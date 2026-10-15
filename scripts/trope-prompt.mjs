@@ -15,9 +15,11 @@ import { readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
+import { homedir } from "node:os";
 import { parsePromptCli, promptArgv, promptName, checkPromptMeta } from "../trope/prompt.mjs";
 
-const AUDIO_ROOT = "C:\\Users\\dsbog\\haftarah-audio";
+// Everything heavy lives outside the repo; HAFTARAH_AUDIO moves it (e.g. to another machine).
+const AUDIO_ROOT = process.env.HAFTARAH_AUDIO || join(homedir(), "haftarah-audio");
 const ENV = process.env.HAFTARAH_SOULX_ENV || join(AUDIO_ROOT, "soulx-env");
 const MODELS = process.env.HAFTARAH_SOULX_PREPROCESS || join(AUDIO_ROOT, "soulx-preprocess");
 const REPO = join(ENV, "SoulX-Singer");
