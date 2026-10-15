@@ -55,3 +55,15 @@ For Josh: which melody table (three diagnostic cells settle it: sof pasuk approa
 4. **Licensing: use what exists now.** CC-BY-NC aligner weights and a PocketTorah-derived share-alike base model are fine for private, unpublished models.
 5. **Josh's recording is optional.** If the result can be great and human-sounding without him, that is fine. He records only if it costs no significant extra work and sounds better. So pipeline A with a stock or Daniel's own prompt voice is the baseline; Josh's clip is an upgrade, not a dependency.
 6. **Stay on this branch** without amending the 2.0 spec yet; make the branch visible to main and the other coder.
+
+## Round 2 (same day, after the rulings)
+
+| Report | Bottom line |
+|---|---|
+| `torah-grammar.md` | Avery/Binder Torah table: 51 cells (43 core + 4 end-of-aliyah + 4 end-of-book), same fitting rules, five Torah context flags (end of aliyah, end of book, Creation refrain, Journeys, Song of the Sea), a fifth aliyah-end pattern (etnachta then silluq, no tipcha), the rare marks (shalshelet x4, mercha kefula x5, karnei farah + yerach ben yomo x1), a 31-verse core / 54-verse full calibration corpus, hebcal `fullkriyah` for the 457 aliyah-final verses, and the Decalogue's double cantillation in MAM. |
+| `nusach-tables.md` | Sources for the option menu. Idelsohn's *Thesaurus* (public domain, archive.org) carries the Moroccan, Gibraltar, Oriental-Sephardi and Aleppo haftarah tables; Jacobson for Ashkenazi traditional (book needed); the 1965 S&P prayer book for Spanish & Portuguese. Recommended order after Binder/Avery: Ashkenazi traditional, Moroccan, S&P, Syrian. Moroccan, Gibraltar, Syrian and Yemenite are reciting-tone traditions where several te'amim share one figure, so the engine needs cell aliases, a reciting-tone default for unlisted marks, a per-table degree map (quarter tones for Syrian), and a Sephardi pronunciation profile. |
+| `voice-feasibility.md` | (pending) The prompt-voice question and a first Hebrew render through a zero-shot singing model. |
+
+## Built the same day (on the branch)
+
+`trope/text.mjs` (Sefaria MAM to syllables, stress, phonemes; havarotjs vendored), `trope/melody.mjs` (cell selection, syllable fitting, cadence flags), `trope/cells/haftarah.json` and `trope/cells/torah.json` (Avery/Binder), `trope/midi.mjs`, `scripts/trope-score.mjs --ref "Book c:v-c:v"` (any reading from Sefaria to a table and a MIDI), `scripts/trope-fetch.mjs`, calibration corpora (53 haftarah verses, 83 Torah verses) and tests (`tests/trope-*.test.mjs`); `npm test` 183 passing.
