@@ -37,3 +37,11 @@ stay in `note`):
     node -e 'const f="tests/fixtures/trope/calibration-torah.json",fs=require("fs"),j=JSON.parse(fs.readFileSync(f,"utf8"));for(const v of j.verses){const n=v.note||"",s=/\[special:([\w-]+)\]/.exec(n);v.endOfAliyah=/\[endOfAliyah\]/.test(n);v.endOfBook=/\[endOfBook\]/.test(n);v.special=s?s[1]:null}fs.writeFileSync(f,JSON.stringify(j,null,2)+"\n")'
 
 Not included: the 27 dual-cantillation Decalogue verses (§3.2), which need their own table.
+
+## Hebcal: `hebcal/*.json`
+
+Raw Hebcal leyning responses (`https://www.hebcal.com/leyning?cfg=json&start=D&end=D`, Diaspora, full kriyah),
+fetched 2026-10-15, for `tests/trope-hebcal.test.mjs`: `bereshit` (2026-10-10, Machar Chodesh haftarah),
+`shemot` (2027-01-02, two-range haftarah Isaiah 27:6-28:13, 29:22-23), `simchat-torah` (2026-10-04, V'Zot
+HaBerachah + Genesis 1:1-2:3 + Numbers maftir), `beshalach` (2027-01-23, the Song of the Sea), `vayakhel-shekalim`
+(2027-03-06, a special maftir as a second range). Regenerate with the same URL and date.

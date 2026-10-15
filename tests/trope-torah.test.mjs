@@ -70,7 +70,7 @@ test("selectCell: the fifth pattern (etnachta -> silluq, no tipcha) gets its own
   assert.equal(byId("aliyah:silluq@no-tipcha").confidence, "low");
 });
 
-test("the rare marks each get a real Torah cell, not the fallback (the haftarah table falls back)", () => {
+test("the rare marks each get a real Torah cell, not the fallback (the haftarah table's are derived from these)", () => {
   for (const [trope, before, id] of [["shalshelet", null, "shalshelet"], ["mercha-kefula", "tipcha", "mercha-kefula"],
     ["karnei-farah", null, "karnei-farah"], ["yerach-ben-yomo", "karnei-farah", "yerach-ben-yomo"]]) {
     const cell = selectCell({}, { trope, before }, table);
@@ -78,7 +78,9 @@ test("the rare marks each get a real Torah cell, not the fallback (the haftarah 
     assert.ok(!cell.fallback && cell.source.startsWith("torah-grammar.md"), `${trope}: ${cell.id}`);
   }
   assert.equal(byId("shalshelet").core.length + byId("shalshelet").upbeats.length, 24);   // [1] + 23 notes
-  assert.equal(selectCell({}, { trope: "shalshelet" }, haftarah).fallback, true);
+  const derived = selectCell({}, { trope: "shalshelet" }, haftarah);
+  assert.ok(!derived.fallback && derived.confidence === "low" && derived.derivedFrom === "torah.json#shalshelet");
+  assert.deepEqual(derived.core, byId("shalshelet").core);   // degree for degree
   assert.equal(selectCell({}, { trope: "munach", before: "yerach-ben-yomo" }, table).id, "munach>yerach-ben-yomo");
 });
 

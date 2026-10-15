@@ -80,7 +80,9 @@ test("selectCell: group and onOneWord contexts, and the fallback for a trope wit
   assert.equal(selectCell({}, { trope: "munach", before: "munach", group: "segol" }, table).id, "munach>munach@segol");
   assert.equal(selectCell({}, { trope: "zakef-katan", onOneWord: ["kadma"] }, table).id, "zakef-katan+kadma");
   assert.equal(selectCell({}, { trope: "geresh", after: "kadma" }, table).id, "azla");
-  const fb = selectCell({}, { trope: "shalshelet" }, table);
+  // shalshelet now has a derived cell; a trope no table knows still gets the reciting tone
+  assert.equal(selectCell({}, { trope: "shalshelet" }, table).id, "shalshelet");
+  const fb = selectCell({}, { trope: "no-such-trope" }, table);
   assert.equal(fb.fallback, true);
   assert.deepEqual(degs(fb.core), [1]);
 });

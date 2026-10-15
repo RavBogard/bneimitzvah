@@ -113,7 +113,8 @@ function keyMatches(key, want, ctx) {
 
 // The cell for a unit: among the table's cells for its trope, every one whose context keys all
 // hold, the most specific wins (first in table order on a tie). A trope the table has no cell for
-// (shalshelet etc., which never occur in a haftarah) gets the reciting tone, flagged as a fallback.
+// gets the reciting tone, flagged as a fallback. (The haftarah table now has derived cells for
+// shalshelet, karnei farah and yerach ben yomo, so in practice this is a table-authoring bug.)
 export function selectCell(unit, ctx, table) {
   const trope = (ctx && ctx.trope) || unitTrope(unit);
   let best = null, bestScore = -1;

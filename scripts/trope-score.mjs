@@ -3,48 +3,76 @@
 // Standard MIDI File to audition the melody in any player.
 //   node scripts/trope-score.mjs <units.json> [options]            one verse, pre-parsed (hebrew-text-pipeline.md §6.3)
 //   node scripts/trope-score.mjs --ref "Isaiah 42:5-43:10" [options]  any reading: fetched from Sefaria (MAM), parsed, scored
+//   node scripts/trope-score.mjs --parashah Bereshit [--haftarah]   a week's Torah reading (or its haftarah) via Hebcal
+//   node scripts/trope-score.mjs --date 2027-01-23 [--haftarah]     the reading on a date (also --holiday "Simchat Torah")
 //   options: [--midi out.mid] [--key D4] [--tempo 96] [--elision] [--final] [--table path] [--quiet]
 // With --ref the last verse gets the end-of-reading cadence unless --no-final; --quiet prints one line per verse.
+// --ref takes several ranges as one reading too: "Isaiah 27:6-28:13; 29:22-23".
+// A Torah reading (--parashah/--date/--holiday without --haftarah) uses trope/cells/torah.json in F3 (the
+// published pitches) and Hebcal's full-kriyah aliyot for the end-of-aliyah / end-of-book / special flags;
+// --haftarah scores that week's haftarah with the haftarah table instead, every range as one reading.
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { scoreVerse, degreeLabel } from "../trope/melody.mjs";
 import { scoreToMidi } from "../trope/midi.mjs";
 import { verseUnits } from "../trope/text.mjs";
 import { fetchReading } from "../trope/sefaria.mjs";
+import { readingFor, verseFlags, flagLabel, parseRefList } from "../trope/hebcal.mjs";
 
 const VERSE_GAP = 1;   // quarters of rest between verses in the MIDI
 
 const args = process.argv.slice(2);
-const valued = ["--midi", "--key", "--tempo", "--table", "--ref"];
+const valued = ["--midi", "--key", "--tempo", "--table", "--ref", "--parashah", "--date", "--holiday"];
 const opt = name => { const k = args.indexOf(name); return k >= 0 ? args[k + 1] : undefined; };
 const input = args.find((a, k) => !a.startsWith("--") && !valued.includes(args[k - 1]));
 const ref = opt("--ref");
-if (!input && !ref) {
-  console.error('usage: node scripts/trope-score.mjs (<units.json> | --ref "Book c:v-c:v") [--midi out.mid] [--key D4] [--tempo 96] [--elision] [--final] [--table path] [--quiet]');
+const week = { parashah: opt("--parashah"), date: opt("--date"), holiday: opt("--holiday") };
+const byWeek = Boolean(week.parashah || week.date || week.holiday);
+if (!input && !ref && !byWeek) {
+  console.error('usage: node scripts/trope-score.mjs (<units.json> | --ref "Book c:v-c:v" | --parashah Name | --date YYYY-MM-DD | --holiday Name) [--haftarah] [--midi out.mid] [--key D4] [--tempo 96] [--elision] [--final] [--table path] [--quiet]');
   process.exit(2);
 }
 
-const tablePath = opt("--table") || fileURLToPath(new URL("../trope/cells/haftarah.json", import.meta.url));
-const table = JSON.parse(readFileSync(tablePath, "utf8"));
-const scoreOpts = { table, key: opt("--key") || "D4", tempo: Number(opt("--tempo") || 96), elision: args.includes("--elision") };
+// What to read: a Hebcal week's Torah (with aliyot) or haftarah, else the --ref ranges.
+let reading = null, refs = [], aliyot = null;
+if (byWeek) {
+  reading = await readingFor(week);
+  if (args.includes("--haftarah")) refs = reading.haftarah.refs;
+  else ({ ranges: refs, aliyot } = reading.torah);
+  if (!refs.length) throw new Error(`${reading.name}: Hebcal lists no ${aliyot ? "Torah reading" : "haftarah"}`);
+} else if (ref) refs = parseRefList(ref);
+const torah = Boolean(aliyot);
 
-const verses = [];
+const cells = name => fileURLToPath(new URL(`../trope/cells/${name}.json`, import.meta.url));
+const tablePath = opt("--table") || cells(torah ? "torah" : "haftarah");
+const table = JSON.parse(readFileSync(tablePath, "utf8"));
+const scoreOpts = { table, key: opt("--key") || (torah ? "F3" : "D4"), tempo: Number(opt("--tempo") || 96), elision: args.includes("--elision") };
+
+const verses = [], labels = [];
 if (input) {
   const verse = JSON.parse(readFileSync(input, "utf8"));
   if (args.includes("--final")) verse.final = true;   // audition the end-of-reading cadence on any verse
   verses.push(verse);
 } else {
-  const fetched = await fetchReading(ref);
+  if (reading) console.log(`${reading.name}${reading.date ? ` (${reading.date})` : ""}: ${torah ? "Torah" : "haftarah"} ${refs.join("; ")}${!torah && reading.haftarah.reason ? ` [${reading.haftarah.reason}]` : ""}`);
+  // Each range fetched on its own, the whole treated as one reading (one final verse, one set of flags).
+  const fetched = [];
+  for (const r of refs) fetched.push(...await fetchReading(r));
+  const flags = verseFlags(fetched.map(v => v.ref), aliyot || []);
   fetched.forEach((v, i) => {
-    const final = args.includes("--final") || (i === fetched.length - 1 && !args.includes("--no-final"));
-    verses.push({ ...verseUnits(v.he, { final }), ref: v.ref });
+    const f = flags[i];
+    // The end-of-reading cadence is the haftarah's; the Torah's last verse is an aliyah end instead.
+    const final = !torah && (args.includes("--final") || (f.final && !args.includes("--no-final")));
+    const units = verseUnits(v.he, { final, ref: v.ref });
+    verses.push(torah ? { ...units, ref: v.ref, endOfAliyah: f.endOfAliyah, endOfBook: f.endOfBook, special: f.special } : { ...units, ref: v.ref });
+    labels.push(torah ? flagLabel(f) : "");
   });
 }
 
 const pad = (s, n) => String(s).padEnd(n);
-const combined = { ref: ref || verses[0].ref, key: scoreOpts.key, tempo: scoreOpts.tempo, events: [] };
+const combined = { ref: ref || (reading && `${reading.name} ${refs.join("; ")}`) || verses[0].ref, key: scoreOpts.key, tempo: scoreOpts.tempo, events: [] };
 let t0 = 0, fallbacks = 0;
-for (const verse of verses) {
+verses.forEach((verse, vi) => {
   const score = scoreVerse(verse, scoreOpts);
   for (const e of score.events) combined.events.push({ ...e, t: e.t + t0 });
   t0 += (score.events.at(-1)?.t ?? 0) + (score.events.at(-1)?.dur ?? 0) + VERSE_GAP;
@@ -52,10 +80,11 @@ for (const verse of verses) {
   fallbacks += fb.length;
 
   if (args.includes("--quiet") || verses.length > 1) {
-    console.log(`${pad(score.ref, 22)} ${pad(score.units.length + " words", 9)} ${pad(score.events.length + " notes", 10)} ${score.seconds}s${fb.length ? "  fallback: " + fb.join(" ") : ""}`);
-    continue;
+    const mark = labels[vi] ? `  ${labels[vi]}` : "";
+    console.log(`${pad(score.ref, 22)} ${pad(score.units.length + " words", 9)} ${pad(score.events.length + " notes", 10)} ${score.seconds}s${fb.length ? "  fallback: " + fb.join(" ") : ""}${mark}`);
+    return;
   }
-  console.log(`${score.ref}  key ${score.key}  tempo ${score.tempo}  ${score.seconds}s`);
+  console.log(`${score.ref}  key ${score.key}  tempo ${score.tempo}  ${score.seconds}s${labels[vi] ? `  ${labels[vi]}` : ""}`);
   console.log(pad("word", 16) + pad("cell", 26) + pad("syll", 6) + pad("ph", 6) + pad("deg", 5) + pad("midi", 6) + "dur");
   for (const u of score.units) {
     let first = true;
@@ -70,8 +99,8 @@ for (const verse of verses) {
       });
     }
   }
-}
-if (verses.length > 1) console.log(`${verses.length} verses, ${combined.events.length} notes, ${Math.round(t0 * 60 / scoreOpts.tempo)}s${fallbacks ? `, ${fallbacks} words on the fallback reciting tone` : ""}`);
+});
+if (verses.length > 1) console.log(`${verses.length} verses, ${combined.events.length} notes, ${Math.round(t0 * 60 / scoreOpts.tempo)}s${fallbacks ? `, ${fallbacks} words on the fallback reciting tone` : byWeek ? ", no fallback" : ""}`);
 
 const midiPath = opt("--midi");
 if (midiPath) {

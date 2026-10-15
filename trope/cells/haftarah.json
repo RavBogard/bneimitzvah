@@ -55,15 +55,18 @@
     "mercha-kefula",
     "darga",
     "kadma",
-    "telisha-ketana"
+    "telisha-ketana",
+    "shalshelet",
+    "karnei-farah",
+    "yerach-ben-yomo"
   ],
-  "absent": {
+  "derived": {
     "tropes": [
       "shalshelet",
       "karnei-farah",
       "yerach-ben-yomo"
     ],
-    "why": "§1 and §2.3 L128: zero occurrences in any haftarah; TropeTrainer shipped no haftarah melody. The engine falls back to the reciting tone if one ever appears."
+    "why": "§1 and §2.3 L128: zero occurrences in any haftarah; TropeTrainer shipped no haftarah melody and no published haftarah source gives one. So that any verse of the Prophets scores without a fallback, their cells (and the munach before karnei farah / yerach ben yomo) are torah.json's Avery/Binder cells transposed degree for degree into this mode, confidence low."
   },
   "endOfHaftarah": {
     "source": "trope-grammar.md L153 (§3, TT comment in the Binder/Avery table)",
@@ -795,6 +798,61 @@
       "source": "trope-grammar.md L145 (§3 metiga-zakef, TT ON_ONE_WORD; the report gives no notes)",
       "confidence": "low",
       "note": "Placeholder: the kadma's [1] 4 folded in as the zakef's upbeats ahead of its 5 3 core. The real 'advanced zakef katon' melody is not in the report; record it."
+    },
+    {
+      "id": "shalshelet",
+      "trope": "shalshelet",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }],
+      "source": "trope-grammar.md L128 (§2.3: no published haftarah melody for this mark) -> derived from torah.json cell 'shalshelet' (torah-grammar.md L104, Avery/Binder column), degree for degree into the haftarah mode",
+      "confidence": "low",
+      "derivedFrom": "torah.json#shalshelet",
+      "note": "No haftarah source gives this mark (it never occurs in a haftarah). The Torah table's Avery/Binder cell is transposed into this table's natural-minor frame by scale degree (Torah degree n -> haftarah degree n), not reshaped; the Torah table's variants are not carried over. Only for verses of the Prophets read outside the haftarah cycle; ask the cantor."
+    },
+    {
+      "id": "karnei-farah",
+      "trope": "karnei-farah",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 1.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 1.5 }],
+      "source": "trope-grammar.md L128 (§2.3: no published haftarah melody for this mark) -> derived from torah.json cell 'karnei-farah' (torah-grammar.md L106, Avery/Binder column), degree for degree into the haftarah mode",
+      "confidence": "low",
+      "derivedFrom": "torah.json#karnei-farah",
+      "note": "No haftarah source gives this mark (it never occurs in a haftarah). The Torah table's Avery/Binder cell is transposed into this table's natural-minor frame by scale degree (Torah degree n -> haftarah degree n), not reshaped; the Torah table's variants are not carried over. Only for verses of the Prophets read outside the haftarah cycle; ask the cantor."
+    },
+    {
+      "id": "munach>karnei-farah",
+      "trope": "munach",
+      "context": { "before": "karnei-farah" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }],
+      "source": "trope-grammar.md L128 (§2.3: no published haftarah melody for this mark) -> derived from torah.json cell 'munach>karnei-farah' (torah-grammar.md L107, Avery/Binder column), degree for degree into the haftarah mode",
+      "confidence": "low",
+      "derivedFrom": "torah.json#munach>karnei-farah",
+      "note": "No haftarah source gives this mark (it never occurs in a haftarah). The Torah table's Avery/Binder cell is transposed into this table's natural-minor frame by scale degree (Torah degree n -> haftarah degree n), not reshaped; the Torah table's variants are not carried over. Only for verses of the Prophets read outside the haftarah cycle; ask the cantor."
+    },
+    {
+      "id": "yerach-ben-yomo",
+      "trope": "yerach-ben-yomo",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }],
+      "source": "trope-grammar.md L128 (§2.3: no published haftarah melody for this mark) -> derived from torah.json cell 'yerach-ben-yomo' (torah-grammar.md L105, Avery/Binder column), degree for degree into the haftarah mode",
+      "confidence": "low",
+      "derivedFrom": "torah.json#yerach-ben-yomo",
+      "note": "No haftarah source gives this mark (it never occurs in a haftarah). The Torah table's Avery/Binder cell is transposed into this table's natural-minor frame by scale degree (Torah degree n -> haftarah degree n), not reshaped; the Torah table's variants are not carried over. Only for verses of the Prophets read outside the haftarah cycle; ask the cantor."
+    },
+    {
+      "id": "munach>yerach-ben-yomo",
+      "trope": "munach",
+      "context": { "before": "yerach-ben-yomo" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }],
+      "source": "trope-grammar.md L128 (§2.3: no published haftarah melody for this mark) -> derived from torah.json cell 'munach>yerach-ben-yomo' (torah-grammar.md L107, Avery/Binder column), degree for degree into the haftarah mode",
+      "confidence": "low",
+      "derivedFrom": "torah.json#munach>yerach-ben-yomo",
+      "note": "No haftarah source gives this mark (it never occurs in a haftarah). The Torah table's Avery/Binder cell is transposed into this table's natural-minor frame by scale degree (Torah degree n -> haftarah degree n), not reshaped; the Torah table's variants are not carried over. Only for verses of the Prophets read outside the haftarah cycle; ask the cantor."
     }
   ]
 }
