@@ -9,8 +9,8 @@
 // syllable, 3 a slur continuation carrying the same token), plus `text` (display only) and `f0`.
 //
 // The performance options (phrasing, rhythm, stress, tokens, f0) are the voice-quality A/B of 2026-10-15
-// (docs/superpowers/research/2026-10-15-trope-engine/voice-ab.md). Each default reproduces the first
-// emitter; SOULX_STYLES.v2 is the set that won.
+// (docs/superpowers/research/2026-10-15-trope-engine/legato-ab.md). Each default reproduces the first
+// emitter; SOULX_STYLES.v2 is the set that has won so far (legato phrasing only).
 
 import { pronunciationProfile } from "./text.mjs";
 
@@ -276,10 +276,10 @@ function splitItems(items, from, to, maxMs, units) {
 
 const slug = s => String(s || "verse").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-// Named option sets for scoreToSoulx. v1 is the first emitter; v2 is the A/B winner (voice-ab.md).
+// Named option sets for scoreToSoulx. v1 is the first emitter; v2 is the A/B winner (legato-ab.md).
 export const SOULX_STYLES = {
   v1: { phrasing: "words", rhythm: "grid", stress: "lexical", tokens: "syllable", f0: "zeros" },
-  v2: { phrasing: "phrases", rhythm: "speech", stress: "full", tokens: "syllable", f0: "zeros" },
+  v2: { phrasing: "phrases", rhythm: "grid", stress: "lexical", tokens: "syllable", f0: "zeros" },
 };
 
 // score -> SoulX target metadata (an array of segments; more than one only when the verse was split).
