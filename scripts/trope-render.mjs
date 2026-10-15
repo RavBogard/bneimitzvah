@@ -26,6 +26,7 @@ import { readingFor } from "../trope/hebcal.mjs";
 import { scoreToSoulx, soulxSummary, MAX_SEGMENT_SECONDS } from "../trope/soulx.mjs";
 import { parseRenderArgs, UsageError, USAGE, findModal, modalInvocation } from "../trope/render-cli.mjs";
 import { concatWavs } from "../trope/wav.mjs";
+import { checkPromptMeta } from "../trope/prompt.mjs";
 
 const AUDIO_ROOT = "C:\\Users\\dsbog\\haftarah-audio";
 const ENV = process.env.HAFTARAH_SOULX_ENV || join(AUDIO_ROOT, "soulx-env");
@@ -137,6 +138,15 @@ const needs = [["prompt wav", promptWav], ["prompt metadata", promptMeta]];
 if (o.backend === "local") needs.unshift(["python (HAFTARAH_SOULX_ENV)", PYTHON], ["SoulX-Singer clone", REPO], ["checkpoint (HAFTARAH_SOULX_MODEL)", MODEL]);
 for (const [what, p] of needs) {
   if (!existsSync(p)) { console.error(`missing ${what}: ${p}${what.startsWith("prompt") && defaultPrompt && o.backend === "modal" ? " (pass --prompt and --prompt-meta; the default prompt lives in the local SoulX clone)" : ""}`); process.exit(1); }
+}
+// Check the prompt metadata before any model load (scripts/trope-prompt.mjs makes it from a sung WAV).
+{
+  const phoneSetPath = join(REPO, "soulxsinger", "utils", "phoneme", "phone_set.json");
+  const phoneSet = existsSync(phoneSetPath) ? new Set(JSON.parse(readFileSync(phoneSetPath, "utf8"))) : null;
+  const { errors, warnings, summary } = checkPromptMeta(JSON.parse(readFileSync(promptMeta, "utf8")), { phoneSet });
+  for (const w of warnings) console.warn(`prompt: ${w}`);
+  if (errors.length) { for (const e of errors) console.error(`prompt: ${e}`); process.exit(1); }
+  console.log(`prompt: ${summary.seconds}s, ${summary.notes} notes${summary.pitchNames ? ` ${summary.pitchNames.join("-")}` : ""}`);
 }
 writeFileSync(jobsPath, JSON.stringify(jobsSpec(), null, 2));
 

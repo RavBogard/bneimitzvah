@@ -214,7 +214,7 @@ The 2.0 spec owns the player (section 5.9). This engine adds:
 
 ## 11. Open items
 
-1. **Prompt voice and first listen.** Daniel listens to the first renders in `C:\Users\dsbog\haftarah-audio\renders`, then picks the published prompt: his own clip, or a VocalSet male singer (licensed, never consented to cloning).
+1. **Prompt voice and first listen.** Daniel listens to the first renders in `C:\Users\dsbog\haftarah-audio\renders`, then picks the published prompt: his own clip, or a VocalSet male singer (licensed, never consented to cloning). Either clip becomes a prompt with `scripts/trope-prompt.mjs` (CPU, SoulX's own RMVPE + ROSVOT models, no ASR: the words come from `--lyric`/`--tokens`); a VocalSet m6 prompt exists at `haftarah-audio\prompts\`. The shipped `en_prompt.json` describes 5.22-10.28 s of `en_prompt.mp3` while SoulX reads the prompt audio from 0 s, so every default-prompt render so far was conditioned on mismatched audio and metadata; judge voice quality on a tool-made prompt.
 2. **Compute.** Local on the GTX 1660 Ti is the baseline and needs no WSL2. Whether to also pay for HF PRO ($9 a month) or a rented GPU to render the cycle faster.
 3. **CRC's aliyah cut points.** Hebcal's ends are the default. Should a per-week override come from CRC's actual cut points now or later (torah-grammar.md Q10; 2.0 spec open item 4)?
 4. **Decalogue system.** Elyon, tachton, or elyon on Shavuot only. Tiberian or printed verse division. Whether the 27-verse table may be derived from Wikisource MAM (CC BY-SA 4.0) and shipped under that licence.
