@@ -23,23 +23,23 @@ def emit(obj):
     print("@@ " + json.dumps(obj), flush=True)
 
 
-def main(jobs_path):
-    with open(jobs_path, encoding="utf-8") as f:
-        spec = json.load(f)
+class Ctx:
+    """The loaded model plus the argument bag SoulX's process() reads; built once, reused per verse."""
+
+
+def load(spec):
+    """Load the checkpoint once. spec keys: repo, model, config, phoneset, prompt_wav, prompt_meta, device, fp16.
+    Shared by the local CLI (main) and trope/modal_render.py, so both take the same inference path."""
     repo = spec["repo"]
     # SoulX's modules import as top-level packages (cli, soulxsinger) relative to the repo root.
-    sys.path.insert(0, repo)
+    if repo not in sys.path:
+        sys.path.insert(0, repo)
     os.chdir(repo)
-    import soundfile as sf
-    import numpy as np
     import torch
-    from cli.inference import build_model, process
+    from cli.inference import build_model
     from soulxsinger.utils.file_utils import load_config
 
-    class Args:
-        pass
-
-    a = Args()
+    a = Ctx()
     a.device = spec.get("device", "cuda")
     a.model_path = spec["model"]
     a.config = spec["config"]
@@ -50,34 +50,57 @@ def main(jobs_path):
     a.pitch_shift = 0
     a.control = "score"
     a.use_fp16 = bool(spec.get("fp16", True))
-    cfg = load_config(a.config)
+    a.cfg = load_config(a.config)
 
     t0 = time.time()
-    model = build_model(a.model_path, cfg, device=a.device, use_fp16=a.use_fp16)
+    a.model = build_model(a.model_path, a.cfg, device=a.device, use_fp16=a.use_fp16)
     emit({"event": "loaded", "load_s": round(time.time() - t0, 1)})
     if a.device.startswith("cuda"):
         torch.cuda.reset_peak_memory_stats()
+    return a
+
+
+def render_one(a, meta_path, wav_path):
+    """Render one target metadata file to wav_path; returns (seconds of audio, wall seconds). Raises on failure."""
+    import soundfile as sf
+    from cli.inference import process
+
+    t1 = time.time()
+    tmp = tempfile.mkdtemp(prefix="soulx_")
+    try:
+        a.target_metadata_path = meta_path
+        a.save_dir = tmp
+        process(a, a.cfg, a.model)
+        d = os.path.dirname(wav_path)
+        if d:
+            os.makedirs(d, exist_ok=True)
+        shutil.move(os.path.join(tmp, "generated.wav"), wav_path)
+        return sf.info(wav_path).duration, time.time() - t1
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def main(jobs_path):
+    with open(jobs_path, encoding="utf-8") as f:
+        spec = json.load(f)
+    import soundfile as sf
+    import numpy as np
+    import torch
+
+    a = load(spec)
 
     done = []
     for i, job in enumerate(spec["jobs"]):
         t1 = time.time()
-        tmp = tempfile.mkdtemp(prefix="soulx_")
         try:
-            a.target_metadata_path = job["meta"]
-            a.save_dir = tmp
-            process(a, cfg, model)
-            os.makedirs(os.path.dirname(job["wav"]), exist_ok=True)
-            shutil.move(os.path.join(tmp, "generated.wav"), job["wav"])
-            info = sf.info(job["wav"])
+            dur, wall = render_one(a, job["meta"], job["wav"])
             done.append(job["wav"])
-            emit({"event": "verse", "i": i, "wav": job["wav"], "seconds": round(info.duration, 3),
+            emit({"event": "verse", "i": i, "wav": job["wav"], "seconds": round(dur, 3),
                   "render_s": round(time.time() - t1, 1)})
         except Exception as e:  # keep going: one bad verse must not cost the other 24
             traceback.print_exc()
             emit({"event": "verse", "i": i, "wav": None, "error": f"{type(e).__name__}: {e}",
                   "render_s": round(time.time() - t1, 1)})
-        finally:
-            shutil.rmtree(tmp, ignore_errors=True)
 
     if a.device.startswith("cuda"):
         emit({"event": "memory", "peak_allocated_mb": round(torch.cuda.max_memory_allocated() / 2**20),
