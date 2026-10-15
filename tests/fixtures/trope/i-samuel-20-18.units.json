@@ -1,0 +1,123 @@
+{
+  "ref": "I Samuel 20:18",
+  "version": "Miqra according to the Masorah",
+  "pronunciation": "israeli-v1",
+  "final": false,
+  "_fixture": "Hand-completed contract fixture for the melody engine (hebrew-text-pipeline.md §6.3). Syllables and stress per §2.3 (havarotjs output, checked by hand); phonemes per the §4 table with ASCII symbols (x = ח/כ rafe, sh = ש, j = yod). All strings are NFD.",
+  "he": "וַיֹּאמֶר־ל֥וֹ יְהוֹנָתָ֖ן מָחָ֣ר חֹ֑דֶשׁ וְנִפְקַ֕דְתָּ כִּ֥י יִפָּקֵ֖ד מוֹשָׁבֶֽךָ׃",
+  "units": [
+    {
+      "text": "וַיֹּאמֶר־ל֥וֹ",
+      "words": ["וַיֹּאמֶר־", "ל֥וֹ"],
+      "range": [0, 14],
+      "accents": [
+        { "name": "merkha", "cp": "05A5", "role": "conjunctive" }
+      ],
+      "trope": { "family": "etnachta", "phrase": 0, "pos": 0, "of": 4 },
+      "syllables": [
+        { "he": "וַ", "ph": ["v", "a", "j"], "stress": null, "closed": true, "note": "closed by forte in י" },
+        { "he": "יֹּא", "ph": ["j", "o"], "stress": null, "closed": false, "note": "quiescent alef" },
+        { "he": "מֶר", "ph": ["m", "e", "r"], "stress": null, "closed": true },
+        { "he": "ל֥וֹ", "ph": ["l", "o"], "stress": "tonic", "accent": "merkha", "closed": false }
+      ]
+    },
+    {
+      "text": "יְהוֹנָתָ֖ן",
+      "words": ["יְהוֹנָתָ֖ן"],
+      "range": [15, 26],
+      "accents": [
+        { "name": "tipcha", "cp": "0596", "role": "disjunctive" }
+      ],
+      "trope": { "family": "etnachta", "phrase": 0, "pos": 1, "of": 4 },
+      "syllables": [
+        { "he": "יְ", "ph": ["j", "e"], "stress": null, "sheva": "na" },
+        { "he": "הוֹ", "ph": ["h", "o"], "stress": null },
+        { "he": "נָ", "ph": ["n", "a"], "stress": null },
+        { "he": "תָ֖ן", "ph": ["t", "a", "n"], "stress": "tonic", "accent": "tipcha", "closed": true }
+      ]
+    },
+    {
+      "text": "מָחָ֣ר",
+      "words": ["מָחָ֣ר"],
+      "range": [27, 33],
+      "accents": [
+        { "name": "munach", "cp": "05A3", "role": "conjunctive" }
+      ],
+      "trope": { "family": "etnachta", "phrase": 0, "pos": 2, "of": 4 },
+      "syllables": [
+        { "he": "מָ", "ph": ["m", "a"], "stress": null },
+        { "he": "חָ֣ר", "ph": ["x", "a", "r"], "stress": "tonic", "accent": "munach", "closed": true }
+      ]
+    },
+    {
+      "text": "חֹ֑דֶשׁ",
+      "words": ["חֹ֑דֶשׁ"],
+      "range": [34, 41],
+      "accents": [
+        { "name": "etnachta", "cp": "0591", "role": "disjunctive" }
+      ],
+      "trope": { "family": "etnachta", "phrase": 0, "pos": 3, "of": 4 },
+      "syllables": [
+        { "he": "חֹ֑", "ph": ["x", "o"], "stress": "tonic", "accent": "etnachta", "closed": false, "note": "mil'el: tonic on the first syllable" },
+        { "he": "דֶשׁ", "ph": ["d", "e", "sh"], "stress": null, "closed": true }
+      ]
+    },
+    {
+      "text": "וְנִפְקַ֕דְתָּ",
+      "words": ["וְנִפְקַ֕דְתָּ"],
+      "range": [42, 56],
+      "accents": [
+        { "name": "zaqef-gadol", "cp": "0595", "role": "disjunctive" }
+      ],
+      "trope": { "family": "zakef-gadol", "phrase": 1, "pos": 0, "of": 1 },
+      "syllables": [
+        { "he": "וְ", "ph": ["v", "e"], "stress": null, "sheva": "na" },
+        { "he": "נִפְ", "ph": ["n", "i", "f"], "stress": null, "closed": true, "sheva": "nach" },
+        { "he": "קַ֕דְ", "ph": ["k", "a", "d"], "stress": "tonic", "accent": "zaqef-gadol", "closed": true, "sheva": "nach" },
+        { "he": "תָּ", "ph": ["t", "a"], "stress": null, "closed": false, "note": "mil'el: post-tonic" }
+      ]
+    },
+    {
+      "text": "כִּ֥י",
+      "words": ["כִּ֥י"],
+      "range": [57, 62],
+      "accents": [
+        { "name": "merkha", "cp": "05A5", "role": "conjunctive" }
+      ],
+      "trope": { "family": "sof-pasuk", "phrase": 2, "pos": 0, "of": 3 },
+      "syllables": [
+        { "he": "כִּ֥י", "ph": ["k", "i"], "stress": "tonic", "accent": "merkha", "closed": false }
+      ]
+    },
+    {
+      "text": "יִפָּקֵ֖ד",
+      "words": ["יִפָּקֵ֖ד"],
+      "range": [63, 72],
+      "accents": [
+        { "name": "tipcha", "cp": "0596", "role": "disjunctive" }
+      ],
+      "trope": { "family": "sof-pasuk", "phrase": 2, "pos": 1, "of": 3 },
+      "syllables": [
+        { "he": "יִ", "ph": ["j", "i", "p"], "stress": null, "closed": true, "note": "closed by forte in פּ" },
+        { "he": "פָּ", "ph": ["p", "a"], "stress": null },
+        { "he": "קֵ֖ד", "ph": ["k", "e", "d"], "stress": "tonic", "accent": "tipcha", "closed": true }
+      ]
+    },
+    {
+      "text": "מוֹשָׁבֶֽךָ׃",
+      "words": ["מוֹשָׁבֶֽךָ׃"],
+      "range": [73, 85],
+      "accents": [
+        { "name": "silluq", "cp": "05BD", "role": "disjunctive" }
+      ],
+      "trope": { "family": "sof-pasuk", "phrase": 2, "pos": 2, "of": 3 },
+      "syllables": [
+        { "he": "מוֹ", "ph": ["m", "o"], "stress": null },
+        { "he": "שָׁ", "ph": ["sh", "a"], "stress": null },
+        { "he": "בֶֽ", "ph": ["v", "e"], "stress": "tonic", "accent": "silluq", "closed": false },
+        { "he": "ךָ", "ph": ["x", "a"], "stress": null, "closed": false }
+      ]
+    }
+  ],
+  "ipa": "va.jo.meʁ-ˈlo je.ho.na.ˈtan ma.ˈχaʁ ˈχo.deʃ ve.nif.ˈkad.ta ˈki jip.pa.ˈked mo.ʃa.ˈve.χa"
+}

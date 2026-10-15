@@ -1,0 +1,800 @@
+{
+  "name": "Ashkenazic haftarah, Binder/Avery (Reform Standard)",
+  "type": "haftarah",
+  "tradition": "Eastern Ashkenazi",
+  "source": "docs/superpowers/research/2026-10-15-trope-engine/trope-grammar.md §2.3 (Binder/Avery column, with Rosowsky and Common Melody as variants). Teaching-source values as transcribed in the report; not Kinnor's file.",
+  "mode": "minor",
+  "key": "D minor",
+  "tonic": "D4",
+  "degrees": {
+    "numbering": "Diatonic steps of the natural minor scale from the reciting/final tone: 1 = tonic, 8 = octave, 9 = 2nd above. 0 is the 7th below (the report's 7_), -1 the 6th below. alt: -1 lowers a note a semitone (Common Melody's 4b).",
+    "semitones": {
+      "0": -2,
+      "1": 0,
+      "2": 2,
+      "3": 3,
+      "4": 5,
+      "5": 7,
+      "6": 8,
+      "7": 10,
+      "8": 12,
+      "9": 14,
+      "-1": -4
+    },
+    "note": "Natural minor throughout (7 = C in D minor, not C#); the report does not say whether the 7_ approach to sof pasuk is raised. Confidence low; ask the cantor."
+  },
+  "durations": {
+    "unit": "beats (quarter note = 1)",
+    "default": 0.5,
+    "held": 1.5,
+    "long": 1,
+    "finalHold": 2,
+    "note": "The report gives rhythm only as 'held'/'long' marks (§2.2 rule 6: rhythm is free). Every other value is the engine's default eighth note, not a source reading."
+  },
+  "cellShape": "{ id, trope, context: { before?, after?, group?, endOfReading?, onOneWord?, monosyllabic? }, upbeats: [{deg, dur}], core: [{deg, dur}], source, confidence?, note?, variants? }. The stressed note is core[0]. before/after are the neighbouring units' trope ids; group is lib.js's phrase family (zakef = zakef katon's block).",
+  "tropeIds": [
+    "silluq",
+    "etnachta",
+    "segol",
+    "zakef-katan",
+    "zakef-gadol",
+    "tipcha",
+    "revia",
+    "zarka",
+    "pashta",
+    "yetiv",
+    "tevir",
+    "geresh",
+    "gershayim",
+    "pazer",
+    "telisha-gedola",
+    "munach-legarmeh",
+    "munach",
+    "mahpach",
+    "mercha",
+    "mercha-kefula",
+    "darga",
+    "kadma",
+    "telisha-ketana"
+  ],
+  "absent": {
+    "tropes": [
+      "shalshelet",
+      "karnei-farah",
+      "yerach-ben-yomo"
+    ],
+    "why": "§1 and §2.3 L128: zero occurrences in any haftarah; TropeTrainer shipped no haftarah melody. The engine falls back to the reciting tone if one ever appears."
+  },
+  "endOfHaftarah": {
+    "source": "trope-grammar.md L153 (§3, TT comment in the Binder/Avery table)",
+    "patterns": [
+      "tipcha-silluq",
+      "mercha-tipcha-silluq",
+      "tipcha-mercha-silluq",
+      "mercha-tipcha-mercha-silluq"
+    ],
+    "rule": "Last verse only, in the sof-pasuk phrase. Wherever the mercha sits it shares the niggun of the trope after it: end:mercha>tipcha or end:mercha>silluq; tipcha and silluq take end:tipcha and end:silluq."
+  },
+  "phraseEndings": "Etnachta ends on 4 (etnachta cell), sof pasuk on 1 (silluq cell); the merchas and tipchas before them differ (mercha / tipcha defaults lead to etnachta; mercha>silluq, mercha>tipcha@sof-pasuk, tipcha@sof-pasuk lead to silluq). §2.1, §3.",
+  "variantSets": {
+    "rosowsky": "Ashkenazic - Rosowsky (D minor). A variant absent from a cell means Rosowsky = Binder/Avery there ('same').",
+    "common": "Ashkenazic - Common Melody (A minor in TropeTrainer; the report gives it in degrees, so it applies in our key unchanged).",
+    "kalib": "Malin's report of Kalib, for the etnachta question only."
+  },
+  "cells": [
+    {
+      "id": "silluq",
+      "trope": "silluq",
+      "context": {},
+      "upbeats": [{ "deg": 0, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 1.5 }],
+      "source": "trope-grammar.md L84 (§2.3 \"sof pasuk (silluq), normal verse\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 5, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 5, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "mercha>silluq",
+      "trope": "mercha",
+      "context": { "before": "silluq" },
+      "upbeats": [{ "deg": 0, "dur": 0.5 }],
+      "core": [{ "deg": 0, "dur": 0.5 }],
+      "source": "trope-grammar.md L85 (§2.3 \"mercha before sof pasuk\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 5, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "tipcha@sof-pasuk",
+      "trope": "tipcha",
+      "context": { "group": "sof-pasuk" },
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 0, "dur": 1.5 }],
+      "source": "trope-grammar.md L86 (§2.3 \"tipcha in a sof-pasuk group\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "mercha>tipcha@sof-pasuk",
+      "trope": "mercha",
+      "context": { "before": "tipcha", "group": "sof-pasuk" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }],
+      "source": "trope-grammar.md L87 (§2.3 \"mercha in a sof-pasuk group (before tipcha)\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "etnachta",
+      "trope": "etnachta",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 1.5 }],
+      "source": "trope-grammar.md L88 (§2.3 \"etnachta\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }]
+        },
+        "kalib": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+          "note": "Kalib's syllabic <1, 3, 5-4> (Malin n.25); same notes as B/A minus the 3-1 turn; listed so the cantor can compare"
+        }
+      }
+    },
+    {
+      "id": "munach>etnachta",
+      "trope": "munach",
+      "context": { "before": "etnachta" },
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }],
+      "source": "trope-grammar.md L89 (§2.3 \"munach before etnachta\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>munach@etnachta",
+      "trope": "munach",
+      "context": { "before": "munach", "group": "etnachta" },
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L90 (§2.3 \"munach before munach (etnachta group)\")"
+    },
+    {
+      "id": "tipcha",
+      "trope": "tipcha",
+      "context": {},
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 1.5 }],
+      "source": "trope-grammar.md L91 (§2.3 \"tipcha (default, before etnachta)\")"
+    },
+    {
+      "id": "mercha",
+      "trope": "mercha",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }],
+      "source": "trope-grammar.md L92 (§2.3 \"mercha (default, before tipcha)\")"
+    },
+    {
+      "id": "zakef-katan",
+      "trope": "zakef-katan",
+      "context": {},
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }],
+      "source": "trope-grammar.md L93 (§2.3 \"zakef katon\")"
+    },
+    {
+      "id": "munach>zakef-katan",
+      "trope": "munach",
+      "context": { "before": "zakef-katan" },
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }],
+      "source": "trope-grammar.md L94 (§2.3 \"munach immediately before zakef katon\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach@zakef",
+      "trope": "munach",
+      "context": { "group": "zakef" },
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L95 (§2.3 \"munach elsewhere in a katon group (e.g. before mahpach)\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }],
+          "note": "report gives '[1] 1, [1] 1' (two plain munachs)"
+        }
+      }
+    },
+    {
+      "id": "pashta",
+      "trope": "pashta",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L96 (§2.3 \"pashta\")",
+      "note": "Double pashta (mil'el word, L97) needs no cell of its own: the text front end puts the tonic on the inner mark, and fitSyllables gives the last note (4) to the post-tonic syllable, which is exactly the report's 'first mark [1] 5; second mark 4'."
+    },
+    {
+      "id": "mahpach",
+      "trope": "mahpach",
+      "context": {},
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }],
+      "source": "trope-grammar.md L98 (§2.3 \"mahpach\")"
+    },
+    {
+      "id": "kadma",
+      "trope": "kadma",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L99 (§2.3 \"kadma (before mahpach/pashta)\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "kadma>geresh",
+      "trope": "kadma",
+      "context": { "before": "geresh" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L100 (§2.3 \"kadma before azla/geresh\")"
+    },
+    {
+      "id": "mercha>pashta",
+      "trope": "mercha",
+      "context": { "before": "pashta" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }],
+      "source": "trope-grammar.md L101 (§2.3 \"mercha before pashta / legarmeh\")"
+    },
+    {
+      "id": "mercha>munach-legarmeh",
+      "trope": "mercha",
+      "context": { "before": "munach-legarmeh" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }],
+      "source": "trope-grammar.md L101 (§2.3 \"mercha before pashta / legarmeh\")"
+    },
+    {
+      "id": "yetiv",
+      "trope": "yetiv",
+      "context": {},
+      "upbeats": [],
+      "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 8, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L102 (§2.3 \"yetiv\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [],
+          "core": [{ "deg": 6, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "revia",
+      "trope": "revia",
+      "context": {},
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 1.5 }],
+      "source": "trope-grammar.md L103 (§2.3 \"revia\")"
+    },
+    {
+      "id": "munach>revia",
+      "trope": "munach",
+      "context": { "before": "revia" },
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 8, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L104 (§2.3 \"munach before revia\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach-legarmeh",
+      "trope": "munach-legarmeh",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L105 (§2.3 \"munach legarmeh\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 4, "dur": 0.5, "alt": -1 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "tevir",
+      "trope": "tevir",
+      "context": {},
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 3, "dur": 1.5 }],
+      "source": "trope-grammar.md L106 (§2.3 \"tevir\")"
+    },
+    {
+      "id": "darga",
+      "trope": "darga",
+      "context": {},
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 7, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L107 (§2.3 \"darga (before tevir)\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 7, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "mercha>tevir",
+      "trope": "mercha",
+      "context": { "before": "tevir" },
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 7, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L108 (§2.3 \"mercha before tevir\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }],
+          "note": "no special cell: ordinary mercha"
+        }
+      }
+    },
+    {
+      "id": "mercha-kefula",
+      "trope": "mercha-kefula",
+      "context": {},
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 7, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L109 (§2.3 \"mercha kefula\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 3, "dur": 1.5 }],
+          "note": "= the tevir cell"
+        }
+      }
+    },
+    {
+      "id": "azla",
+      "trope": "geresh",
+      "context": { "after": "kadma" },
+      "upbeats": [{ "deg": 5, "dur": 0.5 }],
+      "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 8, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L110 (§2.3 \"kadma v'azla (azla)\")",
+      "confidence": "low",
+      "note": "The report lists azla and geresh as two rows; the codepoint is the same (U+059C), so azla is read here as geresh after kadma. Its row on geresh also says 'after kadma the upbeat becomes [4] (B/A)', which conflicts with this [5] upbeat; ask the cantor.",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 5, "dur": 0.5 }],
+          "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 7, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 5, "dur": 0.5 }],
+          "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 7, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "geresh",
+      "trope": "geresh",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 7, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L111 (§2.3 \"geresh\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 5, "dur": 0.5 }],
+          "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 7, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+          "note": "= azla"
+        },
+        "common": {
+          "upbeats": [{ "deg": 5, "dur": 0.5 }],
+          "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 7, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+          "note": "= azla"
+        }
+      }
+    },
+    {
+      "id": "gershayim",
+      "trope": "gershayim",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 6, "dur": 1.5 }],
+      "source": "trope-grammar.md L112 (§2.3 \"gershayim\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 4, "dur": 0.5, "alt": -1 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>geresh",
+      "trope": "munach",
+      "context": { "before": "geresh" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }],
+      "source": "trope-grammar.md L113 (§2.3 \"munach before geresh / zakef gadol\")"
+    },
+    {
+      "id": "munach>zakef-gadol",
+      "trope": "munach",
+      "context": { "before": "zakef-gadol" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }],
+      "source": "trope-grammar.md L113 (§2.3 \"munach before geresh / zakef gadol\")"
+    },
+    {
+      "id": "munach>gershayim",
+      "trope": "munach",
+      "context": { "before": "gershayim" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }],
+      "source": "trope-grammar.md L114 (§2.3 \"munach before gershayim, telisha, pazer\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>telisha-gedola",
+      "trope": "munach",
+      "context": { "before": "telisha-gedola" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }],
+      "source": "trope-grammar.md L114 (§2.3 \"munach before gershayim, telisha, pazer\")",
+      "confidence": "low",
+      "note": "the report says 'telisha' without saying which; read as telisha gedola (the disjunctive)",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>telisha-ketana",
+      "trope": "munach",
+      "context": { "before": "telisha-ketana" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }],
+      "source": "trope-grammar.md L114 (§2.3 \"munach before gershayim, telisha, pazer\")",
+      "confidence": "low",
+      "note": "the report says 'telisha'; §3 lists TT's BEFORE=TELISHA_KETANA, so the same cell is applied before telisha ketana",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>pazer",
+      "trope": "munach",
+      "context": { "before": "pazer" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }],
+      "source": "trope-grammar.md L114 (§2.3 \"munach before gershayim, telisha, pazer\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "zakef-gadol",
+      "trope": "zakef-gadol",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 1.5 }],
+      "source": "trope-grammar.md L115 (§2.3 \"zakef gadol\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 7, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "telisha-ketana",
+      "trope": "telisha-ketana",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 1.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }],
+      "source": "trope-grammar.md L116 (§2.3 \"telisha ketana\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "telisha-gedola",
+      "trope": "telisha-gedola",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }],
+      "source": "trope-grammar.md L117 (§2.3 \"telisha gedola\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "pazer",
+      "trope": "pazer",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 7, "dur": 0.5 }, { "deg": 8, "dur": 0.5 }, { "deg": 7, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L118 (§2.3 \"pazer\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 7, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 7, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "zarka",
+      "trope": "zarka",
+      "context": {},
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 1 }, { "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }],
+      "source": "trope-grammar.md L119 (§2.3 \"zarka\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>zarka",
+      "trope": "munach",
+      "context": { "before": "zarka" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 4, "dur": 1 }],
+      "source": "trope-grammar.md L120 (§2.3 \"munach before zarka\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "segol",
+      "trope": "segol",
+      "context": {},
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 1.5 }, { "deg": 4, "dur": 0.5 }],
+      "source": "trope-grammar.md L121 (§2.3 \"segol\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>segol",
+      "trope": "munach",
+      "context": { "before": "segol" },
+      "upbeats": [{ "deg": 0, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }],
+      "source": "trope-grammar.md L122 (§2.3 \"munach before segol\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>munach@segol",
+      "trope": "munach",
+      "context": { "before": "munach", "group": "segol" },
+      "upbeats": [{ "deg": 0, "dur": 0.5 }],
+      "core": [{ "deg": 0, "dur": 0.5 }],
+      "source": "trope-grammar.md L123 (§2.3 \"munach before munach (segol group)\")"
+    },
+    {
+      "id": "end:tipcha",
+      "trope": "tipcha",
+      "context": { "endOfReading": true },
+      "upbeats": [{ "deg": 6, "dur": 0.5 }],
+      "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }],
+      "source": "trope-grammar.md L124 (§2.3 \"end of haftarah tipcha\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 6, "dur": 0.5 }],
+          "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 7, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "end:mercha>tipcha",
+      "trope": "mercha",
+      "context": { "endOfReading": true, "before": "tipcha" },
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 6, "dur": 0.5 }],
+      "source": "trope-grammar.md L125 (§2.3 \"end of haftarah mercha before tipcha\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 6, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 7, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "end:mercha>silluq",
+      "trope": "mercha",
+      "context": { "endOfReading": true, "before": "silluq" },
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }],
+      "source": "trope-grammar.md L126 (§2.3 \"end of haftarah mercha before silluq\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 6, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 5, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "end:silluq",
+      "trope": "silluq",
+      "context": { "endOfReading": true },
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 7, "dur": 0.5 }, { "deg": 8, "dur": 0.5 }, { "deg": 7, "dur": 0.5 }, { "deg": 6, "dur": 2 }],
+      "source": "trope-grammar.md L127 (§2.3 \"end of haftarah silluq\")",
+      "note": "the three tables end on 6 (B/A), 3 (Rosowsky) and 4 (Common): teacher variance, ask the cantor (§7 Q1c)",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 6, "dur": 0.5 }],
+          "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 5, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach",
+      "trope": "munach",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }],
+      "source": "trope-grammar.md L140 (§3: \"an unlisted munach is sung as 'ordinary munach'\" [LBC]); notes from L113 (plain munach [1] 1)",
+      "confidence": "low",
+      "note": "B/A has no context-free munach row; a munach not covered by a BEFORE/group cell is sung on the reciting tone."
+    },
+    {
+      "id": "zakef-katan+kadma",
+      "trope": "zakef-katan",
+      "context": { "onOneWord": "kadma" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }],
+      "source": "trope-grammar.md L145 (§3 metiga-zakef, TT ON_ONE_WORD; the report gives no notes)",
+      "confidence": "low",
+      "note": "Placeholder: the kadma's [1] 4 folded in as the zakef's upbeats ahead of its 5 3 core. The real 'advanced zakef katon' melody is not in the report; record it."
+    }
+  ]
+}
