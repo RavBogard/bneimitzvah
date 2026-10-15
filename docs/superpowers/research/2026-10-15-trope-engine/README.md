@@ -46,3 +46,12 @@ Render one verse six ways from PocketTorah CC BY-SA audio and Daniel's own voice
 For Daniel: scope (haftarah cycle only vs any verse in the Prophets; Torah later), CRC's ranges vs hebcal's, the quality bar for a public labeled AI voice (accented-but-correct vs native-sounding), whether CC-BY-NC tooling and a PocketTorah-derived share-alike base model are acceptable for an unpublished model, vendoring havarotjs, publishing the cell table, and amending the 2.0 spec.
 
 For Josh: which melody table (three diagnostic cells settle it: sof pasuk approach, etnachta melisma or syllabic, final cadence degree), the munach-before-zakef, tevir and double-pashta variants, elision, pronunciation parameters (ר, ח/ע, ת rafe, qamats, tsere, vocal shva, dagesh forte), what counts as a teaching error vs his own variance, the three consent grants, and one 45-minute session.
+
+## Rulings (Daniel, 2026-10-15)
+
+1. **Scope: haftarah and Torah.** The engine carries two cell tables; the text pipeline is the same.
+2. **Ranges: hebcal's traditional ranges.**
+3. **Quality bar: accented-but-correct ships.** "Sounds right, melodically correct, slightly American on resh and chet" is acceptable for a labeled AI voice.
+4. **Licensing: use what exists now.** CC-BY-NC aligner weights and a PocketTorah-derived share-alike base model are fine for private, unpublished models.
+5. **Josh's recording is optional.** If the result can be great and human-sounding without him, that is fine. He records only if it costs no significant extra work and sounds better. So pipeline A with a stock or Daniel's own prompt voice is the baseline; Josh's clip is an upgrade, not a dependency.
+6. **Stay on this branch** without amending the 2.0 spec yet; make the branch visible to main and the other coder.
