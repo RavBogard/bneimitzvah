@@ -21,6 +21,8 @@ Writes (sample rate 22050 for speech, 24000 for what SVC reads):
   02-timed-speech-24k.wav the same at 24 kHz (SVC input)
   02-world-stretch.wav    with --stretch world: the raw speech time-warped to the same timeline by WORLD
                           (vowel frames stretched, consonants kept), the after-the-fact alternative
+  02-world-pitched.wav    the timed speech with the score's f0 forced on by WORLD (no neural singing; the DSP
+                          baseline, and a pitch-carrying source for Seed-VC); off with --no-world-pitch
   target_f0.npy           50 frames/s, the score's f0 (trope/speech2sing.mjs scoreF0, in the plan as f0)
                           with the voiceless consonants zeroed, as SoulX-SVC reads it
   prompt_f0.npy           the prompt's f0 from its SoulX metadata (scripts/trope-prompt.mjs), with --prompt-meta
@@ -41,7 +43,7 @@ def derive_models(path):
     """Build <voice>.dur.onnx (extra output w_ceil) and <voice>.timed.onnx (w_ceil as an input) once."""
     import onnx
     base = os.path.splitext(path)[0]
-    dur_p, timed_p = base + ".dur.onnx", base + ".timed.onnx"
+    dur_p, timed_p = base + ".dur-v2.onnx", base + ".timed-v2.onnx"
     if os.path.exists(dur_p) and os.path.exists(timed_p):
         return dur_p, timed_p
     m = onnx.load(path)
@@ -49,10 +51,19 @@ def derive_models(path):
     if len(ceil) != 1:
         raise SystemExit(f"expected one Ceil node in {path}, found {len(ceil)}")
     w = ceil[0].output[0]
-    d = onnx.load(path)
+
+    def seeded(model):
+        # fixed seeds on the noise nodes, so a render is repeatable (Piper's export leaves them unseeded)
+        for n in model.graph.node:
+            if n.op_type in ("RandomNormalLike", "RandomNormal", "RandomUniformLike"):
+                for at in [x for x in n.attribute if x.name == "seed"]:
+                    n.attribute.remove(at)
+                n.attribute.append(onnx.helper.make_attribute("seed", 1234.0))
+        return model
+    d = seeded(onnx.load(path))
     d.graph.output.append(onnx.helper.make_tensor_value_info(w, onnx.TensorProto.FLOAT, ["batch", 1, "phonemes"]))
     onnx.save(d, dur_p)
-    t = onnx.load(path)
+    t = seeded(onnx.load(path))
     for n in t.graph.node:
         for i, x in enumerate(n.input):
             if x == w:
@@ -157,6 +168,19 @@ def world_stretch(audio, own, nat, new, out_len):
     return y[:out_len].astype(np.float32)
 
 
+def world_pitch(audio, f0_50):
+    """The timed speech re-synthesized by WORLD with the score's f0 on its voiced frames (the DSP baseline, and
+    the input a VC that tracks the source's pitch, such as Seed-VC's f0-conditioned model, needs)."""
+    import pyworld as pw
+    x = audio.astype(np.float64)
+    f0, t = pw.harvest(x, SR, frame_period=5.0, f0_floor=60, f0_ceil=500)
+    sp = pw.cheaptrick(x, f0, t, SR)
+    ap = pw.d4c(x, f0, t, SR)
+    score = np.interp(t, np.arange(len(f0_50)) / 50.0, f0_50)
+    new = np.where((f0 > 0) & (score > 0), score, 0.0)
+    return pw.synthesize(new, sp, ap, SR, frame_period=5.0).astype(np.float32)[: len(audio)]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("plan")
@@ -169,6 +193,7 @@ def main():
     ap.add_argument("--length", type=float, default=1.0)
     ap.add_argument("--max-cons", type=float, default=0.6)
     ap.add_argument("--stretch", choices=["none", "world"], default="world")
+    ap.add_argument("--no-world-pitch", dest="world_pitch", action="store_false")
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
     import onnxruntime as ort
@@ -255,6 +280,9 @@ def main():
         if f0[k] == 0 and c < total and covered[c] and not voiceless[c] and len(nz):
             f0[k] = curve[nz[np.argmin(np.abs(nz - k))]]
     np.save(os.path.join(a.out, "target_f0.npy"), f0)
+    if a.world_pitch:
+        wp = world_pitch(timed * g, f0)
+        sf.write(os.path.join(a.out, "02-world-pitched.wav"), wp * (0.89 / max(1e-6, float(np.abs(wp).max()))), SR)
     if a.prompt_meta:
         meta = json.load(open(a.prompt_meta, encoding="utf-8"))
         segs = meta if isinstance(meta, list) else [meta]

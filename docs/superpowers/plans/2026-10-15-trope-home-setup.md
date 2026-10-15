@@ -65,3 +65,32 @@ node scripts/trope-render.mjs --ref "I Samuel 20:18" --key D3 \
 On the 1660 Ti a verse takes about 6x its length; expect the 4070 to be several times faster (unmeasured).
 With 8 GB+ of VRAM the 30 s segment cap in `trope/soulx.mjs` (`MAX_SEGMENT_SECONDS`) could be raised.
 Cloud alternative: [`2026-10-15-trope-cloud-render.md`](2026-10-15-trope-cloud-render.md) (Modal).
+
+## 5. Speech-to-singing (voice-quality.md path 1; speech2sing-experiment.md)
+
+Extra pieces under the audio folder (HAFTARAH_AUDIO, default ~/haftarah-audio). Git Bash, from the repo:
+
+```bash
+A=${HAFTARAH_AUDIO:-$HOME/haftarah-audio}
+# TTS venv (CPU; separate from soulx-env, whose numpy must stay < 2). Pins: trope/env/tts-requirements.lock.txt
+py -3.12 -m venv $A/tts-env/venv
+$A/tts-env/venv/Scripts/python.exe -m pip install -r trope/env/tts-requirements.lock.txt
+# Phonikud-TTS voice (non-commercial licence), 63 MB
+mkdir -p $A/tts-env/models
+for f in michael.onnx model.config.json; do curl -L -o $A/tts-env/models/$f https://huggingface.co/Phonikud/phonikud-tts-checkpoints/resolve/main/$f; done
+# SoulX-Singer-SVC checkpoint (2.79 GB), run by the existing soulx-env venv
+mkdir -p $A/soulx-svc
+curl -L -o $A/soulx-svc/model-svc.pt https://huggingface.co/Soul-AILab/SoulX-Singer/resolve/main/model-svc.pt
+# SVC's content encoder (openai/whisper-base, about 290 MB) downloads itself into the HF cache on first use
+```
+
+The derived ONNX graphs (michael.dur-v2.onnx, michael.timed-v2.onnx) are built next to the voice on first run.
+Overrides: HAFTARAH_TTS_ENV, HAFTARAH_SOULX_ENV, HAFTARAH_SOULX_SVC_MODEL. The prompt defaults to
+$A/prompts/vocalset-m6-dona.{wav,json}; output goes to $A/renders/s2s/.
+
+```bash
+node scripts/trope-speech2sing.mjs --ref "I Samuel 20:18-19" --stage tts                  # CPU, seconds
+node scripts/trope-speech2sing.mjs --ref "I Samuel 20:18-19" --stage svc                  # GPU: 03-sung-svc.wav, pitch-timed.json
+node scripts/trope-speech2sing.mjs --ref "I Samuel 20:18-19" --stage svc --source world   # SVC over the WORLD-stretched take
+$A/asr-env/Scripts/python trope/asr_cer.py $A/renders/s2s refs.json                       # CER of the sung wavs (manifest.json)
+```

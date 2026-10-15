@@ -11,14 +11,18 @@ No auto pitch shift: the target f0 is the score's, in the key asked for. The con
 """
 import json, os, sys, time
 
-import numpy as np
-import soundfile as sf
-import torch
 
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     spec = json.load(open(sys.argv[1], encoding="utf-8"))
+    if not spec.get("device", "cuda").startswith("cuda"):
+        # SoulX's WhisperEncoder moves itself to CUDA when it can see a GPU, whatever device the model is on:
+        # hide the GPU so a CPU render never takes GPU memory from another job.
+        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"   # not "": Windows drops an empty variable
+    import numpy as np
+    import soundfile as sf
+    import torch
     sys.path.insert(0, spec["repo"])
     from soulxsinger.utils.file_utils import load_config
     from soulxsinger.utils.audio_utils import load_wav

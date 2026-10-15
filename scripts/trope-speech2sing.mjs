@@ -81,7 +81,7 @@ if (o.stage !== "tts") {
   };
   const jobsPath = join(outRoot, "svc-jobs.json");
   writeFileSync(jobsPath, JSON.stringify(jobs, null, 1));
-  py(exe(SOULX_ENV), [here("../trope/soulx_svc_runner.py"), jobsPath], { cwd: jobs.repo, env: { ...env, PYTHONPATH: jobs.repo } });
+  py(exe(SOULX_ENV), [here("../trope/soulx_svc_runner.py"), jobsPath], { cwd: jobs.repo, env: { ...env, PYTHONPATH: jobs.repo, ...(o.cpu ? { CUDA_VISIBLE_DEVICES: "-1" } : {}) } });
   for (const v of verses) {
     const wav = jobs.jobs.find(j => j.f0.startsWith(v.dir)).out;
     py(exe(TTS_ENV), [here("../trope/s2s_pitch.py"), join(v.dir, "plan.json"), wav, "--json", join(v.dir, `pitch-${o.source}.json`)]);
