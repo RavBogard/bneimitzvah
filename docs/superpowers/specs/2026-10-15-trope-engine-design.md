@@ -154,20 +154,21 @@ Syllables come from havarotjs 0.25.5 (MIT), vendored at `trope/vendor/havarotjs/
 | Deut 1:12 in Eicha trope; Eicha-trope haftarot | Not handled. No Eicha table exists. | Open item 5. |
 | Fallback visibility | `scoreVerse` does not copy the cell's `fallback: true` into `score.units[].cell`, so the "no fallback" checks in `trope-engine.test.mjs` (lines 22 and 47) cannot fail. A fallback is visible only as `id: "fallback:*"`. | Wave 1: carry the flag through; the test checks the id prefix too. |
 
-## 6. Renderers (provisional: to be confirmed by voice-feasibility.md)
+## 6. Renderers
 
-Everything in this section waits on voice-feasibility.md and will be revised from it. The ladder runs from cheapest to best. Each step consumes the score JSON unchanged.
+Confirmed by voice-feasibility.md (2026-10-15): step 2 rendered I Samuel 20:18 end to end, Windows-native on the GTX 1660 Ti, with 33 of 33 pitched notes within half a semitone of the score. The ladder runs from cheapest to best. Each step consumes the score JSON unchanged.
 
 | Step | Renderer | Input beyond the score | State |
 |---|---|---|---|
 | 0 | **MIDI audition.** `scoreToMidi`: format 0, PPQ 480, a lyric meta event with each syllable's phonemes | none | Exists |
 | 1 | **Floor: dependency-free concatenation.** A Node renderer, using no packages, pitch-shifts and time-stretches a small bank of syllable units (CV syllables and sustained vowels at three pitches, made once from the stock voice) to the score's notes and durations. The result is melodically exact and plainly synthetic. It is the low anchor in listening tests. | the unit bank | Planned |
-| 2 | **Zero-shot score-driven singing synthesis.** SoulX-Singer (Apache-2.0) takes notes, phonemes and a prompt clip. A JS emitter writes its metadata from the score: per syllable, ARPAbet tokens from the profile's `symbols.arpabet`, `note_pitch` from `midi`, durations in seconds, and `note_type` 2 for a syllable's first note, 3 for `slur`, 1 for rests. Hebrew goes through a hand-mapped ARPAbet table, with Mandarin tokens for ח and צ to be tried. | a prompt clip | Mechanics test under way (voice-feasibility.md) |
+| 2 | **Zero-shot score-driven singing synthesis.** SoulX-Singer (Apache-2.0) takes notes, phonemes and a prompt clip. A JS emitter writes its metadata from the score: per syllable, ARPAbet tokens from the profile's `symbols.arpabet`, `note_pitch` from `midi`, durations in seconds, and `note_type` 2 for a syllable's first note, 3 for `slur`, 1 for rests. Hebrew goes through a hand-mapped ARPAbet table, with Mandarin tokens for ח and צ to be tried. | a prompt clip | Works locally: fp16, Python 3.12, torch 2.2.0+cu121, 2.9 GB of GPU memory, about 86 s per 14 s verse, so a haftarah is about 35 min and the annual cycle a few overnight batches. The free Space is for quick comparisons only. The emitter must send an all-zero f0 string, not an empty one. |
 | 3 | **Optional voice conversion.** SoulX-Singer-SVC or RVC/Applio polishes the step 2 output, with the score's pitch as the F0 input, so the melody is never re-estimated. | the prompt voice | Optional |
 | 4 | **Ceiling: fine-tuned DiffSinger.** A real Hebrew phoneme dictionary generated from `pronunciation.json`, labels generated from the scores, SOFA/HubertFA alignment, OpenUtau or CLI rendering on CPU. A PocketTorah-derived base is allowed privately (ruling 4). The published voice must not be the PocketTorah reader's. | training data and a GPU | Later |
 
 - **Offline only.** Rendering is a batch job run by Daniel or Claude on a local machine or rented or free GPU, never at request time and never on Vercel. The output is a mono MP3 per verse, loudness-normalized as in 2.0 section 5.9, uploaded to the separate public audio Blob store that the 2.0 spec defines.
-- **The voice.** The prompt voice is stock or synthetic: a clip with no named human behind it, for example a permissively licensed TTS voice. No living person's voice is cloned. Choosing the clip, and voice-feasibility.md's other candidates, is open item 1.
+- **The voice.** Whose voice it is does not matter (ruling). A voice that belongs to nobody does not exist for this model, which has no speaker embedding to interpolate. The model's shipped prompts are stems of commercial pop recordings and serve internal tests only. The published prompt is either Daniel's own 20-30 s clip (voice-feasibility.md's default: no licence stack, no consent question) or an anonymised VocalSet male singer (CC BY 4.0; the singers never consented to cloning, so it is credited and logged). Open item 1.
+- **The weights and the environment** live outside the repo, in `C:\Users\dsbog\haftarah-audio\` (checkpoint, venv, renders). Nothing from it is committed or uploaded except the finished MP3s.
 - **The renderer for Wave 3** is the lowest step that passes the gates in section 7.
 
 ## 7. Evaluation gates
@@ -213,8 +214,8 @@ The 2.0 spec owns the player (section 5.9). This engine adds:
 
 ## 11. Open items
 
-1. **Prompt voice and first listen.** Daniel listens to the first render (voice-feasibility.md). He then rules on the stock or synthetic prompt clip, given that report's other candidates: his own voice, or the VocalSet singers, who never consented to cloning.
-2. **Compute.** A free Hugging Face tier, HF PRO ($9 a month), Colab or a rented GPU. Whether to install WSL2 on this PC.
+1. **Prompt voice and first listen.** Daniel listens to the first renders in `C:\Users\dsbog\haftarah-audio\renders`, then picks the published prompt: his own clip, or a VocalSet male singer (licensed, never consented to cloning).
+2. **Compute.** Local on the GTX 1660 Ti is the baseline and needs no WSL2. Whether to also pay for HF PRO ($9 a month) or a rented GPU to render the cycle faster.
 3. **CRC's aliyah cut points.** Hebcal's ends are the default. Should a per-week override come from CRC's actual cut points now or later (torah-grammar.md Q10; 2.0 spec open item 4)?
 4. **Decalogue system.** Elyon, tachton, or elyon on Shavuot only. Tiberian or printed verse division. Whether the 27-verse table may be derived from Wikisource MAM (CC BY-SA 4.0) and shipped under that licence.
 5. **Special melodies without a cantor.** For the Song of the Sea, Journeys, the Chiefs, *chazak*, Deut 1:12 and the Eicha-trope haftarot: does each get a published-table melody, regular trope with a label, or nothing? The same question applies to each nusach's special tunes (S&P Dipuranita, Moroccan Three Weeks).

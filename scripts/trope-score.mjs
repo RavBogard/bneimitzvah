@@ -10,8 +10,8 @@ import { fileURLToPath } from "node:url";
 import { scoreVerse, degreeLabel } from "../trope/melody.mjs";
 import { scoreToMidi } from "../trope/midi.mjs";
 import { verseUnits } from "../trope/text.mjs";
+import { fetchReading } from "../trope/sefaria.mjs";
 
-const HEBREW_VERSION = "Miqra according to the Masorah";
 const VERSE_GAP = 1;   // quarters of rest between verses in the MIDI
 
 const args = process.argv.slice(2);
@@ -27,30 +27,6 @@ if (!input && !ref) {
 const tablePath = opt("--table") || fileURLToPath(new URL("../trope/cells/haftarah.json", import.meta.url));
 const table = JSON.parse(readFileSync(tablePath, "utf8"));
 const scoreOpts = { table, key: opt("--key") || "D4", tempo: Number(opt("--tempo") || 96), elision: args.includes("--elision") };
-
-// Sefaria returns a string for one verse, an array for a range in one chapter, and nested arrays
-// across chapters; refs come back the same way, so flatten both in step.
-const flat = x => Array.isArray(x) ? x.flatMap(flat) : [x];
-async function fetchReading(r) {
-  const url = `https://www.sefaria.org/api/v3/texts/${encodeURIComponent(r.replace(/\s+/g, " "))}?version=hebrew|${encodeURIComponent(HEBREW_VERSION)}&return_format=default`;
-  const res = await fetch(url, { headers: { accept: "application/json", "user-agent": "crc-haftarah-sheet/1.0" } });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${url}`);
-  const j = await res.json();
-  if (j.error) throw new Error(j.error);
-  const v = (j.versions || []).find(x => x.languageFamilyName === "hebrew");
-  if (!v || v.versionTitle !== HEBREW_VERSION) throw new Error(`no MAM text for ${r}`);
-  // Verse refs are rebuilt from the range's start: a nested array is one chapter per element, the
-  // first starting at the range's first verse and the rest at verse 1.
-  const book = (j.book || j.indexTitle || r.replace(/\s+\d.*$/, "")).trim();
-  const [startChapter, startVerse] = (j.sections || [1, 1]).map(Number);
-  const chapters = Array.isArray(v.text) && Array.isArray(v.text[0]) ? v.text : [Array.isArray(v.text) ? v.text : [v.text]];
-  const out = [];
-  chapters.forEach((ch, c) => flat(ch).forEach((he, i) => {
-    const verse = (c === 0 ? startVerse : 1) + i;
-    if (he) out.push({ ref: `${book} ${startChapter + c}:${verse}`, he });
-  }));
-  return out;
-}
 
 const verses = [];
 if (input) {
