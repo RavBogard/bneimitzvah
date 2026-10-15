@@ -1,0 +1,136 @@
+import { removeTaamim } from "./removeTaamim.js";
+import { sequence } from "./sequence.js";
+const snippets = [
+    "אָבְדַן",
+    "אָבְנ",
+    "אָזְנ",
+    "אָכְל",
+    "אָנִיּ",
+    "אָפְנ",
+    "אָרְח",
+    "אָרְכּ",
+    "אָשְׁר",
+    "בָאְשׁ",
+    "בָשְׁתּ",
+    "בָּשְׁתּ",
+    "גָבְה",
+    "גָּבְה",
+    "גָדְל",
+    "גָּדְל",
+    "גָּלְי", // partial Goliath
+    "גָרְנ",
+    "גָּרְנ",
+    "דָּכְי",
+    "דָּרְבָֽן",
+    "חָדְשׁ",
+    "חָכְמ",
+    "חָלְיֽוֹ",
+    "חָלְיֹו",
+    "חָפְנ",
+    "חָפְשׁ",
+    "חָרְב",
+    "חָרְנֶפֶר",
+    "חָרְפּ",
+    "חָשְׁכּ",
+    "יָפְי",
+    "יָשְׁר",
+    "מָרְדְּכַי",
+    "מָתְנ",
+    "סָלְתּ",
+    "עָזּ",
+    "עָמְר",
+    "עָנְי",
+    "עָפְנִי",
+    "עָפְר",
+    "עָרְל",
+    "עָרְפּ",
+    "עָשְׁר",
+    "צָרְכּ",
+    "קָדְק",
+    "קָדְשׁ",
+    "קָרְבּ",
+    "קָרְח",
+    "רָגְז",
+    "רָחְבּ",
+    "שָׁרְשׁ",
+    "שָׁרָשׁ",
+    "תָּכְנִית"
+];
+const wholeWords = [
+    // nouns
+    "חׇפְרַע", // personal name, see Jer 44:30
+    "חָק־",
+    "(מִ)?כָּל־", // kol w/ maqqef optionally preceded by mem
+    "(וּבְ|וְ|בְּ|לְ)?כָל־", // kol w/ maqqef optionally preceded by shureq + bet, waw, bet, or lamed
+    "^(מִ)?כָּל ?$", // kol w/o maqqef optionally preceded by mem
+    "^(וּבְ|וְ|בְּ|לְ)?כָל ?$", // kol w/o maqqef optionally preceded by shureq + bet, waw, bet, or lamed
+    "מָר־",
+    "עָתְנִיאֵל",
+    "רָב־",
+    "תָם־",
+    "תָּם־",
+    // verbs
+    "חָנֵּנִי",
+    "וַיָּמָת",
+    "וַיָּנָס",
+    "וַיָּקָם",
+    "וַיָּרָם",
+    "וַיָּשָׁב",
+    "וַתָּמָת",
+    "וַתָּקָם",
+    "וַתָּשָׁב"
+];
+const sequenceSnippets = (arr) => {
+    return arr.map((snippet) => sequence(snippet.normalize("NFKD"))
+        .flat()
+        .reduce((a, c) => a + c.text, ""));
+};
+const snippetsRegx = sequenceSnippets(snippets);
+const wholeWordsRegx = sequenceSnippets(wholeWords);
+export const convertsQametsQatan = (word) => {
+    const qametsReg = /\u{05B8}/u;
+    const qametsQatReg = /\u{05C7}/u;
+    const hatefQamRef = /\u{05B3}/u;
+    // if no qamets or has qamets qatan char, return
+    if (!qametsReg.test(word) || qametsQatReg.test(word)) {
+        return word;
+    }
+    // check for hatef qamets followed by qamets pattern
+    if (hatefQamRef.test(word)) {
+        const hatefPos = word.indexOf("\u{05B3}");
+        const qamPos = word.indexOf("\u{05B8}");
+        if (qamPos !== -1 && qamPos < hatefPos) {
+            return word.substring(0, qamPos) + "\u{05C7}" + word.substring(qamPos + 1);
+        }
+    }
+    const [noTaamim, charPos] = removeTaamim(word);
+    // whole words will be more frequent so check first
+    for (const wholeWord of wholeWordsRegx) {
+        const regEx = new RegExp(wholeWord);
+        const match = noTaamim.match(regEx);
+        if (!match) {
+            continue;
+        }
+        else {
+            const lastQam = word.lastIndexOf("\u{05B8}");
+            return word.substring(0, lastQam) + "\u{05C7}" + word.substring(lastQam + 1);
+        }
+    }
+    for (const snippet of snippetsRegx) {
+        const regEx = new RegExp(snippet);
+        const match = noTaamim.match(regEx);
+        if (!match) {
+            continue;
+        }
+        else {
+            const start = charPos[match.index];
+            const end = charPos[match[0].length] + start;
+            const matched = word.substring(start, end);
+            const withQQatan = matched.split(qametsReg).join("\u{05C7}");
+            word = word.split(matched).join(withQQatan);
+            return word;
+        }
+    }
+    return word;
+};
+//# sourceMappingURL=qametsQatan.js.map
