@@ -3,11 +3,14 @@
 Driven by scripts/trope-render.mjs, which writes the jobs file:
   python soulx_runner.py jobs.json
 jobs.json = { repo, model, config, phoneset, prompt_wav, prompt_meta, device, fp16,
+              control ("score" | "melody"), n_steps, cfg, post,
               jobs: [{ meta, wav }], concat: { out, gap } | null }
 
 Loading the 2.8 GB checkpoint takes ~12 s and SoulX's own CLI loads it per call, so this keeps the model
 resident and calls the CLI's own process() per verse: the inference path stays exactly the one the
-feasibility run measured (score control, no auto_shift, pitch_shift 0). One line per verse goes to
+feasibility run measured (no auto_shift, pitch_shift 0). control is "score" (note_pitch drives the melody,
+f0 is ignored) unless the emitter wrote a synthetic f0 (--f0 synth), which needs "melody" (f0 drives it,
+note_pitch is ignored). n_steps / cfg override the config's flow-matching steps (32) and guidance (3). One line per verse goes to
 stdout as "@@ {json}" for the Node side to build the manifest; a verse that fails is reported and skipped.
 """
 import json
@@ -25,6 +28,18 @@ def emit(obj):
 
 class Ctx:
     """The loaded model plus the argument bag SoulX's process() reads; built once, reused per verse."""
+
+
+SETTINGS = ("control", "n_steps", "cfg", "post")
+
+
+def apply_settings(a, spec):
+    """The per-render settings from the jobs spec (absent keys = the defaults: score control, the config's
+    n_steps and cfg, no post-processing). Shared with trope/modal_render.py, which gets them per call."""
+    a.control = spec.get("control") or "score"
+    a.cfg.infer.n_steps = int(spec["n_steps"]) if spec.get("n_steps") else a.base_steps
+    a.cfg.infer.cfg = float(spec["cfg"]) if spec.get("cfg") is not None else a.base_cfg
+    a.post = bool(spec.get("post"))
 
 
 def load(spec):
@@ -48,9 +63,10 @@ def load(spec):
     a.prompt_metadata_path = spec["prompt_meta"]
     a.auto_shift = False
     a.pitch_shift = 0
-    a.control = "score"
     a.use_fp16 = bool(spec.get("fp16", True))
     a.cfg = load_config(a.config)
+    a.base_steps, a.base_cfg = a.cfg.infer.n_steps, a.cfg.infer.cfg
+    apply_settings(a, spec)
 
     t0 = time.time()
     a.model = build_model(a.model_path, a.cfg, device=a.device, use_fp16=a.use_fp16)
@@ -58,6 +74,30 @@ def load(spec):
     if a.device.startswith("cuda"):
         torch.cuda.reset_peak_memory_stats()
     return a
+
+
+def postprocess(wav_path, lufs=-18.0, ceiling_db=-1.0):
+    """--post: every verse to the same loudness (-18 LUFS, as the prompt), then a gentle peak limiter so no
+    sample passes -1 dBFS: gain = min(1, ceiling / |x|), held over 5 ms and smoothed over 2 ms, so peaks
+    are turned down rather than clipped."""
+    import numpy as np
+    import soundfile as sf
+    from scipy.ndimage import maximum_filter1d, uniform_filter1d
+    y, sr = sf.read(wav_path, dtype="float32")
+    try:
+        import pyloudnorm as pyln
+        loud = pyln.Meter(sr).integrated_loudness(y)
+        if np.isfinite(loud):
+            y = y * (10 ** ((lufs - loud) / 20))
+    except ImportError:
+        pass
+    ceil = 10 ** (ceiling_db / 20)
+    need = np.minimum(1.0, ceil / np.maximum(np.abs(y), 1e-9))
+    hold = int(sr * 0.005) | 1
+    g = -maximum_filter1d(-need, size=hold)                 # running minimum: hold the reduction
+    g = uniform_filter1d(g, size=int(sr * 0.002) | 1)
+    y = np.clip(y * g, -ceil, ceil)
+    sf.write(wav_path, y.astype(np.float32), sr)
 
 
 def render_one(a, meta_path, wav_path):
@@ -75,6 +115,8 @@ def render_one(a, meta_path, wav_path):
         if d:
             os.makedirs(d, exist_ok=True)
         shutil.move(os.path.join(tmp, "generated.wav"), wav_path)
+        if getattr(a, "post", False):
+            postprocess(wav_path)
         return sf.info(wav_path).duration, time.time() - t1
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

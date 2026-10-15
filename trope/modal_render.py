@@ -161,7 +161,7 @@ class Renderer:
     @modal.method()
     def render(self, call: dict) -> list:
         """call = {prompt_wav: bytes, prompt_ext: ".mp3", prompt_meta: str,
-                   jobs: [{i: int, meta: str}]}  ->  [{i, wav: bytes|None, seconds, render_s, error?, load_s}]"""
+                   settings: {control, n_steps, cfg, post}, jobs: [{i: int, meta: str}]}  ->  [{i, wav: bytes|None, seconds, render_s, error?, load_s}]"""
         import traceback
 
         tmp = tempfile.mkdtemp(prefix="job_")
@@ -172,6 +172,7 @@ class Renderer:
         with open(pm, "w", encoding="utf-8") as f:
             f.write(call["prompt_meta"])
         self.ctx.prompt_wav_path, self.ctx.prompt_metadata_path = pw, pm
+        self.runner.apply_settings(self.ctx, call.get("settings") or {})
         out = []
         for job in call["jobs"]:
             meta = os.path.join(tmp, f"meta-{job['i']}.json")
@@ -220,7 +221,8 @@ def render(jobs: str, per_call: int = 3, no_fp16: bool = False):
     for i, j in enumerate(job_list):
         with open(j["meta"], encoding="utf-8") as f:
             items.append({"i": i, "meta": f.read()})
-    calls = [{"prompt_wav": wav_bytes, "prompt_ext": ext, "prompt_meta": meta_text, "jobs": c}
+    settings = {k: spec.get(k) for k in ("control", "n_steps", "cfg", "post")}
+    calls = [{"prompt_wav": wav_bytes, "prompt_ext": ext, "prompt_meta": meta_text, "settings": settings, "jobs": c}
              for c in chunk(items, per_call)]
 
     info = download_weights.remote()  # no-op after the first run

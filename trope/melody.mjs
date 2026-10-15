@@ -269,7 +269,7 @@ export function scoreVerse(unitsJson, { table, key = "D4", tempo = 96, elision =
         out.events.push({ t, dur: n.dur, midi: n.midi, deg: n.deg, unit: ui, syllable: si, slur: n.slur, ...(ni === 0 ? { lyric: (s.ph || []).join(""), he: s.he } : {}) });
         t += n.dur;
       });
-      return { he: s.he, ph: s.ph || [], stress: s.stress || null, notes };
+      return { he: s.he, ph: s.ph || [], stress: s.stress || null, ...(s.sheva === "na" ? { sheva: "na" } : {}), notes };
     });
     // A breath after sof pasuk only; the other phrase ends are carried by their held notes.
     if (DISJUNCTIVE_END.has(ctx.trope)) t += 0.5;

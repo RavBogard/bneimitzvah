@@ -2,14 +2,18 @@
 // network, Python or Modal. Dependency-free.
 import { existsSync, readFileSync } from "node:fs";
 import { join, delimiter } from "node:path";
+import { SOULX_STYLES, PHRASING_MODES, RHYTHM_MODES, STRESS_MODES, TOKEN_MODES, F0_MODES } from "./soulx.mjs";
 
 export const BACKENDS = ["local", "modal"];
-export const USAGE = 'usage: node scripts/trope-render.mjs (--ref "Book c:v-c:v" | --refs "ref;ref" | --refs-file file | --year YYYY) [--table path] [--key D4] [--tempo 96] [--prompt wav --prompt-meta json] [--chet en|zh] [--out dir] [--limit N] [--gap 0.6] [--full wav] [--cpu] [--dry-run]\n  cloud: [--backend local|modal] [--gpu L4] [--max-containers 10] [--per-call 3] [--no-fp16] [--modal path-to-modal]';
+export const USAGE = 'usage: node scripts/trope-render.mjs (--ref "Book c:v-c:v" | --refs "ref;ref" | --refs-file file | --year YYYY) [--table path] [--key D4] [--tempo 96] [--prompt wav --prompt-meta json] [--chet en|zh] [--out dir] [--limit N] [--gap 0.6] [--full wav] [--cpu] [--dry-run]\n  voice: [--style v1|v2] [--phrasing words|phrases] [--rhythm grid|speech] [--stress lexical|full|flat] [--tokens syllable|word] [--f0 zeros|synth] [--steps 32] [--cfg 3] [--post]\n  cloud: [--backend local|modal] [--gpu L4] [--max-containers 10] [--per-call 3] [--no-fp16] [--modal path-to-modal]';
 
 export class UsageError extends Error {}
 
-const VALUE_FLAGS = ["--ref", "--refs", "--refs-file", "--year", "--table", "--key", "--tempo", "--prompt", "--prompt-meta", "--chet", "--out", "--limit", "--gap", "--full", "--backend", "--gpu", "--max-containers", "--per-call", "--modal"];
-const BOOL_FLAGS = ["--cpu", "--dry-run", "--no-fp16"];
+const VALUE_FLAGS = ["--ref", "--refs", "--refs-file", "--year", "--table", "--key", "--tempo", "--prompt", "--prompt-meta", "--chet", "--out", "--limit", "--gap", "--full", "--backend", "--gpu", "--max-containers", "--per-call", "--modal", "--style", "--phrasing", "--rhythm", "--stress", "--tokens", "--f0", "--steps", "--cfg"];
+const BOOL_FLAGS = ["--cpu", "--dry-run", "--no-fp16", "--post"];
+
+// The style SoulX renders with when no --style is given (SOULX_STYLES in trope/soulx.mjs).
+export const DEFAULT_STYLE = "v1";
 
 // One reference per line (or ';'-separated); blank lines and '#' comments ignored; duplicates dropped.
 export function parseRefList(text) {
@@ -63,8 +67,26 @@ export function parseRenderArgs(argv, { readFile = p => readFileSync(p, "utf8") 
   const batch = year !== null || refs.length > 1;
   if (batch && raw["--full"]) throw new UsageError("--full names one file; with several readings each gets <out>/<slug>/<slug>-full.wav");
 
+  const styleName = raw["--style"] || DEFAULT_STYLE;
+  if (!SOULX_STYLES[styleName]) throw new UsageError(`--style must be one of ${Object.keys(SOULX_STYLES).join(", ")}, got "${styleName}"`);
+  const voice = { ...SOULX_STYLES[styleName] };
+  for (const [flag, key, ok] of [["--phrasing", "phrasing", PHRASING_MODES], ["--rhythm", "rhythm", RHYTHM_MODES], ["--stress", "stress", STRESS_MODES], ["--tokens", "tokens", TOKEN_MODES], ["--f0", "f0", F0_MODES]]) {
+    if (raw[flag] === undefined) continue;
+    if (!ok.includes(raw[flag])) throw new UsageError(`${flag} must be one of ${ok.join(", ")}, got "${raw[flag]}"`);
+    voice[key] = raw[flag];
+  }
+  // SoulX reads f0 only under melody control, and note_pitch only under score control.
+  const control = voice.f0 === "synth" ? "melody" : "score";
+  const steps = raw["--steps"] ? posInt(raw["--steps"], "--steps") : null;
+  let cfg = null;
+  if (raw["--cfg"] !== undefined) {
+    cfg = Number(raw["--cfg"]);
+    if (!Number.isFinite(cfg) || cfg < 0) throw new UsageError(`--cfg needs a non-negative number, got "${raw["--cfg"]}"`);
+  }
+
   return {
     backend, refs, year, batch,
+    style: styleName, voice, control, steps, cfg, post: flags.has("--post"),
     table: raw["--table"], key: raw["--key"] || "D4", tempo: Number(raw["--tempo"] || 96),
     prompt: raw["--prompt"], promptMeta: raw["--prompt-meta"], chet: raw["--chet"] || "en",
     out: raw["--out"], limit: raw["--limit"] ? Number(raw["--limit"]) : undefined, gap: Number(raw["--gap"] || 0.6), full: raw["--full"],

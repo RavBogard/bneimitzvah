@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { join, delimiter } from "node:path";
-import { parseRenderArgs, parseRefList, findModal, modalInvocation, UsageError } from "../trope/render-cli.mjs";
+import { parseRenderArgs, parseRefList, findModal, modalInvocation, UsageError, DEFAULT_STYLE } from "../trope/render-cli.mjs";
+import { SOULX_STYLES } from "../trope/soulx.mjs";
 import { isolatedEnv } from "./helpers/isolatedEnv.mjs";
 import { concatWavs, readWav, writeWav } from "../trope/wav.mjs";
 
@@ -107,4 +108,26 @@ test("concatWavs joins mono WAVs with a silent gap (int16 and float32)", () => {
     assert.ok(Math.abs(r.samples[849] + 0.25) < 1e-3);
   }
   assert.throws(() => concatWavs([writeWav({ rate: 1000, samples: tone(1, 0) }), writeWav({ rate: 2000, samples: tone(1, 0) })]), /sample rate/);
+});
+
+test("voice options: --style picks a SOULX_STYLES set, single flags override it, f0 synth selects melody control", () => {
+  const d = parse("--ref", "I Samuel 20:18");
+  assert.equal(d.style, DEFAULT_STYLE);
+  assert.deepEqual(d.voice, SOULX_STYLES[DEFAULT_STYLE]);
+  assert.equal(d.control, "score");
+  assert.equal(d.steps, null);
+  assert.equal(d.cfg, null);
+  assert.equal(d.post, false);
+  const v1 = parse("--ref", "I Samuel 20:18", "--style", "v1", "--phrasing", "phrases", "--stress", "flat");
+  assert.deepEqual(v1.voice, { ...SOULX_STYLES.v1, phrasing: "phrases", stress: "flat" });
+  const m = parse("--ref", "I Samuel 20:18", "--f0", "synth", "--steps", "64", "--cfg", "2.5", "--post");
+  assert.equal(m.control, "melody");
+  assert.equal(m.steps, 64);
+  assert.equal(m.cfg, 2.5);
+  assert.equal(m.post, true);
+  assert.throws(() => parse("--ref", "x", "--style", "v9"), /--style/);
+  assert.throws(() => parse("--ref", "x", "--rhythm", "swing"), /--rhythm must be one of/);
+  assert.throws(() => parse("--ref", "x", "--tokens", "phone"), /--tokens/);
+  assert.throws(() => parse("--ref", "x", "--steps", "0"), /--steps/);
+  assert.throws(() => parse("--ref", "x", "--cfg", "-1"), /--cfg/);
 });

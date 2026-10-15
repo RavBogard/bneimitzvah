@@ -5,6 +5,8 @@
 //   node scripts/trope-render.mjs --ref "I Samuel 20:18-42" [--table trope/cells/haftarah.json] [--key D4]
 //     [--tempo 96] [--prompt <wav> --prompt-meta <json>] [--chet en|zh] [--out <dir>] [--limit N]
 //     [--gap 0.6] [--full <wav>] [--cpu] [--dry-run]
+//     [--style v1|v2] [--phrasing words|phrases] [--rhythm grid|speech] [--stress lexical|full|flat]
+//     [--tokens syllable|word] [--f0 zeros|synth] [--steps 32] [--cfg 3] [--post]
 //     [--backend local|modal] [--gpu L4] [--max-containers 10] [--per-call 3] [--no-fp16] [--modal <exe>]
 // Batch: --refs "A;B;C", --refs-file refs.txt (one ref per line, # comments) or --year 2027 (every Shabbat
 // and holiday haftarah Hebcal lists for that Gregorian year, haftarah only). Each reading renders into
@@ -19,6 +21,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
+import { homedir } from "node:os";
 import { scoreVerse } from "../trope/melody.mjs";
 import { verseUnits } from "../trope/text.mjs";
 import { fetchReading } from "../trope/sefaria.mjs";
@@ -28,7 +31,7 @@ import { parseRenderArgs, UsageError, USAGE, findModal, modalInvocation } from "
 import { concatWavs } from "../trope/wav.mjs";
 import { checkPromptMeta } from "../trope/prompt.mjs";
 
-const AUDIO_ROOT = "C:\\Users\\dsbog\\haftarah-audio";
+const AUDIO_ROOT = process.env.HAFTARAH_AUDIO || join(homedir(), "haftarah-audio");
 const ENV = process.env.HAFTARAH_SOULX_ENV || join(AUDIO_ROOT, "soulx-env");
 const MODEL = process.env.HAFTARAH_SOULX_MODEL || join(AUDIO_ROOT, "soulx", "model.pt");
 const REPO = join(ENV, "SoulX-Singer");
@@ -83,7 +86,7 @@ for (const ref of refs) {
     // The end-of-reading cadence belongs to the reading's real last verse, also under --limit.
     const units = { ...verseUnits(v.he, { final: i === fetched.length - 1 }), ref: v.ref };
     const score = scoreVerse(units, scoreOpts);
-    const segments = scoreToSoulx(score, { chet: o.chet });
+    const segments = scoreToSoulx(score, { chet: o.chet, ...o.voice });
     const name = `${String(i + 1).padStart(2, "0")}-${slug(v.ref)}`;
     const json = join(outDir, "json", `${name}.json`);
     writeFileSync(json, JSON.stringify(segments, null, 2));
@@ -119,6 +122,7 @@ const jobsSpec = () => ({
   phoneset: join(REPO, "soulxsinger", "utils", "phoneme", "phone_set.json"),
   prompt_wav: resolve(promptWav), prompt_meta: resolve(promptMeta),
   device: o.cpu ? "cpu" : "cuda", fp16: o.backend === "modal" ? o.modal.fp16 : !o.cpu,
+  control: o.control, n_steps: o.steps, cfg: o.cfg, post: o.post,
   jobs: allVerses.map(v => ({ meta: v.json, wav: v.wav })),
   // The local runner concatenates one reading itself; Modal readings are joined here in Node (trope/wav.mjs).
   concat: o.backend === "local" && !o.batch ? { out: readings[0].fullWav, gap: o.gap } : null,
@@ -226,6 +230,7 @@ for (const rd of readings) {
   }
   const manifest = {
     ref: rd.ref, created: new Date().toISOString(), backend: o.backend, table: table.name || tablePath, key: scoreOpts.key, tempo: scoreOpts.tempo, chet: o.chet,
+    style: o.style, voice: o.voice, control: o.control, steps: o.steps ?? 32, cfg: o.cfg ?? 3, post: o.post,
     prompt: { wav: resolve(promptWav), meta: resolve(promptMeta), publishable: !defaultPrompt },
     ...(o.backend === "modal" ? { modal: { gpu: o.modal.gpu, maxContainers: o.modal.maxContainers, perCall: o.modal.perCall, fp16: o.modal.fp16, app: "haftarah-soulx" } } : { model: MODEL, env: ENV }),
     loadSeconds: loaded?.load_s ?? null, memory: memory ?? null, wallSeconds, full,
