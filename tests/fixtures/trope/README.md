@@ -53,3 +53,13 @@ The subset of SoulX-Singer's `soulxsinger/utils/phoneme/phone_set.json` (commit
 all 70 `en_` CMU ARPAbet tokens and the `zh_` pinyin syllables with initial h or z (the `chet: "zh"` variant).
 `tests/trope-soulx.test.mjs` checks every emitted token against it, so the test needs no Python. Regenerate from
 the clone in `C:\Users\dsbog\haftarah-audio\soulx-env\SoulX-Singer` if the emitter starts using other tokens.
+
+## Moroccan: `idelsohn-272-joshua-1-14.json`
+
+Idelsohn, *Thesaurus* vol. 5 (1928/29, public domain), no. 272: Joshua 1:14 chanted in the Moroccan (Fez)
+Prophets mode, transcribed word by word from the archive.org scan (book p. 103), with the MAM text of the verse.
+Each word: Idelsohn's syllables, the ta'am, the printed pitches per syllable (C4 = middle C), and whether the
+Moroccan table (`trope/cells/haftarah-moroccan.json`) reproduces it `exact`ly, by `contour`, or is `divergent`
+(the table follows no. 271 there; `variants` names the cell variant that sings 272's reading). Used by
+`tests/trope-moroccan.test.mjs`; the transcription and choices are in
+`docs/superpowers/research/2026-10-15-trope-engine/moroccan-table.md`.

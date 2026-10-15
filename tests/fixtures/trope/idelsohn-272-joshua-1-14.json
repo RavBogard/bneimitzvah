@@ -1,0 +1,177 @@
+{
+  "source": "A. Z. Idelsohn, Thesaurus of Oriental Hebrew Melodies vol. 5 (1928/29), no. 272 \"(Jos. I 14)\", book p. 103; scan https://archive.org/details/31761125265157 page index 120. Public domain.",
+  "transcribed": "2026-10-15, from a 500-600 dpi render of the scan; noteheads located with a staff-line/notehead detector and every note read by eye against it. Treble clef, no key signature. Pitches as printed (C4 = middle C). Durations are not recorded here (see moroccan-table.md §2).",
+  "syllables": "Idelsohn's own syllables (his transliteration, e.g. jês'-bu has 2 where the engine's vocal sheva gives 3).",
+  "match": "exact = the Moroccan table sings the same pitches on the same syllables; contour = the same pitch sequence once repeated notes are merged (a repeated reciting note, or a vocal sheva Idelsohn does not sing as a syllable); divergent = no. 271 prints this ta'am differently and the table follows 271 (variant names the cell variant that reproduces 272, if any).",
+  "ref": "Joshua 1:14",
+  "he": "נְשֵׁיכֶ֣ם טַפְּכֶם֮ וּמִקְנֵיכֶם֒ יֵשְׁב֕וּ בָּאָ֕רֶץ אֲשֶׁ֨ר נָתַ֥ן לָכֶ֛ם מֹשֶׁ֖ה בְּעֵ֣בֶר הַיַּרְדֵּ֑ן וְאַתֶּם֩ תַּעַבְר֨וּ חֲמֻשִׁ֜ים לִפְנֵ֣י אֲחֵיכֶ֗ם כֹּ֚ל גִּבּוֹרֵ֣י הַחַ֔יִל וַעֲזַרְתֶּ֖ם אוֹתָֽם׃",
+  "words": [
+    {
+      "he": "נְשֵׁיכֶ֣ם",
+      "idelsohn": "Nĕ-sê-hem",
+      "taam": "munach",
+      "pitches": [["E4"], ["E4"], ["E4"]],
+      "match": "exact"
+    },
+    {
+      "he": "טַפְּכֶם֮",
+      "idelsohn": "ta-pĕ-hem",
+      "taam": "zarka",
+      "pitches": [["E4"], ["A4"], ["E4", "F4", "E4", "F4", "E4", "D4"]],
+      "match": "exact"
+    },
+    {
+      "he": "וּמִקְנֵיכֶם֒",
+      "idelsohn": "u-miq-nê-hem",
+      "taam": "segol",
+      "pitches": [["D4"], ["E4"], ["D4"], ["C4"]],
+      "match": "exact"
+    },
+    {
+      "he": "יֵשְׁב֕וּ",
+      "idelsohn": "jês'-bu",
+      "taam": "zakef-gadol",
+      "pitches": [["E4"], ["D4", "C4"]],
+      "match": "contour",
+      "note": "The engine reads the sheva as vocal (je-she-vu); Idelsohn sings two syllables."
+    },
+    {
+      "he": "בָּאָ֕רֶץ",
+      "idelsohn": "ba-a-reṣ",
+      "taam": "zakef-gadol",
+      "pitches": [["E4"], ["D4"], ["C4"]],
+      "match": "exact"
+    },
+    {
+      "he": "אֲשֶׁ֨ר",
+      "idelsohn": "ă-ser",
+      "taam": "kadma",
+      "pitches": [["E4"], ["E4"]],
+      "match": "exact"
+    },
+    {
+      "he": "נָתַ֥ן",
+      "idelsohn": "na-tan",
+      "taam": "mercha",
+      "pitches": [["E4"], ["D4"]],
+      "match": "exact"
+    },
+    {
+      "he": "לָכֶ֛ם",
+      "idelsohn": "la-hem",
+      "taam": "tevir",
+      "pitches": [["E4"], ["E4", "D4", "C4"]],
+      "match": "contour",
+      "note": "272 repeats E on the stressed syllable before 271's D~C."
+    },
+    {
+      "he": "מֹשֶׁ֖ה",
+      "idelsohn": "mô-so",
+      "taam": "tipcha",
+      "pitches": [["C4"], ["E4"]],
+      "match": "divergent",
+      "note": "271 prints tifha (etnachta half) E E."
+    },
+    {
+      "he": "בְּעֵ֣בֶר",
+      "idelsohn": "bĕ-ʿê-ber",
+      "taam": "munach",
+      "pitches": [["D4"], ["E4"], ["E4"]],
+      "match": "divergent",
+      "note": "271 prints munah E E; the pre-tonic D here has no table counterpart."
+    },
+    {
+      "he": "הַיַּרְדֵּ֑ן",
+      "idelsohn": "haj-jar-dên",
+      "taam": "etnachta",
+      "pitches": [["D4"], ["D4"], ["C4"]],
+      "match": "divergent",
+      "note": "271 prints atnah D D, ending on the final; 272 ends a step below."
+    },
+    {
+      "he": "וְאַתֶּם֩",
+      "idelsohn": "wĕ-at-tem",
+      "taam": "telisha-ketana",
+      "pitches": [["D4"], ["D4"], ["C4", "D4", "E4"]],
+      "match": "exact"
+    },
+    {
+      "he": "תַּעַבְר֨וּ",
+      "idelsohn": "ta-ʿab-ru",
+      "taam": "kadma",
+      "pitches": [["G4"], ["G4"], ["E4"]],
+      "match": "exact"
+    },
+    {
+      "he": "חֲמֻשִׁ֜ים",
+      "idelsohn": "hă-mu-sim",
+      "taam": "geresh",
+      "pitches": [["E4"], ["E4"], ["D4", "C4"]],
+      "match": "exact"
+    },
+    {
+      "he": "לִפְנֵ֣י",
+      "idelsohn": "lif-nê",
+      "taam": "munach",
+      "pitches": [["E4"], ["E4"]],
+      "match": "exact"
+    },
+    {
+      "he": "אֲחֵיכֶ֗ם",
+      "idelsohn": "ă-hê-hem",
+      "taam": "revia",
+      "pitches": [["D4"], ["C4"], ["D4", "C4"]],
+      "match": "divergent",
+      "note": "271 prints rĕbiʿa (= z.g. = gersaim) E E D C, which 272 sings on its two zakef gadol words; its one revia word sings D C D C."
+    },
+    {
+      "he": "כֹּ֚ל",
+      "idelsohn": "kôl",
+      "taam": "yetiv",
+      "pitches": [["F4"]],
+      "match": "exact"
+    },
+    {
+      "he": "גִּבּוֹרֵ֣י",
+      "idelsohn": "gib-bô-rê",
+      "taam": "munach",
+      "pitches": [["E4"], ["E4"], ["E4"]],
+      "match": "exact"
+    },
+    {
+      "he": "הַחַ֔יִל",
+      "idelsohn": "ha-ḥa-jil",
+      "taam": "zakef-katan",
+      "pitches": [["D4", "C4"], ["D4"], ["C4"]],
+      "match": "exact"
+    },
+    {
+      "he": "וַעֲזַרְתֶּ֖ם",
+      "idelsohn": "wa-ʿă-zar-tem",
+      "taam": "tipcha",
+      "pitches": [["C4"], ["B3"], ["C4"], ["D4"]],
+      "match": "exact"
+    },
+    {
+      "he": "אוֹתָֽם׃",
+      "idelsohn": "ô-tam",
+      "taam": "silluq",
+      "pitches": [["D4"], ["E4", "D4"]],
+      "match": "exact"
+    }
+  ],
+  "variants": {
+    "מֹשֶׁ֖ה": {
+      "cell": "tifha",
+      "variant": "jos272"
+    },
+    "הַיַּרְדֵּ֑ן": {
+      "cell": "atnah",
+      "variant": "jos272"
+    },
+    "אֲחֵיכֶ֗ם": {
+      "cell": "rebia",
+      "variant": "jos272"
+    }
+  }
+}

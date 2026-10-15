@@ -96,7 +96,7 @@ Idelsohn's notation uses **×** before some notes in the Moroccan and Aleppo tab
 | R. Meir Elazar Atia (d. 2019); Koren *Avoteinu* Moroccan siddur | Liturgy; no haftarah cantillation source found | Not a source for this |
 | Rav Mordechai Lebhar | Nothing on haftarah cantillation found | Not found |
 
-**Structure of the Moroccan haftarah, from Idelsohn no. 271** [V, my reading of the scan; written with no key signature, final D]. Notes as written, left to right; I have not split upbeat from core (see below):
+**Superseded by `moroccan-table.md` (2026-10-15), which re-reads no. 271 (zarqa's 2nd note is A, not G), resolves the × mark and the qadma/azla labels, and transcribes no. 272.** **Structure of the Moroccan haftarah, from Idelsohn no. 271** [V, my reading of the scan; written with no key signature, final D]. Notes as written, left to right; I have not split upbeat from core (see below):
 
 | Ta'am (Idelsohn's label) | Notes | Degrees (D = 1, dorian) |
 |---|---|---|

@@ -111,15 +111,26 @@ function keyMatches(key, want, ctx) {
   return ctx[key] === want;
 }
 
-// The cell for a unit: among the table's cells for its trope, every one whose context keys all
-// hold, the most specific wins (first in table order on a tie). A trope the table has no cell for
-// gets the reciting tone, flagged as a fallback. (The haftarah table now has derived cells for
-// shalshelet, karnei farah and yerach ben yomo, so in practice this is a table-authoring bug.)
+// A cell serves its own trope and any te'amim it lists in aliases: one printed figure for several
+// marks, as in Idelsohn's Moroccan table ("rebia, z.g. u. gersaim", nusach-tables.md §4.2).
+const serves = (cell, trope) => cell.trope === trope || (Array.isArray(cell.aliases) && cell.aliases.includes(trope));
+
+// The table's reciting tone: table.recite.tone, else degree 1 (the Ashkenazi tables recite on the tonic).
+export function recitingTone(table) {
+  const t = table && table.recite && table.recite.tone;
+  return t ? { deg: t.deg, dur: t.dur || 0.5 } : { deg: 1, dur: 0.5 };
+}
+
+// The cell for a unit: among the table's cells serving its trope, every one whose context keys all
+// hold, the most specific wins (first in table order on a tie). A trope with no cell is recited on
+// the table's reciting tone. When the table lists the trope in recite.tropes, that is the table's own
+// reading (Sephardi conjunctives recite on the tone): the cell is marked recite, not fallback. Any
+// other trope with no cell is a hole in the table and is flagged fallback.
 export function selectCell(unit, ctx, table) {
   const trope = (ctx && ctx.trope) || unitTrope(unit);
   let best = null, bestScore = -1;
   for (const cell of table.cells) {
-    if (cell.trope !== trope) continue;
+    if (!serves(cell, trope)) continue;
     let score = 0, ok = true;
     for (const [k, v] of Object.entries(cell.context || {})) {
       if (v === undefined || v === null) continue;
@@ -128,8 +139,13 @@ export function selectCell(unit, ctx, table) {
     }
     if (ok && score > bestScore) { best = cell; bestScore = score; }
   }
-  if (best) return best;
-  return { id: `fallback:${trope}`, trope, context: {}, upbeats: [], core: [{ deg: 1, dur: 0.5 }], source: "engine fallback: reciting tone", confidence: "none", fallback: true };
+  if (best) return best.trope === trope ? best : { ...best, as: trope };
+  const tone = recitingTone(table);
+  const declared = table.recite && table.recite.tropes && table.recite.tropes[trope];
+  if (declared) {
+    return { id: `recite:${trope}`, trope, context: {}, upbeats: [], core: [tone], source: declared.source || table.recite.source || "table: recited on the reciting tone", confidence: declared.confidence || table.recite.confidence || "low", recite: true };
+  }
+  return { id: `fallback:${trope}`, trope, context: {}, upbeats: [], core: [tone], source: "engine fallback: reciting tone", confidence: "none", fallback: true };
 }
 
 // The tonic syllable: the one the front end marked; failing that, the last (mil'ra is the default).
@@ -155,7 +171,12 @@ export function fitSyllables(cell, unit) {
   const core = cell.core || [];
   const out = Array.from({ length: n }, () => []);
 
-  if (p > 0 && up.length) {
+  if (p > 0 && up.length && p < up.length && cell.foldUpbeats) {
+    // foldUpbeats: a lead-in printed as a melisma (Idelsohn 272, ha- of hehayil): with fewer pre-tonic
+    // syllables than upbeats, the extra upbeats are sung on the first syllable instead of dropped.
+    up.slice(0, up.length - p + 1).forEach(u => out[0].push(note(u)));
+    up.slice(up.length - p + 1).forEach((u, k) => out[k + 1].push(note(u)));
+  } else if (p > 0 && up.length) {
     const pre = p <= up.length ? up.slice(up.length - p) : [...Array(p - up.length).fill(up[0]), ...up];
     pre.forEach((u, k) => out[k].push(note(u)));
   } else if (p > 0) {
@@ -254,7 +275,7 @@ export function scoreVerse(unitsJson, { table, key = "D4", tempo = 96, elision =
     if (DISJUNCTIVE_END.has(ctx.trope)) t += 0.5;
     out.units.push({
       text: unit.text,
-      cell: { id: cell.id, trope: cell.trope, context: cell.context, ...(cell.confidence ? { confidence: cell.confidence } : {}), ...(cell.fallback ? { fallback: true } : {}) },
+      cell: { id: cell.id, trope: cell.trope, context: cell.context, ...(cell.as ? { as: cell.as } : {}), ...(cell.confidence ? { confidence: cell.confidence } : {}), ...(cell.recite ? { recite: true } : {}), ...(cell.fallback ? { fallback: true } : {}) },
       syllables,
     });
   });
