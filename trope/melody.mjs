@@ -49,19 +49,49 @@ function otherAccents(unit, own) {
   return [...seen];
 }
 
+// The special melodies a verse may be flagged with (torah-grammar.md §3.3-3.4). Only those a table
+// has cells for (context.special) are computed; the rest are still scored with the regular cells but
+// reported, so a renderer can swap in a whole-passage recording.
+export const SPECIAL_MELODIES = ["creation", "journeys", "song-of-the-sea"];
+
+// A verse's reading flags, normalised. final = last verse of the reading (the haftarah cadence);
+// endOfAliyah / endOfBook = the Torah cadences; special = one of SPECIAL_MELODIES or null.
+// An unknown special throws: a typo must not silently fall back to the regular melody.
+export function readingFlags(v = {}) {
+  const special = v.special || null;
+  if (special && !SPECIAL_MELODIES.includes(special)) throw new Error(`unknown special melody: ${special}`);
+  return { final: Boolean(v.final), endOfAliyah: Boolean(v.endOfAliyah), endOfBook: Boolean(v.endOfBook), special };
+}
+
+const isEndFamily = fam => fam === "sof-haftarah" || fam === "sof-pasuk";
+const famOf = unit => slug(unit && unit.trope && unit.trope.family);
+
+// The fifth end-of-aliyah pattern (etnachta straight to silluq, torah-grammar.md §3.1) is the
+// sof-pasuk phrase with no tipcha in it; none of the four cadence patterns then applies.
+function phraseLacksTipcha(units) {
+  return !units.some(u => isEndFamily(famOf(u)) && unitTrope(u) === "tipcha");
+}
+
 // Musical context of unit i in its verse, in the cell table's vocabulary.
 // group is lib.js's phrase family; the last verse's sof-pasuk phrase is the end of the reading.
-export function unitContext(units, i, { final = false } = {}) {
+// The Torah cadences (endOfAliyah, endOfBook) likewise apply to the sof-pasuk phrase only, while
+// special marks every unit: a special melody covers the whole verse (cells narrow it with group).
+export function unitContext(units, i, { final = false, endOfAliyah = false, endOfBook = false, special = null } = {}) {
   const unit = units[i];
   const trope = unitTrope(unit);
-  const fam = slug(unit.trope && unit.trope.family);
-  const endFamily = fam === "sof-haftarah" || fam === "sof-pasuk";
+  const fam = famOf(unit);
+  const endFamily = isEndFamily(fam);
+  const cadence = endFamily && (endOfAliyah || endOfBook);
   return {
     trope,
     before: i + 1 < units.length ? unitTrope(units[i + 1]) : null,
     after: i > 0 ? unitTrope(units[i - 1]) : null,
     group: fam === "sof-haftarah" ? "sof-pasuk" : fam || null,
     endOfReading: Boolean(final && endFamily) || fam === "sof-haftarah",
+    endOfAliyah: Boolean(endOfAliyah && endFamily),
+    endOfBook: Boolean(endOfBook && endFamily),
+    noTipcha: Boolean(cadence && phraseLacksTipcha(units)),
+    special: special || null,
     onOneWord: otherAccents(unit, trope),
     monosyllabic: ((unit.syllables || []).length === 1),
   };
@@ -69,12 +99,15 @@ export function unitContext(units, i, { final = false } = {}) {
 
 // How much each satisfied context key counts toward choosing the most specific cell.
 // endOfReading outranks everything (the last-verse cadence replaces the normal cells);
-// "immediately before X" outranks "somewhere in X's group".
-const WEIGHT = { endOfReading: 16, before: 8, after: 4, onOneWord: 4, monosyllabic: 2, group: 1 };
+// "immediately before X" outranks "somewhere in X's group". A book end is also an aliyah end, so
+// endOfBook (and a special melody, which replaces the cadence it falls on) must beat endOfAliyah
+// even against an aliyah cell with more keys.
+const WEIGHT = { endOfBook: 32, special: 32, endOfReading: 16, endOfAliyah: 16, before: 8, after: 4, onOneWord: 4, monosyllabic: 2, noTipcha: 2, group: 1 };
+const BOOLEAN_KEYS = new Set(["endOfReading", "endOfAliyah", "endOfBook", "noTipcha", "monosyllabic"]);
 
 function keyMatches(key, want, ctx) {
   if (key === "onOneWord") return (ctx.onOneWord || []).includes(want);
-  if (key === "endOfReading" || key === "monosyllabic") return Boolean(ctx[key]) === Boolean(want);
+  if (BOOLEAN_KEYS.has(key)) return Boolean(ctx[key]) === Boolean(want);
   return ctx[key] === want;
 }
 
@@ -176,11 +209,11 @@ export function scoreVerse(unitsJson, { table, key = "D4", tempo = 96, elision =
   if (!table) throw new Error("scoreVerse needs a cell table");
   const tonic = keyToMidi(key);
   const units = unitsJson.units || [];
-  const final = Boolean(unitsJson.final);
+  const flags = readingFlags(unitsJson);
   const midi = n => tonic + degreeSemitones(n.deg, table) + (n.alt || 0);
 
   const scored = units.map((unit, i) => {
-    const ctx = unitContext(units, i, { final });
+    const ctx = unitContext(units, i, flags);
     const cell = selectCell(unit, ctx, table);
     const fit = fitSyllables(cell, unit);
     return { unit, ctx, cell, fit };
@@ -197,7 +230,15 @@ export function scoreVerse(unitsJson, { table, key = "D4", tempo = 96, elision =
     }
   }
 
-  const out = { ref: unitsJson.ref || null, key, tempo, table: table.name || null, units: [], events: [] };
+  // special: the verse's special melody, if any; specialCells: whether this table computed it. When
+  // false the notes are the regular cells', and a renderer should play a recording instead.
+  const out = {
+    ref: unitsJson.ref || null, key, tempo, table: table.name || null,
+    flags: { final: flags.final, endOfAliyah: flags.endOfAliyah, endOfBook: flags.endOfBook },
+    special: flags.special,
+    ...(flags.special ? { specialCells: table.cells.some(c => c.context && c.context.special === flags.special) } : {}),
+    units: [], events: [],
+  };
   let t = 0;
   scored.forEach(({ unit, ctx, cell, fit }, ui) => {
     const syllables = (unit.syllables && unit.syllables.length ? unit.syllables : [{ he: unit.text, ph: [], stress: "tonic" }]).map((s, si) => {
