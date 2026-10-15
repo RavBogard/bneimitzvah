@@ -45,3 +45,11 @@ fetched 2026-10-15, for `tests/trope-hebcal.test.mjs`: `bereshit` (2026-10-10, M
 `shemot` (2027-01-02, two-range haftarah Isaiah 27:6-28:13, 29:22-23), `simchat-torah` (2026-10-04, V'Zot
 HaBerachah + Genesis 1:1-2:3 + Numbers maftir), `beshalach` (2027-01-23, the Song of the Sea), `vayakhel-shekalim`
 (2027-03-06, a special maftir as a second range). Regenerate with the same URL and date.
+
+## SoulX phone set: `soulx-phone-set.json`
+
+The subset of SoulX-Singer's `soulxsinger/utils/phoneme/phone_set.json` (commit
+`81aeb3ae772c70093c3de74dc23c92d983801ae4`, 2,820 tokens) that `trope/soulx.mjs` can emit: the 10 special tokens,
+all 70 `en_` CMU ARPAbet tokens and the `zh_` pinyin syllables with initial h or z (the `chet: "zh"` variant).
+`tests/trope-soulx.test.mjs` checks every emitted token against it, so the test needs no Python. Regenerate from
+the clone in `C:\Users\dsbog\haftarah-audio\soulx-env\SoulX-Singer` if the emitter starts using other tokens.
