@@ -253,7 +253,7 @@ export function scoreVerse(unitsJson, { table, key = "D4", tempo = 96, elision =
     if (DISJUNCTIVE_END.has(ctx.trope)) t += 0.5;
     out.units.push({
       text: unit.text,
-      cell: { id: cell.id, trope: cell.trope, context: cell.context, ...(cell.confidence ? { confidence: cell.confidence } : {}) },
+      cell: { id: cell.id, trope: cell.trope, context: cell.context, ...(cell.confidence ? { confidence: cell.confidence } : {}), ...(cell.fallback ? { fallback: true } : {}) },
       syllables,
     });
   });

@@ -11,9 +11,13 @@ import { scoreToMidi } from "../trope/midi.mjs";
 const table = JSON.parse(readFileSync(new URL("../trope/cells/haftarah.json", import.meta.url), "utf8"));
 const corpus = JSON.parse(readFileSync(new URL("./fixtures/trope/calibration-haftarah.json", import.meta.url), "utf8"));
 
-test("every calibration verse scores with one note group per syllable, the core on the tonic, and no fallback cell", () => {
+// Three marks never occur in a haftarah (trope-grammar.md section 4.4) and the haftarah table has no
+// cell for them; the verses that carry them elsewhere in the Prophets land on the reciting tone.
+const NEVIIM_ONLY_MARKS = ["shalshelet", "karnei-farah", "yerach-ben-yomo"];
+
+test("every haftarah calibration verse scores with one note group per syllable, the core on the tonic, and no fallback cell", () => {
   assert.ok(corpus.verses.length >= 50, "the corpus is present");
-  for (const v of corpus.verses) {
+  for (const v of corpus.verses.filter(v => v.set !== "rare")) {
     const units = verseUnits(v.he, { final: v.final });
     const score = scoreVerse({ ...units, ref: v.ref }, { table, key: "D4" });
     const syllables = units.units.reduce((n, u) => n + u.syllables.length, 0);
@@ -39,12 +43,15 @@ test("the last verse of a haftarah ends on the end-of-reading cadence, other ver
   assert.equal(cadence(last), scoreVerse(verseUnits(plain.he, { final: true }), { table, key: "D4" }).units.at(-1).cell.id, "any verse flagged final gets the same cadence");
 });
 
-test("the rare marks score on real cells", () => {
+test("mercha kefula scores on a real cell; the three Nevi'im-only marks are the known fallback", () => {
   const rare = corpus.verses.filter(v => v.set === "rare");
   assert.ok(rare.length >= 4);
   for (const v of rare) {
     const score = scoreVerse(verseUnits(v.he, { final: false }), { table, key: "D4" });
-    assert.ok(score.units.every(u => !u.cell.fallback), `${v.ref}: ${v.note}`);
+    const fallbacks = score.units.filter(u => u.cell.fallback).map(u => u.cell.trope);
+    assert.ok(fallbacks.every(t => NEVIIM_ONLY_MARKS.includes(t)), `${v.ref}: unexpected fallback ${fallbacks.join(" ")}`);
+    const kefula = score.units.find(u => u.cell.trope === "mercha-kefula");
+    if (kefula) assert.ok(!kefula.cell.fallback, `${v.ref}: mercha kefula has a cell`);
   }
 });
 
