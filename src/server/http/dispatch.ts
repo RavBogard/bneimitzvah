@@ -3,6 +3,7 @@ import { createRuntimeScope, type HttpRuntime } from "../runtime/composition";
 import { handleAuthRequest, authRouteMethods } from "./auth";
 import { handlePortalRequest, portalRouteMethods } from "./portal";
 import { handleStudentWorkRequest, studentWorkRouteMethods } from "./student-work";
+import { handleServiceLearningRequest, serviceLearningRouteMethods } from "./service-learning";
 import { errorResponse, HttpBoundaryError } from "./responses";
 
 export type HttpRuntimeScope = (action: (runtime: HttpRuntime) => Promise<Response>) => Promise<Response>;
@@ -22,7 +23,7 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
   return async (request: Request): Promise<Response> => {
     try {
       const url = new URL(request.url);
-      const methods = authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname);
+      const methods = authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname) ?? serviceLearningRouteMethods(url.pathname);
       // No provider configuration or connection required to refuse unowned
       // endpoints (including private SDK session/profile/password APIs).
       if (!methods) throw new HttpBoundaryError(404);
@@ -36,7 +37,7 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
       return await withRuntime(async (runtime) => {
         try {
           await runtime.resolveHost(request);
-          return await handleAuthRequest(request, runtime) ?? await handleStudentWorkRequest(request, runtime) ?? await handlePortalRequest(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
+          return await handleAuthRequest(request, runtime) ?? await handleStudentWorkRequest(request, runtime) ?? await handleServiceLearningRequest(request, runtime) ?? await handlePortalRequest(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
         } catch (error) {
           // Expected HTTP400/413/etc stay inside the scoped runtime callback;
           // otherwise its generic application-error boundary would make503.

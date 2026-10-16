@@ -154,8 +154,10 @@ export function createServiceLearningService<Q extends PgQueryResultHKT>(input: 
       const binding = bindings.sign({ purpose: "service-plan", actor: actorBinding(actor), studentId, studentRevision: student.revision,
         date: student.ceremonyDate, slot: context.serviceSlot, planId: current?.id ?? null, planRevision: expected,
         catalogId, catalogIdentity, lifecycleRevision: lifecycle.revision, selectedIds: selectionIds, selectionDigest: digest(selectionIds) });
+      const expiresAt = bindings.verify(binding, "service-plan").expiresAt;
+      if (typeof expiresAt !== "number") throw new AccessDenied(403);
       live(actor);
-      return { ok: true as const, binding, selectedIds: selectionIds, clearsPlan: !selectionIds.length,
+      return { ok: true as const, binding, expiresAt, selectedIds: selectionIds, clearsPlan: !selectionIds.length,
         review: { studentRevision: student.revision, ceremonyDate: student.ceremonyDate, serviceSlot: context.serviceSlot,
           catalogId, catalogIdentity, lifecycleRevision: lifecycle.revision, expectedPlanRevision: expected } };
     });

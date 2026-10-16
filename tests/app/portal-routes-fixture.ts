@@ -15,6 +15,7 @@ import { resolveTenantHost } from "../../src/server/tenancy/resolve";
 import type { HttpRuntime } from "../../src/server/runtime/composition";
 import { parseCeremonyDate } from "../../src/lib/readings/ranges";
 import { createStudyService } from "../../src/server/study/service";
+import { createServiceLearningService } from "../../src/server/service-learning/service";
 import { createStudentWorkService } from "../../src/server/student-work/service";
 import { StudyUnavailable } from "../../src/server/study/types";
 
@@ -41,6 +42,7 @@ export async function portalRoutesFixture() {
   const runtime: HttpRuntime = { origin: "http://localhost:3000", auth: f.auth, access: f.service, practice, invitations, students, readingPreview, studentWork: createStudentWorkService({ access: f.service, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
     study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }),
     portal: createPortalService({ access: f.service, practice, sessionBindingSecret: randomBytes(48).toString("base64url") }), relationships: createRelationshipService({ access: f.service }), pendingInvitations,
+    serviceLearning: createServiceLearningService({ access: f.service, practice, signingSecret: randomBytes(48).toString("base64url") }),
     googleChallenges: createGoogleChallenges({ db: f.db, origin: "http://localhost:3000", secret: randomBytes(48).toString("base64url") }),
     resolveHost: request => resolveTenantHost(f.db, request, { environment: "test", deployment: "suite" }) };
   function request(path: string, options: { who?: keyof typeof identities | "anonymous"; method?: string; body?: unknown; handle?: string; pending?: string;

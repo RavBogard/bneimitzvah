@@ -20,6 +20,7 @@ import { createPersistentReadingCache } from "../data/reading-cache";
 import { createPersistentStudyCache } from "../data/study-cache";
 import { createSefariaStudyReader } from "../study/sefaria";
 import { createStudyService } from "../study/service";
+import { createServiceLearningService } from "../service-learning/service";
 import { createStudentWorkService } from "../student-work/service";
 import { createPublicStudyCoalescer, type PublicStudyCoalescer } from "../study/coalescing";
 import { resolveTenantHost } from "../tenancy/resolve";
@@ -53,6 +54,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const loadReading = createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS });
   const students = createStudentService({ access, loadReading, signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS });
   const practice = createPracticeService({ access });
+  const serviceLearning = createServiceLearningService({ access, practice, signingSecret: purposeSecret(config, "service-plan-preparations") });
   const studentWork = createStudentWorkService({ access, practice, authorityBindingSecret: purposeSecret(config, "student-work-authority") });
   const loadText = createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS, cache: createPersistentStudyCache(db), coalescer: studyTasks });
   const study = createStudyService({ access, practice, load: loadText });
@@ -67,7 +69,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingPreview, studentWork, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingPreview, studentWork, serviceLearning, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;
