@@ -27,8 +27,10 @@ families and HTML hashes. It stores no verse text or English translations.
 - `cells/haftarah-moroccan.json` and the Idelsohn fixture cite *Thesaurus*, volume
   5, nos. 271-272 (1928/29), described as public domain in the source research.
 - Calibration, edge, unit and reference-text fixtures contain MAM Hebrew via
-  Sefaria. The edge fixture identifies CC BY-SA; the project plan identifies MAM
-  as CC BY-SA and Hebcal leyning fixtures as CC BY. The exact applicable version,
+  Sefaria. Sefaria's official [sources and licenses](https://lite.sefaria.org/sources-and-licenses)
+  identifies MAM as CC-BY-SA without a version on that page. Hebcal's official
+  [API guidance](https://www.hebcal.com/home/help/page/9) identifies CC BY 4.0
+  and attribution requirements for its leyning data. The exact MAM version,
   notices and publication conditions still require confirmation before publishing.
 - `week-min-hebrew.json` and `week-notes-hebrew.json` copy only `ref`, `he` and
   `break` from the source branch's corresponding `tests/fixtures/*/sheet.json`
@@ -37,8 +39,13 @@ families and HTML hashes. It stores no verse text or English translations.
   the same unresolved MAM publication decision as the other fixtures.
 - `soulx-phone-set.json` is a subset of SoulX-Singer's phone set at
   `81aeb3ae772c70093c3de74dc23c92d983801ae4`, path recorded in the fixture README.
-  The source research describes SoulX-Singer as Apache-2.0; corresponding upstream
-  license/NOTICE requirements must be checked before public redistribution.
+  All 244 retained tokens were compared against the pinned source's 2,820 tokens.
+  The pinned upstream [LICENSE](https://github.com/Soul-AILab/SoulX-Singer/blob/81aeb3ae772c70093c3de74dc23c92d983801ae4/LICENSE)
+  is Apache-2.0 and is retained as `tests/fixtures/trope/SoulX-Singer.LICENSE`
+  (SHA-256 `c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4`).
+  Its recursive source tree contains no NOTICE file. The subset modification is
+  explicitly described in the fixture's `about` field and README. The upstream
+  phone-set SHA-256 is `1f28c4fdf8e9b68af42ef706b92b7fa86eb857555610ba271d84148776d5c3b8`.
 - Imported plans are historical evidence. They include an old source-repo push
   workflow and contact identity, and do not authorize pushes, GPU/cloud jobs,
   model downloads, paid services, voice cloning or any student-facing release.

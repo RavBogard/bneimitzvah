@@ -4,11 +4,11 @@ A web portal for b'nei mitzvah students at Central Reform Congregation, St. Loui
 
 Tutors and rabbis see their students, assign sources, leave notes, and hear what students record. Parents get a read-only view. The portal is built for one congregation now and more later: every record belongs to a congregation from the schema up.
 
-The planned trope engine will compute chant from the te'amim using published melody tables (Standard Reform, Binder/Avery, first). Its history-preserving move from the `trope-engine-research` branch of [RavBogard/haftarah](https://github.com/RavBogard/haftarah) is Phase 1; it is not present yet. No student hears generated chant until it passes a listening review.
+The trope engine computes chant scores from the te'amim using published melody tables (Standard Reform, Binder/Avery, first). Its history-preserving move from the `trope-engine-research` branch of [RavBogard/haftarah](https://github.com/RavBogard/haftarah) is integrated locally: 25 historical commits, standalone helpers and 109 engine tests passing on Windows and Linux. Engine publication awaits the melody-table and fixture licensing decisions in [the provenance note](trope/PROVENANCE.md). No student hears generated chant until it passes the required listening review.
 
 ## Status
 
-Phase 0 local foundation: a technical Next.js placeholder, offline tests, repository safeguards and CI configuration. External repository publication, hosted CI and deployment are separate gates. See `docs/planning/2026-10-15-kickoff/STATE.md`.
+Phase 0 foundation is published with passing Windows/Linux/browser CI and a deployed technical placeholder at [bneimitzvah.vercel.app](https://bneimitzvah.vercel.app). Phase 1 engine migration is local and has not been pushed. The planned student and staff workflows are not implemented yet. See [STATE.md](docs/planning/2026-10-15-kickoff/STATE.md) and [the engine return note](docs/planning/2026-10-15-kickoff/ENGINE-MIGRATION-RETURN.md).
 
 ## Run it
 
@@ -18,14 +18,15 @@ Node 24 LTS and npm. Dependencies are pinned exactly in `package-lock.json`.
 npm ci
 cp .env.example .env.local      # fill in locally; never commit
 npm run dev
-npm test                        # policy/isolation and app (Vitest), no network
+npm test                        # engine, policy/isolation and app (Vitest), no network
+node --test "tests/trope-*.test.mjs" # engine only; no npm dependencies required
 npm run typecheck
 npm run build
 npx playwright install chromium # one-time browser download for local checks
 npm run test:e2e                # Playwright
 ```
 
-At Phase 0, `npm test` runs Node policy/isolation tests and a real offline PGlite database probe. Engine tests arrive in Phase 1. Database schema, Drizzle dependencies and `db:*` scripts arrive together in Phase 2; there are no placeholder migration commands.
+`npm test` runs the engine and Node policy/isolation tests, then a real offline PGlite database probe. The integrated local checks pass 119 Node tests and 1 Vitest test. The engine passes 109 tests on Windows and Ubuntu WSL; hosted CI currently covers the published foundation only. Database schema, Drizzle dependencies and `db:*` scripts arrive together in Phase 2; there are no placeholder migration commands.
 
 ## Never in this repo
 

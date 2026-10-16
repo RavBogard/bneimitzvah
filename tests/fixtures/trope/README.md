@@ -71,6 +71,12 @@ all 70 `en_` CMU ARPAbet tokens and the `zh_` pinyin syllables with initial h or
 `tests/trope-soulx.test.mjs` checks every emitted token against it, so the test needs no Python. Regenerate from
 the clone in `C:\Users\dsbog\haftarah-audio\soulx-env\SoulX-Singer` if the emitter starts using other tokens.
 
+The subset is a modification of the upstream phone-set data, retaining 244 of
+2,820 tokens at that exact commit. All subset tokens were verified against the
+pinned source during migration. The upstream Apache-2.0 license is retained as
+`SoulX-Singer.LICENSE`; no NOTICE file exists in that commit's recursive tree.
+See `trope/PROVENANCE.md` for the pinned source URL and SHA-256 hashes.
+
 ## Moroccan: `idelsohn-272-joshua-1-14.json`
 
 Idelsohn, *Thesaurus* vol. 5 (1928/29, public domain), no. 272: Joshua 1:14 chanted in the Moroccan (Fez)
