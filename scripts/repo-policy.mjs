@@ -3,6 +3,7 @@ import { readFile, lstat } from "node:fs/promises";
 import { promisify } from "node:util";
 import { extname, join } from "node:path";
 import { FONT_ASSETS, matchesAssetPin, reviewedFontAsset } from "./font-assets.mjs";
+import { privateBenchmarkProblem } from "./private-benchmark-policy.mjs";
 
 const run = promisify(execFile);
 const DATA = new Set([".json", ".csv", ".tsv", ".txt", ".jsonl", ".ndjson"]);
@@ -84,6 +85,8 @@ export function entryProblems(path, content = "") {
     }
   }
   if (data && LICENSE_MARKERS.test(text)) problems.push("licensed-text publisher/version marker; manual licence review required");
+  const privateBenchmark = privateBenchmarkProblem(text, data);
+  if (privateBenchmark) problems.push(privateBenchmark);
   if (text.includes("\u0000")) problems.push("unreviewed binary content");
   return problems;
 }
