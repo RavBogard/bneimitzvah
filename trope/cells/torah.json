@@ -1,0 +1,1189 @@
+{
+  "name": "Ashkenazic Torah, Avery/Binder (Reform Standard)",
+  "type": "torah",
+  "tradition": "Eastern Ashkenazi",
+  "source": "docs/superpowers/research/2026-10-15-trope-engine/torah-grammar.md §2.2 (Avery/Binder column, Rosowsky and Common Melody as variants), §3.1 (end of aliyah / book, fifth pattern), §3.4 (Creation). A standard published table (TropeTrainer's \"Ashkenazic - Avery/Binder\" Torah table, Lawrence Avery's variant of A. W. Binder), transcribed in the report; not any one cantor's melody.",
+  "mode": "major",
+  "key": "F major (Malin's frame)",
+  "tonic": "D4",
+  "degrees": {
+    "frame": "Malin 2016's frame, F = 1 (torah-grammar.md L57). TropeTrainer files this table as \"C MAJOR\" because it calls the low sof-pasuk note (5_) the tonic; the pitches are the same. Binder's 'sof pasuk ends on C' reads here as 1, 5_.",
+    "numbering": "Diatonic steps of the major scale from 1. 8 = octave. 0 is the 7th below (the report's 7_), -1 the 6th below (6_), -2 the 5th below (5_). alt: +1 raises a note a semitone (the report's 4# = B natural, and Common Melody's 2#).",
+    "semitones": {
+      "0": -1,
+      "1": 0,
+      "2": 2,
+      "3": 4,
+      "4": 5,
+      "5": 7,
+      "6": 9,
+      "7": 11,
+      "8": 12,
+      "-2": -5,
+      "-1": -3
+    },
+    "keyPins": "Degree 1. scoreVerse's key option (key: \"D4\") names the pitch of degree 1, as with the haftarah table, so key: \"F3\" reproduces the published pitches (the silluq ends on C3) and the default \"D4\" puts the sof pasuk's low 5_ on A3 and the shalshelet's top 6 on B4, an octave and a second (Rosowsky's 8 reaches D5), inside a baritone's chant range. Pinning 1 rather than TropeTrainer's C keeps one meaning of key across both tables (the mode's reciting tone) and keeps the degrees aligned with the literature."
+  },
+  "durations": {
+    "unit": "beats (quarter note = 1)",
+    "default": 0.5,
+    "held": 1.5,
+    "note": "The report gives rhythm only as TropeTrainer's held mark ('). Held = 1.5, everything else the engine's default eighth note; rhythm is free (trope-grammar.md §2.2 rule 6)."
+  },
+  "cellShape": "{ id, trope, context: { before?, after?, group?, endOfAliyah?, endOfBook?, special?, noTipcha?, onOneWord?, monosyllabic? }, upbeats: [{deg, dur, alt?}], core: [{deg, dur, alt?}], source, confidence?, note?, variants? }. As haftarah.json; the Torah-only keys are endOfAliyah / endOfBook (set on the sof-pasuk phrase of a flagged verse), special (\"creation\", on that phrase of a Creation-day verse) and noTipcha (that phrase has no tipcha: the fifth pattern).",
+  "tropeIds": [
+    "silluq",
+    "mercha",
+    "tipcha",
+    "etnachta",
+    "munach",
+    "zakef-katan",
+    "pashta",
+    "mahpach",
+    "kadma",
+    "yetiv",
+    "revia",
+    "munach-legarmeh",
+    "tevir",
+    "darga",
+    "mercha-kefula",
+    "geresh",
+    "gershayim",
+    "zakef-gadol",
+    "telisha-ketana",
+    "telisha-gedola",
+    "pazer",
+    "zarka",
+    "segol",
+    "shalshelet",
+    "yerach-ben-yomo",
+    "karnei-farah"
+  ],
+  "readingFlags": {
+    "source": "torah-grammar.md §3.1, §3.4, §7",
+    "endOfAliyah": "The last verse of an aliyah (hebcal fullkriyah 'e', 457 verses). Its sof-pasuk phrase takes the aliyah: cells, cadencing on 6_ (the relative minor).",
+    "endOfBook": "Gen 50:26, Ex 40:38, Lev 27:34, Num 36:13, Deut 34:12. Outranks endOfAliyah (a book end is also an aliyah end). Chazak chazak v'nitchazek after it is a fixed formula, recorded, not computed.",
+    "patterns": [
+      "mercha-tipcha-silluq",
+      "tipcha-mercha-silluq",
+      "tipcha-silluq",
+      "mercha-tipcha-mercha-silluq",
+      "etnachta-silluq (no tipcha; Ex 14:4, Ex 36:7)"
+    ],
+    "final": "This table has no endOfReading cells: a Torah reading's last verse is an aliyah end, so flag it endOfAliyah. final keeps its haftarah meaning."
+  },
+  "specialMelodies": {
+    "source": "torah-grammar.md §3.3-3.4",
+    "creation": {
+      "implemented": true,
+      "cells": "creation:*",
+      "note": "Binder's Creation refrain = the end-of-book cells with an unheld mercha before tipcha (L110)."
+    },
+    "journeys": {
+      "implemented": false,
+      "note": "Num 33, alternating A/B verse-melodies (L111); the report recommends recording a pair whole. The score is computed with the regular cells and marked special so a renderer can skip it."
+    },
+    "song-of-the-sea": {
+      "implemented": false,
+      "note": "Ex 15:1-19, 29 contexts in six sub-schemes whose verse assignment is unknown (L112, §3.3); record whole. Marked special in the score."
+    }
+  },
+  "notInTable": {
+    "decalogue": "Ex 20:2-14, Deut 5:6-18, Gen 35:22 carry both accent systems (§3.2); needs the hand-curated tachton/elyon table, not a cell.",
+    "rosowskyOnly": "Rosowsky's after-munach forms of mahpach, darga, mercha>tevir, geresh, revia and its monosyllabic zakef have no Avery/Binder counterpart and are not cells here."
+  },
+  "variantSets": {
+    "rosowsky": "Ashkenazic - Rosowsky (Torah). Absent from a cell means the report gives no Rosowsky value or says 'default'.",
+    "common": "Ashkenazic - Common Melody (Torah; Chabad and others).",
+    "high": "Avery/Binder 'High Sof Pasuk' table (silluq only)."
+  },
+  "cells": [
+    {
+      "id": "silluq",
+      "trope": "silluq",
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": -2, "dur": 1.5 }],
+      "source": "torah-grammar.md L65 (§2.2 \"sof pasuk (silluq)\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": -2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 1.5 }, { "deg": 1, "dur": 1.5 }]
+        },
+        "high": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 1.5 }, { "deg": 1, "dur": 1.5 }],
+          "note": "Avery/Binder 'High Sof Pasuk' table (L66), the only cell that differs from the default table; also Kalib's 3->1 and Rosowsky's High Silluq table. Cantor question 1."
+        }
+      }
+    },
+    {
+      "id": "mercha>silluq",
+      "trope": "mercha",
+      "context": { "before": "silluq" },
+      "upbeats": [{ "deg": 0, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 0.5 }],
+      "source": "torah-grammar.md L67 (§2.2 \"mercha before silluq\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 0, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": -2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "tipcha",
+      "trope": "tipcha",
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }],
+      "source": "torah-grammar.md L68 (§2.2 \"tipcha (default and after mercha)\")",
+      "note": "One tipcha for both the etnachta and the sof-pasuk half (unlike the haftarah table). Rosowsky's tipcha after mercha is [2] 3, 5, 2, i.e. this cell.",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "mercha",
+      "trope": "mercha",
+      "context": {},
+      "upbeats": [{ "deg": 0, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 1.5 }],
+      "source": "torah-grammar.md L69 (§2.2 \"mercha (default, before tipcha)\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 0, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": -2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "etnachta",
+      "trope": "etnachta",
+      "context": {},
+      "upbeats": [{ "deg": -2, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 1.5 }],
+      "source": "torah-grammar.md L70 (§2.2 \"etnachta\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": -2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": -2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>etnachta",
+      "trope": "munach",
+      "context": { "before": "etnachta" },
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": -1, "dur": 0.5 }],
+      "source": "torah-grammar.md L71 (§2.2 \"munach before etnachta\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": -1, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>munach@etnachta",
+      "trope": "munach",
+      "context": { "before": "munach", "group": "etnachta" },
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 0.5 }],
+      "source": "torah-grammar.md L72 (§2.2 \"munach before munach (etnachta group)\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "zakef-katan",
+      "trope": "zakef-katan",
+      "context": {},
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }],
+      "source": "torah-grammar.md L73 (§2.2 \"zakef katon\")",
+      "note": "Rosowsky sings a monosyllabic zakef as 3, 2; Avery/Binder has no monosyllable cell.",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 1.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>zakef-katan",
+      "trope": "munach",
+      "context": { "before": "zakef-katan" },
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 1.5 }],
+      "source": "torah-grammar.md L74 (§2.2 \"munach immediately before zakef katon\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach@zakef",
+      "trope": "munach",
+      "context": { "group": "zakef" },
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }],
+      "source": "torah-grammar.md L75 (§2.2 \"munach elsewhere in a zakef group\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 5, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach",
+      "trope": "munach",
+      "context": {},
+      "upbeats": [{ "deg": 5, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 5, "dur": 1.5 }],
+      "source": "torah-grammar.md L76 (§2.2 \"munach, default (Binder's \"high\" munach)\")",
+      "note": "The default munach is where the three tables disagree most (cantor question 3).",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "pashta",
+      "trope": "pashta",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 1.5 }],
+      "source": "torah-grammar.md L77 (§2.2 \"pashta / double pashta\")",
+      "note": "Double pashta ('first mark [1] 5, second 5'') needs no cell of its own: on a mil'el word fitSyllables repeats the one-note core on the post-tonic syllable.",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 1.5 }, { "deg": 3, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "mahpach",
+      "trope": "mahpach",
+      "context": {},
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": -2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }],
+      "source": "torah-grammar.md L78 (§2.2 \"mahpach\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": -2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": -1, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }, { "deg": -1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "kadma",
+      "trope": "kadma",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 1.5 }],
+      "source": "torah-grammar.md L79 (§2.2 \"kadma (before mahpach/pashta)\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "kadma>geresh",
+      "trope": "kadma",
+      "context": { "before": "geresh" },
+      "upbeats": [{ "deg": -2, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 1.5 }],
+      "source": "torah-grammar.md L80 (§2.2 \"kadma before azla\")",
+      "note": "Rosowsky and Common sing the default kadma here ('= default').",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "zakef-katan+kadma",
+      "trope": "zakef-katan",
+      "context": { "onOneWord": "kadma" },
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }],
+      "source": "torah-grammar.md L81 (§2.2 \"kadma + zakef on one word (metiga-zakef)\")",
+      "note": "Avery/Binder (and Rosowsky) have no special cell: the plain zakef katon notes. The cell exists so the Common Melody's chromatic metiga-zakef can be picked with withVariants (cantor question 4).",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 1.5, "alt": 1 }],
+          "core": [{ "deg": 2, "dur": 0.5, "alt": 1 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5, "alt": 1 }, { "deg": 5, "dur": 0.5 }, { "deg": 2, "dur": 0.5, "alt": 1 }, { "deg": 4, "dur": 0.5 }, { "deg": 2, "dur": 1.5, "alt": 1 }, { "deg": 2, "dur": 1.5 }],
+          "note": "kadma [1] 2#' folded into the upbeats ahead of the zakef's [2#'] 2#, 1, 2#, 5, 2#, 4, 2#', 2'"
+        }
+      }
+    },
+    {
+      "id": "mercha>pashta",
+      "trope": "mercha",
+      "context": { "before": "pashta" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }],
+      "source": "torah-grammar.md L82 (§2.2 \"mercha before pashta / double pashta / legarmeh\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "mercha>munach-legarmeh",
+      "trope": "mercha",
+      "context": { "before": "munach-legarmeh" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }],
+      "source": "torah-grammar.md L82 (§2.2 \"mercha before pashta / double pashta / legarmeh\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "yetiv",
+      "trope": "yetiv",
+      "context": {},
+      "upbeats": [],
+      "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }],
+      "source": "torah-grammar.md L83 (§2.2 \"yetiv\")",
+      "note": "No upbeat: pre-tonic syllables are recited on the first core note.",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [],
+          "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [],
+          "core": [{ "deg": 5, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "revia",
+      "trope": "revia",
+      "context": {},
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": -1, "dur": 1.5 }],
+      "source": "torah-grammar.md L84 (§2.2 \"revia\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": -1, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 1.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": -1, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>revia",
+      "trope": "munach",
+      "context": { "before": "revia" },
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 1.5 }],
+      "source": "torah-grammar.md L85 (§2.2 \"munach before revia\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach-legarmeh",
+      "trope": "munach-legarmeh",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }],
+      "source": "torah-grammar.md L86 (§2.2 \"munach legarmeh\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "tevir",
+      "trope": "tevir",
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }],
+      "source": "torah-grammar.md L87 (§2.2 \"tevir\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": -2, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "darga",
+      "trope": "darga",
+      "context": {},
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 1.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }],
+      "source": "torah-grammar.md L88 (§2.2 \"darga\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "mercha>tevir",
+      "trope": "mercha",
+      "context": { "before": "tevir" },
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }],
+      "source": "torah-grammar.md L89 (§2.2 \"mercha before tevir\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "mercha-kefula",
+      "trope": "mercha-kefula",
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }],
+      "source": "torah-grammar.md L90 (§2.2 \"mercha kefula\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 1.5 }, { "deg": 4, "dur": 0.5, "alt": 1 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 1.5 }, { "deg": 5, "dur": 1.5 }, { "deg": 3, "dur": 1.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "azla",
+      "trope": "geresh",
+      "context": { "after": "kadma" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 1.5 }],
+      "source": "torah-grammar.md L91 (§2.2 \"kadma v'azla (azla)\")",
+      "note": "Six notes (Binder) vs two (Rosowsky, Common): cantor question 5.",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "geresh",
+      "trope": "geresh",
+      "context": {},
+      "upbeats": [{ "deg": 5, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 1.5 }],
+      "source": "torah-grammar.md L92 (§2.2 \"geresh\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "gershayim",
+      "trope": "gershayim",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 1.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }],
+      "source": "torah-grammar.md L93 (§2.2 \"gershayim\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 1.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>geresh",
+      "trope": "munach",
+      "context": { "before": "geresh" },
+      "upbeats": [{ "deg": 5, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }],
+      "source": "torah-grammar.md L94 (§2.2 \"munach before geresh\")"
+    },
+    {
+      "id": "munach>gershayim",
+      "trope": "munach",
+      "context": { "before": "gershayim" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }],
+      "source": "torah-grammar.md L94 (§2.2 \"munach before gershayim\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "zakef-gadol",
+      "trope": "zakef-gadol",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 5, "dur": 1.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 1.5 }, { "deg": 2, "dur": 1.5 }],
+      "source": "torah-grammar.md L95 (§2.2 \"zakef gadol\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "telisha-ketana",
+      "trope": "telisha-ketana",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }, { "deg": 1, "dur": 1.5 }],
+      "source": "torah-grammar.md L96 (§2.2 \"telisha ketana\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "telisha-gedola",
+      "trope": "telisha-gedola",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 1.5 }],
+      "source": "torah-grammar.md L97 (§2.2 \"telisha gedola\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 1.5 }, { "deg": 2, "dur": 1.5 }, { "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>telisha-ketana",
+      "trope": "munach",
+      "context": { "before": "telisha-ketana" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }],
+      "source": "torah-grammar.md L98 (§2.2 \"munach before telisha ketana\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 1.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>pazer",
+      "trope": "munach",
+      "context": { "before": "pazer" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }],
+      "source": "torah-grammar.md L98 (§2.2 \"munach before pazer\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 1.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>telisha-gedola",
+      "trope": "munach",
+      "context": { "before": "telisha-gedola" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }],
+      "source": "torah-grammar.md L98 (§2.2 \"munach in a telisha-gedola group\")",
+      "confidence": "low",
+      "note": "The report says 'in a telisha-gedola group'; lib.js has no telisha-gedola family, so this is read as 'immediately before telisha gedola'.",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 1.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "pazer",
+      "trope": "pazer",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }],
+      "source": "torah-grammar.md L99 (§2.2 \"pazer\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 1.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5, "alt": 1 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "zarka",
+      "trope": "zarka",
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": -1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": -2, "dur": 0.5 }],
+      "source": "torah-grammar.md L100 (§2.2 \"zarka\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": -1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": -2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 1.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": -1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": -1, "dur": 0.5 }, { "deg": -2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>zarka",
+      "trope": "munach",
+      "context": { "before": "zarka" },
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }],
+      "source": "torah-grammar.md L101 (§2.2 \"munach before zarka\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "mercha>zarka",
+      "trope": "mercha",
+      "context": { "before": "zarka" },
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }],
+      "source": "torah-grammar.md L101 (§2.2 \"mercha before zarka\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "segol",
+      "trope": "segol",
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }],
+      "source": "torah-grammar.md L102 (§2.2 \"segol\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": -2, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": -1, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 1.5 }, { "deg": 2, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>segol",
+      "trope": "munach",
+      "context": { "before": "segol" },
+      "upbeats": [{ "deg": -2, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 1.5 }],
+      "source": "torah-grammar.md L103 (§2.2 \"munach before segol\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": -2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": -1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 1.5 }, { "deg": 0, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>munach@segol",
+      "trope": "munach",
+      "context": { "before": "munach", "group": "segol" },
+      "upbeats": [{ "deg": -2, "dur": 0.5 }],
+      "core": [{ "deg": -2, "dur": 1.5 }],
+      "source": "torah-grammar.md L103 (§2.2 \"munach-munach in a segol group\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "shalshelet",
+      "trope": "shalshelet",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }],
+      "source": "torah-grammar.md L104 (§2.2 \"shalshelet\")",
+      "note": "23 notes, 'similar to three pazers'. Always followed by a paseq, which the text front end reads as paseq, not legarmeh.",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 8, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5, "alt": 1 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5, "alt": 1 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "yerach-ben-yomo",
+      "trope": "yerach-ben-yomo",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }],
+      "source": "torah-grammar.md L105 (§2.2 \"yerach ben yomo\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 1.5 }, { "deg": 2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 1.5 }, { "deg": 4, "dur": 0.5, "alt": 1 }, { "deg": 3, "dur": 0.5 }, { "deg": 0, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "karnei-farah",
+      "trope": "karnei-farah",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 1.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 1.5 }],
+      "source": "torah-grammar.md L106 (§2.2 \"karnei farah\")",
+      "note": "= telisha ketana + telisha gedola.",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 1.5 }, { "deg": 4, "dur": 0.5, "alt": 1 }, { "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 1.5 }, { "deg": 5, "dur": 1.5 }, { "deg": 3, "dur": 1.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }, { "deg": 1, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>yerach-ben-yomo",
+      "trope": "munach",
+      "context": { "before": "yerach-ben-yomo" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }],
+      "source": "torah-grammar.md L107 (§2.2 \"munach before yerach\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 1.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "munach>karnei-farah",
+      "trope": "munach",
+      "context": { "before": "karnei-farah" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }],
+      "source": "torah-grammar.md L107 (§2.2 \"munach before karnei farah\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 1.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "aliyah:mercha>tipcha",
+      "trope": "mercha",
+      "context": { "endOfAliyah": true, "before": "tipcha" },
+      "upbeats": [{ "deg": -1, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 1.5 }],
+      "source": "torah-grammar.md L108 (§2.2 \"END OF ALIYAH mercha->tipcha\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": -1, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "aliyah:tipcha",
+      "trope": "tipcha",
+      "context": { "endOfAliyah": true },
+      "upbeats": [{ "deg": -1, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }],
+      "source": "torah-grammar.md L108 (§2.2 \"END OF ALIYAH tipcha\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "aliyah:mercha>silluq",
+      "trope": "mercha",
+      "context": { "endOfAliyah": true, "before": "silluq" },
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }],
+      "source": "torah-grammar.md L108 (§2.2 \"END OF ALIYAH mercha->silluq\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "aliyah:silluq",
+      "trope": "silluq",
+      "context": { "endOfAliyah": true },
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 0.5 }, { "deg": -1, "dur": 1.5 }],
+      "source": "torah-grammar.md L108 (§2.2 \"END OF ALIYAH silluq\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }, { "deg": -1, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 1.5 }, { "deg": -1, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "aliyah:silluq@no-tipcha",
+      "trope": "silluq",
+      "context": { "endOfAliyah": true, "noTipcha": true },
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 0.5 }, { "deg": -1, "dur": 1.5 }],
+      "source": "torah-grammar.md L129 (§3.1 \"fifth pattern: etnachta->silluq with no tipcha (Ex 14:4, Ex 36:7)\")",
+      "confidence": "low",
+      "note": "No table has a cell for this; the report proposes 'sing the end-of-aliyah silluq cell alone', so these are the aliyah:silluq notes. A separate cell so the cantor's answer (question 7) has a place to go.",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }, { "deg": -1, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 1.5 }, { "deg": -1, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "book:mercha>tipcha",
+      "trope": "mercha",
+      "context": { "endOfBook": true, "before": "tipcha" },
+      "upbeats": [{ "deg": 5, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 1.5 }],
+      "source": "torah-grammar.md L109 (§2.2 \"END OF BOOK mercha->tipcha\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 0, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "book:tipcha",
+      "trope": "tipcha",
+      "context": { "endOfBook": true },
+      "upbeats": [{ "deg": 6, "dur": 0.5 }],
+      "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }],
+      "source": "torah-grammar.md L109 (§2.2 \"END OF BOOK tipcha\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": -2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }, { "deg": -2, "dur": 1.5 }]
+        }
+      }
+    },
+    {
+      "id": "book:mercha>silluq",
+      "trope": "mercha",
+      "context": { "endOfBook": true, "before": "silluq" },
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }],
+      "source": "torah-grammar.md L109 (§2.2 \"END OF BOOK mercha->silluq\")",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": -2, "dur": 0.5 }],
+          "core": [{ "deg": -2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "book:silluq",
+      "trope": "silluq",
+      "context": { "endOfBook": true },
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 1.5 }],
+      "source": "torah-grammar.md L109 (§2.2 \"END OF BOOK silluq\")",
+      "note": "Lands on 1 (Binder) vs 2 (Rosowsky, Common); cantor question 6.",
+      "variants": {
+        "rosowsky": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 2, "dur": 1.5 }]
+        },
+        "common": {
+          "upbeats": [{ "deg": -2, "dur": 0.5 }, { "deg": 5, "dur": 1.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "creation:mercha>tipcha",
+      "trope": "mercha",
+      "context": { "special": "creation", "group": "sof-pasuk", "before": "tipcha" },
+      "upbeats": [{ "deg": 5, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 0.5 }],
+      "source": "torah-grammar.md L110 (§2.2 \"CREATION DAY mercha->tipcha\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 4, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "creation:tipcha",
+      "trope": "tipcha",
+      "context": { "special": "creation", "group": "sof-pasuk" },
+      "upbeats": [{ "deg": 6, "dur": 0.5 }],
+      "core": [{ "deg": 6, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }],
+      "source": "torah-grammar.md L110 (§2.2 \"CREATION DAY tipcha (= END OF BOOK)\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 4, "dur": 0.5 }],
+          "core": [{ "deg": 5, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "creation:mercha>silluq",
+      "trope": "mercha",
+      "context": { "special": "creation", "group": "sof-pasuk", "before": "silluq" },
+      "upbeats": [{ "deg": 3, "dur": 0.5 }],
+      "core": [{ "deg": 3, "dur": 0.5 }],
+      "source": "torah-grammar.md L110 (§2.2 \"CREATION DAY mercha->silluq (= END OF BOOK)\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 3, "dur": 0.5 }],
+          "core": [{ "deg": 3, "dur": 0.5 }]
+        }
+      }
+    },
+    {
+      "id": "creation:silluq",
+      "trope": "silluq",
+      "context": { "special": "creation", "group": "sof-pasuk" },
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 1.5 }],
+      "source": "torah-grammar.md L110 (§2.2 \"CREATION DAY silluq (= END OF BOOK)\")",
+      "variants": {
+        "common": {
+          "upbeats": [{ "deg": 2, "dur": 0.5 }],
+          "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }]
+        }
+      }
+    }
+  ]
+}

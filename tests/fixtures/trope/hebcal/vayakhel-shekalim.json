@@ -1,0 +1,160 @@
+{
+ "date": "2026-10-15T17:56:29.957Z",
+ "location": "Diaspora",
+ "range": {
+  "start": "2027-03-06",
+  "end": "2027-03-06"
+ },
+ "items": [
+  {
+   "date": "2027-03-06",
+   "hdate": "27 Adar I 5787",
+   "name": {
+    "en": "Vayakhel",
+    "he": "וַיַּקְהֵל"
+   },
+   "type": "shabbat",
+   "parshaNum": 22,
+   "summary": "Exodus 35:1-38:20, 30:11-16",
+   "fullkriyah": {
+    "1": {
+     "k": "Exodus",
+     "b": "35:1",
+     "e": "35:20",
+     "v": 20
+    },
+    "2": {
+     "k": "Exodus",
+     "b": "35:21",
+     "e": "35:29",
+     "v": 9
+    },
+    "3": {
+     "k": "Exodus",
+     "b": "35:30",
+     "e": "36:7",
+     "v": 13
+    },
+    "4": {
+     "k": "Exodus",
+     "b": "36:8",
+     "e": "36:19",
+     "v": 12
+    },
+    "5": {
+     "k": "Exodus",
+     "b": "36:20",
+     "e": "37:16",
+     "v": 35
+    },
+    "6": {
+     "k": "Exodus",
+     "b": "37:17",
+     "e": "37:29",
+     "v": 13
+    },
+    "7": {
+     "k": "Exodus",
+     "b": "38:1",
+     "e": "38:20",
+     "v": 20
+    },
+    "M": {
+     "p": 21,
+     "k": "Exodus",
+     "b": "30:11",
+     "e": "30:16",
+     "v": 6,
+     "reason": "Shabbat Shekalim"
+    }
+   },
+   "haftara": "II Kings 12:1-17",
+   "haft": {
+    "k": "II Kings",
+    "b": "12:1",
+    "e": "12:17",
+    "v": 17,
+    "reason": "Shabbat Shekalim"
+   },
+   "seph": {
+    "k": "II Kings",
+    "b": "11:17",
+    "e": "12:17",
+    "v": 21,
+    "reason": "Shabbat Shekalim"
+   },
+   "sephardic": "II Kings 11:17-12:17",
+   "sephardicNumV": 21,
+   "summaryParts": [
+    {
+     "k": "Exodus",
+     "b": "35:1",
+     "e": "38:20"
+    },
+    {
+     "k": "Exodus",
+     "b": "30:11",
+     "e": "30:16"
+    }
+   ],
+   "reason": {
+    "haftara": "Shabbat Shekalim",
+    "sephardic": "Shabbat Shekalim",
+    "M": "Shabbat Shekalim"
+   },
+   "triennial": {
+    "1": {
+     "k": "Exodus",
+     "b": "37:17",
+     "e": "37:19",
+     "v": 3
+    },
+    "2": {
+     "k": "Exodus",
+     "b": "37:20",
+     "e": "37:24",
+     "v": 5
+    },
+    "3": {
+     "k": "Exodus",
+     "b": "37:25",
+     "e": "37:29",
+     "v": 5
+    },
+    "4": {
+     "k": "Exodus",
+     "b": "38:1",
+     "e": "38:3",
+     "v": 3
+    },
+    "5": {
+     "k": "Exodus",
+     "b": "38:4",
+     "e": "38:8",
+     "v": 5
+    },
+    "6": {
+     "k": "Exodus",
+     "b": "38:9",
+     "e": "38:15",
+     "v": 7
+    },
+    "7": {
+     "k": "Exodus",
+     "b": "38:16",
+     "e": "38:20",
+     "v": 5
+    },
+    "M": {
+     "p": 21,
+     "k": "Exodus",
+     "b": "30:11",
+     "e": "30:16",
+     "v": 6,
+     "reason": "Shabbat Shekalim"
+    }
+   },
+   "triYear": 2
+  }
+ ]
+}

@@ -1,0 +1,135 @@
+{
+ "date": "2026-10-14T16:47:24.401Z",
+ "location": "Diaspora",
+ "range": {
+  "start": "2026-10-10",
+  "end": "2026-10-10"
+ },
+ "items": [
+  {
+   "date": "2026-10-10",
+   "hdate": "29 Tishrei 5787",
+   "name": {
+    "en": "Bereshit",
+    "he": "בְּרֵאשִׁית"
+   },
+   "type": "shabbat",
+   "parshaNum": 1,
+   "summary": "Genesis 1:1-6:8",
+   "fullkriyah": {
+    "1": {
+     "k": "Genesis",
+     "b": "1:1",
+     "e": "2:3",
+     "v": 34
+    },
+    "2": {
+     "k": "Genesis",
+     "b": "2:4",
+     "e": "2:19",
+     "v": 16
+    },
+    "3": {
+     "k": "Genesis",
+     "b": "2:20",
+     "e": "3:21",
+     "v": 27
+    },
+    "4": {
+     "k": "Genesis",
+     "b": "3:22",
+     "e": "4:18",
+     "v": 21
+    },
+    "5": {
+     "k": "Genesis",
+     "b": "4:19",
+     "e": "4:22",
+     "reason": "some sources use 4:19-26",
+     "v": 4
+    },
+    "6": {
+     "k": "Genesis",
+     "b": "4:23",
+     "e": "5:24",
+     "reason": "some sources use 5:1-24",
+     "v": 28
+    },
+    "7": {
+     "k": "Genesis",
+     "b": "5:25",
+     "e": "6:8",
+     "v": 16
+    },
+    "M": {
+     "k": "Genesis",
+     "b": "6:5",
+     "e": "6:8",
+     "v": 4
+    }
+   },
+   "haftara": "I Samuel 20:18-42",
+   "haft": {
+    "k": "I Samuel",
+    "b": "20:18",
+    "e": "20:42",
+    "v": 25,
+    "reason": "Shabbat Machar Chodesh"
+   },
+   "reason": {
+    "haftara": "Shabbat Machar Chodesh"
+   },
+   "triennial": {
+    "1": {
+     "k": "Genesis",
+     "b": "2:4",
+     "e": "2:9",
+     "v": 6
+    },
+    "2": {
+     "k": "Genesis",
+     "b": "2:10",
+     "e": "2:19",
+     "v": 10
+    },
+    "3": {
+     "k": "Genesis",
+     "b": "2:20",
+     "e": "2:25",
+     "v": 6
+    },
+    "4": {
+     "k": "Genesis",
+     "b": "3:1",
+     "e": "3:21",
+     "v": 21
+    },
+    "5": {
+     "k": "Genesis",
+     "b": "3:22",
+     "e": "3:24",
+     "v": 3
+    },
+    "6": {
+     "k": "Genesis",
+     "b": "4:1",
+     "e": "4:18",
+     "v": 18
+    },
+    "7": {
+     "k": "Genesis",
+     "b": "4:19",
+     "e": "4:26",
+     "v": 8
+    },
+    "M": {
+     "k": "Genesis",
+     "b": "4:23",
+     "e": "4:26",
+     "v": 4
+    }
+   },
+   "triYear": 2
+  }
+ ]
+}

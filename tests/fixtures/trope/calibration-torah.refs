@@ -1,0 +1,85 @@
+# Torah calibration corpus, torah-grammar.md §5.3 (core 31, full +23 to 54, rare marks §4, extras §3.1/§5.3).
+# ref|set|final|note; tags in the note ([endOfAliyah] [endOfBook] [special:creation]) become fields in the post-processing step (README).
+Genesis 1:1|core|false|seed
+Deuteronomy 1:21|core|false|[endOfAliyah] end of Devarim 2; tipcha-silluq
+Numbers 26:35|core|false|
+Numbers 35:5|core|false|karnei farah + yerach ben yomo
+Genesis 43:7|core|false|
+Deuteronomy 6:11|core|false|
+Genesis 42:38|core|false|
+Numbers 36:13|core|false|[endOfAliyah] [endOfBook] end of Numbers; tipcha-mercha-silluq
+Deuteronomy 31:17|core|false|
+Deuteronomy 14:29|core|false|[endOfAliyah] end of Re'eh 5; mercha-tipcha-mercha-silluq
+Numbers 32:1|core|false|
+Exodus 36:7|core|false|[endOfAliyah] end of Vayakhel 3; etnachta-silluq (fifth pattern)
+Deuteronomy 3:20|core|false|zakef gadol>kadma
+Genesis 7:2|core|false|
+Deuteronomy 2:36|core|false|
+Leviticus 6:11|core|false|[endOfAliyah] end of Tzav 1; mercha-tipcha-silluq
+Exodus 29:1|core|false|
+Exodus 35:29|core|false|[endOfAliyah] end of Vayakhel 2
+Exodus 35:35|core|false|
+Leviticus 27:11|core|false|
+Genesis 9:2|core|false|
+Exodus 30:12|core|false|
+Exodus 7:20|core|false|
+Leviticus 10:1|core|false|mercha kefula
+Genesis 41:22|core|false|
+Genesis 50:26|core|false|[endOfAliyah] [endOfBook] end of Genesis
+Leviticus 27:34|core|false|[endOfAliyah] [endOfBook] end of Leviticus
+Genesis 23:15|core|false|
+Genesis 7:21|core|false|
+Genesis 24:12|core|false|shalshelet
+Numbers 16:13|core|false|[endOfAliyah] end of Korach 1
+Genesis 27:25|full|false|mercha kefula
+Genesis 27:33|full|false|pazer>pazer, segol>pazer
+Genesis 6:15|full|false|
+Exodus 3:18|full|false|
+Exodus 3:8|full|false|
+Exodus 40:38|full|false|[endOfAliyah] [endOfBook] end of Exodus
+Numbers 22:20|full|false|[endOfAliyah] end of Balak 2
+Deuteronomy 6:10|full|false|
+Numbers 29:18|full|false|
+Numbers 18:9|full|false|
+Genesis 10:32|full|false|[endOfAliyah] end of Noach 6
+Numbers 19:4|full|false|
+Deuteronomy 5:22|full|false|
+Exodus 11:1|full|false|
+Exodus 3:19|full|false|telisha gedola>mercha
+Deuteronomy 31:16|full|false|
+Genesis 3:11|full|false|zakef gadol>yetiv
+Genesis 5:29|full|false|gershayim+telisha gedola on one word
+Exodus 16:6|full|false|
+Genesis 42:16|full|false|
+Exodus 13:3|full|false|
+Exodus 35:20|full|false|[endOfAliyah] end of Vayakhel 1, 5 words
+Exodus 16:17|full|false|
+Genesis 13:1|full|false|geresh>telisha gedola
+Exodus 7:7|full|false|[endOfAliyah] end of Vaera 3
+Genesis 22:8|full|false|[endOfAliyah] end of Rosh Hashana II aliyah 2
+Leviticus 15:18|full|false|
+Genesis 28:16|full|false|segol>zakef gadol
+Genesis 41:30|full|false|telisha gedola>geresh
+Exodus 4:31|full|false|[endOfAliyah] end of Shemot 6
+Exodus 40:19|full|false|zakef katan>geresh
+Leviticus 11:35|full|false|segol>darga
+Numbers 14:29|full|false|
+Genesis 38:12|full|false|pashta>revia
+Genesis 43:34|full|false|segol>geresh
+Genesis 44:1|full|false|
+Exodus 38:30|full|false|
+Leviticus 26:26|full|false|
+Numbers 14:35|full|false|
+Leviticus 14:48|full|false|pashta>telisha gedola
+Numbers 11:21|full|false|segol>mercha
+Genesis 47:15|full|false|
+Leviticus 7:21|full|false|pashta>legarmeh; also a mid-verse pisqa
+Genesis 19:16|rare|false|shalshelet
+Genesis 39:8|rare|false|shalshelet
+Leviticus 8:23|rare|false|shalshelet
+Exodus 5:15|rare|false|mercha kefula
+Numbers 14:3|rare|false|mercha kefula
+Numbers 32:42|rare|false|[endOfAliyah] mercha kefula
+Deuteronomy 34:12|extra|false|[endOfAliyah] [endOfBook] end of Deuteronomy (the fifth book end, §5.3 'Add')
+Exodus 14:4|extra|false|[endOfAliyah] end of Beshalach 1; etnachta-silluq (the other fifth-pattern verse, §3.1)
+Genesis 1:5|extra|false|[special:creation] Creation-day refrain (§3.4); special melody

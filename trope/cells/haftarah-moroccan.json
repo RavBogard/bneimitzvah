@@ -1,0 +1,251 @@
+{
+  "name": "Moroccan haftarah (Fez), Idelsohn 1929",
+  "type": "haftarah",
+  "tradition": "Moroccan (general, Fez)",
+  "source": {
+    "work": "A. Z. Idelsohn, Thesaurus of Oriental Hebrew Melodies, vol. 5: Songs of the Moroccan Jews (Berlin/Jerusalem/Vienna: Benjamin Harz, 1928/29). Public domain.",
+    "scan": "https://archive.org/details/31761125265157",
+    "table": "No. 271 \"Nĕbiim (Prophets)\", book p. 103 (scan PDF page index 120, archive.org page n120)",
+    "example": "No. 272, Joshua 1:14 chanted in the same mode, book p. 103 (same page); transcription in tests/fixtures/trope/idelsohn-272-joshua-1-14.json",
+    "provenance": "Hebrew introduction p. 5 (scan index 20): \"271 ... according to Fez, 272 is an example of the Fez reading\"; p. 6 (index 21) groups 271, 272, 296, 297 as one type of Prophets mode.",
+    "legend": "Hebrew introduction p. 5: the raised notes are raised \"in Morocco only by a quarter [tone], or at least without fixed precision, between a quarter and a half; in Europe by a half\" - the x sign in the Torah tables (263, 264) is that quarter-tone raising. No. 271 and no. 272 carry no x and no accidentals.",
+    "report": "docs/superpowers/research/2026-10-15-trope-engine/moroccan-table.md",
+    "rule": "Where no. 271 prints a figure, the cell follows 271. Where 271 is silent, the cell comes from no. 272. Where 272 sings a 271 figure differently, the cell keeps 271 and the 272 reading is a variant named jos272."
+  },
+  "mode": "dorian",
+  "key": "D dorian (no key signature, final D, reciting tone E)",
+  "tonic": "D4",
+  "pronunciation": "moroccan (sketched in moroccan-table.md §6, not implemented; renderers use israeli-v1 until it exists)",
+  "degrees": {
+    "numbering": "Diatonic steps from the final D: 1 = D4, 2 = E4 (the reciting tone), 3 = F4, 4 = G4, 5 = A4, 6 = B4, 7 = C5, 8 = D5. 0 is C4 (the 7th below), -1 is B3 (the 6th below), -2 is A3.",
+    "semitones": { "-2": -5, "-1": -3, "0": -2, "1": 0, "2": 2, "3": 3, "4": 5, "5": 7, "6": 9, "7": 10, "8": 12, "9": 14 },
+    "note": "Dorian as printed: B natural (no. 271 merha D C B), F natural, C natural. Idelsohn's introduction says Moroccan raised notes are raised only a quarter tone or 'between a quarter and a half'; if a reader's B3 sounds lower than B natural, -1 may need -3.5 (a microtone the MIDI renderer cannot play yet)."
+  },
+  "durations": {
+    "unit": "beats (quarter note = 1)",
+    "note": "Idelsohn's printed values (eighth = 0.5, sixteenth = 0.25, dotted eighth = 0.75, quarter = 1). Rhythm in chant is free; the values give the shape, not a meter."
+  },
+  "cellShape": "As trope/cells/haftarah.json, plus aliases (other te'amim this cell serves) and foldUpbeats (extra upbeats sung as a melisma on the first syllable instead of dropped).",
+  "tropeIds": ["silluq", "etnachta", "segol", "zakef-katan", "zakef-gadol", "tipcha", "revia", "zarka", "pashta", "yetiv", "tevir", "geresh", "gershayim", "pazer", "telisha-gedola", "munach-legarmeh", "munach", "mahpach", "mercha", "mercha-kefula", "darga", "kadma", "telisha-ketana", "shalshelet", "karnei-farah", "yerach-ben-yomo"],
+  "recite": {
+    "tone": { "deg": 2, "dur": 0.5 },
+    "why": "Idelsohn: in its Moroccan form this mode 'altogether moves on the tones D, E, (G)' (introduction p. 5), and no. 271 notates munah and merha as two notes on E. Te'amim listed here are recited on E; the following disjunctive's upbeats carry the melody.",
+    "tropes": {
+      "mahpach": { "basis": "source", "confidence": "medium", "source": "Not printed in 271 or 272. Conjunctive: recited on the reciting tone like munah and merha in no. 271 (both E E)." },
+      "darga": { "basis": "source", "confidence": "medium", "source": "Not printed in 271 or 272. Conjunctive: recited on the reciting tone like munah and merha in no. 271. Wikipedia's note that Moroccan darga/tevir differ mid-verse vs near the verse end is not reflected in 271 (open)." },
+      "mercha-kefula": { "basis": "source", "confidence": "low", "source": "Not printed in 271 or 272. Conjunctive: recited on the reciting tone like merha in no. 271." },
+      "yerach-ben-yomo": { "basis": "source", "confidence": "low", "source": "Never occurs in a haftarah. Conjunctive: recited on the reciting tone." },
+      "pazer": { "basis": "editor", "confidence": "none", "source": "Editor's placeholder: pazer is in neither 271 nor 272. Recited on the tone until a living reader is checked (moroccan-table.md §5)." },
+      "karnei-farah": { "basis": "editor", "confidence": "none", "source": "Editor's placeholder: never occurs in a haftarah; not in Idelsohn. Recited on the tone." },
+      "shalshelet": { "basis": "editor", "confidence": "none", "source": "Editor's placeholder: never occurs in a haftarah; not in Idelsohn. Recited on the tone." }
+    }
+  },
+  "endOfHaftarah": "Idelsohn gives no end-of-haftarah cadence for this mode; the last verse takes the ordinary sof pasuq (moroccan-table.md §4).",
+  "variantSets": {
+    "jos272": "How no. 272 (Joshua 1:14) sings a figure that no. 271 prints differently."
+  },
+  "cells": [
+    {
+      "id": "zarka",
+      "trope": "zarka",
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.5 }, { "deg": 5, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 3, "dur": 0.25 }, { "deg": 2, "dur": 0.25 }, { "deg": 1, "dur": 0.5 }],
+      "source": "Idelsohn no. 271 \"Zarqa\" E A | E F E F E D; no. 272 tappĕhem identical (ta E, pĕ A, hem E F E F E D)",
+      "confidence": "high"
+    },
+    {
+      "id": "segol",
+      "trope": "segol",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 0, "dur": 1 }],
+      "source": "Idelsohn no. 271 \"segôl\" D E D | C; no. 272 umiqnêhem identical (u D, miq E, nê D, hem C)",
+      "confidence": "high"
+    },
+    {
+      "id": "qadma>azla",
+      "trope": "kadma",
+      "context": { "before": "geresh" },
+      "upbeats": [{ "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 1 }],
+      "source": "Idelsohn no. 271 \"qadma\" G | E, printed as the pair \"qadma wĕazla\"; no. 272 taʿabru (kadma before geresh) ta G, ʿab G, ru E",
+      "confidence": "high",
+      "note": "Idelsohn's label qadma = the mark U+05A8 (Ashkenazi kadma), azla = geresh: no. 272 settles it, since its kadma word sings G G E and its geresh word sings E E D C."
+    },
+    {
+      "id": "qadma",
+      "trope": "kadma",
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.25 }],
+      "core": [{ "deg": 2, "dur": 0.5 }],
+      "source": "Idelsohn no. 272 ăšer (kadma before merha-tevir) E E; 271 prints qadma only before azla",
+      "confidence": "low"
+    },
+    {
+      "id": "azla",
+      "trope": "geresh",
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.5 }, { "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 1 }, { "deg": 0, "dur": 1 }],
+      "source": "Idelsohn no. 271 \"wĕazla\" E E | D C; no. 272 ḥămušim (geresh) hă E, mu E, šim D~C",
+      "confidence": "high"
+    },
+    {
+      "id": "rebia",
+      "trope": "revia",
+      "aliases": ["zakef-gadol", "gershayim"],
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.5 }, { "deg": 2, "dur": 0.75 }],
+      "core": [{ "deg": 1, "dur": 0.75 }, { "deg": 0, "dur": 1 }],
+      "source": "Idelsohn no. 271 \"rĕbiʿa / z.g. u. gersaim\" (one figure for revia, zakef gadol and gershayim) E E | D C; no. 272 jĕšbu and baʾareṣ (both zakef gadol) sing it exactly",
+      "confidence": "high",
+      "note": "No. 272's one revia word, ăḥêhem, sings D C | D~C instead (variant jos272). That contour is also 272's zakef katon; 271's label is kept.",
+      "variants": {
+        "jos272": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }],
+          "core": [{ "deg": 1, "dur": 1 }, { "deg": 0, "dur": 1 }]
+        }
+      }
+    },
+    {
+      "id": "zakef-katan",
+      "trope": "zakef-katan",
+      "context": {},
+      "foldUpbeats": true,
+      "upbeats": [{ "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 1 }, { "deg": 0, "dur": 1 }],
+      "source": "Not in no. 271. Idelsohn no. 272 haḥajil (the verse's only zakef katan): ha D~C, ḥa D, jil C",
+      "confidence": "low",
+      "note": "One instance. The lead-in D~C is a melisma on one syllable in 272, hence foldUpbeats."
+    },
+    {
+      "id": "pashta",
+      "trope": "pashta",
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.5 }, { "deg": 4, "dur": 0.5 }],
+      "core": [{ "deg": 5, "dur": 1 }, { "deg": 4, "dur": 1 }, { "deg": 2, "dur": 1 }],
+      "source": "Idelsohn no. 271 \"tĕrên qadmin\" E G | A G E, read as the pashta figure",
+      "confidence": "low",
+      "note": "Tĕrên qadmin ('two qadmas') is the Sephardi name of the doubled pashta sign. 271 has no other pashta entry, and 272 has no pashta word, so the assignment is an inference."
+    },
+    {
+      "id": "yetiv",
+      "trope": "yetiv",
+      "context": {},
+      "upbeats": [],
+      "core": [{ "deg": 3, "dur": 1 }],
+      "source": "Not in no. 271. Idelsohn no. 272 kôl (the verse's only yetiv): F",
+      "confidence": "low"
+    },
+    {
+      "id": "tevir",
+      "trope": "tevir",
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 1 }, { "deg": 0, "dur": 1 }],
+      "source": "Idelsohn no. 271 \"tĕbir\" E | D~C; no. 272 lahem la E, hem E D C (one extra E on the stress)",
+      "confidence": "medium",
+      "note": "271 does not distinguish mid-verse from near-verse-end tevir (Wikipedia's claim); no. 296, another Prophets table, does print two tebir forms. Open."
+    },
+    {
+      "id": "merha>tebir",
+      "trope": "mercha",
+      "context": { "before": "tevir" },
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 0.5 }],
+      "source": "Not in no. 271. Idelsohn no. 272 natan (merha before tebir): na E, tan D",
+      "confidence": "low"
+    },
+    {
+      "id": "telisha",
+      "trope": "telisha-ketana",
+      "aliases": ["telisha-gedola"],
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 0, "dur": 0.75 }, { "deg": 1, "dur": 0.25 }, { "deg": 2, "dur": 1 }],
+      "source": "Idelsohn no. 271 \"talsa\" C E; no. 272 wĕattem (telisha ketana) wĕ D, at D, tem C D E",
+      "confidence": "medium",
+      "note": "One cell for both telishas: 271 prints one 'talsa', and Idelsohn's Torah (263) and Gibraltar (273) tables both print 'talsa qĕtanna u. gĕdola' as one figure. The passing D is 272's."
+    },
+    {
+      "id": "merha",
+      "trope": "mercha",
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 1 }],
+      "source": "Idelsohn no. 271 \"merha\" (etnachta half, before tifha) E E",
+      "confidence": "medium"
+    },
+    {
+      "id": "tifha",
+      "trope": "tipcha",
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 1 }],
+      "source": "Idelsohn no. 271 \"tifha\" (etnachta half) E E",
+      "confidence": "medium",
+      "note": "No. 272 môše (tipcha before munah-etnachta) sings mô C, še E: a low upbeat under the reciting tone (variant jos272).",
+      "variants": {
+        "jos272": {
+          "upbeats": [{ "deg": 0, "dur": 0.25 }],
+          "core": [{ "deg": 2, "dur": 0.75 }]
+        }
+      }
+    },
+    {
+      "id": "munah",
+      "trope": "munach",
+      "aliases": ["munach-legarmeh"],
+      "context": {},
+      "upbeats": [{ "deg": 2, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 1 }],
+      "source": "Idelsohn no. 271 \"munaḥ\" E E; no. 272 nĕšêhem, lifnê, gibbôrê E on every syllable (bĕʿêber: bĕ D, ʿê E, ber E)",
+      "confidence": "high",
+      "note": "Munach legarmeh (munach + paseq) is not in Idelsohn; it is sung as munah, the paseq giving only a break. Editor's choice, low confidence for that alias."
+    },
+    {
+      "id": "atnah",
+      "trope": "etnachta",
+      "context": {},
+      "upbeats": [{ "deg": 1, "dur": 1 }],
+      "core": [{ "deg": 1, "dur": 1 }],
+      "source": "Idelsohn no. 271 \"atnaḥ\" D D",
+      "confidence": "medium",
+      "note": "No. 272 hajjardên sings haj D, jar D, dên C, ending a step below the final (variant jos272).",
+      "variants": {
+        "jos272": {
+          "upbeats": [{ "deg": 1, "dur": 0.5 }],
+          "core": [{ "deg": 0, "dur": 1 }]
+        }
+      }
+    },
+    {
+      "id": "merha@sof-pasuq",
+      "trope": "mercha",
+      "context": { "group": "sof-pasuk" },
+      "upbeats": [{ "deg": 1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }],
+      "core": [{ "deg": -1, "dur": 0.5 }],
+      "source": "Idelsohn no. 271 \"merḥa\" (sof-pasuq half) D C | B",
+      "confidence": "medium"
+    },
+    {
+      "id": "tifha@sof-pasuq",
+      "trope": "tipcha",
+      "context": { "group": "sof-pasuk" },
+      "upbeats": [{ "deg": 0, "dur": 0.5 }, { "deg": -1, "dur": 0.5 }, { "deg": 0, "dur": 0.5 }],
+      "core": [{ "deg": 1, "dur": 1.5 }],
+      "source": "Idelsohn no. 271 \"ṭifḥa\" (sof-pasuq half) C | D; no. 272 waʿăzartem wa C, ʿă B, zar C, tem D (the B neighbour note is 272's)",
+      "confidence": "high"
+    },
+    {
+      "id": "sof-pasuq",
+      "trope": "silluq",
+      "context": {},
+      "upbeats": [{ "deg": 0, "dur": 0.5 }, { "deg": 1, "dur": 0.5 }],
+      "core": [{ "deg": 2, "dur": 1 }, { "deg": 1, "dur": 2 }],
+      "source": "Idelsohn no. 271 \"sôf pasuq\" C D | E D; no. 272 ôtam ô D, tam E~D",
+      "confidence": "high"
+    }
+  ]
+}

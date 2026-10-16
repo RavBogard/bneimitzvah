@@ -1,0 +1,536 @@
+{
+  "version": "Miqra according to the Masorah",
+  "fetched": "2026-10-15",
+  "verses": [
+    {
+      "ref": "I Samuel 20:18",
+      "book": "I Samuel",
+      "chapter": 20,
+      "verse": 18,
+      "he": "וַיֹּאמֶר־ל֥וֹ יְהוֹנָתָ֖ן מָחָ֣ר חֹ֑דֶשׁ וְנִפְקַ֕דְתָּ כִּ֥י יִפָּקֵ֖ד מוֹשָׁבֶֽךָ׃",
+      "set": "core",
+      "final": false,
+      "note": "seed: the brief's example verse"
+    },
+    {
+      "ref": "Zechariah 3:2",
+      "book": "Zechariah",
+      "chapter": 3,
+      "verse": 2,
+      "he": "וַיֹּ֨אמֶר יְהֹוָ֜ה אֶל־הַשָּׂטָ֗ן יִגְעַ֨ר יְהֹוָ֤ה בְּךָ֙ הַשָּׂטָ֔ן וְיִגְעַ֤ר יְהֹוָה֙ בְּךָ֔ הַבֹּחֵ֖ר בִּירֽוּשָׁלָ֑͏ִם הֲל֧וֹא זֶ֦ה א֖וּד מֻצָּ֥ל מֵאֵֽשׁ׃",
+      "set": "core",
+      "final": false,
+      "note": "seed: the corpus's only mercha kefula"
+    },
+    {
+      "ref": "Jeremiah 9:23",
+      "book": "Jeremiah",
+      "chapter": 9,
+      "verse": 23,
+      "he": "כִּ֣י אִם־בְּזֹ֞את יִתְהַלֵּ֣ל הַמִּתְהַלֵּ֗ל הַשְׂכֵּל֮ וְיָדֹ֣עַ אוֹתִי֒ כִּ֚י אֲנִ֣י יְהֹוָ֔ה עֹ֥שֶׂה חֶ֛סֶד מִשְׁפָּ֥ט וּצְדָקָ֖ה בָּאָ֑רֶץ כִּֽי־בְאֵ֥לֶּה חָפַ֖צְתִּי נְאֻם־יְהֹוָֽה׃&nbsp;<span class=\"mam-spi-samekh\">{ס}</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
+      "set": "core",
+      "final": true,
+      "note": "last verse of a haftarah; segol>yetiv"
+    },
+    {
+      "ref": "Isaiah 66:20",
+      "book": "Isaiah",
+      "chapter": 66,
+      "verse": 20,
+      "he": "וְהֵבִ֣יאוּ אֶת־כׇּל־אֲחֵיכֶ֣ם מִכׇּל־הַגּוֹיִ֣ם&thinsp;<small>׀</small>&thinsp;מִנְחָ֣ה&thinsp;<small>׀</small>&thinsp;לַיהֹוָ֡ה בַּסּוּסִ֡ים וּ֠בָרֶ֠כֶב וּבַצַּבִּ֨ים וּבַפְּרָדִ֜ים וּבַכִּרְכָּר֗וֹת עַ֣ל הַ֥ר קׇדְשִׁ֛י יְרוּשָׁלַ֖͏ִם אָמַ֣ר יְהֹוָ֑ה כַּאֲשֶׁ֣ר יָבִ֩יאוּ֩ בְנֵ֨י יִשְׂרָאֵ֧ל אֶת־הַמִּנְחָ֛ה בִּכְלִ֥י טָה֖וֹר בֵּ֥ית יְהֹוָֽה׃",
+      "set": "core",
+      "final": false,
+      "note": "pazer>pazer, munach+pazer on one word"
+    },
+    {
+      "ref": "Zechariah 14:2",
+      "book": "Zechariah",
+      "chapter": 14,
+      "verse": 2,
+      "he": "וְאָסַפְתִּ֨י אֶת־כׇּל־הַגּוֹיִ֥ם&thinsp;<small>׀</small>&thinsp;אֶֽל־יְרוּשָׁלַ֘͏ִם֮ לַמִּלְחָמָה֒ וְנִלְכְּדָ֣ה הָעִ֗יר וְנָשַׁ֙סּוּ֙ הַבָּ֣תִּ֔ים וְהַנָּשִׁ֖ים <span class=\"mam-kq\"><span class=\"mam-kq-k\">(תשגלנה)</span> <span class=\"mam-kq-q\">[תִּשָּׁכַ֑בְנָה]</span></span> וְיָצָ֞א חֲצִ֤י הָעִיר֙ בַּגּוֹלָ֔ה וְיֶ֣תֶר הָעָ֔ם לֹ֥א יִכָּרֵ֖ת מִן־הָעִֽיר׃",
+      "set": "core",
+      "final": false,
+      "note": "mercha+zarka on one word"
+    },
+    {
+      "ref": "I Kings 6:6",
+      "book": "I Kings",
+      "chapter": 6,
+      "verse": 6,
+      "he": "<span class=\"mam-kq\"><span class=\"mam-kq-k\">(היצוע)</span> <span class=\"mam-kq-q\">[הַיָּצִ֨יעַ]</span></span> הַתַּחְתֹּנָ֜ה חָמֵ֧שׁ בָּאַמָּ֣ה רׇחְבָּ֗הּ וְהַתִּֽיכֹנָה֙ שֵׁ֤שׁ בָּאַמָּה֙ רׇחְבָּ֔הּ וְהַ֨שְּׁלִישִׁ֔ית שֶׁ֥בַע בָּאַמָּ֖ה רׇחְבָּ֑הּ כִּ֡י מִגְרָעוֹת֩ נָתַ֨ן לַבַּ֤יִת סָבִיב֙ ח֔וּצָה לְבִלְתִּ֖י אֲחֹ֥ז בְּקִירוֹת־הַבָּֽיִת׃",
+      "set": "core",
+      "final": false,
+      "note": "core calibration set (20 verses covering all 23 ta'am types)"
+    },
+    {
+      "ref": "I Kings 7:48",
+      "book": "I Kings",
+      "chapter": 7,
+      "verse": 48,
+      "he": "וַיַּ֣עַשׂ שְׁלֹמֹ֔ה אֵ֚ת כׇּל־הַכֵּלִ֔ים אֲשֶׁ֖ר בֵּ֣ית יְהֹוָ֑ה אֵ֚ת מִזְבַּ֣ח הַזָּהָ֔ב וְאֶת־הַשֻּׁלְחָ֗ן אֲשֶׁ֥ר עָלָ֛יו לֶ֥חֶם הַפָּנִ֖ים זָהָֽב׃",
+      "set": "core",
+      "final": false,
+      "note": "core calibration set (20 verses covering all 23 ta'am types)"
+    },
+    {
+      "ref": "I Samuel 20:25",
+      "book": "I Samuel",
+      "chapter": 20,
+      "verse": 25,
+      "he": "וַיֵּ֣שֶׁב הַ֠מֶּ֠לֶךְ עַל־מ֨וֹשָׁב֜וֹ כְּפַ֣עַם&thinsp;<b>׀</b> בְּפַ֗עַם אֶל־מוֹשַׁב֙ הַקִּ֔יר וַיָּ֙קׇם֙ יְה֣וֹנָתָ֔ן וַיֵּ֥שֶׁב אַבְנֵ֖ר מִצַּ֣ד שָׁא֑וּל וַיִּפָּקֵ֖ד מְק֥וֹם דָּוִֽד׃",
+      "set": "core",
+      "final": false,
+      "note": "core calibration set (20 verses covering all 23 ta'am types)"
+    },
+    {
+      "ref": "Isaiah 7:3",
+      "book": "Isaiah",
+      "chapter": 7,
+      "verse": 3,
+      "he": "וַיֹּ֣אמֶר יְהֹוָה֮ אֶֽל־יְשַֽׁעְיָ֒הוּ֒ צֵא־נָא֙ לִקְרַ֣את אָחָ֔ז אַתָּ֕ה וּשְׁאָ֖ר יָשׁ֣וּב בְּנֶ֑ךָ אֶל־קְצֵ֗ה תְּעָלַת֙ הַבְּרֵכָ֣ה הָעֶלְיוֹנָ֔ה אֶל־מְסִלַּ֖ת שְׂדֵ֥ה כוֹבֵֽס׃",
+      "set": "core",
+      "final": false,
+      "note": "core calibration set (20 verses covering all 23 ta'am types)"
+    },
+    {
+      "ref": "Obadiah 1:1",
+      "book": "Obadiah",
+      "chapter": 1,
+      "verse": 1,
+      "he": "חֲז֖וֹן עֹֽבַדְיָ֑ה כֹּֽה־אָמַר֩ אֲדֹנָ֨י יֱהֹוִ֜ה לֶאֱד֗וֹם שְׁמוּעָ֨ה שָׁמַ֜עְנוּ מֵאֵ֤ת יְהֹוָה֙ וְצִיר֙ בַּגּוֹיִ֣ם שֻׁלָּ֔ח ק֛וּמוּ וְנָק֥וּמָה עָלֶ֖יהָ לַמִּלְחָמָֽה׃",
+      "set": "core",
+      "final": false,
+      "note": "core calibration set (20 verses covering all 23 ta'am types)"
+    },
+    {
+      "ref": "Judges 5:11",
+      "book": "Judges",
+      "chapter": 5,
+      "verse": 11,
+      "he": "מִקּ֣וֹל מְחַֽצְצִ֗ים בֵּ֚ין מַשְׁאַבִּ֔ים&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;שָׁ֤ם יְתַנּוּ֙ צִדְק֣וֹת יְהֹוָ֔ה&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;צִדְקֹ֥ת פִּרְזוֹנ֖וֹ בְּיִשְׂרָאֵ֑ל&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;אָ֛ז יָֽרְד֥וּ לַשְּׁעָרִ֖ים עַם־יְהֹוָֽה׃&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
+      "set": "core",
+      "final": false,
+      "note": "etnachta+tevir and zakef+mahpach on one word"
+    },
+    {
+      "ref": "II Samuel 7:6",
+      "book": "II Samuel",
+      "chapter": 7,
+      "verse": 6,
+      "he": "כִּ֣י לֹ֤א יָשַׁ֙בְתִּי֙ בְּבַ֔יִת לְ֠מִיּ֠וֹם הַעֲלֹתִ֞י אֶת־בְּנֵ֤י יִשְׂרָאֵל֙ מִמִּצְרַ֔יִם וְעַ֖ד הַיּ֣וֹם הַזֶּ֑ה וָאֶֽהְיֶה֙ מִתְהַלֵּ֔ךְ בְּאֹ֖הֶל וּבְמִשְׁכָּֽן׃",
+      "set": "core",
+      "final": false,
+      "note": "zakef>telisha gedola"
+    },
+    {
+      "ref": "Isaiah 6:2",
+      "book": "Isaiah",
+      "chapter": 6,
+      "verse": 2,
+      "he": "שְׂרָפִ֨ים עֹמְדִ֤ים&thinsp;<small>׀</small>&thinsp;מִמַּ֙עַל֙ ל֔וֹ שֵׁ֧שׁ כְּנָפַ֛יִם שֵׁ֥שׁ כְּנָפַ֖יִם לְאֶחָ֑ד בִּשְׁתַּ֣יִם&thinsp;<b>׀</b> יְכַסֶּ֣ה פָנָ֗יו וּבִשְׁתַּ֛יִם יְכַסֶּ֥ה רַגְלָ֖יו וּבִשְׁתַּ֥יִם יְעוֹפֵֽף׃",
+      "set": "core",
+      "final": false,
+      "note": "core calibration set (20 verses covering all 23 ta'am types)"
+    },
+    {
+      "ref": "I Kings 18:4",
+      "book": "I Kings",
+      "chapter": 18,
+      "verse": 4,
+      "he": "וַֽיְהִי֙ בְּהַכְרִ֣ית אִיזֶ֔בֶל אֵ֖ת נְבִיאֵ֣י יְהֹוָ֑ה וַיִּקַּ֨ח עֹבַדְיָ֜הוּ מֵאָ֣ה נְבִיאִ֗ים וַֽיַּחְבִּיאֵ֞ם חֲמִשִּׁ֥ים אִישׁ֙ בַּמְּעָרָ֔ה וְכִלְכְּלָ֖ם לֶ֥חֶם וָמָֽיִם׃",
+      "set": "core",
+      "final": false,
+      "note": "core calibration set (20 verses covering all 23 ta'am types)"
+    },
+    {
+      "ref": "Jeremiah 1:18",
+      "book": "Jeremiah",
+      "chapter": 1,
+      "verse": 18,
+      "he": "וַאֲנִ֞י הִנֵּ֧ה נְתַתִּ֣יךָ הַיּ֗וֹם לְעִ֨יר מִבְצָ֜ר וּלְעַמּ֥וּד בַּרְזֶ֛ל וּלְחֹמ֥וֹת נְחֹ֖שֶׁת עַל־כׇּל־הָאָ֑רֶץ לְמַלְכֵ֤י יְהוּדָה֙ לְשָׂרֶ֔יהָ לְכֹהֲנֶ֖יהָ וּלְעַ֥ם הָאָֽרֶץ׃",
+      "set": "core",
+      "final": false,
+      "note": "core calibration set (20 verses covering all 23 ta'am types)"
+    },
+    {
+      "ref": "Judges 5:4",
+      "book": "Judges",
+      "chapter": 5,
+      "verse": 4,
+      "he": "יְהֹוָ֗ה בְּצֵאתְךָ֤ מִשֵּׂעִיר֙&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;בְּצַעְדְּךָ֙ מִשְּׂדֵ֣ה אֱד֔וֹם&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;אֶ֣רֶץ רָעָ֔שָׁה גַּם־שָׁמַ֖יִם נָטָ֑פוּ&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;גַּם־עָבִ֖ים נָ֥טְפוּ מָֽיִם׃&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
+      "set": "core",
+      "final": false,
+      "note": "zakef+munach on one word"
+    },
+    {
+      "ref": "Joshua 2:19",
+      "book": "Joshua",
+      "chapter": 2,
+      "verse": 19,
+      "he": "וְהָיָ֡ה כֹּ֣ל אֲשֶׁר־יֵצֵא֩ מִדַּלְתֵ֨י בֵיתֵ֧ךְ&thinsp;<small>׀</small>&thinsp;הַח֛וּצָה דָּמ֥וֹ בְרֹאשׁ֖וֹ וַאֲנַ֣חְנוּ נְקִיִּ֑ם וְ֠כֹ֠ל אֲשֶׁ֨ר יִֽהְיֶ֤ה אִתָּךְ֙ בַּבַּ֔יִת דָּמ֣וֹ בְרֹאשֵׁ֔נוּ אִם־יָ֖ד תִּֽהְיֶה־בּֽוֹ׃",
+      "set": "core",
+      "final": false,
+      "note": "darga+tevir on one word"
+    },
+    {
+      "ref": "II Samuel 22:26",
+      "book": "II Samuel",
+      "chapter": 22,
+      "verse": 26,
+      "he": "עִם־חָסִ֖יד תִּתְחַסָּ֑ד&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;עִם־גִּבּ֥וֹר תָּמִ֖ים תִּתַּמָּֽם׃",
+      "set": "core",
+      "final": false,
+      "note": "4 words; short verse for the no-conjunctive case"
+    },
+    {
+      "ref": "Judges 13:6",
+      "book": "Judges",
+      "chapter": 13,
+      "verse": 6,
+      "he": "וַתָּבֹ֣א הָאִשָּׁ֗ה וַתֹּ֣אמֶר לְאִישָׁהּ֮ לֵאמֹר֒ אִ֤ישׁ הָֽאֱלֹהִים֙ בָּ֣א אֵלַ֔י וּמַרְאֵ֕הוּ כְּמַרְאֵ֛ה מַלְאַ֥ךְ הָאֱלֹהִ֖ים נוֹרָ֣א מְאֹ֑ד וְלֹ֤א שְׁאִלְתִּ֙יהוּ֙ אֵֽי־מִזֶּ֣ה ה֔וּא וְאֶת־שְׁמ֖וֹ לֹא־הִגִּ֥יד לִֽי׃",
+      "set": "core",
+      "final": false,
+      "note": "core calibration set (20 verses covering all 23 ta'am types)"
+    },
+    {
+      "ref": "I Kings 18:36",
+      "book": "I Kings",
+      "chapter": 18,
+      "verse": 36,
+      "he": "וַיְהִ֣י&thinsp;<b>׀</b> בַּעֲל֣וֹת הַמִּנְחָ֗ה וַיִּגַּ֞שׁ אֵלִיָּ֣הוּ הַנָּבִיא֮ וַיֹּאמַר֒ יְהֹוָ֗ה אֱלֹהֵי֙ אַבְרָהָם֙ יִצְחָ֣ק וְיִשְׂרָאֵ֔ל הַיּ֣וֹם יִוָּדַ֗ע כִּֽי־אַתָּ֧ה אֱלֹהִ֛ים בְּיִשְׂרָאֵ֖ל וַאֲנִ֣י עַבְדֶּ֑ךָ <span class=\"mam-kq\"><span class=\"mam-kq-k\">(ובדבריך)</span> <span class=\"mam-kq-q\">[וּבִדְבָרְךָ֣]</span></span> עָשִׂ֔יתִי אֵ֥ת כׇּל־הַדְּבָרִ֖ים הָאֵֽלֶּה׃",
+      "set": "core",
+      "final": false,
+      "note": "core calibration set (20 verses covering all 23 ta'am types)"
+    },
+    {
+      "ref": "Judges 5:17",
+      "book": "Judges",
+      "chapter": 5,
+      "verse": 17,
+      "he": "גִּלְעָ֗ד בְּעֵ֤בֶר הַיַּרְדֵּן֙ שָׁכֵ֔ן&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;וְדָ֕ן לָ֥מָּה יָג֖וּר אֳנִיּ֑וֹת&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;אָשֵׁ֗ר יָשַׁב֙ לְח֣וֹף יַמִּ֔ים&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;וְעַ֥ל מִפְרָצָ֖יו יִשְׁכּֽוֹן׃&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "II Kings 23:3",
+      "book": "II Kings",
+      "chapter": 23,
+      "verse": 3,
+      "he": "וַיַּעֲמֹ֣ד הַ֠מֶּ֠לֶךְ עַֽל־הָ֨עַמּ֜וּד וַיִּכְרֹ֥ת אֶֽת־הַבְּרִ֣ית&thinsp;<b>׀</b> לִפְנֵ֣י יְהֹוָ֗ה לָלֶ֜כֶת אַחַ֤ר יְהֹוָה֙ וְלִשְׁמֹ֨ר מִצְוֺתָ֜יו וְאֶת־עֵדְוֺתָ֤יו וְאֶת־חֻקֹּתָיו֙ בְּכׇל־לֵ֣ב וּבְכׇל־נֶ֔פֶשׁ לְהָקִ֗ים אֶת־דִּבְרֵי֙ הַבְּרִ֣ית הַזֹּ֔את הַכְּתֻבִ֖ים עַל־הַסֵּ֣פֶר הַזֶּ֑ה וַיַּעֲמֹ֥ד כׇּל־הָעָ֖ם בַּבְּרִֽית׃",
+      "set": "full",
+      "final": false,
+      "note": "revia>geresh"
+    },
+    {
+      "ref": "Judges 5:16",
+      "book": "Judges",
+      "chapter": 5,
+      "verse": 16,
+      "he": "לָ֣מָּה יָשַׁ֗בְתָּ בֵּ֚ין הַֽמִּשְׁפְּתַ֔יִם&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;לִשְׁמֹ֖עַ שְׁרִק֣וֹת עֲדָרִ֑ים&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;לִפְלַגּ֣וֹת רְאוּבֵ֔ן גְּדוֹלִ֖ים חִקְרֵי־לֵֽב׃&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "I Kings 19:8",
+      "book": "I Kings",
+      "chapter": 19,
+      "verse": 8,
+      "he": "וַיָּ֖קׇם וַיֹּ֣אכַל וַיִּשְׁתֶּ֑ה וַיֵּ֜לֶךְ בְּכֹ֣חַ&thinsp;<b>׀</b> הָאֲכִילָ֣ה הַהִ֗יא אַרְבָּעִ֥ים יוֹם֙ וְאַרְבָּעִ֣ים לַ֔יְלָה עַ֛ד הַ֥ר הָאֱלֹהִ֖ים חֹרֵֽב׃",
+      "set": "full",
+      "final": false,
+      "note": "etnachta>geresh"
+    },
+    {
+      "ref": "II Kings 4:23",
+      "book": "II Kings",
+      "chapter": 4,
+      "verse": 23,
+      "he": "וַיֹּ֗אמֶר מַ֠דּ֠וּעַ <span class=\"mam-kq\"><span class=\"mam-kq-k\">(אתי)</span> <span class=\"mam-kq-q\">[אַ֣תְּ]</span></span> <span class=\"mam-kq\"><span class=\"mam-kq-k\">(הלכתי)</span> <span class=\"mam-kq-q\">[הֹלֶ֤כֶת]</span></span> אֵלָיו֙ הַיּ֔וֹם לֹא־חֹ֖דֶשׁ וְלֹ֣א שַׁבָּ֑ת וַתֹּ֖אמֶר שָׁלֽוֹם׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "Isaiah 58:6",
+      "book": "Isaiah",
+      "chapter": 58,
+      "verse": 6,
+      "he": "הֲל֣וֹא זֶה֮ צ֣וֹם אֶבְחָרֵ֒הוּ֒ פַּתֵּ֙חַ֙ חַרְצֻבּ֣וֹת רֶ֔שַׁע הַתֵּ֖ר אֲגֻדּ֣וֹת מוֹטָ֑ה וְשַׁלַּ֤ח רְצוּצִים֙ חׇפְשִׁ֔ים וְכׇל־מוֹטָ֖ה תְּנַתֵּֽקוּ׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "Malachi 3:15",
+      "book": "Malachi",
+      "chapter": 3,
+      "verse": 15,
+      "he": "וְעַתָּ֕ה אֲנַ֖חְנוּ מְאַשְּׁרִ֣ים זֵדִ֑ים גַּם־נִבְנוּ֙ עֹשֵׂ֣י רִשְׁעָ֔ה גַּ֧ם בָּחֲנ֛וּ אֱלֹהִ֖ים וַיִּמָּלֵֽטוּ׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "Judges 11:27",
+      "book": "Judges",
+      "chapter": 11,
+      "verse": 27,
+      "he": "וְאָֽנֹכִי֙ לֹא־חָטָ֣אתִי לָ֔ךְ וְאַתָּ֞ה עֹשֶׂ֥ה אִתִּ֛י רָעָ֖ה לְהִלָּ֣חֶם בִּ֑י יִשְׁפֹּ֨ט יְהֹוָ֤ה הַשֹּׁפֵט֙ הַיּ֔וֹם בֵּ֚ין בְּנֵ֣י יִשְׂרָאֵ֔ל וּבֵ֖ין בְּנֵ֥י עַמּֽוֹן׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "Jeremiah 46:28",
+      "book": "Jeremiah",
+      "chapter": 46,
+      "verse": 28,
+      "he": "אַ֠תָּ֠ה אַל־תִּירָ֞א עַבְדִּ֤י יַֽעֲקֹב֙ נְאֻם־יְהֹוָ֔ה כִּ֥י אִתְּךָ֖ אָ֑נִי כִּי֩ אֶעֱשֶׂ֨ה כָלָ֜ה בְּכׇֽל־הַגּוֹיִ֣ם&thinsp;<b>׀</b> אֲשֶׁ֧ר הִדַּחְתִּ֣יךָ שָּׁ֗מָּה וְאֹֽתְךָ֙ לֹא־אֶעֱשֶׂ֣ה כָלָ֔ה וְיִסַּרְתִּ֙יךָ֙ לַמִּשְׁפָּ֔ט וְנַקֵּ֖ה לֹ֥א אֲנַקֶּֽךָּ׃&nbsp;<span class=\"mam-spi-pe\">{פ}</span><br>",
+      "set": "full",
+      "final": true,
+      "note": "last verse of a haftarah"
+    },
+    {
+      "ref": "I Kings 5:32",
+      "book": "I Kings",
+      "chapter": 5,
+      "verse": 32,
+      "he": "וַֽיִּפְסְל֞וּ בֹּנֵ֧י שְׁלֹמֹ֛ה וּבֹנֵ֥י חִיר֖וֹם וְהַגִּבְלִ֑ים וַיָּכִ֛ינוּ הָעֵצִ֥ים וְהָאֲבָנִ֖ים לִבְנ֥וֹת הַבָּֽיִת׃&nbsp;<span class=\"mam-spi-pe\">{פ}</span><br>",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "Judges 5:19",
+      "book": "Judges",
+      "chapter": 5,
+      "verse": 19,
+      "he": "בָּ֤אוּ מְלָכִים֙ נִלְחָ֔מוּ&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;אָ֤ז נִלְחֲמוּ֙ מַלְכֵ֣י כְנַ֔עַן&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;בְּתַעְנַ֖ךְ עַל־מֵ֣י מְגִדּ֑וֹ&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;בֶּ֥צַע כֶּ֖סֶף לֹ֥א לָקָֽחוּ׃&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "I Samuel 12:7",
+      "book": "I Samuel",
+      "chapter": 12,
+      "verse": 7,
+      "he": "וְעַתָּ֗ה הִֽתְיַצְּב֛וּ וְאִשָּׁפְטָ֥ה אִתְּכֶ֖ם לִפְנֵ֣י יְהֹוָ֑ה אֵ֚ת כׇּל־צִדְק֣וֹת יְהֹוָ֔ה אֲשֶׁר־עָשָׂ֥ה אִתְּכֶ֖ם וְאֶת־אֲבוֹתֵיכֶֽם׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "Ezekiel 37:11",
+      "book": "Ezekiel",
+      "chapter": 37,
+      "verse": 11,
+      "he": "וַיֹּ֘אמֶר֮ אֵלַי֒ בֶּן־אָדָ֕ם הָעֲצָמ֣וֹת הָאֵ֔לֶּה כׇּל־בֵּ֥ית יִשְׂרָאֵ֖ל הֵ֑מָּה הִנֵּ֣ה אֹמְרִ֗ים יָבְשׁ֧וּ עַצְמוֹתֵ֛ינוּ וְאָבְדָ֥ה תִקְוָתֵ֖נוּ נִגְזַ֥רְנוּ לָֽנוּ׃",
+      "set": "full",
+      "final": false,
+      "note": "segol>zakef gadol"
+    },
+    {
+      "ref": "Jeremiah 46:27",
+      "book": "Jeremiah",
+      "chapter": 46,
+      "verse": 27,
+      "he": "וְ֠אַתָּ֠ה אַל־תִּירָ֞א עַבְדִּ֤י יַֽעֲקֹב֙ וְאַל־תֵּחַ֣ת יִשְׂרָאֵ֔ל כִּ֠י הִנְנִ֤י מוֹשִֽׁעֲךָ֙ מֵרָח֔וֹק וְאֶֽת־זַרְעֲךָ֖ מֵאֶ֣רֶץ שִׁבְיָ֑ם וְשָׁ֧ב יַעֲק֛וֹב וְשָׁקַ֥ט וְשַׁאֲנַ֖ן וְאֵ֥ין מַחֲרִֽיד׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "I Kings 18:26",
+      "book": "I Kings",
+      "chapter": 18,
+      "verse": 26,
+      "he": "וַ֠יִּקְח֠וּ אֶת־הַפָּ֨ר אֲשֶׁר־נָתַ֣ן לָהֶם֮ וַֽיַּעֲשׂוּ֒ וַיִּקְרְא֣וּ בְשֵׁם־הַ֠בַּ֠עַל מֵהַבֹּ֨קֶר וְעַד־הַצׇּהֳרַ֤יִם לֵאמֹר֙ הַבַּ֣עַל עֲנֵ֔נוּ וְאֵ֥ין ק֖וֹל וְאֵ֣ין עֹנֶ֑ה וַֽיְפַסְּח֔וּ עַל־הַמִּזְבֵּ֖חַ אֲשֶׁ֥ר עָשָֽׂה׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "I Kings 1:25",
+      "book": "I Kings",
+      "chapter": 1,
+      "verse": 25,
+      "he": "כִּ֣י&thinsp;<b>׀</b> יָרַ֣ד הַיּ֗וֹם וַ֠יִּזְבַּ֠ח שׁ֥וֹר וּֽמְרִיא־וְצֹאן֮ לָרֹב֒ וַיִּקְרָא֩ לְכׇל־בְּנֵ֨י הַמֶּ֜לֶךְ וּלְשָׂרֵ֤י הַצָּבָא֙ וּלְאֶבְיָתָ֣ר הַכֹּהֵ֔ן וְהִנָּ֛ם אֹכְלִ֥ים וְשֹׁתִ֖ים לְפָנָ֑יו וַיֹּ֣אמְר֔וּ יְחִ֖י הַמֶּ֥לֶךְ אֲדֹנִיָּֽהוּ׃",
+      "set": "full",
+      "final": false,
+      "note": "segol>telisha ketana"
+    },
+    {
+      "ref": "II Samuel 22:47",
+      "book": "II Samuel",
+      "chapter": 22,
+      "verse": 47,
+      "he": "חַי־יְהֹוָ֖ה וּבָר֣וּךְ צוּרִ֑י&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;וְיָרֻ֕ם אֱלֹהֵ֖י צ֥וּר יִשְׁעִֽי׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "Jeremiah 8:18",
+      "book": "Jeremiah",
+      "chapter": 8,
+      "verse": 18,
+      "he": "מַבְלִ֥יגִיתִ֖י עֲלֵ֣י יָג֑וֹן עָלַ֖י לִבִּ֥י דַוָּֽי׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "II Samuel 6:12",
+      "book": "II Samuel",
+      "chapter": 6,
+      "verse": 12,
+      "he": "וַיֻּגַּ֗ד לַמֶּ֣לֶךְ דָּוִד֮ לֵאמֹר֒ בֵּרַ֣ךְ יְהֹוָ֗ה אֶת־בֵּ֨ית עֹבֵ֤ד אֱדֹם֙ וְאֶת־כׇּל־אֲשֶׁר־ל֔וֹ בַּעֲב֖וּר אֲר֣וֹן הָאֱלֹהִ֑ים וַיֵּ֣לֶךְ דָּוִ֗ד וַיַּ֩עַל֩ אֶת־אֲר֨וֹן הָאֱלֹהִ֜ים מִבֵּ֨ית עֹבֵ֥ד אֱדֹ֛ם עִ֥יר דָּוִ֖ד בְּשִׂמְחָֽה׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "Hosea 12:14",
+      "book": "Hosea",
+      "chapter": 12,
+      "verse": 14,
+      "he": "וּבְנָבִ֕יא הֶעֱלָ֧ה יְהֹוָ֛ה אֶת־יִשְׂרָאֵ֖ל מִמִּצְרָ֑יִם וּבְנָבִ֖יא נִשְׁמָֽר׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "Ezekiel 1:25",
+      "book": "Ezekiel",
+      "chapter": 1,
+      "verse": 25,
+      "he": "וַיְהִי־ק֕וֹל מֵעַ֕ל לָרָקִ֖יעַ אֲשֶׁ֣ר עַל־רֹאשָׁ֑ם בְּעׇמְדָ֖ם תְּרַפֶּ֥ינָה כַנְפֵיהֶֽן׃",
+      "set": "full",
+      "final": false,
+      "note": "zakef gadol>zakef gadol"
+    },
+    {
+      "ref": "II Samuel 22:7",
+      "book": "II Samuel",
+      "chapter": 22,
+      "verse": 7,
+      "he": "בַּצַּר־לִי֙ אֶקְרָ֣א יְהֹוָ֔ה וְאֶל־אֱלֹהַ֖י אֶקְרָ֑א&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;וַיִּשְׁמַ֤ע מֵהֵֽיכָלוֹ֙ קוֹלִ֔י וְשַׁוְעָתִ֖י בְּאׇזְנָֽיו׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "Ezekiel 1:9",
+      "book": "Ezekiel",
+      "chapter": 1,
+      "verse": 9,
+      "he": "חֹ֥בְרֹ֛ת אִשָּׁ֥ה אֶל־אֲחוֹתָ֖הּ כַּנְפֵיהֶ֑ם לֹא־יִסַּ֣בּוּ בְלֶכְתָּ֔ן אִ֛ישׁ אֶל־עֵ֥בֶר פָּנָ֖יו יֵלֵֽכוּ׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "Jonah 1:2",
+      "book": "Jonah",
+      "chapter": 1,
+      "verse": 2,
+      "he": "ק֠וּם לֵ֧ךְ אֶל־נִֽינְוֵ֛ה הָעִ֥יר הַגְּדוֹלָ֖ה וּקְרָ֣א עָלֶ֑יהָ כִּֽי־עָלְתָ֥ה רָעָתָ֖ם לְפָנָֽי׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "I Kings 19:7",
+      "book": "I Kings",
+      "chapter": 19,
+      "verse": 7,
+      "he": "וַיָּ֩שׇׁב֩ מַלְאַ֨ךְ יְהֹוָ֤ה&thinsp;<small>׀</small>&thinsp;שֵׁנִית֙ וַיִּגַּע־בּ֔וֹ וַיֹּ֖אמֶר ק֣וּם אֱכֹ֑ל כִּ֛י רַ֥ב מִמְּךָ֖ הַדָּֽרֶךְ׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "Ezekiel 1:10",
+      "book": "Ezekiel",
+      "chapter": 1,
+      "verse": 10,
+      "he": "וּדְמ֣וּת פְּנֵיהֶם֮ פְּנֵ֣י אָדָם֒ וּפְנֵ֨י אַרְיֵ֤ה אֶל־הַיָּמִין֙ לְאַרְבַּעְתָּ֔ם וּפְנֵי־שׁ֥וֹר מֵהַשְּׂמֹ֖אול לְאַרְבַּעְתָּ֑ן וּפְנֵי־נֶ֖שֶׁר לְאַרְבַּעְתָּֽן׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "I Kings 18:6",
+      "book": "I Kings",
+      "chapter": 18,
+      "verse": 6,
+      "he": "וַֽיְחַלְּק֥וּ לָהֶ֛ם אֶת־הָאָ֖רֶץ לַעֲבׇר־בָּ֑הּ אַחְאָ֞ב הָלַ֨ךְ בְּדֶ֤רֶךְ אֶחָד֙ לְבַדּ֔וֹ וְעֹבַדְיָ֛הוּ הָלַ֥ךְ בְּדֶרֶךְ־אֶחָ֖ד לְבַדּֽוֹ׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "Amos 9:14",
+      "book": "Amos",
+      "chapter": 9,
+      "verse": 14,
+      "he": "וְשַׁבְתִּי֮ אֶת־שְׁב֣וּת עַמִּ֣י יִשְׂרָאֵל֒ וּבָנ֞וּ עָרִ֤ים נְשַׁמּוֹת֙ וְיָשָׁ֔בוּ וְנָטְע֣וּ כְרָמִ֔ים וְשָׁת֖וּ אֶת־יֵינָ֑ם וְעָשׂ֣וּ גַנּ֔וֹת וְאָכְל֖וּ אֶת־פְּרִיהֶֽם׃",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "I Samuel 15:16",
+      "book": "I Samuel",
+      "chapter": 15,
+      "verse": 16,
+      "he": "וַיֹּ֤אמֶר שְׁמוּאֵל֙ אֶל־שָׁא֔וּל הֶ֚רֶף וְאַגִּ֣ידָה לְּךָ֔ אֵת֩ אֲשֶׁ֨ר דִּבֶּ֧ר יְהֹוָ֛ה אֵלַ֖י הַלָּ֑יְלָה <span class=\"mam-kq\"><span class=\"mam-kq-k\">(ויאמרו)</span> <span class=\"mam-kq-q\">[וַיֹּ֥אמֶר]</span></span> ל֖וֹ דַּבֵּֽר׃&nbsp;<span class=\"mam-spi-samekh\">{ס}</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
+      "set": "full",
+      "final": false,
+      "note": "full calibration set (covers features occurring 3+ times)"
+    },
+    {
+      "ref": "Isaiah 13:8",
+      "book": "Isaiah",
+      "chapter": 13,
+      "verse": 8,
+      "he": "וְֽנִבְהָ֓לוּ&thinsp;<b>׀</b> צִירִ֤ים וַחֲבָלִים֙ יֹֽאחֵז֔וּן כַּיּוֹלֵדָ֖ה יְחִיל֑וּן אִ֤ישׁ אֶל־רֵעֵ֙הוּ֙ יִתְמָ֔הוּ פְּנֵ֥י לְהָבִ֖ים פְּנֵיהֶֽם׃",
+      "set": "rare",
+      "final": false,
+      "note": "rare mark: shalshelet"
+    },
+    {
+      "ref": "Amos 1:2",
+      "book": "Amos",
+      "chapter": 1,
+      "verse": 2,
+      "he": "וַיֹּאמַ֓ר&thinsp;<b>׀</b> יְהֹוָה֙ מִצִּיּ֣וֹן יִשְׁאָ֔ג וּמִירוּשָׁלַ֖͏ִם יִתֵּ֣ן קוֹל֑וֹ וְאָֽבְלוּ֙ נְא֣וֹת הָרֹעִ֔ים וְיָבֵ֖שׁ רֹ֥אשׁ הַכַּרְמֶֽל׃&nbsp;<span class=\"mam-spi-pe\">{פ}</span><br>",
+      "set": "rare",
+      "final": false,
+      "note": "rare mark: shalshelet"
+    },
+    {
+      "ref": "Joshua 19:51",
+      "book": "Joshua",
+      "chapter": 19,
+      "verse": 51,
+      "he": "אֵ֣לֶּה הַנְּחָלֹ֡ת אֲשֶׁ֣ר נִחֲל֣וּ אֶלְעָזָ֣ר הַכֹּהֵ֣ן&thinsp;<small>׀</small>&thinsp;וִיהוֹשֻׁ֪עַ בִּן־נ֟וּן וְרָאשֵׁ֣י הָאָב֣וֹת לְמַטּוֹת֩ בְּנֵי־יִשְׂרָאֵ֨ל&thinsp;<small>׀</small>&thinsp;בְּגוֹרָ֤ל&thinsp;<small>׀</small>&thinsp;בְּשִׁלֹה֙ לִפְנֵ֣י יְהֹוָ֔ה פֶּ֖תַח אֹ֣הֶל מוֹעֵ֑ד וַיְכַלּ֕וּ מֵחַלֵּ֖ק אֶת־הָאָֽרֶץ׃&nbsp;<span class=\"mam-spi-pe\">{פ}</span><br>",
+      "set": "rare",
+      "final": false,
+      "note": "rare marks: karnei farah + yerach ben yomo"
+    },
+    {
+      "ref": "I Kings 10:3",
+      "book": "I Kings",
+      "chapter": 10,
+      "verse": 3,
+      "he": "וַיַּגֶּד־לָ֥הּ שְׁלֹמֹ֖ה אֶת־כׇּל־דְּבָרֶ֑יהָ לֹֽא־הָיָ֤ה דָבָר֙ נֶעְלָ֣ם מִן־הַמֶּ֔לֶךְ אֲשֶׁ֧ר לֹ֦א הִגִּ֖יד לָֽהּ׃",
+      "set": "rare",
+      "final": false,
+      "note": "rare mark: mercha kefula"
+    }
+  ]
+}

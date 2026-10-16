@@ -1,0 +1,283 @@
+{
+  "about": "Pronunciation profiles for the trope engine's text front end (trope/text.mjs). One profile per reading tradition; verseUnits() takes { pronunciation: <profile name> | <profile object> }. Rationale and the open questions for the cantor: docs/superpowers/research/2026-10-15-trope-engine/hebrew-text-pipeline.md sections 2-4. Symbols are engine-internal ASCII names (the DiffSinger 'he/<name>' column of section 4 without the prefix, except yod = j); the symbols table gives IPA, X-SAMPA and an ARPAbet-ish fallback for each. An empty string means 'no phoneme'.",
+  "default": "israeli-v1",
+  "profiles": {
+    "israeli-v1": {
+      "name": "israeli-v1",
+      "description": "Modern Israeli ('Sephardic-style') reading as used in American non-Orthodox congregations. Tiberian syllable structure (vocal sheva, hataf vowels and dagesh forte all kept), Israeli segment values. Not yet confirmed with Cantor Finkel.",
+      "syllabifier": {
+        "about": "Options passed to havarotjs' Text(). longVowels: true is the Tiberian rule (a sheva after a long vowel is vocal: u-vei-ne-CHA); set false for the Israeli habit (u-vein-CHA). qametsQatan is false because MAM already marks every qamats qatan with U+05C7; letting havarotjs guess could only add errors.",
+        "longVowels": true,
+        "sqnmlvy": true,
+        "article": true,
+        "wawShureq": true,
+        "shevaAfterMeteg": true,
+        "shevaWithMeteg": false,
+        "qametsQatan": false,
+        "holemHaser": "preserve",
+        "strict": false
+      },
+      "consonants": {
+        "about": "Letter -> phoneme. { dagesh, plain } where the letter's sound changes with dagesh lene/forte (BeGaDKeFaT); a string otherwise. Shin/sin are told apart by their dots. Alef and ayin are not here: rules.alefOnset and rules.ayin decide them, and silent letters (quiescent alef, mater he/vav/yod) never reach this table.",
+        "ב": {
+          "dagesh": "b",
+          "plain": "v"
+        },
+        "ג": "g",
+        "ד": "d",
+        "ה": "h",
+        "ו": "v",
+        "ז": "z",
+        "ח": "x",
+        "ט": "t",
+        "י": "j",
+        "כ": {
+          "dagesh": "k",
+          "plain": "x"
+        },
+        "ך": {
+          "dagesh": "k",
+          "plain": "x"
+        },
+        "ל": "l",
+        "מ": "m",
+        "ם": "m",
+        "נ": "n",
+        "ן": "n",
+        "ס": "s",
+        "פ": {
+          "dagesh": "p",
+          "plain": "f"
+        },
+        "ף": {
+          "dagesh": "p",
+          "plain": "f"
+        },
+        "צ": "ts",
+        "ץ": "ts",
+        "ק": "k",
+        "ר": "r",
+        "שׁ": "sh",
+        "שׂ": "s",
+        "ש": "sh",
+        "ת": {
+          "dagesh": "t",
+          "plain": "t"
+        }
+      },
+      "vowels": {
+        "about": "havarotjs vowel name -> phoneme. SHEVA is the vocal sheva (sheva na); a silent sheva is never looked up. Hataf vowels are sung as their own short syllable.",
+        "PATAH": "a",
+        "QAMATS": "a",
+        "HATAF_PATAH": "a",
+        "QAMATS_QATAN": "o",
+        "HATAF_QAMATS": "o",
+        "HOLAM": "o",
+        "HOLAM_HASER": "o",
+        "SEGOL": "e",
+        "TSERE": "e",
+        "HATAF_SEGOL": "e",
+        "SHEVA": "e",
+        "HIRIQ": "i",
+        "QUBUTS": "u",
+        "SHUREQ": "u"
+      },
+      "rules": {
+        "tsereYod": "e",
+        "tsereYodAbout": "Yod after tsere or segol with no vowel of its own: 'e' (silent yod, be-NI) or 'ej' (bei-NI, adds a j).",
+        "geminate": "double",
+        "geminateAbout": "Dagesh forte: 'double' gives the consonant twice (coda of one syllable + onset of the next: yip-pa-KED); 'single' gives it once, as onset only.",
+        "qamatsYodSheva": "nach",
+        "qamatsYodShevaAbout": "Yod with sheva after an open qamats syllable without meteg (הַלָּ֑יְלָה): \"nach\" closes the syllable (ha-LAY-la); \"na\" keeps havarotjs longVowels reading (ha-LA-ye-la).",
+        "furtive": "before",
+        "furtiveAbout": "Furtive patach (final ח/ע/הּ after a non-a vowel): the vowel is sounded before the consonant, as its own unstressed syllable (ga-VO-ah).",
+        "alefOnset": "",
+        "alefOnsetAbout": "Alef that carries a vowel: '' (no onset, the Israeli norm) or 'q' (glottal stop). Alef with no vowel is always silent.",
+        "ayin": "",
+        "ayinAbout": "Ayin: '' (none, merged with alef) or 'q' (glottal stop).",
+        "divineName": {
+          "adonai": "אֲדֹנָי",
+          "elohim": "אֱלֹהִים"
+        },
+        "divineNameAbout": "The Tetragrammaton is sung as the pointed word given here; the Elohim pointing (hataf segol first or hiriq last) reads elohim."
+      },
+      "symbols": {
+        "a": {
+          "ipa": "a",
+          "xsampa": "a",
+          "arpabet": "AA",
+          "roman": "a",
+          "type": "vowel"
+        },
+        "e": {
+          "ipa": "e",
+          "xsampa": "e",
+          "arpabet": "EH",
+          "roman": "e",
+          "type": "vowel"
+        },
+        "i": {
+          "ipa": "i",
+          "xsampa": "i",
+          "arpabet": "IY",
+          "roman": "i",
+          "type": "vowel"
+        },
+        "o": {
+          "ipa": "o",
+          "xsampa": "o",
+          "arpabet": "OW",
+          "roman": "o",
+          "type": "vowel"
+        },
+        "u": {
+          "ipa": "u",
+          "xsampa": "u",
+          "arpabet": "UW",
+          "roman": "u",
+          "type": "vowel"
+        },
+        "q": {
+          "ipa": "ʔ",
+          "xsampa": "?",
+          "arpabet": "",
+          "roman": "'",
+          "type": "stop"
+        },
+        "b": {
+          "ipa": "b",
+          "xsampa": "b",
+          "arpabet": "B",
+          "roman": "b",
+          "type": "stop"
+        },
+        "v": {
+          "ipa": "v",
+          "xsampa": "v",
+          "arpabet": "V",
+          "roman": "v",
+          "type": "fricative"
+        },
+        "g": {
+          "ipa": "ɡ",
+          "xsampa": "g",
+          "arpabet": "G",
+          "roman": "g",
+          "type": "stop"
+        },
+        "d": {
+          "ipa": "d",
+          "xsampa": "d",
+          "arpabet": "D",
+          "roman": "d",
+          "type": "stop"
+        },
+        "h": {
+          "ipa": "h",
+          "xsampa": "h",
+          "arpabet": "HH",
+          "roman": "h",
+          "type": "aspirate"
+        },
+        "z": {
+          "ipa": "z",
+          "xsampa": "z",
+          "arpabet": "Z",
+          "roman": "z",
+          "type": "fricative"
+        },
+        "x": {
+          "ipa": "χ",
+          "xsampa": "X",
+          "arpabet": "HH",
+          "roman": "ch",
+          "type": "fricative"
+        },
+        "t": {
+          "ipa": "t",
+          "xsampa": "t",
+          "arpabet": "T",
+          "roman": "t",
+          "type": "stop"
+        },
+        "j": {
+          "ipa": "j",
+          "xsampa": "j",
+          "arpabet": "Y",
+          "roman": "y",
+          "type": "semivowel"
+        },
+        "k": {
+          "ipa": "k",
+          "xsampa": "k",
+          "arpabet": "K",
+          "roman": "k",
+          "type": "stop"
+        },
+        "l": {
+          "ipa": "l",
+          "xsampa": "l",
+          "arpabet": "L",
+          "roman": "l",
+          "type": "liquid"
+        },
+        "m": {
+          "ipa": "m",
+          "xsampa": "m",
+          "arpabet": "M",
+          "roman": "m",
+          "type": "nasal"
+        },
+        "n": {
+          "ipa": "n",
+          "xsampa": "n",
+          "arpabet": "N",
+          "roman": "n",
+          "type": "nasal"
+        },
+        "s": {
+          "ipa": "s",
+          "xsampa": "s",
+          "arpabet": "S",
+          "roman": "s",
+          "type": "fricative"
+        },
+        "p": {
+          "ipa": "p",
+          "xsampa": "p",
+          "arpabet": "P",
+          "roman": "p",
+          "type": "stop"
+        },
+        "f": {
+          "ipa": "f",
+          "xsampa": "f",
+          "arpabet": "F",
+          "roman": "f",
+          "type": "fricative"
+        },
+        "ts": {
+          "ipa": "ts",
+          "xsampa": "ts",
+          "arpabet": "T S",
+          "roman": "tz",
+          "type": "affricate"
+        },
+        "r": {
+          "ipa": "ʁ",
+          "xsampa": "R",
+          "arpabet": "R",
+          "roman": "r",
+          "type": "liquid"
+        },
+        "sh": {
+          "ipa": "ʃ",
+          "xsampa": "S",
+          "arpabet": "SH",
+          "roman": "sh",
+          "type": "fricative"
+        }
+      }
+    }
+  }
+}
