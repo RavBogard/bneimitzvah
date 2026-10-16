@@ -42,6 +42,25 @@ async function click(tab: Page, name: string) {
 }
 async function loaded(tab: Page, ref: string) { await ui(tab.locator(".study-verses").getByRole("heading", { name: ref, level: 4, exact: true })).toBeVisible(); }
 function verse(tab: Page, ref: string) { return tab.locator(".study-verses > li").filter({ has: tab.getByRole("heading", { name: ref, level: 4, exact: true }) }); }
+async function firstHebrewInViewport(tab: Page) {
+  await safe(() => tab.evaluate(async () => {
+    await document.fonts.ready;
+    if (document.activeElement instanceof HTMLElement && document.activeElement.matches(".skip-link")) document.activeElement.blur();
+    scrollTo(0, 0);
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  }));
+  const geometry = await tab.locator(".study-hebrew > span").first().evaluate(span => {
+    const range = document.createRange(); range.selectNodeContents(span); const bounds = range.getBoundingClientRect();
+    const marker = span.closest("li")?.querySelector(":scope > .student-aliyah")?.getBoundingClientRect();
+    return { scrollY, top: bounds.top, bottom: bounds.bottom, viewportWidth: innerWidth, viewportHeight: innerHeight, markerBottom: marker?.bottom ?? null,
+      bodyFont: getComputedStyle(document.body).fontFamily, hebrewFont: getComputedStyle(span).fontFamily, fontsStatus: document.fonts.status };
+  });
+  const diagnostic = JSON.stringify(geometry); // Geometry/font metadata only; no student text or contacts.
+  expect(geometry.viewportWidth, diagnostic).toBe(390); expect(geometry.viewportHeight, diagnostic).toBe(844);
+  expect(geometry.scrollY, diagnostic).toBe(0); expect(geometry.top, diagnostic).toBeGreaterThanOrEqual(0);
+  expect(geometry.bottom, diagnostic).toBeLessThanOrEqual(geometry.viewportHeight);
+  if (geometry.markerBottom !== null) expect(geometry.markerBottom, diagnostic).toBeLessThanOrEqual(geometry.top);
+}
 async function colorVerse(tab: Page, ref: string) {
   const article = verse(tab, ref).locator("article"), aids = article.locator("details");
   if (await aids.getAttribute("open") === null) await safe(() => aids.locator("summary").click());
@@ -90,21 +109,19 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await safe(() => tutor.getByRole("link", { name: "Parent", exact: true }).click()); await safe(() => tutor.getByLabel("Child", { exact: true }).selectOption(fixture.student.id)); await loaded(tutor, "Genesis 1:1");
   expect(await tutor.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0);
   const learner = await page("student", true); await navigate(learner, "/workspace/student"); await loaded(learner, "Genesis 1:1"); expect(await learner.getByLabel("Student", { exact: true }).count()).toBe(0);
-  await safe(() => learner.evaluate(async () => {
-    await document.fonts.ready;
-    scrollTo(0, 0);
-    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-  }));
-  const geometry = await learner.locator(".study-hebrew > span").first().evaluate(span => {
-    const range = document.createRange(); range.selectNodeContents(span); const bounds = range.getBoundingClientRect();
-    return { scrollY, top: bounds.top, bottom: bounds.bottom, viewportHeight: innerHeight,
-      bodyFont: getComputedStyle(document.body).fontFamily, hebrewFont: getComputedStyle(span).fontFamily, fontsStatus: document.fonts.status };
-  });
-  const diagnostic = JSON.stringify(geometry); // Geometry and font metadata only; no student text or contacts.
-  expect(geometry.scrollY, diagnostic).toBe(0);
-  expect(geometry.top, diagnostic).toBeGreaterThanOrEqual(0);
-  expect(geometry.bottom, diagnostic).toBeLessThanOrEqual(geometry.viewportHeight);
+  await ui(learner.getByText("Aliyah boundaries have not been recorded for this assignment.", { exact: true })).toBeVisible();
+  expect(await learner.locator(".student-aliyah").count()).toBe(0);
+  await firstHebrewInViewport(learner);
   await capture(learner, "study-student-partial-mobile");
+  const assigned = await api(adminTab, `/api/students/${fixture.student.id}/reading?mode=admin`);
+  const torah = assigned.data.readings.find((row: { kind: string }) => row.kind === "torah");
+  const prepared = await api(adminTab, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "admin", kind: "torah", preparationMode: "current-assignment", expectedAssignmentRevision: torah.revision, aliyahStarts: [] });
+  expect(prepared.status).toBe(200);
+  expect((await api(adminTab, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: prepared.data.binding })).status).toBe(200);
+  await click(learner, "Refresh reading"); await loaded(learner, "Genesis 1:1");
+  await ui(learner.getByText("Aliyah 1 starts here", { exact: true })).toBeVisible();
+  await firstHebrewInViewport(learner);
+  await capture(learner, "study-student-one-aliyah-mobile");
   const first = verse(learner, "Genesis 1:1").locator("article"), hebrew = first.locator(".study-hebrew");
   const original = await safe(() => hebrew.textContent()), beforeColors = calls;
   expect(await learner.locator(".study-verses article details[open]").count()).toBe(0);

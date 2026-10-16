@@ -70,9 +70,20 @@ it("lets an admin review actual calendar choices, confirm once and replace only 
   await ui(tab.locator(".confirmed-reading").getByText("Genesis 1:31-2:2", { exact: true })).toBeVisible();
   await capture(tab, "reading-admin-confirmed-desktop");
   await tab.unroute("**/reading/confirm");
+  const haftarahPreparations: Record<string, unknown>[] = [];
+  tab.on("request", request => { if (request.method() === "POST" && new URL(request.url()).pathname.endsWith("/reading/prepare")) haftarahPreparations.push(request.postDataJSON()); });
   await safe(()=>tab.getByLabel("Reading",{exact:true}).selectOption("haftarah"));
+  await ui(tab.getByLabel("Selection method", { exact: true })).toHaveValue("custom");
+  await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("");
+  // Each kind has its own draft. An empty custom draft uses native validation;
+  // it must not silently prepare a calendar choice inherited from Torah.
   await click(tab,"Prepare reading review");
+  expect(await tab.getByLabel("Custom verse ranges", { exact: true }).evaluate(field => (field as HTMLTextAreaElement).validity.valueMissing)).toBe(true);
+  expect(haftarahPreparations).toHaveLength(0);
+  await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("calendar"));
+  await click(tab, "Prepare reading review");
   await ui(tab.getByRole("heading",{name:"Choose a reading explicitly",exact:true})).toBeVisible();
+  expect(haftarahPreparations).toEqual([{ mode: "admin", kind: "haftarah" }]);
   expect(await tab.getByRole("button",{name:"Confirm assigned reading",exact:true}).count()).toBe(0);
   await click(tab,"Use calendar haftarah: Isaiah 1:1-2");
   await click(tab,"Confirm assigned reading");
@@ -145,7 +156,9 @@ it("handles an empty calendar without invention and exposes no editor in parent 
   await ui(tab.getByText("The service slot is not yet set. Choose custom references; no calendar date has been assumed.",{exact:true})).toBeVisible();
   await ui(tab.getByText("No calendar selections are available for this date.", { exact: true })).toBeVisible();
   expect(await tab.getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
-  await safe(() => tab.getByLabel("Reading", { exact: true }).selectOption("haftarah")); await click(tab, "Prepare reading review");
+  await safe(() => tab.getByLabel("Reading", { exact: true }).selectOption("haftarah"));
+  await ui(tab.getByLabel("Selection method", { exact: true })).toHaveValue("custom");
+  await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("calendar")); await click(tab, "Prepare reading review");
   await ui(tab.getByText("No haftarah was returned for this date. Use custom references if appropriate.", { exact: true })).toBeVisible();
   await custom(tab, "Isaiah 1:1-2"); await click(tab, "Prepare reading review"); await click(tab, "Confirm assigned reading");
   await ui(tab.locator(".confirmed-reading").getByText("Isaiah 1:1-2", { exact: true })).toBeVisible();
