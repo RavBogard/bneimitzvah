@@ -1,6 +1,6 @@
 # Admin invitation management UI
 
-Status: bounded source candidate with independent boundary review accepted and final visual verdict `ship` for the scored responsive fix. Full local integration passes; publication remains pending. No provider configuration, real mail or whole-product completion claim.
+Status: published as `2b37394`, with independent boundary review accepted and final visual verdict `ship` for the scored responsive fix. Local integration and all four hosted jobs in run `38891100680` passed; matching Vercel deployment `7117315075` succeeded. No provider configuration, real mail or whole-product completion claim.
 
 ## Surface and behavior
 

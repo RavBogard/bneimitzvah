@@ -45,3 +45,63 @@ After the routes and capabilities are complete, use Daniel's account to verify G
 The isolated SDK checks currently cover actual library handlers and local persistence. They do not establish Google authorization-code delivery, Resend delivery, DNS/TLS, deployed role flows or live Neon behavior. Record those results separately when configuration is available.
 
 The HTTP adapter deliberately ignores caller-supplied IP and forwarding headers for authentication throttling. Until ingress normalization is independently verified, the SDK uses a server-selected bucket per configured origin: magic-link requests share five attempts per minute. This prevents header rotation from bypassing that limit, but can delay unrelated users. Before family access, validate the hosting platform's address-header trust boundary and replace or augment this conservative fallback with a reviewed limiter suitable for concurrent families. Do not describe the current bucket as per-client protection. Application request-URL logging is disabled; separately verify that hosting access logs redact invitation and authentication query strings.
+
+## 6. Private owner grant/revoke commands
+
+After genuine owner bootstrap, `scripts/manage-admin.mjs` provides private CRC
+admin issuance/revocation. This is an operator tool, not an application route or
+an admin invitation. These instructions prepare later operator execution; no real
+authority has been changed by the synthetic tests.
+
+Use a dedicated direct migration-owner connection in the private operator
+environment (`DATABASE_MIGRATION_URL`). The command verifies direct ownership
+before switching transaction-locally to the restricted role. A runtime login or
+a masked `SET ROLE` connection is refused. Do not install this credential in
+application runtime or pass it in command-line arguments.
+
+Obtain the genuine bootstrap audit UUID, owner user ID and exact verified target
+user ID through private database administration. Keep the selection and review
+files in a trusted private directory outside this checkout, excluded from cloud
+sharing, build inputs and logs. A grant selection is exactly:
+
+```json
+{"operation":"grant","tenantId":"crc","bootstrapId":"<bootstrap-audit-uuid>","ownerUserId":"<verified-owner-user-id>","targetUserId":"<exact-target-user-id>","targetGrantId":null}
+```
+
+For revocation, use `"operation":"revoke"` and the exact active admin grant UUID
+in `targetGrantId`. No other role or tenant is supported. Replace placeholders
+privately; these are shape examples, not usable identities.
+
+```text
+node scripts/manage-admin.mjs prepare --input <private-selection.json> --review <new-private-review.json>
+```
+
+Prepare makes no authority change. Privately inspect the review's exact owner,
+target, membership state/revision and complete bounded admin-grant history. An
+absent target membership will be created on grant. A previously revoked admin
+grant remains revoked; confirmed regrant creates a new UUID. Disabled membership
+is refused. Review files last ten minutes and are created exclusively; choose a
+new filename for another preparation.
+
+```text
+node scripts/manage-admin.mjs apply --review <private-review.json> --confirm-digest <reviewed-64-character-digest>
+```
+
+Copy the digest only after reviewing that exact file. It confirms reviewed bytes
+and does not authenticate the operator. Apply requires the same direct owner
+capability and rechecks every identity, revision and history field under locks.
+Any stale state requires a fresh prepare. A retried successful operation cannot
+create another grant/audit. CLI output contains fixed status/error categories,
+never the identities, connection or driver diagnostics.
+
+The command never transfers ownership, revokes the bound owner's grant, restores
+a revoked row/context, re-enables membership or recovers a disabled owner. Other
+roles remain separate. Recovery requires a separately reviewed policy.
+
+File checks reject checkout paths, existing output files, symbolic/junction
+ancestors and linked inputs, and compare canonical parent locations/identities.
+They cannot defend against malicious same-user filesystem renames between system
+calls. Node's POSIX `0600` creation mode does not establish private Windows ACLs;
+use an owner-only directory with trusted ACLs. Do not use shared or adversarially
+writable directories. Keep private files outside Git and remove them when the
+operator review is complete.

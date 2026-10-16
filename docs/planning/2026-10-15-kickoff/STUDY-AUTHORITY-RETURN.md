@@ -81,5 +81,7 @@ Ignored evidence: `.local-logs/study-authority-focused.log` and
 No live provider or full-catalog semantic/edition coverage is claimed. Existing
 adapter limitations and all generated-chant/listening gates remain in force.
 
-Next: root's final independent authority review, full integration/CI, then the
-approved frontend DTO consumer and its late-response/context clearing checks.
+Published checkpoint `2b37394` passed Astra's independent authority review, full
+local integration and all four hosted jobs in run `38891100680`; matching Vercel
+deployment `7117315075` succeeded. The approved frontend DTO consumer and its
+late-response/context clearing checks are the next bounded slice.

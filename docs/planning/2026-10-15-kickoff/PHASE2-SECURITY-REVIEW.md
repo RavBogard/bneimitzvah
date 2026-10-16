@@ -668,3 +668,46 @@ Actual SDK/restricted-PostgreSQL browser tests passed three scenarios, including
 failed captured mail, committed actions with lost responses, target drift and
 session changes. The separate visual review requested one long-value wrapping
 fix; its final evidence and integration results belong in INVITATION-UI-RETURN.md.
+
+## Private owner command and assigned-text consumer — Astra review, 2026-10-16
+
+The private operator command is accepted at its bounded authority scope. It
+requires direct ownership before reducing to the existing runtime role, binds
+only CRC, and locks the tenant before sorted user/membership/grant rows. Its
+singular bootstrap audit must match the immutable owner identity, enabled
+membership and active owner grant. Exact ten-minute review descriptors bind
+target verification, membership presence/state and bounded complete admin
+history. Apply recaptures those fields, checks the digest and expiry after waits,
+then atomically grants a fresh row or revokes an exact revision with its audit.
+The owner's grant is protected; other admin grants confer no ownership. There is
+no app route, new privilege, disabled-owner recovery or revival of old authority.
+
+Independent review found that prefix-based containment treated an in-checkout
+filename beginning `..` as outside the checkout. Sol corrected it to compare
+path components and added a synthetic regression. Final file inspection also
+closed a blocking FIFO-open edge with pre-open type/size/link checks and
+nonblocking open where available. Reads are bounded and private output files
+are exclusive. Trusted private directory ownership remains necessary: these
+checks cannot eliminate malicious same-user rename races, and POSIX creation
+mode cannot establish Windows ACL privacy. Diagnostics are fixed and contain no
+private identities, SQL, credentials or driver causes.
+
+Four real PostgreSQL tests pass, including competing grants/revokes with one
+effect/audit and a physically observed admin read finishing before revocation;
+subsequent admin and study requests deny while the separate tutor grant remains
+usable. Runtime grants and transaction-local role/tenant cleanup are unchanged.
+No real admin account was created or revoked.
+
+The study frontend keeps practice handles inside the provider and validates the
+complete returned student/mode/context/assignment binding and canonical page
+partition. It renders structured segments as escaped React text, compares
+credits to closed registry values and never interprets provider HTML. Metadata
+reload clears text and explicitly passes fresh metadata into the awaited text
+reload before same-session content is revealed. Generation checks, aborts and
+render bindings discard replaced child/page results; authority denial clears
+text. Staff drafts stay separately mounted. No client-persistent text cache or
+automatic retry/prefetch was introduced. The final actual-SDK browser suite
+passes 25/25, including real-assignment-conflict recovery and the corrected
+reading-first phone composition. The fresh visual reviewer returned ship for
+the single scored fix. Combined integration evidence is recorded in
+STUDY-UI-RETURN.md; no remaining blocker was found at this reviewed scope.

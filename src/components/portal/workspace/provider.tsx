@@ -6,12 +6,14 @@ import Link from "next/link";
 import { parseSession, PortalRequestError, requestPortal, roleNames, type SessionSummary } from "../api";
 import { workspaceApi, type Assigned, type Context, type ReadingMode } from "./api";
 import { PracticeCoordinator } from "./practice";
+import { fetchStudyPage, type StudyKind, type StudyPage } from "./study/api";
 
 export const rolePaths = { student: "/workspace/student", parent: "/workspace/parent", tutor: "/workspace/tutor", admin: "/workspace/admin/students" } as const;
 type Workspace = {
   summary: SessionSummary; context: Context | null; epoch: number; busy: boolean; notice: string;
   selectChild(id: string): Promise<void>; exitPractice(): Promise<void>; refresh(): void;
   read(mode: ReadingMode, id: string, signal: AbortSignal): Promise<Assigned>;
+  readStudy(baseline: Assigned, kind: StudyKind, offset: number, signal: AbortSignal): Promise<StudyPage>;
   registerReload(reload: () => Promise<void>): () => void;
 };
 const WorkspaceContext = createContext<Workspace | null>(null);
@@ -131,6 +133,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       throw error;
     }
   }, [practice, router]);
+  const readStudy = useCallback(async (baseline: Assigned, kind: StudyKind, offset: number, signal: AbortSignal) => {
+    const generation = practice.generation, active = practice.selection, mode = baseline.mode, id = baseline.student.id;
+    if (mode === "child-practice" && (!active || active.context.studentId !== id)) throw new PortalRequestError(404);
+    try {
+      const value = await fetchStudyPage(baseline, kind, offset, signal, mode === "child-practice" ? active! : undefined);
+      if (generation !== practice.generation || signal.aborted) throw new PortalRequestError(409);
+      return value;
+    } catch (error) {
+      if (!signal.aborted && generation === practice.generation && mode === "child-practice" && currentPath.current === `/workspace/practice/${id}` && [401, 403, 404].includes(statusOf(error))) {
+        practice.invalidate(); setContext(null); setNotice("Practice access changed. Choose an available child again."); setEpoch(value => value + 1); router.replace("/workspace/parent");
+      }
+      throw error;
+    }
+  }, [practice, router]);
 
   return <div className="portal-shell workspace-shell">
     <a className="skip-link" href="#workspace-main">Skip to workspace</a>
@@ -141,7 +157,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={refresh}>Check access again</button>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
-        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, registerReload }}>
+        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readStudy, registerReload }}>
           <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} aria-current={pathname === rolePaths[role] ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>
           {visibleNotice && <p className="workspace-notice" role="status">{visibleNotice}</p>}
           {children}

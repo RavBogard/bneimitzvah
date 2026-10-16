@@ -7,7 +7,7 @@ import { createStudentService } from "../../src/server/students/service";
 import { createPracticeService } from "../../src/server/practice/service";
 import { createPortalService } from "../../src/server/portal/service";
 import { createStudyService } from "../../src/server/study/service";
-import { StudyUnavailable } from "../../src/server/study/types";
+import { StudyUnavailable, type StudyRequest, type StudyPage } from "../../src/server/study/types";
 import { createRelationshipService } from "../../src/server/relationships/service";
 import { createPendingInvitations } from "../../src/server/http/pending-invitations";
 import { resolveTenantHost } from "../../src/server/tenancy/resolve";
@@ -21,7 +21,7 @@ import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
 const secret = () => randomBytes(48).toString("base64url");
 type Mail = { email: string; url: string };
 
-export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean } = {}) {
+export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage> } = {}) {
   const base = await postgresAccessFixture();
   try {
     // The shared disposable fixture creates the DB, migrations and restricted
@@ -43,7 +43,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     const practice = createPracticeService({ access });
     const pendingInvitations = createPendingInvitations({ secret: secret(), origin: BROWSER_ORIGIN, environment: "local" });
     const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
-      study: createStudyService({ access, practice, load: async () => { throw new StudyUnavailable("upstream"); } }),
+      study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }),
       resolveHost: async request => {
         const host = await resolveTenantHost(db, request, deployment);
         if (host.origin !== BROWSER_ORIGIN) throw new Error("Host mismatch");

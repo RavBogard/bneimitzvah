@@ -109,10 +109,15 @@ select { display: block; width: min(100%, 36rem); font: inherit; padding: 0.6875
 .reading-workspace { display: grid; grid-template-columns: minmax(0, 2fr) minmax(15rem, 1fr); gap: 3rem; margin-top: 2.5rem; }
 .reading-workspace > section { min-width: 0; }
 .reading-date { color: var(--color-muted); margin-top: 0.5rem; font-variant-numeric: tabular-nums; }
+.reading-student-context { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; align-items: center; }
+.reading-student-context .reading-date, .reading-student-context .button-text { margin: 0; }
 .confirmed-reading, .reading-empty { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--color-rule); }
 .reading-reference { font-size: 1.5rem; line-height: 1.4; overflow-wrap: anywhere; }
 .reading-review { color: var(--color-action); margin-top: 0.5rem; }
 .confirmed-reading details { margin-block: 1.25rem; }
+.reading-current-assignment { margin-top: 1.25rem; padding-top: 1rem; }
+.reading-current-assignment details { margin-block: 0.5rem 0; }
+.reading-other-assignments { margin-top: 1.5rem; }
 summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decoration: underline; text-underline-offset: 0.2em; }
 .verse-references { padding-inline-start: 1.5rem; font-variant-numeric: tabular-nums; }
 .verse-references li { margin-block: 0.5rem; }
@@ -153,6 +158,22 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .invitation-record-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 2rem; max-width: 48rem; margin-top: 1rem; }
 .invitation-record-details dt { color: var(--color-muted); }
 .invitation-record-details dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.assigned-study { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--color-ink); }
+.assigned-study > p, .study-credits p { max-width: 70ch; margin-block: 1rem; }
+.study-verses { list-style: none; margin: 1.5rem 0; padding: 0; }
+.study-verses > li { margin-block: 1.5rem 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--color-rule); }
+.study-verses > li:first-child { margin-top: 0.75rem; }
+.study-verses h4 { color: var(--color-muted); font-size: 1rem; font-weight: 500; }
+.study-hebrew { font-family: "Times New Roman", "Noto Serif Hebrew", serif; font-size: 2rem; line-height: 2; text-align: start; overflow-wrap: anywhere; margin-block: 1rem; }
+.study-read-alternative { font-size: 0.75em; }
+.study-paragraph-gap { display: inline-block; min-width: 1.5em; font-size: 0.625em; margin-inline: 0.4em; }
+.study-paragraph-note { color: var(--color-muted); margin-bottom: 1rem; }
+.study-english { white-space: pre-line; overflow-wrap: anywhere; line-height: 1.7; }
+.study-kind-choice, .study-pages { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-block: 1rem; }
+.study-kind-choice [aria-pressed="true"] { border-color: var(--color-action); font-weight: 600; }
+.study-credits { border-top: 1px solid var(--color-rule); padding-top: 1rem; }
+.study-credits section { margin-block: 1.5rem; }
+.study-credits li { overflow-wrap: anywhere; margin-block: 0.5rem; }
 .roster-pages, .form-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
 .roster-editor { border-top: 1px solid var(--color-ink); padding-top: 1.5rem; margin-top: 2.5rem; }
 .roster-editor h2 { margin-bottom: 1.5rem; }
