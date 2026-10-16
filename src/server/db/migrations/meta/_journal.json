@@ -29,6 +29,27 @@
       "when": 1792115270617,
       "tag": "0003_tenant_lock_permission",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792116586470,
+      "tag": "0004_fat_swarm",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792117026025,
+      "tag": "0005_spotty_dakota_north",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792118008857,
+      "tag": "0006_public_talisman",
+      "breakpoints": true
     }
   ]
 }

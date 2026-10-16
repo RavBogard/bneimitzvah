@@ -7,17 +7,27 @@ import * as s from "../db/index";
 
 export type SessionProof = Readonly<{ id: string; userId: string; token: string }>;
 
-export async function lockActorRecords<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, proof: SessionProof, mode: ActiveMode, intent: LockIntent) {
+export async function lockIdentityRecords<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, proof: SessionProof, intent: LockIntent) {
   const strength = lockStrength(intent);
   const [tenant] = await tx.select({ enabled: s.tenant.enabled }).from(s.tenant).where(eq(s.tenant.id, tenantId)).for(strength);
-  const [user] = await tx.select({ id: s.user.id, verified: s.user.emailVerified }).from(s.user).where(eq(s.user.id, proof.userId)).for(strength);
+  const [user] = await tx.select({ id: s.user.id, verified: s.user.emailVerified, email: s.user.email }).from(s.user).where(eq(s.user.id, proof.userId)).for(strength);
   const [session] = await tx.select({ id: s.session.id, userId: s.session.userId, expiresAt: s.session.expiresAt, createdAt: s.session.createdAt })
     .from(s.session).where(and(eq(s.session.id, proof.id), eq(s.session.userId, proof.userId), eq(s.session.token, proof.token))).for(strength);
   const [membership] = await tx.select().from(s.membership).where(and(eq(s.membership.tenantId, tenantId), eq(s.membership.userId, proof.userId))).for(strength);
-  const grants = membership ? await tx.select().from(s.roleGrant).where(and(
-    eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.membershipId, membership.id), eq(s.roleGrant.role, mode), isNull(s.roleGrant.revokedAt),
-  )).for(strength) : [];
-  return { tenant, user, session, membership, grant: grants[0] };
+  return { tenant, user, session, membership };
+}
+
+export async function lockRoleGrant<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, membershipId: string, mode: ActiveMode, intent: LockIntent) {
+  const [grant] = await tx.select().from(s.roleGrant).where(and(
+    eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.membershipId, membershipId), eq(s.roleGrant.role, mode), isNull(s.roleGrant.revokedAt),
+  )).for(lockStrength(intent));
+  return grant;
+}
+
+export async function lockActorRecords<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, proof: SessionProof, mode: ActiveMode, intent: LockIntent) {
+  const records = await lockIdentityRecords(tx, tenantId, proof, intent);
+  const grant = records.membership ? await lockRoleGrant(tx, tenantId, records.membership.id, mode, intent) : undefined;
+  return { ...records, grant };
 }
 
 export async function lockStudent<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string, intent: LockIntent) {

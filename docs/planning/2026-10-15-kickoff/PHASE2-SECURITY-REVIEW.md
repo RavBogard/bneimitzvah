@@ -128,3 +128,111 @@ exercise was run in this follow-up; lock ordering was inspected and committed-
 before-next-call revocation was exercised. Full integration/hosted gates remain
 with the primary collaborator. New route CSRF/request validation and future
 capability/context/revocation implementations require their own review.
+
+## Invitation/private-bootstrap review — 2026-10-15, fixes pending
+
+**Not accepted yet: two P2 findings require correction.** Scope is the invitation
+service, verified-identity extraction, mutation boundary, invitation data/schema
+and migration 0004, private bootstrap and their focused tests. Concurrent roster
+work/migration 0005 is outside this review. No implementation or Git changes were
+made by the reviewer.
+
+1. **P2 — unbound preexisting admin bypasses immutable initial-owner binding.**
+   `scripts/bootstrap-owner.mjs:29` permits no prior owner-bootstrap binding;
+   lines 39–42 then return `already-configured` for any active grant belonging to
+   the configured user without establishing or requiring that binding. Independent
+   disposable PGlite reproduction: seed verified A/B, CRC membership/admin for A,
+   but no bootstrap audit; bootstrap A returns `already-configured` and binding
+   count remains zero. Revoke A; bootstrap B then returns `configured`. Thus the
+   primary's ordinary bootstrap -> revoke -> different-user fix works, but an
+   inconsistent/unbound existing-admin state is accepted and later permits an
+   owner change. Fail closed for that state; idempotence must require a matching
+   prior bootstrap binding. Add a regression covering this alternate path and
+   revoked unbound admin history, without silently adopting another owner.
+2. **P2 — delivery failure has no durable auditable outcome.**
+   `src/server/invitations/service.ts:20`–28 calls transport after commit and
+   returns `sent`/`failed`, but persists neither result. The invitation row and
+   issue audit are identical whether sending succeeded, failed, or was never
+   attempted. The auth/tenancy spec's invitation section explicitly requires an
+   auditable send-failure state. Losing the response loses this evidence. Retain
+   a narrow durable pending/sent/failed outcome without mailbox/token/provider
+   diagnostics; report an unknown/unrecorded result if outcome persistence fails
+   rather than falsely reporting a recorded terminal state. This does not require
+   an external outbox, new provider or paid infrastructure. Primary agreed this
+   remains in the slice's acceptance scope.
+
+Other inspected boundaries are consistent with this scope: random 32-byte tokens
+are stored as SHA-256 only, 72-hour expiry and row lock/conditional consumption
+protect replay, reissue rotates atomically, exact-origin POST and Fetch Metadata
+deny cross-site mutation, fresh admin mode is required to issue/revoke/reissue,
+and acceptance uses the live verified matching mailbox under tenant/user/session/
+membership locks. Membership/grant/link/acceptance/audit share the transaction;
+the tenant authority-write lock serializes same-tenant issuance/redemption.
+Sibling guardians share one parent grant, parent mailboxes do not become student
+identities, stale grant/link history blocks old invitations, and HMAC-scoped
+actor/recipient budgets persist with committed attempts. No raw token/email/
+provider error is returned by the delivery result. Existing host/access denials
+remain fixed messages.
+
+**Independent baseline evidence:** `npx vitest run tests/app/invites.test.ts
+tests/app/bootstrap.test.ts` passed **17/17** (12 invitations, 5 bootstrap).
+Ignored log: `.local-logs/phase2-security-invites.log`. The additional unbound-owner
+probe above reproduced despite that green suite, demonstrating the missing
+regression. The primary's pending-student-invite-after-unlink fix was inspected
+and its old-token-denial/fresh-explicit-invite test passed; the normally
+bootstrapped immutable-owner/revocation regression also passed.
+
+Tests use actual SDK cookies/sessions, captured transport and PGlite transactions.
+They do not demonstrate physical PostgreSQL/Neon concurrent invitation redemption
+or live delivery. Token landing/clean-cookie exchange, routes and context issuance
+are absent next-slice work, not findings here. Final invitation/bootstrap verdict
+is pending author fixes and independent focused revalidation.
+
+## Invitation/bootstrap revalidation — 2026-10-15
+
+**Both P2 findings above are closed. Accepted for the bounded invitation/private
+bootstrap service slice; no remaining blocking finding found.** No implementation
+or Git edits were made by the reviewer. This verdict includes the consequential
+postcommit recorder and migration 0006, not absent routes/context issuance or
+whole-phase acceptance.
+
+- Bootstrap now requires an existing matching durable owner binding for active-
+  owner idempotence, and rejects any preexisting admin history before creating a
+  new owner (`scripts/bootstrap-owner.mjs:39`–46). The independent original probe
+  was rerun: unbound active A is denied; after revoking A, different verified B is
+  also denied; no bootstrap audit binding is created. Existing genuine bootstrap,
+  idempotence and revocation regressions continue passing.
+- Delivery now commits `pending` before invoking transport, then records `sent`
+  or `failed` plus a receipt timestamp and a dedicated audit action in a separate
+  restricted tenant transaction. `data/invitations.ts:100` locks tenant then exact
+  invitation, compares immutable issued-row fields (including hash, mailbox,
+  role/target, inviter and timestamps), and validates the historical admin grant/
+  membership/user tuple. It updates only pending delivery fields and appends the
+  outcome audit. It grants, links, accepts and restores nothing. Logout or grant/
+  invitation revocation during transport therefore does not erase historical
+  delivery evidence or revive authority.
+- Migration `0006_public_talisman.sql` adds the pending/terminal timestamp shape
+  constraint and terminal-outcome immutability trigger, with matching schema/
+  snapshot/journal entries and two explicit audit action values. The existing
+  restricted role's tenant/invite lock and update privileges cover the recorder;
+  no elevated runtime credential or expanded authority grant is introduced.
+- If receipt update/audit/commit cannot be established, delivery returns fixed
+  `unknown`, not a fabricated terminal confirmation. The transaction rolls back
+  to pending when its audit fails. A crash after issue likewise leaves pending.
+  Returned values contain only invitation ID and outcome; transport diagnostics,
+  URL, token and mailbox remain private. Recovery uses explicit rotation.
+
+**Independent focused revalidation:** `npx vitest run
+tests/app/invites.test.ts tests/app/bootstrap.test.ts` passed **20/20** (14
+invitation, 6 bootstrap), zero failures. Log: ignored
+`.local-logs/phase2-security-invites-final.log`. Tests establish durable failure
+and audit, terminal timestamp/status immutability, SQL audit-failure rollback for
+both successful/failed transports, and recording after actual session deletion
+and grant/invitation revocation without restoring access. Token, sibling,
+mailbox, exact-Origin POST and budget regressions remain green.
+
+Evidence here remains actual SDK/PGlite plus inspected SQL. No new live provider
+delivery or physical PostgreSQL/Neon invitation race was executed by this reviewer;
+the concurrent real-Postgres integration assignment and combined/hosted gates
+remain owned by the primary collaborator. Human testing and generated-chant
+release restrictions remain unchanged.

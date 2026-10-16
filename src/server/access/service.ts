@@ -1,12 +1,11 @@
 import "server-only";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAuthStack } from "../auth/factory";
-import { withTenantTransaction } from "../db/runtime";
-import { resolveTenantHost } from "../tenancy/resolve";
-import { lockActorRecords, lockStudent, lockStudentRelationship } from "../data/authority";
+import { lockRoleGrant, lockStudent, lockStudentRelationship } from "../data/authority";
+import { createVerifiedIdentityAccess } from "./identity";
 import { lockVisibleStudentCandidates } from "../data/students";
 import type { StudentPage, StudentView } from "../data/students";
-import { AccessDenied, AccessUnavailable } from "./errors";
+import { AccessDenied } from "./errors";
 import type { AccessDatabase, AccessRequest, AccessTransaction, ActiveMode, Actor, DeploymentScope, LockIntent, StudentActor } from "./types";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -28,35 +27,20 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
   auth: Pick<ReturnType<typeof createAuthStack>, "api">;
   deployment: DeploymentScope;
 }) {
-  const { db, auth } = input;
-  const deployment = Object.freeze({ ...input.deployment });
+  const withVerifiedIdentity = createVerifiedIdentityAccess(input);
 
   async function withActor<T>(request: AccessRequest, mode: ActiveMode, intent: LockIntent, fresh: boolean, action: (tx: AccessTransaction<Q>, actor: Actor) => Promise<T>) {
-    try {
-      const resolved = await resolveTenantHost(db, request, deployment);
+    return withVerifiedIdentity(request, { intent, fresh }, async (tx, identity) => {
       if (!["student", "parent", "tutor", "admin"].includes(mode)) throw new AccessDenied(403);
-      // This is the actual Better Auth cookie/session API, not a caller-provided
-      // actor ID. Cache and refresh are disabled; live rows are locked below.
-      const proof = await auth.api.getSession({ headers: new Headers(request.headers), query: { disableCookieCache: true, disableRefresh: true } });
-      if (!proof || proof.session.userId !== proof.user.id) throw new AccessDenied(401);
-      return await withTenantTransaction(db, resolved, async (tx) => {
-        const records = await lockActorRecords(tx, resolved.tenantId, { id: proof.session.id, userId: proof.user.id, token: proof.session.token }, mode, intent);
-        const now = Date.now();
-        if (!records.tenant?.enabled) throw new AccessDenied(404);
-        if (!records.user || !records.session || records.session.userId !== records.user.id || records.session.expiresAt.getTime() <= now) throw new AccessDenied(401);
-        if (!records.user.verified || !records.membership || records.membership.disabledAt || !records.grant || records.grant.revokedAt) throw new AccessDenied(403);
-        if (fresh && now - records.session.createdAt.getTime() >= 15 * 60_000) throw new AccessDenied(403);
+        if (!identity.membership) throw new AccessDenied(403);
+        const grant = await lockRoleGrant(tx, identity.tenantId, identity.membership.id, mode, intent);
+        if (!grant || grant.revokedAt) throw new AccessDenied(403);
         const actor: Actor = Object.freeze({
-          tenantId: resolved.tenantId, userId: records.user.id, authSessionId: records.session.id,
-          membershipId: records.membership.id, roleGrantId: records.grant.id, mode, authorityRevision: records.membership.authorityRevision,
+          tenantId: identity.tenantId, origin: identity.origin, userId: identity.userId, authSessionId: identity.authSessionId,
+          membershipId: identity.membership.id, roleGrantId: grant.id, mode, authorityRevision: identity.membership.authorityRevision,
         });
         return action(tx, actor);
-      });
-    } catch (error) {
-      if (error instanceof AccessDenied) throw error;
-      // Keep provider/SQL diagnostics, cookie material and record values internal.
-      throw new AccessUnavailable();
-    }
+    });
   }
 
   async function withStudentCapability<T>(request: AccessRequest, selection: { mode: ActiveMode; studentId: string; capability: StudentCapability }, action: (tx: AccessTransaction<Q>, actor: StudentActor, student: StudentView) => Promise<T>) {
@@ -90,6 +74,7 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
     // supply only a mode selector/target, both checked against live authority.
     withStudentCapability,
     withAdminCapability,
+    withVerifiedIdentity,
     readStudent: (request: AccessRequest, selection: { mode: ActiveMode; studentId: string }) => withStudentCapability(request, { ...selection, capability: "read" }, async (_tx, _actor, student) => student),
     listStudents: (request: AccessRequest, selection: { mode: ActiveMode } & StudentPage) => withActor(request, selection.mode, "read", false, async (tx, actor) => {
       if ((selection.afterId !== undefined && !uuid.test(selection.afterId)) || (selection.limit !== undefined && (!Number.isInteger(selection.limit) || selection.limit < 1 || selection.limit > 100))) throw new AccessDenied(403);

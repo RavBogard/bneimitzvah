@@ -10,8 +10,12 @@ export type LockIntent = "read" | "data-write" | "authority-write";
 export type DeploymentScope = Readonly<{ environment: "production" | "preview" | "local" | "test"; deployment: string }>;
 export type AccessRequest = Readonly<{ url: string; headers: Headers }>;
 export type Actor = Readonly<{
-  tenantId: string; userId: string; authSessionId: string; membershipId: string;
+  tenantId: string; origin: string; userId: string; authSessionId: string; membershipId: string;
   roleGrantId: string; mode: ActiveMode; authorityRevision: number;
+}>;
+export type VerifiedIdentity = Readonly<{
+  tenantId: string; origin: string; userId: string; email: string; authSessionId: string;
+  membership: Readonly<{ id: string; authorityRevision: number }> | null;
 }>;
 export type StudentActor = Actor & Readonly<{ studentId: string; relationshipId: string | null }>;
 

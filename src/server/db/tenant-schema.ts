@@ -104,6 +104,8 @@ export const invite = pgTable("invite", {
   id: id(), tenantId: tenantId(), tokenHash: text("token_hash").notNull().unique(), email: text("email").notNull(),
   role: role("role").notNull(), studentId: uuid("student_id"), inviterMembershipId: uuid("inviter_membership_id").notNull(),
   acceptedMembershipId: uuid("accepted_membership_id"), expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  deliveryStatus: text("delivery_status").$type<"pending" | "sent" | "failed">().default("pending").notNull(),
+  deliveryAttemptedAt: timestamp("delivery_attempted_at", { withTimezone: true }),
   acceptedAt: timestamp("accepted_at", { withTimezone: true }), revokedAt: revokedAt(), createdAt: createdAt(),
 }, (t) => [
   unique("invite_tenant_id_key").on(t.tenantId, t.id),
@@ -113,6 +115,7 @@ export const invite = pgTable("invite", {
   check("invite_role_target", sql`(${t.role} in ('parent', 'student') and ${t.studentId} is not null) or (${t.role} = 'tutor' and ${t.studentId} is null)`),
   check("invite_acceptance_pair", sql`(${t.acceptedAt} is null) = (${t.acceptedMembershipId} is null)`),
   check("invite_not_accepted_revoked", sql`not (${t.acceptedAt} is not null and ${t.revokedAt} is not null)`),
+  check("invite_delivery_shape", sql`(${t.deliveryStatus} = 'pending' and ${t.deliveryAttemptedAt} is null) or (${t.deliveryStatus} in ('sent','failed') and ${t.deliveryAttemptedAt} is not null)`),
   check("invite_email_normalized", sql`${t.email} = lower(trim(${t.email})) and length(${t.email}) > 0`),
   check("invite_expiry", sql`${t.expiresAt} > ${t.createdAt}`),
   check("invite_hash", sql`${t.tokenHash} ~ '^[a-f0-9]{64}$'`),
@@ -158,6 +161,7 @@ export const assignment = pgTable("assignment", {
 }, (t) => [
   unique("assignment_tenant_id_key").on(t.tenantId, t.id),
   unique("assignment_student_key").on(t.tenantId, t.id, t.studentId),
+  unique("assignment_current_kind_key").on(t.tenantId, t.studentId, t.kind),
   foreignKey({ name: "assignment_student_fk", columns: [t.tenantId, t.studentId], foreignColumns: [student.tenantId, student.id] }),
   foreignKey({ name: "assignment_author_fk", columns: [t.tenantId, t.setByMembershipId], foreignColumns: [membership.tenantId, membership.id] }),
   check("assignment_status", sql`${t.status} in ('proposed', 'confirmed')`),
@@ -189,5 +193,5 @@ export const auditEvent = pgTable("audit_event", {
   foreignKey({ name: "audit_grant_fk", columns: [t.tenantId, t.roleGrantId, t.actorMembershipId], foreignColumns: [roleGrant.tenantId, roleGrant.id, roleGrant.membershipId] }),
   foreignKey({ name: "audit_student_fk", columns: [t.tenantId, t.actingStudentId], foreignColumns: [student.tenantId, student.id] }),
   foreignKey({ name: "audit_guardian_fk", columns: [t.tenantId, t.guardianId], foreignColumns: [guardian.tenantId, guardian.id] }),
-  check("audit_action_known", sql`${t.action} in ('student.create','student.update','student.import','grant.issue','grant.revoke','guardian.link','guardian.revoke','tutor.assign','tutor.revoke','invite.issue','invite.accept','invite.revoke','context.enter','context.exit','reading.set','identity.link','identity.revoke')`),
+  check("audit_action_known", sql`${t.action} in ('student.create','student.update','student.import','grant.issue','grant.revoke','guardian.link','guardian.revoke','tutor.assign','tutor.revoke','invite.issue','invite.accept','invite.revoke','invite.delivery-sent','invite.delivery-failed','context.enter','context.exit','reading.set','identity.link','identity.revoke')`),
 ]);

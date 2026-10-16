@@ -1,4 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
+import { randomBytes } from "node:crypto";
 // Marker-only mock in this explicit integration suite. Production services and
 // the actual Better Auth cookie validation/session API are never replaced.
 vi.mock("server-only",()=>({}));
@@ -7,6 +8,10 @@ import { AccessDenied, AccessUnavailable } from "../../src/server/access/errors"
 import { withTenantTransaction } from "../../src/server/db/runtime";
 import * as s from "../../src/server/db/index";
 import { deferred, newRequestId, postgresAccessFixture, settleRace, waitForEntry } from "./access-fixture";
+import { createInvitationService } from "../../src/server/invitations/service";
+import { createStudentService } from "../../src/server/students/service";
+import { parseCeremonyDate } from "../../src/lib/readings/ranges";
+import { query } from "./disposable.mjs";
 
 type Fixture=Awaited<ReturnType<typeof postgresAccessFixture>>;
 type Revocation="link"|"grant"|"session";
@@ -118,5 +123,75 @@ test("revocation committed first wins the reverse race and the waiting capabilit
       release.resolve();
       await settleRace(operation?[revocation,operation]:[revocation]);
     }
+  }
+});
+
+test("concurrent redemption contends on live authority and creates exactly one grant, guardian and acceptance audit",async()=>{
+  const f=await fixture();
+  const recipient=await f.signIn("pg-recipient");
+  const throttleSecret=randomBytes(48).toString("base64url");
+  let privateUrl="";
+  const invitationsA=createInvitationService({db:f.aDb,access:f.a,throttleSecret,transport:async message=>{privateUrl=message.url;}});
+  const invitationsB=createInvitationService({db:f.bDb,access:f.b,throttleSecret,transport:async()=>{}});
+  const adminRequest={...f.request("admin"),method:"POST",headers:new Headers({...Object.fromEntries(f.request("admin").headers),origin:"http://localhost:3000"})};
+  const issued=await invitationsA.issue(adminRequest,{mode:"admin",role:"parent",email:"pg-recipient@example.test",studentId:f.student.id});
+  expect(issued.delivery==="sent").toBe(true);
+  const token=new URL(privateUrl).searchParams.get("token");
+  if(!token)throw new Error("Synthetic invitation delivery missing");
+  const request={url:"http://localhost:3000/invitations/accept",method:"POST",headers:new Headers({origin:"http://localhost:3000",cookie:recipient.cookie})};
+  const entered=deferred(),release=deferred();let claimed=false;
+  const restore=await f.intercept("a",text=>!claimed && text.includes('from "invite"') && text.trimEnd().endsWith("for update"),async proceed=>{
+    claimed=true;const result=await proceed();entered.resolve();await release.promise;return result;
+  });
+  const first=invitationsA.accept(request,{token}).then(()=>({accepted:true,denied:false}),()=>({accepted:false,denied:false}));
+  let second:Promise<{accepted:boolean;denied:boolean}>|undefined;
+  try{
+    await waitForEntry(entered.promise,first);
+    second=invitationsB.accept(request,{token}).then(()=>({accepted:true,denied:false}),error=>({accepted:false,denied:error instanceof AccessDenied && error.status===404}));
+    await f.waitForLock(f.pidB,f.pidA);
+    release.resolve();
+    expect((await first).accepted).toBe(true);expect((await second).denied).toBe(true);
+    const members=await f.ownerDb.select({id:s.membership.id}).from(s.membership).where(eq(s.membership.userId,recipient.id));expect(members.length).toBe(1);
+    const grants=await f.ownerDb.select({id:s.roleGrant.id}).from(s.roleGrant).where(eq(s.roleGrant.membershipId,members[0].id));expect(grants.length).toBe(1);
+    expect((await f.ownerDb.select({id:s.guardian.id}).from(s.guardian).where(eq(s.guardian.parentGrantId,grants[0].id))).length).toBe(1);
+    expect((await f.ownerDb.select({id:s.auditEvent.id}).from(s.auditEvent).where(eq(s.auditEvent.action,"invite.accept"))).length).toBe(1);
+    expect((await f.ownerDb.select({id:s.auditEvent.id}).from(s.auditEvent).where(eq(s.auditEvent.action,"grant.issue"))).length).toBe(1);
+    expect((await f.ownerDb.select({id:s.auditEvent.id}).from(s.auditEvent).where(eq(s.auditEvent.action,"guardian.link"))).length).toBe(1);
+    const [row]=await f.ownerDb.select({acceptedAt:s.invite.acceptedAt}).from(s.invite).where(eq(s.invite.id,issued.inviteId));expect(row.acceptedAt!==null).toBe(true);
+  }finally{release.resolve();restore();await settleRace(second?[first,second]:[first]);}
+});
+
+test("two first reading inserts contend on the unique index and commit one exact assignment/audit with a typed stale loser",async()=>{
+  const f=await fixture(),signingSecret=randomBytes(48).toString("base64url");
+  const loadReading=async(date:string,calendar:"diaspora"|"israel")=>({fetchedAt:Date.now(),snapshot:{date:parseCeremonyDate(date),calendar,reading:null,haftarah:null}});
+  const studentsA=createStudentService({access:f.a,signingSecret,loadReading});
+  const studentsB=createStudentService({access:f.b,signingSecret,loadReading});
+  const request={...f.request("tutor"),method:"POST",headers:new Headers({...Object.fromEntries(f.request("tutor").headers),origin:"http://localhost:3000"})};
+  const prepared=await studentsA.prepareReading(request,{mode:"tutor",studentId:f.student.id,ranges:["Genesis 1:31-2:2"]});
+  if(prepared.status!=="prepared")throw new Error("Synthetic reading preparation failed");
+  const enteredA=deferred(),enteredB=deferred(),executeA=deferred(),executeB=deferred(),ackA=deferred(),releaseAck=deferred();
+  let claimedA=false,claimedB=false;
+  const restoreA=await f.intercept("a",text=>!claimedA && text.startsWith('insert into "assignment" '),async proceed=>{
+    claimedA=true;enteredA.resolve();await executeA.promise;const result=await proceed();ackA.resolve();await releaseAck.promise;return result;
+  });
+  const restoreB=await f.intercept("b",text=>!claimedB && text.startsWith('insert into "assignment" '),async proceed=>{
+    claimedB=true;enteredB.resolve();await executeB.promise;return proceed();
+  });
+  const selection={mode:"tutor" as const,studentId:f.student.id,binding:prepared.binding};
+  const first=studentsA.confirmReading(request,selection).then(result=>({accepted:result.ok,stale:!result.ok && result.code==="stale-revision"}),()=>({accepted:false,stale:false}));
+  const second=studentsB.confirmReading(request,selection).then(result=>({accepted:result.ok,stale:!result.ok && result.code==="stale-revision"}),()=>({accepted:false,stale:false}));
+  try{
+    await waitForEntry(enteredA.promise,first);await waitForEntry(enteredB.promise,second);
+    executeA.resolve();await waitForEntry(ackA.promise,first);
+    executeB.resolve();await f.waitForLock(f.pidB,f.pidA);
+    const wait=(await query<{waiting:boolean}>(f.owner,"SELECT EXISTS(SELECT 1 FROM pg_locks WHERE pid=$1 AND locktype='transactionid' AND NOT granted) AS waiting",[f.pidB])).rows[0];expect(wait.waiting).toBe(true);
+    releaseAck.resolve();
+    expect((await first).accepted).toBe(true);expect((await second).stale).toBe(true);
+    const assignments=await f.ownerDb.select({id:s.assignment.id}).from(s.assignment);expect(assignments.length).toBe(1);
+    const verses=await f.ownerDb.select({ref:s.assignmentVerse.verseRef}).from(s.assignmentVerse).orderBy(s.assignmentVerse.ordinal);
+    expect(verses.map(row=>row.ref)).toEqual(["Genesis 1:31","Genesis 2:1","Genesis 2:2"]);
+    expect((await f.ownerDb.select({id:s.auditEvent.id}).from(s.auditEvent).where(eq(s.auditEvent.action,"reading.set"))).length).toBe(1);
+  }finally{
+    executeA.resolve();executeB.resolve();releaseAck.resolve();restoreA();restoreB();await settleRace([first,second]);
   }
 });

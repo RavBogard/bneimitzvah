@@ -1,0 +1,1 @@
+ALTER TABLE "assignment" ADD CONSTRAINT "assignment_current_kind_key" UNIQUE("tenant_id","student_id","kind");

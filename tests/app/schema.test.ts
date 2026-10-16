@@ -116,7 +116,9 @@ describe("tenant schema and transaction boundary", () => {
     const f = await fixture();
     const input = { tenantId: "crc", studentId: f.students[0].id, kind: "torah" as const, basis: "custom" as const, ref: "Genesis 1:1-1:2", setByMembershipId: f.memberA.id };
     const [assignment] = await f.db.insert(schema.assignment).values(input).returning();
-    expect(await fails(() => f.db.insert(schema.assignment).values({ ...input, setByMembershipId: f.memberB.id }))).toBe(true);
+    // Use a distinct current-reading kind so uniqueness cannot mask the
+    // foreign author's composite tenant FK failure.
+    expect(await fails(() => f.db.insert(schema.assignment).values({ ...input, kind: "haftarah", ref: "Isaiah 1:1-1:2", setByMembershipId: f.memberB.id }), "23503")).toBe(true);
     const verse = { tenantId: "crc", assignmentId: assignment.id, studentId: f.students[0].id, ordinal: 1, verseRef: "Genesis 1:1" };
     await f.db.insert(schema.assignmentVerse).values(verse);
     expect(await fails(() => f.db.insert(schema.assignmentVerse).values({ ...verse, studentId: f.students[1].id, ordinal: 2, verseRef: "Genesis 1:2" }))).toBe(true);

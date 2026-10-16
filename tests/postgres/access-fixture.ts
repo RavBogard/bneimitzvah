@@ -136,7 +136,24 @@ export async function postgresAccessFixture() {
       }
       throw new Error("Expected PostgreSQL blocking edge was not observed");
     }
-    return {a,b,aDb,bDb,owner,ownerDb,pidA,pidB,request,admin,tutor,student,otherStudent,link,tutorGrant,close,waitForLock};
+    async function intercept(which:"a"|"b",matches:(text:string)=>boolean,handler:(proceed:()=>Promise<unknown>)=>Promise<unknown>){
+      const pool=which==="a"?aPool:bPool;
+      const client=await pool.connect();
+      const original=client.query;
+      const bound=original.bind(client);
+      // Preserve the driver's callback-style API for every non-target query,
+      // including SDK session work performed through pool.query(). No SQL or
+      // parameters are logged or copied into assertion failures.
+      client.query=(...args:unknown[])=>{
+        const config=args[0] as string|{text?:string};
+        const text=typeof config==="string"?config:config?.text??"";
+        if(!matches(text))return bound(...args);
+        return handler(()=>Promise.resolve(bound(...args)));
+      };
+      client.release();
+      return ()=>{client.query=original;};
+    }
+    return {a,b,aDb,bDb,owner,ownerDb,pidA,pidB,request,admin,tutor,student,otherStudent,link,tutorGrant,close,waitForLock,intercept,signIn};
   } catch {
     try{await close();}catch{/* Do not disclose provider/SQL details from cleanup. */}
     throw new Error("Disposable PostgreSQL access fixture setup failed; details withheld");
