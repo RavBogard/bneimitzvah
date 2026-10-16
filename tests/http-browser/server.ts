@@ -7,6 +7,7 @@ import { createHttpDispatcher, type HttpRuntimeScope } from "../../src/server/ht
 import { authRouteMethods } from "../../src/server/http/auth";
 import { portalRouteMethods } from "../../src/server/http/portal";
 import { studentWorkRouteMethods } from "../../src/server/http/student-work";
+import { closeNextDevelopment } from "./next-lifecycle";
 
 export const BROWSER_PORT = 3187;
 export const BROWSER_ORIGIN = `http://127.0.0.1:${BROWSER_PORT}`;
@@ -30,7 +31,7 @@ async function isolatedNextProject() {
     await mkdir(join(dir, fontDirectory), { recursive: true });
     for (const file of ["NotoSerifHebrew.ttf", "OFL.txt"]) await cp(join(source, fontDirectory, file), join(dir, fontDirectory, file));
     for (const file of ["package.json", "next.config.ts", "tsconfig.json"]) await cp(join(source, file), join(dir, file));
-    return { dir, cleanup: () => rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }) };
+    return { dir };
   } catch {
     await rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
     throw new Error("Isolated Next project setup failed");
@@ -76,7 +77,7 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope) {
   const project = await isolatedNextProject();
   const app = next({ dev: true, dir: project.dir, hostname: "127.0.0.1", port: BROWSER_PORT, quiet: true });
   try { await app.prepare(); }
-  catch { await app.close().catch(() => undefined); await project.cleanup(); throw new Error("Isolated Next preparation failed"); }
+  catch { await closeNextDevelopment(() => app.close()); throw new Error("Isolated Next preparation failed"); }
   const nextHandler = app.getRequestHandler();
   const dispatch = createHttpDispatcher(withRuntime);
   const server = createServer(async (req, res) => {
@@ -90,10 +91,13 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope) {
   });
   try {
     await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(BROWSER_PORT, "127.0.0.1", resolve); });
-  } catch { await app.close(); await project.cleanup(); throw new Error("Isolated browser server listen failed"); }
+  } catch { await closeNextDevelopment(() => app.close()); throw new Error("Isolated browser server listen failed"); }
   return async () => {
     await new Promise<void>(resolve => server.close(() => resolve()));
-    await app.close();
-    await project.cleanup();
+    await closeNextDevelopment(() => app.close());
+    // NextCustomServer.close and AsyncCallbackSet.runAll use allSettled: a
+    // resolved close is not proof that native cleanup succeeded. Retain this
+    // ignored, synthetic-only copy rather than deleting live Turbopack .sst files.
+    // Copy failures before Next starts are still cleaned in isolatedNextProject.
   };
 }

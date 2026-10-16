@@ -152,6 +152,35 @@ Update DESIGN/workspace inventory and STATE only after independent finish review
 Root owns STATE/security, Git, hosted CI/publication and final acceptance. No app,
 test, DESIGN or workspace-inventory change accompanies this final evidence update.
 
+## Published-checkpoint CI repair — 2026-10-16
+
+The initial exact-head hosted run for `74f798a` passed Windows/Linux unit/build and
+public browser gates, SQL 6/6 and service 43/43, but authenticated browser checks
+were 37/38 with an additional unhandled native-cache rejection. On Linux the loaded
+Noto first Hebrew range had top 814.25 and bottom 852.25 against the required 844px
+viewport. The bounded repair reduces only phone assigned-study/kind-selector/list
+spacing before the verse; Hebrew 2rem/line-height 2, touch-control heights, font and
+the complete-range assertion are unchanged. Real-browser verification is pending.
+
+The pinned Next 16.4.2 cleanup selects native `project.shutdown()` only with
+`__NEXT_DEV_WAIT_FOR_TURBOPACK_SHUTDOWN=1`; otherwise it uses `project.onExit()`.
+The test-only close helper sets that flag throughout awaited close and restores the
+exact prior value, including absence. Both NextCustomServer.close and its callback
+set use `Promise.allSettled`, so resolution cannot positively confirm internal
+cleanup success. Consequently the harness **unconditionally retains isolated
+directories after Next starts**; it never deletes a cache possibly still used by
+native tasks. They contain only synthetic fixture/source/build data beneath ignored
+`.local-logs`. Copy failure before Next starts may still remove its incomplete copy.
+No error listener suppresses unhandled failures and no shutdown sleep is added.
+
+The isolation case now checks unchanged source tsconfig/production build, retained
+private copy and a closed HTTP listener. Two focused non-PG tests pass for awaited
+flag lifetime/exact restoration and propagation of an observed close failure;
+`tsc --noEmit` passes. Root's subsequent full SDK/PostgreSQL browser run passed
+38/38 across all 12 files in 173.68 seconds, with no unhandled-error report;
+production build passed. Root inspected the updated phone capture and accepted the
+bounded spacing correction. Exact-head hosted Linux verification remains next.
+
 ## Root integration and scoped verdict
 
 Astra independently accepted the authority/lifecycle and dispatcher corrections. The fresh visual reviewer returned **ship** for its scored recovery-copy and persistence fixes; the full review and verdict are in EDITOR-CHART-FINISH-REVIEW.md. Recovery now renders one accessible announcement while preserving specific receipt/current-head/history explanations, all actions and retained text. The two actual SDK/PostgreSQL recovery cases passed again (2/2 selected, five skipped), including distinct missing-receipt text, valid description targets and identical-body retry. Typecheck and production build passed after the final rendering change. Earlier 381-app/145-Node, 16 affected browser and 15 production-page results retain their precise scope above. Publication and final exact-head hosted all-suite verification are pending; no complete-product claim is made.

@@ -6,7 +6,7 @@ import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from 
 
 vi.mock("server-only", () => ({}));
 
-it("runs Next development without changing the production build or project tsconfig", async () => {
+it("closes the HTTP server without changing production files or deleting a possibly live native cache", async () => {
   assertBrowserStartupAllowed();
   const cwd = process.cwd();
   const tsconfig = join(cwd, "tsconfig.json"), buildId = join(cwd, ".next", "BUILD_ID");
@@ -26,5 +26,9 @@ it("runs Next development without changing the production build or project tscon
   const afterProjects = (await readdir(logs)).filter(name => name.startsWith("http-browser-project-"));
   expect(Buffer.compare(beforeTsconfig, await readFile(tsconfig)) === 0
     && Buffer.compare(beforeBuild, await readFile(buildId)) === 0
-    && beforeProjects.join() === afterProjects.join()).toBe(true);
+    && afterProjects.filter(name => !beforeProjects.includes(name)).length === 1).toBe(true);
+  let closed = false;
+  try { const response = await fetch(BROWSER_ORIGIN, { signal: AbortSignal.timeout(2000), redirect: "error" }); await response.body?.cancel(); }
+  catch { closed = true; }
+  expect(closed).toBe(true);
 }, 120_000);

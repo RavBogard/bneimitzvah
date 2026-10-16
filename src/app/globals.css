@@ -235,8 +235,9 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
   .workspace-main h1 { font-size: 1.875rem; }
   .reading-workspace { grid-template-columns: minmax(0, 1fr); gap: 2rem; margin-top: 1rem; }
   .reading-current-assignment { margin-top: 0.75rem; padding-top: 0.75rem; }
-  .study-kind-choice { margin-block: 0.75rem; }
-  .study-verses { margin-top: 1rem; }
+  .assigned-study { margin-top: 0.5rem; padding-top: 0.5rem; }
+  .study-kind-choice { margin-block: 0.5rem; }
+  .study-verses { margin-top: 0.5rem; }
   .access-details > div { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; }
   .access-actions { align-items: stretch; }
   .roster-form-grid { grid-template-columns: minmax(0, 1fr); }
