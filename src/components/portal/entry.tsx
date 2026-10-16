@@ -9,7 +9,7 @@ type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation"
 type Action = "google" | "email" | "accept" | "sign-out";
 const failure = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
 
-export function PortalEntry({ invitation = false, authenticationError = false }: { invitation?: boolean; authenticationError?: boolean }) {
+export function PortalEntry({ invitation = false, authenticationError = false, autoEnterStudent = true }: { invitation?: boolean; authenticationError?: boolean; autoEnterStudent?: boolean }) {
   const [view, setView] = useState<View>({ kind: "loading" });
   const [pending, setPending] = useState<Action | null>(null), [message, setMessage] = useState("");
   const [email, setEmail] = useState(""), [linkRequested, setLinkRequested] = useState(false);
@@ -26,14 +26,14 @@ export function PortalEntry({ invitation = false, authenticationError = false }:
     void requestPortal(invitation ? "/api/invitations/pending" : "/api/session", undefined, request.signal)
       .then(value => {
         const next: View = invitation ? { kind: "invitation", review: parseInvitation(value) } : { kind: "signed-in", summary: parseSession(value) };
-        if (turn === generation.current && next.kind === "signed-in" && next.summary.roles.length === 1 && next.summary.roles[0] === "student") { window.location.replace("/workspace/student"); return; }
+        if (autoEnterStudent && turn === generation.current && next.kind === "signed-in" && next.summary.roles.length === 1 && next.summary.roles[0] === "student") { window.location.replace("/workspace/student"); return; }
         if (turn === generation.current) setView(next);
       }).catch(error => {
         if (turn !== generation.current || request.signal.aborted) return;
         const status = failure(error);
         setView({ kind: status === 401 ? "sign-in" : status === 403 ? "forbidden" : invitation && status === 404 ? "invalid-invitation" : "unavailable" });
       });
-  }, [invitation]);
+  }, [invitation, autoEnterStudent]);
 
   useEffect(() => {
     refresh();

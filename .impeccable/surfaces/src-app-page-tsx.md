@@ -28,3 +28,8 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 Actual cookie-based HTTP only: session summary, Google/magic-link sign-in, sign-out, invitation preview and reviewed acceptance. No raw invitation token is read by client code. Bindings remain in component memory and are submitted only in the required acceptance POST. HTTP errors use fixed actionable messages; no provider response, token, mailbox or session is logged. Unknown availability fails closed. A signed-in view provides role labels and honest next-stage availability rather than links to unimplemented pages.
 
 Implementation font constraint (Astra): system UI stack for this auth slice; no external font request or binary exception. Hebrew typography, mark rendering and passage/tool composition are a later bounded task using actual licensed-source content. No shipping raster in this slice. Independent review and documentation are supplied by the primary; implementation worker does not recursively delegate.
+
+## Account destination — 2026-10-16
+
+The explicit /account route reuses PortalEntry with automatic student entry disabled. The home route still opens a single-role student's reading directly. Workspace Account and sign out passes through the existing departure guard to this stable signed-in account surface; Sign out and role links retain the existing layout and authority flow. Root and independent review inspected actual SDK desktop (1440x1000) and phone (390x844) captures. The two affected SDK/PostgreSQL suites passed 12/12, with production build and focused checks passing. See ACCOUNT-FINISH-REVIEW.md and BROWSER-LEAVE-REPAIR.md in docs/planning/2026-10-15-kickoff. Hosted checks remain a separate integration gate.
+

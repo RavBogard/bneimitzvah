@@ -105,6 +105,23 @@ async function capture(tab: Page, name: string) {
     }
   } finally { await tab.evaluate(() => { document.documentElement.style.removeProperty("font-size"); }); if (original) await tab.setViewportSize(original); }
 }
+async function accountReady(tab: Page) {
+  await ui(tab.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
+  await ui(tab.getByRole("button", { name: "Sign out", exact: true })).toBeEnabled();
+  expect(new URL(tab.url()).pathname).toBe("/account");
+}
+async function captureAccount(tab: Page) {
+  if (process.env.CI) return;
+  const original = tab.viewportSize(), directory = join(process.cwd(), ".impeccable", "review"); await mkdir(directory, { recursive: true });
+  try {
+    for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+      await tab.setViewportSize(viewport); await accountReady(tab);
+      await safe(() => tab.evaluate(async () => { await document.fonts.ready; scrollTo(0, 0); await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); }));
+      expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth && scrollY === 0)).toBe(true);
+      await safe(() => tab.screenshot({ path: join(directory, `student-account-${viewport.width === 390 ? "mobile" : "desktop"}.png`), fullPage: true }));
+    }
+  } finally { if (original) await tab.setViewportSize(original); }
+}
 
 beforeAll(async () => {
   try {
@@ -226,7 +243,15 @@ it("guards controlled leave and settles hidden lifecycle checks while retaining 
   releaseMetadata(); await tab.unroute("**/reading?**"); await loaded(tab); await ui(staged.locator(".work-status")).toHaveText("Saved"); await tab.unroute("**/work/draft");
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; }); await tab.route("**/work?**", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeVisible(); await ui(tab.locator(".study-hebrew").first()).toBeHidden(); release(); await tab.unroute("**/work?**"); await loaded(tab);
-  const leaving = await tools(tab, "Genesis 1:4"); await safe(() => leaving.getByRole("textbox").fill("Synthetic discard before departure")); await safe(() => tab.getByRole("link", { name: "Account and sign out", exact: true }).click()); await click(tab, "Discard unsent edits and continue"); await ui.poll(() => new URL(tab.url()).pathname).toBe("/");
+  const leaving = await tools(tab, "Genesis 1:4"), discarded = "Synthetic discard before departure";
+  // An unfinished composition stays unsent even when the ordinary link click blurs the field.
+  await safe(() => leaving.getByRole("textbox").dispatchEvent("compositionstart")); await safe(() => leaving.getByRole("textbox").fill(discarded));
+  await safe(() => tab.getByRole("link", { name: "Account and sign out", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await click(tab, "Discard unsent edits and continue");
+  await ui(tab.getByRole("dialog")).toBeHidden(); await accountReady(tab);
+  // A fresh access check must keep sign-out available, rather than briefly visiting / and returning to the reading.
+  const refreshed = tab.waitForResponse(response => new URL(response.url()).pathname === "/api/session");
+  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); expect((await refreshed).status()).toBe(200); await accountReady(tab); await captureAccount(tab);
+  expect((await fixture.ownerDb.select().from(s.translationDraft).where(and(eq(s.translationDraft.studentId, fixture.student.id), eq(s.translationDraft.verseRef, "Genesis 1:4"), eq(s.translationDraft.text, discarded)))).length).toBe(0);
   const admin = await page("admin"); await staff(admin); const notePanel = await tools(admin, "Genesis 1:7"); await safe(() => notePanel.getByRole("button", { name: "Student-visible notes", exact: true }).click());
   await safe(() => notePanel.getByRole("textbox").fill("Synthetic explicitly saved on departure")); await safe(() => admin.getByRole("link", { name: "Back to student roster", exact: true }).click()); await ui(admin.getByRole("dialog")).toBeVisible(); await click(admin, "Save and continue"); await ui.poll(() => new URL(admin.url()).pathname).toBe("/workspace/admin/students");
   expect((await fixture.ownerDb.select().from(s.tutorNote).where(and(eq(s.tutorNote.verseRef, "Genesis 1:7"), eq(s.tutorNote.text, "Synthetic explicitly saved on departure")))).length).toBe(1);

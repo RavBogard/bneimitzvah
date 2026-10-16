@@ -203,7 +203,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   return <div className="portal-shell workspace-shell">
     <a className="skip-link" href="#workspace-main">Skip to workspace</a>
-    <header className="portal-header"><Link className="portal-brand" href="/" onClick={event => controlledLink(event, "/")}>CRC B’nei Mitzvah</Link><Link href="/" onClick={event => controlledLink(event, "/")}>Account and sign out</Link></header>
+    <header className="portal-header"><Link className="portal-brand" href="/" onClick={event => controlledLink(event, "/")}>CRC B’nei Mitzvah</Link><Link href="/account" onClick={event => controlledLink(event, "/account")}>Account and sign out</Link></header>
     <main id="workspace-main" className="workspace-main">
       {(checking || !summary) && <section className="workspace-state" aria-live="polite"><h1>{failure === null ? "Checking your access" : failure === 401 ? "Sign in to continue" : failure === 403 || failure === 404 ? "Access has changed" : "Workspace unavailable"}</h1>
         <p>{failure === null ? "Your student information is hidden until access has been checked." : failure === 401 ? "Use the account on your invitation." : failure === 403 || failure === 404 ? "The requested access is not available. Your previous student view has been cleared." : "We couldn’t load the workspace. Please try again shortly."}</p>
