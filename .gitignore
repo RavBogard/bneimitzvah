@@ -48,6 +48,7 @@ Thumbs.db
 .idea/
 .superpowers/
 .playwright-mcp/
+.impeccable/questions/
 .claude/worktrees/
 
 # local verification output

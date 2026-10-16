@@ -41,6 +41,30 @@ test("Markdown code delimiters do not turn Python decorators into email addresse
   assert.deepEqual(entryProblems("tests/fixtures/portal/student.json", '{"email":"fixture@example.test"}'), []);
 });
 
+test("only named Drizzle metadata shapes are permitted and all content checks remain active", () => {
+  const journal = { version: "7", dialect: "postgresql", entries: [] };
+  const snapshot = { version: "7", dialect: "postgresql", id: "synthetic", prevId: "synthetic", tables: {} };
+  const journalPath = "src/server/db/migrations/meta/_journal.json";
+  const snapshotPath = "src/server/db/migrations/meta/0001_snapshot.json";
+  assert.deepEqual(entryProblems(journalPath, JSON.stringify(journal)), []);
+  assert.deepEqual(entryProblems(snapshotPath, JSON.stringify(snapshot)), []);
+  for (const path of ["src/server/db/migrations/meta/students.json", "src/server/db/migrations/meta/nested/0001_snapshot.json", "src/server/db/migrations/0001_snapshot.json"]) {
+    assert.ok(entryProblems(path, JSON.stringify(snapshot)).includes("data file outside reviewed allow-list"));
+  }
+  assert.ok(entryProblems(snapshotPath, '{"student":"synthetic"}').includes("invalid Drizzle migration metadata shape"));
+  assert.ok(entryProblems(journalPath, "not JSON").includes("invalid Drizzle migration metadata shape"));
+  const samples = [
+    ["credential pattern", "vercel_blob_" + "rw_" + "syntheticMetadataToken"],
+    ["non-synthetic email address", "person" + "@" + "private.invalid"],
+    ["licensed-text publisher/version marker; manual licence review required", "THE " + "JPS TANAKH"],
+  ];
+  for (const [reason, content] of samples) {
+    for (const [path, valid] of [[journalPath, journal], [snapshotPath, snapshot]]) {
+      assert.ok(entryProblems(path, JSON.stringify({ ...valid, sensitive: content })).includes(reason));
+    }
+  }
+});
+
 test("git integration detects untracked, force-staged ignored, and index-only sensitive files without echoing contents", async () => {
   const { env, cleanup } = await isolatedEnv();
   const root = await mkdtemp(join(tmpdir(), "portal-policy-"));

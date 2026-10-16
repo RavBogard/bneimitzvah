@@ -26,7 +26,8 @@ Daniel requires the full planned product to be feature complete before any other
 
 - A rabbi creates a student, supplies a ceremony date and parent contact, reviews the proposed reading, and assigns the exact verses. Tutors can adjust readings and assign sources within their permitted student relationships.
 - Practice happens independently and during Zoom lessons. Layout and verse identification must support both small screens and shared discussion of the same passage. Video conferencing itself is outside the planned product.
-- Daniel confirmed parent sign-in with an explicit switch into linked child practice views, including sibling selection. The ordinary parent view remains read-only. The exact authorization/session mechanism is an open architecture decision; the interface must make the active child and role clear.
+- Daniel confirmed that the student's first screen opens directly on their assigned reading, with practice tools beside it. On small screens the tools must remain available without crowding the passage.
+- Daniel confirmed parent sign-in with an explicit switch into linked child practice views, including sibling selection. The ordinary parent view remains read-only. The approved auth/tenancy spec uses explicit per-tab practice contexts; the interface must make the active child and role clear.
 - Google sign-in and email magic links remain the planned entry methods; passwords are out of scope.
 
 ## Capabilities and Constraints

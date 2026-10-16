@@ -2,7 +2,9 @@
   "name": "crc-bneimitzvah",
   "version": "0.0.0",
   "private": true,
-  "engines": { "node": "24.x" },
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,9 +14,17 @@
     "test:node": "node --test \"tests/**/*.test.mjs\"",
     "test:app": "vitest run",
     "test:e2e": "playwright test",
+    "test:postgres": "node --test \"tests/postgres/*.integration.mjs\"",
+    "db:generate": "node scripts/db-generate.mjs",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "db:auth-schema": "auth generate --config scripts/db-auth-config.ts --output .local-logs/auth-schema.generated.ts --yes",
     "check:repo": "node --test tests/never-in-repo.test.mjs"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "1.7.10",
+    "@neondatabase/serverless": "1.2.0",
+    "better-auth": "1.7.10",
+    "drizzle-orm": "0.45.4",
     "next": "16.4.2",
     "react": "19.3.1",
     "react-dom": "19.3.1"
@@ -25,6 +35,8 @@
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "auth": "1.7.10",
+    "pg": "8.23.1",
     "typescript": "7.0.2",
     "vitest": "5.0.5"
   }

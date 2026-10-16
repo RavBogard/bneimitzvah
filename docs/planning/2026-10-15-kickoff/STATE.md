@@ -2,11 +2,13 @@
 
 Authority: `MISSION.md` (Daniel's rulings). Plan: `PLAN-CODE-2026-10-15.md`. This file says where the work stands. Update it at the end of every session and every phase.
 
-Current phase: 2 (auth/tenancy architecture approved; SDK compatibility spike and application implementation are next). Phases 0 and 1 are published and verified: engine publication `da12401` passed hosted Windows/Linux/browser CI and Vercel serves HTTP 200. Custom-domain DNS remains pending. Engine source: haftarah `trope-engine-research` at `380b1b2`, verified against GitHub on 2026-10-15. Haftarah `main` reference: `5b2530f`.
+Current phase: 2. Auth SDK compatibility, schema/migrations, restricted-role transaction helper and real-Postgres CI gate are implemented and independently reviewed; local integration is green, hosted verification pending. This is a prerequisite checkpoint, not Phase 2 completion. Invitations, capability services, routes, role pages and live providers remain ahead. Phases 0 and 1 are published and verified. Custom-domain DNS remains pending. Engine source: haftarah `trope-engine-research` at `380b1b2`, verified against GitHub on 2026-10-15. Haftarah `main` reference: `5b2530f`.
 
 Current execution authority: Daniel requested Astra as project manager and Sol agents as implementers on 2026-10-15. See `PM-REVIEW-2026-10-15.md` for confirmed amendments, review findings, and proposals. Root `PRODUCT.md` captures the completed Impeccable product interview; the chosen workflow is code-first.
 
 Delivery sequence (Daniel, 2026-10-15): finish all planned features before any human testing beyond Daniel. No early student/parent/tutor pilot. Automated tests and agent reviews continue; Phase 7 follows feature completeness, including MCP and generated chant, and Daniel's approval.
+
+Latest product/setup decisions (Daniel, 2026-10-15): student entry opens directly on the assigned reading with practice tools alongside it. Google OAuth, Neon and Resend are not configured; continue building locally and prepare provider setup steps. No provider provisioning is requested by this decision.
 
 ## Gates
 
@@ -26,6 +28,8 @@ GATE: full local integration passed 119 Node tests plus 1 Vitest/PGlite test —
 GATE: published foundation `452c1c5` passed all hosted Windows/Linux/browser jobs and Vercel HTTP 200 — Phase 0 acceptance met at the Vercel hostname.
 GATE: engine publication `da12401` passed hosted Windows/Linux/browser CI run `38833091139` and its Vercel deployment is Ready/HTTP 200 — Phase 1 complete; noncommercial table terms and fixture attribution are recorded, with no remaining engine-publication blocker.
 BLOCKED (Daniel): custom domain needs CNAME host `bneimitzvah` pointing to `a008a8e486abbe24.vercel-dns-016.com.` at the existing DNS provider.
+GATE: Phase 2 prerequisite independent security review found a privileged login masked by SET ROLE; Sol fixed checks for both session and active identities and transitive elevated/owner membership. Reviewer verified the fix and found no remaining blocker at this scope; see `PHASE2-SECURITY-REVIEW.md`.
+GATE: prerequisite local integration passed 120 Node tests, 21 app tests, typecheck, build and 3 placeholder browser checks. Separate real PostgreSQL 16.15 tests passed 6/6; CI targets 17.11. Live Neon WebSocket transport and provider round trips are not established by these checks.
 
 ## Checklist
 
@@ -52,8 +56,8 @@ BLOCKED (Daniel): custom domain needs CNAME host `bneimitzvah` pointing to `a008
 - [x] Gate: 108 engine tests + parity green Windows + CI
 
 ### Phase 2 — Data model, tenancy, auth, roles, admin
-- [x] auth/tenancy design spec (Sol drafted; Astra approved direction; SDK compatibility unverified)
-- [ ] schema + first migration + seed
+- [x] auth/tenancy design spec (Sol drafted; Astra approved direction; pinned SDK compatibility checked locally)
+- [x] schema + migrations + nonpersonal CRC seed (no owner identity in public seed)
 - [ ] Better Auth: Google, magic link, sessions, invites
 - [ ] Hebcal + `leyning.mjs` copy; verse proposal
 - [ ] admin, tutor, parent, student pages
@@ -109,5 +113,5 @@ BLOCKED (Daniel): custom domain needs CNAME host `bneimitzvah` pointing to `a008
 - 2026-10-15, Astra/Sol milestone: reviewed Cowork's plan and completed Impeccable init. Confirmed all-device practice, Zoom tutoring, linked child practice views, and code-first. See `PM-REVIEW-2026-10-15.md` and root `PRODUCT.md`.
 - Publication: [public repo](https://github.com/RavBogard/bneimitzvah), [green engine CI](https://github.com/RavBogard/bneimitzvah/actions/runs/38833091139), [Ready/HTTP-200 title-only placeholder](https://bneimitzvah.vercel.app). Engine publication `da12401` is the verified public code/deployment, including all 25 historical commits. See `FOUNDATION-RETURN.md` for the earlier foundation checks and pending DNS details.
 - Engine: local history merge `afd56ae`, parity/portability `ee77d23`, reviewed guard correction `b02eb1e`, provenance/license update `8de656c`. 109/109 engine tests on Windows and Ubuntu WSL; 119 Node + 1 PGlite test in final combined Windows suite. See `ENGINE-MIGRATION-RETURN.md` and `trope/PROVENANCE.md`. Source haftarah checkout and refs unchanged. No render/GPU job, audio upload, or student release occurred.
-- Next action: implement the bounded SDK compatibility spike in `docs/superpowers/specs/2026-10-15-auth-tenancy-design.md`, then build schema/auth/capabilities and role shells with independent adversarial review. Astra approved separate role grants, per-tab child contexts, application checks plus transaction-local tenant RLS, and explicit verified-email invite acceptance. Intended canonical auth origin is the custom domain; the Vercel hostname remains an infrastructure placeholder until DNS/provider setup is ready. Daniel's table permission and fixture attribution are resolved; do not reopen them. The early-pilot proposal is declined: build all features and test only with Daniel before Phase 7.
+- Next action: finish hosted verification of the Phase 2 prerequisite checkpoint, then delegate exact-host resolution, verified-session capability services, explicit invitations and per-tab child contexts under `docs/superpowers/specs/2026-10-15-auth-tenancy-design.md`. Read `PHASE2-RETURN.md` and `PHASE2-SECURITY-REVIEW.md` for implementation/evidence limits. Provider setup steps are in `PROVIDER-SETUP.md`; Daniel confirmed these services are not configured and asked to continue locally. The open Impeccable direction round is recorded in `UI-DIRECTION.md`; student reading-first entry and code-first are settled. Canonical auth origin is the custom domain; the Vercel hostname remains a placeholder. No student release, provider email or live database migration occurred.
 - Earlier 2026-10-15: original Cowork planning files written before build work began.

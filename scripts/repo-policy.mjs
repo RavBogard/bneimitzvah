@@ -6,6 +6,7 @@ import { extname, join } from "node:path";
 const run = promisify(execFile);
 const DATA = new Set([".json", ".csv", ".tsv", ".txt", ".jsonl", ".ndjson"]);
 const CONFIGS = new Set(["package.json", "package-lock.json", "tsconfig.json", ".impeccable/config.json"]);
+const DRIZZLE_METADATA = /^src\/server\/db\/migrations\/meta\/(?:_journal|[0-9]{4}_snapshot)\.json$/;
 const MEDIA = /\.(?:mp3|wav|webm|m4a|ogg|flac|aac|mp4|mov|aiff|aif|opus|ckpt|pt|pth|safetensors|onnx|h5|bin)$/i;
 const KEYS = /(?:\.(?:pem|key|p12|pfx|jks|keystore)$|(?:^|\/)(?:id_rsa|id_ed25519|credentials(?:\.json)?|service-account[^/]*\.json)$)/i;
 const CREDENTIALS = [
@@ -41,11 +42,22 @@ export function entryProblems(path, content = "") {
   const problems = [];
   const text = String(content);
   const data = DATA.has(extname(file).toLowerCase());
+  const migrationMetadata = DRIZZLE_METADATA.test(file);
   if (MEDIA.test(file)) problems.push("audio, video, or model artifact");
   if (KEYS.test(file) || /\.local\.json$/i.test(file)) problems.push("credential/config file");
   if (/(?:^|\/)\.env[^/]*$/i.test(file) && file !== ".env.example") problems.push("environment file");
   if (file === ".env.example" && text.split(/\r?\n/).some(line => !/^\s*(?:#|$)/.test(line) && !/^[A-Z][A-Z0-9_]*=\s*$/.test(line))) problems.push("environment example must contain names only");
-  if (data && !CONFIGS.has(file) && !/^(?:trope\/|tests\/fixtures\/(?:trope|portal)\/)/.test(file) && !/(?:^|\/)(?:LICENSE|OFL|PROVENANCE)(?:\.txt)?$/i.test(file)) problems.push("data file outside reviewed allow-list");
+  if (data && !CONFIGS.has(file) && !migrationMetadata && !/^(?:trope\/|tests\/fixtures\/(?:trope|portal)\/)/.test(file) && !/(?:^|\/)(?:LICENSE|OFL|PROVENANCE)(?:\.txt)?$/i.test(file)) problems.push("data file outside reviewed allow-list");
+  if (migrationMetadata) {
+    try {
+      const metadata = JSON.parse(text);
+      const record = value => value !== null && typeof value === "object" && !Array.isArray(value);
+      const validType = file.endsWith("/_journal.json")
+        ? Array.isArray(metadata.entries)
+        : typeof metadata.id === "string" && typeof metadata.prevId === "string" && record(metadata.tables);
+      if (metadata.dialect !== "postgresql" || metadata.version !== "7" || !validType) throw new Error();
+    } catch { problems.push("invalid Drizzle migration metadata shape"); }
+  }
   if (CREDENTIALS.some(pattern => pattern.test(text))) problems.push("credential pattern");
   // Markdown backticks delimit code; they must not become a fabricated local
   // part for standalone decorators such as `@spaces.GPU`.
