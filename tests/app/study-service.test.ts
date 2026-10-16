@@ -8,6 +8,8 @@ import { createSefariaStudyReader } from "../../src/server/study/sefaria";
 import { createPersistentStudyCache } from "../../src/server/data/study-cache";
 import { handlePortalRequest } from "../../src/server/http/portal";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
+import { parseAssigned } from "../../src/components/portal/workspace/api";
+import { parseStudyPage } from "../../src/components/portal/workspace/study/api";
 import { syntheticResponse } from "../helpers/study";
 
 const fixtures: Awaited<ReturnType<typeof portalRoutesFixture>>[] = [];
@@ -17,7 +19,7 @@ async function fixture() {
   const assignment = await f.owner(async () => {
     const [row] = await f.db.insert(s.assignment).values({ tenantId: "crc", studentId: f.students[0].id,
       kind: "torah", basis: "custom", ref: "Genesis 1:1-3", status: "confirmed", setByMembershipId: f.adminMember.id,
-      proposalSnapshot: { confirmationDate: f.students[0].ceremonyDate, needsReview: false } }).returning();
+      proposalSnapshot: { slotProvenance:1, serviceSlot:"morning", readingDate:f.students[0].ceremonyDate, confirmationDate: f.students[0].ceremonyDate, needsReview: false } }).returning();
     await f.db.insert(s.assignmentVerse).values([1, 2, 3].map(verse => ({ tenantId: "crc", studentId: f.students[0].id, assignmentId: row.id, ordinal: verse, verseRef: `Genesis 1:${verse}` })));
     return row;
   });
@@ -111,3 +113,34 @@ test("cache corruption has a fixed503 response with no fallback fetch or diagnos
   const response = await handlePortalRequest(f.request(f.path()), { ...f.runtime, study });
   expect(response?.status).toBe(503); expect(await response?.json()).toEqual({ error: "unavailable" }); expect(f.fetch).not.toHaveBeenCalled();
 });
+
+
+test("metadata and assigned text agree on legacy, current and review-marked provenance without hiding authorized verses",async()=>{
+ const f=await fixture(),date=f.students[0].ceremonyDate;
+ const current={slotProvenance:1,serviceSlot:"morning",readingDate:date,confirmationDate:date,needsReview:false};
+ const cases:[Record<string,unknown>|null,boolean][]=[
+  [{confirmationDate:date,needsReview:false},true],
+  [current,false],
+  [{...current,needsReview:true},true],
+  [{...current,confirmationDate:"2026-12-26"},true],
+  [{...current,slotProvenance:2},true],
+  [{...current,serviceSlot:"friday"},true],
+  [{...current,serviceSlot:["morning"]},true],
+  [{...current,confirmationDate:"2027-02-30"},true],
+  [{...current,serviceSlot:"unknown",readingDate:null,manualFallback:"unknown-slot"},false],
+  [null,true],
+ ];
+ for(const [snapshot,needsReview] of cases){
+  await f.owner(async()=>{await f.db.update(s.assignment).set({proposalSnapshot:snapshot}).where(eq(s.assignment.id,f.assignment.id));});
+  for(const [mode,who] of [["admin","admin"],["tutor","multi"],["parent","multi"],["student","learner"]] as const){
+   const metadata=await handlePortalRequest(f.request(`/api/students/${f.students[0].id}/reading?mode=${mode}`,{who}),f.runtime);
+   expect(metadata?.status).toBe(200);
+   const baseline=parseAssigned(await metadata!.json(),mode,f.students[0].id);
+   expect(baseline.readings[0].needsReview).toBe(needsReview);
+   const response=await f.call(mode,"",{who});expect(response.status).toBe(200);
+   const body=await response.json();expect(body.assignment.needsReview).toBe(needsReview);
+   const text=parseStudyPage(body,baseline,"torah",0);
+   expect(text.verses.map(verse=>verse.ref)).toEqual(["Genesis 1:1","Genesis 1:2","Genesis 1:3"]);
+  }
+ }
+},60000);

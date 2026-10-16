@@ -9,6 +9,7 @@ import type { PracticeContextView } from "../practice/types";
 import type { StudentView } from "../data/students";
 import { confirmedReadings, availableRoles } from "../data/portal";
 import { expandReadingRanges, parseCeremonyDate } from "../../lib/readings/ranges";
+import { assignmentNeedsReview } from "../../lib/readings/review";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 
 const object = (input: unknown): Record<string, unknown> => input !== null && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
@@ -25,7 +26,7 @@ function readingView(row: Awaited<ReturnType<typeof confirmedReadings>>[number],
   const sourceStatus = snapshot.sourceStatus === "available" || snapshot.sourceStatus === "unavailable" ? snapshot.sourceStatus : "unknown";
   const sourceFetchedAt = typeof snapshot.sourceFetchedAt === "number" && Number.isFinite(snapshot.sourceFetchedAt) && snapshot.sourceFetchedAt >= 0 ? snapshot.sourceFetchedAt : null;
   return Object.freeze({ id: row.id, status: "confirmed" as const, kind: row.kind, basis: row.basis, revision: row.revision, ranges: Object.freeze(ranges), verses: Object.freeze(row.verses),
-    confirmationDate, needsReview: snapshot.slotProvenance !== 1 || !["morning","havdalah","unknown"].includes(String(snapshot.serviceSlot)) || snapshot.needsReview !== false || confirmationDate !== ceremonyDate,
+    confirmationDate, needsReview: assignmentNeedsReview(snapshot, ceremonyDate),
     source: Object.freeze({ status: sourceStatus, fetchedAt: sourceFetchedAt, date: snapshot.slotProvenance===1 ? date(snapshot.readingDate) : date(source.date),
       calendar: source.calendar === "diaspora" || source.calendar === "israel" ? source.calendar : null,
       attribution: leyning.source === "Hebcal" ? Object.freeze({ name: "Hebcal", url: "https://www.hebcal.com/" }) : null }) });

@@ -7,6 +7,7 @@ import type { createPracticeService } from "../practice/service";
 import type { PracticeActor, PracticeContextView } from "../practice/types";
 import type { StudentView } from "../data/students";
 import { confirmedReadings } from "../data/portal";
+import { assignmentNeedsReview } from "../../lib/readings/review";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { expandReadingRanges, parseCeremonyDate } from "../../lib/readings/ranges";
 import { identifier, revision } from "../students/validation";
@@ -68,7 +69,7 @@ export function createStudyService<Q extends PgQueryResultHKT>(input: {
         studentId: student.id, studentRevision: student.revision, context,
         assignmentId: reading.id, assignmentRevision: reading.revision, kind: selection.kind, basis: reading.basis,
         ranges: Object.freeze(ranges), verses: Object.freeze(verses), confirmationDate,
-        needsReview: snapshot?.needsReview !== false || confirmationDate !== student.ceremonyDate });
+        needsReview: assignmentNeedsReview(snapshot, student.ceremonyDate) });
       return { ok: true as const, binding };
     }
     const authorize = <T>(action: (tx: AccessTransaction<Q>, actor: StudentActor | PracticeActor, student: StudentView) => Promise<T>) =>
