@@ -1,3 +1,5 @@
+import { eq } from "drizzle-orm";
+import * as s from "../../src/server/db/index";
 import { randomBytes } from "node:crypto";
 import { accessFixture } from "./access-fixture";
 import { createPortalService } from "../../src/server/portal/service";
@@ -19,6 +21,7 @@ export async function portalRoutesFixture() {
   const f = await accessFixture();
   let recipient!: { id: string; cookie: string; sessionId: string };
   await f.owner(async () => {
+    await f.db.update(s.student).set({serviceSlot:"morning"});
     const { cookie } = await f.signIn("routes-recipient@example.test");
     const proof = await f.auth.api.getSession({ headers: new Headers({ cookie }), query: { disableRefresh: true, disableCookieCache: true } });
     if (!proof) throw new Error("Synthetic routes recipient failed");
@@ -31,7 +34,7 @@ export async function portalRoutesFixture() {
     deliveries.push({ url: message.url }); if (sendFails) throw new Error("Synthetic delivery failure");
   } });
   const students = createStudentService({ access: f.service, signingSecret: randomBytes(48).toString("base64url"), loadReading: async (date, calendar) => ({ fetchedAt: Date.now(),
-    snapshot: { date: parseCeremonyDate(date), calendar, reading: { parashah: "Synthetic", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:31-2:2" }], triennial: null }, haftarah: "Isaiah 1:1-2" } }) });
+    snapshot: { date: parseCeremonyDate(date), calendar, classification:"regular", reading: { parashah: "Synthetic", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:31-2:2" }], triennial: null }, haftarah: "Isaiah 1:1-2" } }) });
   const pendingInvitations = createPendingInvitations({ secret: randomBytes(48).toString("base64url"), origin: "http://localhost:3000", environment: "local" });
   const runtime: HttpRuntime = { origin: "http://localhost:3000", auth: f.auth, access: f.service, practice, invitations, students, studentWork: createStudentWorkService({ access: f.service, practice }),
     study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }),

@@ -72,8 +72,8 @@ function staffMode(value: unknown): "admin" | "tutor" { const result = baseMode(
 const objectBody = async (request: Request, required: string[], optional: string[] = [], profile: "ordinary" | "binding" | "csv" = "ordinary") =>
   closedObject(await readJsonBody(request, profile), required, optional);
 function studentInput(value: unknown) {
-  const row = closedObject(value, ["firstName", "lastName", "ceremonyDate"], ["studentKind", "parentEmail", "ownEmail"]);
-  return { firstName: text(row.firstName, 100), lastName: text(row.lastName, 100), ceremonyDate: text(row.ceremonyDate, 10), studentKind: row.studentKind,
+  const row = closedObject(value, ["firstName", "lastName", "ceremonyDate"], ["studentKind", "serviceSlot", "parentEmail", "ownEmail"]);
+  return { firstName: text(row.firstName, 100), lastName: text(row.lastName, 100), ceremonyDate: text(row.ceremonyDate, 10), studentKind: row.studentKind, serviceSlot: row.serviceSlot,
     parentEmail: row.parentEmail === undefined || row.parentEmail === null ? null : text(row.parentEmail, 254, 0),
     ownEmail: row.ownEmail === undefined || row.ownEmail === null ? null : text(row.ownEmail, 254, 0) };
 }
@@ -223,7 +223,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         if (request.method === "GET") {
           const rows = await runtime.students.listRoster(request, { mode: "admin" });
           return privateJson({ students: rows.map(row => ({ id: row.id, firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate,
-            studentKind: row.studentKind, parentEmail: row.parentEmail, ownEmail: row.ownEmail, disabledAt: row.disabledAt?.toISOString() ?? null, revision: row.revision })) });
+            studentKind: row.studentKind, serviceSlot: row.serviceSlot, parentEmail: row.parentEmail, ownEmail: row.ownEmail, disabledAt: row.disabledAt?.toISOString() ?? null, revision: row.revision })) });
         }
         const body = await objectBody(request, ["student"]), value = await runtime.students.create(request, { mode: "admin", student: studentInput(body.student) });
         return privateJson({ id: value.id, revision: value.revision }, 201);
@@ -257,9 +257,9 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         const value = await runtime.students.prepareReading(request, { mode: staffMode(body.mode), studentId: id!, kind: body.kind as "torah" | "haftarah" | undefined,
           pick: body.pick === undefined ? undefined : text(body.pick, 100), ranges: body.ranges === undefined ? undefined : (body.ranges as unknown[]).map(ref => text(ref, 100)) });
         if (value.status === "needs-selection") return privateJson({ status: value.status, requiresConfirmation: value.requiresConfirmation, snapshot: snapshotView(value.snapshot),
-          sourceFetchedAt: value.sourceFetchedAt, sourceStatus: value.sourceStatus, warning: value.warning, toConfirm: value.toConfirm });
+          ceremonyDate: value.ceremonyDate, serviceSlot: value.serviceSlot, readingDate: value.readingDate, manualFallback: value.manualFallback, sourceFetchedAt: value.sourceFetchedAt, sourceStatus: value.sourceStatus, warning: value.warning, toConfirm: value.toConfirm });
         return privateJson({ status: value.status, requiresConfirmation: value.requiresConfirmation, binding: value.binding, kind: value.kind, basis: value.basis, ranges: value.ranges,
-          verseCount: value.verseCount, sourceFetchedAt: value.sourceFetchedAt, sourceStatus: value.sourceStatus, warning: value.warning, maftir: maftirView(value.maftir), toConfirm: value.toConfirm });
+          verseCount: value.verseCount, ceremonyDate: value.ceremonyDate, serviceSlot: value.serviceSlot, readingDate: value.readingDate, manualFallback: value.manualFallback, sourceFetchedAt: value.sourceFetchedAt, sourceStatus: value.sourceStatus, warning: value.warning, maftir: maftirView(value.maftir), toConfirm: value.toConfirm });
       }
       case "confirm": {
         uniqueQuery(request.url, []); const body = await objectBody(request, ["mode", "binding"], [], "binding");

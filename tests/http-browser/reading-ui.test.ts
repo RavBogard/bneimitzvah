@@ -1,3 +1,4 @@
+import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import { openAuthMail } from "./auth-navigation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
@@ -12,6 +13,7 @@ import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
+let browserEnv:Awaited<ReturnType<typeof isolatedEnv>>|undefined;
 const contexts: BrowserContext[] = [];
 async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Reading UI browser operation failed; private details withheld"); } }
 async function navigate(tab: Page, path: string) { await safe(() => tab.goto(path, { waitUntil: "domcontentloaded", timeout: 30_000 })); }
@@ -44,14 +46,16 @@ async function capture(tab: Page, name: string) {
 }
 async function custom(tab: Page, value: string) { await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("custom")); await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill(value)); }
 beforeAll(async () => {
-  try { assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard(); fixture = await browserFixture({ emptyReadingDate: "2027-01-09" }); stop = await startBrowserServer(fixture.withRuntime); browser = await chromium.launch({ headless: true }); }
-  catch { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); throw new Error("Reading UI setup failed; private details withheld"); }
+  try { assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard(); fixture = await browserFixture({ emptyReadingDate: "2027-01-09" }); await fixture.ownerDb.update(s.student).set({serviceSlot:"morning"}).where(eq(s.student.id,fixture.student.id)); stop = await startBrowserServer(fixture.withRuntime); browserEnv=await isolatedEnv(); browser = await chromium.launch({ headless: true, env:browserEnv.env }); }
+  catch { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await browserEnv?.cleanup(); throw new Error("Reading UI setup failed; private details withheld"); }
 }, 120_000);
-afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
+afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await browserEnv?.cleanup(); }, 120_000);
 
 it("lets an admin review actual calendar choices, confirm once and replace only after authoritative reload", async () => {
   const tab = await page("admin"); await navigate(tab, "/workspace/admin/students");
   await safe(() => tab.getByRole("link", { name: "Review reading for Synthetic Learner", exact: true }).click());
+  await ui(tab.getByLabel("Selection method",{exact:true})).toHaveValue("custom");
+  await safe(()=>tab.getByLabel("Selection method",{exact:true}).selectOption("calendar"));
   await click(tab, "Prepare reading review");
   await ui(tab.getByRole("heading", { name: "Choose a reading explicitly", level: 3, exact: true })).toBeVisible();
   expect(await tab.getByRole("button", { name: /Triennial/ }).count()).toBe(0);
@@ -66,6 +70,19 @@ it("lets an admin review actual calendar choices, confirm once and replace only 
   await ui(tab.locator(".confirmed-reading").getByText("Genesis 1:31-2:2", { exact: true })).toBeVisible();
   await capture(tab, "reading-admin-confirmed-desktop");
   await tab.unroute("**/reading/confirm");
+  await safe(()=>tab.getByLabel("Reading",{exact:true}).selectOption("haftarah"));
+  await click(tab,"Prepare reading review");
+  await ui(tab.getByRole("heading",{name:"Choose a reading explicitly",exact:true})).toBeVisible();
+  expect(await tab.getByRole("button",{name:"Confirm assigned reading",exact:true}).count()).toBe(0);
+  await click(tab,"Use calendar haftarah: Isaiah 1:1-2");
+  await click(tab,"Confirm assigned reading");
+  // The practice panel keeps Torah selected; Haftarah is intentionally in the
+  // secondary assignment disclosure until the user opens it.
+  const other=tab.locator(".reading-other-assignments");
+  await ui(other).toBeVisible();await safe(()=>other.locator(":scope > summary").click());
+  await ui(other.getByRole("heading",{name:"Haftarah",exact:true})).toBeVisible();
+  await ui(other.getByText("Isaiah 1:1-2",{exact:true})).toBeVisible();
+  await ui(tab.locator(".reading-current-assignment").getByText("Genesis 1:31-2:2",{exact:true})).toBeVisible();
 });
 
 it("retains a tutor draft during visible access revalidation, invalidates edited/stale reviews and never retries an uncertain confirmation", async () => {
@@ -83,18 +100,24 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
   const [beforePrepare] = await fixture.ownerDb.select().from(s.student).where(eq(s.student.id, fixture.student.id));
   const admin = await page("admin");
   expect((await api(admin, `/api/admin/students/${beforePrepare.id}/edit`, { expectedRevision: beforePrepare.revision, student: {
-    firstName: "Synthetic", lastName: "Learner", ceremonyDate: "2027-01-09", parentEmail: "fixture@example.test"
+    firstName: "Synthetic", lastName: "Learner", ceremonyDate: "2027-01-09", serviceSlot:"havdalah", parentEmail: "fixture@example.test"
   } })).status === 200).toBe(true);
   await click(tab, "Prepare reading review"); await ui(main(tab).getByRole("alert")).toContainText("changed while this proposal");
   expect(await tab.getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
   await click(tab, "Reload current reading");
-  await ui(tab.locator(".reading-review")).toContainText("Needs review with your tutor or rabbi");
+  await ui(tab.locator(".confirmed-reading")).toHaveCount(2);
+  await safe(()=>tab.locator(".reading-other-assignments > summary").click());
+  for(const kind of ["Torah","Haftarah"]){
+    const assignment=tab.locator(".confirmed-reading").filter({has:tab.getByRole("heading",{name:kind,exact:true})});
+    await ui(assignment.locator(".reading-review")).toContainText("Needs review with your tutor or rabbi");
+    await ui(assignment.locator(".reading-review")).toBeVisible();
+  }
   await ui(tab.getByLabel("Student", { exact: true }).locator("option:checked")).toHaveText("Synthetic Learner — 2027-01-09");
   await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:4-5")); expect(await tab.getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
   await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
   const [student] = await fixture.ownerDb.select().from(s.student).where(eq(s.student.id, fixture.student.id));
-  await fixture.ownerDb.update(s.student).set({ revision: student.revision + 1 }).where(eq(s.student.id, student.id));
+  expect((await api(admin, `/api/admin/students/${student.id}/edit`,{expectedRevision:student.revision,student:{firstName:student.firstName,lastName:student.lastName,ceremonyDate:student.ceremonyDate,serviceSlot:"morning",parentEmail:"fixture@example.test"}})).status).toBe(200);
   await click(tab, "Confirm assigned reading"); await ui(main(tab).getByRole("alert")).toContainText("changed after this review");
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5"); await capture(tab, "reading-tutor-conflict-mobile");
   await click(tab, "Reload current reading"); await click(tab, "Prepare reading review"); await capture(tab, "reading-tutor-prepared-mobile");
@@ -116,7 +139,10 @@ it("handles an empty calendar without invention and exposes no editor in parent 
   const tab = await page("admin");
   const created = await api(tab, "/api/admin/students", { student: { firstName: "Synthetic", lastName: "Empty Calendar", ceremonyDate: "2027-01-09", parentEmail: "empty-calendar@example.test" } });
   expect(created.status === 201 || created.status === 200).toBe(true);
-  await navigate(tab, `/workspace/admin/students/${created.data.id}/reading`); await click(tab, "Prepare reading review");
+  await navigate(tab, `/workspace/admin/students/${created.data.id}/reading`);
+  await ui(tab.getByLabel("Selection method",{exact:true})).toHaveValue("custom");
+  await safe(()=>tab.getByLabel("Selection method",{exact:true}).selectOption("calendar")); await click(tab, "Prepare reading review");
+  await ui(tab.getByText("The service slot is not yet set. Choose custom references; no calendar date has been assumed.",{exact:true})).toBeVisible();
   await ui(tab.getByText("No calendar selections are available for this date.", { exact: true })).toBeVisible();
   expect(await tab.getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
   await safe(() => tab.getByLabel("Reading", { exact: true }).selectOption("haftarah")); await click(tab, "Prepare reading review");

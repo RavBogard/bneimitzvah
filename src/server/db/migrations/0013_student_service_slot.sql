@@ -1,0 +1,2 @@
+ALTER TABLE "student" ADD COLUMN "service_slot" text DEFAULT 'unknown' NOT NULL;--> statement-breakpoint
+ALTER TABLE "student" ADD CONSTRAINT "student_service_slot_known" CHECK ("student"."service_slot" in ('morning', 'havdalah', 'unknown'));

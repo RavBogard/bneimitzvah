@@ -2,7 +2,8 @@ import { hebcalRef, leyningOf, parsePick, selectTorah, type Leyning, type Pick, 
 import { expandReadingRanges, parseCeremonyDate, type CeremonyDate, type VerseCounts } from "./ranges";
 
 export type Calendar = "diaspora" | "israel";
-export type Snapshot = { date: CeremonyDate; calendar: Calendar; reading: Leyning | null; haftarah: string | null };
+export type Classification = "regular" | "holiday" | "multiple" | "nonregular" | "missing";
+export type Snapshot = { classification?: Classification; date: CeremonyDate; calendar: Calendar; reading: Leyning | null; haftarah: string | null };
 export type CacheEntry = { fetchedAt: number; expiresAt: number; payload: unknown };
 export type HebcalCache = { get(key: string): Promise<CacheEntry | null>; set(key: string, entry: CacheEntry): Promise<void> };
 export type ConfirmedReading = { status: "confirmed"; ceremonyDate: CeremonyDate; ranges: readonly string[]; revision: number };
@@ -24,21 +25,32 @@ export function hebcalRequest(dateInput: unknown, calendar: Calendar = "diaspora
   if (calendar !== "diaspora" && calendar !== "israel") throw new Error("Invalid reading calendar");
   const url = new URL("https://www.hebcal.com/leyning");
   url.search = new URLSearchParams({ cfg: "json", date, i: calendar === "diaspora" ? "off" : "on", triennial: "on" }).toString();
-  return { date, calendar, url, cacheKey: `hebcal:leyning:v1:${calendar}:${date}:triennial` };
+  return { date, calendar, url, cacheKey: `hebcal:leyning:v2:${calendar}:${date}:triennial` };
 }
 
 function normalizePayload(payload: unknown, date: CeremonyDate, calendar: Calendar, counts: VerseCounts, fromCache=false): { snapshot: Snapshot; payload: unknown } {
-  if (!object(payload) || !Array.isArray(payload.items) || payload.items.length > 1) throw new Error("Invalid calendar response");
-  if (fromCache && (!object(payload.binding) || payload.binding.version!==1 || payload.binding.date!==date || payload.binding.calendar!==calendar)) throw new Error("Cache request binding mismatch");
-  const binding={version:1,date,calendar};
+  if (!object(payload) || !Array.isArray(payload.items) || payload.items.length > 16) throw new Error("Invalid calendar response");
+  if (fromCache && (!object(payload.binding) || payload.binding.version!==2 || payload.binding.date!==date || payload.binding.calendar!==calendar)) throw new Error("Cache request binding mismatch");
+  const binding={version:2,date,calendar};
   if (payload.location!==undefined && payload.location!==(calendar==="diaspora" ? "Diaspora" : "Israel")) throw new Error("Wrong reading calendar");
   if (payload.range!==undefined && (!object(payload.range) || payload.range.start!==date || payload.range.end!==date)) throw new Error("Wrong reading date range");
+
+  if (fromCache && payload.classification==="multiple" && payload.items.length===0) return {snapshot:{date,calendar,reading:null,haftarah:null,classification:"multiple"},payload};
+  if (payload.items.length>1) {
+    if(payload.items.some(item=>!object(item) || item.date!==date))throw new Error("Wrong calendar item date");
+    return {snapshot:{date,calendar,reading:null,haftarah:null,classification:"multiple"},payload:{binding,classification:"multiple",items:[]}};
+  }
   const item = payload.items[0];
-  if (item === undefined) return { snapshot: { date, calendar, reading: null, haftarah: null }, payload: { binding, items: [] } };
+  if (item === undefined) return { snapshot: { date, calendar, reading: null, haftarah: null, classification:"missing" }, payload: { binding, items: [] } };
   if (!object(item) || item.date !== date || !object(item.name)) throw new Error("Wrong or invalid calendar item");
   const safe: Record<string, unknown> = { date, name: { en: label(item.name.en) } };
-  safe.type = item.type === undefined ? (item.fullkriyah ? "shabbat" : "weekday") : label(item.type);
-  if (!["shabbat","holiday","weekday"].includes(safe.type as string)) throw new Error("Unknown reading type");
+  safe.type = item.type === undefined ? (item.weekday ? "weekday" : "unknown") : label(item.type);
+  if (!["shabbat","holiday","weekday","unknown"].includes(safe.type as string)) throw new Error("Unknown reading type");
+  const numbers=Array.isArray(item.parshaNum)?item.parshaNum:[item.parshaNum];
+  if(item.parshaNum!==undefined && (numbers.length<1 || numbers.length>2 || numbers.some(n=>!Number.isInteger(n) || Number(n)<1 || Number(n)>54) || new Set(numbers).size!==numbers.length))throw new Error("Invalid parashah classification");
+  const regular=item.type==="shabbat" && item.parshaNum!==undefined;
+  if(item.parshaNum!==undefined)safe.parshaNum=item.parshaNum;
+  const classification:Classification=regular?"regular":safe.type==="holiday"?"holiday":"nonregular";
   const sanitizeSet = (set: unknown, kind: "torah" | "haftarah") => {
     if (!object(set) || Object.keys(set).length === 0 || Object.keys(set).some(n => !/^[1-7M]$/.test(n))) throw new Error("Invalid aliyot set");
     const out: Record<string, unknown> = {};
@@ -71,7 +83,7 @@ function normalizePayload(payload: unknown, date: CeremonyDate, calendar: Calend
     const haft=sanitizeSet({1:item.haft},"haftarah");
     safe.haft=haft["1"]; haftarah=hebcalRef(safe.haft);
   }
-  return { snapshot:{date,calendar,reading:leyningOf(safe),haftarah}, payload:{binding,items:[safe]} };
+  return { snapshot:{date,calendar,reading:leyningOf(safe),haftarah,classification}, payload:{binding,items:[safe]} };
 }
 
 async function boundedBody(response: Response): Promise<unknown> {
@@ -139,9 +151,9 @@ export function proposeReading(snapshot: Snapshot, counts: VerseCounts, options:
       || (pick.kind==="aliyah" && !((pick.from==="M" && pick.to==="M") || (Number.isInteger(pick.from) && Number.isInteger(pick.to) && Number(pick.from)>=1 && Number(pick.to)<=7 && Number(pick.to)>=Number(pick.from)))))) throw new Error();
   } catch { throw new Error("Invalid reading selection"); }
   if (!snapshot.reading && pick?.kind!=="ref") reason="no-reading";
-  else if (snapshot.reading && !pick && !snapshot.reading.triennial) reason="choose-selection";
+  else if (!pick) reason="choose-selection";
   else {
-    const effective=pick ?? {kind:"triennial" as const};
+    const effective=pick!;
     try { selected=selectTorah(snapshot.reading,effective); }
     catch { throw new Error("Invalid or unavailable reading selection"); }
     const selectedVerses=expandReadingRanges([selected.ref],"torah",counts);

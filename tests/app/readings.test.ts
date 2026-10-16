@@ -6,7 +6,7 @@ import { createHebcalReader, hebcalRequest, proposeReading, ReadingUnavailable, 
 // Synthetic numeric metadata and tiny calendar fragments; no text/student data.
 const counts: VerseCounts={Genesis:[3,4,2],Numbers:[5],Isaiah:[3,4],"I Samuel":[5]};
 const date=parseCeremonyDate("2028-02-29");
-const item=()=>({date,name:{en:"Synthetic reading"},fullkriyah:{
+const item=()=>({date,type:"shabbat",parshaNum:1,name:{en:"Synthetic reading"},fullkriyah:{
   1:{k:"Genesis",b:"1:1",e:"1:3",v:3},2:{k:"Genesis",b:"2:1",e:"2:4",v:4},3:{k:"Genesis",b:"3:1",e:"3:2",v:2},
   M:{k:"Numbers",b:"1:1",e:"1:2",v:2,reason:"Special maftir"}},
   triennial:{1:{k:"Genesis",b:"2:1",e:"2:4",v:4},2:{k:"Genesis",b:"3:1",e:"3:2",v:2}},triYear:2,
@@ -67,7 +67,8 @@ test("normalizes/caches only approved calendar fields and requires confirmation 
   const {snapshot}=await h.load(date);
   expect(snapshot.haftarah).toBe("Isaiah 1:1-3");
   const confirmed={status:"confirmed" as const,ceremonyDate:parseCeremonyDate("2027-01-01"),ranges:Object.freeze(["Genesis 1:1"]),revision:4};
-  const proposed=proposeReading(snapshot,counts,{confirmed});
+  expect(proposeReading(snapshot,counts,{confirmed})).toMatchObject({status:"needs-selection",reason:"choose-selection",selection:null});
+  const proposed=proposeReading(snapshot,counts,{confirmed,pick:"triennial"});
   expect(proposed).toMatchObject({status:"proposed",requiresConfirmation:true,confirmedDateChanged:true,confirmed,selection:{ref:"Genesis 2:1-3:2"},toConfirm:["torah","entryCap","nusach"]});
   expect(confirmed.ranges).toEqual(["Genesis 1:1"]);
   expect(proposeReading(snapshot,counts,{pick:{kind:"ref",ref:"Genesis 1:2-3"}}).selection?.selection).toBe("custom");
@@ -111,7 +112,7 @@ test("cached payload bindings reject same-date foreign-calendar and different-da
   expect(foreignCalendar.fetch).not.toHaveBeenCalled();
   const empty=harness({items:[]});await empty.load(date);
   const cachedEmpty=vi.mocked(empty.cache.set).mock.calls[0][1];
-  expect(cachedEmpty.payload).toEqual({binding:{version:1,date,calendar:"diaspora"},items:[]});
+  expect(cachedEmpty.payload).toEqual({binding:{version:2,date,calendar:"diaspora"},items:[]});
   expect((await empty.load(date)).source).toBe("cache");
   const foreignDate=harness();foreignDate.setCached(cachedEmpty);
   await expect(foreignDate.load("2028-03-01")).rejects.toMatchObject({code:"cache"});
@@ -121,7 +122,7 @@ test("cached payload bindings reject same-date foreign-calendar and different-da
 });
 
 test("malformed, wrong-day, ambiguous, calendar-mismatch and invalid references fail closed",async()=>{
-  const bad=[{}, {items:[{...item(),date:"2028-03-01"}]},{items:[item(),item()]},{location:"Israel",items:[item()]},{range:{start:date,end:"2028-03-01"},items:[item()]},{items:[{...item(),fullkriyah:{1:{k:"Genesis",b:"1:1",e:"1:99"}}}]},{items:[{...item(),fullkriyah:{1:{k:"Genesis",b:"1:1",e:"1:3",v:99}}}]}];
+  const bad=[{}, {items:[{...item(),date:"2028-03-01"}]},{location:"Israel",items:[item()]},{range:{start:date,end:"2028-03-01"},items:[item()]},{items:[{...item(),fullkriyah:{1:{k:"Genesis",b:"1:1",e:"1:99"}}}]},{items:[{...item(),fullkriyah:{1:{k:"Genesis",b:"1:1",e:"1:3",v:99}}}]}];
   for(const payload of bad){const h=harness(payload);await expect(h.load(date)).rejects.toBeInstanceOf(ReadingUnavailable);expect(h.cache.set).not.toHaveBeenCalled();}
 });
 
@@ -136,7 +137,7 @@ test("rejects oversized/chunked, wrong-content-type, redirected, failed, timed-o
 test("expired cache is never served as fresh on upstream failure; corrupt cache also denies use",async()=>{
   const h=harness();h.setCached({fetchedAt:0,expiresAt:86400000,payload:{items:[item()]}});h.fetch.mockRejectedValue(new Error("synthetic upstream failure"));
   await expect(h.load(date)).rejects.toMatchObject({code:"upstream",cachedAt:0});
-  const binding={version:1,date,calendar:"diaspora"};
+  const binding={version:2,date,calendar:"diaspora"};
   const corrupt=harness();corrupt.setCached({fetchedAt:100000000,expiresAt:186400000,payload:{binding,items:[{date}]}});
   await expect(corrupt.load(date)).rejects.toMatchObject({code:"cache"});expect(corrupt.fetch).not.toHaveBeenCalled();
   for(const payload of [{items:[{...item(),date:"2028-03-01"}]},{items:[item()],range:{start:date,end:"2028-03-01"}},{items:[{...item(),fullkriyah:{1:{k:"Genesis",b:"1:1",e:"1:99"}}}]}]) {
@@ -149,4 +150,34 @@ test("a trimmed aliyot set cannot invent the omitted middle verses",async()=>{
   const partial=item();delete (partial.fullkriyah as Record<string,unknown>)["2"];
   const {snapshot}=await harness({items:[partial]}).load(date);
   expect(()=>proposeReading(snapshot,counts,{pick:"full"})).toThrow("complete ordered range");
+});
+
+
+test("classification preserves regular double portions and special maftir, but holidays and multiple items require manual choice",async()=>{
+  const doubled=await harness({items:[{...item(),parshaNum:[22,23]}]}).load(date);
+  expect(doubled.snapshot.classification).toBe("regular");
+  expect(doubled.snapshot.reading?.aliyot.find(row=>row.n==="M")?.ref).toBe("Numbers 1:1-2");
+  const holiday=await harness({items:[{...item(),type:"holiday",parshaNum:undefined}]}).load(date);
+  expect(holiday.snapshot.classification).toBe("holiday");
+  const unclassified=await harness({items:[{...item(),parshaNum:undefined}]}).load(date);
+  expect(unclassified.snapshot.classification).toBe("nonregular");
+  const multiple=harness({items:[{...item(),type:"holiday"},{...item(),type:"holiday"}]});
+  expect((await multiple.load(date)).snapshot).toMatchObject({classification:"multiple",reading:null,haftarah:null});
+  expect((await multiple.load(date)).snapshot.classification).toBe("multiple");
+  expect(hebcalRequest(date).cacheKey).toContain(":v2:");
+  const old=harness();old.setCached({fetchedAt:100000000,expiresAt:186400000,payload:{binding:{version:1,date,calendar:"diaspora"},items:[item()]}});
+  await expect(old.load(date)).rejects.toMatchObject({code:"cache"});
+});
+
+
+test("cache roundtrip never promotes missing source type and validates calendar/range before multiple-result fallback",async()=>{
+ const h=harness({items:[{...item(),type:undefined,parshaNum:2}]});
+ const upstream=await h.load(date),cached=await h.load(date);
+ expect(upstream.snapshot).toMatchObject({classification:"nonregular",reading:{type:"unknown"}});
+ expect(cached.snapshot).toEqual(upstream.snapshot);
+ for(const metadata of [{location:"Israel"},{range:{start:date,end:"2028-03-01"}}]){
+  await expect(harness({...metadata,items:[item(),item()]}).load(date)).rejects.toMatchObject({code:"invalid-response"});
+  const invalid=harness();invalid.setCached({fetchedAt:100000000,expiresAt:186400000,payload:{binding:{version:2,date,calendar:"diaspora"},classification:"multiple",items:[],...metadata}});
+  await expect(invalid.load(date)).rejects.toMatchObject({code:"cache"});
+ }
 });

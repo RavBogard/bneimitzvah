@@ -6,7 +6,7 @@ import { reconcileSelectedStudent } from "../../src/components/portal/workspace/
 
 const id = "10000000-0000-4000-8000-000000000001";
 const student = { id, firstName: "Synthetic", lastName: "Learner", ceremonyDate: "2027-01-02", revision: 1 };
-const source = { sourceStatus: "available", sourceFetchedAt: 1792100000000, warning: null, toConfirm: ["torah", "entryCap", "nusach"], requiresConfirmation: true };
+const source = { ceremonyDate:student.ceremonyDate, serviceSlot:"morning", readingDate:student.ceremonyDate, manualFallback:null, sourceStatus: "available", sourceFetchedAt: 1792100000000, warning: null, toConfirm: ["torah", "entryCap", "nusach"], requiresConfirmation: true };
 const prepared = () => ({ ...source, status: "prepared", binding: `v1.${"a".repeat(100)}`, kind: "torah", basis: "custom", ranges: ["Genesis 1:1-3"], verseCount: 3, maftir: { ref: "Numbers 28:9-10", reason: "Synthetic calendar maftir" } });
 const aliyah = (n: number | "M", ref: string) => ({ n, ref, verses: null, reason: null });
 const empty = () => ({ ...source, status: "needs-selection", snapshot: { date: student.ceremonyDate, calendar: "diaspora", haftarah: null, reading: null } });
@@ -16,7 +16,7 @@ afterEach(() => vi.unstubAllGlobals());
 it("keeps exact prepared ranges, source warning and separately described maftir without expanding the assignment", () => {
   const value = parseReadingProposal(prepared(), "torah", student.ceremonyDate);
   expect(value.status === "prepared" && value.ranges.join() === "Genesis 1:1-3" && value.verseCount === 3 && value.maftir?.ref === "Numbers 28:9-10").toBe(true);
-  const unavailable = parseReadingProposal({ ...prepared(), sourceStatus: "unavailable", sourceFetchedAt: null, warning: "calendar-source-unavailable" }, "torah", student.ceremonyDate);
+  const unavailable = parseReadingProposal({ ...prepared(), sourceStatus: "unavailable", sourceFetchedAt: null, manualFallback:"calendar-source-unavailable", warning: "calendar-source-unavailable" }, "torah", student.ceremonyDate);
   expect(unavailable.sourceStatus === "unavailable" && unavailable.warning === "calendar-source-unavailable").toBe(true);
 });
 
@@ -83,4 +83,13 @@ it("reconciles only the selected stable student ID without downgrading revisions
   expect(reconcileSelectedStudent(rows, other.id, current)).toBe(rows);
   expect(reconcileSelectedStudent(rows, null, current)).toBe(rows);
   expect(reconcileSelectedStudent([other], student.id, current)).toEqual([other]);
+});
+
+
+it("keeps unknown-slot manual review truthful and rejects false derived dates or calendar helper choices",()=>{
+ const context={...prepared(),serviceSlot:"unknown",readingDate:null,manualFallback:"unknown-slot",sourceStatus:"not-requested",sourceFetchedAt:null,warning:null};
+ expect(parseReadingProposal(context,"torah",student.ceremonyDate)).toMatchObject({status:"prepared",readingDate:null,manualFallback:"unknown-slot",sourceStatus:"not-requested"});
+ for(const changed of [{readingDate:student.ceremonyDate},{manualFallback:null},{sourceStatus:"available",sourceFetchedAt:1792100000000}])expect(()=>parseReadingProposal({...context,...changed},"torah",student.ceremonyDate)).toThrow(PortalRequestError);
+ const holiday=parseReadingProposal({...empty(),manualFallback:"holiday",snapshot:{...empty().snapshot,reading:{parashah:"Synthetic holiday",source:"Hebcal",type:"holiday",aliyot:[aliyah(1,"Genesis 1:1-3")],triennial:null}}},"torah",student.ceremonyDate);
+ expect(holiday.status==="needs-selection" && holiday.choices.length===0).toBe(true);
 });

@@ -11,21 +11,27 @@ function keys(value: unknown, allowed: string[]): asserts value is Record<string
   if (!object(value) || Object.keys(value).some((key) => !allowed.includes(key))) throw 0;
 }
 function binding(key: string) {
-  const match = /^hebcal:leyning:v1:(diaspora|israel):(\d{4}-\d{2}-\d{2}):triennial$/.exec(key);
+  const match = /^hebcal:leyning:v2:(diaspora|israel):(\d{4}-\d{2}-\d{2}):triennial$/.exec(key);
   if (!match) throw 0;
   return hebcalRequest(match[2], match[1] as "diaspora" | "israel");
 }
 async function validated(key: string, entry: CacheEntry) {
   const request = binding(key);
+  if(!Number.isSafeInteger(entry.fetchedAt) || entry.fetchedAt<0 || !Number.isSafeInteger(entry.expiresAt)
+    || !Number.isFinite(new Date(entry.fetchedAt).getTime()) || !Number.isFinite(new Date(entry.expiresAt).getTime()))throw 0;
   const serialized = JSON.stringify(entry.payload);
   if (Buffer.byteLength(serialized) > 128 * 1024) throw 0;
   // Only the reader's normalized metadata shape enters this global cache.
   // Unknown properties could conceal contacts/tokens and are rejected outright.
-  keys(entry.payload, ["binding", "items"]);
+  keys(entry.payload, ["binding", "items", "classification"]);
   keys(entry.payload.binding, ["version", "date", "calendar"]);
   if (!Array.isArray(entry.payload.items) || entry.payload.items.length > 1) throw 0;
+  // Multiple calendar results are stored only as a bounded ambiguity marker,
+  // never as a selected first reading or an arbitrary source metadata object.
+  if(entry.payload.classification!==undefined && (entry.payload.classification!=="multiple" || entry.payload.items.length!==0))throw 0;
   for (const item of entry.payload.items) {
-    keys(item, ["date", "name", "type", "fullkriyah", "triennial", "triYear", "reason", "haft"]);
+    keys(item, ["date", "name", "type", "parshaNum", "fullkriyah", "triennial", "triYear", "reason", "haft"]);
+    if(!["shabbat","holiday","weekday","unknown"].includes(String(item.type)))throw 0;
     keys(item.name, ["en"]);
     if (item.reason !== undefined) keys(item.reason, ["M"]);
     const row = (value: unknown) => { keys(value, ["k", "b", "e", "v", "reason"]); };

@@ -92,6 +92,13 @@
       "when": 1792173112344,
       "tag": "0012_student_kind_contacts",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792175132494,
+      "tag": "0013_student_service_slot",
+      "breakpoints": true
     }
   ]
 }

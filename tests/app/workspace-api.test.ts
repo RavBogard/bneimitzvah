@@ -13,7 +13,7 @@ const reply = (value: unknown, status = 200) => new Response(JSON.stringify(valu
 describe("workspace DTO and private transport boundaries", () => {
   it("keeps contact fields confined to the admin roster and rejects partial or malformed lists", () => {
     expect(parseStudents({ students: [student()] })).toHaveLength(1);
-    const row = { ...student(), studentKind: "child" as const, parentEmail: "synthetic-parent@example.test", ownEmail: null, disabledAt: null };
+    const row = { ...student(), studentKind: "child" as const, serviceSlot: "unknown" as const, parentEmail: "synthetic-parent@example.test", ownEmail: null, disabledAt: null };
     expect(() => parseStudents({ students: [row] })).toThrow(PortalRequestError);
     expect(parseStudents({ students: [row] }, true)).toHaveLength(1);
     expect(() => parseStudents({ students: [student(), { ...student(), ceremonyDate: "2027-02-30" }] })).toThrow(PortalRequestError);
@@ -59,7 +59,7 @@ describe("workspace DTO and private transport boundaries", () => {
 
   it("preserves typed409 conflicts without retrying or exposing response diagnostics", async () => {
     const fetch = vi.fn().mockResolvedValue(reply({ privateDiagnostic: "withheld" }, 409)); vi.stubGlobal("fetch", fetch);
-    const form = { firstName: "Synthetic", lastName: "Student", ceremonyDate: "2027-01-02", studentKind: "child" as const, parentEmail: "synthetic-parent@example.test", ownEmail: null };
+    const form = { firstName: "Synthetic", lastName: "Student", ceremonyDate: "2027-01-02", studentKind: "child" as const, serviceSlot: "unknown" as const, parentEmail: "synthetic-parent@example.test", ownEmail: null };
     let caught: unknown; try { await workspaceApi.save(form, { id: a, revision: 1 }); } catch (error) { caught = error; }
     expect(caught instanceof PortalRequestError && caught.status === 409 && !String(caught).includes("withheld")).toBe(true); expect(fetch).toHaveBeenCalledTimes(1);
     expect(Object.keys(JSON.parse(fetch.mock.calls[0][1].body)).sort()).toEqual(["expectedRevision", "student"]);
@@ -69,6 +69,6 @@ describe("workspace DTO and private transport boundaries", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(reply({ payload: "x".repeat(2 * 1024 * 1024) })));
     await expect(workspaceApi.roster()).rejects.toMatchObject({ status: 503 });
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(reply({ ok: true, id: b, revision: 2, readingNeedsReview: false })));
-    await expect(workspaceApi.save({ ...student(), studentKind: "child" as const, parentEmail: "synthetic-parent@example.test", ownEmail: null }, { id: a, revision: 1 })).rejects.toThrow(PortalRequestError);
+    await expect(workspaceApi.save({ ...student(), studentKind: "child" as const, serviceSlot: "unknown" as const, parentEmail: "synthetic-parent@example.test", ownEmail: null }, { id: a, revision: 1 })).rejects.toThrow(PortalRequestError);
   });
 });

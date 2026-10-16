@@ -128,22 +128,69 @@ test("persistent nonpersonal reading cache round-trips normalized metadata and r
   const request = hebcalRequest("2027-01-02");
   let calls = 0;
   const read = createHebcalReader({ cache, verseCounts: TANAKH_VERSE_COUNTS, now: () => time, fetch: async () => {
-    calls++; return new Response(JSON.stringify({ items: [{ date: request.date, name: { en: "Synthetic" }, fullkriyah: { "1": { k: "Genesis", b: "1:31", e: "2:2", v: 3 } } }] }), { headers: { "content-type": "application/json" } });
+    calls++; return new Response(JSON.stringify({ items: [{ date: request.date, name: { en: "Synthetic" }, type:"shabbat", parshaNum:13, fullkriyah: { "1": { k: "Genesis", b: "1:31", e: "2:2", v: 3 } } }] }), { headers: { "content-type": "application/json" } });
   } });
-  expect((await read(request.date)).source).toBe("upstream");
-  expect((await read(request.date)).source).toBe("cache");
+  const upstream=await read(request.date),cached=await read(request.date);
+  expect(upstream.source).toBe("upstream");expect(upstream.snapshot.classification).toBe("regular");
+  expect(cached.source).toBe("cache");expect(cached.snapshot).toEqual(upstream.snapshot);
   expect(calls).toBe(1);
   const entry = (await cache.get(request.cacheKey))!;
   const clone = () => JSON.parse(JSON.stringify(entry));
+  const mutate=(change:(payload:Record<string,any>)=>void)=>{const payload=clone().payload;change(payload);return payload;};
   for (const payload of [
-    { binding: { version: 1, date: request.date, calendar: "israel" }, items: [] },
-    { binding: { version: 1, date: "2027-01-03", calendar: "diaspora" }, items: [] },
+    { binding: { version: 2, date: request.date, calendar: "israel" }, items: [] },
+    { binding: { version: 2, date: "2027-01-03", calendar: "diaspora" }, items: [] },
     { ...(entry.payload as object), email: "synthetic@example.test" },
-    { binding: { version: 1, date: request.date, calendar: "diaspora" }, items: [{ date: request.date, name: { en: "Synthetic" }, type: "shabbat", fullkriyah: { "1": { k: "Genesis", b: "1:31", e: "2:9999" } } }] },
+    mutate(p=>{p.binding.token="synthetic-private";}),
+    mutate(p=>{p.items[0].name.email="synthetic@example.test";}),
+    mutate(p=>{p.items[0].fullkriyah["1"].token="synthetic-private";}),
+    mutate(p=>{p.items[0].parshaNum={email:"synthetic@example.test"};}),
+    mutate(p=>{p.items[0].parshaNum=[1,2,3];}),
+    mutate(p=>{p.items[0].type="arbitrary";}),
+    mutate(p=>{delete p.items[0].type;}),
+    mutate(p=>{p.classification={email:"synthetic@example.test"};}),
+    mutate(p=>{p.classification="multiple";}),
+    mutate(p=>{p.items[0].name.en="x".repeat(140000);}),
+    { binding: { version: 2, date: request.date, calendar: "diaspora" }, items: [{ date: request.date, name: { en: "Synthetic" }, type: "shabbat", fullkriyah: { "1": { k: "Genesis", b: "1:31", e: "2:9999" } } }] },
   ]) expect(await cacheDenied(() => cache.set(request.cacheKey, { ...clone(), payload }))).toBe(true);
   expect(await cacheDenied(() => cache.set("personal:synthetic@example.test", entry))).toBe(true);
+  for(const change of [{fetchedAt:-1},{fetchedAt:NaN},{expiresAt:entry.expiresAt+1},{expiresAt:Infinity}])expect(await cacheDenied(()=>cache.set(request.cacheKey,{...clone(),...change}))).toBe(true);
+  const oldKey=request.cacheKey.replace(":v2:",":v1:");
+  expect(await cacheDenied(()=>cache.set(oldKey,entry))).toBe(true);
+  expect(await cacheDenied(()=>cache.get(oldKey))).toBe(true);
   await db.update(schema.hebcalCache).set({ parameters: { calendar: "israel" } }).where(eq(schema.hebcalCache.requestKey, request.cacheKey));
   expect(await cacheDenied(() => cache.get(request.cacheKey))).toBe(true);
-  await db.update(schema.hebcalCache).set({ parameters: { calendar: "diaspora" }, payload: { binding: { version: 1, date: "2027-01-03", calendar: "diaspora" }, items: [] } }).where(eq(schema.hebcalCache.requestKey, request.cacheKey));
+  await db.update(schema.hebcalCache).set({ parameters: { calendar: "diaspora" }, payload: { binding: { version: 2, date: "2027-01-03", calendar: "diaspora" }, items: [] } }).where(eq(schema.hebcalCache.requestKey, request.cacheKey));
   expect(await cacheDenied(() => cache.get(request.cacheKey))).toBe(true);
+});
+
+
+test("persistent v2 cache retains missing-type uncertainty and multiple-result fallback across real database reads",async()=>{
+ const f=await authFixture();clients.push(f);const db=drizzle(f.client,{schema}),cache=createPersistentReadingCache(db),time=Date.now();
+ for(const [date,multiple] of [["2026-10-03",true],["2026-10-17",false]] as const){
+  const request=hebcalRequest(date);let calls=0;
+  const item={date,name:{en:"Synthetic calendar"},parshaNum:2,fullkriyah:{"1":{k:"Genesis",b:"1:1",e:"1:3",v:3}}};
+  const payload={items:multiple?[{...item,type:"holiday"},{...item,type:"holiday"}]:[item]};
+  const read=createHebcalReader({cache,verseCounts:TANAKH_VERSE_COUNTS,now:()=>time,fetch:async()=>{calls++;return new Response(JSON.stringify(payload),{headers:{"content-type":"application/json"}});}});
+  const upstream=await read(date),cached=await read(date);
+  expect(upstream.snapshot.classification).toBe(multiple?"multiple":"nonregular");
+  expect(cached.source).toBe("cache");expect(cached.snapshot).toEqual(upstream.snapshot);expect(calls).toBe(1);
+  const saved=(await cache.get(request.cacheKey))!;
+  const normalized=saved.payload as {classification?:string;items:{type:string;parshaNum:number}[]};
+  if(multiple)expect(normalized).toMatchObject({classification:"multiple",items:[]});
+  else expect(normalized.items[0]).toMatchObject({type:"unknown",parshaNum:2});
+  for(const payload of [
+   {...normalized,classification:{email:"synthetic@example.test"}},
+   {...normalized,binding:{version:2,date,calendar:"israel"}},
+   {...normalized,binding:{version:2,date:"2026-10-24",calendar:"diaspora"}},
+   {...normalized,token:"synthetic-private"}
+  ]){
+   await db.update(schema.hebcalCache).set({payload}).where(eq(schema.hebcalCache.requestKey,request.cacheKey));
+   expect(await cacheDenied(()=>cache.get(request.cacheKey))).toBe(true);
+  }
+ }
+ // A valid v1 row must be invisible to a v2 lookup rather than transplanted.
+ const request=hebcalRequest("2026-10-24");
+ await db.insert(schema.hebcalCache).values({requestKey:request.cacheKey.replace(":v2:",":v1:"),requestDate:request.date,parameters:{calendar:"diaspora"},payload:{binding:{version:1,date:request.date,calendar:"diaspora"},items:[]},fetchedAt:new Date(time),expiresAt:new Date(time+86400000)});
+ expect(await cache.get(request.cacheKey)).toBeNull();
 });

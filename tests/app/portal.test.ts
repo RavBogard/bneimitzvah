@@ -19,6 +19,7 @@ async function fixture() {
   const f = await accessFixture(); open.push(f);
   let recipient!: { id: string; cookie: string; sessionId: string };
   await f.owner(async () => {
+    await f.db.update(s.student).set({serviceSlot:"morning"});
     const { cookie } = await f.signIn("portal-recipient@example.test");
     const proof = await f.auth.api.getSession({ headers: new Headers({ cookie }), query: { disableRefresh: true, disableCookieCache: true } });
     if (!proof) throw new Error("Synthetic portal recipient failed");
@@ -36,7 +37,7 @@ async function fixture() {
   const invitations = createInvitationService({ db: f.db, access: f.service, throttleSecret: randomBytes(48).toString("base64url"),
     transport: async message => { deliveries.push({ url: message.url }); } });
   const studentsService = createStudentService({ access: f.service, signingSecret: randomBytes(48).toString("base64url"),
-    loadReading: async (date, calendar) => ({ fetchedAt: Date.now(), snapshot: { date: parseCeremonyDate(date), calendar,
+    loadReading: async (date, calendar) => ({ fetchedAt: Date.now(), snapshot: { date: parseCeremonyDate(date), calendar, classification:"regular",
       reading: { parashah: "Synthetic", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:31-2:2" }], triennial: null },
       haftarah: "Isaiah 1:1-2" } satisfies Snapshot }) });
   async function confirm(kind: "torah" | "haftarah", ranges: string[]) {
@@ -250,4 +251,16 @@ describe("private portal read DTOs and recipient invitation review", () => {
     const fresh = await f.invitations.preview(f.http("recipient"), { token: issued.token });
     expect((await f.invitations.acceptReviewed(f.http("recipient", undefined, { method: "POST" }), { token: issued.token, reviewBinding: fresh.reviewBinding })).studentId === f.students[0].id).toBe(true);
   });
+});
+
+
+it("legacy confirmed snapshots missing slot provenance require review while retaining verses",async()=>{
+ const f=await fixture();const saved=await f.confirm("torah",["Genesis 1:1-3"]);
+ await f.owner(async()=>{const [row]=await f.db.select().from(s.assignment).where(eq(s.assignment.id,saved.assignmentId));
+  const legacy={...row.proposalSnapshot};delete legacy.slotProvenance;delete legacy.serviceSlot;delete legacy.readingDate;
+  await f.db.update(s.assignment).set({proposalSnapshot:legacy}).where(eq(s.assignment.id,row.id));
+ });
+ const current=await f.portal.assignedReading(f.http(),{mode:"parent",studentId:f.students[0].id});
+ expect(current.readings[0]).toMatchObject({needsReview:true,verses:["Genesis 1:1","Genesis 1:2","Genesis 1:3"]});
+ expect(Object.keys(current.student).sort()).toEqual(["ceremonyDate","firstName","id","lastName","revision"]);
 });

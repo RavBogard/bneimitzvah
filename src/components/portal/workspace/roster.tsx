@@ -5,8 +5,8 @@ import { workspaceApi, type RosterStudent, type StudentInput } from "./api";
 import { RequireRole, statusOf, useWorkspace } from "./provider";
 import Link from "next/link";
 
-const empty: StudentInput = { firstName: "", lastName: "", ceremonyDate: "", studentKind: "child", parentEmail: "", ownEmail: null };
-function draft(row: RosterStudent): StudentInput { return { firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate, studentKind: row.studentKind, parentEmail: row.parentEmail, ownEmail: row.ownEmail }; }
+const empty: StudentInput = { firstName: "", lastName: "", ceremonyDate: "", studentKind: "child", serviceSlot: "unknown", parentEmail: "", ownEmail: null };
+function draft(row: RosterStudent): StudentInput { return { firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate, studentKind: row.studentKind, serviceSlot: row.serviceSlot, parentEmail: row.parentEmail, ownEmail: row.ownEmail }; }
 export function AdminWorkspace() { return <RequireRole role="admin"><Roster /></RequireRole>; }
 function Roster() {
   const { registerReload } = useWorkspace();
@@ -49,7 +49,7 @@ function Roster() {
       const result = disable && current ? await workspaceApi.disable(current) : await workspaceApi.save(form, current ?? undefined);
       if (generation !== lifetime.current) return;
       const review = "readingNeedsReview" in result && result.readingNeedsReview;
-      const saved = disable ? "Student disabled. Their record remains in the roster." : review ? "Student saved. The changed ceremony date means the reading needs review with the tutor or rabbi." : "Student saved. Creating or editing a record does not send an invitation or grant account access.";
+      const saved = disable ? "Student disabled. Their record remains in the roster." : review ? "Student saved. The ceremony date or service slot changed. Both readings need review with the tutor or rabbi." : "Student saved. Creating or editing a record does not send an invitation or grant account access.";
       let refreshed = true; try { await load(); } catch { refreshed = false; }
       if (generation === lifetime.current) setMessage(saved + (refreshed ? "" : " The roster could not be refreshed. Reload it to check the current record."));
     } catch (error) {
@@ -77,11 +77,11 @@ function Roster() {
       </>}
     {editing && !loading && !unavailable && <section className="roster-editor" aria-labelledby="roster-editor-title"><h2 id="roster-editor-title" tabIndex={-1} ref={formHeading}>{current ? "Edit student" : "Add a student"}</h2>
       {current?.disabledAt ? <><p>This student is disabled. Their record is kept for reference; editing and reactivation are not offered here.</p><dl className="invitation-details"><div><dt>Parent contact</dt><dd><bdi dir="auto">{current.parentEmail ?? "Not supplied"}</bdi></dd></div>{current.ownEmail && <div><dt>Student contact</dt><dd><bdi dir="auto">{current.ownEmail}</bdi></dd></div>}</dl></>
-        : <form onSubmit={submit}><div className="roster-form-grid"><div><label htmlFor="roster-studentKind">Student kind</label><select id="roster-studentKind" value={form.studentKind} disabled={pending || conflict} onChange={event => setForm(previous => ({ ...previous, studentKind: event.target.value as StudentInput["studentKind"] }))}><option value="child">Child</option><option value="adult">Adult</option></select></div>{(["firstName", "lastName", "ceremonyDate", "parentEmail", "ownEmail"] as const).map(field => <div key={field}>
+        : <form onSubmit={submit}><div className="roster-form-grid"><div><label htmlFor="roster-studentKind">Student kind</label><select id="roster-studentKind" value={form.studentKind} disabled={pending || conflict} onChange={event => setForm(previous => ({ ...previous, studentKind: event.target.value as StudentInput["studentKind"] }))}><option value="child">Child</option><option value="adult">Adult</option></select></div><div><label htmlFor="roster-serviceSlot">Service slot</label><select id="roster-serviceSlot" value={form.serviceSlot} disabled={pending || conflict} onChange={event => setForm(previous => ({ ...previous, serviceSlot: event.target.value as StudentInput["serviceSlot"] }))}><option value="unknown">Not yet set</option><option value="morning">Morning (10:00)</option><option value="havdalah">Havdalah / afternoon (4:00)</option></select></div>{(["firstName", "lastName", "ceremonyDate", "parentEmail", "ownEmail"] as const).map(field => <div key={field}>
           <label htmlFor={`roster-${field}`}>{field === "firstName" ? "First name" : field === "lastName" ? "Last name" : field === "ceremonyDate" ? "Ceremony date" : field === "parentEmail" ? (form.studentKind === "child" ? "Parent email" : "Parent email (optional)") : (form.studentKind === "adult" ? "Student email" : "Student email (optional)")}</label>
           <input id={`roster-${field}`} name={field} type={field === "ceremonyDate" ? "date" : field.endsWith("Email") ? "email" : "text"} maxLength={field.endsWith("Email") ? 254 : 100} required={field === "parentEmail" ? form.studentKind === "child" : field === "ownEmail" ? form.studentKind === "adult" : true} disabled={pending || conflict}
             value={form[field] ?? ""} onChange={event => setForm(previous => ({ ...previous, [field]: event.target.value }))} autoComplete="off" />
-        </div>)}</div><p className="field-help">Children need a parent email; adults need their own email. If both are supplied, they must differ. Saving or changing kind does not send invitations or change linked access. Manage identities and guardians separately through Access.</p>
+        </div>)}</div><p className="field-help">Date or slot changes retain assigned verses and mark both readings for review. Children need a parent email; adults need their own email. If both are supplied, they must differ. Saving or changing kind does not send invitations or change linked access. Manage identities and guardians separately through Access.</p>
           <div className="form-actions"><button className="button-primary" disabled={pending || conflict}>{pending ? "Saving…" : "Save student"}</button><button type="button" className="button-secondary" disabled={pending} onClick={() => { setEditing(false); setCurrent(null); setForm(empty); }}>Cancel edit</button></div>
         </form>}
       {current && !current.disabledAt && <div className="disable-student"><h3>Disable this student</h3><p>Stop access to this student’s practice while retaining their record. This does not delete their history.</p>

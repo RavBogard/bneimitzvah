@@ -25,8 +25,8 @@ function readingView(row: Awaited<ReturnType<typeof confirmedReadings>>[number],
   const sourceStatus = snapshot.sourceStatus === "available" || snapshot.sourceStatus === "unavailable" ? snapshot.sourceStatus : "unknown";
   const sourceFetchedAt = typeof snapshot.sourceFetchedAt === "number" && Number.isFinite(snapshot.sourceFetchedAt) && snapshot.sourceFetchedAt >= 0 ? snapshot.sourceFetchedAt : null;
   return Object.freeze({ id: row.id, status: "confirmed" as const, kind: row.kind, basis: row.basis, revision: row.revision, ranges: Object.freeze(ranges), verses: Object.freeze(row.verses),
-    confirmationDate, needsReview: snapshot.needsReview !== false || confirmationDate !== ceremonyDate,
-    source: Object.freeze({ status: sourceStatus, fetchedAt: sourceFetchedAt, date: date(source.date),
+    confirmationDate, needsReview: snapshot.slotProvenance !== 1 || !["morning","havdalah","unknown"].includes(String(snapshot.serviceSlot)) || snapshot.needsReview !== false || confirmationDate !== ceremonyDate,
+    source: Object.freeze({ status: sourceStatus, fetchedAt: sourceFetchedAt, date: snapshot.slotProvenance===1 ? date(snapshot.readingDate) : date(source.date),
       calendar: source.calendar === "diaspora" || source.calendar === "israel" ? source.calendar : null,
       attribution: leyning.source === "Hebcal" ? Object.freeze({ name: "Hebcal", url: "https://www.hebcal.com/" }) : null }) });
 }

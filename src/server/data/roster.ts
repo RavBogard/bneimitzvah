@@ -12,6 +12,11 @@ export async function roster<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>
 export async function editableStudent<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string,id:string){
   const [row]=await tx.select().from(s.student).where(and(eq(s.student.tenantId,tenantId),eq(s.student.id,id))).for("update");return row;
 }
+// Caller already holds the access service's student SHARE lock. Read only the
+// staff planning field; do not upgrade that lock or project contact data.
+export async function studentReadingContext<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string,id:string){
+  const [row]=await tx.select({serviceSlot:s.student.serviceSlot}).from(s.student).where(and(eq(s.student.tenantId,tenantId),eq(s.student.id,id)));return row;
+}
 export async function insertStudent<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string,input:StudentInput){
   const [row]=await tx.insert(s.student).values({...input,tenantId}).returning();return row;
 }

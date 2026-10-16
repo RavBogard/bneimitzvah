@@ -25,7 +25,7 @@ export function validatedSnapshot(value:unknown,date:string,calendar:Calendar,co
     });
   };
   if(value.reading!==null){
-    if(!object(value.reading) || !["shabbat","weekday","holiday"].includes(String(value.reading.type)))throw new AccessDenied(403);
+    if(!object(value.reading) || !["shabbat","weekday","holiday","unknown"].includes(String(value.reading.type)))throw new AccessDenied(403);
     const row=value.reading;
     let triennial:Leyning["triennial"]=null;
     if(row.triennial!==null){
@@ -38,5 +38,7 @@ export function validatedSnapshot(value:unknown,date:string,calendar:Calendar,co
     if(typeof value.haftarah!=="string")throw new AccessDenied(403);
     try{expandReadingRanges([value.haftarah],"haftarah",counts);}catch{throw new AccessDenied(403);}
   }
-  return {date:parseCeremonyDate(date),calendar,reading,haftarah:value.haftarah as string|null};
+  const classification=["regular","holiday","multiple","nonregular","missing"].includes(String(value.classification))?value.classification as NonNullable<Snapshot["classification"]>:"nonregular";
+  if(classification==="regular" && reading?.type!=="shabbat")throw new AccessDenied(403);
+  return {date:parseCeremonyDate(date),calendar,reading,haftarah:value.haftarah as string|null,classification};
 }

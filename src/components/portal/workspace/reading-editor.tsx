@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { workspaceApi, type Assigned } from "./api";
-import { customReadingRanges, readingBaseline, type ReadingKind, type ReadingProposal, type StaffMode } from "./reading-proposal";
+import { customReadingRanges, readingBaseline, fallbackLabels, type ReadingKind, type ReadingProposal, type StaffMode } from "./reading-proposal";
 import { statusOf, useWorkspace } from "./provider";
 
 export function ReadingEditor({ mode, baseline, reload }: { mode: StaffMode; baseline: Assigned | null; reload(): Promise<Assigned> }) {
   const { guardDeparture } = useWorkspace();
-  const [kind, setKind] = useState<ReadingKind>("torah"), [method, setMethod] = useState("calendar"), [custom, setCustom] = useState("");
+  const [kind, setKind] = useState<ReadingKind>("torah"), [method, setMethod] = useState("custom"), [custom, setCustom] = useState("");
   const [review, setReview] = useState<{ proposal: ReadingProposal; baseline: string; expiresAt: number } | null>(null);
   const [pending, setPending] = useState<"prepare" | "confirm" | "reload" | null>(null), [message, setMessage] = useState(""), [blocked, setBlocked] = useState(false);
   const gate = useRef(false), generation = useRef(0), alive = useRef(true), heading = useRef<HTMLHeadingElement>(null);
@@ -83,7 +83,7 @@ export function ReadingEditor({ mode, baseline, reload }: { mode: StaffMode; bas
     <form onSubmit={submit}>
       <div className="reading-editor-fields">
         <div><label htmlFor="reading-kind">Reading</label><select id="reading-kind" value={kind} disabled={pending !== null} onChange={event => change(() => setKind(event.target.value as ReadingKind))}><option value="torah">Torah</option><option value="haftarah">Haftarah</option></select></div>
-        <div><label htmlFor="reading-method">Selection method</label><select id="reading-method" value={method} disabled={pending !== null} onChange={event => change(() => setMethod(event.target.value))}><option value="calendar">Congregation calendar proposal</option><option value="custom">Custom references</option></select></div>
+        <div><label htmlFor="reading-method">Selection method</label><select id="reading-method" value={method} disabled={pending !== null} onChange={event => change(() => setMethod(event.target.value))}><option value="custom">Custom references</option><option value="calendar">Calendar helpers (optional)</option></select></div>
       </div>
       {method === "custom" && <div className="reading-custom"><label htmlFor="reading-ranges">Custom verse ranges</label><textarea id="reading-ranges" value={custom} maxLength={3232} rows={4} disabled={pending !== null} aria-describedby="reading-ranges-help" required onChange={event => change(() => setCustom(event.target.value))} /><p id="reading-ranges-help" className="field-help">One reference per line, up to 32 ranges and 1,000 verses. For example: {kind === "torah" ? "Genesis 1:1-3" : "Isaiah 1:1-2"}. The server checks book, order and verse boundaries.</p></div>}
       <button className="button-secondary" disabled={!baseline || pending !== null || blocked}>{pending === "prepare" ? "Preparing review…" : "Prepare reading review"}</button>
@@ -93,12 +93,15 @@ export function ReadingEditor({ mode, baseline, reload }: { mode: StaffMode; bas
     {blocked && <button className="button-secondary" disabled={pending !== null} onClick={() => void reloadCurrent()}>{pending === "reload" ? "Reloading current reading…" : "Reload current reading"}</button>}
     {proposal && <section className="reading-proposal" aria-labelledby="reading-review-title">
       <h3 id="reading-review-title" tabIndex={-1} ref={heading}>{proposal.status === "prepared" ? `Review ${kind === "torah" ? "Torah" : "Haftarah"} assignment` : "Choose a reading explicitly"}</h3>
-      <p className="field-help">Calendar source: <a href="https://www.hebcal.com/" target="_blank" rel="noopener noreferrer">Hebcal</a>. {proposal.sourceStatus === "available" ? `Fetched ${new Date(proposal.sourceFetchedAt!).toLocaleString()}.` : "Unavailable. These custom references have no available calendar proposal; verify them independently."}</p>
+      <p className="field-help">Calendar source: <a href="https://www.hebcal.com/" target="_blank" rel="noopener noreferrer">Hebcal</a>. {proposal.sourceStatus === "available" ? `Fetched ${new Date(proposal.sourceFetchedAt!).toLocaleString()}.` : proposal.sourceStatus === "not-requested" ? "Not queried: no reading date has been derived." : "Unavailable. Verify custom references independently."}</p>
+      <p>Ceremony: {proposal.ceremonyDate} · {proposal.serviceSlot === "morning" ? "Morning (10:00)" : proposal.serviceSlot === "havdalah" ? "Havdalah / afternoon (4:00)" : "Not yet set"}. Reading date: {proposal.readingDate ?? "not determined"}.</p>
+      {proposal.manualFallback && <p className="field-help">{fallbackLabels[proposal.manualFallback]}</p>}
       {proposal.status === "needs-selection" ? <>
         <p>{proposal.parashah ? `${proposal.parashah} · ` : "No Torah calendar reading was returned · "}{proposal.date} · {proposal.calendar === "diaspora" ? "Diaspora" : "Israel"} calendar.</p>
         <p>No assignment has been prepared or changed. Choose an available selection below, or enter custom references.</p>
         {kind === "torah" && proposal.choices.length > 0 && <ul className="reading-calendar-choices">{proposal.choices.map(choice => <li key={choice.pick}><button className="button-secondary" disabled={pending !== null || blocked} onClick={() => void prepare(choice.pick)}>{choice.label}{choice.ref ? `: ${choice.ref}` : ""}</button></li>)}</ul>}
         {kind === "torah" && !proposal.choices.length && <p>No calendar selections are available for this date.</p>}
+        {kind === "haftarah" && proposal.manualFallback===null && proposal.haftarah && <button className="button-secondary" disabled={pending!==null || blocked} onClick={()=>void prepare("calendar-haftarah")}>Use calendar haftarah: {proposal.haftarah}</button>}
         {kind === "haftarah" && <p>{proposal.haftarah ? `Calendar reference: ${proposal.haftarah}. Prepare again to check its current availability.` : "No haftarah was returned for this date. Use custom references if appropriate."}</p>}
       </> : <>
         <p className="reading-reference">{proposal.ranges.join("; ")}</p><p>{proposal.verseCount} verses · Selection: {proposal.basis}.</p>

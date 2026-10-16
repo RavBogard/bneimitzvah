@@ -1,7 +1,7 @@
 import "server-only";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
-import type { ActiveMode,Actor } from "../access/types";
+import type { ActiveMode,Actor,StudentActor } from "../access/types";
 import { AccessDenied,AccessUnavailable } from "../access/errors";
 import { requireCookieMutation,type CookieMutationRequest } from "../http/mutations";
 import * as data from "../data/roster";
@@ -11,12 +11,13 @@ import { expandReadingRanges,type CeremonyDate,type VerseCounts } from "../../li
 import { proposeReading,ReadingUnavailable,type Calendar,type Snapshot } from "../../lib/readings/proposals";
 import { createBindings,digest } from "./bindings";
 import { identifier,parseStudentCsv,revision,studentInput,type StudentInput } from "./validation";
+import { readingDate } from "../../lib/readings/reading-date";
 import { validatedSnapshot } from "./preparation";
 
 type Mode={mode:ActiveMode};
 type Kind="torah"|"haftarah";
 type Basis="triennial"|"selection"|"full"|"custom";
-type Preparation={kind:Kind;basis:Basis;ranges:string[];snapshot:Snapshot;sourceFetchedAt:number|null;sourceStatus:"available"|"unavailable";maftir:unknown};
+type Preparation={kind:Kind;basis:Basis;ranges:string[];snapshot:Snapshot;sourceFetchedAt:number|null;sourceStatus:"available"|"unavailable"|"not-requested";maftir:unknown};
 const conflict=()=>({ok:false as const,code:"stale-revision" as const});
 const object=(value:unknown):value is Record<string,unknown>=>!!value && typeof value==="object" && !Array.isArray(value);
 function calendarCustoms(customs:unknown){
@@ -32,7 +33,7 @@ function calendarCustoms(customs:unknown){
   }
   return {calendar,pick};
 }
-const actorBinding=(actor:Actor)=>({tenantId:actor.tenantId,userId:actor.userId,authSessionId:actor.authSessionId,roleGrantId:actor.roleGrantId,mode:actor.mode});
+const actorBinding=(actor:Actor&{relationshipId?:StudentActor["relationshipId"];relationshipRevision?:StudentActor["relationshipRevision"]})=>({origin:actor.origin,membershipId:actor.membershipId,authorityRevision:actor.authorityRevision,roleGrantRevision:actor.roleGrantRevision,...("relationshipId" in actor?{relationshipId:actor.relationshipId,relationshipRevision:actor.relationshipRevision}:{}),tenantId:actor.tenantId,userId:actor.userId,authSessionId:actor.authSessionId,roleGrantId:actor.roleGrantId,mode:actor.mode});
 const sameActor=(claim:Record<string,unknown>,actor:Actor)=>digest(claim.actor)===digest(actorBinding(actor));
 const duplicateKey=(row:StudentInput)=>digest([row.firstName,row.lastName,row.ceremonyDate,row.studentKind,row.parentEmail,row.ownEmail]);
 const rosterState=(rows:{id:string;revision:number}[])=>digest(rows.map(row=>[row.id,row.revision]));
@@ -53,7 +54,7 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
     return input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
       const rows=await data.roster(tx,actor.tenantId);
       if(rows.length>5000)throw new AccessDenied(403);
-      return rows.map(({id,firstName,lastName,ceremonyDate,studentKind,parentEmail,ownEmail,disabledAt,revision})=>({id,firstName,lastName,ceremonyDate,studentKind,parentEmail,ownEmail,disabledAt,revision}));
+      return rows.map(({id,firstName,lastName,ceremonyDate,serviceSlot,studentKind,parentEmail,ownEmail,disabledAt,revision})=>({id,firstName,lastName,ceremonyDate,serviceSlot,studentKind,parentEmail,ownEmail,disabledAt,revision}));
     });
   }
   async function create(request:CookieMutationRequest,selection:Mode&{student:unknown}){
@@ -74,7 +75,7 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       if(current.revision!==expected)return conflict();
       const updated=await data.updateStudent(tx,actor.tenantId,id,expected,values);
       if(!updated)return conflict();
-      const readingNeedsReview=current.ceremonyDate!==values.ceremonyDate;
+      const readingNeedsReview=current.ceremonyDate!==values.ceremonyDate || current.serviceSlot!==values.serviceSlot;
       if(readingNeedsReview)await data.markReadingsForReview(tx,actor.tenantId,id);
       await data.audit(tx,actor,"student.update",id);
       return {ok:true as const,id,revision:updated.revision,readingNeedsReview};
@@ -126,20 +127,24 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       requireCookieMutation(request,actor.origin);
       const customs=calendarCustoms(await data.customs(tx,actor.tenantId));
       const assignment=await data.currentAssignment(tx,actor.tenantId,id,kind);
-      return {actor:actorBinding(actor),date:student.ceremonyDate,studentRevision:student.revision,assignmentRevision:assignment?.revision??0,customs};
+      const current=await data.studentReadingContext(tx,actor.tenantId,id);
+      if(!current)throw new AccessDenied(404);
+      return {actor:actorBinding(actor),date:student.ceremonyDate,serviceSlot:current.serviceSlot,...readingDate(student.ceremonyDate,current.serviceSlot),studentRevision:student.revision,assignmentRevision:assignment?.revision??0,customs};
     });
     // No network call or cache operation holds the authority transaction open.
-    let loaded:{snapshot:Snapshot;fetchedAt:number|null;sourceStatus:"available"|"unavailable"};
-    try{loaded={...await input.loadReading(baseline.date,baseline.customs.calendar),sourceStatus:"available"};}
+    let loaded:{snapshot:Snapshot;fetchedAt:number|null;sourceStatus:"available"|"unavailable"|"not-requested"};
+    const emptySnapshot:Snapshot={date:(baseline.readingDate??baseline.date) as CeremonyDate,calendar:baseline.customs.calendar,reading:null,haftarah:null,classification:"missing"};
+    if(baseline.readingDate===null)loaded={snapshot:emptySnapshot,fetchedAt:null,sourceStatus:"not-requested"};
+    else try{loaded={...await input.loadReading(baseline.readingDate,baseline.customs.calendar),sourceStatus:"available"};}
     catch(error){
-      if(error instanceof ReadingUnavailable && selection.ranges!==undefined){
-        loaded={snapshot:{date:baseline.date as CeremonyDate,calendar:baseline.customs.calendar,reading:null,haftarah:null},fetchedAt:null,sourceStatus:"unavailable"};
-      }else if(error instanceof ReadingUnavailable)throw error;
+      if(error instanceof ReadingUnavailable)loaded={snapshot:emptySnapshot,fetchedAt:null,sourceStatus:"unavailable"};
       else throw new AccessUnavailable();
     }
     if(loaded.sourceStatus==="available" && (typeof loaded.fetchedAt!=="number" || !Number.isFinite(loaded.fetchedAt) || loaded.fetchedAt>now() || now()-loaded.fetchedAt>86400000))throw new AccessDenied(403);
-    const snapshot=validatedSnapshot(loaded.snapshot,baseline.date,baseline.customs.calendar,counts);
-    const sourceReview={sourceFetchedAt:loaded.fetchedAt,sourceStatus:loaded.sourceStatus,warning:loaded.sourceStatus==="unavailable"?"calendar-source-unavailable" as const:null};
+    const snapshot=validatedSnapshot(loaded.snapshot,baseline.readingDate??baseline.date,baseline.customs.calendar,counts);
+    const manualFallback=baseline.manualFallback??(loaded.sourceStatus==="unavailable"?"calendar-source-unavailable":snapshot.classification==="regular"?null:snapshot.classification??"nonregular");
+    const context={ceremonyDate:baseline.date,serviceSlot:baseline.serviceSlot,readingDate:baseline.readingDate,manualFallback};
+    const sourceReview={...context,sourceFetchedAt:loaded.fetchedAt,sourceStatus:loaded.sourceStatus,warning:loaded.sourceStatus==="unavailable"?"calendar-source-unavailable" as const:null};
     const needsSelection=()=>({status:"needs-selection" as const,requiresConfirmation:true as const,snapshot,...sourceReview,toConfirm:["torah","entryCap","nusach"]});
     let ranges:string[],basis:Basis,maftir:unknown=null;
     if(selection.ranges!==undefined){
@@ -147,12 +152,13 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       const special=kind==="torah"?snapshot.reading?.aliyot.find(row=>row.n==="M"):null;
       maftir=special?{ref:special.ref,...(special.reason?{reason:special.reason}:{})}:null;
     }
+    else if(manualFallback!==null)return needsSelection();
     else if(kind==="haftarah"){
-      if(!snapshot.haftarah)return needsSelection();
+      if(selection.pick!=="calendar-haftarah" || !snapshot.haftarah)return needsSelection();
       ranges=[snapshot.haftarah];basis="selection";
     }else{
-      const pick=selection.pick??baseline.customs.pick;
-      if(pick==="explicit-selection-required")return needsSelection();
+      const pick=selection.pick;
+      if(pick===undefined || pick==="explicit-selection-required")return needsSelection();
       let canonicalPick:Pick|undefined;
       try{canonicalPick=pick===undefined?undefined:parsePick(pick);}catch{throw new AccessDenied(403);}
       let proposal:ReturnType<typeof proposeReading>;
@@ -163,7 +169,7 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
     }
     let verses:string[];try{verses=expandReadingRanges(ranges,kind,counts);}catch{throw new AccessDenied(403);}
     const preparation:Preparation={kind,basis,ranges,snapshot,sourceFetchedAt:loaded.fetchedAt,sourceStatus:loaded.sourceStatus,maftir};
-    const binding=bindings.sign({purpose:"student-reading",actor:baseline.actor,studentId:id,studentRevision:baseline.studentRevision,assignmentRevision:baseline.assignmentRevision,date:baseline.date,calendar:baseline.customs.calendar,preparation});
+    const binding=bindings.sign({purpose:"student-reading",actor:baseline.actor,studentId:id,studentRevision:baseline.studentRevision,assignmentRevision:baseline.assignmentRevision,date:baseline.date,serviceSlot:baseline.serviceSlot,readingDate:baseline.readingDate,manualFallback,calendar:baseline.customs.calendar,preparation});
     return {status:"prepared" as const,requiresConfirmation:true as const,binding,kind,basis,ranges,verseCount:verses.length,...sourceReview,maftir,toConfirm:["torah","entryCap","nusach"]};
   }
   async function confirmReading(request:CookieMutationRequest,selection:Mode&{studentId:string;binding:string}){
@@ -176,11 +182,18 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       requireCookieMutation(request,actor.origin);
       if(!sameActor(claim,actor))throw new AccessDenied(403);
       const currentCustoms=calendarCustoms(await data.customs(tx,actor.tenantId));
+      const currentStudent=await data.studentReadingContext(tx,actor.tenantId,id);
+      if(!currentStudent)throw new AccessDenied(404);
+      const derived=readingDate(student.ceremonyDate,currentStudent.serviceSlot);
+      if(claim.serviceSlot!==currentStudent.serviceSlot || claim.readingDate!==derived.readingDate)return conflict();
       if(claim.studentRevision!==student.revision || claim.date!==student.ceremonyDate || claim.calendar!==currentCustoms.calendar)return conflict();
       const current=await data.currentAssignment(tx,actor.tenantId,id,preparation.kind,true);
+      // Acquiring authority/assignment locks may outlast the review. Recheck the
+      // original authenticated envelope with a fresh clock before any write.
+      if(digest(bindings.verify(selection.binding,"student-reading"))!==digest(claim))throw new AccessDenied(403);
       if(claim.assignmentRevision!==(current?.revision??0))return conflict();
       const persisted=await data.persistAssignment(tx,actor,id,preparation.kind,current?.revision??0,{ref:preparation.ranges.join("; "),basis:preparation.basis,verses,
-        snapshot:{confirmationDate:student.ceremonyDate,calendar:claim.calendar,ranges:preparation.ranges,source:preparation.snapshot,sourceFetchedAt:preparation.sourceFetchedAt,sourceStatus:preparation.sourceStatus,maftir:preparation.maftir,needsReview:false}});
+        snapshot:{slotProvenance:1,serviceSlot:currentStudent.serviceSlot,readingDate:derived.readingDate,manualFallback:claim.manualFallback,confirmationDate:student.ceremonyDate,calendar:claim.calendar,ranges:preparation.ranges,source:preparation.snapshot,sourceFetchedAt:preparation.sourceFetchedAt,sourceStatus:preparation.sourceStatus,maftir:preparation.maftir,needsReview:false}});
       if(!persisted)return conflict();
       await data.audit(tx,actor,"reading.set",id,persisted.id);
       return {ok:true as const,assignmentId:persisted.id,revision:persisted.revision};

@@ -1,10 +1,21 @@
 import { PortalRequestError } from "../api";
+import { readingDate, serviceSlot } from "../../../lib/readings/reading-date";
 import type { Assigned } from "./api";
 
 export type ReadingKind = "torah" | "haftarah";
 export type StaffMode = "admin" | "tutor";
 export type CalendarChoice = { pick: string; label: string; ref: string | null };
-type Source = { sourceFetchedAt: number | null; sourceStatus: "available" | "unavailable"; warning: "calendar-source-unavailable" | null };
+export const fallbackLabels = {
+  "unknown-slot": "The service slot is not yet set. Choose custom references; no calendar date has been assumed.",
+  "calendar-date-out-of-range": "The following reading date is outside the supported date range. Choose custom references.",
+  "non-saturday": "This ceremony is not on Saturday. Choose custom references; no calendar date has been assumed.",
+  holiday: "The calendar date has a holiday reading. Choose custom references after checking the congregation's practice.",
+  multiple: "The calendar returned multiple readings. Choose custom references after checking the congregation's practice.",
+  nonregular: "A regular Shabbat portion could not be established. Choose custom references.",
+  missing: "No regular calendar reading was returned. Choose custom references.",
+  "calendar-source-unavailable": "The calendar source is unavailable. Verify custom references independently."
+} as const;
+type Source = { ceremonyDate: string; serviceSlot: "morning"|"havdalah"|"unknown"; readingDate: string|null; manualFallback: keyof typeof fallbackLabels|null; sourceFetchedAt: number | null; sourceStatus: "available" | "unavailable" | "not-requested"; warning: "calendar-source-unavailable" | null };
 export type PreparedReading = Source & { status: "prepared"; binding: string; kind: ReadingKind; basis: "triennial" | "selection" | "full" | "custom"; ranges: string[]; verseCount: number; maftir: { ref: string; reason: string | null } | null };
 export type NeedsSelection = Source & { status: "needs-selection"; date: string; calendar: "diaspora" | "israel"; parashah: string | null; choices: CalendarChoice[]; haftarah: string | null };
 export type ReadingProposal = PreparedReading | NeedsSelection;
@@ -14,11 +25,15 @@ function object(value: unknown, keys: string[]): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 function text(value: unknown, max = 160): string { if (typeof value !== "string" || !value.trim() || value.length > max || /[\x00-\x1f\x7f]/.test(value)) return bad(); return value; }
-function source(row: Record<string, unknown>): Source {
-  if (row.sourceStatus !== "available" && row.sourceStatus !== "unavailable") return bad();
+function source(row: Record<string, unknown>, ceremonyDate: string): Source {
+  let slot: Source["serviceSlot"], derived: ReturnType<typeof readingDate>;
+  try{slot=serviceSlot(row.serviceSlot);derived=readingDate(ceremonyDate,slot);}catch{return bad();}
+  if(row.ceremonyDate!==ceremonyDate || row.readingDate!==derived.readingDate || (row.manualFallback!==null && !Object.hasOwn(fallbackLabels,String(row.manualFallback))) || (derived.manualFallback!==null && row.manualFallback!==derived.manualFallback))return bad();
+  if (row.sourceStatus !== "available" && row.sourceStatus !== "unavailable" && row.sourceStatus !== "not-requested") return bad();
   if (row.sourceStatus === "available" ? !Number.isFinite(row.sourceFetchedAt) || !Number.isFinite(new Date(Number(row.sourceFetchedAt)).getTime()) || Number(row.sourceFetchedAt) < 0 || row.warning !== null
-    : row.sourceFetchedAt !== null || row.warning !== "calendar-source-unavailable") return bad();
-  return { sourceStatus: row.sourceStatus, sourceFetchedAt: row.sourceFetchedAt as number | null, warning: row.warning as Source["warning"] };
+    : row.sourceFetchedAt !== null || row.warning !== (row.sourceStatus==="unavailable"?"calendar-source-unavailable":null)) return bad();
+  if((row.sourceStatus==="not-requested")!==(derived.readingDate===null) || (row.sourceStatus==="unavailable" && row.manualFallback!=="calendar-source-unavailable"))return bad();
+  return { ceremonyDate, serviceSlot:slot, readingDate:derived.readingDate, manualFallback:row.manualFallback as Source["manualFallback"], sourceStatus: row.sourceStatus, sourceFetchedAt: row.sourceFetchedAt as number | null, warning: row.warning as Source["warning"] };
 }
 function aliyot(value: unknown): { n: number | "M"; ref: string }[] {
   if (!Array.isArray(value) || value.length > 8) return bad();
@@ -35,10 +50,10 @@ function aliyot(value: unknown): { n: number | "M"; ref: string }[] {
 export function parseReadingProposal(value: unknown, kind: ReadingKind, ceremonyDate: string): ReadingProposal {
   if (!value || typeof value !== "object" || Array.isArray(value)) return bad();
   const status = (value as Record<string, unknown>).status;
-  const keys = ["status", "requiresConfirmation", "sourceFetchedAt", "sourceStatus", "warning", "toConfirm"];
+  const keys = ["ceremonyDate", "serviceSlot", "readingDate", "manualFallback", "status", "requiresConfirmation", "sourceFetchedAt", "sourceStatus", "warning", "toConfirm"];
   const row = object(value, status === "prepared" ? [...keys, "binding", "kind", "basis", "ranges", "verseCount", "maftir"] : [...keys, "snapshot"]);
   if (row.requiresConfirmation !== true || !Array.isArray(row.toConfirm) || row.toConfirm.length !== 3 || row.toConfirm.join(",") !== "torah,entryCap,nusach") return bad();
-  const metadata = source(row);
+  const metadata = source(row,ceremonyDate);
   if (status === "prepared") {
     if (row.kind !== kind || !["triennial", "selection", "full", "custom"].includes(String(row.basis)) || !Array.isArray(row.ranges) || row.ranges.length < 1 || row.ranges.length > 32
       || !Number.isInteger(row.verseCount) || Number(row.verseCount) < 1 || Number(row.verseCount) > 1000) return bad();
@@ -49,21 +64,21 @@ export function parseReadingProposal(value: unknown, kind: ReadingKind, ceremony
   }
   if (status !== "needs-selection") return bad();
   const snapshot = object(row.snapshot, ["date", "calendar", "haftarah", "reading"]);
-  if (snapshot.date !== ceremonyDate || !["diaspora", "israel"].includes(String(snapshot.calendar))) return bad();
+  if (snapshot.date !== (metadata.readingDate??ceremonyDate) || !["diaspora", "israel"].includes(String(snapshot.calendar))) return bad();
   const choices: CalendarChoice[] = []; let parashah: string | null = null;
   if (snapshot.reading !== null) {
     const r = object(snapshot.reading, ["parashah", "type", "source", "aliyot", "triennial"]);
     parashah = text(r.parashah); text(r.type); if (r.source !== "Hebcal") return bad();
     const rows = aliyot(r.aliyot);
-    if (rows.some(row => row.n !== "M")) choices.push({ pick: "full", label: "Full calendar reading", ref: null });
+    if (metadata.manualFallback===null && rows.some(row => row.n !== "M")) choices.push({ pick: "full", label: "Full calendar reading", ref: null });
     if (r.triennial !== null) {
       const tri = object(r.triennial, ["year", "aliyot"]);
       if (tri.year !== null && ![1, 2, 3].includes(Number(tri.year))) return bad();
-      if (aliyot(tri.aliyot).some(row => row.n !== "M")) choices.push({ pick: "triennial", label: tri.year === null ? "Triennial reading" : `Triennial year ${tri.year}`, ref: null });
+      if (metadata.manualFallback===null && aliyot(tri.aliyot).some(row => row.n !== "M")) choices.push({ pick: "triennial", label: tri.year === null ? "Triennial reading" : `Triennial year ${tri.year}`, ref: null });
     }
-    rows.forEach(row => choices.push({ pick: `aliyah:${row.n}`, label: row.n === "M" ? "Calendar maftir" : `Aliyah ${row.n}`, ref: row.ref }));
+    if(metadata.manualFallback===null)rows.forEach(row => choices.push({ pick: `aliyah:${row.n}`, label: row.n === "M" ? "Calendar maftir" : `Aliyah ${row.n}`, ref: row.ref }));
   }
-  return { status, ...metadata, date: ceremonyDate, calendar: snapshot.calendar as NeedsSelection["calendar"], parashah, choices, haftarah: snapshot.haftarah === null ? null : text(snapshot.haftarah, 100) };
+  return { status, ...metadata, date: snapshot.date as string, calendar: snapshot.calendar as NeedsSelection["calendar"], parashah, choices, haftarah: snapshot.haftarah === null ? null : text(snapshot.haftarah, 100) };
 }
 
 export function readingBaseline(value: Assigned, kind: ReadingKind): string {

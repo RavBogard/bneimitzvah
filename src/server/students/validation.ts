@@ -1,7 +1,8 @@
 import { parseCeremonyDate } from "../../lib/readings/ranges";
+import { serviceSlot, type ServiceSlot } from "../../lib/readings/reading-date";
 import { AccessDenied } from "../access/errors";
 
-export type StudentInput={firstName:string;lastName:string;ceremonyDate:string;studentKind:"child"|"adult";parentEmail:string|null;ownEmail:string|null};
+export type StudentInput={firstName:string;lastName:string;ceremonyDate:string;serviceSlot:ServiceSlot;studentKind:"child"|"adult";parentEmail:string|null;ownEmail:string|null};
 const email=(value:unknown)=>{
   if(typeof value!=="string" || value.length>254 || !/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(value.trim()))throw new AccessDenied(403);
   return value.trim().toLowerCase();
@@ -19,9 +20,10 @@ export function studentInput(value:unknown):StudentInput{
   const optionalEmail=(value:unknown)=>value===undefined || value===null || (typeof value==="string" && !value.trim())?null:email(value);
   const parentEmail=optionalEmail(row.parentEmail),ownEmail=optionalEmail(row.ownEmail);
   if((studentKind==="child" && parentEmail===null) || (studentKind==="adult" && ownEmail===null) || (ownEmail!==null && ownEmail===parentEmail))throw new AccessDenied(403);
+  let slot:ServiceSlot;try{slot=serviceSlot(row.serviceSlot===undefined?"unknown":row.serviceSlot);}catch{throw new AccessDenied(403);}
   let ceremonyDate:string;
   try{ceremonyDate=parseCeremonyDate(row.ceremonyDate);}catch{throw new AccessDenied(403);}
-  return {firstName:name(row.firstName),lastName:name(row.lastName),ceremonyDate,studentKind,parentEmail,ownEmail};
+  return {firstName:name(row.firstName),lastName:name(row.lastName),ceremonyDate,serviceSlot:slot,studentKind,parentEmail,ownEmail};
 }
 export function revision(value:unknown):number{
   if(!Number.isSafeInteger(value) || Number(value)<1)throw new AccessDenied(403);
