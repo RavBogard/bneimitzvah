@@ -1,6 +1,6 @@
 # Engine migration provenance
 
-Local migration source: `RavBogard/haftarah` research branch at
+Migration source: `RavBogard/haftarah` research branch at
 `380b1b20095285db373478db1057db2c6bd04b60` (2026-10-15). The source checkout was
 read only. A separate clone was filtered with git-filter-repo, retaining 25 commits
 and their author/committer identities and dates. The selected paths are `trope/`,
@@ -16,27 +16,33 @@ fixture was produced by executing that original source file, not the extracted
 copy: 182 fixture verses, 400 raw/cleaned and final/non-final variants, phrase
 families and HTML hashes. It stores no verse text or English translations.
 
-## Third-party material and unresolved publication decisions
+## Third-party material and publication permissions
 
 - `vendor/havarotjs/`: version 0.25.5, MIT; original license and integrity details
   remain in its `LICENSE` and `PROVENANCE.md`. No installation is needed.
 - `cells/haftarah.json` and `cells/torah.json`: Binder/Avery teaching-source
-  transcriptions with variants, cited in the source research. Their public
-  publication license and comparison with a printed source remain unresolved
-  engine open items 15 and 11. Code licensing does not settle those questions.
+  transcriptions with variants, cited in the source research. On 2026-10-15
+  Daniel reported permission for noncommercial use and expressly confirmed their
+  inclusion in this public repository. This is separate from MIT code; it does
+  not assign a Creative Commons license or unrestricted sublicensing rights.
+  See `cells/README.md`. Printed-source comparison remains an accuracy task.
 - `cells/haftarah-moroccan.json` and the Idelsohn fixture cite *Thesaurus*, volume
-  5, nos. 271-272 (1928/29), described as public domain in the source research.
+  V, nos. 271-272, p. 103. The original scan's title page identifies Benjamin
+  Harz, 1928; its publication term has expired in the US. Exact source and
+  duration references are retained in `cells/README.md`.
 - Calibration, edge, unit and reference-text fixtures contain MAM Hebrew via
-  Sefaria. Sefaria's official [sources and licenses](https://lite.sefaria.org/sources-and-licenses)
-  identifies MAM as CC-BY-SA without a version on that page. Hebcal's official
+  Sefaria. Its API identifies the edition, CC-BY-SA and the MAM maintainer's
+  Wikisource source. The maintainer's [Free Content License statement](https://en.wikisource.org/wiki/User:Dovi/Miqra_according_to_the_Masorah#1._Free_Content_License)
+  links specifically to CC BY-SA 4.0. Hebcal's official
   [API guidance](https://www.hebcal.com/home/help/page/9) identifies CC BY 4.0
-  and attribution requirements for its leyning data. The exact MAM version,
-  notices and publication conditions still require confirmation before publishing.
+  and attribution requirements. `tests/fixtures/trope/NOTICE.md` supplies the
+  attributions, source/license links and modification/share-alike notices for
+  the complete fixture inventory, including the ASR reference text.
 - `week-min-hebrew.json` and `week-notes-hebrew.json` copy only `ref`, `he` and
   `break` from the source branch's corresponding `tests/fixtures/*/sheet.json`
   files. Their source metadata identifies MAM. The original files contain English
-  and editorial metadata and were deliberately not imported. Their Hebrew retains
-  the same unresolved MAM publication decision as the other fixtures.
+  and editorial metadata and were deliberately not imported. Their Hebrew and
+  modifications retain the same CC BY-SA 4.0 terms as the other MAM fixtures.
 - `soulx-phone-set.json` is a subset of SoulX-Singer's phone set at
   `81aeb3ae772c70093c3de74dc23c92d983801ae4`, path recorded in the fixture README.
   All 244 retained tokens were compared against the pinned source's 2,820 tokens.
@@ -55,8 +61,11 @@ The retained history was inspected as 130 unique text blobs: no audio, recording
 weights, binary blobs, key files, credential-pattern matches, student/family data
 or English scripture payloads were found. The five JSON `name.en` fields are
 Hebcal reading titles. The historical contact identity is not student/family data.
-Marker scans and provenance inspection do not establish publication rights.
-This migration is local preparation; these unresolved decisions gate publication.
+Marker scans do not establish publication rights. The table permission reported
+by Daniel and the primary-source fixture licenses/attributions above provide the
+recorded basis for this authorized public migration. Historical notes that call
+these items unresolved describe the earlier research state; this dated record
+and the mission's 2026-10-15 permission amendment supersede that status.
 
 The root code license does not override any third-party terms. No generated chant
 is released by this migration; the G1/G2/G3 gates continue to apply.

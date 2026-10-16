@@ -20,6 +20,8 @@ Daniel confirmed on 2026-10-15 that all three settings matter: independent pract
 
 Put a student's own reading, text tools, chosen commentary, translation drafts, and practice recordings in one place. The 1.0 success criterion remains a real CRC student and tutor completing a real reading with Daniel as rabbi without a workaround.
 
+Daniel requires the full planned product to be feature complete before any other human tests it. Daniel alone reviews and tests during development; automated tests and agent reviews continue throughout. The real-student/tutor pilot follows completion of the planned features, including MCP and generated chant, and Daniel's approval to proceed.
+
 ## Operating Context
 
 - A rabbi creates a student, supplies a ceremony date and parent contact, reviews the proposed reading, and assigns the exact verses. Tutors can adjust readings and assign sources within their permitted student relationships.

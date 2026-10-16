@@ -1,5 +1,26 @@
 # Engine migration return — 2026-10-15
 
+## Publication follow-up — 2026-10-15
+
+Daniel expressly confirmed both noncommercial permission for the Binder/Avery
+tables and their inclusion in this public repository. `trope/cells/README.md`
+records that permission separately from MIT code, without unrestricted
+commercial or sublicensing claims. MAM's maintainer links CC BY-SA 4.0;
+Sefaria's API identifies that edition and version source. Fixture attribution,
+change/share-alike notices and Hebcal CC BY 4.0 credits are retained in
+`tests/fixtures/trope/NOTICE.md`, including the offline ASR reference. Idelsohn's
+original volume V title page confirms the 1928 edition; its US publication-term
+basis and source are recorded. SoulX and havarotjs licenses remain intact.
+
+The following local-preparation record describes the prior checkpoint. Its
+publication-permission blockers are resolved by the explicit permission and
+primary-source attribution above. Normal publication and hosted checks follow;
+the primary collaborator records their final IDs/results in STATE.md. This
+authorizes no student release or practice pilot: Daniel requires the full
+feature-complete product before testing with anyone other than him.
+
+## Local preparation checkpoint
+
 Local integration is complete; no engine commit has been pushed. Source research
 tip: `380b1b20095285db373478db1057db2c6bd04b60`; source main helper:
 `5b2530f72c544a9dab028d73076d47744b8252dc`. Source checkout and refs remain

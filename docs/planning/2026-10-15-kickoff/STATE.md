@@ -6,6 +6,8 @@ Current phase: 1 (local engine migration verified; public inclusion now authoriz
 
 Current execution authority: Daniel requested Astra as project manager and Sol agents as implementers on 2026-10-15. See `PM-REVIEW-2026-10-15.md` for confirmed amendments, review findings, and proposals. Root `PRODUCT.md` captures the completed Impeccable product interview; the chosen workflow is code-first.
 
+Delivery sequence (Daniel, 2026-10-15): finish all planned features before any human testing beyond Daniel. No early student/parent/tutor pilot. Automated tests and agent reviews continue; Phase 7 follows feature completeness, including MCP and generated chant, and Daniel's approval.
+
 ## Gates
 
 Format, one line each, newest last:
@@ -106,5 +108,5 @@ BLOCKED (Daniel): custom domain needs CNAME host `bneimitzvah` pointing to `a008
 - 2026-10-15, Astra/Sol milestone: reviewed Cowork's plan and completed Impeccable init. Confirmed all-device practice, Zoom tutoring, linked child practice views, and code-first. See `PM-REVIEW-2026-10-15.md` and root `PRODUCT.md`.
 - Foundation: [public repo](https://github.com/RavBogard/bneimitzvah), [green foundation CI](https://github.com/RavBogard/bneimitzvah/actions/runs/38832145643), [Ready/HTTP-200 title-only placeholder](https://bneimitzvah.vercel.app). Foundation `452c1c5` is the last verified published deployment; the authorized engine publication is now in progress. See `FOUNDATION-RETURN.md` for pins, browser checks, deployment and DNS details.
 - Engine: local history merge `afd56ae`, parity/portability `ee77d23`, reviewed guard correction `b02eb1e`, provenance/license update `8de656c`. 109/109 engine tests on Windows and Ubuntu WSL; 119 Node + 1 PGlite test in final combined Windows suite. See `ENGINE-MIGRATION-RETURN.md` and `trope/PROVENANCE.md`. Source haftarah checkout and refs unchanged. No render/GPU job, audio upload, or student release occurred.
-- Next action: finish separate noncommercial table notices and open-license fixture attribution, publish the engine, then verify hosted engine CI to complete Phase 1. Daniel has explicitly cleared the tables for public inclusion; do not reopen that permission question. Phase 2 starts with the auth/tenancy architecture spec, including guardian identity versus child practice context. Custom-domain DNS can be completed independently. Earlier supervised pilot after Phase 4 remains a recommendation awaiting Daniel's decision.
+- Next action: finish separate noncommercial table notices and open-license fixture attribution, publish the engine, then verify hosted engine CI to complete Phase 1. Daniel has explicitly cleared the tables for public inclusion; do not reopen that permission question. Phase 2 starts with the auth/tenancy architecture spec, including guardian identity versus child practice context. Custom-domain DNS can be completed independently. The early-pilot proposal is declined: build all features and test only with Daniel before Phase 7.
 - Earlier 2026-10-15: original Cowork planning files written before build work began.

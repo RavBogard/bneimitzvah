@@ -1,13 +1,18 @@
 # Trope calibration fixtures
 
+Text and data attribution, license links and modification notices are in
+[`NOTICE.md`](NOTICE.md). MAM Hebrew and adaptations remain CC BY-SA 4.0;
+Hebcal data remain CC BY 4.0. These licenses are separate from MIT code and
+the Binder/Avery table permission.
+
 ## Local migration additions
 
 `week-min-hebrew.json` and `week-notes-hebrew.json` preserve the 3 and 25 Hebrew
 fixture verses needed by the original engine text tests. Only `ref`, `he` and
 `break` were copied from the source research commit `380b1b2`; each file records
 its exact source path and commit. English translations and editorial metadata
-were excluded. MAM publication permissions remain unresolved; see
-`trope/PROVENANCE.md`.
+were excluded. MAM attribution and CC BY-SA 4.0 terms are retained in `NOTICE.md`;
+see also `trope/PROVENANCE.md`.
 
 `lib-trope-golden.json` records the original `template/lib.js` outputs at source
 main `5b2530f` for all 182 verses in the two calibration corpora, edge cases and

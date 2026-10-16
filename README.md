@@ -4,11 +4,11 @@ A web portal for b'nei mitzvah students at Central Reform Congregation, St. Loui
 
 Tutors and rabbis see their students, assign sources, leave notes, and hear what students record. Parents get a read-only view. The portal is built for one congregation now and more later: every record belongs to a congregation from the schema up.
 
-The trope engine computes chant scores from the te'amim using published melody tables (Standard Reform, Binder/Avery, first). Its history-preserving move from the `trope-engine-research` branch of [RavBogard/haftarah](https://github.com/RavBogard/haftarah) is integrated locally: 25 historical commits, standalone helpers and 109 engine tests passing on Windows and Linux. Engine publication awaits the melody-table and fixture licensing decisions in [the provenance note](trope/PROVENANCE.md). No student hears generated chant until it passes the required listening review.
+The trope engine computes chant scores from the te'amim using published melody tables (Standard Reform, Binder/Avery, first). Its history-preserving move from the `trope-engine-research` branch of [RavBogard/haftarah](https://github.com/RavBogard/haftarah) retains 25 historical commits, standalone helpers and 109 engine tests passing on Windows and Linux. Daniel confirmed noncommercial use and public repository inclusion of the Binder/Avery tables; [the provenance note](trope/PROVENANCE.md) records the separate code, table and fixture terms. No student hears generated chant until it passes the required listening review.
 
 ## Status
 
-Phase 0 foundation is published with passing Windows/Linux/browser CI and a deployed technical placeholder at [bneimitzvah.vercel.app](https://bneimitzvah.vercel.app). Phase 1 engine migration is local and has not been pushed. The planned student and staff workflows are not implemented yet. See [STATE.md](docs/planning/2026-10-15-kickoff/STATE.md) and [the engine return note](docs/planning/2026-10-15-kickoff/ENGINE-MIGRATION-RETURN.md).
+Phase 0 foundation is published with passing Windows/Linux/browser CI and a deployed technical placeholder at [bneimitzvah.vercel.app](https://bneimitzvah.vercel.app). Phase 1 brings the engine and its history into this repository. The planned student and staff workflows are not implemented yet. See [STATE.md](docs/planning/2026-10-15-kickoff/STATE.md) and [the engine return note](docs/planning/2026-10-15-kickoff/ENGINE-MIGRATION-RETURN.md) for gate results.
 
 ## Run it
 
@@ -26,7 +26,7 @@ npx playwright install chromium # one-time browser download for local checks
 npm run test:e2e                # Playwright
 ```
 
-`npm test` runs the engine and Node policy/isolation tests, then a real offline PGlite database probe. The integrated local checks pass 119 Node tests and 1 Vitest test. The engine passes 109 tests on Windows and Ubuntu WSL; hosted CI currently covers the published foundation only. Database schema, Drizzle dependencies and `db:*` scripts arrive together in Phase 2; there are no placeholder migration commands.
+`npm test` runs the engine and Node policy/isolation tests, then a real offline PGlite database probe. The integrated local checks pass 119 Node tests and 1 Vitest test. The engine passes 109 tests on Windows and Ubuntu WSL; CI runs the combined suite on Windows and Linux. Database schema, Drizzle dependencies and `db:*` scripts arrive together in Phase 2; there are no placeholder migration commands.
 
 ## Never in this repo
 
@@ -45,4 +45,4 @@ The guard detects prohibited filenames, known credential formats, non-synthetic 
 
 ## Licence
 
-Code: MIT (`LICENSE`). The licence for the melody tables in `trope/cells/` is not yet decided (engine open item 15). Texts and data keep their own licences above.
+Code: MIT (`LICENSE`). Binder/Avery tables (`trope/cells/haftarah.json` and `torah.json`): permission for noncommercial use and public repository inclusion, reported and expressly confirmed by Daniel on 2026-10-15; this does not grant unrestricted commercial use or sublicensing. See [table permissions](trope/cells/README.md). MAM fixture Hebrew and adaptations: CC BY-SA 4.0; Hebcal fixtures: CC BY 4.0, with [attribution and modification notices](tests/fixtures/trope/NOTICE.md). SoulX and havarotjs retain their Apache-2.0 and MIT notices. Each material keeps its own terms.

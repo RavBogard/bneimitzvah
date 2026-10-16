@@ -64,6 +64,8 @@ It is the second product carved out of the haftarah repo (`RavBogard/haftarah`).
 
 ## Outcome: what "done" means
 
+**Clarified 2026-10-15 (Daniel):** Build the full product to feature completeness before testing with anyone other than Daniel. This includes the planned MCP and generated-chant capabilities, with Daniel's listening approval still required. Daniel is the only human product tester until the feature-complete gate; no early student, parent, or tutor pilot. Automated tests, browser checks and independent agent reviews continue during development. The real-student/tutor pilot remains Phase 7, after the preceding feature phases are complete and Daniel approves proceeding.
+
 The 1.0 gate is a real CRC student and a real tutor using it for a real reading start to finish, with Daniel as rabbi, and nothing needed a workaround. Before that, each phase ends with the machine gates below green and a deploy that Daniel can click through.
 
 ## Boundaries
