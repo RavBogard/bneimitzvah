@@ -1,5 +1,22 @@
 # Trope calibration fixtures
 
+## Local migration additions
+
+`week-min-hebrew.json` and `week-notes-hebrew.json` preserve the 3 and 25 Hebrew
+fixture verses needed by the original engine text tests. Only `ref`, `he` and
+`break` were copied from the source research commit `380b1b2`; each file records
+its exact source path and commit. English translations and editorial metadata
+were excluded. MAM publication permissions remain unresolved; see
+`trope/PROVENANCE.md`.
+
+`lib-trope-golden.json` records the original `template/lib.js` outputs at source
+main `5b2530f` for all 182 verses in the two calibration corpora, edge cases and
+the two Hebrew-only sheet fixtures. Every verse has final/non-final cases; edge
+cases also cover raw and cleaned HTML (400 cases). It stores phrase families,
+HTML SHA-256 hashes, corpus family sets and the source constants, without Hebrew
+or English verse payloads. `tests/trope-lib.test.mjs` compares the standalone
+helper to those original-source results.
+
 `calibration-haftarah.json` holds the calibration corpus of the trope engine research
 (`docs/superpowers/research/2026-10-15-trope-engine/trope-grammar.md`, section 4.4): 53 single verses of the
 "Miqra according to the Masorah" Hebrew text, as Sefaria's v3 API returns them (raw HTML, uncleaned).

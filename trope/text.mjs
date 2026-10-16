@@ -1,14 +1,14 @@
 // The trope engine's text front end: one verse of Sefaria's MAM HTML -> accent units, syllables,
 // stress, trope family and phonemes (hebrew-text-pipeline.md §6, stages 1-7). The object verseUnits()
 // returns is the contract with trope/melody.mjs (§6.3); fields may be added, never renamed or dropped.
-// Pure functions. Dependencies: the vendored havarotjs (syllables) and template/lib.js (trope phrases),
+// Pure functions. Dependencies: the vendored havarotjs (syllables) and lib-trope.cjs (trope phrases),
 // so the chanter's copy and the sung motifs always agree on where a phrase ends.
 
 import { createRequire } from "node:module";
 import { Text } from "./vendor/havarotjs/index.js";
 
 const require = createRequire(import.meta.url);
-const lib = require("../template/lib.js");
+const lib = require("./lib-trope.cjs");
 const PRONUNCIATION = require("./pronunciation.json");
 
 export const VERSION_TITLE = "Miqra according to the Masorah";
@@ -57,7 +57,7 @@ function sheetForm(html) {
 }
 
 // ---- stage 1: markup resolver --------------------------------------------------
-// Tokens exactly as lib.js tropeTokens() cuts them (it is not exported): whitespace, &thinsp; and
+// Tokens exactly as lib-trope.cjs tropeTokens() cuts them (it is not exported): whitespace, &thinsp; and
 // &nbsp; at tag depth zero split; an open element (the ketiv/qere span) keeps its inner space. Keeping
 // the two tokenizers in step is what lets a unit find its trope phrase by token index.
 function htmlTokens(html) {
@@ -83,7 +83,7 @@ function htmlTokens(html) {
   flush();
   return tokens;
 }
-const hasLetters = tok => /[א-תיִ-ﭏ]/.test(tok.replace(/<[^>]*>/g, ""));   // lib.js's letters test
+const hasLetters = tok => /[א-תיִ-ﭏ]/.test(tok.replace(/<[^>]*>/g, ""));   // lib-trope.cjs's letters test
 
 const ENTITIES = { nbsp: " ", thinsp: " ", amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'" };
 const decodeEntities = s => s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) =>
@@ -108,7 +108,7 @@ function readToken(tok) {
 
 // Stage 1 (§6.2): the verse HTML -> what is read, in order. items are words, paseq marks
 // (kind "legarmeh" or "paseq") and pisqa breaks; text is the words and paseq marks joined by single
-// spaces (pisqa is markup, not text), NFD. Each item keeps the index of the lib.js token it came from.
+// spaces (pisqa is markup, not text), NFD. Each item keeps the index of the lib-trope.cjs token it came from.
 export function resolveMarkup(html) {
   const pre = sheetForm(html);
   const tokens = htmlTokens(pre.html);
@@ -128,7 +128,7 @@ export function resolveMarkup(html) {
   });
   // Legarmeh vs paseq (§1.3): MAM bolds the legarmeh stroke and sets a plain paseq small. A bold
   // stroke after shalshelet (Amos 1:2) is the paseq that always follows it, not legarmeh, so the word
-  // before must carry munach and no disjunctive. An unmarked stroke falls back to lib.js's rule.
+  // before must carry munach and no disjunctive. An unmarked stroke falls back to lib-trope.cjs's rule.
   items.forEach((it, k) => {
     if (it.type !== "paseq") return;
     const prev = items[k - 1];
@@ -141,7 +141,7 @@ export function resolveMarkup(html) {
 }
 
 // ---- stages 2-3: divine name and special lexemes ---------------------------------
-const TETRA_ONE = new RegExp(lib.TETRA.source);   // lib.js's pattern, without the g flag
+const TETRA_ONE = new RegExp(lib.TETRA.source);   // lib-trope.cjs's pattern, without the g flag
 const isAccent = ch => !!ACCENTS[ch];
 
 // The Name is read Adonai, or Elohim when pointed with Elohim's vowels (§1.5). The substitute takes the
@@ -410,7 +410,7 @@ function unitSyllables(words, { last, legarmeh, profile, warnings }) {
 }
 
 // ---- the verse ----------------------------------------------------------------------
-// Stage 6: trope families from lib.js tropePhrases(), fed exactly what tropeFamiliesUsed() feeds it,
+// Stage 6: trope families from lib-trope.cjs tropePhrases(), fed exactly what tropeFamiliesUsed() feeds it,
 // so the engine's families equal the chanter's copy's by construction. Returns, per letter-bearing
 // token, { family, phrase } (phrase = index among the verse's phrases).
 function tokenPhrases(html, final) {
@@ -435,7 +435,7 @@ export function verseUnits(html, { final = false, pronunciation, ref = null } = 
   const r = resolveMarkup(html);
   const warnings = [];
 
-  // Letter-bearing tokens in order: the index that ties a unit to its lib.js phrase.
+  // Letter-bearing tokens in order: the index that ties a unit to its lib-trope.cjs phrase.
   const letterIndex = new Map();
   r.tokens.forEach((t, k) => { if (hasLetters(t)) letterIndex.set(k, letterIndex.size); });
   const phrases = tokenPhrases(r.html, final);

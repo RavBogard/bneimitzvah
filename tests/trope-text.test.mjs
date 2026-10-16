@@ -5,10 +5,10 @@ import { readFileSync } from "node:fs";
 import { resolveMarkup, verseUnits, verseToSyllableString, pronunciationProfile } from "../trope/text.mjs";
 
 const require = createRequire(import.meta.url);
-const lib = require("../template/lib.js");
+const lib = require("../trope/lib-trope.cjs");
 const json = p => JSON.parse(readFileSync(new URL(p, import.meta.url), "utf8"));
-const weekMin = json("./fixtures/week-min/sheet.json");
-const weekNotes = json("./fixtures/week-notes/sheet.json");
+const weekMin = json("./fixtures/trope/week-min-hebrew.json");
+const weekNotes = json("./fixtures/trope/week-notes-hebrew.json");
 const edge = json("./fixtures/trope/edge-cases.json");
 const PROFILE = pronunciationProfile();
 

@@ -1,7 +1,7 @@
 // Argument handling and backend plumbing for scripts/trope-render.mjs, kept apart so it tests without
 // network, Python or Modal. Dependency-free.
 import { existsSync, readFileSync } from "node:fs";
-import { join, delimiter } from "node:path";
+import { posix, win32 } from "node:path";
 import { SOULX_STYLES, PHRASING_MODES, RHYTHM_MODES, STRESS_MODES, TOKEN_MODES, F0_MODES } from "./soulx.mjs";
 
 export const BACKENDS = ["local", "modal"];
@@ -103,14 +103,15 @@ export function parseRenderArgs(argv, { readFile = p => readFileSync(p, "utf8") 
 // The modal executable: --modal, HAFTARAH_MODAL, a dedicated venv (HAFTARAH_MODAL_ENV, or modal-env beside
 // the audio folder's soulx-env), then PATH.
 export function findModal({ explicit, env = process.env, audioRoot, platform = process.platform, exists = existsSync } = {}) {
+  const paths = platform === "win32" ? win32 : posix;
   const exe = platform === "win32" ? ["modal.exe", "modal.cmd", "modal"] : ["modal"];
   const bin = platform === "win32" ? "Scripts" : "bin";
   const tried = [];
   const check = p => { tried.push(p); return exists(p) ? p : null; };
   for (const p of [explicit, env.HAFTARAH_MODAL]) if (p) { const hit = check(p); if (hit) return { path: hit, tried }; }
-  const venvs = [env.HAFTARAH_MODAL_ENV, audioRoot && join(audioRoot, "modal-env")].filter(Boolean);
-  for (const v of venvs) for (const e of exe) { const hit = check(join(v, bin, e)); if (hit) return { path: hit, tried }; }
-  for (const d of String(env.PATH || env.Path || "").split(delimiter).filter(Boolean)) for (const e of exe) { const hit = check(join(d, e)); if (hit) return { path: hit, tried }; }
+  const venvs = [env.HAFTARAH_MODAL_ENV, audioRoot && paths.join(audioRoot, "modal-env")].filter(Boolean);
+  for (const v of venvs) for (const e of exe) { const hit = check(paths.join(v, bin, e)); if (hit) return { path: hit, tried }; }
+  for (const d of String(env.PATH || env.Path || "").split(paths.delimiter).filter(Boolean)) for (const e of exe) { const hit = check(paths.join(d, e)); if (hit) return { path: hit, tried }; }
   return { path: null, tried };
 }
 

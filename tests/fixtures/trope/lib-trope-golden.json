@@ -1,0 +1,6615 @@
+{
+  "source": {
+    "repository": "RavBogard/haftarah",
+    "commit": "5b2530f72c544a9dab028d73076d47744b8252dc",
+    "path": "template/lib.js"
+  },
+  "tetra": {
+    "source": "י[\\u0591-\\u05BD\\u05BF\\u05C1\\u05C2\\u05C4\\u05C5\\u05C7]*ה[\\u0591-\\u05BD\\u05BF\\u05C1\\u05C2\\u05C4\\u05C5\\u05C7]*ו[\\u0591-\\u05BD\\u05BF\\u05C1\\u05C2\\u05C4\\u05C5\\u05C7]*ה[\\u0591-\\u05BD\\u05BF\\u05C1\\u05C2\\u05C4\\u05C5\\u05C7]*",
+    "flags": "g"
+  },
+  "families": [
+    [
+      "zakef",
+      "zakef"
+    ],
+    [
+      "etnachta",
+      "etnachta"
+    ],
+    [
+      "sof-pasuk",
+      "sof pasuk"
+    ],
+    [
+      "revia",
+      "revia"
+    ],
+    [
+      "tevir",
+      "tevir"
+    ],
+    [
+      "segol",
+      "segol"
+    ],
+    [
+      "azla",
+      "kadma v’azla"
+    ],
+    [
+      "telisha-ketana",
+      "telisha ketana"
+    ],
+    [
+      "pazer",
+      "pazer"
+    ],
+    [
+      "zakef-gadol",
+      "zakef gadol"
+    ],
+    [
+      "sof-haftarah",
+      "end of the haftarah"
+    ]
+  ],
+  "corpora": [
+    {
+      "fixture": "calibration-haftarah.json",
+      "count": 53,
+      "familiesUsed": [
+        "azla",
+        "etnachta",
+        "pazer",
+        "revia",
+        "segol",
+        "sof-haftarah",
+        "sof-pasuk",
+        "telisha-ketana",
+        "tevir",
+        "zakef",
+        "zakef-gadol"
+      ]
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "count": 83,
+      "familiesUsed": [
+        "azla",
+        "etnachta",
+        "pazer",
+        "revia",
+        "segol",
+        "sof-haftarah",
+        "sof-pasuk",
+        "telisha-ketana",
+        "tevir",
+        "zakef",
+        "zakef-gadol"
+      ]
+    },
+    {
+      "fixture": "edge-cases.json",
+      "count": 18,
+      "familiesUsed": [
+        "azla",
+        "etnachta",
+        "pazer",
+        "revia",
+        "segol",
+        "sof-haftarah",
+        "sof-pasuk",
+        "telisha-ketana",
+        "tevir",
+        "zakef",
+        "zakef-gadol"
+      ]
+    },
+    {
+      "fixture": "week-min-hebrew.json",
+      "count": 3,
+      "familiesUsed": [
+        "azla",
+        "etnachta",
+        "sof-haftarah",
+        "sof-pasuk",
+        "zakef",
+        "zakef-gadol"
+      ]
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "count": 25,
+      "familiesUsed": [
+        "azla",
+        "etnachta",
+        "pazer",
+        "revia",
+        "segol",
+        "sof-haftarah",
+        "sof-pasuk",
+        "telisha-ketana",
+        "tevir",
+        "zakef",
+        "zakef-gadol"
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 0,
+      "ref": "I Samuel 20:18",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "zakef-gadol",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "e32818fb3f8d870545327bc2576b549a0f6a21a76bfea472ecad4f817af6c974"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 0,
+      "ref": "I Samuel 20:18",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "zakef-gadol",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "1d156a5dce94926aa4c486c05d1076ba77267daf2a05fced412701f694a80240"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 1,
+      "ref": "Zechariah 3:2",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "4ff8d72abcf72689cfc017182261165abf4c981fb50b6c4799a54c7bcb249a95"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 1,
+      "ref": "Zechariah 3:2",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "0d96105db64a70bd2fbd454aed013162b2a4399abb42805f09815ec85bf1a1d2"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 2,
+      "ref": "Jeremiah 9:23",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "revia",
+        "segol",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "5bfc6c1a497f9a3388399537bd1dbf676ef3a2b9952555849b54458f62d7b43b"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 2,
+      "ref": "Jeremiah 9:23",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "revia",
+        "segol",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "bd1d39b56ac93b50f9f20ed0c6abcbe12c9a8ff7876fe1b2878104ecfeb6451d"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 3,
+      "ref": "Isaiah 66:20",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "revia",
+        "pazer",
+        "pazer",
+        "pazer",
+        "azla",
+        "revia",
+        "tevir",
+        "etnachta",
+        "telisha-ketana",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "f8f920e1b7718c25656603852bbddcbd616f932034eadddac69898a16dba8076"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 3,
+      "ref": "Isaiah 66:20",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "revia",
+        "pazer",
+        "pazer",
+        "pazer",
+        "azla",
+        "revia",
+        "tevir",
+        "etnachta",
+        "telisha-ketana",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "90483413f3632dd35f32b52c5e70c28d5d679239e1c48715cb71253a32a6c6e8"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 4,
+      "ref": "Zechariah 14:2",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "revia",
+        "zakef",
+        "etnachta",
+        "azla",
+        "zakef",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "61d9338f7341d7b539ddf95457f8543e882cab8d36aa3c3f3811111e209c264a"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 4,
+      "ref": "Zechariah 14:2",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "revia",
+        "zakef",
+        "etnachta",
+        "azla",
+        "zakef",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "881f0a4646d5ce0e66593a74bbeba7be14a8d1d32b57a6bb9410677801861c3a"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 5,
+      "ref": "I Kings 6:6",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "pazer",
+        "telisha-ketana",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "a946e276eb0a5c385de7d1e5f9ed94f32cde5cad771a0fb667f059ed34a232be"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 5,
+      "ref": "I Kings 6:6",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "pazer",
+        "telisha-ketana",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "77499ce40fc6f30d9bb5dccca6ac591e148ca7530cab24d0ba583360f73618b8"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 6,
+      "ref": "I Kings 7:48",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "revia",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "e75eccad8fe1a82ae496865c351c315d71a29ba771f15e0cc06dfb01759f2594"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 6,
+      "ref": "I Kings 7:48",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "revia",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "96db60714a81d380a1a8072d45fa3a02b57f87a8d7e6dea2b60c0bf81c30a111"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 7,
+      "ref": "I Samuel 20:25",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "feb9b5e54140b3455328b66ee7a2e993185d22184b496116b73b0130959a4a4d"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 7,
+      "ref": "I Samuel 20:25",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "861e4f9590fd7d64d7744bb68e4c48ee6edbf4641a1726ef5c6890e8b5c2b0d3"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 8,
+      "ref": "Isaiah 7:3",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "zakef",
+        "zakef-gadol",
+        "etnachta",
+        "revia",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "aca8f8f6ec89b8cb40b324be4ed08b83ff771749e569629a41005fc8c56ee850"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 8,
+      "ref": "Isaiah 7:3",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "zakef",
+        "zakef-gadol",
+        "etnachta",
+        "revia",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "f8be55f30a6f9f6af6a8cfc2b4d8ee547585d73482458ad36a94e44d74944622"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 9,
+      "ref": "Obadiah 1:1",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "azla",
+        "zakef",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "6da050d95060cc52c3254ddb738dc3bb4ad7104fac078919ce9f471009143828"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 9,
+      "ref": "Obadiah 1:1",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "azla",
+        "zakef",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "0c1324e3f8184bb4a8db8ab030306fe5dc6ef8dacf994b3bdc322538ac015001"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 10,
+      "ref": "Judges 5:11",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "bb8cc7b3980011ffd14a1b56a06d7cd1613804e4209fbcb5aea60b38adac7f9b"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 10,
+      "ref": "Judges 5:11",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "b104d61666a35ce880889b5b544ea93643f6a797bb7cd69184ead3f306e3428f"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 11,
+      "ref": "II Samuel 7:6",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "pazer",
+        "azla",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "94574d571000bd581a120364689ee3a3fe3e1b2807e54f9e630192fce2ed37c9"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 11,
+      "ref": "II Samuel 7:6",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "pazer",
+        "azla",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "9ca3e69b7532916eba4ade3875040caf8c8dd442f26283b6eca2633d367dbcc1"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 12,
+      "ref": "Isaiah 6:2",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "tevir",
+        "etnachta",
+        "revia",
+        "revia",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "71e493522d7ab3918b639c30e9c62dfc6fe85f7c8c3d199b30fff2d2073c47dc"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 12,
+      "ref": "Isaiah 6:2",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "tevir",
+        "etnachta",
+        "revia",
+        "revia",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "b74254e69b92c2ce8f296ce0a3228085abea4f9ecb80380467e2c4ffe6889789"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 13,
+      "ref": "I Kings 18:4",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "azla",
+        "revia",
+        "azla",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "7d8edf4ac3ae7e6065c47c86efa32c76883487990a0fd125e189af9be7c91f27"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 13,
+      "ref": "I Kings 18:4",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "azla",
+        "revia",
+        "azla",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "0556e77667b75503c7148b3f3fae5dd7707333da2e829192dfb58187a4f50d06"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 14,
+      "ref": "Jeremiah 1:18",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "revia",
+        "azla",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "331c51fe6ea13755cb07a2a5fa4c0f5945f225d6baea82bfd4e56cbf37097962"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 14,
+      "ref": "Jeremiah 1:18",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "revia",
+        "azla",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "4af71d7ea581011e58b1c2058cf966d7a82cea27099cbc9f45540d350f9fcb28"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 15,
+      "ref": "Judges 5:4",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "0e88b7c195e775fa2edd63ebfa04ffd70cbe5f77ebaabe77088dbebff60c5f65"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 15,
+      "ref": "Judges 5:4",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "ca7cb8cf5ad1d8be52d3fc43eb31d885638f7d3b0a38e5c202052d2e2412b950"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 16,
+      "ref": "Joshua 2:19",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "telisha-ketana",
+        "tevir",
+        "etnachta",
+        "pazer",
+        "zakef",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "78f94eee98c0229e31ffaa3fbe2a9b6b9778af33fe6aaaef41baa3acab8f8ed0"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 16,
+      "ref": "Joshua 2:19",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "telisha-ketana",
+        "tevir",
+        "etnachta",
+        "pazer",
+        "zakef",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "587fb8f02976b5d9748e320d79da5c16feb134ed6ce1e083c5e5c895ef526378"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 17,
+      "ref": "II Samuel 22:26",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "7569729bfa932c4760d0068c65297bb3581b5ce660d75b8fccf46e14ff42ab47"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 17,
+      "ref": "II Samuel 22:26",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "cc2b6b8f5f0303ad9ab85e633568f37c23b4cfb9f76780626ad2588df0d9c76c"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 18,
+      "ref": "Judges 13:6",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "segol",
+        "zakef",
+        "zakef-gadol",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "35d22954eddbd8b752094901d5ac368492c040edc752f49ceae18d5e19da2c94"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 18,
+      "ref": "Judges 13:6",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "segol",
+        "zakef",
+        "zakef-gadol",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "cfed0c9e73ad30d337573b5ce9fe6a87f2f158440dc64d514dcf83cf143d04f0"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 19,
+      "ref": "I Kings 18:36",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "revia",
+        "azla",
+        "segol",
+        "revia",
+        "zakef",
+        "revia",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "f9651d1dc9b1c6ffab11593d07f9ed76447d674d26a296d6d9317e5d282fff73"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 19,
+      "ref": "I Kings 18:36",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "revia",
+        "azla",
+        "segol",
+        "revia",
+        "zakef",
+        "revia",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "b9f68a44bb6b60056493bf66224b4b434077ef9980cabb5a404d779801519b0a"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 20,
+      "ref": "Judges 5:17",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "zakef-gadol",
+        "etnachta",
+        "revia",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "b7e587ff4f2f092dbbeff33ae60453541dcd7ce69aed5762ee7578a414f029e2"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 20,
+      "ref": "Judges 5:17",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "zakef-gadol",
+        "etnachta",
+        "revia",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "e5154704c0513417484cdbc0b7ee4fd4b8df7410ba53f0a145aff9f47de36749"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 21,
+      "ref": "II Kings 23:3",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "revia",
+        "azla",
+        "azla",
+        "zakef",
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "2343356d44f229a2d130d414c65005f4d62f60b0de593257cfadeb2cb6240bfc"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 21,
+      "ref": "II Kings 23:3",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "revia",
+        "azla",
+        "azla",
+        "zakef",
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "5343b81ce761395826fc37366cc978727e9083a69be23d4f89514e16e55a57eb"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 22,
+      "ref": "Judges 5:16",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "7969f78a3e5fb4f8618d7a5c4307fdea3e8be625d048a363b6c990bfda94f890"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 22,
+      "ref": "Judges 5:16",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "1db58263d221f4c2dc40af88b8a119f0ab58306b44336c9f2bbf87fb75cc3684"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 23,
+      "ref": "I Kings 19:8",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "azla",
+        "revia",
+        "revia",
+        "zakef",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "6c2964dbb4357603cd4023ce700a978ba4b716b25d981498fc247a70587bd4fb"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 23,
+      "ref": "I Kings 19:8",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "azla",
+        "revia",
+        "revia",
+        "zakef",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "15bb9e05b1fb7f60f0034795c9eddcbde2795acca257a2e5ee332fc974689d5c"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 24,
+      "ref": "II Kings 4:23",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "pazer",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "15625f394d9f2db78e358cd1cd5bffd60e95e8f1ffb1aad0b45a3cf0ba08faef"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 24,
+      "ref": "II Kings 4:23",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "pazer",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "66c39be9752a3a6877326baf2d1bc9350193df41e6495aa5e0894d497d4a9375"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 25,
+      "ref": "Isaiah 58:6",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "06aedde5f1bc577ae39b8cf0d2484320e7d093e588d96fcd71ad71af1e424f12"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 25,
+      "ref": "Isaiah 58:6",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "04993177f06654a379ffac43fdebf64703d35dd9e2a928b2325c751f45974a7f"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 26,
+      "ref": "Malachi 3:15",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef-gadol",
+        "etnachta",
+        "zakef",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "5b6b2807a90bfc658c2c7863d11c3a3174e73db1017c1a3dd21781d1d7aa966a"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 26,
+      "ref": "Malachi 3:15",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef-gadol",
+        "etnachta",
+        "zakef",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "336100b1160a4a6edef9b4f91170287d7a965d184ba173a9f23081c6285e152c"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 27,
+      "ref": "Judges 11:27",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "azla",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "1737085baddead592c8b6b4fe0833fe319ac542fe0d28a2ad614b77fb6943947"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 27,
+      "ref": "Judges 11:27",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "azla",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "f676cde63995126d4dfd1e2f6414b7096eaea8cc3f73248e3fa3685c5663c2b9"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 28,
+      "ref": "Jeremiah 46:28",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "azla",
+        "zakef",
+        "etnachta",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "revia",
+        "zakef",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "083dabf52e956f51b334da6f5a971308c05432b29c0ba22288004b6f3c50d58a"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 28,
+      "ref": "Jeremiah 46:28",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "azla",
+        "zakef",
+        "etnachta",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "revia",
+        "zakef",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "6768768c9c5dbfbb589aa4db0c8d8ae0c9c44f82d9e6ac8a32cbcd65925c83de"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 29,
+      "ref": "I Kings 5:32",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "tevir",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "e43619bd15e021033dcfc01587807604a9a05fdff244998b60908f70c2d3368c"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 29,
+      "ref": "I Kings 5:32",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "tevir",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "9c64438447314aa3cf3af97681e753724bb1ec9eab8d9b1e734af9337b1af361"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 30,
+      "ref": "Judges 5:19",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "8bd1a48534bfca9bb5bf675c7bbdd026a647bc6181fabab39ad170a4524ac22b"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 30,
+      "ref": "Judges 5:19",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "4d34212659e2f5eeb202dc5b1342fc8f724ccd9f9df79ab9447c3d8dd8929bf3"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 31,
+      "ref": "I Samuel 12:7",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "49550f29eaa69349688c724f32d88632592e840130d98fa61f9ec95518fb50f6"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 31,
+      "ref": "I Samuel 12:7",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "cb0b6099a3e90efe4e940a4367a0f1b45238efa504783cbff57a47b6fe68918a"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 32,
+      "ref": "Ezekiel 37:11",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "zakef-gadol",
+        "zakef",
+        "etnachta",
+        "revia",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "68f3cb4b7a39d85ec79f1805b578500fbcf5dfb205623c0e98f0f461a77a3009"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 32,
+      "ref": "Ezekiel 37:11",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "zakef-gadol",
+        "zakef",
+        "etnachta",
+        "revia",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "b4d4b116f1b4ca7517a9d67748bb8f5843e3d88d4c47723ea603e57f7a0c05bf"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 33,
+      "ref": "Jeremiah 46:27",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "azla",
+        "zakef",
+        "pazer",
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "882339e4518696915822bb470574e4657228e3a218c7528169e2c4cb8647b1b3"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 33,
+      "ref": "Jeremiah 46:27",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "azla",
+        "zakef",
+        "pazer",
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "107e841421df7517be179314e0b90d96c5d5184b656516ccd79674b5f0b0e156"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 34,
+      "ref": "I Kings 18:26",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "segol",
+        "pazer",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "cb6d4541bc3aab538db8e3443dba63b320fe7b64f60aecd5d9f6602161cc56a3"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 34,
+      "ref": "I Kings 18:26",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "segol",
+        "pazer",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "42711cc96c18fa70f8f176d9a48d02d0c391a9a67ffaec45c16ad1806432c444"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 35,
+      "ref": "I Kings 1:25",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "revia",
+        "pazer",
+        "segol",
+        "telisha-ketana",
+        "azla",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "edc0719f068806997a434ae0ddd1bd6c57743ed438850fb5d9937e9eef0fcd6b"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 35,
+      "ref": "I Kings 1:25",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "revia",
+        "pazer",
+        "segol",
+        "telisha-ketana",
+        "azla",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "a89da8bfe2c3d5903655da5fdefebb350261c31ce7dc30a5e922890ddc6f9052"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 36,
+      "ref": "II Samuel 22:47",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "zakef-gadol",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "e27515cd95a6e228474de287acf8709268dba71c1a9d6e7e6c3d95e338a823a7"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 36,
+      "ref": "II Samuel 22:47",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "zakef-gadol",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "74d6a3140ba2bad4a227e67a027f7d42bc98498a8db293c9b0b048492e8a119e"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 37,
+      "ref": "Jeremiah 8:18",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "d189983a7b3aeab052748fe0dc543b88220454fa1740a0dced4680c47e084db6"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 37,
+      "ref": "Jeremiah 8:18",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "590f438f9d112c6cc25a8dc440a01275ab59883d0170a62bc02e424e6477dd12"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 38,
+      "ref": "II Samuel 6:12",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "segol",
+        "revia",
+        "zakef",
+        "etnachta",
+        "revia",
+        "telisha-ketana",
+        "azla",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "a824d8b3f3c79fc9cf7f6fc82309c6b237a826d98f3ea9ff57f405eae4cc6739"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 38,
+      "ref": "II Samuel 6:12",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "segol",
+        "revia",
+        "zakef",
+        "etnachta",
+        "revia",
+        "telisha-ketana",
+        "azla",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "a443fcbb66bf0fe12b91790f48f52e09c97871c9b5e45b8b5dfd9ee42d43b51b"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 39,
+      "ref": "Hosea 12:14",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef-gadol",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "233cd62ba817a0649bbfe72c0c36427ae80f3719a546069ac2187286416b44ae"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 39,
+      "ref": "Hosea 12:14",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef-gadol",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "4eaf6e36290c9401fe42d88cb7930614dfc76a52149cc6e5611e64e6ab11fe57"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 40,
+      "ref": "Ezekiel 1:25",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef-gadol",
+        "zakef-gadol",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "22b4ec71a6947fa4c57ddd482f6393c708eeeb80218ed408399d579018c1bfa2"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 40,
+      "ref": "Ezekiel 1:25",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef-gadol",
+        "zakef-gadol",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "c45600d70e1f5092de4ea4569a3a7365815ce38cf9fdf22779faaca8f7a6cf54"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 41,
+      "ref": "II Samuel 22:7",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "5d2c8ebbbb3a80b2fec188905fe0eaf89d0bbaed380cf504deef7e744cdff8c5"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 41,
+      "ref": "II Samuel 22:7",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "45a007f1bffcdc8bc12d9693e0b4c7e85b5fe0891d6369363aeed8449433be29"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 42,
+      "ref": "Ezekiel 1:9",
+      "field": "he",
+      "final": false,
+      "families": [
+        "tevir",
+        "etnachta",
+        "zakef",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "19ba61c9fb5fdac8a0817bb12e9cc203dd61993944701da3b752e7a78e86c2b1"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 42,
+      "ref": "Ezekiel 1:9",
+      "field": "he",
+      "final": true,
+      "families": [
+        "tevir",
+        "etnachta",
+        "zakef",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "798c4d9abb6d4f4cb61c0737a85247329eb26bde5795bd3a1a385dfc520a29ab"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 43,
+      "ref": "Jonah 1:2",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "0c8a849d004363bec19d72509b34bf41ed3e748a11a71626b7f6ae4e5d85d27a"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 43,
+      "ref": "Jonah 1:2",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "e1487dc44a91911b5c83e0ba57c36ab88fda054fedbbd432ccd4f5f1e9e04371"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 44,
+      "ref": "I Kings 19:7",
+      "field": "he",
+      "final": false,
+      "families": [
+        "telisha-ketana",
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "01d9fb4669acd0229a93defcd34043e0264fc9b9de81f02f656fb3cd009447d4"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 44,
+      "ref": "I Kings 19:7",
+      "field": "he",
+      "final": true,
+      "families": [
+        "telisha-ketana",
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "39781b68833aff56d06a07e092d68462a3680c5cdb3a957ad3dd72eee38783f6"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 45,
+      "ref": "Ezekiel 1:10",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "2585afcf3c67f0cc7013eaeef0284dbf39ea6327b8d3304035512c93dc421896"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 45,
+      "ref": "Ezekiel 1:10",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "17606271241a7b0581006159d7ef69298990f8460199dad02d6f73b63da9c2a9"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 46,
+      "ref": "I Kings 18:6",
+      "field": "he",
+      "final": false,
+      "families": [
+        "tevir",
+        "etnachta",
+        "azla",
+        "zakef",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "25a94512f8057edd5a54ea26a6e3eb576e32ff30d7322a6cea17d56715a358d0"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 46,
+      "ref": "I Kings 18:6",
+      "field": "he",
+      "final": true,
+      "families": [
+        "tevir",
+        "etnachta",
+        "azla",
+        "zakef",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "b87296cf12d85c9e324005aaafdb4a9f9e04869d5f227cb78aca3bde07e2ff7d"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 47,
+      "ref": "Amos 9:14",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "azla",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "97ab560f0688e2c7bbefbcc51dddddfafd763a5d5bcf2e37a71e7fe47a296776"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 47,
+      "ref": "Amos 9:14",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "azla",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "6322145b449e7ab6fa926846ea7fcd7f8bc04e6fb55c043efc168b1e57b13aaa"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 48,
+      "ref": "I Samuel 15:16",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "zakef",
+        "telisha-ketana",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "eb26f1513a9bfd7ac353a912a096930bd1dc0318715e7ace6086a47e1b1e2614"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 48,
+      "ref": "I Samuel 15:16",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "zakef",
+        "telisha-ketana",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "a7ff5a91c08839b5c7c0c33e9d632c3e7b8ed886e02a141962d11b6862068988"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 49,
+      "ref": "Isaiah 13:8",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "406b99bc9104b4d6b085eea4179fd63b8042b3d650fd4c0b8dab23f84dcb70d2"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 49,
+      "ref": "Isaiah 13:8",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "fda0925773d5dc33ce1d88a034c573503a1ccc6620c5b3b0020965e300e7f8cd"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 50,
+      "ref": "Amos 1:2",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "2acaf2ed4e6580f8ff922021347e083b5d868262c6cf62f655a0382beaa85cc6"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 50,
+      "ref": "Amos 1:2",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "73f306fff6add39f4caa5d754395ce82533af840f22dc279d614b9604655e8e0"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 51,
+      "ref": "Joshua 19:51",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "revia",
+        "pazer",
+        "telisha-ketana",
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "59fa5f512887c8b0b3bfe2fecd81c8ae3c8c458062db8a6afb09c91633540423"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 51,
+      "ref": "Joshua 19:51",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "revia",
+        "pazer",
+        "telisha-ketana",
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "d4ed59537064fa355a27a23b54d50fbfeb1386648d3da1b90f60d0593a2d4305"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 52,
+      "ref": "I Kings 10:3",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "d929e0fe4f88c047986c7c4ab48225d8fed8afaf784f30cbec4f1b9f1b48c70b"
+    },
+    {
+      "fixture": "calibration-haftarah.json",
+      "index": 52,
+      "ref": "I Kings 10:3",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "c0552e5a529cb20924dd47534e0e72c77c091e69c9fd02287f2608e5adb3a076"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 0,
+      "ref": "Genesis 1:1",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "b7bd30754d2adbc3ba792e3c4c91aaa166588bf2a6e2460d3418ae40946b70de"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 0,
+      "ref": "Genesis 1:1",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "dd6e8de6aa23ed37e5bbf7e5eab35386f6b18f2fc6a3fd2a40442b032fef1075"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 1,
+      "ref": "Deuteronomy 1:21",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "tevir",
+        "etnachta",
+        "revia",
+        "telisha-ketana",
+        "azla",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "ef2824c959a6ab3e269e912321bc07b6ada092de0871371dc7592b7178235eee"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 1,
+      "ref": "Deuteronomy 1:21",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "tevir",
+        "etnachta",
+        "revia",
+        "telisha-ketana",
+        "azla",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "7e39d3312d52e346f604090779b8a4db1ae95a8fdeeb8dba5d85bcb7ba54fa96"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 2,
+      "ref": "Numbers 26:35",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "revia",
+        "zakef",
+        "zakef-gadol",
+        "etnachta",
+        "zakef-gadol",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "1a17f1505b3df85ce8bd0312cd1a2576cc6d3811ee24982db8eabed123453802"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 2,
+      "ref": "Numbers 26:35",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "revia",
+        "zakef",
+        "zakef-gadol",
+        "etnachta",
+        "zakef-gadol",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "5ff722616cea897f26f6f2a7158d287f027fee4834210d751f67c5fe5855651d"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 3,
+      "ref": "Numbers 35:5",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "revia",
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "revia",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "27b91c05a87dab6c6b6ef2f9f7d73b3985742344478c7633475b04be6eed97d1"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 3,
+      "ref": "Numbers 35:5",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "revia",
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "revia",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "775cf133539eb6e86319bc90823761ccc7cd297fca152a0e364d62a8a38b5cdb"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 4,
+      "ref": "Genesis 43:7",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "pazer",
+        "azla",
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "391d6d3ee891320cfe0300c4bea3fb09ca0b8d56c0d3ff8d8ac6b36f0e4d09df"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 4,
+      "ref": "Genesis 43:7",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "pazer",
+        "azla",
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "fa9c986778ddab1db9e27f2ace78c12311ae666a6ca9359eeb6b78f20e4b3a76"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 5,
+      "ref": "Deuteronomy 6:11",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "segol",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "9590efd7833cd62940bafbc0145d62753563186e3285cbb5101e83da121a493e"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 5,
+      "ref": "Deuteronomy 6:11",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "segol",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "42a22b9d8b5a4fbbc3eddcce7255e2ec58c80a9df2e5ed38a3fd57f2ff518b3c"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 6,
+      "ref": "Genesis 42:38",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef-gadol",
+        "etnachta",
+        "azla",
+        "revia",
+        "zakef",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "bc8e277ff3d75dd62cf64c4b3a24879c57602dbd862016b03574f2e133c46d11"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 6,
+      "ref": "Genesis 42:38",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef-gadol",
+        "etnachta",
+        "azla",
+        "revia",
+        "zakef",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "a92ac0e0dce214803a7d55f5c56f027dc70c1f4c017f5fa1c5d81673a834c4cd"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 7,
+      "ref": "Numbers 36:13",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "revia",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "c86b1974f2a1b5855809b5fe49e07034d6bc08cdf79e2508fa01172252dddcd1"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 7,
+      "ref": "Numbers 36:13",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "revia",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "6606e3f33ac3a3f25cb2d04aaf7b5c66d0ea4d82eed7c2fe2ea5f47873026771"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 8,
+      "ref": "Deuteronomy 31:17",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "azla",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "revia",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "9e4bcdf4f89a1a8b24c355c58e436b0417d56cc25712c50076d2d2014e6708e9"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 8,
+      "ref": "Deuteronomy 31:17",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "azla",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "revia",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "633e01566aa3fb04d4a532f2fd895635df08ccd3c4d301eae0762cde919bcb6a"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 9,
+      "ref": "Deuteronomy 14:29",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "pazer",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "c660398113c41922c8f91c9e6233eb41e917c393ca3119f48625d9b6d5851119"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 9,
+      "ref": "Deuteronomy 14:29",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "pazer",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "7b47b67467efd14808109bb3b3cd69bb76cfeb3184992e5eb038367e7ca87fd3"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 10,
+      "ref": "Numbers 32:1",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "revia",
+        "azla",
+        "tevir",
+        "etnachta",
+        "azla",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "98484011955589bb2ed3079b0e1ae33ff1ba9eab3f7dd34bab73f66a67c856c1"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 10,
+      "ref": "Numbers 32:1",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "revia",
+        "azla",
+        "tevir",
+        "etnachta",
+        "azla",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "b4ad5c98b6856b70703cf3a468566dc6a23dfffe87649a80b48a934ce0487987"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 11,
+      "ref": "Exodus 36:7",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "0ee4a2b10d671235925fca14342a13a3fb784c228184bd77c61f3768fbaf837d"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 11,
+      "ref": "Exodus 36:7",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "cbb4864d676e0211683df7a8ed7ab9082634e18af7c30d4dd12b1947abefccfe"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 12,
+      "ref": "Deuteronomy 3:20",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "segol",
+        "zakef",
+        "zakef-gadol",
+        "tevir",
+        "etnachta",
+        "revia",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "fcb29935747497c376d2b25b59fb3464b59280360f74749063ae6e6276db8818"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 12,
+      "ref": "Deuteronomy 3:20",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "segol",
+        "zakef",
+        "zakef-gadol",
+        "tevir",
+        "etnachta",
+        "revia",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "f47b59fedbc0b42beba4c229fbaae71b3df78ccbdb58aac22d7d86e76da22085"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 13,
+      "ref": "Genesis 7:2",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "revia",
+        "tevir",
+        "etnachta",
+        "pazer",
+        "pazer",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "75e654edc357d7ea471d75ad09c868f93978ca23c509c802cd2a2f7c628e7845"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 13,
+      "ref": "Genesis 7:2",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "revia",
+        "tevir",
+        "etnachta",
+        "pazer",
+        "pazer",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "c8ab293c314f8d5c62ce639557451f188aa2d835254994443f64ef739c4d2522"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 14,
+      "ref": "Deuteronomy 2:36",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "ecfe0db5d5af09d757e62956b2097790389eea5123610e1d946d4e5d3f0b1e52"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 14,
+      "ref": "Deuteronomy 2:36",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "dddc5b092f2172f5d457834d95931207c787e51c52b03efa163bb047b7839b97"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 15,
+      "ref": "Leviticus 6:11",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "1fe1fcf739f89b907e57c36045e39291bfca8e0167e3dd51a28dfe5c9d063779"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 15,
+      "ref": "Leviticus 6:11",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "67ebac3f2f773971ae5c9049b2cd0f43d031fece161b44f78727c840257c52b0"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 16,
+      "ref": "Exodus 29:1",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "tevir",
+        "etnachta",
+        "pazer",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "7a6d1a909041cbe1c0d0092af7e7ea4df6ce1491f0ab017d4b2e50dc6a8fb9a3"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 16,
+      "ref": "Exodus 29:1",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "tevir",
+        "etnachta",
+        "pazer",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "417ff12d266e939537a736d9d73569a18ffd44c67a307e9ca4f4f8705e33e91e"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 17,
+      "ref": "Exodus 35:29",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "segol",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "0c8e1bb658383bead4f5627f532ad61cfe09f7047d25277ef8017cb64141fc5c"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 17,
+      "ref": "Exodus 35:29",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "segol",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "f4a3ad5b75e5394c307856b3b17c31dd26240b8a3833fc1123c944cd9d64af23"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 18,
+      "ref": "Exodus 35:35",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "revia",
+        "revia",
+        "segol",
+        "azla",
+        "revia",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "7f304c6ced3b4198cdbec9e2b9286b21cd291e00a54565b5738088d4a65fc056"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 18,
+      "ref": "Exodus 35:35",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "revia",
+        "revia",
+        "segol",
+        "azla",
+        "revia",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "53f82364f714310dece3df96c2bcc91eac5cddd8449d79e59fe8c0cc8bdc478c"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 19,
+      "ref": "Leviticus 27:11",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "pazer",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "7c7056074b844117a9586ba7a57a82af0d77406b78b00bb85ca281e1abf54958"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 19,
+      "ref": "Leviticus 27:11",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "pazer",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "0512d943964fa60b28f68f9f7bee736c8c0a1790b4c353273f55f648aefb57be"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 20,
+      "ref": "Genesis 9:2",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "telisha-ketana",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "c098929d3bcddec125ca8282f0e51003437c6f2eb35981cbf7454ab066adb5e6"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 20,
+      "ref": "Genesis 9:2",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "telisha-ketana",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "59c09bba3b5d5a79ca3c918d38348e8df513635181c176c88bcfc31cb73feba9"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 21,
+      "ref": "Exodus 30:12",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "segol",
+        "azla",
+        "tevir",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "e98288262c62f3b38eac5398342c338412767f2f9d6bd661121f17224d643e9c"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 21,
+      "ref": "Exodus 30:12",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "segol",
+        "azla",
+        "tevir",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "d68464a7739844ce46c22a5d728a4307d882a0d8eac376595d64ee1b5748e2c1"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 22,
+      "ref": "Exodus 7:20",
+      "field": "he",
+      "final": false,
+      "families": [
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "88704eedb9cc3e701245847f4be1e89510674a52f0bf54b09af40b5d9c8951d5"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 22,
+      "ref": "Exodus 7:20",
+      "field": "he",
+      "final": true,
+      "families": [
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "5558fd2748f76cdff72805f412735fb702e8622acf19ea5714fe99e52c2261f5"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 23,
+      "ref": "Leviticus 10:1",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "zakef",
+        "etnachta",
+        "azla",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "945f1bc861d449506d93ef0ffe7b67be8753a0a4a219f4b5ebb3c823b444257f"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 23,
+      "ref": "Leviticus 10:1",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "zakef",
+        "etnachta",
+        "azla",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "c24513c4cfa169e78cd887e60f36f06432c40da90fc22409281364a1864c7f01"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 24,
+      "ref": "Genesis 41:22",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "revia",
+        "revia",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "663bfab0f8ce8f2f3cdb5a25ed5d06edf17c688d7570bdd707027967da8bc594"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 24,
+      "ref": "Genesis 41:22",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "revia",
+        "revia",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "83f6bf2fa2374eafad4ff0b6ca69974707c671beee8523309102d2b51b6f17bc"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 25,
+      "ref": "Genesis 50:26",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "2d67905295b3ec10b97a8bfc0bde94982553fd2fb95594040d5b8cd67cc5f8da"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 25,
+      "ref": "Genesis 50:26",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "35c9cb45f74e240b3cf946411d0342bce4a922e3bf294b589330a06b744a2f1d"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 26,
+      "ref": "Leviticus 27:34",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "abd596616254607178b9aa5b540431985086cf5954f4aa483be5141bc24c60e3"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 26,
+      "ref": "Leviticus 27:34",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "0f39df2385fa3ec3ee0532ff50172424d60d5adf49f3afcde5848474a16937bb"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 27,
+      "ref": "Genesis 23:15",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "telisha-ketana",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "e5113ecb1207393f15ae2364945191f9be1e54a07ef532c92ed36f8be80df29c"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 27,
+      "ref": "Genesis 23:15",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "telisha-ketana",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "e8c4d7a6b2da469e0a089dbef81082f6d13fa33298e4d07164d240c2c8ec7068"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 28,
+      "ref": "Genesis 7:21",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "revia",
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "c4f392aebb9a338b43499d252f7eca1397d4cdddec4581e29e8e3c6e83deb448"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 28,
+      "ref": "Genesis 7:21",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "revia",
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "f33257c206df46134f73b200824b268e786fe91e2d82527abd22b3b71f49ee3c"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 29,
+      "ref": "Genesis 24:12",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "revia",
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "59ff250f542d4df77058eee1e6d60f4069bac48c9de637d25dfa970fa6c839fd"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 29,
+      "ref": "Genesis 24:12",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "revia",
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "ab44a7d957a96cdac7f689dc59e8983078be58df02563e69298372cfcca7c32f"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 30,
+      "ref": "Numbers 16:13",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "92bcb74c4f5b5472048372c1b0b692431be6d962106b90c4ef4b389cf4fbcbd7"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 30,
+      "ref": "Numbers 16:13",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "a1d05e9626fcda991223112025d88e3b4421d6853290e68b9c46436af7023ff6"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 31,
+      "ref": "Genesis 27:25",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "a7115a9131b27d6a028bb1959891ba9f2842d35f99712798897d48cf966c4734"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 31,
+      "ref": "Genesis 27:25",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "2d9287a4d7adb6f90d80e11cb4b6acfe6f9fb08cd238be3a3a6463033c2a02cf"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 32,
+      "ref": "Genesis 27:33",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "pazer",
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "372d1d55f3a4315015920e641abca716b3be8be537878cb2e0d6b65fffa4d28a"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 32,
+      "ref": "Genesis 27:33",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "pazer",
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "1058f7c7fe99b7e97068a181b1ecf82ba0c01c7b6578e535d8afefd2f37da2e5"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 33,
+      "ref": "Genesis 6:15",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef-gadol",
+        "etnachta",
+        "revia",
+        "zakef",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "9c58d4406d56ef6e9c9e220d0e1488a1b4a77e8c31e3bedd74764c5574a81a28"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 33,
+      "ref": "Genesis 6:15",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef-gadol",
+        "etnachta",
+        "revia",
+        "zakef",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "ac124b443141f32fe7b462fdafeb0b4303f33b83ca3bb303f6c5305c880eea63"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 34,
+      "ref": "Exodus 3:18",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "azla",
+        "zakef",
+        "revia",
+        "azla",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "ed65b15cd3f669a60eb9edef631ae034b21fb62f16e46c71b8bbcf052d40fdf6"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 34,
+      "ref": "Exodus 3:18",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "azla",
+        "zakef",
+        "revia",
+        "azla",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "dd6ec999e6d21c96987ae0f8184641218d7402da436d312e55100473e1ac4211"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 35,
+      "ref": "Exodus 3:8",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "revia",
+        "revia",
+        "segol",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "5a1b3b552f46c968d799551321eebda2b0d24dd6e3c6443071a671668e0333e4"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 35,
+      "ref": "Exodus 3:8",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "revia",
+        "revia",
+        "segol",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "87d853d523e529ef2e4da06275b7c2d47c9f30fce5caab6244b131fc087af6cf"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 36,
+      "ref": "Exodus 40:38",
+      "field": "he",
+      "final": false,
+      "families": [
+        "telisha-ketana",
+        "zakef",
+        "zakef-gadol",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "0584585641c3aa658c066f60441cd4700ef674d7d9b06fe701e33dad1cca1c3b"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 36,
+      "ref": "Exodus 40:38",
+      "field": "he",
+      "final": true,
+      "families": [
+        "telisha-ketana",
+        "zakef",
+        "zakef-gadol",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "d2c07eb1931ce84c8091ed185c5e84f75ae25b314f44db13e39fb9f81317a85a"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 37,
+      "ref": "Numbers 22:20",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "revia",
+        "zakef",
+        "etnachta",
+        "revia",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "f73abb84daefa0a9f0138bbe7ef9e8ea13f5e95d5030f0905a868b8accac60c3"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 37,
+      "ref": "Numbers 22:20",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "revia",
+        "zakef",
+        "etnachta",
+        "revia",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "fc13fc4ed9afa1dfcee673d8543e08355913563f7872f30bff2d107e5b109d4d"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 38,
+      "ref": "Deuteronomy 6:10",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "revia",
+        "revia",
+        "azla",
+        "tevir",
+        "tevir",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "a93915bfe49bdf82d216d8728fea3ff63243e9187807876643d22ebb64988c46"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 38,
+      "ref": "Deuteronomy 6:10",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "revia",
+        "revia",
+        "azla",
+        "tevir",
+        "tevir",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "9ae727015adcf85f443a6bfc0a9a09790d7ce54d7985a1bcc16cddedce9d3e06"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 39,
+      "ref": "Numbers 29:18",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "pazer",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "a7765ccfba8f3ed08bc8785591ae9ebc71be0a8c037b7d67ae0caa03b044afa5"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 39,
+      "ref": "Numbers 29:18",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "pazer",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "3031df5555961b5248489a041b2b063c6f1d8c52fb7fa2fcc33878b62399fb9a"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 40,
+      "ref": "Numbers 18:9",
+      "field": "he",
+      "final": false,
+      "families": [
+        "tevir",
+        "etnachta",
+        "pazer",
+        "azla",
+        "revia",
+        "zakef",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "5c477b44f213e33873831e00c4fa593262fb2326c54da6c9d66a405d98c5e89e"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 40,
+      "ref": "Numbers 18:9",
+      "field": "he",
+      "final": true,
+      "families": [
+        "tevir",
+        "etnachta",
+        "pazer",
+        "azla",
+        "revia",
+        "zakef",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "0887a727e1969e99ff0fcf1e2cebf798344c2621acd07bb34b6bfccd7ed6e97d"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 41,
+      "ref": "Genesis 10:32",
+      "field": "he",
+      "final": false,
+      "families": [
+        "tevir",
+        "etnachta",
+        "azla",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "dbdee012339bf5b1ef6b49b3592001785caa877e3c8707b62184e479f46316e6"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 41,
+      "ref": "Genesis 10:32",
+      "field": "he",
+      "final": true,
+      "families": [
+        "tevir",
+        "etnachta",
+        "azla",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "6644567fd1bac1e5b15604746fef11e87dd4213095f07a608607ee96afd29496"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 42,
+      "ref": "Numbers 19:4",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "tevir",
+        "etnachta",
+        "azla",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "668e2b7115bfa932e91cf83bc633d1d6a04d105769a2a122296e0353e38811f8"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 42,
+      "ref": "Numbers 19:4",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "tevir",
+        "etnachta",
+        "azla",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "5ecf7f62c3209a3898e858bed140ab793860b66422e9fb265480d2bdaaf046a2"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 43,
+      "ref": "Deuteronomy 5:22",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "revia",
+        "revia",
+        "pazer",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "beb3fd26e376c5dad15d4e61d2c414872b2489e2464caf9767b2d7bb41f6259b"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 43,
+      "ref": "Deuteronomy 5:22",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "revia",
+        "revia",
+        "pazer",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "f99f1e3f0759345dcabb40b6b74ffff4307292ba70b5d34b33b1eda9d8370662"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 44,
+      "ref": "Exodus 11:1",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "revia",
+        "zakef",
+        "zakef-gadol",
+        "etnachta",
+        "zakef",
+        "zakef-gadol",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "5ebfd88f476a5105eda535ce93867a9c6dc7f03b74e2b7f6f104769004ded3da"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 44,
+      "ref": "Exodus 11:1",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "revia",
+        "zakef",
+        "zakef-gadol",
+        "etnachta",
+        "zakef",
+        "zakef-gadol",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "edcb1df63207b64941d5cf3c40d584aee9e48f69e2494249e07c0e570954d339"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 45,
+      "ref": "Exodus 3:19",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "pazer",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "d4bcab43c32b50685d18c142bdf4ea4e6abad1b62035de1b29a22821e4984dec"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 45,
+      "ref": "Exodus 3:19",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "pazer",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "8867651fa1d1e8c57d69801a84f74ee8d106f0e170c692cb10e6a24bbca3c741"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 46,
+      "ref": "Deuteronomy 31:16",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "revia",
+        "revia",
+        "zakef",
+        "zakef-gadol",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "3c1a12694684d924f740b17b04f264d43ee1b135be3b3f3c3e1b7770f1faa565"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 46,
+      "ref": "Deuteronomy 31:16",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "revia",
+        "revia",
+        "zakef",
+        "zakef-gadol",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "b24bc79dfb0c9afd4bbcccd30e0fea92f85405e7ad98d3a15acda98bbb29b68a"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 47,
+      "ref": "Genesis 3:11",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef-gadol",
+        "zakef",
+        "etnachta",
+        "revia",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "7f1e5e5e2f4b4f68777f952a172524d33b95d654d97257196dc332ab24c54637"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 47,
+      "ref": "Genesis 3:11",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef-gadol",
+        "zakef",
+        "etnachta",
+        "revia",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "de0a5a5d64c1709e0137a6b3dfa2d08102b8dc1e0157e09afde2fbe9b9db715d"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 48,
+      "ref": "Genesis 5:29",
+      "field": "he",
+      "final": false,
+      "families": [
+        "tevir",
+        "etnachta",
+        "azla",
+        "zakef",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "fa3f0da80354cf34ae33b161d96c80db8b99d1743604ffcb9111266fc5d96e60"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 48,
+      "ref": "Genesis 5:29",
+      "field": "he",
+      "final": true,
+      "families": [
+        "tevir",
+        "etnachta",
+        "azla",
+        "zakef",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "5060ef39160e0e9768135bd5bd477acd9abf8cafa6898e4ec2d12a9f49a63f66"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 49,
+      "ref": "Exodus 16:6",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "zakef-gadol",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "3b78bba415e44917ce7a6f79d335005828dd60b8106d21f3e116770a856dfacf"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 49,
+      "ref": "Exodus 16:6",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "zakef-gadol",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "c2e6d7ce766c941e27bf386c69084b194198a3299c5473469cd3f60733048187"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 50,
+      "ref": "Genesis 42:16",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "e4aba4131006ff380b651c8b6a089de55ea6961c1ac60bc3d534c3afcc1ff71d"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 50,
+      "ref": "Genesis 42:16",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "48240746dee34eafef445f70e3266f1f0fd3981413d4bf54bcf631564515c3dd"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 51,
+      "ref": "Exodus 13:3",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "revia",
+        "azla",
+        "zakef",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "7d0c612a0630a064ec118f8c9a201c06884c0e7327f167b4f7e69a0065294bae"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 51,
+      "ref": "Exodus 13:3",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "revia",
+        "azla",
+        "zakef",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "462be3bb41be3e8915764ff3213be8489587c9a37358d25986391dbf385a0a32"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 52,
+      "ref": "Exodus 35:20",
+      "field": "he",
+      "final": false,
+      "families": [
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "8eac0168fabede565b33efaaf310aca4db2fbd1c91100788e360508e62487cae"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 52,
+      "ref": "Exodus 35:20",
+      "field": "he",
+      "final": true,
+      "families": [
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "2f3af949163f16f9cbb24efb332cfc40e04ef20b09692f0f0bd1f4d08baf5980"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 53,
+      "ref": "Exodus 16:17",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "b7acaa41dccb39609e5b5c470ff36d0f2e158dce78dbfde6ac31a0e7b086deb9"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 53,
+      "ref": "Exodus 16:17",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "42790b6ae0174e2b4dbcbcb637f438e1369d800b14bfedc9c47f7f3c434da625"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 54,
+      "ref": "Genesis 13:1",
+      "field": "he",
+      "final": false,
+      "families": [
+        "telisha-ketana",
+        "azla",
+        "pazer",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "a9cae11f7a5ce0355a7765804a114ce41adfd96409dae973ee1393827dc54b9d"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 54,
+      "ref": "Genesis 13:1",
+      "field": "he",
+      "final": true,
+      "families": [
+        "telisha-ketana",
+        "azla",
+        "pazer",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "8d8bff1b81d346e9cf23c34a48aff25e414976f07c6af71347f73b3697ffa50d"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 55,
+      "ref": "Exodus 7:7",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "e9476821a66979053480641a9037b82d1ba8ddd1435b85e73394be6eecc2186b"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 55,
+      "ref": "Exodus 7:7",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "b92e693cc395f056749f5be2146672004f1cb8387cdd903e7ba0bceb47432cb2"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 56,
+      "ref": "Genesis 22:8",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "azla",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "1fce14bc8f3b93e0951d1a9839d011156e6b2d9c7b6ee2bea7e98312c5c3efc8"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 56,
+      "ref": "Genesis 22:8",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "azla",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "b7e737c4737dbea106d06557ed191de0f0cd5842cbb4c25e0644bfcce48746d9"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 57,
+      "ref": "Leviticus 15:18",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef-gadol",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "498f2d9a807282d101069199a518ed2190fa7309062a9cc009241afa5c2871fe"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 57,
+      "ref": "Leviticus 15:18",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef-gadol",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "4d326c7a7c14bc7a7b7499e87e8a4f40ab6f5ffffc22ecd56153cd9a7bd7930c"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 58,
+      "ref": "Genesis 28:16",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "zakef-gadol",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "cefa4c2712a5d45dbb28fd1c667e86e0b4481bfc01e804b495ef5e23916175bc"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 58,
+      "ref": "Genesis 28:16",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "zakef-gadol",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "bfd7e2665dbdf82cf16c1112c04feb50450c164c7632f8313cb96d7c9a9cc86e"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 59,
+      "ref": "Genesis 41:30",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "azla",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "66a2270cfaf829ad772ed23ea24d92fc0d9362cd240d50cade1379e2dd7365cc"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 59,
+      "ref": "Genesis 41:30",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "azla",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "68f88904da2c1acdf87fd4ba50a5857f73dfb0b6c5482bf4cf20d479ec6b5ccd"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 60,
+      "ref": "Exodus 4:31",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "pazer",
+        "azla",
+        "revia",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "02b253c0a0238090bf60144f33382508d7b80bdc419b0c9214a648d74a0716d2"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 60,
+      "ref": "Exodus 4:31",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "pazer",
+        "azla",
+        "revia",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "1b5c39d2bf845f4415b6298a26c71e182d79dcaa7a188cd0c451ca32774eeac8"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 61,
+      "ref": "Exodus 40:19",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "azla",
+        "tevir",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "90de09d5ca461f9d42c89170369a8a7d7b6c8e9be86926cfdae4cf62d093d0a4"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 61,
+      "ref": "Exodus 40:19",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "azla",
+        "tevir",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "235a7831701b1be815de5a7917a45ace6aa1180cae9ea962ed6f34da5a8421ff"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 62,
+      "ref": "Leviticus 11:35",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "segol",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "7320a70d839e905d075c3deab2a59bf00f89ac6fe8911f2937f9818442f4cd05"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 62,
+      "ref": "Leviticus 11:35",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "segol",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "24d960a508a1ba579acacb56066996b3610d2c355a121b7ea7dee3ab34ae21b8"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 63,
+      "ref": "Numbers 14:29",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "azla",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "0cee36f9523b25802dcb8ddf3ef425c1b1739b76155fdd7c725cf7f286d0fe24"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 63,
+      "ref": "Numbers 14:29",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "azla",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "ec3179337aeb7f1d5c77056037bb2614c508fbd278a4001f5a8c41066d7a4067"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 64,
+      "ref": "Genesis 38:12",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "revia",
+        "azla",
+        "revia",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "b60c8d193268fcb9a815eb629698f75ec6cbe715b24ea28fab71eb85c7d787e2"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 64,
+      "ref": "Genesis 38:12",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "revia",
+        "azla",
+        "revia",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "aea83a5922a427d0b9b0ddc754669266b64ff80d6d2e89b6611f79c5f2e70d28"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 65,
+      "ref": "Genesis 43:34",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "segol",
+        "azla",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "2decd722cafe065a06d3ebbfe08e7c92ded5d68e154923c0be39d46489d3f9d7"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 65,
+      "ref": "Genesis 43:34",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "segol",
+        "azla",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "3e073ed86f8ca49668cb56958b7646bf9144142142bd5f42842c1ef5aeb780f7"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 66,
+      "ref": "Genesis 44:1",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "segol",
+        "azla",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "49620675b67fe1589f02dad688a404f13a6770961b21cbdcc3ae99292bd975c8"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 66,
+      "ref": "Genesis 44:1",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "segol",
+        "azla",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "2519fbfbb25168a6aab5ba22f13105a158e5554ac9a353ebe8154b2c01ea4d48"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 67,
+      "ref": "Exodus 38:30",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "338903befb34b76f83eed778dbfc3bc158a63fe5e83c0c861eeb11c0c49320da"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 67,
+      "ref": "Exodus 38:30",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "6923e685b05d688ba5a7b3e48cba4566f1a1e66ee9f9248dbfe0722f13543287"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 68,
+      "ref": "Leviticus 26:26",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "pazer",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "9ba83183244b089a7949b71767f6157ee3e857c24884b7888c135eb88c5fa5a2"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 68,
+      "ref": "Leviticus 26:26",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "pazer",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "ceb5bf3d1f3cf99b097bbc73908aa8029c757ef2d2f1c6ffbbf078afd1d36541"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 69,
+      "ref": "Numbers 14:35",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "revia",
+        "revia",
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "c38b0784b49cf9dcf13ca81037d91522e2410d01a60a980d482f6c59e47c9c39"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 69,
+      "ref": "Numbers 14:35",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "revia",
+        "revia",
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "64ee823d589979d987978e45ca3231b8da6c2dea0161ff72a32fdf5ffaaadf88"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 70,
+      "ref": "Leviticus 14:48",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "revia",
+        "pazer",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "c6a3241bd40decf32ac433310896d40201ab3541a1188bff49d3817723109934"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 70,
+      "ref": "Leviticus 14:48",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "revia",
+        "pazer",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "a9ee7551c5170e20e0bbb634970afd53e29bc13913337ce013fb6023d1173570"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 71,
+      "ref": "Numbers 11:21",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "zakef",
+        "zakef-gadol",
+        "etnachta",
+        "revia",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "2a9ffa6506fd764bdec3feec25e6bbcfe60a2ac6fefb78e813cd1ee7a2c24f3f"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 71,
+      "ref": "Numbers 11:21",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "zakef",
+        "zakef-gadol",
+        "etnachta",
+        "revia",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "72f3fec7f465c6618ed53f6347f5c35181dddd3f14d77c952f199dfee54ca96c"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 72,
+      "ref": "Genesis 47:15",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "segol",
+        "telisha-ketana",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "6366a64f63436c624fb3a609ae5dd554902fc6f53f86d59f06bd7162ca06d652"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 72,
+      "ref": "Genesis 47:15",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "segol",
+        "telisha-ketana",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "eae003dcc93f6455127031cb00f37d8bf6fe6f3d93b6b2d29b72e9c8d4302a26"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 73,
+      "ref": "Leviticus 7:21",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "revia",
+        "revia",
+        "revia",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "8e8448333177e94e12d8f91350706ace03a6388d446e122056d3996e7f788cd5"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 73,
+      "ref": "Leviticus 7:21",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "revia",
+        "revia",
+        "revia",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "d31a1bdaf0779bbb3dce2023698f619bfc72f849398c6cfe6992ec4a902a9826"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 74,
+      "ref": "Genesis 19:16",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "azla",
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "0f6c8691e1b9dce69d655454c8b239ae2cd524c1c48a9511b2d059bd35b9c1dc"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 74,
+      "ref": "Genesis 19:16",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "azla",
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "e8c129e253eb53a2479907e64d261e60b7ab936d55b423f872e4d2daba9eb0b7"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 75,
+      "ref": "Genesis 39:8",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "185f69361f995b5143b226bf3cd81a111486e64d2c7393893ca9309177d5b0b9"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 75,
+      "ref": "Genesis 39:8",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "febb828cf7fde4a54ec951cc31bad067a09f044cd3c56ca3edc5655f3d85cad3"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 76,
+      "ref": "Leviticus 8:23",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "4773ac0a78d57aecf4c1baa4ee56064e9135ffbe581e30ab63561148c504f373"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 76,
+      "ref": "Leviticus 8:23",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "9dc84d5e229312868bf9f25601543a879e83fd5282a3c6e877d29429912d0688"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 77,
+      "ref": "Exodus 5:15",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "f2bf6ee5f049bc1dbe21c1c756cbde2bc7bddf08dc34c536529bdede22025537"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 77,
+      "ref": "Exodus 5:15",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "48e3238de55a28ee8aa430a0cd13fa101d8843575cfde565c2bbe01e9fa5fe7b"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 78,
+      "ref": "Numbers 14:3",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "azla",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "d4a0baba6f6afef81db4fa06b496fcf7051c63c78133d0b305b6419d83cadb90"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 78,
+      "ref": "Numbers 14:3",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "azla",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "b4ba5226f7247c032eefb459e910d22cd2775056889ca8fcfec06019ceadd304"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 79,
+      "ref": "Numbers 32:42",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "6f7d135f762ba67253479a30f3adcf13371643938bd5e1b01b102a493aa3f1fa"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 79,
+      "ref": "Numbers 32:42",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "08349de0c022ad7f842c08aecb9d75c79289bb0a3e0e7e1aee6267c4b2187475"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 80,
+      "ref": "Deuteronomy 34:12",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "d21fdb14a64349eda51d3fb03d3c5c2211aa0bb407c7f274172f25cc43eb89c4"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 80,
+      "ref": "Deuteronomy 34:12",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "1e56764f8a78bd43ce73af2960027ddf8fc563162566fb8c45bb754c1f4d7542"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 81,
+      "ref": "Exodus 14:4",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "d880299638102a9a8f29b0ac920be7135f4bce2397b9f63d69ca8e11b612a669"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 81,
+      "ref": "Exodus 14:4",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "c1ec92c9c165de7770a95a07f98c3aed6ea695ae82a5c7a0af8a4aed12a956ef"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 82,
+      "ref": "Genesis 1:5",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "ea7e8d339a12d70e7c92870e831729752fea8b2e2cb01a66d6c1ba723991582d"
+    },
+    {
+      "fixture": "calibration-torah.json",
+      "index": 82,
+      "ref": "Genesis 1:5",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "904f0c55a5e6220b9a22a89311a2ee84a2763b1a4d64bfe84a17e42900ca9e18"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 0,
+      "ref": "II Kings 4:1",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "zakef",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "revia",
+        "azla",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "7e7a9bad2c98a57573d17eb4f3609292d1bd353f39475203afb237b1386aa994"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 0,
+      "ref": "II Kings 4:1",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "zakef",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "revia",
+        "azla",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "bc7afe42e845b457af10d2c3dd73ec2b8d294ed4596bd1a455df6845f033c15a"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 0,
+      "ref": "II Kings 4:1",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "zakef",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "revia",
+        "azla",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "7e7a9bad2c98a57573d17eb4f3609292d1bd353f39475203afb237b1386aa994"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 0,
+      "ref": "II Kings 4:1",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "zakef",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "revia",
+        "azla",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "bc7afe42e845b457af10d2c3dd73ec2b8d294ed4596bd1a455df6845f033c15a"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 1,
+      "ref": "II Kings 4:2",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "revia",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "3baf85c0ee1b850222592aa597486cf541f48a1ca519b09c075520544c29ba57"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 1,
+      "ref": "II Kings 4:2",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "revia",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "55e0b484739ac950c4b8f390146476f203039d95b76a3bb18584bcfc2ec65f9a"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 1,
+      "ref": "II Kings 4:2",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "revia",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "3baf85c0ee1b850222592aa597486cf541f48a1ca519b09c075520544c29ba57"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 1,
+      "ref": "II Kings 4:2",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "revia",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "55e0b484739ac950c4b8f390146476f203039d95b76a3bb18584bcfc2ec65f9a"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 2,
+      "ref": "II Kings 4:3",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "d21d82478e722e1d7a9b1719cdda29b5b1f6bee5f6f6e6fd2e533081e3faab6f"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 2,
+      "ref": "II Kings 4:3",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "d8f9908dec6290546ccb2d31206a05efb6d266b69af6a6a19ffbcfe806e9ddc9"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 2,
+      "ref": "II Kings 4:3",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "d21d82478e722e1d7a9b1719cdda29b5b1f6bee5f6f6e6fd2e533081e3faab6f"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 2,
+      "ref": "II Kings 4:3",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "d8f9908dec6290546ccb2d31206a05efb6d266b69af6a6a19ffbcfe806e9ddc9"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 3,
+      "ref": "Isaiah 40:2",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "bc90b28068ab964fead08031c049a8654609a4d8a6e80afd9870498bc0fc5067"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 3,
+      "ref": "Isaiah 40:2",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "a5f97455be58157481a4c149ad8a8f086590abf66e148426d6e1ab326d2d2929"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 3,
+      "ref": "Isaiah 40:2",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "azla",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "04afedd703124aa8cd416fda2d89e5a65b8f5d4999d30f843bdc8d7b74b5ace1"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 3,
+      "ref": "Isaiah 40:2",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "azla",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "035f1d2f2725b7e71d24a211395cde26ee02f3a83807850f1428bad585b0f8e1"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 4,
+      "ref": "Isaiah 40:6",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "5092db07a150c1a2f44238f97b449c488c3b6cc2702094835a4d6f9b4d9bedac"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 4,
+      "ref": "Isaiah 40:6",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "399bdfa0f5af654e5206729e932fe3448e909d25230b2e203c3f8f609fbfb21c"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 4,
+      "ref": "Isaiah 40:6",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "5092db07a150c1a2f44238f97b449c488c3b6cc2702094835a4d6f9b4d9bedac"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 4,
+      "ref": "Isaiah 40:6",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "399bdfa0f5af654e5206729e932fe3448e909d25230b2e203c3f8f609fbfb21c"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 5,
+      "ref": "Isaiah 40:9",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "6a7278c733ced70055cd172ccb48c684a418cdbfed7ab2124e6b4a5447859a94"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 5,
+      "ref": "Isaiah 40:9",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "13a626dd9052454b6108914af5319d4f9e93c7c28e91e05fc77ba51cb2671f4e"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 5,
+      "ref": "Isaiah 40:9",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "6a7278c733ced70055cd172ccb48c684a418cdbfed7ab2124e6b4a5447859a94"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 5,
+      "ref": "Isaiah 40:9",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "13a626dd9052454b6108914af5319d4f9e93c7c28e91e05fc77ba51cb2671f4e"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 6,
+      "ref": "Ezekiel 37:19",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "segol",
+        "telisha-ketana",
+        "azla",
+        "zakef",
+        "etnachta",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "835e5a4e6d24ab3706b6ea0a53a6630db756fd8c738e7743d4b38e59823e9df1"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 6,
+      "ref": "Ezekiel 37:19",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "segol",
+        "telisha-ketana",
+        "azla",
+        "zakef",
+        "etnachta",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "3eb896502da52ce29f92095bfa75a399e022cad2430b9921d5bab6fb57f22084"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 6,
+      "ref": "Ezekiel 37:19",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "revia",
+        "segol",
+        "telisha-ketana",
+        "azla",
+        "zakef",
+        "etnachta",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "835e5a4e6d24ab3706b6ea0a53a6630db756fd8c738e7743d4b38e59823e9df1"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 6,
+      "ref": "Ezekiel 37:19",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "revia",
+        "segol",
+        "telisha-ketana",
+        "azla",
+        "zakef",
+        "etnachta",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "3eb896502da52ce29f92095bfa75a399e022cad2430b9921d5bab6fb57f22084"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 7,
+      "ref": "Ezekiel 37:20",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "6836928609f8dc88f09d4377f477644b496676a369bbeeb3855609666e849a28"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 7,
+      "ref": "Ezekiel 37:20",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "a275f1518d43c84876c4404a9e21a7318dcec4c2d0822de098b988dc51e43883"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 7,
+      "ref": "Ezekiel 37:20",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "azla",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "6836928609f8dc88f09d4377f477644b496676a369bbeeb3855609666e849a28"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 7,
+      "ref": "Ezekiel 37:20",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "azla",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "a275f1518d43c84876c4404a9e21a7318dcec4c2d0822de098b988dc51e43883"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 8,
+      "ref": "Ezekiel 37:21",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "segol",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "6fbddbc471a07066462b9a00a2e5f8de230351fa84fea27b579b08821b62e6d3"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 8,
+      "ref": "Ezekiel 37:21",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "segol",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "e756cbee919ff62d8bfe5778974eb327e526c66bd293faa77c0046fec303f50d"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 8,
+      "ref": "Ezekiel 37:21",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "revia",
+        "segol",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "6fbddbc471a07066462b9a00a2e5f8de230351fa84fea27b579b08821b62e6d3"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 8,
+      "ref": "Ezekiel 37:21",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "revia",
+        "segol",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "e756cbee919ff62d8bfe5778974eb327e526c66bd293faa77c0046fec303f50d"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 9,
+      "ref": "Amos 1:2",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "daa3610512dbdfba93e51a6c06d5d5e36afe0f13f952d136c3afd21b81e87ad2"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 9,
+      "ref": "Amos 1:2",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "dd2688bd758d8d3e4b4ed2f83d543cdd4838af995dd55985d02d0aa89ecd5066"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 9,
+      "ref": "Amos 1:2",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "segol",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "2acaf2ed4e6580f8ff922021347e083b5d868262c6cf62f655a0382beaa85cc6"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 9,
+      "ref": "Amos 1:2",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "segol",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "73f306fff6add39f4caa5d754395ce82533af840f22dc279d614b9604655e8e0"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 10,
+      "ref": "Ruth 3:12",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "bbfef86d3fb8f6d55215ac4b325e6492a3e4bb72460fe11140d7d538ae2f249c"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 10,
+      "ref": "Ruth 3:12",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "34a3d3f67fd368f78f7d4ded8c9110f29dcfba05a6c0577438d47649728fe7fd"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 10,
+      "ref": "Ruth 3:12",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "bbfef86d3fb8f6d55215ac4b325e6492a3e4bb72460fe11140d7d538ae2f249c"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 10,
+      "ref": "Ruth 3:12",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "34a3d3f67fd368f78f7d4ded8c9110f29dcfba05a6c0577438d47649728fe7fd"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 11,
+      "ref": "II Samuel 8:3",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "74b7824a07d7e9767954bd754b1aee439fcc57ec0ef3f806830ca14e03a0153b"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 11,
+      "ref": "II Samuel 8:3",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "d4db8b7111d2104a16a21e9e07f81d029ae65f18016b07e17be07dd180eb3cdb"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 11,
+      "ref": "II Samuel 8:3",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "74b7824a07d7e9767954bd754b1aee439fcc57ec0ef3f806830ca14e03a0153b"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 11,
+      "ref": "II Samuel 8:3",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "d4db8b7111d2104a16a21e9e07f81d029ae65f18016b07e17be07dd180eb3cdb"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 12,
+      "ref": "Jeremiah 31:38",
+      "field": "he",
+      "final": false,
+      "families": [
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "02c848ba7f1520ce2f2397f59db20c2c81865c1993d693968055503b66b5b8c1"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 12,
+      "ref": "Jeremiah 31:38",
+      "field": "he",
+      "final": true,
+      "families": [
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "43a3e4fa786a76d9edebc9a613e98e26c63895077307b85335f5cd1b47670a3d"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 12,
+      "ref": "Jeremiah 31:38",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "02c848ba7f1520ce2f2397f59db20c2c81865c1993d693968055503b66b5b8c1"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 12,
+      "ref": "Jeremiah 31:38",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "tevir",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "43a3e4fa786a76d9edebc9a613e98e26c63895077307b85335f5cd1b47670a3d"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 13,
+      "ref": "II Samuel 16:23",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "8fbacc9b1a1d949c3e7199ad32a0e2870b76416fbf70175f59789363badcb68e"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 13,
+      "ref": "II Samuel 16:23",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "6a5132791f16eaf09aac10a400d89ca1ece8bbcc1d778c5c4d24cd2dd12462f0"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 13,
+      "ref": "II Samuel 16:23",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "38921274c876c30088dd0d01bb60921aa904a0ce77441e41de8ca66c60f29e0e"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 13,
+      "ref": "II Samuel 16:23",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "ecf4a5d95d3851a7f4eb94da2a4561cb7b8f73752adce8c5d632e81dbc9d0451"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 14,
+      "ref": "II Kings 23:3",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "revia",
+        "azla",
+        "azla",
+        "zakef",
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "2343356d44f229a2d130d414c65005f4d62f60b0de593257cfadeb2cb6240bfc"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 14,
+      "ref": "II Kings 23:3",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "revia",
+        "azla",
+        "azla",
+        "zakef",
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "5343b81ce761395826fc37366cc978727e9083a69be23d4f89514e16e55a57eb"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 14,
+      "ref": "II Kings 23:3",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "revia",
+        "azla",
+        "azla",
+        "zakef",
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "2343356d44f229a2d130d414c65005f4d62f60b0de593257cfadeb2cb6240bfc"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 14,
+      "ref": "II Kings 23:3",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "revia",
+        "azla",
+        "azla",
+        "zakef",
+        "revia",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "5343b81ce761395826fc37366cc978727e9083a69be23d4f89514e16e55a57eb"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 15,
+      "ref": "II Kings 23:4",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "segol",
+        "zakef",
+        "revia",
+        "zakef",
+        "etnachta",
+        "azla",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "19dfa57345a644ba4ca8aeebb01b92b18e74bddf6aa83ea2586952c1ce7d6e62"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 15,
+      "ref": "II Kings 23:4",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "segol",
+        "zakef",
+        "revia",
+        "zakef",
+        "etnachta",
+        "azla",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "63b8b3d547a0a989d46a04defc4bea7bd4a1061499d08833d6a12f62e54b0637"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 15,
+      "ref": "II Kings 23:4",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "segol",
+        "zakef",
+        "revia",
+        "zakef",
+        "etnachta",
+        "azla",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "19dfa57345a644ba4ca8aeebb01b92b18e74bddf6aa83ea2586952c1ce7d6e62"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 15,
+      "ref": "II Kings 23:4",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "segol",
+        "zakef",
+        "revia",
+        "zakef",
+        "etnachta",
+        "azla",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "63b8b3d547a0a989d46a04defc4bea7bd4a1061499d08833d6a12f62e54b0637"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 16,
+      "ref": "II Kings 23:23",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "azla",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "5a0bcbd8ff8732013215bd69fe346f73073cfc67aa7c35381a82f67c083608c9"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 16,
+      "ref": "II Kings 23:23",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "azla",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "986fd04bbbb1c10fd8ec1c10c618d34b2c31c1b470c6fa74c2a20c2d479f0a98"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 16,
+      "ref": "II Kings 23:23",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "azla",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "5a0bcbd8ff8732013215bd69fe346f73073cfc67aa7c35381a82f67c083608c9"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 16,
+      "ref": "II Kings 23:23",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "azla",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "986fd04bbbb1c10fd8ec1c10c618d34b2c31c1b470c6fa74c2a20c2d479f0a98"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 17,
+      "ref": "Isaiah 41:16",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "dd352ca5ba48370c1bea163f20812e8e93954a39813516423eb32afe73072b92"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 17,
+      "ref": "Isaiah 41:16",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "d16f4d0046425a34a64569de286fe92278bda8b522af1b216d640e52a19b531c"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 17,
+      "ref": "Isaiah 41:16",
+      "field": "raw",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "80c53f2fe9be7a05f5d3a98e561ff7909dcd0c73ce5cc08f8a803d850b39ec87"
+    },
+    {
+      "fixture": "edge-cases.json",
+      "index": 17,
+      "ref": "Isaiah 41:16",
+      "field": "raw",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "3b29c5188da9b6471fbec21b4dfd414f307bab5ea6b0e084211d6feb9016c3d9"
+    },
+    {
+      "fixture": "week-min-hebrew.json",
+      "index": 0,
+      "ref": "I Samuel 20:18",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "zakef-gadol",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "80173e64026899fb2ced31e89344f69dfd908dc75f5041d737d0bcf57e298378"
+    },
+    {
+      "fixture": "week-min-hebrew.json",
+      "index": 0,
+      "ref": "I Samuel 20:18",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "zakef-gadol",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "b87bd3622aae89a59e8d3ff3b236c69f4b776370a45cd779a23ed48f00de6a90"
+    },
+    {
+      "fixture": "week-min-hebrew.json",
+      "index": 1,
+      "ref": "I Samuel 20:19",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "752823d7af192b24933d82ba4df993e8f151af3ebb15175f64d3e0917ca4ec9f"
+    },
+    {
+      "fixture": "week-min-hebrew.json",
+      "index": 1,
+      "ref": "I Samuel 20:19",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "52019ac5700d811b101ecdd96d4495788c84f1aa4c12b038aaf407b957bcc085"
+    },
+    {
+      "fixture": "week-min-hebrew.json",
+      "index": 2,
+      "ref": "I Samuel 20:20",
+      "field": "he",
+      "final": false,
+      "families": [
+        "azla",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "3d9b65699c70fad0d3567f04d215ed0061c374d698e34b08714ff9bbdf6c3b7c"
+    },
+    {
+      "fixture": "week-min-hebrew.json",
+      "index": 2,
+      "ref": "I Samuel 20:20",
+      "field": "he",
+      "final": true,
+      "families": [
+        "azla",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "3b05121918f24e3bbd87a55cf79a4c0dbf50bd81e4b3404c93d63b2af806124f"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 0,
+      "ref": "I Samuel 20:18",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "zakef-gadol",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "e32818fb3f8d870545327bc2576b549a0f6a21a76bfea472ecad4f817af6c974"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 0,
+      "ref": "I Samuel 20:18",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "zakef-gadol",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "1d156a5dce94926aa4c486c05d1076ba77267daf2a05fced412701f694a80240"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 1,
+      "ref": "I Samuel 20:19",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "a0b2f9b6fbcd37030e129588c886c594143570bf598fad0ccdfa3e1f0432ddaf"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 1,
+      "ref": "I Samuel 20:19",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "c3696d7e6ed90b58f3e840e56088f2b1cc8a2a8103a4b46de4b5799ac7be1c59"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 2,
+      "ref": "I Samuel 20:20",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef-gadol",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "479e83dd64a19cbf671bb6c11e8c44166468f709d3e22da422180cf438ad9a1a"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 2,
+      "ref": "I Samuel 20:20",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef-gadol",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "306a3355cd8aa15f6f32627be37ddb8be070a86d7908709f2a00bebd9797426b"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 3,
+      "ref": "I Samuel 20:21",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "revia",
+        "tevir",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "839bccce7c0569ff6b0e53acdd01e9a5a21b444a2925f142ccf12617711d15d3"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 3,
+      "ref": "I Samuel 20:21",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "revia",
+        "tevir",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "f289ca05e38b3b55d78897a3ab7f1219f03d63d9fc132f62b5c464d03ec5a74b"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 4,
+      "ref": "I Samuel 20:22",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "ef839118a3a7702472395b658c0bf5238be3465f3c4fd9f8ecbed9aca5479550"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 4,
+      "ref": "I Samuel 20:22",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef-gadol",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "9dad6cc38c17dab5586642b5c176d9e2f6bb91b8ea4c9fddd87cf9911f3224b5"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 5,
+      "ref": "I Samuel 20:23",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "478b1272d1d0eb18d13072e73de1bb4964919d96e6b66541063c2006db19c5fc"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 5,
+      "ref": "I Samuel 20:23",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "7a3eb54f02a060b03c53433f46c1acf37b09104f4a1b93e40c8eda77323d467d"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 6,
+      "ref": "I Samuel 20:24",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "zakef",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "bc4b685cf58a58fd5049a904434c66a61dbbe09aa5266ad0afc62a8a383e7797"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 6,
+      "ref": "I Samuel 20:24",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "zakef",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "e96971906696c6a8845fb27edbc3531c42b35e376304874ce0bd27934d079ab5"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 7,
+      "ref": "I Samuel 20:25",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "feb9b5e54140b3455328b66ee7a2e993185d22184b496116b73b0130959a4a4d"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 7,
+      "ref": "I Samuel 20:25",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "azla",
+        "revia",
+        "revia",
+        "zakef",
+        "zakef",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "861e4f9590fd7d64d7744bb68e4c48ee6edbf4641a1726ef5c6890e8b5c2b0d3"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 8,
+      "ref": "I Samuel 20:26",
+      "field": "he",
+      "final": false,
+      "families": [
+        "tevir",
+        "etnachta",
+        "zakef",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "bc9c15e640cb521f139f5dbbc9b52909182c2be6af319833287def97d370fb37"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 8,
+      "ref": "I Samuel 20:26",
+      "field": "he",
+      "final": true,
+      "families": [
+        "tevir",
+        "etnachta",
+        "zakef",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "7a49c42faf3a7f16d07c6e8a820ec6a5a8c9e3d3bf336b65a74adf95f569c910"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 9,
+      "ref": "I Samuel 20:27",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        null,
+        "zakef",
+        "azla",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "f9a35f89693ebc4be46f9d35cbe98ab01c3c65a71963d2f0d9d1ce322e53b92c"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 9,
+      "ref": "I Samuel 20:27",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        null,
+        "zakef",
+        "azla",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "0f76ac33c37febba0c6cf6f114e80449e0827db73ab8f4b08c9aebcdc1f7b723"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 10,
+      "ref": "I Samuel 20:28",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "f8496c2c089f96cc2286635a1126c6f5208166af39a8d659cf53857f743218b8"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 10,
+      "ref": "I Samuel 20:28",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "db9df4a2aec784b248a3cbc4e3b748717e63fd9b4f95a459629139dc194c465f"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 11,
+      "ref": "I Samuel 20:29",
+      "field": "he",
+      "final": false,
+      "families": [
+        "pazer",
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "zakef",
+        "revia",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "7e00a0efef67dc0969764d1e33735722488f7d8b74d50117992a3af3d2a68d2b"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 11,
+      "ref": "I Samuel 20:29",
+      "field": "he",
+      "final": true,
+      "families": [
+        "pazer",
+        "pazer",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "zakef",
+        "revia",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "bd0667fde0d90113e11c99ddad8048b31196297c0669b13db6cc4b65409fb700"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 12,
+      "ref": "I Samuel 20:30",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "revia",
+        "zakef",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "3d4110bee92c09b0cd9be3d6659f03bfb3227b04b828b7bbf25aee373573887e"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 12,
+      "ref": "I Samuel 20:30",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "zakef",
+        "etnachta",
+        "revia",
+        "zakef",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "6b61cef567d4c0f80e01af7e3d4e15683a06cabc52a8a84c01540baa946d0e61"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 13,
+      "ref": "I Samuel 20:31",
+      "field": "he",
+      "final": false,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "revia",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "76f04711b56f2726831772722ab7cdd07c03305dd7b9c445855034a97ca5f314"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 13,
+      "ref": "I Samuel 20:31",
+      "field": "he",
+      "final": true,
+      "families": [
+        "revia",
+        "zakef",
+        "etnachta",
+        "revia",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "1dc92f4ea115910f173731349cfa0f411028401fe10cc472d4d030f90a06d1ba"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 14,
+      "ref": "I Samuel 20:32",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "c67db5bf65470b12870d47952c038a34a6f043570b98ca9ad551cd8653954cc3"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 14,
+      "ref": "I Samuel 20:32",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "41c47bf25e9935f3cf4ef52460ab6254ad16d5573a6ecbd1011d230f7ecda71f"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 15,
+      "ref": "I Samuel 20:33",
+      "field": "he",
+      "final": false,
+      "families": [
+        "tevir",
+        "etnachta",
+        "zakef",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "782a983e8429ebe988ccfa162286f4aa756306a11fbf33411e4ac7b69731ec3e"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 15,
+      "ref": "I Samuel 20:33",
+      "field": "he",
+      "final": true,
+      "families": [
+        "tevir",
+        "etnachta",
+        "zakef",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "4d801968bb4997f651a646eb0438bdad1dca506e60315d467c9895f5e89101e3"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 16,
+      "ref": "I Samuel 20:34",
+      "field": "he",
+      "final": false,
+      "families": [
+        "tevir",
+        "etnachta",
+        "azla",
+        "zakef",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "3ea04db9c8e2a1b4a90c6184abce9c8e84f0a102e2210c13cc7b7a9841890ecc"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 16,
+      "ref": "I Samuel 20:34",
+      "field": "he",
+      "final": true,
+      "families": [
+        "tevir",
+        "etnachta",
+        "azla",
+        "zakef",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "e20427498674823d19938fb24ba5a88f96ebd1f0532c021209faf6d718866488"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 17,
+      "ref": "I Samuel 20:35",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "tevir",
+        "etnachta",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "c527ce64ab5190b254917c06c52491d6d18760023480e7ec70fd72090171f92a"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 17,
+      "ref": "I Samuel 20:35",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "tevir",
+        "etnachta",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "867df465cfd4605955135eff50b098733443d6dec9a787109e9c9c62975d69f9"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 18,
+      "ref": "I Samuel 20:36",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "revia",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "c6ee908b30b3dae603be4e1b3d7b91c76266e9735353046ebf076d12e5808adf"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 18,
+      "ref": "I Samuel 20:36",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "revia",
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "a76bb0dff11de7443d25e569cc42df12b130cb0d5ca1416d5720d576089a373f"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 19,
+      "ref": "I Samuel 20:37",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "azla",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "62e9710823a68be682621f36b0f429f07b70051399300f3aabecf89f8d41da3c"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 19,
+      "ref": "I Samuel 20:37",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "azla",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "8f391858edf85b697bcbb7e2c8994cf661f4b4d61dbded2f0be44c04d20df637"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 20,
+      "ref": "I Samuel 20:38",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "azla",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "9a2c611427b17d94b10b7c52842c22c70bd8cca7480bbcb6f3cef2ac68601b47"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 20,
+      "ref": "I Samuel 20:38",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "azla",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "3473ec336f8cc76a5631b728056b2a91deed044bd7000bcb7d0bb197bc225a7c"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 21,
+      "ref": "I Samuel 20:39",
+      "field": "he",
+      "final": false,
+      "families": [
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "cda1d47b47a469d7462c0abfe4d9c035b9d1053267f4340710c9f1664ad09401"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 21,
+      "ref": "I Samuel 20:39",
+      "field": "he",
+      "final": true,
+      "families": [
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "ff709794a5edde59748754d6f06bc086d0d9d56c0b6a595f1e11a994ef4ea9eb"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 22,
+      "ref": "I Samuel 20:40",
+      "field": "he",
+      "final": false,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "2fb54317825e03cc954b305597f71ec6f969129f1ddb0bb538308d0cbedacd24"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 22,
+      "ref": "I Samuel 20:40",
+      "field": "he",
+      "final": true,
+      "families": [
+        "zakef",
+        "etnachta",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "b325bc1fb40480666e31a6f00018c820d5f5bf229db7887ba28d6b838e50e203"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 23,
+      "ref": "I Samuel 20:41",
+      "field": "he",
+      "final": false,
+      "families": [
+        "segol",
+        "revia",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "revia",
+        "revia",
+        "zakef",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "7bf6ea8aace957c7d945848334339755c25b326223f20b6d111d0d153801a7b1"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 23,
+      "ref": "I Samuel 20:41",
+      "field": "he",
+      "final": true,
+      "families": [
+        "segol",
+        "revia",
+        "zakef",
+        "tevir",
+        "etnachta",
+        "revia",
+        "revia",
+        "zakef",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "6c59e642b5aa9b4564249d35d43a90e90ec71c39188f9f7be211b4153c9edf81"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 24,
+      "ref": "I Samuel 20:42",
+      "field": "he",
+      "final": false,
+      "families": [
+        "tevir",
+        "etnachta",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "zakef",
+        "azla",
+        "revia",
+        "revia",
+        "tevir",
+        "sof-pasuk"
+      ],
+      "htmlSha256": "16655989abb8ebba6bef1ac7cbface8a3284f3e6e837a3498cf21824d2518f3c"
+    },
+    {
+      "fixture": "week-notes-hebrew.json",
+      "index": 24,
+      "ref": "I Samuel 20:42",
+      "field": "he",
+      "final": true,
+      "families": [
+        "tevir",
+        "etnachta",
+        "telisha-ketana",
+        "azla",
+        "revia",
+        "zakef",
+        "azla",
+        "revia",
+        "revia",
+        "tevir",
+        "sof-haftarah"
+      ],
+      "htmlSha256": "b448c8d9a6ff8d099e35f98ba5eedd01599faf152ff01cd19c709afedf36f47a"
+    }
+  ]
+}
