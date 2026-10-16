@@ -2,7 +2,17 @@
 
 Authority: `MISSION.md` (Daniel's rulings). Plan: `PLAN-CODE-2026-10-15.md`. This file says where the work stands. Update it at the end of every session and every phase.
 
-## Resume here — backend verification at rest; design and production held, 2026-10-16
+## Current parallel milestone — recording foundation and cross-stream guards, 2026-10-16
+
+Daniel explicitly resumed independently useful work alongside two active Claude Code instances. Shared coordination and messages live in `../2026-10-16-parallel-work/COORDINATION.md`; both Claude instances acknowledged it in their own return notes. Claude owns the Song session redesign in `bneimitzvah-song` and voice in `bneimitzvah-voice`; Codex/Sol owns the original checkout's pure recording policy foundation and cross-stream repository guard integration. Do not duplicate those streams or infer their acceptance from the previous portal baseline.
+
+Recording validation/lifecycle/calendar-retention code is saved at `2ff7bd3` and independently accepted: 92 focused tests, including 5,844 independently computed retention decisions. Root corrected an initial tenant UUID assumption to match existing text tenant IDs such as `crc`. This slice adds no auth grants, upload/storage/HTTP/schema/UI or deletion scheduler. `../2026-10-16-parallel-work/RECORDING-FOUNDATION-RETURN.md`, its independent review and the recording spec identify the next backend contracts and release limits.
+
+The escaped JSON/BOM private-record bypass is repaired at `f30130d` and independently accepted. The helper preserves the voice literal check, adds bounded decoded/nested/line JSON inspection, and checks candidate/index independently without allowing font exceptions. Focused independent checks pass 42/42; a repaired isolated overlay with the saved UI font changes passes 44/44. No Claude source or actual font registry/asset has been changed. Final local integration passes **777 app tests (one existing skip), 171 Node tests, typecheck and build**. Logs are `.local-logs/parallel-work-final-{app,node,typecheck,build}.log`. The inherited long-token email-regex performance limitation is documented in the guard return/review; this decoder does not claim to bound every older scanner.
+
+The original branch is being prepared for hosted review-branch CI; no main publication or production deployment is part of this checkpoint. Production remains held at `29854eb`, no provider migration/import has run, and unfinished UI stays out of production. UI/voice integration still waits for the UI's frozen checkpoint and exact combined-tree checks; the isolated overlay is evidence for its copied snapshots only.
+
+## Previous stopping point — backend verification at rest; design and production held, 2026-10-16
 
 Daniel resumed only work that survives redesign: verify the service refresh race and backend authorization/integrity, review/test migration/import helpers offline, preserve the frontend, and continue the separate Claude Code voice workstream. **Hold new screens, forms, navigation and visual polish until Claude's full UI/UX recommendations are reconciled. Keep unfinished service UI out of production. No production migration/import is authorized in this milestone.** Come to rest after the independent backend work; do not expand scope.
 
