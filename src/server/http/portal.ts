@@ -13,14 +13,16 @@ import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
 type Kind = "session" | "students" | "student" | "reading" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
-  | "admin-students" | "edit" | "disable" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "pending" | "accept";
-type Route = { kind: Kind; methods: readonly string[]; id?: string };
+  | "admin-students" | "edit" | "disable" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "pending" | "accept"
+  | "eligible-tutors" | "relationships" | "tutor-assign" | "tutor-unassign" | "guardian-revoke" | "identity-revoke" | "guardian-practice" | "grant-revoke" | "cantor";
+type Route = { kind: Kind; methods: readonly string[]; id?: string; linkId?: string };
 const exact: Record<string, Route> = {
   "/api/session": { kind: "session", methods: ["GET"] }, "/api/students": { kind: "students", methods: ["GET"] },
   "/api/practice/read": { kind: "practice-read", methods: ["GET"] },
   "/api/practice/enter": { kind: "practice-enter", methods: ["POST"] }, "/api/practice/switch": { kind: "practice-switch", methods: ["POST"] },
   "/api/practice/exit": { kind: "practice-exit", methods: ["POST"] },
   "/api/admin/students": { kind: "admin-students", methods: ["GET", "POST"] },
+  "/api/admin/tutors": { kind: "eligible-tutors", methods: ["GET"] },
   "/api/admin/students/import/preview": { kind: "csv-preview", methods: ["POST"] }, "/api/admin/students/import/confirm": { kind: "csv-confirm", methods: ["POST"] },
   "/api/admin/invitations": { kind: "invite-issue", methods: ["POST"] },
   "/api/invitations/pending": { kind: "pending", methods: ["GET"] }, "/api/invitations/accept": { kind: "accept", methods: ["POST"] },
@@ -29,6 +31,18 @@ function route(pathname: string): Route | null {
   if (Object.hasOwn(exact, pathname)) return exact[pathname];
   const student = /^\/api\/students\/([^/]+)(?:\/(reading)(?:\/(prepare|confirm))?)?$/.exec(pathname);
   if (student) return { kind: student[3] === "prepare" ? "prepare" : student[3] === "confirm" ? "confirm" : student[2] ? "reading" : "student", methods: student[3] ? ["POST"] : ["GET"], id: student[1] };
+  const relationships = /^\/api\/admin\/students\/([^/]+)\/relationships(?:\/(tutors|guardians|identities)(?:\/([^/]+)\/(revoke|practice))?)?$/.exec(pathname);
+  if (relationships) {
+    const [, id, group, linkId, operation] = relationships;
+    if (!group) return { kind: "relationships", methods: ["GET"], id };
+    if (!linkId && group === "tutors") return { kind: "tutor-assign", methods: ["POST"], id };
+    if (linkId && operation === "revoke") return { kind: group === "tutors" ? "tutor-unassign" : group === "guardians" ? "guardian-revoke" : "identity-revoke", methods: ["POST"], id, linkId };
+    if (linkId && group === "guardians" && operation === "practice") return { kind: "guardian-practice", methods: ["POST"], id, linkId };
+    return null;
+  }
+  const grant = /^\/api\/admin\/(grants|tutors)\/([^/]+)\/(revoke|cantor)$/.exec(pathname);
+  if (grant) return grant[1] === "grants" && grant[3] === "revoke" ? { kind: "grant-revoke", methods: ["POST"], id: grant[2] }
+    : grant[1] === "tutors" && grant[3] === "cantor" ? { kind: "cantor", methods: ["POST"], id: grant[2] } : null;
   const admin = /^\/api\/admin\/students\/([^/]+)\/(edit|disable)$/.exec(pathname);
   if (admin) return { kind: admin[2] as "edit" | "disable", methods: ["POST"], id: admin[1] };
   const invite = /^\/api\/admin\/invitations\/([^/]+)\/(reissue|revoke)$/.exec(pathname);
@@ -75,6 +89,8 @@ function maftirView(value: unknown): JsonValue {
   return { ref: row.ref, reason: row.reason ?? null };
 }
 const stale = () => privateJson({ ok: false, code: "stale-revision" }, 409);
+const staleRelationship = () => privateJson({ ok: false, code: "stale-state" }, 409);
+function expectedActive(value: unknown): "active" { if (value !== "active") throw new HttpBoundaryError(); return value; }
 
 export async function handlePortalRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   let clearPreviewInvalid = false;
@@ -92,7 +108,51 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
     // independently reauthorize; no body/Origin/forwarded claim chooses tenant.
     if (request.method === "POST") requireCookieMutation(request, runtime.origin);
     const id = selected.id === undefined ? undefined : identifier(selected.id);
+    const linkId = selected.linkId === undefined ? undefined : identifier(selected.linkId);
     switch (selected.kind) {
+      case "eligible-tutors": {
+        const query = uniqueQuery(request.url, ["afterId", "limit"]), limit = query.get("limit");
+        if (limit !== null && (!/^[1-9][0-9]{0,2}$/.test(limit) || Number(limit) > 100)) throw new HttpBoundaryError();
+        const rows = await runtime.relationships.listEligibleTutors(request, { mode: "admin", afterId: query.has("afterId") ? identifier(query.get("afterId")) : undefined, limit: limit === null ? undefined : Number(limit) });
+        return privateJson({ tutors: rows.map(row => ({ id: row.id, displayName: row.displayName, revision: row.revision, isCantor: row.isCantor })) });
+      }
+      case "relationships": {
+        uniqueQuery(request.url, []);
+        const value = await runtime.relationships.inspectStudent(request, { mode: "admin", studentId: id! });
+        return privateJson({ student: { ...studentView(value.student), disabled: value.student.disabled },
+          guardians: value.guardians.map(row => ({ id: row.id, revision: row.revision, parentGrantId: row.parentGrantId, parentGrantRevision: row.parentGrantRevision,
+            displayName: row.displayName, practiceEnabled: row.practiceEnabled, effectiveRead: row.effectiveRead, effectivePractice: row.effectivePractice })),
+          identities: value.identities.map(row => ({ id: row.id, studentGrantId: row.studentGrantId, studentGrantRevision: row.studentGrantRevision, displayName: row.displayName, effectivePractice: row.effectivePractice })),
+          tutors: value.tutors.map(row => ({ id: row.id, tutorGrantId: row.tutorGrantId, tutorGrantRevision: row.tutorGrantRevision, displayName: row.displayName, isCantor: row.isCantor, effectiveRead: row.effectiveRead })) });
+      }
+      case "tutor-assign": {
+        uniqueQuery(request.url, []); const body = await objectBody(request, ["tutorGrantId", "expectedState"]);
+        if (body.expectedState !== "unassigned") throw new HttpBoundaryError();
+        const value = await runtime.relationships.assignTutor(request, { mode: "admin", studentId: id!, tutorGrantId: identifier(body.tutorGrantId), expectedState: "unassigned" });
+        return value.ok ? privateJson({ ok: true, id: value.id, studentId: value.studentId, tutorGrantId: value.tutorGrantId }, 201) : staleRelationship();
+      }
+      case "tutor-unassign": case "guardian-revoke": case "identity-revoke": {
+        uniqueQuery(request.url, []); const body = await objectBody(request, ["expectedState"]);
+        const selection = { mode: "admin" as const, studentId: id!, linkId: linkId!, expectedState: expectedActive(body.expectedState) };
+        const value = selected.kind === "tutor-unassign" ? await runtime.relationships.revokeTutor(request, selection)
+          : selected.kind === "guardian-revoke" ? await runtime.relationships.revokeGuardian(request, selection) : await runtime.relationships.revokeStudentIdentity(request, selection);
+        return value.ok ? privateJson({ ok: true, id: value.id }) : staleRelationship();
+      }
+      case "guardian-practice": {
+        uniqueQuery(request.url, []); const body = await objectBody(request, ["expectedRevision", "practiceEnabled"]);
+        const value = await runtime.relationships.setGuardianPractice(request, { mode: "admin", studentId: id!, guardianId: linkId!, expectedRevision: integer(body.expectedRevision), practiceEnabled: boolean(body.practiceEnabled) });
+        return value.ok ? privateJson({ ok: true, id: value.id, revision: value.revision, practiceEnabled: value.practiceEnabled }) : staleRelationship();
+      }
+      case "grant-revoke": {
+        uniqueQuery(request.url, []); const body = await objectBody(request, ["expectedRevision", "expectedState"]);
+        const value = await runtime.relationships.revokeRoleGrant(request, { mode: "admin", roleGrantId: id!, expectedRevision: integer(body.expectedRevision), expectedState: expectedActive(body.expectedState) });
+        return value.ok ? privateJson({ ok: true, id: value.id, revision: value.revision }) : staleRelationship();
+      }
+      case "cantor": {
+        uniqueQuery(request.url, []); const body = await objectBody(request, ["expectedRevision", "isCantor"]);
+        const value = await runtime.relationships.setCantor(request, { mode: "admin", roleGrantId: id!, expectedRevision: integer(body.expectedRevision), isCantor: boolean(body.isCantor) });
+        return value.ok ? privateJson({ ok: true, id: value.id, revision: value.revision, isCantor: value.isCantor }) : staleRelationship();
+      }
       case "session": {
         uniqueQuery(request.url, []); const value = await runtime.portal.sessionSummary(request);
         return privateJson({ membershipAvailable: value.membershipAvailable, roles: value.roles.map(role => role) });

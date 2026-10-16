@@ -12,6 +12,7 @@ import { createInvitationService } from "../invitations/service";
 import { createStudentService } from "../students/service";
 import { createPracticeService } from "../practice/service";
 import { createPortalService } from "../portal/service";
+import { createRelationshipService } from "../relationships/service";
 import { createPendingInvitations } from "../http/pending-invitations";
 import { createPersistentReadingCache } from "../data/reading-cache";
 import { resolveTenantHost } from "../tenancy/resolve";
@@ -38,6 +39,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const students = createStudentService({ access, loadReading, signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS });
   const practice = createPracticeService({ access });
   const portal = createPortalService({ access, practice });
+  const relationships = createRelationshipService({ access });
   const pendingInvitations = createPendingInvitations({ secret: config.authSecret, origin: config.origin, environment: config.deployment.environment as "local" | "preview" | "production" });
   // An eventual auth handler must resolve the request host BEFORE invoking auth.
   const resolveHost = async (request: AccessRequest) => {
@@ -45,7 +47,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, portal, pendingInvitations, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, portal, relationships, pendingInvitations, resolveHost });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

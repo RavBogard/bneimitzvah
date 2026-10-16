@@ -1,0 +1,6 @@
+ALTER TABLE "audit_event" DROP CONSTRAINT "audit_action_known";--> statement-breakpoint
+ALTER TABLE "guardian" ADD COLUMN "revision" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE "role_grant" ADD COLUMN "revision" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE "audit_event" ADD CONSTRAINT "audit_action_known" CHECK ("audit_event"."action" in ('student.create','student.update','student.import','grant.issue','grant.revoke','guardian.link','guardian.revoke','guardian.practice-set','tutor.cantor-set','tutor.assign','tutor.revoke','invite.issue','invite.accept','invite.revoke','invite.delivery-sent','invite.delivery-failed','context.enter','context.exit','reading.set','identity.link','identity.revoke'));--> statement-breakpoint
+ALTER TABLE "guardian" ADD CONSTRAINT "guardian_revision_positive" CHECK ("guardian"."revision" > 0);--> statement-breakpoint
+ALTER TABLE "role_grant" ADD CONSTRAINT "role_grant_revision_positive" CHECK ("role_grant"."revision" > 0);

@@ -3,13 +3,14 @@ import { randomBytes } from "node:crypto";
 // Marker-only mock in this explicit integration suite. Production services and
 // the actual Better Auth cookie validation/session API are never replaced.
 vi.mock("server-only",()=>({}));
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { AccessDenied, AccessUnavailable } from "../../src/server/access/errors";
 import { withTenantTransaction } from "../../src/server/db/runtime";
 import * as s from "../../src/server/db/index";
 import { deferred, newRequestId, postgresAccessFixture, settleRace, waitForEntry } from "./access-fixture";
 import { createInvitationService } from "../../src/server/invitations/service";
 import { createStudentService } from "../../src/server/students/service";
+import { createRelationshipService } from "../../src/server/relationships/service";
 import { parseCeremonyDate } from "../../src/lib/readings/ranges";
 import { query } from "./disposable.mjs";
 
@@ -275,4 +276,71 @@ test("a committed practice switch denies a waiting old-handle write and keeps th
     if(!switched)throw new Error("Expected practice switch result missing");
     expect((await practice.b.read(practice.request(switched.handle),{mode:"child-practice",studentId:practice.sibling.id})).context?.id===switched.context.id).toBe(true);
   }finally{release.resolve();restore();await settleRace(operation?[switching,operation]:[switching]);}
+});
+
+test("an authorized child write commits before service guardian revocation and a sibling context remains valid",async()=>{
+  const f=await fixture(),practice=await f.practice(),relationships=createRelationshipService({access:f.b});
+  const old=await practice.a.enter(practice.request(),{studentId:f.student.id});
+  const sibling=await practice.a.enter(practice.request(),{studentId:practice.sibling.id});
+  const links=await f.ownerDb.select({id:s.guardian.id}).from(s.guardian).where(and(eq(s.guardian.tenantId,"crc"),eq(s.guardian.studentId,f.student.id)));
+  if(links.length!==1)throw new Error("Expected synthetic guardian missing");
+  const request={...f.request("admin"),method:"POST",headers:new Headers({...Object.fromEntries(f.request("admin").headers),origin:"http://localhost:3000"})};
+  const entered=deferred(),release=deferred(),requestId=newRequestId();let claimed=false,revokeSawCommittedWrite=false;
+  const restore=await f.intercept("b",text=>!claimed && text.startsWith('update "guardian" ') && text.includes('"revoked_at"'),async proceed=>{
+    claimed=true;
+    const rows=await f.ownerDb.select({id:s.auditEvent.id}).from(s.auditEvent).where(eq(s.auditEvent.requestId,requestId));
+    if(rows.length!==1)throw new Error("Practice write was not committed before guardian revocation");
+    revokeSawCommittedWrite=true;return proceed();
+  });
+  const operation=practice.a.withPracticeCapability(practice.request(old.handle),{mode:"child-practice",studentId:f.student.id,capability:"practice-write"},async(tx,actor)=>{
+    await tx.insert(s.auditEvent).values({tenantId:actor.tenantId,actorUserId:actor.userId,actorMembershipId:actor.membershipId,
+      roleGrantId:actor.roleGrantId,mode:actor.mode,guardianId:actor.relationshipId,actingStudentId:actor.studentId,action:"context.enter",
+      targetType:"synthetic-practice-write",targetId:actor.context!.id,requestId});
+    entered.resolve();await release.promise;
+  }).then(()=>true,()=>false);
+  let revocation:Promise<boolean>|undefined;
+  try{
+    await waitForEntry(entered.promise,operation);
+    revocation=relationships.revokeGuardian(request,{mode:"admin",studentId:f.student.id,linkId:links[0].id,expectedState:"active"}).then(result=>result.ok,()=>false);
+    await f.waitForLock(f.pidB,f.pidA);
+    release.resolve();
+    expect(await operation).toBe(true);expect(await revocation).toBe(true);expect(revokeSawCommittedWrite).toBe(true);
+    expect((await f.ownerDb.select({id:s.auditEvent.id}).from(s.auditEvent).where(eq(s.auditEvent.requestId,requestId))).length).toBe(1);
+    expect((await f.ownerDb.select({id:s.auditEvent.id}).from(s.auditEvent).where(eq(s.auditEvent.action,"guardian.revoke"))).length).toBe(1);
+    expect(await denied(()=>practice.a.read(practice.request(old.handle),{mode:"child-practice",studentId:f.student.id}),404)).toBe(true);
+    expect((await practice.a.read(practice.request(sibling.handle),{mode:"child-practice",studentId:practice.sibling.id})).context?.id===sibling.context.id).toBe(true);
+    const [context]=await f.ownerDb.select({revokedAt:s.practiceContext.revokedAt}).from(s.practiceContext).where(eq(s.practiceContext.id,old.context.id));
+    expect(context.revokedAt!==null).toBe(true);
+  }finally{release.resolve();restore();await settleRace(revocation?[operation,revocation]:[operation]);}
+});
+
+test("service guardian revocation commits first, denying a waiting child write without affecting its sibling context",async()=>{
+  const f=await fixture(),practice=await f.practice(),relationships=createRelationshipService({access:f.b});
+  const old=await practice.a.enter(practice.request(),{studentId:f.student.id});
+  const sibling=await practice.a.enter(practice.request(),{studentId:practice.sibling.id});
+  const links=await f.ownerDb.select({id:s.guardian.id}).from(s.guardian).where(and(eq(s.guardian.tenantId,"crc"),eq(s.guardian.studentId,f.student.id)));
+  if(links.length!==1)throw new Error("Expected synthetic guardian missing");
+  const request={...f.request("admin"),method:"POST",headers:new Headers({...Object.fromEntries(f.request("admin").headers),origin:"http://localhost:3000"})};
+  const entered=deferred(),release=deferred(),requestId=newRequestId();let claimed=false,callbackCalled=false;
+  const restore=await f.intercept("b",text=>!claimed && text.startsWith('update "guardian" ') && text.includes('"revoked_at"'),async proceed=>{
+    claimed=true;const result=await proceed();entered.resolve();await release.promise;return result;
+  });
+  const revocation=relationships.revokeGuardian(request,{mode:"admin",studentId:f.student.id,linkId:links[0].id,expectedState:"active"}).then(result=>result.ok,()=>false);
+  let operation:Promise<boolean>|undefined;
+  try{
+    await waitForEntry(entered.promise,revocation);
+    operation=practice.a.withPracticeCapability(practice.request(old.handle),{mode:"child-practice",studentId:f.student.id,capability:"practice-write"},async(tx,actor)=>{
+      callbackCalled=true;
+      await tx.insert(s.auditEvent).values({tenantId:actor.tenantId,actorUserId:actor.userId,actorMembershipId:actor.membershipId,
+        roleGrantId:actor.roleGrantId,mode:actor.mode,guardianId:actor.relationshipId,actingStudentId:actor.studentId,action:"context.enter",
+        targetType:"synthetic-practice-write",targetId:actor.context!.id,requestId});
+    }).then(()=>false,error=>error instanceof AccessDenied && error.status===404);
+    await f.waitForLock(f.pidA,f.pidB);
+    release.resolve();
+    expect(await revocation).toBe(true);expect(await operation).toBe(true);expect(callbackCalled).toBe(false);
+    expect((await f.ownerDb.select({id:s.auditEvent.id}).from(s.auditEvent).where(eq(s.auditEvent.requestId,requestId))).length).toBe(0);
+    expect((await practice.a.read(practice.request(sibling.handle),{mode:"child-practice",studentId:practice.sibling.id})).context?.id===sibling.context.id).toBe(true);
+    const [context]=await f.ownerDb.select({revokedAt:s.practiceContext.revokedAt}).from(s.practiceContext).where(eq(s.practiceContext.id,old.context.id));
+    expect(context.revokedAt!==null).toBe(true);
+  }finally{release.resolve();restore();await settleRace(operation?[revocation,operation]:[revocation]);}
 });

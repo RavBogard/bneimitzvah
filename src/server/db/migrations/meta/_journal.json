@@ -50,6 +50,13 @@
       "when": 1792118008857,
       "tag": "0006_public_talisman",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792122721906,
+      "tag": "0007_yellow_ghost_rider",
+      "breakpoints": true
     }
   ]
 }

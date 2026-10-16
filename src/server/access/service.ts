@@ -11,8 +11,9 @@ import type { AccessDatabase, AccessRequest, AccessTransaction, ActiveMode, Acto
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type StudentCapability = "read" | "set-reading" | "practice-write";
-type AdminCapability = "manage-students" | "manage-invites" | "manage-relationships" | "manage-defaults";
+type AdminCapability = "read-relationships" | "manage-students" | "manage-invites" | "manage-relationships" | "manage-defaults";
 const adminRules: Record<AdminCapability, { fresh: boolean; intent: LockIntent }> = {
+  "read-relationships": { fresh: false, intent: "read" },
   "manage-students": { fresh: false, intent: "authority-write" },
   "manage-invites": { fresh: true, intent: "authority-write" },
   "manage-relationships": { fresh: true, intent: "authority-write" },

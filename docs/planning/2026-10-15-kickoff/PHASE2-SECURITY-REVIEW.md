@@ -455,3 +455,84 @@ trust or live-provider proof is inferred. With that documented temporary
 availability constraint, the P2 bypass is closed and this bounded HTTP/binding
 slice is accepted for primary integration. Browser/production-wrapper and
 deployment/provider gates remain separate.
+
+## Independent relationship-service/schema review — 2026-10-15
+
+**Scoped verdict: accepted; no required core-service correction found.** Reviewed
+`src/server/relationships/{service,data,types}.ts`, the `read-relationships`
+capability, guardian/grant revisions, migration 0007 and generated metadata.
+Concurrent HTTP/runtime adapters are outside this verdict. No implementation or
+Git edits were made by this reviewer.
+
+Reads require explicit live admin authority with ordinary session lifetime and
+SHARE intent. Writes require fresh admin authority, exact-Origin POST, no child
+context header and tenant UPDATE intent from the outset. Scoped immutable-key
+probes are rechecked under target membership/grant -> student -> link -> context
+locks. Target global profile/verification reads do not acquire a second global
+user lock; that target's next authenticated invocation independently verifies
+its live identity. This avoids cross-tenant actor/target global-user inversion.
+
+New assignments require active verified tutor authority and enabled students.
+Historical links remain immutable targets; stale IDs cannot revoke replacement
+links. Revision CAS defeats flag ABA, same-value current revisions are honest
+no-ops, and re-enable never restores old handles. Disabled students remain
+inspectable/revocable but cannot receive new assignments or enabled practice.
+Guardian/identity creation remains invitation-only; no membership recovery,
+administrator grant/revoke, role revival or implicit role union is exposed.
+Tenant-authorized labels use safe fallbacks and omit mail, global user/session
+identifiers and provenance/provider objects. Exact guardian/identity/grant
+predicates close only matching contexts, atomically with operator audit.
+
+Added three independent probes in `tests/app/relationships-review.test.ts`:
+another authenticated parent's context for the **same child** survives guardianA
+revocation; a genuine SDK admin proof becomes insufficient after completed
+admin-grant revocation before capability locking, with no target mutation/audit;
+and failed grant-revocation audit rolls back grant revision/revocation plus both
+context writes. A test-only nontransactional sequence advances only after both
+writes are visible inside the failing audit trigger, excluding an earlier-write
+failure false pass.
+
+**Independent evidence:** five focused relationship/reviewer/practice/invitation/
+schema files passed **52/52**; typecheck passed including reviewer additions.
+Logs: ignored `.local-logs/phase2-security-relationships-final.log` and
+`.local-logs/phase2-security-relationships-typecheck.log`. Actual SDK cookies and
+restricted PGlite are used; only `server-only` is mocked locally. Deliberate
+proof/revocation interleaving is not physical concurrency. Primary separately
+reported current real PostgreSQL **9/9**, including both new service guardian-
+revocation/write orderings with observed blocking and surviving sibling contexts;
+their source was inspected without a credentialed rerun. Primary retains broader
+integration/migration/CI and separate adapter/UI review. Synthetic internal
+practice callbacks do not claim future audio/translation features.
+
+## Independent relationship HTTP/runtime adapter review — 2026-10-15
+
+**Scoped verdict: accepted; no implementation blocker found.** The nine added
+relationship routes use literal admin mode, closed decoded request fields,
+bounded unique query keys and explicit response projections. They retain exact
+POST Origin and universal child-header denial before invoking the independently
+authorized services; reads preserve ordinary session availability and writes
+retain fresh authority. Runtime composition constructs the service from the
+same private access instance. Existing common dispatcher host checks and fixed
+private status/header policy remain intact. No core service/schema change was
+required by this adapter review.
+
+Independent focused route/portal/runtime/reviewer checks passed **24/24**, and
+typecheck passed. New `tests/app/relationship-http-review.test.ts` exercises all
+nine routes through the dispatcher using actual SDK cookies, including an actor
+who genuinely owns the target's parent/tutor roles but lacks admin, empty child
+headers, forbidden mode/tenant claims and no resulting writes/audits. It also
+proves foreign grant operations remain tenant-denied and unchanged; disabled
+student cleanup is allowed while assignment/re-enable denies; exact terminal
+replays yield409 without revival. This supplements the earlier core **52/52**
+and primary-reported PostgreSQL **9/9**, rather than claiming new concurrency.
+Logs: ignored `.local-logs/phase2-security-relationship-http-final.log` and
+`.local-logs/phase2-security-relationship-http-typecheck.log`.
+
+One documentation overclaim was corrected with primary agreement: closed body
+validation rejects unknown decoded keys; standard JSON.parse still resolves
+repeated lexical JSON keys to their last value. Unique-query rejection is
+separate. No parser-disagreement authority bypass was found: one canonical parsed
+object is passed to services, with literal admin and live scoped authorization.
+No parser expansion was needed for this slice. Primary retains combined build,
+browser, CI/publication and broader product gates. No implementation/Git edits,
+provider calls or credentialed execution were performed by the reviewer.

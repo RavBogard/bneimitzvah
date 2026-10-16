@@ -42,13 +42,14 @@ export const membership = pgTable("membership", {
 
 export const roleGrant = pgTable("role_grant", {
   id: id(), tenantId: tenantId(), membershipId: uuid("membership_id").notNull(), role: role("role").notNull(),
-  isCantor: boolean("is_cantor").default(false).notNull(), createdAt: createdAt(), revokedAt: revokedAt(),
+  isCantor: boolean("is_cantor").default(false).notNull(), revision: integer("revision").default(1).notNull(), createdAt: createdAt(), revokedAt: revokedAt(),
 }, (t) => [
   unique("role_grant_tenant_id_key").on(t.tenantId, t.id),
   unique("role_grant_typed_key").on(t.tenantId, t.id, t.role),
   unique("role_grant_actor_key").on(t.tenantId, t.id, t.membershipId),
   foreignKey({ name: "role_grant_membership_fk", columns: [t.tenantId, t.membershipId], foreignColumns: [membership.tenantId, membership.id] }),
   uniqueIndex("role_grant_active_key").on(t.tenantId, t.membershipId, t.role).where(sql`${t.revokedAt} is null`),
+  check("role_grant_revision_positive", sql`${t.revision} > 0`),
   check("role_grant_cantor_tutor", sql`not ${t.isCantor} or ${t.role} = 'tutor'`),
 ]);
 
@@ -78,13 +79,14 @@ export const studentIdentity = pgTable("student_identity", {
 
 export const guardian = pgTable("guardian", {
   id: id(), tenantId: tenantId(), studentId: uuid("student_id").notNull(), parentGrantId: uuid("parent_grant_id").notNull(),
-  role: role("role").default("parent").notNull(), practiceEnabled: boolean("practice_enabled").default(true).notNull(),
+  role: role("role").default("parent").notNull(), practiceEnabled: boolean("practice_enabled").default(true).notNull(), revision: integer("revision").default(1).notNull(),
   linkProvenance: text("link_provenance").notNull(), createdAt: createdAt(), revokedAt: revokedAt(),
 }, (t) => [
   unique("guardian_tenant_id_key").on(t.tenantId, t.id),
   unique("guardian_context_key").on(t.tenantId, t.id, t.studentId, t.parentGrantId),
   foreignKey({ name: "guardian_student_fk", columns: [t.tenantId, t.studentId], foreignColumns: [student.tenantId, student.id] }),
   foreignKey({ name: "guardian_grant_fk", columns: [t.tenantId, t.parentGrantId, t.role], foreignColumns: [roleGrant.tenantId, roleGrant.id, roleGrant.role] }),
+  check("guardian_revision_positive", sql`${t.revision} > 0`),
   check("guardian_parent_role", sql`${t.role} = 'parent'`),
   uniqueIndex("guardian_active_key").on(t.tenantId, t.studentId, t.parentGrantId).where(sql`${t.revokedAt} is null`),
 ]);
@@ -193,5 +195,5 @@ export const auditEvent = pgTable("audit_event", {
   foreignKey({ name: "audit_grant_fk", columns: [t.tenantId, t.roleGrantId, t.actorMembershipId], foreignColumns: [roleGrant.tenantId, roleGrant.id, roleGrant.membershipId] }),
   foreignKey({ name: "audit_student_fk", columns: [t.tenantId, t.actingStudentId], foreignColumns: [student.tenantId, student.id] }),
   foreignKey({ name: "audit_guardian_fk", columns: [t.tenantId, t.guardianId], foreignColumns: [guardian.tenantId, guardian.id] }),
-  check("audit_action_known", sql`${t.action} in ('student.create','student.update','student.import','grant.issue','grant.revoke','guardian.link','guardian.revoke','tutor.assign','tutor.revoke','invite.issue','invite.accept','invite.revoke','invite.delivery-sent','invite.delivery-failed','context.enter','context.exit','reading.set','identity.link','identity.revoke')`),
+  check("audit_action_known", sql`${t.action} in ('student.create','student.update','student.import','grant.issue','grant.revoke','guardian.link','guardian.revoke','guardian.practice-set','tutor.cantor-set','tutor.assign','tutor.revoke','invite.issue','invite.accept','invite.revoke','invite.delivery-sent','invite.delivery-failed','context.enter','context.exit','reading.set','identity.link','identity.revoke')`),
 ]);
