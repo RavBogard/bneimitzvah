@@ -133,6 +133,7 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .roster-table th, .roster-table td { border-bottom: 1px solid var(--color-rule); padding: 0.75rem 1rem 0.75rem 0; vertical-align: top; overflow-wrap: anywhere; }
 .roster-table th:nth-child(2), .roster-table td:nth-child(2), .roster-table th:nth-child(3), .roster-table td:nth-child(3) { width: 1%; white-space: nowrap; overflow-wrap: normal; }
 .roster-table tbody th { overflow-wrap: normal; word-break: normal; }
+.roster-student-kind { display: block; color: var(--color-muted); font-size: 0.875rem; font-weight: 400; }
 .roster-table tbody th bdi { overflow-wrap: anywhere; }
 .roster-table thead th { color: var(--color-muted); font-size: 0.875rem; font-weight: 600; }
 .roster-table .button-text { font-size: 1rem; margin: 0; text-align: start; }

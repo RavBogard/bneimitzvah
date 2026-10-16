@@ -4,7 +4,7 @@ import { parseReadingProposal, readingBaseline, type ReadingKind, type StaffMode
 export type BaseMode = "student" | "parent" | "tutor" | "admin";
 export type ReadingMode = BaseMode | "child-practice";
 export type Student = { id: string; firstName: string; lastName: string; ceremonyDate: string; revision: number };
-export type RosterStudent = Student & { parentEmail: string; ownEmail: string | null; disabledAt: string | null };
+export type RosterStudent = Student & { studentKind: "child" | "adult"; parentEmail: string | null; ownEmail: string | null; disabledAt: string | null };
 export type StudentInput = Omit<RosterStudent, "id" | "revision" | "disabledAt">;
 export type Context = { id: string; authorityRevision: number; studentId: string; studentRevision: number; expiresAt: string };
 export type Selection = { handle: string; context: Context };
@@ -28,9 +28,14 @@ export function parseStudents(value: unknown, roster = false): Student[] | Roste
   const rows = object(value, ["students"]).students;
   if (!Array.isArray(rows) || rows.length > (roster ? 5000 : 100)) return bad();
   const result = rows.map(value => {
-    const row = object(value, roster ? [...studentKeys, "parentEmail", "ownEmail", "disabledAt"] : studentKeys), student = studentFields(row);
+    const row = object(value, roster ? [...studentKeys, "studentKind", "parentEmail", "ownEmail", "disabledAt"] : studentKeys), student = studentFields(row);
     if (!roster) return student;
-    return { ...student, parentEmail: text(row.parentEmail, 254), ownEmail: row.ownEmail === null ? null : text(row.ownEmail, 254), disabledAt: row.disabledAt === null ? null : instant(row.disabledAt) };
+    if (row.studentKind !== "child" && row.studentKind !== "adult") return bad();
+    const studentKind = row.studentKind;
+    const mailbox = (value: unknown) => { const result = text(value, 254); if (!/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(result) || result !== result.trim().toLowerCase()) return bad(); return result; };
+    const parentEmail = row.parentEmail === null ? null : mailbox(row.parentEmail), ownEmail = row.ownEmail === null ? null : mailbox(row.ownEmail);
+    if ((studentKind === "child" && parentEmail === null) || (studentKind === "adult" && ownEmail === null) || (ownEmail !== null && ownEmail === parentEmail)) return bad();
+    return { ...student, studentKind, parentEmail, ownEmail, disabledAt: row.disabledAt === null ? null : instant(row.disabledAt) };
   });
   if (new Set(result.map(row => row.id)).size !== result.length) return bad();
   return result;

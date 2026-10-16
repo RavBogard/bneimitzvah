@@ -10,11 +10,13 @@ import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from 
 import { installLoopbackFetchGuard } from "./egress";
 import { CSV_HEADER } from "../../src/components/portal/workspace/csv-import/api";
 import * as s from "../../src/server/db/index";
+import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined, sibling: { id: string };
 const contexts: BrowserContext[] = [];
 const signedCookies: Partial<Record<"admin" | "tutor", Awaited<ReturnType<BrowserContext["cookies"]>>>> = {};
+let cleanupBrowser: (() => Promise<void>) | undefined;
 async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Roster controls browser operation failed; private details withheld"); } }
 async function navigate(tab: Page, path: string) { await safe(() => tab.goto(path, { waitUntil: "domcontentloaded", timeout: 30_000 })); }
 async function api(tab: Page, path: string, body?: unknown) { return safe(() => tab.evaluate(async ({ path, body }) => { const response = await fetch(path, { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store", headers: body === undefined ? {} : { "content-type": "application/json" } }); return { status: response.status, data: await response.json() }; }, { path, body })); }
@@ -55,10 +57,50 @@ beforeAll(async () => {
     assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard(); fixture = await browserFixture(); sibling = (await fixture.practice()).sibling;
     const learner = await fixture.signIn("pg-access-student"); const [member] = await fixture.ownerDb.insert(s.membership).values({ tenantId: "crc", userId: learner.id }).returning();
     const [grant] = await fixture.ownerDb.insert(s.roleGrant).values({ tenantId: "crc", membershipId: member.id, role: "student" }).returning(); await fixture.ownerDb.insert(s.studentIdentity).values({ tenantId: "crc", studentId: fixture.student.id, roleGrantId: grant.id });
-    stop = await startBrowserServer(fixture.withRuntime); browser = await chromium.launch({ headless: true });
-  } catch { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); throw new Error("Roster controls browser setup failed; private details withheld"); }
+    stop = await startBrowserServer(fixture.withRuntime);
+    const isolation = await isolatedEnv(); cleanupBrowser = isolation.cleanup;
+    browser = await chromium.launch({ headless: true, env: isolation.env });
+  } catch { await browser?.close().catch(() => undefined); await cleanupBrowser?.(); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); throw new Error("Roster controls browser setup failed; private details withheld"); }
 }, 120_000);
-afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
+afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await cleanupBrowser?.(); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
+
+it("creates adults without parent contact, requires the contact for each kind and preserves explicit access across kind edits", async () => {
+  const tab = await page(); await navigate(tab, "/workspace/admin/students");
+  await ui(tab.getByRole("button", { name: "Add student", exact: true })).toBeEnabled(); await click(tab, "Add student");
+  await safe(() => tab.getByLabel("Student kind", { exact: true }).selectOption("adult"));
+  await safe(() => tab.getByLabel("First name", { exact: true }).fill("Synthetic"));
+  await safe(() => tab.getByLabel("Last name", { exact: true }).fill("AdultContact"));
+  await safe(() => tab.getByLabel("Ceremony date", { exact: true }).fill("2027-01-02"));
+  await ui(tab.getByLabel("Parent email (optional)", { exact: true })).toHaveJSProperty("required", false);
+  await ui(tab.getByLabel("Student email", { exact: true })).toHaveJSProperty("required", true);
+  await click(tab, "Save student");
+  expect(await tab.getByLabel("Student email", { exact: true }).evaluate(element => (element as HTMLInputElement).validity.valueMissing)).toBe(true);
+  const contact = { firstName: "Synthetic", lastName: "AdultContact", ceremonyDate: "2027-01-02", studentKind: "adult", parentEmail: null, ownEmail: "synthetic-adult@example.test" };
+  expect((await api(tab, "/api/admin/students", { student: { ...contact, ownEmail: null } })).status).toBe(403);
+  await safe(() => tab.getByLabel("Student email", { exact: true }).fill(contact.ownEmail)); await capture(tab, "roster-adult-contact-desktop");
+  await click(tab, "Save student"); await ui(tab.getByText(/Student saved\. Creating or editing/)).toBeVisible();
+  let row = (await api(tab, "/api/admin/students")).data.students.find((row: { lastName: string }) => row.lastName === contact.lastName);
+  expect(row.studentKind === "adult" && row.parentEmail === null && row.ownEmail === contact.ownEmail).toBe(true);
+  const originalRevision = row.revision;
+  await click(tab, "Synthetic AdultContact"); await safe(() => tab.getByLabel("Student kind", { exact: true }).selectOption("child"));
+  await ui(tab.getByLabel("Parent email", { exact: true })).toHaveJSProperty("required", true);
+  await ui(tab.getByLabel("Student email (optional)", { exact: true })).toHaveValue(contact.ownEmail);
+  await click(tab, "Save student");
+  expect(await tab.getByLabel("Parent email", { exact: true }).evaluate(element => (element as HTMLInputElement).validity.valueMissing)).toBe(true);
+  const child = { ...contact, studentKind: "child", parentEmail: "synthetic-parent@example.test" };
+  expect((await api(tab, "/api/admin/students", { student: { ...child, parentEmail: null } })).status).toBe(403);
+  await safe(() => tab.getByLabel("Parent email", { exact: true }).fill(child.parentEmail));
+  await tab.setViewportSize({ width: 390, height: 844 }); await capture(tab, "roster-child-contact-mobile");
+  await click(tab, "Save student"); await ui(tab.getByText(/Student saved\. Creating or editing/)).toBeVisible();
+  row = (await api(tab, "/api/admin/students")).data.students.find((value: { id: string }) => value.id === row.id);
+  expect(row.studentKind === "child" && row.parentEmail === child.parentEmail && row.ownEmail === contact.ownEmail).toBe(true);
+  expect((await api(tab, `/api/admin/students/${row.id}/edit`, { expectedRevision: originalRevision, student: contact })).status).toBe(409);
+  await click(tab, "Synthetic AdultContact"); await safe(() => tab.getByLabel("Student kind", { exact: true }).selectOption("adult"));
+  await ui(tab.getByLabel("Parent email (optional)", { exact: true })).toHaveValue(child.parentEmail);
+  await click(tab, "Save student"); await ui(tab.getByText(/Student saved\. Creating or editing/)).toBeVisible();
+  const access = (await api(tab, `/api/admin/students/${row.id}/relationships`)).data;
+  expect(access.guardians.length === 0 && access.identities.length === 0 && access.tutors.length === 0).toBe(true);
+});
 
 it("reviews tutor assignment/removal with fresh target reads, blocks duplicate submits and keeps disabled-student cleanup", async () => {
   const tab = await page(), id = await create(tab, "RosterAccess"); await navigate(tab, `/workspace/admin/students/${id}/access`); await accessLoaded(tab);
@@ -104,7 +146,7 @@ it("reviews valid/invalid and duplicate CSV rows, invalidates changed drafts and
   const tab = await page(); await navigate(tab, "/workspace/admin/students/import"); await importLoaded(tab);
   const draft = `${CSV_HEADER}\nSynthetic,CsvReviewed,2027-01-02,parent@example.test,`;
   await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(`${CSV_HEADER}\nSynthetic,Invalid,not-a-date,parent@example.test,`)); await click(tab, "Preview import");
-  await ui(tab.getByText("Row 2: invalid name, date or email.", { exact: true })).toBeVisible(); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
+  await ui(tab.getByText("Row 2: invalid kind, name, date or required email.", { exact: true })).toBeVisible(); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
   await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(draft)); await click(tab, "Preview import"); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled(); await capture(tab, "csv-review-desktop");
   await focus(tab); await ui(tab.getByLabel("CSV draft to review", { exact: true })).toHaveValue(draft); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
   await click(tab, "Preview import"); await create(tab, "CsvRosterChanged"); await click(tab, "Import reviewed students"); await ui(tab.locator("#workspace-main").getByRole("alert")).toContainText("reviewed roster");

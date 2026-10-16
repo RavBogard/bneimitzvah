@@ -1,0 +1,5 @@
+ALTER TABLE "student" DROP CONSTRAINT "student_parent_contact_required";--> statement-breakpoint
+ALTER TABLE "student" ALTER COLUMN "parent_email" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "student" ADD COLUMN "student_kind" text DEFAULT 'child' NOT NULL;--> statement-breakpoint
+ALTER TABLE "student" ADD CONSTRAINT "student_kind_known" CHECK ("student"."student_kind" in ('child', 'adult'));--> statement-breakpoint
+ALTER TABLE "student" ADD CONSTRAINT "student_contacts_required" CHECK (("student"."parent_email" is null or length(trim("student"."parent_email")) > 0) and ("student"."own_email" is null or length(trim("student"."own_email")) > 0) and (("student"."student_kind" = 'child' and "student"."parent_email" is not null) or ("student"."student_kind" = 'adult' and "student"."own_email" is not null)));

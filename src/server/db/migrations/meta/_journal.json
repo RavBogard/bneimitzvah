@@ -85,6 +85,13 @@
       "when": 1792150358542,
       "tag": "0011_crc_beit_production_host",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792173112344,
+      "tag": "0012_student_kind_contacts",
+      "breakpoints": true
     }
   ]
 }

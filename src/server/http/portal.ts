@@ -72,8 +72,9 @@ function staffMode(value: unknown): "admin" | "tutor" { const result = baseMode(
 const objectBody = async (request: Request, required: string[], optional: string[] = [], profile: "ordinary" | "binding" | "csv" = "ordinary") =>
   closedObject(await readJsonBody(request, profile), required, optional);
 function studentInput(value: unknown) {
-  const row = closedObject(value, ["firstName", "lastName", "ceremonyDate", "parentEmail"], ["ownEmail"]);
-  return { firstName: text(row.firstName, 100), lastName: text(row.lastName, 100), ceremonyDate: text(row.ceremonyDate, 10), parentEmail: text(row.parentEmail, 254),
+  const row = closedObject(value, ["firstName", "lastName", "ceremonyDate"], ["studentKind", "parentEmail", "ownEmail"]);
+  return { firstName: text(row.firstName, 100), lastName: text(row.lastName, 100), ceremonyDate: text(row.ceremonyDate, 10), studentKind: row.studentKind,
+    parentEmail: row.parentEmail === undefined || row.parentEmail === null ? null : text(row.parentEmail, 254, 0),
     ownEmail: row.ownEmail === undefined || row.ownEmail === null ? null : text(row.ownEmail, 254, 0) };
 }
 const studentView = (s: StudentView) => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, ceremonyDate: s.ceremonyDate, revision: s.revision });
@@ -222,7 +223,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         if (request.method === "GET") {
           const rows = await runtime.students.listRoster(request, { mode: "admin" });
           return privateJson({ students: rows.map(row => ({ id: row.id, firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate,
-            parentEmail: row.parentEmail, ownEmail: row.ownEmail, disabledAt: row.disabledAt?.toISOString() ?? null, revision: row.revision })) });
+            studentKind: row.studentKind, parentEmail: row.parentEmail, ownEmail: row.ownEmail, disabledAt: row.disabledAt?.toISOString() ?? null, revision: row.revision })) });
         }
         const body = await objectBody(request, ["student"]), value = await runtime.students.create(request, { mode: "admin", student: studentInput(body.student) });
         return privateJson({ id: value.id, revision: value.revision }, 201);

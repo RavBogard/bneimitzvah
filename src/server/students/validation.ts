@@ -1,7 +1,7 @@
 import { parseCeremonyDate } from "../../lib/readings/ranges";
 import { AccessDenied } from "../access/errors";
 
-export type StudentInput={firstName:string;lastName:string;ceremonyDate:string;parentEmail:string;ownEmail:string|null};
+export type StudentInput={firstName:string;lastName:string;ceremonyDate:string;studentKind:"child"|"adult";parentEmail:string|null;ownEmail:string|null};
 const email=(value:unknown)=>{
   if(typeof value!=="string" || value.length>254 || !/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(value.trim()))throw new AccessDenied(403);
   return value.trim().toLowerCase();
@@ -13,12 +13,15 @@ const name=(value:unknown)=>{
 export function studentInput(value:unknown):StudentInput{
   if(!value || typeof value!=="object" || Array.isArray(value))throw new AccessDenied(403);
   const row=value as Record<string,unknown>;
-  const parentEmail=email(row.parentEmail);
-  const ownEmail=row.ownEmail===undefined || row.ownEmail===null || row.ownEmail==="" ? null : email(row.ownEmail);
-  if(ownEmail===parentEmail)throw new AccessDenied(403);
+  // Omitted kind is the existing child contract, never inferred from contacts.
+  const studentKind=row.studentKind===undefined?"child":row.studentKind;
+  if(studentKind!=="child" && studentKind!=="adult")throw new AccessDenied(403);
+  const optionalEmail=(value:unknown)=>value===undefined || value===null || (typeof value==="string" && !value.trim())?null:email(value);
+  const parentEmail=optionalEmail(row.parentEmail),ownEmail=optionalEmail(row.ownEmail);
+  if((studentKind==="child" && parentEmail===null) || (studentKind==="adult" && ownEmail===null) || (ownEmail!==null && ownEmail===parentEmail))throw new AccessDenied(403);
   let ceremonyDate:string;
   try{ceremonyDate=parseCeremonyDate(row.ceremonyDate);}catch{throw new AccessDenied(403);}
-  return {firstName:name(row.firstName),lastName:name(row.lastName),ceremonyDate,parentEmail,ownEmail};
+  return {firstName:name(row.firstName),lastName:name(row.lastName),ceremonyDate,studentKind,parentEmail,ownEmail};
 }
 export function revision(value:unknown):number{
   if(!Number.isSafeInteger(value) || Number(value)<1)throw new AccessDenied(403);
@@ -50,7 +53,8 @@ export function parseStudentCsv(csv:unknown):CsvParse{
   if(quoted)throw new AccessDenied(403);
   if(cell!=="" || row.length || closed)finishRow();
   const header=records.shift();
-  if(!header || records.length<1 || header.join(",")!=="firstName,lastName,ceremonyDate,parentEmail,ownEmail")throw new AccessDenied(403);
+  const columns=header?.join(",");
+  if(!header || records.length<1 || (columns!=="firstName,lastName,ceremonyDate,parentEmail,ownEmail" && columns!=="studentKind,firstName,lastName,ceremonyDate,parentEmail,ownEmail"))throw new AccessDenied(403);
   const rows:StudentInput[]=[],rowNumbers:number[]=[],issues:CsvParse["issues"]=[];
   records.forEach((record,index)=>{
     if(record.length!==header.length){issues.push({row:index+2,code:"invalid-columns"});return;}

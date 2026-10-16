@@ -55,11 +55,13 @@ export const roleGrant = pgTable("role_grant", {
 
 export const student = pgTable("student", {
   id: id(), tenantId: tenantId(), firstName: text("first_name").notNull(), lastName: text("last_name").notNull(),
-  ceremonyDate: date("ceremony_date").notNull(), parentEmail: text("parent_email").notNull(), ownEmail: text("own_email"),
+  studentKind: text("student_kind").$type<"child" | "adult">().default("child").notNull(),
+  ceremonyDate: date("ceremony_date").notNull(), parentEmail: text("parent_email"), ownEmail: text("own_email"),
   disabledAt: timestamp("disabled_at", { withTimezone: true }), revision: integer("revision").default(1).notNull(), createdAt: createdAt(),
 }, (t) => [
   unique("student_tenant_id_key").on(t.tenantId, t.id),
-  check("student_parent_contact_required", sql`length(trim(${t.parentEmail})) > 0`),
+  check("student_kind_known", sql`${t.studentKind} in ('child', 'adult')`),
+  check("student_contacts_required", sql`(${t.parentEmail} is null or length(trim(${t.parentEmail})) > 0) and (${t.ownEmail} is null or length(trim(${t.ownEmail})) > 0) and ((${t.studentKind} = 'child' and ${t.parentEmail} is not null) or (${t.studentKind} = 'adult' and ${t.ownEmail} is not null))`),
   check("student_names_required", sql`length(trim(${t.firstName})) > 0 and length(trim(${t.lastName})) > 0`),
   check("student_revision_positive", sql`${t.revision} > 0`),
 ]);

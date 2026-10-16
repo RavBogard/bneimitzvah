@@ -12,8 +12,8 @@ test("0011 upgrades an existing directory by one row and runner replay preserves
   try {
     const folder = "src/server/db/migrations";
     const journal = JSON.parse(await readFile(join(folder, "meta/_journal.json"), "utf8"));
-    expect(journal.entries.at(-1).tag).toBe("0011_crc_beit_production_host");
-    const before = { ...journal, entries: journal.entries.slice(0, -1) };
+    expect(journal.entries.find((entry: { idx: number }) => entry.idx === 11).tag).toBe("0011_crc_beit_production_host");
+    const before = { ...journal, entries: journal.entries.filter((entry: { idx: number }) => entry.idx < 11) };
     const priorFolder = join(isolation.home, "prior-migrations");
     await mkdir(join(priorFolder, "meta"), { recursive: true });
     await writeFile(join(priorFolder, "meta/_journal.json"), JSON.stringify(before));
@@ -29,6 +29,6 @@ test("0011 upgrades an existing directory by one row and runner replay preserves
     expect(upgraded.filter(row => row.host === "beitmitzvah.centralreform.org")).toEqual([{ host: "beitmitzvah.centralreform.org", tenant_id: "crc", environment: "production", deployment: "production", origin: "https://beitmitzvah.centralreform.org" }]);
     await migrate(db, { migrationsFolder: folder });
     expect((await directory()).rows).toEqual(upgraded);
-    expect((await client.query("select count(*)::int as total from drizzle.__drizzle_migrations")).rows).toEqual([{ total: 12 }]);
+    expect((await client.query("select count(*)::int as total from drizzle.__drizzle_migrations")).rows).toEqual([{ total: journal.entries.length }]);
   } finally { await client.close(); await isolation.cleanup(); }
 });

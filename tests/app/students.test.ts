@@ -55,6 +55,41 @@ test("admin roster creation treats parent contact only as contact, refuses role/
   expect(await denied(()=>f.service.readStudent(f.mutation("multi"),{mode:"tutor",studentId:f.students[0].id}),404)).toBe(true);
 });
 
+test("adult create and kind edits remain tenant-scoped CAS contact changes with no implicit account or guardian changes",async()=>{
+  const f=await fixture();
+  const adult={...student,studentKind:"adult",parentEmail:null,ownEmail:"learner@example.test"};
+  for(const [who,mode] of [["multi","tutor"],["multi","parent"],["learner","student"]] as const)expect(await denied(()=>f.studentsService.create(f.mutation(who),{mode,student:adult}))).toBe(true);
+  const created=await f.studentsService.create(f.mutation(),{mode:"admin",student:adult});
+  const roster=await f.studentsService.listRoster(f.mutation(),{mode:"admin"});
+  expect(roster.find(row=>row.id===created.id)).toMatchObject({studentKind:"adult",parentEmail:null,ownEmail:"learner@example.test"});
+  expect(await denied(()=>f.service.readStudent(f.mutation("learner"),{mode:"student",studentId:created.id}),404)).toBe(true);
+  const authority=()=>f.owner(async()=>({guardians:await f.db.select().from(s.guardian),identities:await f.db.select().from(s.studentIdentity),grants:await f.db.select().from(s.roleGrant),invites:await f.db.select().from(s.invite)}));
+  const before=await authority();
+  expect((await f.studentsService.edit(f.mutation(),{mode:"admin",studentId:f.students[0].id,expectedRevision:1,student:adult})).ok).toBe(true);
+  expect(await authority()).toEqual(before);
+  expect(await f.studentsService.edit(f.mutation(),{mode:"admin",studentId:f.students[0].id,expectedRevision:1,student})).toEqual({ok:false,code:"stale-revision"});
+  expect(await denied(()=>f.studentsService.edit(f.mutation(),{mode:"admin",studentId:f.students[3].id,expectedRevision:1,student:adult}),404)).toBe(true);
+  for(const [who,mode] of [["multi","parent"],["multi","tutor"],["learner","student"]] as const){
+    const view=await f.service.readStudent(f.mutation(who),{mode,studentId:f.students[0].id});
+    expect(Object.keys(view).sort()).toEqual(["ceremonyDate","firstName","id","lastName","revision"]);
+  }
+  expect((await f.studentsService.edit(f.mutation(),{mode:"admin",studentId:f.students[0].id,expectedRevision:2,student})).ok).toBe(true);
+  expect(await authority()).toEqual(before);
+  expect(f.loadReading).not.toHaveBeenCalled();
+});
+
+test("extended adult CSV confirms exact nullable contacts without inviting or inferring account authority",async()=>{
+  const f=await fixture(),csv="studentKind,firstName,lastName,ceremonyDate,parentEmail,ownEmail\nadult,Synthetic,Adult,2027-01-02,,learner@example.test";
+  const preview=await f.studentsService.previewImport(f.mutation(),{mode:"admin",csv,allowDuplicates:false});
+  expect(preview.canConfirm).toBe(true);
+  expect(await denied(()=>f.studentsService.confirmImport(f.mutation(),{mode:"admin",csv:csv.replace("adult,Synthetic","child,Synthetic"),allowDuplicates:false,binding:preview.binding!}))).toBe(true);
+  const result=await f.studentsService.confirmImport(f.mutation(),{mode:"admin",csv,allowDuplicates:false,binding:preview.binding!});
+  if(!result.ok)throw new Error("Synthetic adult import failed");
+  expect((await f.studentsService.listRoster(f.mutation(),{mode:"admin"})).find(row=>row.id===result.ids[0])).toMatchObject({studentKind:"adult",parentEmail:null,ownEmail:"learner@example.test"});
+  expect(await denied(()=>f.service.readStudent(f.mutation("learner"),{mode:"student",studentId:result.ids[0]}),404)).toBe(true);
+  expect((await f.studentsService.previewImport(f.mutation(),{mode:"admin",csv,allowDuplicates:false})).duplicateRows).toEqual([2]);
+});
+
 test("signed preparation is separate from confirmation; assigned tutor persists exact cross-chapter verses and maftir",async()=>{
   const f=await fixture(),id=f.students[0].id;
   expect(await denied(()=>f.studentsService.prepareReading(f.mutation("multi"),{mode:"parent",studentId:id}))).toBe(true);

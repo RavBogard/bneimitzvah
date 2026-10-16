@@ -1,6 +1,12 @@
 # Provider preparation return — 2026-10-16
 
-**Status: approved database setup completed; authentication remains disabled.**
+**Current status, 2026-10-16: canonical authentication transport is enabled and verified at https://beitmitzvah.centralreform.org.** Code `bb2ddfd` passes all four hosted jobs in run `38941201880`; matching READY deployment `dpl_2u3oYjaxx6yoLVp8MvinneTSjKjH` passes the five-record native canary with credential markers absent. Anonymous session is 401 private/no-store, Google challenge is 200 with binding cookie, ten alias page checks redirect to fixed canonical /#home and five alias API checks return 404. Daniel confirmed the Google JavaScript origin. Daniel confirmed successful Google phone sign-in and the exact masked account. Explicit owner bootstrap now has one verified active CRC administrator grant and one bound owner audit. Refreshed workspace use and real Resend email fallback acceptance remain pending.
+
+Migration 0011 added the canonical CRC host, bringing the verified ledger to 12. The first 11 SQL files are unchanged from their original published Git blobs; live ledger hashes match one Git-byte representation and ten exact CRLF checkout representations. No historical ledger entry was rewritten or migration repeated. Existing host rows and all nine sensitive Production binding IDs/scopes were preserved; only BETTER_AUTH_URL changed before the same-Git redeploy. See QUERY-FREE-AUTH-REVIEW.md for independent review and STATE.md for the next action.
+
+## Historical initial database setup (completed before auth activation)
+
+At this earlier checkpoint authentication was disabled:
 The exact resource/project connection was removed, the owner credential rotated,
 the authenticated-client retirement gate completed after two separately authorized
 endpoint restarts, all 11 migrations applied and verified, and the restricted

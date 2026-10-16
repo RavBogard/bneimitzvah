@@ -34,7 +34,7 @@ function calendarCustoms(customs:unknown){
 }
 const actorBinding=(actor:Actor)=>({tenantId:actor.tenantId,userId:actor.userId,authSessionId:actor.authSessionId,roleGrantId:actor.roleGrantId,mode:actor.mode});
 const sameActor=(claim:Record<string,unknown>,actor:Actor)=>digest(claim.actor)===digest(actorBinding(actor));
-const duplicateKey=(row:StudentInput)=>digest([row.firstName,row.lastName,row.ceremonyDate,row.parentEmail,row.ownEmail]);
+const duplicateKey=(row:StudentInput)=>digest([row.firstName,row.lastName,row.ceremonyDate,row.studentKind,row.parentEmail,row.ownEmail]);
 const rosterState=(rows:{id:string;revision:number}[])=>digest(rows.map(row=>[row.id,row.revision]));
 function duplicates(rows:StudentInput[],existing:StudentInput[],rowNumbers:number[]){
   const seen=new Set(existing.map(duplicateKey));const indices:number[]=[];
@@ -53,7 +53,7 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
     return input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
       const rows=await data.roster(tx,actor.tenantId);
       if(rows.length>5000)throw new AccessDenied(403);
-      return rows.map(({id,firstName,lastName,ceremonyDate,parentEmail,ownEmail,disabledAt,revision})=>({id,firstName,lastName,ceremonyDate,parentEmail,ownEmail,disabledAt,revision}));
+      return rows.map(({id,firstName,lastName,ceremonyDate,studentKind,parentEmail,ownEmail,disabledAt,revision})=>({id,firstName,lastName,ceremonyDate,studentKind,parentEmail,ownEmail,disabledAt,revision}));
     });
   }
   async function create(request:CookieMutationRequest,selection:Mode&{student:unknown}){

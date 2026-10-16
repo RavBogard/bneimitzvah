@@ -46,7 +46,7 @@ export function issueReview(draft: InviteDraft, students: RosterStudent[]) {
   if (!["parent", "student", "tutor"].includes(draft.role)) throw new PortalRequestError(400);
   const email = recipient(draft.email), student = draft.role === "tutor" ? null : students.find(row => row.id === draft.studentId);
   if (draft.role !== "tutor" && (!student || student.disabledAt)) throw new PortalRequestError(400);
-  if (draft.role === "student" && student && recipient(student.parentEmail) === email) throw new PortalRequestError(400);
+  if (draft.role === "student" && student && student.parentEmail !== null && recipient(student.parentEmail) === email) throw new PortalRequestError(400);
   const selection: IssueSelection = { role: draft.role, email, ...(student ? { studentId: student.id } : {}) };
   return { selection, student, fingerprint: JSON.stringify([selection, student ? [student.id, student.revision, student.firstName, student.lastName, student.ceremonyDate, student.parentEmail, student.disabledAt] : null]) };
 }

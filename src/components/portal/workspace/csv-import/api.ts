@@ -3,6 +3,7 @@ import { identifier } from "../api";
 import { adminRequest, flag, invalid, record } from "../relationships/api";
 
 export const CSV_HEADER = "firstName,lastName,ceremonyDate,parentEmail,ownEmail";
+export const CSV_ADULT_HEADER = "studentKind,firstName,lastName,ceremonyDate,parentEmail,ownEmail";
 export const REVIEW_TTL = 5 * 60_000;
 export type Preview = { validRows: number; issues: { row: number; code: "invalid-row" | "invalid-columns" }[]; duplicateRows: number[]; requiresDuplicateConfirmation: boolean; canConfirm: boolean; binding: string | null };
 function count(value: unknown, min = 0, max = 500): number { if (!Number.isSafeInteger(value) || Number(value) < min || Number(value) > max) return invalid(); return Number(value); }

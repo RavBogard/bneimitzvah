@@ -5,8 +5,8 @@ import { workspaceApi, type RosterStudent, type StudentInput } from "./api";
 import { RequireRole, statusOf, useWorkspace } from "./provider";
 import Link from "next/link";
 
-const empty: StudentInput = { firstName: "", lastName: "", ceremonyDate: "", parentEmail: "", ownEmail: null };
-function draft(row: RosterStudent): StudentInput { return { firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate, parentEmail: row.parentEmail, ownEmail: row.ownEmail }; }
+const empty: StudentInput = { firstName: "", lastName: "", ceremonyDate: "", studentKind: "child", parentEmail: "", ownEmail: null };
+function draft(row: RosterStudent): StudentInput { return { firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate, studentKind: row.studentKind, parentEmail: row.parentEmail, ownEmail: row.ownEmail }; }
 export function AdminWorkspace() { return <RequireRole role="admin"><Roster /></RequireRole>; }
 function Roster() {
   const { registerReload } = useWorkspace();
@@ -43,7 +43,7 @@ function Roster() {
   }
   async function mutate(disable: boolean) {
     if (gate.current || conflict) return;
-    if (!disable && form.ownEmail?.trim().toLowerCase() === form.parentEmail.trim().toLowerCase()) { setMessage("The student’s own email must be different from their parent’s email."); return; }
+    if (!disable && form.ownEmail?.trim() && form.parentEmail?.trim() && form.ownEmail.trim().toLowerCase() === form.parentEmail.trim().toLowerCase()) { setMessage("The student’s own email must be different from their parent’s email."); return; }
     gate.current = true; setPending(true); setMessage(""); const generation = lifetime.current;
     try {
       const result = disable && current ? await workspaceApi.disable(current) : await workspaceApi.save(form, current ?? undefined);
@@ -70,18 +70,18 @@ function Roster() {
     {message && <p className={conflict ? "request-error" : "workspace-notice"} role={conflict ? "alert" : "status"}>{message}</p>}
     {loading ? <p role="status">Loading the roster…</p> : unavailable ? <div role="alert"><h2>Roster unavailable</h2><p>The complete roster could not be loaded. It may exceed the supported response size, or access may be unavailable. No partial roster is shown.</p><button className="button-secondary" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
       : <><div className="roster-scroll"><table className="roster-table"><caption>{rows.length} student records. Showing page {page + 1} of {Math.max(1, Math.ceil(rows.length / 25))}.</caption><thead><tr><th scope="col">Student</th><th scope="col">Ceremony date</th><th scope="col">Status</th></tr></thead>
-        <tbody>{pageRows.map(row => <tr key={row.id}><th scope="row"><button className="button-text" disabled={pending} onClick={() => choose(row)}><bdi dir="auto">{row.firstName} {row.lastName}</bdi></button>{!row.disabledAt && <Link className="roster-reading-link" aria-label={`Review reading for ${row.firstName} ${row.lastName}`} href={`/workspace/admin/students/${row.id}/reading`}>Review reading</Link>}<Link className="roster-reading-link" aria-label={`Manage access for ${row.firstName} ${row.lastName}`} href={`/workspace/admin/students/${row.id}/access`}>Access</Link></th><td><time dateTime={row.ceremonyDate}>{row.ceremonyDate}</time></td><td>{row.disabledAt ? "Disabled" : "Active"}</td></tr>)}</tbody></table></div>
+        <tbody>{pageRows.map(row => <tr key={row.id}><th scope="row"><button className="button-text" disabled={pending} onClick={() => choose(row)}><bdi dir="auto">{row.firstName} {row.lastName}</bdi></button><span className="roster-student-kind">{row.studentKind === "adult" ? "Adult" : "Child"}</span>{!row.disabledAt && <Link className="roster-reading-link" aria-label={`Review reading for ${row.firstName} ${row.lastName}`} href={`/workspace/admin/students/${row.id}/reading`}>Review reading</Link>}<Link className="roster-reading-link" aria-label={`Manage access for ${row.firstName} ${row.lastName}`} href={`/workspace/admin/students/${row.id}/access`}>Access</Link></th><td><time dateTime={row.ceremonyDate}>{row.ceremonyDate}</time></td><td>{row.disabledAt ? "Disabled" : "Active"}</td></tr>)}</tbody></table></div>
         {!rows.length && <p>No students have been created yet.</p>}
         {rows.length > 25 && <nav className="roster-pages" aria-label="Roster pages"><button className="button-secondary" disabled={pending || page === 0} onClick={() => setPage(value => value - 1)}>Previous page</button><button className="button-secondary" disabled={pending || (page + 1) * 25 >= rows.length} onClick={() => setPage(value => value + 1)}>Next page</button></nav>}
         <button className="button-text" disabled={pending} onClick={() => void load().catch(() => undefined)}>Reload roster</button>
       </>}
     {editing && !loading && !unavailable && <section className="roster-editor" aria-labelledby="roster-editor-title"><h2 id="roster-editor-title" tabIndex={-1} ref={formHeading}>{current ? "Edit student" : "Add a student"}</h2>
-      {current?.disabledAt ? <><p>This student is disabled. Their record is kept for reference; editing and reactivation are not offered here.</p><dl className="invitation-details"><div><dt>Parent contact</dt><dd><bdi dir="auto">{current.parentEmail}</bdi></dd></div>{current.ownEmail && <div><dt>Student contact</dt><dd><bdi dir="auto">{current.ownEmail}</bdi></dd></div>}</dl></>
-        : <form onSubmit={submit}><div className="roster-form-grid">{(["firstName", "lastName", "ceremonyDate", "parentEmail", "ownEmail"] as const).map(field => <div key={field}>
-          <label htmlFor={`roster-${field}`}>{field === "firstName" ? "First name" : field === "lastName" ? "Last name" : field === "ceremonyDate" ? "Ceremony date" : field === "parentEmail" ? "Parent email" : "Student email (optional)"}</label>
-          <input id={`roster-${field}`} name={field} type={field === "ceremonyDate" ? "date" : field.endsWith("Email") ? "email" : "text"} maxLength={field.endsWith("Email") ? 254 : 100} required={field !== "ownEmail"} disabled={pending || conflict}
+      {current?.disabledAt ? <><p>This student is disabled. Their record is kept for reference; editing and reactivation are not offered here.</p><dl className="invitation-details"><div><dt>Parent contact</dt><dd><bdi dir="auto">{current.parentEmail ?? "Not supplied"}</bdi></dd></div>{current.ownEmail && <div><dt>Student contact</dt><dd><bdi dir="auto">{current.ownEmail}</bdi></dd></div>}</dl></>
+        : <form onSubmit={submit}><div className="roster-form-grid"><div><label htmlFor="roster-studentKind">Student kind</label><select id="roster-studentKind" value={form.studentKind} disabled={pending || conflict} onChange={event => setForm(previous => ({ ...previous, studentKind: event.target.value as StudentInput["studentKind"] }))}><option value="child">Child</option><option value="adult">Adult</option></select></div>{(["firstName", "lastName", "ceremonyDate", "parentEmail", "ownEmail"] as const).map(field => <div key={field}>
+          <label htmlFor={`roster-${field}`}>{field === "firstName" ? "First name" : field === "lastName" ? "Last name" : field === "ceremonyDate" ? "Ceremony date" : field === "parentEmail" ? (form.studentKind === "child" ? "Parent email" : "Parent email (optional)") : (form.studentKind === "adult" ? "Student email" : "Student email (optional)")}</label>
+          <input id={`roster-${field}`} name={field} type={field === "ceremonyDate" ? "date" : field.endsWith("Email") ? "email" : "text"} maxLength={field.endsWith("Email") ? 254 : 100} required={field === "parentEmail" ? form.studentKind === "child" : field === "ownEmail" ? form.studentKind === "adult" : true} disabled={pending || conflict}
             value={form[field] ?? ""} onChange={event => setForm(previous => ({ ...previous, [field]: event.target.value }))} autoComplete="off" />
-        </div>)}</div><p className="field-help">A student’s own email must be different from their parent’s. Saving a record does not send an invitation.</p>
+        </div>)}</div><p className="field-help">Children need a parent email; adults need their own email. If both are supplied, they must differ. Saving or changing kind does not send invitations or change linked access. Manage identities and guardians separately through Access.</p>
           <div className="form-actions"><button className="button-primary" disabled={pending || conflict}>{pending ? "Saving…" : "Save student"}</button><button type="button" className="button-secondary" disabled={pending} onClick={() => { setEditing(false); setCurrent(null); setForm(empty); }}>Cancel edit</button></div>
         </form>}
       {current && !current.disabledAt && <div className="disable-student"><h3>Disable this student</h3><p>Stop access to this student’s practice while retaining their record. This does not delete their history.</p>

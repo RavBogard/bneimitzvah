@@ -5,7 +5,7 @@ import type { RosterStudent } from "../../src/components/portal/workspace/api";
 
 const id = (n: number) => `10000000-0000-4000-8000-${n.toString().padStart(12, "0")}`;
 const created = "2026-10-16T00:00:00.000Z", expires = "2026-10-19T00:00:00.000Z", attempted = "2026-10-16T00:00:01.000Z";
-const student: RosterStudent = { id: id(10), firstName: "Synthetic", lastName: "Student", ceremonyDate: "2027-01-02", revision: 1, parentEmail: "parent@example.test", ownEmail: null, disabledAt: null };
+const student: RosterStudent = { id: id(10), firstName: "Synthetic", lastName: "Student", ceremonyDate: "2027-01-02", studentKind: "child" as const, revision: 1, parentEmail: "parent@example.test", ownEmail: null, disabledAt: null };
 const row = (n = 1) => ({ id: id(n), role: "parent", recipientEmail: "parent@example.test", student: { id: student.id, firstName: student.firstName, lastName: student.lastName }, status: "pending", createdAt: created, expiresAt: expires, acceptedAt: null, revokedAt: null, delivery: { status: "pending", attemptedAt: null } });
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 afterEach(() => vi.unstubAllGlobals());
@@ -39,6 +39,12 @@ it("requires explicit supported role and active selected child; siblings sharing
   for (const draft of [{ role: "student" as const, email: "parent@example.test", studentId: student.id }, { role: "parent" as const, email: "parent@example.test", studentId: id(12) }])
     expect(() => issueReview(draft, [student])).toThrow(PortalRequestError);
   expect(() => issueReview({ role: "parent", email: "parent@example.test", studentId: student.id }, [{ ...student, disabledAt: attempted }])).toThrow(PortalRequestError);
+});
+
+it("adult null parent contact does not become a mailbox match, and supplied malformed contacts still fail closed", () => {
+  const adult: RosterStudent = { ...student, studentKind: "adult", parentEmail: null, ownEmail: "adult@example.test" };
+  expect(issueReview({ role: "student", email: "adult@example.test", studentId: adult.id }, [adult]).selection.email).toBe("adult@example.test");
+  expect(() => issueReview({ role: "student", email: "adult@example.test", studentId: adult.id }, [{ ...adult, parentEmail: "malformed-contact" }])).toThrow(PortalRequestError);
 });
 
 it("invalidates review fingerprints on displayed identity/date/contact/revision, lifecycle or delivery changes", () => {

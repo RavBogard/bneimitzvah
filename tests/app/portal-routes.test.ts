@@ -75,6 +75,24 @@ describe("private portal HTTP adapters over actual SDK and restricted tenant ser
     expect((await f.call("/api/admin/students", { who: "admin", body: { student: contact }, headers: { "content-length": "20000" } })).status === 413).toBe(true);
   });
 
+  it("adult HTTP contracts accept nullable parent contact only with required own email and preserve admin-only fields", async () => {
+    const f = await fixture();
+    const adult = { ...contact, studentKind: "adult", parentEmail: null, ownEmail: "adult@example.test" };
+    for (const who of ["multi", "learner", "recipient"] as const) expect((await f.call("/api/admin/students", { who, body: { student: adult } })).status).toBe(403);
+    expect((await f.call("/api/admin/students", { who: "admin", body: { student: { ...adult, role: "admin" } } })).status).toBe(400);
+    for (const student of [{ ...adult, ownEmail: null }, { ...adult, studentKind: "child" }, { ...adult, studentKind: "other" }]) {
+      expect((await f.call("/api/admin/students", { who: "admin", body: { student } })).status).toBe(403);
+    }
+    const response = await f.call("/api/admin/students", { who: "admin", body: { student: { ...adult, parentEmail: "" } } });
+    expect(response.status).toBe(201); expect(privateResponse(response)).toBe(true);
+    const created = await json(response), rows = await json(await f.call("/api/admin/students", { who: "admin" }));
+    expect(rows.students.find((row: { id: string }) => row.id === created.id)).toMatchObject({ studentKind: "adult", parentEmail: null, ownEmail: "adult@example.test" });
+    for (const mode of ["student", "parent", "tutor"]) {
+      const list = await f.call(`/api/students?mode=${mode}`, { who: mode === "student" ? "learner" : "multi" });
+      const body = await list.text(); expect(body).not.toContain("parentEmail"); expect(body).not.toContain("ownEmail"); expect(body).not.toContain("studentKind");
+    }
+  });
+
   it("round-trips opaque CSV review without leaking private claims and detects a changed roster", async () => {
     const f = await fixture();
     const csv = "firstName,lastName,ceremonyDate,parentEmail,ownEmail\nSynthetic,Imported,2027-01-02,contact@example.test,";
