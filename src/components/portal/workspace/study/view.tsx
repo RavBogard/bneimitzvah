@@ -1,26 +1,17 @@
 "use client";
-import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { type Assigned } from "../api";
 import { statusOf, useWorkspace } from "../provider";
-import { studyBinding, studyPlan, type StudyKind, type StudyPage, type StudyVerse } from "./api";
+import { studyBinding, studyPlan, type StudyKind, type StudyPage } from "./api";
 import { StudyCredits } from "./credits";
-import hebrewStyles from "../../../../styles/hebrew-font.module.css";
+import { AnnotatedStudyVerse } from "./annotations";
 
 export type StudyReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
-function Hebrew({ verse }: { verse: StudyVerse }) {
-  return <><p className={`study-hebrew ${hebrewStyles.hebrew}`} lang="he" dir="rtl">{verse.hebrew.segments.map((segment, index) => segment.kind === "text" ? <span key={index}>{segment.text}</span>
-    : segment.kind === "alternative" ? <span className="study-alternative" key={index}><span>{segment.written}</span><span className="study-read-alternative"> [<span lang="en" dir="ltr">read / qere:</span> {segment.read}]</span></span>
-      : segment.kind === "inverted-nun" ? <span key={index} role="img" aria-label="Inverted nun, Masoretic sign">׆</span>
-        : <span key={index} className="study-paragraph-gap"><span lang="en" dir="ltr">[{segment.break === "petuchah" ? "open paragraph" : "closed paragraph"}]</span></span>)}</p>
-    {verse.hebrew.segments.some(segment => segment.kind === "alternative") && <p className="field-help">Written form (ketiv) is followed by the read alternative (qere); neither is silently substituted.</p>}
-    {verse.hebrew.paragraphAfter && <p className="study-paragraph-note">{verse.hebrew.paragraphAfter === "petuchah" ? "Open paragraph (petuchah) after this verse." : "Closed paragraph (setumah) after this verse."}</p>}
-  </>;
-}
 export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, renderWork, renderActiveWork, onPage }: {
   baseline: Assigned | null; register(value: StudyReload): () => void; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; onKindChange(kind: StudyKind): void;
   guardDeparture?(): Promise<boolean>; renderWork?(kind: StudyKind, verseRef: string): ReactNode; renderActiveWork?(): ReactNode; onPage?(kind: StudyKind, offset: number, signal: AbortSignal): Promise<void>;
 }) {
-  const { readStudy } = useWorkspace();
+  const { readStudy, summary } = useWorkspace(), aidsGroup = useId();
   const metadata = useRef<Assigned | null>(null), controller = useRef<AbortController | null>(null), generation = useRef(0);
   const selection = useRef<{ kind: StudyKind; offset: number; assignmentKey: string } | null>(null);
   const [state, setState] = useState<{ binding: string; kind?: StudyKind; page?: StudyPage; error?: number; loading?: boolean }>({ binding: "" });
@@ -80,7 +71,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       <button className="button-secondary" onClick={() => { if (current.error === 409) void reloadMetadata().catch(() => undefined); else void explicitLoad(kind, selection.current?.offset ?? 0); }}>{current.error === 409 ? "Refresh reading and text" : "Reload assigned text"}</button>
       {renderActiveWork?.()}
     </div> : current.page && <>
-      <ol className={`study-verses${renderWork ? " study-verses-with-work" : ""}`} start={current.page.offset + 1}>{current.page.verses.map(verse => <li key={verse.ref}><article><h4><bdi dir="ltr">{verse.ref}</bdi></h4><Hebrew verse={verse} /><p className="study-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p></article>{renderWork?.(kind, verse.ref)}</li>)}</ol>
+      <ol className={`study-verses${renderWork ? " study-verses-with-work" : ""}`} start={current.page.offset + 1}>{current.page.verses.map(verse => <li key={verse.ref}><AnnotatedStudyVerse key={JSON.stringify([summary.sessionBinding, key, kind, current.page!.offset, verse.ref])} verse={verse} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} />{renderWork?.(kind, verse.ref)}</li>)}</ol>
       <p role="status">Verses {current.page.offset + 1}–{current.page.offset + current.page.verses.length} of {current.page.totalVerses}. {current.page.translation.status === "partial" ? "The selected English edition is missing for some verses." : current.page.translation.status === "unavailable" ? "The selected English edition is unavailable on this page." : "Selected English edition available."}</p>
       <p className="field-help">Hebrew: Miqra according to the Masorah. English reference: JPS2023. No alternate edition is substituted.</p>
       <nav className="study-pages" aria-label="Text pages"><button className="button-secondary" disabled={previous === undefined} onClick={() => previous !== undefined && void explicitLoad(kind, previous)}>Previous text page</button><button className="button-secondary" disabled={current.page.nextOffset === null} onClick={() => current.page?.nextOffset !== null && void explicitLoad(kind, current.page!.nextOffset!)}>Next text page</button></nav>

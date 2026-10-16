@@ -32,12 +32,13 @@ Daniel requires the full planned product to be feature complete before any other
 
 ## Capabilities and Constraints
 
-- Hebrew includes vowels and cantillation, verse-aligned translations, trope family colors, optional transliteration, word analysis, and verse-based translation drafts.
+- Hebrew includes vowels and cantillation, verse-aligned translations, trope family colors, word analysis, and verse-based translation drafts. Visible transliteration is paused for reconsideration at Daniel's request (2026-10-16); it is not part of the current UI assignment.
 - Commentary is available broadly, with congregation defaults and tutor/rabbi assignments surfaced first. Generated summaries require rabbi approval and clear attribution. No student chatbot in 1.0.
 - Tutor recordings provide an interim learning source. Generated chant stays unavailable to students until the prescribed automatic checks and Daniel's listening review pass.
+- Sung practice uses Adonai/Elohim as in the ceremony, as Daniel confirmed on 2026-10-16. This pronunciation choice does not introduce visible transliteration.
 - One congregation launches first; tenant isolation belongs in the schema and access layer from the beginning. Second-tenant onboarding is deferred.
 - Public source control must contain no student/family records, recordings, credentials, licensed translation payloads, rendered audio, or model weights. Approved redistributable engine fixtures need their own provenance; an already-public source is not evidence of permission.
-- Cost, publication, licensing, and student-release gates in MISSION.md continue to apply. Recording retention is unresolved.
+- Cost, publication, licensing, and student-release gates in MISSION.md continue to apply. Students' submitted recordings are retained for one year after the ceremony, then deleted (Daniel, 2026-10-16).
 
 ## Brand Commitments
 

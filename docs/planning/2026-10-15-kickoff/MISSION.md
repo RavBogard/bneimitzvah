@@ -35,10 +35,16 @@ It is the second product carved out of the haftarah repo (`RavBogard/haftarah`).
 12. The word panel (STEP grammar, BDB, "this word elsewhere"), the translation picker across editions, and a guided "build your own translation": the student writes a translation verse by verse, saves drafts, and the tutor sees them. JPS 2023 is the reference translation.
 13. Transliteration is offered as a toggle for students (the haftarah site ruled it out; students are a different audience).
 
+**Under reconsideration, 2026-10-16 (Daniel):** Daniel questioned whether visible transliteration is needed and asked to discuss its purpose. Implementation is paused; continue Hebrew phrase colors and audio work. Astra recommends omitting the Latin-letter aid, but this note does not turn that recommendation into a final mission amendment. Internal phonemes for synthesis are a separate concern.
+
 ### Trope and audio
+
+**Confirmed 2026-10-16 (Daniel):** Sung practice pronounces divine names Adonai/Elohim, as in the ceremony, rather than substituting Hashem. Visible transliteration remains paused as noted above.
 
 14. Per-verse play, slow and loop, trope colours with family drills, the printable trope chart — as ruled in D1–D13 of the haftarah chant-integration plan (`docs/superpowers/plans/2026-10-15-web-2-0-chant-integration.md`), which carries over whole: label "Claude-generated chant" with a line to check with your tutor or cantor; 64 kbps mono MP3; Standard Reform (Binder/Avery) default nusach; speed 0.5–1.25 with loop; no downloads; plays counted in aggregate only; a new voice applies to new renders only.
 15. Record-yourself, and the student *can* send a recording to their tutor. (Ruled out on the public haftarah site; here it is the point.)
+
+**Amended 2026-10-16 (Daniel):** Retain students' submitted recordings for one year after their ceremony, then delete them. This is distinct from any separately consented adult voice-training or reference corpus.
 16. Until the engine's listening gate G3 passes, the portal ships with the player built and the audio slot empty; a tutor or the rabbi can upload a recording per verse as the interim source.
 17. G3 stays the gate before any student hears generated chant: Daniel passes at least 95% of the review verses on melody with zero "would teach wrong", after the automatic gates G1 (notes within ±50 cents) and G2 (technical checks).
 
@@ -48,6 +54,8 @@ It is the second product carved out of the haftarah repo (`RavBogard/haftarah`).
 
 18. `trope/` moves from the haftarah branch `trope-engine-research` into this repo **with git history** (subtree), plus a copy of the trope functions from `template/lib.js` (`tropePhrases`, `TETRA` and what they need) until the haftarah Wave 6 engine package exists; then the portal switches to the package.
 19. Rendering stays an offline GPU job (Daniel's RTX 4070 laptop now; Modal or a rented GPU later, engine open item 2) that uploads MP3s and a manifest to a Blob store **the portal owns**. The `haftarah-audio` store is renamed or replaced.
+
+**Reassessment authorized, 2026-10-16 (Daniel):** Research the best voice/rendering approach from first principles rather than treating the previous technical choices as optimal. Daniel or a willing cantor/tutor could supply recordings if justified. That possibility is not permission to upload another person's voice or spend money. Existing teaching-quality/listening gates remain in force while implementation and hosting recommendations are reconsidered.
 20. The engine's tests must pass in the new repo before anything else is built on it. (Amended 2026-10-15 while planning: the interview said "314 tests"; 314 is the whole branch suite, of which 108 are the engine's and move; the other 206 test the haftarah sheet and stay. The gate is the 108 plus a parity golden against haftarah's `lib.js`.)
 
 ### Tenancy, hosting, repo

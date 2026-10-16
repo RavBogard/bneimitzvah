@@ -33,13 +33,21 @@ async function page(who: "admin" | "tutor" | "student", mobile = false) {
     if (url.pathname.endsWith("/study-text")) modes.add(url.searchParams.get("mode") ?? ""); await route.continue();
   } catch { await route.abort(); } });
   const tab = await context.newPage(); await navigate(tab, "/"); const email = who === "student" ? "pg-study-student@example.test" : who === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
-  expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status === 200).toBe(true); await navigate(tab, fixture.takeMail(email)); return tab;
+  expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await navigate(tab, fixture.takeMail(email)); return tab;
 }
 async function click(tab: Page, name: string) {
   try { await safe(() => tab.getByRole("button", { name, exact: true }).click()); }
   catch { const steps = new Set(["Refresh reading", "Reload assigned text", "Next text page", "Previous text page", "Refresh reading and text", "Haftarah text"]); throw new Error(`Study UI ${steps.has(name) ? name : "controlled action"} failed; private details withheld`); }
 }
 async function loaded(tab: Page, ref: string) { await ui(tab.locator(".study-verses").getByRole("heading", { name: ref, level: 4, exact: true })).toBeVisible(); }
+function verse(tab: Page, ref: string) { return tab.locator(".study-verses > li").filter({ has: tab.getByRole("heading", { name: ref, level: 4, exact: true }) }); }
+async function colorVerse(tab: Page, ref: string) {
+  const article = verse(tab, ref).locator("article"), aids = article.locator("details");
+  if (await aids.getAttribute("open") === null) await safe(() => aids.locator("summary").click());
+  await safe(() => aids.getByRole("checkbox").check());
+  await ui(article.locator("[data-family]").first()).toBeVisible();
+  return article;
+}
 async function capture(tab: Page, name: string) {
   if (process.env.CI) return;
   await ui(tab.locator("#workspace-main").getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden();
@@ -96,30 +104,81 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   expect(geometry.top, diagnostic).toBeGreaterThanOrEqual(0);
   expect(geometry.bottom, diagnostic).toBeLessThanOrEqual(geometry.viewportHeight);
   await capture(learner, "study-student-partial-mobile");
+  const first = verse(learner, "Genesis 1:1").locator("article"), hebrew = first.locator(".study-hebrew");
+  const original = await safe(() => hebrew.textContent()), beforeColors = calls;
+  expect(await learner.locator(".study-verses article details[open]").count()).toBe(0);
+  expect(await learner.locator(".study-verses [data-word-index]").count()).toBe(0); // No eager projection on first display.
+  expect(await first.locator(".study-hebrew").evaluate(element => element.compareDocumentPosition(element.parentElement!.querySelector("details")!) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy();
+  await colorVerse(learner, "Genesis 1:1");
+  expect(await hebrew.textContent() === original && calls === beforeColors).toBe(true);
+  await ui(first.getByRole("list", { name: "Phrase families for Genesis 1:1", exact: true })).toContainText("etnachta");
+  await ui(first.getByRole("list", { name: "Phrase families for Genesis 1:1", exact: true })).toContainText("Word 1");
+  expect(await first.locator(".study-alternative > span:first-child [data-family]").count()).toBe(0);
+  const indices = await first.locator("[data-word-index]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-word-index")).join(","));
+  await safe(() => first.getByRole("checkbox").uncheck()); expect(await first.locator("[data-family]").count()).toBe(0);
+  expect(await first.locator("[data-word-index]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-word-index")).join(","))).toBe(indices);
+  await safe(() => first.getByRole("checkbox").check());
+  await colorVerse(learner, "Genesis 1:2"); expect(await first.locator("details[open]").count()).toBe(0);
+  expect(await learner.locator(".study-verses article details[open]").count()).toBe(1);
+  await colorVerse(learner, "Genesis 1:1"); await capture(learner, "study-colors-mobile");
   await click(learner, "Haftarah text"); await loaded(learner, "Isaiah 1:1"); expect(await learner.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true }).count()).toBe(0);
   await ui(learner.locator(".reading-current-assignment").getByRole("heading", { name: "Haftarah", level: 3, exact: true })).toBeVisible();
   await ui(learner.locator(".reading-current-assignment").getByText("Isaiah 1:1-2", { exact: true })).toBeVisible();
+  const middle = await colorVerse(learner, "Isaiah 1:1"), final = await colorVerse(learner, "Isaiah 1:2");
+  expect(await middle.locator('[data-family="sof-pasuk"]').count()).toBeGreaterThan(0);
+  expect(await final.locator('[data-family="sof-haftarah"]').count()).toBeGreaterThan(0);
+  await colorVerse(adminTab, "Genesis 1:1"); await capture(adminTab, "study-colors-desktop");
+  await safe(() => adminTab.evaluate(() => { document.documentElement.style.zoom = "2"; })); await capture(adminTab, "study-colors-desktop-200");
+  await safe(() => adminTab.evaluate(() => { document.documentElement.style.zoom = ""; }));
+});
+
+it("keeps unsent typing and an unknown save intact while phrase controls change", async () => {
+  const tab = await page("student"); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
+  const panel = verse(tab, "Genesis 1:1").locator(".verse-work"); await safe(() => panel.locator("summary").click());
+  const field = panel.getByRole("textbox"); await ui(field).toBeVisible();
+  let release!: () => void, committed = false, writes = 0; const gate = new Promise<void>(resolve => { release = resolve; });
+  await tab.route("**/work/draft", async route => { writes++; const response = await route.fetch(); committed = response.status() === 200; await gate; await route.fulfill({ response }).catch(() => undefined); });
+  try {
+    await safe(() => field.fill("Synthetic save held during phrase colors")); await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click());
+    await ui.poll(() => committed).toBe(true);
+    await safe(() => field.fill("Synthetic queued typing kept through phrase colors"));
+    await ui(panel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab.", { timeout: 18_000 });
+    const article = await colorVerse(tab, "Genesis 1:1");
+    await safe(() => article.getByRole("checkbox").uncheck()); await safe(() => article.getByRole("checkbox").check());
+    await colorVerse(tab, "Genesis 1:2");
+    await ui(field).toHaveValue("Synthetic queued typing kept through phrase colors");
+    await ui(panel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab."); expect(writes).toBe(1);
+  } finally { release(); await tab.unroute("**/work/draft"); }
+  await safe(() => panel.getByRole("button", { name: "Check save", exact: true }).click());
+  await ui(field).toHaveValue("Synthetic queued typing kept through phrase colors"); await ui(panel.locator(".work-status")).toHaveText("Saved", { timeout: 18_000 });
 });
 
 it("discards held old-child text after a switch, keeps another tab independent, and clears text after relationship revocation", async () => {
   const tab = await page("tutor", true); await navigate(tab, "/workspace/parent"); await safe(() => tab.getByLabel("Child", { exact: true }).selectOption(fixture.student.id)); await click(tab, "Enter child practice"); await loaded(tab, "Genesis 1:1");
   const other = await tab.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => other.getByLabel("Child", { exact: true }).selectOption(fixture.student.id)); await click(other, "Enter child practice"); await loaded(other, "Genesis 1:1");
+  await colorVerse(tab, "Genesis 1:1");
   const pattern = new RegExp(`/api/students/${fixture.student.id}/study-text\\?`); let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route(pattern, async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   await click(tab, "Refresh reading"); await ui.poll(() => held).toBe(true);
   try { await click(tab, "Switch practice to Synthetic Sibling"); await loaded(tab, "Genesis 2:1"); } finally { release(); }
   await tab.unroute(pattern); expect(await tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true }).count()).toBe(0);
+  expect(await tab.locator(".study-verses [data-family]").count()).toBe(0);
+  await colorVerse(tab, "Genesis 2:1");
   await capture(tab, "study-child-sibling-mobile");
   const relationships = await api(adminTab, `/api/admin/students/${sibling.id}/relationships`);
   const guardian = relationships.data.guardians[0]; expect(Boolean(guardian)).toBe(true);
   expect((await api(adminTab, `/api/admin/students/${sibling.id}/relationships/guardians/${guardian.id}/revoke`, { expectedState: "active" })).status === 200).toBe(true);
   await click(tab, "Refresh reading"); await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); expect(await tab.locator(".study-verses").count()).toBe(0);
+  expect(await tab.locator("[data-family], [data-word-index]").count()).toBe(0);
   await safe(() => other.evaluate(() => window.dispatchEvent(new Event("focus")))); await loaded(other, "Genesis 1:1");
   expect(modes.size === 5 && [...modes].every(mode => ["student", "parent", "tutor", "admin", "child-practice"].includes(mode))).toBe(true);
 });
 
 it("preserves staff drafts, explicit paging and same-session text revalidation while rejecting stale responses and clearing on expired session", async () => {
-  const tab = await page("admin"); await navigate(tab, `/workspace/admin/students/${fixture.student.id}/reading`); await loaded(tab, "Genesis 1:1");
+  // Reuse the real initial admin session: the plugin permits five magic-link
+  // requests per origin/path in 60 seconds, and a sixth sign-in is unnecessary
+  // for this same-session revalidation and explicit expiry scenario.
+  const tab = adminTab; await navigate(tab, `/workspace/admin/students/${fixture.student.id}/reading`); await loaded(tab, "Genesis 1:1");
   await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("custom")); await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:4-5"));
   unavailable = true; await click(tab, "Refresh reading"); await ui(tab.getByRole("heading", { name: "Text unavailable", level: 4, exact: true })).toBeVisible();
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5"); expect(await tab.locator(".study-hebrew").count()).toBe(0);
@@ -127,7 +186,9 @@ it("preserves staff drafts, explicit paging and same-session text revalidation w
   const prepared = await api(tab, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "admin", ranges: ["Genesis 1:1-4:24"] }); expect(prepared.status === 200 && prepared.data.status === "prepared").toBe(true);
   expect((await api(tab, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: prepared.data.binding })).status === 200).toBe(true);
   await click(tab, "Refresh reading"); await ui(tab.locator(".study-verses > li")).toHaveCount(100);
+  await colorVerse(tab, "Genesis 1:1");
   const beforeNext = calls; await click(tab, "Next text page"); await ui(tab.locator(".study-verses > li")).toHaveCount(4); expect(calls - beforeNext).toBe(1);
+  expect(await tab.locator(".study-verses [data-family], .study-verses article details[open]").count()).toBe(0);
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/study-text?**", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   try {
