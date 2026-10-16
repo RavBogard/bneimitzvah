@@ -45,7 +45,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - name: Migrate disposable Postgres and verify restricted-role RLS
+      - name: Verify migrated RLS and access-service revocation races
         run: npm run test:postgres
         env:
           POSTGRES_TEST_DISPOSABLE: "1"

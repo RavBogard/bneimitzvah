@@ -5,34 +5,11 @@ import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { disposableConfig, query } from "./disposable.mjs";
 
 // Explicit opt-in only; .integration.mjs is excluded from the offline npm test.
 // Refuse a general DATABASE_URL or a remote database: this suite creates roles
 // and synthetic records and must run only against an empty disposable service.
-function disposableConfig() {
-  const env = process.env;
-  if (env.POSTGRES_TEST_DISPOSABLE !== "1" || env.PGDATABASE !== "portal_rls_test"
-      || !["127.0.0.1", "localhost", "::1"].includes(env.PGHOST)
-      || !env.PGUSER || !env.PGPASSWORD || !/^\d+$/.test(env.PGPORT ?? "")) {
-    throw new Error("Postgres gate requires explicit disposable loopback configuration");
-  }
-  return {
-    host: env.PGHOST, port: Number(env.PGPORT), database: env.PGDATABASE,
-    user: env.PGUSER, password: env.PGPASSWORD,
-    connectionTimeoutMillis: 5000, statement_timeout: 10000,
-  };
-}
-
-// Driver errors can contain row data, connection details and SQL. Preserve only
-// SQLSTATE for assertions; never attach original errors, causes or parameters.
-async function query(client, text, values) {
-  try { return await client.query(text, values); }
-  catch (error) {
-    const code = /^[A-Z0-9]{5}$/.test(error?.code ?? "") ? error.code : "unknown";
-    throw Object.assign(new Error(`Postgres gate query failed (${code})`), { code });
-  }
-}
-
 async function checkout(pool) {
   let client;
   try { client = await pool.connect(); }
