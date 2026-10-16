@@ -23,6 +23,66 @@ async function fixture() {
   return { ...f, assignment, selection, write, work: f.runtime.studentWork, workRequest: request };
 }
 
+test("newer locked revision recovery explicitly distinguishes original committed and absent mutations without writing", async () => {
+  const f = await fixture(), written = f.write("Synthetic original committed"), absent = f.write("Synthetic original absent"), initial = await f.work.page(f.workRequest(), f.selection);
+  if (!initial.ok) throw new Error("Synthetic work authority missing");
+  await f.work.append(f.workRequest(), f.selection, "draft", written);
+  await f.owner(() => f.db.update(s.assignment).set({ revision: 2 }).where(eq(s.assignment.id, f.assignment.id)));
+  const current = { ...f.selection, assignmentRevision: 2 };
+  expect(await f.work.recovery(f.workRequest(), current, "draft", 1, written, initial.authorityBinding)).toMatchObject({ ok: true, outcome: "committed", assignmentRevision: 2, originalRevision: 1, mutationId: written.mutationId, verseRef: written.verseRef, stream: "draft", receipt: { committed: { assignmentRevision: 1, text: written.text } } });
+  expect(await f.work.recovery(f.workRequest(), current, "draft", 1, absent, initial.authorityBinding)).toMatchObject({ ok: true, outcome: "absent", assignmentRevision: 2, originalRevision: 1, mutationId: absent.mutationId, receipt: null });
+  expect(await f.work.recovery(f.workRequest(), current, "draft", 2, absent, initial.authorityBinding)).toEqual({ ok: false, code: "invalid-request" });
+  for (const altered of [{ ...written, text: "Synthetic mismatched original" }, { ...written, expectedVersion: 1 }, { ...written, verseRef: "Genesis 1:2" }]) expect(await f.work.recovery(f.workRequest(), current, "draft", 1, altered, initial.authorityBinding)).toEqual({ ok: false, code: "conflict" });
+  expect(await f.work.append(f.workRequest(), f.selection, "draft", absent)).toEqual({ ok: false, code: "stale-revision" });
+  expect(await f.owner(() => f.db.select().from(s.translationDraft))).toHaveLength(1);
+  expect(await f.work.history(f.workRequest(), current, "draft", written.verseRef)).toMatchObject({ versions: [{ version: 1, assignmentRevision: 1 }] });
+});
+
+test("recovery is body-only, closed, Origin checked, privately cached and restricted to current writable streams", async () => {
+  const f = await fixture(), initial = await f.work.page(f.workRequest(), f.selection); if (!initial.ok) throw new Error("Synthetic work authority missing");
+  await f.owner(() => f.db.update(s.assignment).set({ revision: 2 }).where(eq(s.assignment.id, f.assignment.id)));
+  const { studentId: _studentId, ...binding } = { ...f.selection, assignmentRevision: 2 }, body = { ...binding, stream: "draft", originalRevision: 1, write: f.write(), authorityBinding: initial.authorityBinding };
+  const path = `/api/students/${f.students[0].id}/work/recovery`, call = (value: unknown = body, headers?: Record<string, string>, suffix = "") => handleStudentWorkRequest(f.request(`${path}${suffix}`, { who: "learner", body: value, headers }), f.runtime);
+  const response = (await call())!; expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("private, no-store"); expect(response.headers.get("referrer-policy")).toBe("no-referrer"); expect(await response.json()).toMatchObject({ outcome: "absent", receipt: null });
+  expect((await call(body, { origin: "https://foreign.example.test" }))!.status).toBe(403);
+  expect((await call({ ...body, extra: true }))!.status).toBe(400);
+  expect((await call({ ...body, write: { ...body.write, assignmentRevision: 1 } }))!.status).toBe(400);
+  expect((await call(body, undefined, "?originalRevision=1"))!.status).toBe(400);
+  expect((await handleStudentWorkRequest(f.request(path, { who: "learner" }), f.runtime))!.status).toBe(405);
+  for (const mode of ["parent", "tutor", "admin"] as const) await expect(f.work.recovery(f.workRequest(mode === "admin" ? "admin" : "multi"), { ...f.selection, mode, assignmentRevision: 2 }, "draft", 1, body.write, initial.authorityBinding)).rejects.toMatchObject({ status: 403 });
+  await expect(f.work.recovery(f.workRequest(), { ...f.selection, assignmentRevision: 2 }, "note", 1, body.write, initial.authorityBinding)).rejects.toMatchObject({ status: 403 });
+});
+
+test("work authority is opaque, stable across assignment-only edits, and changes for student, relationship, grant and membership revisions", async () => {
+  const f = await fixture();
+  const binding = async () => { const page = await f.work.page(f.workRequest(), { ...f.selection, assignmentRevision: 2 }); if (!page.ok) throw new Error("Synthetic work authority missing"); return page.authorityBinding; };
+  const first = await f.work.page(f.workRequest(), f.selection); if (!first.ok) throw new Error("Synthetic work authority missing");
+  expect(first.authorityBinding).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  for (const sensitive of [f.identities.learner.id, f.identities.learner.sessionId, f.learnerMember.id, f.learnerGrant.id, f.learnerLink.id]) expect(first.authorityBinding).not.toContain(sensitive);
+  await f.owner(() => f.db.update(s.assignment).set({ revision: 2 }).where(eq(s.assignment.id, f.assignment.id)));
+  expect(await binding()).toBe(first.authorityBinding); let prior = first.authorityBinding;
+  for (const update of [
+    () => f.db.update(s.student).set({ revision: 2 }).where(eq(s.student.id, f.students[0].id)),
+    async () => { await f.db.update(s.studentIdentity).set({ revokedAt: new Date() }).where(eq(s.studentIdentity.id, f.learnerLink.id)); await f.db.insert(s.studentIdentity).values({ tenantId: "crc", studentId: f.students[0].id, roleGrantId: f.learnerGrant.id }); },
+    () => f.db.update(s.roleGrant).set({ revision: 2 }).where(eq(s.roleGrant.id, f.learnerGrant.id)),
+    () => f.db.update(s.membership).set({ authorityRevision: 2 }).where(eq(s.membership.id, f.learnerMember.id)),
+  ]) { await f.owner(async () => { await update(); }); const next = await binding(); expect(next).not.toBe(prior); prior = next; }
+  await expect(f.work.recovery(f.workRequest(), { ...f.selection, assignmentRevision: 2 }, "draft", 1, f.write(), first.authorityBinding)).rejects.toMatchObject({ status: 404 });
+});
+
+test("an old child-context receipt cannot be adopted by a newly entered context", async () => {
+  const f = await fixture(), selection = { ...f.selection, mode: "child-practice" as const }, child = await f.runtime.practice.enter(f.workRequest("multi"), { studentId: f.students[0].id }), write = f.write("Synthetic assisted uncertain");
+  const first = await f.work.page(f.workRequest("multi", child.handle), selection); if (!first.ok) throw new Error("Synthetic work authority missing");
+  await f.work.append(f.workRequest("multi", child.handle), selection, "draft", write);
+  await f.runtime.practice.exit(f.workRequest("multi", child.handle));
+  const second = await f.runtime.practice.enter(f.workRequest("multi"), { studentId: f.students[0].id });
+  await f.owner(() => f.db.update(s.assignment).set({ revision: 2 }).where(eq(s.assignment.id, f.assignment.id)));
+  const current = { ...selection, assignmentRevision: 2 }, page = await f.work.page(f.workRequest("multi", second.handle), current); if (!page.ok) throw new Error("Synthetic work authority missing");
+  expect(page.authorityBinding).not.toBe(first.authorityBinding);
+  await expect(f.work.recovery(f.workRequest("multi", second.handle), current, "draft", 1, write, first.authorityBinding)).rejects.toMatchObject({ status: 404 });
+  expect(await f.work.recovery(f.workRequest("multi", second.handle), current, "draft", 1, write, page.authorityBinding)).toEqual({ ok: false, code: "conflict" });
+});
+
 test("drafts preserve hostile plain text/Unicode, explicit clear, CAS receipts and committed versus latest", async () => {
   const f = await fixture(), input = f.write(" <script>alert('synthetic')</script>\r\nא 😀 \t");
   const first = await f.work.append(f.workRequest(), f.selection, "draft", input);

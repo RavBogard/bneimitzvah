@@ -302,3 +302,5 @@ plus one existing skip before this narrow correction; it was not repeated here.
 Daniel reports the Resend domain is Verified, the key is installed and click/open
 tracking appears off. Root accepts those reported facts for preparation. Actual
 sending readiness remains for Daniel-initiated delivery; no test email was sent.
+
+Staff preview release, 2026-10-16: exact `5b652c6026b98d00ba6a8cbabf21ed9b0b409ff0` passed all four hosted jobs in run `38956763174` before main publication. Production deployment `dpl_9MaSkDbzrrutwPJ4C1DLPCXxGJr2` is READY and matches that SHA. The canonical native authentication canary passes five route events/five matching records with no secret canaries observed. No provider configuration, schema migration, credentials, owner access, billing plan or actual email delivery changed in this milestone. Daniel's refreshed workspace and email-fallback acceptance remain separate pending checks.

@@ -1,5 +1,17 @@
 # Student work UI implementation return — 2026-10-16
 
+## Assignment-revision recovery checkpoint — 2026-10-16
+
+Before verse selection and aliyah cuts, unsent work now survives a strictly newer revision of the same assignment with exactly the same ordered verses and freshly verified student authority. Each reading is retained separately. Retained text is blocked for explicit review; automatic saves cannot cross the revision. Saved history remains available. This is mounted-tab recovery, not durable browser storage.
+
+A separate body-only recovery POST binds the original frozen mutation, current assignment, verse, stream and domain-separated authority proof. Under the assignment lock it distinguishes a committed old save from explicit absence; ordinary receipt parsing remains revision-strict. An uncertain result never permits a new save identity. A confirmed old save is kept distinct from later typed text. Access/session/context changes still clear work.
+
+Independent source review found and closed two gaps: missing verse/stream echoes in the recovery proof, and a manual recovery 404 that could preserve visible text after authority changed. The repaired path hides text during a fresh authority-page check, clears denied/mismatched authority and keeps failed checks hidden with the existing retry path. See PHASE2-SECURITY-REVIEW.md.
+
+Current evidence: 66 focused cases, typecheck/build and four repository/isolation guards pass; full integration passes 152 engine and 493 app cases (one existing skip); actual local PostgreSQL 16 passes all 18 student-work cases including both lock orders and final expiry; all ten authenticated browser cases pass. The first browser run passed seven existing cases but stopped all three new cases in a helper fetching from an unopened tab. Entering the actual staff workspace fixes that helper without weakening acceptance. Four fresh synthetic desktop/mobile full-page captures and four analytical detail crops are private under `.impeccable/review/work-revision-*`; the single changed-target detector returned no findings. Fresh visual review found only an outdated workspace inventory; the documenter corrected it and the reviewer scored that sole fix resolved with disposition ship. Hosted CI and deployment acceptance remain pending.
+
+## Earlier implementation return (historical)
+
 Status: implementation and the affected local acceptance gates pass. Fresh finish
 review of the corrected unknown-state capture remains with Astra and the independent
 reviewer. This note does not claim a local combined 38/38 pass, hosted CI/publication

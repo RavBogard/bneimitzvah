@@ -7,7 +7,7 @@ import { parseSession, PortalRequestError, requestPortal, roleNames, type Sessio
 import { workspaceApi, type Assigned, type Context, type ReadingMode } from "./api";
 import { PracticeCoordinator } from "./practice";
 import { fetchStudyPage, type StudyKind, type StudyPage } from "./study/api";
-import { fetchWork, type WorkOperation, type WorkPage, type WorkHistory, type WorkReceipt } from "./work/api";
+import { fetchWork, type WorkOperation, type WorkPage, type WorkHistory, type WorkReceipt, type WorkRecovery } from "./work/api";
 
 export const rolePaths = { student: "/workspace/student", parent: "/workspace/parent", tutor: "/workspace/tutor", admin: "/workspace/admin/students" } as const;
 type WorkLifecycle = { pause(): void; clear(): void; settle(): Promise<void>; hasUnsaved(): boolean; reveal(): void };
@@ -15,8 +15,9 @@ type Workspace = {
   summary: SessionSummary; context: Context | null; epoch: number; busy: boolean; notice: string;
   selectChild(id: string): Promise<void>; exitPractice(): Promise<void>; refresh(): void;
   read(mode: ReadingMode, id: string, signal: AbortSignal): Promise<Assigned>;
+  readVerified(mode: ReadingMode, id: string, signal: AbortSignal): Promise<Assigned>;
   readStudy(baseline: Assigned, kind: StudyKind, offset: number, signal: AbortSignal): Promise<StudyPage>;
-  readWork(baseline: Assigned, kind: StudyKind, operation: WorkOperation, signal: AbortSignal): Promise<WorkPage | WorkHistory | WorkReceipt>;
+  readWork(baseline: Assigned, kind: StudyKind, operation: WorkOperation, signal: AbortSignal): Promise<WorkPage | WorkHistory | WorkReceipt | WorkRecovery>;
   registerWork(value: WorkLifecycle): () => void;
   completeWork(value: WorkLifecycle): void;
   registerDeparture(guard: () => Promise<boolean>): () => void;
@@ -167,6 +168,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       throw error;
     }
   }, [practice, router]);
+  const verifyWorkSession = useCallback(async (signal: AbortSignal) => {
+    const expected = binding.current;
+    const fresh = parseSession(await requestPortal("/api/session", undefined, signal));
+    if (signal.aborted) throw new PortalRequestError(409);
+    if (!expected || binding.current !== expected || fresh.sessionBinding !== expected) { clearWork(); throw new PortalRequestError(401); }
+  }, [clearWork]);
+  const readVerified = useCallback(async (mode: ReadingMode, id: string, signal: AbortSignal) => {
+    await verifyWorkSession(signal);
+    const value = await read(mode, id, signal);
+    await verifyWorkSession(signal);
+    return value;
+  }, [read, verifyWorkSession]);
   const readStudy = useCallback(async (baseline: Assigned, kind: StudyKind, offset: number, signal: AbortSignal) => {
     const generation = practice.generation, active = practice.selection, mode = baseline.mode, id = baseline.student.id;
     if (mode === "child-practice" && (!active || active.context.studentId !== id)) throw new PortalRequestError(404);
@@ -186,7 +199,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const generation = practice.generation, active = practice.selection, mode = baseline.mode, id = baseline.student.id;
     if (mode === "child-practice" && (!active || active.context.studentId !== id || active.context.id !== baseline.context?.id)) throw new PortalRequestError(404);
     try {
+      if (operation.type === "recovery") await verifyWorkSession(signal);
       const value = await fetchWork(baseline, kind, operation, signal, mode === "child-practice" ? active! : undefined);
+      if (operation.type === "recovery") await verifyWorkSession(signal);
       if (generation !== practice.generation || signal.aborted) throw new PortalRequestError(409);
       return value;
     } catch (error) {
@@ -195,7 +210,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
       throw error;
     }
-  }, [practice, router, clearWork]);
+  }, [practice, router, clearWork, verifyWorkSession]);
   const controlledLink = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault(); void guardDeparture().then(leave => { if (leave) { clearWork(); router.push(href); } });
@@ -210,7 +225,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={refresh}>Check access again</button>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
-        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readStudy, readWork, registerWork, completeWork, registerDeparture, guardDeparture, registerReload }}>
+        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readWork, registerWork, completeWork, registerDeparture, guardDeparture, registerReload }}>
           <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>
           {visibleNotice && <p className="workspace-notice" role="status">{visibleNotice}</p>}
           {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}

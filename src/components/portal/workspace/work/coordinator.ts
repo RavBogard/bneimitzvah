@@ -1,14 +1,16 @@
 import { PortalRequestError } from "../../api";
 import type { Assigned } from "../api";
 import type { StudyKind } from "../study/api";
-import { normalizeWork, workScope, workTextError, WorkError, type Stream, type WorkHistory, type WorkOperation, type WorkPage, type WorkReceipt, type WorkVersion, type WorkVerse } from "./api";
+import { normalizeWork, workScope, workTextError, WorkError, type Stream, type WorkHistory, type WorkOperation, type WorkPage, type WorkReceipt, type WorkRecovery, type WorkVersion, type WorkVerse } from "./api";
 
-type Phase = "ready" | "saving" | "unknown" | "conflict" | "invalid" | "unavailable";
+type Phase = "ready" | "saving" | "unknown" | "conflict" | "invalid" | "unavailable" | "revision";
 export type PendingWrite = Readonly<{ type: Stream; verseRef: string; text: string; expectedVersion: number; mutationId: string }>;
 export type WorkCell = { text: string; head: WorkVersion | null; verified: boolean; phase: Phase; error: string; composing: boolean;
-  pending?: PendingWrite; task?: Promise<void>; recovery?: Promise<void>; timer?: ReturnType<typeof setTimeout>; committedEarlier?: number; history?: WorkHistory; historyBefore?: number; historyBusy?: boolean };
-type Scope = { baseline: Assigned; kind: StudyKind; key: string; cells: Map<string, WorkCell>; verses: Map<string, WorkVerse>; pages: Map<number, string[]>; offset: number; nextOffset: number | null; loading: boolean; error: boolean; readSequence: number };
-export type WorkTransport = (baseline: Assigned, kind: StudyKind, operation: WorkOperation, signal: AbortSignal) => Promise<WorkPage | WorkReceipt | WorkHistory>;
+  pending?: PendingWrite; task?: Promise<void>; recovery?: Promise<void>; timer?: ReturnType<typeof setTimeout>; committedEarlier?: number; history?: WorkHistory; historyBefore?: number; historyBusy?: boolean; revisionRecovery?: RevisionRecovery };
+export type RevisionRecovery = { originalRevision: number; authorityBinding: string; outcome: "unknown" | "unsaved" | "committed"; committedText?: string };
+type RecoverableCell = WorkCell & { revisionRecovery?: RevisionRecovery };
+type Scope = { baseline: Assigned; kind: StudyKind; key: string; authorityBinding?: string; cells: Map<string, RecoverableCell>; verses: Map<string, WorkVerse>; pages: Map<number, string[]>; offset: number; nextOffset: number | null; loading: boolean; error: boolean; readSequence: number };
+export type WorkTransport = (baseline: Assigned, kind: StudyKind, operation: WorkOperation, signal: AbortSignal) => Promise<WorkPage | WorkReceipt | WorkHistory | WorkRecovery>;
 const cellKey = (ref: string, stream: Stream) => `${stream}:${ref}`;
 const fresh = (head: WorkVersion | null, stream: Stream): WorkCell => ({ text: stream === "draft" ? head?.text ?? "" : "", head, verified: true, phase: "ready", error: "", composing: false });
 const status = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
@@ -40,9 +42,31 @@ export class WorkCoordinator {
   pause = () => { this.pauseEpoch++; this.acceptedEpoch = null; this.paused = true; this.cancelTimers(); this.scopes.forEach(scope => scope.cells.forEach(cell => { cell.verified = false; cell.history = undefined; })); this.reads.forEach(request => request.abort()); this.reads.clear(); this.emit(); };
   clear = (notice = "") => { this.generation++; this.pause(); this.scopes.clear(); this.active = null; this.notice = notice; this.departure?.resolve(false); this.departure = null; this.emit(); };
   dispose = () => { this.clear(); this.alive = false; };
-  configure(baseline: Assigned) {
+  configure(baseline: Assigned, allowRevisionRecovery = false) {
+    const sameContext = (previous: Assigned) => previous.mode === baseline.mode && previous.student.id === baseline.student.id
+      && previous.student.revision === baseline.student.revision && previous.context?.id === baseline.context?.id && previous.context?.authorityRevision === baseline.context?.authorityRevision;
+    if ([...this.scopes.values()].some(scope => !sameContext(scope.baseline))) this.clear();
     const changed = [...this.scopes.values()].some(scope => !baseline.readings.some(row => row.kind === scope.kind) || scope.key !== workScope(baseline, scope.kind));
-    if (changed) this.clear("The assignment changed. Previous unsent edits were cleared; an unconfirmed request may have saved under the earlier assignment.");
+    if (changed) {
+      this.pause();
+      for (const [kind, previous] of this.scopes) {
+        const row = baseline.readings.find(row => row.kind === kind), old = previous.baseline.readings.find(row => row.kind === kind)!;
+        if (row && previous.key === workScope(baseline, kind)) continue;
+        this.scopes.delete(kind);
+        if (!allowRevisionRecovery || !row || !previous.authorityBinding || row.id !== old.id || row.revision <= old.revision || row.verses.length !== old.verses.length || row.verses.some((ref, i) => ref !== old.verses[i])) {
+          this.notice = "The reading changed. Unsent work for that reading was cleared; an unconfirmed save may have succeeded.";
+          if (this.active?.kind === kind) this.active = null;
+          continue;
+        }
+        const cells = new Map<string, RecoverableCell>();
+        for (const [key, cell] of previous.cells) if (cell.pending || (key.startsWith("draft:") ? cell.text !== (cell.head?.text ?? "") : Boolean(cell.text))) {
+          cells.set(key, { ...cell, verified: false, phase: "revision", composing: false, task: undefined, recovery: undefined, timer: undefined, history: undefined, historyBusy: false,
+            revisionRecovery: cell.revisionRecovery ?? { originalRevision: old.revision, authorityBinding: previous.authorityBinding, outcome: cell.pending ? "unknown" : "unsaved" },
+            error: "The reading was updated. Review your unsent text before saving." });
+        }
+        this.scopes.set(kind, { baseline, kind, key: workScope(baseline, kind), authorityBinding: previous.authorityBinding, cells, verses: new Map(), pages: new Map(), offset: previous.offset, nextOffset: null, loading: false, error: false, readSequence: 0 });
+      }
+    }
     for (const row of baseline.readings) {
       const scope = this.scopes.get(row.kind);
       if (scope) scope.baseline = baseline;
@@ -83,6 +107,8 @@ export class WorkCoordinator {
     try {
       const page = await this.transport(scope.baseline, kind, { type: "page", offset }, request.signal) as WorkPage;
       if (!this.current(scope, generation) || request.signal.aborted || turn !== scope.readSequence) return false;
+      if (scope.authorityBinding && scope.authorityBinding !== page.authorityBinding) { this.clear(); this.denied(403); throw new WorkError(403); }
+      scope.authorityBinding = page.authorityBinding;
       // A pre-commit read is never allowed to replace an acknowledged newer head.
       for (const verse of page.verses) for (const stream of ["draft", "note"] as const) {
         const known = scope.cells.get(cellKey(verse.ref, stream))?.head, incoming = stream === "draft" ? verse.draft : verse.notes[0] ?? null;
@@ -100,7 +126,8 @@ export class WorkCoordinator {
           if (!cell) scope.cells.set(key, fresh(head, stream));
           else {
             const changed = (cell.head?.version ?? 0) !== (head?.version ?? 0), staged = stream === "draft" ? cell.text !== (cell.head?.text ?? "") : Boolean(cell.text);
-            if (!cell.pending && changed && staged) { cell.phase = "conflict"; cell.error = "Another version was saved. Review before saving yours."; }
+            if (cell.revisionRecovery) { cell.phase = "revision"; }
+            else if (!cell.pending && changed && staged) { cell.phase = "conflict"; cell.error = "Another version was saved. Review before saving yours."; }
             else if (!cell.pending && !staged && cell.phase !== "conflict") { if (stream === "draft") cell.text = head?.text ?? ""; cell.phase = "ready"; }
             cell.head = head; cell.verified = true;
             if (cell.phase === "unavailable") cell.phase = "ready";
@@ -112,7 +139,8 @@ export class WorkCoordinator {
     } catch (error) {
       if (!this.current(scope, generation) || request.signal.aborted || turn !== scope.readSequence) return false;
       scope.error = true; scope.cells.forEach(cell => { cell.verified = false; cell.history = undefined; });
-      if (authority(error) || error instanceof WorkError && error.code === "stale-revision") { this.clear("Work access or assignment changed. Unsent edits were cleared; an unconfirmed request may have saved."); this.denied(status(error)); throw error; }
+      if (authority(error)) { this.clear(); this.denied(status(error)); throw error; }
+      if (error instanceof WorkError && error.code === "stale-revision") { this.pause(); this.denied(409); throw error; }
       return false;
     } finally { this.reads.delete(request); outer?.removeEventListener("abort", abort); if (this.current(scope, generation) && turn === scope.readSequence) { scope.loading = false; this.emit(); } }
   }
@@ -127,7 +155,7 @@ export class WorkCoordinator {
   }
   close(kind: StudyKind, ref: string) { if (this.active?.kind === kind && this.active.ref === ref) { this.active = null; this.emit(); } }
   edit(kind: StudyKind, ref: string, stream: Stream, text: string) {
-    const cell = this.cell(kind, ref, stream); if (!cell) return;
+    const cell = this.cell(kind, ref, stream); if (!cell || cell.revisionRecovery) return;
     cell.text = normalizeWork(text); cell.error = workTextError(cell.text, stream) ?? "";
     if (cell.phase === "invalid" && !cell.error) cell.phase = "ready";
     if (stream === "draft") this.schedule(kind, ref, cell); this.emit();
@@ -142,7 +170,7 @@ export class WorkCoordinator {
     cell.timer = setTimeout(() => { cell.timer = undefined; void this.save(kind, ref, "draft"); }, 800);
   }
   async save(kind: StudyKind, ref: string, stream: Stream, departureSave = false) {
-    const scope = this.scopes.get(kind), cell = this.cell(kind, ref, stream); if (!scope || !cell || this.paused || this.departure && !departureSave || !cell.verified || cell.composing || cell.pending || ["conflict", "unknown", "unavailable"].includes(cell.phase)) return;
+    const scope = this.scopes.get(kind), cell = this.cell(kind, ref, stream); if (!scope || !cell || cell.revisionRecovery || this.paused || this.departure && !departureSave || !cell.verified || cell.composing || cell.pending || ["conflict", "unknown", "unavailable"].includes(cell.phase)) return;
     clearTimeout(cell.timer); cell.timer = undefined;
     if (stream === "draft" && cell.text === (cell.head?.text ?? "")) return;
     const error = workTextError(cell.text, stream); if (error) { cell.error = error; cell.phase = "invalid"; this.emit(); return; }
@@ -161,7 +189,8 @@ export class WorkCoordinator {
         if (receipt.currentLatestVersion > receipt.committedVersion) await this.loadPage(scope.kind, scope.baseline.readings.find(row => row.kind === scope.kind)!.verses.indexOf(pending.verseRef));
       } catch (error) {
         if (!this.current(scope, generation)) return;
-        if (authority(error) || error instanceof WorkError && error.code === "stale-revision") { this.clear("Work access or assignment changed. Unsent edits were cleared; an unconfirmed request may have saved."); this.denied(status(error)); return; }
+        if (authority(error)) { this.clear(); this.denied(status(error)); return; }
+        if (error instanceof WorkError && error.code === "stale-revision") { cell.phase = "unknown"; cell.error = "The reading was updated. Reload it to check this save and review your text."; this.pause(); this.denied(409); return; }
         if (error instanceof WorkError && error.code === "conflict") { cell.pending = undefined; cell.phase = "conflict"; cell.error = "Another version was saved. Review before saving yours.";
           await this.loadPage(scope.kind, scope.baseline.readings.find(row => row.kind === scope.kind)!.verses.indexOf(pending.verseRef)); }
         else if (error instanceof WorkError && error.code === "invalid-request") { cell.pending = undefined; cell.phase = "invalid"; cell.error = "Not saved. Check this text before saving again."; }
@@ -195,7 +224,8 @@ export class WorkCoordinator {
     let absent = false;
     try {
       if (verify) { const next = await this.verify(request.signal); if (!this.current(scope, generation) || request.signal.aborted) return;
-        if (!next.readings.some(row => row.kind === kind) || workScope(next, kind) !== scope.key) { this.configure(next); this.denied(409); return; } scope.baseline = next; }
+        if (!next.readings.some(row => row.kind === kind) || workScope(next, kind) !== scope.key) { this.configure(next, true); this.denied(409); return; } scope.baseline = next; }
+      if (cell.revisionRecovery) { await this.recoverRevision(scope, cell, pending, request, generation); return; }
       let receipt: WorkReceipt | null = null;
       try { receipt = await this.transport(scope.baseline, kind, { type: "receipt", stream, verseRef: ref, mutationId: pending.mutationId }, request.signal) as WorkReceipt; }
       catch (error) { if (status(error) !== 404) throw error; absent = true; }
@@ -217,12 +247,58 @@ export class WorkCoordinator {
       else { cell.phase = "unknown"; cell.error = "Save not confirmed. No receipt was found; the request may still have saved. You can retry the same save under this assignment."; }
     } catch (error) {
       if (!this.current(scope, generation) || request.signal.aborted) return;
-      if (authority(error) || error instanceof WorkError && error.code === "stale-revision") { this.clear("Work access changed. Unsent edits were cleared; an unconfirmed request may have saved."); this.denied(status(error)); }
+      if (authority(error)) { this.clear(); this.denied(status(error)); }
+      else if (error instanceof WorkError && error.code === "stale-revision") { this.pause(); this.denied(409); }
       else { cell.phase = "unknown"; cell.verified = false; cell.error = "Save not confirmed. Check save again when work is available."; }
     } finally { this.reads.delete(request); outer?.removeEventListener("abort", abort); if (this.current(scope, generation)) this.emit(); }
   }
+  private async recoverRevision(scope: Scope, cell: WorkCell, pending: PendingWrite, request: AbortController, generation: number) {
+    const original = cell.revisionRecovery!, assignment = scope.baseline.readings.find(row => row.kind === scope.kind)!;
+    try {
+      const { type, ...write } = pending;
+      const proof = await this.transport(scope.baseline, scope.kind, { type: "recovery", stream: type, originalRevision: original.originalRevision, write, authorityBinding: original.authorityBinding }, request.signal) as WorkRecovery;
+      if (!this.current(scope, generation) || request.signal.aborted) return;
+      if (proof.assignmentId !== assignment.id || proof.assignmentRevision !== assignment.revision || proof.originalRevision !== original.originalRevision || proof.mutationId !== pending.mutationId || proof.verseRef !== pending.verseRef || proof.stream !== pending.type || proof.authorityBinding !== original.authorityBinding) throw new WorkError(503);
+      const receipt = proof.receipt;
+      if (proof.outcome === "committed") {
+        if (!receipt || receipt.committed.assignmentId !== assignment.id || receipt.committed.assignmentRevision !== original.originalRevision || receipt.committed.verseRef !== pending.verseRef || receipt.committed.text !== pending.text
+          || receipt.committed.author.mode !== scope.baseline.mode || receipt.committedVersion !== pending.expectedVersion + 1 || receipt.committed.version !== receipt.committedVersion || receipt.currentLatestVersion < receipt.committedVersion) throw new WorkError(503);
+      } else if (proof.outcome !== "absent" || receipt !== null) throw new WorkError(503);
+      const loaded = await this.loadPage(scope.kind, assignment.verses.indexOf(pending.verseRef), request.signal);
+      if (!this.current(scope, generation) || request.signal.aborted || !loaded || !cell.verified) return;
+      if (receipt && (!cell.head || cell.head.version < receipt.currentLatestVersion || cell.head.version === receipt.committedVersion && (cell.head.id !== receipt.committed.id || cell.head.text !== receipt.committed.text))) throw new WorkError(503);
+      // No old body is ever retargeted: explicit proof + a fresh head only
+      // unlock the user's review. Reapply creates a new current-revision write.
+      cell.pending = undefined; original.outcome = receipt ? "committed" : "unsaved"; original.committedText = receipt?.committed.text;
+      cell.committedEarlier = receipt?.committedVersion; cell.phase = "revision";
+      cell.error = receipt ? "Your earlier save succeeded. Review the saved work and any later unsent text." : "The earlier save did not complete. Review your unsent text before saving it again.";
+    } catch (error) {
+      if (!this.current(scope, generation) || request.signal.aborted) return;
+      if ([401, 403].includes(status(error))) { this.clear(); this.denied(status(error)); return; }
+      if (status(error) === 404) {
+        // A missing recovery route/result can also be an authority denial.
+        // Hide the retained copy until a fresh page proves the same binding;
+        // neither that page nor a 404 establishes the old mutation's outcome.
+        cell.verified = false; cell.history = undefined; this.emit();
+        let loaded = false;
+        try { loaded = await this.loadPage(scope.kind, assignment.verses.indexOf(pending.verseRef), request.signal); } catch { /* loadPage handles authority loss. */ }
+        if (!this.current(scope, generation) || request.signal.aborted) return;
+        if (!loaded) cell.verified = false;
+      }
+      // A 404, outage, conflict or malformed proof is never an absence proof.
+      original.outcome = "unknown"; cell.phase = "revision"; cell.error = "We couldn’t confirm the earlier save. Your text stays here; check again before saving anything new.";
+    }
+  }
+  resolveRevision(kind: StudyKind, ref: string, stream: Stream, useSaved: boolean) {
+    const cell = this.cell(kind, ref, stream), recovery = cell?.revisionRecovery;
+    if (!cell || !recovery || recovery.outcome === "unknown" || cell.pending || !cell.verified || this.paused) return;
+    if (!useSaved && recovery.outcome === "committed" && cell.text === recovery.committedText) return;
+    if (useSaved) cell.text = stream === "draft" ? cell.head?.text ?? "" : "";
+    cell.revisionRecovery = undefined; cell.committedEarlier = undefined; cell.phase = "ready"; cell.error = "";
+    this.emit();
+  }
   resolveConflict(kind: StudyKind, ref: string, stream: Stream, useSaved: boolean) {
-    const cell = this.cell(kind, ref, stream); if (!cell?.verified || cell.pending || this.paused) return;
+    const cell = this.cell(kind, ref, stream); if (!cell?.verified || cell.revisionRecovery || cell.pending || this.paused) return;
     if (useSaved) cell.text = stream === "draft" ? cell.head?.text ?? "" : "";
     cell.phase = "ready"; cell.error = ""; cell.committedEarlier = undefined;
     // Explicit review does not submit a note; learner Save now also remains deliberate here.
@@ -250,7 +326,7 @@ export class WorkCoordinator {
     if (action === "cancel") { this.departure = null; departure.resolve(false); this.emit(); return; }
     if (action === "discard") {
       this.generation++; this.cancelTimers(); this.reads.forEach(request => request.abort()); this.reads.clear();
-      this.scopes.forEach(scope => scope.cells.forEach((cell, key) => { cell.pending = undefined; cell.task = undefined; cell.text = key.startsWith("draft:") ? cell.head?.text ?? "" : ""; cell.phase = "ready"; cell.error = ""; cell.verified = false; cell.history = undefined; }));
+      this.scopes.forEach(scope => scope.cells.forEach((cell, key) => { cell.pending = undefined; cell.task = undefined; cell.revisionRecovery = undefined; cell.text = key.startsWith("draft:") ? cell.head?.text ?? "" : ""; cell.phase = "ready"; cell.error = ""; cell.verified = false; cell.history = undefined; }));
       this.departure = null; departure.resolve(true); this.emit(); return;
     }
     departure.busy = true; this.emit(); await this.settle();

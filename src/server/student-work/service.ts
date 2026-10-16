@@ -1,5 +1,5 @@
 import "server-only";
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessRequest, AccessTransaction } from "../access/types";
 import { AccessDenied } from "../access/errors";
@@ -17,7 +17,15 @@ const conflict = { ok: false as const, code: "conflict" as const };
 type Request = AccessRequest & { method?: string };
 export function createStudentWorkService<Q extends PgQueryResultHKT>(input: {
   access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>;
+  authorityBindingSecret: string;
 }) {
+  if (input.authorityBindingSecret.length < 32) throw new Error("Work authority unavailable");
+  const authorityBinding = async (tx: AccessTransaction<Q>, actor: data.WorkActor) => createHmac("sha256", input.authorityBindingSecret).update(JSON.stringify([
+    "student-work-authority:v1", actor.origin, actor.tenantId, actor.userId, actor.authSessionId, actor.membershipId, actor.authorityRevision,
+    actor.roleGrantId, actor.roleGrantRevision, actor.studentId, actor.relationshipId, actor.relationshipRevision, actor.mode,
+    "context" in actor ? actor.context?.id ?? null : null, "context" in actor ? actor.context?.authorityRevision ?? null : null,
+    await data.studentRevision(tx, actor),
+  ])).digest("base64url");
   async function authorized<T>(request: Request, selection: WorkSelection, operation: "read" | Stream,
     action: (tx: AccessTransaction<Q>, actor: data.WorkActor, verses: readonly string[]) => Promise<T>) {
     const run = async (tx: AccessTransaction<Q>, actor: data.WorkActor) => {
@@ -58,6 +66,29 @@ export function createStudentWorkService<Q extends PgQueryResultHKT>(input: {
   const latest = async (tx: AccessTransaction<Q>, actor: data.WorkActor, stream: Stream, verse: string) =>
     (await data.history(tx, actor, stream, verse, undefined, 1))[0] ?? null;
   return Object.freeze({
+    async recovery(request: Request, supplied: WorkSelection, stream: Stream, originalRevision: number, suppliedWrite: validate.WorkWrite, originalAuthority: string) {
+      const selection = validate.selection(supplied); validate.stream(stream); validate.integer(originalRevision, 1, 2147483647);
+      const write = validate.write(suppliedWrite, stream);
+      if (originalRevision >= selection.assignmentRevision) return { ok: false as const, code: "invalid-request" as const };
+      const digest = createHash("sha256").update(JSON.stringify([stream, selection.kind, selection.assignmentId, originalRevision,
+        selection.mode, write.verseRef, write.expectedVersion, write.text])).digest("hex");
+      return authorized(request, selection, stream, async (tx, actor, verses) => {
+        if (typeof originalAuthority !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(originalAuthority) || originalAuthority !== await authorityBinding(tx, actor)) throw new AccessDenied(404);
+        requireVerse(verses, write.verseRef);
+        // A newer assignment under this SHARE lock proves every old writer
+        // either committed before its UPDATE or will reject the old revision.
+        const row = await data.receipt(tx, actor, stream, write.mutationId);
+        const child = actor.mode === "child-practice";
+        if (row && (row.requestDigest !== digest || row.assignmentId !== selection.assignmentId || row.assignmentRevision !== originalRevision
+          || row.verseRef !== write.verseRef || row.text !== write.text || row.version !== write.expectedVersion + 1
+          || row.actorMembershipId !== actor.membershipId || row.mode !== actor.mode || row.roleGrantId !== actor.roleGrantId
+          || row.guardianId !== (child ? actor.relationshipId : null) || row.contextId !== ("context" in actor ? actor.context?.id ?? null : null)
+          || row.studentIdentityId !== (actor.mode === "student" ? actor.relationshipId : null))) return conflict;
+        return { ok: true as const, assignmentId: selection.assignmentId, assignmentRevision: selection.assignmentRevision, originalRevision,
+          mutationId: write.mutationId, verseRef: write.verseRef, stream, authorityBinding: originalAuthority, outcome: row ? "committed" as const : "absent" as const,
+          receipt: row ? { ok: true as const, committedVersion: row.version, currentLatestVersion: (await latest(tx, actor, stream, write.verseRef))!.version, committed: data.view(row) } : null };
+      });
+    },
     async page(request: Request, supplied: WorkSelection, offset = 0) {
       const selection = validate.selection(supplied); validate.integer(offset, 0, 999);
       return authorized(request, selection, "read", async (tx, actor, verses) => {
@@ -71,7 +102,7 @@ export function createStudentWorkService<Q extends PgQueryResultHKT>(input: {
           if (rows.length && Buffer.byteLength(JSON.stringify([...rows, row])) > 240 * 1024) break;
           rows.push(row);
         }
-        return { ok: true as const, studentId: actor.studentId, assignmentId: selection.assignmentId, assignmentRevision: selection.assignmentRevision,
+        return { ok: true as const, studentId: actor.studentId, assignmentId: selection.assignmentId, assignmentRevision: selection.assignmentRevision, authorityBinding: await authorityBinding(tx, actor),
           offset, totalVerses: verses.length, nextOffset: offset + rows.length < verses.length ? offset + rows.length : null, verses: rows };
       });
     },

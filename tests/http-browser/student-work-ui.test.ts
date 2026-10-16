@@ -13,10 +13,12 @@ import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { StudyUnavailable } from "../../src/server/study/types";
 import { expandReadingRanges } from "../../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
+import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
+let browserEnvironment: Awaited<ReturnType<typeof isolatedEnv>> | undefined;
 let sibling: { id: string }, learnerId = "", unavailable = false;
 const contexts: BrowserContext[] = [];
 const sdkCookies = new Map<string, Awaited<ReturnType<BrowserContext["cookies"]>>>();
@@ -29,8 +31,8 @@ function observe(tab: Page) {
 }
 async function safe<T>(action: () => Promise<T>, step = "workspace interaction"): Promise<T> { try { return await action(); } catch { throw new Error(`Student work browser ${step} failed; private details withheld`); } }
 async function navigate(tab: Page, path: string) { await safe(() => tab.goto(path, { waitUntil: "domcontentloaded", timeout: 30_000 })); }
-async function api(tab: Page, path: string, body?: unknown) {
-  return safe(() => tab.evaluate(async ({ path, body }) => { const response = await fetch(path, { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store", headers: body === undefined ? {} : { "content-type": "application/json" } }); return { status: response.status, data: await response.json() }; }, { path, body }));
+async function api(tab: Page, path: string, body?: unknown, step = "workspace interaction") {
+  return safe(() => tab.evaluate(async ({ path, body }) => { const response = await fetch(path, { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store", headers: body === undefined ? {} : { "content-type": "application/json" } }); return { status: response.status, data: await response.json() }; }, { path, body }), step);
 }
 async function page(who: "student" | "tutor" | "admin", mobile = false) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 } }); contexts.push(context);
@@ -73,7 +75,12 @@ async function capture(tab: Page, name: string) {
   async function expectedState() {
     await ui(tab.locator(".reading-with-work")).toBeVisible();
     const panel = tab.locator(".study-verses .verse-work[open]"); await ui(panel).toBeVisible();
-    if (state === "unknown") {
+    if (state === "revision-review" || state === "revision-unknown") {
+      await ui(panel.getByRole("textbox")).toHaveJSProperty("readOnly", true);
+      await ui(panel.getByRole("region", { name: /Review unsent translation/ })).toBeVisible();
+      if (state === "revision-unknown") await ui(panel.getByRole("button", { name: "Check earlier save", exact: true })).toBeVisible();
+      else await ui(panel.getByRole("button", { name: "Review and keep my text", exact: true })).toBeEnabled();
+    } else if (state === "unknown") {
       await ui(panel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab.");
       await ui(panel.getByRole("button", { name: "Check save", exact: true })).toBeVisible();
       await ui(panel.getByRole("button", { name: "Retry the same save", exact: true })).toBeVisible();
@@ -136,10 +143,10 @@ beforeAll(async () => {
       const [assignment] = await fixture.ownerDb.insert(s.assignment).values({ tenantId: "crc", studentId, kind: "torah", basis: "custom", ref: ranges.join("; "), status: "confirmed", setByMembershipId: adminMember.id, proposalSnapshot: { ranges: [...ranges], confirmationDate: "2027-01-02", needsReview: false } }).returning();
       await fixture.ownerDb.insert(s.assignmentVerse).values(expandReadingRanges(ranges, "torah", TANAKH_VERSE_COUNTS).map((verseRef, index) => ({ tenantId: "crc", studentId, assignmentId: assignment.id, ordinal: index + 1, verseRef })));
     }
-    stop = await startBrowserServer(fixture.withRuntime); browser = await chromium.launch({ headless: true });
-  } catch { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); throw new Error("Student work browser setup failed; private details withheld"); }
+    stop = await startBrowserServer(fixture.withRuntime); browserEnvironment = await isolatedEnv(); browser = await chromium.launch({ headless: true, env: browserEnvironment.env });
+  } catch { await browser?.close().catch(() => undefined); await browserEnvironment?.cleanup().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); throw new Error("Student work browser setup failed; private details withheld"); }
 }, 120_000);
-afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
+afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await browserEnvironment?.cleanup().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
 it("edits own and assisted translations, preserves Unicode and literal markup, and keeps parent/staff drafts read-only with explicit visible staff notes", async () => {
   const student = await page("student", true); await learner(student);
@@ -273,6 +280,57 @@ it("honors a real byte-adaptive work page and preserves original assignment labe
   await replace(["Genesis 1:11-15"]); await click(student, "Refresh reading"); await loaded(student, "Genesis 1:11"); const earlier = await tools(student, "Genesis 1:11"); await ui(earlier.getByText(/Saved under an earlier assignment \(revision 1\)/)).toBeVisible();
   const currentBinding = await selection(student), historyQuery = new URLSearchParams({ ...currentBinding, assignmentRevision: String(currentBinding.assignmentRevision), stream: "draft", verseRef: "Genesis 1:1" }); expect((await api(student, `/api/students/${fixture.student.id}/work/history?${historyQuery}`)).status === 404).toBe(true);
   await replace(["Genesis 1:1-15"]); await click(student, "Refresh reading"); await loaded(student); const readded = await tools(student); await ui(readded.getByRole("textbox")).toHaveValue(expanded); await ui(readded.getByText(/Saved under an earlier assignment \(revision 1\)/)).toBeVisible();
+});
+
+async function reviseSameVerses(admin: Page) {
+  // Cached SDK cookies create a blank page. Establish its loopback origin
+  // before using browser-relative API fetches, as the existing staff flow does.
+  await staff(admin);
+  const prepare = await api(admin, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "admin", ranges: ["Genesis 1:1-15"] }, "revision prepare");
+  expect(prepare.status, "revision preparation HTTP status").toBe(200); expect(prepare.data.status === "prepared", "revision preparation fixed state").toBe(true);
+  expect((await api(admin, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: prepare.data.binding }, "revision confirm")).status, "revision confirmation HTTP status").toBe(200);
+}
+async function focusRefresh(tab: Page) { await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await loaded(tab); }
+
+it("retains unsent text after an assignment-only revision for explicit review without autosave", async () => {
+  const student = await page("student"), admin = await page("admin"); await learner(student);
+  let writes = 0; student.on("request", request => { if (new URL(request.url()).pathname.endsWith("/work/draft") && request.method() === "POST") writes++; });
+  let panel = await tools(student, "Genesis 1:12");
+  // An active composition gives a real unsent draft without racing debounce.
+  await safe(() => panel.getByRole("textbox").evaluate(field => field.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }))));
+  await safe(() => panel.getByRole("textbox").fill("Synthetic revision-retained translation")); await reviseSameVerses(admin); await focusRefresh(student);
+  panel = await tools(student, "Genesis 1:12"); await ui(panel.getByRole("textbox")).toHaveValue("Synthetic revision-retained translation"); await ui(panel.getByRole("textbox")).toHaveJSProperty("readOnly", true);
+  await ui(panel.locator(".work-status")).toHaveText("The reading was updated. Review your unsent text before saving."); await capture(student, "revision-review"); expect(writes).toBe(0);
+  await safe(() => panel.getByRole("button", { name: "Review and keep my text", exact: true }).click()); await ui(panel.getByRole("textbox")).toHaveJSProperty("readOnly", false); expect(writes).toBe(0);
+  await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(panel.locator(".work-status")).toHaveText("Saved"); expect(writes).toBe(1); expect((await head(student, "Genesis 1:12"))?.text).toBe("Synthetic revision-retained translation");
+});
+
+it("reconciles an old committed save across a revision while preserving later unsent text and using a new save identity", async () => {
+  const student = await page("student"), admin = await page("admin"); await learner(student);
+  const bodies: { mutationId: string; assignmentRevision: number; expectedVersion: number; text: string }[] = [];
+  await student.route("**/work/draft", async route => { bodies.push(route.request().postDataJSON()); if (bodies.length === 1) { const response = await route.fetch(); expect(response.status()).toBe(200); await route.abort("failed"); } else await route.continue(); });
+  let panel = await tools(student, "Genesis 1:13"); await safe(() => panel.getByRole("textbox").fill("Synthetic earlier revision commit")); await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click());
+  await ui(panel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab."); await safe(() => panel.getByRole("textbox").fill("Synthetic later revision draft")); await reviseSameVerses(admin); await focusRefresh(student);
+  panel = await tools(student, "Genesis 1:13"); await ui(panel.getByRole("textbox")).toHaveValue("Synthetic later revision draft"); await ui(panel.locator(".work-status")).toHaveText("Your earlier save succeeded. Review the saved work and any later unsent text.");
+  await ui(panel.locator(".work-comparison .work-text")).toHaveText("Synthetic earlier revision commit"); expect(bodies).toHaveLength(1);
+  await safe(() => panel.getByRole("button", { name: "Review and keep my text", exact: true }).click()); expect(bodies).toHaveLength(1); await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(panel.locator(".work-status")).toHaveText("Saved");
+  expect(bodies).toHaveLength(2); expect(bodies[1].mutationId).not.toBe(bodies[0].mutationId); expect(bodies[1].assignmentRevision).toBeGreaterThan(bodies[0].assignmentRevision); expect(bodies[1].expectedVersion).toBe(bodies[0].expectedVersion + 1); expect((await head(student, "Genesis 1:13"))?.text).toBe("Synthetic later revision draft");
+  await student.unroute("**/work/draft");
+});
+
+it("blocks an uncertain old save through recovery outages until explicit authorized absence and fresh heads", async () => {
+  const student = await page("student"), admin = await page("admin"); await learner(student);
+  const bodies: { mutationId: string; assignmentRevision: number }[] = [];
+  student.on("request", request => { if (new URL(request.url()).pathname.endsWith("/work/draft") && request.method() === "POST") bodies.push(request.postDataJSON()); });
+  await student.route("**/work/draft", route => route.abort("failed")); await student.route("**/work/recovery", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "unavailable" }) }));
+  let panel = await tools(student, "Genesis 1:14"); await safe(() => panel.getByRole("textbox").fill("Synthetic unsaved old revision")); await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(panel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab.");
+  await reviseSameVerses(admin); await focusRefresh(student); panel = await tools(student, "Genesis 1:14");
+  await ui(panel.getByRole("textbox")).toHaveValue("Synthetic unsaved old revision"); await ui(panel.locator(".work-status")).toHaveText("We couldn’t confirm the earlier save. Your text stays here; check again before saving anything new.");
+  expect(await panel.getByRole("button", { name: "Retry the same save", exact: true }).count()).toBe(0); expect(await panel.getByRole("button", { name: "Review and keep my text", exact: true }).count()).toBe(0); await capture(student, "revision-unknown"); expect(bodies).toHaveLength(1);
+  await student.unroute("**/work/recovery"); await safe(() => panel.getByRole("button", { name: "Check earlier save", exact: true }).click());
+  await ui(panel.locator(".work-status")).toHaveText("The earlier save did not complete. Review your unsent text before saving it again."); expect(bodies).toHaveLength(1);
+  await student.unroute("**/work/draft"); await safe(() => panel.getByRole("button", { name: "Review and keep my text", exact: true }).click()); await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(panel.locator(".work-status")).toHaveText("Saved");
+  expect(bodies).toHaveLength(2); expect(bodies[1].mutationId).not.toBe(bodies[0].mutationId); expect(bodies[1].assignmentRevision).toBeGreaterThan(bodies[0].assignmentRevision);
 });
 
 it("clears old child work on forced revocation and fences an actual committed late reply across context loss", async () => {

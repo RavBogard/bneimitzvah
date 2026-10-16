@@ -48,7 +48,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     const pendingInvitations = createPendingInvitations({ secret: secret(), origin: BROWSER_ORIGIN, environment: "local" });
     const readingPreview=createReadingPreviewService({access,signingSecret:secret(),loadReading:async(date,calendar)=>({fetchedAt:Date.now(),snapshot:{date:parseCeremonyDate(date),calendar,classification:date===options.emptyReadingDate?"missing":"regular",reading:date===options.emptyReadingDate?null:{parashah:"Synthetic",type:"shabbat",summary:"",source:"Hebcal",aliyot:[{n:1,ref:"Genesis 1:1-6:8"},{n:"M",ref:"Numbers 28:9-10"}],triennial:null},haftarah:date===options.emptyReadingDate?null:"Isaiah 1:1-2"}}),loadText:options.studyLoad??(async()=>{throw new StudyUnavailable("upstream");})});
     const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, readingPreview, portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
-      study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }), studentWork: createStudentWorkService({ access, practice }),
+      study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }), studentWork: createStudentWorkService({ access, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
       googleChallenges: createGoogleChallenges({ db, origin: BROWSER_ORIGIN, secret: secret() }),
       resolveHost: async request => {
         const host = await resolveTenantHost(db, request, deployment);

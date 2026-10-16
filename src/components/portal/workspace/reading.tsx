@@ -23,7 +23,7 @@ function AssignmentContext({ row, current = false }: { row: Reading; current?: b
 }
 
 export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: ReadingMode; studentId: string; onStudentReload?(student: Student): void }) {
-  const { read, readWork, epoch, busy, selectChild, registerReload, registerWork, completeWork, registerDeparture, guardDeparture } = useWorkspace();
+  const { readVerified: read, readWork, epoch, busy, selectChild, registerReload, registerWork, completeWork, registerDeparture, guardDeparture } = useWorkspace();
   const key = `${mode}:${studentId}:${epoch}`;
   const [result, setResult] = useState<{ key: string; value?: Assigned; error?: number; loading?: boolean }>({ key: "" }), [retry, setRetry] = useState(0);
   const [selectedKind, setSelectedKind] = useState<StudyKind>("torah");
@@ -53,7 +53,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       if (request.signal.aborted || turn !== sequence.current || lifecycle !== work.lifecycle) throw new Error("Reading request replaced");
       const value = await read(mode, studentId, request.signal);
       if (request.signal.aborted || turn !== sequence.current || lifecycle !== work.lifecycle) throw new Error("Reading request replaced");
-      onStudentReload?.(value.student); work.configure(value); lifecycle = work.lifecycle; setResult({ key, value, loading: true });
+      onStudentReload?.(value.student); work.configure(value, true); lifecycle = work.lifecycle; setResult({ key, value, loading: true });
       const kind = value.readings.some(row => row.kind === selectedKindRef.current) ? selectedKindRef.current : value.readings[0]?.kind;
       await Promise.all([study.current?.reload(value, request.signal), kind ? work.reload(request.signal, kind) : undefined]);
       if (request.signal.aborted || turn !== sequence.current || lifecycle !== work.lifecycle) throw new Error("Reading request replaced");
@@ -61,7 +61,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       setResult({ key, value });
       return value;
     }
-    catch (error) { if (!request.signal.aborted && turn === sequence.current) { if ([401, 403, 404, 409].includes(statusOf(error))) work.clear(); setResult({ key, error: statusOf(error) }); } throw error; }
+    catch (error) { if (!request.signal.aborted && turn === sequence.current) { if ([401, 403, 404].includes(statusOf(error))) work.clear(); setResult({ key, error: statusOf(error) }); } throw error; }
   }, [read, mode, studentId, key, onStudentReload, work, completeWork]);
   const selectedKindRef = useRef(selectedKind); selectedKindRef.current = selectedKind;
   useEffect(() => registerReload(async () => { await load(); }), [registerReload, load]);

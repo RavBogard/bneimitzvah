@@ -10,6 +10,11 @@ import * as s from "../db/index";
 export type WorkActor = StudentActor | PracticeActor;
 const table = (stream: Stream) => stream === "draft" ? s.translationDraft : s.tutorNote;
 export type WorkRow = typeof s.translationDraft.$inferSelect & { displayName: string };
+export async function studentRevision<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: WorkActor) {
+  const [row] = await tx.select({ revision: s.student.revision }).from(s.student).where(and(eq(s.student.tenantId, actor.tenantId), eq(s.student.id, actor.studentId)));
+  if (!row) throw new Error("Work authority unavailable");
+  return row.revision;
+}
 const displayName = (value: string) => value.includes("@") ? "Portal member"
   : Array.from(value.toWellFormed().replace(/[\x00-\x1f\x7f-\x9f]/g, " ").trim()).slice(0, 120).join("") || "Portal member";
 export function view(row: WorkRow) {

@@ -45,8 +45,8 @@ async function fixture() {
   const [member] = await f.ownerDb.select().from(s.membership).where(eq(s.membership.userId, f.admin.id));
   const [assignment] = await f.ownerDb.insert(s.assignment).values({ tenantId: "crc", studentId: f.student.id, kind: "torah", basis: "custom", ref: "Genesis 1:1-3", status: "confirmed", setByMembershipId: member.id }).returning();
   await f.ownerDb.insert(s.assignmentVerse).values([1, 2, 3].map(verse => ({ tenantId: "crc", studentId: f.student.id, assignmentId: assignment.id, ordinal: verse, verseRef: `Genesis 1:${verse}` })));
-  const a = createStudentWorkService({ access: f.a, practice: createPracticeService({ access: f.a }) });
-  const b = createStudentWorkService({ access: f.b, practice: createPracticeService({ access: f.b }) });
+  const a = createStudentWorkService({ access: f.a, practice: createPracticeService({ access: f.a }), authorityBindingSecret: "synthetic-work-authority-binding-secret" });
+  const b = createStudentWorkService({ access: f.b, practice: createPracticeService({ access: f.b }), authorityBindingSecret: "synthetic-work-authority-binding-secret" });
   const selection: WorkSelection = { mode: "tutor", studentId: f.student.id, kind: "torah", assignmentId: assignment.id, assignmentRevision: 1 };
   function request(who: "admin" | "tutor" = "tutor") {
     const request = f.request(who); request.headers.set("origin", "http://localhost:3000"); return { ...request, method: "POST" };
@@ -166,6 +166,44 @@ test("assignment replacement waits on append; removed work cannot be read/replay
     await tx.insert(s.assignmentVerse).values([1, 2, 3].map(verse => ({ tenantId: "crc", studentId: f.student.id, assignmentId: f.assignment.id, ordinal: verse, verseRef: `Genesis 1:${verse}` })));
   });
   expect(await f.workB.history(f.workRequest(), { ...current, assignmentRevision: 3 }, "note", input.verseRef)).toMatchObject({ versions: [{ assignmentRevision: 1, version: 1 }] });
+});
+
+test("recovery finds the old commit only after the assignment UPDATE waited for its writer", async () => {
+  const f = await fixture(), input = f.write(), initial = await f.workA.page(f.workRequest(), f.selection);
+  if (!initial.ok) throw new Error("Synthetic work authority missing");
+  const entered = deferred(), release = deferred();
+  const stop = await f.intercept("a", text => text.startsWith('insert into "tutor_note"'), async proceed => { const value = await proceed(); entered.resolve(); await release.promise; return value; });
+  const save = safe(f.workA.append(f.workRequest(), f.selection, "note", input)); let update: Promise<unknown> | undefined;
+  try {
+    await waitForEntry(entered.promise, save);
+    const ownerPid = (await query<{ pid: number }>(f.owner, "select pg_backend_pid() as pid")).rows[0].pid;
+    update = safe(f.ownerDb.transaction(async tx => { await tx.update(s.assignment).set({ revision: 2 }).where(eq(s.assignment.id, f.assignment.id)); return { committed: true }; }));
+    await observeOwnerWait(f, ownerPid, f.pidA);
+  } finally { release.resolve(); stop(); await Promise.all([save, update]); }
+  expect(await save).toMatchObject({ ok: true, committedVersion: 1 }); expect(await update).toEqual({ committed: true });
+  expect(await f.workB.recovery(f.workRequest(), { ...f.selection, assignmentRevision: 2 }, "note", 1, input, initial.authorityBinding)).toMatchObject({ ok: true, outcome: "committed", receipt: { committedVersion: 1, committed: { assignmentRevision: 1 } } });
+  expect(await f.ownerDb.select().from(s.tutorNote)).toHaveLength(1);
+});
+
+for (const expire of [false, true]) test(`newer locked recovery fences a waiting old writer${expire ? " and rejects expiry after waking" : " before explicit absence"}`, async () => {
+  const f = await fixture(), input = f.write(), initial = await f.workA.page(f.workRequest(), f.selection);
+  if (!initial.ok) throw new Error("Synthetic work authority missing");
+  const entered = deferred(), release = deferred(), expiresAt = Date.now() + 60_000;
+  if (expire) await f.ownerDb.update(s.session).set({ expiresAt: new Date(expiresAt) }).where(eq(s.session.id, f.tutor.sessionId));
+  const update = safe(f.ownerDb.transaction(async tx => { await tx.update(s.assignment).set({ revision: 2 }).where(eq(s.assignment.id, f.assignment.id)); entered.resolve(); await release.promise; return { committed: true }; }));
+  let oldSave: Promise<unknown> | undefined, recovery: Promise<unknown> | undefined, restore: (() => void) | undefined;
+  try {
+    await waitForEntry(entered.promise, update);
+    const ownerPid = (await query<{ pid: number }>(f.owner, "select pg_backend_pid() as pid")).rows[0].pid;
+    oldSave = safe(f.workA.append(f.workRequest(), f.selection, "note", input));
+    recovery = safe(f.workB.recovery(f.workRequest(), { ...f.selection, assignmentRevision: 2 }, "note", 1, input, initial.authorityBinding));
+    await f.waitForLock(f.pidA, ownerPid); await f.waitForLock(f.pidB, ownerPid);
+    if (expire) { const clock = vi.spyOn(Date, "now").mockReturnValue(expiresAt + 1); restore = () => clock.mockRestore(); }
+  } finally { release.resolve(); await Promise.all([update, oldSave, recovery]); restore?.(); }
+  expect(await update).toEqual({ committed: true });
+  expect(await oldSave).toEqual(expire ? { denied: 401 } : { ok: false, code: "stale-revision" });
+  expect(await recovery).toMatchObject(expire ? { denied: 401 } : { ok: true, outcome: "absent", receipt: null, mutationId: input.mutationId, originalRevision: 1, assignmentRevision: 2 });
+  expect(await f.ownerDb.select().from(s.tutorNote)).toHaveLength(0);
 });
 
 test("fresh real PG migration enforces tenant RLS, grants, append-only guard and composite actor/student FKs", async () => {

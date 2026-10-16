@@ -7,12 +7,12 @@ import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from ".
 import { requireCookieMutation } from "./mutations";
 
 function route(pathname: string) {
-  const match = /^\/api\/students\/([^/]+)\/work(?:\/(history|receipt|draft|note))?$/.exec(pathname);
+  const match = /^\/api\/students\/([^/]+)\/work(?:\/(history|receipt|recovery|draft|note))?$/.exec(pathname);
   return match ? { studentId: match[1], operation: match[2] ?? "page" } : null;
 }
 export function studentWorkRouteMethods(pathname: string): readonly string[] | null {
   const found = route(pathname);
-  return found ? [found.operation === "draft" || found.operation === "note" ? "POST" : "GET"] : null;
+  return found ? [["draft", "note", "recovery"].includes(found.operation) ? "POST" : "GET"] : null;
 }
 const binding = ["mode", "kind", "assignmentId", "assignmentRevision"];
 function number(value: unknown) {
@@ -33,9 +33,12 @@ export async function handleStudentWorkRequest(request: Request, runtime: HttpRu
     let result: unknown;
     if (mutation) {
       requireCookieMutation(request, runtime.origin);
-      const body = closedObject(await readJsonBody(request, "work"), [...binding, "verseRef", "text", "expectedVersion", "mutationId"]);
+      const recovery = found.operation === "recovery";
+      const body = closedObject(await readJsonBody(request, "work"), [...binding, ...(recovery ? ["stream", "originalRevision", "write", "authorityBinding"] : ["verseRef", "text", "expectedVersion", "mutationId"])]);
       const selection = validate.selection({ studentId: found.studentId, ...Object.fromEntries(binding.map(key => [key, body[key]])) });
-      result = await runtime.studentWork.append(request, selection, validate.stream(found.operation), validate.write(Object.fromEntries(["verseRef", "text", "expectedVersion", "mutationId"].map(key => [key, body[key]])), validate.stream(found.operation)));
+      if (recovery && (typeof body.authorityBinding !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(body.authorityBinding))) throw new HttpBoundaryError();
+      result = recovery ? await runtime.studentWork.recovery(request, selection, validate.stream(body.stream), validate.integer(body.originalRevision, 1, 2147483647), validate.write(body.write, validate.stream(body.stream)), body.authorityBinding as string)
+        : await runtime.studentWork.append(request, selection, validate.stream(found.operation), validate.write(Object.fromEntries(["verseRef", "text", "expectedVersion", "mutationId"].map(key => [key, body[key]])), validate.stream(found.operation)));
     } else {
       const selection = validate.selection({ studentId: found.studentId, ...Object.fromEntries(binding.map(key => [key, key === "assignmentRevision" ? number(query.get(key)) : query.get(key)])) });
       if (found.operation === "page") result = await runtime.studentWork.page(request, selection, query.has("offset") ? number(query.get("offset")) : 0);
