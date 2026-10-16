@@ -52,3 +52,19 @@ The supplied reviewed browser log reports 25/25 tests passed across ten files. N
 Clear. This ship covers the scored fix, not the whole surface. The original full review above remains the bounded synthetic visual record; full-corpus Hebrew/cantillation rendering, auth/lifecycle boundaries, full-product completion and student release are not established by this verdict.
 
 disposition: ship
+
+## scoped cross-platform verdict — 2026-10-16
+
+This follow-up scores only the phone-spacing correction to the prior reading-first finding. Inspected the current CSS/test diff, latest cross-platform return note and both supplied static geometry images; no browser, detector, implementation or broader review was performed.
+
+| Finding | Verdict | Evidence |
+| --- | --- | --- |
+| Linux system-font wrapping pushes the first Hebrew text range below the initial phone viewport | resolved within the supplied static geometry reproduction | Four phone-only margin/padding adjustments compact the reading entry without changing type or control sizes. Recorded Linux range improves from 832.98–870.98px to 798.25–836.25px at 390×844; Windows is 705.88–741.88px after correction. Both images retain clear student/reference/review context, visible kind controls and separated verse content. |
+
+No material spacing or control regression is visible in these two reproductions. The test retains its full-range-inside-viewport requirement, now waits for font readiness and two frames, and emits numeric geometry/font diagnostics rather than a bare boolean.
+
+### scoped remaining
+
+Clear for the reviewed spacing change. These are static CSS/markup geometry reproductions, not refreshed authenticated app captures or proof that hosted CI now passes. Linux's minimal font set visibly lacks some synthetic cantillation glyphs, so these images establish spacing only. Actual SDK/Postgres and hosted rerun acceptance remain root-owned gates. This ship covers the scoped correction only and does not extend the previous Hebrew/font or release claims.
+
+disposition: ship

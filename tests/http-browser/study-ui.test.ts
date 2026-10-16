@@ -78,11 +78,20 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await safe(() => tutor.getByRole("link", { name: "Parent", exact: true }).click()); await safe(() => tutor.getByLabel("Child", { exact: true }).selectOption(fixture.student.id)); await loaded(tutor, "Genesis 1:1");
   expect(await tutor.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0);
   const learner = await page("student", true); await navigate(learner, "/workspace/student"); await loaded(learner, "Genesis 1:1"); expect(await learner.getByLabel("Student", { exact: true }).count()).toBe(0);
-  await safe(() => learner.evaluate(() => scrollTo(0, 0)));
-  expect(await learner.locator(".study-hebrew > span").first().evaluate(span => {
+  await safe(() => learner.evaluate(async () => {
+    await document.fonts.ready;
+    scrollTo(0, 0);
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  }));
+  const geometry = await learner.locator(".study-hebrew > span").first().evaluate(span => {
     const range = document.createRange(); range.selectNodeContents(span); const bounds = range.getBoundingClientRect();
-    return scrollY === 0 && bounds.top >= 0 && bounds.bottom <= innerHeight;
-  })).toBe(true);
+    return { scrollY, top: bounds.top, bottom: bounds.bottom, viewportHeight: innerHeight,
+      bodyFont: getComputedStyle(document.body).fontFamily, hebrewFont: getComputedStyle(span).fontFamily, fontsStatus: document.fonts.status };
+  });
+  const diagnostic = JSON.stringify(geometry); // Geometry and font metadata only; no student text or contacts.
+  expect(geometry.scrollY, diagnostic).toBe(0);
+  expect(geometry.top, diagnostic).toBeGreaterThanOrEqual(0);
+  expect(geometry.bottom, diagnostic).toBeLessThanOrEqual(geometry.viewportHeight);
   await capture(learner, "study-student-partial-mobile");
   await click(learner, "Haftarah text"); await loaded(learner, "Isaiah 1:1"); expect(await learner.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true }).count()).toBe(0);
   await ui(learner.locator(".reading-current-assignment").getByRole("heading", { name: "Haftarah", level: 3, exact: true })).toBeVisible();
