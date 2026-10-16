@@ -1,0 +1,3872 @@
+{
+  "id": "4919ff38-666a-447f-bf9e-09dd1f1dbf02",
+  "prevId": "b40747e2-6552-4bf4-84b1-15b06193a514",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.account": {
+      "name": "account",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_token": {
+          "name": "access_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token": {
+          "name": "refresh_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_token": {
+          "name": "id_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "access_token_expires_at": {
+          "name": "access_token_expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refresh_token_expires_at": {
+          "name": "refresh_token_expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "account_userId_idx": {
+          "name": "account_userId_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "account_user_id_user_id_fk": {
+          "name": "account_user_id_user_id_fk",
+          "tableFrom": "account",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "account_provider_identity_key": {
+          "name": "account_provider_identity_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "provider_id",
+            "account_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.rate_limit": {
+      "name": "rate_limit",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_request": {
+          "name": "last_request",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "rate_limit_key_unique": {
+          "name": "rate_limit_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.session": {
+      "name": "session",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "session_userId_idx": {
+          "name": "session_userId_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "session_user_id_user_id_fk": {
+          "name": "session_user_id_user_id_fk",
+          "tableFrom": "session",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "session_token_unique": {
+          "name": "session_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token"
+          ]
+        },
+        "session_id_user_key": {
+          "name": "session_id_user_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "user_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user": {
+      "name": "user",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email_verified": {
+          "name": "email_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "image": {
+          "name": "image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "user_normalized_email_key": {
+          "name": "user_normalized_email_key",
+          "columns": [
+            {
+              "expression": "lower(\"email\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "user_email_unique": {
+          "name": "user_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.verification": {
+      "name": "verification",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "verification_identifier_idx": {
+          "name": "verification_identifier_idx",
+          "columns": [
+            {
+              "expression": "identifier",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.invitation_throttle": {
+      "name": "invitation_throttle",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bucket_start": {
+          "name": "bucket_start",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "invitation_throttle_tenant_id_tenant_id_fk": {
+          "name": "invitation_throttle_tenant_id_tenant_id_fk",
+          "tableFrom": "invitation_throttle",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "invitation_throttle_tenant_id_key": {
+          "name": "invitation_throttle_tenant_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "invitation_throttle_bucket_key": {
+          "name": "invitation_throttle_bucket_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "scope",
+            "key",
+            "bucket_start"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "invitation_throttle_scope": {
+          "name": "invitation_throttle_scope",
+          "value": "\"invitation_throttle\".\"scope\" in ('actor','recipient')"
+        },
+        "invitation_throttle_hash": {
+          "name": "invitation_throttle_hash",
+          "value": "\"invitation_throttle\".\"key\" ~ '^[a-f0-9]{64}$'"
+        },
+        "invitation_throttle_positive": {
+          "name": "invitation_throttle_positive",
+          "value": "\"invitation_throttle\".\"count\" > 0 and \"invitation_throttle\".\"bucket_start\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.service_catalog": {
+      "name": "service_catalog",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identity": {
+          "name": "identity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "feed_bytes": {
+          "name": "feed_bytes",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provenance_bytes": {
+          "name": "provenance_bytes",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pins": {
+          "name": "pins",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "service_catalog_tenant_id_tenant_id_fk": {
+          "name": "service_catalog_tenant_id_tenant_id_fk",
+          "tableFrom": "service_catalog",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "service_catalog_tenant_key": {
+          "name": "service_catalog_tenant_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "service_catalog_identity_key": {
+          "name": "service_catalog_identity_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id",
+            "identity"
+          ]
+        },
+        "service_catalog_generation_key": {
+          "name": "service_catalog_generation_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "identity"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "service_catalog_identity_hash": {
+          "name": "service_catalog_identity_hash",
+          "value": "\"service_catalog\".\"identity\" ~ '^[a-f0-9]{64}$'"
+        },
+        "service_catalog_bytes_bound": {
+          "name": "service_catalog_bytes_bound",
+          "value": "octet_length(\"service_catalog\".\"feed_bytes\") between 1 and 2097152 and octet_length(\"service_catalog\".\"provenance_bytes\") between 1 and 32768"
+        },
+        "service_catalog_pins_bound": {
+          "name": "service_catalog_pins_bound",
+          "value": "jsonb_typeof(\"service_catalog\".\"pins\") = 'object' and octet_length(\"service_catalog\".\"pins\"::text) <= 2048\n    and \"service_catalog\".\"pins\" ?& array['feedSha256','provenanceSha256','artifactRepo','artifactCommit','artifactRunId','sourceGitSha']\n    and (\"service_catalog\".\"pins\" - 'feedSha256' - 'provenanceSha256' - 'artifactRepo' - 'artifactCommit' - 'artifactRunId' - 'sourceGitSha') = '{}'::jsonb"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.service_catalog_lifecycle": {
+      "name": "service_catalog_lifecycle",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "catalog_id": {
+          "name": "catalog_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "service_lifecycle_one_active": {
+          "name": "service_lifecycle_one_active",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"service_catalog_lifecycle\".\"state\" = 'active'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "service_catalog_lifecycle_tenant_id_tenant_id_fk": {
+          "name": "service_catalog_lifecycle_tenant_id_tenant_id_fk",
+          "tableFrom": "service_catalog_lifecycle",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "service_lifecycle_catalog_fk": {
+          "name": "service_lifecycle_catalog_fk",
+          "tableFrom": "service_catalog_lifecycle",
+          "tableTo": "service_catalog",
+          "columnsFrom": [
+            "tenant_id",
+            "catalog_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "service_lifecycle_catalog_key": {
+          "name": "service_lifecycle_catalog_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "catalog_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "service_lifecycle_state": {
+          "name": "service_lifecycle_state",
+          "value": "\"service_catalog_lifecycle\".\"state\" in ('active','superseded','withdrawn')"
+        },
+        "service_lifecycle_revision": {
+          "name": "service_lifecycle_revision",
+          "value": "\"service_catalog_lifecycle\".\"revision\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.student_service_plan": {
+      "name": "student_service_plan",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "student_id": {
+          "name": "student_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "catalog_id": {
+          "name": "catalog_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "catalog_identity": {
+          "name": "catalog_identity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "selected_ids": {
+          "name": "selected_ids",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "needs_review": {
+          "name": "needs_review",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "reviewed_date": {
+          "name": "reviewed_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reviewed_slot": {
+          "name": "reviewed_slot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "set_by_membership_id": {
+          "name": "set_by_membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "student_service_plan_tenant_id_tenant_id_fk": {
+          "name": "student_service_plan_tenant_id_tenant_id_fk",
+          "tableFrom": "student_service_plan",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "student_service_plan_student_fk": {
+          "name": "student_service_plan_student_fk",
+          "tableFrom": "student_service_plan",
+          "tableTo": "student",
+          "columnsFrom": [
+            "tenant_id",
+            "student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "student_service_plan_catalog_fk": {
+          "name": "student_service_plan_catalog_fk",
+          "tableFrom": "student_service_plan",
+          "tableTo": "service_catalog",
+          "columnsFrom": [
+            "tenant_id",
+            "catalog_id",
+            "catalog_identity"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "identity"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "student_service_plan_author_fk": {
+          "name": "student_service_plan_author_fk",
+          "tableFrom": "student_service_plan",
+          "tableTo": "membership",
+          "columnsFrom": [
+            "tenant_id",
+            "set_by_membership_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "student_service_plan_current_key": {
+          "name": "student_service_plan_current_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "student_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "student_service_plan_revision": {
+          "name": "student_service_plan_revision",
+          "value": "\"student_service_plan\".\"revision\" > 0"
+        },
+        "student_service_plan_slot": {
+          "name": "student_service_plan_slot",
+          "value": "\"student_service_plan\".\"reviewed_slot\" in ('morning','havdalah')"
+        },
+        "student_service_plan_selection": {
+          "name": "student_service_plan_selection",
+          "value": "cardinality(\"student_service_plan\".\"selected_ids\") <= 256 and\n    (cardinality(\"student_service_plan\".\"selected_ids\") = 0 or (array_ndims(\"student_service_plan\".\"selected_ids\") = 1 and array_lower(\"student_service_plan\".\"selected_ids\",1) = 1))\n    and array_position(\"student_service_plan\".\"selected_ids\", null) is null and octet_length(array_to_string(\"student_service_plan\".\"selected_ids\", '|')) <= 16384"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.translation_draft": {
+      "name": "translation_draft",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "student_id": {
+          "name": "student_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verse_ref": {
+          "name": "verse_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assignment_id": {
+          "name": "assignment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assignment_revision": {
+          "name": "assignment_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "text": {
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_membership_id": {
+          "name": "actor_membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_grant_id": {
+          "name": "role_grant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "portal_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mode": {
+          "name": "mode",
+          "type": "context_mode",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guardian_id": {
+          "name": "guardian_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "context_id": {
+          "name": "context_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "student_identity_id": {
+          "name": "student_identity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mutation_id": {
+          "name": "mutation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_digest": {
+          "name": "request_digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "base_version": {
+          "name": "base_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "translation_draft_tenant_id_tenant_id_fk": {
+          "name": "translation_draft_tenant_id_tenant_id_fk",
+          "tableFrom": "translation_draft",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "translation_draft_student_fk": {
+          "name": "translation_draft_student_fk",
+          "tableFrom": "translation_draft",
+          "tableTo": "student",
+          "columnsFrom": [
+            "tenant_id",
+            "student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "translation_draft_assignment_fk": {
+          "name": "translation_draft_assignment_fk",
+          "tableFrom": "translation_draft",
+          "tableTo": "assignment",
+          "columnsFrom": [
+            "tenant_id",
+            "assignment_id",
+            "student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "student_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "translation_draft_actor_fk": {
+          "name": "translation_draft_actor_fk",
+          "tableFrom": "translation_draft",
+          "tableTo": "membership",
+          "columnsFrom": [
+            "tenant_id",
+            "actor_membership_id",
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "translation_draft_grant_fk": {
+          "name": "translation_draft_grant_fk",
+          "tableFrom": "translation_draft",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "role_grant_id",
+            "actor_membership_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "membership_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "translation_draft_role_fk": {
+          "name": "translation_draft_role_fk",
+          "tableFrom": "translation_draft",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "role_grant_id",
+            "role"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "role"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "translation_draft_guardian_fk": {
+          "name": "translation_draft_guardian_fk",
+          "tableFrom": "translation_draft",
+          "tableTo": "guardian",
+          "columnsFrom": [
+            "tenant_id",
+            "guardian_id",
+            "student_id",
+            "role_grant_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "student_id",
+            "parent_grant_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "translation_draft_identity_fk": {
+          "name": "translation_draft_identity_fk",
+          "tableFrom": "translation_draft",
+          "tableTo": "student_identity",
+          "columnsFrom": [
+            "tenant_id",
+            "student_identity_id",
+            "student_id",
+            "role_grant_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "student_id",
+            "role_grant_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "translation_draft_stream_key": {
+          "name": "translation_draft_stream_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "student_id",
+            "verse_ref",
+            "version"
+          ]
+        },
+        "translation_draft_receipt_key": {
+          "name": "translation_draft_receipt_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "student_id",
+            "actor_user_id",
+            "mutation_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "translation_draft_versions": {
+          "name": "translation_draft_versions",
+          "value": "\"translation_draft\".\"version\" > 0 and \"translation_draft\".\"base_version\" >= 0 and \"translation_draft\".\"version\" = \"translation_draft\".\"base_version\" + 1 and \"translation_draft\".\"assignment_revision\" > 0"
+        },
+        "translation_draft_text_bound": {
+          "name": "translation_draft_text_bound",
+          "value": "octet_length(\"translation_draft\".\"text\") <= 4096 and translate(\"translation_draft\".\"text\", chr(9) || chr(10), '') !~ '[[:cntrl:]]'"
+        },
+        "translation_draft_digest": {
+          "name": "translation_draft_digest",
+          "value": "\"translation_draft\".\"request_digest\" ~ '^[a-f0-9]{64}$'"
+        },
+        "translation_draft_ref": {
+          "name": "translation_draft_ref",
+          "value": "\"translation_draft\".\"verse_ref\" ~ '^[[:alpha:] 0-9]+ [1-9][0-9]*:[1-9][0-9]*$'"
+        },
+        "translation_draft_mode": {
+          "name": "translation_draft_mode",
+          "value": "(\"translation_draft\".\"mode\" = 'student' and \"translation_draft\".\"role\" = 'student' and \"translation_draft\".\"student_identity_id\" is not null and \"translation_draft\".\"guardian_id\" is null and \"translation_draft\".\"context_id\" is null) or (\"translation_draft\".\"mode\" = 'child-practice' and \"translation_draft\".\"role\" = 'parent' and \"translation_draft\".\"guardian_id\" is not null and \"translation_draft\".\"context_id\" is not null and \"translation_draft\".\"student_identity_id\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.tutor_note": {
+      "name": "tutor_note",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "student_id": {
+          "name": "student_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verse_ref": {
+          "name": "verse_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assignment_id": {
+          "name": "assignment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assignment_revision": {
+          "name": "assignment_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "text": {
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_membership_id": {
+          "name": "actor_membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_grant_id": {
+          "name": "role_grant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "portal_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mode": {
+          "name": "mode",
+          "type": "context_mode",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guardian_id": {
+          "name": "guardian_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "context_id": {
+          "name": "context_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "student_identity_id": {
+          "name": "student_identity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mutation_id": {
+          "name": "mutation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_digest": {
+          "name": "request_digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "base_version": {
+          "name": "base_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tutor_note_tenant_id_tenant_id_fk": {
+          "name": "tutor_note_tenant_id_tenant_id_fk",
+          "tableFrom": "tutor_note",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tutor_note_student_fk": {
+          "name": "tutor_note_student_fk",
+          "tableFrom": "tutor_note",
+          "tableTo": "student",
+          "columnsFrom": [
+            "tenant_id",
+            "student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tutor_note_assignment_fk": {
+          "name": "tutor_note_assignment_fk",
+          "tableFrom": "tutor_note",
+          "tableTo": "assignment",
+          "columnsFrom": [
+            "tenant_id",
+            "assignment_id",
+            "student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "student_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tutor_note_actor_fk": {
+          "name": "tutor_note_actor_fk",
+          "tableFrom": "tutor_note",
+          "tableTo": "membership",
+          "columnsFrom": [
+            "tenant_id",
+            "actor_membership_id",
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tutor_note_grant_fk": {
+          "name": "tutor_note_grant_fk",
+          "tableFrom": "tutor_note",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "role_grant_id",
+            "actor_membership_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "membership_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tutor_note_role_fk": {
+          "name": "tutor_note_role_fk",
+          "tableFrom": "tutor_note",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "role_grant_id",
+            "role"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "role"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tutor_note_guardian_fk": {
+          "name": "tutor_note_guardian_fk",
+          "tableFrom": "tutor_note",
+          "tableTo": "guardian",
+          "columnsFrom": [
+            "tenant_id",
+            "guardian_id",
+            "student_id",
+            "role_grant_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "student_id",
+            "parent_grant_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tutor_note_identity_fk": {
+          "name": "tutor_note_identity_fk",
+          "tableFrom": "tutor_note",
+          "tableTo": "student_identity",
+          "columnsFrom": [
+            "tenant_id",
+            "student_identity_id",
+            "student_id",
+            "role_grant_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "student_id",
+            "role_grant_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "tutor_note_stream_key": {
+          "name": "tutor_note_stream_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "student_id",
+            "verse_ref",
+            "version"
+          ]
+        },
+        "tutor_note_receipt_key": {
+          "name": "tutor_note_receipt_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "student_id",
+            "actor_user_id",
+            "mutation_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "tutor_note_versions": {
+          "name": "tutor_note_versions",
+          "value": "\"tutor_note\".\"version\" > 0 and \"tutor_note\".\"base_version\" >= 0 and \"tutor_note\".\"version\" = \"tutor_note\".\"base_version\" + 1 and \"tutor_note\".\"assignment_revision\" > 0"
+        },
+        "tutor_note_text_bound": {
+          "name": "tutor_note_text_bound",
+          "value": "octet_length(\"tutor_note\".\"text\") <= 4096 and translate(\"tutor_note\".\"text\", chr(9) || chr(10), '') !~ '[[:cntrl:]]'"
+        },
+        "tutor_note_digest": {
+          "name": "tutor_note_digest",
+          "value": "\"tutor_note\".\"request_digest\" ~ '^[a-f0-9]{64}$'"
+        },
+        "tutor_note_ref": {
+          "name": "tutor_note_ref",
+          "value": "\"tutor_note\".\"verse_ref\" ~ '^[[:alpha:] 0-9]+ [1-9][0-9]*:[1-9][0-9]*$'"
+        },
+        "tutor_note_mode": {
+          "name": "tutor_note_mode",
+          "value": "\"tutor_note\".\"mode\"::text = \"tutor_note\".\"role\"::text and \"tutor_note\".\"mode\" in ('admin','tutor') and \"tutor_note\".\"guardian_id\" is null and \"tutor_note\".\"context_id\" is null and \"tutor_note\".\"student_identity_id\" is null and length(trim(\"tutor_note\".\"text\")) > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.sefaria_text_cache": {
+      "name": "sefaria_text_cache",
+      "schema": "",
+      "columns": {
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "api_version": {
+          "name": "api_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parser_version": {
+          "name": "parser_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "policy_version": {
+          "name": "policy_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "book": {
+          "name": "book",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chapter": {
+          "name": "chapter",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hebrew_edition": {
+          "name": "hebrew_edition",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hebrew_language": {
+          "name": "hebrew_language",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "translation_edition": {
+          "name": "translation_edition",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "translation_language": {
+          "name": "translation_language",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fetched_at": {
+          "name": "fetched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "sefaria_text_cache_expiry": {
+          "name": "sefaria_text_cache_expiry",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "sefaria_text_cache_key": {
+          "name": "sefaria_text_cache_key",
+          "columns": [
+            "provider",
+            "api_version",
+            "parser_version",
+            "policy_version",
+            "book",
+            "chapter",
+            "hebrew_edition",
+            "hebrew_language",
+            "translation_edition",
+            "translation_language"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "sefaria_text_cache_namespace": {
+          "name": "sefaria_text_cache_namespace",
+          "value": "\"sefaria_text_cache\".\"provider\" = 'sefaria' and \"sefaria_text_cache\".\"api_version\" = 'v3'\n    and \"sefaria_text_cache\".\"parser_version\" = 'parse5-8.0.1' and \"sefaria_text_cache\".\"policy_version\" = 'study-normalized-v1'\n    and \"sefaria_text_cache\".\"hebrew_edition\" = 'mam' and \"sefaria_text_cache\".\"hebrew_language\" = 'he'\n    and \"sefaria_text_cache\".\"translation_edition\" = 'jps2023' and \"sefaria_text_cache\".\"translation_language\" = 'en'"
+        },
+        "sefaria_text_cache_chapter": {
+          "name": "sefaria_text_cache_chapter",
+          "value": "\"sefaria_text_cache\".\"chapter\" between 1 and case \"sefaria_text_cache\".\"book\" when 'Genesis' then 50 when 'Exodus' then 40 when 'Leviticus' then 27 when 'Numbers' then 36 when 'Deuteronomy' then 34 when 'Joshua' then 24 when 'Judges' then 21 when 'I Samuel' then 31 when 'II Samuel' then 24 when 'I Kings' then 22 when 'II Kings' then 25 when 'Isaiah' then 66 when 'Jeremiah' then 52 when 'Ezekiel' then 48 when 'Hosea' then 14 when 'Joel' then 4 when 'Amos' then 9 when 'Obadiah' then 1 when 'Jonah' then 4 when 'Micah' then 7 when 'Nahum' then 3 when 'Habakkuk' then 3 when 'Zephaniah' then 3 when 'Haggai' then 2 when 'Zechariah' then 14 when 'Malachi' then 3 when 'Psalms' then 150 when 'Proverbs' then 31 when 'Job' then 42 when 'Song of Songs' then 8 when 'Ruth' then 4 when 'Lamentations' then 5 when 'Ecclesiastes' then 12 when 'Esther' then 10 when 'Daniel' then 12 when 'Ezra' then 10 when 'Nehemiah' then 13 when 'I Chronicles' then 29 when 'II Chronicles' then 36 else 0 end"
+        },
+        "sefaria_text_cache_payload": {
+          "name": "sefaria_text_cache_payload",
+          "value": "jsonb_typeof(\"sefaria_text_cache\".\"payload\") = 'object'\n    and \"sefaria_text_cache\".\"payload\" ?& array['verses','editions'] and (\"sefaria_text_cache\".\"payload\" - 'verses' - 'editions') = '{}'::jsonb\n    and jsonb_typeof(\"sefaria_text_cache\".\"payload\"->'verses') = 'array' and jsonb_typeof(\"sefaria_text_cache\".\"payload\"->'editions') = 'array'\n    and jsonb_array_length(\"sefaria_text_cache\".\"payload\"->'verses') between 1 and 176\n    and jsonb_array_length(\"sefaria_text_cache\".\"payload\"->'editions') between 1 and 2\n    and octet_length(\"sefaria_text_cache\".\"payload\"::text) <= 524288"
+        },
+        "sefaria_text_cache_hash": {
+          "name": "sefaria_text_cache_hash",
+          "value": "\"sefaria_text_cache\".\"content_hash\" ~ '^[a-f0-9]{64}$'"
+        },
+        "sefaria_text_cache_times": {
+          "name": "sefaria_text_cache_times",
+          "value": "isfinite(\"sefaria_text_cache\".\"fetched_at\") and isfinite(\"sefaria_text_cache\".\"expires_at\")\n    and extract(epoch from \"sefaria_text_cache\".\"fetched_at\") >= 0 and extract(epoch from \"sefaria_text_cache\".\"expires_at\") <= 8640000000000\n    and extract(epoch from \"sefaria_text_cache\".\"fetched_at\") * 1000 = trunc(extract(epoch from \"sefaria_text_cache\".\"fetched_at\") * 1000)\n    and \"sefaria_text_cache\".\"expires_at\" = \"sefaria_text_cache\".\"fetched_at\" + interval '24 hours'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.assignment": {
+      "name": "assignment",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "student_id": {
+          "name": "student_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "reading_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "basis": {
+          "name": "basis",
+          "type": "reading_basis",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ref": {
+          "name": "ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'proposed'"
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "set_by_membership_id": {
+          "name": "set_by_membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "proposal_cache_id": {
+          "name": "proposal_cache_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposal_snapshot": {
+          "name": "proposal_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "aliyah_starts": {
+          "name": "aliyah_starts",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "assignment_tenant_id_tenant_id_fk": {
+          "name": "assignment_tenant_id_tenant_id_fk",
+          "tableFrom": "assignment",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "assignment_proposal_cache_id_hebcal_cache_id_fk": {
+          "name": "assignment_proposal_cache_id_hebcal_cache_id_fk",
+          "tableFrom": "assignment",
+          "tableTo": "hebcal_cache",
+          "columnsFrom": [
+            "proposal_cache_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "assignment_student_fk": {
+          "name": "assignment_student_fk",
+          "tableFrom": "assignment",
+          "tableTo": "student",
+          "columnsFrom": [
+            "tenant_id",
+            "student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "assignment_author_fk": {
+          "name": "assignment_author_fk",
+          "tableFrom": "assignment",
+          "tableTo": "membership",
+          "columnsFrom": [
+            "tenant_id",
+            "set_by_membership_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "assignment_tenant_id_key": {
+          "name": "assignment_tenant_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "assignment_student_key": {
+          "name": "assignment_student_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id",
+            "student_id"
+          ]
+        },
+        "assignment_current_kind_key": {
+          "name": "assignment_current_kind_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "student_id",
+            "kind"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "assignment_status": {
+          "name": "assignment_status",
+          "value": "\"assignment\".\"status\" in ('proposed', 'confirmed')"
+        },
+        "assignment_revision_positive": {
+          "name": "assignment_revision_positive",
+          "value": "\"assignment\".\"revision\" > 0"
+        },
+        "assignment_ref_required": {
+          "name": "assignment_ref_required",
+          "value": "length(trim(\"assignment\".\"ref\")) > 0"
+        },
+        "assignment_aliyah_starts_shape": {
+          "name": "assignment_aliyah_starts_shape",
+          "value": "\"assignment\".\"aliyah_starts\" is null or (\"assignment\".\"kind\" = 'torah' and cardinality(\"assignment\".\"aliyah_starts\") <= 999 and (cardinality(\"assignment\".\"aliyah_starts\") = 0 or (array_ndims(\"assignment\".\"aliyah_starts\") = 1 and array_lower(\"assignment\".\"aliyah_starts\", 1) = 1)) and array_position(\"assignment\".\"aliyah_starts\", null) is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.assignment_verse": {
+      "name": "assignment_verse",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assignment_id": {
+          "name": "assignment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "student_id": {
+          "name": "student_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verse_ref": {
+          "name": "verse_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "assignment_verse_tenant_id_tenant_id_fk": {
+          "name": "assignment_verse_tenant_id_tenant_id_fk",
+          "tableFrom": "assignment_verse",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "assignment_verse_parent_fk": {
+          "name": "assignment_verse_parent_fk",
+          "tableFrom": "assignment_verse",
+          "tableTo": "assignment",
+          "columnsFrom": [
+            "tenant_id",
+            "assignment_id",
+            "student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "student_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "assignment_verse_student_fk": {
+          "name": "assignment_verse_student_fk",
+          "tableFrom": "assignment_verse",
+          "tableTo": "student",
+          "columnsFrom": [
+            "tenant_id",
+            "student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "assignment_verse_tenant_id_key": {
+          "name": "assignment_verse_tenant_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "assignment_verse_ordinal_key": {
+          "name": "assignment_verse_ordinal_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "assignment_id",
+            "ordinal"
+          ]
+        },
+        "assignment_verse_ref_key": {
+          "name": "assignment_verse_ref_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "assignment_id",
+            "verse_ref"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "assignment_verse_positive_ordinal": {
+          "name": "assignment_verse_positive_ordinal",
+          "value": "\"assignment_verse\".\"ordinal\" > 0"
+        },
+        "assignment_verse_full_ref": {
+          "name": "assignment_verse_full_ref",
+          "value": "\"assignment_verse\".\"verse_ref\" ~ '^[[:alpha:] 0-9]+ [1-9][0-9]*:[1-9][0-9]*$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.audit_event": {
+      "name": "audit_event",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_membership_id": {
+          "name": "actor_membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mode": {
+          "name": "mode",
+          "type": "context_mode",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "acting_student_id": {
+          "name": "acting_student_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "role_grant_id": {
+          "name": "role_grant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guardian_id": {
+          "name": "guardian_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_type": {
+          "name": "target_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "audit_event_tenant_id_tenant_id_fk": {
+          "name": "audit_event_tenant_id_tenant_id_fk",
+          "tableFrom": "audit_event",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_event_actor_user_id_user_id_fk": {
+          "name": "audit_event_actor_user_id_user_id_fk",
+          "tableFrom": "audit_event",
+          "tableTo": "user",
+          "columnsFrom": [
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_actor_fk": {
+          "name": "audit_actor_fk",
+          "tableFrom": "audit_event",
+          "tableTo": "membership",
+          "columnsFrom": [
+            "tenant_id",
+            "actor_membership_id",
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_grant_fk": {
+          "name": "audit_grant_fk",
+          "tableFrom": "audit_event",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "role_grant_id",
+            "actor_membership_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "membership_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_student_fk": {
+          "name": "audit_student_fk",
+          "tableFrom": "audit_event",
+          "tableTo": "student",
+          "columnsFrom": [
+            "tenant_id",
+            "acting_student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_guardian_fk": {
+          "name": "audit_guardian_fk",
+          "tableFrom": "audit_event",
+          "tableTo": "guardian",
+          "columnsFrom": [
+            "tenant_id",
+            "guardian_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "audit_event_tenant_id_key": {
+          "name": "audit_event_tenant_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "audit_action_known": {
+          "name": "audit_action_known",
+          "value": "\"audit_event\".\"action\" in ('student.create','student.update','student.import','grant.issue','grant.revoke','guardian.link','guardian.revoke','guardian.practice-set','tutor.cantor-set','tutor.assign','tutor.revoke','invite.issue','invite.accept','invite.revoke','invite.delivery-sent','invite.delivery-failed','context.enter','context.exit','reading.set','identity.link','identity.revoke','draft.append','note.append','service-plan.set')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.guardian": {
+      "name": "guardian",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "student_id": {
+          "name": "student_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_grant_id": {
+          "name": "parent_grant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "portal_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'parent'"
+        },
+        "practice_enabled": {
+          "name": "practice_enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "link_provenance": {
+          "name": "link_provenance",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "guardian_active_key": {
+          "name": "guardian_active_key",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "student_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "parent_grant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"guardian\".\"revoked_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "guardian_tenant_id_tenant_id_fk": {
+          "name": "guardian_tenant_id_tenant_id_fk",
+          "tableFrom": "guardian",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "guardian_student_fk": {
+          "name": "guardian_student_fk",
+          "tableFrom": "guardian",
+          "tableTo": "student",
+          "columnsFrom": [
+            "tenant_id",
+            "student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "guardian_grant_fk": {
+          "name": "guardian_grant_fk",
+          "tableFrom": "guardian",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "parent_grant_id",
+            "role"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "role"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "guardian_tenant_id_key": {
+          "name": "guardian_tenant_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "guardian_context_key": {
+          "name": "guardian_context_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id",
+            "student_id",
+            "parent_grant_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "guardian_revision_positive": {
+          "name": "guardian_revision_positive",
+          "value": "\"guardian\".\"revision\" > 0"
+        },
+        "guardian_parent_role": {
+          "name": "guardian_parent_role",
+          "value": "\"guardian\".\"role\" = 'parent'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.hebcal_cache": {
+      "name": "hebcal_cache",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "request_key": {
+          "name": "request_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_date": {
+          "name": "request_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parameters": {
+          "name": "parameters",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fetched_at": {
+          "name": "fetched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "hebcal_cache_request_key_unique": {
+          "name": "hebcal_cache_request_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "request_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.invite": {
+      "name": "invite",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "portal_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "student_id": {
+          "name": "student_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "inviter_membership_id": {
+          "name": "inviter_membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_membership_id": {
+          "name": "accepted_membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "delivery_status": {
+          "name": "delivery_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "delivery_attempted_at": {
+          "name": "delivery_attempted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "invite_tenant_id_tenant_id_fk": {
+          "name": "invite_tenant_id_tenant_id_fk",
+          "tableFrom": "invite",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "invite_student_fk": {
+          "name": "invite_student_fk",
+          "tableFrom": "invite",
+          "tableTo": "student",
+          "columnsFrom": [
+            "tenant_id",
+            "student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "invite_inviter_fk": {
+          "name": "invite_inviter_fk",
+          "tableFrom": "invite",
+          "tableTo": "membership",
+          "columnsFrom": [
+            "tenant_id",
+            "inviter_membership_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "invite_acceptor_fk": {
+          "name": "invite_acceptor_fk",
+          "tableFrom": "invite",
+          "tableTo": "membership",
+          "columnsFrom": [
+            "tenant_id",
+            "accepted_membership_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "invite_token_hash_unique": {
+          "name": "invite_token_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token_hash"
+          ]
+        },
+        "invite_tenant_id_key": {
+          "name": "invite_tenant_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "invite_role_target": {
+          "name": "invite_role_target",
+          "value": "(\"invite\".\"role\" in ('parent', 'student') and \"invite\".\"student_id\" is not null) or (\"invite\".\"role\" = 'tutor' and \"invite\".\"student_id\" is null)"
+        },
+        "invite_acceptance_pair": {
+          "name": "invite_acceptance_pair",
+          "value": "(\"invite\".\"accepted_at\" is null) = (\"invite\".\"accepted_membership_id\" is null)"
+        },
+        "invite_not_accepted_revoked": {
+          "name": "invite_not_accepted_revoked",
+          "value": "not (\"invite\".\"accepted_at\" is not null and \"invite\".\"revoked_at\" is not null)"
+        },
+        "invite_delivery_shape": {
+          "name": "invite_delivery_shape",
+          "value": "(\"invite\".\"delivery_status\" = 'pending' and \"invite\".\"delivery_attempted_at\" is null) or (\"invite\".\"delivery_status\" in ('sent','failed') and \"invite\".\"delivery_attempted_at\" is not null)"
+        },
+        "invite_email_normalized": {
+          "name": "invite_email_normalized",
+          "value": "\"invite\".\"email\" = lower(trim(\"invite\".\"email\")) and length(\"invite\".\"email\") > 0"
+        },
+        "invite_expiry": {
+          "name": "invite_expiry",
+          "value": "\"invite\".\"expires_at\" > \"invite\".\"created_at\""
+        },
+        "invite_hash": {
+          "name": "invite_hash",
+          "value": "\"invite\".\"token_hash\" ~ '^[a-f0-9]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.membership": {
+      "name": "membership",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "disabled_at": {
+          "name": "disabled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "authority_revision": {
+          "name": "authority_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "membership_tenant_id_tenant_id_fk": {
+          "name": "membership_tenant_id_tenant_id_fk",
+          "tableFrom": "membership",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "membership_user_id_user_id_fk": {
+          "name": "membership_user_id_user_id_fk",
+          "tableFrom": "membership",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "membership_tenant_id_key": {
+          "name": "membership_tenant_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "membership_tenant_user_key": {
+          "name": "membership_tenant_user_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "user_id"
+          ]
+        },
+        "membership_actor_key": {
+          "name": "membership_actor_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id",
+            "user_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "membership_revision_positive": {
+          "name": "membership_revision_positive",
+          "value": "\"membership\".\"authority_revision\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.practice_context": {
+      "name": "practice_context",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth_session_id": {
+          "name": "auth_session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_membership_id": {
+          "name": "actor_membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_grant_id": {
+          "name": "role_grant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "portal_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mode": {
+          "name": "mode",
+          "type": "context_mode",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "acting_student_id": {
+          "name": "acting_student_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "guardian_id": {
+          "name": "guardian_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "student_identity_id": {
+          "name": "student_identity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "authority_revision": {
+          "name": "authority_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "practice_context_tenant_id_tenant_id_fk": {
+          "name": "practice_context_tenant_id_tenant_id_fk",
+          "tableFrom": "practice_context",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "context_session_actor_fk": {
+          "name": "context_session_actor_fk",
+          "tableFrom": "practice_context",
+          "tableTo": "session",
+          "columnsFrom": [
+            "auth_session_id",
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "id",
+            "user_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "context_membership_actor_fk": {
+          "name": "context_membership_actor_fk",
+          "tableFrom": "practice_context",
+          "tableTo": "membership",
+          "columnsFrom": [
+            "tenant_id",
+            "actor_membership_id",
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "context_grant_actor_fk": {
+          "name": "context_grant_actor_fk",
+          "tableFrom": "practice_context",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "role_grant_id",
+            "actor_membership_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "membership_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "context_grant_role_fk": {
+          "name": "context_grant_role_fk",
+          "tableFrom": "practice_context",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "role_grant_id",
+            "role"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "role"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "context_student_fk": {
+          "name": "context_student_fk",
+          "tableFrom": "practice_context",
+          "tableTo": "student",
+          "columnsFrom": [
+            "tenant_id",
+            "acting_student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "context_guardian_pair_fk": {
+          "name": "context_guardian_pair_fk",
+          "tableFrom": "practice_context",
+          "tableTo": "guardian",
+          "columnsFrom": [
+            "tenant_id",
+            "guardian_id",
+            "acting_student_id",
+            "role_grant_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "student_id",
+            "parent_grant_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "context_student_identity_fk": {
+          "name": "context_student_identity_fk",
+          "tableFrom": "practice_context",
+          "tableTo": "student_identity",
+          "columnsFrom": [
+            "tenant_id",
+            "student_identity_id",
+            "acting_student_id",
+            "role_grant_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "student_id",
+            "role_grant_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "practice_context_token_hash_unique": {
+          "name": "practice_context_token_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token_hash"
+          ]
+        },
+        "practice_context_tenant_id_key": {
+          "name": "practice_context_tenant_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "context_mode_shape": {
+          "name": "context_mode_shape",
+          "value": "(\n    (\"practice_context\".\"mode\" = 'child-practice' and \"practice_context\".\"role\" = 'parent' and \"practice_context\".\"acting_student_id\" is not null and \"practice_context\".\"guardian_id\" is not null and \"practice_context\".\"student_identity_id\" is null)\n    or (\"practice_context\".\"mode\" = 'student' and \"practice_context\".\"role\" = 'student' and \"practice_context\".\"acting_student_id\" is not null and \"practice_context\".\"guardian_id\" is null and \"practice_context\".\"student_identity_id\" is not null)\n    or (\"practice_context\".\"mode\"::text = \"practice_context\".\"role\"::text and \"practice_context\".\"mode\" in ('admin', 'tutor', 'parent') and \"practice_context\".\"acting_student_id\" is null and \"practice_context\".\"guardian_id\" is null and \"practice_context\".\"student_identity_id\" is null)\n  )"
+        },
+        "context_expiry": {
+          "name": "context_expiry",
+          "value": "\"practice_context\".\"expires_at\" > \"practice_context\".\"created_at\""
+        },
+        "context_revision_positive": {
+          "name": "context_revision_positive",
+          "value": "\"practice_context\".\"authority_revision\" > 0"
+        },
+        "context_hash": {
+          "name": "context_hash",
+          "value": "\"practice_context\".\"token_hash\" ~ '^[a-f0-9]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.role_grant": {
+      "name": "role_grant",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "membership_id": {
+          "name": "membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "portal_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_cantor": {
+          "name": "is_cantor",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "role_grant_active_key": {
+          "name": "role_grant_active_key",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "membership_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"role_grant\".\"revoked_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "role_grant_tenant_id_tenant_id_fk": {
+          "name": "role_grant_tenant_id_tenant_id_fk",
+          "tableFrom": "role_grant",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "role_grant_membership_fk": {
+          "name": "role_grant_membership_fk",
+          "tableFrom": "role_grant",
+          "tableTo": "membership",
+          "columnsFrom": [
+            "tenant_id",
+            "membership_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "role_grant_tenant_id_key": {
+          "name": "role_grant_tenant_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "role_grant_typed_key": {
+          "name": "role_grant_typed_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id",
+            "role"
+          ]
+        },
+        "role_grant_actor_key": {
+          "name": "role_grant_actor_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id",
+            "membership_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "role_grant_revision_positive": {
+          "name": "role_grant_revision_positive",
+          "value": "\"role_grant\".\"revision\" > 0"
+        },
+        "role_grant_cantor_tutor": {
+          "name": "role_grant_cantor_tutor",
+          "value": "not \"role_grant\".\"is_cantor\" or \"role_grant\".\"role\" = 'tutor'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.student": {
+      "name": "student",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "student_kind": {
+          "name": "student_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'child'"
+        },
+        "service_slot": {
+          "name": "service_slot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unknown'"
+        },
+        "ceremony_date": {
+          "name": "ceremony_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_email": {
+          "name": "parent_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "own_email": {
+          "name": "own_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "disabled_at": {
+          "name": "disabled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "student_tenant_id_tenant_id_fk": {
+          "name": "student_tenant_id_tenant_id_fk",
+          "tableFrom": "student",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "student_tenant_id_key": {
+          "name": "student_tenant_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "student_service_slot_known": {
+          "name": "student_service_slot_known",
+          "value": "\"student\".\"service_slot\" in ('morning', 'havdalah', 'unknown')"
+        },
+        "student_kind_known": {
+          "name": "student_kind_known",
+          "value": "\"student\".\"student_kind\" in ('child', 'adult')"
+        },
+        "student_contacts_required": {
+          "name": "student_contacts_required",
+          "value": "(\"student\".\"parent_email\" is null or length(trim(\"student\".\"parent_email\")) > 0) and (\"student\".\"own_email\" is null or length(trim(\"student\".\"own_email\")) > 0) and ((\"student\".\"student_kind\" = 'child' and \"student\".\"parent_email\" is not null) or (\"student\".\"student_kind\" = 'adult' and \"student\".\"own_email\" is not null))"
+        },
+        "student_names_required": {
+          "name": "student_names_required",
+          "value": "length(trim(\"student\".\"first_name\")) > 0 and length(trim(\"student\".\"last_name\")) > 0"
+        },
+        "student_revision_positive": {
+          "name": "student_revision_positive",
+          "value": "\"student\".\"revision\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.student_identity": {
+      "name": "student_identity",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "student_id": {
+          "name": "student_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_grant_id": {
+          "name": "role_grant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "portal_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'student'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "student_identity_active_student_key": {
+          "name": "student_identity_active_student_key",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "student_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"student_identity\".\"revoked_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "student_identity_active_grant_key": {
+          "name": "student_identity_active_grant_key",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role_grant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"student_identity\".\"revoked_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "student_identity_tenant_id_tenant_id_fk": {
+          "name": "student_identity_tenant_id_tenant_id_fk",
+          "tableFrom": "student_identity",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "student_identity_student_fk": {
+          "name": "student_identity_student_fk",
+          "tableFrom": "student_identity",
+          "tableTo": "student",
+          "columnsFrom": [
+            "tenant_id",
+            "student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "student_identity_grant_fk": {
+          "name": "student_identity_grant_fk",
+          "tableFrom": "student_identity",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "role_grant_id",
+            "role"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "role"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "student_identity_tenant_id_key": {
+          "name": "student_identity_tenant_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "student_identity_context_key": {
+          "name": "student_identity_context_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id",
+            "student_id",
+            "role_grant_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "student_identity_role": {
+          "name": "student_identity_role",
+          "value": "\"student_identity\".\"role\" = 'student'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.tenant": {
+      "name": "tenant",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_name": {
+          "name": "product_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "customs": {
+          "name": "customs",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tenant_host": {
+      "name": "tenant_host",
+      "schema": "",
+      "columns": {
+        "host": {
+          "name": "host",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "environment": {
+          "name": "environment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deployment": {
+          "name": "deployment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "origin": {
+          "name": "origin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tenant_host_tenant_id_tenant_id_fk": {
+          "name": "tenant_host_tenant_id_tenant_id_fk",
+          "tableFrom": "tenant_host",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "tenant_host_tenant_key": {
+          "name": "tenant_host_tenant_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "host"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "tenant_host_environment": {
+          "name": "tenant_host_environment",
+          "value": "\"tenant_host\".\"environment\" in ('production', 'preview', 'local', 'test')"
+        },
+        "tenant_host_normalized": {
+          "name": "tenant_host_normalized",
+          "value": "\"tenant_host\".\"host\" = lower(\"tenant_host\".\"host\") and length(\"tenant_host\".\"host\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.tutor_student": {
+      "name": "tutor_student",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "student_id": {
+          "name": "student_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tutor_grant_id": {
+          "name": "tutor_grant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "portal_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'tutor'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "tutor_student_active_key": {
+          "name": "tutor_student_active_key",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "student_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "tutor_grant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"tutor_student\".\"revoked_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "tutor_student_tenant_id_tenant_id_fk": {
+          "name": "tutor_student_tenant_id_tenant_id_fk",
+          "tableFrom": "tutor_student",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tutor_student_student_fk": {
+          "name": "tutor_student_student_fk",
+          "tableFrom": "tutor_student",
+          "tableTo": "student",
+          "columnsFrom": [
+            "tenant_id",
+            "student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tutor_student_grant_fk": {
+          "name": "tutor_student_grant_fk",
+          "tableFrom": "tutor_student",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "tutor_grant_id",
+            "role"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "role"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "tutor_student_tenant_id_key": {
+          "name": "tutor_student_tenant_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "tutor_student_role": {
+          "name": "tutor_student_role",
+          "value": "\"tutor_student\".\"role\" = 'tutor'"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.context_mode": {
+      "name": "context_mode",
+      "schema": "public",
+      "values": [
+        "student",
+        "parent",
+        "tutor",
+        "admin",
+        "child-practice"
+      ]
+    },
+    "public.reading_basis": {
+      "name": "reading_basis",
+      "schema": "public",
+      "values": [
+        "triennial",
+        "selection",
+        "full",
+        "custom"
+      ]
+    },
+    "public.reading_kind": {
+      "name": "reading_kind",
+      "schema": "public",
+      "values": [
+        "torah",
+        "haftarah",
+        "blessing-before",
+        "blessing-after"
+      ]
+    },
+    "public.portal_role": {
+      "name": "portal_role",
+      "schema": "public",
+      "values": [
+        "student",
+        "parent",
+        "tutor",
+        "admin"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

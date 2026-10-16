@@ -10,7 +10,7 @@ import { AccessDenied } from "./errors";
 import type { AccessDatabase, AccessRequest, AccessTransaction, ActiveMode, Actor, DeploymentScope, LockIntent, StudentActor } from "./types";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-type StudentCapability = "read" | "set-reading" | "practice-write" | "note-write";
+type StudentCapability = "read" | "set-reading" | "set-service-plan" | "practice-write" | "note-write";
 type AdminCapability = "read-relationships" | "read-invites" | "manage-students" | "manage-invites" | "manage-relationships" | "manage-defaults";
 const adminRules: Record<AdminCapability, { fresh: boolean; intent: LockIntent }> = {
   "read-relationships": { fresh: false, intent: "read" },
@@ -51,7 +51,7 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
   }
 
   async function withStudentCapability<T>(request: AccessRequest, selection: { mode: ActiveMode; studentId: string; capability: StudentCapability }, action: (tx: AccessTransaction<Q>, actor: StudentActor, student: StudentView) => Promise<T>) {
-    if (!["read", "set-reading", "practice-write", "note-write"].includes(selection.capability)) throw new AccessDenied(403);
+    if (!["read", "set-reading", "set-service-plan", "practice-write", "note-write"].includes(selection.capability)) throw new AccessDenied(403);
     const intent: LockIntent = selection.capability === "read" ? "read" : "data-write";
     return withActor(request, selection.mode, intent, false, async (tx, actor) => {
       if (!uuid.test(selection.studentId)) throw new AccessDenied(404);
@@ -62,6 +62,10 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
       // First establish view access, then distinguish forbidden action from an
       // unavailable target. Foreign/missing/unrelated IDs share the same denial.
       if (selection.capability === "set-reading" && actor.mode !== "admin" && actor.mode !== "tutor") throw new AccessDenied(403);
+      if (selection.capability === "set-service-plan") {
+        if (actor.mode !== "admin" && actor.mode !== "tutor") throw new AccessDenied(403);
+        requireCookieMutation(request, actor.origin);
+      }
       if (selection.capability === "note-write") {
         if (actor.mode !== "admin" && actor.mode !== "tutor") throw new AccessDenied(403);
         requireCookieMutation(request, actor.origin);

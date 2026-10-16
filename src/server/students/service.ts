@@ -15,6 +15,7 @@ import { readingDate } from "../../lib/readings/reading-date";
 import { validatedSnapshot } from "./preparation";
 import { aliyahStarts } from "../../lib/readings/aliyah-starts";
 import { readingView } from "../portal/service";
+import { markForReview as markServicePlanForReview } from "../service-learning/data";
 
 type Mode={mode:ActiveMode};
 type Kind="torah"|"haftarah";
@@ -81,7 +82,7 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       const updated=await data.updateStudent(tx,actor.tenantId,id,expected,values);
       if(!updated)return conflict();
       const readingNeedsReview=current.ceremonyDate!==values.ceremonyDate || current.serviceSlot!==values.serviceSlot;
-      if(readingNeedsReview)await data.markReadingsForReview(tx,actor.tenantId,id);
+      if(readingNeedsReview){await data.markReadingsForReview(tx,actor.tenantId,id);await markServicePlanForReview(tx,actor.tenantId,id);}
       await data.audit(tx,actor,"student.update",id);
       return {ok:true as const,id,revision:updated.revision,readingNeedsReview};
     });

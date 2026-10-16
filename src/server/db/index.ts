@@ -3,3 +3,4 @@ export * from "./tenant-schema";
 export * from "./invitation-schema";
 export * from "./study-cache-schema";
 export * from "./student-work-schema";
+export * from "./service-learning-schema";
