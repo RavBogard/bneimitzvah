@@ -1,5 +1,7 @@
 # Reading proposal and confirmation UI
 
+Published checkpoint: `67e7175`, all four hosted jobs green in run `38889034114`; matching Vercel deployment `7116979547` succeeded. The stable admin reading route returns HTTP 200. Live provider access remains unconfigured, and the full product is incomplete.
+
 Status: source boundary review accepted the post-prepare reread fix. The selected-student date correction is implemented and the independent finish reviewer accepted the five recaptures with a bounded ship verdict. Final actual-SDK reading/workspace checks passed 6/6 and production e2e passed 6/6. No publication, whole-product, live-provider or released-text/audio claim.
 
 ## Contract and surfaces

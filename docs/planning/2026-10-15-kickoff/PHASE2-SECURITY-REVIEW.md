@@ -629,3 +629,42 @@ The reading editor uses existing literal staff endpoints and retains drafts with
 Separately reviewed cache persistence has a closed canonical chapter and edition-key namespace, exact registry provenance, reconstructed Hebrew written/read projections, validated hashes and 24-hour timestamps on reads and writes. Runtime privileges are SELECT/INSERT and content-column UPDATE only; no DELETE, key UPDATE, definer helper or tenant privilege expansion. Expired entries are misses; corrupt envelopes fail closed. Real PostgreSQL verifies those grants and constraints, corruption/expiry behavior and operator-only bounded cleanup. Database reads sample the clock after awaiting the query. Generated migration metadata uses stable edition keys rather than embedding a publisher-title literal; full runtime provenance still requires exact titles/licenses, and repository protection was not relaxed. This cache has no public route and does not establish the later two-stage authorized text delivery path.
 
 The integrated source checkpoint passed 127 Node and 310 app tests, plus six fresh-cluster PostgreSQL migration/isolation checks and four cache checks. Browser and visual evidence, remaining corrections and subsequent publication gates are recorded in READING-UI-RETURN.md and STUDY-CACHE-RETURN.md.
+
+## Study delivery and invitation management — Astra review, 2026-10-16
+
+Accepted at the bounded authority and client-state scope, subject to the recorded
+integration and visual gates. Study delivery captures the existing explicit-mode
+capability and assignment, releases its transaction for cache/provider work,
+then reacquires live authority and compares the entire binding before projecting
+text. Internal grant/guardian revisions and session expiry come from already
+locked rows; public responses exclude those authority details. Exact route/query
+validation and fixed private response projections remain in place. No schema,
+RLS privilege, role-union or provider identity forwarding was introduced.
+
+Review required explicit abort checks around an injected reader and a final
+session/context expiry check after the last assignment query, so natural expiry
+during that query cannot release text. Real PostgreSQL passed eleven study tests:
+nine committed mutations during held provider/cache reads, plus two deterministic
+expiry cases during the final SQL read. The full PostgreSQL service suite passed
+24/24. The barrier tests require mutations to commit before public work resumes,
+demonstrating that network/cache waits do not retain authority locks. Final
+projection is the authorization point; this cannot erase data already delivered.
+
+Public chapter coalescing is explicitly injected, limited to 32 pending keys and
+five seconds, and retains no completed values or request database/actor closure.
+Subscribers independently cancel and account bytes; cache hits also count toward
+page limits. Corrupt cache entries fail closed and expired entries cannot become
+a fallback. Sharing is process-local, not distributed. This review does not
+establish whole-catalog semantic coverage or a live provider configuration.
+
+The invitation interface uses the previously reviewed admin endpoints. Input and
+target fingerprints invalidate memory-only reviews; every action re-reads the
+current page and roster before comparing its exact target. A synchronous guard
+prevents duplicate submission. Unknown responses block another action until
+explicit recovery, and revalidation never resends. Durable lifecycle/delivery
+states remain distinct from an unknown action receipt; sent does not promise
+inbox delivery, and revoking an invitation does not revoke accepted access.
+Actual SDK/restricted-PostgreSQL browser tests passed three scenarios, including
+failed captured mail, committed actions with lost responses, target drift and
+session changes. The separate visual review requested one long-value wrapping
+fix; its final evidence and integration results belong in INVITATION-UI-RETURN.md.

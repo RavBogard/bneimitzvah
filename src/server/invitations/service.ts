@@ -194,7 +194,8 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
       const activeGrant = grants.find((grant) => grant.role === invitation.role && !grant.revokedAt);
       const grantId = activeGrant?.id ?? await data.insertGrant(tx, identity.tenantId, membershipId, invitation.role);
       const actor: Actor = Object.freeze({ tenantId: identity.tenantId, origin: identity.origin, userId: identity.userId,
-        authSessionId: identity.authSessionId, membershipId, roleGrantId: grantId, mode: invitation.role, authorityRevision: identity.membership?.authorityRevision ?? 1 });
+        authSessionId: identity.authSessionId, authSessionExpiresAt: identity.sessionExpiresAt.getTime(), roleGrantRevision: activeGrant?.revision ?? 1,
+        membershipId, roleGrantId: grantId, mode: invitation.role, authorityRevision: identity.membership?.authorityRevision ?? 1 });
       if (!activeGrant) await data.writeInvitationAudit(tx, actor, "grant.issue", grantId);
       if (invitation.studentId && invitation.role !== "tutor") {
         const link = await data.linkInvitedStudent(tx, identity.tenantId, invitation.studentId, grantId, invitation.role, invitation.id, invitation.createdAt);

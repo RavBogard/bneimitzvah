@@ -44,6 +44,7 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
         const actor: Actor = Object.freeze({
           tenantId: identity.tenantId, origin: identity.origin, userId: identity.userId, authSessionId: identity.authSessionId,
           membershipId: identity.membership.id, roleGrantId: grant.id, mode, authorityRevision: identity.membership.authorityRevision,
+          authSessionExpiresAt: identity.sessionExpiresAt.getTime(), roleGrantRevision: grant.revision,
         });
         return action(tx, actor);
     });
@@ -65,7 +66,7 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
         if (actor.mode !== "student") throw new AccessDenied(403);
         requireCookieMutation(request, actor.origin);
       }
-      return action(tx, Object.freeze({ ...actor, studentId: student.id, relationshipId: relationship.id }), studentView(student));
+      return action(tx, Object.freeze({ ...actor, studentId: student.id, relationshipId: relationship.id, relationshipRevision: relationship.revision }), studentView(student));
     });
   }
 

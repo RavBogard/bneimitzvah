@@ -7,12 +7,13 @@ import type { PracticeContextView } from "../practice/types";
 import type { Snapshot } from "../../lib/readings/proposals";
 import type { Aliyah } from "../../lib/readings/leyning.mjs";
 import { identifier } from "../students/validation";
+import { StudyUnavailable, type StudyPage } from "../study/types";
 import { readJsonBody } from "./body";
 import { closedObject, uniqueQuery } from "./query";
 import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
-type Kind = "session" | "students" | "student" | "reading" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
+type Kind = "session" | "students" | "student" | "reading" | "study-text" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
   | "admin-students" | "edit" | "disable" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "pending" | "accept"
   | "eligible-tutors" | "relationships" | "tutor-assign" | "tutor-unassign" | "guardian-revoke" | "identity-revoke" | "guardian-practice" | "grant-revoke" | "cantor";
 type Route = { kind: Kind; methods: readonly string[]; id?: string; linkId?: string };
@@ -29,6 +30,8 @@ const exact: Record<string, Route> = {
 };
 function route(pathname: string): Route | null {
   if (Object.hasOwn(exact, pathname)) return exact[pathname];
+  const study = /^\/api\/students\/([^/]+)\/study-text$/.exec(pathname);
+  if (study) return { kind: "study-text", methods: ["GET"], id: study[1] };
   const student = /^\/api\/students\/([^/]+)(?:\/(reading)(?:\/(prepare|confirm))?)?$/.exec(pathname);
   if (student) return { kind: student[3] === "prepare" ? "prepare" : student[3] === "confirm" ? "confirm" : student[2] ? "reading" : "student", methods: student[3] ? ["POST"] : ["GET"], id: student[1] };
   const relationships = /^\/api\/admin\/students\/([^/]+)\/relationships(?:\/(tutors|guardians|identities)(?:\/([^/]+)\/(revoke|practice))?)?$/.exec(pathname);
@@ -75,6 +78,17 @@ function studentInput(value: unknown) {
 }
 const studentView = (s: StudentView) => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, ceremonyDate: s.ceremonyDate, revision: s.revision });
 const contextView = (c: PracticeContextView | null) => c ? { id: c.id, authorityRevision: c.authorityRevision, studentId: c.studentId, studentRevision: c.studentRevision, expiresAt: c.expiresAt } : null;
+function studyPageView(page: StudyPage): { [key: string]: JsonValue } {
+  return { offset: page.offset, nextOffset: page.nextOffset, totalVerses: page.totalVerses,
+    translation: { key: page.translation.key, status: page.translation.status },
+    verses: page.verses.map(verse => ({ ref: verse.ref, english: verse.english, hebrew: { text: verse.hebrew.text, readingText: verse.hebrew.readingText,
+      paragraphAfter: verse.hebrew.paragraphAfter, segments: verse.hebrew.segments.map((segment): JsonValue => segment.kind === "text" ? { kind: segment.kind, text: segment.text }
+        : segment.kind === "alternative" ? { kind: segment.kind, written: segment.written, read: segment.read }
+          : segment.kind === "gap" ? { kind: segment.kind, break: segment.break } : { kind: segment.kind }) } })),
+    chapters: page.chapters.map(chapter => ({ ref: chapter.ref, sefariaUrl: chapter.sefariaUrl, fetchedAt: chapter.fetchedAt, hash: chapter.hash,
+      editions: chapter.editions.map(edition => ({ key: edition.key, versionTitle: edition.versionTitle, language: edition.language, creator: edition.creator,
+        sourceUrl: edition.sourceUrl, license: edition.license, licenseUrl: edition.licenseUrl, changes: edition.changes })) })) };
+}
 const aliyot = (rows: Aliyah[]) => rows.map(row => ({ n: row.n, ref: row.ref, verses: row.verses ?? null, reason: row.reason ?? null }));
 function snapshotView(snapshot: Snapshot) {
   const r = snapshot.reading;
@@ -103,7 +117,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", selected.methods.join(", ")); return response;
     }
     const practiceRoute = selected.kind.startsWith("practice-");
-    if (!practiceRoute && selected.kind !== "reading" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
+    if (!practiceRoute && selected.kind !== "reading" && selected.kind !== "study-text" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
     // Dispatcher resolves the actual host before this adapter. Services still
     // independently reauthorize; no body/Origin/forwarded claim chooses tenant.
     if (request.method === "POST") requireCookieMutation(request, runtime.origin);
@@ -166,6 +180,20 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       case "student": {
         const query = uniqueQuery(request.url, ["mode"]);
         return privateJson({ student: studentView(await runtime.access.readStudent(request, { mode: baseMode(query.get("mode")), studentId: id! })) });
+      }
+      case "study-text": {
+        const query = uniqueQuery(request.url, ["mode", "kind", "assignmentId", "assignmentRevision", "translation", "offset"]);
+        const kind = query.get("kind"), translation = query.get("translation"), revisionValue = query.get("assignmentRevision"), offset = query.get("offset");
+        if ((kind !== "torah" && kind !== "haftarah") || translation !== "jps2023" || !revisionValue || !/^[1-9][0-9]{0,9}$/.test(revisionValue)
+          || offset === null || !/^(?:0|[1-9][0-9]{0,2})$/.test(offset)) throw new HttpBoundaryError();
+        let value;
+        try { value = await runtime.study.read(request, { mode: mode(query.get("mode"), true), studentId: id!, kind,
+          assignmentId: identifier(query.get("assignmentId")), assignmentRevision: integer(Number(revisionValue)), translation, offset: Number(offset) }); }
+        catch (error) { if (error instanceof StudyUnavailable && error.code === "invalid-request") throw new HttpBoundaryError(); throw error; }
+        if (!value.ok) return stale();
+        return privateJson({ studentId: value.studentId, studentRevision: value.studentRevision, mode: value.mode, context: contextView(value.context),
+          assignment: { id: value.assignment.id, revision: value.assignment.revision, kind: value.assignment.kind, needsReview: value.assignment.needsReview },
+          ...studyPageView(value.page) });
       }
       case "reading": {
         const query = uniqueQuery(request.url, ["mode"]), value = await runtime.portal.assignedReading(request, { mode: mode(query.get("mode"), true), studentId: id! });

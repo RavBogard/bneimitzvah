@@ -1,5 +1,7 @@
 # Public normalized chapter cache — 2026-10-16
 
+Published checkpoint: `67e7175`, all four hosted jobs green in run `38889034114`; matching Vercel deployment `7116979547` succeeded. This publishes persistence only, with no authorized text endpoint yet.
+
 Bounded implementation for Astra's approved study adapter. No endpoint, UI,
 authority composition, provider request, licensed passage fixture, commit or push.
 Other workers' files and `STATE.md` were preserved.

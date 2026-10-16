@@ -40,9 +40,9 @@ export async function lockStudent<Q extends PgQueryResultHKT>(tx: AccessTransact
 
 export async function lockStudentRelationship<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string, grantId: string, mode: ActiveMode, intent: LockIntent) {
   const strength = lockStrength(intent);
-  if (mode === "admin") return { id: null };
+  if (mode === "admin") return { id: null, revision: null };
   if (mode === "parent") {
-    const [link] = await tx.select({ id: s.guardian.id }).from(s.guardian).where(and(
+    const [link] = await tx.select({ id: s.guardian.id, revision: s.guardian.revision }).from(s.guardian).where(and(
       eq(s.guardian.tenantId, tenantId), eq(s.guardian.studentId, studentId), eq(s.guardian.parentGrantId, grantId), isNull(s.guardian.revokedAt),
     )).for(strength);
     return link;
@@ -51,10 +51,10 @@ export async function lockStudentRelationship<Q extends PgQueryResultHKT>(tx: Ac
     const [link] = await tx.select({ id: s.tutorStudent.id }).from(s.tutorStudent).where(and(
       eq(s.tutorStudent.tenantId, tenantId), eq(s.tutorStudent.studentId, studentId), eq(s.tutorStudent.tutorGrantId, grantId), isNull(s.tutorStudent.revokedAt),
     )).for(strength);
-    return link;
+    return link ? { ...link, revision: null } : undefined;
   }
   const [link] = await tx.select({ id: s.studentIdentity.id }).from(s.studentIdentity).where(and(
     eq(s.studentIdentity.tenantId, tenantId), eq(s.studentIdentity.studentId, studentId), eq(s.studentIdentity.roleGrantId, grantId), isNull(s.studentIdentity.revokedAt),
   )).for(strength);
-  return link;
+  return link ? { ...link, revision: null } : undefined;
 }

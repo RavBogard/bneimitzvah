@@ -66,6 +66,7 @@ function Roster() {
   return <section className="role-workspace">
     <div className="workspace-heading-row"><h1>Student roster</h1><button className="button-primary" disabled={pending || loading || unavailable} onClick={() => choose(null)}>Add student</button></div>
     <p>Congregation student records and contact details. Account access is managed separately through explicit invitations.</p>
+    <p><Link href="/workspace/admin/invitations">Manage invitations</Link></p>
     {message && <p className={conflict ? "request-error" : "workspace-notice"} role={conflict ? "alert" : "status"}>{message}</p>}
     {loading ? <p role="status">Loading the roster…</p> : unavailable ? <div role="alert"><h2>Roster unavailable</h2><p>The complete roster could not be loaded. It may exceed the supported response size, or access may be unavailable. No partial roster is shown.</p><button className="button-secondary" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
       : <><div className="roster-scroll"><table className="roster-table"><caption>{rows.length} student records. Showing page {page + 1} of {Math.max(1, Math.ceil(rows.length / 25))}.</caption><thead><tr><th scope="col">Student</th><th scope="col">Ceremony date</th><th scope="col">Status</th></tr></thead>

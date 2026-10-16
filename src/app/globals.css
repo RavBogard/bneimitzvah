@@ -141,6 +141,18 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .reading-proposal { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--color-rule); }
 .reading-calendar-choices { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.75rem; }
 .reading-calendar-choices button { white-space: normal; text-align: start; }
+.invitation-compose, .invitation-action-review, .invitation-list-section, .invitation-outcome { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--color-rule); }
+.invitation-workspace > p, .invitation-compose > p, .invitation-action-review > p, .invitation-outcome > p { max-width: 70ch; margin-block: 1rem; }
+.invitation-compose form { max-width: 44rem; }
+.invitation-action-review .invitation-details dd, .invitation-action-review .invitation-details bdi { min-width: 0; overflow-wrap: anywhere; }
+.invitation-form-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; margin-block: 1.5rem; }
+.invitation-student { margin-block: 1.5rem; }
+.invitation-records { list-style: none; padding: 0; }
+.invitation-records > li { padding-block: 1.5rem 2rem; border-bottom: 1px solid var(--color-rule); }
+.invitation-records h3, .invitation-recipient { overflow-wrap: anywhere; }
+.invitation-record-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 2rem; max-width: 48rem; margin-top: 1rem; }
+.invitation-record-details dt { color: var(--color-muted); }
+.invitation-record-details dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .roster-pages, .form-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
 .roster-editor { border-top: 1px solid var(--color-ink); padding-top: 1.5rem; margin-top: 2.5rem; }
 .roster-editor h2 { margin-bottom: 1.5rem; }
@@ -155,6 +167,7 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
   .reading-workspace { grid-template-columns: minmax(0, 1fr); gap: 2rem; margin-top: 2rem; }
   .roster-form-grid { grid-template-columns: minmax(0, 1fr); }
   .reading-editor-fields { grid-template-columns: minmax(0, 1fr); }
+  .invitation-form-fields, .invitation-record-details { grid-template-columns: minmax(0, 1fr); }
   .workspace-heading-row > button { width: 100%; }
   .student-selection-list { display: block; }
   .student-selection-list li + li { margin-top: 0.75rem; }

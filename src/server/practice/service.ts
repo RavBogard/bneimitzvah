@@ -96,7 +96,9 @@ export function createPracticeService<Q extends PgQueryResultHKT>(input: { acces
         || context.authorityRevision !== identity.membership!.authorityRevision) throw new AccessDenied(404);
       const actor: PracticeActor = Object.freeze({ tenantId: identity.tenantId, origin: identity.origin, userId: identity.userId,
         authSessionId: identity.authSessionId, membershipId: identity.membership!.id, roleGrantId: grant.id, mode: "child-practice", role: "parent",
-        authorityRevision: identity.membership!.authorityRevision, studentId: student.id, relationshipId: guardian.id, context: contextView(context, student) });
+        authSessionExpiresAt: identity.sessionExpiresAt.getTime(), roleGrantRevision: grant.revision,
+        authorityRevision: identity.membership!.authorityRevision, studentId: student.id, relationshipId: guardian.id,
+        relationshipRevision: guardian.revision, context: contextView(context, student) });
       return action(tx, actor, studentView(student));
     });
   }

@@ -5,12 +5,15 @@ import { expandReadingRanges } from "../../lib/readings/ranges";
 import { normalizeEnglish, normalizeHebrew } from "./normalize";
 import { MAM, matchesEdition, translationEdition, versionParameter } from "./versions";
 import { StudyUnavailable, type EditionProvenance, type StudyPage, type StudyRequest, type StudyVerse } from "./types";
+import { createStudyCacheEntry, studyCacheBinding, validateStudyCacheEntry, STUDY_CACHE_TTL_MS,
+  type StudyChapterCache } from "./cache";
+import type { PublicStudyCoalescer, PublicStudyTask } from "./coalescing";
 
 // Application operating bounds, not claims about the provider's limits.
 export const STUDY_LIMITS = Object.freeze({ verses: 100, chapters: 8, concurrency: 2, requestMs: 5000, pageMs: 8000,
   chapterBytes: 512 * 1024, pageBytes: 2 * 1024 * 1024 });
 type Chapter = Readonly<{ ref: string; book: string; number: number; count: number }>;
-type ChapterResult = { verses: StudyVerse[]; editions: EditionProvenance[]; fetchedAt: number; hash: string };
+type ChapterResult = { verses: readonly StudyVerse[]; editions: readonly EditionProvenance[]; fetchedAt: number; hash: string; decodedBytes: number };
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
 const invalid = () => { throw new StudyUnavailable("invalid-response"); };
 
@@ -43,7 +46,7 @@ function requestUrl(chapter: Chapter, translation: EditionProvenance) {
   url.searchParams.set("return_format", "default");
   return url;
 }
-function validateChapter(payload: unknown, chapter: Chapter, english: EditionProvenance): Omit<ChapterResult, "fetchedAt" | "hash"> {
+function validateChapter(payload: unknown, chapter: Chapter, english: EditionProvenance): Omit<ChapterResult, "fetchedAt" | "hash" | "decodedBytes"> {
   if (!object(payload) || payload.ref !== chapter.ref || payload.book !== chapter.book || payload.indexTitle !== chapter.book
     || payload.textDepth !== 2 || payload.isComplex !== false || payload.isSpanning !== false
     || !Array.isArray(payload.sectionNames) || payload.sectionNames.join("|") !== "Chapter|Verse"
@@ -71,68 +74,106 @@ function validateChapter(payload: unknown, chapter: Chapter, english: EditionPro
   return { verses, editions: [MAM, ...(en.length ? [english] : [])] };
 }
 
-/** Public-text adapter only: callers must authorize before invocation and revalidate
- * live actor/context/assignment authority after it returns. No cache or route. */
+// This factory receives public transport dependencies only. Tasks handed to a
+// shared coalescer cannot retain request-scoped cache/database/actor objects.
+function publicChapterTasks(fetch: typeof globalThis.fetch, now: () => number, requestMs: number) {
+  return (selection: Chapter, translation: EditionProvenance): PublicStudyTask<ChapterResult> => async (signal, progress) => {
+    const local = new AbortController(), stop = () => local.abort();
+    signal.addEventListener("abort", stop, { once: true });
+    if (signal.aborted) local.abort();
+    let timer: ReturnType<typeof setTimeout> | undefined, reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    const cancel = () => { void reader?.cancel().catch(() => {}); };
+    local.signal.addEventListener("abort", cancel, { once: true });
+    try {
+      return await Promise.race([
+        (async () => {
+          if (local.signal.aborted) throw new StudyUnavailable("upstream");
+          const url = requestUrl(selection, translation);
+          let response: Response;
+          try { response = await fetch(url, { method: "GET", headers: { accept: "application/json" },
+            credentials: "omit", redirect: "error", cache: "no-store", signal: local.signal }); }
+          catch { throw new StudyUnavailable("upstream"); }
+          if (local.signal.aborted) { void response.body?.cancel().catch(() => {}); throw new StudyUnavailable("upstream"); }
+          if (response.status !== 200 || response.redirected || response.url && response.url !== url.href
+            || !/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(response.headers.get("content-type") ?? "")) {
+            void response.body?.cancel().catch(() => {}); return invalid();
+          }
+          const length = response.headers.get("content-length");
+          if (length !== null && (!/^\d+$/.test(length) || Number(length) > STUDY_LIMITS.chapterBytes) || !response.body) {
+            void response.body?.cancel().catch(() => {}); return invalid();
+          }
+          reader = response.body.getReader();
+          const decoder = new TextDecoder("utf-8", { fatal: true });
+          let count = 0, text = "";
+          while (true) {
+            const chunk = await reader.read();
+            if (local.signal.aborted) throw new StudyUnavailable("upstream");
+            if (chunk.done) break;
+            count += chunk.value.byteLength;
+            if (count > STUDY_LIMITS.chapterBytes) return invalid();
+            progress(count);
+            text += decoder.decode(chunk.value, { stream: true });
+          }
+          const parsed = validateChapter(JSON.parse(text + decoder.decode()), selection, translation), fetchedAt = now();
+          const normalizedBytes = Buffer.byteLength(JSON.stringify(parsed));
+          if (!Number.isSafeInteger(fetchedAt) || fetchedAt < 0 || normalizedBytes > STUDY_LIMITS.chapterBytes) return invalid();
+          progress(Math.max(count, normalizedBytes));
+          return { ...parsed, fetchedAt, decodedBytes: count, hash: createHash("sha256").update(JSON.stringify(parsed)).digest("hex") };
+        })(),
+        new Promise<never>((_, reject) => { timer = setTimeout(() => { local.abort(); reject(new StudyUnavailable("upstream")); }, requestMs); }),
+        new Promise<never>((_, reject) => { local.signal.addEventListener("abort", () => reject(new StudyUnavailable("upstream")), { once: true }); }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer); local.abort(); signal.removeEventListener("abort", stop);
+      void reader?.cancel().catch(() => {});
+      try { reader?.releaseLock(); } catch { /* No upstream diagnostic. */ }
+    }
+  };
+}
+
+/** Call only between preflight and final live authority transactions. */
 export function createSefariaStudyReader(input: { fetch: typeof globalThis.fetch; verseCounts: VerseCounts; now?: () => number;
-  requestMs?: number; pageMs?: number }) {
-  const requestMs = input.requestMs ?? STUDY_LIMITS.requestMs, pageMs = input.pageMs ?? STUDY_LIMITS.pageMs;
+  cache?: StudyChapterCache; coalescer?: PublicStudyCoalescer; requestMs?: number; pageMs?: number }) {
+  const requestMs = input.requestMs ?? STUDY_LIMITS.requestMs, pageMs = input.pageMs ?? STUDY_LIMITS.pageMs, now = input.now ?? Date.now;
   if (!Number.isInteger(requestMs) || requestMs < 1 || requestMs > STUDY_LIMITS.requestMs
     || !Number.isInteger(pageMs) || pageMs < 1 || pageMs > STUDY_LIMITS.pageMs) throw new Error("Invalid study deadline");
+  const task = publicChapterTasks(input.fetch, now, requestMs);
   return async function load(request: StudyRequest): Promise<StudyPage> {
     const plan = planStudyPage(request, input.verseCounts), controller = new AbortController();
-    const readers = new Set<ReadableStreamDefaultReader<Uint8Array>>();
     const abort = () => controller.abort();
     request.signal?.addEventListener("abort", abort, { once: true });
     if (request.signal?.aborted) controller.abort();
     let bytes = 0, next = 0, pageTimer: ReturnType<typeof setTimeout> | undefined;
     const results = new Map<string, ChapterResult>();
-    const chapter = async (selection: Chapter) => {
+    const chapter = async (selection: Chapter): Promise<ChapterResult> => {
       if (controller.signal.aborted) throw new StudyUnavailable("upstream");
-      const local = new AbortController(), stop = () => local.abort();
-      controller.signal.addEventListener("abort", stop, { once: true });
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      try {
-        return await Promise.race([
-          (async () => {
-            const url = requestUrl(selection, plan.translation);
-            let response: Response;
-            try { response = await input.fetch(url, { method: "GET", headers: { accept: "application/json" },
-              credentials: "omit", redirect: "error", cache: "no-store", signal: local.signal }); }
-            catch { throw new StudyUnavailable("upstream"); }
-            if (local.signal.aborted || controller.signal.aborted) {
-              void response.body?.cancel().catch(() => {}); throw new StudyUnavailable("upstream");
-            }
-            if (response.status !== 200 || response.redirected || response.url && response.url !== url.href
-              || !/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(response.headers.get("content-type") ?? "")) {
-              void response.body?.cancel().catch(() => {}); return invalid();
-            }
-            const length = response.headers.get("content-length");
-            if (length !== null && (!/^\d+$/.test(length) || Number(length) > STUDY_LIMITS.chapterBytes) || !response.body) {
-              void response.body?.cancel().catch(() => {}); return invalid();
-            }
-            const reader = response.body!.getReader(), decoder = new TextDecoder("utf-8", { fatal: true });
-            readers.add(reader);
-            let count = 0, text = "";
-            try {
-              while (true) {
-                const chunk = await reader.read();
-                if (chunk.done) break;
-                count += chunk.value.byteLength; bytes += chunk.value.byteLength;
-                if (count > STUDY_LIMITS.chapterBytes || bytes > STUDY_LIMITS.pageBytes) return invalid();
-                text += decoder.decode(chunk.value, { stream: true });
-              }
-              const parsed = validateChapter(JSON.parse(text + decoder.decode()), selection, plan.translation);
-              const fetchedAt = (input.now ?? Date.now)();
-              if (!Number.isFinite(fetchedAt) || fetchedAt < 0) return invalid();
-              return { ...parsed, fetchedAt, hash: createHash("sha256").update(JSON.stringify(parsed)).digest("hex") };
-            } finally {
-              readers.delete(reader); void reader.cancel().catch(() => {});
-              try { reader.releaseLock(); } catch { /* Fixed cleanup, no upstream diagnostic. */ }
-            }
-          })(),
-          new Promise<never>((_, reject) => { timer = setTimeout(() => { local.abort(); reject(new StudyUnavailable("upstream")); }, requestMs); }),
-        ]);
-      } finally { if (timer) clearTimeout(timer); local.abort(); controller.signal.removeEventListener("abort", stop); }
+      let accounted = 0;
+      const progress = (total: number) => {
+        if (!Number.isSafeInteger(total) || total < accounted || total > STUDY_LIMITS.chapterBytes) return invalid();
+        bytes += total - accounted; accounted = total;
+        if (bytes > STUDY_LIMITS.pageBytes) return invalid();
+      };
+      const binding = input.cache ? studyCacheBinding(selection.ref, request.translation) : null;
+      const cached = binding ? await input.cache!.get(binding) : null;
+      if (controller.signal.aborted) throw new StudyUnavailable("upstream");
+      if (cached && binding) {
+        const valid = validateStudyCacheEntry(binding, cached, now());
+        if (valid.expiresAt > now()) {
+          progress(Buffer.byteLength(JSON.stringify(valid.payload)));
+          return { ...valid.payload, fetchedAt: valid.fetchedAt, hash: valid.hash, decodedBytes: 0 };
+        }
+      }
+      const publicTask = task(selection, plan.translation);
+      const key = JSON.stringify(["sefaria:v3:parse5-8.0.1:study-normalized-v1", selection.ref, selection.count, plan.translation.key]);
+      const result = input.coalescer
+        ? await input.coalescer.run(key, publicTask, controller.signal, progress)
+        : await publicTask(controller.signal, progress);
+      if (controller.signal.aborted) throw new StudyUnavailable("upstream");
+      // Re-account the full public result even when joining after its stream.
+      progress(Math.max(result.decodedBytes, Buffer.byteLength(JSON.stringify({ verses: result.verses, editions: result.editions }))));
+      if (binding) await input.cache!.set(binding, createStudyCacheEntry(binding, result));
+      if (controller.signal.aborted) throw new StudyUnavailable("upstream");
+      return result;
     };
     const worker = async () => {
       while (next < plan.chapters.length) {
@@ -148,6 +189,7 @@ export function createSefariaStudyReader(input: { fetch: typeof globalThis.fetch
         new Promise<never>((_, reject) => { controller.signal.addEventListener("abort", () => reject(new StudyUnavailable("upstream")), { once: true }); }),
       ]);
       if (controller.signal.aborted) throw new StudyUnavailable("upstream");
+      if ([...results.values()].some(result => result.fetchedAt + STUDY_CACHE_TTL_MS <= now())) return invalid();
       const mapped = new Map([...results.values()].flatMap(result => result.verses.map(verse => [verse.ref, verse] as const)));
       const verses = plan.refs.map(ref => { const verse = mapped.get(ref); if (!verse) return invalid(); return verse; });
       const translated = verses.filter(verse => verse.english !== null).length;
@@ -159,7 +201,6 @@ export function createSefariaStudyReader(input: { fetch: typeof globalThis.fetch
     } catch (error) { throw new StudyUnavailable(error instanceof StudyUnavailable ? error.code : "invalid-response"); }
     finally {
       if (pageTimer) clearTimeout(pageTimer); controller.abort(); request.signal?.removeEventListener("abort", abort);
-      for (const reader of readers) { void reader.cancel().catch(() => {}); }
     }
   };
 }

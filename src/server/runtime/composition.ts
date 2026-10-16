@@ -15,6 +15,10 @@ import { createPortalService } from "../portal/service";
 import { createRelationshipService } from "../relationships/service";
 import { createPendingInvitations } from "../http/pending-invitations";
 import { createPersistentReadingCache } from "../data/reading-cache";
+import { createPersistentStudyCache } from "../data/study-cache";
+import { createSefariaStudyReader } from "../study/sefaria";
+import { createStudyService } from "../study/service";
+import { createPublicStudyCoalescer, type PublicStudyCoalescer } from "../study/coalescing";
 import { resolveTenantHost } from "../tenancy/resolve";
 import { createHebcalReader } from "../../lib/readings/proposals";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
@@ -29,7 +33,14 @@ const purposeSecret = (config: RuntimeConfig, purpose: string) => createHmac("sh
 
 // Explicit component boundary permits offline tests without environment flags,
 // mock credentials, public endpoints or alternate production database fallback.
-export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch) {
+const publicStudyTasks = new WeakMap<typeof globalThis.fetch, PublicStudyCoalescer>();
+function sharedStudyTasks(fetch: typeof globalThis.fetch) {
+  let tasks = publicStudyTasks.get(fetch);
+  if (!tasks) { tasks = createPublicStudyCoalescer(); publicStudyTasks.set(fetch, tasks); }
+  return tasks;
+}
+export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch,
+  studyTasks: PublicStudyCoalescer = sharedStudyTasks(fetch)) {
   const send = createMailTransport({ ...config.mail, origin: config.origin, fetch });
   const auth = createAuthStack(db, schema, { origin: config.origin, secret: config.authSecret, google: config.google,
     sendMagicLink: ({ email, url }) => send("magic-link", { email, url }) });
@@ -38,6 +49,8 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const loadReading = createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS });
   const students = createStudentService({ access, loadReading, signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS });
   const practice = createPracticeService({ access });
+  const study = createStudyService({ access, practice, load: createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS,
+    cache: createPersistentStudyCache(db), coalescer: studyTasks }) });
   const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding") });
   const relationships = createRelationshipService({ access });
   const pendingInvitations = createPendingInvitations({ secret: config.authSecret, origin: config.origin, environment: config.deployment.environment as "local" | "preview" | "production" });
@@ -47,7 +60,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, portal, relationships, pendingInvitations, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, portal, relationships, pendingInvitations, resolveHost });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

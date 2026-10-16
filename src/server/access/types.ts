@@ -11,13 +11,13 @@ export type DeploymentScope = Readonly<{ environment: "production" | "preview" |
 export type AccessRequest = Readonly<{ url: string; headers: Headers }>;
 export type Actor = Readonly<{
   tenantId: string; origin: string; userId: string; authSessionId: string; membershipId: string;
-  roleGrantId: string; mode: ActiveMode; authorityRevision: number;
+  authSessionExpiresAt: number; roleGrantId: string; roleGrantRevision: number; mode: ActiveMode; authorityRevision: number;
 }>;
 export type VerifiedIdentity = Readonly<{
   tenantId: string; origin: string; userId: string; email: string; authSessionId: string; sessionExpiresAt: Date;
   membership: Readonly<{ id: string; authorityRevision: number }> | null;
 }>;
-export type StudentActor = Actor & Readonly<{ studentId: string; relationshipId: string | null }>;
+export type StudentActor = Actor & Readonly<{ studentId: string; relationshipId: string | null; relationshipRevision: number | null }>;
 
 // Mutation/revocation composition must choose authority-write before locking,
 // then lock tenant -> user -> session -> membership -> grant -> student -> link.
