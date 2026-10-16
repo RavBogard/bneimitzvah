@@ -10,6 +10,19 @@ import * as s from "../db/index";
 export type InvitedRole = "parent" | "student" | "tutor";
 const HOUR = 60 * 60_000;
 
+export async function listInvitations<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, afterId: string | undefined, limit: number) {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new AccessDenied(403);
+  // Explicit private-admin contact projection. Never select token hashes,
+  // inviter/acceptor identities, sessions, or global user profiles.
+  return tx.select({ id: s.invite.id, role: s.invite.role, recipientEmail: s.invite.email, studentId: s.invite.studentId,
+    firstName: s.student.firstName, lastName: s.student.lastName, targetId: s.student.id,
+    createdAt: s.invite.createdAt, expiresAt: s.invite.expiresAt, acceptedAt: s.invite.acceptedAt, revokedAt: s.invite.revokedAt,
+    deliveryStatus: s.invite.deliveryStatus, deliveryAttemptedAt: s.invite.deliveryAttemptedAt })
+    .from(s.invite).leftJoin(s.student, and(eq(s.student.tenantId, s.invite.tenantId), eq(s.student.id, s.invite.studentId)))
+    .where(and(eq(s.invite.tenantId, tenantId), afterId === undefined ? undefined : gt(s.invite.id, afterId)))
+    .orderBy(s.invite.id).limit(limit).for("share", { of: s.invite });
+}
+
 export async function consumeInvitationBudget<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: Actor, email: string, secret: string, now: number) {
   const bucketStart = Math.floor(now / HOUR) * HOUR;
   for (const [scope, value, limit] of [["actor", actor.membershipId, 20], ["recipient", email, 5]] as const) {

@@ -19,12 +19,50 @@ function assertUsableInvitation(invitation: data.IssuedInvitation | undefined, i
   if (!invitation || invitation.acceptedAt || invitation.revokedAt || invitation.expiresAt <= now || invitation.email !== normalizedInvitationEmail(identity.email) || invitation.role === "admin") throw new AccessDenied(404);
 }
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function invitationListRow(row: Awaited<ReturnType<typeof data.listInvitations>>[number], now: number) {
+  const timestamp = (value: unknown): number => {
+    if (!(value instanceof Date) || !Number.isFinite(value.getTime())) throw new AccessUnavailable();
+    return value.getTime();
+  };
+  const name = (value: unknown): string => {
+    if (typeof value !== "string" || !value.trim() || value.length > 100 || /[<>\x00-\x1f\x7f]/.test(value)) throw new AccessUnavailable();
+    return value;
+  };
+  let email: string;
+  try { email = normalizedInvitationEmail(row.recipientEmail); } catch { throw new AccessUnavailable(); }
+  if (email !== row.recipientEmail || !uuid.test(row.id) || !["parent", "student", "tutor"].includes(row.role)) throw new AccessUnavailable();
+  const created = timestamp(row.createdAt), expires = timestamp(row.expiresAt);
+  const accepted = row.acceptedAt === null ? null : timestamp(row.acceptedAt), revoked = row.revokedAt === null ? null : timestamp(row.revokedAt);
+  const attempted = row.deliveryAttemptedAt === null ? null : timestamp(row.deliveryAttemptedAt);
+  if (expires <= created || (accepted !== null && (accepted < created || accepted >= expires)) || (revoked !== null && revoked < created)
+    || (accepted !== null && revoked !== null) || (attempted !== null && attempted < created)
+    || !["pending", "sent", "failed"].includes(row.deliveryStatus) || (row.deliveryStatus === "pending") !== (attempted === null)) throw new AccessUnavailable();
+  let student: Readonly<{ id: string; firstName: string; lastName: string }> | null = null;
+  if (row.role === "tutor") {
+    if (row.studentId !== null || row.targetId !== null || row.firstName !== null || row.lastName !== null) throw new AccessUnavailable();
+  } else {
+    if (typeof row.studentId !== "string" || !uuid.test(row.studentId) || row.targetId !== row.studentId) throw new AccessUnavailable();
+    student = Object.freeze({ id: row.studentId, firstName: name(row.firstName), lastName: name(row.lastName) });
+  }
+  const status = accepted !== null ? "accepted" as const : revoked !== null ? "revoked" as const : expires <= now ? "expired" as const : "pending" as const;
+  return Object.freeze({ id: row.id, role: row.role as InvitedRole, recipientEmail: email, student, status,
+    createdAt: row.createdAt.toISOString(), expiresAt: row.expiresAt.toISOString(), acceptedAt: row.acceptedAt?.toISOString() ?? null, revokedAt: row.revokedAt?.toISOString() ?? null,
+    delivery: Object.freeze({ status: row.deliveryStatus, attemptedAt: row.deliveryAttemptedAt?.toISOString() ?? null }) });
+}
 
 export function createInvitationService<Q extends PgQueryResultHKT>(input: {
   db: AccessDatabase<Q>; access: ReturnType<typeof createAccessService<Q>>; transport: InvitationTransport; throttleSecret: string;
 }) {
   if (typeof input.transport !== "function" || typeof input.throttleSecret !== "string" || input.throttleSecret.length < 32) throw new AccessUnavailable();
   const reviewKey = createHmac("sha256", input.throttleSecret).update("portal:invitation-review:v1").digest();
+  async function list(request: AccessRequest, selection: { mode: ActiveMode; afterId?: string; limit?: number }) {
+    const limit = selection.limit ?? 100;
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100 || (selection.afterId !== undefined && (typeof selection.afterId !== "string" || !uuid.test(selection.afterId)))) throw new AccessDenied(403);
+    return input.access.withAdminCapability(request, { mode: selection.mode, capability: "read-invites" }, async (tx, actor) => {
+      const rows = await data.listInvitations(tx, actor.tenantId, selection.afterId, limit), now = Date.now();
+      return Object.freeze(rows.map(row => invitationListRow(row, now)));
+    });
+  }
   function reviewDigest(invitation: data.IssuedInvitation, identity: VerifiedIdentity, expiry: number) {
     return createHmac("sha256", reviewKey).update(JSON.stringify(["invitation-review:v1", expiry, invitation.tokenHash, identity.authSessionId,
       identity.userId, identity.tenantId, identity.origin, invitation.role, invitation.studentId, invitation.expiresAt.getTime()])).digest();
@@ -167,7 +205,7 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
       return { inviteId: invitation.id, role: invitation.role, studentId: invitation.studentId };
     });
   }
-  return Object.freeze({ issue, revoke, reissue, preview,
+  return Object.freeze({ issue, revoke, reissue, preview, list,
     // Private compatibility/composition API; HTTP must exclusively use the
     // reviewed path, with raw token obtained only from its encrypted pending cookie.
     accept: (request: CookieMutationRequest, selection: { token: string }) => acceptCore(request, selection, false),

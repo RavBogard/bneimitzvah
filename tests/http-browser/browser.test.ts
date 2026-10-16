@@ -107,6 +107,10 @@ describe("real browser, SDK cookies and restricted PostgreSQL", () => {
     const studentId = fixture.student.id;
     const invite = await call(admin, "/api/admin/invitations", "POST", { role: "student", email: "browser-learner@example.test", studentId });
     expect(invite.status === 201 && invite.data.delivery === "sent").toBe(true);
+    const listed = await call(admin, "/api/admin/invitations");
+    expect(listed.status === 200 && Array.isArray(listed.data.invitations) && listed.data.invitations.some(
+      (row: { id?: unknown; status?: unknown; delivery?: { status?: unknown } }) => row.id === invite.data.inviteId && row.status === "pending" && row.delivery?.status === "sent",
+    )).toBe(true);
     const invitationLink = fixture.takeMail("browser-learner@example.test");
     try { await recipient.goto(invitationLink, { waitUntil: "domcontentloaded" }); }
     catch { throw new Error("Invitation browser navigation failed; details withheld"); }

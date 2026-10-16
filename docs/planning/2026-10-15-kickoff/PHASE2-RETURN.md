@@ -85,3 +85,33 @@ Author evidence: existing access/schema **23/23** passed after shared identity e
 Limits: concurrent redemption evidence here is PGlite/actual SQL with queued transactions, not a demonstrated physical Neon invitation race. Foundation's real-Postgres access-lock races are separately recorded and need the coordinated current migration set checked at integration. No UI/routes, token landing exchange, child-context issuance, live delivery, provider setup, private secret access, account provisioning, real family data, human pilot or Git operation occurred. No claim of Phase 2 completion.
 
 Review follow-up checkpoint: both independent P2 findings addressed. Bootstrap regression seeds an unbound active admin, denies adoption, revokes it, then denies replacement by a different verified identity with no membership/audit side effects. Delivery regressions verify committed pending state before transport completes, persisted failure plus audit, terminal field immutability, actual SQL audit failure rolling back both successful/failed receipts to pending with `unknown`, and logout/grant+invitation revocation during transport retaining a sent audit without restoring authority. Focused **14 invitation + 6 bootstrap = 20/20** passed; typecheck passed. New/changed follow-up files: invitation service/DAL, bootstrap script, tenant schema, 0006 SQL/snapshot/journal, invitation fixture/tests and bootstrap tests. Assignment uniqueness/0005 and roster worker files are preserved. Independent reviewer revalidation and primary combined integration are next. No additional runtime dependencies or Git operations.
+
+## Admin invitation status listing
+
+Service API: `invitations.list(request,{mode,afterId?,limit?})` uses the new `read-invites` admin capability with ordinary session freshness and SHARE intent. Exact tenant, live verified identity/member/admin grant and child-context rejection come from existing access checks; modes never combine. UUID ascending keyset pagination accepts limits 1-100 (default 100), and the DAL enforces the same maximum before executing a bounded query. Only explicit invitation fields and a student join qualified by both tenant and ID are selected; there is no global profile search.
+
+DTO: `id`, intended `role`, private-admin `recipientEmail`, minimal `student:{id,firstName,lastName}|null`, lifecycle `status`, ISO `createdAt/expiresAt/acceptedAt/revokedAt`, and `delivery:{status,attemptedAt}`. Recipient contact is intentionally available only through this authorized admin workflow, consistent with the existing admin roster. Token/hash, issuer/acceptor membership, session/global-user IDs and private audit identities are not selected or returned. Delivery pending means its outcome remains unconfirmed; sent records transport outcome, not recipient receipt. Lifecycle accepted/revoked/expired/pending is derived from one read-time clock after the bounded query and does not promise current redemption eligibility; acceptance still rechecks live recipient/grant/link authority.
+
+Projection rejects malformed stored mailbox/name/role-target/date/delivery shapes with fixed503. It rejects incoherent terminal dates, simultaneous acceptance/revocation and nonfinite timestamps without adding an arbitrary future-clock-skew or legacy72h policy. Listing performs no source, acceptance, grant, link or audit mutation. Existing issue/reissue/revoke/accept and delivery paths remain unchanged.
+
+Files: `src/server/access/service.ts`, `src/server/data/invitations.ts`, `src/server/invitations/service.ts`, `src/server/http/portal.ts`, new `tests/app/invitation-list.test.ts`, and these return notes. No migration/dependency/provider/Git changes. Focused actual-SDK/restricted-PGlite checks: **31/31 passed** (listing7, existing invitation14, portal routes10), log `.local-logs/invitation-list-test.log`; typecheck passed, log `.local-logs/invitation-list-typecheck.log`. Tests cover status/delivery combinations and exact expiry, private field mask, real acceptance, source/audit unchanged after GET, tenant exclusion, 101-row bounded pagination, nonfresh reads versus fresh writes, role/context/anonymous denial, closed query and malformed legacy rows. Initial malformed-row fixture attempted an immutable identity update and was corrected to create a separate legacy row, retaining DB immutability protection. Independent review and primary integration remain required; no live provider/delivery claim.
+
+Independent invitation-list review is accepted: **33/33** focused tests plus
+typecheck passed, including two new actual-SDK/restricted-PGlite reviewer probes
+for late admin-grant revocation and all-or-nothing malformed-page failure without
+partial contact output or mutation. Logs:
+`.local-logs/phase2-security-invitation-list-final.log` and
+`.local-logs/phase2-security-invitation-list-typecheck.log`. Intentional admin-only
+recipient contact and historical status semantics were reviewed; unchanged
+mutation/physical-lock evidence is reused. Detailed limits are in
+`PHASE2-SECURITY-REVIEW.md`; primary retains broader integration/publication.
+
+The separate private-attachment guard adjunct is also independently accepted
+after a first-TAB-only index parser fix. Synthetic reviewer regression proved the
+previous index path truncation could reach a prohibited blob read; fixed path
+checking now runs before that read. Policy/reviewer/actual repository guard and
+process-isolation checks passed **13/13**. No actual attachment contents or
+private filenames were inspected, printed, deleted or published. Log:
+`.local-logs/phase2-security-attachment-policy-correction.log`; full bounded review
+is appended to the security note. No shared-checkout Git changes or provider use
+were performed by this reviewer.

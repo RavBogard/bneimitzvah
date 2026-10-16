@@ -536,3 +536,61 @@ object is passed to services, with literal admin and live scoped authorization.
 No parser expansion was needed for this slice. Primary retains combined build,
 browser, CI/publication and broader product gates. No implementation/Git edits,
 provider calls or credentialed execution were performed by the reviewer.
+
+## Independent admin invitation-list review — 2026-10-15
+
+**Scoped verdict: accepted; no implementation blocker found.** The literal-admin
+GET uses the ordinary-lifetime `read-invites` capability with live authority and
+SHARE intent. Its SQL selects explicit fields, qualifies invitation and joined
+student by tenant, orders by immutable UUID and limits pages to100. No global
+user/profile join, hash, token, issuer/acceptor/session or audit identity is
+selected. Intentional recipient contact projection stays inside the private
+authenticated admin response, consistent with existing authorized roster access.
+Unknown/duplicate query fields and child headers deny; writes retain freshness.
+
+Date/role-target/contact/delivery validation fails whole pages to fixed503;
+accepted/revoked/expired/pending are historical lifecycle labels, not current
+redemption authority. Pending delivery means an unconfirmed outcome, not queued
+work. No mutation or provider call is performed by the list. Existing invitation
+mutations and acceptance checks remain unchanged.
+
+Independent listing/reviewer/invitation/portal checks passed **33/33**, plus
+typecheck. New `tests/app/invitation-list-review.test.ts` proves a genuine SDK
+proof cannot expose the list after completed admin-grant revocation, and a later
+malformed terminal date fails the entire requested page without a partial contact
+response or data/audit changes; a bounded valid first page is a positive control.
+Logs: ignored `.local-logs/phase2-security-invitation-list-final.log` and
+`.local-logs/phase2-security-invitation-list-typecheck.log`. No contact values are
+included in review output. Current physical PostgreSQL9 evidence is reused for
+unchanged service locks; no new credentialed execution is claimed. Primary owns
+combined integration/build/CI/publication and broader UI/product gates.
+
+## Independent private-attachment repository guard review — 2026-10-15
+
+**Scoped verdict: accepted after one narrow index-parser correction.** The exact
+private attachment directory is ignored and explicitly prohibited by normalized
+path independently of content, extension, case or separators. Candidate paths
+are rejected before lstat/readFile; indexed paths before cat-file. Findings use
+fixed category-only messages without private filenames. Existing sensitive-data,
+credential, licensed-content and metadata checks retain their strength; no broad
+exception was added. The real attachment directory was not opened, enumerated,
+deleted or used by this reviewer, and no shared-checkout Git changes were made.
+
+Review found that splitting an index record on every TAB truncated a legal Git
+pathname containing TAB before the protected directory. The worktree candidate
+pass still blocked publication, but its index pass could attempt a private blob
+read. New `tests/repo-policy-review.test.mjs` constructs only a synthetic
+index-only path and deliberately nonexistent blob in an isolated temporary Git
+repository. It initially failed at cat-file, proving the forbidden attempt. The
+author now splits only the first metadata separator and preserves the entire
+pathname; the same regression returns path-only findings without touching the
+blob. Windows path protection is disabled only for that temporary index insertion;
+no corresponding filesystem path or actual attachment is needed.
+
+Independent policy/reviewer/actual repository guard/process-isolation checks
+passed **13/13** after correction. Log: ignored
+`.local-logs/phase2-security-attachment-policy-correction.log`. The original
+synthetic regression failure remains at
+`.local-logs/phase2-security-attachment-policy-probe.log`. This accepts the bounded
+ignore/path protection and parsing fix; no private payload inspection or deletion
+was required. Primary retains staging/publication and final combined gates.

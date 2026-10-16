@@ -13,6 +13,7 @@ next-env.d.ts
 *.pem
 *.key
 .vercel/
+.codex-remote-attachments/
 
 # local caches (Sefaria, STEP, OSHB, Hebcal)
 .cache/

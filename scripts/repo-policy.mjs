@@ -9,6 +9,8 @@ const CONFIGS = new Set(["package.json", "package-lock.json", "tsconfig.json", "
 const DRIZZLE_METADATA = /^src\/server\/db\/migrations\/meta\/(?:_journal|[0-9]{4}_snapshot)\.json$/;
 const MEDIA = /\.(?:mp3|wav|webm|m4a|ogg|flac|aac|mp4|mov|aiff|aif|opus|ckpt|pt|pth|safetensors|onnx|h5|bin)$/i;
 const KEYS = /(?:\.(?:pem|key|p12|pfx|jks|keystore)$|(?:^|\/)(?:id_rsa|id_ed25519|credentials(?:\.json)?|service-account[^/]*\.json)$)/i;
+const REMOTE_ATTACHMENTS = /(?:^|\/)\.codex-remote-attachments(?:\/|$)/i;
+const ATTACHMENT_REASON = "private remote attachment directory";
 const CREDENTIALS = [
   /\bvercel_blob_rw_[A-Za-z0-9_-]+/,
   /\bGOCSPX-[A-Za-z0-9_-]+/,
@@ -39,6 +41,9 @@ function syntheticEmail(address) {
 
 export function entryProblems(path, content = "") {
   const file = path.replaceAll("\\", "/");
+  // Path alone is sufficient. Do not inspect or echo private attachments,
+  // including otherwise allowed source extensions or empty/binary files.
+  if (REMOTE_ATTACHMENTS.test(file)) return [ATTACHMENT_REASON];
   const problems = [];
   const text = String(content);
   const data = DATA.has(extname(file).toLowerCase());
@@ -89,6 +94,10 @@ export async function inspectRepository(root, env) {
   if (!paths.length) throw new Error("Repository policy has no files to inspect");
   const findings = [];
   for (const file of paths) {
+    if (REMOTE_ATTACHMENTS.test(file.replaceAll("\\", "/"))) {
+      findings.push(`${ATTACHMENT_REASON}: prohibited publish candidate`);
+      continue;
+    }
     let stat;
     try { stat = await lstat(join(root, file)); }
     catch (error) { if (error.code === "ENOENT") continue; throw error; }
@@ -105,7 +114,15 @@ export async function inspectRepository(root, env) {
     for (const reason of entryProblems(file, content)) findings.push(`${file}: ${reason}`);
   }
   for (const record of indexed.split("\0").filter(Boolean)) {
-    const [meta, file] = record.split("\t");
+    // Only the first tab separates index metadata from the pathname. Tabs in
+    // the pathname itself must remain intact for the private-directory gate.
+    const separator = record.indexOf("\t");
+    if (separator < 0) throw new Error("Repository policy: invalid index record; details withheld");
+    const meta = record.slice(0, separator), file = record.slice(separator + 1);
+    if (REMOTE_ATTACHMENTS.test(file.replaceAll("\\", "/"))) {
+      findings.push(`${ATTACHMENT_REASON} (index): prohibited publish candidate`);
+      continue;
+    }
     const [mode, hash] = meta.split(" ");
     if (mode !== "100644" && mode !== "100755") {
       findings.push(`${file} (index): symlink or non-file requires review`);

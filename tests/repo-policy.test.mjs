@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { entryProblems, inspectRepository, repositoryGit } from "../scripts/repo-policy.mjs";
@@ -33,6 +33,45 @@ test("reviewed config and synthetic fixture paths do not bypass content checks",
     assert.ok(entryProblems("tests/fixtures/portal/data.json", content).length > 0, "sensitive synthetic fixture rejected");
   }
   assert.ok(entryProblems("src/leak.ts", samples[0]).includes("credential pattern"));
+});
+
+test("private remote attachment paths are prohibited independently of extension, content, case or separators", () => {
+  for (const file of [".codex-remote-attachments", ".codex-remote-attachments/innocent.ts", ".codex-remote-attachments/image.jpg",
+    "nested/.CODEX-REMOTE-ATTACHMENTS/allowed.md", "nested\\.codex-remote-attachments\\empty.svg"]) {
+    for (const content of ["", "export {};", "\u0000synthetic"]) assert.deepEqual(entryProblems(file, content), ["private remote attachment directory"]);
+  }
+  assert.deepEqual(entryProblems("src/.codex-remote-attachments-example.ts", "export {};"), []);
+});
+
+test("private remote attachments remain local when ignored and are rejected when untracked or force indexed without echoing filenames", async () => {
+  const { env, cleanup } = await isolatedEnv();
+  const root = await mkdtemp(join(tmpdir(), "portal-attachment-policy-"));
+  const git = (...args) => execFileSync("git", args, { cwd: root, env, stdio: "pipe" });
+  const directory = ".codex-remote-attachments", filename = "synthetic-private-name.ts";
+  try {
+    git("init", "-b", "main");
+    await writeFile(join(root, "README.md"), "Synthetic fixture repository\n");
+    git("add", "README.md");
+    await mkdir(join(root, directory));
+    await writeFile(join(root, directory, filename), "export {};\n");
+    const untracked = await inspectRepository(root, env);
+    assert.ok(untracked.findings.includes("private remote attachment directory: prohibited publish candidate"));
+    assert.ok(!JSON.stringify(untracked).includes(filename));
+    await writeFile(join(root, ".gitignore"), `${directory}/\n`);
+    git("add", ".gitignore");
+    assert.deepEqual((await inspectRepository(root, env)).findings, [], "ignored private attachments remain on disk but aren't candidates");
+    git("add", "-f", `${directory}/${filename}`);
+    const forced = await inspectRepository(root, env);
+    assert.ok(forced.findings.includes("private remote attachment directory (index): prohibited publish candidate"));
+    assert.ok(!JSON.stringify(forced).includes(filename));
+    await rm(join(root, directory, filename));
+    const indexOnly = await inspectRepository(root, env);
+    assert.ok(indexOnly.findings.includes("private remote attachment directory (index): prohibited publish candidate"));
+    assert.ok(!JSON.stringify(indexOnly).includes(filename));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+    await cleanup();
+  }
 });
 
 test("Markdown code delimiters do not turn Python decorators into email addresses", () => {

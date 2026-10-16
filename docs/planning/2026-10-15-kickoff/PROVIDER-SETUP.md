@@ -1,6 +1,6 @@
 # Provider setup for Daniel's private testing
 
-Status, 2026-10-15: Daniel confirmed Google OAuth, Neon and Resend are not configured. Continue local implementation; this is a preparation checklist, not evidence that live authentication works. No new account, paid service, outbound email or database has been provisioned by these steps.
+Status, 2026-10-15: Daniel supplied a Google Web application client export while working remotely from his phone. Its registered redirects are bare site addresses and need the exact callback paths below; client credentials remain in the ignored private attachment directory and have not been installed in the runtime. Neon and Resend remain unconfigured. Continue local implementation; this is a preparation checklist, not evidence that live authentication works. No new account, paid service, outbound email or database has been provisioned by these steps.
 
 ## 1. Canonical host
 
@@ -11,6 +11,8 @@ The intended authenticated origin is `https://bneimitzvah.centralreform.org`. Co
 Create a Google OAuth Web application client for this portal, with the consent screen restricted to Daniel's testing while the full product is built. The reviewed production callback is `https://bneimitzvah.centralreform.org/api/auth/callback/google`. A separate local client may use `http://localhost:3000/api/auth/callback/google` when that exact local origin is configured. The route adapter exposes this callback through an explicit allowlist; the full Better Auth endpoint set is not mounted. Register exact callbacks, without wildcards. Store client ID and secret privately as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`; set `BETTER_AUTH_URL` to the matching origin. [Better Auth Google setup](https://better-auth.com/docs/authentication/google).
 
 The portal accepts families' Google accounts rather than requiring a CRC Workspace domain. A successful sign-in establishes identity only; it does not grant a congregation role or access to a child. Explicit invitation acceptance is a separate operation.
+
+For the client shown in Daniel's phone screenshot, edit **Authorized redirect URIs** to use the full production callback above and the local callback when needed. The bare Vercel root and bare HTTPS loopback address do not match this application. Production remains the custom CRC domain; using the Vercel hostname for authentication would require an explicit reviewed host mapping and its own full callback. Do not enable the console's AI-agent option for this ordinary portal sign-in. Google's server flow requires the redirect URI to match exactly, including scheme, port and path. [Google server OAuth documentation](https://developers.google.com/identity/protocols/oauth2/web-server).
 
 ## 3. Neon database
 

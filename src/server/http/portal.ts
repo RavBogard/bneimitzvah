@@ -24,7 +24,7 @@ const exact: Record<string, Route> = {
   "/api/admin/students": { kind: "admin-students", methods: ["GET", "POST"] },
   "/api/admin/tutors": { kind: "eligible-tutors", methods: ["GET"] },
   "/api/admin/students/import/preview": { kind: "csv-preview", methods: ["POST"] }, "/api/admin/students/import/confirm": { kind: "csv-confirm", methods: ["POST"] },
-  "/api/admin/invitations": { kind: "invite-issue", methods: ["POST"] },
+  "/api/admin/invitations": { kind: "invite-issue", methods: ["GET", "POST"] },
   "/api/invitations/pending": { kind: "pending", methods: ["GET"] }, "/api/invitations/accept": { kind: "accept", methods: ["POST"] },
 };
 function route(pathname: string): Route | null {
@@ -238,6 +238,15 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         return value.ok ? privateJson({ ok: true, assignmentId: value.assignmentId, revision: value.revision }) : stale();
       }
       case "invite-issue": {
+        if (request.method === "GET") {
+          const query = uniqueQuery(request.url, ["afterId", "limit"]), limit = query.get("limit");
+          if (limit !== null && (!/^[1-9][0-9]{0,2}$/.test(limit) || Number(limit) > 100)) throw new HttpBoundaryError();
+          const rows = await runtime.invitations.list(request, { mode: "admin", afterId: query.has("afterId") ? identifier(query.get("afterId")) : undefined, limit: limit === null ? undefined : Number(limit) });
+          return privateJson({ invitations: rows.map(row => ({ id: row.id, role: row.role, recipientEmail: row.recipientEmail,
+            student: row.student ? { id: row.student.id, firstName: row.student.firstName, lastName: row.student.lastName } : null, status: row.status,
+            createdAt: row.createdAt, expiresAt: row.expiresAt, acceptedAt: row.acceptedAt, revokedAt: row.revokedAt,
+            delivery: { status: row.delivery.status, attemptedAt: row.delivery.attemptedAt } })) });
+        }
         uniqueQuery(request.url, []); const body = await objectBody(request, ["role", "email"], ["studentId"]);
         if (body.role !== "parent" && body.role !== "student" && body.role !== "tutor") throw new HttpBoundaryError();
         const value = await runtime.invitations.issue(request, { mode: "admin", role: body.role, email: text(body.email, 254), studentId: body.studentId === undefined ? undefined : identifier(body.studentId) });
