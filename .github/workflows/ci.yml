@@ -54,6 +54,17 @@ jobs:
           PGDATABASE: portal_rls_test
           PGUSER: postgres
           PGPASSWORD: disposable-ci-only
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Exercise browser HTTP authority and built production denial
+        run: npm run test:http:browser
+        env:
+          POSTGRES_TEST_DISPOSABLE: "1"
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGDATABASE: portal_rls_test
+          PGUSER: postgres
+          PGPASSWORD: disposable-ci-only
   browser:
     runs-on: ubuntu-latest
     env:

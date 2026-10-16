@@ -2,7 +2,6 @@ import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
 import { drizzle } from "drizzle-orm/pglite";
 import { eq } from "drizzle-orm";
-// @ts-expect-error Shared dependency-free Node test helper is intentionally JS.
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import { authFixture } from "./auth-stack-helper";
 import { bootstrapOwner } from "../../scripts/bootstrap-owner.mjs";

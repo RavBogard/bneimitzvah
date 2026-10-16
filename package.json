@@ -17,6 +17,7 @@
     "test:postgres": "npm run test:postgres:sql && npm run test:postgres:access",
     "test:postgres:sql": "node --test \"tests/postgres/*.integration.mjs\"",
     "test:postgres:access": "vitest run --config vitest.postgres.config.mts",
+    "test:http:browser": "vitest run --config vitest.http-browser.config.mts",
     "db:generate": "node scripts/db-generate.mjs",
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:auth-schema": "auth generate --config scripts/db-auth-config.ts --output .local-logs/auth-schema.generated.ts --yes",
