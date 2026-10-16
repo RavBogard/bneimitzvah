@@ -2,7 +2,7 @@
 
 Authority: `MISSION.md` (Daniel's rulings). Plan: `PLAN-CODE-2026-10-15.md`. This file says where the work stands. Update it at the end of every session and every phase.
 
-Current phase: 1 (local engine migration verified; public inclusion now authorized, attribution finalization and hosted engine CI in progress). Phase 0 foundation is published, hosted CI passes, and the Vercel placeholder serves HTTP 200; custom-domain DNS remains pending. Engine source: haftarah `trope-engine-research` at `380b1b2`, verified against GitHub on 2026-10-15. Haftarah `main` reference: `5b2530f`.
+Current phase: 2 (auth/tenancy architecture approved; SDK compatibility spike and application implementation are next). Phases 0 and 1 are published and verified: engine publication `da12401` passed hosted Windows/Linux/browser CI and Vercel serves HTTP 200. Custom-domain DNS remains pending. Engine source: haftarah `trope-engine-research` at `380b1b2`, verified against GitHub on 2026-10-15. Haftarah `main` reference: `5b2530f`.
 
 Current execution authority: Daniel requested Astra as project manager and Sol agents as implementers on 2026-10-15. See `PM-REVIEW-2026-10-15.md` for confirmed amendments, review findings, and proposals. Root `PRODUCT.md` captures the completed Impeccable product interview; the chosen workflow is code-first.
 
@@ -24,6 +24,7 @@ GATE: Daniel confirmed noncommercial use permission and expressly authorized pub
 GATE: local engine move preserved 25 source commits and passed 109 engine tests on Windows and Ubuntu WSL — migration is verified locally; no generated audio was released.
 GATE: full local integration passed 119 Node tests plus 1 Vitest/PGlite test — repository guard false-positive fix also reviewed by Astra.
 GATE: published foundation `452c1c5` passed all hosted Windows/Linux/browser jobs and Vercel HTTP 200 — Phase 0 acceptance met at the Vercel hostname.
+GATE: engine publication `da12401` passed hosted Windows/Linux/browser CI run `38833091139` and its Vercel deployment is Ready/HTTP 200 — Phase 1 complete; noncommercial table terms and fixture attribution are recorded, with no remaining engine-publication blocker.
 BLOCKED (Daniel): custom domain needs CNAME host `bneimitzvah` pointing to `a008a8e486abbe24.vercel-dns-016.com.` at the existing DNS provider.
 
 ## Checklist
@@ -48,10 +49,10 @@ BLOCKED (Daniel): custom domain needs CNAME host `bneimitzvah` pointing to `a008
 - [x] path rewrites in `text.mjs` and `trope-text.test.mjs`; missing source fixtures reduced to Hebrew-only fields
 - [x] parity golden + `trope-lib.test.mjs` (182 verses, 400 variants)
 - [x] `findModal` Linux fix (Windows joins and PATH delimiters)
-- [ ] Gate: 108 engine tests + parity green Windows + CI
+- [x] Gate: 108 engine tests + parity green Windows + CI
 
 ### Phase 2 — Data model, tenancy, auth, roles, admin
-- [ ] auth/tenancy design spec (Fable)
+- [x] auth/tenancy design spec (Sol drafted; Astra approved direction; SDK compatibility unverified)
 - [ ] schema + first migration + seed
 - [ ] Better Auth: Google, magic link, sessions, invites
 - [ ] Hebcal + `leyning.mjs` copy; verse proposal
@@ -106,7 +107,7 @@ BLOCKED (Daniel): custom domain needs CNAME host `bneimitzvah` pointing to `a008
 (Newest first. What was done, what is half done, the exact next step, test counts, last deploy URL and status.)
 
 - 2026-10-15, Astra/Sol milestone: reviewed Cowork's plan and completed Impeccable init. Confirmed all-device practice, Zoom tutoring, linked child practice views, and code-first. See `PM-REVIEW-2026-10-15.md` and root `PRODUCT.md`.
-- Foundation: [public repo](https://github.com/RavBogard/bneimitzvah), [green foundation CI](https://github.com/RavBogard/bneimitzvah/actions/runs/38832145643), [Ready/HTTP-200 title-only placeholder](https://bneimitzvah.vercel.app). Foundation `452c1c5` is the last verified published deployment; the authorized engine publication is now in progress. See `FOUNDATION-RETURN.md` for pins, browser checks, deployment and DNS details.
+- Publication: [public repo](https://github.com/RavBogard/bneimitzvah), [green engine CI](https://github.com/RavBogard/bneimitzvah/actions/runs/38833091139), [Ready/HTTP-200 title-only placeholder](https://bneimitzvah.vercel.app). Engine publication `da12401` is the verified public code/deployment, including all 25 historical commits. See `FOUNDATION-RETURN.md` for the earlier foundation checks and pending DNS details.
 - Engine: local history merge `afd56ae`, parity/portability `ee77d23`, reviewed guard correction `b02eb1e`, provenance/license update `8de656c`. 109/109 engine tests on Windows and Ubuntu WSL; 119 Node + 1 PGlite test in final combined Windows suite. See `ENGINE-MIGRATION-RETURN.md` and `trope/PROVENANCE.md`. Source haftarah checkout and refs unchanged. No render/GPU job, audio upload, or student release occurred.
-- Next action: finish separate noncommercial table notices and open-license fixture attribution, publish the engine, then verify hosted engine CI to complete Phase 1. Daniel has explicitly cleared the tables for public inclusion; do not reopen that permission question. Phase 2 starts with the auth/tenancy architecture spec, including guardian identity versus child practice context. Custom-domain DNS can be completed independently. The early-pilot proposal is declined: build all features and test only with Daniel before Phase 7.
+- Next action: implement the bounded SDK compatibility spike in `docs/superpowers/specs/2026-10-15-auth-tenancy-design.md`, then build schema/auth/capabilities and role shells with independent adversarial review. Astra approved separate role grants, per-tab child contexts, application checks plus transaction-local tenant RLS, and explicit verified-email invite acceptance. Intended canonical auth origin is the custom domain; the Vercel hostname remains an infrastructure placeholder until DNS/provider setup is ready. Daniel's table permission and fixture attribution are resolved; do not reopen them. The early-pilot proposal is declined: build all features and test only with Daniel before Phase 7.
 - Earlier 2026-10-15: original Cowork planning files written before build work began.
