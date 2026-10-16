@@ -1,6 +1,6 @@
 # Provider setup for Daniel's private testing
 
-Status, 2026-10-16: Daniel has corrected the Google callbacks and intentionally keeps OAuth public. He already has a CRC Resend account, not yet connected to this portal, and is creating the Neon project through Vercel. Use the stable Vercel host until custom-domain DNS is ready. Private runtime credentials have not been installed by this implementation work. This is a preparation checklist, not evidence that live authentication works; no database creation, outbound delivery or paid provisioning is claimed.
+Status, 2026-10-16: Daniel has corrected the Google callbacks and intentionally keeps OAuth public. He connected Neon through Vercel, installed the CRC Resend sending key in Production and redeployed. He explicitly approved the existing Neon Launch plan. Restricted runtime access, schema migration and remaining app configuration are still pending. Use the stable Vercel host until custom-domain DNS is ready. Private runtime credentials have not been installed by this implementation work. This is a preparation checklist, not evidence that live authentication works; no database creation, outbound delivery or paid provisioning is claimed.
 
 ## 1. Canonical host
 
@@ -18,7 +18,7 @@ Use full callback paths, not a bare site root or bare HTTPS loopback address. Do
 
 ## 3. Neon database
 
-Create the portal's own Neon project/database through the Vercel Marketplace on the Free plan, connected only to Production for now. The integration may inject default connection variables; replace those with the restricted runtime login and remove unnecessary owner credentials before enabling the portal. Review the current plan and spending controls before creation. Any new charge or upgrade needs Daniel's approval. Keep migration credentials separate from runtime credentials and out of Vercel's runtime environment.
+The portal has its own connected Neon project through Vercel. Daniel explicitly approved its existing Launch subscription on 2026-10-16; the earlier Free recommendation is superseded. Runtime database access must be Production-only. The integration may inject default connection variables; replace those with the restricted runtime login and remove unnecessary owner credentials before enabling the portal. Review the current plan and spending controls before creation. Any new charge or upgrade needs Daniel's approval. Keep migration credentials separate from runtime credentials and out of Vercel's runtime environment.
 
 Apply the reviewed migrations as a dedicated owner. Create the application LOGIN role through SQL with no superuser, role-creation, database-creation, replication or RLS-bypass privilege. Grant it membership in the migration-defined `portal_runtime` privilege group only. It must own no application table and must not be able to assume the owner or an elevated role. Neon Console/CLI/API-created roles receive `neon_superuser` membership, so they are unsuitable as the unmodified application login. [Neon role management](https://neon.com/docs/manage/roles).
 
@@ -28,7 +28,7 @@ The runtime accepts a restricted Neon URL with `sslmode=require` and no addition
 
 ## 4. Resend magic links
 
-Reuse the existing CRC Resend account. Daniel reports centralreform.live is Verified (2026-10-16); this is the selected candidate domain. Confirm sending capability and tracking configuration before live authentication delivery. A new account is unnecessary. If a new sending subdomain is needed, add the exact verification records shown by Resend and preserve the congregation's existing mail records. Confirm domain verification before delivery testing. Keep click/open tracking disabled for authentication messages. A subdomain can isolate transactional sending reputation. [Resend verified domains](https://resend.com/docs/dashboard/domains/introduction).
+Reuse the existing CRC Resend account. Daniel reports centralreform.live is Verified (2026-10-16); this is the selected candidate domain. Daniel reports click/open tracking appear off; preserve the shared CRC configuration. Sending capability and real delivery remain acceptance items before calling mail ready. A new account is unnecessary. If a new sending subdomain is needed, add the exact verification records shown by Resend and preserve the congregation's existing mail records. Confirm domain verification before delivery testing. Keep click/open tracking disabled for authentication messages. A subdomain can isolate transactional sending reputation. [Resend verified domains](https://resend.com/docs/dashboard/domains/introduction).
 
 Create a dedicated API key limited to sending on the chosen domain. Store it privately as `RESEND_API_KEY`, with the verified sender in `RESEND_FROM`. Resend supports permission and optional domain restrictions for keys. [Resend API keys](https://resend.com/docs/dashboard/api-keys/introduction).
 
