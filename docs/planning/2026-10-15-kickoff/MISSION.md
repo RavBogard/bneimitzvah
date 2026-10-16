@@ -44,6 +44,8 @@ It is the second product carved out of the haftarah repo (`RavBogard/haftarah`).
 
 ### The engine move
 
+**Amended 2026-10-15 (Daniel):** Permission for the Binder/Avery melody tables covers noncommercial use, and the tables are allowed in this public repository. This resolves the public-inclusion decision in engine open item 15. Preserve that restriction in the table notices, separately from the MIT license for code; this is not an unrestricted license grant for the tables. Printed-source accuracy checks and the G1/G2/G3 student-audio gates remain unchanged.
+
 18. `trope/` moves from the haftarah branch `trope-engine-research` into this repo **with git history** (subtree), plus a copy of the trope functions from `template/lib.js` (`tropePhrases`, `TETRA` and what they need) until the haftarah Wave 6 engine package exists; then the portal switches to the package.
 19. Rendering stays an offline GPU job (Daniel's RTX 4070 laptop now; Modal or a rented GPU later, engine open item 2) that uploads MP3s and a manifest to a Blob store **the portal owns**. The `haftarah-audio` store is renamed or replaced.
 20. The engine's tests must pass in the new repo before anything else is built on it. (Amended 2026-10-15 while planning: the interview said "314 tests"; 314 is the whole branch suite, of which 108 are the engine's and move; the other 206 test the haftarah sheet and stay. The gate is the 108 plus a parity golden against haftarah's `lib.js`.)
