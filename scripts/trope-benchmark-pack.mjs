@@ -5,6 +5,7 @@ import { open, lstat, realpath, mkdir, readdir, writeFile } from "node:fs/promis
 import { dirname, basename, resolve, relative, isAbsolute, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { insideGitWorkingTree } from "./private-paths.mjs";
 import { BENCHMARK_LIMITS, BENCHMARK_TABLES, BenchmarkPackError, buildBenchmarkPack, canonicalJson, sha256 } from "../trope/benchmark-pack.mjs";
 
 const REPOSITORY = fileURLToPath(new URL("../", import.meta.url));
@@ -37,7 +38,7 @@ export async function privateBenchmarkDestination(destination) {
     const parent = await realpath(dirname(requested));
     if (within(repository, parent)) rejected("destination-repository");
     const target = join(parent, basename(requested));
-    if (within(repository, target)) rejected("destination-repository");
+    if (within(repository, target) || await insideGitWorkingTree(requested) || await insideGitWorkingTree(target)) rejected("destination-repository");
     try { await lstat(target); rejected("destination-exists"); } catch (error) { if (error?.code !== "ENOENT") throw error; }
     return target;
   } catch (error) { if (error instanceof BenchmarkPackError) throw error; rejected("destination"); }
