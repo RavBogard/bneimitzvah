@@ -6,9 +6,17 @@ afterEach(() => vi.unstubAllGlobals());
 const a = "10000000-0000-4000-8000-000000000001", b = "10000000-0000-4000-8000-000000000002";
 const student = () => ({ id: a, firstName: "Synthetic", lastName: "Student", ceremonyDate: "2027-01-02", revision: 1 });
 const context = () => ({ id: b, studentId: a, studentRevision: 1, authorityRevision: 1, expiresAt: new Date(Date.now() + 60_000).toISOString() });
-const reading = (kind = "torah") => ({ id: b, status: "confirmed", kind, basis: "custom", revision: 1, ranges: ["Genesis 1:1"], verses: ["Genesis 1:1"], confirmationDate: "2027-01-02", needsReview: true,
+const reading = (kind = "torah") => ({ id: b, status: "confirmed", kind, basis: "custom", revision: 1, ranges: ["Genesis 1:1"], verses: ["Genesis 1:1"], confirmationDate: "2027-01-02", needsReview: true, aliyahStarts:null,
   source: { status: "unknown", fetchedAt: null, date: null, calendar: null, attribution: null } });
 const reply = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
+
+it("assigned-reading metadata validates canonical cut membership and preserves null versus explicit one aliyah",()=>{
+ const row={...reading(),ranges:["Genesis 1:1-3"],verses:["Genesis 1:1","Genesis 1:2","Genesis 1:3"]},dto=(value:unknown)=>({student:student(),mode:"student",context:null,readings:[value]});
+ for(const cuts of [null,[],["Genesis 1:2"]])expect(parseAssigned(dto({...row,aliyahStarts:cuts}),"student",a).readings[0].aliyahStarts).toEqual(cuts);
+ for(const cuts of [undefined,["Genesis 1:1"],["Genesis 1:2","Genesis 1:2"],["Genesis 1:3","Genesis 1:2"],["Genesis 1:4"]])expect(()=>parseAssigned(dto({...row,aliyahStarts:cuts}),"student",a)).toThrow();
+ expect(()=>parseAssigned(dto({...row,kind:"haftarah",aliyahStarts:[]}),"student",a)).toThrow();
+ expect(()=>parseAssigned(dto({...row,verses:["Genesis 1:1","Genesis 1:3"]}),"student",a)).toThrow();
+});
 
 describe("workspace DTO and private transport boundaries", () => {
   it("keeps contact fields confined to the admin roster and rejects partial or malformed lists", () => {

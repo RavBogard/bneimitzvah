@@ -13,12 +13,17 @@ import { createBindings,digest } from "./bindings";
 import { identifier,parseStudentCsv,revision,studentInput,type StudentInput } from "./validation";
 import { readingDate } from "../../lib/readings/reading-date";
 import { validatedSnapshot } from "./preparation";
+import { aliyahStarts } from "../../lib/readings/aliyah-starts";
+import { readingView } from "../portal/service";
 
 type Mode={mode:ActiveMode};
 type Kind="torah"|"haftarah";
 type Basis="triennial"|"selection"|"full"|"custom";
-type Preparation={kind:Kind;basis:Basis;ranges:string[];snapshot:Snapshot;sourceFetchedAt:number|null;sourceStatus:"available"|"unavailable"|"not-requested";maftir:unknown};
+type Preparation={cutsVersion:1;kind:Kind;basis:Basis;ranges:string[];aliyahStarts:string[]|null} & (
+  {preparationMode:"replace";snapshot:Snapshot;sourceFetchedAt:number|null;sourceStatus:"available"|"unavailable"|"not-requested";maftir:unknown}
+  | {preparationMode:"current-assignment";snapshotDigest:string;refDigest:string});
 const conflict=()=>({ok:false as const,code:"stale-revision" as const});
+const assertSessionLive=(expiresAt:number)=>{if(expiresAt<=Date.now())throw new AccessDenied(401);};
 const object=(value:unknown):value is Record<string,unknown>=>!!value && typeof value==="object" && !Array.isArray(value);
 export function calendarCustoms(customs:unknown){
   if(!object(customs))throw new AccessDenied(403);
@@ -120,17 +125,40 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       return {ok:true as const,ids};
     });
   }
-  async function prepareReading(request:CookieMutationRequest,selection:Mode&{studentId:string;kind?:Kind;pick?:string;ranges?:string[]}){
+  async function prepareReading(request:CookieMutationRequest,selection:Mode&{studentId:string;kind?:Kind;pick?:string;ranges?:string[];aliyahStarts?:string[];preparationMode?:"current-assignment";expectedAssignmentRevision?:number}){
     const id=identifier(selection.studentId),kind=selection.kind??"torah";
     if(kind!=="torah" && kind!=="haftarah")throw new AccessDenied(403);
+    if(selection.aliyahStarts!==undefined && (kind!=="torah" || !Array.isArray(selection.aliyahStarts)))throw new AccessDenied(403);
+    const currentOnly=selection.preparationMode==="current-assignment";
+    if(selection.preparationMode!==undefined && !currentOnly || currentOnly && (kind!=="torah" || selection.ranges!==undefined || selection.pick!==undefined)
+      || !currentOnly && selection.expectedAssignmentRevision!==undefined)throw new AccessDenied(403);
+    if(currentOnly)revision(selection.expectedAssignmentRevision);
+    if(selection.ranges!==undefined)try{expandReadingRanges(selection.ranges,kind,counts);}catch{throw new AccessDenied(403);}
     const baseline=await input.access.withStudentCapability(request,{mode:selection.mode,studentId:id,capability:"set-reading"},async(tx,actor,student)=>{
       requireCookieMutation(request,actor.origin);
       const customs=calendarCustoms(await data.customs(tx,actor.tenantId));
-      const assignment=await data.currentAssignment(tx,actor.tenantId,id,kind);
+      const assignment=await data.currentAssignment(tx,actor.tenantId,id,kind,currentOnly?"share":false);
       const current=await data.studentReadingContext(tx,actor.tenantId,id);
       if(!current)throw new AccessDenied(404);
-      return {actor:actorBinding(actor),date:student.ceremonyDate,serviceSlot:current.serviceSlot,...readingDate(student.ceremonyDate,current.serviceSlot),studentRevision:student.revision,assignmentRevision:assignment?.revision??0,customs};
+      const storedVerses=currentOnly && assignment?await data.assignmentVerses(tx,actor.tenantId,id,assignment.id):null;
+      assertSessionLive(actor.authSessionExpiresAt);
+      return {actor:actorBinding(actor),sessionExpiresAt:actor.authSessionExpiresAt,date:student.ceremonyDate,serviceSlot:current.serviceSlot,...readingDate(student.ceremonyDate,current.serviceSlot),studentRevision:student.revision,assignmentRevision:assignment?.revision??0,assignment,storedVerses,customs};
     });
+    const resolveCuts=(verses:string[])=>{try{return aliyahStarts(kind,selection.aliyahStarts===undefined?(baseline.assignment?.aliyahStarts??null):selection.aliyahStarts,verses);}catch{throw new AccessDenied(403);}};
+    if(currentOnly){
+      const current=baseline.assignment;if(!current || current.status!=="confirmed" || !baseline.storedVerses)throw new AccessDenied(404);
+      if(current.revision!==selection.expectedAssignmentRevision)return {status:"stale" as const,...conflict()};
+      const ranges=current.ref.split(/;\s*/),verses=expandReadingRanges(ranges,kind,counts),cuts=resolveCuts(verses);
+      if(verses.length!==baseline.storedVerses.length || verses.some((ref,i)=>ref!==baseline.storedVerses![i]))throw new AccessUnavailable();
+      const view=readingView({...current,snapshot:current.proposalSnapshot,verses:baseline.storedVerses},baseline.date);
+      const preparation:Preparation={cutsVersion:1,preparationMode:"current-assignment",kind,basis:current.basis,ranges,aliyahStarts:cuts,snapshotDigest:digest(current.proposalSnapshot),refDigest:digest(current.ref)};
+      assertSessionLive(baseline.sessionExpiresAt);
+      const binding=bindings.sign({purpose:"student-reading",actor:baseline.actor,studentId:id,studentRevision:baseline.studentRevision,assignmentId:current.id,assignmentRevision:current.revision,date:baseline.date,serviceSlot:baseline.serviceSlot,readingDate:baseline.readingDate,calendar:baseline.customs.calendar,preparation});
+      assertSessionLive(baseline.sessionExpiresAt);
+      return {status:"prepared" as const,requiresConfirmation:true as const,binding,kind,basis:current.basis,ranges,verseCount:verses.length,aliyahStarts:cuts,preparationMode:"current-assignment" as const,
+        ceremonyDate:baseline.date,serviceSlot:baseline.serviceSlot,readingDate:baseline.readingDate,manualFallback:baseline.manualFallback,sourceFetchedAt:null,sourceStatus:"preserved" as const,warning:null,maftir:null,
+        preserved:{confirmationDate:view.confirmationDate,needsReview:view.needsReview,source:view.source},toConfirm:["torah","entryCap","nusach"]};
+    }
     // No network call or cache operation holds the authority transaction open.
     let loaded:{snapshot:Snapshot;fetchedAt:number|null;sourceStatus:"available"|"unavailable"|"not-requested"};
     const emptySnapshot:Snapshot={date:(baseline.readingDate??baseline.date) as CeremonyDate,calendar:baseline.customs.calendar,reading:null,haftarah:null,classification:"missing"};
@@ -142,6 +170,7 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
     }
     if(loaded.sourceStatus==="available" && (typeof loaded.fetchedAt!=="number" || !Number.isFinite(loaded.fetchedAt) || loaded.fetchedAt>now() || now()-loaded.fetchedAt>86400000))throw new AccessDenied(403);
     const snapshot=validatedSnapshot(loaded.snapshot,baseline.readingDate??baseline.date,baseline.customs.calendar,counts);
+    assertSessionLive(baseline.sessionExpiresAt);
     const manualFallback=baseline.manualFallback??(loaded.sourceStatus==="unavailable"?"calendar-source-unavailable":snapshot.classification==="regular"?null:snapshot.classification??"nonregular");
     const context={ceremonyDate:baseline.date,serviceSlot:baseline.serviceSlot,readingDate:baseline.readingDate,manualFallback};
     const sourceReview={...context,sourceFetchedAt:loaded.fetchedAt,sourceStatus:loaded.sourceStatus,warning:loaded.sourceStatus==="unavailable"?"calendar-source-unavailable" as const:null};
@@ -168,16 +197,16 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       basis=canonicalPick?.kind==="full"?"full":canonicalPick?.kind==="aliyah"?"selection":"triennial";
     }
     let verses:string[];try{verses=expandReadingRanges(ranges,kind,counts);}catch{throw new AccessDenied(403);}
-    const preparation:Preparation={kind,basis,ranges,snapshot,sourceFetchedAt:loaded.fetchedAt,sourceStatus:loaded.sourceStatus,maftir};
-    const binding=bindings.sign({purpose:"student-reading",actor:baseline.actor,studentId:id,studentRevision:baseline.studentRevision,assignmentRevision:baseline.assignmentRevision,date:baseline.date,serviceSlot:baseline.serviceSlot,readingDate:baseline.readingDate,manualFallback,calendar:baseline.customs.calendar,preparation});
-    return {status:"prepared" as const,requiresConfirmation:true as const,binding,kind,basis,ranges,verseCount:verses.length,...sourceReview,maftir,toConfirm:["torah","entryCap","nusach"]};
+    const cuts=resolveCuts(verses),preparation:Preparation={cutsVersion:1,preparationMode:"replace",kind,basis,ranges,aliyahStarts:cuts,snapshot,sourceFetchedAt:loaded.fetchedAt,sourceStatus:loaded.sourceStatus,maftir};
+    const binding=bindings.sign({purpose:"student-reading",actor:baseline.actor,studentId:id,studentRevision:baseline.studentRevision,assignmentId:baseline.assignment?.id??null,assignmentRevision:baseline.assignmentRevision,date:baseline.date,serviceSlot:baseline.serviceSlot,readingDate:baseline.readingDate,manualFallback,calendar:baseline.customs.calendar,preparation});
+    return {status:"prepared" as const,requiresConfirmation:true as const,binding,kind,basis,ranges,verseCount:verses.length,...sourceReview,maftir,aliyahStarts:cuts,preparationMode:"replace" as const,preserved:null,toConfirm:["torah","entryCap","nusach"]};
   }
   async function confirmReading(request:CookieMutationRequest,selection:Mode&{studentId:string;binding:string}){
     const id=identifier(selection.studentId),claim=bindings.verify(selection.binding,"student-reading");
     if(claim.studentId!==id || !object(claim.preparation))throw new AccessDenied(403);
     const preparation=claim.preparation as unknown as Preparation;
-    if(!["torah","haftarah"].includes(preparation.kind) || !["full","triennial","selection","custom"].includes(preparation.basis))throw new AccessDenied(403);
-    let verses:string[];try{verses=expandReadingRanges(preparation.ranges,preparation.kind,counts);}catch{throw new AccessDenied(403);}
+    if(preparation.cutsVersion!==1 || !["replace","current-assignment"].includes(preparation.preparationMode) || !["torah","haftarah"].includes(preparation.kind) || !["full","triennial","selection","custom"].includes(preparation.basis))throw new AccessDenied(403);
+    let verses:string[],cuts:string[]|null;try{verses=expandReadingRanges(preparation.ranges,preparation.kind,counts);cuts=aliyahStarts(preparation.kind,preparation.aliyahStarts,verses);}catch{throw new AccessDenied(403);}
     return input.access.withStudentCapability(request,{mode:selection.mode,studentId:id,capability:"set-reading"},async(tx,actor,student)=>{
       requireCookieMutation(request,actor.origin);
       if(!sameActor(claim,actor))throw new AccessDenied(403);
@@ -188,14 +217,24 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       if(claim.serviceSlot!==currentStudent.serviceSlot || claim.readingDate!==derived.readingDate)return conflict();
       if(claim.studentRevision!==student.revision || claim.date!==student.ceremonyDate || claim.calendar!==currentCustoms.calendar)return conflict();
       const current=await data.currentAssignment(tx,actor.tenantId,id,preparation.kind,true);
+      const assertLive=()=>{assertSessionLive(actor.authSessionExpiresAt);if(digest(bindings.verify(selection.binding,"student-reading"))!==digest(claim))throw new AccessDenied(403);};
       // Acquiring authority/assignment locks may outlast the review. Recheck the
       // original authenticated envelope with a fresh clock before any write.
-      if(digest(bindings.verify(selection.binding,"student-reading"))!==digest(claim))throw new AccessDenied(403);
-      if(claim.assignmentRevision!==(current?.revision??0))return conflict();
-      const persisted=await data.persistAssignment(tx,actor,id,preparation.kind,current?.revision??0,{ref:preparation.ranges.join("; "),basis:preparation.basis,verses,
+      assertLive();
+      if(claim.assignmentId!==(current?.id??null) || claim.assignmentRevision!==(current?.revision??0))return conflict();
+      if(preparation.preparationMode==="current-assignment"){
+        if(preparation.kind!=="torah" || !current || current.status!=="confirmed" || current.basis!==preparation.basis || preparation.refDigest!==digest(current.ref) || current.ref.split(/;\s*/).join("; ")!==preparation.ranges.join("; ") || preparation.snapshotDigest!==digest(current.proposalSnapshot))return conflict();
+        const stored=await data.assignmentVerses(tx,actor.tenantId,id,current.id);
+        if(stored.length!==verses.length || stored.some((ref,i)=>ref!==verses[i]))return conflict();
+        assertLive();
+        const persisted=await data.persistCuts(tx,actor,id,current.id,current.revision,cuts);if(!persisted)return conflict();
+        await data.audit(tx,actor,"reading.set",id,persisted.id);assertLive();return {ok:true as const,assignmentId:persisted.id,revision:persisted.revision};
+      }
+      const persisted=await data.persistAssignment(tx,actor,id,preparation.kind,current?.revision??0,{ref:preparation.ranges.join("; "),basis:preparation.basis,verses,aliyahStarts:cuts,
         snapshot:{slotProvenance:1,serviceSlot:currentStudent.serviceSlot,readingDate:derived.readingDate,manualFallback:claim.manualFallback,confirmationDate:student.ceremonyDate,calendar:claim.calendar,ranges:preparation.ranges,source:preparation.snapshot,sourceFetchedAt:preparation.sourceFetchedAt,sourceStatus:preparation.sourceStatus,maftir:preparation.maftir,needsReview:false}});
       if(!persisted)return conflict();
       await data.audit(tx,actor,"reading.set",id,persisted.id);
+      assertLive();
       return {ok:true as const,assignmentId:persisted.id,revision:persisted.revision};
     });
   }

@@ -181,6 +181,7 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .reading-with-work[hidden] { display: none; }
 .study-verses-with-work > li { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(18rem, 1fr); gap: 2rem; align-items: start; }
 .study-verses-with-work > li > article { min-width: 0; }
+.study-verses-with-work > li > .student-aliyah { grid-column: 1 / -1; }
 .verse-work { min-width: 0; border-inline-start: 1px solid var(--color-rule); padding-inline-start: 1.5rem; }
 .verse-work summary { min-height: 44px; padding-block: 0.625rem; cursor: pointer; overflow-wrap: anywhere; }
 .verse-work-content { padding-block: 0.5rem; }
@@ -260,3 +261,11 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .preview-chapter > summary { font-weight: 600; }
 .preview-chapter .study-verses { margin-top: 1rem; }
 .preview-boundary { color: var(--color-muted); font-size: 0.875rem; margin-block: 1rem 0.5rem; }
+.reading-cuts, .preview-selection { margin-block: 1.5rem; padding: 1rem; border: 1px solid var(--color-rule); min-width: 0; }
+.reading-cuts legend, .preview-selection legend { font-weight: 600; padding-inline: 0.35rem; }
+.reading-cuts p, .preview-selection p { max-width: 70ch; margin-block: 0.75rem; }
+.preview-verse-actions { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-block: 0.75rem; }
+.preview-verse-actions button[aria-pressed="true"] { font-weight: 700; text-decoration: underline; }
+.preview-cut { display: flex; align-items: center; gap: 0.75rem; margin-block: 0.75rem; }
+.preview-cut input { width: 1.25rem; height: 1.25rem; flex: 0 0 auto; }
+.student-aliyah { color: var(--color-teal); font-weight: 600; margin-block: 1.25rem 0.5rem; }

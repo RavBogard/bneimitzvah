@@ -11,6 +11,7 @@ import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 import { ReadingUnavailable,type Snapshot } from "../../src/lib/readings/proposals";
 import * as rosterData from "../../src/server/data/roster";
 import * as s from "../../src/server/db/index";
+import { createBindings } from "../../src/server/students/bindings";
 
 const open:Awaited<ReturnType<typeof accessFixture>>[]=[];
 afterEach(async()=>{await Promise.all(open.splice(0).map(f=>f.client.close()));});
@@ -21,9 +22,9 @@ async function fixture(){
   const loadReading=vi.fn(async(date:string,calendar:"diaspora"|"israel"):Promise<{fetchedAt:number;snapshot:Snapshot}>=>({fetchedAt:time,snapshot:{date:parseCeremonyDate(date),calendar,classification:"regular" as const,
     reading:{parashah:"Synthetic",type:"shabbat",summary:"",source:"Hebcal",aliyot:[{n:1,ref:"Genesis 1:1-3"},{n:"M",ref:"Numbers 1:1-2",reason:"Synthetic special maftir"}],
       triennial:{year:2,aliyot:[{n:1,ref:"Genesis 1:1-3"}]}},haftarah:"Isaiah 1:1-3"} satisfies Snapshot}));
-  const service=createStudentService({access:f.service,signingSecret:randomBytes(48).toString("base64url"),loadReading,now:()=>time});
+  const signingSecret=randomBytes(48).toString("base64url"),service=createStudentService({access:f.service,signingSecret,loadReading,now:()=>time});
   const request=(who:"admin"|"multi"|"learner"="admin",method="POST",origin="http://localhost:3000")=>({...f.request(who,"http://localhost:3000",{origin}),method});
-  return {...f,studentsService:service,loadReading,mutation:request,advance:()=>{time+=6*60000;}};
+  return {...f,studentsService:service,loadReading,mutation:request,advance:()=>{time+=6*60000;},reviewBindings:createBindings(signingSecret,()=>time)};
 }
 async function denied(action:()=>Promise<unknown>,status=403){try{await action();return false;}catch(error){return error instanceof AccessDenied && error.status===status;}}
 async function databaseCode(action:()=>PromiseLike<unknown>,code:string){try{await action();return false;}catch(error){const e=error as {code?:string;cause?:{code?:string}};return (e.cause?.code??e.code)===code;}}
@@ -289,6 +290,92 @@ test("confirmation rechecks authority revisions and revoked tutor relationships 
  await f.owner(async()=>{await f.db.update(s.tutorStudent).set({revokedAt:new Date()}).where(eq(s.tutorStudent.studentId,id));});
  expect(await denied(()=>f.studentsService.confirmReading(f.mutation("multi"),{mode:"tutor",studentId:id,binding:fresh.binding}),404)).toBe(true);
  await f.owner(async()=>{expect(await f.db.select().from(s.assignment)).toHaveLength(0);});
+});
+
+test("Torah cuts are resolved and signed; omissions preserve only valid boundaries and haftarah rejects even empty cuts",async()=>{
+ const f=await fixture(),id=f.students[0].id;
+ const prepare=(extra:Record<string,unknown>={})=>f.studentsService.prepareReading(f.mutation(),{mode:"admin",studentId:id,ranges:["Genesis 1:1-3"],...extra});
+ const first=await prepare({aliyahStarts:["Genesis 1:2"]});if(first.status!=="prepared")throw new Error("Expected reading review");
+ expect(first.aliyahStarts).toEqual(["Genesis 1:2"]);await f.studentsService.confirmReading(f.mutation(),{mode:"admin",studentId:id,binding:first.binding});
+ const omitted=await prepare();expect(omitted).toMatchObject({status:"prepared",aliyahStarts:["Genesis 1:2"]});
+ expect(await denied(()=>prepare({ranges:["Genesis 1:3"]}))).toBe(true);
+ const reset=await prepare({ranges:["Genesis 1:3"],aliyahStarts:[]});if(reset.status!=="prepared")throw new Error("Expected explicit reset");
+ await f.studentsService.confirmReading(f.mutation(),{mode:"admin",studentId:id,binding:reset.binding});
+ for(const cuts of [["Genesis 1:1"],["Genesis 1:3","Genesis 1:2"],["Genesis 1:2","Genesis 1:2"],["Genesis 1:4"],null])expect(await denied(()=>prepare({aliyahStarts:cuts}))).toBe(true);
+ expect(await denied(()=>prepare({kind:"haftarah",ranges:["Isaiah 1:1-3"],aliyahStarts:[]}))).toBe(true);
+ await f.owner(async()=>{expect((await f.db.select().from(s.assignment).where(eq(s.assignment.studentId,id)))[0].aliyahStarts).toEqual([]);});
+});
+
+test("current-assignment cut review preserves exact provenance, existing needs-review status and verse identities with zero provider fetches",async()=>{
+ const f=await fixture(),id=f.students[0].id,first=await f.studentsService.prepareReading(f.mutation(),{mode:"admin",studentId:id,pick:"full",aliyahStarts:["Genesis 1:2"]});
+ if(first.status!=="prepared")throw new Error("Expected reading review");await f.studentsService.confirmReading(f.mutation(),{mode:"admin",studentId:id,binding:first.binding});
+ await f.owner(()=>rosterData.markReadingsForReview(f.db as never,"crc",id));
+ const before=await f.owner(async()=>({assignment:(await f.db.select().from(s.assignment).where(eq(s.assignment.studentId,id)))[0],verses:await f.db.select().from(s.assignmentVerse),snapshotText:(await f.db.execute(sql`select proposal_snapshot::text as bytes from assignment`)).rows}));f.loadReading.mockClear();
+ const current=await f.studentsService.prepareReading(f.mutation("multi"),{mode:"tutor",studentId:id,preparationMode:"current-assignment",expectedAssignmentRevision:2,aliyahStarts:["Genesis 1:3"]});
+ expect(current).toMatchObject({status:"prepared",preparationMode:"current-assignment",basis:"full",sourceStatus:"preserved",preserved:{needsReview:true},aliyahStarts:["Genesis 1:3"]});if(current.status!=="prepared")throw new Error("Expected cuts review");
+ expect(await f.studentsService.confirmReading(f.mutation("multi"),{mode:"tutor",studentId:id,binding:current.binding})).toMatchObject({ok:true,revision:3});expect(f.loadReading).not.toHaveBeenCalled();
+ const after=await f.owner(async()=>({assignment:(await f.db.select().from(s.assignment).where(eq(s.assignment.studentId,id)))[0],verses:await f.db.select().from(s.assignmentVerse),snapshotText:(await f.db.execute(sql`select proposal_snapshot::text as bytes from assignment`)).rows}));
+ expect(after).toEqual({assignment:{...before.assignment,revision:3,aliyahStarts:["Genesis 1:3"]},verses:before.verses,snapshotText:before.snapshotText});
+ const audits=await f.owner(()=>f.db.select().from(s.auditEvent).where(eq(s.auditEvent.action,"reading.set")));expect(audits.at(-1)).toMatchObject({actorUserId:f.identities.multi.id,mode:"tutor",targetId:before.assignment.id});
+});
+
+test("current-assignment mode rejects mixed inputs and stale/hash-changed context without recasting it as custom",async()=>{
+ const f=await fixture(),id=f.students[0].id,initial=await f.studentsService.prepareReading(f.mutation(),{mode:"admin",studentId:id,ranges:["Genesis 1:1-3"]});if(initial.status!=="prepared")throw new Error("Expected review");await f.studentsService.confirmReading(f.mutation(),{mode:"admin",studentId:id,binding:initial.binding});
+ const input={mode:"admin" as const,studentId:id,preparationMode:"current-assignment" as const,expectedAssignmentRevision:1,aliyahStarts:[]};
+ for(const extra of [{kind:"haftarah" as const},{ranges:["Genesis 1:1-3"]},{pick:"full"},{expectedAssignmentRevision:undefined}])expect(await denied(()=>f.studentsService.prepareReading(f.mutation(),{...input,...extra}))).toBe(true);
+ expect(await f.studentsService.prepareReading(f.mutation(),{...input,expectedAssignmentRevision:2})).toMatchObject({status:"stale",ok:false});
+ const prepared=await f.studentsService.prepareReading(f.mutation(),input);if(prepared.status!=="prepared")throw new Error("Expected cuts review");
+ await f.owner(async()=>{const [row]=await f.db.select().from(s.assignment);await f.db.update(s.assignment).set({proposalSnapshot:{...row.proposalSnapshot,needsReview:true}}).where(eq(s.assignment.id,row.id));});
+ expect(await f.studentsService.confirmReading(f.mutation(),{mode:"admin",studentId:id,binding:prepared.binding})).toEqual({ok:false,code:"stale-revision"});
+ const tutor=await f.studentsService.prepareReading(f.mutation("multi"),{...input,mode:"tutor"});if(tutor.status!=="prepared")throw new Error("Expected tutor cuts review");
+ expect(await denied(()=>f.studentsService.confirmReading(f.mutation("multi"),{mode:"tutor",studentId:f.students[1].id,binding:tutor.binding}))).toBe(true);
+ expect(await denied(()=>f.studentsService.prepareReading(f.mutation(),{...input,studentId:f.students[3].id}),404)).toBe(true);
+ await f.owner(()=>f.db.update(s.tutorStudent).set({revokedAt:new Date()}).where(eq(s.tutorStudent.id,f.tutorLink.id)));
+ expect(await denied(()=>f.studentsService.confirmReading(f.mutation("multi"),{mode:"tutor",studentId:id,binding:tutor.binding}),404)).toBe(true);
+});
+
+test("old authenticated review envelopes without the resolved cuts contract cannot confirm",async()=>{
+ const f=await fixture(),id=f.students[0].id;
+ const legacy=f.reviewBindings.sign({purpose:"student-reading",studentId:id,preparation:{kind:"torah",basis:"custom",ranges:["Genesis 1:1-3"]}});
+ expect(await denied(()=>f.studentsService.confirmReading(f.mutation(),{mode:"admin",studentId:id,binding:legacy}))).toBe(true);
+ await f.owner(async()=>{expect(await f.db.select().from(s.assignment)).toHaveLength(0);});
+});
+
+test("date/slot edits preserve saved cuts while both readings require review",async()=>{
+ const f=await fixture(),id=f.students[0].id,review=await f.studentsService.prepareReading(f.mutation(),{mode:"admin",studentId:id,ranges:["Genesis 1:1-3"],aliyahStarts:["Genesis 1:2"]});if(review.status!=="prepared")throw new Error("Expected reading review");await f.studentsService.confirmReading(f.mutation(),{mode:"admin",studentId:id,binding:review.binding});
+ const cuts=await f.studentsService.prepareReading(f.mutation(),{mode:"admin",studentId:id,preparationMode:"current-assignment",expectedAssignmentRevision:1,aliyahStarts:[]});if(cuts.status!=="prepared")throw new Error("Expected cuts review");
+ await f.studentsService.edit(f.mutation(),{mode:"admin",studentId:id,expectedRevision:1,student:{...student,serviceSlot:"havdalah"}});
+ expect(await f.studentsService.confirmReading(f.mutation(),{mode:"admin",studentId:id,binding:cuts.binding})).toEqual({ok:false,code:"stale-revision"});
+ await f.owner(async()=>{const [row]=await f.db.select().from(s.assignment);expect(row).toMatchObject({aliyahStarts:["Genesis 1:2"],revision:2,proposalSnapshot:{needsReview:true}});expect(await f.db.select().from(s.assignmentVerse)).toHaveLength(3);});
+});
+
+test("cut-only confirmation rechecks expiry after its final assignment lock wait",async()=>{
+ const f=await fixture(),id=f.students[0].id,initial=await f.studentsService.prepareReading(f.mutation(),{mode:"admin",studentId:id,ranges:["Genesis 1:1-3"]});if(initial.status!=="prepared")throw new Error("Expected review");await f.studentsService.confirmReading(f.mutation(),{mode:"admin",studentId:id,binding:initial.binding});
+ const current=await f.studentsService.prepareReading(f.mutation(),{mode:"admin",studentId:id,preparationMode:"current-assignment",expectedAssignmentRevision:1,aliyahStarts:[]});if(current.status!=="prepared")throw new Error("Expected cuts review");
+ let entered!:()=>void,release!:()=>void;const waiting=new Promise<void>(resolve=>{entered=resolve;}),gate=new Promise<void>(resolve=>{release=resolve;}),original=rosterData.currentAssignment;
+ const lock=vi.spyOn(rosterData,"currentAssignment").mockImplementation(async(...args)=>{entered();await gate;return original(...args);});
+ try{const result=denied(()=>f.studentsService.confirmReading(f.mutation(),{mode:"admin",studentId:id,binding:current.binding}));await waiting;f.advance();release();expect(await result).toBe(true);}finally{release();lock.mockRestore();}
+ await f.owner(async()=>{expect((await f.db.select().from(s.assignment))[0]).toMatchObject({revision:1,aliyahStarts:null});});
+});
+
+test.each(["prepare-current","current-lock","replace-lock","current-audit","replace-audit"] as const)("a valid reading envelope cannot outlive the staff session while waiting: %s",async phase=>{
+ const f=await fixture(),id=f.students[0].id,initial=await f.studentsService.prepareReading(f.mutation(),{mode:"admin",studentId:id,ranges:["Genesis 1:1-3"]});if(initial.status!=="prepared")throw new Error("Expected review");await f.studentsService.confirmReading(f.mutation(),{mode:"admin",studentId:id,binding:initial.binding});
+ const expiresAt=Date.now()+60_000;await f.owner(()=>f.db.update(s.session).set({expiresAt:new Date(expiresAt)}).where(eq(s.session.id,f.identities.admin.sessionId)));
+ const currentInput={mode:"admin" as const,studentId:id,preparationMode:"current-assignment" as const,expectedAssignmentRevision:1,aliyahStarts:[]};
+ const prepared=phase==="prepare-current"?null:await f.studentsService.prepareReading(f.mutation(),phase.startsWith("current")?currentInput:{mode:"admin",studentId:id,ranges:["Genesis 1:2-3"],aliyahStarts:[]});
+ if(prepared && prepared.status!=="prepared")throw new Error("Expected valid envelope");
+ const before=await f.owner(async()=>({assignments:await f.db.select().from(s.assignment),verses:await f.db.select().from(s.assignmentVerse),audit:await f.db.select().from(s.auditEvent)}));
+ let entered!:()=>void,release!:()=>void;const waiting=new Promise<void>(resolve=>{entered=resolve;}),gate=new Promise<void>(resolve=>{release=resolve;});
+ const originalLock=rosterData.currentAssignment,originalVerses=rosterData.assignmentVerses,originalAudit=rosterData.audit;
+ const hook=phase==="prepare-current"?vi.spyOn(rosterData,"assignmentVerses").mockImplementation(async(...args)=>{entered();await gate;return originalVerses(...args);})
+   :phase.endsWith("audit")?vi.spyOn(rosterData,"audit").mockImplementation(async(...args)=>{await originalAudit(...args);entered();await gate;})
+   :vi.spyOn(rosterData,"currentAssignment").mockImplementation(async(...args)=>{entered();await gate;return originalLock(...args);});
+ let clock:ReturnType<typeof vi.spyOn>|undefined;
+ try{
+  const result=denied(()=>phase==="prepare-current"?f.studentsService.prepareReading(f.mutation(),currentInput):f.studentsService.confirmReading(f.mutation(),{mode:"admin",studentId:id,binding:prepared!.binding}),401);
+  await waiting;clock=vi.spyOn(Date,"now").mockReturnValue(expiresAt+1);release();expect(await result).toBe(true);
+ }finally{release();clock?.mockRestore();hook.mockRestore();}
+ const after=await f.owner(async()=>({assignments:await f.db.select().from(s.assignment),verses:await f.db.select().from(s.assignmentVerse),audit:await f.db.select().from(s.auditEvent)}));expect(after).toEqual(before);
 });
 
 

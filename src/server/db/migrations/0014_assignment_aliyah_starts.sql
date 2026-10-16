@@ -1,0 +1,2 @@
+ALTER TABLE "assignment" ADD COLUMN "aliyah_starts" text[];--> statement-breakpoint
+ALTER TABLE "assignment" ADD CONSTRAINT "assignment_aliyah_starts_shape" CHECK ("assignment"."aliyah_starts" is null or ("assignment"."kind" = 'torah' and cardinality("assignment"."aliyah_starts") <= 999 and (cardinality("assignment"."aliyah_starts") = 0 or (array_ndims("assignment"."aliyah_starts") = 1 and array_lower("assignment"."aliyah_starts", 1) = 1)) and array_position("assignment"."aliyah_starts", null) is null));

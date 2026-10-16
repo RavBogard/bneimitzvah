@@ -33,12 +33,18 @@ export async function markReadingsForReview<Q extends PgQueryResultHKT>(tx:Acces
 export async function customs<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string){
   const [row]=await tx.select({customs:s.tenant.customs}).from(s.tenant).where(eq(s.tenant.id,tenantId));return row?.customs;
 }
-export async function currentAssignment<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string,studentId:string,kind:"torah"|"haftarah",lock=false){
+export async function currentAssignment<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string,studentId:string,kind:"torah"|"haftarah",lock:false|true|"share"=false){
   const query=tx.select().from(s.assignment).where(and(eq(s.assignment.tenantId,tenantId),eq(s.assignment.studentId,studentId),eq(s.assignment.kind,kind)));
-  const [row]=await (lock?query.for("update"):query);return row;
+  const [row]=await (lock?query.for(lock==="share"?"share":"update"):query);return row;
 }
-export async function persistAssignment<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,actor:Actor,studentId:string,kind:"torah"|"haftarah",expected:number,input:{ref:string;basis:"triennial"|"selection"|"full"|"custom";snapshot:Record<string,unknown>;verses:string[]}){
-  const values={ref:input.ref,basis:input.basis,status:"confirmed",setByMembershipId:actor.membershipId,proposalSnapshot:input.snapshot};
+export async function assignmentVerses<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string,studentId:string,assignmentId:string){
+  return (await tx.select({ref:s.assignmentVerse.verseRef}).from(s.assignmentVerse).where(and(eq(s.assignmentVerse.tenantId,tenantId),eq(s.assignmentVerse.studentId,studentId),eq(s.assignmentVerse.assignmentId,assignmentId))).orderBy(asc(s.assignmentVerse.ordinal)).limit(1001)).map(row=>row.ref);
+}
+export async function persistCuts<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,actor:Actor,studentId:string,assignmentId:string,expected:number,aliyahStarts:string[]|null){
+  const [row]=await tx.update(s.assignment).set({aliyahStarts,revision:expected+1}).where(and(eq(s.assignment.tenantId,actor.tenantId),eq(s.assignment.studentId,studentId),eq(s.assignment.id,assignmentId),eq(s.assignment.kind,"torah"),eq(s.assignment.status,"confirmed"),eq(s.assignment.revision,expected))).returning({id:s.assignment.id,revision:s.assignment.revision});return row??null;
+}
+export async function persistAssignment<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,actor:Actor,studentId:string,kind:"torah"|"haftarah",expected:number,input:{ref:string;basis:"triennial"|"selection"|"full"|"custom";snapshot:Record<string,unknown>;verses:string[];aliyahStarts:string[]|null}){
+  const values={ref:input.ref,basis:input.basis,status:"confirmed",setByMembershipId:actor.membershipId,proposalSnapshot:input.snapshot,aliyahStarts:input.aliyahStarts};
   const [row]=expected===0
     ? await tx.insert(s.assignment).values({...values,tenantId:actor.tenantId,studentId,kind}).onConflictDoNothing({target:[s.assignment.tenantId,s.assignment.studentId,s.assignment.kind]}).returning()
     : await tx.update(s.assignment).set({...values,revision:expected+1}).where(and(eq(s.assignment.tenantId,actor.tenantId),eq(s.assignment.studentId,studentId),eq(s.assignment.kind,kind),eq(s.assignment.revision,expected))).returning();

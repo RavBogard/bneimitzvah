@@ -25,13 +25,13 @@ async function api(tab: Page, path: string, body?: unknown) {
     return { status: response.status, data: await response.json() };
   }, { path, body }));
 }
-async function page(role: "admin" | "tutor" = "admin") {
+async function page(role: "admin" | "tutor" | "student" = "admin") {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false, viewport: { width: 1440, height: 1000 } }); contexts.push(context);
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
   const saved = cookies.get(role); if (saved) await context.addCookies(saved);
   const tab = await context.newPage(); await safe(() => tab.goto("/", { waitUntil: "domcontentloaded" }));
   if (!saved) {
-    const email = role === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
+    const email = role === "admin" ? "pg-admin@example.test" : role === "tutor" ? "pg-tutor@example.test" : "pg-aliyah-student@example.test";
     expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); cookies.set(role, await context.cookies());
   }
   return tab;
@@ -41,20 +41,48 @@ async function reading(tab: Page, role = "admin") {
   if (role === "tutor") await safe(() => tab.getByLabel("Student", { exact: true }).selectOption(fixture.student.id));
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible();
 }
-async function captures(tab: Page) {
+async function assertDesktopStudyColumns(tab: Page) {
+  const layout = await safe(() => tab.locator(".assigned-study .study-verses-with-work > li").first().evaluate(li => {
+    const marker = li.querySelector(":scope > .student-aliyah"), verse = li.querySelector(":scope > article"), tools = li.querySelector(":scope > .verse-work");
+    if (!marker || !verse || !tools) return null;
+    const bounds = (element: Element) => { const rect = element.getBoundingClientRect(); return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }; };
+    return { marker: bounds(marker), markerColumn: getComputedStyle(marker).gridColumn, verse: bounds(verse), tools: bounds(tools) };
+  }));
+  expect(layout).not.toBeNull();
+  expect(Math.abs(layout!.verse.top - layout!.tools.top)).toBeLessThanOrEqual(1);
+  expect(layout!.verse.right).toBeLessThan(layout!.tools.left);
+  expect(Math.abs(layout!.marker.left - layout!.verse.left)).toBeLessThanOrEqual(1);
+  // The marker occupies a full grid row while retaining the incumbent prose measure.
+  expect(layout!.markerColumn).toBe("1 / -1");
+  expect(layout!.marker.right).toBeLessThanOrEqual(layout!.tools.right);
+  expect(layout!.marker.bottom).toBeLessThanOrEqual(layout!.verse.top);
+}
+async function captures(tab: Page, stage: "selection" | "cut-review" | "student-markers", selector: string) {
   if (process.env.CI) return;
   const folder = join(process.cwd(), ".impeccable", "review"); await mkdir(folder, { recursive: true });
   // One batched, settled-layout round. No live provider content enters captures.
   for (const [name, viewport] of [["desktop", { width: 1440, height: 1000 }], ["mobile", { width: 390, height: 844 }]] as const) {
-    await tab.setViewportSize(viewport); await ui(panel(tab).getByText(/Preview page 1 of 2\./)).toBeVisible();
-    await safe(() => tab.evaluate(async () => { await document.fonts.ready; scrollTo(0, 0); await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); }));
+    await tab.setViewportSize(viewport); await ui(tab.locator(selector)).toBeVisible();
+    await safe(() => tab.evaluate(async () => {
+      await document.fonts.ready;
+      // Access revalidation can restore focus to the skip link. Clear that
+      // incidental overlay without changing styles or interactive states.
+      if (document.activeElement instanceof HTMLElement && document.activeElement.matches(".skip-link")) document.activeElement.blur();
+      scrollTo(0, 0);
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    }));
     expect(await tab.evaluate(() => scrollY === 0 && document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await safe(() => tab.screenshot({ path: join(folder, `${name}.png`), fullPage: true }));
+    await safe(() => tab.screenshot({ path: join(folder, `aliyah-${stage}-${name}.png`), fullPage: true }));
+    await safe(() => tab.locator(selector).screenshot({ path: join(folder, `aliyah-${stage}-${name}-detail.png`) }));
   }
 }
 beforeAll(async () => {
   try {
     assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard(); fixture = await browserFixture({ studyLoad: async request => syntheticUiStudyPage(request) });
+    const learner = await fixture.signIn("pg-aliyah-student");
+    const [learnerMember] = await fixture.ownerDb.insert(s.membership).values({ tenantId: "crc", userId: learner.id }).returning();
+    const [learnerGrant] = await fixture.ownerDb.insert(s.roleGrant).values({ tenantId: "crc", membershipId: learnerMember.id, role: "student" }).returning();
+    await fixture.ownerDb.insert(s.studentIdentity).values({ tenantId: "crc", studentId: fixture.student.id, roleGrantId: learnerGrant.id });
     await fixture.ownerDb.update(s.student).set({ serviceSlot: "morning" }).where(eq(s.student.id, fixture.student.id));
     const [member] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.userId, fixture.admin.id));
     const [assignment] = await fixture.ownerDb.insert(s.assignment).values({ tenantId: "crc", studentId: fixture.student.id, kind: "torah", basis: "custom", ref: "Genesis 1:1-3", status: "confirmed", setByMembershipId: member.id,
@@ -86,7 +114,6 @@ it("previews a staff whole portion across pages and chapters while preserving cu
   expect(tokens.length >= 3 && tokens.every(token => token === tokens[0])).toBe(true); expect(mutations).toBe(0);
   const after = await api(tab, `/api/students/${fixture.student.id}/reading?mode=admin`); expect(after.data).toEqual(before.data);
   expect(await tab.getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
-  await captures(tab);
 });
 
 it("previews explicit manual fallback and discards a delayed manual response when its custom draft changes", async () => {
@@ -127,4 +154,163 @@ it("clears preview text during access revalidation and fences a late response, w
   expect((await api(tab, `/api/students/${fixture.student.id}/reading/preview/prepare`, { mode: "parent", kind: "torah", source: "calendar" })).status).toBe(400);
   await safe(() => tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" })); await safe(() => tab.getByLabel("Child", { exact: true }).selectOption(fixture.student.id));
   await ui(tab.locator(".reading-current-assignment")).toBeVisible(); expect(await tab.getByRole("button", { name: "Preview custom references", exact: true }).count()).toBe(0);
+});
+
+it("stages a cross-page excerpt and cuts, isolates Torah/haftarah drafts, and rejects a selection crossing a manual gap", async () => {
+  await fixture.ownerDb.update(s.student).set({ serviceSlot: "morning" }).where(eq(s.student.id, fixture.student.id));
+  const tab = await page(); await reading(tab);
+  const before = await api(tab, `/api/students/${fixture.student.id}/reading?mode=admin`);
+  let mutations = 0;
+  tab.on("request", request => { if (request.method() === "POST" && /\/reading\/(?:prepare|confirm)$/.test(new URL(request.url()).pathname)) mutations++; });
+  await click(tab, "Preview whole Torah portion");
+  await ui(panel(tab).getByText(/Preview page 1 of 2\./)).toBeVisible();
+  await safe(() => panel(tab).getByLabel("Jump to chapter (opens its first preview page)", { exact: true }).selectOption("Genesis 4"));
+  await click(tab, "Start at Genesis 4:19");
+  await click(tab, "Next preview page");
+  await ui(panel(tab).getByText(/Preview page 2 of 2\./)).toBeVisible();
+  await click(tab, "End at Genesis 4:23");
+  await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("");
+  await click(tab, "Use selected verses");
+  await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 4:19-23");
+  await safe(() => panel(tab).getByRole("checkbox", { name: "Start new aliyah at Genesis 4:22", exact: true }).check());
+  await ui(tab.getByLabel("Subsequent aliyah starts", { exact: true })).toHaveValue("Genesis 4:22");
+  await safe(() => tab.getByLabel("Reading", { exact: true }).selectOption("haftarah"));
+  await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("");
+  expect(await tab.getByRole("group", { name: "Student Torah aliyah starts", exact: true }).count()).toBe(0);
+  await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Isaiah 1:1-2"));
+  await safe(() => tab.getByLabel("Reading", { exact: true }).selectOption("torah"));
+  await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 4:19-23");
+  await ui(tab.getByLabel("Subsequent aliyah starts", { exact: true })).toHaveValue("Genesis 4:22");
+  // Reopen the staged excerpt, keeping the capture bounded to five synthetic verses.
+  await click(tab, "Preview custom references");
+  await ui(panel(tab).getByRole("heading", { name: "Genesis 4:19", exact: true })).toBeVisible();
+  await click(tab, "Start at Genesis 4:19"); await click(tab, "End at Genesis 4:23");
+  await captures(tab, "selection", ".reading-editor");
+  await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2\nGenesis 1:4-5"));
+  await click(tab, "Preview custom references");
+  await click(tab, "Start at Genesis 1:2"); await click(tab, "End at Genesis 1:4");
+  await ui(panel(tab).getByText("Choose Start before End without crossing a gap in the preview references.", { exact: true })).toBeVisible();
+  await ui(tab.getByRole("button", { name: "Use selected verses", exact: true })).toBeDisabled();
+  await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2\nGenesis 1:4-5");
+  expect(mutations).toBe(0);
+  expect((await api(tab, `/api/students/${fixture.student.id}/reading?mode=admin`)).data).toEqual(before.data);
+});
+
+it("reviews and confirms only cuts with truthful preserved context, retaining saved notes and their earlier-revision history", async () => {
+  const tab = await page();
+  const [assignment] = await fixture.ownerDb.select().from(s.assignment).where(eq(s.assignment.studentId, fixture.student.id));
+  const snapshot = { slotProvenance: 1, serviceSlot: "morning", readingDate: "2026-12-26", confirmationDate: "2026-12-26", needsReview: true,
+    sourceStatus: "unavailable", sourceFetchedAt: null, source: { date: "2026-12-26", calendar: "diaspora" } };
+  await fixture.ownerDb.update(s.assignment).set({ proposalSnapshot: snapshot }).where(eq(s.assignment.id, assignment.id));
+  await reading(tab);
+  const tools = tab.locator(".assigned-study .verse-work").first();
+  await safe(() => tools.locator("summary").first().click());
+  await safe(() => tools.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  await safe(() => tools.getByRole("textbox").fill("Synthetic note retained after a cut-only revision"));
+  await safe(() => tools.getByRole("button", { name: "Add student-visible note", exact: true }).click());
+  await ui(tools.locator(".work-notes")).toContainText("Synthetic note retained after a cut-only revision");
+  const before = await api(tab, `/api/students/${fixture.student.id}/reading?mode=admin`);
+  const requests: Record<string, unknown>[] = [];
+  tab.on("request", request => { if (request.method() === "POST" && new URL(request.url()).pathname.endsWith("/reading/prepare")) requests.push(request.postDataJSON()); });
+  await click(tab, "Use current assignment");
+  await safe(() => tab.getByLabel("Subsequent aliyah starts", { exact: true }).fill("Genesis 1:3"));
+  await click(tab, "Prepare reading review");
+  const review = tab.locator(".reading-proposal");
+  await ui(review.getByRole("heading", { name: "Review Torah assignment", exact: true })).toBeVisible();
+  expect(requests.at(-1)).toMatchObject({ kind: "torah", preparationMode: "current-assignment", expectedAssignmentRevision: assignment.revision, aliyahStarts: ["Genesis 1:3"] });
+  expect(requests.at(-1)).not.toHaveProperty("ranges"); expect(requests.at(-1)).not.toHaveProperty("pick");
+  await ui(review).toContainText("References unchanged. Existing confirmation date: 2026-12-26.");
+  await ui(review).toContainText("The reading still needs review with the tutor or rabbi.");
+  await ui(review).toContainText("Preserved calendar source: unavailable when the assignment was saved.");
+  await ui(review).toContainText("No calendar result was newly checked.");
+  expect((await api(tab, `/api/students/${fixture.student.id}/reading?mode=admin`)).data).toEqual(before.data);
+  await captures(tab, "cut-review", ".reading-editor");
+  // A manual reference edit explicitly leaves cut-only mode; a fresh seed returns to it.
+  await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
+  await click(tab, "Record one aliyah"); await click(tab, "Prepare reading review");
+  await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
+  expect(requests.at(-1)).toMatchObject({ ranges: ["Genesis 1:1-2"], aliyahStarts: [] });
+  expect(requests.at(-1)).not.toHaveProperty("preparationMode");
+  await click(tab, "Use current assignment");
+  await safe(() => tab.getByLabel("Subsequent aliyah starts", { exact: true }).fill("Genesis 1:3"));
+  await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
+  await click(tab, "Confirm assigned reading");
+  await ui(tab.getByText("Reading confirmed and reloaded from the server. The assignment above is current.", { exact: true })).toBeVisible();
+  const after = await api(tab, `/api/students/${fixture.student.id}/reading?mode=admin`);
+  expect(after.data.readings[0]).toEqual({ ...before.data.readings[0], revision: assignment.revision + 1, aliyahStarts: ["Genesis 1:3"] });
+  const [persisted] = await fixture.ownerDb.select().from(s.assignment).where(eq(s.assignment.id, assignment.id));
+  expect(persisted.proposalSnapshot).toEqual(snapshot);
+  const reloadedTools = tab.locator(".assigned-study .verse-work").first();
+  if (await reloadedTools.getAttribute("open") === null) await safe(() => reloadedTools.locator("summary").first().click());
+  await safe(() => reloadedTools.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  await safe(() => reloadedTools.locator(".work-history > summary").click());
+  await ui(reloadedTools.locator(".work-history")).toContainText("Synthetic note retained after a cut-only revision");
+  await ui(reloadedTools.locator(".work-history")).toContainText(`Saved under an earlier assignment (revision ${assignment.revision})`);
+});
+
+it("requires an explicit current-assignment reseed after a cut-only revision and recovers unsent note text under that revision", async () => {
+  const tab = await page(); await reading(tab); await click(tab, "Use current assignment");
+  await safe(() => tab.getByLabel("Subsequent aliyah starts", { exact: true }).fill("Genesis 1:3"));
+  const tools = tab.locator(".assigned-study .verse-work").first();
+  await safe(() => tools.locator("summary").first().click());
+  await safe(() => tools.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  const text = "Synthetic unsent note recovered across a cut-only change";
+  await safe(() => tools.getByRole("textbox").fill(text));
+  const before = await api(tab, `/api/students/${fixture.student.id}/reading?mode=admin`), revision = before.data.readings[0].revision;
+  const prepared = await api(tab, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "admin", kind: "torah", preparationMode: "current-assignment", expectedAssignmentRevision: revision, aliyahStarts: ["Genesis 1:2"] });
+  expect(prepared.status).toBe(200);
+  expect((await api(tab, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: prepared.data.binding })).status).toBe(200);
+  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
+  await ui(tab.getByText(/The assignment used for this draft has changed\./)).toBeVisible();
+  await ui(tab.getByRole("button", { name: "Prepare reading review", exact: true })).toBeDisabled();
+  await ui(tab.getByLabel("Subsequent aliyah starts", { exact: true })).toHaveValue("Genesis 1:3");
+  const recovered = tab.locator(".assigned-study .verse-work").first();
+  await safe(() => recovered.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  await ui(recovered.getByRole("textbox")).toHaveValue(text);
+  await ui(recovered.getByRole("textbox")).toHaveAttribute("readonly", "");
+  await ui(recovered.getByRole("region", { name: "Review unsent note for Genesis 1:1", exact: true })).toBeVisible();
+  await safe(() => recovered.getByRole("button", { name: "Review and keep my text", exact: true }).click());
+  await safe(() => recovered.getByRole("button", { name: "Add student-visible note", exact: true }).click());
+  await ui(recovered.locator(".work-notes")).toContainText(text);
+  await click(tab, "Use current assignment");
+  await ui(tab.getByLabel("Subsequent aliyah starts", { exact: true })).toHaveValue("Genesis 1:2");
+  await ui(tab.getByRole("button", { name: "Prepare reading review", exact: true })).toBeEnabled();
+  // Preview selection also leaves the captured current-assignment mode.
+  await click(tab, "Preview whole Torah portion"); await click(tab, "Start at Genesis 1:1"); await click(tab, "End at Genesis 1:3"); await click(tab, "Use selected verses");
+  const request = tab.waitForRequest(request => request.method() === "POST" && new URL(request.url()).pathname.endsWith("/reading/prepare"));
+  await click(tab, "Prepare reading review");
+  const body = (await request).postDataJSON();
+  expect(body).toMatchObject({ ranges: ["Genesis 1:1-3"], aliyahStarts: ["Genesis 1:2"] });
+  expect(body).not.toHaveProperty("preparationMode");
+});
+
+it("shows recorded student boundaries and page continuation, distinguishing unrecorded metadata from one aliyah", async () => {
+  const staff = await page(); await reading(staff);
+  await safe(() => staff.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-4:24"));
+  await safe(() => staff.getByLabel("Subsequent aliyah starts", { exact: true }).fill("Genesis 4:19"));
+  await click(staff, "Prepare reading review"); await ui(staff.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
+  await click(staff, "Confirm assigned reading");
+  await ui(staff.getByText("Reading confirmed and reloaded from the server. The assignment above is current.", { exact: true })).toBeVisible();
+  const learner = await page("student"); await safe(() => learner.goto("/workspace/student", { waitUntil: "domcontentloaded" }));
+  const study = learner.locator(".assigned-study");
+  await ui(study.getByText("Aliyah 1 starts here", { exact: true })).toBeVisible();
+  await ui(study.getByText("Aliyah 2 starts here", { exact: true })).toBeVisible();
+  await click(learner, "Next text page");
+  await ui(study.getByText("Aliyah 2 · continued from the previous text page", { exact: true })).toBeVisible();
+  expect(await study.getByText(/Aliyah \d starts here/).count()).toBe(0);
+  await assertDesktopStudyColumns(learner);
+  await captures(learner, "student-markers", ".assigned-study");
+  const [assignment] = await fixture.ownerDb.select().from(s.assignment).where(eq(s.assignment.studentId, fixture.student.id));
+  for (const aliyahStarts of [null, []] as const) {
+    await fixture.ownerDb.update(s.assignment).set({ aliyahStarts: aliyahStarts === null ? null : [], revision: assignment.revision + (aliyahStarts === null ? 1 : 2) }).where(eq(s.assignment.id, assignment.id));
+    await click(learner, "Refresh reading");
+    if (aliyahStarts === null) {
+      await ui(study.getByText("Aliyah boundaries have not been recorded for this assignment.", { exact: true })).toBeVisible();
+      expect(await study.locator(".student-aliyah").count()).toBe(0);
+    } else {
+      await ui(study.getByText("Aliyah 1 starts here", { exact: true })).toBeVisible();
+      await click(learner, "Next text page");
+      await ui(study.getByText("Aliyah 1 · continued from the previous text page", { exact: true })).toBeVisible();
+    }
+  }
 });

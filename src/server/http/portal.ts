@@ -71,7 +71,7 @@ function mode(value: unknown, child = false): ActiveMode | "child-practice" {
 }
 function baseMode(value: unknown): ActiveMode { return mode(value) as ActiveMode; }
 function staffMode(value: unknown): "admin" | "tutor" { const result = baseMode(value); if (result !== "admin" && result !== "tutor") throw new HttpBoundaryError(); return result; }
-const objectBody = async (request: Request, required: string[], optional: string[] = [], profile: "ordinary" | "binding" | "csv" = "ordinary") =>
+const objectBody = async (request: Request, required: string[], optional: string[] = [], profile: "ordinary" | "binding" | "csv" | "work" = "ordinary") =>
   closedObject(await readJsonBody(request, profile), required, optional);
 function studentInput(value: unknown) {
   const row = closedObject(value, ["firstName", "lastName", "ceremonyDate"], ["studentKind", "serviceSlot", "parentEmail", "ownEmail"]);
@@ -223,7 +223,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       case "reading": {
         const query = uniqueQuery(request.url, ["mode"]), value = await runtime.portal.assignedReading(request, { mode: mode(query.get("mode"), true), studentId: id! });
         return privateJson({ student: studentView(value.student), mode: value.mode, context: contextView(value.context), readings: value.readings.map(row => ({ id: row.id, status: row.status,
-          kind: row.kind, basis: row.basis, revision: row.revision, ranges: [...row.ranges], verses: [...row.verses], confirmationDate: row.confirmationDate, needsReview: row.needsReview,
+          kind: row.kind, basis: row.basis, revision: row.revision, ranges: [...row.ranges], verses: [...row.verses], confirmationDate: row.confirmationDate, needsReview: row.needsReview, aliyahStarts:row.aliyahStarts,
           source: { status: row.source.status, fetchedAt: row.source.fetchedAt, date: row.source.date, calendar: row.source.calendar,
             attribution: row.source.attribution ? { name: row.source.attribution.name, url: row.source.attribution.url } : null } })) });
       }
@@ -275,15 +275,22 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         return value.ok ? privateJson({ ok: true, ids: value.ids }, 201) : stale();
       }
       case "prepare": {
-        uniqueQuery(request.url, []); const body = await objectBody(request, ["mode"], ["kind", "pick", "ranges"]);
+        uniqueQuery(request.url, []); const body = await objectBody(request, ["mode"], ["kind", "pick", "ranges", "aliyahStarts", "preparationMode", "expectedAssignmentRevision"], "work");
         if (body.kind !== undefined && body.kind !== "torah" && body.kind !== "haftarah") throw new HttpBoundaryError();
         if (body.ranges !== undefined && (!Array.isArray(body.ranges) || body.ranges.length < 1 || body.ranges.length > 32)) throw new HttpBoundaryError();
+        if (body.aliyahStarts !== undefined && (body.kind === "haftarah" || !Array.isArray(body.aliyahStarts) || body.aliyahStarts.length > 999)) throw new HttpBoundaryError();
+        if (body.preparationMode !== undefined && body.preparationMode !== "current-assignment" || body.preparationMode === "current-assignment" && (body.kind === "haftarah" || body.ranges !== undefined || body.pick !== undefined || body.expectedAssignmentRevision === undefined)
+          || body.preparationMode === undefined && body.expectedAssignmentRevision !== undefined) throw new HttpBoundaryError();
         const value = await runtime.students.prepareReading(request, { mode: staffMode(body.mode), studentId: id!, kind: body.kind as "torah" | "haftarah" | undefined,
-          pick: body.pick === undefined ? undefined : text(body.pick, 100), ranges: body.ranges === undefined ? undefined : (body.ranges as unknown[]).map(ref => text(ref, 100)) });
+          pick: body.pick === undefined ? undefined : text(body.pick, 100), ranges: body.ranges === undefined ? undefined : (body.ranges as unknown[]).map(ref => text(ref, 100)),
+          ...(body.aliyahStarts===undefined?{}:{aliyahStarts:(body.aliyahStarts as unknown[]).map(ref=>text(ref,100))}),
+          ...(body.preparationMode===undefined?{}:{preparationMode:"current-assignment" as const,expectedAssignmentRevision:integer(body.expectedAssignmentRevision)}) });
+        if(value.status==="stale")return stale();
         if (value.status === "needs-selection") return privateJson({ status: value.status, requiresConfirmation: value.requiresConfirmation, snapshot: snapshotView(value.snapshot),
           ceremonyDate: value.ceremonyDate, serviceSlot: value.serviceSlot, readingDate: value.readingDate, manualFallback: value.manualFallback, sourceFetchedAt: value.sourceFetchedAt, sourceStatus: value.sourceStatus, warning: value.warning, toConfirm: value.toConfirm });
         return privateJson({ status: value.status, requiresConfirmation: value.requiresConfirmation, binding: value.binding, kind: value.kind, basis: value.basis, ranges: value.ranges,
-          verseCount: value.verseCount, ceremonyDate: value.ceremonyDate, serviceSlot: value.serviceSlot, readingDate: value.readingDate, manualFallback: value.manualFallback, sourceFetchedAt: value.sourceFetchedAt, sourceStatus: value.sourceStatus, warning: value.warning, maftir: maftirView(value.maftir), toConfirm: value.toConfirm });
+          verseCount: value.verseCount, ceremonyDate: value.ceremonyDate, serviceSlot: value.serviceSlot, readingDate: value.readingDate, manualFallback: value.manualFallback, sourceFetchedAt: value.sourceFetchedAt, sourceStatus: value.sourceStatus, warning: value.warning, maftir: maftirView(value.maftir), toConfirm: value.toConfirm,
+          aliyahStarts:value.aliyahStarts,preparationMode:value.preparationMode,preserved:value.preserved });
       }
       case "confirm": {
         uniqueQuery(request.url, []); const body = await objectBody(request, ["mode", "binding"], [], "binding");

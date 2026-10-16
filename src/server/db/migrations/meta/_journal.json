@@ -99,6 +99,13 @@
       "when": 1792175132494,
       "tag": "0013_student_service_slot",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792182359496,
+      "tag": "0014_assignment_aliyah_starts",
+      "breakpoints": true
     }
   ]
 }

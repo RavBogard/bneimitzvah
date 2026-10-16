@@ -1,0 +1,28 @@
+# Verse selection and Torah aliyah starts — 2026-10-16
+
+Scope: checkpoint 13(c), following the released preview and unsent-work recovery prerequisites. Staff can stage a contiguous selection from preview, record subsequent Torah aliyah starts, review, and explicitly confirm. Manual multi-range assignments remain supported; selection across a gap refuses rather than adding unseen verses.
+
+## Behavior and architecture
+
+- Drafts are separate for Torah and haftarah. Preview selection changes only the draft. Haftarah has no aliyah cut controls.
+- Native nullable `assignment.aliyah_starts text[]` distinguishes unrecorded legacy boundaries from an explicit single aliyah. The first assigned verse implicitly starts aliyah 1; subsequent starts must be unique, ordered, canonical members after it. No ritual minimum or exactly-three rule is imposed.
+- Omitted starts preserve existing boundaries only when valid for the proposed assignment. Invalid boundaries require explicit adjustment; they are never silently pruned. Exact resolved starts are signed into prepare/review/confirm.
+- “Use current assignment” supports a Torah cut-only review under the captured assignment revision, without a provider fetch. Confirmation changes only boundaries and revision through CAS, preserving reference provenance, verse rows, setter, source snapshot and needs-review status. Editing references switches to an ordinary custom replacement. Stale current drafts must be reseeded.
+- Saved study markers identify starts and page continuations using authoritative assigned metadata. The existing text/metadata revision barrier and separately reviewed unsent-work recovery remain in force. Unknown boundaries do not invent an aliyah marker.
+- Additive migration 0014 adds one nullable column and a Torah/array-shape CHECK. No default, backfill, old migration change, role change or new table is included.
+
+## Verification
+
+Independent server/schema review accepted the repaired source; see `PHASE2-SECURITY-REVIEW.md`. Its session-expiry finding was corrected with real-session checks after lock waits and before transaction return, independently of the five-minute review clock. Five controlled regressions cover preparation, both confirmation modes and rollback after audit.
+
+Local integration passes 111 focused server/parser/migration checks, 11 focused draft/study checks, 514 app checks (one existing skip), typecheck and production build. Unchanged engine evidence remains 152 passing tests. Actual disposable PostgreSQL 16 student-work checks pass 21/21, including one-winner cut CAS and observed lock-wait session-expiry races. A subsequent test-only generic-inference correction changes no runtime arguments or assertions.
+
+The seven authenticated browser scenarios pass on final source: cross-page selection, gap refusal, per-kind drafts, explicit cut-only review/confirmation with preserved provenance, saved history and unsent-work recovery after revision, stale current drafts, and assigned markers including legacy/single/continuation states. Root's first visual inspection caught a desktop marker occupying the Hebrew column. A full-row marker span corrects it; the browser now checks Hebrew-left/tools-right alignment and marker placement. An initially overstrict marker-width assertion failed because the incumbent paragraph measure correctly limits text width; safe computed-style evidence established the cause, and the corrected assertion checks grid span without removing the alignment checks. Final typecheck/build and all seven browser cases pass after the repair.
+
+Root inspected all twelve final synthetic desktop/phone full-page and supplementary detail captures in the second bounded pass. The single detector reports 21 advisory incumbent global palette/type differences, with no new component/style finding. No new token, comp, raster asset or visual world is introduced. The documenter updated the workspace surface inventory while preserving global design files. Fresh independent finish review opened all twelve captures, accepted their validity and returned **ship** with no material fix at this bounded interface scope; see `ALIYAH-FINISH-REVIEW.md`.
+
+The private production migration operator has passed syntax checking and 21 offline guard mutants. It pins old migration history and source bytes, checks exact catalog changes, preserves roles/ACLs/policies and existing rows, and reports honestly if a post-commit verification fails. It has not yet connected to production for 0014.
+
+## Release boundary and next action
+
+Visual review/documentation are complete. Exact-commit hosted checks, reviewed 0014 application, matching main deployment and native authentication canary remain pending. No 13(c) production acceptance is claimed yet. No provider settings, real email, owner grant, audio or generated-chant gate changes belong to this checkpoint. Daniel remains the only human tester; refreshed administrator use and actual email fallback acceptance remain separate checks. Full product is incomplete.

@@ -13,7 +13,7 @@ export async function confirmedReadings<Q extends PgQueryResultHKT>(tx: AccessTr
   // Lock the confirmed assignment versions before reading their verses. A
   // concurrent replacement cannot splice new verses into an old revision.
   const assignments = await tx.select({ id: s.assignment.id, kind: s.assignment.kind, basis: s.assignment.basis, ref: s.assignment.ref,
-    revision: s.assignment.revision, snapshot: s.assignment.proposalSnapshot }).from(s.assignment).where(and(
+    revision: s.assignment.revision, snapshot: s.assignment.proposalSnapshot, aliyahStarts:s.assignment.aliyahStarts }).from(s.assignment).where(and(
     eq(s.assignment.tenantId, tenantId), eq(s.assignment.studentId, studentId), eq(s.assignment.status, "confirmed"),
     inArray(s.assignment.kind, ["torah", "haftarah"]))).orderBy(asc(s.assignment.kind)).limit(3).for("share");
   if (assignments.length > 2) throw new Error("Excess confirmed readings");

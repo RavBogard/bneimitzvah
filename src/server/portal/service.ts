@@ -11,10 +11,11 @@ import { confirmedReadings, availableRoles } from "../data/portal";
 import { expandReadingRanges, parseCeremonyDate } from "../../lib/readings/ranges";
 import { assignmentNeedsReview } from "../../lib/readings/review";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
+import { aliyahStarts } from "../../lib/readings/aliyah-starts";
 
 const object = (input: unknown): Record<string, unknown> => input !== null && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
 function date(input: unknown) { try { return parseCeremonyDate(input); } catch { return null; } }
-function readingView(row: Awaited<ReturnType<typeof confirmedReadings>>[number], ceremonyDate: string) {
+export function readingView(row: Awaited<ReturnType<typeof confirmedReadings>>[number], ceremonyDate: string) {
   if ((row.kind !== "torah" && row.kind !== "haftarah") || !["triennial", "selection", "full", "custom"].includes(row.basis)) throw new Error("Unsupported confirmed reading");
   // Treat ref/snapshot as data, not arbitrary display strings or JSON. Only
   // canonical references and explicitly selected source metadata leave here.
@@ -26,7 +27,7 @@ function readingView(row: Awaited<ReturnType<typeof confirmedReadings>>[number],
   const sourceStatus = snapshot.sourceStatus === "available" || snapshot.sourceStatus === "unavailable" ? snapshot.sourceStatus : "unknown";
   const sourceFetchedAt = typeof snapshot.sourceFetchedAt === "number" && Number.isFinite(snapshot.sourceFetchedAt) && snapshot.sourceFetchedAt >= 0 ? snapshot.sourceFetchedAt : null;
   return Object.freeze({ id: row.id, status: "confirmed" as const, kind: row.kind, basis: row.basis, revision: row.revision, ranges: Object.freeze(ranges), verses: Object.freeze(row.verses),
-    confirmationDate, needsReview: assignmentNeedsReview(snapshot, ceremonyDate),
+    confirmationDate, needsReview: assignmentNeedsReview(snapshot, ceremonyDate), aliyahStarts:aliyahStarts(row.kind,row.aliyahStarts,expected),
     source: Object.freeze({ status: sourceStatus, fetchedAt: sourceFetchedAt, date: snapshot.slotProvenance===1 ? date(snapshot.readingDate) : date(source.date),
       calendar: source.calendar === "diaspora" || source.calendar === "israel" ? source.calendar : null,
       attribution: leyning.source === "Hebcal" ? Object.freeze({ name: "Hebcal", url: "https://www.hebcal.com/" }) : null }) });

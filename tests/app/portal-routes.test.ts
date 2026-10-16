@@ -14,6 +14,19 @@ function privateResponse(response: Response) {
 }
 const contact = { firstName: "Synthetic", lastName: "Created", ceremonyDate: "2027-01-02", parentEmail: "contact@example.test" };
 
+it("reading cut contracts stay closed/body-only, retain strict assigned metadata, and expose preserved review truthfully",async()=>{
+ const f=await fixture(),id=f.students[0].id,path=`/api/students/${id}/reading`,call=(body:unknown,headers?:Record<string,string>)=>handlePortalRequest(f.request(`${path}/prepare`,{who:"admin",body,headers}),f.runtime);
+ for(const bad of [{mode:"admin",kind:"haftarah",ranges:["Isaiah 1:1-3"],aliyahStarts:[]},{mode:"admin",ranges:["Genesis 1:1-3"],aliyahStarts:null},{mode:"admin",preparationMode:"current-assignment",expectedAssignmentRevision:1,ranges:["Genesis 1:1-3"]},{mode:"admin",ranges:["Genesis 1:1-3"],source:{snapshot:"untrusted"}}])expect((await call(bad))!.status).toBe(400);
+ const prepare=(await call({mode:"admin",kind:"torah",ranges:["Genesis 1:1-3"],aliyahStarts:["Genesis 1:2"]}))!;expect(prepare.status).toBe(200);expect(privateResponse(prepare)).toBe(true);const prepared=await json(prepare);expect(prepared).toMatchObject({preparationMode:"replace",aliyahStarts:["Genesis 1:2"],preserved:null});
+ expect((await handlePortalRequest(f.request(`${path}/confirm`,{who:"admin",body:{mode:"admin",binding:prepared.binding}}),f.runtime))!.status).toBe(200);
+ const assigned=(await handlePortalRequest(f.request(`${path}?mode=student`,{who:"learner"}),f.runtime))!,metadata=await json(assigned);expect(metadata.readings[0].aliyahStarts).toEqual(["Genesis 1:2"]);
+ const input={mode:"admin",kind:"torah",preparationMode:"current-assignment",expectedAssignmentRevision:1,aliyahStarts:[]};
+ expect((await call(input,{origin:"https://foreign.example.test"}))!.status).toBe(403);
+ expect((await handlePortalRequest(f.request(`${path}/prepare?aliyahStarts=Genesis1`,{who:"admin",body:input}),f.runtime))!.status).toBe(400);
+ const current=(await call(input))!;expect(current.status).toBe(200);expect(privateResponse(current)).toBe(true);const review=await json(current);
+ expect(review).toMatchObject({sourceStatus:"preserved",preparationMode:"current-assignment",aliyahStarts:[]});expect(review.preserved.source).toEqual(metadata.readings[0].source);expect(review).not.toHaveProperty("snapshotDigest");expect(review).not.toHaveProperty("snapshot");
+});
+
 describe("private portal HTTP adapters over actual SDK and restricted tenant services", () => {
   it("classifies owned paths, rejects unknown/methods and returns only private fixed errors", async () => {
     const f = await fixture();

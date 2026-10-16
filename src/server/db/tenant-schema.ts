@@ -164,6 +164,7 @@ export const assignment = pgTable("assignment", {
   ref: text("ref").notNull(), status: text("status").default("proposed").notNull(), revision: integer("revision").default(1).notNull(),
   setByMembershipId: uuid("set_by_membership_id").notNull(), proposalCacheId: uuid("proposal_cache_id").references(() => hebcalCache.id),
   proposalSnapshot: jsonb("proposal_snapshot").$type<Record<string, unknown>>(), createdAt: createdAt(),
+  aliyahStarts: text("aliyah_starts").array(),
 }, (t) => [
   unique("assignment_tenant_id_key").on(t.tenantId, t.id),
   unique("assignment_student_key").on(t.tenantId, t.id, t.studentId),
@@ -173,6 +174,7 @@ export const assignment = pgTable("assignment", {
   check("assignment_status", sql`${t.status} in ('proposed', 'confirmed')`),
   check("assignment_revision_positive", sql`${t.revision} > 0`),
   check("assignment_ref_required", sql`length(trim(${t.ref})) > 0`),
+  check("assignment_aliyah_starts_shape", sql`${t.aliyahStarts} is null or (${t.kind} = 'torah' and cardinality(${t.aliyahStarts}) <= 999 and (cardinality(${t.aliyahStarts}) = 0 or (array_ndims(${t.aliyahStarts}) = 1 and array_lower(${t.aliyahStarts}, 1) = 1)) and array_position(${t.aliyahStarts}, null) is null)`),
 ]);
 
 export const assignmentVerse = pgTable("assignment_verse", {

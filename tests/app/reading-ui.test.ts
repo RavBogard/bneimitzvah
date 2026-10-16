@@ -7,7 +7,7 @@ import { reconcileSelectedStudent } from "../../src/components/portal/workspace/
 const id = "10000000-0000-4000-8000-000000000001";
 const student = { id, firstName: "Synthetic", lastName: "Learner", ceremonyDate: "2027-01-02", revision: 1 };
 const source = { ceremonyDate:student.ceremonyDate, serviceSlot:"morning", readingDate:student.ceremonyDate, manualFallback:null, sourceStatus: "available", sourceFetchedAt: 1792100000000, warning: null, toConfirm: ["torah", "entryCap", "nusach"], requiresConfirmation: true };
-const prepared = () => ({ ...source, status: "prepared", binding: `v1.${"a".repeat(100)}`, kind: "torah", basis: "custom", ranges: ["Genesis 1:1-3"], verseCount: 3, maftir: { ref: "Numbers 28:9-10", reason: "Synthetic calendar maftir" } });
+const prepared = () => ({ ...source, status: "prepared", binding: `v1.${"a".repeat(100)}`, kind: "torah", basis: "custom", ranges: ["Genesis 1:1-3"], verseCount: 3, aliyahStarts:null,preparationMode:"replace",preserved:null, maftir: { ref: "Numbers 28:9-10", reason: "Synthetic calendar maftir" } });
 const aliyah = (n: number | "M", ref: string) => ({ n, ref, verses: null, reason: null });
 const empty = () => ({ ...source, status: "needs-selection", snapshot: { date: student.ceremonyDate, calendar: "diaspora", haftarah: null, reading: null } });
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -18,6 +18,14 @@ it("keeps exact prepared ranges, source warning and separately described maftir 
   expect(value.status === "prepared" && value.ranges.join() === "Genesis 1:1-3" && value.verseCount === 3 && value.maftir?.ref === "Numbers 28:9-10").toBe(true);
   const unavailable = parseReadingProposal({ ...prepared(), sourceStatus: "unavailable", sourceFetchedAt: null, manualFallback:"calendar-source-unavailable", warning: "calendar-source-unavailable" }, "torah", student.ceremonyDate);
   expect(unavailable.sourceStatus === "unavailable" && unavailable.warning === "calendar-source-unavailable").toBe(true);
+});
+
+it("strictly binds resolved cuts and truthful preserved-provenance reviews without accepting legacy or mismatched fields",()=>{
+ const preserved={confirmationDate:"2026-12-26",needsReview:true,source:{status:"unknown",fetchedAt:null,date:null,calendar:null,attribution:null}};
+ const current={...prepared(),preparationMode:"current-assignment",sourceStatus:"preserved",sourceFetchedAt:null,warning:null,maftir:null,preserved,aliyahStarts:["Genesis 1:2"]};
+ expect(parseReadingProposal(current,"torah",student.ceremonyDate)).toMatchObject({preparationMode:"current-assignment",aliyahStarts:["Genesis 1:2"],preserved:{confirmationDate:"2026-12-26",needsReview:true}});
+ for(const mutant of [{...current,aliyahStarts:["Genesis 1:1"]},{...current,aliyahStarts:["Genesis 1:3","Genesis 1:2"]},{...current,aliyahStarts:["Genesis 1:4"]},{...current,sourceStatus:"available"},{...current,preserved:{...preserved,needsReview:"false"}},{...current,preserved:{...preserved,privateSnapshot:{}}},{...prepared(),preparationMode:undefined}])expect(()=>parseReadingProposal(mutant,"torah",student.ceremonyDate)).toThrow();
+ expect(()=>parseReadingProposal({...prepared(),kind:"haftarah",ranges:["Isaiah 1:1-3"],aliyahStarts:[]},"haftarah",student.ceremonyDate)).toThrow();
 });
 
 it("offers only snapshot-derived choices and honestly preserves an empty calendar", () => {

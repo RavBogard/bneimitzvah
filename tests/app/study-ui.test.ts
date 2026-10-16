@@ -11,7 +11,7 @@ const studentId = "10000000-0000-4000-8000-000000000001", assignmentId = "100000
 function baseline(mode: ReadingMode = "tutor", ranges = ["Genesis 1:1-3"]): Assigned {
   return { mode, student: { id: studentId, firstName: "Synthetic", lastName: "Study", ceremonyDate: "2027-01-02", revision: 2 },
     context: mode === "child-practice" ? { id: contextId, studentId, studentRevision: 2, authorityRevision: 1, expiresAt: "2026-10-17T00:00:00Z" } : null,
-    readings: [{ id: assignmentId, kind: "torah", basis: "custom", revision: 3, ranges, verses: expandReadingRanges(ranges, "torah", TANAKH_VERSE_COUNTS), needsReview: true, confirmationDate: "2026-12-26", source: { status: "unknown", fetchedAt: null, date: null, calendar: null, attribution: null } }] };
+    readings: [{ id: assignmentId, kind: "torah", basis: "custom", revision: 3, ranges, verses: expandReadingRanges(ranges, "torah", TANAKH_VERSE_COUNTS), needsReview: true, aliyahStarts:null, confirmationDate: "2026-12-26", source: { status: "unknown", fetchedAt: null, date: null, calendar: null, attribution: null } }] };
 }
 function page(value: Assigned = baseline(), offset = 0) {
   const assignment = value.readings[0];

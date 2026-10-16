@@ -11,6 +11,7 @@ import { withTenantTransaction } from "../../src/server/db/runtime";
 import { deferred, postgresAccessFixture, waitForEntry } from "./access-fixture";
 import { query } from "./disposable.mjs";
 import { AccessDenied } from "../../src/server/access/errors";
+import { createStudentService } from "../../src/server/students/service";
 
 type Fixture = Awaited<ReturnType<typeof postgresAccessFixture>>;
 const fixtures: Fixture[] = [];
@@ -54,6 +55,40 @@ async function fixture() {
   const write = (text = "Synthetic note", expectedVersion = 0) => ({ verseRef: "Genesis 1:1", text, expectedVersion, mutationId: randomUUID() });
   return { ...f, workA: a, workB: b, selection, assignment, workRequest: request, write };
 }
+
+function cutServices(f: Awaited<ReturnType<typeof fixture>>) {
+  const reviewTime=Date.now(),signingSecret="synthetic-pg-aliyah-review-signing-secret",loadReading=async()=>{throw new Error("Unexpected synthetic calendar request");};
+  return {a:createStudentService({access:f.a,signingSecret,loadReading,now:()=>reviewTime}),b:createStudentService({access:f.b,signingSecret,loadReading,now:()=>reviewTime})};
+}
+test("cut-only confirmations contend on the real assignment lock: one CAS winner preserves provenance and verse identities",async()=>{
+ const f=await fixture(),services=cutServices(f),input={mode:"tutor" as const,studentId:f.student.id,preparationMode:"current-assignment" as const,expectedAssignmentRevision:1};
+ const aReview=await services.a.prepareReading(f.workRequest(),{...input,aliyahStarts:[]}),bReview=await services.b.prepareReading(f.workRequest(),{...input,aliyahStarts:["Genesis 1:2"]});
+ if(aReview.status!=="prepared" || bReview.status!=="prepared")throw new Error("Expected synthetic cuts reviews");
+ const before={assignment:(await f.ownerDb.select().from(s.assignment))[0],verses:await f.ownerDb.select().from(s.assignmentVerse)};
+ const entered=deferred(),release=deferred(),stop=await f.intercept("a",text=>text.startsWith('update "assignment"'),async proceed=>{const result=await proceed();entered.resolve();await release.promise;return result;});
+ const a=safe(services.a.confirmReading(f.workRequest(),{mode:"tutor",studentId:f.student.id,binding:aReview.binding}));let b:Promise<unknown>|undefined;
+ try{await waitForEntry(entered.promise,a);b=safe(services.b.confirmReading(f.workRequest(),{mode:"tutor",studentId:f.student.id,binding:bReview.binding}));await f.waitForLock(f.pidB,f.pidA);}finally{release.resolve();stop();await Promise.all([a,b]);}
+ expect(await a).toMatchObject({ok:true,revision:2});expect(await b).toEqual({ok:false,code:"stale-revision"});
+ expect((await f.ownerDb.select().from(s.assignment))[0]).toEqual({...before.assignment,revision:2,aliyahStarts:[]});expect(await f.ownerDb.select().from(s.assignmentVerse)).toEqual(before.verses);
+ expect(await f.ownerDb.select().from(s.auditEvent).where(eq(s.auditEvent.action,"reading.set"))).toHaveLength(1);
+});
+
+for(const phase of ["confirmation","preparation"] as const)test(`cut-only ${phase} rejects a session that expires across its real assignment lock wait`,async()=>{
+ const f=await fixture(),services=cutServices(f),expiresAt=Date.now()+60_000;
+ await f.ownerDb.update(s.session).set({expiresAt:new Date(expiresAt)}).where(eq(s.session.id,f.tutor.sessionId));
+ const input={mode:"tutor" as const,studentId:f.student.id,preparationMode:"current-assignment" as const,expectedAssignmentRevision:1,aliyahStarts:[]};
+ const prepared=phase==="confirmation"?await services.a.prepareReading(f.workRequest(),input):null;if(prepared && prepared.status!=="prepared")throw new Error("Expected valid cuts envelope");
+ const before={assignments:await f.ownerDb.select().from(s.assignment),verses:await f.ownerDb.select().from(s.assignmentVerse),audit:await f.ownerDb.select().from(s.auditEvent)};
+ const entered=deferred(),release=deferred(),hold=safe(f.ownerDb.transaction(async tx=>{await tx.execute(sql`select id from assignment where id=${f.assignment.id} for update`);entered.resolve();await release.promise;return {held:true};}));
+ let operation:Promise<unknown>|undefined,restore:(()=>void)|undefined;
+ try{
+  await waitForEntry(entered.promise,hold);const ownerPid=(await query<{pid:number}>(f.owner,"select pg_backend_pid() as pid")).rows[0].pid;
+  operation=phase==="confirmation"?safe(services.a.confirmReading(f.workRequest(),{mode:"tutor",studentId:f.student.id,binding:prepared!.binding})):safe(services.a.prepareReading(f.workRequest(),input));
+  await f.waitForLock(f.pidA,ownerPid);const clock=vi.spyOn(Date,"now").mockReturnValue(expiresAt+1);restore=()=>clock.mockRestore();
+ }finally{release.resolve();await Promise.all([hold,operation]);restore?.();}
+ expect(await operation).toEqual({denied:401});
+ expect({assignments:await f.ownerDb.select().from(s.assignment),verses:await f.ownerDb.select().from(s.assignmentVerse),audit:await f.ownerDb.select().from(s.auditEvent)}).toEqual(before);
+});
 
 for (const race of ["same-base", "identical-retry", "uuid-mismatch"] as const) test(`real first-version contention ${race} yields exactly one version/audit`, async () => {
   const f = await fixture(), entered = deferred(), release = deferred();
