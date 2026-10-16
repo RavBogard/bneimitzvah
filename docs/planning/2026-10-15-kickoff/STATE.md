@@ -2,7 +2,7 @@
 
 Authority: `MISSION.md` (Daniel's rulings). Plan: `PLAN-CODE-2026-10-15.md`. This file says where the work stands. Update it at the end of every session and every phase.
 
-Current phase: 0 (local foundation in progress; CI and deployment unverified). Engine source: haftarah `trope-engine-research` at `380b1b2` (re-check the tip in Phase 1). Haftarah `main` reference: `5b2530f`.
+Current phase: 1 (local engine migration verified; publication and hosted engine CI await permission/provenance decisions). Phase 0 foundation is published, hosted CI passes, and the Vercel placeholder serves HTTP 200; custom-domain DNS remains pending. Engine source: haftarah `trope-engine-research` at `380b1b2`, verified against GitHub on 2026-10-15. Haftarah `main` reference: `5b2530f`.
 
 Current execution authority: Daniel requested Astra as project manager and Sol agents as implementers on 2026-10-15. See `PM-REVIEW-2026-10-15.md` for confirmed amendments, review findings, and proposals. Root `PRODUCT.md` captures the completed Impeccable product interview; the chosen workflow is code-first.
 
@@ -18,30 +18,34 @@ GATE: engine test count is 108, not the 314 MISSION names — proceeded because 
 GATE: MAM Hebrew (CC BY-SA) and Hebcal (CC BY) calibration fixtures come over with the engine — proceeded because the same files are already public on haftarah's branch; Daniel confirms (plan, open item a).
 GATE: independent Phase 0 repository-guard review by Astra — subprocess-error disclosure finding fixed by Sol and covered by a regression; approved at this scope, with documented limits of content heuristics.
 GATE: Node 24 LTS replaces the planned Node 22 baseline — local runtime is 24.11.1, CI tracks supported 24.x; no system runtime replacement was performed.
-BLOCKED (Daniel): resolve engine melody-table and fixture publication permissions before pushing the extracted history; local migration preparation continues.
+BLOCKED (Daniel): resolve engine melody-table and fixture publication permissions before pushing the extracted history; local migration is complete.
+GATE: local engine move preserved 25 source commits and passed 109 engine tests on Windows and Ubuntu WSL — migration is verified locally; no generated audio was released.
+GATE: full local integration passed 119 Node tests plus 1 Vitest/PGlite test — repository guard false-positive fix also reviewed by Astra.
+GATE: published foundation `452c1c5` passed all hosted Windows/Linux/browser jobs and Vercel HTTP 200 — Phase 0 acceptance met at the Vercel hostname.
+BLOCKED (Daniel): custom domain needs CNAME host `bneimitzvah` pointing to `a008a8e486abbe24.vercel-dns-016.com.` at the existing DNS provider.
 
 ## Checklist
 
 ### Phase 0 — Repo, scaffolding, CI, never-in-repo test
-- [ ] git init, first commit, `gh repo create` (public), push, status clean
+- [x] git init, first commit, `gh repo create` (public), foundation push, status clean
 - [x] repo-local git identity RavBogard (GitHub noreply)
 - [x] Next.js scaffold created, deps pinned
 - [x] package.json test, browser, typecheck and build scripts (`db:*` intentionally deferred to Phase 2 with real schema/migrations)
 - [x] isolatedEnv + isolation test copied, CLEARED extended
 - [x] never-in-repo test and independent review
 - [x] LICENSE (MIT), `.env.example`
-- [x] CI configuration: ubuntu + windows `npm test`; ubuntu e2e (hosted execution pending)
-- [ ] Vercel project `bneimitzvah`, placeholder deployed, domain added
-- [ ] Gate: `npm test` green Windows + CI; build; deploy 200
+- [x] CI: ubuntu + windows `npm test`; ubuntu e2e (hosted foundation jobs green)
+- [x] Vercel project `bneimitzvah`, placeholder deployed, domain added (external DNS pending)
+- [x] Gate: foundation `npm test` green Windows + CI; build; deploy 200
 
 ### Phase 1 — Engine move
-- [ ] branch tip recorded
-- [ ] filter-repo extract (commit count recorded)
-- [ ] merged with history; `git log --follow trope/melody.mjs` checked
-- [ ] `trope/lib-trope.cjs`
-- [ ] path rewrites in `text.mjs` and `trope-text.test.mjs`
-- [ ] parity golden + `trope-lib.test.mjs`
-- [ ] `findModal` Linux fix
+- [x] branch tip recorded
+- [x] filter-repo extract (25 retained source commits)
+- [x] merged with history; `git log --follow trope/melody.mjs` checked
+- [x] `trope/lib-trope.cjs`
+- [x] path rewrites in `text.mjs` and `trope-text.test.mjs`; missing source fixtures reduced to Hebrew-only fields
+- [x] parity golden + `trope-lib.test.mjs` (182 verses, 400 variants)
+- [x] `findModal` Linux fix (Windows joins and PATH delimiters)
 - [ ] Gate: 108 engine tests + parity green Windows + CI
 
 ### Phase 2 — Data model, tenancy, auth, roles, admin
@@ -99,17 +103,8 @@ BLOCKED (Daniel): resolve engine melody-table and fixture publication permission
 
 (Newest first. What was done, what is half done, the exact next step, test counts, last deploy URL and status.)
 
-- 2026-10-15: planning files written in Cowork; nothing built.
-
-### Active milestone — 2026-10-15 PM handoff
-
-- Confirmed all-device home practice and Zoom tutoring; parent sign-in with explicit linked child practice contexts; code-first design workflow.
-- Sol owns local Phase 0 scaffold, pinned dependencies, CI configuration, isolation helper, and repository guard. Astra owns planning records and integration decisions. Independent guard review follows implementation.
-- No student release approved. Engine publication remains gated on provenance/permissions and a scan of the history to be published.
-- Next: complete local build/tests, resolve independent review findings, then verify repository publication, CI, and placeholder deployment access. Do not call Phase 0 complete from local checks alone.
-
-### Local foundation verification — 2026-10-15
-
-- Sol reports passing on Windows/Node 24.11.1: 9 Node tests, 1 PGlite test, typecheck, Next production build, and 3 Playwright device projects (desktop, tablet, phone).
-- Dependency pins include Next 16.4.2 and React 19.3.1; install audit reports zero vulnerabilities. Version selection checked against official Next release/security guidance. No production/student features are present.
-- Root Git initialized. No remote publication or deployment verified yet. A separate Sol worker is preparing the engine extraction; GitHub research tip matches local `380b1b2` and the filtered history contains 25 commits. Engine test results pending.
+- 2026-10-15, Astra/Sol milestone: reviewed Cowork's plan and completed Impeccable init. Confirmed all-device practice, Zoom tutoring, linked child practice views, and code-first. See `PM-REVIEW-2026-10-15.md` and root `PRODUCT.md`.
+- Foundation: [public repo](https://github.com/RavBogard/bneimitzvah), [green hosted CI](https://github.com/RavBogard/bneimitzvah/actions/runs/38832145643), [Ready/HTTP-200 title-only placeholder](https://bneimitzvah.vercel.app). Remote main and deployment remain foundation `452c1c5`; **do not push local main while engine publication gates remain open**. See `FOUNDATION-RETURN.md` for pins, browser checks, deployment and DNS details.
+- Engine: local history merge `afd56ae`, parity/portability `ee77d23`, reviewed guard correction `b02eb1e`, provenance/license update `8de656c`. 109/109 engine tests on Windows and Ubuntu WSL; 119 Node + 1 PGlite test in final combined Windows suite. See `ENGINE-MIGRATION-RETURN.md` and `trope/PROVENANCE.md`. Source haftarah checkout and refs unchanged. No render/GPU job, audio upload, or student release occurred.
+- Next action: resolve the recorded engine publication decisions, push only once cleared, then verify hosted engine CI to complete Phase 1. Phase 2 starts with the auth/tenancy architecture spec, including guardian identity versus child practice context. Custom-domain DNS can be completed independently. Earlier supervised pilot after Phase 4 remains a recommendation awaiting Daniel's decision.
+- Earlier 2026-10-15: original Cowork planning files written before build work began.
