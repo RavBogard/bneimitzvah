@@ -2,6 +2,10 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { magicLink } from "better-auth/plugins";
 
+// Only the private HTTP adapter constructs this header. Never trust a caller's
+// value or mount the unprojected SDK handler as an application route.
+export const AUTH_RATE_LIMIT_HEADER = "x-portal-auth-bucket";
+
 export type AuthStackInput = {
   origin: string;
   secret: string;
@@ -35,7 +39,7 @@ export function createAuthStack(
     },
     session: { expiresIn: 7 * 24 * 60 * 60, freshAge: 15 * 60, cookieCache: { enabled: false } },
     rateLimit: { enabled: true, storage: "database", window: 60, max: 60 },
-    advanced: { crossSubDomainCookies: { enabled: false }, useSecureCookies: origin.protocol === "https:" },
+    advanced: { ipAddress: { ipAddressHeaders: [AUTH_RATE_LIMIT_HEADER], ipv6Subnet: 128 }, crossSubDomainCookies: { enabled: false }, useSecureCookies: origin.protocol === "https:" },
     // Provider/adapter diagnostics can contain identities or credentials. The app's
     // eventual allowlisted logger must never forward arbitrary library messages.
     logger: { disabled: true },

@@ -3,7 +3,7 @@ import { mailbox } from "../runtime/config";
 import { RuntimeUnavailable } from "../runtime/errors";
 
 type Kind = "invitation" | "magic-link";
-const paths = { invitation: "/invitations/accept", "magic-link": "/api/auth/magic-link/verify" } as const;
+const paths = { invitation: "/invitations/open", "magic-link": "/api/auth/magic-link/verify" } as const;
 const redirects = new Set(["/", "/sign-in", "/invitations/accept"]);
 
 function canonicalLink(value: string, origin: string, kind: Kind) {

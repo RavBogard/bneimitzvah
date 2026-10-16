@@ -8,7 +8,7 @@ const origin = "https://synthetic.example.test";
 const apiKey = `re_${randomBytes(24).toString("hex")}`;
 const email = "synthetic@example.test";
 function link(kind: "invitation" | "magic-link") {
-  const url = new URL(kind === "invitation" ? "/invitations/accept" : "/api/auth/magic-link/verify", origin);
+  const url = new URL(kind === "invitation" ? "/invitations/open" : "/api/auth/magic-link/verify", origin);
   url.searchParams.set("token", kind === "invitation" ? randomBytes(32).toString("base64url") : "A".repeat(32));
   if (kind === "magic-link") url.searchParams.set("callbackURL", "/");
   return url.href;
@@ -41,7 +41,7 @@ test("mail rejects foreign, ambiguous, duplicated-token, header-injection and un
   const send = createMailTransport({ origin, apiKey, from: email, fetch: async () => { calls++; return new Response(); } });
   const good = link("invitation");
   for (const url of [good.replace(origin, "https://foreign.example.test"), `${good}#fragment`, `${good}&token=duplicate`, `${good}&email=synthetic`,
-    good.replace("/invitations/accept", "/invitations/%61ccept"), good.replace("https://", "https://user@"), good + "\n", good.replace("accept", "accept/"),
+    good.replace("/invitations/open", "/invitations/%6fpen"), good.replace("https://", "https://user@"), good + "\n", good.replace("open", "open/"),
     link("magic-link").replace("callbackURL=%2F", "callbackURL=https%3A%2F%2Fforeign.example.test")]) {
     expect(await safeFailure(() => send(url.includes("magic-link") ? "magic-link" : "invitation", { email, url }))).toBe(true);
   }

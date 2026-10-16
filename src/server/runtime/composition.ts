@@ -11,6 +11,8 @@ import { createAccessService } from "../access/service";
 import { createInvitationService } from "../invitations/service";
 import { createStudentService } from "../students/service";
 import { createPracticeService } from "../practice/service";
+import { createPortalService } from "../portal/service";
+import { createPendingInvitations } from "../http/pending-invitations";
 import { createPersistentReadingCache } from "../data/reading-cache";
 import { resolveTenantHost } from "../tenancy/resolve";
 import { createHebcalReader } from "../../lib/readings/proposals";
@@ -35,19 +37,21 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const loadReading = createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS });
   const students = createStudentService({ access, loadReading, signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS });
   const practice = createPracticeService({ access });
+  const portal = createPortalService({ access, practice });
+  const pendingInvitations = createPendingInvitations({ secret: config.authSecret, origin: config.origin, environment: config.deployment.environment as "local" | "preview" | "production" });
   // An eventual auth handler must resolve the request host BEFORE invoking auth.
   const resolveHost = async (request: AccessRequest) => {
     const resolved = await resolveTenantHost(db, request, config.deployment);
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ auth, access, invitations, students, practice, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, portal, pendingInvitations, resolveHost });
 }
 
-type Runtime = ReturnType<typeof composeRuntime>;
+export type HttpRuntime = ReturnType<typeof composeRuntime>;
 export function createRuntimeScope(env: () => Readonly<Record<string, string | undefined>> = () => process.env) {
   // No environment reads, pool construction or I/O until the scoped call.
-  return async function withRuntime<T>(action: (runtime: Runtime) => Promise<T>): Promise<T> {
+  return async function withRuntime<T>(action: (runtime: HttpRuntime) => Promise<T>): Promise<T> {
     const log = createLogger().request();
     let pool: Pool | undefined;
     try {

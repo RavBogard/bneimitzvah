@@ -366,3 +366,92 @@ landing from the clean Next page is the next route slice's architectural task.
 Provider OAuth success, live delivery, external access-log redaction and browser
 late-response/context handling remain separate gates. Primary owns broader
 integration/CI/deployment; existing human-testing and chant-release limits remain.
+
+## Independent routed auth/portal and opaque-binding review — 2026-10-15
+
+**Scoped verdict: accepted after the P2 correction independently verified below.**
+Reviewed the new auth/common dispatcher, portal adapter, runtime composition,
+thin Node/dynamic Next routes, separate `/invitations/open` landing selector,
+fixed redirects, opaque student review envelopes and disabled framework incoming
+request logging. No implementation or Git edits were made by the reviewer.
+
+**P2, fixed — caller-controlled forwarding address bypassed magic-link throttling.**
+Before the correction, `src/server/http/auth.ts:19-23` copied incoming headers into SDK mutation
+requests without establishing an ingress-only client address. The current auth
+factory supplies no explicit IP-header trust policy, and pinned Better Auth's
+`@better-auth/core/dist/utils/ip.mjs` defaults to trusting a single-valued
+`X-Forwarded-For` header. Through the real dispatcher and pinned SDK, five
+magic-link requests with one synthetic address succeed, the sixth is429, and
+changing only that header permits another200/delivery. The fixed Origin/tenant
+checks do not authenticate this header. New reviewer regression
+`tests/app/http-routes-review.test.ts:53` requires the rotated request to remain
+rate-limited and initially failed with200 instead of429. This required a trusted
+ingress projection or safe non-spoofable fallback; merely accepting caller
+forwarding headers was insufficient. A later
+provider deployment may prove its own overwrite policy, but no such proof comes
+from the direct application route or current local tests. This is an anti-abuse
+gap, not an identity/tenant privilege escalation.
+
+The remaining inspected boundaries showed no additional required correction:
+actual incoming host resolution precedes SDK/service/mail; only explicit paths
+and methods reach runtime; unknown SDK APIs are not mounted. All mutation inputs
+use exact Origin and bounded closed DTOs. SDK callbacks keep library state/PKCE
+processing but project only reviewed cookies and clean fixed local redirects.
+Google initiation returns200 and one validated authorization URL, avoiding a
+cross-origin fetch redirect. No SDK session/provider body is relayed. Assigned
+reading correctly passes child headers to live practice authorization while base
+modes reject them. Reviewed-accept404 preserves a potentially recoverable pending
+cookie; invalid encrypted carriers and terminal preview failures use the explicit
+clear policy.
+
+Student reviews now have randomized AES-GCM ciphertext with purpose-derived
+key/AAD, canonical versioned encoding, bounded plaintext/envelope, five-minute
+expiry and no readable legacy downgrade. Existing live actor/session/tenant/mode,
+roster and assignment revision checks remain at confirmation. A new actual-SDK
+reviewer case gives one identity both tutor/admin grants, prepares as tutor and
+denies confirmation as that genuinely authorized admin mode; replacement-session
+confirmation also denies while its ordinary tutor read succeeds. The original
+session/mode confirms successfully and replay yields409. Cross-purpose use as an
+import binding denies. Another new probe creates genuine database OAuth state
+then presents missing/forged state cookies: clean failure occurs with zero
+provider fetches and no new sessions.
+
+**Independent evidence before correction:** existing auth HTTP, portal routes,
+opaque bindings and student service focused files passed **25/25**. New reviewer
+file passed **2/3**, with the single throttle regression above failing as expected
+for the current flaw. `npm run typecheck` passed including reviewer tests. Logs:
+ignored `.local-logs/phase2-security-http-routes-baseline.log`,
+`.local-logs/phase2-security-http-routes-probes.log` and
+`.local-logs/phase2-security-http-routes-typecheck.log`. Tests use real SDK cookies,
+restricted PGlite and locally mocked `server-only`; no physical concurrency or
+provider success is claimed. The separately assigned browser harness,
+production-wrapper probes, provider/ingress setup and broader integration remain
+primary-owned gates.
+
+**Correction independently verified:** the adapter now reconstructs SDK headers
+from a closed set, discarding every incoming forwarding/IP/vendor/custom field
+and overwriting even a forged `x-portal-auth-bucket`. Its synthetic IPv6 bucket
+depends only on the resolved configured origin, and factory configuration reads
+only that internal header with `/128` normalization. Inspected all five SDK entry
+paths: magic-link/social/logout POSTs and magic verification/Google callback GETs
+all use this reconstruction. Actual Host/Origin/cookies and CSRF/state processing
+remain intact. No raw SDK handler is mounted elsewhere in the thin routes.
+
+Independent reviewer/auth HTTP/auth stack revalidation passed **20/20** across
+three files after the fix, including the original failing spoofed-address probe,
+vendor/forged-internal-header rotations with no additional mail, and all SDK-entry
+header checks. Log: ignored
+`.local-logs/phase2-security-http-routes-correction.log`. The earlier independent
+25-test portal/student/binding baseline remains reusable; no related source
+changed. Author also supplied current correction typecheck success; primary is
+running broader integration/build separately.
+
+The configured magic-link request limit is **five attempts per minute shared per
+trusted configured origin**, across recipients. This is deliberately not a
+per-client limit or observed client-IP identity, and one caller can exhaust that
+shared sign-in budget. Improving availability requires a separately explicit and
+tested ingress-normalization contract at provider readiness; no Vercel header
+trust or live-provider proof is inferred. With that documented temporary
+availability constraint, the P2 bypass is closed and this bounded HTTP/binding
+slice is accepted for primary integration. Browser/production-wrapper and
+deployment/provider gates remain separate.

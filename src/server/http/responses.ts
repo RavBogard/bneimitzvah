@@ -47,8 +47,8 @@ export function privateJson(value: JsonValue, status: 200 | 201 | 400 | 409 | 42
     return new Response(serialized, { status, headers });
   } catch { return errorResponse(undefined); }
 }
-const localDestinations = new Set(["/", "/sign-in", "/invitations/accept"]);
-export function privateRedirect(destination: "/" | "/sign-in" | "/invitations/accept"): Response {
+const localDestinations = new Set(["/", "/sign-in", "/sign-in?error=authentication", "/invitations/accept"]);
+export function privateRedirect(destination: "/" | "/sign-in" | "/sign-in?error=authentication" | "/invitations/accept"): Response {
   if (!localDestinations.has(destination)) return errorResponse(undefined);
   const headers = privateHeaders(); headers.set("location", destination);
   return new Response(null, { status: 303, headers });

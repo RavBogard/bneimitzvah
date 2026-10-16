@@ -10,7 +10,7 @@ function fixture(selectedOrigin = origin, environment: "local" | "preview" | "pr
   const input = { secret: randomBytes(48).toString("base64url"), origin: selectedOrigin, environment, now: () => time };
   const pending = createPendingInvitations(input);
   const token = randomBytes(32).toString("base64url");
-  const landing = new URL("/invitations/accept", selectedOrigin); landing.searchParams.set("token", token);
+  const landing = new URL("/invitations/open", selectedOrigin); landing.searchParams.set("token", token);
   const issue = () => pending.exchange(new Request(landing));
   const cookie = () => issue().headers.getSetCookie()[0].split(";")[0];
   const read = (cookieValue: string, url = `${selectedOrigin}/api/invitations/pending`, headers: Record<string, string> = {}) => pending.read(new Request(url, { headers: { cookie: cookieValue, ...headers } }));
@@ -78,7 +78,7 @@ test("invitation token exists only on exact landing GET; URL practice contexts, 
   const f = fixture();
   for (const request of [new Request(f.landing, { method: "POST" }), new Request(f.landing.href + "&token=duplicate"), new Request(f.landing.href + "&handle=opaque"),
     new Request(f.landing.href + "&context=opaque"), new Request(f.landing.href + "#fragment"), new Request(f.landing, { headers: { "X-Practice-Context": "" } }),
-    new Request(f.landing, { headers: { host: "foreign.example.test" } }), new Request(f.landing.href.replace("/invitations/accept", "/invitations/%61ccept")),
+    new Request(f.landing, { headers: { host: "foreign.example.test" } }), new Request(f.landing.href.replace("/invitations/open", "/invitations/%6fpen")),
     new Request(f.landing.href.replace(f.token, "A".repeat(42))), new Request(f.landing.href.replace(f.token, "A".repeat(42) + "B"))]) {
     expect(await denied(() => f.pending.exchange(request))).toBe(true);
   }

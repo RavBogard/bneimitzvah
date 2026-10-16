@@ -39,7 +39,7 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
   }
 
   async function deliver(pending: { invitation: data.IssuedInvitation; actor: Actor; token: string }): Promise<Delivery> {
-    const url = new URL("/invitations/accept", pending.actor.origin);
+    const url = new URL("/invitations/open", pending.actor.origin);
     url.searchParams.set("token", pending.token);
     let outcome: "sent" | "failed" = "sent";
     try {

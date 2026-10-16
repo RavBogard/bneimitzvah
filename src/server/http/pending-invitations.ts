@@ -38,12 +38,40 @@ export function createPendingInvitations(input: { secret: string; origin: string
     if (url.origin !== configuredOrigin || (host !== null && host !== url.host)) throw 0;
     return { url, query };
   };
+  const unseal = (request: Request): string => {
+    const header = request.headers.get("cookie");
+    if (!header || Buffer.byteLength(header) > 16 * 1024) throw 0;
+    const values = new Map<string, string>();
+    for (const part of header.split(";")) {
+      const pair = part.trim();
+      if (!pair) continue;
+      const equal = pair.indexOf("=");
+      const cookieName = pair.slice(0, equal);
+      if (equal < 1 || !/^[!#$%&'*+\-.^_`|~A-Za-z0-9]+$/.test(cookieName) || values.has(cookieName)) throw 0;
+      values.set(cookieName, pair.slice(equal + 1));
+    }
+    if (values.has(secure ? localName : secureName)) throw 0;
+    const sealed = values.get(name);
+    if (!sealed || sealed.length > 2048 || !/^v1\.[A-Za-z0-9_-]+$/.test(sealed)) throw 0;
+    const encoded = sealed.slice(3);
+    const packed = Buffer.from(encoded, "base64url");
+    if (packed.toString("base64url") !== encoded || packed.length < 29) throw 0;
+    const decipher = createDecipheriv("aes-256-gcm", key, packed.subarray(0, 12));
+    decipher.setAAD(Buffer.from(configuredOrigin));
+    decipher.setAuthTag(packed.subarray(-16));
+    const plaintext = Buffer.concat([decipher.update(packed.subarray(12, -16)), decipher.final()]).toString("utf8");
+    const body = closedObject(JSON.parse(plaintext), ["version", "token", "origin", "issuedAt", "expiresAt"]);
+    const current = time();
+    if (body.version !== 1 || body.origin !== configuredOrigin || !tokenValid(body.token) || !Number.isSafeInteger(body.issuedAt) || !Number.isSafeInteger(body.expiresAt)
+      || Number(body.issuedAt) < 0 || Number(body.issuedAt) > current || Number(body.expiresAt) <= current || Number(body.expiresAt) - Number(body.issuedAt) !== LIFETIME) throw 0;
+    return body.token;
+  };
   return Object.freeze({
     exchange(request: Request): Response {
       try {
         const { url, query } = requestUrl(request, ["token"]);
         const token = query.get("token");
-        if (request.method !== "GET" || url.pathname !== "/invitations/accept" || !tokenValid(token)) throw 0;
+        if (request.method !== "GET" || url.pathname !== "/invitations/open" || !tokenValid(token)) throw 0;
         const issuedAt = time();
         const nonce = randomBytes(12);
         const cipher = createCipheriv("aes-256-gcm", key, nonce);
@@ -60,33 +88,15 @@ export function createPendingInvitations(input: { secret: string; origin: string
       try {
         const { url } = requestUrl(request, []);
         if (!((request.method === "GET" && url.pathname === "/api/invitations/pending") || (request.method === "POST" && url.pathname === "/api/invitations/accept"))) throw 0;
-        const header = request.headers.get("cookie");
-        if (!header || Buffer.byteLength(header) > 16 * 1024) throw 0;
-        const values = new Map<string, string>();
-        for (const part of header.split(";")) {
-          const pair = part.trim();
-          if (!pair) continue;
-          const equal = pair.indexOf("=");
-          const cookieName = pair.slice(0, equal);
-          if (equal < 1 || !/^[!#$%&'*+\-.^_`|~A-Za-z0-9]+$/.test(cookieName) || values.has(cookieName)) throw 0;
-          values.set(cookieName, pair.slice(equal + 1));
-        }
-        if (values.has(secure ? localName : secureName)) throw 0;
-        const sealed = values.get(name);
-        if (!sealed || sealed.length > 2048 || !/^v1\.[A-Za-z0-9_-]+$/.test(sealed)) throw 0;
-        const encoded = sealed.slice(3);
-        const packed = Buffer.from(encoded, "base64url");
-        if (packed.toString("base64url") !== encoded || packed.length < 29) throw 0;
-        const decipher = createDecipheriv("aes-256-gcm", key, packed.subarray(0, 12));
-        decipher.setAAD(Buffer.from(configuredOrigin));
-        decipher.setAuthTag(packed.subarray(-16));
-        const plaintext = Buffer.concat([decipher.update(packed.subarray(12, -16)), decipher.final()]).toString("utf8");
-        const body = closedObject(JSON.parse(plaintext), ["version", "token", "origin", "issuedAt", "expiresAt"]);
-        const current = time();
-        if (body.version !== 1 || body.origin !== configuredOrigin || !tokenValid(body.token) || !Number.isSafeInteger(body.issuedAt) || !Number.isSafeInteger(body.expiresAt)
-          || Number(body.issuedAt) < 0 || Number(body.issuedAt) > current || Number(body.expiresAt) <= current || Number(body.expiresAt) - Number(body.issuedAt) !== LIFETIME) throw 0;
-        return body.token;
+        return unseal(request);
       } catch { throw new HttpBoundaryError(404); }
+    },
+    hasPendingForSignIn(request: Request): boolean {
+      try {
+        const { url } = requestUrl(request, []);
+        if (request.method !== "POST" || !["/api/auth/sign-in/magic-link", "/api/auth/sign-in/social"].includes(url.pathname)) return false;
+        unseal(request); return true;
+      } catch { return false; }
     },
     clear(): string { return cookie("", 0); },
   });
