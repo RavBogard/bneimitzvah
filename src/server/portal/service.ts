@@ -1,4 +1,6 @@
 import "server-only";
+import { createHmac } from "node:crypto";
+import { AccessUnavailable } from "../access/errors";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
 import type { ActiveMode, AccessRequest } from "../access/types";
@@ -29,12 +31,15 @@ function readingView(row: Awaited<ReturnType<typeof confirmedReadings>>[number],
       attribution: leyning.source === "Hebcal" ? Object.freeze({ name: "Hebcal", url: "https://www.hebcal.com/" }) : null }) });
 }
 
-export function createPortalService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>> }) {
+export function createPortalService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>; sessionBindingSecret: string }) {
+  if (typeof input.sessionBindingSecret !== "string" || input.sessionBindingSecret.length < 32) throw new AccessUnavailable();
   async function sessionSummary(request: AccessRequest) {
-    return input.access.withVerifiedIdentity(request, { intent: "read" }, async (tx, identity) => Object.freeze({
-      membershipAvailable: identity.membership !== null,
-      roles: Object.freeze(identity.membership ? (await availableRoles(tx, identity.tenantId, identity.membership.id)).map(grant => grant.role) : []),
-    }));
+    return input.access.withVerifiedIdentity(request, { intent: "read" }, async (tx, identity) => {
+      const grants = identity.membership ? await availableRoles(tx, identity.tenantId, identity.membership.id) : [];
+      const sessionBinding = createHmac("sha256", input.sessionBindingSecret).update(JSON.stringify(["session-ui-binding:v1", identity.origin, identity.tenantId, identity.userId,
+        identity.authSessionId, identity.membership?.id ?? null, identity.membership?.authorityRevision ?? null, grants.map(grant => [grant.role, grant.id, grant.revision])])).digest("base64url");
+      return Object.freeze({ membershipAvailable: identity.membership !== null, roles: Object.freeze(grants.map(grant => grant.role)), sessionBinding });
+    });
   }
   async function assignedReading(request: AccessRequest, selection: { mode: ActiveMode | "child-practice"; studentId: string }) {
     if (selection.mode === "child-practice") {

@@ -5,7 +5,7 @@ import type { AccessTransaction } from "../access/types";
 import * as s from "../db/index";
 
 export async function availableRoles<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, membershipId: string) {
-  return tx.select({ role: s.roleGrant.role }).from(s.roleGrant).where(and(eq(s.roleGrant.tenantId, tenantId),
+  return tx.select({ role: s.roleGrant.role, id: s.roleGrant.id, revision: s.roleGrant.revision }).from(s.roleGrant).where(and(eq(s.roleGrant.tenantId, tenantId),
     eq(s.roleGrant.membershipId, membershipId), isNull(s.roleGrant.revokedAt))).orderBy(asc(s.roleGrant.role)).for("share");
 }
 

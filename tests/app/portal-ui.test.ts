@@ -8,11 +8,13 @@ const review = () => ({ role: "parent", student: { firstName: "Synthetic", lastN
 
 describe("portal entry client trust and transport contracts", () => {
   it("loads only a minimal session role summary and rejects unexpected identity/provider fields", () => {
-    expect(parseSession({ membershipAvailable: false, roles: [] })).toEqual({ membershipAvailable: false, roles: [] });
-    expect(parseSession({ membershipAvailable: true, roles: ["parent", "tutor"] }).roles).toEqual(["parent", "tutor"]);
+    const sessionBinding = "a".repeat(43);
+    expect(parseSession({ membershipAvailable: false, roles: [], sessionBinding })).toEqual({ membershipAvailable: false, roles: [], sessionBinding });
+    expect(parseSession({ membershipAvailable: true, roles: ["parent", "tutor"], sessionBinding }).roles).toEqual(["parent", "tutor"]);
     for (const value of [{ membershipAvailable: false, roles: ["admin"] }, { membershipAvailable: true, roles: ["admin", "admin"] },
       { membershipAvailable: true, roles: ["owner"] }, { membershipAvailable: true, roles: [], user: {} }, { membershipAvailable: "true", roles: [] }])
-      expect(() => parseSession(value)).toThrow(PortalRequestError);
+      expect(() => parseSession({ ...value, sessionBinding })).toThrow(PortalRequestError);
+    expect(() => parseSession({ membershipAvailable: true, roles: [], sessionBinding: "untrusted-readable-claims" })).toThrow(PortalRequestError);
   });
 
   it("requires a reviewed invitation DTO without raw token/mailbox/session claims and enforces role-target shape", () => {

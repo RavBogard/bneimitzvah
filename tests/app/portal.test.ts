@@ -31,7 +31,7 @@ async function fixture() {
       ...(handle === undefined ? {} : { "X-Practice-Context": handle }) }) };
   }
   const practice = createPracticeService({ access: f.service });
-  const portal = createPortalService({ access: f.service, practice });
+  const portal = createPortalService({ access: f.service, practice, sessionBindingSecret: randomBytes(48).toString("base64url") });
   const deliveries: { url: string }[] = [];
   const invitations = createInvitationService({ db: f.db, access: f.service, throttleSecret: randomBytes(48).toString("base64url"),
     transport: async message => { deliveries.push({ url: message.url }); } });
@@ -64,7 +64,7 @@ describe("private portal read DTOs and recipient invitation review", () => {
     const f = await fixture();
     expect(await denied(() => f.portal.sessionSummary(f.http("multi", undefined, { cookie: "" })), 401)).toBe(true);
     const empty = await f.portal.sessionSummary(f.http("recipient"));
-    expect(!empty.membershipAvailable && empty.roles.length === 0 && Object.keys(empty).sort().join() === "membershipAvailable,roles").toBe(true);
+    expect(!empty.membershipAvailable && empty.roles.length === 0 && Object.keys(empty).sort().join() === "membershipAvailable,roles,sessionBinding").toBe(true);
     const summary = await f.portal.sessionSummary(f.http());
     expect(summary.membershipAvailable && summary.roles.join() === "parent,tutor" && !JSON.stringify(summary).includes("@")).toBe(true);
     const other = await f.portal.sessionSummary(f.http("multi", undefined, { origin: "http://localhost:3101" }));

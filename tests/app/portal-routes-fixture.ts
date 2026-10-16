@@ -30,7 +30,7 @@ export async function portalRoutesFixture() {
     snapshot: { date: parseCeremonyDate(date), calendar, reading: { parashah: "Synthetic", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:31-2:2" }], triennial: null }, haftarah: "Isaiah 1:1-2" } }) });
   const pendingInvitations = createPendingInvitations({ secret: randomBytes(48).toString("base64url"), origin: "http://localhost:3000", environment: "local" });
   const runtime: HttpRuntime = { origin: "http://localhost:3000", auth: f.auth, access: f.service, practice, invitations, students,
-    portal: createPortalService({ access: f.service, practice }), relationships: createRelationshipService({ access: f.service }), pendingInvitations,
+    portal: createPortalService({ access: f.service, practice, sessionBindingSecret: randomBytes(48).toString("base64url") }), relationships: createRelationshipService({ access: f.service }), pendingInvitations,
     resolveHost: request => resolveTenantHost(f.db, request, { environment: "test", deployment: "suite" }) };
   function request(path: string, options: { who?: keyof typeof identities | "anonymous"; method?: string; body?: unknown; handle?: string; pending?: string;
     headers?: Record<string, string>; origin?: string } = {}) {

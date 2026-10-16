@@ -76,7 +76,7 @@ test("review: replacement encrypted cookie cannot redirect a reviewed sibling ac
 test("review: inconsistent persisted confirmed verses fail closed rather than exposing a partial reading or database snapshot", async () => {
   const f = await accessFixture();
   try {
-    const portal = createPortalService({ access: f.service, practice: createPracticeService({ access: f.service }) });
+    const portal = createPortalService({ access: f.service, practice: createPracticeService({ access: f.service }), sessionBindingSecret: randomBytes(48).toString("base64url") });
     let assignmentId = "";
     await f.owner(async () => {
       const [row] = await f.db.insert(s.assignment).values({ tenantId: "crc", studentId: f.students[0].id, kind: "torah", basis: "custom",

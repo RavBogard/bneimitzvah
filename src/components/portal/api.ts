@@ -1,6 +1,6 @@
 export const roleNames = { student: "Student", parent: "Parent", tutor: "Tutor", admin: "Rabbi / admin" } as const;
 export type Role = keyof typeof roleNames;
-export type SessionSummary = Readonly<{ membershipAvailable: boolean; roles: readonly Role[] }>;
+export type SessionSummary = Readonly<{ membershipAvailable: boolean; roles: readonly Role[]; sessionBinding: string }>;
 export type InvitationReview = Readonly<{ role: "student" | "parent" | "tutor"; student: { firstName: string; lastName: string } | null; expiresAt: string; reviewBinding: string }>;
 
 export class PortalRequestError extends Error {
@@ -16,11 +16,11 @@ function role(value: unknown): Role {
   return value as Role;
 }
 export function parseSession(value: unknown): SessionSummary {
-  const row = record(value, ["membershipAvailable", "roles"]);
-  if (typeof row.membershipAvailable !== "boolean" || !Array.isArray(row.roles) || row.roles.length > 4) return unavailable();
+  const row = record(value, ["membershipAvailable", "roles", "sessionBinding"]);
+  if (typeof row.membershipAvailable !== "boolean" || !Array.isArray(row.roles) || row.roles.length > 4 || typeof row.sessionBinding !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(row.sessionBinding)) return unavailable();
   const roles = row.roles.map(role);
   if (new Set(roles).size !== roles.length || (!row.membershipAvailable && roles.length)) return unavailable();
-  return { membershipAvailable: row.membershipAvailable, roles };
+  return { membershipAvailable: row.membershipAvailable, roles, sessionBinding: row.sessionBinding };
 }
 export function parseInvitation(value: unknown): InvitationReview {
   const row = record(value, ["role", "student", "expiresAt", "requiresConfirmation", "reviewBinding"]), intendedRole = role(row.role);

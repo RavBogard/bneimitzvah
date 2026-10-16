@@ -114,7 +114,9 @@ it("single-submits a real magic link, shows separate genuine roles without fake 
   await navigate(tab, link); await ui(tab.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
   const roles = tab.getByRole("list", { name: "Available roles" });
   await ui(roles).toContainText("Parent"); await ui(roles).toContainText("Tutor");
-  expect(await roles.getByRole("link").count()).toBe(0);
+  expect(await roles.getByRole("link").count()).toBe(2);
+  expect(await roles.getByRole("link", { name: "Parent", exact: true }).getAttribute("href") === "/workspace/parent").toBe(true);
+  expect(await roles.getByRole("link", { name: "Tutor", exact: true }).getAttribute("href") === "/workspace/tutor").toBe(true);
   await clean(tab, [token, "pg-tutor@example.test"]);
   await safe(() => tab.getByRole("button", { name: "Sign out", exact: true }).click());
   await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
@@ -172,7 +174,9 @@ it("keeps invitation landing nonaccepting and accepts one reviewed binding only,
   await ui(recipient.getByRole("heading", { name: "Invitation accepted", exact: true })).toBeVisible();
   await clean(recipient, [token, email]);
   await safe(() => recipient.getByRole("link", { name: "Continue to the portal", exact: true }).click());
-  await ui(recipient.getByRole("list", { name: "Available roles" })).toContainText("Student");
+  await ui(recipient.getByRole("heading", { name: "Your assigned reading", exact: true })).toBeVisible();
+  expect(new URL(recipient.url()).pathname === "/workspace/student").toBe(true);
+  expect(await recipient.getByRole("heading", { name: "Choose your workspace", exact: true }).count()).toBe(0);
   await navigate(recipient, link);
   await ui(recipient.getByRole("heading", { name: "Invitation unavailable", exact: true })).toBeVisible();
   expect((await navigate(recipient, "/invitations/open?token=invalid"))?.status()).toBe(404);

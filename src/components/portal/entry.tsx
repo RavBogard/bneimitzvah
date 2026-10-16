@@ -26,6 +26,7 @@ export function PortalEntry({ invitation = false, authenticationError = false }:
     void requestPortal(invitation ? "/api/invitations/pending" : "/api/session", undefined, request.signal)
       .then(value => {
         const next: View = invitation ? { kind: "invitation", review: parseInvitation(value) } : { kind: "signed-in", summary: parseSession(value) };
+        if (turn === generation.current && next.kind === "signed-in" && next.summary.roles.length === 1 && next.summary.roles[0] === "student") { window.location.replace("/workspace/student"); return; }
         if (turn === generation.current) setView(next);
       }).catch(error => {
         if (turn !== generation.current || request.signal.aborted) return;
@@ -115,7 +116,7 @@ export function PortalEntry({ invitation = false, authenticationError = false }:
               <button type="submit" className="button-primary" disabled={pending !== null}>{pending === "email" ? "Sending link…" : "Email me a sign-in link"}</button>
             </form></>)}
         {view.kind === "signed-in" && <>
-          {view.summary.roles.length ? <><p>Your congregation has given you the following access. Each role stays separate.</p><ul className="role-list" aria-label="Available roles">{view.summary.roles.map(role => <li key={role}>{roleNames[role]}</li>)}</ul><p>The reading and staff workspaces are still being prepared. There’s nothing else to set up here yet.</p></>
+          {view.summary.roles.length ? <><p>Choose the workspace you want to use. Each role stays separate.</p><ul className="role-list" aria-label="Available roles">{view.summary.roles.map(role => <li key={role}><a href={role === "admin" ? "/workspace/admin/students" : `/workspace/${role}`}>{roleNames[role]}</a></li>)}</ul></>
             : <><p>No congregation role is linked to this account yet.</p><p>If you received an invitation, open its email link while signed in. Otherwise, ask your tutor or the congregation for an invitation.</p></>}
           <button type="button" className="button-secondary" disabled={pending !== null} onClick={() => void action("sign-out")}>{pending === "sign-out" ? "Signing out…" : "Sign out"}</button>
         </>}

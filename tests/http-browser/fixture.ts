@@ -37,7 +37,7 @@ export async function browserFixture(options: { google?: boolean } = {}) {
       snapshot: { date: parseCeremonyDate(date), calendar, reading: { parashah: "Synthetic", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:31-2:2" }], triennial: null }, haftarah: "Isaiah 1:1-2" } }) });
     const practice = createPracticeService({ access });
     const pendingInvitations = createPendingInvitations({ secret: secret(), origin: BROWSER_ORIGIN, environment: "local" });
-    const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, portal: createPortalService({ access, practice }), relationships: createRelationshipService({ access }), pendingInvitations,
+    const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
       resolveHost: async request => {
         const host = await resolveTenantHost(db, request, deployment);
         if (host.origin !== BROWSER_ORIGIN) throw new Error("Host mismatch");

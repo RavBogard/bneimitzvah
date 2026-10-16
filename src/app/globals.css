@@ -92,3 +92,61 @@ html { scrollbar-color: #83918e var(--color-canvas); scrollbar-width: thin; }
   .portal-footer { gap: 0.5rem; padding-block: 1.25rem; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+
+/* Role workspaces extend the reviewed entry tokens. */
+.workspace-main { flex: 1; padding-block: 2rem 4rem; min-width: 0; }
+.workspace-role-nav { display: flex; flex-wrap: wrap; gap: 0.75rem 1.75rem; padding-bottom: 1.5rem; margin-bottom: 2.5rem; border-bottom: 1px solid var(--color-rule); }
+.workspace-role-nav a { display: inline-flex; align-items: center; min-height: 44px; color: var(--color-muted); }
+.workspace-role-nav a[aria-current="page"] { color: var(--color-action); font-weight: 650; }
+.workspace-main h1 { font-size: 2.25rem; max-width: none; margin-bottom: 1rem; }
+.workspace-main h3 { font-size: 1.125rem; margin: 0 0 0.75rem; font-weight: 650; }
+.workspace-state { max-width: 65ch; margin-block: 2rem; }
+.workspace-state > p, .role-workspace > p { margin-bottom: 1rem; }
+.workspace-state > button, .workspace-state > a { margin-top: 1rem; }
+.workspace-notice { color: var(--color-teal); padding-block: 0.75rem; margin-bottom: 1.5rem; }
+.workspace-heading-row { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: start; gap: 1rem; margin-bottom: 1rem; }
+select { display: block; width: min(100%, 36rem); font: inherit; padding: 0.6875rem 2rem 0.6875rem 0.875rem; border: 1px solid #83918e; border-radius: var(--radius-control); color: var(--color-ink); background: var(--color-surface); min-height: 48px; }
+.reading-workspace { display: grid; grid-template-columns: minmax(0, 2fr) minmax(15rem, 1fr); gap: 3rem; margin-top: 2.5rem; }
+.reading-workspace > section { min-width: 0; }
+.reading-date { color: var(--color-muted); margin-top: 0.5rem; font-variant-numeric: tabular-nums; }
+.confirmed-reading, .reading-empty { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--color-rule); }
+.reading-reference { font-size: 1.5rem; line-height: 1.4; overflow-wrap: anywhere; }
+.reading-review { color: var(--color-action); margin-top: 0.5rem; }
+.confirmed-reading details { margin-block: 1.25rem; }
+summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decoration: underline; text-underline-offset: 0.2em; }
+.verse-references { padding-inline-start: 1.5rem; font-variant-numeric: tabular-nums; }
+.verse-references li { margin-block: 0.5rem; }
+.reading-tools { align-self: start; padding-top: 1.5rem; border-top: 1px solid var(--color-ink); }
+.reading-tools p { margin-top: 1rem; }
+.reading-tools .button-primary { margin-top: 1.5rem; }
+.sibling-selection { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--color-rule); }
+.student-selection-list { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 1rem; }
+.student-selection-list bdi { margin-inline-start: 0.35em; }
+.roster-scroll { overflow-x: auto; margin-top: 1.75rem; }
+.roster-table { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
+.roster-table caption { text-align: left; color: var(--color-muted); padding-bottom: 1rem; }
+.roster-table th, .roster-table td { border-bottom: 1px solid var(--color-rule); padding: 0.75rem 1rem 0.75rem 0; vertical-align: top; overflow-wrap: anywhere; }
+.roster-table th:nth-child(2), .roster-table td:nth-child(2), .roster-table th:nth-child(3), .roster-table td:nth-child(3) { width: 1%; white-space: nowrap; overflow-wrap: normal; }
+.roster-table tbody th { overflow-wrap: normal; word-break: normal; }
+.roster-table tbody th bdi { overflow-wrap: anywhere; }
+.roster-table thead th { color: var(--color-muted); font-size: 0.875rem; font-weight: 600; }
+.roster-table .button-text { font-size: 1rem; margin: 0; text-align: start; }
+.roster-pages, .form-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
+.roster-editor { border-top: 1px solid var(--color-ink); padding-top: 1.5rem; margin-top: 2.5rem; }
+.roster-editor h2 { margin-bottom: 1.5rem; }
+.roster-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem 1.75rem; max-width: 52rem; }
+.disable-student { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--color-rule); }
+.disable-student > p { margin-block: 1rem; }
+@media (max-width: 900px) { .reading-workspace { gap: 2rem; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  .workspace-main { padding-block: 1.5rem 3rem; }
+  .workspace-role-nav { gap: 0.5rem 1.25rem; margin-bottom: 2rem; }
+  .workspace-main h1 { font-size: 1.875rem; }
+  .reading-workspace { grid-template-columns: minmax(0, 1fr); gap: 2rem; margin-top: 2rem; }
+  .roster-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .workspace-heading-row > button { width: 100%; }
+  .student-selection-list { display: block; }
+  .student-selection-list li + li { margin-top: 0.75rem; }
+  .student-selection-list button { width: 100%; flex-wrap: wrap; }
+  .roster-table th, .roster-table td { padding-inline-end: 0.5rem; font-size: 0.875rem; }
+}

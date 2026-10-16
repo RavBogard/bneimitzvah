@@ -38,7 +38,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const loadReading = createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS });
   const students = createStudentService({ access, loadReading, signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS });
   const practice = createPracticeService({ access });
-  const portal = createPortalService({ access, practice });
+  const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding") });
   const relationships = createRelationshipService({ access });
   const pendingInvitations = createPendingInvitations({ secret: config.authSecret, origin: config.origin, environment: config.deployment.environment as "local" | "preview" | "production" });
   // An eventual auth handler must resolve the request host BEFORE invoking auth.
