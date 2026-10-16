@@ -174,6 +174,33 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .study-credits { border-top: 1px solid var(--color-rule); padding-top: 1rem; }
 .study-credits section { margin-block: 1.5rem; }
 .study-credits li { overflow-wrap: anywhere; margin-block: 0.5rem; }
+
+/* Student work follows the verse on small screens and sits beside it on wide screens. */
+.reading-workspace.reading-with-work { grid-template-columns: minmax(0, 1fr); }
+.reading-with-work[hidden] { display: none; }
+.study-verses-with-work > li { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(18rem, 1fr); gap: 2rem; align-items: start; }
+.study-verses-with-work > li > article { min-width: 0; }
+.verse-work { min-width: 0; border-inline-start: 1px solid var(--color-rule); padding-inline-start: 1.5rem; }
+.verse-work summary { min-height: 44px; padding-block: 0.625rem; cursor: pointer; overflow-wrap: anywhere; }
+.verse-work-content { padding-block: 0.5rem; }
+.work-streams, .work-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-block: 0.75rem; }
+.work-streams [aria-pressed="true"] { color: var(--color-ink); font-weight: 600; text-decoration-thickness: 2px; }
+.work-editor label { display: block; margin-top: 1rem; font-weight: 600; }
+.work-editor textarea { display: block; width: 100%; min-height: 9rem; margin-top: 0.75rem; padding: 0.75rem; resize: vertical; font: inherit; line-height: 1.6; color: var(--color-ink); background: var(--color-surface); border: 1px solid var(--color-rule); border-radius: var(--radius-control); caret-color: var(--color-action); }
+.work-text { white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext; line-height: 1.7; }
+.work-attribution { color: var(--color-muted); line-height: 1.6; overflow-wrap: anywhere; margin-top: 0.5rem; }
+.work-status { margin-block: 0.75rem; }
+.work-comparison, .work-history, .work-notes article { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--color-rule); }
+.work-comparison h5 { font-size: 1rem; margin-bottom: 0.5rem; }
+.work-history ol { list-style: none; padding: 0; }
+.work-history li { padding-block: 1rem; border-bottom: 1px solid var(--color-rule); }
+.work-departure { width: min(38rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); padding: 1.5rem; border: 1px solid var(--color-ink); color: var(--color-ink); background: var(--color-surface); overflow: auto; }
+.work-departure::backdrop { background: color-mix(in srgb, var(--color-ink) 30%, transparent); }
+.work-departure h2 { margin-bottom: 1rem; }
+@media (max-width: 1000px) {
+  .study-verses-with-work > li { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  .verse-work { border-inline-start: 0; border-top: 1px solid var(--color-rule); padding-inline-start: 0; }
+}
 .access-section, .access-review, .csv-review, .csv-recovery { border-top: 1px solid var(--color-rule); margin-top: 2rem; padding-top: 1.5rem; }
 .access-review, .csv-review { border-color: var(--color-ink); max-width: 44rem; }
 .access-review h2, .csv-review h2, .access-section h2, .csv-recovery h2 { margin-bottom: 1rem; }

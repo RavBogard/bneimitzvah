@@ -2,8 +2,10 @@
 
 Status: Astra's independent source/security review found no remaining blocker;
 focused PGlite 10/10, real PostgreSQL 15/15 and fresh SQL migration/replay 6/6 pass.
-Root owns the final combined integration/build/CI gates. No commit, push, deployment, real account,
-provider provisioning or mail. No frontend change in this milestone.
+Published in d1b5a0a: all four hosted jobs passed in run 38897881389, including 43
+PostgreSQL service checks and 31 authenticated-browser checks. Matching deployment
+7118460414 succeeded. No real account, provider provisioning or mail. This slice
+adds persistence; the editor frontend is a subsequent milestone.
 
 ## Delivered
 
@@ -70,13 +72,11 @@ historical work intact and separately authorized readers can still read it.
 - Combined local integration: 127 Node + 364 app tests (one POSIX-only skip),
   31 authenticated-browser checks and six production-page checks pass. Final UI
   presentation fixes additionally pass their seven focused client checks. Logs:
-  `.local-logs/student-work-roster-*`. Hosted CI/publication remain pending.
+  `.local-logs/student-work-roster-*`. Hosted CI/publication also pass as recorded above.
 
 ## Remaining integration
 
-Astra owns the independent security-review record, required combined build/tests
-and CI, STATE update and integration/publication. Fresh SQL/PG gates passed.
-Frontend autosave,
-translation editor and notes presentation are a later bounded assignment; the
+Astra completed independent security review, combined build/tests, CI and publication.
+Frontend autosave, translation editor and notes presentation are the next bounded assignment; the
 approved Annotated score direction remains binding. Retention/export and note
 retraction policy remain separate future decisions.

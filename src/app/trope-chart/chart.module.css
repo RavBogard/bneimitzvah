@@ -1,0 +1,54 @@
+.shell[data-chart-page] { min-height: 100svh; }
+.main { padding-block: 2.5rem 3rem; }
+.title { max-width: none; margin-bottom: 1rem; }
+.introduction { margin-bottom: 2.5rem; }
+.introduction > p { margin-bottom: 1.5rem; }
+.introduction [data-chart-print-controls] { display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem 1.5rem; }
+.introduction [role="status"] { color: var(--color-muted); }
+.sectionHeading { margin-bottom: 0.75rem; }
+.explanation { margin-bottom: 1.5rem; }
+.families, .marks, .otherMarks { list-style: none; margin: 0; padding: 0; }
+.families { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem 3rem; }
+.family { border-top: 1px solid var(--color-rule); padding-top: 1rem; min-width: 0; }
+.family h3 { font-size: 1.125rem; line-height: 1.4; margin: 0 0 0.5rem; font-weight: 600; }
+.marks { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; }
+.mark { display: flex; flex-direction: column; align-items: start; min-width: 0; max-width: 11rem; break-inside: avoid; }
+.sample { display: inline-block; font-size: 2rem; line-height: 2; padding-inline: 0.25em; background: var(--family-color, transparent); color: var(--color-ink); }
+.markName { line-height: 1.5; overflow-wrap: anywhere; }
+.codepoint { color: var(--color-muted); font-size: 0.8125rem; margin-top: 0.25rem; }
+.other { border-top: 1px solid var(--color-ink); padding-top: 1.5rem; margin-top: 2.5rem; }
+.otherMarks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem 1.5rem; }
+.sources { border-top: 1px solid var(--color-rule); margin-top: 2.5rem; padding-top: 1.5rem; color: var(--color-muted); font-size: 0.875rem; }
+.sources p { max-width: none; }
+.sources p + p { margin-top: 0.75rem; }
+@media (max-width: 640px) {
+  .main { padding-block: 2rem; }
+  .families { grid-template-columns: minmax(0, 1fr); }
+  .otherMarks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media print {
+  @page { size: auto; margin: 12mm; }
+  .shell[data-chart-page] { padding: 0; margin: 0; min-height: 0; max-width: none; }
+  .header { padding: 0 0 5pt; margin: 0 0 8pt; }
+  .header :global(.portal-brand) { font-size: 10pt; }
+  .back, .shell :global(.skip-link), .introduction [data-chart-print-controls] { display: none; }
+  .main { padding: 0; }
+  .title { font-size: 20pt; line-height: 1.15; margin-bottom: 3pt; }
+  .introduction { margin-bottom: 9pt; }
+  .introduction > p, .explanation { font-size: 10pt; line-height: 1.3; margin-bottom: 6pt; max-width: none; }
+  .sectionHeading { font-size: 12pt; line-height: 1.2; margin-bottom: 4pt; }
+  .families { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6pt 16pt; }
+  .family { padding-top: 4pt; break-inside: avoid; }
+  .family h3 { font-size: 11pt; line-height: 1.25; margin-bottom: 2pt; }
+  .marks { gap: 3pt 8pt; flex-wrap: nowrap; }
+  .mark { max-width: none; flex: 1 1 0; }
+  .sample { font-size: 22pt; line-height: 1.6; padding-inline: 0.15em; }
+  .markName { font-size: 10pt; line-height: 1.25; }
+  .codepoint { display: none; }
+  .other { margin-top: 9pt; padding-top: 6pt; }
+  .otherMarks { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5pt 6pt; }
+  .otherMarks .sample { font-size: 20pt; }
+  .sources { margin-top: 8pt; padding-top: 5pt; font-size: 8.5pt; line-height: 1.3; break-inside: avoid; }
+  .sources p + p { margin-top: 3pt; }
+  .sources a { color: inherit; text-decoration: none; }
+}

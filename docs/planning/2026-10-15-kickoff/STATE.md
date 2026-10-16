@@ -2,11 +2,11 @@
 
 Authority: `MISSION.md` (Daniel's rulings). Plan: `PLAN-CODE-2026-10-15.md`. This file says where the work stands. Update it at the end of every session and every phase.
 
-Current phase: 2, with Phase 3 in progress. Verified public checkpoint 2521706 includes assigned Hebrew/English reading display, admin invitations and private owner admin operations. All four jobs passed in run 38895008269 (https://github.com/RavBogard/bneimitzvah/actions/runs/38895008269); matching deployment 7117984307 succeeded and stable student entry returns HTTP 200. Google/Neon/Resend remain unconfigured; authenticated production access is unavailable. Phase 2 still needs relationship/CSV interfaces and live-provider checks. The remaining study tools, audio, MCP and generated chant are incomplete. Engine source: haftarah trope-engine-research at 380b1b2, verified against GitHub on 2026-10-15; main reference 5b2530f.
+Current phase: 2, with Phase 3 in progress. Verified public checkpoint d1b5a0a includes assigned Hebrew/English reading, admin invitations/relationships/CSV interfaces, private owner admin operations and student-translation/tutor-note persistence. All four jobs passed in run 38897881389 (https://github.com/RavBogard/bneimitzvah/actions/runs/38897881389), including 43 PostgreSQL service and 31 authenticated-browser checks. Matching deployment 7118460414 succeeded; stable tutor/import shells return HTTP 200. Google/Neon/Resend remain unconfigured; session API returns the fixed private/no-store unavailable response and authenticated production access is unavailable. The editor, remaining study tools, audio, MCP and generated chant are incomplete. Engine source: haftarah trope-engine-research at 380b1b2, verified against GitHub on 2026-10-15; main reference 5b2530f.
 
 Current execution authority: Daniel requested Astra as project manager and Sol agents as implementers on 2026-10-15. See `PM-REVIEW-2026-10-15.md` for confirmed amendments, review findings, and proposals. Root `PRODUCT.md` captures the completed Impeccable product interview; the chosen workflow is code-first.
 
-Active continuation, 2026-10-16: relationship/CSV interfaces and student-translation/tutor-note persistence passed independent authority review and local integration: 127 Node + 364 app tests (one POSIX-only skip), 31 authenticated-browser checks, typecheck/build and six production-page checks. New persistence additionally passed 15 real PostgreSQL cases and six fresh SQL migration/replay checks. The single visual fix batch preserves keyboard inspection of uncertain CSV drafts and limits ordinary grant identifiers to name collisions; the independent visual reviewer confirmed both fixes and returned ship. Publication is pending. See ROSTER-CONTROLS-RETURN.md, STUDENT-WORK-RETURN.md and PHASE2-SECURITY-REVIEW.md. The student editor/notes UI plan is approved with bounded controlled-navigation protection and explicit browser-termination limits; implementation follows this milestone. Retained writing survives session/context cleanup; historical attribution never grants access. Full product remains incomplete.
+Active continuation, 2026-10-16: the student translation/teacher-note editor and printable trope chart are implemented locally. Independent authority/repository review passed; the fresh visual reviewer returned ship for the single recovery-copy/documentation fix batch. Local checks: 145 Node, 381 app (one POSIX-only skip), typecheck/build, 15 production-page cases; a combined authenticated run exposed three integration issues, and all 16 affected cases passed after fixes, followed by two recovery cases after the visual copy fix. No final local 38/38 claim is made; that full gate remains for exact-head hosted CI. The corrected dispatcher now reaches work routes; failed/stale text loads no longer erase assignment recovery. Actual Noto glyph rendering and the unchanged first-Hebrew phone bound pass. Letter/A4/background-disabled charts each fit one readable page. See STUDENT-WORK-UI-RETURN.md, TROPE-CHART-RETURN.md, FONTS-GUARD-RETURN.md, EDITOR-CHART-FINISH-REVIEW.md and PHASE2-SECURITY-REVIEW.md. Next: publish/verify this checkpoint, then complete remaining study tools (trope colors/transliteration, edition picker, word data and commentary/source assignment). Recording retention remains unanswered; no real recording intake follows from silence. Full product remains incomplete.
 
 Delivery sequence (Daniel, 2026-10-15): finish all planned features before any human testing beyond Daniel. No early student/parent/tutor pilot. Automated tests and agent reviews continue; Phase 7 follows feature completeness, including MCP and generated chant, and Daniel's approval.
 
@@ -80,10 +80,10 @@ GATE: invitation/roster/reading checkpoint `18918c0` passed hosted Windows/Linux
 - [ ] verse view: trope colours, picker, transliteration toggle
 - [ ] word data load + word panel
 - [ ] commentary: defaults, assigned, all; approved summaries
-- [ ] own-translation drafts; tutor notes
+- [x] own-translation drafts; tutor notes (local implementation/review complete; checkpoint verification below)
 - [ ] source defaults page; assign from verse
-- [ ] printable trope chart
-- [ ] fonts + OFL texts
+- [x] printable trope chart (local implementation/review complete; checkpoint verification below)
+- [x] fonts + OFL texts (local implementation/review complete; checkpoint verification below)
 - [ ] Gate: golden, Playwright, deploy; Daniel approves the page
 
 ### Phase 4 — Audio

@@ -12,7 +12,7 @@ export function StudentWorkspace({ mode }: { mode: "student" | "parent" | "tutor
   return <RequireRole role={mode}><StudentSelection mode={mode} /></RequireRole>;
 }
 function StudentSelection({ mode, switching = false }: { mode: "student" | "parent" | "tutor"; switching?: boolean }) {
-  const { epoch, context, busy, selectChild, registerReload } = useWorkspace();
+  const { epoch, context, busy, selectChild, registerReload, guardDeparture } = useWorkspace();
   const [rows, setRows] = useState<Student[]>([]), [selected, setSelected] = useState<string | null>(null), [error, setError] = useState(false), [loading, setLoading] = useState(true), [more, setMore] = useState(false);
   const [retry, setRetry] = useState(0), gate = useRef(false), sequence = useRef(0);
   const [paging, setPaging] = useState(false);
@@ -58,7 +58,7 @@ function StudentSelection({ mode, switching = false }: { mode: "student" | "pare
     {mode !== "student" && <p>{mode === "parent" ? "Choose a child to view their reading. Entering child practice is a separate action." : "Choose an assigned student to view their confirmed reading."}</p>}
     {loading ? <p role="status">Loading available students…</p> : error ? <div role="alert"><p>Students couldn’t be loaded. No previous selection is being shown.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload students</button></div>
       : !rows.length ? <p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p>
-        : <>{(mode !== "student" || rows.length !== 1) && <><label htmlFor="workspace-student">{mode === "parent" ? "Child" : "Student"}</label><select id="workspace-student" value={selected ?? ""} onChange={event => setSelected(event.target.value || null)}><option value="">Choose a student</option>{rows.map(row => <option key={row.id} value={row.id}>{row.firstName} {row.lastName} — {row.ceremonyDate}</option>)}</select>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
+        : <>{(mode !== "student" || rows.length !== 1) && <><label htmlFor="workspace-student">{mode === "parent" ? "Child" : "Student"}</label><select id="workspace-student" value={selected ?? ""} onChange={event => { const id = event.target.value || null; void guardDeparture().then(leave => { if (leave) setSelected(id); }); }}><option value="">Choose a student</option>{rows.map(row => <option key={row.id} value={row.id}>{row.firstName} {row.lastName} — {row.ceremonyDate}</option>)}</select>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
           {selected && <ReadingPanel mode={mode} studentId={selected} onStudentReload={reconcileStudent} />}</>}
   </section>;
 }

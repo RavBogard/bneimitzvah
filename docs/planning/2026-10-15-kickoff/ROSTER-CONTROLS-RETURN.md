@@ -35,7 +35,7 @@ The fresh reviewer returned `fix` with two P2 findings in `ROSTER-CONTROLS-FINIS
 
 Focused client checks remain **7/7 passed** and typecheck passes after this batch. The final combined actual-SDK/restricted-PG browser suite passes **31/31**, including all six roster/import cases and refreshed captures. The independent reviewer returned **ship** after confirming both findings were resolved. No other polish, detector rerun, CSS/token or server change was made for these findings.
 
-Independent finish/security reviews and combined production build pass. Integration also passed 127 Node + 364 app tests (one POSIX-only skip), typecheck and six production-page checks; evidence is under ignored `.local-logs/student-work-roster-*`. Hosted CI/publication remain pending. Root owns the private PostgreSQL runner; this worker has not started/stopped the cluster or read/rotated its credentials.
+Independent finish/security reviews and combined production build pass. Integration also passed 127 Node + 364 app tests (one POSIX-only skip), typecheck and six production-page checks; evidence is under ignored `.local-logs/student-work-roster-*`. Published d1b5a0a passed all four hosted jobs in run 38897881389, including 43 PostgreSQL service and 31 authenticated-browser checks. Matching deployment 7118460414 succeeded; the stable tutor/import shells return 200 while unconfigured authentication returns the fixed private/no-store unavailable response. Root owns the private PostgreSQL runner; this worker has not started/stopped the cluster or read/rotated its credentials.
 
 ## Known contract limits
 

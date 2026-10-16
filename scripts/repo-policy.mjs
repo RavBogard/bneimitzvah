@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { readFile, lstat } from "node:fs/promises";
 import { promisify } from "node:util";
 import { extname, join } from "node:path";
+import { FONT_ASSETS, matchesAssetPin, reviewedFontAsset } from "./font-assets.mjs";
 
 const run = promisify(execFile);
 const DATA = new Set([".json", ".csv", ".tsv", ".txt", ".jsonl", ".ndjson"]);
@@ -10,6 +11,7 @@ const DRIZZLE_METADATA = /^src\/server\/db\/migrations\/meta\/(?:_journal|[0-9]{
 const MEDIA = /\.(?:mp3|wav|webm|m4a|ogg|flac|aac|mp4|mov|aiff|aif|opus|ckpt|pt|pth|safetensors|onnx|h5|bin)$/i;
 const KEYS = /(?:\.(?:pem|key|p12|pfx|jks|keystore)$|(?:^|\/)(?:id_rsa|id_ed25519|credentials(?:\.json)?|service-account[^/]*\.json)$)/i;
 const REMOTE_ATTACHMENTS = /(?:^|\/)\.codex-remote-attachments(?:\/|$)/i;
+const FONT_FILE = /\.(?:ttf|otf|woff2?|ttc|otc|eot)$/i;
 const ATTACHMENT_REASON = "private remote attachment directory";
 const CREDENTIALS = [
   /\bvercel_blob_rw_[A-Za-z0-9_-]+/,
@@ -34,6 +36,11 @@ export async function repositoryGit(args, options) {
   }
 }
 
+export async function repositoryRead(file, encoding) {
+  try { return await readFile(file, encoding); }
+  catch { throw new Error("Repository policy: file read failed; details withheld"); }
+}
+
 function syntheticEmail(address) {
   const domain = address.toLowerCase().split("@")[1];
   return domain === "example.test" || domain === "example.com";
@@ -49,6 +56,7 @@ export function entryProblems(path, content = "") {
   const data = DATA.has(extname(file).toLowerCase());
   const migrationMetadata = DRIZZLE_METADATA.test(file);
   if (MEDIA.test(file)) problems.push("audio, video, or model artifact");
+  if (FONT_FILE.test(file)) problems.push(reviewedFontAsset(path)?.kind === "font" ? "font asset requires exact byte verification" : "unlisted font asset");
   if (KEYS.test(file) || /\.local\.json$/i.test(file)) problems.push("credential/config file");
   if (/(?:^|\/)\.env[^/]*$/i.test(file) && file !== ".env.example") problems.push("environment file");
   if (file === ".env.example" && text.split(/\r?\n/).some(line => !/^\s*(?:#|$)/.test(line) && !/^[A-Z][A-Z0-9_]*=\s*$/.test(line))) problems.push("environment example must contain names only");
@@ -80,6 +88,30 @@ export function entryProblems(path, content = "") {
   return problems;
 }
 
+async function fontWorktreeState(root, file) {
+  const parts = file.split("/");
+  for (let index = 0; index < parts.length; index++) {
+    let stat;
+    try { stat = await lstat(join(root, ...parts.slice(0, index + 1))); }
+    catch (error) { if (error.code === "ENOENT") return { exists: false }; throw new Error("Repository policy: file inspection failed; details withheld"); }
+    if (stat.isSymbolicLink() || (index === parts.length - 1 ? !stat.isFile() : !stat.isDirectory())) return { exists: true, regular: false };
+    if (index === parts.length - 1) return { exists: true, regular: true, size: stat.size };
+  }
+}
+
+function missingFontPair(present, findings, suffix = "") {
+  if (!FONT_ASSETS.some(asset => present.has(asset.path))) return;
+  for (const asset of FONT_ASSETS) if (!present.has(asset.path)) findings.push(`${asset.path}${suffix}: required paired font asset missing`);
+}
+
+function inspectFontBytes(asset, content, findings, suffix = "") {
+  const verified = matchesAssetPin(content, asset);
+  if (!verified) findings.push(`${asset.path}${suffix}: reviewed font asset integrity mismatch`);
+  // The narrow binary exception applies only to the pinned font. Its notice
+  // still receives every ordinary privacy/credential/publisher/binary check.
+  if (asset.kind === "license" || !verified) for (const reason of entryProblems(asset.path, content.toString("utf8"))) findings.push(`${asset.path}${suffix}: ${reason}`);
+}
+
 // Include untracked publish candidates and the index, not only committed files.
 // Ignored local .env/cache/build files stay local; a force-staged one is still checked.
 // Index and worktree are both inspected to prevent a safe edit hiding a staged secret.
@@ -92,25 +124,35 @@ export async function inspectRepository(root, env) {
   ]);
   const paths = [...new Set(candidates.split("\0").filter(Boolean))];
   if (!paths.length) throw new Error("Repository policy has no files to inspect");
-  const findings = [];
+  const findings = [], worktreeFonts = new Set(), indexedFonts = new Set();
   for (const file of paths) {
     if (REMOTE_ATTACHMENTS.test(file.replaceAll("\\", "/"))) {
       findings.push(`${ATTACHMENT_REASON}: prohibited publish candidate`);
       continue;
     }
+    const asset = reviewedFontAsset(file);
+    if (asset) {
+      const state = await fontWorktreeState(root, file);
+      if (!state.exists) continue;
+      worktreeFonts.add(file);
+      if (!state.regular) { findings.push(`${file}: symlink or non-file requires review`); continue; }
+      if (asset.kind === "font" && state.size !== asset.size) { findings.push(`${file}: reviewed font asset integrity mismatch`); continue; }
+      inspectFontBytes(asset, await repositoryRead(join(root, file)), findings);
+      continue;
+    }
     let stat;
     try { stat = await lstat(join(root, file)); }
-    catch (error) { if (error.code === "ENOENT") continue; throw error; }
+    catch (error) { if (error.code === "ENOENT") continue; throw new Error("Repository policy: file inspection failed; details withheld"); }
     if (stat.isSymbolicLink() || !stat.isFile()) {
       findings.push(`${file}: symlink or non-file requires review`);
       continue;
     }
     const pathProblems = entryProblems(file);
-    if (MEDIA.test(file) || KEYS.test(file)) {
+    if (MEDIA.test(file) || KEYS.test(file) || FONT_FILE.test(file)) {
       for (const reason of pathProblems) findings.push(`${file}: ${reason}`);
       continue;
     }
-    const content = await readFile(join(root, file), "utf8");
+    const content = await repositoryRead(join(root, file), "utf8");
     for (const reason of entryProblems(file, content)) findings.push(`${file}: ${reason}`);
   }
   for (const record of indexed.split("\0").filter(Boolean)) {
@@ -124,16 +166,25 @@ export async function inspectRepository(root, env) {
       continue;
     }
     const [mode, hash] = meta.split(" ");
+    const asset = reviewedFontAsset(file);
+    if (asset) indexedFonts.add(file);
     if (mode !== "100644" && mode !== "100755") {
       findings.push(`${file} (index): symlink or non-file requires review`);
       continue;
     }
-    if (MEDIA.test(file) || KEYS.test(file)) {
+    if (asset) {
+      const { stdout: content } = await repositoryGit(["cat-file", "blob", hash], { ...options, encoding: null });
+      inspectFontBytes(asset, content, findings, " (index)");
+      continue;
+    }
+    if (MEDIA.test(file) || KEYS.test(file) || FONT_FILE.test(file)) {
       for (const reason of entryProblems(file)) findings.push(`${file} (index): ${reason}`);
       continue;
     }
     const { stdout: content } = await git("cat-file", "blob", hash);
     for (const reason of entryProblems(file, content)) findings.push(`${file} (index): ${reason}`);
   }
+  missingFontPair(worktreeFonts, findings);
+  missingFontPair(indexedFonts, findings, " (index)");
   return { count: paths.length, findings: [...new Set(findings)] };
 }

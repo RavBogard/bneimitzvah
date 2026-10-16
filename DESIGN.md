@@ -65,7 +65,7 @@ components:
 
 **Creative North Star: "Annotated Score"**
 
-The implemented entry surface uses a white working field, legible ink, a restrained burgundy action, and precise rules. The page leads with the reading as its destination while its neighboring task area reports actual access and invitation state. This is the initial authentication and invitation slice; a Hebrew passage and its practice tools have not been implemented or visually specified by this file.
+The implemented entry surface uses a white working field, legible ink, a restrained burgundy action, and precise rules. The page leads with the reading as its destination while its neighboring task area reports actual access and invitation state. This entry composition describes authentication and invitations; the implemented assigned-reading/editor and public chart compositions are recorded separately in `.impeccable/surfaces/src-app-workspace-page-tsx.md` and `.impeccable/surfaces/src-app-trope-chart-page-tsx.md`.
 
 The current controls feel familiar and deliberate. Spacing creates the hierarchy, and text explains state without ornamental imagery.
 
@@ -96,14 +96,14 @@ The palette uses one action accent, one confirmed-state accent, and quiet neutra
 
 ## Typography
 
-The initial entry slice deliberately uses the system UI stack in the frontmatter for headings, body, labels, and controls. This records the approved implementation choice for this slice, not a Hebrew display font decision.
+The entry surface uses the system UI stack in the frontmatter for headings, body, labels, and controls. This remains the approved interface typography; Hebrew-only content uses the separate Reading Type Rule below and its surface-local sizes.
 
 - **Headline** (`typography.headline`): the short introductory task, capped at roughly twelve characters per line on desktop and reduced at phone widths.
 - **Title** (`typography.title`): the adjacent live access or invitation state.
 - **Body** (`typography.body`): explanations and recovery text; paragraphs remain within approximately 65 characters.
 - **Label** (`typography.label`): field labels and action text.
 
-**The Reading Type Rule.** Hebrew reading requires its own verified vowel and cantillation rendering when actual licensed content is implemented. The current `[lang="he"]` selector establishes right-to-left direction and mark features, but no Hebrew passage or compiled Hebrew font is present yet.
+**The Reading Type Rule.** Assigned Hebrew and standalone trope-chart samples use the Hebrew-only `.hebrew[lang="he"]` content class from `src/styles/hebrew-font.module.css`: locally hosted `CRC Noto Serif Hebrew` (Noto Serif Hebrew 2.004), then `Noto Serif Hebrew`, `Times New Roman`, serif. The approved font and complete adjacent SIL Open Font License 1.1 notice are pinned byte-for-byte under `public/fonts/noto-serif-hebrew/`; retain that notice and provenance. The class sets weight 400, disables synthesized faces and enables mark/mkmk features; RTL direction remains explicit. Reading type stays 2rem with line height 2. Chart-local screen/print sizes belong to its surface brief, not the global UI ramp. Headings, English, controls and editor drafts retain the system UI stack. Bounded synthetic browser/print evidence does not establish full-corpus vowel/cantillation fidelity, musical pedagogy, security, real-provider coverage or student-release approval.
 
 ## Layout
 

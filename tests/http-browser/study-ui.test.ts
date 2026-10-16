@@ -35,7 +35,10 @@ async function page(who: "admin" | "tutor" | "student", mobile = false) {
   const tab = await context.newPage(); await navigate(tab, "/"); const email = who === "student" ? "pg-study-student@example.test" : who === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
   expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status === 200).toBe(true); await navigate(tab, fixture.takeMail(email)); return tab;
 }
-async function click(tab: Page, name: string) { await safe(() => tab.getByRole("button", { name, exact: true }).click()); }
+async function click(tab: Page, name: string) {
+  try { await safe(() => tab.getByRole("button", { name, exact: true }).click()); }
+  catch { const steps = new Set(["Refresh reading", "Reload assigned text", "Next text page", "Previous text page", "Refresh reading and text", "Haftarah text"]); throw new Error(`Study UI ${steps.has(name) ? name : "controlled action"} failed; private details withheld`); }
+}
 async function loaded(tab: Page, ref: string) { await ui(tab.locator(".study-verses").getByRole("heading", { name: ref, level: 4, exact: true })).toBeVisible(); }
 async function capture(tab: Page, name: string) {
   if (process.env.CI) return;

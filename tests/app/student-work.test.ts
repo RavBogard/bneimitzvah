@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { portalRoutesFixture } from "./portal-routes-fixture";
 import { handleStudentWorkRequest } from "../../src/server/http/student-work";
+import { createHttpDispatcher } from "../../src/server/http/dispatch";
 import type { WorkSelection } from "../../src/server/student-work/validation";
 
 const fixtures: Awaited<ReturnType<typeof portalRoutesFixture>>[] = [];
@@ -96,6 +97,23 @@ test("HTTP has closed bounded bodies/queries, protected mutations and fixed priv
   expect(saved.status).toBe(200); expect(saved.headers.get("cache-control")).toBe("private, no-store");
   expect(await saved.json()).toMatchObject({ committed: { text: "<b>Synthetic</b>" } });
   expect((await call(`${url}/note`, { ...binding, ...f.write("   ") })).status).toBe(400);
+});
+
+test("full dispatcher sends exact work routes to the work service before the broader portal namespace", async () => {
+  const f = await fixture(), dispatch = createHttpDispatcher(action => action(f.runtime));
+  const url = `/api/students/${f.students[0].id}/work`, { studentId: _id, ...binding } = f.selection;
+  const query = new URLSearchParams(Object.entries(binding).map(([key, value]) => [key, String(value)]));
+  const get = await dispatch(f.request(`${url}?${query}`, { who: "learner" }));
+  expect(get.status).toBe(200); expect(await get.json()).toMatchObject({ ok: true, offset: 0, nextOffset: 10 });
+  const saved = await dispatch(f.request(`${url}/draft`, { who: "learner", body: { ...binding, ...f.write("Synthetic dispatch append") } }));
+  expect(saved.status).toBe(200); expect(await saved.json()).toMatchObject({ ok: true, committedVersion: 1, committed: { text: "Synthetic dispatch append" } });
+  const read = await dispatch(f.request(`${url}?${query}`, { who: "learner" })); expect(await read.json()).toMatchObject({ verses: [expect.objectContaining({ draft: expect.objectContaining({ version: 1 }) }), ...Array.from({ length: 9 }, () => expect.anything())] });
+  expect((await dispatch(f.request(`${url}?${query}&mode=admin`, { who: "learner" }))).status).toBe(400);
+  expect((await dispatch(f.request(`${url}?${query}`, { who: "learner", method: "POST", body: {} }))).status).toBe(405);
+  expect((await dispatch(f.request(`${url}/draft`, { who: "learner", body: { ...binding, ...f.write("Synthetic foreign", 1) }, headers: { origin: "https://foreign.example.test" } }))).status).toBe(403);
+  expect((await dispatch(f.request(`/api/students/${f.students[3].id}/work?${query}`, { who: "learner" }))).status).toBe(404);
+  expect((await dispatch(f.request(`${url}/unowned`, { who: "learner" }))).status).toBe(404);
+  expect((await dispatch(f.request("/api/unowned", { who: "learner" }))).status).toBe(404);
 });
 
 test("bounded version history uses descending cursor and revoked notes remain visible", async () => {

@@ -78,7 +78,7 @@ it("revokes only the selected parent practice context, removes exact parent/stud
   const other = await parent.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => other.getByLabel("Child", { exact: true }).selectOption(sibling.id)); await click(other, "Enter child practice"); await ui(other.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
   await navigate(admin, `/workspace/admin/students/${fixture.student.id}/access`); await accessLoaded(admin); await click(admin, "Review stopping practice"); await confirm(admin);
   const denied = parent.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/reading`);
-  await focus(parent); expect((await denied).status()).toBe(404); await ui(parent.getByRole("heading", { name: "Access has changed", exact: true })).toBeVisible();
+  await focus(parent); expect((await denied).status()).toBe(404); await ui.poll(() => new URL(parent.url()).pathname).toBe("/workspace/parent"); await ui(parent.getByText("Practice access changed. Choose an available child again.", { exact: true })).toBeVisible(); await ui(parent.getByLabel("Child", { exact: true })).toBeVisible();
   expect(await parent.locator(".reading-workspace").count()).toBe(0);
   await focus(other); await ui(other.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
   await click(admin, "Review allowing practice"); await confirm(admin); await click(admin, "Review parent link removal"); await confirm(admin); await click(admin, "Review student sign-in removal"); await confirm(admin);

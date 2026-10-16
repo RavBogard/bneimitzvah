@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { workspaceApi, type Assigned } from "./api";
 import { customReadingRanges, readingBaseline, type ReadingKind, type ReadingProposal, type StaffMode } from "./reading-proposal";
-import { statusOf } from "./provider";
+import { statusOf, useWorkspace } from "./provider";
 
 export function ReadingEditor({ mode, baseline, reload }: { mode: StaffMode; baseline: Assigned | null; reload(): Promise<Assigned> }) {
+  const { guardDeparture } = useWorkspace();
   const [kind, setKind] = useState<ReadingKind>("torah"), [method, setMethod] = useState("calendar"), [custom, setCustom] = useState("");
   const [review, setReview] = useState<{ proposal: ReadingProposal; baseline: string; expiresAt: number } | null>(null);
   const [pending, setPending] = useState<"prepare" | "confirm" | "reload" | null>(null), [message, setMessage] = useState(""), [blocked, setBlocked] = useState(false);
@@ -45,6 +46,8 @@ export function ReadingEditor({ mode, baseline, reload }: { mode: StaffMode; bas
   }
   async function confirm() {
     if (gate.current || !review || review.proposal.status !== "prepared" || !baseline || review.baseline !== key || Date.now() >= review.expiresAt || blocked) return;
+    if (!await guardDeparture()) return;
+    if (gate.current || !alive.current || review.baseline !== keyRef.current || Date.now() >= review.expiresAt) return;
     gate.current = true; const turn = ++generation.current; setPending("confirm"); setMessage("");
     const prepared = review.proposal; setReview(null);
     try {

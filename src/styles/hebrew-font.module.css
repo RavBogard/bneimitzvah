@@ -1,0 +1,14 @@
+@font-face {
+  font-family: "CRC Noto Serif Hebrew";
+  src: url("/fonts/noto-serif-hebrew/NotoSerifHebrew.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+.hebrew[lang="he"] {
+  font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", "Times New Roman", serif;
+  font-weight: 400;
+  font-synthesis: none;
+  font-feature-settings: "mark", "mkmk";
+}

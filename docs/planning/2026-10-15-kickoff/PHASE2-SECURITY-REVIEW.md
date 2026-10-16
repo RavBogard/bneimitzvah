@@ -782,3 +782,66 @@ private-content clearing, scoped alert locators and in-memory reuse of actual SD
 session cookies. The final combined suite passes 31/31, including these six cases
 after both visual fixes; typecheck/build and six production-page checks also pass.
 See ROSTER-CONTROLS-RETURN.md for final integration evidence.
+
+## Student work UI and dispatcher integration — 2026-10-16
+
+Astra independently reviewed Sol's memory-only work coordinator, closed response
+parsers, provider lifecycle integration and controlled departure paths. Draft
+authority remains on the server: own student or explicit child practice may
+append translations; ordinary parent and staff draft views are read-only; staff
+notes require the existing explicit capability. No local persistence, background
+beacon, optimistic authority restoration or generated-audio release is added.
+
+Review closed several ordering and uncertainty findings. Old page responses and
+late acknowledgements cannot lower a known stream head. Receipts must match the
+frozen operation, assignment, verse, text and expected next version. Receipt 404
+alone neither proves rollback nor revokes child authority; 401/403 still clear
+authority. Unknown recovery waits for current metadata and head before retrying
+the exact original UUID/body. Queued typing remains separate from that operation.
+An older committed version with an unavailable current head is not labelled as
+the current saved text.
+
+Visibility/session revalidation pauses work and settles writes plus recovery;
+metadata, text and saved work must all complete for the same lifecycle before
+editing resumes. Work-page completion alone cannot unpause. Denial and changed
+session/context/assignment clear mounted work and fence late callbacks. A current
+403/404 during active-child revalidation now clears the child's work immediately
+and returns to the parent route while the retained subtree remains hidden. Abort,
+refresh sequence, context identity, practice generation and route checks prevent
+an old denial from clearing replacement state. 401 retains full session denial.
+The parent route performs fresh checks before showing available children.
+
+Controlled navigation reviews staged or uncertain work. Opening that review
+blocks blur autosave; only its explicit Save-and-continue path may submit during
+review. Native beforeunload registration is bounded to unsent/uncertain work.
+Browser termination, arbitrary Back/Forward and reload recovery remain explicitly
+unsupported; synthetic lifecycle events do not establish real BFCache behavior.
+
+Actual browser integration exposed a production dispatcher defect missed by the
+earlier handler-direct tests: the general portal handler consumed work routes
+before the specific handler. Sol reordered handlers and added a full-dispatch
+regression covering persisted append/read and method/query/origin/student denial.
+The test harness also needed to recognize work routes before delegating to its
+injected runtime. These were routing corrections, not relaxed authentication.
+
+The existing study browser suite also caught a cross-component recovery defect:
+after a handled stale-assignment text response, a work-page request could clear
+the baseline and remove the explicit text recovery action. The text loader now
+returns success only for a current successful page. Work paging requires that
+success and the same controller, generation and metadata after the departure
+guard; aborted/stale/error completions cannot start it. The original stale-text,
+session-expiry, privacy-clearing and sibling assertions remain in the tests.
+
+The final affected-file browser run passed 16/16 (seven editor, six relationship,
+three study cases), following a combined 35/38 run whose three failures exposed
+the omitted test font asset, an obsolete parent-recovery expectation and the
+stale-text defect above. The fixed isolated harness copies only the pinned font
+and OFL; actual CDP glyph inspection verifies Noto rather than a declared CSS
+family. A capture-only rerun passed 1/1 after a malformed phone screenshot; it
+does not substitute for the independent visual verdict. Final local application
+tests pass 381 with one platform-specific skip; typecheck/build and fifteen
+production-page checks pass. Final hosted all-suite evidence remains separate.
+
+Source review found no remaining authority blocker at this scope. Final browser,
+visual and publication evidence belongs in STUDENT-WORK-UI-RETURN.md and STATE.md;
+source acceptance alone does not establish those gates or live-provider readiness.

@@ -36,7 +36,7 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
       return await withRuntime(async (runtime) => {
         try {
           await runtime.resolveHost(request);
-          return await handleAuthRequest(request, runtime) ?? await handlePortalRequest(request, runtime) ?? await handleStudentWorkRequest(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
+          return await handleAuthRequest(request, runtime) ?? await handleStudentWorkRequest(request, runtime) ?? await handlePortalRequest(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
         } catch (error) {
           // Expected HTTP400/413/etc stay inside the scoped runtime callback;
           // otherwise its generic application-error boundary would make503.

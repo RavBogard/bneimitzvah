@@ -1,13 +1,14 @@
 "use client";
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { type Assigned } from "../api";
 import { statusOf, useWorkspace } from "../provider";
 import { studyBinding, studyPlan, type StudyKind, type StudyPage, type StudyVerse } from "./api";
 import { StudyCredits } from "./credits";
+import hebrewStyles from "../../../../styles/hebrew-font.module.css";
 
 export type StudyReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
 function Hebrew({ verse }: { verse: StudyVerse }) {
-  return <><p className="study-hebrew" lang="he" dir="rtl">{verse.hebrew.segments.map((segment, index) => segment.kind === "text" ? <span key={index}>{segment.text}</span>
+  return <><p className={`study-hebrew ${hebrewStyles.hebrew}`} lang="he" dir="rtl">{verse.hebrew.segments.map((segment, index) => segment.kind === "text" ? <span key={index}>{segment.text}</span>
     : segment.kind === "alternative" ? <span className="study-alternative" key={index}><span>{segment.written}</span><span className="study-read-alternative"> [<span lang="en" dir="ltr">read / qere:</span> {segment.read}]</span></span>
       : segment.kind === "inverted-nun" ? <span key={index} role="img" aria-label="Inverted nun, Masoretic sign">׆</span>
         : <span key={index} className="study-paragraph-gap"><span lang="en" dir="ltr">[{segment.break === "petuchah" ? "open paragraph" : "closed paragraph"}]</span></span>)}</p>
@@ -15,8 +16,9 @@ function Hebrew({ verse }: { verse: StudyVerse }) {
     {verse.hebrew.paragraphAfter && <p className="study-paragraph-note">{verse.hebrew.paragraphAfter === "petuchah" ? "Open paragraph (petuchah) after this verse." : "Closed paragraph (setumah) after this verse."}</p>}
   </>;
 }
-export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange }: {
+export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, renderWork, renderActiveWork, onPage }: {
   baseline: Assigned | null; register(value: StudyReload): () => void; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; onKindChange(kind: StudyKind): void;
+  guardDeparture?(): Promise<boolean>; renderWork?(kind: StudyKind, verseRef: string): ReactNode; renderActiveWork?(): ReactNode; onPage?(kind: StudyKind, offset: number, signal: AbortSignal): Promise<void>;
 }) {
   const { readStudy } = useWorkspace();
   const metadata = useRef<Assigned | null>(null), controller = useRef<AbortController | null>(null), generation = useRef(0);
@@ -33,12 +35,14 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     setState({ binding, kind, loading: true });
     try {
       const page = await readStudy(value, kind, offset, request.signal);
-      if (request.signal.aborted || turn !== generation.current) return;
+      if (request.signal.aborted || turn !== generation.current) return false;
       setState({ binding, kind, page });
+      return true;
     } catch (error) {
-      if (request.signal.aborted || turn !== generation.current) return;
+      if (request.signal.aborted || turn !== generation.current) return false;
       const status = statusOf(error); setState({ binding, kind, error: status });
       if ([401, 403, 404].includes(status)) { metadata.current = null; authorityFailed(status); throw error; }
+      return false;
     } finally { outer?.removeEventListener("abort", abort); }
   }, [readStudy, authorityFailed, onKindChange]);
   const reload = useCallback(async (value: Assigned, signal: AbortSignal) => {
@@ -56,7 +60,13 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   async function explicitLoad(kind: StudyKind, offset: number) {
     const value = metadata.current;
     if (!value || studyBinding(value) !== key) return;
-    try { await load(value, kind, offset); } catch { /* Authority state has already cleared text and metadata. */ }
+    if (guardDeparture && !await guardDeparture()) return;
+    if (metadata.current !== value || studyBinding(value) !== key) return;
+    try {
+      const pending = load(value, kind, offset), request = controller.current, turn = generation.current;
+      const loaded = await pending;
+      if (loaded && onPage && request && controller.current === request && turn === generation.current && !request.signal.aborted && metadata.current === value) await onPage(kind, offset, request.signal);
+    } catch { /* Authority state has already cleared text and metadata. */ }
   }
   if (!baseline) return <section className="assigned-study" aria-label="Assigned text"><p role="status">Text is hidden while the assignment is checked.</p></section>;
   if (!baseline.readings.length) return null;
@@ -68,8 +78,9 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     {!current || current.loading ? <p role="status">Loading the assigned text…</p> : current.error ? <div role="status"><h4>{current.error === 409 ? "Assignment changed" : [401, 403, 404].includes(current.error) ? "Text access changed" : "Text unavailable"}</h4>
       <p>{current.error === 409 ? "Refresh the reading metadata before loading this assignment’s text again." : "No previous text is being shown. Confirmed references and the reading review form remain separate."}</p>
       <button className="button-secondary" onClick={() => { if (current.error === 409) void reloadMetadata().catch(() => undefined); else void explicitLoad(kind, selection.current?.offset ?? 0); }}>{current.error === 409 ? "Refresh reading and text" : "Reload assigned text"}</button>
+      {renderActiveWork?.()}
     </div> : current.page && <>
-      <ol className="study-verses" start={current.page.offset + 1}>{current.page.verses.map(verse => <li key={verse.ref}><article><h4><bdi dir="ltr">{verse.ref}</bdi></h4><Hebrew verse={verse} /><p className="study-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p></article></li>)}</ol>
+      <ol className={`study-verses${renderWork ? " study-verses-with-work" : ""}`} start={current.page.offset + 1}>{current.page.verses.map(verse => <li key={verse.ref}><article><h4><bdi dir="ltr">{verse.ref}</bdi></h4><Hebrew verse={verse} /><p className="study-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p></article>{renderWork?.(kind, verse.ref)}</li>)}</ol>
       <p role="status">Verses {current.page.offset + 1}–{current.page.offset + current.page.verses.length} of {current.page.totalVerses}. {current.page.translation.status === "partial" ? "The selected English edition is missing for some verses." : current.page.translation.status === "unavailable" ? "The selected English edition is unavailable on this page." : "Selected English edition available."}</p>
       <p className="field-help">Hebrew: Miqra according to the Masorah. English reference: JPS2023. No alternate edition is substituted.</p>
       <nav className="study-pages" aria-label="Text pages"><button className="button-secondary" disabled={previous === undefined} onClick={() => previous !== undefined && void explicitLoad(kind, previous)}>Previous text page</button><button className="button-secondary" disabled={current.page.nextOffset === null} onClick={() => current.page?.nextOffset !== null && void explicitLoad(kind, current.page!.nextOffset!)}>Next text page</button></nav>

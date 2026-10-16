@@ -6,6 +6,7 @@ import next from "next";
 import { createHttpDispatcher, type HttpRuntimeScope } from "../../src/server/http/dispatch";
 import { authRouteMethods } from "../../src/server/http/auth";
 import { portalRouteMethods } from "../../src/server/http/portal";
+import { studentWorkRouteMethods } from "../../src/server/http/student-work";
 
 export const BROWSER_PORT = 3187;
 export const BROWSER_ORIGIN = `http://127.0.0.1:${BROWSER_PORT}`;
@@ -25,6 +26,9 @@ async function isolatedNextProject() {
   if (!resolve(dir).startsWith(`${logRoot}${sep}`)) throw new Error("Isolated Next directory escaped workspace");
   try {
     await cp(join(source, "src"), join(dir, "src"), { recursive: true });
+    const fontDirectory = join("public", "fonts", "noto-serif-hebrew");
+    await mkdir(join(dir, fontDirectory), { recursive: true });
+    for (const file of ["NotoSerifHebrew.ttf", "OFL.txt"]) await cp(join(source, fontDirectory, file), join(dir, fontDirectory, file));
     for (const file of ["package.json", "next.config.ts", "tsconfig.json"]) await cp(join(source, file), join(dir, file));
     return { dir, cleanup: () => rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }) };
   } catch {
@@ -80,7 +84,7 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope) {
       const request = safeRequest(req);
       if (!request) { await send(res, new Response(null, { status: 400 })); return; }
       const pathname = new URL(request.url).pathname;
-      if (!authRouteMethods(pathname) && !portalRouteMethods(pathname)) { await nextHandler(req, res); return; }
+      if (!authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname)) { await nextHandler(req, res); return; }
       await send(res, await dispatch(request));
     } catch { if (!res.headersSent) await send(res, new Response(null, { status: 503 })); else res.destroy(); }
   });
