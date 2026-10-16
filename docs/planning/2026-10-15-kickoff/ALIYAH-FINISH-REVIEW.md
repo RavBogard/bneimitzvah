@@ -83,3 +83,37 @@ None at this reopened finish-review scope. The observed phone reading regression
 ## keep
 
 Keep strict 390×844 Hebrew visibility checks, the authoritative null-versus-empty distinction, marker-before-verse order, desktop Hebrew/tools alignment, and the explicit staging/review/confirmation boundary.
+
+---
+
+disposition: ship
+
+## persistence
+
+Pass — second bounded reopening, 2026-10-16. This acceptance covers only the phone heading/Hebrew margin correction after the reported `98cb` hosted browser result of 55/56, where recorded-marker Hebrew ended at 851.84px against the unchanged 844px limit. The earlier local pass and visual acceptance did not establish that hosted requirement.
+
+Read the changed CSS and the strict study browser helper/call sites. Independently reopened the fresh partial-student phone, one-aliyah phone, student-marker phone/full detail, selection phone and cut-review phone captures, plus the student-marker desktop control: seven images in total. All are valid loaded evidence; full pages show the document top and no horizontal overflow. The affected student captures carry 16:19–16:20 timestamps. The current local log confirms three files and 14 tests passing from 16:19:47. Root reports typecheck/build passing; neither those checks nor a new hosted run were executed by this reviewer. The final surface inventory was reread. No world, detector, provider, security or unrelated adapter review was reopened.
+
+## fidelity
+
+| Element or promise | Result | Evidence |
+| --- | --- | --- |
+| TYPE | match | Hebrew size/face and the established marker/reference hierarchy remain unchanged; only phone margins are normalized. |
+| MATERIAL | match | Existing flat working surface, native controls and fine rules remain intact. |
+| GROUND | match | Existing white field remains intact. |
+| Phone reading order | match | Refreshed recorded-start and continuation captures show marker, verse reference, then Hebrew without overlap. Null boundaries still invent no marker and retain their notice after the passage. |
+| First Hebrew within the phone viewport | adaptation | Explicit `h4` block margins of 0/0.5rem and Hebrew start margin of 0.5rem replace incidental heading spacing at ≤640px. This directly answers the observed hosted failure and preserves PRODUCT.md's reading-first requirement. |
+| Verification strength | match | The helper waits for fonts, starts at document top, measures the Hebrew text range, asserts exactly 390×844, requires its bottom at least 24px above the viewport bottom, and checks marker → reference → Hebrew nonoverlap. Both null and explicitly empty starts execute it. This is a stricter local guard, not proof of every platform or a later hosted pass. |
+| Desktop and staff controls | match | The desktop marker control retains the existing full-grid placement and adjacent Hebrew/tools columns. Fresh staff phone captures retain readable assigned text, draft fields, preview controls and separate confirmation. |
+
+## ceiling
+
+Reached at this correction scope. The compact spacing remains legible and ordered in the fresh phone captures; no material craft regression is visible. Additional decoration or broader redesign is unwarranted.
+
+## material_fixes
+
+None for the reviewed margin correction. Visual acceptance permits the next exact-commit CI check; it does not turn the previous failed hosted result into a pass or authorize production/student release.
+
+## keep
+
+Keep the exact 390×844 assertions with the 24px cushion, font readiness, document-top measurement and explicit marker/reference/Hebrew nonoverlap checks.

@@ -52,14 +52,20 @@ async function firstHebrewInViewport(tab: Page) {
   const geometry = await tab.locator(".study-hebrew > span").first().evaluate(span => {
     const range = document.createRange(); range.selectNodeContents(span); const bounds = range.getBoundingClientRect();
     const marker = span.closest("li")?.querySelector(":scope > .student-aliyah")?.getBoundingClientRect();
+    const reference = span.closest("article")?.querySelector("h4")?.getBoundingClientRect();
     return { scrollY, top: bounds.top, bottom: bounds.bottom, viewportWidth: innerWidth, viewportHeight: innerHeight, markerBottom: marker?.bottom ?? null,
+      referenceTop: reference?.top ?? null, referenceBottom: reference?.bottom ?? null,
       bodyFont: getComputedStyle(document.body).fontFamily, hebrewFont: getComputedStyle(span).fontFamily, fontsStatus: document.fonts.status };
   });
   const diagnostic = JSON.stringify(geometry); // Geometry/font metadata only; no student text or contacts.
   expect(geometry.viewportWidth, diagnostic).toBe(390); expect(geometry.viewportHeight, diagnostic).toBe(844);
   expect(geometry.scrollY, diagnostic).toBe(0); expect(geometry.top, diagnostic).toBeGreaterThanOrEqual(0);
   expect(geometry.bottom, diagnostic).toBeLessThanOrEqual(geometry.viewportHeight);
-  if (geometry.markerBottom !== null) expect(geometry.markerBottom, diagnostic).toBeLessThanOrEqual(geometry.top);
+  // Reserve room for platform font differences instead of just clipping below 844px.
+  expect(geometry.bottom, diagnostic).toBeLessThanOrEqual(geometry.viewportHeight - 24);
+  expect(geometry.referenceTop, diagnostic).not.toBeNull(); expect(geometry.referenceBottom, diagnostic).not.toBeNull();
+  expect(geometry.referenceBottom!, diagnostic).toBeLessThanOrEqual(geometry.top);
+  if (geometry.markerBottom !== null) expect(geometry.markerBottom, diagnostic).toBeLessThanOrEqual(geometry.referenceTop!);
 }
 async function colorVerse(tab: Page, ref: string) {
   const article = verse(tab, ref).locator("article"), aids = article.locator("details");

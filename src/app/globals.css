@@ -270,6 +270,8 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .preview-cut input { width: 1.25rem; height: 1.25rem; flex: 0 0 auto; }
 .student-aliyah { color: var(--color-teal); font-weight: 600; margin-block: 1.25rem 0.5rem; }
 @media (max-width: 640px) {
+  .assigned-study .study-verses > li > article > h4 { margin-block: 0 0.5rem; }
+  .assigned-study .study-verses > li > article > .study-hebrew { margin-block-start: 0.5rem; }
   .study-verses-with-work > li:has(> .student-aliyah) { row-gap: 0; }
   .study-verses-with-work > li > .student-aliyah { margin-block: 0; font-size: 0.875rem; line-height: 1.4; }
   .study-verses-with-work > li:has(> .student-aliyah) > .verse-work { margin-block-start: 1rem; }
