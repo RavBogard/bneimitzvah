@@ -13,7 +13,7 @@ import { closedObject, uniqueQuery } from "./query";
 import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
-type Kind = "session" | "students" | "student" | "reading" | "study-text" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
+type Kind = "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
   | "admin-students" | "edit" | "disable" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "pending" | "accept"
   | "eligible-tutors" | "relationships" | "tutor-assign" | "tutor-unassign" | "guardian-revoke" | "identity-revoke" | "guardian-practice" | "grant-revoke" | "cantor";
 type Route = { kind: Kind; methods: readonly string[]; id?: string; linkId?: string };
@@ -30,6 +30,8 @@ const exact: Record<string, Route> = {
 };
 function route(pathname: string): Route | null {
   if (Object.hasOwn(exact, pathname)) return exact[pathname];
+  const preview = /^\/api\/students\/([^/]+)\/reading\/preview\/(prepare|page)$/.exec(pathname);
+  if(preview)return {kind:preview[2]==="prepare"?"preview-prepare":"preview-page",methods:["POST"],id:preview[1]};
   const study = /^\/api\/students\/([^/]+)\/study-text$/.exec(pathname);
   if (study) return { kind: "study-text", methods: ["GET"], id: study[1] };
   const student = /^\/api\/students\/([^/]+)(?:\/(reading)(?:\/(prepare|confirm))?)?$/.exec(pathname);
@@ -125,6 +127,28 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
     const id = selected.id === undefined ? undefined : identifier(selected.id);
     const linkId = selected.linkId === undefined ? undefined : identifier(selected.linkId);
     switch (selected.kind) {
+      case "preview-prepare": {
+        uniqueQuery(request.url,[]);
+        const body=await objectBody(request,["mode","kind","source"],["ranges"]);
+        if((body.kind!=="torah" && body.kind!=="haftarah") || (body.source!=="calendar" && body.source!=="manual")
+          || body.ranges!==undefined && (!Array.isArray(body.ranges) || body.ranges.length<1 || body.ranges.length>32))throw new HttpBoundaryError();
+        const value=await runtime.readingPreview.prepare(request,{mode:staffMode(body.mode),studentId:id!,kind:body.kind,source:body.source,
+          ...(body.ranges===undefined?{}:{ranges:(body.ranges as unknown[]).map(ref=>text(ref,100))})});
+        if(!value.ok)return stale();
+        const context={status:value.status,studentId:value.studentId,studentRevision:value.studentRevision,mode:value.mode,kind:value.kind,
+          ceremonyDate:value.ceremonyDate,serviceSlot:value.serviceSlot,readingDate:value.readingDate,calendar:value.calendar,source:value.source,
+          sourceFetchedAt:value.sourceFetchedAt,manualFallback:value.manualFallback,portion:value.portion,calendarAliyot:value.calendarAliyot.map(row=>({n:row.n,ref:row.ref})),maftir:maftirView(value.maftir)};
+        return privateJson(value.status==="manual-required"?context:{...context,binding:value.binding,expiresAt:value.expiresAt,ranges:[...value.ranges],verseCount:value.verseCount,
+          pages:value.pages.map(page=>({offset:page.offset,first:page.first,last:page.last,chapters:[...page.chapters]}))});
+      }
+      case "preview-page": {
+        uniqueQuery(request.url,[]);const body=await objectBody(request,["mode","binding","offset"],[],"binding");
+        if(!Number.isSafeInteger(body.offset) || Number(body.offset)<0 || Number(body.offset)>999)throw new HttpBoundaryError();
+        let value;try{value=await runtime.readingPreview.page(request,{mode:staffMode(body.mode),studentId:id!,binding:text(body.binding,48000),offset:Number(body.offset)});}
+        catch(error){if(error instanceof StudyUnavailable && error.code==="invalid-request")throw new HttpBoundaryError();throw error;}
+        if(!value.ok)return stale();
+        return privateJson({studentId:value.studentId,studentRevision:value.studentRevision,mode:value.mode,kind:value.kind,expiresAt:value.expiresAt,...studyPageView(value.page)});
+      }
       case "eligible-tutors": {
         const query = uniqueQuery(request.url, ["afterId", "limit"]), limit = query.get("limit");
         if (limit !== null && (!/^[1-9][0-9]{0,2}$/.test(limit) || Number(limit) > 100)) throw new HttpBoundaryError();

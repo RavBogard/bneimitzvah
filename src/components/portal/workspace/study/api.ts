@@ -26,8 +26,13 @@ export function studyPlan(baseline: Assigned, kind: StudyKind, offset: number) {
   if (!assignment || !Number.isInteger(offset) || offset < 0 || offset >= assignment.verses.length || assignment.verses.length > 1000) return bad();
   let canonical: string[]; try { canonical = expandReadingRanges(assignment.ranges, kind, TANAKH_VERSE_COUNTS); } catch { return bad(); }
   if (canonical.length !== assignment.verses.length || canonical.some((ref, index) => ref !== assignment.verses[index])) return bad();
+  return {assignment,...studyRangePlan(assignment.ranges,kind,offset)};
+}
+export function studyRangePlan(ranges:readonly string[],kind:StudyKind,offset:number){
+  let verses:string[];try{verses=expandReadingRanges(ranges,kind,TANAKH_VERSE_COUNTS);}catch{return bad();}
+  if(!Number.isSafeInteger(offset) || offset<0 || offset>=verses.length)return bad();
   const chapters: { ref: string; url: string }[] = [], refs: string[] = [];
-  for (const ref of assignment.verses.slice(offset, offset + 100)) {
+  for (const ref of verses.slice(offset, offset + 100)) {
     const match = /^(.*) ([1-9]\d*):([1-9]\d*)$/.exec(ref); if (!match) return bad();
     const book = match[1], chapter = Number(match[2]), verse = Number(match[3]);
     if (!Object.hasOwn(TANAKH_VERSE_COUNTS, book) || verse > (TANAKH_VERSE_COUNTS[book]?.[chapter - 1] ?? 0)) return bad();
@@ -38,7 +43,7 @@ export function studyPlan(baseline: Assigned, kind: StudyKind, offset: number) {
     }
     refs.push(ref);
   }
-  return { assignment, refs, chapters, nextOffset: offset + refs.length < assignment.verses.length ? offset + refs.length : null };
+  return { refs, chapters, nextOffset: offset + refs.length < verses.length ? offset + refs.length : null };
 }
 function hebrew(value: unknown): StudyVerse["hebrew"] {
   const row = object(value, ["text", "readingText", "segments", "paragraphAfter"]);
@@ -79,7 +84,12 @@ export function parseStudyPage(value: unknown, baseline: Assigned, kind: StudyKi
   } else if (row.context !== null || selection) return bad();
   const a = object(row.assignment, ["id", "revision", "kind", "needsReview"]);
   if (a.id !== plan.assignment.id || a.revision !== plan.assignment.revision || a.kind !== kind || a.needsReview !== plan.assignment.needsReview) throw new PortalRequestError(409);
-  if (row.offset !== offset || row.nextOffset !== plan.nextOffset || row.totalVerses !== plan.assignment.verses.length || !Array.isArray(row.verses) || row.verses.length !== plan.refs.length || !Array.isArray(row.chapters) || row.chapters.length !== plan.chapters.length) return bad();
+  return parseStudyContent(row,plan,offset,plan.assignment.verses.length);
+}
+// Shared text-only validator. Its caller validates the independent authorization
+// envelope; preview must never fabricate an assigned-reading identity.
+export function parseStudyContent(row:Record<string,unknown>,plan:ReturnType<typeof studyRangePlan>,offset:number,totalVerses:number):StudyPage{
+  if (row.offset !== offset || row.nextOffset !== plan.nextOffset || row.totalVerses !== totalVerses || !Array.isArray(row.verses) || row.verses.length !== plan.refs.length || !Array.isArray(row.chapters) || row.chapters.length !== plan.chapters.length) return bad();
   const verses = row.verses.map((value, index): StudyVerse => { const v = object(value, ["ref", "english", "hebrew"]); if (v.ref !== plan.refs[index]) return bad(); return { ref: plan.refs[index], english: v.english === null ? null : text(v.english), hebrew: hebrew(v.hebrew) }; });
   const t = object(row.translation, ["key", "status"]), translated = verses.filter(v => v.english !== null).length;
   const status = translated === verses.length ? "available" : translated === 0 ? "unavailable" : "partial";
@@ -92,7 +102,7 @@ export function parseStudyPage(value: unknown, baseline: Assigned, kind: StudyKi
     if (verses.some(v => v.ref.startsWith(`${expected.ref}:`) && v.english !== null) && !editions.some(e => e.key === "jps2023")) return bad();
     return { ref: expected.ref, sefariaUrl: expected.url, fetchedAt: c.fetchedAt, hash: c.hash, editions };
   });
-  return { offset, nextOffset: plan.nextOffset, totalVerses: plan.assignment.verses.length, verses, chapters, translation: { key: "jps2023", status } };
+  return { offset, nextOffset: plan.nextOffset, totalVerses: totalVerses, verses, chapters, translation: { key: "jps2023", status } };
 }
 export async function fetchStudyPage(baseline: Assigned, kind: StudyKind, offset: number, signal: AbortSignal, selection?: Selection): Promise<StudyPage> {
   const plan = studyPlan(baseline, kind, offset);

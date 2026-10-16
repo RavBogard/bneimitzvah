@@ -9,6 +9,7 @@ import type { AccessDatabase, AccessRequest } from "../access/types";
 import { createAuthStack } from "../auth/factory";
 import { createAccessService } from "../access/service";
 import { createInvitationService } from "../invitations/service";
+import { createReadingPreviewService } from "../students/preview";
 import { createStudentService } from "../students/service";
 import { createPracticeService } from "../practice/service";
 import { createPortalService } from "../portal/service";
@@ -53,8 +54,9 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const students = createStudentService({ access, loadReading, signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS });
   const practice = createPracticeService({ access });
   const studentWork = createStudentWorkService({ access, practice });
-  const study = createStudyService({ access, practice, load: createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS,
-    cache: createPersistentStudyCache(db), coalescer: studyTasks }) });
+  const loadText = createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS, cache: createPersistentStudyCache(db), coalescer: studyTasks });
+  const study = createStudyService({ access, practice, load: loadText });
+  const readingPreview = createReadingPreviewService({ access, loadReading, loadText, signingSecret:purposeSecret(config,"reading-preview") });
   const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding") });
   const relationships = createRelationshipService({ access });
   const pendingInvitations = createPendingInvitations({ secret: config.authSecret, origin: config.origin, environment: config.deployment.environment as "local" | "preview" | "production" });
@@ -65,7 +67,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, studentWork, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingPreview, studentWork, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

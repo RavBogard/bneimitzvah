@@ -250,3 +250,13 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
   .student-selection-list button { width: 100%; flex-wrap: wrap; }
   .roster-table th, .roster-table td { padding-inline-end: 0.5rem; font-size: 0.875rem; }
 }
+
+/* Staff preview extends the existing annotated reading, without assignment tools. */
+.reading-preview { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--color-rule); }
+.reading-preview > p, .preview-context > p { margin-block: 0.75rem; max-width: 70ch; }
+.preview-controls { max-width: 30rem; margin-block: 1.25rem; }
+.preview-context > details { margin-block: 1rem; }
+.preview-chapter { border-top: 1px solid var(--color-rule); padding-block: 0.75rem; }
+.preview-chapter > summary { font-weight: 600; }
+.preview-chapter .study-verses { margin-top: 1rem; }
+.preview-boundary { color: var(--color-muted); font-size: 0.875rem; margin-block: 1rem 0.5rem; }

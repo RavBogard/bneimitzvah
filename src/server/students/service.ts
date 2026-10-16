@@ -20,7 +20,7 @@ type Basis="triennial"|"selection"|"full"|"custom";
 type Preparation={kind:Kind;basis:Basis;ranges:string[];snapshot:Snapshot;sourceFetchedAt:number|null;sourceStatus:"available"|"unavailable"|"not-requested";maftir:unknown};
 const conflict=()=>({ok:false as const,code:"stale-revision" as const});
 const object=(value:unknown):value is Record<string,unknown>=>!!value && typeof value==="object" && !Array.isArray(value);
-function calendarCustoms(customs:unknown){
+export function calendarCustoms(customs:unknown){
   if(!object(customs))throw new AccessDenied(403);
   const calendar:Calendar=customs.calendar==="diaspora" || (object(customs.calendar)&&customs.calendar.diaspora===true)?"diaspora"
     :customs.calendar==="israel" || (object(customs.calendar)&&customs.calendar.diaspora===false)?"israel":(()=>{throw new AccessDenied(403);})();
@@ -33,7 +33,7 @@ function calendarCustoms(customs:unknown){
   }
   return {calendar,pick};
 }
-const actorBinding=(actor:Actor&{relationshipId?:StudentActor["relationshipId"];relationshipRevision?:StudentActor["relationshipRevision"]})=>({origin:actor.origin,membershipId:actor.membershipId,authorityRevision:actor.authorityRevision,roleGrantRevision:actor.roleGrantRevision,...("relationshipId" in actor?{relationshipId:actor.relationshipId,relationshipRevision:actor.relationshipRevision}:{}),tenantId:actor.tenantId,userId:actor.userId,authSessionId:actor.authSessionId,roleGrantId:actor.roleGrantId,mode:actor.mode});
+export const actorBinding=(actor:Actor&{relationshipId?:StudentActor["relationshipId"];relationshipRevision?:StudentActor["relationshipRevision"]})=>({origin:actor.origin,membershipId:actor.membershipId,authorityRevision:actor.authorityRevision,roleGrantRevision:actor.roleGrantRevision,...("relationshipId" in actor?{relationshipId:actor.relationshipId,relationshipRevision:actor.relationshipRevision}:{}),tenantId:actor.tenantId,userId:actor.userId,authSessionId:actor.authSessionId,roleGrantId:actor.roleGrantId,mode:actor.mode});
 const sameActor=(claim:Record<string,unknown>,actor:Actor)=>digest(claim.actor)===digest(actorBinding(actor));
 const duplicateKey=(row:StudentInput)=>digest([row.firstName,row.lastName,row.ceremonyDate,row.studentKind,row.parentEmail,row.ownEmail]);
 const rosterState=(rows:{id:string;revision:number}[])=>digest(rows.map(row=>[row.id,row.revision]));

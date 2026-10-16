@@ -76,7 +76,7 @@ export function parseAssigned(value: unknown, mode: ReadingMode, studentId: stri
   return { student, mode, context, readings: readings.sort((a, b) => a.kind === b.kind ? 0 : a.kind === "torah" ? -1 : 1) };
 }
 
-async function call(path: string, body?: object, handle?: string, signal?: AbortSignal, max = 256 * 1024): Promise<unknown> {
+export async function call(path: string, body?: object, handle?: string, signal?: AbortSignal, max = 256 * 1024): Promise<unknown> {
   const controller = new AbortController(), abort = () => controller.abort();
   if (signal?.aborted) abort(); signal?.addEventListener("abort", abort, { once: true });
   const timeout = setTimeout(abort, 12_000);

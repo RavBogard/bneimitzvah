@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { createAuthStack } from "../../src/server/auth/factory";
 import { createAccessService } from "../../src/server/access/service";
 import { createInvitationService } from "../../src/server/invitations/service";
+import { createReadingPreviewService } from "../../src/server/students/preview";
 import { createStudentService } from "../../src/server/students/service";
 import { createPracticeService } from "../../src/server/practice/service";
 import { createPortalService } from "../../src/server/portal/service";
@@ -45,7 +46,8 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       snapshot: { date: parseCeremonyDate(date), calendar, classification: date===options.emptyReadingDate ? "missing" : "regular", reading: date === options.emptyReadingDate ? null : { parashah: "Synthetic", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:31-2:2" }], triennial: null }, haftarah: date === options.emptyReadingDate ? null : "Isaiah 1:1-2" } }) });
     const practice = createPracticeService({ access });
     const pendingInvitations = createPendingInvitations({ secret: secret(), origin: BROWSER_ORIGIN, environment: "local" });
-    const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
+    const readingPreview=createReadingPreviewService({access,signingSecret:secret(),loadReading:async(date,calendar)=>({fetchedAt:Date.now(),snapshot:{date:parseCeremonyDate(date),calendar,classification:date===options.emptyReadingDate?"missing":"regular",reading:date===options.emptyReadingDate?null:{parashah:"Synthetic",type:"shabbat",summary:"",source:"Hebcal",aliyot:[{n:1,ref:"Genesis 1:1-6:8"},{n:"M",ref:"Numbers 28:9-10"}],triennial:null},haftarah:date===options.emptyReadingDate?null:"Isaiah 1:1-2"}}),loadText:options.studyLoad??(async()=>{throw new StudyUnavailable("upstream");})});
+    const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, readingPreview, portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
       study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }), studentWork: createStudentWorkService({ access, practice }),
       googleChallenges: createGoogleChallenges({ db, origin: BROWSER_ORIGIN, secret: secret() }),
       resolveHost: async request => {

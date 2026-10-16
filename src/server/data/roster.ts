@@ -17,6 +17,9 @@ export async function editableStudent<Q extends PgQueryResultHKT>(tx:AccessTrans
 export async function studentReadingContext<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string,id:string){
   const [row]=await tx.select({serviceSlot:s.student.serviceSlot}).from(s.student).where(and(eq(s.student.tenantId,tenantId),eq(s.student.id,id)));return row;
 }
+export async function readingAssignmentVersion<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string,studentId:string,kind:"torah"|"haftarah"){
+  const [row]=await tx.select({id:s.assignment.id,revision:s.assignment.revision}).from(s.assignment).where(and(eq(s.assignment.tenantId,tenantId),eq(s.assignment.studentId,studentId),eq(s.assignment.kind,kind))).for("share");return row;
+}
 export async function insertStudent<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string,input:StudentInput){
   const [row]=await tx.insert(s.student).values({...input,tenantId}).returning();return row;
 }

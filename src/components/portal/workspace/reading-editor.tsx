@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { workspaceApi, type Assigned } from "./api";
 import { customReadingRanges, readingBaseline, fallbackLabels, type ReadingKind, type ReadingProposal, type StaffMode } from "./reading-proposal";
+import { ReadingPreview } from "./reading-preview";
 import { statusOf, useWorkspace } from "./provider";
 
 export function ReadingEditor({ mode, baseline, reload }: { mode: StaffMode; baseline: Assigned | null; reload(): Promise<Assigned> }) {
@@ -88,6 +89,7 @@ export function ReadingEditor({ mode, baseline, reload }: { mode: StaffMode; bas
       {method === "custom" && <div className="reading-custom"><label htmlFor="reading-ranges">Custom verse ranges</label><textarea id="reading-ranges" value={custom} maxLength={3232} rows={4} disabled={pending !== null} aria-describedby="reading-ranges-help" required onChange={event => change(() => setCustom(event.target.value))} /><p id="reading-ranges-help" className="field-help">One reference per line, up to 32 ranges and 1,000 verses. For example: {kind === "torah" ? "Genesis 1:1-3" : "Isaiah 1:1-2"}. The server checks book, order and verse boundaries.</p></div>}
       <button className="button-secondary" disabled={!baseline || pending !== null || blocked}>{pending === "prepare" ? "Preparing review…" : "Prepare reading review"}</button>
     </form>
+    <ReadingPreview mode={mode} baseline={baseline} kind={kind} custom={method==="custom"?custom:""} disabled={blocked || pending!==null} />
     {pending === "confirm" && <p role="status">Saving the reviewed assignment and checking its confirmed references…</p>}
     {message && <p className={blocked ? "request-error" : "field-help"} role={blocked ? "alert" : "status"}>{message}</p>}
     {blocked && <button className="button-secondary" disabled={pending !== null} onClick={() => void reloadCurrent()}>{pending === "reload" ? "Reloading current reading…" : "Reload current reading"}</button>}
