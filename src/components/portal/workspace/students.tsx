@@ -6,6 +6,7 @@ import Link from "next/link";
 import { workspaceApi, type Student } from "./api";
 import { RequireRole, statusOf, useWorkspace } from "./provider";
 import { ReadingPanel } from "./reading";
+import { reconcileSelectedStudent } from "./student-label";
 
 export function StudentWorkspace({ mode }: { mode: "student" | "parent" | "tutor" }) {
   return <RequireRole role={mode}><StudentSelection mode={mode} /></RequireRole>;
@@ -15,8 +16,9 @@ function StudentSelection({ mode, switching = false }: { mode: "student" | "pare
   const [rows, setRows] = useState<Student[]>([]), [selected, setSelected] = useState<string | null>(null), [error, setError] = useState(false), [loading, setLoading] = useState(true), [more, setMore] = useState(false);
   const [retry, setRetry] = useState(0), gate = useRef(false), sequence = useRef(0);
   const [paging, setPaging] = useState(false);
-  const abort = useRef<AbortController | null>(null), rowsRef = useRef(rows);
-  rowsRef.current = rows;
+  const abort = useRef<AbortController | null>(null), rowsRef = useRef(rows), selectedRef = useRef(selected);
+  rowsRef.current = rows; selectedRef.current = selected;
+  const reconcileStudent = useCallback((current: Student) => { setRows(previous => reconcileSelectedStudent(previous, selectedRef.current, current)); }, []);
   const load = useCallback(async (preserve = true) => {
     abort.current?.abort(); const request = new AbortController(), turn = ++sequence.current; abort.current = request;
     if (!preserve) { setLoading(true); setRows([]); setSelected(null); }
@@ -26,7 +28,10 @@ function StudentSelection({ mode, switching = false }: { mode: "student" | "pare
       const count = preserve ? rowsRef.current.length : 100;
       while (page.length === 100 && values.length < count) { page = await workspaceApi.students(mode, page[page.length - 1].id, request.signal); values = [...values, ...page]; }
       if (request.signal.aborted || turn !== sequence.current) return;
-      setRows(values); setMore(page.length === 100);
+      setRows(previous => {
+        const known = previous.find(row => row.id === selectedRef.current);
+        return known ? reconcileSelectedStudent(values, selectedRef.current, known) : values;
+      }); setMore(page.length === 100);
       setSelected(previous => previous && values.some(row => row.id === previous) ? previous : mode === "student" && values.length === 1 ? values[0].id : null);
     } catch (error) { if (!request.signal.aborted && turn === sequence.current) { setError(true); throw error; } }
     finally { if (!request.signal.aborted && turn === sequence.current) setLoading(false); }
@@ -54,7 +59,7 @@ function StudentSelection({ mode, switching = false }: { mode: "student" | "pare
     {loading ? <p role="status">Loading available students…</p> : error ? <div role="alert"><p>Students couldn’t be loaded. No previous selection is being shown.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload students</button></div>
       : !rows.length ? <p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p>
         : <>{(mode !== "student" || rows.length !== 1) && <><label htmlFor="workspace-student">{mode === "parent" ? "Child" : "Student"}</label><select id="workspace-student" value={selected ?? ""} onChange={event => setSelected(event.target.value || null)}><option value="">Choose a student</option>{rows.map(row => <option key={row.id} value={row.id}>{row.firstName} {row.lastName} — {row.ceremonyDate}</option>)}</select>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
-          {selected && <ReadingPanel mode={mode} studentId={selected} />}</>}
+          {selected && <ReadingPanel mode={mode} studentId={selected} onStudentReload={reconcileStudent} />}</>}
   </section>;
 }
 

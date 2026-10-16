@@ -1,6 +1,6 @@
 # Role-workspace checkpoint
 
-Status: independently reviewed; final local browser/production checks passed and both material visual fixes scored resolved. Hosted integration/publication is pending. No Phase 2 completion or live-provider claim.
+Status: published as `beac58f`; all four hosted jobs passed in run38855635803 and Vercel deployment7111662888 succeeded. Final local browser/production checks passed and both material visual fixes scored resolved. No Phase 2 completion or live-provider claim.
 
 ## Working surfaces
 

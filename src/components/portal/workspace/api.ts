@@ -1,4 +1,5 @@
 import { PortalRequestError } from "../api";
+import { parseReadingProposal, readingBaseline, type ReadingKind, type StaffMode } from "./reading-proposal";
 
 export type BaseMode = "student" | "parent" | "tutor" | "admin";
 export type ReadingMode = BaseMode | "child-practice";
@@ -110,4 +111,20 @@ export const workspaceApi = {
     return { id: identifier(row.id), revision: positive(row.revision), readingNeedsReview: row.readingNeedsReview === true };
   },
   async disable(student: RosterStudent) { const row = object(await call(`/api/admin/students/${identifier(student.id)}/disable`, { expectedRevision: positive(student.revision) }), ["ok", "id", "revision"]); if (row.ok !== true || row.id !== student.id) return bad(); return { id: identifier(row.id), revision: positive(row.revision) }; },
+  async prepareReading(mode: StaffMode, baseline: Assigned, kind: ReadingKind, input: { pick?: string; ranges?: string[] }) {
+    if (!["admin", "tutor"].includes(mode) || baseline.mode !== mode || !["torah", "haftarah"].includes(kind) || input.pick !== undefined && input.ranges !== undefined) return bad();
+    const id = identifier(baseline.student.id);
+    const raw = await call(`/api/students/${id}/reading/prepare`, { mode, kind, ...(input.pick === undefined ? {} : { pick: input.pick }), ...(input.ranges === undefined ? {} : { ranges: input.ranges }) });
+    // Preparation binds the server's live state. Do not show it against an
+    // earlier student/date/assignment until a later authoritative read proves
+    // the original monotonic baseline still matches.
+    const live = parseAssigned(await call(`/api/students/${id}/reading?mode=${mode}`), mode, id);
+    if (readingBaseline(live, kind) !== readingBaseline(baseline, kind)) throw new PortalRequestError(409);
+    return parseReadingProposal(raw, kind, baseline.student.ceremonyDate);
+  },
+  async confirmReading(mode: StaffMode, studentId: string, binding: string) {
+    if (!["admin", "tutor"].includes(mode) || typeof binding !== "string" || binding.length > 48000 || !/^v1\.[A-Za-z0-9_-]+$/.test(binding)) return bad();
+    const row = object(await call(`/api/students/${identifier(studentId)}/reading/confirm`, { mode, binding }), ["ok", "assignmentId", "revision"]);
+    if (row.ok !== true) return bad(); return { assignmentId: identifier(row.assignmentId), revision: positive(row.revision) };
+  },
 };

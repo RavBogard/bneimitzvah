@@ -2,7 +2,7 @@
 version: 1
 slug: "src-app-workspace-page-tsx"
 primary_target: "src/app/workspace/page.tsx"
-related_targets: ["src/app/workspace/layout.tsx","src/components/portal/workspace/provider.tsx","src/components/portal/workspace/students.tsx","src/components/portal/workspace/reading.tsx","src/components/portal/workspace/roster.tsx"]
+related_targets: ["src/app/workspace/layout.tsx","src/components/portal/workspace/provider.tsx","src/components/portal/workspace/students.tsx","src/components/portal/workspace/reading.tsx","src/components/portal/workspace/roster.tsx","src/app/workspace/admin/students/[studentId]/reading/page.tsx","src/components/portal/workspace/admin-reading.tsx","src/components/portal/workspace/reading-editor.tsx","src/components/portal/workspace/reading-proposal.ts","src/components/portal/workspace/student-label.ts"]
 ---
 
 # Role workspaces
@@ -30,3 +30,11 @@ All displayed data comes from cookie-authenticated same-origin APIs. Confirmed T
 Focus, visible return and pageshow hide/inert the retained subtree until fresh data checks complete. An opaque server session binding allows same-session draft/selection retention; a changed or failed binding discards the subtree. Admin contacts stay in the authorized roster. No session IDs, handles, contacts or drafts enter logs, URLs or persistent browser storage. Exact current role/relationship authority remains server-side.
 
 Review requires actual SDK/browser lifecycle, two-tab and stale-response evidence plus desktop/phone captures. No new font or asset decision is made here; Hebrew mark-rendering typography remains a separate verified-source task.
+
+## Reading assignment editor inventory — 2026-10-16
+
+The tutor reading panel and the admin student's reading route extend this surface with an inline reference editor below the current confirmed projection. Parent, student and child-practice views do not mount it. The current assignment remains distinct from a proposed replacement; preparation, explicit calendar selection when required, review and confirmation have separate labels and actions. Selected-student names and ceremony dates reconcile with authoritative reading reloads, while the old assignment's labeled confirmation date remains history.
+
+The editor continues existing system typography, white/ink/burgundy colors and flat rules. Its form is capped at 44rem; the two-column reading/method selectors stack at the existing 640px breakpoint. Custom ranges use a vertically resizable, labeled textarea with inherited type, a burgundy caret and the existing 6px control corner. Calendar-choice buttons wrap; the proposal is separated by a quiet rule. These are surface-local compositions and existing-control adaptations, not new global tokens.
+
+Prepared review shows exact references, verse count, calendar source availability/time and separately identified maftir. Input or baseline changes discard the confirmable review. Conflict/uncertain-result copy retains the draft and requires explicit authoritative reload; successful confirmation reports a verified current assignment. Hebrew text, audio and study tools remain unavailable in this extension. Implementation and bounded finish evidence are linked from `docs/planning/2026-10-15-kickoff/READING-UI-RETURN.md` and `READING-UI-FINISH-REVIEW.md`; this inventory does not establish authorization or release approval.

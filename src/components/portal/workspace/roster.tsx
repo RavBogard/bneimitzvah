@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { workspaceApi, type RosterStudent, type StudentInput } from "./api";
 import { RequireRole, statusOf, useWorkspace } from "./provider";
+import Link from "next/link";
 
 const empty: StudentInput = { firstName: "", lastName: "", ceremonyDate: "", parentEmail: "", ownEmail: null };
 function draft(row: RosterStudent): StudentInput { return { firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate, parentEmail: row.parentEmail, ownEmail: row.ownEmail }; }
@@ -68,7 +69,7 @@ function Roster() {
     {message && <p className={conflict ? "request-error" : "workspace-notice"} role={conflict ? "alert" : "status"}>{message}</p>}
     {loading ? <p role="status">Loading the roster…</p> : unavailable ? <div role="alert"><h2>Roster unavailable</h2><p>The complete roster could not be loaded. It may exceed the supported response size, or access may be unavailable. No partial roster is shown.</p><button className="button-secondary" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
       : <><div className="roster-scroll"><table className="roster-table"><caption>{rows.length} student records. Showing page {page + 1} of {Math.max(1, Math.ceil(rows.length / 25))}.</caption><thead><tr><th scope="col">Student</th><th scope="col">Ceremony date</th><th scope="col">Status</th></tr></thead>
-        <tbody>{pageRows.map(row => <tr key={row.id}><th scope="row"><button className="button-text" disabled={pending} onClick={() => choose(row)}><bdi dir="auto">{row.firstName} {row.lastName}</bdi></button></th><td><time dateTime={row.ceremonyDate}>{row.ceremonyDate}</time></td><td>{row.disabledAt ? "Disabled" : "Active"}</td></tr>)}</tbody></table></div>
+        <tbody>{pageRows.map(row => <tr key={row.id}><th scope="row"><button className="button-text" disabled={pending} onClick={() => choose(row)}><bdi dir="auto">{row.firstName} {row.lastName}</bdi></button>{!row.disabledAt && <Link className="roster-reading-link" aria-label={`Review reading for ${row.firstName} ${row.lastName}`} href={`/workspace/admin/students/${row.id}/reading`}>Review reading</Link>}</th><td><time dateTime={row.ceremonyDate}>{row.ceremonyDate}</time></td><td>{row.disabledAt ? "Disabled" : "Active"}</td></tr>)}</tbody></table></div>
         {!rows.length && <p>No students have been created yet.</p>}
         {rows.length > 25 && <nav className="roster-pages" aria-label="Roster pages"><button className="button-secondary" disabled={pending || page === 0} onClick={() => setPage(value => value - 1)}>Previous page</button><button className="button-secondary" disabled={pending || (page + 1) * 25 >= rows.length} onClick={() => setPage(value => value + 1)}>Next page</button></nav>}
         <button className="button-text" disabled={pending} onClick={() => void load().catch(() => undefined)}>Reload roster</button>

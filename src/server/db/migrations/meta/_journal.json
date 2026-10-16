@@ -64,6 +64,13 @@
       "when": 1792124938069,
       "tag": "0008_crc_vercel_production_host",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792146836432,
+      "tag": "0009_sefaria_text_cache",
+      "breakpoints": true
     }
   ]
 }

@@ -19,7 +19,7 @@ import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
 const secret = () => randomBytes(48).toString("base64url");
 type Mail = { email: string; url: string };
 
-export async function browserFixture(options: { google?: boolean } = {}) {
+export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string } = {}) {
   const base = await postgresAccessFixture();
   try {
     // The shared disposable fixture creates the DB, migrations and restricted
@@ -34,7 +34,7 @@ export async function browserFixture(options: { google?: boolean } = {}) {
     const access = createAccessService({ db, auth, deployment });
     const invitations = createInvitationService({ db, access, transport: async ({ email, url }) => { deliveries.push({ email, url }); }, throttleSecret: secret() });
     const students = createStudentService({ access, signingSecret: secret(), loadReading: async (date, calendar) => ({ fetchedAt: Date.now(),
-      snapshot: { date: parseCeremonyDate(date), calendar, reading: { parashah: "Synthetic", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:31-2:2" }], triennial: null }, haftarah: "Isaiah 1:1-2" } }) });
+      snapshot: { date: parseCeremonyDate(date), calendar, reading: date === options.emptyReadingDate ? null : { parashah: "Synthetic", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:31-2:2" }], triennial: null }, haftarah: date === options.emptyReadingDate ? null : "Isaiah 1:1-2" } }) });
     const practice = createPracticeService({ access });
     const pendingInvitations = createPendingInvitations({ secret: secret(), origin: BROWSER_ORIGIN, environment: "local" });
     const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
