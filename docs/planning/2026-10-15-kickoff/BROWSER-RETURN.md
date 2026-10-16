@@ -146,3 +146,69 @@ gates. There is no production identity bypass/test import, provider setup,
 configured live-provider success, portal UI completeness, per-client throttle
 claim or generated-chant release in this result. No implementation/Git edits or
 recursive delegation were performed by this reviewer.
+
+## Initial portal UI browser acceptance and production-test isolation
+
+Independent test ownership covered `tests/http-browser/portal-ui.test.ts`, its
+optional synthetic Google fixture configuration, and the replacement
+`e2e/foundation.spec.ts`. Primary executed the PostgreSQL-backed UI file:
+**5/5 passed** in `.local-logs/portal-entry-browser-rerun.log`; the other eight
+HTTP browser checks passed in the preceding combined run. These are primary's
+private executions of reviewer-authored tests, not a claim that the reviewer
+received or used database credentials.
+
+The UI tests use actual SDK magic-link requests, captured synthetic mail,
+verification navigation and browser cookies against the restricted PostgreSQL
+runtime. They exercise synchronous double-submit protection for magic links and
+reviewed acceptance, explicit separate role labels without invented role
+destinations, cookie-only invitation landing/review, no acceptance before review,
+one binding-only acceptance POST, invalid/replayed invitation denial, own logout,
+and cross-tab logout revalidation. The history-navigation case leaves an open
+invitation review, logs out in another tab, goes back, and requires sign-in with
+no stale student label or acceptance button; signing in again restores a fresh
+review. **Native BFCache restoration was not observed and is not claimed.**
+
+Google initiation is actual SDK HTTP behavior with state/PKCE/callback checks;
+the browser fulfills the provider navigation locally, so this does not prove a
+Google provider round trip. Setup/retry and malformed-provider-response cases
+are explicitly mocked UI failures. Desktop/phone checks cover overflow, fixed
+errors, focus and privacy; they are not a comprehensive accessibility audit.
+No mail address, captured token or cookie is asserted as failure output. Browser
+and process egress guards stay enabled; no traces, video or HAR are captured by
+the private UI suite. Primary generated four ignored synthetic screenshots under
+`.impeccable/review/` for the separate fresh visual reviewer, before email entry
+and at invitation review. This reviewer did not perform that visual finish review.
+
+The built unconfigured production UI tests replaced the technical-placeholder
+assertions for desktop, tablet and phone. Primary's first execution was **6/6**;
+the following test-harness safety correction requires a final primary execution.
+Installed Playwright 1.64.1 `lib/runner/index.js` merges parent `process.env` into
+`webServer.env`, so supplying an allowlist there cannot isolate provider config.
+`playwright.config.ts` now uses `e2e/server-setup.ts` and the test-only
+`tests/helpers/builtE2eServer.mjs` to spawn Node/Next directly with `isolatedEnv`,
+explicit production mode, no shell, ignored child output and fixed diagnostics.
+It refuses an occupied port, waits for readiness and returns teardown which
+waits for process termination before removing only its fresh isolated HOME.
+
+Pinned Next also reads production dotenv files independently. Before any child
+or isolated HOME is created, metadata-only `lstat` checks all four possible
+filenames and refuses any existing entry, including directories or symlinks;
+no private dotenv contents are opened. This unconfigured production gate must
+therefore run from a clean checkout without `.env`, `.env.local`,
+`.env.production` or `.env.production.local`. An operator-configured checkout
+should use a separate clean checkout; the private SDK harness already uses a
+copied project. Shell provider/operator variables are discarded rather than
+overridden selectively.
+
+Focused synthetic regression and existing isolation checks passed **6/6**:
+all four dotenv names and a directory entry deny before project execution;
+a disposable fake Next child receives no synthetic inherited provider/operator
+configuration and its HOME disappears after teardown; occupied ports cannot
+reuse another service. Typecheck and Playwright discovery passed (six device
+tests). Logs: `.local-logs/e2e-server-isolation.log`,
+`.local-logs/e2e-server-typecheck.log`, `.local-logs/e2e-server-list.log`.
+Repository publish-candidate/index guard passed **1/1** in
+`.local-logs/portal-ui-repo-guard.log`; no guard exception was introduced.
+No application implementation, Git, provider setup or real attachment access
+was involved. Primary retains final production e2e, independent harness review,
+integration, CI and publication gates.

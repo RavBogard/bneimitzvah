@@ -19,7 +19,7 @@ import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
 const secret = () => randomBytes(48).toString("base64url");
 type Mail = { email: string; url: string };
 
-export async function browserFixture() {
+export async function browserFixture(options: { google?: boolean } = {}) {
   const base = await postgresAccessFixture();
   try {
     // The shared disposable fixture creates the DB, migrations and restricted
@@ -27,7 +27,9 @@ export async function browserFixture() {
     const db = base.aDb;
     const deliveries: Mail[] = [];
     await base.ownerDb.insert(s.tenantHost).values({ host: `127.0.0.1:${BROWSER_PORT}`, tenantId: "crc", environment: "local", deployment: "http-browser", origin: BROWSER_ORIGIN });
-    const auth = createAuthStack(db, s, { origin: BROWSER_ORIGIN, secret: secret(), sendMagicLink: async ({ email, url }) => { deliveries.push({ email, url }); } });
+    const auth = createAuthStack(db, s, { origin: BROWSER_ORIGIN, secret: secret(),
+      ...(options.google ? { google: { clientId: "synthetic-browser-client", clientSecret: secret() } } : {}),
+      sendMagicLink: async ({ email, url }) => { deliveries.push({ email, url }); } });
     const deployment = { environment: "local" as const, deployment: "http-browser" };
     const access = createAccessService({ db, auth, deployment });
     const invitations = createInvitationService({ db, access, transport: async ({ email, url }) => { deliveries.push({ email, url }); }, throttleSecret: secret() });

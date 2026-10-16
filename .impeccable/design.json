@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-16T04:42:02Z",
+  "title": "Design System: CRC B'nei Mitzvah",
+  "extensions": {
+    "colorMeta": {
+      "surface": { "role": "neutral", "displayName": "White Surface", "tonalRamp": ["oklch(15% 0 0)", "oklch(27% 0 0)", "oklch(39% 0 0)", "oklch(51% 0 0)", "oklch(63% 0 0)", "oklch(75% 0 0)", "oklch(87% 0 0)", "oklch(99% 0 0)"] },
+      "canvas": { "role": "neutral", "displayName": "Pale Canvas", "tonalRamp": ["oklch(15% 0.004 160)", "oklch(27% 0.004 160)", "oklch(39% 0.004 160)", "oklch(51% 0.004 160)", "oklch(63% 0.004 160)", "oklch(75% 0.004 160)", "oklch(87% 0.004 160)", "oklch(97% 0.004 160)"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "tonalRamp": ["oklch(15% 0.018 245)", "oklch(27% 0.018 245)", "oklch(39% 0.018 245)", "oklch(51% 0.018 245)", "oklch(63% 0.018 245)", "oklch(75% 0.018 245)", "oklch(87% 0.018 245)", "oklch(95% 0.018 245)"] },
+      "muted": { "role": "neutral", "displayName": "Muted Ink", "tonalRamp": ["oklch(15% 0.018 215)", "oklch(27% 0.018 215)", "oklch(39% 0.018 215)", "oklch(51% 0.018 215)", "oklch(63% 0.018 215)", "oklch(75% 0.018 215)", "oklch(87% 0.018 215)", "oklch(95% 0.018 215)"] },
+      "action": { "role": "primary", "displayName": "Burgundy Action", "tonalRamp": ["oklch(15% 0.10 25)", "oklch(27% 0.10 25)", "oklch(39% 0.10 25)", "oklch(51% 0.10 25)", "oklch(63% 0.10 25)", "oklch(75% 0.10 25)", "oklch(87% 0.10 25)", "oklch(95% 0.10 25)"] },
+      "action-hover": { "role": "primary", "displayName": "Deep Burgundy", "tonalRamp": ["oklch(15% 0.09 25)", "oklch(27% 0.09 25)", "oklch(39% 0.09 25)", "oklch(51% 0.09 25)", "oklch(63% 0.09 25)", "oklch(75% 0.09 25)", "oklch(87% 0.09 25)", "oklch(95% 0.09 25)"] },
+      "teal": { "role": "secondary", "displayName": "Confirmed Teal", "tonalRamp": ["oklch(15% 0.07 175)", "oklch(27% 0.07 175)", "oklch(39% 0.07 175)", "oklch(51% 0.07 175)", "oklch(63% 0.07 175)", "oklch(75% 0.07 175)", "oklch(87% 0.07 175)", "oklch(95% 0.07 175)"] },
+      "rule": { "role": "neutral", "displayName": "Quiet Rule", "tonalRamp": ["oklch(15% 0.008 170)", "oklch(27% 0.008 170)", "oklch(39% 0.008 170)", "oklch(51% 0.008 170)", "oklch(63% 0.008 170)", "oklch(75% 0.008 170)", "oklch(87% 0.008 170)", "oklch(95% 0.008 170)"] }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "Short introductory task." },
+      "title": { "displayName": "Task title", "purpose": "Live access or invitation state." },
+      "body": { "displayName": "Body", "purpose": "Explanation and recovery copy." },
+      "label": { "displayName": "Label", "purpose": "Fields and action text." }
+    },
+    "shadows": [],
+    "motion": [{ "name": "ease-settle", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "160ms button background and border state transitions; suppressed for reduced motion." }],
+    "breakpoints": [{ "name": "compact", "value": "900px" }, { "name": "phone", "value": "640px" }]
+  },
+  "components": [
+    {
+      "name": "Primary Button", "kind": "button", "refersTo": "button-primary", "description": "The explicit next action in the current task state.",
+      "html": "<button class=\"ds-btn-primary\">Accept invitation</button>",
+      "css": ".ds-btn-primary { min-height:48px; padding:0.6875rem 1.125rem; border:1px solid transparent; border-radius:var(--radius-control,6px); background:var(--color-action,#8a0a14); color:var(--color-surface,#fff); font:600 1rem/1.45 system-ui,sans-serif; cursor:pointer; transition:background-color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-primary:hover { background:var(--color-action-hover,#680911); } .ds-btn-primary:active { background:#51070d; } .ds-btn-primary:focus-visible { outline:3px solid var(--color-focus,#0b6a62); outline-offset:4px; } .ds-btn-primary:disabled { opacity:.6; cursor:wait; } @media (prefers-reduced-motion:reduce) { .ds-btn-primary { transition:none; } }"
+    },
+    {
+      "name": "Secondary Button", "kind": "button", "refersTo": "button-secondary", "description": "Alternate sign-in or account action.",
+      "html": "<button class=\"ds-btn-secondary\">Continue with Google</button>",
+      "css": ".ds-btn-secondary { min-height:48px; padding:0.6875rem 1.125rem; border:1px solid #83918e; border-radius:var(--radius-control,6px); background:var(--color-surface,#fff); color:var(--color-ink,#222c35); font:600 1rem/1.45 system-ui,sans-serif; cursor:pointer; transition:background-color 160ms cubic-bezier(0.16,1,0.3,1),border-color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-secondary:hover { background:#edf2f0; border-color:var(--color-ink,#222c35); } .ds-btn-secondary:active { background:#dfe8e4; } .ds-btn-secondary:focus-visible { outline:3px solid var(--color-focus,#0b6a62); outline-offset:4px; } .ds-btn-secondary:disabled { opacity:.6; cursor:wait; } @media (prefers-reduced-motion:reduce) { .ds-btn-secondary { transition:none; } }"
+    },
+    {
+      "name": "Text Action", "kind": "button", "description": "Lower-emphasis account switch below invitation acceptance.",
+      "html": "<button class=\"ds-btn-text\">Sign out to use another account</button>",
+      "css": ".ds-btn-text { display:block; min-height:44px; padding:.75rem 0; border:0; background:transparent; color:var(--color-action,#8a0a14); font:.9375rem/1.45 system-ui,sans-serif; text-decoration:underline; text-underline-offset:.2em; cursor:pointer; } .ds-btn-text:hover { color:var(--color-action-hover,#680911); } .ds-btn-text:focus-visible { outline:3px solid var(--color-focus,#0b6a62); outline-offset:4px; }"
+    },
+    {
+      "name": "Email Field", "kind": "input", "refersTo": "input-email", "description": "Labeled email entry with short invitation guidance.",
+      "html": "<label class=\"ds-field-label\" for=\"ds-email\">Email address</label><input class=\"ds-email\" id=\"ds-email\" type=\"email\"><p class=\"ds-field-help\">Use the address on your invitation.</p>",
+      "css": ".ds-field-label { display:block; margin-bottom:.5rem; color:var(--color-ink,#222c35); font:600 1rem/1.6 system-ui,sans-serif; } .ds-email { display:block; width:100%; min-height:48px; padding:.6875rem .875rem; border:1px solid #83918e; border-radius:var(--radius-control,6px); background:var(--color-surface,#fff); color:var(--color-ink,#222c35); caret-color:var(--color-action,#8a0a14); font:1rem/1.6 system-ui,sans-serif; } .ds-email:focus-visible { outline:3px solid var(--color-focus,#0b6a62); outline-offset:4px; } .ds-email:disabled { background:var(--color-canvas,#f6f7f6); } .ds-field-help { margin:.5rem 0 0; color:var(--color-muted,#53616a); font:.875rem/1.6 system-ui,sans-serif; }"
+    },
+    {
+      "name": "Masthead", "kind": "nav", "description": "Compact CRC identity and congregation attribution.",
+      "html": "<nav class=\"ds-masthead\"><a class=\"ds-brand\" href=\"#\">CRC B’nei Mitzvah</a><span class=\"ds-congregation\">Central Reform Congregation</span></nav>",
+      "css": ".ds-masthead { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; padding:1.75rem 0; border-bottom:1px solid var(--color-rule,#d5dcda); font-family:system-ui,sans-serif; } .ds-brand { color:var(--color-ink,#222c35); font-size:1.125rem; font-weight:650; letter-spacing:-.02em; text-decoration:none; } .ds-brand:hover { color:var(--color-action-hover,#680911); } .ds-brand:focus-visible { outline:3px solid var(--color-focus,#0b6a62); outline-offset:4px; } .ds-congregation { color:var(--color-muted,#53616a); font-size:.875rem; }"
+    },
+    {
+      "name": "Invitation Details", "kind": "custom", "description": "Explicit role and target review before acceptance.",
+      "html": "<dl class=\"ds-invite\"><div><dt>Access</dt><dd>Parent</dd></div><div><dt>Student</dt><dd><bdi dir=\"auto\">Student name</bdi></dd></div></dl>",
+      "css": ".ds-invite { margin:1.75rem 0; color:var(--color-ink,#222c35); font:1rem/1.6 system-ui,sans-serif; font-variant-numeric:tabular-nums; } .ds-invite>div { display:grid; grid-template-columns:5rem minmax(0,1fr); gap:1rem; margin-top:.75rem; } .ds-invite dt { color:var(--color-muted,#53616a); } .ds-invite dd { margin:0; font-weight:600; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Annotated Score",
+    "overview": "The implemented entry surface uses a white working field, legible ink, a restrained burgundy action, and precise rules. The page leads with the reading as its destination while its neighboring task area reports actual access and invitation state. This is the initial authentication and invitation slice; a Hebrew passage and its practice tools have not been implemented or visually specified by this file. The current controls feel familiar and deliberate. Spacing creates the hierarchy, and text explains state without ornamental imagery.",
+    "keyCharacteristics": ["A flat white field with fine rules and a compact congregation masthead.", "A reading-first introduction beside a live task area on wide screens.", "Clear, touch-sized controls and a single-column phone layout.", "Explicit role and invitation details before access changes."],
+    "rules": [
+      { "name": "The State Has Words Rule", "body": "Color reinforces an explicit label or message; role and invitation state remain understandable without color.", "section": "colors" },
+      { "name": "The Reading Type Rule", "body": "Hebrew reading requires its own verified vowel and cantillation rendering when actual licensed content is implemented. The current `[lang=\"he\"]` selector establishes right-to-left direction and mark features, but no Hebrew passage or compiled Hebrew font is present yet.", "section": "typography" },
+      { "name": "The Adjacent Task Rule", "body": "Keep the current action or access state next to the introduction on wide screens, and immediately after it on narrow screens.", "section": "layout" },
+      { "name": "The Open Surface Rule", "body": "Use line weight and spacing to separate content; this entry surface has no shadow vocabulary.", "section": "elevation" }
+    ],
+    "dos": ["**Do** keep current access and invitation outcomes explicit in headings, labels, and recovery copy.", "**Do** preserve a readable one-column flow and touch-sized actions on phones.", "**Do** use the restrained burgundy for action and teal for focus or confirmed-role emphasis."],
+    "donts": ["**Don't** imply an unimplemented reading workspace or invent passage content in the entry surface.", "**Don't** use color alone to communicate role or acceptance state.", "**Don't** add decorative depth to this flat entry system without an implemented reason."]
+  }
+}

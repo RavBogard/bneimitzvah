@@ -1,3 +1,3 @@
-export default function Home() {
-  return <main><h1>CRC B&apos;nei Mitzvah</h1></main>;
-}
+import { PortalEntry } from "../components/portal/entry";
+
+export default function Home() { return <PortalEntry />; }

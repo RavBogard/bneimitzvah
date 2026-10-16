@@ -6,4 +6,4 @@
 - Reuse current evidence, plans, and handoffs. Update the existing short state note at milestone boundaries. Avoid broad audits unrelated to the milestone.
 - Finish authorized reversible work. Ask only for information that materially changes the outcome or an applicable unresolved release, money, or licensing gate.
 - Preserve the existing independent adversarial review requirement for auth, tenancy, repository protection, recording access, and generated-chant release.
-- `PRODUCT.md` contains the confirmed product context. The user's selected design workflow is code-first in `.impeccable/config.json`. No final portal visual design has been chosen yet.
+- `PRODUCT.md` contains the confirmed product context. The user's selected design workflow is code-first in `.impeccable/config.json`. Daniel selected Annotated score on 2026-10-15: clear Hebrew reading, restrained color and practice tools beside it. Record and review the implementation against that direction; do not reopen the visual-world choice.

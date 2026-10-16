@@ -1,10 +1,31 @@
 import { expect, test } from "@playwright/test";
 
-test("technical placeholder loads at each supported device size", async ({ page }) => {
+test("built portal presents an honest unavailable state with accessible retry at each supported device size", async ({ page }) => {
   const response = await page.goto("/");
   expect(response?.status()).toBe(200);
   await expect(page).toHaveTitle("CRC B'nei Mitzvah");
-  await expect(page.getByRole("heading", { level: 1, name: "CRC B'nei Mitzvah" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Open your reading" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign-in is unavailable", exact: true })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByLabel("Email address")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Continue with Google" })).toHaveCount(0);
+  const retry = page.getByRole("button", { name: "Try again", exact: true });
+  await retry.click();
+  await expect(page.getByRole("heading", { name: "Sign-in is unavailable", exact: true })).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.keyboard.press("Tab");
+  await expect(retry).toBeFocused();
+  const unavailable = await page.request.get("/api/session");
+  expect(unavailable.status()).toBe(503);
+  expect(await unavailable.json()).toEqual({ error: "unavailable" });
+});
+
+test("built sign-in and invitation entry preserve private setup failure without test identity or provider diagnostics", async ({ page }) => {
+  for (const path of ["/sign-in?error=authentication", "/invitations/accept"]) {
+    expect((await page.goto(path))?.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: "Sign-in is unavailable", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Try again", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Accept invitation", exact: true })).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
 });
