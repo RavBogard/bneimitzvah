@@ -124,9 +124,9 @@ test("pinned Google cryptography uses server nonce and projects session JSON; re
   expect((await f.dispatch(f.request("/api/auth/sign-in/social", { credential: token(late.nonce), challengeId: late.challengeId, csrfToken: late.csrfToken }))).status).toBe(403);
 });
 
-test("consistent Forwarded permits real Google nonce/body verification but cannot bypass Origin or CSRF or reach SDK headers", async () => {
+test("discarded hostile Forwarded cannot bypass real Google nonce/body verification, Origin or CSRF or reach SDK headers", async () => {
   const f = await fixture(), token = googleTokens();
-  const forwarded = 'for="[2001:db8::1]:4711";host="localhost:3000";proto=http';
+  const forwarded = 'for="[2001:db8::1]:4711";host="foreign.example.test";proto=https, for=unknown;extension=synthetic-private';
   const prepared = await f.dispatch(f.request("/api/auth/google/challenge", {}, { forwarded }));
   expect(prepared.status).toBe(200);
   const issued = await prepared.json(), cookie = cookieOf(prepared);

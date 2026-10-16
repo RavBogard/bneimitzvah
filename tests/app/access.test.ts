@@ -49,9 +49,38 @@ describe("exact host and database-live access", () => {
       f.request("admin", "http://localhost:3000", { "x-forwarded-host": "" }),
       f.request("admin", "http://localhost:3000", { "x-forwarded-proto": "https" }),
       f.request("admin", "http://localhost:3000", { "x-forwarded-port": "3101" }),
-      f.request("admin", "http://localhost:3000", { forwarded: "host=localhost:3101" }),
+      f.request("admin", "http://localhost:3101", { host: "localhost:3000", forwarded: "host=localhost:3000" }),
     ];
     for (const request of invalid) expect(await denied(() => f.service.listStudents(request, { mode: "admin" }), 404)).toBe(true);
+  });
+
+  it("discards RFC Forwarded before real SDK identity lookup while preserving cookies and exact-tenant grants", async () => {
+    const f = await fixture();
+    let lookups = 0;
+    const api = new Proxy(f.auth.api, { get(target, key, receiver) {
+      if (key !== "getSession") return Reflect.get(target, key, receiver);
+      return async (options: Parameters<typeof f.auth.api.getSession>[0]) => {
+        lookups++;
+        if (!options) throw new Error("Synthetic identity lookup requires options");
+        const headers = new Headers(options.headers);
+        expect(headers.has("forwarded")).toBe(false);
+        expect(headers.get("cookie")).toBe(f.identities.admin.cookie);
+        expect(options.query).toEqual({ disableCookieCache: true, disableRefresh: true });
+        return target.getSession(options);
+      };
+    } });
+    const service = createAccessService({ db: f.db, auth: { api }, deployment: { environment: "test", deployment: "suite" } });
+    const metadata = "host=localhost:3101;proto=https, for=unknown;extension=synthetic-private";
+    const input = f.request("admin", "http://localhost:3000", { Forwarded: metadata });
+    const rows = await service.listStudents(input, { mode: "admin" });
+    expect(rows.map(row => row.id).sort()).toEqual(f.students.slice(0, 3).map(row => row.id).sort());
+    expect(input.headers.get("forwarded")).toBe(metadata);
+    expect(lookups).toBe(1);
+    for (const request of [
+      f.request("admin", "https://unknown.example.test", { forwarded: "host=localhost:3000" }),
+      f.request("admin", "http://localhost:3000", { "x-forwarded-host": "localhost:3101", forwarded: "host=localhost:3000" }),
+    ]) expect(await denied(() => service.listStudents(request, { mode: "admin" }), 404)).toBe(true);
+    expect(lookups).toBe(1);
   });
 
   it("enforces four roles, parent+tutor mode separation and scoped rosters", async () => {

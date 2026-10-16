@@ -24,7 +24,6 @@ test("host denial stages remain fixed while all existing rejection decisions rem
     { stage: "url-authority", url: "https://user:synthetic-private@example.test/api/session" },
     { stage: "scheme", url: "http://bneimitzvah.vercel.app/api/session" },
     { stage: "host", headers: { host: "synthetic-private.example.test" } },
-    { stage: "forwarded", headers: { forwarded: "for=192.0.2.1;host=synthetic-private.example.test;proto=https" } },
     { stage: "forwarded-host", headers: { "x-forwarded-host": "synthetic-private.example.test" } },
     { stage: "forwarded-proto", headers: { "x-forwarded-proto": "http" } },
     { stage: "forwarded-port", headers: { "x-forwarded-port": "3000" } },
@@ -61,13 +60,13 @@ test("successful exact mapping is unchanged and sink failures cannot change a de
   const sink = vi.spyOn(console, "info").mockImplementation(() => { throw new Error("synthetic-private-sink"); });
   expect(await resolveTenantHost(database().db, request({ host: "bneimitzvah.vercel.app", "x-forwarded-host": "bneimitzvah.vercel.app", "x-forwarded-proto": "https", "x-forwarded-port": "443" }), scope, "incoming")).toEqual({ tenantId: "crc", origin });
   expect(sink).not.toHaveBeenCalled();
-  await expect(resolveTenantHost(database().db, request({ forwarded: "synthetic-private" }), scope, "incoming")).rejects.toMatchObject({ status: 404, message: "Not found" });
+  await expect(resolveTenantHost(database().db, request({ host: "synthetic-private.example.test", forwarded: "synthetic-private" }), scope, "incoming")).rejects.toMatchObject({ status: 404, message: "Not found" });
   expect(sink).toHaveBeenCalledTimes(1);
   let coerced = false;
   const hostileFrame = { toString() { coerced = true; throw new Error("synthetic-private"); } } as unknown as HostFrame;
-  await expect(resolveTenantHost(database().db, request({ forwarded: "synthetic-private" }), scope, hostileFrame)).rejects.toMatchObject({ status: 404 });
+  await expect(resolveTenantHost(database().db, request({ host: "synthetic-private.example.test", forwarded: "synthetic-private" }), scope, hostileFrame)).rejects.toMatchObject({ status: 404 });
   expect(coerced).toBe(false); expect(sink).toHaveBeenCalledTimes(1);
   vi.spyOn(logging, "createLogger").mockImplementationOnce(() => { throw new Error("synthetic-private-construction"); });
-  await expect(resolveTenantHost(database().db, request({ forwarded: "synthetic-private" }), scope, "incoming")).rejects.toMatchObject({ name: "AccessDenied", status: 404, message: "Not found" });
+  await expect(resolveTenantHost(database().db, request({ host: "synthetic-private.example.test", forwarded: "synthetic-private" }), scope, "incoming")).rejects.toMatchObject({ name: "AccessDenied", status: 404, message: "Not found" });
   expect(sink).toHaveBeenCalledTimes(1);
 });

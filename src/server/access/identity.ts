@@ -17,7 +17,10 @@ export function createVerifiedIdentityAccess<Q extends PgQueryResultHKT>(input: 
       if (request.headers.has("X-Practice-Context") && !options.allowPracticeContext) throw new AccessDenied(403);
       const resolved = await resolveTenantHost(input.db, request, deployment);
       if (options.mutation) requireCookieMutation(request, resolved.origin);
-      const proof = await input.auth.api.getSession({ headers: new Headers(request.headers), query: { disableCookieCache: true, disableRefresh: true } });
+      const sessionHeaders = new Headers(request.headers);
+      // Discard unused RFC proxy metadata before any SDK processing.
+      sessionHeaders.delete("forwarded");
+      const proof = await input.auth.api.getSession({ headers: sessionHeaders, query: { disableCookieCache: true, disableRefresh: true } });
       if (!proof || proof.session.userId !== proof.user.id) throw new AccessDenied(401);
       return await withTenantTransaction(input.db, resolved, async (tx) => {
         const records = await lockIdentityRecords(tx, resolved.tenantId, { id: proof.session.id, userId: proof.user.id, token: proof.session.token }, options.intent);
