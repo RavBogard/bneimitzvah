@@ -57,6 +57,13 @@
       "when": 1792122721906,
       "tag": "0007_yellow_ghost_rider",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792124938069,
+      "tag": "0008_crc_vercel_production_host",
+      "breakpoints": true
     }
   ]
 }

@@ -8,6 +8,10 @@ export type RuntimeConfig = Readonly<{
   mail: Readonly<{ apiKey: string; from: string }>;
 }>;
 const clean = (s: unknown): s is string => typeof s === "string" && s.length > 0 && s.trim() === s && !/[\x00-\x20\x7f]/.test(s);
+// Configuration selects exactly one; this is not a request-host alias list.
+export const PRODUCTION_ORIGINS: readonly string[] = Object.freeze([
+  "https://bneimitzvah.centralreform.org", "https://bneimitzvah.vercel.app",
+]);
 export const mailbox = (s: unknown): s is string => typeof s === "string" && s.length <= 254 && /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}$/.test(s);
 
 // Values enter only from trusted server configuration, never request headers.
@@ -22,9 +26,9 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
     if (!clean(env.BETTER_AUTH_URL)) throw 0;
     const origin = new URL(env.BETTER_AUTH_URL);
     if (origin.origin !== env.BETTER_AUTH_URL || origin.username || origin.password || !/^[a-z0-9.-]+$/.test(origin.hostname)) throw 0;
-    if (environment === "production" && origin.origin !== "https://bneimitzvah.centralreform.org") throw 0;
+    if (environment === "production" && !PRODUCTION_ORIGINS.includes(origin.origin)) throw 0;
     if (environment === "production" && env.PORTAL_DEPLOYMENT !== "production") throw 0;
-    if (environment === "preview" && (origin.protocol !== "https:" || origin.port || /^\d+(?:\.\d+){3}$/.test(origin.hostname) || origin.hostname.endsWith(".localhost") || ["localhost", "bneimitzvah.centralreform.org", "bneimitzvah.vercel.app"].includes(origin.hostname))) throw 0;
+    if (environment === "preview" && (origin.protocol !== "https:" || origin.port || /^\d+(?:\.\d+){3}$/.test(origin.hostname) || origin.hostname.endsWith(".localhost") || origin.hostname === "localhost" || PRODUCTION_ORIGINS.includes(origin.origin))) throw 0;
     if (environment === "local" && !(origin.protocol === "http:" && ["localhost", "127.0.0.1"].includes(origin.hostname) && origin.port)) throw 0;
     if (!clean(env.DATABASE_URL)) throw 0;
     const db = new URL(env.DATABASE_URL);

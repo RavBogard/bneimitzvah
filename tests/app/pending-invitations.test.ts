@@ -92,7 +92,7 @@ test("invitation token exists only on exact landing GET; URL practice contexts, 
 
 test("pending primitives reject bad configured origins and keep their captured configuration stable", async () => {
   const f = fixture();
-  for (const change of [{ origin: "https://bneimitzvah.vercel.app", environment: "production" }, { origin: "http://localhost:3000", environment: "preview" },
+  for (const change of [{ origin: "https://bneimitzvah-random.vercel.app", environment: "production" }, { origin: "http://localhost:3000", environment: "preview" },
     { origin: "https://bneimitzvah.centralreform.org", environment: "preview" }, { secret: "short" }, { origin: origin + "/" }]) {
     let safe = false;
     try { createPendingInvitations({ ...f.input, ...change } as typeof f.input); }

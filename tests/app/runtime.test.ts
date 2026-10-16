@@ -32,7 +32,7 @@ async function cacheDenied(action: () => Promise<unknown>) {
 test("private configuration rejects aliases, environment contradictions, operator credentials and incomplete secrets without leaking inputs", async () => {
   const base = env();
   const invalid = [
-    { BETTER_AUTH_URL: "https://bneimitzvah.vercel.app", PORTAL_ENVIRONMENT: "production", PORTAL_DEPLOYMENT: "production" },
+    { BETTER_AUTH_URL: "https://bneimitzvah-random.vercel.app", PORTAL_ENVIRONMENT: "production", PORTAL_DEPLOYMENT: "production" },
     { BETTER_AUTH_URL: "http://localhost:3000", PORTAL_ENVIRONMENT: "production" },
     { NODE_ENV: "production" }, { VERCEL: "1" }, { VERCEL_ENV: "production" },
     { PORTAL_ENVIRONMENT: "test" }, { PORTAL_DEPLOYMENT: "" }, { BETTER_AUTH_URL: "http://localhost:3000/" },
@@ -54,6 +54,18 @@ test("private configuration rejects aliases, environment contradictions, operato
   const preview = loadRuntimeConfig({ ...base, PORTAL_ENVIRONMENT: "preview", VERCEL_ENV: "preview", BETTER_AUTH_URL: "https://one-exact-preview.example.test" });
   expect(preview.origin).toBe("https://one-exact-preview.example.test");
   expect(Object.isFrozen(preview)).toBe(true);
+});
+
+test("production explicitly selects one of two exact CRC origins and rejects sibling aliases or preview reuse", async () => {
+  const base = { ...env(), PORTAL_ENVIRONMENT: "production", PORTAL_DEPLOYMENT: "production", VERCEL_ENV: "production", NODE_ENV: "production" };
+  for (const origin of ["https://bneimitzvah.centralreform.org", "https://bneimitzvah.vercel.app"]) {
+    expect(loadRuntimeConfig({ ...base, BETTER_AUTH_URL: origin }).origin === origin).toBe(true);
+    expect(await safeUnavailable(() => loadRuntimeConfig({ ...base, PORTAL_ENVIRONMENT: "preview", VERCEL_ENV: "preview", BETTER_AUTH_URL: origin }))).toBe(true);
+  }
+  for (const origin of ["https://bneimitzvah-random.vercel.app", "https://sub.bneimitzvah.vercel.app", "https://bneimitzvah.vercel.app.evil.invalid",
+    "https://bneimitzvah.vercel.app:443", "https://bneimitzvah.vercel.app/", "https://bneimitzvah.vercel.app/path", "http://bneimitzvah.vercel.app"]) {
+    expect(await safeUnavailable(() => loadRuntimeConfig({ ...base, BETTER_AUTH_URL: origin }))).toBe(true);
+  }
 });
 
 test("runtime scope remains lazy and missing configuration fails closed before callback/network", async () => {

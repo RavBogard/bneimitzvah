@@ -35,6 +35,18 @@ test("reviewed config and synthetic fixture paths do not bypass content checks",
   assert.ok(entryProblems("src/leak.ts", samples[0]).includes("credential pattern"));
 });
 
+test("only exact design token metadata is allowed while credential, email and binary checks remain active", () => {
+  const path = ".impeccable/design.json";
+  const tokens = JSON.stringify({ colors: { paper: "#fffdf8", ink: "#252520" }, fonts: { body: "system-ui" }, tokens: { space: 8 } });
+  assert.deepEqual(entryProblems(path, tokens), []);
+  for (const neighbor of [".impeccable/design-backup.json", ".impeccable/other.json", ".impeccable/nested/design.json", "nested/.impeccable/design.json"]) {
+    assert.ok(entryProblems(neighbor, tokens).includes("data file outside reviewed allow-list"));
+  }
+  assert.ok(entryProblems(path, JSON.stringify({ token: "vercel_blob_" + "rw_" + "syntheticMetadataToken" })).includes("credential pattern"));
+  assert.ok(entryProblems(path, JSON.stringify({ contact: "person" + "@" + "private.invalid" })).includes("non-synthetic email address"));
+  assert.ok(entryProblems(path, tokens + "\u0000").includes("unreviewed binary content"));
+});
+
 test("private remote attachment paths are prohibited independently of extension, content, case or separators", () => {
   for (const file of [".codex-remote-attachments", ".codex-remote-attachments/innocent.ts", ".codex-remote-attachments/image.jpg",
     "nested/.CODEX-REMOTE-ATTACHMENTS/allowed.md", "nested\\.codex-remote-attachments\\empty.svg"]) {

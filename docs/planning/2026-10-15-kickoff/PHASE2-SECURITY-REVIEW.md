@@ -594,3 +594,10 @@ synthetic regression failure remains at
 `.local-logs/phase2-security-attachment-policy-probe.log`. This accepts the bounded
 ignore/path protection and parsing fix; no private payload inspection or deletion
 was required. Primary retains staging/publication and final combined gates.
+# Temporary Vercel origin and design metadata — independent Astra review, 2026-10-15
+
+Accepted at this scope. Daniel requested the stable Vercel hostname while DNS is pending. Reviewed config and pending-cookie factories now permit that exact production value, while `BETTER_AUTH_URL` still selects one origin. The unchanged dispatcher resolves the tenant and rejects a different configured origin before SDK/provider work. Migration 0008 adds only the exact stable host for CRC; preview aliases and sibling hosts remain excluded. Pending envelopes use origin-derived keys and AAD, and host-only secure cookies remain unchanged. Existing migrations are not rewritten.
+
+Independently reran 42 focused auth/runtime/pending/access/schema checks, including actual SDK initiation and magic-link flows at the Vercel origin, bidirectional inactive-origin denial before SDK calls, and incompatible pending envelopes. All passed. Real PostgreSQL migration/replay and RLS checks passed 6/6 in a new isolated cluster. The first attempt correctly refused a previously populated disposable database; it did not alter that database. The replacement cluster was stopped afterward. This does not establish live Google, Neon or Resend operation.
+
+Also reviewed the exact `.impeccable/design.json` metadata allowance and ignored review-evidence directory. Neighboring JSON files remain disallowed, credentials/emails/binary checks still apply to metadata, and force-staged screenshots receive no binary exemption. Independent policy/guard tests passed 11/11, including attachment index-path protection. The generated design metadata still requires content review at UI integration.

@@ -9,6 +9,7 @@ import { composeRuntime, createRuntimeScope, type HttpRuntime } from "../../src/
 import { loadRuntimeConfig } from "../../src/server/runtime/config";
 import { RuntimeUnavailable } from "../../src/server/runtime/errors";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
+import { createPendingInvitations } from "../../src/server/http/pending-invitations";
 
 const opened: Awaited<ReturnType<typeof authFixture>>[] = [];
 afterEach(async () => { await Promise.all(opened.splice(0).map((f) => f.client.close())); });
@@ -40,7 +41,7 @@ async function fixture(origin = "http://localhost:3000", google = true) {
 const cookieOf = (response: Response) => response.headers.getSetCookie().map(value => value.split(";")[0]).join("; ");
 
 test("actual HTTP magic-link flow generates real SDK session cookie and logout with no session/mail/token JSON for local and canonical HTTPS", async () => {
-  for (const origin of ["http://localhost:3000", "https://bneimitzvah.centralreform.org"]) {
+  for (const origin of ["http://localhost:3000", "https://bneimitzvah.centralreform.org", "https://bneimitzvah.vercel.app"]) {
     const f = await fixture(origin);
     const email = "http-recipient@example.test";
     const start = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email }));
@@ -97,7 +98,7 @@ test("pending invite changes only fixed sign-in destination; invalid or missing 
 test("actual Google initiation preserves PKCE/state cookies and fixed callbacks while malformed callbacks never contact provider", async () => {
   const network = vi.spyOn(globalThis, "fetch").mockImplementation(async () => { throw new Error("Synthetic provider network forbidden"); });
   try {
-    for (const origin of ["http://localhost:3000", "https://bneimitzvah.centralreform.org"]) {
+    for (const origin of ["http://localhost:3000", "https://bneimitzvah.centralreform.org", "https://bneimitzvah.vercel.app"]) {
       const f = await fixture(origin);
       const start = await f.dispatch(f.request("/api/auth/sign-in/social", { provider: "google" }));
       expect(start.status).toBe(200);
@@ -247,4 +248,28 @@ test("all SDK entry paths receive only server-selected IP identity while actual 
       && !["x-real-ip", "cf-connecting-ip", "authorization", "x-vercel-forwarded-for", "x-arbitrary-ip", "forwarded"].includes(key)))).toBe(true);
   const logoutRequest = requests.find(request => new URL(request.url).pathname === "/api/auth/sign-out");
   expect(logoutRequest?.headers.get("cookie") === cookie && logoutRequest.headers.get("origin") === f.origin).toBe(true);
+});
+
+test("production directory entries never become simultaneous accepted origins or compatible pending envelopes", async () => {
+  const origins = ["https://bneimitzvah.centralreform.org", "https://bneimitzvah.vercel.app"];
+  for (const selected of origins) {
+    const f = await fixture(selected), other = origins.find(origin => origin !== selected)!;
+    expect(JSON.stringify(f.runtime.auth.options.trustedOrigins) === JSON.stringify([selected])).toBe(true);
+    expect((await f.runtime.resolveHost({ url: selected, headers: new Headers() })).tenantId === "crc").toBe(true);
+    const denied = await f.dispatch(new Request(`${other}/api/auth/sign-in/magic-link`, { method: "POST",
+      headers: { origin: other, "content-type": "application/json" }, body: JSON.stringify({ email: "origin-selection@example.test" }) }));
+    expect(denied.status).toBe(503);
+    expect(await denied.json()).toEqual({ error: "unavailable" });
+    expect(f.sdk.mock.calls.length === 0 && f.messages.length === 0).toBe(true);
+    const token = randomBytes(32).toString("base64url");
+    const landing = f.runtime.pendingInvitations.exchange(new Request(`${selected}/invitations/open?token=${token}`));
+    const sealed = landing.headers.getSetCookie()[0];
+    expect(sealed.startsWith("__Host-portal_pending_invitation=") && sealed.includes("; Secure") && !sealed.includes("Domain=")).toBe(true);
+    const cookie = sealed.split(";")[0];
+    const otherPending = createPendingInvitations({ secret: f.config.authSecret, origin: other, environment: "production" });
+    let incompatible = false;
+    try { otherPending.read(new Request(`${other}/api/invitations/pending`, { headers: { cookie } })); } catch { incompatible = true; }
+    expect(incompatible).toBe(true);
+    expect(f.runtime.pendingInvitations.read(new Request(`${selected}/api/invitations/pending`, { headers: { cookie } })) === token).toBe(true);
+  }
 });

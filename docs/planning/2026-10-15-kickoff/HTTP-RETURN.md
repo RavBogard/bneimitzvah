@@ -111,3 +111,54 @@ Focused evidence: reviewer regression plus auth HTTP/stack suites **20/20 passed
 `GET /api/admin/invitations?afterId=<UUID>&limit=<1..100>` now shares the existing static invitation path with its unchanged POST issue method. GET selects literal admin mode, permits only unique afterId/limit query fields and rejects child-context headers; the service rechecks actual active admin authority using nonfresh read locks. Caller mode, recipient search, actor/tenant/session claims and duplicate query fields are rejected. The explicit response is `{invitations:[...]}` using only the admin DTO documented in PHASE2-RETURN; no response spreads or raw invitation rows. Success is private/no-store200, invalid query bounds400, invalid UUID404, anonymous401, denied authority403 and malformed source/runtime503; unsupported methods405 advertise GET, POST. Existing POST Origin/freshness checks and invite issue/reissue/revoke/accept remain intact.
 
 Author checks: listing/invitation/portal regression **31/31 passed**, typecheck passed. Independent review and broader integration follow. Contact visibility is limited to this admin list and existing admin roster, with no diagnostics/logging of contacts and no public recipient lookup.
+
+## Exact temporary Vercel production origin
+
+Daniel chose `https://bneimitzvah.vercel.app` for production while custom-domain
+DNS is pending. Runtime configuration and pending-cookie configuration now accept
+exactly the stable Vercel origin or `https://bneimitzvah.centralreform.org` as
+production **configuration choices**. Both remain forbidden as preview
+configuration. `BETTER_AUTH_URL` selects exactly one; no trusted-origin union,
+wildcard Vercel host, implicit alias, automatic fallback or request-header-selected
+canonical origin was added.
+
+New data-only migration `0008_crc_vercel_production_host` inserts the exact Vercel
+production/production directory row for the existing CRC tenant, retaining the
+published custom-domain row. The journal advances without a schema snapshot
+change; no published migration was edited. Existing runtime `resolveHost` still
+rejects a resolved request origin that differs from its configured origin before
+SDK/mail/service invocation, even though both directory rows exist. OAuth/mail
+callbacks use the selected base URL. Secure host-only SDK/pending cookies and
+origin-derived pending/review keys retain their boundaries; changing the selected
+host requires browser sign-in again, and pending envelopes cannot transfer.
+
+Provider/runtime instructions now specify the current full Google redirect URI
+`https://bneimitzvah.vercel.app/api/auth/callback/google`, the eventual custom-domain
+callback and deliberate environment switch. No provider settings, live database,
+DNS, credentials, paid resources or Git state were changed by this implementation.
+Root independent auth/migration review and broader gates remain required before
+publication/configuration. Browser UI test expansion remains paused until this
+host checkpoint is reviewed.
+
+Author verification: **42/42** focused runtime/auth HTTP/pending/access/schema
+tests passed, including actual pinned SDK magic-link/session/logout and Google
+initiation on Vercel, one selected trusted origin, rejection on the other directory
+origin before SDK/mail, incompatible same-secret pending envelopes across both
+production origins, exact config negatives and repeat migration with precisely
+two CRC production rows. Typecheck passed. Logs: ignored
+`.local-logs/interim-production-origin-tests.log` and
+`.local-logs/interim-production-origin-typecheck.log`. Synthetic local transport
+evidence is not live Google/Neon/mail success. Primary owns physical PostgreSQL
+migration/service verification and deployment.
+
+Separate narrow repository policy change: only `.impeccable/design.json` joins
+the existing exact reviewed config paths. Synthetic color/font/token metadata is
+allowed there; neighboring/nested JSON remains denied, and credential/email/
+binary checks still run. No actual design metadata was generated. Policy,
+reviewer regression, actual repository guard and process-isolation checks passed
+**14/14**, log `.local-logs/interim-origin-design-policy.log`. This guard change is
+separate from host semantics and still requires primary independent review.
+
+The root-only `/.impeccable/review/` directory is also ignored for nonshipping
+synthetic/unconfigured visual evidence. No binary/media publishing exception was
+added; force-staged artifacts still pass through the existing content guard.
