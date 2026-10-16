@@ -1,0 +1,54 @@
+# dependencies and builds
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# environment and credentials
+.env*
+!.env.example
+*.local.json
+*.pem
+*.key
+.vercel/
+
+# local caches (Sefaria, STEP, OSHB, Hebcal)
+.cache/
+.bneimitzvah-cache/
+.haftarah-cache/
+
+# audio, renders, model files (never committed)
+*.mp3
+*.wav
+*.webm
+*.m4a
+*.ogg
+*.flac
+renders/
+trope/env/**/venv/
+*.ckpt
+*.pt
+*.safetensors
+*.onnx
+
+# tests
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+coverage/
+tests/fixtures/_*/
+
+# editors and tools
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.superpowers/
+.playwright-mcp/
+.claude/worktrees/
+
+# local verification output
+.local-logs/

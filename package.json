@@ -1,0 +1,31 @@
+{
+  "name": "crc-bneimitzvah",
+  "version": "0.0.0",
+  "private": true,
+  "engines": { "node": "24.x" },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "npm run test:node && npm run test:app",
+    "test:node": "node --test \"tests/**/*.test.mjs\"",
+    "test:app": "vitest run",
+    "test:e2e": "playwright test",
+    "check:repo": "node --test tests/never-in-repo.test.mjs"
+  },
+  "dependencies": {
+    "next": "16.4.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5"
+  }
+}
