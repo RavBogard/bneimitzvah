@@ -174,6 +174,27 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .study-credits { border-top: 1px solid var(--color-rule); padding-top: 1rem; }
 .study-credits section { margin-block: 1.5rem; }
 .study-credits li { overflow-wrap: anywhere; margin-block: 0.5rem; }
+.access-section, .access-review, .csv-review, .csv-recovery { border-top: 1px solid var(--color-rule); margin-top: 2rem; padding-top: 1.5rem; }
+.access-review, .csv-review { border-color: var(--color-ink); max-width: 44rem; }
+.access-review h2, .csv-review h2, .access-section h2, .csv-recovery h2 { margin-bottom: 1rem; }
+.access-student { margin-top: 2rem; }
+.access-student h2, .access-records h2, .access-records h3 { overflow-wrap: anywhere; }
+.access-records { list-style: none; padding: 0; margin-block: 1rem; }
+.access-records > li { padding-block: 1.25rem; border-bottom: 1px solid var(--color-rule); overflow-wrap: anywhere; }
+.access-records p, .access-review > p, .csv-format p, .csv-review > p, .csv-recovery > p { margin-block: 0.75rem; }
+.access-actions, .access-pages { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; margin-top: 1rem; }
+.access-actions .button-text { margin: 0; text-align: start; }
+.access-details { margin-block: 1rem; }
+.access-details > div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: 0.5rem 1rem; margin-block: 0.75rem; }
+.access-details dd, .csv-format code { overflow-wrap: anywhere; }
+.access-assign { margin-block: 1.5rem; max-width: 44rem; }
+.access-assign > button { margin-top: 1rem; }
+.csv-format { max-width: 65ch; margin-block: 1.5rem; }
+.csv-draft { max-width: 44rem; }
+.csv-draft > input { margin-bottom: 1.5rem; }
+.csv-draft textarea { width: 100%; min-height: 14rem; resize: vertical; padding: 0.75rem; border: 1px solid var(--color-muted); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); caret-color: var(--color-action); font: inherit; }
+.csv-duplicate-choice { display: flex; align-items: start; gap: 0.75rem; padding-block: 0.75rem; margin-block: 0.5rem; font-weight: 400; }
+.csv-duplicate-choice input { flex: 0 0 auto; width: 1.25rem; height: 1.25rem; min-height: 0; margin: 0.2rem 0 0; accent-color: var(--color-action); }
 .roster-pages, .form-actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; }
 .roster-editor { border-top: 1px solid var(--color-ink); padding-top: 1.5rem; margin-top: 2.5rem; }
 .roster-editor h2 { margin-bottom: 1.5rem; }
@@ -189,6 +210,8 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
   .reading-current-assignment { margin-top: 0.75rem; padding-top: 0.75rem; }
   .study-kind-choice { margin-block: 0.75rem; }
   .study-verses { margin-top: 1rem; }
+  .access-details > div { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; }
+  .access-actions { align-items: stretch; }
   .roster-form-grid { grid-template-columns: minmax(0, 1fr); }
   .reading-editor-fields { grid-template-columns: minmax(0, 1fr); }
   .invitation-form-fields, .invitation-record-details { grid-template-columns: minmax(0, 1fr); }

@@ -11,6 +11,7 @@ import { resolveTenantHost } from "../../src/server/tenancy/resolve";
 import type { HttpRuntime } from "../../src/server/runtime/composition";
 import { parseCeremonyDate } from "../../src/lib/readings/ranges";
 import { createStudyService } from "../../src/server/study/service";
+import { createStudentWorkService } from "../../src/server/student-work/service";
 import { StudyUnavailable } from "../../src/server/study/types";
 
 export async function portalRoutesFixture() {
@@ -31,7 +32,7 @@ export async function portalRoutesFixture() {
   const students = createStudentService({ access: f.service, signingSecret: randomBytes(48).toString("base64url"), loadReading: async (date, calendar) => ({ fetchedAt: Date.now(),
     snapshot: { date: parseCeremonyDate(date), calendar, reading: { parashah: "Synthetic", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:31-2:2" }], triennial: null }, haftarah: "Isaiah 1:1-2" } }) });
   const pendingInvitations = createPendingInvitations({ secret: randomBytes(48).toString("base64url"), origin: "http://localhost:3000", environment: "local" });
-  const runtime: HttpRuntime = { origin: "http://localhost:3000", auth: f.auth, access: f.service, practice, invitations, students,
+  const runtime: HttpRuntime = { origin: "http://localhost:3000", auth: f.auth, access: f.service, practice, invitations, students, studentWork: createStudentWorkService({ access: f.service, practice }),
     study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }),
     portal: createPortalService({ access: f.service, practice, sessionBindingSecret: randomBytes(48).toString("base64url") }), relationships: createRelationshipService({ access: f.service }), pendingInvitations,
     resolveHost: request => resolveTenantHost(f.db, request, { environment: "test", deployment: "suite" }) };

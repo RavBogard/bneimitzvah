@@ -18,6 +18,7 @@ import { createPersistentReadingCache } from "../data/reading-cache";
 import { createPersistentStudyCache } from "../data/study-cache";
 import { createSefariaStudyReader } from "../study/sefaria";
 import { createStudyService } from "../study/service";
+import { createStudentWorkService } from "../student-work/service";
 import { createPublicStudyCoalescer, type PublicStudyCoalescer } from "../study/coalescing";
 import { resolveTenantHost } from "../tenancy/resolve";
 import { createHebcalReader } from "../../lib/readings/proposals";
@@ -49,6 +50,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const loadReading = createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS });
   const students = createStudentService({ access, loadReading, signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS });
   const practice = createPracticeService({ access });
+  const studentWork = createStudentWorkService({ access, practice });
   const study = createStudyService({ access, practice, load: createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS,
     cache: createPersistentStudyCache(db), coalescer: studyTasks }) });
   const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding") });
@@ -60,7 +62,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, portal, relationships, pendingInvitations, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, studentWork, portal, relationships, pendingInvitations, resolveHost });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

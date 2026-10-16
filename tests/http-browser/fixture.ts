@@ -7,6 +7,7 @@ import { createStudentService } from "../../src/server/students/service";
 import { createPracticeService } from "../../src/server/practice/service";
 import { createPortalService } from "../../src/server/portal/service";
 import { createStudyService } from "../../src/server/study/service";
+import { createStudentWorkService } from "../../src/server/student-work/service";
 import { StudyUnavailable, type StudyRequest, type StudyPage } from "../../src/server/study/types";
 import { createRelationshipService } from "../../src/server/relationships/service";
 import { createPendingInvitations } from "../../src/server/http/pending-invitations";
@@ -43,7 +44,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     const practice = createPracticeService({ access });
     const pendingInvitations = createPendingInvitations({ secret: secret(), origin: BROWSER_ORIGIN, environment: "local" });
     const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
-      study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }),
+      study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }), studentWork: createStudentWorkService({ access, practice }),
       resolveHost: async request => {
         const host = await resolveTenantHost(db, request, deployment);
         if (host.origin !== BROWSER_ORIGIN) throw new Error("Host mismatch");

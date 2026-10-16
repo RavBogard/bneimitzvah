@@ -1,6 +1,6 @@
 # Assigned-text frontend consumer
 
-Status: independently reviewed and ready for publication. Final actual-SDK/restricted-PostgreSQL browser suite passes 25/25, including real 409 recovery, corrected phone layout and reading-switch context. The fresh visual reviewer accepted the single composition fix: ship, scored fix only. This does not complete Phase 3 or establish live-provider/full-catalog/font-rendering coverage.
+Status: published in 362986e with cross-platform phone correction 2521706. All four hosted jobs passed in run 38895008269, including 25/25 authenticated-browser and 28/28 database service tests. Matching deployment 7117984307 succeeded; stable student entry returns HTTP 200. The fresh visual reviewer accepted the scoped composition and spacing fixes. This does not complete Phase 3 or establish live-provider/full-catalog/font-rendering coverage.
 
 ## Architecture and surface
 
@@ -48,3 +48,5 @@ Astra approved one phone-only spacing correction: reading-grid top margin, curre
 The corrected synthetic capture batch is `.local-logs/study-geometry-win32.png` and `.local-logs/study-geometry-linux.png`; both were inspected. These are stylesheet/markup reproductions, not authenticated full-app captures. The minimal WSL font installation lacks some cantillation glyphs visible in the synthetic marks; these images establish spacing only, not full Hebrew glyph coverage or a new font acceptance. No PG process or credential was touched. No detector rerun or wider polish was performed. Root owns the actual SDK/restricted-PostgreSQL browser gate, fresh independent scoped review, integration and hosted rerun; those results are pending at this correction handoff.
 
 Primary follow-up: the actual-SDK/restricted-PostgreSQL study browser checks pass **3/3** after the correction (`.local-logs/study-phone-platform-browser.log`). The independent finish reviewer returned **ship for the spacing correction only**, preserving the stated font and static-capture limits. The focused local gate ran in the shared checkout with the subsequent student-work runtime initializer present; the hosted correction run must verify the exact published commit separately. Publication/hosted results remain pending.
+
+Publication follow-up: exact commit **2521706** passed all four jobs in [run 38895008269](https://github.com/RavBogard/bneimitzvah/actions/runs/38895008269), including the corrected Linux phone assertion. Matching Vercel deployment **7117984307** succeeded; the stable student route returns HTTP 200. The previous pending statements describe their earlier handoff stage. Live providers and full Hebrew font coverage remain separate gates.

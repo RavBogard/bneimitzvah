@@ -711,3 +711,74 @@ passes 25/25, including real-assignment-conflict recovery and the corrected
 reading-first phone composition. The fresh visual reviewer returned ship for
 the single scored fix. Combined integration evidence is recorded in
 STUDY-UI-RETURN.md; no remaining blocker was found at this reviewed scope.
+
+## Student translations and tutor notes — independent review, 2026-10-16
+
+Astra reviewed the new capability, HTTP boundary, assignment locks, immutable
+storage and receipt protocol independently of Sol's implementation. Acceptance is
+limited to this backend slice; no autosave interface or live-provider claim.
+
+Draft writes require the learner's student authority or an active linked-child
+practice context. Notes require the explicit tutor/admin capability. Every work,
+history, receipt and append request revalidates the current assignment and verse;
+old history cannot grant access to a removed verse. Existing SHARE authority locks
+are preserved. Post-wait expiry checks precede stale results and run again before
+return, including after insertion contention. CAS and same-operation receipts
+produce one version/audit; a replay distinguishes its committed version from the
+current head and cannot silently overwrite later writing.
+
+Review corrections removed an ephemeral context FK that would prevent session
+cleanup, replaced a maximum-version sentinel that hid the final valid integer
+version, moved expiry checks ahead of an early stale return, and added bounded
+non-email author labels. Durable composite actor/grant/student/guardian and
+student-identity FKs retain attribution; historical context UUIDs grant nothing.
+Both tables FORCE tenant RLS and grant only SELECT/INSERT to runtime. Immutable
+triggers protect UPDATE/DELETE; audit data excludes submitted writing.
+
+Verification: ten focused PGlite checks, fifteen real PostgreSQL checks and six
+fresh SQL migration/replay checks pass. Two initial PG race tests used their
+blocked mutation connection as observer; Sol corrected the test harness to use
+an independent idle connection and settle/sanitize concurrent failures. Final
+physical lock observations cover uniqueness, revocation, context switching,
+assignment changes and natural expiry. FK probes use distinct version/receipt
+keys and assert the constraint SQLSTATE, avoiding uniqueness false positives.
+Session deletion successfully cleans up practice context while authorized history
+survives. Evidence: STUDENT-WORK-RETURN.md and ignored student-work-* logs.
+No remaining blocker was found in this backend scope. Combined UI integration,
+build and hosted CI remain separate acceptance gates.
+
+## Relationship and CSV interfaces — independent review, 2026-10-16
+
+Astra reviewed the admin-only route composition, closed response parsers, bounded
+transport, target snapshots and mutation/reload lifecycle. These interfaces use
+the already reviewed relationship/import endpoints and introduce no new server
+permission. Reviews distinguish removing one student link from revoking an entire
+congregation role; exact link/grant revisions remain separate from student revision.
+Every access change re-reads its target and compares the reviewed identity/state
+before POST. Disabled students permit cleanup without enabling new access.
+
+Synchronous latches prevent double submission. Unknown responses block further
+mutations until explicit recovery; no automatic POST retry or optimistic access
+claim occurs. A successful write followed by a failed reload remains labelled as
+saved with current state unavailable. Reload promises await pending writes and
+fresh private reads; generation/lifetime checks discard replaced completions.
+
+CSV commit retains the exact bytes, duplicate choice and opaque short-lived server
+binding. Draft/lifecycle changes invalidate review. Unknown import cannot prove
+failure: its original draft is protected from editing until explicit roster
+inspection/acknowledgment; the recovery clears duplicate override and requires a
+new preview. No local persistence, automatic clipboard action or new import
+receipt is introduced. Student names follow their existing contract, independently
+of the stricter authorized display-name labels. Source review found no remaining
+authority blocker at this scope. The fresh visual review's focusable read-only
+unknown draft and compact identifier presentation were corrected in one bounded
+batch; the reviewer confirmed both and returned ship.
+
+Six actual-SDK/restricted-PostgreSQL browser cases passed before that visual fix,
+including real committed-but-unknown operations, changed review identity, stale
+CSV roster binding, child-context denial and sibling survival. Initial harness
+failures were corrected without changing production auth/rate limits: exact
+private-content clearing, scoped alert locators and in-memory reuse of actual SDK
+session cookies. The final combined suite passes 31/31, including these six cases
+after both visual fixes; typecheck/build and six production-page checks also pass.
+See ROSTER-CONTROLS-RETURN.md for final integration evidence.

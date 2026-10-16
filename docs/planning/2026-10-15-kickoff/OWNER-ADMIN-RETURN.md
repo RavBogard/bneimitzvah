@@ -59,5 +59,7 @@ blocking source finding at this scope. Final isolation/repository checks passed
 **127 Node + 347 app tests**, one POSIX-only Windows skip, typecheck/build,
 **25 authenticated-browser checks** and **6 production-page checks**. The four
 new owner PostgreSQL tests passed separately from the previous 24-test checkpoint.
-Hosted CI and publication remain pending. No real operator execution or owner
-recovery/transfer is implied.
+Published in 362986e; corrected study-UI checkpoint 2521706 passed all four hosted
+jobs in run 38895008269, including the full 28-test PostgreSQL service suite.
+Matching Vercel deployment 7117984307 succeeded. No real operator execution or
+owner recovery/transfer is implied.
