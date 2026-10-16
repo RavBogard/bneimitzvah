@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { type Assigned, type Reading, type ReadingMode, type Student } from "./api";
 import { statusOf, useWorkspace, WorkspaceLink } from "./provider";
 import { ReadingEditor } from "./reading-editor";
@@ -9,6 +9,7 @@ import type { StudyKind } from "./study/api";
 import { WorkCoordinator } from "./work/coordinator";
 import { VerseTools } from "./work/verse-tools";
 import { DepartureReview } from "./work/departure-review";
+import { ServiceLearningPanel, type ServiceReload } from "./service-learning/panel";
 
 function AssignmentContext({ row, current = false }: { row: Reading; current?: boolean }) {
   return <article className={`confirmed-reading${current ? " reading-current-assignment" : ""}`}>
@@ -25,10 +26,13 @@ function AssignmentContext({ row, current = false }: { row: Reading; current?: b
 export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: ReadingMode; studentId: string; onStudentReload?(student: Student): void }) {
   const { readVerified: read, readWork, epoch, busy, selectChild, registerReload, registerWork, completeWork, registerDeparture, guardDeparture } = useWorkspace();
   const key = `${mode}:${studentId}:${epoch}`;
+  const serviceId = useId();
   const [result, setResult] = useState<{ key: string; value?: Assigned; error?: number; loading?: boolean }>({ key: "" }), [retry, setRetry] = useState(0);
   const [selectedKind, setSelectedKind] = useState<StudyKind>("torah");
   const abort = useRef<AbortController | null>(null), sequence = useRef(0);
   const study = useRef<StudyReload | null>(null);
+  const service = useRef<ServiceReload | null>(null);
+  const registerService = useCallback((value: ServiceReload) => { service.current = value; return () => { if (service.current === value) service.current = null; }; }, []);
   const registerStudy = useCallback((value: StudyReload) => { study.current = value; return () => { if (study.current === value) study.current = null; }; }, []);
   const studyDenied = useCallback((status: number) => { setResult({ key, error: status }); }, [key]);
   const environment = useRef({ read, readWork, mode, studentId, studyDenied }); environment.current = { read, readWork, mode, studentId, studyDenied };
@@ -45,7 +49,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   }, [work, needsUnload]);
   const load = useCallback(async () => {
     abort.current?.abort(); const request = new AbortController(), turn = ++sequence.current; abort.current = request;
-    work.pause(); study.current?.clear();
+    work.pause(); study.current?.clear(); service.current?.clear();
     let lifecycle = work.lifecycle;
     setResult(previous => previous.key === key ? { ...previous, loading: true } : { key, loading: true });
     try {
@@ -55,7 +59,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       if (request.signal.aborted || turn !== sequence.current || lifecycle !== work.lifecycle) throw new Error("Reading request replaced");
       onStudentReload?.(value.student); work.configure(value, true); lifecycle = work.lifecycle; setResult({ key, value, loading: true });
       const kind = value.readings.some(row => row.kind === selectedKindRef.current) ? selectedKindRef.current : value.readings[0]?.kind;
-      await Promise.all([study.current?.reload(value, request.signal), kind ? work.reload(request.signal, kind) : undefined]);
+      await Promise.all([study.current?.reload(value, request.signal), kind ? work.reload(request.signal, kind) : undefined, service.current?.reload(value, request.signal)]);
       if (request.signal.aborted || turn !== sequence.current || lifecycle !== work.lifecycle) throw new Error("Reading request replaced");
       work.accept(lifecycle); completeWork(work);
       setResult({ key, value });
@@ -78,12 +82,13 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
         {current?.error && <button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload reading</button>}</div> : <>
       <h2 id="reading-heading"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
       <div className="reading-student-context"><p className="reading-date">Ceremony date: <time dateTime={student.ceremonyDate}>{student.ceremonyDate}</time></p>
-      <button className="button-text" onClick={() => setRetry(value => value + 1)}>Refresh reading</button></div>
+      <button className="button-text" aria-label="Refresh reading" onClick={() => setRetry(value => value + 1)}>Refresh</button>
+      {readings.length < 2 && <a className="button-text service-entry" href={`#${serviceId}`}>Service parts</a>}</div>
       {current?.loading && <p role="status">Checking the current assignment…</p>}
       {readings.length === 0 ? <div className="reading-empty"><h3>No reading has been assigned yet</h3><p>Your tutor or rabbi will confirm the verses here.</p></div>
         : <AssignmentContext row={selectedReading} current />}</>}
       <AssignedStudyText baseline={current?.value ?? null} register={registerStudy} reloadMetadata={load} authorityFailed={status => { work.clear(); studyDenied(status); }} onKindChange={setSelectedKind}
-        guardDeparture={guardDeparture} renderWork={(kind, verseRef) => <VerseTools coordinator={work} kind={kind} verseRef={verseRef} />} renderActiveWork={() => work.active && <VerseTools coordinator={work} kind={work.active.kind} verseRef={work.active.ref} />}
+        guardDeparture={guardDeparture} serviceHref={`#${serviceId}`} renderWork={(kind, verseRef) => <VerseTools coordinator={work} kind={kind} verseRef={verseRef} />} renderActiveWork={() => work.active && <VerseTools coordinator={work} kind={work.active.kind} verseRef={work.active.ref} />}
         onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} />
       {work.notice && <p className="field-help" role="status">{work.notice}</p>}
       {otherReadings.length > 0 && <details className="reading-other-assignments"><summary>Other confirmed reading details</summary>{otherReadings.map(row => <AssignmentContext key={row.id} row={row} />)}</details>}
@@ -95,5 +100,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       <p className="field-help">Unsent work stays only in this tab. Controlled workspace changes ask you to review it. Your browser may warn before reload or close; Back, Forward, closing the browser or an unexpected route change can discard work. A warning and delivery cannot be guaranteed.</p>
       {mode === "parent" && <button className="button-primary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : "Enter child practice"}</button>}
     </aside>}
-  </div>{current?.loading && <p role="status">Checking the current assignment, text and saved work…</p>}{editor}</>;
+  </div>{current?.loading && <p role="status">Checking the current assignment, text and saved work…</p>}{editor}
+    <ServiceLearningPanel id={serviceId} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} />
+  </>;
 }

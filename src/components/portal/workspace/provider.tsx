@@ -8,6 +8,8 @@ import { workspaceApi, type Assigned, type Context, type ReadingMode } from "./a
 import { PracticeCoordinator } from "./practice";
 import { fetchStudyPage, type StudyKind, type StudyPage } from "./study/api";
 import { fetchWork, type WorkOperation, type WorkPage, type WorkHistory, type WorkReceipt, type WorkRecovery } from "./work/api";
+import { serviceApi, type ServiceMetadata, type ServicePlan, type ServiceUnitResponse } from "./service-learning/api";
+import { reloadWorkspaceScopes, type ReloadRegistration } from "./reload-barrier";
 
 export const rolePaths = { student: "/workspace/student", parent: "/workspace/parent", tutor: "/workspace/tutor", admin: "/workspace/admin/students" } as const;
 type WorkLifecycle = { pause(): void; clear(): void; settle(): Promise<void>; hasUnsaved(): boolean; reveal(): void };
@@ -18,6 +20,10 @@ type Workspace = {
   readVerified(mode: ReadingMode, id: string, signal: AbortSignal): Promise<Assigned>;
   readStudy(baseline: Assigned, kind: StudyKind, offset: number, signal: AbortSignal): Promise<StudyPage>;
   readWork(baseline: Assigned, kind: StudyKind, operation: WorkOperation, signal: AbortSignal): Promise<WorkPage | WorkHistory | WorkReceipt | WorkRecovery>;
+  readServiceMetadata(mode: ReadingMode, id: string, signal: AbortSignal): Promise<ServiceMetadata>;
+  readServiceUnit(mode: ReadingMode, id: string, plan: ServicePlan, unitId: string, signal: AbortSignal): Promise<ServiceUnitResponse>;
+  verifyServiceSession(signal: AbortSignal): Promise<void>;
+  serviceAuthorityFailed(status: number): void;
   registerWork(value: WorkLifecycle): () => void;
   completeWork(value: WorkLifecycle): void;
   registerDeparture(guard: () => Promise<boolean>): () => void;
@@ -40,7 +46,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [context, setContext] = useState<Context | null>(null), [busy, setBusy] = useState(false), [epoch, setEpoch] = useState(0), [notice, setNotice] = useState("");
   const [workNotice, setWorkNotice] = useState("");
   const sequence = useRef(0), currentPath = useRef(pathname), routeRevision = useRef(0), sessionAbort = useRef<AbortController | null>(null);
-  const binding = useRef<string | null>(null), reloaders = useRef(new Set<() => Promise<void>>());
+  const binding = useRef<string | null>(null), reloaders = useRef(new Set<ReloadRegistration>());
   const work = useRef(new Set<WorkLifecycle>()), departures = useRef(new Set<() => Promise<boolean>>());
   const completeWork = useCallback((value: WorkLifecycle) => { if (!checkingRef.current && work.current.has(value)) value.reveal(); }, []);
   const registerWork = useCallback((value: WorkLifecycle) => { work.current.add(value); return () => {
@@ -50,7 +56,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const registerDeparture = useCallback((guard: () => Promise<boolean>) => { departures.current.add(guard); return () => { departures.current.delete(guard); }; }, []);
   const guardDeparture = useCallback(async () => { for (const guard of departures.current) if (!await guard()) return false; return true; }, []);
   const clearWork = useCallback(() => { work.current.forEach(value => value.clear()); }, []);
-  const registerReload = useCallback((reload: () => Promise<void>) => { reloaders.current.add(reload); return () => { reloaders.current.delete(reload); }; }, []);
+  const registerReload = useCallback((reload: () => Promise<void>) => { const registration = { reload }; reloaders.current.add(registration); return () => { reloaders.current.delete(registration); }; }, []);
   if (currentPath.current !== pathname) { currentPath.current = pathname; routeRevision.current++; }
   const visibleNotice = isParentPath(pathname) ? notice : "";
 
@@ -92,7 +98,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         }
       }
       if (request.signal.aborted || turn !== sequence.current) return;
-      if (sameBinding) { await Promise.all([...work.current].map(value => value.settle())); await Promise.all([...reloaders.current].map(reload => reload())); }
+      if (sameBinding) {
+        await Promise.all([...work.current].map(value => value.settle()));
+        await reloadWorkspaceScopes(reloaders.current, async () => {
+          const verified = parseSession(await requestPortal("/api/session", undefined, request.signal));
+          if (verified.sessionBinding !== next.sessionBinding) throw new PortalRequestError(401);
+        });
+      }
       if (request.signal.aborted || turn !== sequence.current) return;
       binding.current = next.sessionBinding;
       checkingRef.current = false; work.current.forEach(value => value.reveal());
@@ -211,6 +223,25 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       throw error;
     }
   }, [practice, router, clearWork, verifyWorkSession]);
+  const serviceRead = useCallback(async <T,>(mode: ReadingMode, id: string, signal: AbortSignal, action: (selection?: typeof practice.selection) => Promise<T>): Promise<T> => {
+    const generation = practice.generation, active = practice.selection, route = routeRevision.current;
+    if (mode === "child-practice" && (!active || active.context.studentId !== id)) throw new PortalRequestError(404);
+    const check = () => { if (signal.aborted || generation !== practice.generation || route !== routeRevision.current || mode === "child-practice" && (practice.selection?.handle !== active?.handle || practice.selection?.context.id !== active?.context.id)) throw new PortalRequestError(409); };
+    try {
+      await verifyWorkSession(signal); check();
+      const value = await action(mode === "child-practice" ? active : undefined);
+      check(); await verifyWorkSession(signal); check(); return value;
+    } catch (error) {
+      if (!signal.aborted && generation === practice.generation && route === routeRevision.current && mode === "child-practice" && currentPath.current === `/workspace/practice/${id}` && [401, 403, 404].includes(statusOf(error))) {
+        clearWork(); practice.invalidate(); setContext(null); setNotice("Practice access changed. Choose an available child again."); setEpoch(value => value + 1); router.replace("/workspace/parent");
+      } else if (!signal.aborted && generation === practice.generation && route === routeRevision.current && [401, 403, 404].includes(statusOf(error))) { clearWork(); refresh(); }
+      throw error;
+    }
+  }, [practice, verifyWorkSession, clearWork, router, refresh]);
+  const readServiceMetadata = useCallback((mode: ReadingMode, id: string, signal: AbortSignal) => serviceRead(mode, id, signal, selection => serviceApi.metadata(mode, id, signal, selection ?? undefined)), [serviceRead]);
+  const readServiceUnit = useCallback((mode: ReadingMode, id: string, plan: ServicePlan, unitId: string, signal: AbortSignal) => serviceRead(mode, id, signal, selection => serviceApi.unit(mode, id, plan, unitId, signal, selection ?? undefined)), [serviceRead]);
+  const serviceAuthorityFailed = useCallback((status: number) => { if ([401, 403, 404].includes(status)) { clearWork(); refresh(); } }, [clearWork, refresh]);
+  const verifyServiceSession = useCallback(async (signal: AbortSignal) => { try { await verifyWorkSession(signal); } catch (error) { if (!signal.aborted) serviceAuthorityFailed(statusOf(error)); throw error; } }, [verifyWorkSession, serviceAuthorityFailed]);
   const controlledLink = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault(); void guardDeparture().then(leave => { if (leave) { clearWork(); router.push(href); } });
@@ -225,7 +256,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={refresh}>Check access again</button>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
-        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readWork, registerWork, completeWork, registerDeparture, guardDeparture, registerReload }}>
+        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readWork, readServiceMetadata, readServiceUnit, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload }}>
           <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>
           {visibleNotice && <p className="workspace-notice" role="status">{visibleNotice}</p>}
           {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}

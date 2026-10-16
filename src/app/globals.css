@@ -276,3 +276,33 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
   .study-verses-with-work > li > .student-aliyah { margin-block: 0; font-size: 0.875rem; line-height: 1.4; }
   .study-verses-with-work > li:has(> .student-aliyah) > .verse-work { margin-block-start: 1rem; }
 }
+
+/* Selected service parts extend the existing reading and explicit review controls. */
+.service-learning-panel { margin-block-start: 3rem; padding-block-start: 1.5rem; border-top: 1px solid var(--color-ink); scroll-margin-block-start: 1.5rem; }
+.service-learning-panel > p, .service-plan-editor > p, .service-plan-review > p { margin-block: 1rem; }
+.service-part-choices { display: flex; flex-wrap: wrap; gap: 0.75rem; list-style: none; padding: 0; margin-block: 1.25rem; }
+.service-part-choices [aria-pressed="true"] { border-color: var(--color-ink); font-weight: 700; }
+.service-unit { margin-block: 1.5rem; padding-block: 1.25rem; border-top: 1px solid var(--color-rule); }
+.service-unit-caption { margin-block: 0.75rem 1rem; }
+.service-unit-group { padding-block: 0.5rem; }
+.service-source-block { min-width: 0; margin-block: 0.75rem; }
+.service-unit-hebrew { white-space: pre-wrap; }
+.service-unit-english, .service-source-english, .service-source-instruction { white-space: pre-wrap; overflow-wrap: anywhere; }
+.service-source-label { font-weight: 600; margin-block: 0.75rem 0.25rem; }
+.service-unit[data-layout="parallel-passages"] .service-unit-group { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 2rem; align-items: start; }
+.service-unit-notes details { margin-block: 0.75rem; }
+.service-unit-credits { margin-block-start: 1.5rem; padding-block-start: 1rem; border-top: 1px solid var(--color-rule); }
+.service-unit-credits p + p { margin-block-start: 0.5rem; }
+.service-plan-editor { margin-block-start: 2rem; padding-block-start: 1.5rem; border-top: 1px solid var(--color-rule); max-width: 44rem; }
+.service-plan-editor > button { margin-block: 0.5rem; }
+.service-plan-editor fieldset { margin-block: 1.25rem; border: 1px solid var(--color-rule); min-width: 0; }
+.service-plan-editor legend { font-weight: 600; padding-inline: 0.35rem; }
+.service-catalog-choices { list-style: none; padding: 0; margin: 0; }
+.service-catalog-choices label { display: flex; align-items: start; gap: 0.75rem; min-height: 48px; padding-block: 0.75rem; cursor: pointer; }
+.service-catalog-choices input { width: 1.25rem; height: 1.25rem; flex: 0 0 auto; margin-block-start: 0.25rem; }
+.service-choice-caption { display: block; margin-block-start: 0.25rem; }
+.service-plan-review { margin-block-start: 1.5rem; padding-block-start: 1.25rem; border-top: 1px solid var(--color-ink); }
+@media (max-width: 640px) {
+  .study-kind-choice { gap: 0.5rem; }
+  .service-unit[data-layout="parallel-passages"] .service-unit-group { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+}
