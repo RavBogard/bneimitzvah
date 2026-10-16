@@ -195,3 +195,84 @@ test("two first reading inserts contend on the unique index and commit one exact
     executeA.resolve();executeB.resolve();releaseAck.resolve();restoreA();restoreB();await settleRace([first,second]);
   }
 });
+
+test("an authorized old-child practice write commits before a competing switch without closing another tab",async()=>{
+  const f=await fixture(),practice=await f.practice();
+  const old=await practice.a.enter(practice.request(),{studentId:f.student.id});
+  const otherTab=await practice.a.enter(practice.request(),{studentId:practice.sibling.id});
+  const entered=deferred(),release=deferred(),requestId=newRequestId();
+  let switchSawCommittedWrite=false,claimed=false;
+  const restore=await f.intercept("b",text=>!claimed && text.startsWith('update "practice_context" ') && text.includes('"revoked_at"'),async proceed=>{
+    claimed=true;
+    // This executes inside the actual switch after its tenant UPDATE lock was
+    // granted. A separate physical owner connection must already see the write
+    // committed before the switch can mutate the old context. No fake results.
+    const rows=await f.ownerDb.select({id:s.auditEvent.id}).from(s.auditEvent).where(eq(s.auditEvent.requestId,requestId));
+    if(rows.length!==1)throw new Error("Practice write was not committed before switch");
+    switchSawCommittedWrite=true;
+    return proceed();
+  });
+  // A synthetic audit insert is the real practice-write transaction side effect;
+  // translation/recording writes are future separately-reviewed features.
+  const operation=practice.a.withPracticeCapability(practice.request(old.handle),{mode:"child-practice",studentId:f.student.id,capability:"practice-write"},async(tx,actor)=>{
+    await tx.insert(s.auditEvent).values({tenantId:actor.tenantId,actorUserId:actor.userId,actorMembershipId:actor.membershipId,
+      roleGrantId:actor.roleGrantId,mode:actor.mode,guardianId:actor.relationshipId,actingStudentId:actor.studentId,action:"context.enter",
+      targetType:"synthetic-practice-write",targetId:actor.context!.id,requestId});
+    entered.resolve(); // INSERT acknowledged; authority/context SHARE locks held.
+    await release.promise;
+    return true;
+  }).then(()=>true,()=>false);
+  let switching:Promise<Awaited<ReturnType<typeof practice.b.switch>>|null>|undefined;
+  try{
+    await waitForEntry(entered.promise,operation);
+    switching=practice.b.switch(practice.request(old.handle),{studentId:practice.sibling.id}).then(result=>result,()=>null);
+    await f.waitForLock(f.pidB,f.pidA); // Observed PG blocking edge, not a delay.
+    release.resolve();
+    expect(await operation).toBe(true);
+    const switched=await switching;
+    expect(switched!==null && switchSawCommittedWrite).toBe(true);
+    expect((await f.ownerDb.select({id:s.auditEvent.id}).from(s.auditEvent).where(eq(s.auditEvent.requestId,requestId))).length).toBe(1);
+    expect(await denied(()=>practice.a.read(practice.request(old.handle),{mode:"child-practice",studentId:f.student.id}),404)).toBe(true);
+    expect((await practice.a.read(practice.request(otherTab.handle),{mode:"child-practice",studentId:practice.sibling.id})).context?.id===otherTab.context.id).toBe(true);
+    if(!switched)throw new Error("Expected practice switch result missing");
+    expect((await practice.b.read(practice.request(switched.handle),{mode:"child-practice",studentId:practice.sibling.id})).context?.id===switched.context.id).toBe(true);
+  }finally{release.resolve();restore();await settleRace(switching?[operation,switching]:[operation]);}
+});
+
+test("a committed practice switch denies a waiting old-handle write and keeps the other tab usable",async()=>{
+  const f=await fixture(),practice=await f.practice();
+  const old=await practice.a.enter(practice.request(),{studentId:f.student.id});
+  const otherTab=await practice.a.enter(practice.request(),{studentId:practice.sibling.id});
+  const entered=deferred(),release=deferred(),requestId=newRequestId();
+  let claimed=false,callbackCalled=false;
+  const restore=await f.intercept("b",text=>!claimed && text.startsWith('update "practice_context" ') && text.includes('"revoked_at"'),async proceed=>{
+    claimed=true;
+    const result=await proceed(); // Real old-context UPDATE acknowledgement.
+    entered.resolve();
+    await release.promise;
+    return result;
+  });
+  const switching=practice.b.switch(practice.request(old.handle),{studentId:practice.sibling.id}).then(result=>result,()=>null);
+  let operation:Promise<boolean>|undefined;
+  try{
+    await waitForEntry(entered.promise,switching);
+    operation=practice.a.withPracticeCapability(practice.request(old.handle),{mode:"child-practice",studentId:f.student.id,capability:"practice-write"},async(tx,actor)=>{
+      callbackCalled=true;
+      await tx.insert(s.auditEvent).values({tenantId:actor.tenantId,actorUserId:actor.userId,actorMembershipId:actor.membershipId,
+        roleGrantId:actor.roleGrantId,mode:actor.mode,guardianId:actor.relationshipId,actingStudentId:actor.studentId,action:"context.enter",
+        targetType:"synthetic-practice-write",targetId:actor.context!.id,requestId});
+    }).then(()=>false,error=>error instanceof AccessDenied && error.status===404);
+    await f.waitForLock(f.pidA,f.pidB);
+    release.resolve();
+    const switched=await switching;
+    expect(switched!==null).toBe(true);
+    expect(await operation).toBe(true);
+    expect(callbackCalled).toBe(false);
+    expect((await f.ownerDb.select({id:s.auditEvent.id}).from(s.auditEvent).where(eq(s.auditEvent.requestId,requestId))).length).toBe(0);
+    const [closed]=await f.ownerDb.select({revokedAt:s.practiceContext.revokedAt}).from(s.practiceContext).where(eq(s.practiceContext.id,old.context.id));
+    expect(closed.revokedAt!==null).toBe(true);
+    expect((await practice.a.read(practice.request(otherTab.handle),{mode:"child-practice",studentId:practice.sibling.id})).context?.id===otherTab.context.id).toBe(true);
+    if(!switched)throw new Error("Expected practice switch result missing");
+    expect((await practice.b.read(practice.request(switched.handle),{mode:"child-practice",studentId:practice.sibling.id})).context?.id===switched.context.id).toBe(true);
+  }finally{release.resolve();restore();await settleRace(operation?[switching,operation]:[switching]);}
+});

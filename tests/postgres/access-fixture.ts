@@ -5,7 +5,9 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { createAuthStack } from "../../src/server/auth/factory";
 import { createAccessService } from "../../src/server/access/service";
+import { createPracticeService } from "../../src/server/practice/service";
 import type { AccessRequest } from "../../src/server/access/types";
+import type { CookieMutationRequest } from "../../src/server/http/mutations";
 import * as s from "../../src/server/db/index";
 import * as authSchema from "../../src/server/db/auth-schema";
 import { disposableConfig, query } from "./disposable.mjs";
@@ -153,7 +155,19 @@ export async function postgresAccessFixture() {
       client.release();
       return ()=>{client.query=original;};
     }
-    return {a,b,aDb,bDb,owner,ownerDb,pidA,pidB,request,admin,tutor,student,otherStudent,link,tutorGrant,close,waitForLock,intercept,signIn};
+    async function practice() {
+      // Opt-in practice fixture additions leave the existing access/reading
+      // fixtures and their exact cardinality assertions unchanged.
+      const [sibling]=await ownerDb.insert(s.student).values({tenantId:"crc",firstName:"Synthetic",lastName:"Sibling",
+        ceremonyDate:"2027-01-02",parentEmail:"fixture@example.test"}).returning();
+      await ownerDb.insert(s.guardian).values({tenantId:"crc",studentId:sibling.id,parentGrantId:parentGrant.id,linkProvenance:"synthetic-practice"});
+      function practiceRequest(handle?:string):CookieMutationRequest {
+        return {url:"http://localhost:3000/practice",method:"POST",headers:new Headers({origin:"http://localhost:3000",cookie:tutor.cookie,
+          ...(handle===undefined?{}:{"X-Practice-Context":handle})})};
+      }
+      return {a:createPracticeService({access:a}),b:createPracticeService({access:b}),sibling,request:practiceRequest};
+    }
+    return {a,b,aDb,bDb,owner,ownerDb,pidA,pidB,request,admin,tutor,student,otherStudent,link,tutorGrant,close,waitForLock,intercept,signIn,practice};
   } catch {
     try{await close();}catch{/* Do not disclose provider/SQL details from cleanup. */}
     throw new Error("Disposable PostgreSQL access fixture setup failed; details withheld");

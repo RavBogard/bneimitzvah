@@ -14,7 +14,7 @@ export type Actor = Readonly<{
   roleGrantId: string; mode: ActiveMode; authorityRevision: number;
 }>;
 export type VerifiedIdentity = Readonly<{
-  tenantId: string; origin: string; userId: string; email: string; authSessionId: string;
+  tenantId: string; origin: string; userId: string; email: string; authSessionId: string; sessionExpiresAt: Date;
   membership: Readonly<{ id: string; authorityRevision: number }> | null;
 }>;
 export type StudentActor = Actor & Readonly<{ studentId: string; relationshipId: string | null }>;

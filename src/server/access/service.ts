@@ -5,11 +5,12 @@ import { lockRoleGrant, lockStudent, lockStudentRelationship } from "../data/aut
 import { createVerifiedIdentityAccess } from "./identity";
 import { lockVisibleStudentCandidates } from "../data/students";
 import type { StudentPage, StudentView } from "../data/students";
+import { requireCookieMutation } from "../http/mutations";
 import { AccessDenied } from "./errors";
 import type { AccessDatabase, AccessRequest, AccessTransaction, ActiveMode, Actor, DeploymentScope, LockIntent, StudentActor } from "./types";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-type StudentCapability = "read" | "set-reading";
+type StudentCapability = "read" | "set-reading" | "practice-write";
 type AdminCapability = "manage-students" | "manage-invites" | "manage-relationships" | "manage-defaults";
 const adminRules: Record<AdminCapability, { fresh: boolean; intent: LockIntent }> = {
   "manage-students": { fresh: false, intent: "authority-write" },
@@ -30,6 +31,9 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
   const withVerifiedIdentity = createVerifiedIdentityAccess(input);
 
   async function withActor<T>(request: AccessRequest, mode: ActiveMode, intent: LockIntent, fresh: boolean, action: (tx: AccessTransaction<Q>, actor: Actor) => Promise<T>) {
+    // Base-mode services must not silently ignore a child-practice header and
+    // grant a parent's overlapping staff role. Only practice consumes it.
+    if (request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
     return withVerifiedIdentity(request, { intent, fresh }, async (tx, identity) => {
       if (!["student", "parent", "tutor", "admin"].includes(mode)) throw new AccessDenied(403);
         if (!identity.membership) throw new AccessDenied(403);
@@ -44,7 +48,7 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
   }
 
   async function withStudentCapability<T>(request: AccessRequest, selection: { mode: ActiveMode; studentId: string; capability: StudentCapability }, action: (tx: AccessTransaction<Q>, actor: StudentActor, student: StudentView) => Promise<T>) {
-    if (!["read", "set-reading"].includes(selection.capability)) throw new AccessDenied(403);
+    if (!["read", "set-reading", "practice-write"].includes(selection.capability)) throw new AccessDenied(403);
     const intent: LockIntent = selection.capability === "read" ? "read" : "data-write";
     return withActor(request, selection.mode, intent, false, async (tx, actor) => {
       if (!uuid.test(selection.studentId)) throw new AccessDenied(404);
@@ -55,6 +59,10 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
       // First establish view access, then distinguish forbidden action from an
       // unavailable target. Foreign/missing/unrelated IDs share the same denial.
       if (selection.capability === "set-reading" && actor.mode !== "admin" && actor.mode !== "tutor") throw new AccessDenied(403);
+      if (selection.capability === "practice-write") {
+        if (actor.mode !== "student") throw new AccessDenied(403);
+        requireCookieMutation(request, actor.origin);
+      }
       return action(tx, Object.freeze({ ...actor, studentId: student.id, relationshipId: relationship.id }), studentView(student));
     });
   }

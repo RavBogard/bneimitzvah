@@ -75,3 +75,7 @@ revision, HMAC alteration/replay, canonical verse, duplicate/row-bound and rollb
 contracts. It does not prove a real PostgreSQL first-confirmation race, live
 provider transport, route/body limits or a browser confirmation workflow. Root
 retains combined/hosted integration gates and future public-route review.
+
+## Integration follow-through
+
+Published as 18918c0. Combined local integration passed 120 Node and 73 app tests, typecheck/build and 3 placeholder browser checks. Real PostgreSQL tests now prove two first-assignment inserts contend on the unique index and produce one confirmed assignment with one stale result. All four hosted jobs passed in run 38841820697, including PostgreSQL 17.11; matching deployment reports success. Routes, role UI and live-provider behavior remain future gates.

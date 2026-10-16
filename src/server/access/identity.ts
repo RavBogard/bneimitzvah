@@ -12,8 +12,9 @@ export function createVerifiedIdentityAccess<Q extends PgQueryResultHKT>(input: 
   db: AccessDatabase<Q>; auth: Pick<ReturnType<typeof createAuthStack>, "api">; deployment: DeploymentScope;
 }) {
   const deployment = Object.freeze({ ...input.deployment });
-  return async function withVerifiedIdentity<T>(request: AccessRequest & { method?: string }, options: { intent: LockIntent; mutation?: boolean; fresh?: boolean }, action: (tx: AccessTransaction<Q>, identity: VerifiedIdentity) => Promise<T>) {
+  return async function withVerifiedIdentity<T>(request: AccessRequest & { method?: string }, options: { intent: LockIntent; mutation?: boolean; fresh?: boolean; allowPracticeContext?: boolean }, action: (tx: AccessTransaction<Q>, identity: VerifiedIdentity) => Promise<T>) {
     try {
+      if (request.headers.has("X-Practice-Context") && !options.allowPracticeContext) throw new AccessDenied(403);
       const resolved = await resolveTenantHost(input.db, request, deployment);
       if (options.mutation) requireCookieMutation(request, resolved.origin);
       const proof = await input.auth.api.getSession({ headers: new Headers(request.headers), query: { disableCookieCache: true, disableRefresh: true } });
@@ -26,7 +27,7 @@ export function createVerifiedIdentityAccess<Q extends PgQueryResultHKT>(input: 
         if (!records.user.verified || records.membership?.disabledAt) throw new AccessDenied(403);
         if (options.fresh && now - records.session.createdAt.getTime() >= 15 * 60_000) throw new AccessDenied(403);
         const identity: VerifiedIdentity = Object.freeze({ tenantId: resolved.tenantId, origin: resolved.origin, userId: records.user.id,
-          email: records.user.email, authSessionId: records.session.id,
+          email: records.user.email, authSessionId: records.session.id, sessionExpiresAt: new Date(records.session.expiresAt),
           membership: records.membership ? Object.freeze({ id: records.membership.id, authorityRevision: records.membership.authorityRevision }) : null });
         return action(tx, identity);
       });

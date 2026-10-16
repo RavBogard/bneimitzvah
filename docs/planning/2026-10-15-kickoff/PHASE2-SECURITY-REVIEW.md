@@ -236,3 +236,71 @@ delivery or physical PostgreSQL/Neon invitation race was executed by this review
 the concurrent real-Postgres integration assignment and combined/hosted gates
 remain owned by the primary collaborator. Human testing and generated-chant
 release restrictions remain unchanged.
+
+## Practice-context/runtime foundation review — 2026-10-15
+
+**Accepted for these bounded backend slices after one P2 privacy fix; no remaining
+blocking finding found.** Reviewer added only `tests/app/practice-review.test.ts`,
+`tests/app/runtime-review.test.ts` and this note; no implementation or Git edits.
+
+**P2 fixed: mutable denials escaped the runtime privacy boundary.**
+`runtime/composition.ts` previously rethrew a callback's `AccessDenied` object
+verbatim. A focused adversarial test changed its message/name/stack and attached
+private cause/provider fields; those diagnostics escaped despite the boundary's
+fixed-error contract. The author now copies only strictly validated 401/403/404
+into a fresh denial, catches diagnostic-accessor failures, and maps malformed
+statuses to a fresh unavailable error. The reviewer regression independently
+passes after the fix, proving original diagnostic fields do not survive and
+logging retains only fixed event/status/generated request ID.
+
+**Practice authority:** inspected live verified user/session/membership, exact
+parent grant, practice-enabled guardian and student checks; context handles are
+random 32-byte secrets stored as SHA-256, scoped to exact tenant/user/session/
+membership/grant/guardian/child/revision, and expire strictly at the earlier of
+60 minutes or session expiry. Own-student writes require their live student
+identity; parents obtain only the explicit child-practice path. Base services and
+verified-identity calls reject context headers by default, including blank ones;
+practice explicitly opts in. A header-bearing child request cannot acquire an
+overlapping tutor/admin role. Headerless staff mode remains a separate live grant.
+
+Switch authorizes the new child before closing the old context. Exit/switch old-
+context cleanup checks immutable actor/session/membership provenance rather than
+reviving a revoked old grant/link; context changes and correctly attributed
+guardian/child audits share the transaction. Inspected lock order remains tenant
+-> user -> session -> membership -> grant -> student -> guardian -> context, with
+SHARE ordinary writes and UPDATE switch/exit. The new independent probe obtains a
+genuine SDK session proof, completes a sibling switch before returning that stale
+proof, then attempts an old-context write: denied before callback execution while
+the successor remains usable. This is deliberate boundary interleaving, not a
+claim of physical PGlite concurrency.
+
+**Runtime/privacy:** configuration is lazy and explicit, rejects operator
+credentials/contradictory environments/unsafe origins and unsupported connection
+options. Restricted-role closure and exact configured mapping are checked before
+exposing SDK/cache access; request-scoped pools close on failure. Fixed-field
+logging does not serialize arbitrary diagnostic objects. Mail is restricted to
+the official endpoint and canonical same-origin path/token/redirect allowlists,
+with deadlines, no redirects, plain text and discarded provider bodies. The
+global SQL cache revalidates bounded nonpersonal metadata, namespaces, envelopes,
+dates/calendars/ranges/TTL and rejects hidden properties. No route or provider
+configuration was introduced by this review.
+
+**Independent evidence:** the six focused practice/runtime/mail/logging files
+passed **24/24** before the isolated denial fix, including the new stale-proof
+probe. After the fix, both new reviewer files passed **2/2** independently; the
+runtime regression checks mutated diagnostic fields and malformed denial status.
+Logs: ignored `.local-logs/phase2-security-practice-runtime-baseline.log` and
+`.local-logs/phase2-security-practice-runtime-final.log`. The lifecycle privacy
+test mocks driver/startup boundaries only; practice uses actual SDK cookies and
+restricted PGlite services. Primary supplied separate PostgreSQL 16.15 service
+evidence **7/7**, including two practice races; inspected tests observe real
+blocking edges and preserve the other tab. This reviewer did not rerun that
+credentialed suite.
+
+Acceptance does not cover future routes/UI/browser response-generation handling,
+real Neon WebSockets, Google, Resend delivery or provider-side tracking settings.
+Incoming auth handlers must validate the actual request through `resolveHost`
+before the SDK; creation/data responses need no-store, and the private tab handle
+must never enter URLs/logs. Those intentionally absent transport boundaries still
+require implementation/review. Primary retains full integration/hosted gates;
+human testing and generated-chant release restrictions remain in effect.
