@@ -10,7 +10,7 @@ export type RuntimeConfig = Readonly<{
 const clean = (s: unknown): s is string => typeof s === "string" && s.length > 0 && s.trim() === s && !/[\x00-\x20\x7f]/.test(s);
 // Configuration selects exactly one; this is not a request-host alias list.
 export const PRODUCTION_ORIGINS: readonly string[] = Object.freeze([
-  "https://bneimitzvah.centralreform.org", "https://bneimitzvah.vercel.app",
+  "https://beitmitzvah.centralreform.org", "https://bneimitzvah.centralreform.org", "https://bneimitzvah.vercel.app",
 ]);
 export const mailbox = (s: unknown): s is string => typeof s === "string" && s.length <= 254 && /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}$/.test(s);
 

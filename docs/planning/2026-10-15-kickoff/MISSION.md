@@ -1,27 +1,29 @@
-# B'nei Mitzvah Portal — mission brief
+# Beit Mitzvah Portal — mission brief
 
 Filed 2026-10-15 from the kickoff interview in Cowork. This is the authority document for the project until a spec supersedes a section of it; a spec that changes a ruling here says so with a dated "Amended" note. Daniel's words are binding; everything else is Claude's read, approved by him in three rounds on 2026-10-15.
 
+**Amended 2026-10-16:** Daniel's later rulings 27–59 in [PLAN-REVIEW.md](../2026-10-16-review/PLAN-REVIEW.md#1-rulings-from-this-session-daniel-binding-2026-10-16) are folded in below. Original numbering and dated decisions are retained; that review preserves the earlier wording and interview record. Its section 3 mechanisms remain proposals, subject to Astra's integration corrections and bounded design review. These requirements do not claim completed implementation.
+
 ## What this is
 
-A web-app portal for b'nei mitzvah students at Central Reform Congregation (CRC), St. Louis, built so other congregations can be added later. A student signs in and finds their own Torah reading: the Hebrew with vowels and cantillation, a translation, the trope colored by family with audio to learn from, commentary chosen for them by their rabbi and tutor, and tools to work out their own translation word by word. Tutors and rabbis see their students, assign sources, leave notes, and hear what the student records.
+A web-app portal for child and adult Beit Mitzvah students at Central Reform Congregation (CRC), St. Louis, built so other congregations can be added later. A student finds their Torah and haftarah readings, equally prominent, and the service parts they lead: Hebrew with vowels and cantillation, translations, trope and recording practice, chosen commentary and translation tools. Tutors and rabbis assign the material, leave notes and hear submitted recordings. The product scope is reading and service preparation; d'var Torah, mitzvah projects and general family logistics are outside 1.0.
 
 It is the second product carved out of the haftarah repo (`RavBogard/haftarah`). The haftarah 2.0 spec (`docs/superpowers/specs/2026-10-15-web-2-0-design.md`, commit `5b2530f` of 2026-10-15) rules that "the study-sheet maker and viewer and the B'nei Mitzvah portal are two products": the trope engine, the audio store, the player, the drills, record-yourself and the cantor question all belong here, and nothing tenant- or user-specific ever enters the haftarah repo.
 
-## Settled decisions (Daniel, binding, 2026-10-15)
+## Settled decisions (Daniel, binding, 2026-10-15; dated amendments below)
 
 ### Users and roles
 
-1. Four roles per congregation: **student**, **parent** (read-only view of the student's page and progress), **tutor** (their assigned students; can assign sources and leave notes), **rabbi/admin** (everyone in the congregation; sets the congregation's defaults). A cantor is a tutor with a flag.
-2. Sign-in with Google for everyone, with a magic-link email fallback for kids without a Google account. No passwords.
-3. Under-13s exist. Every student record carries a parent email.
-4. The rabbi creates a student by typing name, date and parent email; the portal computes the parashah from the date and proposes the verses. CSV import is enough at first. No Maven/Salesforce integration in 1.0.
+1. Four roles per congregation: **student**, **parent**, **tutor** (their assigned students; can assign sources and leave notes), **rabbi/admin** (everyone in the congregation; sets defaults). A cantor is a tutor with a flag. **Amended 2026-10-16, rulings 32/48 and direct clarification:** the parent dashboard is read-only except the honors form; it hides the child's recordings. Recordings are available inside the explicitly selected linked-child practice view through parent sign-in. This delegated capability does not grant tutor/admin authority.
+2. Google sign-in with a magic-link fallback; no passwords. **Amended 2026-10-16, ruling 32:** scoped signed, expiring honoree links to blessings/audio are the one no-login surface. They require their own reviewed bearer-access contract, fragment/body transport, revocation and strict field projection.
+3. Under-13s exist. **Amended 2026-10-16, ruling 33:** the same portal serves adults. The rabbi sets `student_kind` (child/adult); a child requires parent email, while an adult's parent email is optional and the adult is their own contact.
+4. Manual rabbi entry and CSV import remain. **Amended 2026-10-16, rulings 41–42:** add read-only Maven roster import; never write back to Salesforce. Daniel adds Morning/Afternoon to that external feed. Until supplied, imported slot is unknown and the rabbi sets it. Match stable source record ID within tenant/source namespace; name/date may suggest explicit reconciliation, never silently establish identity.
 
 ### The student's reading
 
-5. A student record holds the date, the parashah (from Hebcal), and the exact verses assigned: a custom range set by the rabbi or tutor, defaulting to the triennial or CRC's selection. Optionally the haftarah and the blessings before and after.
+5. A student record holds the date, service slot, parashah and exact assigned verses. **Amended 2026-10-16, rulings 34–35:** morning is 10:00; Havdalah/afternoon is 4:00 and uses the following Shabbat's parashah. Show the whole proposed parashah and default to tutor/rabbi custom selection; triennial/full-parashah are optional helpers. Unknown slot requires resolution rather than silently assuming morning. Typical short Torah/haftarah selections are guidance, not fixed verse caps. Verify holiday/afternoon cases against actual Hebcal data before implementing edge rules.
 6. The portal fetches its own texts from Sefaria for the assigned verses. The haftarah Blob store is not the source of record (it holds only Daniel's weekly class selections, and JPS 2023 is CC BY-NC).
-7. Torah first. Haftarah and blessings are in the data model from day one and second in build order.
+7. **Amended 2026-10-16, ruling 31:** Torah and haftarah are both in 1.0 and equal on the student page; the earlier Torah-first deferral is superseded. Service-part scope is recorded below.
 
 ### Commentary
 
@@ -33,18 +35,19 @@ It is the second product carved out of the haftarah repo (`RavBogard/haftarah`).
 ### Translation tools
 
 12. The word panel (STEP grammar, BDB, "this word elsewhere"), the translation picker across editions, and a guided "build your own translation": the student writes a translation verse by verse, saves drafts, and the tutor sees them. JPS 2023 is the reference translation.
-13. Transliteration is offered as a toggle for students (the haftarah site ruled it out; students are a different audience).
+13. **Amended 2026-10-16, ruling 38:** no visible transliteration. Tapping a word offers syllables and marked stress in Hebrew letters. Internal synthesis phonemes are unaffected.
 
-**Under reconsideration, 2026-10-16 (Daniel):** Daniel questioned whether visible transliteration is needed and asked to discuss its purpose. Implementation is paused; continue Hebrew phrase colors and audio work. Astra recommends omitting the Latin-letter aid, but this note does not turn that recommendation into a final mission amendment. Internal phonemes for synthesis are a separate concern.
+Historical note: the earlier 2026-10-16 pause/reconsideration of the original Latin-letter toggle is closed by ruling 38; it is no longer an open choice.
 
 ### Trope and audio
 
-**Confirmed 2026-10-16 (Daniel):** Sung practice pronounces divine names Adonai/Elohim, as in the ceremony, rather than substituting Hashem. Visible transliteration remains paused as noted above.
+**Confirmed 2026-10-16 (Daniel):** sung practice uses Adonai/Elohim, as in the ceremony, rather than Hashem. Visible transliteration is excluded by ruling 38.
 
-14. Per-verse play, slow and loop, trope colours with family drills, the printable trope chart — as ruled in D1–D13 of the haftarah chant-integration plan (`docs/superpowers/plans/2026-10-15-web-2-0-chant-integration.md`), which carries over whole: label "Claude-generated chant" with a line to check with your tutor or cantor; 64 kbps mono MP3; Standard Reform (Binder/Avery) default nusach; speed 0.5–1.25 with loop; no downloads; plays counted in aggregate only; a new voice applies to new renders only.
+14. Per-verse play, slow/loop, trope-family drills and printable trope chart retain the chant-integration contract: label "Claude-generated chant" and check with tutor/cantor; 64 kbps mono MP3; Standard Reform (Binder/Avery) default; speed 0.5–1.25. **Amended 2026-10-16, rulings 45/53/58:** student-scoped practice events support the student's quiet calendar/streak; others receive days-practiced only, with no cross-student reporting or leaderboards. Installable PWA/offline current audio and deferred recording upload are in scope. App-controlled caching is allowed; no file-export control is offered, without promising that playable audio cannot be saved. Generated chant offers bass/tenor/alto/soprano, chosen by student or tutor, with tutor-set default; reference recordings play as recorded. Four independent renders are a hypothesis to benchmark, not a settled mechanism. Range/renderer version belong in release identity, with G1/G2 per asset and G3 evidence across released ranges.
 15. Record-yourself, and the student *can* send a recording to their tutor. (Ruled out on the public haftarah site; here it is the point.)
 
 **Amended 2026-10-16 (Daniel):** Retain students' submitted recordings for one year after their ceremony, then delete them. This is distinct from any separately consented adult voice-training or reference corpus.
+**Clarified 2026-10-16, rulings 39/48–49:** the tutor supplies pronunciation/chant feedback; automated scoring is not a goal. Parent-dashboard notice explains storage, access and one-year deletion without becoming a consent gate. Dashboard recordings remain hidden; delegated linked-child practice access follows ruling 1.
 16. Until the engine's listening gate G3 passes, the portal ships with the player built and the audio slot empty; a tutor or the rabbi can upload a recording per verse as the interim source.
 17. G3 stays the gate before any student hears generated chant: Daniel passes at least 95% of the review verses on melody with zero "would teach wrong", after the automatic gates G1 (notes within ±50 cents) and G2 (technical checks).
 
@@ -53,6 +56,7 @@ It is the second product carved out of the haftarah repo (`RavBogard/haftarah`).
 **Amended 2026-10-15 (Daniel):** Permission for the Binder/Avery melody tables covers noncommercial use, and the tables are allowed in this public repository. This resolves the public-inclusion decision in engine open item 15. Preserve that restriction in the table notices, separately from the MIT license for code; this is not an unrestricted license grant for the tables. Printed-source accuracy checks and the G1/G2/G3 student-audio gates remain unchanged.
 
 18. `trope/` moves from the haftarah branch `trope-engine-research` into this repo **with git history** (subtree), plus a copy of the trope functions from `template/lib.js` (`tropePhrases`, `TETRA` and what they need) until the haftarah Wave 6 engine package exists; then the portal switches to the package.
+**Amended 2026-10-16, ruling 56:** consolidate token-level phrase-family logic into dependency-free `trope/lib-trope.cjs`; the app keeps a thin typed wrapper and colors. Preserve exact Hebrew, qere/ketiv and read-word indices reviewed at `ff1215a`, locked by existing app/chart tests and the 182-verse parity golden. The haftarah study-sheet package is not a trope-engine replacement.
 19. Rendering stays an offline GPU job (Daniel's RTX 4070 laptop now; Modal or a rented GPU later, engine open item 2) that uploads MP3s and a manifest to a Blob store **the portal owns**. The `haftarah-audio` store is renamed or replaced.
 
 **Reassessment authorized, 2026-10-16 (Daniel):** Research the best voice/rendering approach from first principles rather than treating the previous technical choices as optimal. Daniel or a willing cantor/tutor could supply recordings if justified. That possibility is not permission to upload another person's voice or spend money. Existing teaching-quality/listening gates remain in force while implementation and hosting recommendations are reconsidered.
@@ -60,15 +64,22 @@ It is the second product carved out of the haftarah repo (`RavBogard/haftarah`).
 
 ### Tenancy, hosting, repo
 
-21. Multi-tenant from the schema up (same move ruled for centralreform.live on 2026-10-12). CRC is the only tenant at launch; Daniel is sole platform owner; one Vercel deployment; Postgres on Neon, pay-per-use. Not building a second tenant's onboarding yet, just not painting it in.
+21. Multi-tenant from the schema up; CRC launches first, Daniel is sole platform owner, one Vercel deployment and Neon Postgres. **Amended 2026-10-16, ruling 52:** build congregation settings and minimal onboarding now in anticipation of a second congregation. Actual second-tenant provisioning remains Daniel's gate.
 22. Hosting cap: under $25/month ideal, $50 acceptable (same as Overlays).
-23. Public GitHub repo `RavBogard/bneimitzvah`, checked out at `C:\Users\dsbog\bneimitzvah`. Vercel project on the same team. Domain `bneimitzvah.centralreform.org` for CRC; later tenants get their own hostname on the one deployment.
+23. Public GitHub repo `RavBogard/bneimitzvah`, checked out at `C:\Users\dsbog\bneimitzvah`; same-team Vercel project. **Amended 2026-10-16, ruling 59:** target canonical host is `beitmitzvah.centralreform.org`; `barmitzvah.centralreform.org`, `batmitzvah.centralreform.org`, `bnaimitzvah.centralreform.org` and `bneimitzvah.centralreform.org` redirect there. Register all five with Vercel and CRC's host directory, without granting alias API/cookie trust. Daniel's CNAME work and project registration/TLS are verified; he reports the new canonical Google JavaScript origin added. Reviewed application mapping/redirect migration and deliberate canonical configuration cutover remain implementation/acceptance work. Preserve the working Vercel address until cutover; reject noncanonical mutations and never forward credential queries between hosts.
 24. Public repo means: code, melody tables and tests are public. **Never in the repo:** JPS text or any licensed text, student data, recordings, credentials. A test enforces this, like the haftarah publish-whitelist test.
-25. Product name on the page: "CRC B'nei Mitzvah" for now.
+25. **Amended 2026-10-16, ruling 27:** product/CRC tenant display name is **"CRC Beit Mitzvah"**. Repository naming need not change.
 
 ### Claude's place in the product
 
 26. An MCP server on the portal (the pattern of the haftarah Wave 6 plan) so Daniel and tutors can set up students, assign sources, and draft labelled summaries from Cowork. Sign-in through Google OAuth, restricted to the congregation's rabbi/admin and tutor accounts.
+
+### Additional 1.0 scope — amended 2026-10-16
+
+- **Service learning (28–30, 37, 51, 55):** Torah/haftarah blessings, Sh'ma/V'ahavta and an assigned menu of service parts; tikkun view and printable practice sheet. Import/cache stable unit IDs from shirei-tfilah's published `feed.json` and its dedicated Beit Mitzvah morning/Havdalah volume. Prayer audio links out to CRC Music; portal reference recordings remain Torah/haftarah verse recordings. D'var drafting/feedback follows 1.0; reserve an extension seam without prematurely creating unused tables.
+- **Office (32, 43–44):** include aliyah cut points and parent-written honors form; honoree access follows ruling 2. Write one portal-owned Beit Mitzvah Roster Google Sheet with student/Hebrew name, date, slot, parashah, Torah/haftarah verses, tutor and rehearsal dates. Staff read that sheet; no staff role, lesson scheduling or pay/hour accounting. Custom siddur inputs/packet export and supplement generation wait for v2.0; collect none in 1.0.
+- **Teaching and progress (36, 40, 45–48, 54):** recording-first and trope practice are both first class; clergy, staff, hired and volunteer tutors share the tutor role. Tutor verse statuses are not started/working/solid, alongside student self-checks and ruling 14's private practice history. Parents see reading/progress, ceremony/slot/logistics, tutor notes, lesson log and honors; their practice-activity summary is days-only; raw events remain student-scoped. Tutors write lesson summaries without hours. Existing Resend sends tutor recording/draft notifications, weekly parent digests and opt-in student reminders. No student assistant in 1.0.
+- **Immediate order (57):** finish observed production query-free Google/magic-link sign-in first, verify existing Neon migrations/restricted role rather than redoing them, and establish Resend delivery. Daniel must be able to use his phone. Then canonical name/host, slot/adult/custom-first assignment behavior, equal Torah/haftarah and service/honors work. Provider presence or synthetic checks do not establish real delivery or sign-in.
 
 ## Outcome: what "done" means
 
@@ -86,15 +97,15 @@ The 1.0 gate is a real CRC student and a real tutor using it for a real reading 
 
 ## Authority: who decides what
 
-- **Claude decides and logs:** framework and library choices inside the stated stack, schema details, component structure, test design, copy on internal pages, the order of work inside a phase, which Opus/Sonnet agents do what.
-- **Machine gates decide:** tests green (`npm test`, no network), the engine's 314 tests, the never-in-repo test, a rendering golden on the student text view, no credential in any log or tool result, a deploy that serves the live site.
+- **Amended working ownership, 2026-10-16:** Astra is primary project manager for product direction, architecture, ambiguity, delegation and final integration. Sol 6.1 agents implement bounded assignments with explicit ownership/checks and preserve concurrent edits. Earlier Opus/Fable/Sonnet assignments are superseded; independent adversarial review remains mandatory for high-stakes changes.
+- **Machine gates decide:** tests green (`npm test`, no network), the migrated engine tests plus parity golden (ruling 20 corrects the original 314 count), never-in-repo, a rendering golden, no credential in any log/tool result, and a deploy that serves the live site.
 - **Daniel is interrupted for:** money (any new paid service, any upgrade, the Blob store spend notice), anything student-visible before it ships (he wants to see it), the cantor licence and any other licence question, a second tenant, and any ruling above that turns out to be wrong in practice. Everything else: decide, log, move on.
 
 ## Proof: done means verified, not written
 
 - Every phase ends with the tests above green on Daniel's machine (Windows) and in CI (Linux).
 - Student-visible pages get a browser check (Playwright, as the haftarah `web-check` does): the page loads with a fixture student, the trope colours and word panel open, the player bar renders with the audio slot empty.
-- Anything high-stakes (auth, tenancy isolation, the never-in-repo rule) gets an independent adversarial pass by a second agent before it is reported done.
+- Anything high-stakes (auth/bearer access, tenancy isolation, repository protection, recording access and generated-chant release) gets an independent adversarial pass by a second agent before it is reported done.
 - "Working on my laptop" is not done. A deploy Daniel can open is.
 
 ## Where it lands
@@ -102,31 +113,33 @@ The 1.0 gate is a real CRC student and a real tutor using it for a real reading 
 - Repo: `RavBogard/bneimitzvah` (public), local checkout `C:\Users\dsbog\bneimitzvah`.
 - This brief: `docs/planning/2026-10-15-kickoff/MISSION.md`. The plan for Code: `PLAN-CODE-2026-10-15.md` beside it. Phase status: `STATE.md` beside it (the haftarah house format: gates as "GATE: … — proceeded because …", blocks as "BLOCKED (Daniel): …", a tickable checklist, resume notes).
 - Specs per phase go in `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`, plans in `docs/superpowers/plans/`, research in `docs/superpowers/research/`, as in the haftarah repo. Each spec opens with "Settled decisions (Daniel, binding)" and ends with "Open items that wait on Daniel".
-- Deploy: Vercel, `bneimitzvah.centralreform.org`.
+- Deploy: Vercel; target canonical `beitmitzvah.centralreform.org` after ruling 23's reviewed cutover. The working Vercel origin remains until acceptance.
 
 ## Scale and surface
 
 This is a campaign, not one session. Phases (shape, not schedule; the plan file has the detail):
 
 0. Repo, brief, scaffolding, CI, the never-in-repo test.
-1. Engine move: `trope/` subtree with history, lib.js trope functions, 314 tests green here.
-2. Data model, tenancy, auth, the four roles; student/tutor/rabbi admin pages.
-3. The student's study page: text, trope colours, word panel, translation picker, commentary (defaults + assigned), own-translation drafts, transliteration toggle.
-4. Audio: player, record-yourself, send to tutor, tutor uploads per verse.
+1. Engine move with history and parity gates; consolidate shared trope logic without changing reviewed Hebrew behavior.
+2. Production sign-in first; then canonical host/name, slot/adult/custom-first roster behavior, Maven/CSV import, roster Sheet, congregation settings and minimal onboarding.
+3. Equal Torah/haftarah study, word/translation/commentary tools, Hebrew syllable/stress help, tikkun/print practice, assigned service parts, aliyah/honors/honoree access.
+4. Player/recording/send/reference audio, verse progress/self-checks, private practice calendar, lesson log, notifications, recording retention/notice and scoped PWA/offline behavior.
 5. The MCP server.
-6. Generated chant behind the G3 gate: render pipeline, portal-owned Blob store, chant manifest keyed by verse, nusach row.
+6. Generated chant in four human ranges behind G1/G2/G3; renderer/range/release identity, benchmarked voice approach and approved audio storage.
 7. Real-student pilot.
 
-All build work is **Claude Code's lane**, on Opus by default, Fable for the hardest judgment (auth and tenancy design, the engine extraction, anything touching the G3 gate). Cowork sessions do review, research and planning only. Unattended-run rule: a seat that dies on Fable reruns on Opus, substitution noted in STATE.md.
+**Amended 2026-10-16:** Astra directs and integrates; Sol 6.1 implements. Cowork review supplies recorded decisions/research, while detailed mechanisms require bounded architecture/security review. Use the existing plan and short STATE handoff; no parallel replacement plan. Annotated score remains the selected code-first interface direction.
 
 ## Open items that wait on Daniel
 
-Carried from the engine spec and not ruled in this interview; none blocks phases 0–5:
+Open gates attach to their dependent milestone; they do not defer the production sign-in priority:
 
-- Engine open items 1–17 in `2026-10-15-trope-engine-design.md` on the `trope-engine-research` branch, above all: which voice prompt to publish (1); where to render (2); CRC's actual aliyah cut points (3); the Decalogue (4) and special melodies (5); checking the Binder/Avery tables against a printed source (11); the licence for publishing the melody tables (15); whether a cantor's recording replaces or sits beside generated audio (17).
+- Unresolved engine/voice/compute, Decalogue/special melodies, printed-table accuracy and source-permission questions remain scoped to their work. Public noncommercial melody-table inclusion was approved on 2026-10-15; four ranges and generated-chant-as-goal are settled, not open alternatives. Tutor/rabbi still set actual custom verses and aliyah cuts.
 - The cantor's licence (Cantor Josh Finkel): which grants, credit and honorarium, withdrawal terms — only if path 3 (recordings) is pursued. Blocks nothing until then.
 - A second congregation, when there is one.
-- `customs/crc.json` in the haftarah repo still lists `toConfirm: ["torah","entryCap","nusach"]`; the portal's CRC customs record inherits those as unconfirmed.
+- Before offline release, settle the permitted offline authorization/release lease interval. A disconnected device cannot discover withdrawal immediately; require scoped caches, expiry, reconnect revalidation/purge and account-switch/logout cleanup. Storage eviction and pending-upload loss need visible handling; do not cache private API responses generically.
+- Confirm external Maven source IDs/slot feed and published shirei-tfilah dedicated-volume contract; verify CRC Music link capabilities, relevant text/font permissions and storage costs at their milestones. Bound practice-event retention/purpose before shipping it. Exact mechanisms in review section 3 remain proposals.
+- Reconcile inherited customs flags at the implementation milestone without reopening settled custom-first selection, Binder/Avery default or Adonai/Elohim pronunciation.
 
 ## Source record
 
@@ -134,3 +147,4 @@ Carried from the engine spec and not ruled in this interview; none blocks phases
 - Chant integration plan D1–D13 and the engine's questions O1–O13 (superseded for the haftarah site, "the record for the portal, which inherits the engine").
 - Trope engine design spec and trope audio web-integration spec, branch `trope-engine-research` at `380b1b2`; handoff `docs/superpowers/plans/2026-10-15-trope-handoff.md` (the work queue, now on the RTX 4070 laptop); `chant-audio.md` research (the cantor licence, section 5).
 - Kickoff interview, Cowork, 2026-10-15: three rounds, every proposal approved as written except ruling 8–10, which Daniel restated ("rabbi sets defaults that are shown; all sources should be theoretically available; a tutor or a rabbi can assign particular ones to the student so they show up when the student is studying").
+- [2026-10-16 plan review](../2026-10-16-review/PLAN-REVIEW.md): section 1 rulings 27–59, Astra integration corrections and Daniel's direct recording-surface clarification. These dated amendments supersede the specified kickoff provisions; section 3 is not blanket mechanism approval.

@@ -56,15 +56,31 @@ test("private configuration rejects aliases, environment contradictions, operato
   expect(Object.isFrozen(preview)).toBe(true);
 });
 
-test("production explicitly selects one of two exact CRC origins and rejects sibling aliases or preview reuse", async () => {
+test("production selects exactly one configured CRC origin and rejects sibling aliases or preview reuse", async () => {
   const base = { ...env(), PORTAL_ENVIRONMENT: "production", PORTAL_DEPLOYMENT: "production", VERCEL_ENV: "production", NODE_ENV: "production" };
-  for (const origin of ["https://bneimitzvah.centralreform.org", "https://bneimitzvah.vercel.app"]) {
+  for (const origin of ["https://beitmitzvah.centralreform.org", "https://bneimitzvah.centralreform.org", "https://bneimitzvah.vercel.app"]) {
     expect(loadRuntimeConfig({ ...base, BETTER_AUTH_URL: origin }).origin === origin).toBe(true);
     expect(await safeUnavailable(() => loadRuntimeConfig({ ...base, PORTAL_ENVIRONMENT: "preview", VERCEL_ENV: "preview", BETTER_AUTH_URL: origin }))).toBe(true);
   }
-  for (const origin of ["https://bneimitzvah-random.vercel.app", "https://sub.bneimitzvah.vercel.app", "https://bneimitzvah.vercel.app.evil.invalid",
+  for (const origin of ["https://barmitzvah.centralreform.org", "https://batmitzvah.centralreform.org", "https://bnaimitzvah.centralreform.org", "https://bneimitzvah-random.vercel.app", "https://sub.bneimitzvah.vercel.app", "https://bneimitzvah.vercel.app.evil.invalid",
     "https://bneimitzvah.vercel.app:443", "https://bneimitzvah.vercel.app/", "https://bneimitzvah.vercel.app/path", "http://bneimitzvah.vercel.app"]) {
     expect(await safeUnavailable(() => loadRuntimeConfig({ ...base, BETTER_AUTH_URL: origin }))).toBe(true);
+  }
+});
+
+test("adding canonical directory data never creates an auth-origin union and switching back restores exact stable selection", async () => {
+  const f = await authFixture(); clients.push(f);
+  const db = drizzle(f.client, { schema });
+  const origins = ["https://beitmitzvah.centralreform.org", "https://bneimitzvah.vercel.app", "https://bneimitzvah.centralreform.org"];
+  for (const selected of [origins[1], origins[0], origins[1]]) {
+    const config = loadRuntimeConfig({ ...env(), PORTAL_ENVIRONMENT: "production", PORTAL_DEPLOYMENT: "production", BETTER_AUTH_URL: selected });
+    const runtime = composeRuntime(config, db, async () => { throw new Error("No external requests permitted"); });
+    expect(runtime.auth.options.trustedOrigins).toEqual([selected]);
+    expect(runtime.auth.options.baseURL).toBe(selected);
+    expect((await runtime.resolveHost({ url: selected, headers: new Headers({ host: new URL(selected).host }) })).origin).toBe(selected);
+    for (const other of origins.filter(origin => origin !== selected)) {
+      expect(await safeUnavailable(() => runtime.resolveHost({ url: other, headers: new Headers({ host: new URL(other).host }) }))).toBe(true);
+    }
   }
 });
 
