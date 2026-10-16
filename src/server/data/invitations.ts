@@ -3,7 +3,8 @@ import { createHmac } from "node:crypto";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { AccessDenied } from "../access/errors";
-import type { AccessTransaction, Actor, VerifiedIdentity } from "../access/types";
+import type { AccessTransaction, Actor, LockIntent, VerifiedIdentity } from "../access/types";
+import { lockStrength } from "../access/types";
 import * as s from "../db/index";
 
 export type InvitedRole = "parent" | "student" | "tutor";
@@ -24,8 +25,8 @@ export async function lockInvitation<Q extends PgQueryResultHKT>(tx: AccessTrans
   const [row] = await tx.select().from(s.invite).where(and(eq(s.invite.tenantId, tenantId), eq(s.invite.id, id))).for("update");
   return row;
 }
-export async function lockInvitationByHash<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, tokenHash: string) {
-  const [row] = await tx.select().from(s.invite).where(and(eq(s.invite.tenantId, tenantId), eq(s.invite.tokenHash, tokenHash))).for("update");
+export async function lockInvitationByHash<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, tokenHash: string, intent: LockIntent = "authority-write") {
+  const [row] = await tx.select().from(s.invite).where(and(eq(s.invite.tenantId, tenantId), eq(s.invite.tokenHash, tokenHash))).for(lockStrength(intent));
   return row;
 }
 export async function insertInvitation<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, input: typeof s.invite.$inferInsert) {
@@ -43,9 +44,9 @@ export async function consumeInvitation<Q extends PgQueryResultHKT>(tx: AccessTr
   return row;
 }
 
-export async function lockInvitationStudent<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string) {
-  const [row] = await tx.select({ id: s.student.id, parentEmail: s.student.parentEmail, disabledAt: s.student.disabledAt })
-    .from(s.student).where(and(eq(s.student.tenantId, tenantId), eq(s.student.id, studentId))).for("update");
+export async function lockInvitationStudent<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string, intent: LockIntent = "authority-write") {
+  const [row] = await tx.select({ id: s.student.id, firstName: s.student.firstName, lastName: s.student.lastName, parentEmail: s.student.parentEmail, disabledAt: s.student.disabledAt })
+    .from(s.student).where(and(eq(s.student.tenantId, tenantId), eq(s.student.id, studentId))).for(lockStrength(intent));
   return row;
 }
 
@@ -62,29 +63,39 @@ export async function obtainMembership<Q extends PgQueryResultHKT>(tx: AccessTra
   const [row] = await tx.insert(s.membership).values({ tenantId: identity.tenantId, userId: identity.userId }).returning({ id: s.membership.id });
   return row.id;
 }
-export async function lockMembershipGrants<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, membershipId: string) {
-  return tx.select().from(s.roleGrant).where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.membershipId, membershipId))).orderBy(s.roleGrant.id).for("update");
+export async function lockMembershipGrants<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, membershipId: string, intent: LockIntent = "authority-write") {
+  return tx.select().from(s.roleGrant).where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.membershipId, membershipId))).orderBy(s.roleGrant.id).for(lockStrength(intent));
 }
 export async function insertGrant<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, membershipId: string, role: InvitedRole) {
   const [row] = await tx.insert(s.roleGrant).values({ tenantId, membershipId, role }).returning({ id: s.roleGrant.id });
   return row.id;
 }
 
-export async function linkInvitedStudent<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string, grantId: string, role: "parent" | "student", inviteId: string, issuedAt: Date) {
+// The same read-only eligibility check serves preview and locked acceptance.
+// A missing future grant must still check occupied/revoked student history.
+export async function eligibleInvitedStudentLink<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string, grantId: string | null, role: "parent" | "student", issuedAt: Date, intent: LockIntent) {
   if (role === "parent") {
-    const history = await tx.select().from(s.guardian).where(and(eq(s.guardian.tenantId, tenantId), eq(s.guardian.studentId, studentId), eq(s.guardian.parentGrantId, grantId))).orderBy(s.guardian.id).for("update");
-    if (history.some((link) => link.revokedAt && link.revokedAt >= issuedAt)) throw new AccessDenied(404);
-    const existing = history.find((link) => !link.revokedAt);
-    if (existing) return { id: existing.id, created: false };
+    if (!grantId) return null;
+    const history = await tx.select().from(s.guardian).where(and(eq(s.guardian.tenantId, tenantId), eq(s.guardian.studentId, studentId), eq(s.guardian.parentGrantId, grantId))).orderBy(s.guardian.id).for(lockStrength(intent));
+    if (history.some(link => link.revokedAt && link.revokedAt >= issuedAt)) throw new AccessDenied(404);
+    return history.find(link => !link.revokedAt) ?? null;
+  }
+  const history = await tx.select().from(s.studentIdentity).where(and(eq(s.studentIdentity.tenantId, tenantId),
+    grantId ? sql`(${s.studentIdentity.studentId} = ${studentId} or ${s.studentIdentity.roleGrantId} = ${grantId})` : eq(s.studentIdentity.studentId, studentId)))
+    .orderBy(s.studentIdentity.id).for(lockStrength(intent));
+  if (history.some(link => link.revokedAt && link.revokedAt >= issuedAt)) throw new AccessDenied(404);
+  const links = history.filter(link => !link.revokedAt);
+  if (links.some(link => link.studentId !== studentId || link.roleGrantId !== grantId)) throw new AccessDenied(404);
+  return links[0] ?? null;
+}
+
+export async function linkInvitedStudent<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string, grantId: string, role: "parent" | "student", inviteId: string, issuedAt: Date) {
+  const existing = await eligibleInvitedStudentLink(tx, tenantId, studentId, grantId, role, issuedAt, "authority-write");
+  if (existing) return { id: existing.id, created: false };
+  if (role === "parent") {
     const [link] = await tx.insert(s.guardian).values({ tenantId, studentId, parentGrantId: grantId, linkProvenance: `invite:${inviteId}` }).returning({ id: s.guardian.id });
     return { id: link.id, created: true };
   }
-  const history = await tx.select().from(s.studentIdentity).where(and(eq(s.studentIdentity.tenantId, tenantId),
-    sql`(${s.studentIdentity.studentId} = ${studentId} or ${s.studentIdentity.roleGrantId} = ${grantId})`)).orderBy(s.studentIdentity.id).for("update");
-  if (history.some((link) => link.revokedAt && link.revokedAt >= issuedAt)) throw new AccessDenied(404);
-  const links = history.filter((link) => !link.revokedAt);
-  if (links.some((link) => link.studentId !== studentId || link.roleGrantId !== grantId)) throw new AccessDenied(404);
-  if (links.length) return { id: links[0].id, created: false };
   const [link] = await tx.insert(s.studentIdentity).values({ tenantId, studentId, roleGrantId: grantId }).returning({ id: s.studentIdentity.id });
   return { id: link.id, created: true };
 }

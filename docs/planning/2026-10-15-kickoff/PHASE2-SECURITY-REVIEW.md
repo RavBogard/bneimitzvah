@@ -304,3 +304,65 @@ before the SDK; creation/data responses need no-store, and the private tab handl
 must never enter URLs/logs. Those intentionally absent transport boundaries still
 require implementation/review. Primary retains full integration/hosted gates;
 human testing and generated-chant release restrictions remain in effect.
+
+## Independent HTTP primitives and portal projection review — 2026-10-15
+
+**Scoped verdict: accepted; no additional implementation blocker found.** Reviewed
+the uncommitted HTTP body/query/response/pending-cookie primitives, portal session
+and confirmed-reading projections, and invitation preview/reviewed acceptance.
+This accepts these server composition APIs only; routes, dispatchers and the
+browser harness are not present or accepted by this checkpoint.
+
+Body reads enforce actual streamed UTF-8 byte limits independently of advertised
+length, reject malformed media/encoding/length/JSON and bound timeout/abort even
+when cancellation remains pending. Query/object helpers reject unknown authority
+fields, duplicate decoded keys and accessor/prototype tricks. Fixed responses
+select their diagnostics and private headers; SDK projection validates all cookie
+headers before appending any and does not relay SDK bodies, redirects or provider
+headers. Pinned Better Auth's actual Google initiation `state` cookie is covered
+for local and HTTPS origins; the reviewer additionally exercised genuine SDK
+magic-link callback and logout cookies through the projection, including durable
+session invalidation. AES-GCM pending envelopes use fresh nonces, origin AAD,
+purpose/environment/origin-derived keys and strict ten-minute timestamps. Their
+reader rejects duplicate cookie names and local/secure shadow names. Cookie
+encryption does not confer invitation authority.
+
+Portal summaries project only live tenant membership availability and role names.
+Student reads retain explicit base-mode or live matching child-context authority.
+Reading DTOs whitelist source metadata, expand canonical references, require the
+exact ordered stored verse list and preserve date-change review state. Assignment
+SHARE locks precede verse reads and conflict with the existing replacement UPDATE
+path. The new reviewer corruption probe proves an incomplete confirmed verse list
+fails through fixed unavailable JSON, while repairing that list restores the
+expected reading without exposing the private stored snapshot sentinel.
+
+Preview and acceptance now share read-only relationship-history/occupancy checks,
+including no-recipient-grant student identity checks. The existing focused cases
+verify old revoked guardian/identity histories deny, while a later explicit
+reinvite can succeed. Reviewed acceptance binds token hash, exact tenant/origin,
+user/session, role/target and invitation expiry; its lifetime is additionally
+bounded by five minutes and live session expiry. All checks and consumption stay
+inside the existing locked transaction. The reviewer composed actual SDK session
+cookies, two encrypted sibling pending cookies and the real services: replacing
+the pending cookie after review denied acceptance and consumed/audited neither
+invitation; restoring the originally reviewed cookie succeeded, and replay then
+denied. No implementation edits or Git operations were performed by this review.
+
+**Independent verification:** five focused files passed **42/42** (HTTP boundaries,
+pending invitations, portal, invitations, and new `portal-http-review.test.ts` with
+three adversarial cases). `npm run typecheck` passed. Logs remain ignored at
+`.local-logs/phase2-security-portal-http-final.log` and
+`.local-logs/phase2-security-portal-http-typecheck.log`. Only `server-only` is
+mocked locally; service probes use the actual pinned SDK and restricted PGlite.
+Primary separately reported the current-code physical PostgreSQL service suite
+**7/7** after the invitation helper refactor; this reviewer did not rerun it.
+
+Limits: PGlite is not evidence of physical confirmed-reading replacement
+concurrency, and no new such race is claimed. Transport must still resolve exact
+host/tenant before invoking SDK/mail, apply exact mutation Origin and closed
+request DTOs, select `acceptReviewed` exclusively with the decrypted internal
+token, clean pending cookies and enforce response/privacy policy. Splitting token
+landing from the clean Next page is the next route slice's architectural task.
+Provider OAuth success, live delivery, external access-log redaction and browser
+late-response/context handling remain separate gates. Primary owns broader
+integration/CI/deployment; existing human-testing and chant-release limits remain.

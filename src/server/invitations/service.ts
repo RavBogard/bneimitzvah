@@ -1,7 +1,8 @@
 import "server-only";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
-import type { AccessDatabase, ActiveMode, Actor } from "../access/types";
+import type { AccessDatabase, AccessRequest, ActiveMode, Actor, VerifiedIdentity } from "../access/types";
 import { AccessDenied, AccessUnavailable } from "../access/errors";
 import { requireCookieMutation } from "../http/mutations";
 import type { CookieMutationRequest } from "../http/mutations";
@@ -13,12 +14,30 @@ import { createInvitationSecret, hashInvitationToken, INVITATION_LIFETIME_MS, no
 export type InvitationTransport = (message: Readonly<{ email: string; url: string }>) => Promise<void>;
 export type InvitationDeliveryStatus = "pending" | "sent" | "failed";
 type Delivery = Readonly<{ inviteId: string; delivery: "sent" | "failed" | "unknown" }>;
+const REVIEW_LIFETIME_MS = 5 * 60_000;
+function assertUsableInvitation(invitation: data.IssuedInvitation | undefined, identity: VerifiedIdentity, now: Date): asserts invitation is data.IssuedInvitation & { role: InvitedRole } {
+  if (!invitation || invitation.acceptedAt || invitation.revokedAt || invitation.expiresAt <= now || invitation.email !== normalizedInvitationEmail(identity.email) || invitation.role === "admin") throw new AccessDenied(404);
+}
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function createInvitationService<Q extends PgQueryResultHKT>(input: {
   db: AccessDatabase<Q>; access: ReturnType<typeof createAccessService<Q>>; transport: InvitationTransport; throttleSecret: string;
 }) {
   if (typeof input.transport !== "function" || typeof input.throttleSecret !== "string" || input.throttleSecret.length < 32) throw new AccessUnavailable();
+  const reviewKey = createHmac("sha256", input.throttleSecret).update("portal:invitation-review:v1").digest();
+  function reviewDigest(invitation: data.IssuedInvitation, identity: VerifiedIdentity, expiry: number) {
+    return createHmac("sha256", reviewKey).update(JSON.stringify(["invitation-review:v1", expiry, invitation.tokenHash, identity.authSessionId,
+      identity.userId, identity.tenantId, identity.origin, invitation.role, invitation.studentId, invitation.expiresAt.getTime()])).digest();
+  }
+  function verifyReview(invitation: data.IssuedInvitation, identity: VerifiedIdentity, reviewBinding: unknown, now: number) {
+    if (typeof reviewBinding !== "string" || !/^[1-9][0-9]{0,15}\.[A-Za-z0-9_-]{43}$/.test(reviewBinding)) throw new AccessDenied(404);
+    const [expiryText, mac] = reviewBinding.split("."), expiry = Number(expiryText);
+    const supplied = Buffer.from(mac, "base64url");
+    if (!Number.isSafeInteger(expiry) || expiry <= now || expiry > invitation.expiresAt.getTime() || expiry > identity.sessionExpiresAt.getTime()
+      || expiry > now + REVIEW_LIFETIME_MS || supplied.length !== 32 || supplied.toString("base64url") !== mac
+      || !timingSafeEqual(supplied, reviewDigest(invitation, identity, expiry))) throw new AccessDenied(404);
+  }
+
   async function deliver(pending: { invitation: data.IssuedInvitation; actor: Actor; token: string }): Promise<Delivery> {
     const url = new URL("/invitations/accept", pending.actor.origin);
     url.searchParams.set("token", pending.token);
@@ -96,12 +115,37 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
     return deliver(pending);
   }
 
-  async function accept(request: CookieMutationRequest, selection: { token: string }) {
+  async function preview(request: AccessRequest, selection: { token: string }) {
+    const hash = hashInvitationToken(selection.token);
+    return input.access.withVerifiedIdentity(request, { intent: "read" }, async (tx, identity) => {
+      const invitation = await data.lockInvitationByHash(tx, identity.tenantId, hash, "read");
+      const now = new Date();
+      assertUsableInvitation(invitation, identity, now);
+      const grants = identity.membership ? await data.lockMembershipGrants(tx, identity.tenantId, identity.membership.id, "read") : [];
+      if (invitation.role === "student" && grants.some(grant => grant.role === "parent")) throw new AccessDenied(404);
+      if (grants.some(grant => grant.role === invitation.role && grant.revokedAt && grant.revokedAt >= invitation.createdAt)) throw new AccessDenied(404);
+      const student = invitation.studentId ? await data.lockInvitationStudent(tx, identity.tenantId, invitation.studentId, "read") : null;
+      if (invitation.studentId && (!student || student.disabledAt)) throw new AccessDenied(404);
+      if (invitation.role === "student" && student && normalizedInvitationEmail(student.parentEmail) === normalizedInvitationEmail(identity.email)) throw new AccessDenied(404);
+      if (invitation.studentId && invitation.role !== "tutor") {
+        const activeGrant = grants.find(grant => grant.role === invitation.role && !grant.revokedAt);
+        await data.eligibleInvitedStudentLink(tx, identity.tenantId, invitation.studentId, activeGrant?.id ?? null, invitation.role, invitation.createdAt, "read");
+      }
+      const expiry = Math.min(now.getTime() + REVIEW_LIFETIME_MS, invitation.expiresAt.getTime(), identity.sessionExpiresAt.getTime());
+      if (expiry <= now.getTime()) throw new AccessDenied(404);
+      return Object.freeze({ role: invitation.role, student: student ? Object.freeze({ firstName: student.firstName, lastName: student.lastName }) : null,
+        expiresAt: invitation.expiresAt.toISOString(), requiresConfirmation: true as const,
+        reviewBinding: `${expiry}.${reviewDigest(invitation, identity, expiry).toString("base64url")}` });
+    });
+  }
+
+  async function acceptCore(request: CookieMutationRequest, selection: { token: string; reviewBinding?: string }, reviewed: boolean) {
     const hash = hashInvitationToken(selection.token);
     return input.access.withVerifiedIdentity(request, { intent: "authority-write", mutation: true }, async (tx, identity) => {
       const invitation = await data.lockInvitationByHash(tx, identity.tenantId, hash);
       const now = new Date();
-      if (!invitation || invitation.acceptedAt || invitation.revokedAt || invitation.expiresAt <= now || invitation.email !== normalizedInvitationEmail(identity.email) || invitation.role === "admin") throw new AccessDenied(404);
+      assertUsableInvitation(invitation, identity, now);
+      if (reviewed) verifyReview(invitation, identity, selection.reviewBinding, now.getTime());
       const student = invitation.studentId ? await data.lockInvitationStudent(tx, identity.tenantId, invitation.studentId) : null;
       if (invitation.studentId && (!student || student.disabledAt)) throw new AccessDenied(404);
       if (invitation.role === "student" && student && normalizedInvitationEmail(student.parentEmail) === normalizedInvitationEmail(identity.email)) throw new AccessDenied(404);
@@ -123,5 +167,10 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
       return { inviteId: invitation.id, role: invitation.role, studentId: invitation.studentId };
     });
   }
-  return Object.freeze({ issue, revoke, reissue, accept });
+  return Object.freeze({ issue, revoke, reissue, preview,
+    // Private compatibility/composition API; HTTP must exclusively use the
+    // reviewed path, with raw token obtained only from its encrypted pending cookie.
+    accept: (request: CookieMutationRequest, selection: { token: string }) => acceptCore(request, selection, false),
+    acceptReviewed: (request: CookieMutationRequest, selection: { token: string; reviewBinding: string }) => acceptCore(request, selection, true),
+  });
 }
