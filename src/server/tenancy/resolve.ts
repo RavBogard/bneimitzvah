@@ -3,6 +3,7 @@ import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { AccessDenied } from "../access/errors";
 import type { AccessDatabase, AccessRequest, DeploymentScope } from "../access/types";
 import { lookupTenantHost } from "../data/tenant-hosts";
+import { createLogger, hostDenialEvent, type HostDenialStage, type HostFrame } from "../logging/logger";
 
 function authority(value: string, scheme: string) {
   // DNS/IPv4 plus explicit port only. No credentials, percent decoding, Unicode
@@ -13,33 +14,48 @@ function authority(value: string, scheme: string) {
   return url.host;
 }
 
-export async function resolveTenantHost<Q extends PgQueryResultHKT>(db: AccessDatabase<Q>, request: AccessRequest, scope: DeploymentScope) {
+export async function resolveTenantHost<Q extends PgQueryResultHKT>(db: AccessDatabase<Q>, request: AccessRequest, scope: DeploymentScope, frame: HostFrame = "service") {
+  let stage: HostDenialStage = "scope";
   try {
     if (!scope.deployment || scope.deployment.trim() !== scope.deployment || !["production", "preview", "local", "test"].includes(scope.environment)) throw new AccessDenied(404);
+    stage = "url";
     if (/[\s\\\u0000-\u001f\u007f]/.test(request.url)) throw new AccessDenied(404);
     const match = /^(https?):\/\/([^/?#]+)(?:[/?#]|$)/.exec(request.url);
     if (!match) throw new AccessDenied(404);
     const url = new URL(request.url);
+    stage = "url-authority";
     const host = authority(match[2], url.protocol);
     if (url.hash || url.username || url.password || url.host !== host) throw new AccessDenied(404);
+    stage = "scheme";
     const loopback = url.hostname === "localhost" || url.hostname === "127.0.0.1";
     if (url.protocol !== "https:" && !(loopback && ["local", "test"].includes(scope.environment))) throw new AccessDenied(404);
     if (loopback && ["production", "preview"].includes(scope.environment)) throw new AccessDenied(404);
+    stage = "host";
     const suppliedHost = request.headers.get("host");
     if (suppliedHost !== null && (!suppliedHost || authority(suppliedHost, url.protocol) !== host)) throw new AccessDenied(404);
     // Forwarded headers are consistency checks only; none selects a tenant.
+    stage = "forwarded";
     if (request.headers.has("forwarded")) throw new AccessDenied(404);
+    stage = "forwarded-host";
     const forwardedHost = request.headers.get("x-forwarded-host");
     if (forwardedHost !== null && (!forwardedHost || authority(forwardedHost, url.protocol) !== host)) throw new AccessDenied(404);
+    stage = "forwarded-proto";
     const forwardedProtocol = request.headers.get("x-forwarded-proto");
     if (forwardedProtocol !== null && forwardedProtocol !== url.protocol.slice(0, -1)) throw new AccessDenied(404);
+    stage = "forwarded-port";
     const forwardedPort = request.headers.get("x-forwarded-port");
     if (forwardedPort !== null && forwardedPort !== (url.port || (url.protocol === "https:" ? "443" : "80"))) throw new AccessDenied(404);
+    stage = "directory-query";
     const mapping = await lookupTenantHost(db, host, url.origin, scope);
+    stage = "directory-missing";
     if (!mapping) throw new AccessDenied(404);
     return Object.freeze({ tenantId: mapping.tenantId, origin: url.origin });
   } catch {
     // No raw host, URL, header, directory row or database error in denials.
+    try {
+      const event = hostDenialEvent(frame, stage);
+      if (event) createLogger().request().emit(event, 404);
+    } catch { /* Diagnostic construction cannot change the existing denial. */ }
     throw new AccessDenied(404);
   }
 }

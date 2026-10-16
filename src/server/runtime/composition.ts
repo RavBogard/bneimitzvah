@@ -26,6 +26,7 @@ import { createHebcalReader } from "../../lib/readings/proposals";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { createMailTransport, projectMagicLink } from "../mail/transport";
 import { createLogger } from "../logging/logger";
+import type { HostFrame } from "../logging/logger";
 import { loadRuntimeConfig, type RuntimeConfig } from "./config";
 import { RuntimeUnavailable } from "./errors";
 import { AccessDenied } from "../access/errors";
@@ -59,8 +60,8 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const pendingInvitations = createPendingInvitations({ secret: config.authSecret, origin: config.origin, environment: config.deployment.environment as "local" | "preview" | "production" });
   const googleChallenges = createGoogleChallenges({ db, origin: config.origin, secret: purposeSecret(config, "google-challenges") });
   // An eventual auth handler must resolve the request host BEFORE invoking auth.
-  const resolveHost = async (request: AccessRequest) => {
-    const resolved = await resolveTenantHost(db, request, config.deployment);
+  const resolveHost = async (request: AccessRequest, frame: HostFrame = "incoming") => {
+    const resolved = await resolveTenantHost(db, request, config.deployment, frame);
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
@@ -84,7 +85,7 @@ export function createRuntimeScope(env: () => Readonly<Record<string, string | u
       // identities with the same live-role check used by capability services.
       await withTenantTransaction(db, { tenantId: "crc" }, async () => undefined);
       const runtime = composeRuntime(config, db, globalThis.fetch);
-      await runtime.resolveHost({ url: config.origin, headers: new Headers() });
+      await runtime.resolveHost({ url: config.origin, headers: new Headers() }, "configured");
       return await action(runtime);
     } catch (error) {
       // Callback errors are mutable and may carry private diagnostics even when

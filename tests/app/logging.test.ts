@@ -1,6 +1,6 @@
 import { expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { createLogger } from "../../src/server/logging/logger";
+import { createLogger, hostDenialEvent } from "../../src/server/logging/logger";
 
 test("logger projects only fixed event/status and generated request UUID, ignoring arbitrary private objects", () => {
   const lines: string[] = [];
@@ -27,4 +27,23 @@ test("logger projects only fixed event/status and generated request UUID, ignori
 
 test("logging sink failures never change the operation outcome", () => {
   expect(() => createLogger(() => { throw new Error("synthetic-private"); }).request().emit("runtime.unavailable", 503)).not.toThrow();
+});
+
+test("host diagnostic codes use compile-time vocabulary and reject hostile runtime dimensions without coercion", () => {
+  let touched = false;
+  const hostile = { toString() { touched = true; throw new Error("synthetic-private"); }, toJSON() { touched = true; return "synthetic-private"; } };
+  expect(hostDenialEvent(hostile, "host")).toBeNull();
+  expect(hostDenialEvent("incoming", hostile)).toBeNull();
+  expect(hostDenialEvent("incoming.synthetic-private", "host")).toBeNull();
+  expect(hostDenialEvent("incoming", "synthetic-private")).toBeNull();
+  expect(touched).toBe(false);
+  const lines: string[] = [], request = createLogger(line => lines.push(line)).request();
+  const emit = request.emit as (...args: unknown[]) => void;
+  emit("host.denied.incoming.synthetic-private", 404);
+  emit("host.denied.synthetic-private.host", 404);
+  const event = hostDenialEvent("incoming", "directory-query");
+  expect(event).toBe("host.denied.incoming.directory-query");
+  if (event) request.emit(event, 404);
+  expect(lines.length).toBe(1);
+  expect(JSON.parse(lines[0])).toEqual({ event, status: 404, requestId: request.requestId });
 });
