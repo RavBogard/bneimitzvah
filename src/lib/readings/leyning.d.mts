@@ -1,0 +1,11 @@
+export type Aliyah = { n: number | "M"; ref: string; verses?: number; reason?: string };
+export type Leyning = { parashah: string; type: string; summary: string; aliyot: Aliyah[]; triennial: { year: number | null; aliyot: Aliyah[] } | null; source: string };
+export type Pick = { kind: "full" | "triennial" } | { kind: "aliyah"; from: number | "M"; to: number | "M" } | { kind: "ref"; ref: string };
+export type Selection = { ref: string; book: string; selection: string; maftir: { ref: string; reason?: string } | null };
+export function hebcalRef(value: unknown): string;
+export function parseRange(ref: unknown): { book: string; from: [number, number]; to: [number, number] } | null;
+export function aliyotOf(set: unknown, reasons?: unknown): Aliyah[];
+export function leyningOf(item: unknown): Leyning;
+export function parsePick(text: unknown): Pick;
+export function defaultPick(customs: unknown): Pick | null;
+export function selectTorah(leyning: Leyning | null, pick: Pick): Selection;

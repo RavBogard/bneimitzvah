@@ -68,3 +68,63 @@ passed after this change.
 Re-review is required as those next-slice authorization/service boundaries are
 implemented. Human testing remains Daniel-only until the feature-complete product;
 generated chant remains behind G1/G2/G3.
+
+## Access/host slice follow-up — 2026-10-15
+
+**Accepted at this bounded utility/service scope; no remaining blocking finding
+found.** Reviewed `src/server/{access,tenancy,data}/`, migration 0003, the runtime
+role-closure change and test-only server marker replacement. This does not accept
+the whole phase, routes, invitations, context issuance or student-facing release.
+
+- `access/service.ts:40` obtains the real cookie/session proof with cookie caching
+  and refresh disabled, then `data/authority.ts:10` locks and reloads the tenant,
+  user, matching session ID/user/token, membership and exact selected role grant.
+  Live expiry, verification, disable/revocation and sensitive-action freshness are
+  checked before callbacks. Parent+tutor grants cannot combine into authority in
+  parent mode. Student identity/guardian/tutor links are checked against the same
+  tenant, target and selected grant; missing, foreign and unrelated targets deny
+  uniformly. Returned student projections exclude contact/auth material.
+- The inspected lock protocol is tenant -> user -> session -> membership -> grant
+  -> student -> relationship. Authority mutations choose exclusive locks before
+  acquisition; reads/reading writes keep shared authority locks. Roster candidates
+  are locked in student-ID order and links rechecked afterward. Callbacks are
+  trusted internal server composition using the supplied transaction, not public
+  transport handlers or arbitrary client-selected operations. Future revocation
+  services must retain that order and must not upgrade shared authority locks.
+- `tenancy/resolve.ts:28`–38 rejects empty/conflicting Host and proxy headers,
+  forwarded lists, malformed authorities, unknown/alias hosts and production
+  loopback. Proxy headers never choose a tenant. Lookup requires the exact
+  normalized host/origin/environment/deployment tuple; no CRC fallback. Error
+  classes and catch boundaries discard raw SQL/provider/header diagnostics.
+- Approved migration `0003_tenant_lock_permission.sql:6` grants only
+  `UPDATE(customs)` needed for tenant row locking. Focused tests prove that locks
+  and customs writes work while enabled/ID/host-directory changes are denied and
+  a foreign-tenant customs update changes no row.
+- The author tightened `db/runtime.ts:28,38,46` before final validation: allowed
+  membership closure is only the authenticated login and `portal_runtime`, and
+  active role must be one of those. The earlier draft also allowed `current_user`
+  to whitelist itself. Final tests reject both membership in `pg_write_all_data`
+  and actively switching into that role. The earlier elevated-login protections
+  remain in place.
+
+**Independent final check:** `npx vitest run tests/app/access.test.ts
+tests/app/schema.test.ts` passed **23/23** (12 access, 11 schema), zero failures.
+Log: ignored `.local-logs/phase2-security-access-final.log`. The fixture obtains
+three actual Better Auth magic-link cookies and real DB sessions for two
+synthetic tenants. Coverage includes all four modes, mixed-role isolation,
+forged/tampered cookies, live session deletion/expiry, stale genuine proofs,
+unverified users, revoked links/grants, disabled membership/student/tenant,
+pagination, transaction rollback and restricted column permissions. A requested
+test-strength correction makes the other-tenant positive roster check require
+exactly one result; rollback evidence also confirms both writes completed before
+the intentional exception.
+
+`vi.mock("server-only")` occurs only in `tests/app/access.test.ts:4`; it replaces
+the marker, not auth/database behavior. Vitest has no global alias and application
+modules retain their server-only imports. PGlite restricted-session switching is
+explicit fixture simulation, not proof of a real credential boundary. No new
+real-Postgres concurrent revoke/access race test or production ingress/provider
+exercise was run in this follow-up; lock ordering was inspected and committed-
+before-next-call revocation was exercised. Full integration/hosted gates remain
+with the primary collaborator. New route CSRF/request validation and future
+capability/context/revocation implementations require their own review.

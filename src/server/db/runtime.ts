@@ -25,6 +25,7 @@ export async function withTenantTransaction<Q extends PgQueryResultHKT, T>(
   return db.transaction(async (tx) => {
     const roles = await tx.select({
       restricted: sql<boolean>`not rolsuper and not rolbypassrls and not rolcreatedb and not rolcreaterole and not rolreplication`,
+      allowedActiveRole: sql<boolean>`current_user = session_user or current_user = 'portal_runtime'`,
       elevatedMembership: sql<boolean>`exists (
         select 1 from pg_catalog.pg_roles elevated
         where pg_has_role(pg_roles.oid, elevated.oid, 'MEMBER') and (
@@ -34,10 +35,15 @@ export async function withTenantTransaction<Q extends PgQueryResultHKT, T>(
           or exists (select 1 from pg_catalog.pg_database d where d.datname = current_database() and d.datdba = elevated.oid)
         )
       )`,
+      unexpectedMembership: sql<boolean>`exists (
+        select 1 from pg_catalog.pg_roles granted
+        where pg_has_role(pg_roles.oid, granted.oid, 'MEMBER')
+          and granted.rolname not in (session_user, 'portal_runtime')
+      )`,
     }).from(sql`pg_catalog.pg_roles`).where(sql`rolname in (current_user, session_user)`);
     // SET ROLE must not disguise an elevated authenticated connection. Check
     // both session and active roles, plus their transitive owner memberships.
-    if (!roles.length || roles.some((role) => !role.restricted || role.elevatedMembership)) throw new Error("Restricted nonowner runtime role required");
+    if (!roles.length || roles.some((role) => !role.restricted || !role.allowedActiveRole || role.elevatedMembership || role.unexpectedMembership)) throw new Error("Restricted nonowner runtime role required");
     await tx.execute(sql`select set_config('app.tenant_id', ${scope.tenantId}, true)`);
     // The same awaited transaction handle must perform every query and audit.
     return action(tx);
