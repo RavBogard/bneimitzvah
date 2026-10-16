@@ -133,12 +133,13 @@ export async function neonRuntimeProbe(databaseUrl: unknown) {
     const neverFetch: typeof fetch = async () => { throw new ProbeFailure("host"); };
     const runtime = composeRuntime(config, db, neverFetch);
     requireTrue((await runtime.resolveHost({ url: origin, headers: new Headers() })).tenantId === "crc", phase);
+    requireTrue((await runtime.resolveHost({ url: origin, headers: new Headers({ forwarded: `host=${new URL(origin).host}` }) })).tenantId === "crc", phase);
     const requests = [
       { url: "https://bneimitzvah.centralreform.org", headers: new Headers() },
       { url: "https://synthetic-preview.vercel.app", headers: new Headers() },
       { url: origin, headers: new Headers({ "x-forwarded-host": "synthetic-preview.vercel.app" }) },
       { url: "https://synthetic-preview.vercel.app", headers: new Headers({ "x-forwarded-host": "bneimitzvah.vercel.app" }) },
-      { url: origin, headers: new Headers({ forwarded: "host=bneimitzvah.vercel.app" }) },
+      { url: origin, headers: new Headers({ forwarded: "host=synthetic-preview.vercel.app" }) },
     ];
     for (const request of requests) { let denied = false; try { await runtime.resolveHost(request); } catch { denied = true; } requireTrue(denied, "host"); }
     phase = "close";

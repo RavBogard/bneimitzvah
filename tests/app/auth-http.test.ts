@@ -124,6 +124,24 @@ test("pinned Google cryptography uses server nonce and projects session JSON; re
   expect((await f.dispatch(f.request("/api/auth/sign-in/social", { credential: token(late.nonce), challengeId: late.challengeId, csrfToken: late.csrfToken }))).status).toBe(403);
 });
 
+test("consistent Forwarded permits real Google nonce/body verification but cannot bypass Origin or CSRF or reach SDK headers", async () => {
+  const f = await fixture(), token = googleTokens();
+  const forwarded = 'for="[2001:db8::1]:4711";host="localhost:3000";proto=http';
+  const prepared = await f.dispatch(f.request("/api/auth/google/challenge", {}, { forwarded }));
+  expect(prepared.status).toBe(200);
+  const issued = await prepared.json(), cookie = cookieOf(prepared);
+  const body = { credential: token(issued.nonce), challengeId: issued.challengeId, csrfToken: issued.csrfToken };
+  expect((await f.dispatch(f.request("/api/auth/sign-in/social", body, { cookie, forwarded, origin: "https://foreign.example.test" }))).status).toBe(403);
+  expect((await f.dispatch(f.request("/api/auth/sign-in/social", { ...body, csrfToken: randomBytes(32).toString("base64url") }, { cookie, forwarded }))).status).toBe(403);
+  expect(f.sdk.mock.calls.length).toBe(0);
+  const response = await f.dispatch(f.request("/api/auth/sign-in/social", body, { cookie, forwarded }));
+  expect(response.status).toBe(200); expect(await response.json()).toEqual({ ok: true, next: "/" });
+  expect(f.sdk.mock.calls.length).toBe(1);
+  expect(f.sdk.mock.calls.every(([request]) => !(request as Request).headers.has("forwarded"))).toBe(true);
+  const forged = await f.dispatch(new Request("http://foreign.example.test/api/auth/google/challenge", { method: "POST", headers: { origin: f.origin, "content-type": "application/json", forwarded }, body: "{}" }));
+  expect(forged.status).toBe(404);
+});
+
 test("real verifier refuses missing/mismatching nonce, wrong audience/issuer/expiry/signature and unverified same-email linking", async () => {
   const variants = [{ nonce: undefined }, { nonce: "attacker" }, { aud: "foreign-client" }, { iss: "https://foreign.example.test" }, { exp: 1 }, { email_verified: false }];
   for (const override of variants) {
