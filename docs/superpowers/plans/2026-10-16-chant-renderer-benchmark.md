@@ -111,3 +111,96 @@ C starts **only with an audit**, not a training promise: inspect approved adult 
 **Next Sol slice:** implement the private offline job-pack builder and A/B manifest/blinding metadata around existing pure score functions, with explicit flags and adapter parity checks; no GPU or model change. Its acceptance check is that both lanes reference the same canonical syllable/note timeline and reject incomplete provenance. Then implement human-source alignment/retiming as its own slice. This is proposed work, not executable infrastructure already delivered.
 
 **Daniel genuinely decides:** remaining pronunciation details and target chant/key; recording donor and permitted voice uses/retention; whether the proposed four-passage recording session is worthwhile; blind listening acceptance; and any later money/license question. Adonai/Elohim ceremony reading is already settled. Routine job-pack/annotation mechanics can proceed within authorization. New microphone purchases, new paid services, training or cloud uploads are not required to make this plan concrete.
+
+## Offline target-pack delivery — 2026-10-16
+
+The bounded target-preparation implementation is in `trope/benchmark-pack.mjs`,
+`scripts/trope-benchmark-pack.mjs` and `tests/trope-benchmark-pack.test.mjs`. Existing
+engine functions, renderer CLIs, app behavior and release rules are unchanged.
+This slice prepares JSON targets and an identity/parity sidecar; it creates no
+runnable model job, blinding interface, audio, F0 file, alignment or release grant.
+
+Pure API: `buildBenchmarkPack(input, assets)` returns `{manifest, manifestSha256,
+artifacts}`. `artifacts` maps relative filenames to deterministic canonical JSON
+bytes. Trusted assets contain exact local table/profile JSON, repository HEAD and
+the actual working code bytes; the CLI obtains them. File hashes, including both
+new builder/CLI files and the vendored syllabifier dependencies, identify the
+implementation used even when it differs from HEAD. HEAD is labelled as repository
+HEAD only. Canonical artifacts introduce no clock values or random identifiers.
+
+The required input schema is `chant-benchmark-input/v1`:
+
+- `benchmarkId`: an ASCII opaque identifier; passage IDs must also be safe and
+  unique without regard to case. Paths, Windows device names and traversal are
+  rejected.
+- `source`: `edition`, `sourceRecordId`, `rightsRecordId`, `approvalRecordId`.
+- `pronunciation`: named `profile: 'israeli-v1'`, `confirmationRecordId`, and settled
+  `divineNames: 'ceremony-adonai-elohim'`.
+- `performance`: explicit `key`, `tempo`, named `table` and `style`. Current tables
+  are `torah`, `haftarah`, `haftarah-moroccan`; existing styles are `v1` and `v2`.
+  Keys are bounded to octaves 2–5 and tempo to 40–180; no custom table/profile input
+  or inferred performance defaults are accepted.
+- `passages`: 1–12 objects with `id`, canonical-form `ref`, privately supplied `he`,
+  exact UTF-8 `textSha256`, and **all four** explicit flags: `final`, `endOfAliyah`,
+  `endOfBook`, `special` (including `null`). Finality is never inferred from array
+  position. Torah rejects the haftarah `final` flag; haftarah rejects Torah cadence
+  and special flags; book endings require aliyah endings. Table/reference mismatch,
+  unsupported special cells and fallback cells reject the target.
+
+Supplied record IDs are retained as assertions requiring external review. They do
+not establish rights, pronunciation confirmation or target approval. Every manifest
+and passage starts at `targetReview: 'pending'`; `releaseStatus` remains
+`private-unreleased`. The original frozen private input should be retained separately.
+
+For each passage the builder calls `verseUnits` → `scoreVerse` → `scoreToSoulx`
+once, then supplies those same emitted segments and original units to `buildPlan`.
+The five files are `P01/units.json`, `score.json`, `a-soulx-target.json`,
+`b-speech-plan.json` and `identity-map.json` (with each passage's actual ID as the
+directory). `manifest.json` records source/input/profile/table/code and artifact
+hashes, explicit flags/settings, conditioning differences and review/release status.
+The manifest's own SHA-256 is returned separately by the builder/writer, avoiding a
+self-referential hash. The CLI prints only a fixed success message; no private
+destination or text is printed.
+
+Identity IDs are scoped to the full target hash and passage/unit/word/syllable/note
+coordinates. The sidecar retains maqaf word distinctions and separately records
+engine stress versus B's existing spoken-word stress heuristic. Parity explicitly
+checks note count/order/MIDI/slur, syllable attachment, rests, split boundaries and
+executed millisecond timing against `segmentNotes` and the B plan. Raw score beat
+times remain distinguishable from emitted timing, which includes phrasing rests.
+A uses score conditioning and zero placeholder F0 metadata; B still requires later
+F0/voicing preparation and review. **Identical F0 is not claimed.**
+
+The CLI requires an out-of-band SHA-256 of the exact private input file:
+
+```powershell
+node scripts/trope-benchmark-pack.mjs --input "C:\private\chant-benchmark\input.json" --input-sha256 "<actual-64-character-sha256>" --out "C:\private\chant-benchmark\new-target-pack"
+```
+
+This is an illustrative command, not a benchmark run performed here. The parent
+directory must already exist outside the checkout. The writer checks both lexical
+and resolved parent containment, rejects existing destinations including links,
+rejects junction/symlink aliases back into the repo, and creates files exclusively
+without overwrite. It validates artifact paths/hashes/total size before creation,
+checks created directories before writes, and writes the manifest last. Failure
+retains any partial output for inspection; there is no destructive cleanup.
+Errors use fixed codes and withhold private payloads, underlying diagnostics and
+paths. No fetch, model, Python, GPU, account or spending operation is included.
+
+Bounds: 256 KiB input, 8 KiB Hebrew per passage, 512 words, 2,048 syllables, 8,192
+timeline notes, 180 executed seconds per passage, 30 seconds per emitted segment,
+16 MiB total output and 4 MiB trusted code assets. An indivisible word that exceeds
+the emitter's segment limit is explicitly rejected rather than silently exempted.
+
+Focused implementation evidence: **7/7 new target-pack tests and 3/3 process-
+isolation tests pass** on Windows. Cases use invented syllables or existing permitted
+MAM fixtures, deterministic outputs, strict provenance/checksums/flags, ordinary
+and final/aliyah/book cadence differences, long/melismatic splits, maqaf IDs,
+tampered parity/output, bounded output, private-path containment and sanitized CLI
+errors. Synthetic CLI outputs were confined to isolated temporary test directories
+and cleaned up. No real private target pack or recording was created. Root's full
+Node integration passes **152/152**, including the unchanged engine suites.
+The fresh independent reviewer passed the seven focused cases plus 43 separate
+adversarial checks of timing, provenance, malformed inputs and private path safety;
+see `../../planning/2026-10-15-kickoff/BENCHMARK-PACK-REVIEW.md`. Publication and
+exact-commit hosted checks remain pending at this local implementation boundary.

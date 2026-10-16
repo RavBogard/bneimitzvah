@@ -84,6 +84,12 @@ changed for the fixture repair. Logs: `.local-logs/study-colors-browser-repair.l
 `study-colors-browser.log`, `study-colors-integration-tests.log` and
 `study-colors-build.log`. Hosted exact-commit CI/deployment are the remaining gate.
 
-Next: root publishes and checks exact-commit hosted CI/deployment.
+Published checkpoint **ff1215a6232b42eb6785e9042a7fefb43fa0b8ca** passed all four
+jobs in [CI run 38922295034](https://github.com/RavBogard/bneimitzvah/actions/runs/38922295034).
+Hosted PostgreSQL checks include 6 SQL, 43 service and **39/39 browser cases**.
+Matching deployment **7122564767** succeeded; stable `/trope-chart` returns 200.
+`/api/session` remains private/no-store 503 until actual providers are configured.
+This closes the scoped integration/publication gate, not live-provider acceptance
+or feature completeness. Next work is the separate offline chant benchmark pack.
 No wider audit, PostgreSQL runner, remote service or spending was performed by this
 implementer. Daniel-only review and existing audio/release gates remain.

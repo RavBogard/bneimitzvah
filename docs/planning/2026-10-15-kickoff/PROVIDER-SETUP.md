@@ -1,6 +1,6 @@
 # Provider setup for Daniel's private testing
 
-Status, 2026-10-15: Daniel is updating the Google client callbacks and has chosen the stable Vercel host until custom-domain DNS is ready. Include the exact active callback below; private credentials have not been installed by this implementation work. Neon and Resend remain setup gates. This is a preparation checklist, not evidence that live authentication works. No new account, paid service, outbound email or database has been provisioned by these steps.
+Status, 2026-10-16: Daniel has corrected the Google callbacks and intentionally keeps OAuth public. He already has a CRC Resend account, not yet connected to this portal, and is creating the Neon project through Vercel. Use the stable Vercel host until custom-domain DNS is ready. Private runtime credentials have not been installed by this implementation work. This is a preparation checklist, not evidence that live authentication works; no database creation, outbound delivery or paid provisioning is claimed.
 
 ## 1. Canonical host
 
@@ -10,7 +10,7 @@ When DNS is ready, complete the pending CNAME for `bneimitzvah` to `a008a8e486ab
 
 ## 2. Google sign-in
 
-Use a Google OAuth Web application client for this portal, with the consent screen restricted to Daniel's testing while the full product is built. Add `https://bneimitzvah.vercel.app/api/auth/callback/google` under **Authorized redirect URIs** for the temporary production host. The eventual custom-domain callback is `https://bneimitzvah.centralreform.org/api/auth/callback/google`; a separate local client may use `http://localhost:3000/api/auth/callback/google` when that exact local origin is configured. Registering both future/current callback URIs at Google does not make both portal origins trusted: runtime still selects exactly one through `BETTER_AUTH_URL`. The route adapter exposes this callback through an explicit allowlist; the full SDK endpoint set is not mounted. Store client ID and secret privately as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. [Better Auth Google setup](https://better-auth.com/docs/authentication/google).
+Use a Google OAuth Web application client for this portal. Daniel confirmed on 2026-10-16 that public OAuth availability is intentional; do not switch it back to testing. Public identity sign-in does not grant portal membership or invite other people to test the product. Add `https://bneimitzvah.vercel.app/api/auth/callback/google` under **Authorized redirect URIs** for the temporary production host. The eventual custom-domain callback is `https://bneimitzvah.centralreform.org/api/auth/callback/google`; a separate local client may use `http://localhost:3000/api/auth/callback/google` when that exact local origin is configured. Registering both future/current callback URIs at Google does not make both portal origins trusted: runtime still selects exactly one through `BETTER_AUTH_URL`. The route adapter exposes this callback through an explicit allowlist; the full SDK endpoint set is not mounted. Store client ID and secret privately as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. [Better Auth Google setup](https://better-auth.com/docs/authentication/google).
 
 The portal accepts families' Google accounts rather than requiring a CRC Workspace domain. A successful sign-in establishes identity only; it does not grant a congregation role or access to a child. Explicit invitation acceptance is a separate operation.
 
@@ -18,7 +18,7 @@ Use full callback paths, not a bare site root or bare HTTPS loopback address. Do
 
 ## 3. Neon database
 
-Select the portal's own project/database and review the current plan and spending controls before creation. Any new charge or upgrade needs Daniel's approval. Keep migration credentials separate from runtime credentials and out of Vercel's runtime environment.
+Create the portal's own Neon project/database through the Vercel Marketplace on the Free plan, connected only to Production for now. The integration may inject default connection variables; replace those with the restricted runtime login and remove unnecessary owner credentials before enabling the portal. Review the current plan and spending controls before creation. Any new charge or upgrade needs Daniel's approval. Keep migration credentials separate from runtime credentials and out of Vercel's runtime environment.
 
 Apply the reviewed migrations as a dedicated owner. Create the application LOGIN role through SQL with no superuser, role-creation, database-creation, replication or RLS-bypass privilege. Grant it membership in the migration-defined `portal_runtime` privilege group only. It must own no application table and must not be able to assume the owner or an elevated role. Neon Console/CLI/API-created roles receive `neon_superuser` membership, so they are unsuitable as the unmodified application login. [Neon role management](https://neon.com/docs/manage/roles).
 
@@ -28,7 +28,7 @@ The runtime accepts a restricted Neon URL with `sslmode=require` and no addition
 
 ## 4. Resend magic links
 
-Choose a CRC-controlled sending subdomain and add the exact verification records shown by Resend; preserve the congregation's existing mail records. Confirm domain verification before delivery testing. Keep click/open tracking disabled for authentication messages. A subdomain can isolate transactional sending reputation. [Resend verified domains](https://resend.com/docs/dashboard/domains/introduction).
+Reuse the existing CRC Resend account. Daniel reports centralreform.live is Verified (2026-10-16); this is the selected candidate domain. Confirm sending capability and tracking configuration before live authentication delivery. A new account is unnecessary. If a new sending subdomain is needed, add the exact verification records shown by Resend and preserve the congregation's existing mail records. Confirm domain verification before delivery testing. Keep click/open tracking disabled for authentication messages. A subdomain can isolate transactional sending reputation. [Resend verified domains](https://resend.com/docs/dashboard/domains/introduction).
 
 Create a dedicated API key limited to sending on the chosen domain. Store it privately as `RESEND_API_KEY`, with the verified sender in `RESEND_FROM`. Resend supports permission and optional domain restrictions for keys. [Resend API keys](https://resend.com/docs/dashboard/api-keys/introduction).
 
