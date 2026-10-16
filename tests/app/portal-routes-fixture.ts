@@ -6,6 +6,7 @@ import { createPracticeService } from "../../src/server/practice/service";
 import { createInvitationService } from "../../src/server/invitations/service";
 import { createStudentService } from "../../src/server/students/service";
 import { createPendingInvitations } from "../../src/server/http/pending-invitations";
+import { createGoogleChallenges } from "../../src/server/http/google-challenge";
 import { handlePortalRequest } from "../../src/server/http/portal";
 import { resolveTenantHost } from "../../src/server/tenancy/resolve";
 import type { HttpRuntime } from "../../src/server/runtime/composition";
@@ -35,6 +36,7 @@ export async function portalRoutesFixture() {
   const runtime: HttpRuntime = { origin: "http://localhost:3000", auth: f.auth, access: f.service, practice, invitations, students, studentWork: createStudentWorkService({ access: f.service, practice }),
     study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }),
     portal: createPortalService({ access: f.service, practice, sessionBindingSecret: randomBytes(48).toString("base64url") }), relationships: createRelationshipService({ access: f.service }), pendingInvitations,
+    googleChallenges: createGoogleChallenges({ db: f.db, origin: "http://localhost:3000", secret: randomBytes(48).toString("base64url") }),
     resolveHost: request => resolveTenantHost(f.db, request, { environment: "test", deployment: "suite" }) };
   function request(path: string, options: { who?: keyof typeof identities | "anonymous"; method?: string; body?: unknown; handle?: string; pending?: string;
     headers?: Record<string, string>; origin?: string } = {}) {
@@ -54,9 +56,9 @@ export async function portalRoutesFixture() {
     return response;
   }
   function pending(index = deliveries.length - 1) {
-    const token = new URL(deliveries[index].url).searchParams.get("token");
+    const token = new URLSearchParams(new URL(deliveries[index].url).hash.slice(1)).get("token");
     if (!token) throw new Error("Synthetic invitation token missing");
-    const response = pendingInvitations.exchange(new Request(`http://localhost:3000/invitations/open?token=${token}`));
+    const response = pendingInvitations.exchange(new Request("http://localhost:3000/api/invitations/open", { method: "POST", headers: { origin: "http://localhost:3000" } }), token);
     return { token, cookie: response.headers.getSetCookie()[0].split(";")[0] };
   }
   return { ...f, identities, runtime, request, call, pending, deliveries, failSend: (value: boolean) => { sendFails = value; } };

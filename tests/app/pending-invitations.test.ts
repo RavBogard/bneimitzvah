@@ -10,8 +10,8 @@ function fixture(selectedOrigin = origin, environment: "local" | "preview" | "pr
   const input = { secret: randomBytes(48).toString("base64url"), origin: selectedOrigin, environment, now: () => time };
   const pending = createPendingInvitations(input);
   const token = randomBytes(32).toString("base64url");
-  const landing = new URL("/invitations/open", selectedOrigin); landing.searchParams.set("token", token);
-  const issue = () => pending.exchange(new Request(landing));
+  const landing = new URL("/api/invitations/open", selectedOrigin);
+  const issue = () => pending.exchange(new Request(landing, { method: "POST", headers: { origin: selectedOrigin } }), token);
   const cookie = () => issue().headers.getSetCookie()[0].split(";")[0];
   const read = (cookieValue: string, url = `${selectedOrigin}/api/invitations/pending`, headers: Record<string, string> = {}) => pending.read(new Request(url, { headers: { cookie: cookieValue, ...headers } }));
   return { input, pending, token, landing, issue, cookie, read, advance: (delta: number) => { time += delta; } };
@@ -21,13 +21,13 @@ async function denied(action: () => unknown) {
   catch (error) { return error instanceof HttpBoundaryError && error.status === 404 && error.message === "Request rejected" && !("cause" in error); }
 }
 
-test("landing GET seals a confidential randomized pending cookie and clean redirect without identity/grant work", async () => {
+test("body exchange seals a confidential randomized pending cookie and fixed result without identity/grant work", async () => {
   const f = fixture();
   const response = f.issue();
   const setCookie = response.headers.getSetCookie()[0];
   const cookie = setCookie.split(";")[0];
-  expect(response.status).toBe(303);
-  expect(response.headers.get("location")).toBe("/invitations/accept");
+  expect(response.status).toBe(200);
+  expect(response.headers.get("location")).toBeNull();
   expect(response.headers.get("cache-control")).toBe("private, no-store");
   expect(response.headers.get("referrer-policy")).toBe("no-referrer");
   expect((await response.text()).includes(f.token)).toBe(false);
@@ -74,14 +74,15 @@ test("pending cookie expiry/future clock, ciphertext tamper and oversized/duplic
   expect(text.includes(f.token) || text.includes(tampered) || text.includes(f.input.secret)).toBe(false);
 });
 
-test("invitation token exists only on exact landing GET; URL practice contexts, duplicate token and unsupported read paths deny", async () => {
+test("invitation exchange requires exact body POST; URL parameters, foreign origin and unsupported read paths deny", async () => {
   const f = fixture();
-  for (const request of [new Request(f.landing, { method: "POST" }), new Request(f.landing.href + "&token=duplicate"), new Request(f.landing.href + "&handle=opaque"),
-    new Request(f.landing.href + "&context=opaque"), new Request(f.landing.href + "#fragment"), new Request(f.landing, { headers: { "X-Practice-Context": "" } }),
-    new Request(f.landing, { headers: { host: "foreign.example.test" } }), new Request(f.landing.href.replace("/invitations/open", "/invitations/%6fpen")),
-    new Request(f.landing.href.replace(f.token, "A".repeat(42))), new Request(f.landing.href.replace(f.token, "A".repeat(42) + "B"))]) {
-    expect(await denied(() => f.pending.exchange(request))).toBe(true);
+  for (const request of [new Request(f.landing), new Request(f.landing.href + "?token=duplicate", { method: "POST", headers: { origin } }),
+    new Request(f.landing.href + "?context=opaque", { method: "POST", headers: { origin } }), new Request(f.landing.href + "#fragment", { method: "POST", headers: { origin } }),
+    new Request(f.landing, { method: "POST", headers: { origin, "X-Practice-Context": "" } }), new Request(f.landing, { method: "POST", headers: { origin, host: "foreign.example.test" } }),
+    new Request(f.landing, { method: "POST", headers: { origin: "http://foreign.example.test" } }), new Request(f.landing.href.replace("/open", "/%6fpen"), { method: "POST", headers: { origin } })]) {
+    expect(await denied(() => f.pending.exchange(request, f.token))).toBe(true);
   }
+  for (const token of ["A".repeat(42), "A".repeat(42) + "B", undefined]) expect(await denied(() => f.pending.exchange(new Request(f.landing, { method: "POST", headers: { origin } }), token))).toBe(true);
   const cookie = f.cookie();
   for (const path of ["/api/invitations/pending?token=opaque", "/api/invitations/pending?handle=opaque", "/api/invitations/accept", "/api/students", "/invitations/accept"]) {
     expect(await denied(() => f.read(cookie, origin + path))).toBe(true);

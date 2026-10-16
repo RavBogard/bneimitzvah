@@ -1,14 +1,82 @@
 # Provider preparation return — 2026-10-16
 
-**Status: read-only preparation complete; remote configuration is not enabled.**
-No database/schema/role/environment mutation, account creation, provider email,
-interactive sign-in, spend change or deployment was performed by this implementer.
-The bounded operator-only WebSocket probe is now implemented below, but has not
-been executed remotely. No application endpoint was added. Root owns execution and
-security review. **Runtime authentication enabling/deployment is blocked by the
-separately confirmed hosting request-log query leak, even if database gates pass.**
+**Status: approved database setup completed; authentication remains disabled.**
+The exact resource/project connection was removed, the owner credential rotated,
+the authenticated-client retirement gate completed after two separately authorized
+endpoint restarts, all 11 migrations applied and verified, and the restricted
+production login passed the actual WebSocket acceptance probe. Only its sensitive
+Production `DATABASE_URL` was installed; the existing Resend binding is preserved.
+No auth settings, deployment, email, owner bootstrap, real student data, second
+tenant, account or billing change was performed. The session endpoint still returns
+**503**. Root retains integration and authentication-enabling ownership.
 
-## Actual capability and database evidence
+## Execution evidence — approved bounded setup
+
+- Exact connection removal: **18 managed aliases removed**, project connections
+  **0**, Neon resource/integration retained. Final project metadata has **2**
+  sensitive Production-only variables (restricted database URL and unchanged Resend
+  key); Preview variables, branch overrides, hidden Production variables and
+  owner/operator/bootstrap/other auth variables are each **0**. Immutable older
+  deployments' copies were addressed by credential/session retirement below.
+- Owner reset finished; **2** prior exact owner/database client backends were
+  terminated and the immediate remaining count was **0**. Fresh original-password
+  direct and pooled authentication rejected with actual authentication SQLSTATE;
+  replacement direct and pooled credentials worked. The original authenticated
+  pooled handle nevertheless remained usable, so setup stopped at that gate.
+- Root separately reviewed the exact-endpoint restart remedy. **2 restart requests
+  total**, with no resize/resource/plan change: the first observer stopped on one
+  terminal `skipped` intermediate operation and closed its controls, so that run
+  did not establish client invalidation. After read-only confirmation of five
+  finished/one skipped operations and active endpoint, root authorized the second.
+  The corrected observer treated terminal skipped as completion only. Both held
+  **current** direct and pooled handles then became unusable, fresh current
+  credentials worked on both paths, and original stale credentials failed on both.
+  This demonstrates endpoint client invalidation; it does not claim retesting the
+  already closed original pooled handle. All operator/control clients were closed.
+- Owner preflight: PostgreSQL **180006**, direct database owner with reviewed
+  attributes; actual client TLS socket **encrypted=true, authorized=true** using
+  `verify-full`. Neon's proxy makes backend `pg_stat_ssl.ssl=false`; that backend
+  value was not misreported as evidence about client TLS.
+- Existing migrations **0000–0010**, ledger rows **11**, every exact SQL hash and
+  journal timestamp matched. Enabled CRC tenant **1**, exact production host rows
+  **2**, user/membership/grant/student/audit rows **0**. No owner identity was seeded.
+- SQL-created `portal_app`: safe role attributes, **1** membership (only
+  `portal_runtime`), elevated/unexpected/ownership closure **0**, public-schema
+  CREATE **false**. **161** inherited table privilege checks and **25** column
+  update checks matched the intended narrow grants, including auth/cache exceptions.
+  Ledger access, SET ROLE owner, role elevation and public CREATE denied with
+  **42501**. Neon intercepted SET ROLE neon_superuser with **XX000**; this was
+  recorded separately, with SET membership absent and current/session role unchanged
+  after savepoint recovery. It was not counted as an RLS denial.
+- Exact ENABLE/FORCE tenant policies **15**, including invitation_throttle from
+  0004; immutable authority/audit/work triggers **22**. Separate actual
+  `withTenantTransaction` owner-negative check rejected before callback entry
+  (**callbackEntered=false**). Owner input never entered the restricted probe child.
+- Actual pinned Neon WebSocket/Drizzle/runtime probe **passed (close)** on the same
+  direct endpoint class installed for Production. It checked all 15 protected
+  tables, restricted closure, missing/empty/wrong contexts, CRC read/write,
+  rolled-back fixture, before/inside/after physical-backend cleanup, parallel
+  isolation and exact-host composition. RLS denials still required **42501**.
+  Final independent inspection: student/identity/authority/audit rows **0**,
+  remaining owner client backends excluding the inspector **0**; inspector closed.
+- Live acceptance used frozen base
+  `d655c15abd8692e222ec86aa1fa11709461cf7ef`, plus only the independently approved
+  invitation_throttle addition to the probe's protected-table list. Actual executed
+  `neon-ws.ts` SHA-256:
+  `0ec8e203d4182b385c5e4eec4b8819fda14723906c1e615f75e03ca344f892c4`.
+  Main and frozen source match after line-ending normalization. Concurrent auth
+  implementation was not imported. Frozen worktree remains for root to archive.
+- Latest focused checks: **6/6** probe tests and typecheck pass after the catalog
+  addition. No broad suite was repeated for that one-line strengthening. Main
+  source fixture literals were constructed to satisfy the existing repository
+  guard, without weakening the guard.
+
+Canonical private file locations and sanitized operator result files are recorded
+only in the ignored operator handoff. Historical preparation/proposed-procedure
+sections below are retained as the reviewed execution contract; their earlier
+pending/read-only descriptions are superseded by these actual results.
+
+## Pre-execution capability and database evidence
 
 - Vercel CLI 50.35.0 is authenticated and linked to the existing
   `ravbogards-projects/bneimitzvah` project. The one connected Neon resource is
@@ -110,9 +178,9 @@ decision remains Daniel's mission gate.
    Real mail delivery, Google round trip, owner grant, provider logging/tracking
    checks and any family pilot remain separate explicit acceptance work.
 
-The proposed scope changes and role/password operations above have **not run**.
-The useful current result is an actual empty-database/owner-capability diagnosis,
-a supported private operator connection, and this concrete procedure for review.
+The sequence above was the reviewed proposal. The execution evidence at the top
+records which steps are now complete; the later auth/bootstrap/deployment steps
+remain outside this database milestone.
 
 ## Concrete owner credential/session retirement
 
@@ -186,10 +254,10 @@ one closed pass/fail phase. The operator test catches every failure into fixed
 sanitized phase codes without a cause, SQL, rows, connection, token or raw driver
 error. Connections/queries/idle transactions and the whole runner have finite bounds.
 
-Actual probe behavior, awaiting live execution:
+Actual probe behavior (live execution now passed above):
 
 - Uses pinned `@neondatabase/serverless` 1.2.0 `Pool`, Drizzle and the unmodified
-  `withTenantTransaction` role-closure contract. Requires all 14 tenant/work tables
+  `withTenantTransaction` role-closure contract. Requires all 15 tenant/work/throttle tables
   to have both ENABLE and FORCE RLS.
 - Checks no-context and explicitly empty-context protected reads/CRC insert denial.
   Uses savepoints and requires RLS SQLSTATE 42501; network errors are not denials.
@@ -220,7 +288,7 @@ unexpectedly successful insert. The added adversarial case rejects matching oute
 PIDs with a different transaction PID for both commit and rollback, changed
 post-transaction backends, retained contexts and invalid IDs. They mock the driver
 and establish no live Neon result. Independent correction review and explicit
-remote-execution authorization remain. The prior full app run passed 398 tests
+remote-execution authorization were completed before the execution above. The prior full app run passed 398 tests
 plus one existing skip before this narrow correction; it was not repeated here.
 
 Daniel reports the Resend domain is Verified, the key is installed and click/open

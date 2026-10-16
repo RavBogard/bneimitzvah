@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { parseAcceptance, parseAcknowledgement, parseGoogleDestination, parseInvitation, parseSession, PortalRequestError, requestPortal, roleNames,
+import { parseAcceptance, parseAcknowledgement, parseInvitation, parseSession, PortalRequestError, requestPortal, roleNames,
   type InvitationReview, type SessionSummary } from "./api";
+import { GoogleSignIn } from "./google-sign-in";
 
 type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "accepted" | "uncertain" }
   | { kind: "signed-in"; summary: SessionSummary } | { kind: "invitation"; review: InvitationReview };
@@ -14,6 +15,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
   const [pending, setPending] = useState<Action | null>(null), [message, setMessage] = useState("");
   const [email, setEmail] = useState(""), [linkRequested, setLinkRequested] = useState(false);
   const [attemptedSignIn, setAttemptedSignIn] = useState(false);
+  const [authGeneration, setAuthGeneration] = useState(0);
   const gate = useRef<Action | null>(null), generation = useRef(0), controller = useRef<AbortController | null>(null);
   const heading = useRef<HTMLHeadingElement>(null), focusNext = useRef(false);
 
@@ -46,22 +48,18 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
   }, [view, linkRequested]);
 
   function retry() { focusNext.current = true; refresh(); }
-  async function action(kind: Action) {
+  async function action(kind: Exclude<Action, "google">) {
     // React state alone cannot prevent two submissions in the same event turn.
     if (gate.current) return;
     gate.current = kind; setPending(kind); setMessage("");
-    if (kind === "google" || kind === "email") setAttemptedSignIn(true);
+    if (kind === "email") setAttemptedSignIn(true);
     try {
-      if (kind === "google") {
-        const url = parseGoogleDestination(await requestPortal("/api/auth/sign-in/social", { provider: "google" }));
-        window.location.assign(url);
-        return;
-      }
       if (kind === "email") {
         parseAcknowledgement(await requestPortal("/api/auth/sign-in/magic-link", { email: email.trim() }), "requested");
         setEmail(""); setLinkRequested(true); focusNext.current = true;
       } else if (kind === "sign-out") {
         parseAcknowledgement(await requestPortal("/api/auth/sign-out", {}), "ok");
+        setAuthGeneration(value => value + 1);
         setEmail(""); setLinkRequested(false); setView({ kind: "sign-in" }); focusNext.current = true;
       } else {
         if (view.kind !== "invitation") return;
@@ -107,7 +105,14 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         {view.kind === "unavailable" && <><p>The portal isn’t ready to sign you in right now. Your reading remains private.</p><p>Please try again shortly. If this continues, ask your tutor or the congregation for help.</p><button type="button" className="button-primary" onClick={retry}>Try again</button></>}
         {view.kind === "sign-in" && (linkRequested ? <><p role="status">If this address can sign in, an email link will arrive shortly. Open the link on this device to continue.</p><p>Don’t see it? Check your spam folder, or wait a minute before requesting another link.</p><button type="button" className="button-secondary" onClick={() => { focusNext.current = true; setLinkRequested(false); setMessage(""); }}>Use a different email</button></>
           : <><p>{invitation ? "Sign in with the email address that received this invitation." : "Use Google, or get a sign-in link by email. No password needed."}</p>
-            <button type="button" className="button-secondary google-button" disabled={pending !== null} onClick={() => void action("google")}>{pending === "google" ? "Opening Google…" : "Continue with Google"}</button>
+            <GoogleSignIn key={authGeneration} disabled={pending !== null} onBegin={() => {
+              if (gate.current) return false;
+              gate.current = "google"; setPending("google"); setMessage(""); setAttemptedSignIn(true); return true;
+            }} onFinish={next => {
+              if (gate.current !== "google") return;
+              gate.current = null; setPending(null);
+              if (next) window.location.replace(next);
+            }} />
             <div className="form-divider"><span>or use email</span></div>
             <form onSubmit={submit}>
               <label htmlFor="entry-email">Email address</label>

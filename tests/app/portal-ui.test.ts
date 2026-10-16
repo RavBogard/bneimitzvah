@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { parseAcceptance, parseAcknowledgement, parseGoogleDestination, parseInvitation, parseSession, PortalRequestError, requestPortal } from "../../src/components/portal/api";
+import { parseAcceptance, parseAcknowledgement, parseAuthResult, parseGoogleChallenge, parseInvitation, parseSession, PortalRequestError, requestPortal } from "../../src/components/portal/api";
 
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 const response = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
@@ -59,10 +59,13 @@ describe("portal entry client trust and transport contracts", () => {
     await vi.advanceTimersByTimeAsync(12_000); expect(await result).toBe(true);
   });
 
-  it("permits only the validated Google navigation destination", () => {
-    expect(parseGoogleDestination({ url: "https://accounts.google.com/o/oauth2/v2/auth?state=synthetic" }).startsWith("https://accounts.google.com/")).toBe(true);
-    for (const url of ["javascript:alert(1)", "https://accounts.google.com.evil.example.test/o/oauth2/v2/auth", "https://accounts.google.com/other", "http://accounts.google.com/o/oauth2/v2/auth", "https://accounts.google.com/o/oauth2/v2/auth#private"])
-      expect(() => parseGoogleDestination({ url })).toThrow(PortalRequestError);
+  it("accepts only bounded Google challenges and fixed local authentication destinations", () => {
+    const challenge = { challengeId: "A".repeat(43), nonce: "B".repeat(43), csrfToken: "C".repeat(43), clientId: "synthetic-client", expiresAt: Date.now() + 100_000 };
+    expect(parseGoogleChallenge(challenge)).toEqual(challenge);
+    for (const change of [{ nonce: "" }, { expiresAt: Date.now() - 1 }, { clientId: "javascript:invalid" }, { token: "private" }]) expect(() => parseGoogleChallenge({ ...challenge, ...change })).toThrow(PortalRequestError);
+    expect(parseAuthResult({ ok: true, next: "/" })).toBe("/");
+    expect(parseAuthResult({ ok: true, next: "/invitations/accept" })).toBe("/invitations/accept");
+    for (const next of ["javascript:alert(1)", "https://foreign.example.test", "/?token=private", "/sign-in"]) expect(() => parseAuthResult({ ok: true, next })).toThrow(PortalRequestError);
   });
 
   it("accepts only fixed acknowledgements and constrained acceptance results", () => {

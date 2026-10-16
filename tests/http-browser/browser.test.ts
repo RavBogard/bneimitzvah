@@ -3,6 +3,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
+import { openAuthMail } from "./auth-navigation";
 
 vi.mock("server-only", () => ({}));
 type Fixture = Awaited<ReturnType<typeof browserFixture>>;
@@ -40,7 +41,7 @@ async function signIn(tab: Page, email: string) {
   const requested = await call(tab, "/api/auth/sign-in/magic-link", "POST", { email });
   expect(requested.status === 200).toBe(true);
   const link = fixture.takeMail(email);
-  try { await tab.goto(link, { waitUntil: "domcontentloaded", timeout: 30_000 }); }
+  try { await openAuthMail(tab, link); }
   catch { throw new Error("Magic-link browser navigation failed; details withheld"); }
   const session = await call(tab, "/api/session");
   expect(session.status === 200).toBe(true);
@@ -112,7 +113,7 @@ describe("real browser, SDK cookies and restricted PostgreSQL", () => {
       (row: { id?: unknown; status?: unknown; delivery?: { status?: unknown } }) => row.id === invite.data.inviteId && row.status === "pending" && row.delivery?.status === "sent",
     )).toBe(true);
     const invitationLink = fixture.takeMail("browser-learner@example.test");
-    try { await recipient.goto(invitationLink, { waitUntil: "domcontentloaded" }); }
+    try { await openAuthMail(recipient, invitationLink); }
     catch { throw new Error("Invitation browser navigation failed; details withheld"); }
     expect((await call(recipient, `/api/students/${studentId}?mode=student`)).status === 401).toBe(true);
     await signIn(recipient, "browser-learner@example.test");

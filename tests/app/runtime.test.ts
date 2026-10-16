@@ -88,7 +88,7 @@ test("composed real auth stack sends only synthetic mail to injected transport a
   const runtime = composeRuntime(config, db, async (url, options) => {
     if (String(url) !== "https://api.resend.com/emails") throw new Error("Unexpected test provider");
     const payload = JSON.parse(String(options?.body));
-    if (typeof payload.text !== "string" || !payload.text.includes("/api/auth/magic-link/verify?token=")) throw new Error("Invalid synthetic message");
+    if (typeof payload.text !== "string" || !payload.text.includes("/auth/email#token=")) throw new Error("Invalid synthetic message");
     mailCalls++;
     return new Response("{}", { status: 200 });
   });

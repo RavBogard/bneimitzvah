@@ -1,3 +1,4 @@
+import { openAuthMail } from "./auth-navigation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
@@ -30,7 +31,7 @@ async function api(tab: Page, path: string, body?: unknown, handle?: string) {
 }
 async function signIn(tab: Page, email: string) {
   await navigate(tab, "/"); expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status === 200).toBe(true);
-  await navigate(tab, fixture.takeMail(email));
+  await openAuthMail(tab, fixture.takeMail(email));
 }
 async function capture(tab: Page, name: string) {
   if (process.env.CI) return;

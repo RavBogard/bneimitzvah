@@ -1,3 +1,4 @@
+import { openAuthMail } from "./auth-navigation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
@@ -25,7 +26,7 @@ async function page(who: "admin" | "tutor" = "admin", mobile = false) {
   if (!cached) {
     const email = who === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
     const result = await api(tab, "/api/auth/sign-in/magic-link", { email }); expect(result.status).toBe(200);
-    await navigate(tab, fixture.takeMail(email)); signedCookies[who] = await context.cookies();
+    await openAuthMail(tab, fixture.takeMail(email)); signedCookies[who] = await context.cookies();
   }
   return tab;
 }

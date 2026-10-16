@@ -1,6 +1,7 @@
 import "server-only";
 import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "node:crypto";
-import { HttpBoundaryError, privateRedirect } from "./responses";
+import { HttpBoundaryError, privateJson } from "./responses";
+import { requireCookieMutation } from "./mutations";
 import { closedObject, uniqueQuery } from "./query";
 import { PRODUCTION_ORIGINS } from "../runtime/config";
 
@@ -68,11 +69,11 @@ export function createPendingInvitations(input: { secret: string; origin: string
     return body.token;
   };
   return Object.freeze({
-    exchange(request: Request): Response {
+    exchange(request: Request, token: unknown): Response {
       try {
-        const { url, query } = requestUrl(request, ["token"]);
-        const token = query.get("token");
-        if (request.method !== "GET" || url.pathname !== "/invitations/open" || !tokenValid(token)) throw 0;
+        const { url } = requestUrl(request, []);
+        requireCookieMutation(request, configuredOrigin);
+        if (request.method !== "POST" || url.pathname !== "/api/invitations/open" || !tokenValid(token)) throw 0;
         const issuedAt = time();
         const nonce = randomBytes(12);
         const cipher = createCipheriv("aes-256-gcm", key, nonce);
@@ -80,7 +81,7 @@ export function createPendingInvitations(input: { secret: string; origin: string
         const plaintext = JSON.stringify({ version: 1, token, origin: configuredOrigin, issuedAt, expiresAt: issuedAt + LIFETIME });
         const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
         const sealed = `v1.${Buffer.concat([nonce, encrypted, cipher.getAuthTag()]).toString("base64url")}`;
-        const response = privateRedirect("/invitations/accept");
+        const response = privateJson({ ok: true, next: "/invitations/accept" });
         response.headers.append("set-cookie", cookie(sealed, LIFETIME / 1000));
         return response;
       } catch { throw new HttpBoundaryError(404); }
@@ -95,7 +96,7 @@ export function createPendingInvitations(input: { secret: string; origin: string
     hasPendingForSignIn(request: Request): boolean {
       try {
         const { url } = requestUrl(request, []);
-        if (request.method !== "POST" || !["/api/auth/sign-in/magic-link", "/api/auth/sign-in/social"].includes(url.pathname)) return false;
+        if (request.method !== "POST" || !["/api/auth/sign-in/magic-link", "/api/auth/email/confirm", "/api/auth/google/challenge"].includes(url.pathname)) return false;
         unseal(request); return true;
       } catch { return false; }
     },

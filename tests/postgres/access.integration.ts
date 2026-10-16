@@ -137,7 +137,7 @@ test("concurrent redemption contends on live authority and creates exactly one g
   const adminRequest={...f.request("admin"),method:"POST",headers:new Headers({...Object.fromEntries(f.request("admin").headers),origin:"http://localhost:3000"})};
   const issued=await invitationsA.issue(adminRequest,{mode:"admin",role:"parent",email:"pg-recipient@example.test",studentId:f.student.id});
   expect(issued.delivery==="sent").toBe(true);
-  const token=new URL(privateUrl).searchParams.get("token");
+  const token=new URLSearchParams(new URL(privateUrl).hash.slice(1)).get("token");
   if(!token)throw new Error("Synthetic invitation delivery missing");
   const request={url:"http://localhost:3000/invitations/accept",method:"POST",headers:new Headers({origin:"http://localhost:3000",cookie:recipient.cookie})};
   const entered=deferred(),release=deferred();let claimed=false;

@@ -78,7 +78,7 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
 
   async function deliver(pending: { invitation: data.IssuedInvitation; actor: Actor; token: string }): Promise<Delivery> {
     const url = new URL("/invitations/open", pending.actor.origin);
-    url.searchParams.set("token", pending.token);
+    url.hash = `token=${pending.token}`;
     let outcome: "sent" | "failed" = "sent";
     try {
       // Issue/reissue committed before this call. Provider diagnostics and the

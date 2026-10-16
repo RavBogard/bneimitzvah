@@ -1,3 +1,4 @@
+import { openAuthMail } from "./auth-navigation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
@@ -33,7 +34,7 @@ async function page(who: "admin" | "tutor" | "student", mobile = false) {
     if (url.pathname.endsWith("/study-text")) modes.add(url.searchParams.get("mode") ?? ""); await route.continue();
   } catch { await route.abort(); } });
   const tab = await context.newPage(); await navigate(tab, "/"); const email = who === "student" ? "pg-study-student@example.test" : who === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
-  expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await navigate(tab, fixture.takeMail(email)); return tab;
+  expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); return tab;
 }
 async function click(tab: Page, name: string) {
   try { await safe(() => tab.getByRole("button", { name, exact: true }).click()); }

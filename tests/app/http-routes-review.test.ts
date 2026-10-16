@@ -28,30 +28,26 @@ test("review: opaque reading review cannot cross a genuinely authorized role or 
   } finally { await f.client.close(); }
 });
 
-test("review: real database OAuth state without its exact state cookie denies before provider traffic", async () => {
+test("review: retired query OAuth and missing browser challenge deny before provider traffic", async () => {
   const f = await portalRoutesFixture();
   const network = vi.spyOn(globalThis, "fetch").mockImplementation(async () => { throw new Error("Unexpected synthetic provider call"); });
   try {
     const dispatch = createHttpDispatcher(async action => action(f.runtime));
     const before = await f.owner(async () => (await f.db.select().from(s.session)).length);
-    const start = await dispatch(f.request("/api/auth/sign-in/social", { body: { provider: "google" } }));
-    expect(start.status).toBe(200);
-    const target = new URL((await start.json()).url);
-    const state = target.searchParams.get("state");
-    expect(typeof state === "string" && state.length > 0).toBe(true);
-    const realCookie = start.headers.getSetCookie().map(value => value.split(";")[0]).join("; ");
-    expect(realCookie.includes("better-auth.state=")).toBe(true);
-    for (const cookie of ["", `better-auth.state=${randomBytes(32).toString("base64url")}`]) {
-      const response = await dispatch(f.request(`/api/auth/callback/google?code=synthetic-code&state=${encodeURIComponent(state!)}`, { who: "anonymous", headers: { cookie } }));
-      expect(response.status).toBe(303);
-      expect(response.headers.get("location")).toBe("/sign-in?error=authentication");
-      expect((await response.text()).length).toBe(0);
+    const prepared = await dispatch(f.request("/api/auth/google/challenge", { who: "anonymous", body: {} }));
+    expect(prepared.status).toBe(200);
+    const challenge = await prepared.json();
+    const credential = `${Buffer.from('{"alg":"RS256"}').toString("base64url")}.e30.AA`;
+    for (const cookie of ["", `portal_google_binding=${randomBytes(32).toString("base64url")}`]) {
+      const response = await dispatch(f.request("/api/auth/sign-in/social", { who: "anonymous", body: { credential, challengeId: challenge.challengeId, csrfToken: challenge.csrfToken }, headers: { cookie } }));
+      expect(response.status).toBe(403);
+      expect(response.headers.get("location")).toBeNull();
     }
+    expect((await dispatch(f.request("/api/auth/callback/google?code=synthetic&state=synthetic"))).status).toBe(404);
     expect(network.mock.calls.length).toBe(0);
     expect(await f.owner(async () => (await f.db.select().from(s.session)).length === before)).toBe(true);
   } finally { network.mockRestore(); await f.client.close(); }
 });
-
 test("review: client-supplied forwarding addresses cannot rotate around the magic-link throttle", async () => {
   const f = await portalRoutesFixture();
   try {

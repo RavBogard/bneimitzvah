@@ -28,6 +28,6 @@ export async function invitesFixture() {
   function request(who: keyof typeof identities, origin = "http://localhost:3000", extra: Record<string, string> = {}, method = "POST"): CookieMutationRequest {
     return { url: `${origin}/invitations`, method, headers: new Headers({ cookie: identities[who].cookie, origin, ...extra }) };
   }
-  const token = (index = delivered.length - 1) => new URL(delivered[index].url).searchParams.get("token")!;
+  const token = (index = delivered.length - 1) => new URLSearchParams(new URL(delivered[index].url).hash.slice(1)).get("token")!;
   return { ...base, identities, invitations: service, delivered, request, token, failDelivery: (value: boolean) => { shouldFail = value; }, duringTransport: (callback: () => Promise<void>) => { duringTransport = callback; }, outsideTransport: () => transportOutsideTransaction };
 }

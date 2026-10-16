@@ -1,5 +1,5 @@
 import { AUTH_RATE_LIMIT_HEADER } from "../../src/server/auth/factory";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createSign, generateKeyPairSync } from "node:crypto";
 import { afterEach, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { drizzle } from "drizzle-orm/pglite";
@@ -12,7 +12,7 @@ import { createHttpDispatcher } from "../../src/server/http/dispatch";
 import { createPendingInvitations } from "../../src/server/http/pending-invitations";
 
 const opened: Awaited<ReturnType<typeof authFixture>>[] = [];
-afterEach(async () => { await Promise.all(opened.splice(0).map((f) => f.client.close())); });
+afterEach(async () => { vi.unstubAllGlobals(); await Promise.all(opened.splice(0).map((f) => f.client.close())); });
 async function fixture(origin = "http://localhost:3000", google = true) {
   const f = await authFixture(); opened.push(f);
   const db = drizzle(f.client, { schema });
@@ -36,240 +36,193 @@ async function fixture(origin = "http://localhost:3000", google = true) {
   const dispatch = createHttpDispatcher(async action => action(runtime as HttpRuntime));
   const request = (path: string, body?: unknown, headers: Record<string, string> = {}) => new Request(origin + path, body === undefined ? { headers } : {
     method: "POST", headers: { origin, "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
-  return { runtime, sdk, dispatch, request, messages, config, origin };
+  return { runtime, sdk, dispatch, request, messages, config, origin, db };
 }
 const cookieOf = (response: Response) => response.headers.getSetCookie().map(value => value.split(";")[0]).join("; ");
 
-test("actual HTTP magic-link flow generates real SDK session cookie and logout with no session/mail/token JSON for local and canonical HTTPS", async () => {
+const tokenOf = (url: string) => new URLSearchParams(new URL(url).hash.slice(1)).get("token")!;
+const fakeCredential = `${Buffer.from('{"alg":"RS256"}').toString("base64url")}.e30.AA`;
+async function challenge(f: Awaited<ReturnType<typeof fixture>>, cookie = "") {
+  const response = await f.dispatch(f.request("/api/auth/google/challenge", {}, cookie ? { cookie } : {}));
+  expect(response.status).toBe(200);
+  return { ...await response.json(), cookie: cookieOf(response) };
+}
+function googleTokens() {
+  const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const key = { ...publicKey.export({ format: "jwk" }), kid: "synthetic-http-key", alg: "RS256", use: "sig" };
+  vi.stubGlobal("fetch", async (input: string | URL | Request) => {
+    if ((input instanceof Request ? input.url : String(input)) !== "https://www.googleapis.com/oauth2/v3/certs") throw new Error("Offline auth network refused");
+    return Response.json({ keys: [key] });
+  });
+  return (nonce: string | undefined, overrides: Record<string, unknown> = {}) => {
+    const now = Math.floor(Date.now() / 1000);
+    const header = Buffer.from(JSON.stringify({ alg: "RS256", kid: key.kid })).toString("base64url");
+    const payload = Buffer.from(JSON.stringify({ iss: "https://accounts.google.com", aud: "synthetic-client", sub: "synthetic-http-subject", email: "http-identity@example.test", email_verified: true, name: "Synthetic learner", iat: now, exp: now + 300, nonce, ...overrides })).toString("base64url");
+    const signing = `${header}.${payload}`;
+    return `${signing}.${createSign("RSA-SHA256").update(signing).sign(privateKey).toString("base64url")}`;
+  };
+}
+
+test("fragment mail bridges internally to real SDK sessions, replay fails and logout clears both cookies", async () => {
   for (const origin of ["http://localhost:3000", "https://bneimitzvah.centralreform.org", "https://bneimitzvah.vercel.app"]) {
     const f = await fixture(origin);
-    const email = "http-recipient@example.test";
-    const start = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email }));
-    expect(start.status).toBe(200);
+    const start = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "http-identity@example.test" }));
     expect(await start.json()).toEqual({ requested: true });
-    expect(f.messages.length).toBe(1);
-    const message = f.messages[0];
-    const verified = await f.dispatch(new Request(message.url));
-    expect(verified.status).toBe(303);
-    expect(verified.headers.get("location")).toBe("/");
-    const cookie = cookieOf(verified);
-    expect(cookie.length > 0).toBe(true);
-    expect(verified.headers.getSetCookie().some(value => value.startsWith(`${origin.startsWith("https:") ? "__Secure-" : ""}better-auth.session_token=`))).toBe(true);
+    const link = new URL(f.messages[0].url);
+    expect(link.pathname).toBe("/auth/email"); expect(link.search).toBe(""); expect(link.hash).toMatch(/^#token=[A-Za-z]{32}$/);
+    const confirmed = await f.dispatch(f.request("/api/auth/email/confirm", { token: tokenOf(link.href) }));
+    expect(confirmed.status).toBe(200); expect(await confirmed.json()).toEqual({ ok: true, next: "/" });
+    const cookie = cookieOf(confirmed);
     const proof = await f.runtime.auth.api.getSession({ headers: new Headers({ cookie }), query: { disableRefresh: true } });
-    expect(!!proof && proof.user.emailVerified).toBe(true);
+    expect(proof?.user.emailVerified).toBe(true);
+    const replay = await f.dispatch(f.request("/api/auth/email/confirm", { token: tokenOf(link.href) }));
+    expect(replay.status).toBe(400); expect(await replay.json()).toEqual({ error: "authentication" });
     const summary = await f.dispatch(f.request("/api/session", undefined, { cookie }));
-    expect(summary.status).toBe(200);
-    const summaryText = await summary.text();
-    expect(!summaryText.includes(email) && !summaryText.includes(proof!.session.token) && !summaryText.includes(f.config.authSecret)).toBe(true);
-    const out = await f.dispatch(f.request("/api/auth/sign-out", {}, { cookie, "X-Practice-Context": "ignored-for-logout" }));
-    expect(out.status).toBe(200);
+    const text = await summary.text();
+    expect(text.includes("http-identity@example.test") || text.includes(proof!.session.token)).toBe(false);
+    const out = await f.dispatch(f.request("/api/auth/sign-out", {}, { cookie, "X-Practice-Context": "ignored" }));
     expect(await out.json()).toEqual({ ok: true });
-    expect(out.headers.getSetCookie().length > 0).toBe(true);
-    expect(await f.runtime.auth.api.getSession({ headers: new Headers({ cookie }), query: { disableRefresh: true } }) === null).toBe(true);
-    const replay = await f.dispatch(new Request(message.url));
-    expect(replay.headers.get("location")).toBe("/sign-in?error=authentication");
-    expect((await replay.text()).includes(message.url)).toBe(false);
+    expect(out.headers.getSetCookie().some(value => value.includes("portal_google_binding=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"))).toBe(true);
+    expect(await f.runtime.auth.api.getSession({ headers: new Headers({ cookie }), query: { disableRefresh: true } })).toBeNull();
   }
 });
 
-test("pending invite changes only fixed sign-in destination; invalid or missing cookie falls back without exposing its token", async () => {
-  const f = await fixture();
-  const token = randomBytes(32).toString("base64url");
-  const landing = await f.dispatch(new Request(`${f.origin}/invitations/open?token=${token}`));
-  expect(landing.status).toBe(303);
-  expect(landing.headers.get("location")).toBe("/invitations/accept");
-  const cookie = cookieOf(landing);
-  const valid = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "pending@example.test" }, { cookie }));
-  expect(valid.status).toBe(200);
-  expect(new URL(f.messages.at(-1)!.url).searchParams.get("callbackURL")).toBe("/invitations/accept");
-  expect(f.messages.at(-1)!.url.includes(token)).toBe(false);
-  const verified = await f.dispatch(new Request(f.messages.at(-1)!.url));
-  expect(verified.headers.get("location")).toBe("/invitations/accept");
-  const fallbackHeaders: Record<string, string>[] = [{}, { cookie: "portal_pending_invitation=invalid" }];
-  for (const headers of fallbackHeaders) {
-    const response = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "fallback@example.test" }, headers));
-    expect(response.status).toBe(200);
-    expect(new URL(f.messages.at(-1)!.url).searchParams.get("callbackURL")).toBe("/");
-  }
-  expect(f.runtime.pendingInvitations.hasPendingForSignIn(new Request(`${f.origin}/api/auth/sign-in/social`, { method: "POST", headers: { cookie } }))).toBe(true);
-  expect(f.runtime.pendingInvitations.hasPendingForSignIn(new Request(`${f.origin}/api/students`, { method: "POST", headers: { cookie } }))).toBe(false);
+test("body-only invitation staging chooses a fixed confirm/challenge destination and never accepts on GET", async () => {
+  const f = await fixture(); const token = randomBytes(32).toString("base64url");
+  expect((await f.dispatch(new Request(`${f.origin}/invitations/open?token=${token}`))).status).toBe(404);
+  const staged = await f.dispatch(f.request("/api/invitations/open", { token }));
+  expect(await staged.json()).toEqual({ ok: true, next: "/invitations/accept" });
+  const cookie = cookieOf(staged);
+  await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "pending@example.test" }, { cookie }));
+  const confirmed = await f.dispatch(f.request("/api/auth/email/confirm", { token: tokenOf(f.messages[0].url) }, { cookie }));
+  expect(await confirmed.json()).toEqual({ ok: true, next: "/invitations/accept" });
+  const prepared = await challenge(f, cookie);
+  f.sdk.mockImplementationOnce(async () => new Response('{"token":"synthetic-private"}', { status: 200 }));
+  const social = await f.dispatch(f.request("/api/auth/sign-in/social", { credential: fakeCredential, challengeId: prepared.challengeId, csrfToken: prepared.csrfToken }, { cookie: `${cookie}; ${prepared.cookie}` }));
+  expect(await social.json()).toEqual({ ok: true, next: "/invitations/accept" });
+  expect(f.sdk.mock.calls.length).toBe(3);
 });
 
-test("actual Google initiation preserves PKCE/state cookies and fixed callbacks while malformed callbacks never contact provider", async () => {
-  const network = vi.spyOn(globalThis, "fetch").mockImplementation(async () => { throw new Error("Synthetic provider network forbidden"); });
-  try {
-    for (const origin of ["http://localhost:3000", "https://bneimitzvah.centralreform.org", "https://bneimitzvah.vercel.app"]) {
-      const f = await fixture(origin);
-      const start = await f.dispatch(f.request("/api/auth/sign-in/social", { provider: "google" }));
-      expect(start.status).toBe(200);
-      const projected = await start.json();
-      expect(Object.keys(projected)).toEqual(["url"]);
-      expect(start.headers.get("location")).toBeNull();
-      const target = new URL(projected.url);
-      expect(target.origin + target.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
-      expect(target.searchParams.get("redirect_uri")).toBe(`${origin}/api/auth/callback/google`);
-      expect(target.searchParams.get("code_challenge_method")).toBe("S256");
-      expect(start.headers.getSetCookie().some(value => value.includes("better-auth.state="))).toBe(true);
-      for (const path of ["/api/auth/callback/google?code=synthetic-code&state=invalid", "/api/auth/callback/google?error=denied&error_description=synthetic-private&state=invalid",
-        "/api/auth/magic-link/verify?token=synthetic-private", `/api/auth/magic-link/verify?token=${"A".repeat(32)}&callbackURL=https%3A%2F%2Fforeign.example.test`]) {
-        const response = await f.dispatch(f.request(path));
-        expect(response.status).toBe(303);
-        expect(response.headers.get("location")).toBe("/sign-in?error=authentication");
-        expect((await response.text()).includes("synthetic-private")).toBe(false);
-      }
-    }
-    expect(network.mock.calls.length).toBe(0);
-  } finally { network.mockRestore(); }
+test("pinned Google cryptography uses server nonce and projects session JSON; replay and fresh-challenge reuse fail", async () => {
+  const f = await fixture(); const token = googleTokens();
+  const first = await challenge(f);
+  const credential = token(first.nonce);
+  const body = { credential, challengeId: first.challengeId, csrfToken: first.csrfToken };
+  const response = await f.dispatch(f.request("/api/auth/sign-in/social", body, { cookie: first.cookie }));
+  expect(response.status).toBe(200); expect(await response.json()).toEqual({ ok: true, next: "/" });
+  const sessionCookie = cookieOf(response);
+  expect(sessionCookie).toContain("better-auth.session_token=");
+  expect((await f.db.select().from(schema.user)).length).toBe(1);
+  const grants = await f.db.select().from(schema.membership); expect(grants.length).toBe(0);
+  expect((await f.dispatch(f.request("/api/auth/sign-in/social", body, { cookie: first.cookie }))).status).toBe(403);
+  const fresh = await challenge(f, first.cookie);
+  expect((await f.dispatch(f.request("/api/auth/sign-in/social", { ...body, challengeId: fresh.challengeId, csrfToken: fresh.csrfToken }, { cookie: fresh.cookie }))).status).toBe(400);
+  const late = await challenge(f, first.cookie);
+  const logout = await f.dispatch(f.request("/api/auth/sign-out", {}, { cookie: `${sessionCookie}; ${first.cookie}` }));
+  expect(logout.status).toBe(200);
+  expect(logout.headers.getSetCookie().some(cookie => cookie.startsWith("portal_google_binding=;") && cookie.includes("Max-Age=0"))).toBe(true);
+  expect((await f.dispatch(f.request("/api/auth/sign-in/social", { credential: token(late.nonce), challengeId: late.challengeId, csrfToken: late.csrfToken }))).status).toBe(403);
 });
 
-test("actual host resolution precedes SDK/mail and input/mutation errors retain closed HTTP statuses inside runtime", async () => {
-  const f = await fixture();
-  for (const request of [new Request("http://foreign.example.test/api/auth/sign-in/magic-link", { method: "POST", headers: { origin: f.origin, "content-type": "application/json" }, body: "{}" }),
-    f.request("/api/auth/sign-in/magic-link", { email: "synthetic@example.test" }, { host: "foreign.example.test" }),
-    f.request("/api/auth/sign-in/magic-link", { email: "synthetic@example.test" }, { "x-forwarded-host": "foreign.example.test" })]) {
-    expect((await f.dispatch(request)).status).toBe(404);
+test("real verifier refuses missing/mismatching nonce, wrong audience/issuer/expiry/signature and unverified same-email linking", async () => {
+  const variants = [{ nonce: undefined }, { nonce: "attacker" }, { aud: "foreign-client" }, { iss: "https://foreign.example.test" }, { exp: 1 }, { email_verified: false }];
+  for (const override of variants) {
+    const f = await fixture(); const token = googleTokens();
+    await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "http-identity@example.test" }));
+    await f.dispatch(f.request("/api/auth/email/confirm", { token: tokenOf(f.messages[0].url) }));
+    const issued = await challenge(f);
+    const response = await f.dispatch(f.request("/api/auth/sign-in/social", { credential: token(issued.nonce, override), challengeId: issued.challengeId, csrfToken: issued.csrfToken }, { cookie: issued.cookie }));
+    expect(response.status).toBe(400);
+    expect((await f.db.select().from(schema.account)).length).toBe(0);
   }
-  expect(f.sdk.mock.calls.length).toBe(0); expect(f.messages.length).toBe(0);
-  const invalid: [Request, number][] = [
-    [f.request("/api/auth/sign-in/magic-link", { email: "synthetic@example.test", callbackURL: "https://foreign.example.test" }), 400],
-    [f.request("/api/auth/sign-in/magic-link", { email: "a".repeat(17000) }), 413],
-    [f.request("/api/auth/sign-in/magic-link", { email: "synthetic@example.test" }, { origin: "https://foreign.example.test" }), 403],
-    [f.request("/api/auth/sign-in/magic-link", { email: "synthetic@example.test" }, { "sec-fetch-site": "cross-site" }), 403],
-    [f.request("/api/auth/sign-in/magic-link", { email: "synthetic@example.test" }, { "X-Practice-Context": "" }), 403],
-    [f.request("/api/auth/sign-in/social", { provider: "google", idToken: { token: "forged" } }), 400],
-    [f.request("/api/auth/sign-in/social", { provider: "other" }), 400],
-    [f.request("/api/auth/sign-in/magic-link", { email: "synthetic@example.test" }, { cookie: "better-auth.session_token=a; better-auth.session_token=b" }), 400],
-  ];
-  for (const [request, status] of invalid) {
-    const response = await f.dispatch(request);
-    expect(response.status).toBe(status);
-    expect(response.headers.get("cache-control")).toBe("private, no-store");
-    expect((await response.text()).includes("synthetic@example.test")).toBe(false);
+  const f = await fixture(); const token = googleTokens(); const issued = await challenge(f);
+  const valid = token(issued.nonce); const pieces = valid.split("."); pieces[2] = "A".repeat(pieces[2].length);
+  const response = await f.dispatch(f.request("/api/auth/sign-in/social", { credential: pieces.join("."), challengeId: issued.challengeId, csrfToken: issued.csrfToken }, { cookie: issued.cookie }));
+  expect(response.status).toBe(400);
+});
+
+test("verified same-email magic then Google and Google then magic keep one identity without authority grants", async () => {
+  for (const googleFirst of [false, true]) {
+    const f = await fixture(); const token = googleTokens();
+    const emailSignIn = async () => {
+      await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "http-identity@example.test" }));
+      expect((await f.dispatch(f.request("/api/auth/email/confirm", { token: tokenOf(f.messages[0].url) }))).status).toBe(200);
+    };
+    if (!googleFirst) await emailSignIn();
+    const issued = await challenge(f);
+    expect((await f.dispatch(f.request("/api/auth/sign-in/social", { credential: token(issued.nonce), challengeId: issued.challengeId, csrfToken: issued.csrfToken }, { cookie: issued.cookie }))).status).toBe(200);
+    if (googleFirst) await emailSignIn();
+    expect((await f.db.select().from(schema.user)).length).toBe(1);
+    expect((await f.db.select().from(schema.account)).length).toBe(1);
+    expect((await f.db.select().from(schema.membership)).length).toBe(0);
   }
+});
+
+test("challenge browser/CSRF/closed body/host boundaries precede SDK and whole-envelope size stays 16 KiB", async () => {
+  const f = await fixture(); const issued = await challenge(f);
+  const body = { credential: fakeCredential, challengeId: issued.challengeId, csrfToken: issued.csrfToken };
+  for (const [request, status] of [
+    [f.request("/api/auth/sign-in/social", body), 403],
+    [f.request("/api/auth/sign-in/social", { ...body, csrfToken: randomBytes(32).toString("base64url") }, { cookie: issued.cookie }), 403],
+    [f.request("/api/auth/sign-in/social", { ...body, nonce: issued.nonce }, { cookie: issued.cookie }), 400],
+    [f.request("/api/auth/sign-in/social", { provider: "google", idToken: { token: fakeCredential } }), 400],
+    [f.request("/api/auth/sign-in/social", { ...body, credential: "A".repeat(17000) }), 413],
+    [f.request("/api/auth/google/challenge", {}, { origin: "https://foreign.example.test" }), 403],
+    [f.request("/api/auth/google/challenge", {}, { "sec-fetch-site": "cross-site" }), 403],
+    [f.request("/api/auth/google/challenge", {}, { "X-Practice-Context": "opaque" }), 403],
+    [f.request("/api/auth/google/challenge?state=synthetic", {}), 400],
+    [f.request("/api/auth/google/challenge", {}, { host: "foreign.example.test" }), 404],
+    [f.request("/api/auth/google/challenge", {}, { cookie: `${issued.cookie}; ${issued.cookie}` }), 400],
+  ] as [Request, number][]) expect((await f.dispatch(request)).status).toBe(status);
   expect(f.sdk.mock.calls.length).toBe(0);
+  for (const path of ["/api/auth/magic-link/verify?token=synthetic", "/api/auth/callback/google?code=synthetic&state=synthetic", "/api/auth/get-session"]) expect((await f.dispatch(f.request(path))).status).toBe(404);
+  expect((await f.dispatch(f.request("/api/auth/email/confirm"))).status).toBe(405);
 });
 
-test("unknown SDK paths/methods deny without configuration and runtime/SDK failure diagnostics never escape", async () => {
-  let scopes = 0;
-  const absent = createHttpDispatcher(async () => { scopes++; throw new RuntimeUnavailable(); });
-  for (const path of ["/api/auth/get-session", "/api/auth/list-sessions", "/api/auth/sign-in/email", "/api/auth/callback/other", "/api/__test/latest-token"]) {
-    expect((await absent(new Request(`http://localhost:3000${path}`))).status).toBe(404);
+test("SDK response projection discards diagnostics, tokens and Locations and preserves only reviewed cookies", async () => {
+  const f = await fixture(); const marker = "synthetic-private-sdk-value";
+  for (const status of [200, 429, 500, 302]) {
+    const issued = await challenge(f);
+    const setCookie = "better-auth.session_token=synthetic-valid-cookie; Path=/; HttpOnly; SameSite=Lax; Max-Age=600";
+    f.sdk.mockImplementationOnce(async () => new Response(JSON.stringify({ token: marker, user: { email: "private@example.test" } }), { status, headers: { "x-provider-error": marker, "set-cookie": setCookie, ...(status === 302 ? { location: `https://foreign.example.test/${marker}` } : {}) } }));
+    const response = await f.dispatch(f.request("/api/auth/sign-in/social", { credential: fakeCredential, challengeId: issued.challengeId, csrfToken: issued.csrfToken }, { cookie: issued.cookie }));
+    expect(response.status).toBe(status === 200 ? 200 : status === 429 ? 429 : status === 500 ? 503 : 400);
+    expect(response.headers.has("location") || response.headers.has("x-provider-error") || (await response.text()).includes(marker)).toBe(false);
+    expect(response.headers.getSetCookie()).toEqual(status === 200 ? [setCookie] : []);
   }
-  expect((await absent(new Request("http://localhost:3000/api/auth/sign-in/magic-link"))).status).toBe(405);
+  // Magic verification with a rejected Location must also discard a perfectly
+  // shaped SDK session cookie, not merely hide its redirect/body.
+  f.sdk.mockImplementationOnce(async () => new Response(null, { status: 302, headers: { location: "https://foreign.example.test/", "set-cookie": "better-auth.session_token=synthetic-valid-cookie; Path=/; HttpOnly; SameSite=Lax; Max-Age=600" } }));
+  const rejected = await f.dispatch(f.request("/api/auth/email/confirm", { token: "A".repeat(32) }));
+  expect(rejected.status).toBe(400); expect(rejected.headers.getSetCookie()).toEqual([]);
+  const issued = await challenge(f);
+  f.sdk.mockImplementationOnce(async () => new Response("{}", { status: 200, headers: { location: "https://foreign.example.test/", "set-cookie": "better-auth.session_token=synthetic-valid-cookie; Path=/; HttpOnly; SameSite=Lax; Max-Age=600" } }));
+  const unexpectedLocation = await f.dispatch(f.request("/api/auth/sign-in/social", { credential: fakeCredential, challengeId: issued.challengeId, csrfToken: issued.csrfToken }, { cookie: issued.cookie }));
+  expect(unexpectedLocation.status).toBe(400); expect(unexpectedLocation.headers.getSetCookie()).toEqual([]);
+  f.sdk.mockImplementationOnce(async () => new Response("{}", { status: 500, headers: { "set-cookie": "better-auth.session_token=synthetic-valid-cookie; Path=/; HttpOnly; SameSite=Lax; Max-Age=600" } }));
+  const failedLogout = await f.dispatch(f.request("/api/auth/sign-out", {}));
+  expect(failedLogout.status).toBe(503); expect(failedLogout.headers.getSetCookie()).toEqual([]);
+});
+
+test("rotated caller IP headers cannot reset SDK or challenge issuance budgets", async () => {
+  const f = await fixture();
+  for (let index = 0; index < 5; index++) expect((await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "budget@example.test" }, { "x-forwarded-for": `192.0.2.${index}` }))).status).toBe(200);
+  expect((await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "other@example.test" }, { [AUTH_RATE_LIMIT_HEADER]: "192.0.2.80" }))).status).toBe(429);
+  const requests = f.sdk.mock.calls.map(([request]) => request as Request);
+  expect(new Set(requests.map(request => request.headers.get(AUTH_RATE_LIMIT_HEADER))).size).toBe(1);
+  expect(requests.every(request => !request.headers.has("x-forwarded-for"))).toBe(true);
+  const issued = await challenge(f);
+  for (let index = 0; index < 4; index++) await challenge(f, issued.cookie);
+  expect((await f.dispatch(f.request("/api/auth/google/challenge", {}, { cookie: issued.cookie, "x-forwarded-for": "192.0.2.90" }))).status).toBe(429);
+});
+
+test("unknown routes reject without configuration; missing provider and private failures stay fixed", async () => {
+  let scopes = 0; const absent = createHttpDispatcher(async () => { scopes++; throw new RuntimeUnavailable(); });
+  for (const path of ["/api/auth/callback/google?code=synthetic", "/api/auth/magic-link/verify?token=synthetic", "/api/auth/get-session"]) expect((await absent(new Request(`http://localhost:3000${path}`))).status).toBe(404);
   expect(scopes).toBe(0);
-  expect((await absent(new Request("http://localhost:3000/api/auth/sign-out", { method: "POST" }))).status).toBe(503);
   const f = await fixture(undefined, false);
-  expect((await f.dispatch(f.request("/api/auth/sign-in/social", { provider: "google" }))).status).toBe(503);
-  const marker = "synthetic-private-sdk-diagnostic";
-  f.sdk.mockImplementation(async () => { throw new Error(marker, { cause: { email: "synthetic@example.test" } }); });
-  const response = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "synthetic@example.test" }));
-  expect(response.status).toBe(503);
-  expect((await response.text()).includes(marker)).toBe(false);
-  const log = vi.spyOn(console, "info").mockImplementation(() => {});
-  try {
-    const actualMissing = createHttpDispatcher(createRuntimeScope(() => ({})));
-    const denied = await actualMissing(f.request("/api/auth/sign-out", {}));
-    expect(denied.status).toBe(503);
-    expect((await denied.text()).includes(marker)).toBe(false);
-    expect(log.mock.calls.every(args => !args.some(value => String(value).includes(marker)))).toBe(true);
-  } finally { log.mockRestore(); }
-});
-
-test("SDK response projection rejects unreviewed OAuth destinations and never forwards provider bodies, cookies into JSON or headers", async () => {
-  const f = await fixture();
-  const marker = "synthetic-private-provider-body";
-  for (const result of [
-    new Response(JSON.stringify({ url: "https://foreign.example.test/authorize", redirect: true }), { headers: { "x-provider-error": marker } }),
-    new Response(JSON.stringify({ token: marker, user: { email: "synthetic@example.test" } })),
-    new Response(JSON.stringify({ error: marker }), { status: 500, headers: { "x-provider-error": marker } }),
-  ]) {
-    f.sdk.mockImplementationOnce(async () => result);
-    const response = await f.dispatch(f.request("/api/auth/sign-in/social", { provider: "google" }));
-    expect(response.status).toBe(503);
-    expect(response.headers.get("x-provider-error")).toBeNull();
-    expect(response.headers.get("location")).toBeNull();
-    expect((await response.text()).includes(marker)).toBe(false);
-  }
-  f.sdk.mockImplementationOnce(async () => new Response(JSON.stringify({ token: marker, email: "synthetic@example.test" }), { status: 429, headers: { "x-provider-error": marker } }));
-  const limited = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "synthetic@example.test" }));
-  expect(limited.status).toBe(429);
-  expect(await limited.json()).toEqual({ error: "rate-limited" });
-});
-
-
-test("untrusted IP header rotation cannot reset the shared origin magic-link budget or send more mail", async () => {
-  const f = await fixture();
-  for (let index = 0; index < 5; index++) {
-    const response = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "shared-budget@example.test" }, { "x-forwarded-for": "192.0.2.20" }));
-    expect(response.status === 200).toBe(true);
-  }
-  const variants: Record<string, string>[] = [
-    { "x-forwarded-for": "192.0.2.20" }, { "x-forwarded-for": "192.0.2.21" },
-    { "x-real-ip": "192.0.2.22" }, { "cf-connecting-ip": "192.0.2.23", "true-client-ip": "192.0.2.24" },
-    { "x-client-ip": "192.0.2.25", "fastly-client-ip": "192.0.2.26" },
-    { [AUTH_RATE_LIMIT_HEADER]: "192.0.2.27", "x-forwarded-for": "192.0.2.28" },
-    { [AUTH_RATE_LIMIT_HEADER]: "2001:db8:ffff::1", "x-real-ip": "192.0.2.29" },
-  ];
-  for (const headers of variants) {
-    // Distinct recipient is deliberately still limited: this is a shared
-    // configured-origin bucket, not proven per-client or per-mailbox protection.
-    const response = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "another-budget@example.test" }, headers));
-    expect(response.status === 429 && (await response.json()).error === "rate-limited").toBe(true);
-  }
-  expect(f.messages.length === 5).toBe(true);
-  const requests = f.sdk.mock.calls.map(([request]) => request as Request);
-  const buckets = new Set(requests.map(request => request.headers.get(AUTH_RATE_LIMIT_HEADER)));
-  expect(buckets.size === 1 && requests.every(request => !request.headers.has("x-forwarded-for") && !request.headers.has("x-real-ip")
-    && !request.headers.has("cf-connecting-ip") && !request.headers.has("true-client-ip") && !request.headers.has("x-client-ip") && !request.headers.has("fastly-client-ip"))).toBe(true);
-  expect(f.runtime.auth.options.advanced?.ipAddress?.ipAddressHeaders?.join() === AUTH_RATE_LIMIT_HEADER
-    && f.runtime.auth.options.advanced?.ipAddress?.ipv6Subnet === 128).toBe(true);
-});
-
-test("all SDK entry paths receive only server-selected IP identity while actual host/origin/session cookies survive", async () => {
-  const f = await fixture();
-  const spoofed = { host: "localhost:3000", "x-forwarded-host": "localhost:3000", "x-forwarded-proto": "http", "x-forwarded-port": "3000",
-    "x-forwarded-for": "192.0.2.60", "x-real-ip": "192.0.2.61", "cf-connecting-ip": "192.0.2.62", [AUTH_RATE_LIMIT_HEADER]: "192.0.2.63",
-    "x-vercel-forwarded-for": "192.0.2.64", "x-arbitrary-ip": "192.0.2.65", authorization: "synthetic-unsupported-bearer" };
-  await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "all-paths@example.test" }, spoofed));
-  const verified = await f.dispatch(new Request(f.messages[0].url, { headers: spoofed }));
-  expect(verified.status === 303).toBe(true);
-  const cookie = cookieOf(verified);
-  expect(cookie.includes("better-auth.session_token=")).toBe(true);
-  const social = await f.dispatch(f.request("/api/auth/sign-in/social", { provider: "google" }, { ...spoofed, cookie }));
-  expect(social.status === 200).toBe(true);
-  const callback = await f.dispatch(new Request(`${f.origin}/api/auth/callback/google?code=synthetic&state=invalid`, { headers: { ...spoofed, cookie } }));
-  expect(callback.status === 303).toBe(true);
-  const logout = await f.dispatch(f.request("/api/auth/sign-out", {}, { ...spoofed, cookie }));
-  expect(logout.status === 200).toBe(true);
-  const requests = f.sdk.mock.calls.map(([request]) => request as Request);
-  const bucket = requests[0].headers.get(AUTH_RATE_LIMIT_HEADER);
-  expect(requests.length === 5 && bucket !== spoofed[AUTH_RATE_LIMIT_HEADER] && requests.every(request => request.headers.get(AUTH_RATE_LIMIT_HEADER) === bucket
-    && request.headers.get("host") === "localhost:3000" && [...request.headers.keys()].every(key => !key.startsWith("x-forwarded-")
-      && !["x-real-ip", "cf-connecting-ip", "authorization", "x-vercel-forwarded-for", "x-arbitrary-ip", "forwarded"].includes(key)))).toBe(true);
-  const logoutRequest = requests.find(request => new URL(request.url).pathname === "/api/auth/sign-out");
-  expect(logoutRequest?.headers.get("cookie") === cookie && logoutRequest.headers.get("origin") === f.origin).toBe(true);
-});
-
-test("production directory entries never become simultaneous accepted origins or compatible pending envelopes", async () => {
-  const origins = ["https://bneimitzvah.centralreform.org", "https://bneimitzvah.vercel.app"];
-  for (const selected of origins) {
-    const f = await fixture(selected), other = origins.find(origin => origin !== selected)!;
-    expect(JSON.stringify(f.runtime.auth.options.trustedOrigins) === JSON.stringify([selected])).toBe(true);
-    expect((await f.runtime.resolveHost({ url: selected, headers: new Headers() })).tenantId === "crc").toBe(true);
-    const denied = await f.dispatch(new Request(`${other}/api/auth/sign-in/magic-link`, { method: "POST",
-      headers: { origin: other, "content-type": "application/json" }, body: JSON.stringify({ email: "origin-selection@example.test" }) }));
-    expect(denied.status).toBe(503);
-    expect(await denied.json()).toEqual({ error: "unavailable" });
-    expect(f.sdk.mock.calls.length === 0 && f.messages.length === 0).toBe(true);
-    const token = randomBytes(32).toString("base64url");
-    const landing = f.runtime.pendingInvitations.exchange(new Request(`${selected}/invitations/open?token=${token}`));
-    const sealed = landing.headers.getSetCookie()[0];
-    expect(sealed.startsWith("__Host-portal_pending_invitation=") && sealed.includes("; Secure") && !sealed.includes("Domain=")).toBe(true);
-    const cookie = sealed.split(";")[0];
-    const otherPending = createPendingInvitations({ secret: f.config.authSecret, origin: other, environment: "production" });
-    let incompatible = false;
-    try { otherPending.read(new Request(`${other}/api/invitations/pending`, { headers: { cookie } })); } catch { incompatible = true; }
-    expect(incompatible).toBe(true);
-    expect(f.runtime.pendingInvitations.read(new Request(`${selected}/api/invitations/pending`, { headers: { cookie } })) === token).toBe(true);
-  }
+  expect((await f.dispatch(f.request("/api/auth/google/challenge", {}))).status).toBe(503);
+  f.sdk.mockImplementationOnce(async () => { throw new Error("synthetic-private-diagnostic"); });
+  const response = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "private@example.test" }));
+  expect(response.status).toBe(503); expect(await response.json()).toEqual({ error: "unavailable" });
 });

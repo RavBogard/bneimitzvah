@@ -200,12 +200,12 @@ describe("admin tenant authority management", () => {
     const f = await fixture(); let url = "";
     const invitations = createInvitationService({ db: f.db, access: f.service, throttleSecret: randomBytes(48).toString("base64url"), transport: async message => { url = message.url; } });
     const input = { ...admin, role: "parent" as const, studentId: f.students[0].id, email: "multi@example.test" };
-    await invitations.issue(f.request("admin"), input); const old = new URL(url).searchParams.get("token")!;
+    await invitations.issue(f.request("admin"), input); const old = new URLSearchParams(new URL(url).hash.slice(1)).get("token")!;
     await f.relationships.revokeGuardian(f.request("admin"), { ...admin, ...active, studentId: f.students[0].id, linkId: f.guardians[0].id });
     expect(await denied(() => invitations.preview(f.request("multi"), { token: old }))).toBe(true);
     expect(await denied(() => invitations.accept(f.request("multi"), { token: old }))).toBe(true);
     vi.setSystemTime(new Date(Date.now() + 1000));
-    await invitations.issue(f.request("admin"), input); const fresh = new URL(url).searchParams.get("token")!;
+    await invitations.issue(f.request("admin"), input); const fresh = new URLSearchParams(new URL(url).hash.slice(1)).get("token")!;
     const preview = await invitations.preview(f.request("multi"), { token: fresh });
     expect((await invitations.acceptReviewed(f.request("multi"), { token: fresh, reviewBinding: preview.reviewBinding })).studentId === f.students[0].id).toBe(true);
     expect(!(await f.relationships.revokeGuardian(f.request("admin"), { ...admin, ...active, studentId: f.students[0].id, linkId: f.guardians[0].id })).ok).toBe(true);

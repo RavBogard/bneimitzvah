@@ -14,6 +14,7 @@ import { createPracticeService } from "../practice/service";
 import { createPortalService } from "../portal/service";
 import { createRelationshipService } from "../relationships/service";
 import { createPendingInvitations } from "../http/pending-invitations";
+import { createGoogleChallenges } from "../http/google-challenge";
 import { createPersistentReadingCache } from "../data/reading-cache";
 import { createPersistentStudyCache } from "../data/study-cache";
 import { createSefariaStudyReader } from "../study/sefaria";
@@ -23,7 +24,7 @@ import { createPublicStudyCoalescer, type PublicStudyCoalescer } from "../study/
 import { resolveTenantHost } from "../tenancy/resolve";
 import { createHebcalReader } from "../../lib/readings/proposals";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
-import { createMailTransport } from "../mail/transport";
+import { createMailTransport, projectMagicLink } from "../mail/transport";
 import { createLogger } from "../logging/logger";
 import { loadRuntimeConfig, type RuntimeConfig } from "./config";
 import { RuntimeUnavailable } from "./errors";
@@ -44,7 +45,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   studyTasks: PublicStudyCoalescer = sharedStudyTasks(fetch)) {
   const send = createMailTransport({ ...config.mail, origin: config.origin, fetch });
   const auth = createAuthStack(db, schema, { origin: config.origin, secret: config.authSecret, google: config.google,
-    sendMagicLink: ({ email, url }) => send("magic-link", { email, url }) });
+    sendMagicLink: ({ email, url, token }) => send("magic-link", { email, url: projectMagicLink(url, token, config.origin) }) });
   const access = createAccessService({ db, auth, deployment: config.deployment });
   const invitations = createInvitationService({ db, access, transport: (message) => send("invitation", message), throttleSecret: purposeSecret(config, "invitation-throttle") });
   const loadReading = createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS });
@@ -56,13 +57,14 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding") });
   const relationships = createRelationshipService({ access });
   const pendingInvitations = createPendingInvitations({ secret: config.authSecret, origin: config.origin, environment: config.deployment.environment as "local" | "preview" | "production" });
+  const googleChallenges = createGoogleChallenges({ db, origin: config.origin, secret: purposeSecret(config, "google-challenges") });
   // An eventual auth handler must resolve the request host BEFORE invoking auth.
   const resolveHost = async (request: AccessRequest) => {
     const resolved = await resolveTenantHost(db, request, config.deployment);
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, studentWork, portal, relationships, pendingInvitations, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, studentWork, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

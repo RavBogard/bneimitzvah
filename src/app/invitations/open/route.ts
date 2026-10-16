@@ -1,11 +1,12 @@
-import { dispatchRequest } from "@/server/http/dispatch";
+import { fragmentLanding } from "@/server/http/fragment-landing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const GET = dispatchRequest;
-export const POST = dispatchRequest;
-export const PUT = dispatchRequest;
-export const PATCH = dispatchRequest;
-export const DELETE = dispatchRequest;
-export const HEAD = dispatchRequest;
-export const OPTIONS = dispatchRequest;
+const respond = (request: Request) => fragmentLanding(request, "invitation");
+export const GET = respond;
+export const POST = respond;
+export const PUT = respond;
+export const PATCH = respond;
+export const DELETE = respond;
+export const HEAD = respond;
+export const OPTIONS = respond;

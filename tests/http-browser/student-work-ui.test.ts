@@ -1,3 +1,4 @@
+import { openAuthMail } from "./auth-navigation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page, type Locator } from "playwright";
@@ -36,7 +37,7 @@ async function page(who: "student" | "tutor" | "admin", mobile = false) {
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
   const cached = sdkCookies.get(who); if (cached) { await context.addCookies(cached); return observe(await context.newPage()); }
   const tab = observe(await context.newPage()); await navigate(tab, "/"); const email = who === "student" ? "pg-work-student@example.test" : who === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
-  const login = await api(tab, "/api/auth/sign-in/magic-link", { email }); expect(login.status, "synthetic SDK sign-in HTTP status").toBe(200); await navigate(tab, fixture.takeMail(email)); sdkCookies.set(who, await context.cookies()); return tab;
+  const login = await api(tab, "/api/auth/sign-in/magic-link", { email }); expect(login.status, "synthetic SDK sign-in HTTP status").toBe(200); await openAuthMail(tab, fixture.takeMail(email)); sdkCookies.set(who, await context.cookies()); return tab;
 }
 async function click(tab: Page, name: string) { await safe(() => tab.getByRole("button", { name, exact: true }).click()); }
 async function loaded(tab: Page, ref = "Genesis 1:1") {

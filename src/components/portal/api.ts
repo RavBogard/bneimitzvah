@@ -35,14 +35,18 @@ export function parseInvitation(value: unknown): InvitationReview {
   }
   return { role: intendedRole, student, expiresAt: row.expiresAt, reviewBinding: row.reviewBinding };
 }
-export function parseGoogleDestination(value: unknown): string {
-  const row = record(value, ["url"]);
-  if (typeof row.url !== "string" || row.url.length > 4096) return unavailable();
-  try {
-    const url = new URL(row.url);
-    if (url.origin !== "https://accounts.google.com" || url.pathname !== "/o/oauth2/v2/auth" || url.username || url.password || url.hash) return unavailable();
-    return url.href;
-  } catch { return unavailable(); }
+export type GoogleChallenge = Readonly<{ challengeId: string; nonce: string; csrfToken: string; clientId: string; expiresAt: number }>;
+export function parseGoogleChallenge(value: unknown): GoogleChallenge {
+  const row = record(value, ["challengeId", "nonce", "csrfToken", "clientId", "expiresAt"]);
+  for (const key of ["challengeId", "nonce", "csrfToken"]) if (typeof row[key] !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(row[key] as string)) return unavailable();
+  if (typeof row.clientId !== "string" || !/^[A-Za-z0-9._-]{1,256}$/.test(row.clientId) || !Number.isSafeInteger(row.expiresAt)
+    || Number(row.expiresAt) <= Date.now() || Number(row.expiresAt) > Date.now() + 300_000) return unavailable();
+  return row as GoogleChallenge;
+}
+export function parseAuthResult(value: unknown): "/" | "/invitations/accept" {
+  const row = record(value, ["ok", "next"]);
+  if (row.ok !== true || (row.next !== "/" && row.next !== "/invitations/accept")) return unavailable();
+  return row.next;
 }
 export function parseAcknowledgement(value: unknown, key: "requested" | "ok") {
   if (record(value, [key])[key] !== true) return unavailable();
@@ -56,8 +60,8 @@ export function parseAcceptance(value: unknown) {
 
 // A closed endpoint set prevents callers from turning this helper into an
 // arbitrary fetch/redirect surface. No response diagnostics cross the boundary.
-type Endpoint = "/api/session" | "/api/auth/sign-in/social" | "/api/auth/sign-in/magic-link" | "/api/auth/sign-out" | "/api/invitations/pending" | "/api/invitations/accept";
-const endpoints = new Set<string>(["/api/session", "/api/auth/sign-in/social", "/api/auth/sign-in/magic-link", "/api/auth/sign-out", "/api/invitations/pending", "/api/invitations/accept"]);
+type Endpoint = "/api/session" | "/api/auth/sign-in/social" | "/api/auth/google/challenge" | "/api/auth/sign-in/magic-link" | "/api/auth/sign-out" | "/api/invitations/pending" | "/api/invitations/accept";
+const endpoints = new Set<string>(["/api/session", "/api/auth/sign-in/social", "/api/auth/google/challenge", "/api/auth/sign-in/magic-link", "/api/auth/sign-out", "/api/invitations/pending", "/api/invitations/accept"]);
 export async function requestPortal(endpoint: Endpoint, body?: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> {
   if (!endpoints.has(endpoint)) return unavailable();
   const controller = new AbortController(), abort = () => controller.abort();

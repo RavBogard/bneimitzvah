@@ -49,7 +49,7 @@ async function fixture() {
   }
   async function issue(studentId = f.students[0].id, email = "portal-recipient@example.test", role: "parent" | "student" = "parent") {
     const issued = await invitations.issue(http("admin", undefined, { method: "POST" }), { mode: "admin", role, studentId, email });
-    const token = new URL(deliveries.at(-1)!.url).searchParams.get("token");
+    const token = new URLSearchParams(new URL(deliveries.at(-1)!.url).hash.slice(1)).get("token");
     if (!token || issued.delivery !== "sent") throw new Error("Synthetic invitation missing");
     return { ...issued, token };
   }

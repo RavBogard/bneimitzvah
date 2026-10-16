@@ -11,6 +11,8 @@ import { createStudentWorkService } from "../../src/server/student-work/service"
 import { StudyUnavailable, type StudyRequest, type StudyPage } from "../../src/server/study/types";
 import { createRelationshipService } from "../../src/server/relationships/service";
 import { createPendingInvitations } from "../../src/server/http/pending-invitations";
+import { createGoogleChallenges } from "../../src/server/http/google-challenge";
+import { projectMagicLink } from "../../src/server/mail/transport";
 import { resolveTenantHost } from "../../src/server/tenancy/resolve";
 import { parseCeremonyDate } from "../../src/lib/readings/ranges";
 import { withTenantTransaction } from "../../src/server/db/runtime";
@@ -32,7 +34,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     await base.ownerDb.insert(s.tenantHost).values({ host: `127.0.0.1:${BROWSER_PORT}`, tenantId: "crc", environment: "local", deployment: "http-browser", origin: BROWSER_ORIGIN });
     const auth = createAuthStack(db, s, { origin: BROWSER_ORIGIN, secret: secret(),
       ...(options.google ? { google: { clientId: "synthetic-browser-client", clientSecret: secret() } } : {}),
-      sendMagicLink: async ({ email, url }) => { deliveries.push({ email, url }); } });
+      sendMagicLink: async ({ email, url, token }) => { deliveries.push({ email, url: projectMagicLink(url, token, BROWSER_ORIGIN) }); } });
     const deployment = { environment: "local" as const, deployment: "http-browser" };
     const access = createAccessService({ db, auth, deployment });
     const invitations = createInvitationService({ db, access, transport: async ({ email, url }) => {
@@ -45,6 +47,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     const pendingInvitations = createPendingInvitations({ secret: secret(), origin: BROWSER_ORIGIN, environment: "local" });
     const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
       study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }), studentWork: createStudentWorkService({ access, practice }),
+      googleChallenges: createGoogleChallenges({ db, origin: BROWSER_ORIGIN, secret: secret() }),
       resolveHost: async request => {
         const host = await resolveTenantHost(db, request, deployment);
         if (host.origin !== BROWSER_ORIGIN) throw new Error("Host mismatch");

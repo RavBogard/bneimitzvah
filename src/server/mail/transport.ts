@@ -3,22 +3,33 @@ import { mailbox } from "../runtime/config";
 import { RuntimeUnavailable } from "../runtime/errors";
 
 type Kind = "invitation" | "magic-link";
-const paths = { invitation: "/invitations/open", "magic-link": "/api/auth/magic-link/verify" } as const;
+const paths = { invitation: "/invitations/open", "magic-link": "/auth/email" } as const;
 const redirects = new Set(["/", "/sign-in", "/invitations/accept"]);
 
 function canonicalLink(value: string, origin: string, kind: Kind) {
   if (typeof value !== "string" || value.length > 2048 || /[\s\\\x00-\x1f\x7f]/.test(value)) throw 0;
   const url = new URL(value);
-  if (url.href !== value || url.origin !== origin || url.username || url.password || url.hash || url.pathname !== paths[kind]) throw 0;
-  const keys = kind === "invitation" ? ["token"] : ["token", "callbackURL", "newUserCallbackURL", "errorCallbackURL"];
-  if ([...url.searchParams.keys()].some((key) => !keys.includes(key) || url.searchParams.getAll(key).length !== 1)) throw 0;
-  const token = url.searchParams.get("token") ?? "";
+  if (url.href !== value || url.origin !== origin || url.username || url.password || url.search || url.pathname !== paths[kind]) throw 0;
+  const fragment = new URLSearchParams(url.hash.slice(1));
+  if (fragment.size !== 1 || fragment.getAll("token").length !== 1) throw 0;
+  const token = fragment.get("token") ?? "";
   if (!(kind === "invitation" ? /^[A-Za-z0-9_-]{43}$/ : /^[A-Za-z]{32}$/).test(token)) throw 0;
-  for (const key of keys.filter((key) => key !== "token")) {
-    const destination = url.searchParams.get(key);
-    if (destination !== null && !redirects.has(destination)) throw 0;
-  }
+  if (url.hash !== `#token=${token}` || (kind === "invitation" && Buffer.from(token, "base64url").toString("base64url") !== token)) throw 0;
   return url.href;
+}
+
+// The SDK's generated GET URL is validated and discarded entirely in-process.
+// Only the new fragment URL reaches the mail provider.
+export function projectMagicLink(urlValue: string, token: string, origin: string): string {
+  try {
+    const url = new URL(urlValue);
+    const keys = ["token", "callbackURL", "newUserCallbackURL", "errorCallbackURL"];
+    if (url.href !== urlValue || url.origin !== origin || url.username || url.password || url.hash || url.pathname !== "/api/auth/magic-link/verify"
+      || !/^[A-Za-z]{32}$/.test(token) || url.searchParams.get("token") !== token
+      || [...url.searchParams.keys()].some(key => !keys.includes(key) || url.searchParams.getAll(key).length !== 1)) throw 0;
+    for (const key of keys.slice(1)) if (url.searchParams.has(key) && !redirects.has(url.searchParams.get(key)!)) throw 0;
+    return `${origin}/auth/email#token=${token}`;
+  } catch { throw new RuntimeUnavailable(); }
 }
 
 // Plain-text transactional mail only. Tracking must also be disabled on the

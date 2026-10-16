@@ -13,7 +13,7 @@ type Phase = typeof PROBE_PHASES[number];
 export class ProbeFailure extends Error {
   constructor(readonly phase: Phase) { super(`Provider probe failed (${phase}); private details withheld`); }
 }
-const protectedTables = ["tenant", "membership", "role_grant", "student", "student_identity", "guardian", "tutor_student", "invite", "practice_context", "assignment", "assignment_verse", "audit_event", "translation_draft", "tutor_note"];
+const protectedTables = ["tenant", "membership", "role_grant", "student", "student_identity", "guardian", "tutor_student", "invite", "practice_context", "assignment", "assignment_verse", "audit_event", "invitation_throttle", "translation_draft", "tutor_note"];
 const rollback = new Error("Synthetic probe transaction rollback");
 const wrong = "provider_probe_unmapped";
 const origin = "https://bneimitzvah.vercel.app";

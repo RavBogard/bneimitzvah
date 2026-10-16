@@ -47,7 +47,8 @@ test("review: replacement encrypted cookie cannot redirect a reviewed sibling ac
     const cookies: string[] = [];
     for (const child of f.students.slice(0, 2)) {
       await invitations.issue(admin, { mode: "admin", role: "parent", studentId: child.id, email: "multi@example.test" });
-      cookies.push(pending.exchange(new Request(transport.at(-1)!.url)).headers.getSetCookie()[0].split(";")[0]);
+      const token = new URLSearchParams(new URL(transport.at(-1)!.url).hash.slice(1)).get("token");
+      cookies.push(pending.exchange(new Request(`${origin}/api/invitations/open`, { method: "POST", headers: { origin } }), token).headers.getSetCookie()[0].split(";")[0]);
     }
     const authCookie = f.identities.multi.cookie;
     const first = request("GET", `${authCookie}; ${cookies[0]}`);
