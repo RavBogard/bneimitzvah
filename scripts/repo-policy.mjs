@@ -47,7 +47,9 @@ export function entryProblems(path, content = "") {
   if (file === ".env.example" && text.split(/\r?\n/).some(line => !/^\s*(?:#|$)/.test(line) && !/^[A-Z][A-Z0-9_]*=\s*$/.test(line))) problems.push("environment example must contain names only");
   if (data && !CONFIGS.has(file) && !/^(?:trope\/|tests\/fixtures\/(?:trope|portal)\/)/.test(file) && !/(?:^|\/)(?:LICENSE|OFL|PROVENANCE)(?:\.txt)?$/i.test(file)) problems.push("data file outside reviewed allow-list");
   if (CREDENTIALS.some(pattern => pattern.test(text))) problems.push("credential pattern");
-  for (const match of text.matchAll(/[A-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9.-]*[A-Z0-9])?\.[A-Z]{2,}/gi)) {
+  // Markdown backticks delimit code; they must not become a fabricated local
+  // part for standalone decorators such as `@spaces.GPU`.
+  for (const match of text.matchAll(/[A-Z0-9.!#$%&'*+\/=?^_{|}~-]+@[A-Z0-9](?:[A-Z0-9.-]*[A-Z0-9])?\.[A-Z]{2,}/gi)) {
     const email = match[0].toLowerCase().replace(/^`+/, "");
     // Existing planning contact is permitted only in prose, never fixture/data files.
     const documentedContact = ["daniel", "centralreform.org"].join("@");

@@ -35,6 +35,12 @@ test("reviewed config and synthetic fixture paths do not bypass content checks",
   assert.ok(entryProblems("src/leak.ts", samples[0]).includes("credential pattern"));
 });
 
+test("Markdown code delimiters do not turn Python decorators into email addresses", () => {
+  assert.deepEqual(entryProblems("docs/research.md", "Use `@spaces.GPU` and `@spaces.GPU(duration=20)`."), []);
+  assert.ok(entryProblems("docs/research.md", "Contact `person" + "@" + "private.invalid`.").includes("non-synthetic email address"));
+  assert.deepEqual(entryProblems("tests/fixtures/portal/student.json", '{"email":"fixture@example.test"}'), []);
+});
+
 test("git integration detects untracked, force-staged ignored, and index-only sensitive files without echoing contents", async () => {
   const { env, cleanup } = await isolatedEnv();
   const root = await mkdtemp(join(tmpdir(), "portal-policy-"));
