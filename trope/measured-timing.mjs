@@ -56,26 +56,3 @@ export function applyMeasuredTiming(score, syllableMs) {
   out.timing = { source: "measured", syllables: rows.length };
   return out;
 }
-
-/**
- * The emitter's interior breath rests (added time after a phrase break) for a score with no gaps:
- * syllable index -> rest ms that directly follows that syllable's last note. Measured inter-onset times
- * already contain the chanter's own breaths, so the caller shortens those syllables by these amounts.
- */
-export function emitterBreaths(score, segments) {
-  const rows = scoreSyllables(score), lastEventOf = new Map(rows.map((r, k) => [r.events.at(-1), k]));
-  const breaths = new Map();
-  let event = 0, previousPitched = null;
-  for (const segment of segments) {
-    const types = segment.note_type.split(" ").map(Number), durations = segment.duration.split(" ").map(Number);
-    types.forEach((type, i) => {
-      if (type === 1) {
-        if (previousPitched !== null && event < score.events.length && lastEventOf.has(previousPitched)) {
-          const k = lastEventOf.get(previousPitched);
-          breaths.set(k, (breaths.get(k) ?? 0) + Math.round(durations[i] * 1000));
-        }
-      } else { previousPitched = event; event++; }
-    });
-  }
-  return breaths;
-}

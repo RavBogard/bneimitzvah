@@ -439,3 +439,22 @@ test("CLI keeps inputs and output private, writes exclusively with a run record,
     const again = await call(); assert.equal(again.code, 1); clean(again);
   } finally { await cleanup(); }
 }));
+
+test("review regressions: a phrase ending in an absent consonant still releases, and word review is bound to its own passage", () => {
+  const target = packFor("בָ־לָ֑הּ דָֽ׃", "Genesis 1:1"), audio = synthetic(target.identity, { pauseAfter: new Set() });
+  const record = recordFor(target, audio);
+  const s = record.syllables.find(x => x.coda.some(c => c.phone === "h"));
+  assert.ok(s, "fixture has a final h");
+  const h = s.coda.find(c => c.phone === "h"), gone = h.reviewed;
+  s.vowel.reviewed.end = gone.end; h.reviewed = { absent: true };
+  const map = json(build(record, target, audio), "retime-map.json");
+  assert.ok(map.releases.length >= 1);
+  const proposal = recordFor(target, synthetic(target.identity, { proposals: true }), { proposals: true });
+  proposal.annotation.reviewState = "proposed"; proposal.annotation.reviewRecordId = null;
+  for (const x of proposal.syllables) for (const c of [...x.onset, x.vowel, ...x.coda]) { c.proposed = c.reviewed; c.reviewed = null; }
+  for (const e of proposal.events) { e.proposed = e.reviewed; e.reviewed = null; }
+  assert.throws(() => applyWordListeningReview(proposal, { words: [{ id: "only-word" }] }, ["only-word"], "review-x"), e => e.code === "word-review-target");
+  const other = packFor("בָ־לָ֑הּ דָֽ׃", "Genesis 1:2").identity;
+  assert.throws(() => applyWordListeningReview(proposal, other, other.words.map(w => w.id), "review-x"), e => e.code === "word-review-target");
+  assert.throws(() => applyWordListeningReview(proposal, target.identity, {}, "review-x"), e => e.code === "word-review");
+});

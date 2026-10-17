@@ -202,8 +202,14 @@ export function applyWordListeningReview(proposal, identity, approvedWordIds, re
   validateAlignmentRecord(proposal);
   if (proposal.annotation.method !== "proposed-then-reviewed" || proposal.annotation.reviewState !== "proposed") fail("annotation-method");
   id(reviewRecordId);
+  if (!Array.isArray(approvedWordIds)) fail("word-review");
+  // The word list must be the passage this proposal is bound to, syllable for syllable.
+  if (!identity || identity.targetHash !== proposal.target.targetHash || identity.passageId !== proposal.target.passageId
+    || !Array.isArray(identity.syllables) || !Array.isArray(identity.words) || identity.syllables.length !== proposal.syllables.length
+    || identity.syllables.some((s, k) => s.id !== proposal.syllables[k].syllableId)) fail("word-review-target");
   const approved = new Set(approvedWordIds), words = identity.words.map(w => w.id);
-  if (!Array.isArray(approvedWordIds) || approved.size !== approvedWordIds.length || [...approved].some(w => !words.includes(w))) fail("word-review");
+  if (approved.size !== approvedWordIds.length || [...approved].some(w => !words.includes(w))) fail("word-review");
+  if (identity.syllables.some(s => !approved.has(s.wordId))) fail("word-review-incomplete");
   if (words.some(w => !approved.has(w))) fail("word-review-incomplete");
   const copy = structuredClone(proposal), review = x => { if (x.proposed === null) fail("review-incomplete"); x.reviewed = structuredClone(x.proposed); };
   copy.syllables.forEach(s => [...s.onset, s.vowel, ...s.coda].forEach(review)); copy.events.forEach(review);

@@ -189,3 +189,11 @@ test("measured timing keeps notes, order and text while each syllable lasts its 
   const extra = clone(timedInput); extra.passages[0].timing.note = "x"; rejects(extra, "schema");
   const badId = clone(timedInput); badId.passages[0].timing.recordId = "../x"; rejects(badId, "identifier");
 });
+
+test("under style v1 measured timing adds no emitter breath time and says word gaps are carved from the syllable", () => {
+  const he = "בָ־גָ֑ דָֽ׃", v1 = input([passage(he)], "torah", "v1"), base = build(v1);
+  const n = artifact(base, "identity-map").syllables.length;
+  v1.passages[0].timing = { source: "measured", recordId: "timing-test", syllableMs: Array(n).fill(300) };
+  const t = build(v1).manifest.passages[0].timing;
+  assert.equal(t.emitterBreathMsAdded, 0); assert.match(t.wordGaps, /carves/);
+});

@@ -107,30 +107,32 @@ export function planRetime(bound, input) {
   // carried on. Either way it fades out completely before the next phrase's lead consonant.
   const sourceAfter = new Map([...bound.events.map(e => [map(e.start), map(e.end)]), [map(bound.sourceRegion.end), map(bound.record.recording.frames)]]);
   const CONTINUANT = new Set(["l", "m", "n", "ʁ", "v", "z", "j"]);
+  // Returns where the released phrase now ends (the cursor), or null when nothing was released.
   const release = limit => {
-    if (!pendingRelease) return;
+    if (!pendingRelease) return null;
     const last = pendingRelease, room = limit - last.dstEnd - Math.round(o.releaseGapMs * R / 1000);
     let len = Math.min(Math.round(o.releaseMs * R / 1000), room);
     pendingRelease = null;
-    if (len < Math.round(0.02 * R)) return;
+    if (len < Math.round(0.02 * R)) return null;
     const decayEnd = sourceAfter.get(last.srcEnd);
     if (decayEnd !== undefined) {
       len = Math.min(len, decayEnd - last.srcEnd);
-      if (len < Math.round(0.02 * R)) return;
+      if (len < Math.round(0.02 * R)) return null;
       pieces.push({ kind: "release", method: "copy", role: "release", syllableId: last.syllableId, syllable: last.syllable, phone: null, voiced: false,
         srcStart: last.srcEnd, srcEnd: last.srcEnd + len, dstStart: last.dstEnd, dstEnd: last.dstEnd + len, ratio: 1, source: "take-decay" });
     } else if (last.role === "vowel" || CONTINUANT.has(last.phone)) {
       last.releaseSamples = len; last.dstEnd += len; last.method = "wsola"; last.ratio = round6((last.dstEnd - last.dstStart) / (last.srcEnd - last.srcStart));
-    } else return;
+    } else return null;
     releases.push({ syllableId: last.syllableId, phone: last.phone, samples: len, source: decayEnd !== undefined ? "take-decay" : "sustained" });
+    return last.dstEnd + (decayEnd !== undefined ? len : 0);
   };
   const releases = [];
   for (const phrase of phrases) {
     const b = [...phrase.map(s => toSample(s.startMs)), toSample(phrase.at(-1).endMs)];
     const leadOnsets = bySyllable[phrase[0].index].onset;
     const naturalLead = leadOnsets.reduce((n, c) => n + length(c), 0);
-    release(b[0] - Math.min(naturalLead, b[0] - cursor));
-    cursor = pieces.length ? pieces.at(-1).dstEnd : cursor;
+    // The last piece may be a zero-length absent consonant, so the cursor follows the release itself.
+    cursor = Math.max(cursor, release(b[0] - Math.min(naturalLead, b[0] - cursor)) ?? cursor);
     const lead = fit(leadOnsets, b[0] - cursor, phrase[0].id), leadLength = lead.reduce((a, c) => a + c, 0);
     silence(cursor, b[0] - leadLength);
     let at = b[0] - leadLength;
@@ -151,8 +153,7 @@ export function planRetime(bound, input) {
     cursor = b.at(-1);
     pendingRelease = pieces.filter(p => p.kind === "phone" && p.dstEnd > p.dstStart).at(-1);
   }
-  release(total);
-  cursor = pieces.at(-1).dstEnd;
+  cursor = Math.max(cursor, release(total) ?? cursor);
   silence(cursor, total);
   const sounding = pieces.filter(p => p.dstEnd > p.dstStart);
   for (let i = 1; i < sounding.length; i++) if (sounding[i].dstStart !== sounding[i - 1].dstEnd) fail("timeline");
@@ -238,7 +239,7 @@ export function f0Voicing(plan, speechPlan, from = 0, to = plan.totalSamples) {
     if (next >= 0 && (nearest[i] < 0 || next - i < i - nearest[i])) nearest[i] = next;
   }
   const hop = plan.rate / plan.options.f0Fps, frames = Math.ceil((to - from) / hop), f0 = [], voicing = [];
-  const counts = { frames, voiced: 0, silence: 0, voicelessConsonant: 0, filledFromNearest: 0 };
+  const counts = { frames, voiced: 0, silence: 0, voicelessConsonant: 0, unvoicedRelease: 0, filledFromNearest: 0 };
   const pieces = plan.pieces.filter(p => p.dstEnd > p.dstStart);
   let k = 0;
   for (let j = 0; j < frames; j++) {
@@ -246,7 +247,7 @@ export function f0Voicing(plan, speechPlan, from = 0, to = plan.totalSamples) {
     while (k < pieces.length - 1 && pieces[k].dstEnd <= centre) k++;
     const p = centre < to ? pieces[k] : null;
     if (!p || p.kind === "silence") { counts.silence++; f0.push(0); voicing.push(0); continue; }
-    if (!p.voiced) { counts.voicelessConsonant++; f0.push(0); voicing.push(0); continue; }
+    if (!p.voiced) { counts[p.kind === "release" ? "unvoicedRelease" : "voicelessConsonant"]++; f0.push(0); voicing.push(0); continue; }
     let hz = curve[ms];
     if (!(hz > 0)) { if (nearest[ms] < 0) fail("f0"); hz = curve[nearest[ms]]; counts.filledFromNearest++; }
     counts.voiced++; f0.push(hz); voicing.push(1);

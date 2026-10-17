@@ -119,7 +119,9 @@ def main():
     flux = np.r_[0, np.linalg.norm(np.diff(mel, axis=0), axis=1)]
     flux = np.convolve(flux, np.ones(3) / 3, mode="same")
     def vowel_join(t0, t1):
-        f0, f1 = int(t0 / 0.01) + 1, max(int(t0 / 0.01) + 2, int(t1 / 0.01))
+        f0, f1 = int(t0 / 0.01) + 1, min(len(flux), max(int(t0 / 0.01) + 2, int(t1 / 0.01)))
+        if f1 <= f0:
+            return None
         return (f0 + int(np.argmax(flux[f0:f1]))) * 0.01
     edges = [fade_in(spans[0].start * frame_s, max(0.0, spans[0].start * frame_s - a.lead_back))]
     events = []
@@ -139,11 +141,19 @@ def main():
             # offset was heard both too early and too late there. Cut at the largest change in the
             # spectrum between the two vowels' spans.
             # The window opens 30 ms after the first vowel's span, past that vowel's own onset transition.
-            lo, hi = spans[i - 1].end * frame_s + 0.03, spans[i].end * frame_s + 0.02
-            edges.append(vowel_join(lo, hi) if hi - lo >= 0.03 else max(prev_end, nxt + a.onset_offset))
+            # The cut must leave the second vowel at least 15 ms before the following boundary.
+            onset_rule = max(prev_end, nxt + a.onset_offset)
+            nxt_floor = max(spans[i].end * frame_s, spans[i + 1].start * frame_s + a.onset_offset) if i + 1 < len(spans) else spans[i].end * frame_s
+            lo, hi = spans[i - 1].end * frame_s + 0.03, min(spans[i].end * frame_s + 0.02, nxt_floor - 0.015)
+            cut = vowel_join(lo, hi) if hi - lo >= 0.03 else None
+            edges.append(cut if cut is not None and cut < nxt_floor - 0.015 else onset_rule)
             continue
         edges.append(max(prev_end, nxt + a.onset_offset) if a.boundary == "onset" else (prev_end + nxt) / 2)
-    end_s = fade_out(spans[-1].end * frame_s, clip_s - 0.01)
+    end_s = max(fade_out(spans[-1].end * frame_s, clip_s - 0.01), spans[-1].end * frame_s)
+    # Every phone must keep a positive span: boundaries strictly increase, or the proposal is refused.
+    flat = [edges[0]] + [e if not isinstance(e, tuple) else e[1] for e in edges[1:]] + [end_s]
+    if any(b - a < 0.005 for a, b in zip(flat, flat[1:])):
+        raise SystemExit("proposed boundaries do not strictly increase; refusing this proposal")
     to_sample = lambda t: s0 + int(round(t * rate))
     bounds = []   # (start, end) per token
     cursor = edges[0]
@@ -162,9 +172,9 @@ def main():
             syllables[t["syllable"]]["vowel"] = row
         else:
             syllables[t["syllable"]][t["role"]].append(row)
-        frames = logp[sp.start:sp.end + 1, t["id"]]
+        frames = logp[sp.start:max(sp.start + 1, sp.end), t["id"]]
         detail.append({"syllable": t["syllable"], "role": t["role"], "phone": t["phone"], "word": t["word"],
-                       "spanSeconds": [round(a.start + sp.start * frame_s, 3), round(a.start + (sp.end + 1) * frame_s, 3)],
+                       "spanSeconds": [round(a.start + sp.start * frame_s, 3), round(a.start + sp.end * frame_s, 3)],
                        "meanLogProb": round(float(frames.mean()), 3)})
     record = {
         "schema": "chant-human-alignment/v1", "alignmentId": meta["alignmentId"],
@@ -175,7 +185,7 @@ def main():
                       "audioSha256": sha256(a.audio), "encoding": encoding, "sampleRate": rate, "channels": info.channels,
                       "frames": info.frames, "downmix": "none" if info.channels == 1 else "average",
                       "consentRecordId": meta["consentRecordId"], "consentScope": meta["consentScope"]},
-        "annotation": {"units": "samples", "method": "proposed-then-reviewed", "proposalSource": f"wav2vec2-espeak-2c73378-{a.boundary}",
+        "annotation": {"units": "samples", "method": "proposed-then-reviewed", "proposalSource": f"w2v-{a.revision[:7]}-{a.boundary}-r3",
                        "reviewState": "proposed", "reviewRecordId": None},
         "syllables": syllables,
         "events": [{"kind": "pause", "proposed": {"start": to_sample(e0), "end": to_sample(e1)}, "reviewed": None} for e0, e1 in events],

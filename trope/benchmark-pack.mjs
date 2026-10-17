@@ -4,7 +4,7 @@ import { verseUnits } from "./text.mjs";
 import { scoreVerse, SPECIAL_MELODIES } from "./melody.mjs";
 import { scoreToSoulx, SOULX_STYLES, syllableToken } from "./soulx.mjs";
 import { buildPlan, segmentNotes } from "./speech2sing.mjs";
-import { applyMeasuredTiming, emitterBreaths, MEASURED_LIMITS, MeasuredTimingError } from "./measured-timing.mjs";
+import { applyMeasuredTiming, MEASURED_LIMITS, MeasuredTimingError } from "./measured-timing.mjs";
 
 export const BENCHMARK_LIMITS = Object.freeze({ inputBytes: 262144, textBytes: 8192, passages: 12,
   words: 512, syllables: 2048, notes: 8192, seconds: 180, segmentSeconds: 30,
@@ -191,11 +191,12 @@ export function buildBenchmarkPack(input, assets) {
       if (engineScore.events.length > BENCHMARK_LIMITS.notes || engineScore.seconds > BENCHMARK_LIMITS.seconds || engineScore.units.some(unit => unit.cell.fallback)) fail("score");
       let score = engineScore, breathMs = null;
       if (passage.timing) {
-        // Every syllable keeps its full measured length. Shortening the syllable before an emitter
-        // breath (whose measured time includes the chanter's own breath) clipped phrase-final words by
-        // ear (Daniel, 2026-10-16), so the emitter's breath rests are added on top and recorded.
+        // Every syllable keeps its full measured score length. Shortening the syllable before an emitter
+        // breath clipped phrase-final words by ear (Daniel, 2026-10-16), so v2's breath rests are added
+        // on top; v1 instead carves its word gaps out of each word's last note, adding no time.
         score = timedScore(engineScore, passage.timing.syllableMs);
-        breathMs = [...emitterBreaths(score, scoreToSoulx(score, { ...style, profile })).values()].reduce((a, b) => a + b, 0);
+        const emitted = scoreToSoulx(score, { ...style, profile }).reduce((t, seg) => t + seg.time[1] - seg.time[0], 0);
+        breathMs = emitted - Math.round(style.lead * 1000) - Math.round(score.seconds * 1000);
         if (score.seconds > BENCHMARK_LIMITS.seconds) fail("score");
       }
       const segments = scoreToSoulx(score, { ...style, profile });
@@ -205,6 +206,7 @@ export function buildBenchmarkPack(input, assets) {
       for (const [name, data] of [["units", units], ["score", score], ["a-soulx-target", segments], ["b-speech-plan", plan], ["identity-map", identities]]) add(`${directory}/${name}.json`, data);
       passages.push({ id: passage.id, ref: passage.ref, textSha256: passage.textSha256, flags: passage.flags, targetHash, directory,
         timing: passage.timing ? { source: "measured", recordId: passage.timing.recordId, syllables: passage.timing.syllableMs.length, emitterBreathMsAdded: breathMs,
+          wordGaps: input.performance.style === "v1" ? "v1 carves word gaps out of each word's last note" : "none",
           review: "measured values are assertions from a private take; not reviewed here" } : "engine",
         seconds: plan.seconds, segments: segments.length, notes: score.events.length, syllables: syllables.length, targetReview: "pending" });
     }
