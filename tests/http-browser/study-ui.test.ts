@@ -11,6 +11,7 @@ import { installLoopbackFetchGuard } from "./egress";
 import { syntheticUiStudyPage, syntheticUiLongStudyPage } from "../helpers/study-ui";
 import { expandReadingRanges } from "../../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
+import { projectStudyVerse } from "../../src/lib/hebrew/study-tokens";
 import { StudyUnavailable } from "../../src/server/study/types";
 import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
@@ -160,7 +161,14 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   expect(await learner.locator(".study-verses article details").count()).toBe(0); // One toolbar replaces per-verse aids.
   await colorVerse(learner, "Genesis 1:1");
   const indices = await first.locator("[data-word-index]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-word-index")).join(","));
-  await setColors(learner, false); expect(await learner.locator(".study-verses [data-family], .study-verses [data-word-index]").count()).toBe(0); // No projection while colors are off.
+  const synthetic = syntheticUiStudyPage({ kind: "torah", ranges: ["Genesis 1:1"], verses: ["Genesis 1:1"], offset: 0, translation: "jps2023" }).verses[0];
+  const canonical = projectStudyVerse(synthetic.ref, synthetic.hebrew);
+  if (canonical.status !== "ready") throw new Error("Synthetic study word projection unavailable");
+  expect(indices).toBe(canonical.projection.words.map(word => word.index).join(","));
+  await setColors(learner, false);
+  expect(await learner.locator(".study-verses [data-family], .study-verses [data-phrase], .study-hebrew [aria-describedby]").count()).toBe(0);
+  expect(await first.locator("[data-word-index]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-word-index")).join(","))).toBe(indices);
+  expect(await first.locator(".study-alternative > span:first-child [data-word-index]").count()).toBe(0); // Ketiv is never a reading-word target.
   expect(await hebrew.textContent() === original && calls === beforeColors).toBe(true);
   await setColors(learner, true); await colorVerse(learner, "Genesis 1:1");
   expect(await first.locator("[data-word-index]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-word-index")).join(","))).toBe(indices);

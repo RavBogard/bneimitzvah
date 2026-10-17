@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { colorStudyVerse, type AssignmentEnding, type ColorResult } from "../../../../lib/hebrew/study-annotations";
-import type { DisplayPart } from "../../../../lib/hebrew/study-tokens";
+import { projectStudyVerse, type DisplayPart } from "../../../../lib/hebrew/study-tokens";
 import { PHRASE_FAMILIES } from "../../../../lib/trope/chart-catalog";
 import hebrewStyles from "../../../../styles/hebrew-font.module.css";
 import { useReadingPrefs } from "../reading-prefs";
@@ -20,13 +20,18 @@ const range = (first: number, last: number) => first === last ? `Word ${first}` 
 const unavailableText = (result: ColorResult) => result.status === "unavailable" && result.reason === "unsupported-system"
   ? "Phrase colors aren’t available for Psalms, Proverbs and Job yet." : "Phrase colors aren’t available for this verse.";
 
-/** Projection runs only when colors are shown; plain Hebrew never computes it. */
+/** Phrase analysis runs only when colors are shown; word identity is independent. */
 export function useVerseColors(verse: StudyVerse, assignment: AssignmentEnding, enabled: boolean) {
   const { kind, confirmed } = assignment, verses = assignment.verses.join("\n");
   return useMemo(() => enabled ? colorStudyVerse(verse.ref, verse.hebrew, { kind, confirmed, verses: verses ? verses.split("\n") : [] }) : null, [enabled, verse, kind, confirmed, verses]);
 }
 
 export function StudyHebrew({ verse, colors, id, className = "" }: { verse: StudyVerse; colors: Ready | null; id: string; className?: string }) {
+  const projection = useMemo(() => {
+    if (colors) return colors.projection;
+    const result = projectStudyVerse(verse.ref, verse.hebrew);
+    return result.status === "ready" ? result.projection : null;
+  }, [colors, verse.ref, verse.hebrew]);
   const parts = (pieces: readonly DisplayPart[]) => pieces.map((part, index) => {
     const word = part.wordIndex === null ? null : colors?.words[part.wordIndex];
     const family = word?.family ? families.get(word.family) : null;
@@ -39,9 +44,9 @@ export function StudyHebrew({ verse, colors, id, className = "" }: { verse: Stud
   const trailing = (index: number, count: number, kind: string) => kind === "gap" && verse.hebrew.paragraphAfter !== null && index === count - 1;
   const gap = (kind: "petuchah" | "setumah") => <span className="study-paragraph-gap"><span lang="en" dir="ltr">[{kind === "petuchah" ? "open paragraph" : "closed paragraph"}]</span></span>;
   const sign = <span role="img" aria-label="Inverted nun, Masoretic sign">׆</span>;
-  return <p className={`study-hebrew ${hebrewStyles.hebrew} ${className}`.trim()} lang="he" dir="rtl">{colors ? colors.projection.runs.map(run => run.kind === "text" ? <span key={run.segment}>{parts(run.parts)}</span>
+  return <p className={`study-hebrew ${hebrewStyles.hebrew} ${className}`.trim()} lang="he" dir="rtl">{projection ? projection.runs.map((run, index) => run.kind === "text" ? <span key={run.segment}>{parts(run.parts)}</span>
     : run.kind === "alternative" ? <span className="study-alternative" key={run.segment}>{alternative(run.written, parts(run.read))}</span>
-      : run.kind === "gap" && trailing(colors.projection.runs.indexOf(run), colors.projection.runs.length, run.kind) ? null : <span key={run.segment}>{run.kind === "gap" ? gap(run.break) : sign}</span>)
+      : run.kind === "gap" && trailing(index, projection.runs.length, run.kind) ? null : <span key={run.segment}>{run.kind === "gap" ? gap(run.break) : sign}</span>)
     : verse.hebrew.segments.map((segment, index) => segment.kind === "text" ? <span key={index}>{segment.text}</span>
       : segment.kind === "alternative" ? <span className="study-alternative" key={index}>{alternative(segment.written, segment.read)}</span>
         : segment.kind === "gap" && trailing(index, verse.hebrew.segments.length, segment.kind) ? null : <span key={index}>{segment.kind === "gap" ? gap(segment.break) : sign}</span>)}</p>;
