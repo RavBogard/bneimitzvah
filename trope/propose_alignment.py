@@ -46,7 +46,8 @@ def main():
     ap.add_argument("--revision", default="2c733782da5604684829819a5eb744c193fe9398")
     ap.add_argument("--pause", type=float, default=0.25)
     ap.add_argument("--boundary", choices=["onset", "midpoint"], default="onset")
-    ap.add_argument("--onset-offset", type=float, default=0.015)
+    # By ear (Daniel, 2026-10-16): the midpoint was too early and onset + 15 ms a touch too late.
+    ap.add_argument("--onset-offset", type=float, default=-0.02)
     ap.add_argument("--edge-db", type=float, default=12.0)
     ap.add_argument("--lead-back", type=float, default=0.25)
     ap.add_argument("--meta", required=True, help="JSON with alignmentId, sampleId, speakerId, takeNumber, consentRecordId, consentScope, targetReviewRecordId")
@@ -125,7 +126,7 @@ def main():
                 events.append((p0, p1)); edges.append(("pause", p0, p1)); continue
         # Between sounds: CTC spans mark a sound's start, so the boundary sits at the next span's start
         # (plus a small offset), not halfway between spans, which put boundaries too early by ear.
-        edges.append(nxt + a.onset_offset if a.boundary == "onset" else (prev_end + nxt) / 2)
+        edges.append(max(prev_end, nxt + a.onset_offset) if a.boundary == "onset" else (prev_end + nxt) / 2)
     end_s = fade_out(spans[-1].end * frame_s, clip_s - 0.01)
     to_sample = lambda t: s0 + int(round(t * rate))
     bounds = []   # (start, end) per token
