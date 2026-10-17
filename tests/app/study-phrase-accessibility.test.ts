@@ -14,7 +14,10 @@ const children = (node: Node): Node[] => "childNodes" in node ? node.childNodes 
 const attr = (node: Node, name: string) => "attrs" in node ? node.attrs.find(value => value.name === name)?.value : undefined;
 const text = (node: Node): string => "value" in node ? node.value : children(node).map(text).join("");
 function nodes(node: Node): Node[] { return [node, ...children(node).flatMap(nodes)]; }
-const verses = ["Genesis 1:1", "Genesis 1:2"].map(ref => ({ ref, hebrew: normalizeHebrew("אָ֑ב גַּֽד׃"), english: null }));
+const verses = ["Genesis 1:1", "Genesis 1:2"].map(ref => {
+  const hebrew = normalizeHebrew("אָ֑ב גַּֽד׃");
+  return { ref, hebrew: { ...hebrew, segments: [...hebrew.segments] }, english: null };
+});
 const assignment = { kind: "torah" as const, confirmed: true, verses: verses.map(verse => verse.ref) };
 
 it("gives every colored reading word a unique, nonempty phrase description alongside the open practice dialog", () => {
