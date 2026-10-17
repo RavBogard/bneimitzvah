@@ -19,6 +19,14 @@ Use seconds on the original asset timeline throughout. Clip and word intervals a
 3. Fit explicit play/pause, verse/word selection, current-word highlight and repeat into the existing lifted reading surface. Word identity must survive phrase colors being turned off, including qere/ketiv and maqaf cases. No autoplay. Stop playback, cancel pending fetch/hash/play operations and clear old state on verse/assignment/role/child change or unmount. Stale asynchronous results must never resume the old recording. Audio ticks are not calendar visits.
 4. Exercise browser playback with runtime-generated synthetic audio, then approved real source samples. Verify nonzero clip offsets, seek/loop boundaries, first/last words, speed changes, held/unavailable states, teardown, keyboard access and phone layout. Do not report the pure-helper tests as a working player or deploy acceptance.
 
+## First serving decision — root, 2026-10-17
+
+Use the public PocketTorah archive as the first byte-source proof. A fresh bounded metadata request returned the expected title, creator and BY-SA 3.0 licence; one sample HEAD returned audio/mpeg, byte-range support and permissive CORS. This establishes a candidate source, not tested playback across the corpus or mobile browsers. No audio upload, student-recording machinery or new spending is needed for this proof.
+
+Keep the existing verse DTO unchanged. A separately reviewed authenticated resolver may return a fixed public source location for an approved opaque asset, after verifying the current assignment/ref/practice context; no public catalog or private assignment/text/timing endpoint is introduced. Public delivery URLs are necessarily visible outside the DTO. Browser source requests must omit portal credentials, private parameters and referrers; restrict source/redirect hosts and applicable CSP rather than accepting arbitrary URLs. Store actual catalog/index artifacts outside Git. Final runtime catalog delivery and authorization composition require their own bounded implementation review.
+
+Review holds govern what the portal selects and plays. The source recordings are already public: selected clip boundaries cannot prevent external listening to neighboring cuts. Do not claim byte-level withholding or DRM. No generated audio or private student recording is involved. Validate actual GET/seek/decode, nonzero offsets, redirects/CORS/referrer behavior and phone playback before release.
+
 ## Independent pitch investigation
 
 Browser `preservesPitch` maintains pitch while changing playback speed; it is not an independent pitch dial. See the [HTML media standard](https://html.spec.whatwg.org/multipage/media.html#dom-media-preservespitch). A separate DSP path must preserve the source timeline, account for processing latency, reset on seek/loop and stop cleanly on scope changes.
