@@ -1,9 +1,16 @@
 # Settled decisions (Daniel, binding)
 
-- Student self-check and tutor assessment are separate concepts (MISSION rulings 36/40/45–48/54). Self-check is `unmarked` (default), `working`, or `got-it`; assessment is `not-started` (default), `working`, or `solid`. Counts identify their actual stream. No visit, play, recording or upload changes a mark.
-- Only the student's currently confirmed, assigned Torah/haftarah verses are eligible. Service parts, raw practice-event history/calendar, recordings, notifications, offline replay and new providers are outside this backend slice.
-- Self-check writes require the student's own mode or explicitly selected linked-child practice. Parent dashboard, tutor and admin modes do not impersonate a student. Assessment writes require an authorized tutor/admin. Existing authorized student/parent/tutor/admin/child-practice reading paths may read both current streams.
-- No frontend change is included. Daniel's approved student surface remains approved. Production/provider/migration-apply/import/model work remains held; generation and disposable local test fixtures do not authorize production operations.
+- MISSION's Teaching and progress amendment (rulings 36/40/45–48/54) includes tutor verse statuses `not started` / `working` / `solid`, alongside separate student self-checks.
+- MISSION ruling 1, amended/clarified by rulings 32/48: the parent dashboard is read-only except honors; explicitly selected linked-child practice is a separate delegated capability, without tutor/admin authority.
+- MISSION ruling 14 and Teaching and progress amendment (45/53/58): private practice-event details remain student-scoped, and other roles receive days-practiced summaries rather than raw activity.
+
+## Architecture decisions (root, 2026-10-16)
+
+These are approved implementation choices for this slice, not additional Daniel rulings. Self-check is `unmarked` (default), `working`, or `got-it`; assessment is `not-started` (default), `working`, or `solid`. Counts identify their actual stream. No visit, play, recording or upload changes a mark.
+
+Only the student's currently confirmed, assigned Torah/haftarah verses are eligible. Self-check writes require the student's own mode or explicitly selected linked-child practice. Parent dashboard, tutor and admin modes do not impersonate a student. Assessment writes require an authorized tutor/admin. Existing authorized student/parent/tutor/admin/child-practice reading paths may read both streams.
+
+No frontend change is included. Daniel's approved student surface remains approved. Service parts, raw practice-event history/calendar, recordings, notifications, offline replay and new providers are outside this backend slice. Production/provider/migration-apply/import/model work remains held; generation and disposable local test fixtures do not authorize production operations.
 
 ## Source inventory and architecture decision
 
