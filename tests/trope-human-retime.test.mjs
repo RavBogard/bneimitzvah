@@ -156,7 +156,8 @@ test("melisma holds one vowel without repeated consonants; final consonants stay
   assert.ok(closed.length);
   for (const s of closed) {
     const last = map.notes.filter(n => n.syllableId === s.id).at(-1);
-    for (const c of map.pieces.filter(p => p.role === "coda" && p.syllableId === s.id)) assert.ok(c.dstStart >= last.dstStart && c.dstEnd <= last.dstEnd);
+    // A phrase-final continuant may carry on into the rest as its release; the coda itself sits in the last note.
+    for (const c of map.pieces.filter(p => p.role === "coda" && p.syllableId === s.id)) assert.ok(c.dstStart >= last.dstStart && c.dstEnd - (c.releaseSamples ?? 0) <= last.dstEnd);
   }
   const slices = map.slices;
   assert.equal(slices.length, target.identity.segments.length); assert.equal(slices[0].dstStart, 0); assert.equal(slices.at(-1).dstEnd, map.totalSamples);
@@ -176,6 +177,39 @@ test("melisma holds one vowel without repeated consonants; final consonants stay
   assert.equal(joined.length, whole.length); assert.ok(joined.every((v, i) => v === whole[i]), "slices rejoin to the exact full timeline");
   assert.ok(map.pieces.filter(p => p.method === "wsola").every(p => p.ratio > 0));
   assert.equal(result.manifest.original.sampleRate, 48000);
+});
+
+test("phrase endings release into the rest: the take's own decay after a pause, otherwise the final vowel carried on and faded", () => {
+  const target = packFor("בָ־גָ֑ דָֽ׃", "Genesis 1:1"), audio = synthetic(target.identity, { pauseAfter: new Set([1]) });
+  const result = build(recordFor(target, audio), target, audio), map = json(result, "retime-map.json");
+  const speech = parseWav(new Uint8Array(result.artifacts["retimed-speech.wav"])).channelData[0];
+  // Syllable 1 ends phrase 1 and the speaker paused after it: its release copies the pause audio.
+  const copied = map.pieces.find(p => p.kind === "release");
+  assert.ok(copied && copied.method === "copy" && copied.source === "take-decay" && copied.voiced === false);
+  assert.equal(copied.syllableId, target.identity.syllables[1].id);
+  const vowel = map.pieces.find(p => p.role === "vowel" && p.syllableId === copied.syllableId);
+  assert.equal(copied.dstStart, vowel.dstEnd); assert.equal(copied.srcStart, vowel.srcEnd);
+  // The verse-final vowel has no pause after it in the take (the trailing room tone follows), so it
+  // is released from the trailing region too; with no trailing audio it would be sustained instead.
+  assert.ok(map.releases.length >= 1 && map.releases.every(r => r.samples > 0));
+  // Releases fade to nothing, leave a gap before the next lead consonant and keep the total length.
+  assert.equal(speech.length, map.totalSamples);
+  for (const r of map.pieces.filter(p => p.kind === "release")) {
+    assert.ok(Math.abs(speech[r.dstEnd - 1]) < 1e-3, "faded out");
+    const next = map.pieces.find(p => p.dstStart >= r.dstEnd && p.kind !== "silence");
+    if (next) assert.ok(next.dstStart - r.dstEnd >= Math.round(0.04 * 24000), "gap before next phrase");
+  }
+  const fv = json(result, "f0-voicing.json").full;
+  const inRelease = j => map.pieces.some(p => p.kind === "release" && p.dstStart <= (j + 0.5) * 480 && (j + 0.5) * 480 < p.dstEnd);
+  assert.ok(fv.f0.every((hz, j) => !inRelease(j) || hz === 0), "copied breath is unvoiced");
+  // Without a pause after the phrase, the vowel itself is sustained and faded.
+  const joined = synthetic(target.identity, { pauseAfter: new Set() }), r2 = json(build(recordFor(target, joined), target, joined), "retime-map.json");
+  const held = r2.pieces.find(p => p.releaseSamples);
+  assert.ok(held && held.role === "vowel" && held.method === "wsola");
+  assert.ok(r2.releases.some(r => r.source === "sustained"));
+  assert.throws(() => build(recordFor(target, audio), target, audio, { releaseMs: 1000 }), e => e.code === "options");
+  const none = json(build(recordFor(target, audio), target, audio, { releaseMs: 0 }), "retime-map.json");
+  assert.equal(none.releases.length, 0);
 });
 
 test("a split point inside sound moves back to the syllable attack, and an unplaceable split is rejected", () => {

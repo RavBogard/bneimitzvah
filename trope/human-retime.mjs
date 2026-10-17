@@ -18,7 +18,7 @@ import { canonicalJson, sha256, BENCHMARK_LIMITS } from "./benchmark-pack.mjs";
 
 export const RETIME_SCHEMA = "chant-human-retime/v1";
 export const RETIME_DEFAULTS = Object.freeze({ outputRate: 24000, maxConsonantShare: 0.6, minConsonantRatio: 0.5, minVowelMs: 20,
-  fadeMs: 5, maxSplitShiftMs: 2000, f0Fps: 50, warnVowelRatio: 8, warnNoteVowelCoverage: 0.5 });
+  fadeMs: 5, maxSplitShiftMs: 2000, f0Fps: 50, warnVowelRatio: 8, warnNoteVowelCoverage: 0.5, releaseMs: 150, releaseGapMs: 40 });
 export const OUTPUT_RATES = Object.freeze([16000, 22050, 24000, 44100, 48000]);
 // Phonikud characters that carry no voicing; the F0 sent to SVC is 0 over them, as in speech2sing.py.
 export const VOICELESS = Object.freeze(["p", "t", "k", "f", "s", "ʃ", "χ", "h", "ʔ", "ts"]);
@@ -46,7 +46,8 @@ function options(input = {}) {
   const o = { ...RETIME_DEFAULTS, ...input };
   if (Object.keys(input).some(key => !Object.hasOwn(RETIME_DEFAULTS, key)) || !OUTPUT_RATES.includes(o.outputRate)
     || !(o.maxConsonantShare > 0 && o.maxConsonantShare < 1) || !(o.minConsonantRatio > 0 && o.minConsonantRatio <= 1)
-    || !(o.minVowelMs > 0) || !(o.fadeMs >= 0 && o.fadeMs <= 20) || !(o.maxSplitShiftMs >= 0) || o.f0Fps !== 50) fail("options");
+    || !(o.minVowelMs > 0) || !(o.fadeMs >= 0 && o.fadeMs <= 20) || !(o.maxSplitShiftMs >= 0) || o.f0Fps !== 50
+    || !(o.releaseMs >= 0 && o.releaseMs <= 400) || !(o.releaseGapMs >= 0 && o.releaseGapMs <= 200)) fail("options");
   return Object.freeze(o);
 }
 
@@ -99,11 +100,37 @@ export function planRetime(bound, input) {
     if (phone.absent) warnings.push({ code: "consonant-absent", at: syllable.id, phone: phone.phone });
   };
   const silence = (from, to) => { if (to > from) pieces.push({ kind: "silence", method: "silence", voiced: false, dstStart: from, dstEnd: to }); };
-  let cursor = 0;
+  let cursor = 0, pendingRelease = null;
   const vowelMin = Math.ceil(o.minVowelMs * R / 1000);
+  // A phrase's last sound is released into the following rest instead of stopping dead: the take's own
+  // decay or breath when the speaker paused there, otherwise the final vowel (or voiced continuant)
+  // carried on. Either way it fades out completely before the next phrase's lead consonant.
+  const sourceAfter = new Map([...bound.events.map(e => [map(e.start), map(e.end)]), [map(bound.sourceRegion.end), map(bound.record.recording.frames)]]);
+  const CONTINUANT = new Set(["l", "m", "n", "ʁ", "v", "z", "j"]);
+  const release = limit => {
+    if (!pendingRelease) return;
+    const last = pendingRelease, room = limit - last.dstEnd - Math.round(o.releaseGapMs * R / 1000);
+    let len = Math.min(Math.round(o.releaseMs * R / 1000), room);
+    pendingRelease = null;
+    if (len < Math.round(0.02 * R)) return;
+    const decayEnd = sourceAfter.get(last.srcEnd);
+    if (decayEnd !== undefined) {
+      len = Math.min(len, decayEnd - last.srcEnd);
+      if (len < Math.round(0.02 * R)) return;
+      pieces.push({ kind: "release", method: "copy", role: "release", syllableId: last.syllableId, syllable: last.syllable, phone: null, voiced: false,
+        srcStart: last.srcEnd, srcEnd: last.srcEnd + len, dstStart: last.dstEnd, dstEnd: last.dstEnd + len, ratio: 1, source: "take-decay" });
+    } else if (last.role === "vowel" || CONTINUANT.has(last.phone)) {
+      last.releaseSamples = len; last.dstEnd += len; last.method = "wsola"; last.ratio = round6((last.dstEnd - last.dstStart) / (last.srcEnd - last.srcStart));
+    } else return;
+    releases.push({ syllableId: last.syllableId, phone: last.phone, samples: len, source: decayEnd !== undefined ? "take-decay" : "sustained" });
+  };
+  const releases = [];
   for (const phrase of phrases) {
     const b = [...phrase.map(s => toSample(s.startMs)), toSample(phrase.at(-1).endMs)];
     const leadOnsets = bySyllable[phrase[0].index].onset;
+    const naturalLead = leadOnsets.reduce((n, c) => n + length(c), 0);
+    release(b[0] - Math.min(naturalLead, b[0] - cursor));
+    cursor = pieces.length ? pieces.at(-1).dstEnd : cursor;
     const lead = fit(leadOnsets, b[0] - cursor, phrase[0].id), leadLength = lead.reduce((a, c) => a + c, 0);
     silence(cursor, b[0] - leadLength);
     let at = b[0] - leadLength;
@@ -122,7 +149,10 @@ export function planRetime(bound, input) {
       if (c !== b[k + 1]) fail("timeline");
     });
     cursor = b.at(-1);
+    pendingRelease = pieces.filter(p => p.kind === "phone" && p.dstEnd > p.dstStart).at(-1);
   }
+  release(total);
+  cursor = pieces.at(-1).dstEnd;
   silence(cursor, total);
   const sounding = pieces.filter(p => p.dstEnd > p.dstStart);
   for (let i = 1; i < sounding.length; i++) if (sounding[i].dstStart !== sounding[i - 1].dstEnd) fail("timeline");
@@ -175,13 +205,13 @@ export function planRetime(bound, input) {
 
   const dropped = [{ kind: "leading", srcStart: 0, srcEnd: map(bound.sourceRegion.start) }, ...bound.events.map(e => ({ kind: e.kind, srcStart: map(e.start), srcEnd: map(e.end) })),
     { kind: "trailing", srcStart: map(bound.sourceRegion.end), srcEnd: map(bound.record.recording.frames) }].filter(d => d.srcEnd > d.srcStart);
-  return { options: o, rate: R, totalSamples: total, totalMs, pieces, noteMap, melismas, slices, dropped, warnings };
+  return { options: o, rate: R, totalSamples: total, totalMs, pieces, noteMap, melismas, slices, dropped, releases, warnings };
 }
 
 /** Render the plan from the original samples. Same input bytes and plan give the same samples. */
 export function renderRetime(plan, sourceAtRate) {
   const out = new Float64Array(plan.totalSamples), n = Math.round(plan.options.fadeMs * plan.rate / 1000);
-  const phones = plan.pieces.filter(p => p.kind === "phone" && p.dstEnd > p.dstStart);
+  const phones = plan.pieces.filter(p => (p.kind === "phone" || p.kind === "release") && p.dstEnd > p.dstStart);
   for (const p of phones) {
     if (p.srcEnd > sourceAtRate.length) fail("render-bounds");
     const piece = sourceAtRate.slice(p.srcStart, p.srcEnd);
@@ -191,7 +221,9 @@ export function renderRetime(plan, sourceAtRate) {
   phones.forEach((p, i) => {
     const before = phones[i - 1], after = phones[i + 1];
     if (!before || before.dstEnd !== p.dstStart || before.srcEnd !== p.srcStart) fade(out, p.dstStart, p.dstEnd, n, "in");
-    if (!after || after.dstStart !== p.dstEnd || after.srcStart !== p.srcEnd) fade(out, p.dstStart, p.dstEnd, n, "out");
+    if (p.kind === "release") fade(out, p.dstStart, p.dstEnd, p.dstEnd - p.dstStart, "out");
+    else if (p.releaseSamples) fade(out, p.dstStart, p.dstEnd, p.releaseSamples, "out");
+    else if (!after || after.dstStart !== p.dstEnd || after.srcStart !== p.srcEnd) fade(out, p.dstStart, p.dstEnd, n, "out");
   });
   return out;
 }
@@ -249,7 +281,7 @@ export function buildHumanRetime(record, pack, audio, { code, alignmentFileSha25
     const peak = speech.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
     add(PATHS.map, canonicalJson({ schema: "chant-human-retime-map/v1", targetHash: record.target.targetHash, passageId: record.target.passageId,
       units: { source: `original samples mapped to ${plan.rate} Hz by mapSample`, target: `${plan.rate} Hz samples of the executed timeline` },
-      totalSamples: plan.totalSamples, totalMs: plan.totalMs, pieces: plan.pieces, notes: plan.noteMap, melismas: plan.melismas, slices, dropped: plan.dropped,
+      totalSamples: plan.totalSamples, totalMs: plan.totalMs, pieces: plan.pieces, notes: plan.noteMap, melismas: plan.melismas, slices, dropped: plan.dropped, releases: plan.releases,
       warnings: plan.warnings, absentConsonants: plan.pieces.filter(p => p.method === "absent").length, peakAbsolute: round6(peak), reviewDeviation: bound.reviewDeviation }), "retime-map");
     const manifest = { schema: RETIME_SCHEMA, releaseStatus: "private-unreleased", lane: "B-human", stage: "retime",
       targetReview: "pending", targetReviewAssertion: record.target.targetReviewRecordId
@@ -264,7 +296,8 @@ export function buildHumanRetime(record, pack, audio, { code, alignmentFileSha25
       consent: { recordId: r.consentRecordId, scope: r.consentScope, verification: "recorded-only; the record identifier does not establish consent" },
       speaker: { speakerId: r.speakerId, sampleId: r.sampleId, takeNumber: r.takeNumber },
       method: { resampler: RESAMPLER, timeScale: WSOLA, timing: "vowel onset on first note; consonants kept unless over maxConsonantShare; vowel nucleus spans every note of its syllable",
-        rests: "digital silence; source pauses and breaths dropped", options: plan.options, normalisation: "none", outputFormat: "float32 mono WAV" },
+        rests: "digital silence after each phrase's release; source pauses and breaths otherwise dropped",
+        release: "a phrase's last sound fades over up to releaseMs into the rest: the take's own decay where the speaker paused, else the final vowel or voiced continuant sustained", options: plan.options, normalisation: "none", outputFormat: "float32 mono WAV" },
       outputs: { originalSpeech: "not-copied", retimedSpeech: PATHS.speech, dspPitchBaseline: "not-produced", neuralOutput: "not-produced" },
       code, f0Parity: "score F0 from the same B speech plan notes; not a claim about any rendered pitch",
       artifacts: Object.fromEntries(Object.entries(artifacts).map(([path, bytes]) => [path, { role: roles[path], sha256: sha256(bytes), bytes: bytes.length }])) };

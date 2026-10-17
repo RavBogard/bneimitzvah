@@ -191,14 +191,11 @@ export function buildBenchmarkPack(input, assets) {
       if (engineScore.events.length > BENCHMARK_LIMITS.notes || engineScore.seconds > BENCHMARK_LIMITS.seconds || engineScore.units.some(unit => unit.cell.fallback)) fail("score");
       let score = engineScore, breathMs = null;
       if (passage.timing) {
-        // Measured inter-onset times already hold the chanter's breaths, so each syllable the emitter
-        // follows with a breath rest is shortened by that rest, and the score is timed once more.
-        const draft = timedScore(engineScore, passage.timing.syllableMs);
-        const breaths = emitterBreaths(draft, scoreToSoulx(draft, { ...style, profile }));
-        // Never take more than half a syllable: the chanter may not have breathed where the emitter does.
-        const removed = passage.timing.syllableMs.map((ms, k) => Math.min(breaths.get(k) ?? 0, Math.floor(ms / 2)));
-        breathMs = removed.reduce((a, b) => a + b, 0);
-        score = timedScore(engineScore, passage.timing.syllableMs.map((ms, k) => ms - removed[k]));
+        // Every syllable keeps its full measured length. Shortening the syllable before an emitter
+        // breath (whose measured time includes the chanter's own breath) clipped phrase-final words by
+        // ear (Daniel, 2026-10-16), so the emitter's breath rests are added on top and recorded.
+        score = timedScore(engineScore, passage.timing.syllableMs);
+        breathMs = [...emitterBreaths(score, scoreToSoulx(score, { ...style, profile })).values()].reduce((a, b) => a + b, 0);
         if (score.seconds > BENCHMARK_LIMITS.seconds) fail("score");
       }
       const segments = scoreToSoulx(score, { ...style, profile });
@@ -207,7 +204,7 @@ export function buildBenchmarkPack(input, assets) {
       const directory = passage.id;
       for (const [name, data] of [["units", units], ["score", score], ["a-soulx-target", segments], ["b-speech-plan", plan], ["identity-map", identities]]) add(`${directory}/${name}.json`, data);
       passages.push({ id: passage.id, ref: passage.ref, textSha256: passage.textSha256, flags: passage.flags, targetHash, directory,
-        timing: passage.timing ? { source: "measured", recordId: passage.timing.recordId, syllables: passage.timing.syllableMs.length, emitterBreathMsRemoved: breathMs,
+        timing: passage.timing ? { source: "measured", recordId: passage.timing.recordId, syllables: passage.timing.syllableMs.length, emitterBreathMsAdded: breathMs,
           review: "measured values are assertions from a private take; not reviewed here" } : "engine",
         seconds: plan.seconds, segments: segments.length, notes: score.events.length, syllables: syllables.length, targetReview: "pending" });
     }
