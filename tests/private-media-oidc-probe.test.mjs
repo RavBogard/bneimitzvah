@@ -58,7 +58,7 @@ test("default prebuild is silent and has no SDK loading, even with ambient provi
     assert.deepEqual(JSON.parse(invalid.stdout),{ok:false,mode:"invalid",environmentMatch:false,expectation:"none",outcome:"failed"});
     const pkg=JSON.parse(await readFile(new URL("../package.json",import.meta.url),"utf8"));
     assert.equal(pkg.dependencies["@vercel/blob"],"2.8.2");
-    assert.equal(pkg.scripts.prebuild,"node scripts/private-media-oidc-probe.mjs && node scripts/private-media-object-probe.mjs");
+    assert.equal(pkg.scripts.prebuild,"node scripts/private-media-single-write-probe.mjs && node scripts/private-media-oidc-probe.mjs && node scripts/private-media-object-probe.mjs");
     assert.equal(pkg.scripts.build,"next build");
   }finally{await isolated.cleanup();}
 });
