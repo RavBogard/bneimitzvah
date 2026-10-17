@@ -148,6 +148,13 @@
       "when": 1792238392492,
       "tag": "0020_student_recording_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792267004656,
+      "tag": "0021_recording_receipt_admission",
+      "breakpoints": true
     }
   ]
 }
