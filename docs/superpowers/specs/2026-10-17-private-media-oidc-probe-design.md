@@ -1,0 +1,35 @@
+# Settled decisions (Daniel, binding)
+
+Complete the product and deploy at will with Sol implementation and independent high-stakes review. Dedicated private Blob in iad1, Production-only/OIDC and synthetic-first, is approved at the revised ordinary $5–8 monthly planning target with review above$10, not a cap. Do not use static Blob credentials as fallback or switch provider without Daniel. Real recordings, invitations/import and G3 remain separately held.
+
+## Bounded purpose
+
+The one owned private store and its sole Production project connection now exist. Installed CLI created a legacy static-token environment variable, and BLOB_STORE_ID is absent. This does not prove whether the connection already authorizes native OIDC. A supported dashboard upgrade is pending Daniel because the local browser is signed out. Implement a **metadata-only actual-identity probe**, independently reviewed before execution, to prove provider behavior and prepare later media work. No audio/object writes or token-mint HTTP endpoint.
+
+## Source contract
+
+Own a new Node script and ordinary Node tests, exact `@vercel/blob@2.8.2` dependency/lock, and the minimal build hook. Default is disabled: ordinary local/CI/Vercel builds make zero provider calls. Only explicit ephemeral probe flags select production-allow or preview/development-deny, an exact known store ID and a run UUID. No flags or unsupported combination may quietly select another mode. Root controls actual deployment flags; source workers perform no live probe or environment operation.
+
+When enabled, require the pinned portal project/team and matching actual native Vercel environment. Obtain only native VERCEL_OIDC_TOKEN; never fetch owner CLI credentials, pull project environments, accept an arbitrary bearer from a request, or expose a token through HTTP/stdout/log/files. Remove static Blob fallback from the probe process before SDK use, pass explicit OIDC/store ID, and document supported SDK environment override guards. Confirm documented native JWT issuer/audience/project/environment/fresh expiry shape for diagnostics; this is not a locally verified JWT signature or application authorization mechanism. The actual authenticated provider result supplies the access evidence. Reject unsupported claim shapes rather than relabeling development as production.
+
+Make one bounded SDK metadata list request, limited to one item under a fixed synthetic `acceptance/<run UUID>/` prefix, with an abort deadline. Do not inspect/list other stores or media prefixes. Production must succeed; nonproduction must return a recognized access-denied result from the actual provider, with a present fresh matching native identity and the same known store ID. Missing credentials/configuration, network errors, malformed responses or generic exceptions are not evidence of denial. No PUT/copy/delete, bucket operation, callbacks, registrar or database request. Do not print object metadata even if unexpectedly returned.
+
+Output only a closed aggregate result: mode, actual-environment match, fixed expectation, allowed/denied/failed and success boolean. No tokens, hashes of tokens, URLs, names/emails, provider errors, stack traces or environment dumps. Unexpected access or failure makes the explicitly enabled build fail. Standard builds with absent flags remain unchanged apart from the disabled hook.
+
+## Acceptance and rollout
+
+Tests use synthetic identities and injected SDK calls with isolated child environments; no actual network. Meaningful cases cover default zero-call behavior, malformed/partial flags, wrong project/team/environment/issuer/audience/expiry, static fallback absence, constrained metadata prefix/limit/deadline, recognized denial versus transport failure, unexpected allow, and hostile error redaction. Root/peer review the exact dependency and build hook. Existing engine stays untouched.
+
+Exact hosted Windows/Linux/native/browser CI precedes deployment. Root runs actual native Production and known-store Preview/Development probes in their corresponding contexts after the implementation review; absent BLOB_STORE_ID alone is never environment isolation proof. A successful production probe may justify a separately reviewed narrow configuration repair (nonsecret ID plus removal of only the newly created legacy variable), if the documented dashboard upgrade remains unavailable. No repair is authorized by a test stub or decoded JWT alone. Upload, conditional retirement, private range delivery and cleanup have separate later acceptance.
+
+### Root execution direction (review before use)
+
+Use a clean exact-commit source checkout, containing tracked files only and explicit existing project/team identity. Vercel's documented [deployment flags](https://vercel.com/docs/cli/deploy) support ephemeral `--build-env` values and `--prod --skip-domain`: perform native hosted builds with the nonsecret probe flags only, never a local/prebuilt identity simulation. Production verification is staged without domain promotion; Preview is a separate native build. Verify the actual deployment project, target, source and result through closed API projections, and verify the canonical alias still points to the accepted production deployment. Ordinary later builds receive no probe flags. No persistent project probe settings, public diagnostic endpoint or additional project/store is required.
+
+Development verification uses only the documented project-token mechanism after independently checking its actual source/claims; capture the short-lived token directly in memory, never terminal/log/argv or an environment-pull file. Vercel's [OIDC documentation](https://vercel.com/docs/oidc) distinguishes native hosted build tokens from local-development tokens. The existing owner CLI credential may authorize the deployment/control-plane operation, but it must never become the Blob probe's identity. An unexpected response or uncertain deployment write outcome requires read-only reconciliation before retry.
+
+The pinned SDK's specific environment-not-allowed error is the only passing negative-provider result. Generic forbidden, expired identity, configuration, billing and transport failures are failures to establish isolation. Recheck identity freshness after the awaited result, and test the real pinned SDK error mapping through an injected response, rather than relying solely on test-defined error classes. The final operator helper/command, exact source and all preconditions still require root and independent acceptance; this direction is not evidence that actual probes passed.
+
+## Open items that wait on Daniel
+
+The dashboard OIDC upgrade can proceed when convenient; no keys or tokens in chat. No further approval is needed for this bounded source work or the already approved synthetic verification. A provider/scope/spending change remains Daniel's decision. Neither this probe nor its build hook enables student audio.
