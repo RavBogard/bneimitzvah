@@ -24,6 +24,38 @@ test("private chant-benchmark records are rejected even under the engine and fix
   assert.deepEqual(entryProblems("trope/human-alignment.mjs", 'export const ALIGNMENT_SCHEMA = "chant-human-alignment/v1";'), []);
 });
 
+test("private reference-index JSON is rejected through allow-lists, escaped keys, arrays, BOM and source extensions", () => {
+  const record = { schema: "pockettorah-verse-index/v1", recordings: [] };
+  const variants = [JSON.stringify(record), JSON.stringify({ nested: [record] }), '\uFEFF' + JSON.stringify(record), '{"sch\\u0065ma":"pockettorah-verse-index\\/v1","recordings":[]}'];
+  for (const file of ["trope/synthetic.json", "tests/fixtures/trope/synthetic.json", "tests/fixtures/portal/synthetic.json", "src/synthetic.ts"]) {
+    for (const content of variants) assert.ok(entryProblems(file, content).includes("private reference-audio index"), file);
+  }
+  assert.ok(entryProblems("tests/fixtures/portal/synthetic.jsonl", 'not JSON\n' + JSON.stringify(record)).includes("private reference-audio index"));
+  assert.ok(entryProblems("tests/fixtures/portal/synthetic.json", '{"schema":"pockettorah-verse-index/v1",').includes("private reference-audio index"));
+});
+
+test("public source strings naming the reference-index schema are code rather than private records", () => {
+  for (const source of ['export const INDEX_SCHEMA = "pockettorah-verse-index/v1";', 'const synthetic = { schema: "pockettorah-verse-index/v1", recordings: [] };', 'const example = \'{"schema":"pockettorah-verse-index/v1"}\';', '// {"schema":"pockettorah-verse-index/v1"}\nexport {};']) {
+    assert.deepEqual(entryProblems("scripts/reference-synthetic.mjs", source), []);
+  }
+  assert.deepEqual(entryProblems("tests/fixtures/portal/synthetic.json", JSON.stringify({ code: '{"schema":"pockettorah-verse-index/v1"}' })), []);
+  assert.deepEqual(entryProblems("tests/fixtures/portal/synthetic.json", JSON.stringify({ schema: "reference-verse/v1" })), []);
+});
+
+test("staged reference-index JSON is rejected even after its working copy has been replaced with safe synthetic data", async () => {
+  const isolation = await isolatedEnv(), root = await mkdtemp(join(tmpdir(), "portal-reference-policy-"));
+  const git = (...args) => execFileSync("git", args, { cwd: root, env: isolation.env, stdio: "pipe" });
+  try {
+    git("init", "-b", "main"); await mkdir(join(root, "tests", "fixtures", "portal"), { recursive: true });
+    const file = "tests/fixtures/portal/synthetic-reference.json";
+    await writeFile(join(root, file), JSON.stringify({ schema: "pockettorah-verse-index/v1", recordings: [] })); git("add", file);
+    await writeFile(join(root, file), '{"synthetic":true}');
+    const result = await inspectRepository(root, isolation.env);
+    assert.ok(result.findings.includes(`${file} (index): private reference-audio index`));
+    assert.ok(!result.findings.includes(`${file}: private reference-audio index`));
+  } finally { await rm(root, { recursive: true, force: true }); await isolation.cleanup(); }
+});
+
 test("reviewed config and synthetic fixture paths do not bypass content checks", () => {
   assert.deepEqual(entryProblems(".impeccable/config.json", '{"version":1}'), []);
   assert.deepEqual(entryProblems("tests/fixtures/portal/student.json", '{"email":"fixture@example.test"}'), []);
