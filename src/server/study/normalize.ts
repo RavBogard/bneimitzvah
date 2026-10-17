@@ -67,8 +67,10 @@ export function normalizeHebrew(input: unknown): HebrewVerse {
       if (semantic === "mam-kq") {
         const children = el.childNodes.filter(child => !(child.nodeName === "#text" && /^\s*$/.test((child as DefaultTreeAdapterMap["textNode"]).value)));
         if (children.length !== 2) invalid();
-        const written = element(children[0]), read = element(children[1]);
-        if (written.tagName !== "span" || read.tagName !== "span" || classes(written).join() !== "mam-kq-k" || classes(read).join() !== "mam-kq-q") invalid();
+        const sides = children.map(element);
+        const written = sides.find(side => side.tagName === "span" && classes(side).join() === "mam-kq-k");
+        const read = sides.find(side => side.tagName === "span" && classes(side).join() === "mam-kq-q");
+        if (!written || !read) return invalid();
         const text = (n: Element) => plain(n.childNodes.map(child => basic(child, true)).join(""), true).trim();
         const k = text(written), rawQ = text(read), q = rawQ.startsWith("[") && rawQ.endsWith("]") ? rawQ.slice(1, -1).trim() : rawQ;
         if (!k || !q || /[\[\]]/.test(k + q) || !/[א-ת]/u.test(k) || !/[א-ת]/u.test(q)) invalid();
