@@ -1,5 +1,7 @@
 # Recording manifest upload and atomic finalization
 
+**PARKED outside 1.0 by Daniel's 2026-10-17 revised scope.** Design acceptance is preserved; implementation checkpoint `277eca96adbd7b1b59394e0ff27f5f7abaec5e8f` remains on `codex/recording-manifest-finalization`, outside main/production and without independent source acceptance. This document does not authorize further recording implementation or native operations. See the current kickoff STATE.
+
 ## Settled decisions (Daniel, binding)
 
 Finish the complete product with Sol implementation and independent recording-access review; root owns architecture and final integration. Preserve private/submitted access, linked-child practice authority, one-calendar-year recording retention and the generated-chant G3 gate. Use the already approved private Production store with no new spending/service scope. This contract covers one provider-disabled internal checkpoint only: no HTTP/client/production worker, real audio, import/invitation/mail or production migration is enabled.

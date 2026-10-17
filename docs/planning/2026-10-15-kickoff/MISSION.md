@@ -4,6 +4,16 @@ Filed 2026-10-15 from the kickoff interview in Cowork. This is the authority doc
 
 **Amended 2026-10-16:** Daniel's later rulings 27–59 in [PLAN-REVIEW.md](../2026-10-16-review/PLAN-REVIEW.md#1-rulings-from-this-session-daniel-binding-2026-10-16) are folded in below. Original numbering and dated decisions are retained; that review preserves the earlier wording and interview record. Its section 3 mechanisms remain proposals, subject to Astra's integration corrections and bounded design review. These requirements do not claim completed implementation.
 
+## Current 1.0 scope — Daniel, 2026-10-17
+
+This revision supersedes older scope and ordering below. Generated trope voices are **outside 1.0**. Student recordings are **parked**: the internal prototype is not a usable finished feature. Preserve its checkpoints without finishing or activating upload, submission, retention workers or recording controls for this release. Continue storage work only when needed for reference playback.
+
+The first priority is **existing human reference recordings playable by word and verse**, with synchronized Hebrew highlighting and selected-word/verse looping. Independent pitch adjustment is desirable only if speed and text alignment remain correct. Recover and reuse the PocketTorah reference index/contract already researched; do not restart source discovery or invent word timings. Reference recordings are a primary feature, not an interim generated-voice substitute. Generated-chant G1/G2/G3 gates remain binding on future generated assets; they do not gate authentic reference playback. Reference provenance, attribution, timing review and Daniel's listening acceptance still apply.
+
+Next: (1) word/grammar tools, Hebrew syllables/stress, commentary and source assignments; (2) family honors and scoped honoree links; (3) MCP, read-only Maven and the owned roster Sheet; (4) final integration, deployment and Daniel's testing. Offline/PWA and notification extras follow 1.0. Essential sign-in and explicitly initiated invitation mail remain distinct; quiet imports still send nothing. No other human testing before the revised product is complete and Daniel approves it.
+
+Existing privacy, authorization, repository protection, quiet-import, licensing and spending rules remain. Historical generated-voice/recording plans and retention decisions are preserved for future work, not current release requirements.
+
 ## What this is
 
 A web-app portal for child and adult Beit Mitzvah students at Central Reform Congregation (CRC), St. Louis, built so other congregations can be added later. A student finds their Torah and haftarah readings, equally prominent, and the service parts they lead: Hebrew with vowels and cantillation, translations, trope and recording practice, chosen commentary and translation tools. Tutors and rabbis assign the material, leave notes and hear submitted recordings. The product scope is reading and service preparation; d'var Torah, mitzvah projects and general family logistics are outside 1.0.

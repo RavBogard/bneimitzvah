@@ -1,5 +1,7 @@
 # Manifest upload and finalization independent design review
 
+**PARKED outside 1.0, Daniel 2026-10-17.** This historical design verdict is preserved. Implementation checkpoint `277eca96` has not received independent source acceptance and stays outside main/production. Current work is reference playback; this review is not authority to continue student recording implementation or operations.
+
 Accepted for the bounded provider-disabled internal checkpoint against the [root-authored concrete spec](../../superpowers/specs/2026-10-17-recording-manifest-finalization-design.md), Git blob **`e5e0c6a0cf565e55a00053014c9dd5f5b5aa7e67`**, on integrated base `ddc64b2a3d01ed8948ce1173e3141229b6822e71`. The staged spec is unchanged by this reviewer. This is design acceptance, not source/native/provider/production acceptance; no implementation or operation was performed.
 
 The selected deliverable is one coherent internal path: synthetic canonical take, immutable server-owned chunks, whole-WAV verification, exact original-ID ledger/audit and testable retirement. Additive persistence and disabled orchestration belong in that checkpoint. No extra delegated upload/MPU/general provider-testing framework or separately released prerequisite is required. One author and a different adversarial reviewer should implement/verify it against the existing A/B/C/D/Q contracts.
