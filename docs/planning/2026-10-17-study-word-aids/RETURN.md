@@ -1,0 +1,9 @@
+# Hebrew syllable and stress foundation
+
+Separate checkpoint based on reference release0731928; no UI, endpoint, database, provider, audio or engine changes. The recording-manifest-finalization branch remains preserved at277eca9; its checkout is reused only after confirming a clean tree. No parked recording change was imported.
+
+The server adapter reuses the existing whole-verse analysis, then proves exact canonical NFC/qere/maqaf word reconstruction before returning bounded syllable ranges and stress. Special spoken forms, unaccented or ambiguous stress and unsupported poetic systems stay unavailable. The client-safe strict parser binds actual expected words/ref/hash/count, copies and freezes the result, and carries no Hebrew corpus, IPA or transliteration. Minimal engine declaration returns unknown so the adapter validates its result.
+
+Sol implementation and independent review accepted the frozen source unchanged. Combined synthetic tests plus unchanged projection/annotation checks pass35/35; both workers report typecheck and repository protection3/3 pass. Independent cases cover qere/maqaf/NFD/hash scope, divine/Jerusalem substitutions, nonfinal meteg, every possible UTF16 cut, malformed accessors/shapes, bounds and forged mappings. Two initial reviewer fixture assumptions were corrected against the existing engine; no product assertion or source was relaxed. This is reconstruction/provenance evidence, not corpus-wide linguistic, listening, UI or runtime acceptance.
+
+Root integrates only the six listed source/spec/test paths and this note on the isolated word-aid branch. Exact branch CI and later authorized endpoint/UI composition remain separate gates. The active native player deployment continues to use the frozen0731928 archive, not this new checkpoint. No real roster import, invitation, mail or provider mutation occurred.
