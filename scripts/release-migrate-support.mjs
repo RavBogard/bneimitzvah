@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 export const RELEASE_BASE = "4ad7e0c110cb30819b948429a7b65a1fcc5e35f9";
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-export const RELEASE_FILES = ["scripts/release-migrate.mjs", "scripts/release-migrate-support.mjs", "scripts/release-migrate-catalog.mjs", "scripts/release-migrate-reference.json", "scripts/db-migrate.mjs"];
+export const RELEASE_FILES = ["scripts/release-migrate.mjs", "scripts/release-migrate-support.mjs", "scripts/release-migrate-catalog.mjs", "tests/fixtures/portal/release-migrate-reference.json", "scripts/db-migrate.mjs"];
 export const NEW_TABLES = ["service_catalog", "service_catalog_lifecycle", "student_service_plan", "verse_assessment", "verse_self_check", "lesson_log", "practice_day", "practice_event"].sort();
 export const NEW_FUNCTIONS = ["portal_immutable_service_catalog", "portal_service_lifecycle_revision", "portal_progress_version", "portal_lesson_log_version", "portal_practice_anniversary_due", "portal_practice_ceremony_change"].sort();
 export const sha = value => createHash("sha256").update(value).digest("hex");
@@ -84,7 +84,7 @@ export function sourceContract(expectedCommit, options = {}) {
     return { index, tag: entry.tag, createdAt: entry.when, hash: lf, historicalAllowed: index < 11 || index === 13 ? [...new Set([lf, crlf])] : [lf] };
   });
   const provenance = sha(Buffer.from(JSON.stringify([...blobs].map(([path, bytes]) => [path, sha(bytes)]))));
-  const reference = JSON.parse(read("scripts/release-migrate-reference.json").toString("utf8"));
+  const reference = JSON.parse(read("tests/fixtures/portal/release-migrate-reference.json").toString("utf8"));
   need(reference.version === 1 && reference.sourceCommit === RELEASE_BASE && reference.migrationsSHA256 === provenance && reference.baseline && reference.final);
   const historicalFunctions = historicalFunctionContract(reference, blobs.get(`${folder}/${migrations[2].tag}.sql`).toString("utf8"), migrations[2]);
   const recheck = () => { check(); for (const [path, bytes] of blobs) need(bytes.equals(read(path))); for (const path of RELEASE_FILES) need(git("show", `${expectedCommit}:${path}`).equals(read(path))); };

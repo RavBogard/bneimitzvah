@@ -13,7 +13,8 @@ function source() {
   return { migrations, recheck() {}, reference: { baseline: { tables: [{ name: "student" }] }, final: { tables: ["student", ...NEW_TABLES].sort().map(name => ({ name })) } } };
 }
 function manifest(s = source()) {
-  return { version: 1, migrationUrl: "postgresql://release_owner:synthetic-password@ep-synthetic.neon.tech/synthetic?sslmode=require",
+  const url = new URL("postgresql://ep-synthetic.neon.tech/synthetic?sslmode=require"); url.username = "release_owner"; url.password = "synthetic-password";
+  return { version: 1, migrationUrl: url.href,
     expected: { hostname: "ep-synthetic.neon.tech", database: "synthetic", owner: "release_owner", ownerOid: "501", runtimeRole: "release_runtime", serverMajor: 18, tenantId: "crc", canonicalOrigin: "https://beitmitzvah.centralreform.org" },
     historicalPrefix: s.migrations.slice(0, 15).map((migration, index) => ({ id: index + 1, hash: migration.hash, createdAt: migration.createdAt })),
     provenance: { sourceCommit: RELEASE_BASE, method: "owner-readonly", observedAt: "2026-10-16T00:00:00.000Z" } };
@@ -160,7 +161,7 @@ function sourceFixture() {
   const records = ["portal_immutable_audit", "portal_immutable_columns"].map(name => ({ name, arguments: "", source: "\nBEGIN RETURN NEW; END " }));
   const functions = records.map(row => ({ name: row.name, arguments: row.arguments, sha256: sha(JSON.stringify(canonical(row))) }));
   const files = new Map(blobs);
-  for (const path of RELEASE_FILES) files.set(path, Buffer.from(path === "scripts/release-migrate-reference.json" ? JSON.stringify({ version: 1, sourceCommit: RELEASE_BASE, migrationsSHA256: provenance, baseline: { tables: [], functions }, final: { tables: [], functions }, historicalFunctions: records }) : "// pinned\n"));
+  for (const path of RELEASE_FILES) files.set(path, Buffer.from(path === "tests/fixtures/portal/release-migrate-reference.json" ? JSON.stringify({ version: 1, sourceCommit: RELEASE_BASE, migrationsSHA256: provenance, baseline: { tables: [], functions }, final: { tables: [], functions }, historicalFunctions: records }) : "// pinned\n"));
   const committed = new Map(files);
   let dirty = false;
   const git = (...args) => {
@@ -180,7 +181,7 @@ test("source contract checks exact Git bytes and rejects CRLF, dirty/untracked m
 });
 
 test("historical expected function bytes are derived only from chosen migration2 LF or CRLF", () => {
-  const reference = JSON.parse(readFileSync(new URL("../scripts/release-migrate-reference.json", import.meta.url)));
+  const reference = JSON.parse(readFileSync(new URL("./fixtures/portal/release-migrate-reference.json", import.meta.url)));
   const sql = execFileSync("git", ["show", `${RELEASE_BASE}:src/server/db/migrations/0002_tenant_security.sql`], { windowsHide: true }).toString("utf8");
   const s = source(); s.migrations[2] = { ...s.migrations[2], hash: sha(sql), historicalAllowed: [sha(sql), sha(sql.replace(/\n/g, "\r\n"))] }; s.reference = reference;
   const records = historicalFunctionContract(reference, sql, s.migrations[2]); s.historicalFunctions = records;

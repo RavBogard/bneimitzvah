@@ -47,7 +47,7 @@ async function fixture(options = {}) {
     }
     await writeFile(join(folder, "meta", "_journal.json"), JSON.stringify({ ...journal, entries: journal.entries.slice(0, 15) }));
     await migrate(drizzle(owner, { logger: false }), { migrationsFolder: folder });
-    const reference = JSON.parse(await readFile(new URL("../../scripts/release-migrate-reference.json", import.meta.url), "utf8"));
+    const reference = JSON.parse(await readFile(new URL("../fixtures/portal/release-migrate-reference.json", import.meta.url), "utf8"));
 
     await query(owner, `INSERT INTO public.student(tenant_id,first_name,last_name,ceremony_date,parent_email) VALUES('crc','Synthetic','Release','2027-01-02','fixture@example.test')`);
     const prefix = (await query(owner, "SELECT id,hash,created_at FROM drizzle.__drizzle_migrations ORDER BY created_at,id")).rows.map(row => ({ id: row.id, hash: row.hash, createdAt: Number(row.created_at) }));
@@ -57,7 +57,8 @@ async function fixture(options = {}) {
     const source = { migrations, reference, historicalFunctions: historicalFunctionContract(reference, securitySQL, migrations[2]), recheck() {} };
     // Trusted direct composition lets this disposable test attest PG16/18 and
     // loopback. The public CLI still requires the production Neon/PG18 contract.
-    const parsed = parseTarget({ version: 1, migrationUrl: `postgresql://${ownerRole}:${password}@ep-synthetic.neon.tech/${database}?sslmode=require`,
+    const url = new URL("postgresql://ep-synthetic.neon.tech"); url.username = ownerRole; url.password = password; url.pathname = `/${database}`; url.searchParams.set("sslmode", "require");
+    const parsed = parseTarget({ version: 1, migrationUrl: url.href,
       expected: { hostname: "ep-synthetic.neon.tech", database, owner: ownerRole, ownerOid: identity.oid, runtimeRole, serverMajor: 18, tenantId: "crc", canonicalOrigin: "https://beitmitzvah.centralreform.org" },
       historicalPrefix: prefix, provenance: { sourceCommit: RELEASE_BASE, method: "owner-readonly", observedAt: "2026-10-16T00:00:00.000Z" } }, source);
     // Preserve the REAL parseTarget startup/query options. Override only the
