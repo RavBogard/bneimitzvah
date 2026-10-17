@@ -1,0 +1,20 @@
+# Recording foundation release — 2026-10-17
+
+Main and canonical production are exact `e9b0287b67c8e4644cb2383be8205ff14f2f4c97`, READY deployment `dpl_Ddi1uAWUe9Uif9s6PRAeU4ukxRsN`, at https://beitmitzvah.centralreform.org. This completes the bounded metadata/capture prerequisite release, **not the student recording feature**.
+
+## Included and verified
+
+- Accepted all-private/submitted ledger and anniversary retention from f5, cleanly combined with released calendar1b. Staff access remains submitted-only; parent dashboard is denied, while exact linked-child practice authority is supported.
+- Unwired streaming canonical WAV verifier and headless browser microphone capture. Explicit capture only, actual24kHz mono PCM16, bounded ten-minute take, silent worklet output and lifecycle cleanup. No workspace recording UI, upload route or provider byte delivery is wired.
+- Explicit0020 release operator76 and independent reviewa2, plus independent capture reviewe9. Historical operators/migrations remain unchanged; source pins and future/dirty/refusal guards remain intact.
+- All four [exact hosted jobs39040021984](https://github.com/RavBogard/bneimitzvah/actions/runs/39040021984) passed: Windows/Linux Node254 each and106 app files, both typechecks/builds; nativeSQL34, restricted PostgreSQL suite, authenticated-browser30 files and public-browser suite. Full ignored log: `.local-logs/recording-foundation-final-ci-complete.log`.
+
+Root's separate exact-LF operational clone exercised the default CLI against the protected actual PostgreSQL18 target: check-only returned ledger20, then explicit apply returned ledger21. The operator verified every original migration entry, role and preexisting-row digest preserved, and the new recording table empty. No generic migration bypass, historical-source normalization, roster import, invitation or audio operation occurred. Closed proof: `.local-logs/recording-release-production-migration.log`. Prior1b READY rollback metadata is immutable outside Git; application rollback can retain this additive, empty0020 schema and must not run an improvised DOWN migration.
+
+Matching live checks pass: canonical200, anonymous private401/no-store, alias pages canonicalized/alias APIs denied, Google challenge bound, test route404. New recording metadata denies anonymous access; collection POST is405 and creation route404. Served public worklet bytes equal the exact commit. Matching native auth canary passed five route events/five native rows with zero observed secret canaries. Closed proof: `.local-logs/provider-bootstrap/recording-release-live-and-native.log`. Actual phone microphone/listening and workspace lifecycle integration remain future acceptance, not claims of this source slice.
+
+## Next bounded work
+
+Daniel approved dedicated private Blob in iad1, Production-only/OIDC, synthetic-first, at the [revised ordinary $5–8 monthly planning target](../../superpowers/research/2026-10-17-private-media-spend-notice.md), reviewing forecasts above$10 without claiming a hard cap. Provisioning helper/independent review comes next. The high-level [media transport contract](../../superpowers/specs/2026-10-17-private-recording-media-design.md) is reviewed; the [receipt/admission/worker proposal](RECEIPT-DESIGN-PROPOSAL.md) is still a proposal and no new schema/runtime work is approved by it alone.
+
+Actual scoped token/byte/range/environment behavior and [late-upload retirement](../../superpowers/research/2026-10-17-private-upload-quiescence.md) must be resolved before real audio. In particular, expiry/404 alone cannot prove a late PUT cannot recreate deleted media. Keep0020 immutable and use a later independently reviewed migration for WAV activation, receipts and cleanup authority. No provider switch is inferred. Real roster import/family invitations, new licensing, second tenant and generated-chant G3 remain separately held. Continue authorized delivery; do not retire the product at this prerequisite checkpoint.
