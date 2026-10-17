@@ -39,6 +39,29 @@ it("builds only exact official chapter requests and projects only assigned verse
   expect(Object.isFrozen(page) && Object.isFrozen(page.verses)).toBe(true);
 });
 
+it("normalizes an unassigned plain trivial verse without poisoning the selected chapter page", async () => {
+  const data = payload();
+  data.versions[0].text[1] = 'אָב <span class="mam-kq-trivial">בָ֣</span> ג׃';
+  const fetch = vi.fn<typeof globalThis.fetch>(async () => response(data));
+  const page = await reader(fetch)(request(["Genesis 1:1"]));
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(page.verses.map(verse => verse.ref)).toEqual(["Genesis 1:1"]);
+  expect(page.verses[0].hebrew.text).toBe("אָ֑ב ג׃".normalize("NFC"));
+  expect(page.translation.status).toBe("available");
+  const selected = await reader(fetch)(request(["Genesis 1:2"]));
+  expect(selected.verses[0].hebrew.text).toBe("אָב בָ֣ ג׃".normalize("NFC"));
+  expect(selected.verses[0].hebrew.readingText).toBe(selected.verses[0].hebrew.text);
+  expect(selected.verses[0].hebrew.segments.some(segment => segment.kind === "alternative")).toBe(false);
+});
+
+it.each([
+  '<span class="mam-kq-trivial"><b>בָ</b></span>', '<span class="mam-kq-trivial extra">בָ</span>',
+  '<span class="mam-kq-trivial" data-hidden="synthetic">בָ</span>', '<span class="mam-unreviewed">בָ</span>',
+])("still rejects a chapter containing unreviewed markup outside the selected verse (%#)", async markup => {
+  const data = payload(); data.versions[0].text[1] = `אָב ${markup} ג׃`;
+  await expect(reader(async () => response(data))(request(["Genesis 1:1"]))).rejects.toMatchObject({ code: "invalid-response" });
+});
+
 it("plans canonical pages under both caps and rejects tampered row order/ranges, arbitrary versions and empty offsets", () => {
   const many: VerseCounts = { Genesis: Array.from({ length: 10 }, () => 20) };
   const ranges = ["Genesis 1:1-6:20"], verses = expandReadingRanges(ranges, "torah", many);
