@@ -181,8 +181,38 @@ export async function runPrivateMediaSingleReadProbe(env=process.env,deps={}){
   finally{finished=true;clearTimeout(timer);controller.abort();for(const resource of resources)discard(resource);}
 }
 
+export const PRIVATE_MEDIA_IDENTITY_WRITE_PROBE=Object.freeze({...P,schema:'private-media-single-write-identity/v2',mode:'single-write-identity-v2'});
+const V=PRIVATE_MEDIA_IDENTITY_WRITE_PROBE;
+const identityWriteRefused=()=>Object.freeze({schema:V.schema,ok:false,phase:'selection',outcome:'failed',writeAttempted:false,requiresReconciliation:false,race:'none',evidence:'none',checks:Object.freeze({ordinaryVerified:false,staleDenied:false,ordinaryRetired:false,heldRetired:false})});
+/** Separately selected identity representation; the frozen writer owns all
+ * protocol, body, ETag, deadline and reconciliation decisions unchanged. */
+export async function runPrivateMediaIdentityWriteProbe(env=process.env,deps={}){
+  let translated,fetchIdentity;
+  try{
+    const supplied=Object.keys(env).filter(k=>k.startsWith(prefix));if(!supplied.length)return null;
+    need(supplied.length===3&&supplied.every(k=>flags.includes(k))&&env[flags[0]]===V.mode&&env[flags[1]]===V.storeId);
+    const run=env[flags[2]];keyFor(run,'normal');need(!Object.keys(env).some(k=>k.startsWith('PRIVATE_MEDIA_OIDC_PROBE_')||k.startsWith('PRIVATE_MEDIA_OBJECT_PROBE_')));
+    translated=new Proxy(Object.create(null),{ownKeys:()=>Reflect.ownKeys(env),getOwnPropertyDescriptor:()=>({enumerable:true,configurable:true}),
+      get:(_,k)=>k===flags[0]?P.mode:env[k],set:(_,k,v)=>Reflect.set(env,k,v),deleteProperty:(_,k)=>Reflect.deleteProperty(env,k)});
+    fetchIdentity=async(url,options)=>{
+      let response;
+      try{
+        need(url instanceof URL&&url.origin===origin&&['normal','held'].some(slot=>url.pathname===`/${keyFor(run,slot)}`)&&!url.username&&!url.password&&!url.hash);
+        need(url.searchParams.size===3&&url.searchParams.get('cache')==='0'&&url.searchParams.has('vercel-blob-delegation')&&/^[A-Za-z0-9_-]{43}$/.test(url.searchParams.get('vercel-blob-signature')??''));
+        need(object(options)&&Object.keys(options).sort().join(',')==='cache,credentials,headers,method,redirect,referrerPolicy,signal'&&options.method==='GET'&&options.redirect==='error'&&options.credentials==='omit'&&options.referrerPolicy==='no-referrer'&&options.cache==='no-store');
+        need(object(options.headers)&&Object.keys(options.headers).join(',')==='If-Match'&&tag(options.headers['If-Match'])&&options.signal instanceof AbortSignal&&!options.signal.aborted);
+        response=await(deps.fetch??globalThis.fetch)(url,{...options,headers:{...options.headers,'Accept-Encoding':'identity'}});
+        need(!options.signal.aborted&&response&&response.headers&&typeof response.headers.has==='function'&&!response.headers.has('content-encoding')&&typeof response.url==='string'&&response.url===url.href);
+        return response;
+      }catch{try{discard(response?.body);}catch{}throw 0;}
+    };
+  }catch{return identityWriteRefused();}
+  const value=await runPrivateMediaSingleWriteProbe(translated,{...deps,fetch:fetchIdentity});
+  return value===null?null:Object.freeze({...value,schema:V.schema});
+}
+
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
-  const reading=process.env[flags[0]]===Q.mode;
-  const value=process.argv.length===2?(reading?await runPrivateMediaSingleReadProbe():await runPrivateMediaSingleWriteProbe()):reading?readResult(false,'selection',readObservations()):{schema:P.schema,ok:false,phase:'selection',outcome:'failed',writeAttempted:false,requiresReconciliation:false,race:'none',evidence:'none',checks:{ordinaryVerified:false,staleDenied:false,ordinaryRetired:false,heldRetired:false}};
+  const reading=process.env[flags[0]]===Q.mode,identityWriting=process.env[flags[0]]===V.mode;
+  const value=identityWriting?(process.argv.length===2?await runPrivateMediaIdentityWriteProbe():identityWriteRefused()):process.argv.length===2?(reading?await runPrivateMediaSingleReadProbe():await runPrivateMediaSingleWriteProbe()):reading?readResult(false,'selection',readObservations()):{schema:P.schema,ok:false,phase:'selection',outcome:'failed',writeAttempted:false,requiresReconciliation:false,race:'none',evidence:'none',checks:{ordinaryVerified:false,staleDenied:false,ordinaryRetired:false,heldRetired:false}};
   if(value){process.stdout.write(JSON.stringify(value)+'\n');process.exitCode=value.ok?0:1;}
 }
