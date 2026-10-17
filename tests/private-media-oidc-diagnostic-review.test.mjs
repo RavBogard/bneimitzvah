@@ -38,19 +38,19 @@ test("diagnostics preserve the original first failing predicate when several val
     closed(result); assert.equal(imports, 0);
     assert.deepEqual(records, [{ schema: "private-media-oidc-diagnostic/v1", phase, check }]);
   }
-  let tokenReads = 0; const records = [], env = environment({}, {}, { NODE_OPTIONS: "synthetic-sensitive" });
+  let tokenReads = 0; const records = [], env = environment({}, {}, { DEBUG: "synthetic-sensitive" });
   Object.defineProperty(env, "VERCEL_OIDC_TOKEN", { get() { tokenReads++; throw Error("must not read identity yet"); } });
   closed(await probe(env, { onDiagnostic: r => records.push(r) }));
   assert.equal(tokenReads, 0);
-  assert.deepEqual(records, [{ schema: "private-media-oidc-diagnostic/v1", phase: "environment-guard", check: "node-options" }]);
+  assert.deepEqual(records, [{ schema: "private-media-oidc-diagnostic/v1", phase: "environment-guard", check: "debug" }]);
 });
 
 test("diagnostic callback gets one frozen literal record and cannot replace the fixed failure by throwing", async () => {
   let calls = 0;
-  const result = await probe(environment({}, {}, { NODE_OPTIONS: "synthetic-sensitive" }), {
+  const result = await probe(environment({}, {}, { DEBUG: "synthetic-sensitive" }), {
     onDiagnostic(...args) {
       calls++; assert.equal(args.length, 1);
-      assert.deepEqual(args[0], { schema: "private-media-oidc-diagnostic/v1", phase: "environment-guard", check: "node-options" });
+      assert.deepEqual(args[0], { schema: "private-media-oidc-diagnostic/v1", phase: "environment-guard", check: "debug" });
       assert.ok(Object.isFrozen(args[0]));
       assert.throws(() => { args[0].check = "synthetic-sensitive"; }, TypeError);
       throw Error("synthetic-sensitive callback exception");
@@ -59,7 +59,7 @@ test("diagnostic callback gets one frozen literal record and cannot replace the 
   closed(result); assert.equal(calls, 1);
   let accesses = 0; const deps = {};
   Object.defineProperty(deps, "onDiagnostic", { get() { accesses++; throw Error("synthetic-sensitive accessor"); } });
-  closed(await probe(environment({}, {}, { NODE_OPTIONS: "synthetic-sensitive" }), deps));
+  closed(await probe(environment({}, {}, { DEBUG: "synthetic-sensitive" }), deps));
   assert.equal(accesses, 1);
 });
 
