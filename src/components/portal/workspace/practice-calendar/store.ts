@@ -6,7 +6,10 @@ import { dayOrdinal, dayString, PracticeCalendarError, type PracticeAck, type Pr
 
 type Request = (mode: ReadingMode, studentId: string, operation: PracticeOperation, signal: AbortSignal) => Promise<PracticeDates | PracticeAck>;
 export type PracticeCalendarState = { status: "off" | "loading" | "unavailable" | "ended" } | { status: "ready"; serverDay: string; fromDate: string; throughDate: string; dates: ReadonlySet<string> };
-const scopeOf = (value: Assigned) => JSON.stringify([value.mode, value.student.id, value.context?.id ?? null, value.context?.authorityRevision ?? null, value.readings.map(row => [row.id, row.revision])]);
+const scopeOf = (value: Assigned) => JSON.stringify([value.mode, value.student.id, value.context?.id ?? null, value.context?.authorityRevision ?? null]);
+const materialOf = (target: PracticeTarget) => JSON.stringify(target.type === "verse"
+  ? [target.type, target.kind, target.assignmentId, target.assignmentRevision]
+  : [target.type, target.catalogId, target.catalogIdentity, target.planId, target.planRevision]);
 // The read window only: a year of dates ending a day after the browser's date, so any Chicago day is inside it. Writes never use it.
 function windowAround(today: number) { return { fromDate: dayString(today - 364), throughDate: dayString(today + 1) }; }
 function browserToday() { const now = new Date(); return dayOrdinal(`${String(now.getFullYear()).padStart(4, "0")}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`); }
@@ -19,7 +22,7 @@ function browserToday() { const now = new Date(); return dayOrdinal(`${String(no
 export class PracticeCalendar {
   private listeners = new Set<() => void>(); private current: PracticeCalendarState = { status: "off" };
   private baseline: Assigned | null = null; private scope = ""; private generation = 0; private controller = new AbortController();
-  private sent = new Set<string>(); private staleReloaded = false;
+  private sent = new Set<string>(); private staleReloaded = new Set<string>();
   constructor(private request: Request, private onStale: () => void, private today: () => number = browserToday) {}
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   snapshot = () => this.current;
@@ -29,7 +32,7 @@ export class PracticeCalendar {
   /** Only the student's own view and an explicitly selected child practice show the calendar. */
   configure(baseline: Assigned | null) {
     const on = baseline && (baseline.mode === "student" || baseline.mode === "child-practice") ? baseline : null, scope = on ? scopeOf(on) : "";
-    if (scope !== this.scope) this.staleReloaded = false;
+    if (scope !== this.scope) this.staleReloaded.clear();
     this.baseline = on; this.scope = scope; this.clear();
   }
   async load(signal?: AbortSignal) {
@@ -66,15 +69,22 @@ export class PracticeCalendar {
     try {
       const ack = await this.request(baseline.mode, baseline.student.id, { type: "visit", eventId: crypto.randomUUID(), expectedDay: state.serverDay, target }, controller.signal) as PracticeAck;
       if (turn !== this.generation || controller.signal.aborted || this.current !== state) return;
-      this.staleReloaded = false;
       if (!state.dates.has(ack.practiceDay)) this.set({ ...state, dates: new Set([...state.dates, ack.practiceDay]) });
     } catch (error) {
       if (turn !== this.generation || controller.signal.aborted) return;
       this.sent.delete(key);
+      // A definite denial ends this local selection immediately. Abort all
+      // sibling requests and discard private dates without a refresh/retry loop.
+      if (error instanceof PracticeCalendarError && [401, 403, 404].includes(error.status)) { this.configure(null); return; }
       const code = error instanceof PracticeCalendarError ? error.code : undefined;
       // A new day or changed material needs a fresh read; the visit itself is never resent.
       if (code === "stale-day") void this.load();
-      else if (code === "stale-material" && !this.staleReloaded) { this.staleReloaded = true; this.onStale(); }
+      else if (code === "stale-material") {
+        // One reload per actual material version, across same-scope refreshes.
+        // A service-plan/catalog change is independent of verse assignments.
+        const material = materialOf(target);
+        if (!this.staleReloaded.has(material)) { this.staleReloaded.add(material); this.onStale(); }
+      }
       else if (code === "retention-expired") { this.generation++; this.set({ status: "ended" }); }
     }
   }

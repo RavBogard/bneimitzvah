@@ -152,6 +152,38 @@ test("a late read or acknowledgement after a clear, a child switch or a new revi
   calendar.configure(null); expect(calendar.snapshot().status).toBe("off");
 });
 
+test("a definite visit denial aborts a concurrent acknowledgement, forgets dates and disables later local loads/visits", async () => {
+  const { calendar, respond, onStale } = harness(), late = deferred<PracticeAck>(), denied = deferred<PracticeAck>();
+  calendar.configure(baseline()); await calendar.load();
+  const signal = respond.mock.calls[0][3]!;
+  respond.mockImplementationOnce(() => late.promise); calendar.visitVerse("torah", "Genesis 1:1");
+  respond.mockImplementationOnce(() => denied.promise); calendar.visitVerse("torah", "Genesis 1:2");
+  denied.reject(new PracticeCalendarError(403)); await flush();
+  expect(calendar.snapshot()).toEqual({ status: "off" }); expect(signal.aborted).toBe(true);
+  late.resolve({ practiceDay: "2026-10-17" }); await flush();
+  await calendar.load(); calendar.visitVerse("torah", "Genesis 1:1"); calendar.visitUnit(plan, "synthetic-unit"); await flush();
+  expect(calendar.snapshot()).toEqual({ status: "off" }); expect(respond).toHaveBeenCalledTimes(3); expect(onStale).not.toHaveBeenCalled();
+});
+
+test("stale reloads are bounded by material version independently for service and verse targets across refreshes", async () => {
+  const { calendar, respond, onStale } = harness(); calendar.configure(baseline()); await calendar.load();
+  async function stale(servicePlan: ServicePlan, unit = "synthetic-unit") {
+    respond.mockImplementationOnce(async () => { throw new PracticeCalendarError(409, "stale-material"); });
+    calendar.visitUnit(servicePlan, unit); await flush();
+  }
+  await stale(plan); expect(onStale).toHaveBeenCalledTimes(1);
+  calendar.configure(baseline()); await calendar.load(); await stale(plan, "another-unit"); expect(onStale).toHaveBeenCalledTimes(1);
+  // A successful unrelated visit cannot renew the same stale-plan allowance.
+  calendar.visitVerse("torah", "Genesis 1:1"); await flush(); await stale(plan); expect(onStale).toHaveBeenCalledTimes(1);
+  await stale({ ...plan, revision: plan.revision + 1 }); expect(onStale).toHaveBeenCalledTimes(2);
+  await stale({ ...plan, catalogIdentity: "b".repeat(64) }); expect(onStale).toHaveBeenCalledTimes(3);
+  calendar.configure(baseline("student", null, 4)); await calendar.load(); await stale(plan); expect(onStale).toHaveBeenCalledTimes(3);
+  respond.mockImplementationOnce(async () => { throw new PracticeCalendarError(409, "stale-material"); }); calendar.visitVerse("torah", "Genesis 1:1"); await flush(); expect(onStale).toHaveBeenCalledTimes(4);
+  calendar.configure(baseline("student", null, 5)); await calendar.load();
+  respond.mockImplementationOnce(async () => { throw new PracticeCalendarError(409, "stale-material"); }); calendar.visitVerse("torah", "Genesis 1:2"); await flush(); expect(onStale).toHaveBeenCalledTimes(5);
+  expect(respond.mock.calls.filter(call => call[2].type === "visit")).toHaveLength(9);
+});
+
 test("a server day outside the browser's window gets one more read around the server's day", async () => {
   const { calendar, operations } = harness(["2027-03-01", "2027-03-01"], []);
   calendar.configure(baseline()); await calendar.load();
