@@ -23,6 +23,7 @@ import { createStudyService } from "../study/service";
 import { createServiceLearningService } from "../service-learning/service";
 import { createStudentWorkService } from "../student-work/service";
 import { createProgressService } from "../progress/service";
+import { createLessonLogService } from "../lesson-log/service";
 import { createPublicStudyCoalescer, type PublicStudyCoalescer } from "../study/coalescing";
 import { resolveTenantHost } from "../tenancy/resolve";
 import { createHebcalReader } from "../../lib/readings/proposals";
@@ -58,6 +59,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const serviceLearning = createServiceLearningService({ access, practice, signingSecret: purposeSecret(config, "service-plan-preparations") });
   const studentWork = createStudentWorkService({ access, practice, authorityBindingSecret: purposeSecret(config, "student-work-authority") });
   const progress = createProgressService({ access, practice });
+  const lessonLog = createLessonLogService({ access, practice });
   const loadText = createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS, cache: createPersistentStudyCache(db), coalescer: studyTasks });
   const study = createStudyService({ access, practice, load: loadText });
   const readingPreview = createReadingPreviewService({ access, loadReading, loadText, signingSecret:purposeSecret(config,"reading-preview") });
@@ -71,7 +73,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingPreview, studentWork, progress, serviceLearning, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingPreview, studentWork, progress, lessonLog, serviceLearning, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;
