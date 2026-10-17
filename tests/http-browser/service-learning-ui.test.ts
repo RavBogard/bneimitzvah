@@ -247,6 +247,7 @@ it("puts a tutor's service parts in a tab beside the reading, keeping open mater
   await ui(serviceTab).toHaveAttribute("aria-selected", "true");
   await click(tab, "Keep editing service parts"); await ui(prompt).toBeHidden();
   await ui(serviceTab).toHaveAttribute("aria-selected", "true"); await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
+  await ui(panel(tab).getByRole("button", { name: "Reload catalog and discard draft", exact: true })).toBeFocused();
   await safe(() => readingTab.click()); await click(tab, "Haftarah text"); await click(tab, "Discard service draft and continue");
   await ui(readingTab).toHaveAttribute("aria-selected", "true");
   await ui(tab.getByRole("button", { name: "Haftarah text", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -259,6 +260,49 @@ async function capture(tab: Page, name: string) {
   await tab.setViewportSize({ width: 390, height: 844 }); await writeFile(join(folder, `${name}-mobile.png`), await tab.screenshot({ fullPage: true }));
   await tab.setViewportSize({ width: 1440, height: 1000 });
 }
+
+it("suspends the reading sheet for a service decision and removes every modal during an access check before restoring the draft and focus", async () => {
+  const admin = await page("admin"); await assign(admin, fixture.student.id, [content.first]);
+  const tab = await page("tutor"); await workspace(tab, "tutor");
+  await click(tab, "Choose service parts"); await safe(() => panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ }).check());
+  await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click());
+  await click(tab, "Change verses");
+  const sheet = tab.locator("dialog.editor-sheet"), prompt = tab.getByRole("dialog", { name: "Keep this service draft?", exact: true });
+  await ui(sheet).toBeVisible();
+  await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("custom"));
+  await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
+  await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
+  let writes = 0; tab.on("request", request => { if (request.method() === "POST" && /\/(reading|service-plan)\/confirm$/.test(new URL(request.url()).pathname)) writes++; });
+  await click(tab, "Confirm assigned reading"); await ui(prompt).toBeVisible();
+  const snapshot = () => tab.evaluate(() => ({ modals: document.querySelectorAll("dialog:modal").length, service: Boolean(document.querySelector(".service-learning-panel dialog:modal")), sheet: Boolean(document.querySelector("dialog.editor-sheet:modal")) }));
+  const phases = [await snapshot()];
+  let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
+  await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
+  try {
+    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
+    await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeVisible(); phases.push(await snapshot());
+  } finally { release(); }
+  await ui(prompt).toBeVisible(); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); phases.push(await snapshot());
+  expect(phases).toEqual([{ modals: 1, service: true, sheet: false }, { modals: 0, service: false, sheet: false }, { modals: 1, service: true, sheet: false }]);
+  await ui(tab.getByRole("button", { name: "Keep editing service parts", exact: true })).toBeFocused();
+  await safe(() => tab.keyboard.press("Escape")); await ui(prompt).toBeHidden(); await ui(sheet).toBeVisible();
+  expect(await sheet.evaluate(node => node.contains(document.activeElement))).toBe(true);
+  await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
+  await safe(() => tab.keyboard.press("Escape")); await ui(sheet).toBeHidden();
+  await ui(tab.getByRole("button", { name: "Change verses", exact: true })).toBeFocused();
+  await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
+  await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked(); expect(writes).toBe(0);
+  await tab.unroute("**/api/session");
+  // A real native close must settle this idle decision as cancellation, while
+  // the conceal-driven close above must preserve the pending decision.
+  await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click()); await click(tab, "Haftarah text"); await ui(prompt).toBeVisible();
+  await safe(() => prompt.evaluate(node => (node as HTMLDialogElement).close())); await ui(prompt).toBeHidden();
+  await ui(panel(tab).getByRole("button", { name: "Reload catalog and discard draft", exact: true })).toBeFocused();
+  await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click()); await click(tab, "Haftarah text"); await ui(prompt).toBeVisible();
+  await click(tab, "Discard service draft and continue"); await ui(prompt).toBeHidden();
+  await ui(tab.getByRole("tab", { name: "Reading", exact: true })).toHaveAttribute("aria-selected", "true");
+  await ui(tab.getByRole("button", { name: "Haftarah text", exact: true })).toHaveAttribute("aria-pressed", "true"); expect(writes).toBe(0);
+});
 
 it("clears a denied tutor draft and material immediately when the actual relationship is revoked", async () => {
   // Establish this case's plan independently so it can be diagnosed in isolation.

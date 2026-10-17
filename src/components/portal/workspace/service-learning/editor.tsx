@@ -2,14 +2,14 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Assigned } from "../api";
-import { statusOf, useWorkspace } from "../provider";
+import { statusOf, useWorkspace, useWorkspaceModal } from "../provider";
 import { serviceApi, servicePlanKey, type AvailableCatalog, type Catalog, type PreparedServicePlan, type ServiceMetadata } from "./api";
 
-export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfirmed, reloadReading }: {
+export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfirmed, reloadReading, onDepartureActive }: {
   mode: "admin" | "tutor"; studentId: string; baseline: Assigned | null; metadata: ServiceMetadata | null;
-  onConfirmed(): Promise<ServiceMetadata>; reloadReading(): Promise<Assigned>;
+  onConfirmed(): Promise<ServiceMetadata>; reloadReading(): Promise<Assigned>; onDepartureActive(active: boolean): void;
 }) {
-  const { registerWork, registerDeparture, guardDeparture, verifyServiceSession, serviceAuthorityFailed } = useWorkspace();
+  const { registerWork, registerDeparture, guardDeparture, verifyServiceSession, serviceAuthorityFailed, concealed } = useWorkspace();
   const [catalog, setCatalog] = useState<Catalog | null>(null), [selected, setSelected] = useState<string[]>([]), [clearIntent, setClearIntent] = useState(false);
   const [review, setReview] = useState<PreparedServicePlan | null>(null), [pending, setPending] = useState<"catalog" | "prepare" | "confirm" | null>(null);
   const reviewRef = useRef(review); reviewRef.current = review;
@@ -17,13 +17,16 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
   const seed = useRef<string[]>([]), seedContext = useRef(""), dirty = useRef(false), alive = useRef(true), generation = useRef(0), gate = useRef(false), skipOwnGuard = useRef(false);
   const request = useRef<AbortController | null>(null), task = useRef<Promise<void> | null>(null), pendingRef = useRef(pending); pendingRef.current = pending;
   const dialog = useRef<HTMLDialogElement>(null), departure = useRef<((leave: boolean) => void) | null>(null), reviewHeading = useRef<HTMLHeadingElement>(null);
+  const origin = useRef<HTMLElement | null>(null), originSheet = useRef<HTMLDialogElement | null>(null), keepEditing = useRef<HTMLButtonElement>(null), catalogButton = useRef<HTMLButtonElement>(null);
+  const departureState = useRef(onDepartureActive); departureState.current = onDepartureActive;
   const contextKey = baseline && metadata ? JSON.stringify([baseline.student.id, baseline.student.revision, baseline.student.ceremonyDate, servicePlanKey(metadata)]) : "";
   const context = useRef(contextKey); context.current = contextKey;
   const stale = Boolean(catalog?.state === "available" && baseline && (catalog.studentRevision !== baseline.student.revision || catalog.ceremonyDate !== baseline.student.ceremonyDate || contextKey && seedContext.current !== contextKey));
   const latest = useRef({ baseline, metadata }); latest.current = { baseline, metadata };
   const lifecycle = useRef({
     pause() { generation.current++; if (pendingRef.current !== "confirm") request.current?.abort(); setReview(null); setPaused(true); },
-    clear() { generation.current++; if (pendingRef.current !== "confirm") request.current?.abort(); dirty.current = false; seed.current = []; seedContext.current = ""; setSelected([]); setCatalog(null); setReview(null); setClearIntent(false); setMessage(""); setBlocked(false); setPaused(true); },
+    clear() { generation.current++; if (pendingRef.current !== "confirm") request.current?.abort(); dirty.current = false; seed.current = []; seedContext.current = ""; setSelected([]); setCatalog(null); setReview(null); setClearIntent(false); setMessage(""); setBlocked(false); setPaused(true);
+      origin.current = null; originSheet.current = null; const resolve = departure.current; departure.current = null; setLeaving(false); departureState.current(false); resolve?.(false); },
     async settle() { await task.current?.catch(() => undefined); }, hasUnsaved: () => dirty.current,
     reveal() { if (alive.current) setPaused(false); },
   });
@@ -32,11 +35,25 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
     const unregister = registerWork(lifecycle.current), unregisterGuard = registerDeparture(async () => {
       if (skipOwnGuard.current || !dirty.current) return true;
       if (departure.current) return false;
-      setLeaving(true); return new Promise<boolean>(resolve => { departure.current = resolve; });
+      // Capture before ReadingPanel suspends the sheet's physical modal layer.
+      origin.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      originSheet.current = origin.current?.closest<HTMLDialogElement>("dialog.editor-sheet") ?? null;
+      setLeaving(true); departureState.current(true); return new Promise<boolean>(resolve => { departure.current = resolve; });
     });
-    return () => { alive.current = false; generation.current++; request.current?.abort(); departure.current?.(false); departure.current = null; unregisterGuard(); unregister(); };
+    return () => { alive.current = false; generation.current++; request.current?.abort(); departure.current?.(false); departure.current = null; origin.current = null; originSheet.current = null; departureState.current(false); unregisterGuard(); unregister(); };
   }, [registerWork, registerDeparture]);
-  useEffect(() => { if (leaving && !dialog.current?.open) dialog.current?.showModal(); if (!leaving && dialog.current?.open) dialog.current.close(); }, [leaving]);
+  const visible = useWorkspaceModal(dialog, leaving);
+  useEffect(() => {
+    const canFocus = (node: HTMLElement | null) => Boolean(node?.isConnected && !node.matches(":disabled") && !node.closest("[hidden], [inert], dialog:not([open])") && node.getClientRects().length);
+    if (visible && canFocus(keepEditing.current) && !dialog.current?.contains(document.activeElement)) keepEditing.current?.focus();
+    if (!leaving && !concealed && (origin.current || originSheet.current)) {
+      const opener = origin.current, sheet = originSheet.current; origin.current = null; originSheet.current = null;
+      if (canFocus(opener)) opener?.focus();
+      // Access revalidation may remove the old confirmation button. The same
+      // retained sheet has reopened; keep its native initial focus in that case.
+      else if (!sheet?.open && canFocus(catalogButton.current)) catalogButton.current?.focus();
+    }
+  }, [leaving, visible, concealed]);
   useEffect(() => { if (stale) setReview(null); }, [stale]);
   useEffect(() => {
     if (!review) return;
@@ -49,8 +66,9 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
     window.addEventListener("beforeunload", unload); return () => window.removeEventListener("beforeunload", unload);
   }, [selected, clearIntent]);
   function finishDeparture(leave: boolean) {
+    if (!departure.current) return;
     if (leave) { dirty.current = false; setSelected(seed.current); setClearIntent(false); setReview(null); }
-    const resolve = departure.current; departure.current = null; setLeaving(false); resolve?.(leave);
+    const resolve = departure.current; departure.current = null; setLeaving(false); departureState.current(false); resolve(leave);
   }
   function edit(next: string[], explicitlyClear = false) {
     generation.current++; setSelected(next); setClearIntent(explicitlyClear || next.length === 0 && selected.length > 0); setReview(null); setMessage("");
@@ -113,7 +131,7 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
   return <section className="service-plan-editor" aria-labelledby="service-plan-editor-heading">
     <h3 id="service-plan-editor-heading">Set service parts</h3>
     <p>The saved service plan stays in place until you review and explicitly confirm a selection.</p>
-    <button className="button-secondary" disabled={disabled} onClick={() => void openCatalog()}>{pending === "catalog" ? "Loading service catalog…" : dirty.current || catalog ? "Reload catalog and discard draft" : "Choose service parts"}</button>
+    <button ref={catalogButton} className="button-secondary" disabled={disabled} onClick={() => void openCatalog()}>{pending === "catalog" ? "Loading service catalog…" : dirty.current || catalog ? "Reload catalog and discard draft" : "Choose service parts"}</button>
     {catalog?.state === "unknown-slot" && <p>Set the student’s morning or Havdalah / afternoon slot before choosing service parts. Existing assigned parts remain separate.</p>}
     {catalog?.state === "unavailable" && <p>The service catalog is unavailable. The saved plan has not changed.</p>}
     {active && <>
@@ -131,9 +149,9 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
       {review.clearsPlan ? <p>This will explicitly clear the service plan. No service parts will remain assigned.</p> : <><p>These exact parts will replace the saved service selection, in source order:</p><ol>{review.selectedIds.map(id => <li key={id}>{active.units.find(unit => unit.id === id)!.name}</li>)}</ol></>}
       <p>No service assignment has changed yet.</p><button className="button-primary" disabled={disabled || blocked || stale || Date.now() >= review.expiresAt} onClick={() => void confirm()}>Confirm service plan</button>
     </section>}
-    <dialog ref={dialog} className="work-departure" aria-labelledby="service-draft-departure-heading" onCancel={event => { event.preventDefault(); finishDeparture(false); }}>
+    <dialog ref={dialog} className="work-departure" aria-labelledby="service-draft-departure-heading" onCancel={event => { event.preventDefault(); finishDeparture(false); }} onClose={() => { if (visible && !dialog.current?.open) finishDeparture(false); }}>
       <h2 id="service-draft-departure-heading">Keep this service draft?</h2><p>Your service choices have not been confirmed. Discard the draft to leave this student or role.</p>
-      <div className="form-actions"><button autoFocus className="button-secondary" onClick={() => finishDeparture(false)}>Keep editing service parts</button><button className="button-text" onClick={() => finishDeparture(true)}>Discard service draft and continue</button></div>
+      <div className="form-actions"><button autoFocus ref={keepEditing} className="button-secondary" onClick={() => finishDeparture(false)}>Keep editing service parts</button><button className="button-text" onClick={() => finishDeparture(true)}>Discard service draft and continue</button></div>
     </dialog>
   </section>;
 }

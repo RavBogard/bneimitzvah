@@ -9,9 +9,9 @@ import type { ServiceMetadata } from "./api";
 import { ServicePlanEditor } from "./editor";
 
 export type ServiceReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
-export function ServiceLearningPanel({ id, mode, studentId, baseline, register, reloadReading }: {
+export function ServiceLearningPanel({ id, mode, studentId, baseline, register, reloadReading, onDepartureActive }: {
   id: string; mode: ReadingMode; studentId: string; baseline: Assigned | null;
-  register(value: ServiceReload): () => void; reloadReading(): Promise<Assigned>;
+  register(value: ServiceReload): () => void; reloadReading(): Promise<Assigned>; onDepartureActive(active: boolean): void;
 }) {
   const { summary, epoch, readServiceMetadata, readServiceUnit, registerWork } = useWorkspace();
   const scope = JSON.stringify([summary.sessionBinding, epoch, mode, studentId]), scopeRef = useRef(scope); scopeRef.current = scope;
@@ -71,6 +71,6 @@ export function ServiceLearningPanel({ id, mode, studentId, baseline, register, 
         {current.material && <ServiceUnitView key={JSON.stringify([scope, assigned.plan.id, assigned.plan.revision, assigned.plan.catalogIdentity, current.selected])} material={current.material} />}
       </>}
     </>}
-    {(mode === "admin" || mode === "tutor") && <ServicePlanEditor key={scope} mode={mode} studentId={studentId} baseline={baseline} metadata={assigned ?? null} onConfirmed={confirmed} reloadReading={reloadReading} />}
+    {(mode === "admin" || mode === "tutor") && <ServicePlanEditor key={scope} mode={mode} studentId={studentId} baseline={baseline} metadata={assigned ?? null} onConfirmed={confirmed} reloadReading={reloadReading} onDepartureActive={onDepartureActive} />}
   </section>;
 }

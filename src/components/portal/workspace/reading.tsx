@@ -98,10 +98,10 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const song = learner || mode === "tutor", editorId = `${serviceId}-editor`;
   const lift = useRef<((index: number) => void) | null>(null);
   // Tutors change verses in a sheet over the reading instead of a form below it.
-  const [sheetOpen, setSheetOpen] = useState(false), sheet = useRef<HTMLDialogElement>(null), sheetOrigin = useRef<HTMLElement | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false), [serviceDepartureActive, setServiceDepartureActive] = useState(false), sheet = useRef<HTMLDialogElement>(null), sheetOrigin = useRef<HTMLElement | null>(null);
   // Keep the editor draft mounted, but give departure review the sole modal
   // layer. This also makes access-check resume independent of effect ordering.
-  useWorkspaceModal(sheet, sheetOpen && !work.departure);
+  useWorkspaceModal(sheet, sheetOpen && !work.departure && !serviceDepartureActive);
   // closedby is not available in every browser. Disabled controls can leave
   // focus outside the sheet, so capture Escape at document level only while
   // this visible editor is the actual active modal and has pending work.
@@ -211,6 +211,6 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   </div>{current?.loading && <p role="status">Checking the current assignment, text and saved work…</p>}{editor && (mode === "tutor" ? <dialog ref={sheet} id={editorId} className="editor-sheet" aria-labelledby="reading-editor-title" closedby={editorBusy ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); closeSheet(); }}>
       <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close verse editor" disabled={editorBusy} onClick={closeSheet}>{icons.close}</button></div>{editor}
     </dialog> : <div id={editorId} className="reading-editor-anchor">{editor}</div>)}
-    {tabPanel("service", <ServiceLearningPanel id={serviceId} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} />)}
+    {tabPanel("service", <ServiceLearningPanel id={serviceId} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} onDepartureActive={setServiceDepartureActive} />)}
   </ReadingPrefsScope>;
 }
