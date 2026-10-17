@@ -44,6 +44,7 @@ export function useWorkspaceModal(dialog: RefObject<HTMLDialogElement | null>, o
     if (open && !concealed) { if (!node.open) node.showModal(); }
     else if (node.open) node.close();
   }, [dialog, open, concealed]);
+  return open && !concealed;
 }
 export const statusOf = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
 const isParentPath = (path: string) => path === rolePaths.parent || path.startsWith("/workspace/practice/");

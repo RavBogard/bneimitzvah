@@ -96,7 +96,9 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const lift = useRef<((index: number) => void) | null>(null);
   // Tutors change verses in a sheet over the reading instead of a form below it.
   const [sheetOpen, setSheetOpen] = useState(false), sheet = useRef<HTMLDialogElement>(null), sheetOrigin = useRef<HTMLElement | null>(null);
-  useWorkspaceModal(sheet, sheetOpen);
+  // Keep the editor draft mounted, but give departure review the sole modal
+  // layer. This also makes access-check resume independent of effect ordering.
+  useWorkspaceModal(sheet, sheetOpen && !work.departure);
   // The sheet stays open while a review or confirmation is in flight, so its outcome is seen.
   const closeSheet = () => { if (!editorBusy) setSheetOpen(false); };
   useEffect(() => {
