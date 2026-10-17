@@ -1,12 +1,13 @@
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {readFile} from 'node:fs/promises';
-import {PRIVATE_MEDIA_PROBE,runPrivateMediaOidcProbe,assertPrivateMediaNativeIdentity} from './private-media-oidc-probe.mjs';
+import {PRIVATE_MEDIA_PROBE,runPrivateMediaOidcProbe,assertPrivateMediaNativeContext} from './private-media-oidc-probe.mjs';
 
 export const PRIVATE_MEDIA_OBJECT_PROBE=Object.freeze({
   schema:'private-media-object-roundtrip/v1',mode:'roundtrip-v1',storeId:PRIVATE_MEDIA_PROBE.storeId,
   markerBytes:64,rangeBytes:16,errorBytes:4096,etagBytes:256,grantMs:60000,
   callTimeoutMs:10000,bodyIdleMs:5000,totalTimeoutMs:90000,maxApplicationCalls:12,
+  maxConsecutiveEmptyChunks:64,
   phases:Object.freeze(['selection','metadata-before','sdk-load','put','head-before','grant','presign','range',
     'stale-etag','unsigned','head-after','delete','absence','metadata-after','complete','deadline']),
 });
@@ -31,12 +32,16 @@ function selection(env){
 // Copy names/accessors, never environment values or NODE_OPTIONS. The original
 // metadata probe alone supplies override checks and actual permission evidence.
 function metadataEnvironment(env,run){
-  const facade=Object.create(null);
-  for(const key of Object.keys(env))if(key!=='NODE_OPTIONS'&&!key.startsWith(prefix)){
-    Object.defineProperty(facade,key,{enumerable:true,configurable:true,get:()=>env[key],set:value=>{env[key]=value;}});
-  }
-  Object.assign(facade,{PRIVATE_MEDIA_OIDC_PROBE_MODE:'production-allow',PRIVATE_MEDIA_OIDC_PROBE_STORE_ID:P.storeId,PRIVATE_MEDIA_OIDC_PROBE_RUN_ID:run});
-  return new Proxy(facade,{deleteProperty(target,key){delete env[key];return Reflect.deleteProperty(target,key);}});
+  const flags={PRIVATE_MEDIA_OIDC_PROBE_MODE:'production-allow',PRIVATE_MEDIA_OIDC_PROBE_STORE_ID:P.storeId,PRIVATE_MEDIA_OIDC_PROBE_RUN_ID:run};
+  // Forward future guard keys too. A snapshot of initial property names would
+  // hide endpoint/debug/CA overrides introduced during asynchronous work.
+  return new Proxy(Object.create(null),{
+    ownKeys:()=>[...new Set([...Object.keys(env).filter(key=>key!=='NODE_OPTIONS'&&!key.startsWith(prefix)),...Object.keys(flags)])],
+    getOwnPropertyDescriptor:()=>({enumerable:true,configurable:true}),
+    get:(_,key)=>Object.hasOwn(flags,key)?flags[key]:key==='NODE_OPTIONS'?undefined:env[key],
+    set:(_,key,value)=>Reflect.set(env,key,value),
+    deleteProperty:(_,key)=>Reflect.deleteProperty(env,key),
+  });
 }
 function urlFor(value,key,signed=false,delegation){
   need(typeof value==='string'&&value.length<=8192);
@@ -77,13 +82,18 @@ export async function runPrivateMediaObjectProbe(env=process.env,dependencies={}
   const monotonic=()=>performance.now(),now=dependencies.now??Date.now;
   let end,callMs,idleMs,applicationCalls=0;
   function live(){
-    need(!finished&&!controller.signal.aborted&&monotonic()<end);
-    assertPrivateMediaNativeIdentity(env,now(),token);
+    if(monotonic()>=end){phase='deadline';controller.abort();}
+    need(!finished&&!controller.signal.aborted);
+    assertPrivateMediaNativeContext(env,now(),token);
   }
   async function bounded(action,ms,onTimeout){
-    let timer;
+    let timer;const deadline=monotonic()+ms;
     try{
-      return await Promise.race([Promise.resolve().then(action),new Promise((_,reject)=>{timer=setTimeout(()=>{onTimeout?.();reject(0);},ms);})]);
+      const value=await Promise.race([Promise.resolve().then(action),new Promise((_,reject)=>{timer=setTimeout(()=>{onTimeout?.();reject(0);},ms);})]);
+      // Timers cannot preempt SDK JSON parsing or a synchronous stream read.
+      // Recheck elapsed time before any result can advance the probe.
+      if(monotonic()>=deadline){onTimeout?.();throw 0;}
+      return value;
     }finally{clearTimeout(timer);}
   }
   async function step(label,action,provider=true){
@@ -96,11 +106,14 @@ export async function runPrivateMediaObjectProbe(env=process.env,dependencies={}
     need(!response.headers.has('content-length')||/^\d+$/.test(response.headers.get('content-length'))&&Number(response.headers.get('content-length'))<=limit);
     if(!response.body){need(!expected&&(!response.headers.has('content-length')||response.headers.get('content-length')==='0'));return;}
     const reader=response.body.getReader();resources.delete(response.body);resources.add(reader);
-    let total=0;const chunks=[];
+    let total=0,empty=0,progressDeadline=monotonic()+idleMs;const chunks=[];
     try{
       for(;;){
-        live();const part=await bounded(()=>reader.read(),Math.max(1,Math.min(idleMs,end-monotonic())),()=>{phase='deadline';controller.abort();});live();
-        if(part.done)break;need(part.value instanceof Uint8Array);total+=part.value.byteLength;need(total<=limit);if(expected)chunks.push(part.value);
+        live();const remaining=progressDeadline-monotonic();if(remaining<=0){phase='deadline';controller.abort();throw 0;}
+        const part=await bounded(()=>reader.read(),Math.min(remaining,end-monotonic()),()=>{phase='deadline';controller.abort();});live();
+        if(part.done)break;need(part.value instanceof Uint8Array);total+=part.value.byteLength;need(total<=limit);
+        if(part.value.byteLength){empty=0;progressDeadline=monotonic()+idleMs;if(expected)chunks.push(part.value);}
+        else need(++empty<=P.maxConsecutiveEmptyChunks);
       }
       if(expected){need(total===expected.length);let offset=0;for(const chunk of chunks)for(const byte of chunk)need(byte===expected[offset++]);}
     }finally{resources.delete(reader);discard(reader);}
@@ -112,7 +125,7 @@ export async function runPrivateMediaObjectProbe(env=process.env,dependencies={}
     totalTimer=setTimeout(()=>{phase='deadline';controller.abort();},dependencies.totalTimeoutMs??P.totalTimeoutMs);
     // Identity before the first list rejects other environments; metadata then
     // repeats all full override/native checks and performs actual provider I/O.
-    token=assertPrivateMediaNativeIdentity(env,now());
+    token=assertPrivateMediaNativeContext(env,now());
     const facade=metadataEnvironment(env,selected.run);
     const loadSdk=async()=>{
       live();

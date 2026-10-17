@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {isolatedEnv} from './helpers/isolatedEnv.mjs';
 import {PRIVATE_MEDIA_OBJECT_PROBE as P,runPrivateMediaObjectProbe as probe} from '../scripts/private-media-object-probe.mjs';
-import {PRIVATE_MEDIA_PROBE as I,assertPrivateMediaNativeIdentity} from '../scripts/private-media-oidc-probe.mjs';
+import {PRIVATE_MEDIA_PROBE as I,assertPrivateMediaNativeContext} from '../scripts/private-media-oidc-probe.mjs';
 import {MockAgent,getGlobalDispatcher,setGlobalDispatcher,fetch as undiciFetch} from 'undici';
 
 const run='44444444-4444-4444-8444-444444444444',key=`acceptance/${run}/roundtrip-marker.bin`;
@@ -62,11 +62,11 @@ test('disabled import/CLI is silent and unsupported/partial flags or arguments c
   }finally{await isolated.cleanup();}
 });
 
-test('fixed Production assertion reuses full identity and exact token continuity without provider calls',()=>{
-  const env=environment(),token=assertPrivateMediaNativeIdentity(env,Date.now());assert.equal(token,env.VERCEL_OIDC_TOKEN);
-  assert.equal(assertPrivateMediaNativeIdentity(env,Date.now(),token),token);
-  for(const value of [environment({environment:'preview'}),environment({owner_id:'other'}),environment({exp:0}),{...env,VERCEL:undefined}])assert.throws(()=>assertPrivateMediaNativeIdentity(value,Date.now()));
-  assert.throws(()=>assertPrivateMediaNativeIdentity(env,Date.now(),'other'));
+test('fixed Production assertion reuses full guarded context and exact token continuity without provider calls',()=>{
+  const env=environment(),token=assertPrivateMediaNativeContext(env,Date.now());assert.equal(token,env.VERCEL_OIDC_TOKEN);
+  assert.equal(assertPrivateMediaNativeContext(env,Date.now(),token),token);
+  for(const value of [environment({environment:'preview'}),environment({owner_id:'other'}),environment({exp:0}),{...env,VERCEL:undefined}])assert.throws(()=>assertPrivateMediaNativeContext(value,Date.now()));
+  assert.throws(()=>assertPrivateMediaNativeContext(env,Date.now(),'other'));
 });
 
 test('one complete synthetic roundtrip validates bytes, conditional semantics, denial bracket and exact-key deletion',async()=>{

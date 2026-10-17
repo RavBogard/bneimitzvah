@@ -78,9 +78,11 @@ function identity(env,selected,now,at,phase="identity"){
   at(phase,"native-org");if(env.VERCEL_ORG_ID!==undefined)need(env.VERCEL_ORG_ID===p.teamId);
   return token;
 }
-/** Read-only fixed-Production composition seam. Claim decoding is not provider
- * authentication; callers must separately require the actual metadata check. */
-export function assertPrivateMediaNativeIdentity(env,now,expectedToken){
+/** Fixed-Production composition seam: reuses original override checks and
+ * static-fallback removal/retry0 normalization. Claim decoding is not provider
+ * authentication; callers separately require the actual metadata check. */
+export function assertPrivateMediaNativeContext(env,now,expectedToken){
+  guardedEnvironment(env,()=>{});
   const token=identity(env,{environment:"production"},now,()=>{});
   need(expectedToken===undefined || token===expectedToken);
   return token;
