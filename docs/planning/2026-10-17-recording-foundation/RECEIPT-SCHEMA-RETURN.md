@@ -22,3 +22,7 @@ Additive recording_manifest_ceremony_retention runs after existing0020 recording
 ## Pending boundaries
 
 Independent schema adversarial acceptance and root broader/exact CI gates remain. Slice B owns freshly authorized/idempotent admission, aggregate checks and legacy-writer activation blocker, confirmed OUTER-COMMIT permission, one-head maintenance wrapper and their races. This slice deliberately does not claim those services exist. Private provider proof/transport/runtime OIDC/actual cleanup and later separately guarded production0021 release are still outside the source gate;0020 operators must continue refusing future trees. Failed original write proof remains failed.
+## Root integration acceptance, 2026-10-17
+
+Integrated author `ad1d8c31ec857243cfe1c7de006da240bf55fedc` and independent review `be4dddd0480a2c262b6219e41e53986b95ece886` at `d85e7a43a59b4268ba18609ecd6f164c2f5befba`. All four [exact hosted jobs39065858887](https://github.com/RavBogard/bneimitzvah/actions/runs/39065858887) pass: Node360 per OS, app1037 Linux/1036 plus one existing skip Windows, SQL42, restricted PostgreSQL140, authenticated browser137, public browser15 and both type/builds. Root local full suite passes Node360/app1036 plus the same skip. Full logs remain ignored in the root integration checkout. This accepts the provider-disabled persistence slice only; no production migration, receipt route, provider call, worker privilege/schedule or real-data operation occurred. Service B and transport C remain separate implementation/review milestones.
+
