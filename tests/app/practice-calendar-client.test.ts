@@ -3,6 +3,7 @@ import type { Assigned, Selection } from "../../src/components/portal/workspace/
 import type { ServicePlan } from "../../src/components/portal/workspace/service-learning/api";
 import { dayOrdinal, dayString, fetchPracticeCalendar, parsePracticeAck, parsePracticeDates, PracticeCalendarError, type PracticeAck, type PracticeDates, type PracticeOperation } from "../../src/components/portal/workspace/practice-calendar/api";
 import { PracticeCalendar } from "../../src/components/portal/workspace/practice-calendar/store";
+import { PortalRequestError } from "../../src/components/portal/api";
 
 const studentId = "10000000-0000-4000-8000-000000000001", assignmentId = "10000000-0000-4000-8000-000000000002";
 const baseline = (mode: Assigned["mode"] = "student", contextId: string | null = null, revision = 3): Assigned => ({
@@ -163,6 +164,16 @@ test("a definite visit denial aborts a concurrent acknowledgement, forgets dates
   late.resolve({ practiceDay: "2026-10-17" }); await flush();
   await calendar.load(); calendar.visitVerse("torah", "Genesis 1:1"); calendar.visitUnit(plan, "synthetic-unit"); await flush();
   expect(calendar.snapshot()).toEqual({ status: "off" }); expect(respond).toHaveBeenCalledTimes(3); expect(onStale).not.toHaveBeenCalled();
+});
+
+test.each([401, 403, 404])("plain provider refusal %s also clears and aborts calendar dates without retry", async status => {
+  const { calendar, respond, onStale } = harness(); calendar.configure(baseline()); await calendar.load();
+  const signal = respond.mock.calls[0][3]!;
+  respond.mockImplementationOnce(async () => { throw new PortalRequestError(status); });
+  calendar.visitVerse("torah", "Genesis 1:1"); await flush();
+  expect(calendar.snapshot()).toEqual({ status: "off" }); expect(signal.aborted).toBe(true);
+  await calendar.load(); calendar.visitVerse("torah", "Genesis 1:1"); await flush();
+  expect(respond).toHaveBeenCalledTimes(2); expect(onStale).not.toHaveBeenCalled();
 });
 
 test("stale reloads are bounded by material version independently for service and verse targets across refreshes", async () => {

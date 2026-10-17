@@ -266,9 +266,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const value = await action(mode === "child-practice" ? active : undefined);
       check(); await verifyWorkSession(signal); check(); return value;
     } catch (error) {
-      if (!signal.aborted && generation === practice.generation && route === routeRevision.current && mode === "child-practice" && currentPath.current === `/workspace/practice/${id}` && [401, 403, 404].includes(statusOf(error))) {
+      const current = !signal.aborted && generation === practice.generation && route === routeRevision.current, status = statusOf(error);
+      if (current && status === 401) { clearWork(); refresh(); }
+      else if (refreshOnDenied && current && mode === "child-practice" && currentPath.current === `/workspace/practice/${id}` && [403, 404].includes(status)) {
         clearWork(); practice.invalidate(); setContext(null); setNotice("Practice access changed. Choose an available child again."); setEpoch(value => value + 1); router.replace("/workspace/parent");
-      } else if (refreshOnDenied && !signal.aborted && generation === practice.generation && route === routeRevision.current && [401, 403, 404].includes(statusOf(error))) { clearWork(); refresh(); }
+      } else if (refreshOnDenied && current && [403, 404].includes(status)) { clearWork(); refresh(); }
       throw error;
     }
   }, [practice, verifyWorkSession, clearWork, router, refresh]);
@@ -277,7 +279,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   // Lesson notes share the service path: fresh session checks around each request, and the same access-failure handling.
   const readLessons = useCallback((mode: ReadingMode, id: string, operation: LessonOperation, signal: AbortSignal) => serviceRead(mode, id, signal, selection => fetchLessons(mode, id, operation, signal, selection ?? undefined)), [serviceRead]);
   // The practice calendar uses the same path; it reads dates only and reports a visit only when asked.
-  // A refusal stays local to the calendar: it must not start another access check by itself.
+  // Material/link 403/404 refusals stay local; a current session 401 always clears
+  // and conceals the whole workspace through the existing access-check path.
   const readPracticeCalendar = useCallback((mode: ReadingMode, id: string, operation: PracticeOperation, signal: AbortSignal) => serviceRead(mode, id, signal, selection => fetchPracticeCalendar(mode, id, operation, signal, selection ?? undefined), false), [serviceRead]);
   const serviceAuthorityFailed = useCallback((status: number) => { if ([401, 403, 404].includes(status)) { clearWork(); refresh(); } }, [clearWork, refresh]);
   const verifyServiceSession = useCallback(async (signal: AbortSignal) => { try { await verifyWorkSession(signal); } catch (error) { if (!signal.aborted) serviceAuthorityFailed(statusOf(error)); throw error; } }, [verifyWorkSession, serviceAuthorityFailed]);

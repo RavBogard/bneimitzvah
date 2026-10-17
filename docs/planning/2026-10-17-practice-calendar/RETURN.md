@@ -23,3 +23,15 @@ Verification:
 - `git diff --check`: **PASS**. No full app, native PostgreSQL, browser, provider or production operation was run by author for this correction.
 
 Root owns final integration and broader gates; reviewer continues the distinct service-browser cases. Recording retention amendments belong to the separate ledger branch and are not mixed into this checkpoint.
+
+## Current-session denial correction
+
+Root's follow-up review identified that the calendar's local-refusal opt-out also bypassed global handling of a failed session probe: a plain session401 could leave the rest of the private workspace visible. In `provider.tsx`, a current, nonaborted service request's401 now always clears work and invokes the existing access refresh, immediately pausing/concealing the subtree in both own-student and linked-child modes. Calendar-specific403/404 still stay local without global refreshes/redirect loops. Existing generation, route and signal guards prevent a stale old401 from clearing a newer scope. No new authority mechanism is added.
+
+The calendar store now recognizes the shared `PortalRequestError` denial base class, including plain session-probe failures rather than only its calendar-specific subclass. It clears dates/aborts immediately as before, with no queue or automatic POST replay.
+
+Author's new DOM-free provider callback tests exercise current preprobe/direct-request/postprobe401 in both modes, held refresh concealment, eventual failed-session removal, local403/404 in both modes and old401 fenced independently by signal/generation/route. These are callback tests, not native-browser or real SDK evidence; the independent reviewer owns that browser file and lane. Existing calendar cases additionally cover plain provider refusals and retain late acknowledgement/context behavior.
+
+- `node .local-logs/run-isolated.mjs calendar-session-focused node node_modules/vitest/vitest.mjs run --config .local-logs/vitest-study.mts tests/app/practice-calendar-client.test.ts tests/app/practice-calendar-review.test.ts tests/app/practice-calendar-session.test.ts`: **33/33**, three files,362ms. Log `.local-logs/calendar-session-focused.log`.
+- Composed typecheck **PASS**, `.local-logs/calendar-session-typecheck.log`. One scoped mechanical detector over provider/store: **no findings**, `.local-logs/calendar-session-detector.json`; prior context/hardening instructions were reused in this checkout and craft-floor read immediately before edits. No design/copy/style change or extra context run.
+- Diff whitespace check **PASS**. Independent session-browser/source review and root final integration/hosted gates remain pending; no browser/server, native PG, broad suite, provider or production operation was run by author.

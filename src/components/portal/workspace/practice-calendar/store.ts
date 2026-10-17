@@ -1,4 +1,5 @@
 import type { Assigned, ReadingMode } from "../api";
+import { PortalRequestError } from "../../api";
 import type { StudyKind } from "../study/api";
 import type { ServicePlan } from "../service-learning/api";
 import type { PracticeTarget } from "../../../../lib/practice-calendar/types";
@@ -75,7 +76,7 @@ export class PracticeCalendar {
       this.sent.delete(key);
       // A definite denial ends this local selection immediately. Abort all
       // sibling requests and discard private dates without a refresh/retry loop.
-      if (error instanceof PracticeCalendarError && [401, 403, 404].includes(error.status)) { this.configure(null); return; }
+      if (error instanceof PortalRequestError && [401, 403, 404].includes(error.status)) { this.configure(null); return; }
       const code = error instanceof PracticeCalendarError ? error.code : undefined;
       // A new day or changed material needs a fresh read; the visit itself is never resent.
       if (code === "stale-day") void this.load();
