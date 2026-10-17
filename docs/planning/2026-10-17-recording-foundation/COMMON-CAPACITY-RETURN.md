@@ -31,3 +31,7 @@ The first runner invocation omitted its `node` selector and failed before Vitest
 
 Repository protection and final source freeze are recorded below after the owned staged gate. No claim of native runtime transport acceptance or activated uploads follows from this checkpoint.
 Final owned staged repository-protection gate: **3/3 PASS**,34.79s; .local-logs/common-capacity-protection.log. Final git diff --cached --check clean. Only the11 owned/approved paths enter the source commit; independent implementation acceptance remains pending.
+
+## Root combined integration acceptance
+
+Accepted with D at exact `ddc64b2a3d01ed8948ce1173e3141229b6822e71`: all four [hosted jobs39070115387](https://github.com/RavBogard/bneimitzvah/actions/runs/39070115387) pass. Node362 per OS; app1116 Linux/1115 plus one existing Windows skip across120 files; SQL42/restricted PostgreSQL162/authenticated browser137/public15; both type/default builds. Root full local Node362/app1115 plus that skip/type/default build also pass. This closes the reviewed application-writer bypass, not arbitrary owner SQL, provider operation limits or receipt finalization. E's separately reviewed exact consumption/accounting contract is the next internal implementation; no route, production0021 apply, real media or worker is enabled by Q acceptance.
