@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { normalizeEnglish, normalizeHebrew } from "../../src/server/study/normalize";
 import { projectStudyVerse } from "../../src/lib/hebrew/study-tokens";
+import { studyCacheBinding, validateStudyChapterContent } from "../../src/server/study/cache";
+import { MAM } from "../../src/server/study/versions";
 vi.mock("server-only", () => ({}));
 
 describe("synthetic study plaintext normalization", () => {
@@ -16,6 +18,58 @@ describe("synthetic study plaintext normalization", () => {
     expect(verse.text).toBe("אָב כְּתָב ג׃".normalize("NFC"));
     expect(verse.readingText).toBe("אָב קְרִי ג׃".normalize("NFC"));
     expect(verse.segments.find(segment => segment.kind === "alternative")).toEqual({ kind: "alternative", written: "כְּתָב".normalize("NFC"), read: "קְרִי".normalize("NFC") });
+  });
+  it("identifies both nonempty alternatives by exact semantic class regardless of child order", () => {
+    const k = '<span class="mam-kq-k">בָ֔־גָ</span>', q = '<span class="mam-kq-q">[דָ֖ הָ֑]</span>';
+    const normal = normalizeHebrew(`אָב־זָ <span class="mam-kq">${k} ${q}</span> וָ׃`);
+    const reversed = normalizeHebrew(`אָב־זָ <span class="mam-kq">${q} ${k}</span> וָ׃`);
+    expect(reversed).toEqual(normal);
+    expect(reversed.text).toBe("אָב־זָ בָ֔־גָ וָ׃".normalize("NFC"));
+    expect(reversed.readingText).toBe("אָב־זָ דָ֖ הָ֑ וָ׃".normalize("NFC"));
+    const projected = projectStudyVerse("Genesis 1:1", reversed);
+    expect(projected).toEqual(projectStudyVerse("Genesis 1:1", normal));
+    if (projected.status !== "ready") throw new Error("Synthetic qere projection unavailable");
+    expect(projected.projection.words.map(word => [word.index, word.text])).toEqual(["אָב", "זָ", "דָ֖", "הָ֑", "וָ"].map((text, index) => [index, text.normalize("NFC")]));
+    for (const word of projected.projection.words) {
+      const reconstructed = word.spans.map(span => {
+        const segment = reversed.segments[span.segment];
+        return (segment.kind === "text" ? segment.text : segment.kind === "alternative" ? segment.read : "").slice(span.start, span.end);
+      }).join("");
+      expect(reconstructed).toBe(word.text);
+    }
+    const payload = { verses: Array.from({ length: 31 }, (_, index) => ({ ref: `Genesis 1:${index + 1}`, hebrew: reversed, english: null })), editions: [MAM] };
+    expect(validateStudyChapterContent(studyCacheBinding("Genesis 1"), JSON.parse(JSON.stringify(payload)))).toEqual(payload);
+  });
+  it("normalizes mixed ordinary/reversed alternatives to the same canonical segments and read projection", () => {
+    const pair = (reverse: boolean) => { const sides = ['<span class="mam-kq-k"><b>בָ</b></span>', '<span class="mam-kq-q">[גָ]</span>']; return `<span class="mam-kq">${(reverse ? sides.reverse() : sides).join(" ")}</span>`; };
+    const mixed = normalizeHebrew(`אָב ${pair(true)} דָ ${pair(false)} הָ׃`), normal = normalizeHebrew(`אָב ${pair(false)} דָ ${pair(false)} הָ׃`);
+    expect(mixed).toEqual(normal);
+    expect(projectStudyVerse("Genesis 1:1", mixed)).toEqual(projectStudyVerse("Genesis 1:1", normal));
+  });
+  it.each([
+    '<span class="mam-kq-k">בָ</span><span class="mam-kq-k">גָ</span>',
+    '<span class="mam-kq-q">[בָ]</span><span class="mam-kq-q">[גָ]</span>',
+    '<span class="mam-kq-q">[בָ]</span>',
+    '<span class="mam-kq-q">[]</span><span class="mam-kq-k">גָ</span>',
+    '<span class="mam-kq-q">[בָ]</span><span class="mam-kq-k"></span>',
+    '<span class="mam-kq-q">[בָ]</span><span class="mam-kq-k">גָ</span><span>דָ</span>',
+    '<span class="mam-kq-q">[בָ]</span>דָ<span class="mam-kq-k">גָ</span>',
+    '<span class="mam-kq-q extra">[בָ]</span><span class="mam-kq-k">גָ</span>',
+    '<span class="mam-kq-q" title="synthetic">[בָ]</span><span class="mam-kq-k">גָ</span>',
+    '<span class="mam-kq-q">[בָ]</span><span class="mam-kq-k"><span class="unknown">גָ</span></span>',
+    '<span class="mam-kq-q">[[בָ]]</span><span class="mam-kq-k">גָ</span>',
+    '<span class="mam-kq-q">[בָ\u202e]</span><span class="mam-kq-k">גָ</span>',
+  ])("rejects malformed or unreviewed semantic side pairs (%#)", sides => {
+    expect(() => normalizeHebrew(`אָב <span class="mam-kq">${sides}</span> דָ׃`)).toThrow("Unsupported study markup");
+  });
+  it.each(["&#xfeff;", "&#x202e;", "&#x2066;", "&#x85;"])("validates decoded inter-side text before whitespace elision (%s)", control => {
+    const k = '<span class="mam-kq-k">בָ</span>', q = '<span class="mam-kq-q">[גָ]</span>';
+    for (const [first, second] of [[k, q], [q, k]]) {
+      for (const content of [`${control}${first}${second}`, `${first}${control}${second}`, `${first}${second}${control}`]) {
+        expect(() => normalizeHebrew(`אָב <span class="mam-kq">${content}</span> דָ׃`)).toThrow("Unsupported study markup");
+      }
+    }
+    expect(normalizeHebrew(`אָב <span class="mam-kq">\n${q}\t ${k}\n</span> דָ׃`).readingText).toBe("אָב גָ דָ׃".normalize("NFC"));
   });
   it("preserves the reviewed plain trivial form as identical written/read text and one spoken word", () => {
     const form = "בָ֣\u034f", verse = normalizeHebrew(`אָב <span class="mam-kq-trivial">${form}</span> ג׃`);
@@ -70,7 +124,7 @@ describe("synthetic study plaintext normalization", () => {
     '<script>throw()</script>אָב', '<img src="https://example.test">אָב', '<svg><text>אָב</text></svg>',
     '<span onclick="throw()">אָב</span>', '<span style="display:none">אָב</span>',
     '<span class="mam-new-semantics">אָב</span>', '<span class="mam-kq-k">אָב</span>',
-    '<span class="mam-kq"><span class="mam-kq-q">ג</span><span class="mam-kq-k">ב</span></span>',
+    '<span class="mam-kq"><span class="mam-kq-q">ג</span><span class="mam-kq-q">ב</span></span>',
     '<span class="mam-spi-pe">אָב</span>', '<span class="mam-spi-invnun">נ</span>',
     'אָב\u202E', 'אָב&#x202e;', 'אָב\u0000', 'אָב\ud800', '<b class="a" class="b">אָב</b>',
     '<!-- hidden -->אָב', `${"<b>".repeat(35)}אָב${"</b>".repeat(35)}`, 'אָ'.repeat(40000),
