@@ -9,12 +9,30 @@ vi.mock("@neondatabase/serverless", () => ({ Pool: class {
 } }));
 import { PgDialect } from "drizzle-orm/pg-core";
 import { restrictedProbeInput, restrictedChildEnvironment, sanitizedProbeResult } from "../../scripts/provider-bootstrap/probe-neon-ws.mjs";
-import { deniedInsert, neonRuntimeProbe, ProbeFailure, requirePhysicalCleanup } from "../../scripts/provider-bootstrap/neon-ws";
+import { deniedInsert, neonRuntimeProbe, ProbeFailure, requirePhysicalCleanup, requireReleaseRowsHidden } from "../../scripts/provider-bootstrap/neon-ws";
 
 const syntheticUrl = new URL("postgresql://ep-synthetic.neon.tech/neondb?sslmode=require");
 syntheticUrl.username = "portal_app";
 syntheticUrl.password = "synthetic-password";
 const url = syntheticUrl.href;
+it("reads every additive release table through fixed qualified identifiers without mutations", async () => {
+  const dialect = new PgDialect(), calls: { sql: string; params: unknown[] }[] = [];
+  const tx = { execute: async (query: Parameters<PgDialect["sqlToQuery"]>[0]) => {
+    const statement = dialect.sqlToQuery(query); calls.push(statement); return { rows: [{ n: 0 }] };
+  } };
+  await requireReleaseRowsHidden(tx as Parameters<typeof requireReleaseRowsHidden>[0], "no-context");
+  expect(calls.map(call => call.sql)).toEqual(["service_catalog", "service_catalog_lifecycle", "student_service_plan", "verse_assessment", "verse_self_check", "lesson_log", "practice_day", "practice_event"].map(table => `select count(*)::int as n from public."${table}"`));
+  expect(calls.every(call => call.params.length === 0)).toBe(true);
+});
+it("fails closed with the actual context phase when a release table exposes rows or has an invalid count", async () => {
+  for (const phase of ["no-context", "empty-context", "wrong-context"] as const) {
+    for (const value of [1, -1, null, undefined, "0"]) {
+      const tx = { execute: async () => ({ rows: [{ n: value }] }) };
+      // Deliberately malformed driver results exercise the runtime boundary.
+      await expect(requireReleaseRowsHidden(tx as unknown as Parameters<typeof requireReleaseRowsHidden>[0], phase)).rejects.toMatchObject({ phase, message: `Provider probe failed (${phase}); private details withheld` });
+    }
+  }
+});
 describe("private restricted probe input boundary", () => {
   it("accepts only the dedicated restricted-login key and the existing runtime URL contract", () => {
     expect(restrictedProbeInput(`PROVIDER_RUNTIME_DATABASE_URL="${url}"\n`)).toBe(url);

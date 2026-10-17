@@ -13,13 +13,21 @@ type Phase = typeof PROBE_PHASES[number];
 export class ProbeFailure extends Error {
   constructor(readonly phase: Phase) { super(`Provider probe failed (${phase}); private details withheld`); }
 }
-const protectedTables = ["tenant", "membership", "role_grant", "student", "student_identity", "guardian", "tutor_student", "invite", "practice_context", "assignment", "assignment_verse", "audit_event", "invitation_throttle", "translation_draft", "tutor_note"];
+const releaseProtectedTables = ["service_catalog", "service_catalog_lifecycle", "student_service_plan", "verse_assessment", "verse_self_check", "lesson_log", "practice_day", "practice_event"] as const;
+const protectedTables = ["tenant", "membership", "role_grant", "student", "student_identity", "guardian", "tutor_student", "invite", "practice_context", "assignment", "assignment_verse", "audit_event", "invitation_throttle", "translation_draft", "tutor_note", ...releaseProtectedTables];
 const rollback = new Error("Synthetic probe transaction rollback");
 const wrong = "provider_probe_unmapped";
 const origin = "https://bneimitzvah.vercel.app";
 type Database = ReturnType<typeof drizzle<typeof schema, PoolClient>>;
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 const requireTrue = (value: unknown, phase: Phase) => { if (value !== true) throw new ProbeFailure(phase); };
+/** SELECT-only transport/context evidence for the additive release tables. */
+export async function requireReleaseRowsHidden(tx: Transaction, phase: "no-context" | "empty-context" | "wrong-context") {
+  for (const table of releaseProtectedTables) {
+    const result = await tx.execute(sql`select count(*)::int as n from public.${sql.identifier(table)}`);
+    requireTrue(result.rows[0]?.n === 0, phase);
+  }
+}
 const count = async (tx: Transaction, id?: string) => Number((await tx.execute(id
   ? sql`select count(*)::int as n from student where id = ${id}::uuid`
   : sql`select count(*)::int as n from student`)).rows[0]?.n);
@@ -82,6 +90,7 @@ export async function neonRuntimeProbe(databaseUrl: unknown) {
       await rolledBack(() => db.transaction(async tx => {
         if (empty) await tx.execute(sql`select set_config('app.tenant_id', '', true)`);
         requireTrue(await count(tx) === 0, empty ? "empty-context" : "no-context");
+        await requireReleaseRowsHidden(tx, empty ? "empty-context" : "no-context");
         await deniedInsert(tx, empty ? "empty-context" : "no-context");
         throw rollback;
       }));
@@ -99,6 +108,7 @@ export async function neonRuntimeProbe(databaseUrl: unknown) {
       phase = "wrong-context";
       await tx.execute(sql`select set_config('app.tenant_id', ${wrong}, true)`);
       requireTrue(await count(tx, fixture) === 0, "wrong-context");
+      await requireReleaseRowsHidden(tx, "wrong-context");
       const seed = await tx.execute(sql`select count(*)::int as n from tenant where id='crc'`);
       requireTrue(seed.rows[0]?.n === 0, "wrong-context");
       const blockedUpdate = await tx.execute(sql`update student set last_name='SyntheticBlocked' where id=${fixture}::uuid returning id`);
@@ -106,6 +116,7 @@ export async function neonRuntimeProbe(databaseUrl: unknown) {
       await deniedInsert(tx, "wrong-context");
       await tx.execute(sql`select set_config('app.tenant_id', '', true)`);
       requireTrue(await count(tx, fixture) === 0, "empty-context");
+      await requireReleaseRowsHidden(tx, "empty-context");
       await deniedInsert(tx, "empty-context");
       throw rollback;
     }));
