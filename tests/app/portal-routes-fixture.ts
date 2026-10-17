@@ -7,6 +7,7 @@ import { createRelationshipService } from "../../src/server/relationships/servic
 import { createPracticeService } from "../../src/server/practice/service";
 import { createProgressService } from "../../src/server/progress/service";
 import { createLessonLogService } from "../../src/server/lesson-log/service";
+import { createPracticeCalendarService } from "../../src/server/practice-calendar/service";
 import { createInvitationService } from "../../src/server/invitations/service";
 import { createReadingPreviewService } from "../../src/server/students/preview";
 import { createStudentService } from "../../src/server/students/service";
@@ -42,7 +43,7 @@ export async function portalRoutesFixture() {
   const pendingInvitations = createPendingInvitations({ secret: randomBytes(48).toString("base64url"), origin: "http://localhost:3000", environment: "local" });
   const readingPreview=createReadingPreviewService({access:f.service,signingSecret:randomBytes(48).toString("base64url"),loadReading:async(date,calendar)=>({fetchedAt:Date.now(),snapshot:{date:parseCeremonyDate(date),calendar,classification:"regular",reading:{parashah:"Synthetic",type:"shabbat",summary:"",source:"Hebcal",aliyot:[{n:1,ref:"Genesis 1:1-6:8"}],triennial:null},haftarah:"Isaiah 1:1-2"}}),loadText:async()=>{throw new StudyUnavailable("upstream");}});
   const runtime: HttpRuntime = { origin: "http://localhost:3000", auth: f.auth, access: f.service, practice, invitations, students, readingPreview, studentWork: createStudentWorkService({ access: f.service, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
-    study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }), progress: createProgressService({ access: f.service, practice }), lessonLog: createLessonLogService({ access: f.service, practice }),
+    study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }), progress: createProgressService({ access: f.service, practice }), lessonLog: createLessonLogService({ access: f.service, practice }), practiceCalendar: createPracticeCalendarService({ access: f.service, practice }),
     portal: createPortalService({ access: f.service, practice, sessionBindingSecret: randomBytes(48).toString("base64url") }), relationships: createRelationshipService({ access: f.service }), pendingInvitations,
     serviceLearning: createServiceLearningService({ access: f.service, practice, signingSecret: randomBytes(48).toString("base64url") }),
     googleChallenges: createGoogleChallenges({ db: f.db, origin: "http://localhost:3000", secret: randomBytes(48).toString("base64url") }),

@@ -127,6 +127,13 @@
       "when": 1792202610195,
       "tag": "0017_lesson_log_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792204136334,
+      "tag": "0018_practice_calendar_foundation",
+      "breakpoints": true
     }
   ]
 }

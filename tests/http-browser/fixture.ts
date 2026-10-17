@@ -12,6 +12,7 @@ import { createServiceLearningService } from "../../src/server/service-learning/
 import { createStudentWorkService } from "../../src/server/student-work/service";
 import { createProgressService } from "../../src/server/progress/service";
 import { createLessonLogService } from "../../src/server/lesson-log/service";
+import { createPracticeCalendarService } from "../../src/server/practice-calendar/service";
 import { StudyUnavailable, type StudyRequest, type StudyPage } from "../../src/server/study/types";
 import { createRelationshipService } from "../../src/server/relationships/service";
 import { createPendingInvitations } from "../../src/server/http/pending-invitations";
@@ -50,7 +51,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     const practice = createPracticeService({ access });
     const pendingInvitations = createPendingInvitations({ secret: secret(), origin: BROWSER_ORIGIN, environment: "local" });
     const readingPreview=createReadingPreviewService({access,signingSecret:secret(),loadReading:async(date,calendar)=>({fetchedAt:Date.now(),snapshot:{date:parseCeremonyDate(date),calendar,classification:date===options.emptyReadingDate?"missing":"regular",reading:date===options.emptyReadingDate?null:{parashah:"Synthetic",type:"shabbat",summary:"",source:"Hebcal",aliyot:[{n:1,ref:"Genesis 1:1-6:8"},{n:"M",ref:"Numbers 28:9-10"}],triennial:null},haftarah:date===options.emptyReadingDate?null:"Isaiah 1:1-2"}}),loadText:options.studyLoad??(async()=>{throw new StudyUnavailable("upstream");})});
-    const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, readingPreview, progress: createProgressService({ access, practice }), lessonLog: createLessonLogService({ access, practice }), portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
+    const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, readingPreview, progress: createProgressService({ access, practice }), lessonLog: createLessonLogService({ access, practice }), practiceCalendar: createPracticeCalendarService({ access, practice }), portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
       study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }), studentWork: createStudentWorkService({ access, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
     serviceLearning: createServiceLearningService({ access: access, practice, signingSecret: secret() }),
       googleChallenges: createGoogleChallenges({ db, origin: BROWSER_ORIGIN, secret: secret() }),

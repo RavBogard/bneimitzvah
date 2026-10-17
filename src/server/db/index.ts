@@ -6,3 +6,4 @@ export * from "./student-work-schema";
 export * from "./service-learning-schema";
 export * from "./progress-schema";
 export * from "./lesson-log-schema";
+export * from "./practice-calendar-schema";

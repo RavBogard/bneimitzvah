@@ -13,6 +13,7 @@ import { identifier } from "../students/validation";
 import { parseServiceFeed, serviceUnitsForSlot, SERVICE_FEED_LIMITS, type ServiceFeed, type ServiceUnit as FeedUnit } from "./feed";
 import type { ServiceUnit, ServiceUnitMaterial, ServiceSectionHeading } from "../../lib/service-learning/types";
 import * as stored from "./data";
+import type { PracticeTarget } from "../../lib/practice-calendar/types";
 
 type Mode = ActiveMode | "child-practice";
 type ReadSelection = { mode: Mode; studentId: string };
@@ -58,39 +59,47 @@ const bounded = <T>(value: T): T => { if (Buffer.byteLength(JSON.stringify(value
 const summary = (feed: ServiceFeed, unit: FeedUnit) => ({ id: unit.id, name: unit.name,
   ...(unit.caption !== undefined ? { caption: unit.caption } : {}), section: section(feed, unit.section) });
 
+async function readStoredFeed<Q extends PgQueryResultHKT>(data: typeof stored, tx: AccessTransaction<Q>, tenantId: string, catalogId: string, check: () => void) {
+  const row = await data.catalog(tx, tenantId, catalogId); check(); if (!row) throw new AccessUnavailable();
+  try {
+    const parsed = parseServiceFeed(row.feedBytes, row.provenanceBytes, row.pins);
+    if (parsed.identity !== row.identity) throw new AccessUnavailable();
+    return parsed;
+  } catch { throw new AccessUnavailable(); }
+}
+async function readStoredPlan<Q extends PgQueryResultHKT>(data: typeof stored, tx: AccessTransaction<Q>, actor: StudentActor | PracticeActor, student: StudentView, check: () => void) {
+  const baseline = await data.currentPlan(tx, actor.tenantId, student.id); check(); if (!baseline) return null;
+  // Shared material composition preserves lifecycle-before-plan lock order.
+  const lifecycle = await data.lifecycle(tx, actor.tenantId, baseline.catalogId); check(); if (!lifecycle) throw new AccessUnavailable();
+  const plan = await data.currentPlan(tx, actor.tenantId, student.id, "share"); check();
+  if (!plan || plan.id !== baseline.id || plan.revision !== baseline.revision || plan.catalogId !== baseline.catalogId) return { stale: true as const };
+  const context = await data.context(tx, actor.tenantId, student.id); check(); if (!context) throw new AccessDenied(404);
+  const selected = ids(plan.selectedIds), needsReview = plan.needsReview || student.ceremonyDate !== plan.reviewedDate || context.serviceSlot !== plan.reviewedSlot;
+  return { plan, lifecycle, selected, needsReview };
+}
+/** Internal transaction composition only: no capability grant or material DTO. */
+export async function verifyPracticeServiceUnit<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: StudentActor | PracticeActor, student: StudentView, target: Extract<PracticeTarget, { type: "service-unit" }>, check: () => void) {
+  const value = await readStoredPlan(stored, tx, actor, student, check); check();
+  if (!value || "stale" in value || value.plan.id !== target.planId || value.plan.revision !== target.planRevision || value.plan.catalogId !== target.catalogId || value.plan.catalogIdentity !== target.catalogIdentity || !value.selected.includes(target.unitId) || value.lifecycle.state === "withdrawn") return false;
+  const loaded = await readStoredFeed(stored, tx, actor.tenantId, value.plan.catalogId, check); check();
+  const selected = canonical(loaded, value.selected, value.plan.reviewedSlot);
+  if (loaded.identity !== value.plan.catalogIdentity || digest(selected) !== digest(value.selected)) throw new AccessUnavailable();
+  return selected.includes(target.unitId);
+}
+
 export function createServiceLearningService<Q extends PgQueryResultHKT>(input: {
   access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>;
   signingSecret: string; now?: () => number; data?: typeof stored;
 }) {
   const data = input.data ?? stored, bindings = createBindings(input.signingSecret, input.now ?? Date.now);
-  async function feed(tx: AccessTransaction<Q>, tenantId: string, catalogId: string) {
-    const row = await data.catalog(tx, tenantId, catalogId); if (!row) throw new AccessUnavailable();
-    try {
-      const parsed = parseServiceFeed(row.feedBytes, row.provenanceBytes, row.pins);
-      if (parsed.identity !== row.identity) throw new AccessUnavailable();
-      return parsed;
-    } catch { throw new AccessUnavailable(); }
-  }
+  const feed = (tx: AccessTransaction<Q>, tenantId: string, catalogId: string) => readStoredFeed(data, tx, tenantId, catalogId, () => undefined);
   const withRead = <T>(request: AccessRequest, selection: ReadSelection, action: (tx: AccessTransaction<Q>, actor: StudentActor | PracticeActor, student: StudentView) => Promise<T>) => {
     identifier(selection.studentId);
     return selection.mode === "child-practice"
       ? input.practice.withPracticeCapability(request, { ...selection, mode: "child-practice", capability: "read" }, action)
       : input.access.withStudentCapability(request, { ...selection, mode: selection.mode, capability: "read" }, action);
   };
-  async function readPlan(tx: AccessTransaction<Q>, actor: StudentActor | PracticeActor, student: StudentView) {
-    const baseline = await data.currentPlan(tx, actor.tenantId, student.id);
-    if (!baseline) { live(actor); return null; }
-    // Lifecycle precedes plan locks for every read/write. Re-read after locking to
-    // reject a concurrent plan replacement rather than mix generations.
-    const lifecycle = await data.lifecycle(tx, actor.tenantId, baseline.catalogId);
-    if (!lifecycle) throw new AccessUnavailable();
-    const plan = await data.currentPlan(tx, actor.tenantId, student.id, "share");
-    live(actor);
-    if (!plan || plan.id !== baseline.id || plan.revision !== baseline.revision || plan.catalogId !== baseline.catalogId) return { stale: true as const };
-    const context = await data.context(tx, actor.tenantId, student.id); if (!context) throw new AccessDenied(404);
-    const selected = ids(plan.selectedIds), needsReview = plan.needsReview || student.ceremonyDate !== plan.reviewedDate || context.serviceSlot !== plan.reviewedSlot;
-    live(actor); return { plan, lifecycle, selected, needsReview };
-  }
+  const readPlan = (tx: AccessTransaction<Q>, actor: StudentActor | PracticeActor, student: StudentView) => readStoredPlan(data, tx, actor, student, () => live(actor));
   const planView = (value: { plan: Plan; lifecycle: Lifecycle; needsReview: boolean }) => ({ id: value.plan.id, revision: value.plan.revision,
     needsReview: value.needsReview, catalogId: value.plan.catalogId, catalogIdentity: value.plan.catalogIdentity, catalogState: value.lifecycle.state });
   async function metadata(request: AccessRequest, selection: ReadSelection) {
