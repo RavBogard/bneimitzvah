@@ -32,3 +32,13 @@ Guards remain sequential through the provider's existing registered guard loop. 
 - Pending operations: preserve existing held prepare/confirm/reload protections and immediate/repeated Escape assertions; ensure the new service-active signal cannot close a pending editor or introduce an idle Escape trap. Reuse prior native closedBy/fallback evidence for identical code rather than claiming cross-browser testing.
 
 Author should own the bounded repair and normal runtime case after the calendar clean checkpoint; coordinate any distinct reviewer test ownership and the exclusive fixture before execution. No runtime failure, final severity score, browser acceptance or new source approval is asserted by this design review.
+
+## Fixture inventory and proposed independent ownership
+
+Read-only inventory after root approved the narrow architecture: propose reviewer-owned `tests/http-browser/service-modal-privacy-ui.test.ts`, with three groups: held same-authority conceal/resume/cancel from service decision over a logical reading sheet; sequential service/work-note decisions with later cancellation; real session-expiry and tutor-link-revocation cleanup/recovery. Author retains ordinary tab/service flows and current reading busy/Escape coverage. Test edits and execution wait for the frozen integrated repair.
+
+Existing `browserFixture` supplies actual SDK auth, tenant-host resolution, restricted runtime, owner-only synthetic setup and per-fixture disposable PostgreSQL. `syntheticUiStudyPage` and `syntheticServiceCatalog` supply invented text/catalog content. Existing modal privacy code demonstrates real route.fetch plus response gates, modal-count and focus assertions, exact retained note verification after reselecting the note stream, and actual session/link mutations. No new production fixture hook is needed.
+
+Use new BrowserContexts, block non-loopback egress/service workers/downloads, and reuse only healthy same-role SDK cookies; no local/session storage or practice handles are copied. Failure cases get a fresh session when expiring auth, rather than inheriting a deliberately expired cached cookie. Target about three tutor SDK signins, below the existing five-request throttle; do not change auth limits. Owner-seeded baseline avoids unnecessary admin login traffic.
+
+The existing isolated runner probes owned port 3191, asserts the exact disposable cluster, creates a fresh owned bootstrap anchor, uses fixture-restricted runtime roles, and restores exact server bytes/removes its anchor in finally. Run only in the author's coordinated exclusive browser/PG lane, serially under the existing browser Vitest config; do not touch occupied 3187 or start a parallel fixture. No new runtime evidence was collected during this inventory.
