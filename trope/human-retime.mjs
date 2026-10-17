@@ -18,7 +18,7 @@ import { canonicalJson, sha256, BENCHMARK_LIMITS } from "./benchmark-pack.mjs";
 
 export const RETIME_SCHEMA = "chant-human-retime/v1";
 export const RETIME_DEFAULTS = Object.freeze({ outputRate: 24000, maxConsonantShare: 0.6, minConsonantRatio: 0.5, minVowelMs: 20,
-  fadeMs: 5, maxSplitShiftMs: 2000, f0Fps: 50, warnVowelRatio: 8, warnNoteVowelCoverage: 0.5, releaseMs: 150, releaseGapMs: 40, tailMs: 200, steadyHeadMs: 25, steadyTailMs: 35 });
+  fadeMs: 5, maxSplitShiftMs: 2000, f0Fps: 50, warnVowelRatio: 8, warnNoteVowelCoverage: 0.5, releaseMs: 150, releaseGapMs: 40, tailMs: 200, steadyHeadMs: 25, steadyTailMs: 35, releaseBreathMs: 60 });
 export const OUTPUT_RATES = Object.freeze([16000, 22050, 24000, 44100, 48000]);
 // Phonikud characters that carry no voicing; the F0 sent to SVC is 0 over them, as in speech2sing.py.
 export const VOICELESS = Object.freeze(["p", "t", "k", "f", "s", "ʃ", "χ", "h", "ʔ", "ts"]);
@@ -48,7 +48,8 @@ function options(input = {}) {
     || !(o.maxConsonantShare > 0 && o.maxConsonantShare < 1) || !(o.minConsonantRatio > 0 && o.minConsonantRatio <= 1)
     || !(o.minVowelMs > 0) || !(o.fadeMs >= 0 && o.fadeMs <= 20) || !(o.maxSplitShiftMs >= 0) || o.f0Fps !== 50
     || !(o.releaseMs >= 0 && o.releaseMs <= 400) || !(o.releaseGapMs >= 0 && o.releaseGapMs <= 200) || !(o.tailMs >= 0 && o.tailMs <= 1000)
-    || !(o.steadyHeadMs >= 0 && o.steadyHeadMs <= 60) || !(o.steadyTailMs >= 0 && o.steadyTailMs <= 60)) fail("options");
+    || !(o.steadyHeadMs >= 0 && o.steadyHeadMs <= 60) || !(o.steadyTailMs >= 0 && o.steadyTailMs <= 60)
+    || !(o.releaseBreathMs >= 0 && o.releaseBreathMs <= 400)) fail("options");
   return Object.freeze(o);
 }
 
@@ -116,16 +117,23 @@ export function planRetime(bound, input) {
     pendingRelease = null;
     if (len < Math.round(0.02 * R)) return null;
     const decayEnd = sourceAfter.get(last.srcEnd);
-    if (decayEnd !== undefined) {
-      len = Math.min(len, decayEnd - last.srcEnd);
-      if (len < Math.round(0.02 * R)) return null;
-      pieces.push({ kind: "release", method: "copy", role: "release", syllableId: last.syllableId, syllable: last.syllable, phone: null, voiced: false,
-        srcStart: last.srcEnd, srcEnd: last.srcEnd + len, dstStart: last.dstEnd, dstEnd: last.dstEnd + len, ratio: 1, source: "take-decay" });
-    } else if (last.role === "vowel" || CONTINUANT.has(last.phone)) {
-      last.releaseSamples = len; last.dstEnd += len; last.method = "wsola"; last.ratio = round6((last.dstEnd - last.dstStart) / (last.srcEnd - last.srcStart));
-    } else return null;
-    releases.push({ syllableId: last.syllableId, phone: last.phone, samples: len, source: decayEnd !== undefined ? "take-decay" : "sustained" });
-    return last.dstEnd + (decayEnd !== undefined ? len : 0);
+    const sustainable = last.role === "vowel" || CONTINUANT.has(last.phone), minimum = Math.round(0.02 * R);
+    // After a voiced sound, the take's own decay is mostly unvoiced breath, and SVC renders all of it as
+    // breath (Daniel, 2026-10-16: "some of the final ך are now too breathy"). The sound is held, voiced,
+    // for most of the release and only the last releaseBreathMs comes from the take's decay.
+    let breath = decayEnd === undefined ? 0 : Math.min(len, decayEnd - last.srcEnd, sustainable ? Math.round(o.releaseBreathMs * R / 1000) : len);
+    if (breath < minimum) breath = 0;
+    const held = sustainable ? len - breath : 0;
+    if (!breath && (!sustainable || held < minimum)) return null;
+    if (held) {
+      last.dstEnd += held; last.method = "wsola"; last.ratio = round6((last.dstEnd - last.dstStart) / (last.srcEnd - last.srcStart));
+      if (breath) last.heldSamples = held; else last.releaseSamples = held;
+    }
+    if (breath) pieces.push({ kind: "release", method: "copy", role: "release", syllableId: last.syllableId, syllable: last.syllable, phone: null, voiced: false,
+      srcStart: last.srcEnd, srcEnd: last.srcEnd + breath, dstStart: last.dstEnd, dstEnd: last.dstEnd + breath, ratio: 1, source: "take-decay" });
+    releases.push({ syllableId: last.syllableId, phone: last.phone, samples: held + breath, heldSamples: held, breathSamples: breath,
+      source: breath && held ? "held-then-take-decay" : breath ? "take-decay" : "sustained" });
+    return last.dstEnd + breath;
   };
   const releases = [];
   for (const phrase of phrases) {
@@ -341,7 +349,7 @@ export function buildHumanRetime(record, pack, audio, { code, alignmentFileSha25
       speaker: { speakerId: r.speakerId, sampleId: r.sampleId, takeNumber: r.takeNumber },
       method: { resampler: RESAMPLER, timeScale: WSOLA, vowelStretch: "steady middle only; steadyHeadMs and steadyTailMs kept at natural speed", timing: "vowel onset on first note; consonants kept unless over maxConsonantShare; vowel nucleus spans every note of its syllable",
         rests: "digital silence after each phrase's release; source pauses and breaths otherwise dropped",
-        release: "a phrase's last sound fades over up to releaseMs into the rest: the take's own decay where the speaker paused, else the final vowel or voiced continuant sustained", options: plan.options, normalisation: "none", outputFormat: "float32 mono WAV" },
+        release: "a phrase's last sound fades over up to releaseMs into the rest: a final vowel or voiced continuant is held, voiced, and ends in at most releaseBreathMs of the take's own decay where the speaker paused; other sounds end in the take's decay", options: plan.options, normalisation: "none", outputFormat: "float32 mono WAV" },
       outputs: { originalSpeech: "not-copied", retimedSpeech: PATHS.speech, dspPitchBaseline: "not-produced", neuralOutput: "not-produced" },
       code, f0Parity: "score F0 from the same B speech plan notes; not a claim about any rendered pitch",
       artifacts: Object.fromEntries(Object.entries(artifacts).map(([path, bytes]) => [path, { role: roles[path], sha256: sha256(bytes), bytes: bytes.length }])) };

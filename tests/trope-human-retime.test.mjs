@@ -157,7 +157,7 @@ test("melisma holds one vowel without repeated consonants; final consonants stay
   for (const s of closed) {
     const last = map.notes.filter(n => n.syllableId === s.id).at(-1);
     // A phrase-final continuant may carry on into the rest as its release; the coda itself sits in the last note.
-    for (const c of map.pieces.filter(p => p.role === "coda" && p.syllableId === s.id)) assert.ok(c.dstStart >= last.dstStart && c.dstEnd - (c.releaseSamples ?? 0) <= last.dstEnd);
+    for (const c of map.pieces.filter(p => p.role === "coda" && p.syllableId === s.id)) assert.ok(c.dstStart >= last.dstStart && c.dstEnd - (c.releaseSamples ?? 0) - (c.heldSamples ?? 0) <= last.dstEnd);
   }
   const slices = map.slices;
   assert.equal(slices.length, target.identity.segments.length); assert.equal(slices[0].dstStart, 0); assert.equal(slices.at(-1).dstEnd, map.totalSamples);
@@ -189,6 +189,12 @@ test("phrase endings release into the rest: the take's own decay after a pause, 
   assert.equal(copied.syllableId, target.identity.syllables[1].id);
   const vowel = map.pieces.find(p => p.role === "vowel" && p.syllableId === copied.syllableId);
   assert.equal(copied.dstStart, vowel.dstEnd); assert.equal(copied.srcStart, vowel.srcEnd);
+  // The vowel is held, voiced, for most of the release; only the last 60 ms is the take's breath.
+  assert.ok(vowel.heldSamples > 0 && copied.dstEnd - copied.dstStart <= Math.round(0.06 * 24000));
+  const split = map.releases.find(r => r.syllableId === copied.syllableId);
+  assert.equal(split.source, "held-then-take-decay"); assert.equal(split.samples, split.heldSamples + split.breathSamples);
+  const whole = json(build(recordFor(target, audio), target, audio, { releaseBreathMs: 150 }), "retime-map.json");
+  assert.ok(whole.releases.some(r => r.source === "take-decay" && r.heldSamples === 0), "a full-length breath leaves nothing to hold");
   // The verse-final vowel has no pause after it in the take (the trailing room tone follows), so it
   // is released from the trailing region too; with no trailing audio it would be sustained instead.
   assert.ok(map.releases.length >= 1 && map.releases.every(r => r.samples > 0));

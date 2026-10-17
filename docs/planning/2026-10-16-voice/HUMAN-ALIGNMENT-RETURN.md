@@ -196,3 +196,9 @@ Daniel recorded `2026-10-16-daniel-vahavta-spoken-slow` (216 s). It holds three 
 Its held word-final consonants did not fit the short maqaf notes: ל of about 250 ms, and final ת with about 100 ms of silent closure. Five of seven verses failed `consonant-fit` at the 0.5 floor. The retime CLI gained `--min-consonant-ratio` (0.2–1, default unchanged, recorded in the retime manifest's options), and the take was rendered at 0.25 as run `vahavta-Bhuman-slow-v6b`. Word review `review-daniel-vahavta-slow-words-1p` is provisional; nothing in this take has been heard word by word.
 
 GATE: lowered the consonant floor for this take only — proceeded because the extra length is silence or a steady sonorant, it is a run option rather than a new default, and the render is private research audio under G3.
+
+**v6b verdict (Daniel):** "another great step forward", but "some of the final ך are now too breathy".
+
+**Measured cause:** the slow reading pauses after more phrase ends, so 16 releases switched from a sustained vowel to a 150 ms copy of the take's decay. That decay is unvoiced exhale: about 10–15 dB below the vowel, with an autocorrelation voicing score of about 0.2, held flat rather than decaying. SVC renders unvoiced F0 there as breath.
+
+**Fix (run `vahavta-Bhuman-slow-v7`):** a final vowel or voiced continuant is now held, voiced, for the release, ending in at most `releaseBreathMs` (default 60) of the take's decay. Releases record `heldSamples`, `breathSamples` and the source `held-then-take-decay`. Awaiting Daniel's listening.
