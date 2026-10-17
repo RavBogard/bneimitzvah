@@ -78,6 +78,13 @@ function identity(env,selected,now,at,phase="identity"){
   at(phase,"native-org");if(env.VERCEL_ORG_ID!==undefined)need(env.VERCEL_ORG_ID===p.teamId);
   return token;
 }
+/** Read-only fixed-Production composition seam. Claim decoding is not provider
+ * authentication; callers must separately require the actual metadata check. */
+export function assertPrivateMediaNativeIdentity(env,now,expectedToken){
+  const token=identity(env,{environment:"production"},now,()=>{});
+  need(expectedToken===undefined || token===expectedToken);
+  return token;
+}
 async function loadSdk(at){
   at("sdk-import","pinned-package");
   const metadata=JSON.parse(await readFile(new URL("../package.json",import.meta.resolve("@vercel/blob")),"utf8"));

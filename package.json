@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/private-media-oidc-probe.mjs",
+    "prebuild": "node scripts/private-media-oidc-probe.mjs && node scripts/private-media-object-probe.mjs",
     "build": "next build",
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
