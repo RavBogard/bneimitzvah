@@ -306,3 +306,18 @@ Also fixed: holes in `voicedPhones` are refused, `f0-voicing.json` lists the eff
 
 Also fixed: release options are range-checked, missing consonants are refused, and a non-numeric delta is refused. Run `unread-Btts-v3` replaces v2 on the same page; Daniel had not flagged v2.
 
+## PocketTorah: Daniel's decisions and a proposal for Codex (2026-10-16)
+
+**Decided (Daniel):**
+- **Use PocketTorah.** Its recordings serve as timing and melody data for the engine, and students may hear them. "Yes I want it, we are safe with the license on archive, don't stress it."
+  - The data comes from archive.org item `PockettorahAudioFiles`, CC BY-SA 3.0, Avery Binder style, plus the app repository's word-onset labels.
+  - Private copy and provenance: `C:/private/pockettorah/` (PROVENANCE.md).
+  - Attribution: "PocketTorah (not-a-box media lab), CC BY-SA 3.0".
+- **Generated chant is a fallback only.** "We don't need to offer my voice as an option ... only my voice when no other choice." Where a human recording exists, students hear it. Daniel's converted voice is used only where none exists, and only after G3.
+
+**Proposal for Codex (app integration, Codex-owned):**
+- **What plays.** A verse player that serves a PocketTorah recording cut to the verse, with word highlighting, wherever one covers the verse: every Torah aliyah and each parashah's single-range haftarah. Composite haftarot and special readings fall back to generated chant, under G3. The CC BY-SA credit is shown wherever a recording plays.
+- **Cut points.** The voice stream will supply verse and word timings from its own alignment of every recording (CTC, cross-checked against PocketTorah's labels: no drift, about ±150 ms scatter on the first aliyah). It will also supply a coverage table of which verses have a recording.
+- **Storage.** Audio stays out of the repository, as always; serving it needs a storage decision on Codex's side.
+- **Release.** This audio is not generated chant, so G3 does not hold it, but it is student-visible. Daniel approved the source.
+
