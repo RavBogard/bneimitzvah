@@ -30,3 +30,7 @@ Root required confinement of HEAD metadata identity/size while keeping differenc
 Final author11/11 PASS1.12s; final composed80/80 PASS via single-read-final-composed, with single-read-final-type and single-read-final-build PASS. Earlier79/type/build and first guard apply to the prior draft; final protection is run on the tightened staged bytes. Independent nine groups remain separate pending evidence. Original writer/selection unchanged comparison still applies (only the separately appended read section changed).
 
 Final tightened staged protection3/3 PASS (single-read-final-guard); final diffcheck clean. No additional source changes after those checks.
+# Root integration
+
+Author source f9ed95c and independent review25c51c accepted. Root full Node340/340 PASS40.83s in `.local-logs/single-read-integration-node.log`; author type/default production build and staged protection pass. Frozen writer/selection remain exact8c. Required exact hosted gates, read-only operator preparation/review and root-only native read remain pending. No result here upgrades the old failed write proof or authorizes a new write round/cleanup/normal release.
+
