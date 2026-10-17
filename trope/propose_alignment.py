@@ -113,6 +113,14 @@ def main():
             t -= 0.01
         return max(t, limit)
     clip_s = clip16.shape[1] / 16000
+    # Log-mel frames (10 ms hop) for vowel-to-vowel joins: the join is where the timbre changes most.
+    mel = torchaudio.transforms.MelSpectrogram(16000, n_fft=400, hop_length=160, n_mels=40)(clip16).clamp_min(1e-10).log()[0].T.numpy()
+    mel = mel - mel.mean(axis=1, keepdims=True)
+    flux = np.r_[0, np.linalg.norm(np.diff(mel, axis=0), axis=1)]
+    flux = np.convolve(flux, np.ones(3) / 3, mode="same")
+    def vowel_join(t0, t1):
+        f0, f1 = int(t0 / 0.01) + 1, max(int(t0 / 0.01) + 2, int(t1 / 0.01))
+        return (f0 + int(np.argmax(flux[f0:f1]))) * 0.01
     edges = [fade_in(spans[0].start * frame_s, max(0.0, spans[0].start * frame_s - a.lead_back))]
     events = []
     for i in range(1, len(spans)):
@@ -126,6 +134,14 @@ def main():
                 events.append((p0, p1)); edges.append(("pause", p0, p1)); continue
         # Between sounds: CTC spans mark a sound's start, so the boundary sits at the next span's start
         # (plus a small offset), not halfway between spans, which put boundaries too early by ear.
+        if a.boundary == "onset" and word_boundary and tokens[i]["role"] == "vowel" and tokens[i - 1]["role"] == "vowel":
+            # Vowel meets vowel across words (…χa | u…): no consonant edge for CTC to mark, and one fixed
+            # offset was heard both too early and too late there. Cut at the largest change in the
+            # spectrum between the two vowels' spans.
+            # The window opens 30 ms after the first vowel's span, past that vowel's own onset transition.
+            lo, hi = spans[i - 1].end * frame_s + 0.03, spans[i].end * frame_s + 0.02
+            edges.append(vowel_join(lo, hi) if hi - lo >= 0.03 else max(prev_end, nxt + a.onset_offset))
+            continue
         edges.append(max(prev_end, nxt + a.onset_offset) if a.boundary == "onset" else (prev_end + nxt) / 2)
     end_s = fade_out(spans[-1].end * frame_s, clip_s - 0.01)
     to_sample = lambda t: s0 + int(round(t * rate))
