@@ -325,3 +325,40 @@ Also fixed: release options are range-checked, missing consonants are refused, a
 
 **Coverage built:** 431 of 432 recordings, 7,057 verses. That is every aliyah of all 54 parashot except Haazinu 1, whose song layout the engine's score refuses, plus all 54 weekly haftarot, five of them in two parts. Holiday, special-Shabbat and megillah files are not yet mapped to readings. Alignment is running.
 
+## Generation parked (Daniel, 2026-10-16)
+
+"Let's cut generation for now. Keep in the background for the future if we ever want to pick it back up."
+
+Students hear PocketTorah's human recordings. Generated chant, in lane A, B-human or B-TTS, is parked: no further listening rounds or tuning. Nothing is deleted.
+
+**What exists, and how to resume:**
+- **B-human:** a spoken take goes through `trope/propose_alignment.py` (CTC proposal, r5), then `applyWordListeningReview`, then `scripts/trope-human-retime.mjs` (WSOLA retime, releases, `--min-consonant-ratio`, `--voiced-phones`), then `trope/soulx_svc_runner.py`. Best result: V'ahavta v9, which Daniel approved as a research render, not under G3.
+- **B-TTS:** a pack's `b-speech-plan.json` with `scoreF0` goes through `trope/speech2sing.py` (Phonikud `michael`, `--release-ms`, `--voiced h`), then SVC with Daniel's prompt. Best result: unread-verse v1 with 3 of 35 words flagged. v2/v3 tried fixes for those flags, and v3 has known defects (below).
+- **Timing:** `trope/timing-model.mjs` (modelled timing; packs accept `timing.source: "modelled"`), `trope/chant-silence.mjs` and `trope/measured-timing.mjs`. The fitted models stay private, under `C:/private/chant-benchmark/models/`.
+- **Environments:** the SoulX venv and SVC checkpoint under `C:/Users/dsbog/haftarah-audio`, and the TTS venv per the home-setup plan, section 5.
+- **Private runs and records:** `C:/private/chant-benchmark/`.
+
+**Open defects at park (seventh review, b94a80b). Fix these first when resuming:**
+1. The `LEAD_S` room rule (`speech2sing.py`) disables the release for U01's וָבֹהוּ, the word Daniel flagged: a 0.2 s rest gives negative room. v3 is bit-identical to no release there. Use the next phrase's actual lead frames instead of the constant.
+2. `impose` does not cap the first onset to LEAD_S, so the room's assumption is unenforced.
+3. The TTS output is already silent over that final vowel's last ~150 ms (raw Phonikud), while target_f0 marks it voiced. That is probably the real cause of "too cut off".
+4. The fade can start before a very short final vowel's own start, and the held pitch can freeze a vibrato swing.
+5. No test covers the Python TTS path, and `scripts/trope-speech2sing.mjs` never passes `--release-ms`.
+
+## Frozen checkpoint offer for Codex (parked engine work, not for release)
+
+Range `2f8119b..1f1d596` on `voice/human-alignment`. It is engine and tooling only, with no app or UI changes, and nothing student-facing.
+- **Review coverage:**
+  - Six adversarial reviews: the third through the sixth plus the reviews of 39ccaa7 and b94a80b, recorded above.
+  - Every defect they found is fixed, except the five open TTS-release items listed under "Generation parked".
+- **Tests:** 182 Node tests pass on Windows (`node --test "tests/**/*.test.mjs"`), and `tests/never-in-repo.test.mjs` is green. Hosted CI has not run on this range.
+- **Option and default changes that affect render identity:**
+  - `releaseMs` 150, `releaseGapMs` 40, `releaseBreathMs` 30 (0 or 20–400).
+  - `voicedPhones` [], `minConsonantRatio` default 0.5 (CLI 0.2–1).
+  - Aligner tag r5; chant-silence defaults; timing model `chant-timing-model/v1` with gamma 0.75, delta 0.2, shrink 6.
+  - Pack `timing.source` measured or modelled, recorded in both manifest and score.
+- **Caveats:**
+  - No G1/G2/G3 standing.
+  - No inheritance of earlier listening results.
+  - Generation is parked, so this integrates only if Codex wants the engine kept in sync. It can equally wait.
+
