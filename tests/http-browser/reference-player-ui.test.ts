@@ -29,8 +29,9 @@ const sourceAsset = "ra_" + "7".repeat(32);
 async function api(tab: Page, path: string, body: unknown) {
   return tab.evaluate(async ({ path, body }) => { const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }); return r.status; }, { path, body });
 }
-async function page(mobile = false, who: "admin" | "tutor" = "admin") {
-  const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 }, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
+async function page(mobile = false, who: "admin" | "tutor" = "admin", authenticated?: BrowserContext) {
+  const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 }, serviceWorkers: "block", acceptDownloads: false,
+    ...(authenticated ? { storageState: await authenticated.storageState() } : {}) }); contexts.push(context);
   const state = { requests: 0, corrupt: false, held: null as null | { release(): void; started: Promise<void> }, sawCookie: false, sawReferer: false };
   await context.addInitScript(() => {
     const target = window as TrackedWindow; target.referenceAudios = []; target.referenceRevoked = [];
@@ -50,7 +51,7 @@ async function page(mobile = false, who: "admin" | "tutor" = "admin") {
     } else if (url.origin === BROWSER_ORIGIN) await route.continue(); else await route.abort();
   });
   const tab = await context.newPage(); await tab.goto("/", { waitUntil: "domcontentloaded" });
-  const email = `pg-${who}@example.test`; expect(await api(tab, "/api/auth/sign-in/magic-link", { email })).toBe(200); await openAuthMail(tab, fixture.takeMail(email));
+  if (!authenticated) { const email = `pg-${who}@example.test`; expect(await api(tab, "/api/auth/sign-in/magic-link", { email })).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); }
   await tab.goto(`/workspace/${who === "admin" ? "admin/students" : "tutor"}/${fixture.student.id}${who === "admin" ? "/reading" : ""}`, { waitUntil: "domcontentloaded" });
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
   return { tab, state, hold() { state.held = { release, started }; return state.held; } };
@@ -174,4 +175,32 @@ it("clears real playback when its authenticated browser session disappears", asy
   await expect.poll(async () => (await native(tab)).revoked).toBe(1);
   expect(await native(tab)).toMatchObject({ paused: true, src: null });
   await ui(player(tab)).toHaveCount(0);
+});
+
+it("opens fresh idle practice from Service parts Start without reviving disposed media", async () => {
+  // A new media/browser context can reuse this fixture's valid synthetic admin
+  // session without spending a sixth magic link in the same IP rate window.
+  // When selected alone, page() signs in normally.
+  const { tab, state } = await page(false, "admin", contexts[0]);
+  const tabs = tab.getByRole("tablist", { name: "Student page" });
+  const service = tabs.getByRole("tab", { name: "Service parts", exact: true });
+  const reading = tabs.getByRole("tab", { name: "Reading", exact: true });
+  await service.click(); await ui(service).toHaveAttribute("aria-selected", "true");
+  await ui(tab.locator(".reading-toolbar")).toHaveCount(0);
+  await tab.getByRole("button", { name: "Start", exact: true }).click();
+  await ui(reading).toHaveAttribute("aria-selected", "true");
+  await ui(tab.getByRole("dialog", { name: "Genesis 1:1", exact: true })).toBeVisible();
+  expect(await native(tab)).toMatchObject({ count: 0 }); expect(state.requests).toBe(0);
+  await load(tab); await player(tab).getByRole("button", { name: "Play", exact: true }).click();
+  await expect.poll(async () => (await native(tab)).paused).toBe(false);
+  await tab.getByRole("dialog").getByRole("button", { name: "Close practice view", exact: true }).click();
+  await expect.poll(async () => (await native(tab)).revoked).toBe(1);
+  expect(await native(tab)).toMatchObject({ paused: true, src: null });
+  await service.click(); await ui(service).toHaveAttribute("aria-selected", "true");
+  await ui(player(tab)).toHaveCount(0);
+  await tab.getByRole("button", { name: "Start", exact: true }).click();
+  await ui(reading).toHaveAttribute("aria-selected", "true"); await ui(player(tab)).toBeVisible();
+  await ui(player(tab).getByRole("button", { name: "Play", exact: true })).toBeDisabled();
+  await ui(player(tab).getByRole("button", { name: "Load recording", exact: true })).toBeEnabled();
+  expect(state.requests).toBe(1); expect(await native(tab)).toMatchObject({ count: 1, paused: true, src: null, revoked: 1 });
 });

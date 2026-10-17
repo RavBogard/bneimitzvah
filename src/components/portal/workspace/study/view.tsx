@@ -76,12 +76,23 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   }
   const livePage = key && state.binding === key && !state.loading ? state.page : undefined;
   const canHear = Boolean(livePage && !concealed && active);
+  const openerScope = useRef({ baseline, page: livePage, concealed, epoch });
+  openerScope.current = { baseline, page: livePage, concealed, epoch };
   useLayoutEffect(() => { onHearReady?.(canHear); return () => onHearReady?.(false); }, [canHear, onHearReady]);
   useLayoutEffect(() => { if (concealed || !active) setLift(null); }, [concealed, active, epoch]);
   const shown = livePage && state.kind ? [state.kind, livePage.offset, livePage.verses.length] as const : null;
   useEffect(() => { if (shown) onShown?.(...shown); }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
   const open = (page: StudyPage, index: number) => { setLift({ page, index }); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
-  if (liftHandle) liftHandle.current = livePage && canHear ? (index: number) => open(livePage, Math.min(Math.max(index, 0), livePage.verses.length - 1)) : null;
+  if (liftHandle) {
+    // Parent Start brings this tab forward and opens it in the same event.
+    // Inactivity still unmounts media; it does not revoke this explicit opener.
+    const scope = openerScope.current, turn = generation.current;
+    liftHandle.current = livePage && !concealed ? (index: number) => {
+      if (openerScope.current !== scope || scope.concealed || metadata.current !== baseline
+        || generation.current !== turn || controller.current?.signal.aborted) return;
+      open(livePage, Math.min(Math.max(index, 0), livePage.verses.length - 1));
+    } : null;
+  }
   if (!baseline) return <section className="assigned-study" aria-label="Assigned text"><p role="status">Text is hidden while the assignment is checked.</p></section>;
   if (!baseline.readings.length) return null;
   const kind = current?.kind ?? selection.current?.kind ?? baseline.readings[0].kind, assignment = baseline.readings.find(row => row.kind === kind);
