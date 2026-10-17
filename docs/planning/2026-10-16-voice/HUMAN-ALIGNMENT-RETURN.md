@@ -211,7 +211,21 @@ GATE: lowered the consonant floor for this take only — proceeded because the e
 - לְבָבְךָ has no gap in the chant; it is probably the known vowel-to-vowel join with וּבְכׇל.
 
 **Fixes (run `vahavta-Bhuman-slow-v9`, pack `daniel-vahavta-siddur-sungtime4`):**
-- Measured syllables lose the chant's silent runs of 100 ms or more below −30 dBFS, keeping 80 ms for a closure. 3.69 s were removed; the timing record is `timing-daniel-vahavta-sung-3-silence-removed`.
+- Each measured syllable's longest silent run below −30 dBFS (10 ms frames) gives up all but 80 ms, and the cut is applied only when it is 100 ms or more, so in effect pauses of 180 ms or more are shortened. 3.69 s were removed; the timing record is `timing-daniel-vahavta-sung-3-silence-removed`. The step first ran as a one-off command; it is now `trope/chant-silence.mjs` (`chantSilenceCuts`, `removeChantSilence`), which reproduces the private record exactly (196 of 196 cuts, 3690 ms, identical timing).
 - A held vowel now fades linearly from the start of its hold through the breath.
 
 **v9 verdict (Daniel):** "Approved." He flagged no words on the second flag page (its `flags` collection read back empty). This approves v9 as the current state of the B-human research render. It is not the G3 listening review: no student hears it, and the formal review (at least 95% melody passes, zero "would teach wrong") is still to come.
+
+**Fourth review (adversarial, 4002d98..44fc926):** no blocking defects. Release accounting, the fade's continuity into the breath, and source bounds were checked directly. Fixed:
+- The v9 silence removal had no committed code. It is now `trope/chant-silence.mjs` with tests.
+- `releaseBreathMs` of 1–19 ms was accepted but behaved as 0, since breaths under 20 ms are dropped. Only 0 or 20–400 is accepted now.
+- Tests now tie the release record's `heldSamples` and `breathSamples` to the vowel and release pieces. The CLI test covers `--min-consonant-ratio`: values out of range are refused, and 0.25 is recorded in the manifest.
+
+Left as noted:
+- Commit 2ae2b5c's subject says the release keeps the *last* 60 ms of the breath. It keeps the first, continuous with the vowel. Pushed history is not rewritten.
+- A hold under 20 ms is kept when a breath follows it.
+- A sustained release records `releaseSamples` on its piece, not `heldSamples`.
+- Vowel-stretch warnings are computed before the hold lengthens the final vowel.
+- A word ending in voiceless ך (for example בַדֶּרֶךְ) still copies its full breath after a pause.
+
+The test that the breath is not faded twice is still missing.

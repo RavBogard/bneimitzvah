@@ -49,7 +49,7 @@ function options(input = {}) {
     || !(o.minVowelMs > 0) || !(o.fadeMs >= 0 && o.fadeMs <= 20) || !(o.maxSplitShiftMs >= 0) || o.f0Fps !== 50
     || !(o.releaseMs >= 0 && o.releaseMs <= 400) || !(o.releaseGapMs >= 0 && o.releaseGapMs <= 200) || !(o.tailMs >= 0 && o.tailMs <= 1000)
     || !(o.steadyHeadMs >= 0 && o.steadyHeadMs <= 60) || !(o.steadyTailMs >= 0 && o.steadyTailMs <= 60)
-    || !(o.releaseBreathMs >= 0 && o.releaseBreathMs <= 400)) fail("options");
+    || !(o.releaseBreathMs === 0 || o.releaseBreathMs >= 20 && o.releaseBreathMs <= 400)) fail("options");
   return Object.freeze(o);
 }
 

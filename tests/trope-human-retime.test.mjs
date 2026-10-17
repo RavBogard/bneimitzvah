@@ -193,6 +193,9 @@ test("phrase endings release into the rest: the take's own decay after a pause, 
   assert.ok(vowel.heldSamples > 0 && copied.dstEnd - copied.dstStart <= Math.round(0.03 * 24000));
   const split = map.releases.find(r => r.syllableId === copied.syllableId);
   assert.equal(split.source, "held-then-take-decay"); assert.equal(split.samples, split.heldSamples + split.breathSamples);
+  assert.equal(vowel.heldSamples, split.heldSamples, "the record's hold is the hold the vowel piece carries");
+  assert.equal(copied.dstEnd - copied.dstStart, split.breathSamples, "the record's breath is the release piece");
+  assert.equal(copied.srcEnd - copied.srcStart, split.breathSamples, "the breath is copied at natural speed");
   // The hold is one decay from its start through the breath, not a full-level tail.
   const peak = (a, z) => speech.slice(a, z).reduce((m, s) => Math.max(m, Math.abs(s)), 0), h0 = vowel.dstEnd - vowel.heldSamples, q = vowel.heldSamples >> 2;
   assert.ok(peak(vowel.dstEnd - q, vowel.dstEnd) < 0.6 * peak(h0 - q, h0), "held vowel fades from the start of its hold");
@@ -217,6 +220,9 @@ test("phrase endings release into the rest: the take's own decay after a pause, 
   assert.ok(held && held.role === "vowel" && held.method === "wsola");
   assert.ok(r2.releases.some(r => r.source === "sustained"));
   assert.throws(() => build(recordFor(target, audio), target, audio, { releaseMs: 1000 }), e => e.code === "options");
+  // A breath under the 20 ms floor would be dropped, so 1-19 ms is refused rather than silently meaning 0.
+  for (const releaseBreathMs of [10, 19, 401, -1]) assert.throws(() => build(recordFor(target, audio), target, audio, { releaseBreathMs }), e => e.code === "options");
+  for (const releaseBreathMs of [0, 20, 400]) assert.ok(build(recordFor(target, audio), target, audio, { releaseBreathMs }));
   const none = json(build(recordFor(target, audio), target, audio, { releaseMs: 0 }), "retime-map.json");
   assert.equal(none.releases.length, 0);
 });
@@ -436,7 +442,13 @@ test("CLI keeps inputs and output private, writes exclusively with a run record,
     const otherOut = await call({ "--out": join(otherRepo, "out") }); assert.equal(otherOut.code, 1); assert.match(otherOut.stderr, /destination-repository/); clean(otherOut);
     await assert.rejects(lstat(join(otherRepo, "out")), { code: "ENOENT" });
     await assert.rejects(lstat(join(root, "out")), { code: "ENOENT" });
+    for (const ratio of ["0.1", "1.5", "x"]) { const bad = await call({ "--min-consonant-ratio": ratio }); assert.equal(bad.code, 1); assert.match(bad.stderr, /arguments/); clean(bad); }
+    await assert.rejects(lstat(join(root, "out")), { code: "ENOENT" });
+    const floor = await call({ "--min-consonant-ratio": "0.25", "--out": join(root, "out-floor") }); assert.equal(floor.code, 0, floor.stderr); clean(floor);
+    const floorManifest = JSON.parse(await readFile(join(root, "out-floor", "manifest.json"), "utf8"));
+    assert.ok(JSON.stringify(floorManifest).includes('"minConsonantRatio":0.25'), "a lowered consonant floor is recorded in the manifest");
     const ok = await call(); assert.equal(ok.code, 0, ok.stderr); clean(ok);
+    assert.ok(!JSON.stringify(JSON.parse(await readFile(join(root, "out", "manifest.json"), "utf8"))).includes('"minConsonantRatio":0.25'));
     const manifest = JSON.parse(await readFile(join(root, "out", "manifest.json"), "utf8"));
     assert.equal(manifest.binding.alignmentFileSha256, sha256(alignmentBytes));
     assert.equal(manifest.code.fileHashes["trope/human-retime.mjs"], sha256(await readFile(join(repository, "trope/human-retime.mjs"))));
