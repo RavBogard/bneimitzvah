@@ -1,13 +1,14 @@
 // Reference-audio ingestion contract: validates a private PocketTorah verse index
 // (pockettorah-verse-index/v1), maps its aligned words onto the portal's own reading words, and builds
-// the small client-safe verse DTO a reviewed player adapter may serve. Pure functions, no I/O, no
-// dependencies. The index's Hebrew is alignment evidence only; the portal's licensed study text stays
-// the authority for what a word is. See docs/planning/2026-10-17-reference-audio/REFERENCE-AUDIO-CONTRACT.md.
+// the small client-safe verse DTO a reviewed player adapter may serve. No I/O; only node:crypto. The
+// index's Hebrew is alignment evidence only; the portal's licensed study text stays the authority for
+// what a word is. See docs/planning/2026-10-17-reference-audio/REFERENCE-AUDIO-CONTRACT.md.
+import { createHash } from "node:crypto";
 
 export const INDEX_SCHEMA = "pockettorah-verse-index/v1";
 export const DTO_SCHEMA = "reference-verse/v1";
 
-/** Seconds. Every bound is checked inclusively with EPSILON; anything outside is rejected, never clamped. */
+/** Seconds. Every bound is checked inclusively with EPSILON where stated; nothing is ever clamped. */
 export const TOLERANCES = Object.freeze({
   EPSILON: 0.0015,            // index times are rounded to 1 ms
   MIN_VERSE_SECONDS: 0.5,     // shorter cuts are not a verse
@@ -18,7 +19,7 @@ export const TOLERANCES = Object.freeze({
   MAX_VERSES_PER_RECORDING: 400,
 });
 
-/** The only review states the index may declare, and what each means for playback. */
+/** The only review states the index may declare, and the playback review each one becomes. */
 export const REVIEW_STATES = Object.freeze({
   "start moved earlier to pitched sound before the aligned first word": "start-moved",
 });
@@ -26,8 +27,6 @@ export const REVIEW_STATES = Object.freeze({
 /** Recordings known to be missing from the source; anything else missing is a gap to report, never to fill. */
 export const KNOWN_GAPS = Object.freeze({
   "Haazinu-1": "no PocketTorah recording",
-  "torah-1..torah-12": "short trope-example files, not readings; excluded",
-  holidays: "festival, special-Shabbat and megillah readings are not in the source",
 });
 
 export const ATTRIBUTION = Object.freeze({
@@ -42,16 +41,17 @@ export const BOOKS = Object.freeze(["Genesis", "Exodus", "Leviticus", "Numbers",
   "I Samuel", "II Samuel", "I Kings", "II Kings", "Isaiah", "Jeremiah", "Ezekiel", "Hosea", "Joel", "Amos", "Obadiah",
   "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", "Malachi", "Psalms", "Proverbs", "Job",
   "Song of Songs", "Ruth", "Lamentations", "Ecclesiastes", "Esther", "Daniel", "Ezra", "Nehemiah", "I Chronicles", "II Chronicles"]);
-const BOOK_RE = BOOKS.map(b => b.replace(/ /g, " ")).join("|");
+const BOOK_RE = BOOKS.join("|");
 const VERSE_REF = new RegExp(`^(${BOOK_RE}) ([1-9]\\d{0,2}):([1-9]\\d{0,2})$`);
-const SPAN = `([1-9]\\d{0,2}):([1-9]\\d{0,2})-([1-9]\\d{0,2}):([1-9]\\d{0,2})`;
-const RANGE_PART = new RegExp(`^(${BOOK_RE}) ${SPAN}$`);
-const KEY = /^[A-Za-z]{2,40}-(?:[1-7]|h)$/;
+const RANGE_PART = new RegExp(`^(${BOOK_RE}) ([1-9]\\d{0,2}):([1-9]\\d{0,2})-([1-9]\\d{0,2}):([1-9]\\d{0,2})$`);
+const KEY = /^([A-Za-z]{2,40})-([1-7]|h)$/;
 const ARCHIVE_FILE = /^[A-Za-z0-9_-]{1,80}\.mp3$/;
-const ASSET_ID = /^ra_[a-z0-9]{16,40}$/;
-const SHA256 = /^[0-9a-f]{64}$/;
+const ASSET_ID = /^ra_[0-9a-f]{32}$/;   // a random or keyed-hash id from the approved-asset registry
+const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+// Index word text: Hebrew points, accents, letters, maqaf, paseq, sof pasuq, geresh marks and CGJ only.
+const WORD_TEXT = /^[֑-ׇא-תװ-״͏]{1,64}$/u;
 const HEBREW_LETTER = /[א-ת]/u;
-const BAD_TEXT = /[\u0000-\u001F\u007F-\u009F‪-‮⁦-⁩﻿\s]/u;
+const MAQAF = "־", PASEQ = "׀", SOF_PASUQ = "׃", CGJ = /͏/gu;
 
 const RECORDING_FIELDS = new Set(["key", "parsha", "part", "table", "ref", "archiveFile", "seconds", "wordLabelsMatched", "verses"]);
 const VERSE_FIELDS = new Set(["ref", "start", "end", "words", "alignScore", "startVsSoundOnsetMs", "labelGapMedianMs", "review"]);
@@ -60,149 +60,195 @@ const TOP_FIELDS = new Set(["schema", "source", "method", "recordings"]);
 
 const finite = x => typeof x === "number" && Number.isFinite(x);
 const isObject = x => x !== null && typeof x === "object" && !Array.isArray(x);
+const sha256 = s => createHash("sha256").update(s, "utf8").digest("hex");
+const cmp = (a, b) => a[0] - b[0] || a[1] - b[1];
+const safeKey = k => /^[A-Za-z0-9_]{1,40}$/.test(k) ? k : "?";
 
 /** "Isaiah 40:1" -> {book, chapter, verse}, or null for anything not canonical. */
 export function parseVerseRef(ref) {
   const m = typeof ref === "string" ? VERSE_REF.exec(ref) : null;
   return m ? { book: m[1], chapter: Number(m[2]), verse: Number(m[3]) } : null;
 }
-/** "Jeremiah 2:4-2:28; Jeremiah 3:4-3:4" -> parts, or null. */
+/**
+ * "Jeremiah 2:4-2:28; Jeremiah 3:4-3:4" -> parts, or null. Every part runs forward, all parts are in one
+ * book, and no two parts share a verse. Parts are read in the order written: a haftarah may genuinely
+ * jump back (Jeremiah 34:8-34:22; Jeremiah 33:25-33:26), so a declared backward part is allowed and
+ * marked `back`, while verses that leave the declared order are rejected by validateIndex.
+ */
 export function parseRangeRef(ref) {
   if (typeof ref !== "string" || ref.length > 200) return null;
   const parts = ref.split("; ").map(p => RANGE_PART.exec(p));
   if (parts.some(p => !p)) return null;
   const out = parts.map(m => ({ book: m[1], from: [Number(m[2]), Number(m[3])], to: [Number(m[4]), Number(m[5])] }));
-  return out.every(p => cmp(p.from, p.to) <= 0) ? out : null;
+  if (out.some(p => p.book !== out[0].book || cmp(p.from, p.to) > 0)) return null;
+  for (let a = 0; a < out.length; a++) for (let b = a + 1; b < out.length; b++) {
+    if (cmp(out[a].from, out[b].to) <= 0 && cmp(out[b].from, out[a].to) <= 0) return null;   // overlap or duplicate
+  }
+  return out.map((p, k) => ({ ...p, back: k > 0 && cmp(p.from, out[k - 1].to) < 0 }));
 }
-const cmp = (a, b) => a[0] - b[0] || a[1] - b[1];
 
 /**
- * Validate a parsed index. Returns {ok, errors, warnings, recordings} where errors are {code, at} with
- * `at` a structural location only (recording key / verse ref / word number), never text or paths.
- * Nothing is repaired: a recording with any error is excluded whole, so a player never guesses.
+ * Validate a parsed index. Returns {ok, errors, warnings, recordings}: errors are {code, at} with `at` a
+ * structural location only (recording key, verse ref, word number), never text or paths.
+ *  - An invalid envelope (schema, unknown top-level field, recordings list) leaves recordings EMPTY.
+ *  - Under a valid envelope a recording with any error is excluded whole, and every copy of a
+ *    duplicated key or archive file is excluded; independently valid recordings remain usable.
+ * options.verseCounts: {"Book": [verses in chapter 1, ...]} lets a reading cross a chapter boundary;
+ * without it a chapter change cannot be checked for skipped verses and is rejected.
+ * Never throws: hostile JSON becomes error codes.
  */
-export function validateIndex(index) {
+export function validateIndex(index, { verseCounts = null } = {}) {
   const errors = [], warnings = [], valid = new Map();
+  let envelope = true;
   const fail = (code, at) => { errors.push({ code, at }); return false; };
-  if (!isObject(index)) return { ok: false, errors: [{ code: "not-an-object", at: "index" }], warnings, recordings: valid };
-  for (const k of Object.keys(index)) if (!TOP_FIELDS.has(k)) fail("unknown-field", `index.${safeKey(k)}`);
-  if (index.schema !== INDEX_SCHEMA) fail("schema", "index.schema");
-  if (!Array.isArray(index.recordings) || index.recordings.length === 0 || index.recordings.length > TOLERANCES.MAX_RECORDINGS) {
-    fail("recordings", "index.recordings");
-    return { ok: false, errors, warnings, recordings: valid };
-  }
-  const seenKeys = new Set(), seenFiles = new Set();
+  const bad = (code, at) => { envelope = false; return fail(code, at); };
+  const done = () => ({ ok: errors.length === 0, errors, warnings, recordings: envelope ? valid : new Map() });
+  if (!isObject(index)) { bad("not-an-object", "index"); return done(); }
+  for (const k of Object.keys(index)) if (!TOP_FIELDS.has(k)) bad("unknown-field", `index.${safeKey(k)}`);
+  if (index.schema !== INDEX_SCHEMA) bad("schema", "index.schema");
+  for (const k of ["source", "method"]) if (index[k] !== undefined && (typeof index[k] !== "string" || index[k].length > 4000)) bad(k, `index.${k}`);
+  if (!Array.isArray(index.recordings) || index.recordings.length === 0 || index.recordings.length > TOLERANCES.MAX_RECORDINGS) { bad("recordings", "index.recordings"); return done(); }
+  const count = (f) => { const m = new Map(); for (const r of index.recordings) { const v = isObject(r) ? f(r) : null; if (typeof v === "string") m.set(v, (m.get(v) ?? 0) + 1); } return m; };
+  const keyCount = count(r => r.key), fileCount = count(r => typeof r.archiveFile === "string" ? r.archiveFile.toLowerCase() : null);
   index.recordings.forEach((r, n) => {
     const before = errors.length;
     const at = isObject(r) && typeof r.key === "string" && KEY.test(r.key) ? r.key : `recording#${n}`;
-    if (!isObject(r)) return fail("recording-not-object", at);
-    for (const k of Object.keys(r)) if (!RECORDING_FIELDS.has(k)) fail("unknown-field", `${at}.${safeKey(k)}`);
-    if (typeof r.key !== "string" || !KEY.test(r.key)) fail("recording-key", at);
-    else if (seenKeys.has(r.key)) fail("duplicate-recording-key", at);
-    if (typeof r.archiveFile !== "string" || !ARCHIVE_FILE.test(r.archiveFile)) fail("archive-file", at);
-    else if (seenFiles.has(r.archiveFile.toLowerCase())) fail("duplicate-archive-file", at);
-    if (typeof r.parsha !== "string" || !r.parsha) fail("parsha", at);
-    if (!(r.part === "h" || /^[1-7]$/.test(String(r.part)))) fail("part", at);
-    if (typeof r.key === "string" && r.key.slice(r.key.lastIndexOf("-") + 1) !== String(r.part)) fail("key-part-mismatch", at);
-    if (!(r.table === "torah" && r.part !== "h" || r.table === "haftarah" && r.part === "h")) fail("table", at);
-    if (!finite(r.seconds) || r.seconds <= 0 || r.seconds > TOLERANCES.MAX_RECORDING_SECONDS) fail("recording-seconds", at);
-    if (typeof r.wordLabelsMatched !== "boolean") fail("labels-matched-flag", at);
-    const range = parseRangeRef(r.ref);
-    if (!range) fail("recording-ref", at);
-    if (!Array.isArray(r.verses) || !r.verses.length || r.verses.length > TOLERANCES.MAX_VERSES_PER_RECORDING) { fail("verses", at); return; }
-    const seenRefs = new Set();
-    let prev = null;
-    r.verses.forEach((v, i) => {
-      const vat = `${at}/${isObject(v) && parseVerseRef(v.ref) ? v.ref : `verse#${i}`}`;
-      if (!isObject(v)) return fail("verse-not-object", vat);
-      for (const k of Object.keys(v)) if (!VERSE_FIELDS.has(k)) fail("unknown-field", `${vat}.${safeKey(k)}`);
-      const p = parseVerseRef(v.ref);
-      if (!p) return fail("verse-ref", vat);
-      if (seenRefs.has(v.ref)) fail("duplicate-verse-ref", vat);
-      seenRefs.add(v.ref);
-      if (range && !range.some(part => part.book === p.book && cmp(part.from, [p.chapter, p.verse]) <= 0 && cmp([p.chapter, p.verse], part.to) <= 0)) fail("verse-outside-recording-ref", vat);
-      // Consecutive verses, a new chapter's first verse, or the first verse of a later part of a split range.
-      const partStart = range && range.some(part => part.book === p.book && part.from[0] === p.chapter && part.from[1] === p.verse);
-      if (prev && !(prev.book === p.book && (p.chapter === prev.chapter && p.verse === prev.verse + 1 || p.chapter === prev.chapter + 1 && p.verse === 1)) && !partStart) fail("verse-order", vat);
-      if (!prev && range && !(range[0].book === p.book && range[0].from[0] === p.chapter && range[0].from[1] === p.verse)) fail("first-verse-not-range-start", vat);
-      if (!finite(v.start) || !finite(v.end) || v.start < -TOLERANCES.EPSILON || v.end > r.seconds + TOLERANCES.EPSILON) fail("verse-cut-out-of-range", vat);
-      else {
-        const d = v.end - v.start;
-        if (d < TOLERANCES.MIN_VERSE_SECONDS || d > TOLERANCES.MAX_VERSE_SECONDS) fail("verse-duration", vat);
-        if (i > 0 && finite(r.verses[i - 1]?.end) && v.start < r.verses[i - 1].end - TOLERANCES.EPSILON) fail("verse-overlap", vat);
-      }
-      if (v.review !== undefined && !Object.hasOwn(REVIEW_STATES, v.review)) fail("review-state", vat);
-      for (const k of ["alignScore", "startVsSoundOnsetMs", "labelGapMedianMs"]) if (v[k] !== undefined && v[k] !== null && !finite(v[k])) fail(`metric-${k}`, vat);
-      if (!Array.isArray(v.words) || !v.words.length || v.words.length > TOLERANCES.MAX_WORDS_PER_VERSE) return fail("words", vat);
-      v.words.forEach((w, k) => {
-        const wat = `${vat}#w${k}`;
-        if (!isObject(w)) return fail("word-not-object", wat);
-        for (const f of Object.keys(w)) if (!WORD_FIELDS.has(f)) fail("unknown-field", `${wat}.${safeKey(f)}`);
-        if (typeof w.he !== "string" || !w.he || w.he.length > 64 || !w.he.isWellFormed() || w.he !== w.he.normalize("NFC") || BAD_TEXT.test(w.he) || !HEBREW_LETTER.test(w.he)) fail("word-text", wat);
-        if (!finite(w.start)) return fail("word-start", wat);
-        if (finite(v.start) && finite(v.end) && (w.start < v.start - TOLERANCES.EPSILON || w.start > v.end + TOLERANCES.EPSILON)) fail("word-outside-verse", wat);
-        if (k > 0 && finite(v.words[k - 1]?.start) && w.start < v.words[k - 1].start) fail("word-order", wat);
-        // label is PocketTorah's own onset; it leads the voice and is never used for highlighting.
-        if (w.label !== undefined && (!finite(w.label) || w.label < 0 || w.label > r.seconds + TOLERANCES.EPSILON)) fail("word-label", wat);
-        if (w.label !== undefined && r.wordLabelsMatched !== true) fail("label-without-match", wat);
-      });
-      prev = p;
-    });
-    if (typeof r.key === "string") seenKeys.add(r.key);
-    if (typeof r.archiveFile === "string") seenFiles.add(r.archiveFile.toLowerCase());
+    try { checkRecording(r, at, fail, keyCount, fileCount, verseCounts); } catch { fail("malformed-recording", at); }
     if (errors.length === before) valid.set(r.key, r);
   });
-  // The same verse in two recordings is legal (it can be read in two places) but never resolved by guessing.
   const byRef = new Map();
   for (const r of valid.values()) for (const v of r.verses) byRef.set(v.ref, (byRef.get(v.ref) ?? 0) + 1);
-  const shared = [...byRef.values()].filter(n => n > 1).length;
+  const shared = [...byRef.values()].filter(x => x > 1).length;
+  // The same verse in two recordings is legal (it can be read in two places); it is addressed only as (asset, ref).
   if (shared) warnings.push({ code: "verse-in-several-recordings", count: shared });
-  return { ok: errors.length === 0, errors, warnings, recordings: valid };
+  const back = [...valid.values()].filter(r => parseRangeRef(r.ref).some(p => p.back)).length;
+  if (back) warnings.push({ code: "declared-backward-range-part", count: back });
+  return done();
 }
-const safeKey = k => /^[A-Za-z0-9_]{1,40}$/.test(k) ? k : "?";
+
+function checkRecording(r, at, fail, keyCount, fileCount, verseCounts) {
+  if (!isObject(r)) return fail("recording-not-object", at);
+  for (const k of Object.keys(r)) if (!RECORDING_FIELDS.has(k)) fail("unknown-field", `${at}.${safeKey(k)}`);
+  const key = typeof r.key === "string" ? KEY.exec(r.key) : null;
+  if (!key) fail("recording-key", at);
+  else if (keyCount.get(r.key) > 1) fail("duplicate-recording-key", at);
+  if (typeof r.archiveFile !== "string" || !ARCHIVE_FILE.test(r.archiveFile)) fail("archive-file", at);
+  else if (fileCount.get(r.archiveFile.toLowerCase()) > 1) fail("duplicate-archive-file", at);
+  if (typeof r.parsha !== "string" || !key || r.parsha.replace(/[^A-Za-z]/g, "") !== key[1]) fail("parsha", at);
+  if (typeof r.part !== "string" || !/^(?:[1-7]|h)$/.test(r.part)) fail("part", at);
+  else if (key && key[2] !== r.part) fail("key-part-mismatch", at);
+  if (!(r.table === "torah" && r.part !== "h" || r.table === "haftarah" && r.part === "h")) fail("table", at);
+  if (!finite(r.seconds) || r.seconds <= 0 || r.seconds > TOLERANCES.MAX_RECORDING_SECONDS) fail("recording-seconds", at);
+  if (typeof r.wordLabelsMatched !== "boolean") fail("labels-matched-flag", at);
+  const range = parseRangeRef(r.ref);
+  if (!range) fail("recording-ref", at);
+  if (!Array.isArray(r.verses) || !r.verses.length || r.verses.length > TOLERANCES.MAX_VERSES_PER_RECORDING) return fail("verses", at);
+  const seenRefs = new Set();
+  let prev = null, part = 0;
+  r.verses.forEach((v, i) => {
+    const vat = `${at}/${isObject(v) && parseVerseRef(v.ref) ? v.ref : `verse#${i}`}`;
+    if (!isObject(v)) return fail("verse-not-object", vat);
+    for (const k of Object.keys(v)) if (!VERSE_FIELDS.has(k)) fail("unknown-field", `${vat}.${safeKey(k)}`);
+    const p = parseVerseRef(v.ref);
+    if (!p) { prev = null; return fail("verse-ref", vat); }
+    if (seenRefs.has(v.ref)) fail("duplicate-verse-ref", vat);
+    seenRefs.add(v.ref);
+    if (range) {
+      // Reading order: start at the range start, then the next verse, the next chapter's first verse when the
+      // chapter's verse count shows it ended, or the next part's start once the current part is complete.
+      const here = [p.chapter, p.verse];
+      if (p.book !== range[0].book) fail("verse-outside-recording-ref", vat);
+      else if (i === 0) { if (cmp(here, range[0].from) !== 0) fail("first-verse-not-range-start", vat); }
+      else if (prev) {
+        const last = [prev.chapter, prev.verse];
+        if (cmp(last, range[part].to) === 0) {
+          if (part + 1 < range.length && cmp(here, range[part + 1].from) === 0) part++;
+          else fail("verse-outside-recording-ref", vat);
+        } else if (!(p.chapter === prev.chapter && p.verse === prev.verse + 1)) {
+          const counts = verseCounts?.[p.book];
+          if (p.chapter === prev.chapter + 1 && p.verse === 1 && Array.isArray(counts)) { if (counts[prev.chapter - 1] !== prev.verse) fail("verse-skipped", vat); }
+          else fail(p.chapter === prev.chapter + 1 && p.verse === 1 ? "chapter-end-unverified" : "verse-order", vat);
+        }
+        if (cmp(here, range[part].to) > 0) fail("verse-outside-recording-ref", vat);
+      }
+    }
+    if (!finite(v.start) || !finite(v.end) || v.start < 0 || v.end > r.seconds + TOLERANCES.EPSILON) fail("verse-cut-out-of-range", vat);
+    else {
+      const d = v.end - v.start;
+      if (d < TOLERANCES.MIN_VERSE_SECONDS || d > TOLERANCES.MAX_VERSE_SECONDS) fail("verse-duration", vat);
+      if (i > 0 && finite(r.verses[i - 1]?.end) && v.start < r.verses[i - 1].end - TOLERANCES.EPSILON) fail("verse-overlap", vat);
+    }
+    if (v.review !== undefined && (typeof v.review !== "string" || !Object.hasOwn(REVIEW_STATES, v.review))) fail("review-state", vat);
+    for (const k of ["alignScore", "startVsSoundOnsetMs", "labelGapMedianMs"]) if (v[k] !== undefined && v[k] !== null && !finite(v[k])) fail(`metric-${k}`, vat);
+    if (!Array.isArray(v.words) || !v.words.length || v.words.length > TOLERANCES.MAX_WORDS_PER_VERSE) { prev = p; return fail("words", vat); }
+    v.words.forEach((w, k) => {
+      const wat = `${vat}#w${k}`;
+      if (!isObject(w)) return fail("word-not-object", wat);
+      for (const f of Object.keys(w)) if (!WORD_FIELDS.has(f)) fail("unknown-field", `${wat}.${safeKey(f)}`);
+      if (typeof w.he !== "string" || !w.he.isWellFormed() || w.he !== w.he.normalize("NFC") || !WORD_TEXT.test(w.he) || !HEBREW_LETTER.test(w.he)) fail("word-text", wat);
+      if (!finite(w.start)) return fail("word-start", wat);
+      // A word starts inside its verse, strictly before the verse ends, and strictly after the previous word.
+      if (finite(v.start) && finite(v.end) && (w.start < v.start || w.start >= v.end)) fail("word-outside-verse", wat);
+      if (k > 0 && finite(v.words[k - 1]?.start) && !(w.start > v.words[k - 1].start)) fail("word-order", wat);
+      // label is PocketTorah's own onset; it leads the voice and is never used for highlighting.
+      if (w.label !== undefined && (!finite(w.label) || w.label < 0 || w.label > r.seconds + TOLERANCES.EPSILON)) fail("word-label", wat);
+      if (w.label !== undefined && r.wordLabelsMatched !== true) fail("label-without-match", wat);
+    });
+    prev = p;
+  });
+  if (range && prev && !(part === range.length - 1 && cmp([prev.chapter, prev.verse], range.at(-1).to) === 0)) fail("recording-incomplete", at);
+}
 
 // ---- read-word crosswalk ---------------------------------------------------------------------------
-// The portal's reading words (projectStudyVerse().words[].text, qere already chosen) are the authority.
-// Comparison key: NFC with sof pasuq, paseq, maqaf and CGJ removed; nothing else is touched, so any
-// difference in a letter, vowel or accent makes the verse unavailable for word highlighting.
-const STRIP = /[׃׀־͏]/gu, MAQAF_CH = "־";
-export const comparisonKey = w => String(w).normalize("NFC").replace(STRIP, "");
+// The portal's reading words (projectStudyVerse().words[].text, qere already chosen) are the authority;
+// the portal splits words at a maqaf, so no portal word contains maqaf, paseq or sof pasuq.
+// An index word matches portal word k when, after removing CGJ (invisible) from both, it equals the
+// portal word plus at most one trailing maqaf, paseq or sof pasuq. Its trailing maqaf must stand exactly
+// where the portal's reading text has a maqaf between words k and k+1. Nothing else is normalized.
+const core = w => w.replace(CGJ, "");
+const trailing = w => [MAQAF, PASEQ, SOF_PASUQ].includes(w.at(-1)) ? w.at(-1) : null;
 
 /**
- * Map portal reading words to index words. Exact when each portal word equals the concatenation of
- * one or more consecutive index words (a maqaf compound the aligner split), covering both sequences
- * completely. Returns {status: "exact", groups} (groups[p] = index word numbers for portal word p) or
- * {status: "unavailable", reason}. Never shifts, skips or fuzzily matches a word.
+ * Map portal reading words one-to-one to index words. Returns {status: "exact"} or {status:
+ * "unavailable", reason}. readingText is the portal's readingText, used to locate the separators.
+ * Never shifts, skips, merges or fuzzily matches a word.
  */
-export function crosswalkWords(portalWords, indexWords) {
+export function crosswalkWords(portalWords, readingText, indexWords) {
   if (!Array.isArray(portalWords) || !Array.isArray(indexWords) || !portalWords.length || !indexWords.length) return { status: "unavailable", reason: "no-words" };
-  const P = portalWords.map(comparisonKey), I = indexWords.map(comparisonKey);
-  if (P.some(w => !w) || I.some(w => !w)) return { status: "unavailable", reason: "empty-word" };
-  const groups = [];
-  let i = 0;
-  for (const p of P) {
-    const g = [];
-    let acc = "";
-    while (i < I.length && acc.length < p.length) {
-      // Only a maqaf joins two index words into one portal word; a space never does.
-      if (g.length && !String(indexWords[i - 1]).normalize("NFC").endsWith(MAQAF_CH)) return { status: "unavailable", reason: "text-mismatch" };
-      acc += I[i]; g.push(i++);
-      if (!p.startsWith(acc)) return { status: "unavailable", reason: "text-mismatch" };
+  if (typeof readingText !== "string") return { status: "unavailable", reason: "text-binding-missing" };
+  if (portalWords.some(w => typeof w !== "string" || !w) || indexWords.some(w => typeof w !== "string" || !w)) return { status: "unavailable", reason: "empty-word" };
+  if (portalWords.length !== indexWords.length) return { status: "unavailable", reason: "word-count-mismatch" };
+  const text = readingText.normalize("NFC");
+  let cursor = 0;
+  const ends = [];
+  for (let k = 0; k < portalWords.length; k++) {
+    const p = portalWords[k].normalize("NFC");
+    if (/[־׀׃]/u.test(p)) return { status: "unavailable", reason: "portal-word-punctuation" };
+    const at = text.indexOf(p, cursor);
+    if (at < 0 || text.slice(cursor, at).match(/[א-ת]/u)) return { status: "unavailable", reason: "text-binding-mismatch" };
+    cursor = at + p.length; ends.push([at, cursor]);
+    const i = indexWords[k].normalize("NFC"), t = trailing(i);
+    if (core(t ? i.slice(0, -1) : i) !== core(p)) return { status: "unavailable", reason: "text-mismatch" };
+    if (k > 0) {
+      const joinedByMaqaf = text.slice(ends[k - 1][1], at).includes(MAQAF);
+      if (joinedByMaqaf !== (trailing(indexWords[k - 1].normalize("NFC")) === MAQAF)) return { status: "unavailable", reason: "maqaf-mismatch" };
     }
-    if (acc !== p) return { status: "unavailable", reason: i >= I.length ? "index-words-exhausted" : "text-mismatch" };
-    groups.push(g);
   }
-  if (i !== I.length) return { status: "unavailable", reason: "index-words-left-over" };
-  return { status: "exact", groups };
+  if (trailing(indexWords.at(-1).normalize("NFC")) === MAQAF) return { status: "unavailable", reason: "maqaf-mismatch" };
+  return { status: "exact" };
 }
 
 /**
- * A reviewed override for a verse the exact rule cannot map. It binds to the exact texts it was
- * reviewed against; a changed portal text or index makes it stale, and stale means unavailable.
+ * A reviewed override for a verse the exact rule cannot map: groups[p] lists the index words whose
+ * first start is portal word p's start. It binds to the exact portal words, reading text and index
+ * words it was reviewed against; any change makes it stale, and stale means unavailable.
  */
-export function applyOverride(override, { readingTextSha256, indexWordsSha256, portalCount, indexCount }) {
-  if (!isObject(override) || override.readingTextSha256 !== readingTextSha256 || override.indexWordsSha256 !== indexWordsSha256) return { status: "unavailable", reason: "override-stale" };
-  if (typeof override.reviewedBy !== "string" || !override.reviewedBy || typeof override.reviewedAt !== "string" || !/^\d{4}-\d{2}-\d{2}/.test(override.reviewedAt)) return { status: "unavailable", reason: "override-unreviewed" };
+export function applyOverride(override, { readingTextSha256, portalWordsSha256, indexWordsSha256, portalCount, indexCount }) {
+  if (!isObject(override) || override.readingTextSha256 !== readingTextSha256 || override.portalWordsSha256 !== portalWordsSha256 || override.indexWordsSha256 !== indexWordsSha256) return { status: "unavailable", reason: "override-stale" };
+  const d = typeof override.reviewedAt === "string" ? DATE.exec(override.reviewedAt) : null;
+  const when = d ? new Date(`${override.reviewedAt}T00:00:00Z`) : null;
+  const real = when && !Number.isNaN(when.getTime()) && when.toISOString().slice(0, 10) === override.reviewedAt;
+  if (typeof override.reviewedBy !== "string" || !override.reviewedBy.trim() || !real) return { status: "unavailable", reason: "override-unreviewed" };
   const g = override.groups;
   if (!Array.isArray(g) || g.length !== portalCount) return { status: "unavailable", reason: "override-shape" };
   let next = 0;
@@ -214,40 +260,46 @@ export function applyOverride(override, { readingTextSha256, indexWordsSha256, p
   return { status: "exact", groups: g.map(x => [...x]) };
 }
 
+/** The exact strings whose SHA-256 values bind timings and overrides: words joined by U+0020. */
+export const indexWordsDigestInput = verse => verse.words.map(w => w.he).join(" ");
+export const portalWordsDigestInput = words => words.join(" ");
+
 // ---- client DTO -----------------------------------------------------------------------------------
 const ms = t => Math.round(t * 1000) / 1000;
+const MISMATCH = new Set(["word-count-mismatch", "text-mismatch", "maqaf-mismatch"]);
 
 /**
- * Build the client-safe DTO for one verse of one validated recording.
- *  asset: the approved-asset registry entry for this recording, {assetId, approved: true} (opaque id
- *         assigned by the server; no path, file name or URL ever reaches the client).
- *  portal: {status: "ready", words: string[], readingTextSha256} from the portal's own projection, or
- *          {status: "unavailable"}.
- *  hashes: {indexWordsSha256} computed by the caller over the index words (see indexWordsDigestInput).
+ * Build the client-safe DTO for one verse of a recording that validateIndex accepted.
+ *  asset:  the approved-asset registry entry, {assetId: "ra_" + 32 hex, approved: true}. No path,
+ *          file name or URL ever reaches the client.
+ *  portal: {status: "ready", words: projection.words.map(w => w.text), readingText} from the portal's
+ *          own projection, or {status: "unavailable"}.
  *  override: an optional reviewed override (applyOverride).
- * Playback and word highlighting are separate: a verse can play whole with highlighting unavailable.
+ * Every hash is computed here from the texts themselves; nothing a caller supplies is reflected.
+ * Playback and highlighting are separate. A verse whose words disagree with the portal text still has
+ * playback, but as needs-review ("text-mismatch"), since the disagreement questions which verse it is.
  */
-export function buildVerseDto({ recording, verse, asset, portal, indexWordsSha256 = null, override = null }) {
-  if (!isObject(asset) || asset.approved !== true || typeof asset.assetId !== "string" || !ASSET_ID.test(asset.assetId)) {
-    return { schema: DTO_SCHEMA, ref: verse.ref, playback: { status: "unavailable", reason: "asset-not-approved" }, words: { status: "unavailable", reason: "no-playback" } };
-  }
-  const review = verse.review === undefined ? null : REVIEW_STATES[verse.review];
-  const playback = { status: review ? "needs-review" : "ready", ...(review ? { review } : {}), asset: asset.assetId, clip: { start: ms(verse.start), end: ms(verse.end) } };
-  let words;
+export function buildVerseDto({ recording, verse, asset, portal, override = null }) {
+  const unavailable = reason => ({ schema: DTO_SCHEMA, ref: verse.ref, playback: { status: "unavailable", reason }, words: { status: "unavailable", reason: "no-playback" } });
+  if (!isObject(asset) || asset.approved !== true || typeof asset.assetId !== "string" || !ASSET_ID.test(asset.assetId)) return unavailable("asset-not-approved");
+  let words, mismatch = false;
   if (!isObject(portal) || portal.status !== "ready" || !Array.isArray(portal.words)) words = { status: "unavailable", reason: "portal-text-unavailable" };
+  else if (typeof portal.readingText !== "string" || !portal.readingText) words = { status: "unavailable", reason: "text-binding-missing" };
   else {
-    let x = crosswalkWords(portal.words, verse.words.map(w => w.he));
-    if (x.status !== "exact" && override) {
-      x = (typeof portal.readingTextSha256 === "string" && SHA256.test(portal.readingTextSha256) && typeof indexWordsSha256 === "string" && SHA256.test(indexWordsSha256))
-        ? applyOverride(override, { readingTextSha256: portal.readingTextSha256, indexWordsSha256, portalCount: portal.words.length, indexCount: verse.words.length })
-        : { status: "unavailable", reason: "override-unbound" };
+    const indexWords = verse.words.map(w => w.he);
+    let x = crosswalkWords(portal.words, portal.readingText, indexWords);
+    let groups = x.status === "exact" ? indexWords.map((_, k) => [k]) : null;
+    if (x.status !== "exact" && override && portal.words.every(w => typeof w === "string")) {
+      x = applyOverride(override, { readingTextSha256: sha256(portal.readingText.normalize("NFC")), portalWordsSha256: sha256(portalWordsDigestInput(portal.words)),
+        indexWordsSha256: sha256(indexWordsDigestInput(verse)), portalCount: portal.words.length, indexCount: indexWords.length });
+      groups = x.groups ?? null;
     }
+    mismatch = x.status !== "exact" && MISMATCH.has(x.reason);
     words = x.status === "exact"
-      ? { status: "ready", ...(typeof portal.readingTextSha256 === "string" ? { readingTextSha256: portal.readingTextSha256 } : {}), starts: x.groups.map(g => ms(verse.words[g[0]].start)) }
+      ? { status: "ready", readingTextSha256: sha256(portal.readingText.normalize("NFC")), starts: groups.map(g => ms(verse.words[g[0]].start)) }
       : { status: "unavailable", reason: x.reason };
   }
+  const review = mismatch ? "text-mismatch" : verse.review === undefined ? null : REVIEW_STATES[verse.review];
+  const playback = { status: review ? "needs-review" : "ready", ...(review ? { review } : {}), asset: asset.assetId, clip: { start: ms(verse.start), end: ms(verse.end) } };
   return { schema: DTO_SCHEMA, ref: verse.ref, table: recording.table, playback, words, attribution: ATTRIBUTION };
 }
-
-/** The exact string whose SHA-256 binds an override to an index verse: words joined by U+0020. */
-export const indexWordsDigestInput = verse => verse.words.map(w => w.he).join(" ");
