@@ -474,3 +474,17 @@ test("the verse's last word releases into a bounded tail beyond the timeline, an
   assert.equal(speech.length, map.totalSamples); assert.ok(Math.abs(speech.at(-1)) < 1e-3);
   assert.equal(json(result, "f0-voicing.json").full.frames, Math.ceil(map.totalSamples / 480));
 });
+
+test("a lengthened vowel keeps its first 25 ms and last 35 ms at natural speed and stretches only its steady middle", async () => {
+  const { stretchSteady } = await import("../trope/human-retime.mjs");
+  const rate = 24000, vowel = Float64Array.from({ length: 4800 }, (_, i) => Math.sin(2 * Math.PI * 200 * i / rate) * (i < 600 ? i / 600 : 1));
+  const out = stretchSteady(vowel, 24000, rate, { steadyHeadMs: 25, steadyTailMs: 35 });
+  assert.equal(out.length, 24000);
+  for (let i = 0; i < 600; i++) assert.equal(out[i], vowel[i], "head copied exactly");
+  for (let i = 1; i <= 840; i++) assert.equal(out.at(-i), vowel.at(-i), "tail copied exactly");
+  const short = stretchSteady(vowel, 2400, rate, { steadyHeadMs: 25, steadyTailMs: 35 });
+  assert.equal(short.length, 2400);
+  const tiny = Float64Array.from({ length: 64 }, (_, i) => Math.sin(i)); assert.equal(stretchSteady(tiny, 400, rate, { steadyHeadMs: 25, steadyTailMs: 35 }).length, 400);
+  const target = packFor("בָ־גָ֑ דָֽ׃", "Genesis 1:1"), audio = synthetic(target.identity);
+  assert.throws(() => build(recordFor(target, audio), target, audio, { steadyTailMs: 100 }), e => e.code === "options");
+});

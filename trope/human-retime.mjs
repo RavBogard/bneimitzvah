@@ -18,7 +18,7 @@ import { canonicalJson, sha256, BENCHMARK_LIMITS } from "./benchmark-pack.mjs";
 
 export const RETIME_SCHEMA = "chant-human-retime/v1";
 export const RETIME_DEFAULTS = Object.freeze({ outputRate: 24000, maxConsonantShare: 0.6, minConsonantRatio: 0.5, minVowelMs: 20,
-  fadeMs: 5, maxSplitShiftMs: 2000, f0Fps: 50, warnVowelRatio: 8, warnNoteVowelCoverage: 0.5, releaseMs: 150, releaseGapMs: 40, tailMs: 200 });
+  fadeMs: 5, maxSplitShiftMs: 2000, f0Fps: 50, warnVowelRatio: 8, warnNoteVowelCoverage: 0.5, releaseMs: 150, releaseGapMs: 40, tailMs: 200, steadyHeadMs: 25, steadyTailMs: 35 });
 export const OUTPUT_RATES = Object.freeze([16000, 22050, 24000, 44100, 48000]);
 // Phonikud characters that carry no voicing; the F0 sent to SVC is 0 over them, as in speech2sing.py.
 export const VOICELESS = Object.freeze(["p", "t", "k", "f", "s", "ʃ", "χ", "h", "ʔ", "ts"]);
@@ -47,7 +47,8 @@ function options(input = {}) {
   if (Object.keys(input).some(key => !Object.hasOwn(RETIME_DEFAULTS, key)) || !OUTPUT_RATES.includes(o.outputRate)
     || !(o.maxConsonantShare > 0 && o.maxConsonantShare < 1) || !(o.minConsonantRatio > 0 && o.minConsonantRatio <= 1)
     || !(o.minVowelMs > 0) || !(o.fadeMs >= 0 && o.fadeMs <= 20) || !(o.maxSplitShiftMs >= 0) || o.f0Fps !== 50
-    || !(o.releaseMs >= 0 && o.releaseMs <= 400) || !(o.releaseGapMs >= 0 && o.releaseGapMs <= 200) || !(o.tailMs >= 0 && o.tailMs <= 1000)) fail("options");
+    || !(o.releaseMs >= 0 && o.releaseMs <= 400) || !(o.releaseGapMs >= 0 && o.releaseGapMs <= 200) || !(o.tailMs >= 0 && o.tailMs <= 1000)
+    || !(o.steadyHeadMs >= 0 && o.steadyHeadMs <= 60) || !(o.steadyTailMs >= 0 && o.steadyTailMs <= 60)) fail("options");
   return Object.freeze(o);
 }
 
@@ -215,14 +216,33 @@ export function planRetime(bound, input) {
   return { options: o, rate: R, totalSamples: total, timelineSamples, tailSamples, totalMs, pieces, noteMap, melismas, slices, dropped, releases, warnings };
 }
 
+/**
+ * Lengthen a vowel by stretching only its steady middle. The first steadyHeadMs and last steadyTailMs
+ * stay at natural speed: they carry the glides from and into the neighbouring sounds, and stretching
+ * them made a following consonant audible inside the vowel (Daniel, 2026-10-16: "elohechaM",
+ * "anochiN", a final "-ta" heard as "teh"). Shortening still scales the whole piece.
+ */
+export function stretchSteady(piece, target, rate, { steadyHeadMs, steadyTailMs }) {
+  let head = Math.round(steadyHeadMs * rate / 1000), tail = Math.round(steadyTailMs * rate / 1000);
+  const quarter = Math.floor(piece.length / 4);
+  head = Math.min(head, quarter); tail = Math.min(tail, quarter);
+  const middle = piece.length - head - tail;
+  if (target <= piece.length || middle < 16 || target - head - tail < 1) return wsola(piece, target, rate);
+  const out = new Float64Array(target);
+  out.set(piece.subarray(0, head), 0);
+  out.set(wsola(piece.slice(head, head + middle), target - head - tail, rate), head);
+  out.set(piece.subarray(piece.length - tail), target - tail);
+  return out;
+}
+
 /** Render the plan from the original samples. Same input bytes and plan give the same samples. */
 export function renderRetime(plan, sourceAtRate) {
   const out = new Float64Array(plan.totalSamples), n = Math.round(plan.options.fadeMs * plan.rate / 1000);
   const phones = plan.pieces.filter(p => (p.kind === "phone" || p.kind === "release") && p.dstEnd > p.dstStart);
   for (const p of phones) {
     if (p.srcEnd > sourceAtRate.length) fail("render-bounds");
-    const piece = sourceAtRate.slice(p.srcStart, p.srcEnd);
-    out.set(p.method === "copy" ? piece : wsola(piece, p.dstEnd - p.dstStart, plan.rate), p.dstStart);
+    const piece = sourceAtRate.slice(p.srcStart, p.srcEnd), length = p.dstEnd - p.dstStart;
+    out.set(p.method === "copy" ? piece : p.role === "vowel" ? stretchSteady(piece, length, plan.rate, plan.options) : wsola(piece, length, plan.rate), p.dstStart);
   }
   // Fade only where the waveform is discontinuous: next to silence or across a dropped source pause.
   phones.forEach((p, i) => {
@@ -302,7 +322,7 @@ export function buildHumanRetime(record, pack, audio, { code, alignmentFileSha25
         downmix: r.downmix, handling: "read-only input to this stage: not copied, rewritten or normalised; the CLI re-hashes it before writing outputs" },
       consent: { recordId: r.consentRecordId, scope: r.consentScope, verification: "recorded-only; the record identifier does not establish consent" },
       speaker: { speakerId: r.speakerId, sampleId: r.sampleId, takeNumber: r.takeNumber },
-      method: { resampler: RESAMPLER, timeScale: WSOLA, timing: "vowel onset on first note; consonants kept unless over maxConsonantShare; vowel nucleus spans every note of its syllable",
+      method: { resampler: RESAMPLER, timeScale: WSOLA, vowelStretch: "steady middle only; steadyHeadMs and steadyTailMs kept at natural speed", timing: "vowel onset on first note; consonants kept unless over maxConsonantShare; vowel nucleus spans every note of its syllable",
         rests: "digital silence after each phrase's release; source pauses and breaths otherwise dropped",
         release: "a phrase's last sound fades over up to releaseMs into the rest: the take's own decay where the speaker paused, else the final vowel or voiced continuant sustained", options: plan.options, normalisation: "none", outputFormat: "float32 mono WAV" },
       outputs: { originalSpeech: "not-copied", retimedSpeech: PATHS.speech, dspPitchBaseline: "not-produced", neuralOutput: "not-produced" },
