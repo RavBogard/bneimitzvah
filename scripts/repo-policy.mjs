@@ -25,6 +25,9 @@ const CREDENTIALS = [
   /\bpostgres(?:ql)?:\/\/[^\s:/]+:[^\s@]+@/i,
   /\b(?:BETTER_AUTH_SECRET|GOOGLE_CLIENT_SECRET|RESEND_API_KEY|BLOB_READ_WRITE_TOKEN|CHANT_BLOB_TOKEN|DATABASE_URL)[ \t]*[=:][ \t]*["']?(?!["' \t]*(?:$|[,;}]))[^\s"',;}]{8,}/im,
 ];
+// Private chant-benchmark records (targets, alignments, retiming, run records, listening keys)
+// carry licensed text, voice-derived timing or blind-review identities; none belongs in the repo.
+const PRIVATE_BENCHMARK_SCHEMA = /"schema"\s*:\s*"chant-(?:benchmark-(?:input|pack|identity|run)|human-[a-z0-9-]+|listening-[a-z0-9-]+)\//;
 const LICENSE_MARKERS = /\b(?:JPS|Koren|Jewish Publication Society|THE JPS TANAKH|Gender-Sensitive Edition)\b/i;
 
 export async function repositoryGit(args, options) {
@@ -84,6 +87,7 @@ export function entryProblems(path, content = "") {
       break;
     }
   }
+  if (data && PRIVATE_BENCHMARK_SCHEMA.test(text)) problems.push("private chant-benchmark record");
   if (data && LICENSE_MARKERS.test(text)) problems.push("licensed-text publisher/version marker; manual licence review required");
   const privateBenchmark = privateBenchmarkProblem(text, data);
   if (privateBenchmark) problems.push(privateBenchmark);

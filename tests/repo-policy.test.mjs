@@ -15,6 +15,15 @@ test("policy rejects prohibited filenames regardless of location and case", () =
   assert.ok(entryProblems(".env.example", "BETTER_AUTH_SECRET=" + "filled-value").length > 0);
 });
 
+test("private chant-benchmark records are rejected even under the engine and fixture allow-lists", () => {
+  for (const schema of ["chant-human-alignment/v1", "chant-human-retime-map/v1", "chant-benchmark-run/v1", "chant-listening-key/v1", "chant-benchmark-identity/v1", "chant-benchmark-pack/v1"]) {
+    for (const file of ["trope/private.json", "tests/fixtures/trope/private.json"]) assert.ok(entryProblems(file, `{
+  "schema": "${schema}"
+}`).includes("private chant-benchmark record"), `${file} ${schema}`);
+  }
+  assert.deepEqual(entryProblems("trope/human-alignment.mjs", 'export const ALIGNMENT_SCHEMA = "chant-human-alignment/v1";'), []);
+});
+
 test("reviewed config and synthetic fixture paths do not bypass content checks", () => {
   assert.deepEqual(entryProblems(".impeccable/config.json", '{"version":1}'), []);
   assert.deepEqual(entryProblems("tests/fixtures/portal/student.json", '{"email":"fixture@example.test"}'), []);
