@@ -83,7 +83,7 @@ Read Codex's note that Daniel approved the frozen student UI and wording ("Looks
 - **Sheet:** "Change verses" (or "Assign verses" when nothing is assigned) opens the existing reading editor in a modal sheet. It is full screen on phones and a right-hand panel on wider screens, with the reading still visible behind it. Admin keeps the inline editor until Phase 3.
 - **Picker:** inside the sheet, the preview is restyled as the picker. Start and End are pill buttons beside each verse. The "Stage a verse selection" box stays pinned while verses scroll on wider screens; on phones it is not pinned, because it is too tall.
 - **Review:** the review reads as a card with one full-width Confirm.
-- **Logic unchanged:** `reading-editor.tsx` and `reading-preview.tsx` are untouched. Prepare, review and confirm, the server binding, expiry, conflict handling and the departure guard work exactly as before. The draft survives closing and reopening the sheet.
+- **Logic unchanged:** `reading-preview.tsx` is untouched. `reading-editor.tsx` has one addition (correction to an earlier draft of this note, which called it untouched): an optional `onBusy(busy)` prop, fed by `useEffect(() => onBusy?.(pending !== null), [pending, onBusy])`. It only reports whether a prepare or confirm is in flight, so the sheet can stay open. No request, binding, expiry, conflict, revocation or departure-guard code changed. Browser evidence, in the sheet: the tutor test in `reading-ui.test.ts` passes. It covers confirm, the draft held through a visible access recheck, edited and stale reviews invalidated, and an uncertain (503) confirmation not retried. It also checks that the draft survives closing and reopening the sheet. The browser suite has no editor-specific expiry or revocation case; those remain the existing server and app tests, which this change does not touch.
 - **Finding, fixed generally:** a modal `<dialog>` inside the workspace's hidden/inert wrapper renders nothing but still makes the whole page inert. That would lock the "Checking your access" and "Sign in to continue" screens. This was verified in Chromium.
   - The new `useWorkspaceModal(ref, open)` in `provider.tsx` shows a modal only while the workspace is visible. It closes the modal during an access check and reopens it afterwards. The workspace context gains `concealed`.
   - The sheet and the practice dialog use it. The practice dialog was already safe in practice, because the reading clears on recheck; a new browser test asserts that no modal remains during the check.
@@ -100,3 +100,41 @@ Read Codex's note that Daniel approved the frozen student UI and wording ("Looks
   - Still open for Codex: the departure-review modal, above.
   - The phrase "The assignment above is current" now appears inside the sheet. It is staff wording pinned by tests and is left as is.
 - **Next:** service parts and notes as tabs on the student page.
+
+## Carried integration repair (2026-10-16)
+
+Codex's reviewed tutor pagination repair `b9f12e9` is cherry-picked onto `design/song-session-staff` (as `46480fd`, no conflicts). Its `tutor-route-ui` browser file passes on this branch (4/4). The departure-review modal repair stays with Codex, as reserved in COORDINATION.md; it is not duplicated here.
+
+## Phase 2, slice 3: service parts as a tab for tutors (2026-10-16)
+
+- **Tabs:** on a tutor's student page, "Reading" and "Service parts" are an ARIA tablist under the hero. It uses automatic activation, a roving tabindex, and Arrow, Home and End keys. Underline tabs keep them distinct from the Torah/Haftarah pill control below. The service panel becomes a surface card, and its "Service parts" heading is screen-reader only because the tab names it. The hero's and text toolbar's "Service parts" links are dropped for tutors. Learner, parent and admin views are unchanged: every branch is gated on tutor mode.
+- **Nothing remounts:** both panels stay mounted; the inactive one is `hidden`. Reload registration, access checks, unsent work and departure guards behave as on the long page. The tabs appear only once the student has loaded. Before that, or after a failed load, both panels show, so service errors stay visible.
+- **Modals in a hidden tab:** a modal inside a `display:none` panel would lock the page.
+  - **CSS safety net:** `.page-tab-panel[hidden]:has(dialog[open])` keeps such a panel displayed.
+  - **Observer:** a MutationObserver brings the dialog's tab forward.
+  - **Start:** switches to Reading in the same React update that opens practice.
+  - **Reading actions:** a guarded action (paging, Torah/Haftarah) that the tutor continues past the service-draft prompt returns them to Reading.
+  - **Browser support:** without `:has()` (Firefox before 121), the observer still switches the tab immediately after the dialog opens.
+- **Notes tab not built:** tutor lesson notes need Codex's lesson-log contract. Per-verse notes stay in the reading.
+- **For Codex:** `service-learning/editor.tsx` has its own "Keep this service draft?" modal. It is inside the workspace wrapper, so it has the same access-check lock as `work/departure-review.tsx`. It may want `useWorkspaceModal` in the same reserved repair.
+- **Tests:** in `service-learning-ui.test.ts`, the tutor helper opens the Service parts tab. A new test covers:
+  - the default tab, the panels and their `aria-controls`/`aria-labelledby` links, and that tutors get no "Service parts" link;
+  - Arrow, Home and End keys;
+  - Start returning to the reading and opening practice, with focus back on Start;
+  - open material and an unsent draft surviving tab switches;
+  - the draft prompt from the Reading tab bringing Service parts forward, keeping the draft on "Keep editing", and returning to Reading with Haftarah loaded on "Discard".
+  - New local-only captures: `tutor-service-tab-{desktop,mobile}`.
+  - Not covered by a browser case: the failed-load layout, where both panels show with no tabs.
+- **Adversarial review (second agent):** no lock path in Chromium. Fixed from its findings:
+  - the draft prompt's tab is brought forward, and the tutor returns to Reading after continuing;
+  - service messages stay visible on a failed load;
+  - Start's fallback scroll waits a frame;
+  - the tab reset is a layout effect, so the previous student's tab never shows;
+  - the test title now says only what the test checks.
+- **Checks:**
+  - Typecheck passes on the final tree.
+  - Browser files pass one at a time on a disposable WSL PostgreSQL 16, after the review fixes: service-learning-ui 13/13, tutor-route-ui 4/4, reading-ui 3/3, reading-preview-ui 7/7, study-ui 6/6, workspace-ui 3/3, student-work-ui 10/10, portal-ui 7/7.
+  - Before the review fixes, all 17 browser files passed; so did `next build`, app tests (779 passed, 1 existing skip) and the repository guard (16/16).
+  - The app-test and build rerun after the fixes was stopped by Claude Code for low system memory. It was not repeated; rerun it at integration.
+  - The test role and database have been dropped.
+- **Next:** tutor lesson notes, and progress wiring, once Codex offers frozen lesson-log and progress refs. Then Phase 3, admin.

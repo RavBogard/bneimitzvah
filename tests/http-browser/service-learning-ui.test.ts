@@ -40,6 +40,8 @@ async function page(role: "admin" | "tutor" | "student", mobile = false) {
 async function workspace(tab: Page, role: "admin" | "tutor" | "student" | "parent") {
   await safe(() => tab.goto(role === "admin" ? `/workspace/admin/students/${fixture.student.id}/reading` : `/workspace/${role}`, { waitUntil: "domcontentloaded" }));
   if (role === "tutor" || role === "parent") await safe(() => tab.getByLabel(role === "parent" ? "Child" : "Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+  // Tutors reach service parts through the tab beside the reading.
+  if (role === "tutor") await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
   await ui(panel(tab).getByRole("heading", { name: "Service parts", exact: true })).toBeVisible();
   await ui(panel(tab).getByText("Checking assigned service parts…", { exact: true })).toBeHidden();
 }
@@ -208,6 +210,55 @@ it("rejects a stale review without overwriting a newer service plan, and explici
   expect((await api(tab, fixture.student.id, "?mode=admin")).data.state).toBe("cleared");
   await assign(tab, fixture.student.id, [content.first, content.second]);
 });
+
+it("puts a tutor's service parts in a tab beside the reading, keeping open material and an unsent draft across switches and bringing a departure prompt's tab forward", async () => {
+  const admin = await page("admin"); await assign(admin, fixture.student.id, [content.first, content.second]);
+  const tab = await page("tutor"); await safe(() => tab.goto("/workspace/tutor", { waitUntil: "domcontentloaded" }));
+  await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+  const tabs = tab.getByRole("tablist", { name: "Student page" }), readingTab = tabs.getByRole("tab", { name: "Reading", exact: true }), serviceTab = tabs.getByRole("tab", { name: "Service parts", exact: true });
+  await ui(readingTab).toHaveAttribute("aria-selected", "true"); await ui(tab.locator(".assigned-study")).toBeVisible();
+  for (const control of [readingTab, serviceTab]) {
+    const id = await control.getAttribute("aria-controls"); expect(id).toBeTruthy();
+    await ui(tab.locator(`[id="${id}"][role="tabpanel"]`)).toHaveAttribute("aria-labelledby", (await control.getAttribute("id"))!);
+  }
+  await ui(panel(tab)).toBeHidden();
+  expect(await tab.getByRole("link", { name: "Service parts", exact: true }).count()).toBe(0);
+  await safe(() => readingTab.focus()); await safe(() => tab.keyboard.press("ArrowRight"));
+  await ui(serviceTab).toHaveAttribute("aria-selected", "true"); await ui(serviceTab).toBeFocused();
+  await ui(tab.locator(".assigned-study")).toBeHidden(); await ui(tab.locator(".reading-toolbar")).toHaveCount(0);
+  await ui(panel(tab).getByText("Checking assigned service parts…", { exact: true })).toBeHidden();
+  await click(tab, "Synthetic part 0"); await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
+  await capture(tab, "tutor-service-tab");
+  // Start belongs to the reading: it brings the reading forward and opens practice there.
+  await click(tab, "Start");
+  await ui(readingTab).toHaveAttribute("aria-selected", "true"); await ui(tab.locator("dialog.lift")).toBeVisible();
+  await safe(() => tab.keyboard.press("Escape")); await ui(tab.locator("dialog.lift")).toHaveCount(0);
+  await ui(tab.getByRole("button", { name: "Start", exact: true })).toBeFocused();
+  await safe(() => serviceTab.click()); await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
+  await safe(() => tab.keyboard.press("Home")); await ui(readingTab).toHaveAttribute("aria-selected", "true"); await ui(readingTab).toBeFocused();
+  await safe(() => tab.keyboard.press("ArrowLeft")); await ui(serviceTab).toHaveAttribute("aria-selected", "true"); await ui(serviceTab).toBeFocused();
+  // An unsent service draft survives the panel being hidden.
+  await click(tab, "Choose service parts"); await safe(() => panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ }).check());
+  await safe(() => readingTab.click()); await ui(panel(tab)).toBeHidden();
+  await safe(() => serviceTab.click()); await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
+  // A guarded reading action from the Reading tab raises the draft prompt and brings Service parts forward.
+  await safe(() => readingTab.click()); await click(tab, "Haftarah text");
+  const prompt = tab.getByRole("dialog", { name: "Keep this service draft?", exact: true }); await ui(prompt).toBeVisible();
+  await ui(serviceTab).toHaveAttribute("aria-selected", "true");
+  await click(tab, "Keep editing service parts"); await ui(prompt).toBeHidden();
+  await ui(serviceTab).toHaveAttribute("aria-selected", "true"); await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
+  await safe(() => readingTab.click()); await click(tab, "Haftarah text"); await click(tab, "Discard service draft and continue");
+  await ui(readingTab).toHaveAttribute("aria-selected", "true");
+  await ui(tab.getByRole("button", { name: "Haftarah text", exact: true })).toHaveAttribute("aria-pressed", "true");
+});
+
+async function capture(tab: Page, name: string) {
+  if (process.env.CI) return;
+  const folder = join(process.cwd(), ".impeccable", "review"); await mkdir(folder, { recursive: true });
+  await writeFile(join(folder, `${name}-desktop.png`), await tab.screenshot({ fullPage: true }));
+  await tab.setViewportSize({ width: 390, height: 844 }); await writeFile(join(folder, `${name}-mobile.png`), await tab.screenshot({ fullPage: true }));
+  await tab.setViewportSize({ width: 1440, height: 1000 });
+}
 
 it("clears a denied tutor draft and material immediately when the actual relationship is revoked", async () => {
   // Establish this case's plan independently so it can be diagnosed in isolation.
