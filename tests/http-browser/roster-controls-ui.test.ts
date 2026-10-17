@@ -33,9 +33,11 @@ async function page(who: "admin" | "tutor" = "admin", mobile = false) {
   return tab;
 }
 async function click(tab: Page, name: string) { await safe(() => tab.getByRole("button", { name, exact: true }).click()); }
-async function accessLoaded(tab: Page) { await ui(tab.getByText("Checking current access records…", { exact: true })).toBeHidden(); await ui(tab.getByRole("button", { name: "Reload access", exact: true })).toBeEnabled(); }
+// Row actions are named for the person they change ("Unassign Synthetic Tutor"); this finds one by its verb within a card.
+function action(tab: Page, card: string, verb: string) { return tab.getByRole("region", { name: card, exact: true }).getByRole("button", { name: new RegExp(`^${verb} `) }); }
+async function accessLoaded(tab: Page) { await ui(tab.getByText("Checking current access…", { exact: true })).toBeHidden(); await ui(tab.getByRole("button", { name: "Reload access", exact: true })).toBeEnabled(); }
 async function importLoaded(tab: Page) { await ui(tab.getByText("Checking the current roster…", { exact: true })).toBeHidden(); await ui(tab.getByRole("button", { name: "Reload roster for import", exact: true })).toBeEnabled(); }
-async function confirm(tab: Page) { await click(tab, "Confirm access change"); await ui(tab.getByText("Access change saved. The current access records have been refreshed.", { exact: true })).toBeVisible(); await accessLoaded(tab); }
+async function confirm(tab: Page) { await click(tab, "Confirm access change"); await ui(tab.getByText("Saved. Access is up to date.", { exact: true })).toBeVisible(); await accessLoaded(tab); }
 async function create(tab: Page, suffix: string, firstName = "Synthetic") { const result = await api(tab, "/api/admin/students", { student: { firstName, lastName: suffix, ceremonyDate: "2027-01-02", parentEmail: "synthetic-access@example.test" } }); expect(result.status === 201).toBe(true); return result.data.id as string; }
 async function capture(tab: Page, name: string) {
   if (process.env.CI) return;
@@ -106,41 +108,47 @@ it("creates adults without parent contact, requires the contact for each kind an
 
 it("reviews tutor assignment/removal with fresh target reads, blocks duplicate submits and keeps disabled-student cleanup", async () => {
   const tab = await page(), id = await create(tab, "RosterAccess"); await navigate(tab, `/workspace/admin/students/${id}/access`); await accessLoaded(tab);
-  await safe(() => tab.getByLabel("Tutor to assign", { exact: true }).selectOption(fixture.tutorGrant.id)); await click(tab, "Review tutor assignment");
+  await safe(() => tab.getByLabel("Tutor to assign", { exact: true }).selectOption(fixture.tutorGrant.id)); await click(tab, "Assign");
+  await ui(tab.getByRole("dialog").getByRole("heading", { name: "Assign tutor", exact: true })).toBeFocused();
+  // The role identifier is kept for checking, folded under Technical details.
+  await ui(tab.getByRole("dialog").getByText("Role identifier", { exact: true })).toBeHidden();
+  await safe(() => tab.getByRole("dialog").getByText("Technical details", { exact: true }).click());
+  await ui(tab.getByRole("dialog").getByText(fixture.tutorGrant.id, { exact: true })).toBeVisible();
   expect((await api(tab, `/api/admin/students/${id}/relationships`)).data.tutors.length === 0).toBe(true); await capture(tab, "roster-assignment-review-desktop");
   let posts = 0, targetReads = 0;
   await tab.route(`**/api/admin/students/${id}/relationships**`, async route => { if (route.request().method() === "POST") posts++; else targetReads++; const response = await route.fetch(); await route.fulfill({ response }); });
   await safe(() => tab.getByRole("button", { name: "Confirm access change", exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); }));
-  await ui(tab.getByText("Access change saved. The current access records have been refreshed.", { exact: true })).toBeVisible(); expect(posts === 1 && targetReads >= 1).toBe(true); await accessLoaded(tab);
+  await ui(tab.getByText("Saved. Access is up to date.", { exact: true })).toBeVisible(); await ui(tab.getByRole("dialog")).toBeHidden(); await ui(tab.getByRole("heading", { name: "People and access", level: 1, exact: true })).toBeFocused(); expect(posts === 1 && targetReads >= 1).toBe(true); await accessLoaded(tab);
   const current = await api(tab, `/api/admin/students/${id}/relationships`); expect(current.data.tutors.length === 1).toBe(true);
   await api(tab, `/api/admin/students/${id}/disable`, { expectedRevision: current.data.student.revision }); await click(tab, "Reload access"); await accessLoaded(tab);
-  await ui(tab.getByLabel("Tutor to assign", { exact: true })).toBeDisabled(); await click(tab, "Review assignment removal"); await confirm(tab); expect((await api(tab, `/api/admin/students/${id}/relationships`)).data.tutors.length === 0).toBe(true);
+  await ui(tab.getByLabel("Tutor to assign", { exact: true })).toBeDisabled(); await safe(() => action(tab, "Tutors", "Unassign").click()); await confirm(tab); expect((await api(tab, `/api/admin/students/${id}/relationships`)).data.tutors.length === 0).toBe(true);
   await tab.unroute(`**/api/admin/students/${id}/relationships**`);
 });
 
 it("revokes only the selected parent practice context, removes exact parent/student links and preserves sibling access", async () => {
   const admin = await page(), parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await click(parent, "Enter child practice"); await ui(parent.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
   const other = await parent.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => other.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click()); await click(other, "Enter child practice"); await ui(other.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
-  await navigate(admin, `/workspace/admin/students/${fixture.student.id}/access`); await accessLoaded(admin); await click(admin, "Review stopping practice"); await confirm(admin);
+  await navigate(admin, `/workspace/admin/students/${fixture.student.id}/access`); await accessLoaded(admin); await safe(() => action(admin, "Parents", "Stop child practice").click()); await confirm(admin);
   const denied = parent.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/reading`);
   await focus(parent); expect((await denied).status()).toBe(404); await ui.poll(() => new URL(parent.url()).pathname).toBe("/workspace/parent"); await ui(parent.getByText("Practice access changed. Choose an available child again.", { exact: true })).toBeVisible(); await ui(parent.getByLabel("Child", { exact: true })).toBeVisible();
   expect(await parent.locator(".reading-workspace").count()).toBe(0);
   await focus(other); await ui(other.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
-  await click(admin, "Review allowing practice"); await confirm(admin); await click(admin, "Review parent link removal"); await confirm(admin); await click(admin, "Review student sign-in removal"); await confirm(admin);
+  await safe(() => action(admin, "Parents", "Allow child practice").click()); await confirm(admin); await safe(() => action(admin, "Parents", "Unlink").click()); await confirm(admin); await safe(() => action(admin, "Student sign-in", "Unlink").click()); await confirm(admin);
   const current = (await api(admin, `/api/admin/students/${fixture.student.id}/relationships`)).data; expect(current.guardians.length === 0 && current.identities.length === 0).toBe(true);
   expect((await api(admin, `/api/admin/students/${sibling.id}/relationships`)).data.guardians.length === 1).toBe(true);
 });
 
 it("rejects changed reviewed identities before POST, isolates uncertain access outcomes and renders long phone identity reviews", async () => {
-  const tab = await page("admin", true); await navigate(tab, "/workspace/admin/tutors"); await accessLoaded(tab); await click(tab, "Review cantor flag");
+  const tab = await page("admin", true); await navigate(tab, "/workspace/admin/tutors"); await accessLoaded(tab); await safe(() => action(tab, "Tutors", "Mark as cantor").click());
   let posts = 0; await tab.route(`**/api/admin/tutors/${fixture.tutorGrant.id}/cantor`, async route => { posts++; const response = await route.fetch(); await route.fulfill({ response }); });
   const longName = `Synthetic${"N".repeat(130)}`; await fixture.ownerDb.update(s.user).set({ name: longName }).where(eq(s.user.id, fixture.tutor.id));
-  await click(tab, "Confirm access change"); await ui(tab.getByText("The reviewed identity or access state changed. Review the current record again.", { exact: true })).toBeVisible(); expect(posts).toBe(0);
-  await click(tab, "Review cantor flag"); await capture(tab, "roster-long-review-mobile"); await confirm(tab); expect(posts).toBe(1);
+  await click(tab, "Confirm access change"); await ui(tab.getByText("Something changed for this person since you opened the review. Check the current access and try again.", { exact: true })).toBeVisible(); expect(posts).toBe(0);
+  await ui(tab.getByRole("dialog")).toBeHidden();
+  await safe(() => action(tab, "Tutors", "Mark as cantor").click()); await capture(tab, "roster-long-review-mobile"); await confirm(tab); expect(posts).toBe(1);
   await tab.unroute(`**/api/admin/tutors/${fixture.tutorGrant.id}/cantor`);
   await tab.route(`**/api/admin/tutors/${fixture.tutorGrant.id}/cantor`, async route => { posts++; const response = await route.fetch(); await response.dispose(); await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); });
-  await click(tab, "Review removing cantor flag"); await click(tab, "Confirm access change"); await ui(tab.locator("#workspace-main").getByRole("alert")).toContainText("outcome is unknown"); await capture(tab, "roster-unknown-mobile");
-  await focus(tab); expect(posts).toBe(2); await ui(tab.getByRole("button", { name: "Review cantor flag", exact: true })).toBeDisabled(); await click(tab, "Reload access"); await accessLoaded(tab); expect(posts).toBe(2);
+  await safe(() => action(tab, "Tutors", "Remove cantor flag").click()); await click(tab, "Confirm access change"); await ui(tab.locator("#workspace-main").getByRole("alert")).toContainText("couldn’t confirm whether this change saved"); await capture(tab, "roster-unknown-mobile");
+  await focus(tab); expect(posts).toBe(2); await ui(action(tab, "Tutors", "Mark as cantor")).toBeDisabled(); await click(tab, "Reload access"); await accessLoaded(tab); expect(posts).toBe(2);
   await tab.unroute(`**/api/admin/tutors/${fixture.tutorGrant.id}/cantor`); await fixture.ownerDb.update(s.user).set({ name: "Synthetic Tutor" }).where(eq(s.user.id, fixture.tutor.id));
 });
 
@@ -176,7 +184,7 @@ it("requires explicit roster inspection after an unknown import, never retries a
 
 it("reviews congregation-wide parent/tutor grant consequences and denies tutor access to admin controls", async () => {
   const admin = await page(), tutor = await page("tutor"); await navigate(tutor, "/workspace/admin/tutors"); await ui(tutor.getByRole("heading", { name: "Role unavailable", exact: true })).toBeVisible();
-  await navigate(admin, `/workspace/admin/students/${sibling.id}/access`); await accessLoaded(admin); await click(admin, "Review parent role revocation"); await ui(admin.locator(".access-review")).toContainText("ALL linked children"); await confirm(admin);
+  await navigate(admin, `/workspace/admin/students/${sibling.id}/access`); await accessLoaded(admin); await safe(() => action(admin, "Parents", "Revoke parent role").click()); await ui(admin.locator(".access-review")).toContainText("ALL linked children"); await confirm(admin);
   const current = (await api(admin, `/api/admin/students/${sibling.id}/relationships`)).data; expect(current.guardians[0].effectiveRead === false).toBe(true);
-  await navigate(admin, "/workspace/admin/tutors"); await accessLoaded(admin); await click(admin, "Review tutor role revocation"); await ui(admin.locator(".access-review")).toContainText("ALL assigned students"); await confirm(admin); await ui(admin.getByText("No eligible tutors on this page.", { exact: true })).toBeVisible();
+  await navigate(admin, "/workspace/admin/tutors"); await accessLoaded(admin); await safe(() => action(admin, "Tutors", "Revoke tutor role").click()); await ui(admin.locator(".access-review")).toContainText("ALL assigned students"); await confirm(admin); await ui(admin.getByText("No tutors yet", { exact: true })).toBeVisible();
 });

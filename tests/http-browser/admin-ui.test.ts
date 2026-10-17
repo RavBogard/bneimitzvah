@@ -127,6 +127,17 @@ it("opens a student's page with the staff tabs and verse sheet, and links to the
     await safe(() => tab.getByRole("link", { name: "People and access", exact: true }).click());
     await ui(tab.getByRole("heading", { name: "People and access", level: 1, exact: true })).toBeVisible();
     await ui(tab.getByRole("link", { name: "Student page", exact: true })).toBeVisible();
-    if (mobile) await capture(tab, "admin-people");
+    await capture(tab, "admin-people");
+    // The People card's raw role identifier is behind the confirm sheet's technical details, not on the page.
+    expect(await tab.getByText("Role identifier", { exact: true }).count()).toBe(0);
+    if (!mobile) {
+      // "Invite a parent" fills the invitation for this student with their record's parent contact; nothing is sent yet.
+      await safe(() => tab.getByRole("link", { name: "Invite a parent", exact: true }).click());
+      await ui(tab.getByRole("heading", { name: "Invitations", level: 1, exact: true })).toBeVisible();
+      await ui(tab.getByLabel("Invitation role", { exact: true })).toHaveValue("parent");
+      await ui(tab.getByLabel("Student to link", { exact: true })).toHaveValue(fixture.student.id);
+      await ui(tab.getByLabel("Recipient email", { exact: true })).toHaveValue("fixture@example.test");
+      await ui(tab.getByRole("button", { name: "Review invitation", exact: true })).toBeEnabled();
+    }
   }
 });

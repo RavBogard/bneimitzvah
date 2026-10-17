@@ -336,3 +336,52 @@ No privacy or authority break was found. The sheet closes during access checks, 
 - Whether the student sheet should ask before discarding a typed draft.
 
 **Next:** Phase 3, slice 2. People and access gets grouped cards, plain status, the confirm step in a sheet, no raw role identifier, and "Invite a parent" from the student. Then Invitations and Tutors, then Import.
+
+
+## Phase 3, slice 2: People and access, and Tutors (2026-10-16)
+
+Screens only; access logic unchanged.
+
+- **People and access** (`relationships/workspace.tsx`): one card each for Tutors, Parents and Student sign-in.
+  - Each person is a row with an initial avatar, their name, a plain status ("Can teach this student", "Can read · Can practise as the child", "Access paused") and short actions: Unassign, Stop/Allow child practice, Unlink, and Revoke … role in red.
+  - Each action's accessible name includes the person ("Unassign Synthetic Tutor").
+  - Assigning a tutor is a select with an "Assign" button inside the Tutors card.
+  - "Invite a parent" and "Invite the student" link from the student's cards to Invitations. They are hidden for disabled students.
+  - The student's name and ceremony date sit under the heading. A disabled student gets a note that existing links can still be removed.
+- **Tutors page:** the same rows, with a Cantor chip and the actions Mark as cantor / Remove cantor flag / Revoke tutor role. It has an empty state, and paging appears only when there is more than one page.
+- **Confirm step in a sheet** (`relationships/review.tsx`). It shows the person, the student and the consequence (unchanged text from `api.ts`), then "Access is checked again before anything is saved." The full role identifier and ceremony date are folded under "Technical details"; names are already disambiguated by `identityLabels`.
+  - Load, the fingerprint re-check before POST, the latch, the blocked state after unknown outcomes and 401/403/404 clearing are unchanged.
+  - While access reloads, the page still hides everything rather than showing old people.
+- **Invitation prefill** (`invitations/workspace.tsx`): `?student=…&role=parent|student` fills the role, the student and that record's contact email once. It only applies to an active student in the loaded roster, and never over anything the admin has already typed. Only the id and role go in the URL; nothing is sent until the admin reviews.
+- **Wording (staff):** "Saved. Access is up to date." and "Access reloaded." are the calm lines. "Something changed for this person since you opened the review…", "We couldn’t confirm whether this change saved…" and "This change isn’t allowed any more…" stay error-styled and blocking, as before.
+
+### Decided here (GATE log)
+
+- GATE: staff-only wording and action names on People and access and Tutors. Proceeded because it is staff-visible and follows the UX analysis ruling (plain outcomes, caveats in detail views). It is listed for Daniel's look.
+- GATE: the role identifier is no longer shown in the review by default, only under "Technical details". Proceeded because labels already disambiguate same-named people and the UX analysis flagged the raw identifier.
+
+### Adversarial review (second agent)
+
+No authority or privacy hole was found. Unchanged: access logic, the double-submit latch, unknown outcomes kept blocked and error-styled, the sheet closing on failed loads, conflicts and access checks, and Escape blocked while saving. Fixed from its findings:
+
+- Focus now reaches the review heading. It is set after the sheet is shown, because `showModal` focuses the close button first.
+- Focus returns to the opener once the change and its reload settle, or to the page heading if the opener is gone or disabled. A test asserts the heading after Assign.
+- The prefill never overwrites a draft the admin has started.
+- The 409 / not-posted line no longer claims "nothing was saved".
+- The failure panel no longer has two "Reload access" buttons.
+- The Technical details fold is now tested: hidden by default, and the identifier is shown when opened.
+
+### Tests
+
+- roster-controls-ui (7/7) finds row actions by verb within a named card. The old properties are all kept: one POST under a double click, no POST after a changed identity, controls disabled after an unknown outcome, and the "ALL linked children / ALL assigned students" consequences.
+- admin-ui (2/2) adds captures of the People page and an "Invite a parent" prefill check. invitation-management-ui passes 3/3.
+
+### Checks
+
+- Typecheck and `next build` pass.
+- App tests: 800 passed, plus the 1 existing skip (two workers).
+- `never-in-repo` passes with the files staged.
+- The touched browser files pass one at a time: roster-controls-ui 7/7, admin-ui 2/2, invitation-management-ui 3/3. Every other browser file passed on slice 1's tree; this slice changes only the People, Tutors and Invitations screens and their CSS.
+- Captures (local): `.impeccable/review/admin-people-{desktop,mobile}.png` and `roster-long-review-mobile.png`.
+
+**Next:** Invitations (the compose form and the list as cards, the review in a sheet) and Import.

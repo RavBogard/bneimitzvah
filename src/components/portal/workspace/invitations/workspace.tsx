@@ -39,6 +39,16 @@ function Invitations() {
   useEffect(() => {
     if (review && snapshot && !loading && !matches(review, snapshot)) { setReview(null); setMessage("The reviewed target changed or left this page. Reload the records and review the current target again."); setBlocked(true); }
   }, [review, snapshot, loading]);
+  // "Invite a parent" from a student's People page arrives with ?student=…&role=…. The draft is filled once,
+  // only for an active student in the loaded roster, with that record's contact email. Nothing is sent until reviewed.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !snapshot) return; prefilled.current = true;
+    const query = new URLSearchParams(window.location.search), role = query.get("role"), row = snapshot.students.find(value => value.id === query.get("student") && !value.disabledAt);
+    if (!row || (role !== "parent" && role !== "student")) return;
+    // Never replace anything the admin has already started.
+    setDraft(current => current.email || current.studentId || current.role !== "parent" ? current : { role, studentId: row.id, email: (role === "parent" ? row.parentEmail : row.ownEmail) ?? "" });
+  }, [snapshot]);
   function change(value: InviteDraft) { setDraft(value); setReview(null); if (!blocked) setMessage(""); }
   function reviewIssue() {
     if (!snapshot || loading || gate.current || blocked) return;

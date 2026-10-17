@@ -1,7 +1,8 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "../provider";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { RequireRole, statusOf, useWorkspace, useWorkspaceModal, WorkspaceLink } from "../provider";
+import { ceremonyCountdown } from "../reading";
+import { icons } from "../study/lift";
 import { AdminNav } from "../admin-nav";
 import { identityLabels, makeReview, relationshipApi, type Action, type Relationships, type Review, type Tutor } from "./api";
 import { AccessReview } from "./review";
@@ -28,12 +29,12 @@ function Access({ studentId }: { studentId?: string }) {
   useEffect(() => {
     if (!review || !snapshot || loading) return;
     try { if (makeReview(review.action, snapshot.relationships, snapshot.tutors).fingerprint === review.fingerprint) return; } catch { /* Reviewed identity left the authorized view. */ }
-    setReview(null); setMessage("The reviewed identity or access state changed. Review the current record again.");
+    setReview(null); setMessage("Something changed for this person since you opened the review. Check the current access and try again.");
   }, [snapshot, review, loading]);
   function choose(action: Action) {
     if (!snapshot || pending || blocked || loading) return;
     try { setReview(makeReview(action, snapshot.relationships, snapshot.tutors)); setMessage(""); }
-    catch { setReview(null); setMessage("This action is unavailable for the current record. Reload access to check it."); }
+    catch { setReview(null); setMessage("That change isn’t available for the current access. Reload access to check it."); }
   }
   function confirm() {
     if (latch.current || !review || blocked) return;
@@ -43,49 +44,96 @@ function Access({ studentId }: { studentId?: string }) {
       try {
         const fresh = await load(); if (!alive.current) return;
         let current: Review; try { current = makeReview(checked.action, fresh.relationships, fresh.tutors); } catch { throw new Error("Reviewed target changed"); }
-        if (current.fingerprint !== checked.fingerprint) { setReview(null); setMessage("The reviewed identity or access state changed. Review the current record again."); return; }
+        if (current.fingerprint !== checked.fingerprint) { setReview(null); setMessage("Something changed for this person since you opened the review. Check the current access and try again."); return; }
         posted = true; await relationshipApi.mutate(current); if (!alive.current) return;
         setReview(null); setSelected("");
-        try { await load(); if (alive.current) setMessage("Access change saved. The current access records have been refreshed."); }
-        catch { if (alive.current) { setBlocked(true); setMessage("Access change saved. Current records could not be refreshed; reload access before another action."); } }
+        try { await load(); if (alive.current) setMessage("Saved. Access is up to date."); }
+        catch { if (alive.current) { setBlocked(true); setMessage("Saved, but the current access couldn’t be refreshed. Reload access before another change."); } }
       } catch (error) {
         if (!alive.current) return; setReview(null); setBlocked(true);
         const status = statusOf(error);
-        if ([401, 403, 404].includes(status)) { setSnapshot(null); setFailed(true); setMessage("This action is no longer permitted. Reload access or check your account and sign in again."); }
-        else if (status === 409 || !posted) setMessage("Current identity or access state could not be confirmed. Reload access and review again before saving.");
-        else setMessage("The access-change outcome is unknown. Reload access and inspect the current records before reviewing another action. No automatic retry will occur.");
+        if ([401, 403, 404].includes(status)) { setSnapshot(null); setFailed(true); setMessage("This change isn’t allowed any more. Reload access, or check your account and sign in again."); }
+        else if (status === 409 || !posted) setMessage("The current access couldn’t be confirmed. Reload access and review again before saving.");
+        else setMessage("We couldn’t confirm whether this change saved. Reload access and check before trying again.");
       } finally { latch.current = false; if (alive.current) setPending(false); }
     })(); mutation.current = operation; void operation.finally(() => { if (mutation.current === operation) mutation.current = null; });
   }
-  async function reload() { if (pending) return; setReview(null); try { await load(); if (alive.current) { setBlocked(false); setMessage("Current access records reloaded. Review any new action before confirming it."); } } catch { /* Load supplies the unavailable state. */ } }
+  async function reload() { if (pending) return; setReview(null); try { await load(); if (alive.current) { setBlocked(false); setMessage("Access reloaded."); } } catch { /* Load supplies the unavailable state. */ } }
   const data = snapshot?.relationships, disabled = pending || blocked || loading || failed;
   const available = snapshot?.tutors.filter(row => !data?.tutors.some(link => link.tutorGrantId === row.id)) ?? [];
   const tutorLabels = identityLabels(snapshot?.tutors ?? []), pickerLabels = identityLabels(available);
   const linkedTutorLabels = identityLabels(data?.tutors.map(row => ({ id: row.tutorGrantId, displayName: row.displayName })) ?? []);
   const parentLabels = identityLabels(data?.guardians.map(row => ({ id: row.parentGrantId, displayName: row.displayName })) ?? []);
   const studentLabels = identityLabels(data?.identities.map(row => ({ id: row.studentGrantId, displayName: row.displayName })) ?? []);
-  return <section className="role-workspace access-workspace admin-workspace"><AdminNav />{studentId && <div className="admin-crumbs"><WorkspaceLink href={`/workspace/admin/students/${studentId}/reading`}>Student page</WorkspaceLink></div>}<h1>{studentId ? "People and access" : "Tutors"}</h1>
-    <p>{studentId ? "Manage the people linked to this student. A student link and a congregation role have different effects." : "Active, verified tutor identities in this congregation. Invitations create access only after acceptance."}</p>
-    {message && <p className={blocked || !message.startsWith("Access change saved") ? "request-error" : "workspace-notice"} role={blocked ? "alert" : "status"}>{message}</p>}
-    {review && <AccessReview review={review} pending={pending} confirm={confirm} cancel={() => setReview(null)} />}
-    {loading ? <p role="status">Checking current access records…</p> : failed ? <p role="alert">Access records are unavailable. No previous identity list is being shown.</p> : snapshot && <>
+  // The confirm step is a sheet over the page; the action that opened it gets focus back.
+  const sheet = useRef<HTMLDialogElement>(null), origin = useRef<HTMLElement | null>(null);
+  const sheetShown = useWorkspaceModal(sheet, Boolean(review));
+  // showModal focuses the close button, so the heading is focused here, after the hook has shown the sheet.
+  useLayoutEffect(() => { if (sheetShown) document.getElementById("access-review-heading")?.focus(); }, [sheetShown, review]);
+  // Once the change and its reload settle, focus returns to the action that opened the review, or to the page heading if it is gone or disabled.
+  const pageHeading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (review || pending || loading || !origin.current) return;
+    const opener = origin.current; origin.current = null;
+    (opener.isConnected && !(opener as HTMLButtonElement).disabled ? opener : pageHeading.current)?.focus();
+  }, [review, pending, loading]);
+  useLayoutEffect(() => {
+    if (!pending) return;
+    const block = (event: KeyboardEvent) => { if (event.key === "Escape" && sheet.current?.open) event.preventDefault(); };
+    document.addEventListener("keydown", block, true); return () => document.removeEventListener("keydown", block, true);
+  }, [pending]);
+  const shown = useRef({ sheetShown, pending }); shown.current = { sheetShown, pending };
+  function sheetClosed() { const now = shown.current; if (!now.sheetShown) return; if (now.pending || latch.current) sheet.current?.showModal(); else setReview(null); }
+  const open = (action: Action) => (event: { currentTarget: HTMLElement }) => { origin.current = event.currentTarget; choose(action); };
+  // Row actions say whose access they change, so the visible verb is never ambiguous to a screen reader.
+  const act = (label: string, name: string, action: Action, danger = false, off = false) => <button className={`roster-action${danger ? " people-danger" : ""}`} aria-label={`${label} ${name}`} disabled={disabled || off} onClick={open(action)}>{label}</button>;
+  const person = (name: string, status: ReactNode, actions: ReactNode, key: string) => <li key={key} className="people-row">
+    <span className="people-avatar" aria-hidden="true">{initial(name)}</span>
+    <div className="people-body"><h3><bdi dir="auto">{name}</bdi></h3><p className="people-status">{status}</p></div>
+    <div className="people-actions">{actions}</div>
+  </li>;
+  const calm = message === "Saved. Access is up to date." || message === "Access reloaded.";
+  return <section className="role-workspace access-workspace admin-workspace"><AdminNav />{studentId && <div className="admin-crumbs"><WorkspaceLink href={`/workspace/admin/students/${studentId}/reading`}>Student page</WorkspaceLink></div>}
+    <div className="admin-head"><div><h1 ref={pageHeading} tabIndex={-1}>{studentId ? "People and access" : "Tutors"}</h1>
+      {data ? <p className="people-student"><bdi dir="auto">{data.student.firstName} {data.student.lastName}</bdi> · <time dateTime={data.student.ceremonyDate}>{ceremonyCountdown(data.student.ceremonyDate).label}</time>{data.student.disabled && <span className="roster-chip">Disabled</span>}</p>
+        : !studentId && <p className="people-student">Tutors join by invitation. Assign them to students from each student’s People page.</p>}</div>
+      {!failed && <button type="button" className="hero-icon roster-reload" aria-label="Reload access" disabled={pending || loading} onClick={() => void reload()}>{reloadIcon}</button>}</div>
+    {data?.student.disabled && <p className="people-note">This student is disabled. Nobody can use their access; existing links can still be removed.</p>}
+    {message && !review && <p className={calm ? "workspace-notice roster-message" : "request-error roster-message"} role={blocked ? "alert" : "status"}>{message}</p>}
+    {loading ? <p role="status">Checking current access…</p> : failed ? <div className="admin-state" role="alert"><h2>Access unavailable</h2><p>Current access couldn’t be loaded, so none of it is shown.</p><div className="form-actions"><button className="button-secondary admin-pill" disabled={pending || loading} onClick={() => void reload()}>Reload access</button><WorkspaceLink className="button-text" href="/">Check account and sign in again</WorkspaceLink></div></div> : snapshot && <>
       {data ? <>
-        <div className="access-student"><h2><bdi dir="auto">{data.student.firstName} {data.student.lastName}</bdi></h2><p><time>{data.student.ceremonyDate}</time> · {data.student.disabled ? "Disabled student — access is unavailable; existing links can be removed." : "Active student"}</p></div>
-        <section className="access-section"><h2>Tutors</h2><p>Assignments give tutors access to this student's work.</p>
-          <ul className="access-records">{data.tutors.map(row => <li key={row.id}><h3><bdi dir="auto">{linkedTutorLabels.get(row.tutorGrantId)}</bdi></h3><p>{row.effectiveRead ? "Reading access available" : "Access currently unavailable"}{row.isCantor ? " · Cantor" : ""}</p>
-            <div className="access-actions"><button className="button-secondary" disabled={disabled} onClick={() => choose({ kind: "link", group: "tutors", linkId: row.id })}>Review assignment removal</button><button className="button-text" disabled={disabled} onClick={() => choose({ kind: "grant", group: "tutors", linkId: row.id, grantId: row.tutorGrantId })}>Review tutor role revocation</button></div></li>)}</ul>
-          {!data.tutors.length && <p>No tutor is assigned.</p>}
-          <div className="access-assign"><label htmlFor="access-tutor">Tutor to assign</label><select id="access-tutor" disabled={disabled || data.student.disabled} value={selected} onChange={event => setSelected(event.target.value)}><option value="">Choose an eligible tutor</option>{available.map(row => <option key={row.id} value={row.id}>{pickerLabels.get(row.id)}{row.isCantor ? " · Cantor" : ""}</option>)}</select>
-            {!available.length && <p className="field-help">No unassigned eligible tutor on this page. Check another page or manage invitations.</p>}<button className="button-secondary" disabled={disabled || data.student.disabled || !selected} onClick={() => choose({ kind: "assign", grantId: selected })}>Review tutor assignment</button></div>
+        <section className="people-card" aria-labelledby="people-tutors"><div className="people-card-head"><h2 id="people-tutors">Tutors</h2><p>Can open this student’s reading, service parts and lessons.</p></div>
+          {data.tutors.length ? <ul className="people-list">{data.tutors.map(row => person(linkedTutorLabels.get(row.tutorGrantId)!, <>{row.effectiveRead ? "Can teach this student" : "Access paused"}{row.isCantor && <span className="roster-chip">Cantor</span>}</>,
+            <>{act("Unassign", linkedTutorLabels.get(row.tutorGrantId)!, { kind: "link", group: "tutors", linkId: row.id })}{act("Revoke tutor role", linkedTutorLabels.get(row.tutorGrantId)!, { kind: "grant", group: "tutors", linkId: row.id, grantId: row.tutorGrantId }, true)}</>, row.id))}</ul>
+            : <p className="people-empty">No tutor assigned yet.</p>}
+          <div className="people-assign"><label htmlFor="access-tutor">Tutor to assign</label><div className="people-assign-row"><select id="access-tutor" disabled={disabled || data.student.disabled} value={selected} onChange={event => setSelected(event.target.value)}><option value="">Choose a tutor</option>{available.map(row => <option key={row.id} value={row.id}>{pickerLabels.get(row.id)}{row.isCantor ? " · Cantor" : ""}</option>)}</select>
+            <button className="button-secondary admin-pill" disabled={disabled || data.student.disabled || !selected} onClick={open({ kind: "assign", grantId: selected })}>Assign</button></div>
+            {!available.length && <p className="field-help">Every tutor on this page is already assigned. Invite a new tutor from Invitations.</p>}</div>
         </section>
-        <section className="access-section"><h2>Parents</h2><p>Parent reading access and permission to practice as this child are separate.</p><ul className="access-records">{data.guardians.map(row => <li key={row.id}><h3><bdi dir="auto">{parentLabels.get(row.parentGrantId)}</bdi></h3><p>{row.effectiveRead ? "Parent reading available" : "Access currently unavailable"} · {row.effectivePractice ? "Child practice available" : "Child practice unavailable"}</p><p className="field-help">Practice permission: {row.practiceEnabled ? "Allowed" : "Stopped"}.</p><div className="access-actions">
-          <button className="button-secondary" disabled={disabled || !row.practiceEnabled && (!row.effectiveRead || data.student.disabled)} onClick={() => choose({ kind: "practice", linkId: row.id, enabled: !row.practiceEnabled })}>{row.practiceEnabled ? "Review stopping practice" : "Review allowing practice"}</button>
-          <button className="button-secondary" disabled={disabled} onClick={() => choose({ kind: "link", group: "guardians", linkId: row.id })}>Review parent link removal</button><button className="button-text" disabled={disabled} onClick={() => choose({ kind: "grant", group: "guardians", linkId: row.id, grantId: row.parentGrantId })}>Review parent role revocation</button></div></li>)}</ul>{!data.guardians.length && <p>No parent links. Use an explicit parent invitation to establish one.</p>}</section>
-        <section className="access-section"><h2>Student sign-in</h2><ul className="access-records">{data.identities.map(row => <li key={row.id}><h3><bdi dir="auto">{studentLabels.get(row.studentGrantId)}</bdi></h3><p>{row.effectivePractice ? "Student practice available" : "Access currently unavailable"}</p><div className="access-actions"><button className="button-secondary" disabled={disabled} onClick={() => choose({ kind: "link", group: "identities", linkId: row.id })}>Review student sign-in removal</button><button className="button-text" disabled={disabled} onClick={() => choose({ kind: "grant", group: "identities", linkId: row.id, grantId: row.studentGrantId })}>Review student role revocation</button></div></li>)}</ul>{!data.identities.length && <p>No independent student sign-in is linked. Parent child-practice access is separate.</p>}</section>
-      </> : <ul className="access-records">{snapshot.tutors.map(row => <li key={row.id}><h2><bdi dir="auto">{tutorLabels.get(row.id)}</bdi></h2><p>{row.isCantor ? "Cantor" : "Tutor"}</p><div className="access-actions"><button className="button-secondary" disabled={disabled} onClick={() => choose({ kind: "cantor", grantId: row.id, enabled: !row.isCantor })}>{row.isCantor ? "Review removing cantor flag" : "Review cantor flag"}</button><button className="button-text" disabled={disabled} onClick={() => choose({ kind: "grant", grantId: row.id })}>Review tutor role revocation</button></div></li>)}</ul>}
-      {!data && !snapshot.tutors.length && <p>No eligible tutors on this page.</p>}
-      <nav className="access-pages" aria-label="Eligible tutor pages"><button className="button-secondary" disabled={disabled || cursors.length === 1} onClick={() => { setReview(null); setSelected(""); setCursors(previous => previous.slice(0, -1)); }}>Previous tutor page</button><button className="button-secondary" disabled={disabled || snapshot.tutors.length !== 100} onClick={() => { setReview(null); setSelected(""); setCursors(previous => [...previous, snapshot.tutors[snapshot.tutors.length - 1].id]); }}>Next tutor page</button></nav>
+        <section className="people-card" aria-labelledby="people-parents"><div className="people-card-head"><h2 id="people-parents">Parents</h2><p>Can read this student’s work. Practising as the child is a separate permission.</p></div>
+          {data.guardians.length ? <ul className="people-list">{data.guardians.map(row => person(parentLabels.get(row.parentGrantId)!, <>{row.effectiveRead ? "Can read" : "Access paused"} · {row.practiceEnabled ? (row.effectivePractice ? "Can practise as the child" : "Child practice allowed but unavailable") : "Child practice stopped"}</>,
+            <>{act(row.practiceEnabled ? "Stop child practice" : "Allow child practice", parentLabels.get(row.parentGrantId)!, { kind: "practice", linkId: row.id, enabled: !row.practiceEnabled }, false, !row.practiceEnabled && (!row.effectiveRead || data.student.disabled))}
+              {act("Unlink", parentLabels.get(row.parentGrantId)!, { kind: "link", group: "guardians", linkId: row.id })}{act("Revoke parent role", parentLabels.get(row.parentGrantId)!, { kind: "grant", group: "guardians", linkId: row.id, grantId: row.parentGrantId }, true)}</>, row.id))}</ul>
+            : <p className="people-empty">No parent linked yet.</p>}
+          {!data.student.disabled && <WorkspaceLink className="button-secondary admin-pill people-invite" href={`/workspace/admin/invitations?student=${encodeURIComponent(data.student.id)}&role=parent`}>Invite a parent</WorkspaceLink>}
+        </section>
+        <section className="people-card" aria-labelledby="people-students"><div className="people-card-head"><h2 id="people-students">Student sign-in</h2><p>The student’s own account. A parent practising as the child doesn’t need one.</p></div>
+          {data.identities.length ? <ul className="people-list">{data.identities.map(row => person(studentLabels.get(row.studentGrantId)!, row.effectivePractice ? "Can sign in and practise" : "Access paused",
+            <>{act("Unlink", studentLabels.get(row.studentGrantId)!, { kind: "link", group: "identities", linkId: row.id })}{act("Revoke student role", studentLabels.get(row.studentGrantId)!, { kind: "grant", group: "identities", linkId: row.id, grantId: row.studentGrantId }, true)}</>, row.id))}</ul>
+            : <p className="people-empty">No student sign-in linked.</p>}
+          {!data.student.disabled && <WorkspaceLink className="button-secondary admin-pill people-invite" href={`/workspace/admin/invitations?student=${encodeURIComponent(data.student.id)}&role=student`}>Invite the student</WorkspaceLink>}
+        </section>
+      </> : snapshot.tutors.length ? <section className="people-card" aria-label="Tutors"><ul className="people-list">{snapshot.tutors.map(row => person(tutorLabels.get(row.id)!, row.isCantor ? <span className="roster-chip">Cantor</span> : "Tutor",
+          <>{act(row.isCantor ? "Remove cantor flag" : "Mark as cantor", tutorLabels.get(row.id)!, { kind: "cantor", grantId: row.id, enabled: !row.isCantor })}{act("Revoke tutor role", tutorLabels.get(row.id)!, { kind: "grant", grantId: row.id }, true)}</>, row.id))}</ul></section>
+        : <div className="admin-empty"><p className="admin-empty-title">No tutors yet</p><p>Invite a tutor from Invitations. They appear here once they accept.</p></div>}
+      {(cursors.length > 1 || snapshot.tutors.length === 100) && <nav className="roster-pages" aria-label="Tutor pages"><button className="button-secondary admin-pill" disabled={disabled || cursors.length === 1} onClick={() => { setReview(null); setSelected(""); setCursors(previous => previous.slice(0, -1)); }}>Previous tutor page</button><button className="button-secondary admin-pill" disabled={disabled || snapshot.tutors.length !== 100} onClick={() => { setReview(null); setSelected(""); setCursors(previous => [...previous, snapshot.tutors[snapshot.tutors.length - 1].id]); }}>Next tutor page</button></nav>}
     </>}
-    <button className="button-text" disabled={pending || loading} onClick={() => void reload()}>Reload access</button><p className="field-help"><Link href="/">Check account and sign in again</Link></p>
+    <dialog ref={sheet} className="roster-sheet access-sheet" aria-labelledby="access-review-heading" closedby={pending ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); if (!pending) setReview(null); }} onClose={sheetClosed}>
+      <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close access review" disabled={pending} onClick={() => setReview(null)}>{icons.close}</button></div>
+      {review && <AccessReview review={review} pending={pending} confirm={confirm} cancel={() => setReview(null)} />}
+    </dialog>
   </section>;
 }
+
+const initial = (name: string) => (name.trim().match(/\p{L}|\p{N}/u)?.[0] ?? "?").toLocaleUpperCase();
+const reloadIcon = <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
