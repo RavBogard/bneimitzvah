@@ -67,3 +67,36 @@ It also raised seven low findings: unlimited absent consonants, manifest wording
 Residual gaps, both low:
 - Per-passage target-pack files (`units.json`, `score.json`, `a-soulx-target.json`, `b-speech-plan.json`) carry no `schema` marker. The repo guard therefore catches them outside `trope/` and `tests/fixtures/trope/` only as unlisted data files.
 - A hard-linked input is refused even when both links are outside any repository. That is a deliberate usability cost.
+
+## Coordination (2026-10-16, for Codex)
+
+**Acknowledged:** `C:/Users/dsbog/bneimitzvah/docs/planning/2026-10-16-parallel-work/COORDINATION.md`.
+- I keep the ownership listed there and work only in `C:/Users/dsbog/bneimitzvah-voice` on `voice/human-alignment`, with its own dependencies.
+- I won't edit another stream's files, the coordination file or the original checkout's STATE.
+
+**Frozen checkpoint for integration:** `24778d3`, pushed to `origin/voice/human-alignment`, with CI green on Windows, Ubuntu, Postgres and browser.
+- Files changed: `trope/{audio-dsp,human-alignment,human-retime,benchmark-run}.mjs`, `scripts/{trope-human-retime,private-paths}.mjs`, `tests/trope-human-retime.test.mjs`, and this note.
+- Shared files changed: `scripts/repo-policy.mjs`, `tests/repo-policy.test.mjs` and `scripts/trope-benchmark-pack.mjs` (`privateBenchmarkDestination`).
+
+**About `scripts/repo-policy.mjs`:** the voice change is additive.
+- It adds one constant, `PRIVATE_BENCHMARK_SCHEMA`, and one rule in `entryProblems`: data files whose `"schema"` is `chant-benchmark-(input|pack|identity|run)/`, `chant-human-*/` or `chant-listening-*/` are flagged, even under `trope/` and `tests/fixtures/trope/`.
+- The test for it is "private chant-benchmark records are rejected even under the engine and fixture allow-lists" in `tests/repo-policy.test.mjs`.
+- It doesn't touch the font rules, so keep both when you reconcile.
+- `scripts/private-paths.mjs` (`insideGitWorkingTree`) is new and voice-only, but it now also guards the target-pack CLI destination.
+
+**Integration request:** none yet. This branch has no app, UI, schema or provider changes and no student path, so it can merge on its own whenever you integrate. G3 is untouched.
+
+**Since `24778d3`:**
+- Daniel recorded one private take: an iPad Voice Memo, Genesis 11:1–2, spoken and then a self-described Moroccan-style chant.
+- It's stored outside every repository at `C:\private\chant-benchmark\recordings\2026-10-16-daniel\`.
+- It has a consent record: private playback, local processing, voice conversion, and cloud processing for this file. Training and distribution stay off.
+- Nothing from it is in Git.
+
+**Next checkpoint (separate commit):**
+1. Build a Genesis 11:1 target pack in the private folder.
+2. Machine-propose alignment boundaries, using a locally run aligner whose license is checked first.
+3. Give Daniel a word-by-word listening review, recorded explicitly as word-level review, with the sound-level boundaries kept as proposals. This needs a small, separately reviewed schema change for review granularity.
+4. Set up the local SoulX environment outside the repo (free, Apache-2.0; a few GB of downloads).
+5. Produce the first real retime and SVC output for Daniel's listening only.
+
+**Message to the UI stream:** none blocking. The only shared file is `scripts/repo-policy.mjs`, as above.
