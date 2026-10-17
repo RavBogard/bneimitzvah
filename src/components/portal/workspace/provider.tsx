@@ -11,6 +11,7 @@ import { fetchWork, type WorkOperation, type WorkPage, type WorkHistory, type Wo
 import { fetchProgress, type ProgressOperation, type ProgressRows, type ProgressSaved } from "./progress/api";
 import { serviceApi, type ServiceMetadata, type ServicePlan, type ServiceUnitResponse } from "./service-learning/api";
 import { fetchLessons, type LessonOperation, type LessonResult } from "./lessons/api";
+import { fetchPracticeCalendar, type PracticeAck, type PracticeDates, type PracticeOperation } from "./practice-calendar/api";
 import { reloadWorkspaceScopes, type ReloadRegistration } from "./reload-barrier";
 
 export const rolePaths = { student: "/workspace/student", parent: "/workspace/parent", tutor: "/workspace/tutor", admin: "/workspace/admin/students" } as const;
@@ -26,6 +27,7 @@ type Workspace = {
   readServiceMetadata(mode: ReadingMode, id: string, signal: AbortSignal): Promise<ServiceMetadata>;
   readServiceUnit(mode: ReadingMode, id: string, plan: ServicePlan, unitId: string, signal: AbortSignal): Promise<ServiceUnitResponse>;
   readLessons(mode: ReadingMode, id: string, operation: LessonOperation, signal: AbortSignal): Promise<LessonResult>;
+  readPracticeCalendar(mode: ReadingMode, id: string, operation: PracticeOperation, signal: AbortSignal): Promise<PracticeDates | PracticeAck>;
   verifyServiceSession(signal: AbortSignal): Promise<void>;
   serviceAuthorityFailed(status: number): void;
   registerWork(value: WorkLifecycle): () => void;
@@ -255,7 +257,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       throw error;
     }
   }, [practice, router, clearWork]);
-  const serviceRead = useCallback(async <T,>(mode: ReadingMode, id: string, signal: AbortSignal, action: (selection?: typeof practice.selection) => Promise<T>): Promise<T> => {
+  const serviceRead = useCallback(async <T,>(mode: ReadingMode, id: string, signal: AbortSignal, action: (selection?: typeof practice.selection) => Promise<T>, refreshOnDenied = true): Promise<T> => {
     const generation = practice.generation, active = practice.selection, route = routeRevision.current;
     if (mode === "child-practice" && (!active || active.context.studentId !== id)) throw new PortalRequestError(404);
     const check = () => { if (signal.aborted || generation !== practice.generation || route !== routeRevision.current || mode === "child-practice" && (practice.selection?.handle !== active?.handle || practice.selection?.context.id !== active?.context.id)) throw new PortalRequestError(409); };
@@ -266,7 +268,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       if (!signal.aborted && generation === practice.generation && route === routeRevision.current && mode === "child-practice" && currentPath.current === `/workspace/practice/${id}` && [401, 403, 404].includes(statusOf(error))) {
         clearWork(); practice.invalidate(); setContext(null); setNotice("Practice access changed. Choose an available child again."); setEpoch(value => value + 1); router.replace("/workspace/parent");
-      } else if (!signal.aborted && generation === practice.generation && route === routeRevision.current && [401, 403, 404].includes(statusOf(error))) { clearWork(); refresh(); }
+      } else if (refreshOnDenied && !signal.aborted && generation === practice.generation && route === routeRevision.current && [401, 403, 404].includes(statusOf(error))) { clearWork(); refresh(); }
       throw error;
     }
   }, [practice, verifyWorkSession, clearWork, router, refresh]);
@@ -274,6 +276,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const readServiceUnit = useCallback((mode: ReadingMode, id: string, plan: ServicePlan, unitId: string, signal: AbortSignal) => serviceRead(mode, id, signal, selection => serviceApi.unit(mode, id, plan, unitId, signal, selection ?? undefined)), [serviceRead]);
   // Lesson notes share the service path: fresh session checks around each request, and the same access-failure handling.
   const readLessons = useCallback((mode: ReadingMode, id: string, operation: LessonOperation, signal: AbortSignal) => serviceRead(mode, id, signal, selection => fetchLessons(mode, id, operation, signal, selection ?? undefined)), [serviceRead]);
+  // The practice calendar uses the same path; it reads dates only and reports a visit only when asked.
+  // A refusal stays local to the calendar: it must not start another access check by itself.
+  const readPracticeCalendar = useCallback((mode: ReadingMode, id: string, operation: PracticeOperation, signal: AbortSignal) => serviceRead(mode, id, signal, selection => fetchPracticeCalendar(mode, id, operation, signal, selection ?? undefined), false), [serviceRead]);
   const serviceAuthorityFailed = useCallback((status: number) => { if ([401, 403, 404].includes(status)) { clearWork(); refresh(); } }, [clearWork, refresh]);
   const verifyServiceSession = useCallback(async (signal: AbortSignal) => { try { await verifyWorkSession(signal); } catch (error) { if (!signal.aborted) serviceAuthorityFailed(statusOf(error)); throw error; } }, [verifyWorkSession, serviceAuthorityFailed]);
   const controlledLink = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -290,7 +295,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={refresh}>Check access again</button>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
-        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readWork, readProgress, readServiceMetadata, readServiceUnit, readLessons, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, concealed: checking || failure !== null }}>
+        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readWork, readProgress, readServiceMetadata, readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, concealed: checking || failure !== null }}>
           {summary.roles.length > 1 && <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] || pathname.startsWith(`${rolePaths[role]}/`) ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>}
           {visibleNotice && <p className="workspace-notice" role="status">{visibleNotice}</p>}
           {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}

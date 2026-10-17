@@ -515,3 +515,61 @@ No authority, privacy or double-send defect was found. Unchanged: fresh load plu
 Nothing is pushed, migrated or deployed. Daniel's look at the admin screens and the staff wording is still open.
 
 **Update (2026-10-17, later):** per Codex's "QUIET ROSTER CHECKPOINT COMPLETE", `design/song-session-admin-roster` now also merges the final roster ref `add56e7`. Since `cd8e102` it changes only the reviewed split of `tests/app/auth-http.test.ts` into isolated cases, plus its docs. The merge is clean. The changed test passes 16/16 and typecheck passes; `src/` is byte-identical to the fully checked `38b126e` tree. Frozen ref: the commit that adds this line.
+
+## Quiet practice calendar (2026-10-17)
+
+**Order:** `docs/planning/2026-10-17-roster-admin-release/CLAUDE-UI-NEXT.md` (Codex, under Daniel's direction). Build a dates-only practice calendar on the deployed 0018 backend for the student and an explicitly selected child practice. No server, schema, auth, import, invitation or dialog changes.
+
+**Frozen ref:** branch `design/practice-calendar` at the commit that adds this note. Its parent is `3bc99ea`, which is untouched, as the order says. Main has since moved to the released `0ce58b6`; Codex owns integration. Nothing is pushed.
+
+**Changed files:**
+- New: `src/components/portal/workspace/practice-calendar/api.ts`, `store.ts` and `view.tsx`.
+- New tests: `tests/app/practice-calendar-client.test.ts` (10 cases) and `tests/http-browser/practice-calendar-ui.test.ts` (3 cases).
+- Small hooks:
+  - `provider.tsx`: `readPracticeCalendar` goes through the existing session-checked service path. A new `refreshOnDenied=false` flag keeps a calendar refusal local, so it can't start an access-check loop.
+  - `reading.tsx`: owns the store, registers it as work (cleared on every pause and `clearWork`), configures it per reading load, and loads it alongside the reading without delaying it.
+  - `study/view.tsx`: `onVisit` fires on a verse tap, on Start, and on the lift view's next and previous.
+  - `service-learning/panel.tsx`: `onVisit` fires only when a part the reader chose opens, not when a reload restores it.
+- Scoped `.practice-*` CSS in `globals.css`.
+
+**Behaviour:**
+- **Display:** this week as seven dots under the hero actions, with a "Practice calendar" disclosure for a month grid (previous and next month within the loaded year). It shows dates only, with screen-reader text for every day. Parent, tutor and admin views show no calendar and request none.
+- **Reads:** a window of at most 366 days, chosen from the browser date but used only to pick that window. If the server's day falls outside it, one more read is made around the server's day. The raw-events GET is never called.
+- **Visits:** a visit is sent only for an explicit open. `expectedDay` is the last-read Chicago `serverDay`, never the browser date. Each visit gets a fresh `crypto.randomUUID()` and the exact current binding: assignment id, revision, kind and ref for a verse; plan id and revision, catalog id and identity, and unit id for a service part. Opening the same target again on the same day sends nothing.
+  - **Stale day:** one fresh read; the visit is never resent.
+  - **Stale material:** asks for one reading reload. The limit resets when the material revision changes or a visit is acknowledged.
+  - **Retention expired:** the calendar disappears.
+  - **Other failures:** dropped, with no retry and no queue. No play or record events are sent.
+- **Privacy:** cleared on access-check concealment, session change (remount), student, child or context change, authority failure and `clearWork`. Late reads and acknowledgements are dropped by generation and abort checks. Child-practice requests carry only the current selection's context.
+
+**Second-agent review:** found no defect in explicit-only writes, server day, exact bindings, mode scoping, clearing or scope. It raised five issues, all fixed and rechecked:
+- the calendar delayed the reading (medium);
+- a possible access-check loop on a calendar-only refusal;
+- empty month column headers for screen readers;
+- the month header pushed to the right;
+- only one stale-material reload per practice context.
+
+**Checks on this exact tree:**
+- Typecheck and `next build` pass. App tests: 856 passed, plus the 1 existing skip (two workers). `never-in-repo` passes 3/3.
+- Browser files, one at a time, on the disposable WSL PostgreSQL 16:
+  - practice-calendar-ui 3, reading-ui 4, workspace-ui 3, lesson-progress-privacy-ui 4, service-learning-ui 14;
+  - study-ui 6, student-work-ui 10, modal-privacy-ui 2, service-modal-privacy-ui 3, progress-ui 3.
+- The calendar browser case covers the student on desktop and mobile:
+  - zero POSTs on load and on a held access-check refresh, and no calendar DOM while concealed;
+  - exact visit bodies and day/event rows in the database;
+  - same-target dedupe;
+  - keyboard use of the disclosure and month buttons;
+  - no overflow.
+- It also covers the stale-day re-read without a resend, and child practice: a dates-only `child-practice` read, a visit carrying the context header, and the calendar gone after "Return to parent view".
+- **Failure found and fixed:** the first full run caught horizontal overflow at 200% root text on a 390px screen (`workspace-ui`, `student-work-ui`). The week strip and month grid are now fluid.
+- One `lesson-progress-privacy-ui` run hit an interrupted `page.goto` navigation. It passed on both reruns.
+- Screenshots (local): `.impeccable/review/practice-calendar-student-{desktop,mobile}.png` and `practice-calendar-child-desktop.png`.
+
+**Open dependencies and gaps:**
+- The service-part visit is covered by unit tests only. A browser case needs a synthetic service-plan fixture.
+- Placement in other authorized views (parent, tutor, admin) was not added.
+- The calendar's wording ("Practice this week", "Practice calendar") is student-visible and needs Daniel's look before release.
+
+**For Codex's admin-sheet test:** if `design/song-session-admin-sheets` (`11a82a2`) is ever taken, its `reconnect()` returns focus to the rebuilt row opener. Your `admin-sheet-release-review` access case currently expects the `Tutors` h1, so that assertion would need to expect the opener instead.
+
+**Continuation:** this is ready for Codex's integration and independent privacy review. Nothing is pushed or deployed, and no real student data was used.

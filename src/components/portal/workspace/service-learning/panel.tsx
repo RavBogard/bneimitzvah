@@ -5,13 +5,15 @@ import type { Assigned, ReadingMode } from "../api";
 import { statusOf, useWorkspace } from "../provider";
 import { ServiceUnitView } from "../../service-learning/unit-view";
 import type { ServiceUnitMaterial } from "../../../../lib/service-learning/types";
-import type { ServiceMetadata } from "./api";
+import type { ServiceMetadata, ServicePlan } from "./api";
 import { ServicePlanEditor } from "./editor";
 
 export type ServiceReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
-export function ServiceLearningPanel({ id, mode, studentId, baseline, register, reloadReading, onDepartureActive }: {
+export function ServiceLearningPanel({ id, mode, studentId, baseline, register, reloadReading, onDepartureActive, onVisit }: {
   id: string; mode: ReadingMode; studentId: string; baseline: Assigned | null;
   register(value: ServiceReload): () => void; reloadReading(): Promise<Assigned>; onDepartureActive(active: boolean): void;
+  /** Called only when the reader chooses a part and it opens; a reload that restores the choice is not a visit. */
+  onVisit?(plan: ServicePlan, unitId: string): void;
 }) {
   const { summary, epoch, readServiceMetadata, readServiceUnit, registerWork } = useWorkspace();
   const scope = JSON.stringify([summary.sessionBinding, epoch, mode, studentId]), scopeRef = useRef(scope); scopeRef.current = scope;
@@ -52,7 +54,7 @@ export function ServiceLearningPanel({ id, mode, studentId, baseline, register, 
       const result = await readServiceUnit(mode, studentId, current.plan, unitId, controller.signal);
       if (controller.signal.aborted || turn !== generation.current || selectedScope !== scopeRef.current) return;
       if (result.state === "withdrawn") { metadata.current = result; choice.current = null; setState({ scope: selectedScope, metadata: result }); }
-      else setState({ scope: selectedScope, metadata: current, selected: unitId, material: result.material });
+      else { setState({ scope: selectedScope, metadata: current, selected: unitId, material: result.material }); onVisit?.(result.plan, unitId); }
     } catch (error) { if (!controller.signal.aborted && turn === generation.current && selectedScope === scopeRef.current) { metadata.current = null; setState({ scope: selectedScope, error: statusOf(error) }); } }
   }
   const current = state.scope === scope ? state : null, assigned = current?.metadata;
