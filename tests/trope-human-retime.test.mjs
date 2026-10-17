@@ -137,6 +137,22 @@ test("voiced and voiceless frames: score F0 on vowels and voiced consonants, zer
   assert.equal((npy.length - 10 - npy.readUInt16LE(8)) / 4, fv.frames);
 });
 
+test("voicedPhones carries the score F0 through a default-voiceless phone and nothing else", () => {
+  const target = packFor("הָ֑ שָֽׁ׃", "Genesis 1:1"), audio = synthetic(target.identity, { consonantMs: 80 }), record = recordFor(target, audio);
+  const f0At = (options, phone) => {
+    const result = build(record, target, audio, options), map = json(result, "retime-map.json"), fv = json(result, "f0-voicing.json").full;
+    const piece = map.pieces.find(p => p.kind === "phone" && p.phone === phone);
+    const frames = fv.f0.filter((hz, j) => { const c = Math.floor((j + 0.5) * 480); return piece.dstStart <= c && c < piece.dstEnd; });
+    return { piece, frames, options: JSON.parse(Buffer.from(result.artifacts["manifest.json"]).toString("utf8")) };
+  };
+  const plain = f0At({}, "h"), voiced = f0At({ voicedPhones: ["h"] }, "h"), sh = f0At({ voicedPhones: ["h"] }, "ʃ");
+  assert.ok(plain.frames.length > 1 && plain.frames.every(hz => hz === 0) && plain.piece.voiced === false, "h is voiceless by default");
+  assert.ok(voiced.frames.length > 1 && voiced.frames.every(hz => hz > 100 && hz < 200) && voiced.piece.voiced === true, "h carries the score F0 when listed");
+  assert.ok(sh.frames.every(hz => hz === 0), "an unlisted voiceless phone stays voiceless");
+  assert.ok(JSON.stringify(voiced.options).includes('"voicedPhones":["h"]'), "the option is recorded in the manifest");
+  for (const voicedPhones of [["a"], ["h", "h"], "h", ["l"]]) assert.throws(() => build(record, target, audio, { voicedPhones }), e => e.code === "options");
+});
+
 test("melisma holds one vowel without repeated consonants; final consonants stay inside the last note; splits never cut a phone", () => {
   const row = fixture("Genesis 24:12"), target = packFor(row.he, row.ref);
   assert.ok(target.identity.segments.length > 1);
@@ -443,10 +459,12 @@ test("CLI keeps inputs and output private, writes exclusively with a run record,
     await assert.rejects(lstat(join(otherRepo, "out")), { code: "ENOENT" });
     await assert.rejects(lstat(join(root, "out")), { code: "ENOENT" });
     for (const ratio of ["0.1", "1.5", "x"]) { const bad = await call({ "--min-consonant-ratio": ratio }); assert.equal(bad.code, 1); assert.match(bad.stderr, /arguments/); clean(bad); }
+    for (const phones of ["a", "h,h", "h,l"]) { const bad = await call({ "--voiced-phones": phones }); assert.equal(bad.code, 1); assert.match(bad.stderr, /arguments/); clean(bad); }
     await assert.rejects(lstat(join(root, "out")), { code: "ENOENT" });
-    const floor = await call({ "--min-consonant-ratio": "0.25", "--out": join(root, "out-floor") }); assert.equal(floor.code, 0, floor.stderr); clean(floor);
+    const floor = await call({ "--min-consonant-ratio": "0.25", "--voiced-phones": "h", "--out": join(root, "out-floor") }); assert.equal(floor.code, 0, floor.stderr); clean(floor);
     const floorManifest = JSON.parse(await readFile(join(root, "out-floor", "manifest.json"), "utf8"));
     assert.ok(JSON.stringify(floorManifest).includes('"minConsonantRatio":0.25'), "a lowered consonant floor is recorded in the manifest");
+    assert.ok(JSON.stringify(floorManifest).includes('"voicedPhones":["h"]'), "voiced phones are recorded in the manifest");
     const ok = await call(); assert.equal(ok.code, 0, ok.stderr); clean(ok);
     assert.ok(!JSON.stringify(JSON.parse(await readFile(join(root, "out", "manifest.json"), "utf8"))).includes('"minConsonantRatio":0.25'));
     const manifest = JSON.parse(await readFile(join(root, "out", "manifest.json"), "utf8"));

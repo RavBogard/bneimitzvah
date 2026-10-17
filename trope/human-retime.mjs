@@ -18,7 +18,7 @@ import { canonicalJson, sha256, BENCHMARK_LIMITS } from "./benchmark-pack.mjs";
 
 export const RETIME_SCHEMA = "chant-human-retime/v1";
 export const RETIME_DEFAULTS = Object.freeze({ outputRate: 24000, maxConsonantShare: 0.6, minConsonantRatio: 0.5, minVowelMs: 20,
-  fadeMs: 5, maxSplitShiftMs: 2000, f0Fps: 50, warnVowelRatio: 8, warnNoteVowelCoverage: 0.5, releaseMs: 150, releaseGapMs: 40, tailMs: 200, steadyHeadMs: 25, steadyTailMs: 35, releaseBreathMs: 30 });
+  fadeMs: 5, maxSplitShiftMs: 2000, f0Fps: 50, warnVowelRatio: 8, warnNoteVowelCoverage: 0.5, releaseMs: 150, releaseGapMs: 40, tailMs: 200, steadyHeadMs: 25, steadyTailMs: 35, releaseBreathMs: 30, voicedPhones: Object.freeze([]) });
 export const OUTPUT_RATES = Object.freeze([16000, 22050, 24000, 44100, 48000]);
 // Phonikud characters that carry no voicing; the F0 sent to SVC is 0 over them, as in speech2sing.py.
 export const VOICELESS = Object.freeze(["p", "t", "k", "f", "s", "ʃ", "χ", "h", "ʔ", "ts"]);
@@ -49,8 +49,9 @@ function options(input = {}) {
     || !(o.minVowelMs > 0) || !(o.fadeMs >= 0 && o.fadeMs <= 20) || !(o.maxSplitShiftMs >= 0) || o.f0Fps !== 50
     || !(o.releaseMs >= 0 && o.releaseMs <= 400) || !(o.releaseGapMs >= 0 && o.releaseGapMs <= 200) || !(o.tailMs >= 0 && o.tailMs <= 1000)
     || !(o.steadyHeadMs >= 0 && o.steadyHeadMs <= 60) || !(o.steadyTailMs >= 0 && o.steadyTailMs <= 60)
-    || !(o.releaseBreathMs === 0 || o.releaseBreathMs >= 20 && o.releaseBreathMs <= 400)) fail("options");
-  return Object.freeze(o);
+    || !(o.releaseBreathMs === 0 || o.releaseBreathMs >= 20 && o.releaseBreathMs <= 400)
+    || !Array.isArray(o.voicedPhones) || o.voicedPhones.some((ph, i) => !voiceless.has(ph) || o.voicedPhones.indexOf(ph) !== i)) fail("options");
+  return Object.freeze({ ...o, voicedPhones: Object.freeze([...o.voicedPhones]) });
 }
 
 /**
@@ -79,7 +80,9 @@ export function planRetime(bound, input) {
 
   const bySyllable = syllables.map(() => ({ onset: [], vowel: null, coda: [] }));
   for (const item of bound.items) {
-    const phone = { ...item, voiced: item.role === "vowel" || !voiceless.has(item.phone) };
+    // voicedPhones carries the score F0 through phones that are voiceless by default, such as h between
+    // vowels, which a speaker often voices and SVC otherwise renders as a whispered gap in the line.
+    const phone = { ...item, voiced: item.role === "vowel" || !voiceless.has(item.phone) || o.voicedPhones.includes(item.phone) };
     if (!item.absent) { phone.srcStart = map(item.start); phone.srcEnd = map(item.end); if (phone.srcEnd <= phone.srcStart) fail("span-too-short"); }
     if (item.role === "vowel") bySyllable[item.syllable].vowel = phone; else bySyllable[item.syllable][item.role].push(phone);
   }

@@ -242,3 +242,16 @@ GATE: timed the engine's melody to an improvised chant — proceeded because Dan
 
 Run `four-Bhuman-v1b` (floor 0.25, provisional word review `review-daniel-four-spoken-words-1p`): median vowel ratio 1.4–1.6 for P01, P02 and P09, and 2.2 for P11, whose spoken reading is faster than his chant. Awaiting Daniel's listening on a flag page.
 
+**v1b verdict (Daniel):** "really impressive. Much better." He flagged 11 of 46 words, and said some were drawn out in weird ways, at least one was too fast, the ה/ח sound was off, and endings dragged or faded oddly.
+- 9 of the 14 words with ה or ח/ך were flagged, against 2 of the other 32.
+- 6 of the 7 held phrase endings were flagged.
+- Every word with a vowel stretched more than 8 times was flagged except דָּוִד and יְהוֹנָתָן.
+
+**Causes:**
+- The spoken reading runs about 1.5 times faster than his chant, 2.2 times in P11. V'ahavta improved once its stretch was near 1.
+- h and χ are voiceless, so SVC gets no F0 for 40–100 ms mid-line. Daniel's own h measures as partly voiced (autocorrelation 0.33–0.48).
+
+**Next:**
+- Daniel is recording a slow spoken take, paced against his own chant, which the script page now plays.
+- A new retime option, `voicedPhones` (CLI `--voiced-phones h`, recorded in the manifest), carries the score F0 through listed default-voiceless phones. It will be rendered on and off for comparison.
+
