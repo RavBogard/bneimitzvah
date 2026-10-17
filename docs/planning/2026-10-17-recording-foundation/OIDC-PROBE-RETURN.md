@@ -1,5 +1,17 @@
 # Private media OIDC metadata probe
 
+## Root operational acceptance — 2026-10-17
+
+Exact candidate `5c2613efc86590e90f1cb27779511f1ce0061bb1` passed all four [hosted jobs39049244982](https://github.com/RavBogard/bneimitzvah/actions/runs/39049244982): Node280 on both systems; app1018 Linux/1017 Windows plus one existing skip; both typechecks/builds; restricted SQL/service checks and137 authenticated-browser cases;15 public-browser cases. Final source review and the operator's final pin seal are accepted. Earlier source-only/pending statements below are historical.
+
+Root executed separately staged native builds through independently reviewed operator `64258161308d11bba426f04292f1967b6aca5b95e80e60d98deca507c76ba3ad`. Production `dpl_4mXzaWzhQQCpC3MaFaK44ktVXPVj` / run `d5f1e35f-f257-47b3-8154-2cd2f870a940` returned actual allowed access; Preview `dpl_BWWAF44NmFM3j48fkn12sHsgzTMu` / run `090e42d4-5dc7-49f3-b1ec-5cba1e7f18fc` returned the specifically recognized environment denial. Both READY/source/target/run/event bindings and canonical/store/environment postchecks pass. Native Development denial was independently established in the preserved first round. Generic errors and the three earlier failed hosted rounds remain failures, not permission evidence. No object was written or read.
+
+Root then ran independently reviewed configuration operator `bf8f2c49e27020c2043bbac955f15b2b2f9f57565892ec5f7e23de9b82602e08`: separate explicit add-store-ID and exact legacy-env removal both verified; final read-only check passed. Production has the plain nonsecret `BLOB_STORE_ID`; the setup-created `BLOB_READ_WRITE_TOKEN` project env is absent. The same private iad1 store, sole fixed Production connection, nine unrelated env metadata records and canonical e9 deployment are preserved. Derived connection-variable metadata was allowed only unchanged or the operation's single named-key delta; no connection mutation occurred. Removing an env is not revoking the underlying token or changing old deployments. No dashboard upgrade is needed for the verified native access.
+
+Closed operational logs and independent helper reviews remain ignored under original `.local-logs/provider-bootstrap/`; separate protected journals remain outside Git. Never reset or replay old rounds. The deployed portal remains `e9b0287b67c8e4644cb2383be8205ff14f2f4c97` / `dpl_Ddi1uAWUe9Uif9s6PRAeU4ukxRsN`. This closes metadata permission/configuration acceptance only. Synthetic signed-capability, byte/type/multipart, conditional-retirement and private-origin/range proof remain before real media activation; WAV/receipt/cleanup integration and generated-chant release remain separate.
+
+## Original source return
+
 Bounded source implementation from deployed `e9b0287`; no provider operation, credential retrieval, environment pull, store change or deployment was performed. Root's current probe spec is copied unchanged. Independent source review and exact hosted CI remain required before root executes actual probes.
 
 ## Source and behavior
