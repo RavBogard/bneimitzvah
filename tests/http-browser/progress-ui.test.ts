@@ -134,3 +134,42 @@ it("shows the latest mark instead of overwriting one made elsewhere", async () =
   const saved = await progress(student, "student");
   expect(saved.verses[2].selfCheck).toEqual({ state: "working", version: 1 });
 });
+
+it("keeps an uncertain mark unverified until an explicit read succeeds, without replaying the write", async () => {
+  const student = await page("student", true); await workspace(student, "student");
+  await safe(() => student.getByRole("button", { name: "Start", exact: true }).click());
+  let posts = 0, reads = 0, release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  const pattern = `**/api/students/${fixture.student.id}/progress**`;
+  await student.route(pattern, async route => {
+    if (route.request().method() === "POST") {
+      posts++;
+      // The real authorized write commits; only its acknowledgement is lost.
+      const response = await route.fetch(); expect(response.status()).toBe(200); await response.dispose();
+      await route.abort("failed"); return;
+    }
+    reads++; await held;
+    await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "unavailable" }) });
+  });
+  try {
+    await safe(() => lift(student).getByRole("button", { name: "Got it", exact: true }).click());
+    await ui(lift(student).getByRole("button", { name: "Checking mark…", exact: true })).toBeDisabled();
+    await ui(lift(student).getByRole("group", { name: "How Genesis 1:1 is going" })).toHaveCount(0);
+    await ui.poll(() => [posts, reads]).toEqual([1, 1]);
+    release();
+    const retry = lift(student).getByRole("button", { name: "Check saved mark", exact: true });
+    await ui(retry).toBeEnabled();
+    await ui(lift(student).locator(".lift-progress-note[role=status]")).toContainText("The saved mark couldn’t be checked.");
+    await ui(lift(student).getByRole("group", { name: "How Genesis 1:1 is going" })).toHaveCount(0);
+    await capture(student, "unverified-retry-mobile");
+    expect(posts).toBe(1);
+    await student.unroute(pattern);
+    await safe(() => retry.click());
+    await ui(lift(student).getByRole("button", { name: "Got it", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await ui(lift(student).locator(".lift-progress-note[role=status]")).toHaveText("That mark may not have saved. The latest mark is shown.");
+    expect(posts).toBe(1);
+    await safe(() => student.keyboard.press("Escape"));
+    await ui(student.locator(".hero-marked")).toContainText("1 got it");
+    await ui(card(student, "Genesis 1:1").locator(".verse-mark")).toHaveText("Got it");
+  } finally { release(); await student.unroute(pattern); }
+});

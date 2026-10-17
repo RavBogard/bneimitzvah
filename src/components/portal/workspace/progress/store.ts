@@ -5,7 +5,7 @@ import type { ProgressCounts, ProgressStream, ProgressVerse } from "../../../../
 import { ProgressError, type ProgressMark, type ProgressOperation, type ProgressRows, type ProgressSaved } from "./api";
 
 type Request = (baseline: Assigned, kind: StudyKind, operation: ProgressOperation, signal: AbortSignal) => Promise<ProgressRows | ProgressSaved>;
-type KindState = { from: number; to: number; token: number; loadingAt: number | null; loading: boolean; failed: boolean; stale: boolean; verses: Map<string, ProgressVerse>; counts: ProgressCounts | null; pending: Set<string>; notices: Map<string, string> };
+type KindState = { from: number; to: number; token: number; loadingAt: number | null; loading: boolean; failed: boolean; stale: boolean; verses: Map<string, ProgressVerse>; counts: ProgressCounts | null; pending: Set<string>; unverified: Map<string, string>; notices: Map<string, string> };
 const scopeOf = (value: Assigned) => JSON.stringify([value.mode, value.student.id, value.context?.id ?? null, value.context?.authorityRevision ?? null, value.readings.map(row => [row.kind, row.id, row.revision, row.verses])]);
 
 /**
@@ -36,13 +36,20 @@ export class ProgressStore {
   }
   private state(kind: StudyKind) {
     let state = this.kinds.get(kind);
-    if (!state) { state = { from: 0, to: 0, token: 0, loadingAt: null, loading: false, failed: false, stale: false, verses: new Map(), counts: null, pending: new Set(), notices: new Map() }; this.kinds.set(kind, state); }
+    if (!state) { state = { from: 0, to: 0, token: 0, loadingAt: null, loading: false, failed: false, stale: false, verses: new Map(), counts: null, pending: new Set(), unverified: new Map(), notices: new Map() }; this.kinds.set(kind, state); }
     return state;
   }
   verse(kind: StudyKind, ref: string) { return this.kinds.get(kind)?.verses.get(ref) ?? null; }
   counts(kind: StudyKind) { return this.kinds.get(kind)?.counts ?? null; }
   failed(kind: StudyKind) { return Boolean(this.kinds.get(kind)?.failed); }
-  pending(kind: StudyKind, ref: string) { return Boolean(this.kinds.get(kind)?.pending.has(ref)); }
+  pending(kind: StudyKind, ref: string) { const state = this.kinds.get(kind); return Boolean(state && (state.pending.has(ref) || state.unverified.has(ref))); }
+  unverified(kind: StudyKind, ref: string) { return Boolean(this.kinds.get(kind)?.unverified.has(ref)); }
+  loading(kind: StudyKind) { return Boolean(this.kinds.get(kind)?.loading); }
+  /** Explicit recovery reads the affected verse's current page, never a POST. */
+  retry(kind: StudyKind, ref: string) {
+    const index = this.baseline?.readings.find(row => row.kind === kind)?.verses.indexOf(ref) ?? -1;
+    if (index >= 0) void this.load(kind, Math.floor(index / 100) * 100);
+  }
   /** A message about the last mark on this verse, if any. */
   notice(kind: StudyKind, ref: string) { return this.kinds.get(kind)?.notices.get(ref) ?? ""; }
   /** Loads the marks covering a shown text page unless they are already current. */
@@ -63,12 +70,16 @@ export class ProgressStore {
         const known = state.verses.get(row.verseRef);
         if (state.pending.has(row.verseRef) && known) continue;
         state.verses.set(row.verseRef, known ? { verseRef: row.verseRef, selfCheck: known.selfCheck.version > row.selfCheck.version ? known.selfCheck : row.selfCheck, assessment: known.assessment.version > row.assessment.version ? known.assessment : row.assessment } : row);
+        const recovery = state.unverified.get(row.verseRef);
+        if (recovery !== undefined) { state.unverified.delete(row.verseRef); state.notices.set(row.verseRef, `${recovery} The latest mark is shown.`); }
       }
       // Counts are only ever the server's; each save is followed by its own re-read.
       state.from = offset; state.to = offset + rows.verses.length; if (!state.pending.size) state.counts = rows.counts;
     } catch (error) {
       if (generation !== this.generation || token !== state.token) return;
-      state.failed = true; this.fail(error);
+      state.failed = true; state.counts = null;
+      for (const [ref, recovery] of state.unverified) state.notices.set(ref, `${recovery} The saved mark couldn’t be checked. Check it before changing this verse’s mark.`);
+      this.fail(error);
     } finally { if (generation === this.generation && token === state.token) { state.loading = false; state.loadingAt = null; this.emit(); } }
   }
   private fail(error: unknown) {
@@ -79,7 +90,7 @@ export class ProgressStore {
   }
   async set(kind: StudyKind, ref: string, next: ProgressMark) {
     const baseline = this.baseline, stream = this.stream, state = this.kinds.get(kind), verse = state?.verses.get(ref);
-    if (!baseline || !stream || !state || !verse || state.pending.has(ref)) return;
+    if (!baseline || !stream || !state || !verse || state.pending.has(ref) || state.unverified.has(ref)) return;
     const key = stream === "self-check" ? "selfCheck" : "assessment", before = verse[key], generation = this.generation;
     if (before.state === next) return;
     state.pending.add(ref); state.notices.delete(ref);
@@ -94,12 +105,17 @@ export class ProgressStore {
       if (generation !== this.generation) return;
       state.verses.set(ref, verse);
       const status = statusOf(error), conflict = error instanceof ProgressError && error.code === "conflict";
+      const recovery = conflict ? "This verse was marked somewhere else." : status === 429 ? "Too many changes at once." : "That mark may not have saved.";
+      state.unverified.set(ref, recovery); state.counts = null;
       if (!(error instanceof ProgressError && error.code === "stale-assignment") && ![401, 403, 404].includes(status))
-        state.notices.set(ref, conflict ? "This verse was marked somewhere else. The latest mark is shown." : status === 429 ? "Too many changes at once. Wait a moment, then try again." : "That mark may not have saved. The latest mark is shown.");
+        state.notices.set(ref, `${recovery} Checking the saved mark…`);
       if (!conflict) this.fail(error);
     } finally {
       // Re-read (never resend) so the mark and the counts are the server's.
-      if (generation === this.generation) { state.pending.delete(ref); this.emit(); if (this.baseline === baseline) void this.load(kind, state.from); }
+      // configure() may supply a fresh object for the exact same valid scope.
+      // Generation fences changed assignments/contexts; object identity must not
+      // suppress reconciliation after a same-scope refresh skipped this write.
+      if (generation === this.generation) { state.pending.delete(ref); this.emit(); this.retry(kind, ref); }
     }
   }
 }
