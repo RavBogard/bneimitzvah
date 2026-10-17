@@ -452,3 +452,35 @@ No authority, privacy or double-send defect was found. Unchanged: fresh load plu
 - Captures (local): `.impeccable/review/invitation-{review-desktop,list-desktop,review-mobile,failed-mobile,unknown-mobile}.png` and `csv-review-{desktop,mobile}.png`.
 
 **Frozen ref for Codex:** this commit on `design/song-session-admin-invites` (parent `df10e59`). It is separate from the release; nothing is pushed.
+
+
+## Admin handoff on deployed main (2026-10-17)
+
+**Acknowledged:** main `1d5e932` is deployed (Codex, COORDINATION.md "DEPLOYED 2026-10-17 — use main now"). The admin work stays a separate bounded review and preserves the deployed modal and progress fixes.
+
+**Frozen ref:** branch `design/song-session-admin-main` at the commit that adds this note, based on `origin/main` `1d5e932`. It holds the four admin commits, cherry-picked without conflicts:
+
+| On main | Was | Content |
+|---|---|---|
+| `a5759e1` | `8aee6b1` | nav, students list and sheet, admin student page |
+| `1e2cec5` | `226a2b4` | People and access, Tutors, confirm sheet, invitation prefill |
+| `06a2588` | `df10e59` | earlier handoff note |
+| `ab573e8` | `bd1dd65` | Invitations and Import |
+
+`src/` is byte-identical to the reviewed `bd1dd65` tree; main changed no source after `5a14d73`.
+
+**One test adapted:** main's new `lesson-progress-privacy-ui.test.ts`, in its admin case, now clicks the staff "Lessons" tab before paging and editing. Admins read lessons in that tab, as tutors do. No assertion was removed or loosened.
+
+**Checks on this exact tree:**
+- Typecheck and `next build` pass.
+- Node: 206 passed. App tests: 828 passed, plus the 1 existing skip (two workers). `never-in-repo` passes.
+- All 22 browser files pass, one at a time, on a disposable WSL PostgreSQL 16:
+  - admin-ui 2, workspace-ui 3, roster-controls-ui 7, invitation-management-ui 3;
+  - reading-ui 4, service-learning-ui 14, reading-preview-ui 7, study-ui 6, student-work-ui 10;
+  - lessons-ui 2, progress-ui 3, lesson-progress-privacy-ui 4, tutor-route-ui 4, modal-privacy-ui 2, portal-ui 7;
+  - browser 2, canonical-navigation 4, egress 1, production-denial 2, server-isolation 1, server-review 2, service-learning-http 1.
+
+**Still open:**
+- Daniel's look at the admin screens and the staff wording listed in slices 1–3.
+- Roster chips (tutor, parent invited, reading confirmed) need a roster summary field from the backend.
+- Nothing is pushed.
