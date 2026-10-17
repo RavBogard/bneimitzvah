@@ -137,3 +137,29 @@ Recorded as a **diction failure** for lane A on this passage. Two causes:
 **Measurement:** Daniel's sung V'ahavta runs about 71 s against the engine's 115 s for the same 196 syllables. Per verse it is 45–74% of engine length. Median sung syllables are 0.20–0.32 s, ranging 0.06–2.08 s, against the engine's near-constant 0.313 s. These come from a CTC alignment of singing, unreviewed.
 
 **Next condition:** a measured-timing target (same notes and text; syllable durations from the sung take), then B-human on it.
+
+## Listening iterations after B-human (2026-10-16, private)
+
+| Run | Change | Daniel's verdict |
+|---|---|---|
+| B-human, sung-time v1 | Syllable lengths measured from Daniel's sung V'ahavta. Median vowel stretch fell from 3.40× to 1.82×; stretches above 8× fell from 34 to 6. | "Still somewhat inhuman, but better." Words ending in ך, ח or ה are cut off. |
+| sung-time v2 | Phrase-final release into the rest (the take's own decay, or the final vowel sustained). Measured syllables kept whole. | "Better." Many final ך still cut off. The first word "almost sounds French". |
+| sung-time v3 | Final syllables measured by the loudness fade (the CTC estimate was 0.04 s; actual 0.18–0.40 s). The verse-final rest is kept under measured timing, and there is a bounded tail release. | Pending. |
+
+**Diagnoses with evidence:**
+- **Verse-final ך:** two defects stacked.
+  - The CTC "end" is the onset of the last span. It measured held finals at 40 ms, clamped up to 60 ms.
+  - `applyMeasuredTiming` dropped the verse-final rest, so there was no room to release.
+  - Both are fixed in `c265184` and the v3 input.
+- **Mid-verse -ךָ before a vowel-initial word:** the accepted vowel-to-vowel join imprecision.
+- **"French" first word:** a hypothesis. The spoken take reduces unstressed vowels; the phone decode shows "…haftə". A reduced vowel held for 0.5–0.6 s may sound like a French "e".
+  - Proposed remedy: a slower spoken take with full vowels.
+  - Alternative: select vowel material from stressed instances.
+
+**Second independent review (`21a50c2`..`d0dafe3`): accept with fixes.** All findings are fixed in `3cb9436`:
+1. A release-cursor regression with absent consonants.
+2. Word-listening review not bound to its own passage.
+3. Non-increasing aligner boundaries possible at vowel joins.
+4. The v1 breath accounting was wrong.
+
+Later changes (`c265184`: verse-final rest and tail) have not been independently reviewed yet.
