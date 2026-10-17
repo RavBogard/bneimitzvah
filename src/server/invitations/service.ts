@@ -55,6 +55,11 @@ function invitationListRow(row: Awaited<ReturnType<typeof data.listInvitations>>
 function parentContactMatches(contact: string | null, email: string): boolean {
   return contact !== null && normalizedInvitationEmail(contact) === normalizedInvitationEmail(email);
 }
+function studentParentContactMatches(student:{parentEmail:string|null;secondParentEmail:string|null},email:string):boolean {
+  // Validate both supplied contacts even if the first already matches.
+  const first=parentContactMatches(student.parentEmail,email),second=parentContactMatches(student.secondParentEmail,email);
+  return first || second;
+}
 
 export function createInvitationService<Q extends PgQueryResultHKT>(input: {
   db: AccessDatabase<Q>; access: ReturnType<typeof createAccessService<Q>>; transport: InvitationTransport; throttleSecret: string;
@@ -111,7 +116,7 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
       if (selection.studentId) {
         const student = await data.lockInvitationStudent(tx, actor.tenantId, selection.studentId);
         if (!student || student.disabledAt) throw new AccessDenied(404);
-        if (selection.role === "student" && (parentContactMatches(student.parentEmail, email) || await data.mailboxHasParentIdentity(tx, actor.tenantId, email))) throw new AccessDenied(403);
+        if (selection.role === "student" && (studentParentContactMatches(student, email) || await data.mailboxHasParentIdentity(tx, actor.tenantId, email))) throw new AccessDenied(403);
       }
       const now = new Date();
       await data.consumeInvitationBudget(tx, actor, email, input.throttleSecret, now.getTime());
@@ -145,7 +150,7 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
       if (previous.studentId) {
         const student = await data.lockInvitationStudent(tx, actor.tenantId, previous.studentId);
         if (!student || student.disabledAt) throw new AccessDenied(404);
-        if (previous.role === "student" && (parentContactMatches(student.parentEmail, previous.email) || await data.mailboxHasParentIdentity(tx, actor.tenantId, previous.email))) throw new AccessDenied(403);
+        if (previous.role === "student" && (studentParentContactMatches(student, previous.email) || await data.mailboxHasParentIdentity(tx, actor.tenantId, previous.email))) throw new AccessDenied(403);
       }
       const now = new Date();
       await data.consumeInvitationBudget(tx, actor, previous.email, input.throttleSecret, now.getTime());
@@ -170,7 +175,7 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
       if (grants.some(grant => grant.role === invitation.role && grant.revokedAt && grant.revokedAt >= invitation.createdAt)) throw new AccessDenied(404);
       const student = invitation.studentId ? await data.lockInvitationStudent(tx, identity.tenantId, invitation.studentId, "read") : null;
       if (invitation.studentId && (!student || student.disabledAt)) throw new AccessDenied(404);
-      if (invitation.role === "student" && student && parentContactMatches(student.parentEmail, identity.email)) throw new AccessDenied(404);
+      if (invitation.role === "student" && student && studentParentContactMatches(student, identity.email)) throw new AccessDenied(404);
       if (invitation.studentId && invitation.role !== "tutor") {
         const activeGrant = grants.find(grant => grant.role === invitation.role && !grant.revokedAt);
         await data.eligibleInvitedStudentLink(tx, identity.tenantId, invitation.studentId, activeGrant?.id ?? null, invitation.role, invitation.createdAt, "read");
@@ -192,7 +197,7 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
       if (reviewed) verifyReview(invitation, identity, selection.reviewBinding, now.getTime());
       const student = invitation.studentId ? await data.lockInvitationStudent(tx, identity.tenantId, invitation.studentId) : null;
       if (invitation.studentId && (!student || student.disabledAt)) throw new AccessDenied(404);
-      if (invitation.role === "student" && student && parentContactMatches(student.parentEmail, identity.email)) throw new AccessDenied(404);
+      if (invitation.role === "student" && student && studentParentContactMatches(student, identity.email)) throw new AccessDenied(404);
       const membershipId = await data.obtainMembership(tx, identity);
       const grants = await data.lockMembershipGrants(tx, identity.tenantId, membershipId);
       if (invitation.role === "student" && grants.some((grant) => grant.role === "parent")) throw new AccessDenied(404);

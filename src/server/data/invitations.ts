@@ -58,7 +58,7 @@ export async function consumeInvitation<Q extends PgQueryResultHKT>(tx: AccessTr
 }
 
 export async function lockInvitationStudent<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string, intent: LockIntent = "authority-write") {
-  const [row] = await tx.select({ id: s.student.id, firstName: s.student.firstName, lastName: s.student.lastName, parentEmail: s.student.parentEmail, disabledAt: s.student.disabledAt })
+  const [row] = await tx.select({ id: s.student.id, firstName: s.student.firstName, lastName: s.student.lastName, parentEmail: s.student.parentEmail, secondParentEmail: s.student.secondParentEmail, disabledAt: s.student.disabledAt })
     .from(s.student).where(and(eq(s.student.tenantId, tenantId), eq(s.student.id, studentId))).for(lockStrength(intent));
   return row;
 }

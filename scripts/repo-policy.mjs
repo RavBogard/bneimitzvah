@@ -12,8 +12,10 @@ const DRIZZLE_METADATA = /^src\/server\/db\/migrations\/meta\/(?:_journal|[0-9]{
 const MEDIA = /\.(?:mp3|wav|webm|m4a|ogg|flac|aac|mp4|mov|aiff|aif|opus|ckpt|pt|pth|safetensors|onnx|h5|bin)$/i;
 const KEYS = /(?:\.(?:pem|key|p12|pfx|jks|keystore)$|(?:^|\/)(?:id_rsa|id_ed25519|credentials(?:\.json)?|service-account[^/]*\.json)$)/i;
 const REMOTE_ATTACHMENTS = /(?:^|\/)\.codex-remote-attachments(?:\/|$)/i;
+const LOCAL_DATA = /(?:^|\/)\.local-data(?:\/|$)/i;
 const FONT_FILE = /\.(?:ttf|otf|woff2?|ttc|otc|eot)$/i;
 const ATTACHMENT_REASON = "private remote attachment directory";
+const LOCAL_DATA_REASON = "private local data directory";
 const CREDENTIALS = [
   /\bvercel_blob_rw_[A-Za-z0-9_-]+/,
   /\bGOCSPX-[A-Za-z0-9_-]+/,
@@ -47,11 +49,17 @@ function syntheticEmail(address) {
   return domain === "example.test" || domain === "example.com";
 }
 
+function privateDirectoryReason(file) {
+  if (REMOTE_ATTACHMENTS.test(file)) return ATTACHMENT_REASON;
+  if (LOCAL_DATA.test(file)) return LOCAL_DATA_REASON;
+}
+
 export function entryProblems(path, content = "") {
   const file = path.replaceAll("\\", "/");
-  // Path alone is sufficient. Do not inspect or echo private attachments,
+  // Path alone is sufficient. Do not inspect or echo private local directories,
   // including otherwise allowed source extensions or empty/binary files.
-  if (REMOTE_ATTACHMENTS.test(file)) return [ATTACHMENT_REASON];
+  const privateDirectory = privateDirectoryReason(file);
+  if (privateDirectory) return [privateDirectory];
   const problems = [];
   const text = String(content);
   const data = DATA.has(extname(file).toLowerCase());
@@ -132,8 +140,9 @@ export async function inspectRepository(root, env) {
   if (!paths.length) throw new Error("Repository policy has no files to inspect");
   const findings = [], worktreeFonts = new Set(), indexedFonts = new Set();
   for (const file of paths) {
-    if (REMOTE_ATTACHMENTS.test(file.replaceAll("\\", "/"))) {
-      findings.push(`${ATTACHMENT_REASON}: prohibited publish candidate`);
+    const privateDirectory = privateDirectoryReason(file.replaceAll("\\", "/"));
+    if (privateDirectory) {
+      findings.push(`${privateDirectory}: prohibited publish candidate`);
       continue;
     }
     const asset = reviewedFontAsset(file);
@@ -167,8 +176,9 @@ export async function inspectRepository(root, env) {
     const separator = record.indexOf("\t");
     if (separator < 0) throw new Error("Repository policy: invalid index record; details withheld");
     const meta = record.slice(0, separator), file = record.slice(separator + 1);
-    if (REMOTE_ATTACHMENTS.test(file.replaceAll("\\", "/"))) {
-      findings.push(`${ATTACHMENT_REASON} (index): prohibited publish candidate`);
+    const privateDirectory = privateDirectoryReason(file.replaceAll("\\", "/"));
+    if (privateDirectory) {
+      findings.push(`${privateDirectory} (index): prohibited publish candidate`);
       continue;
     }
     const [mode, hash] = meta.split(" ");
