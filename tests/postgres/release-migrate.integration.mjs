@@ -63,7 +63,7 @@ async function fixture() {
     // transport/attested major for this explicit disposable loopback test.
     const target = { ...parsed, expected: { ...parsed.expected, serverMajor: major }, connection: { ...parsed.connection, host: config.host, port: config.port, ssl: false } };
     await writeFile(join(folder, "meta", "_journal.json"), JSON.stringify(journal));
-    const run = (apply = false, operation) => executeRelease(source, target, { apply, connect: () => new pg.Client(target.connection), migrate: operation ?? (client => migrate(drizzle(client, { logger: false }), { migrationsFolder: folder })) });
+    const run = (apply = false, operation) => executeRelease(source, target, { apply, checks: { transport() {} }, /* Explicit disposable loopback only. */ connect: () => new pg.Client(target.connection), migrate: operation ?? (client => migrate(drizzle(client, { logger: false }), { migrationsFolder: folder })) });
     return { owner, connection, source, target, folder, journal, run, close };
   } catch { await close().catch(() => undefined); throw new Error("Release disposable fixture failed; details withheld"); }
 }

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { argumentsFor, parseTarget, checkLedger, sourceContract, sha, RELEASE_BASE, RELEASE_FILES, NEW_TABLES } from "../scripts/release-migrate-support.mjs";
-import { executeRelease, runRelease } from "../scripts/release-migrate.mjs";
+import { executeRelease, runRelease, ReleaseClient, assertReleaseTransport } from "../scripts/release-migrate.mjs";
 import { verifyCatalog } from "../scripts/release-migrate-catalog.mjs";
 
 const candidate = "a".repeat(40);
@@ -24,6 +24,7 @@ function harness(options = {}) {
     async query(sql) { log.push(sql); if (sql.includes("pg_try_advisory_lock")) return { rows: [{ locked: !options.locked }] }; if (sql.includes("pg_advisory_unlock")) return { rows: [{ unlocked: true }] }; if (sql.includes("FROM drizzle.__drizzle_migrations")) return { rows: ledger() }; return { rows: [] }; },
   });
   const checks = {
+    transport() {}, // Explicit synthetic client; real CLI never bypasses transport.
     async identity(value) { assert.equal(value, client); if (options.identityFailure) throw new Error("private-driver-detail"); },
     async catalog() { catalogs++; return options.postSchemaFailure && length === 19 ? { tables: [] } : length === 15 ? s.reference.baseline : s.reference.final; }, verifyCatalog,
     async roles() { return { roles: ["same-role"], memberships: [] }; },
@@ -49,6 +50,57 @@ test("private target rejects poolers, endpoint/identity mismatches, missing prov
   const s = source();
   for (const mutate of [m => m.migrationUrl = m.migrationUrl.replace("ep-synthetic", "ep-synthetic-pooler"), m => m.expected.database = "other", m => m.expected.owner = "other", m => m.migrationUrl += "&options=-crole=owner", m => m.expected.serverMajor = 16, m => delete m.provenance, m => m.extra = "ignored", m => m.expected.ownerOid = 501]) { const m = manifest(s); mutate(m); assert.throws(() => parseTarget(m, s)); }
 });
+
+test("optional channel binding accepts only one require value and preserves the policy", () => {
+  const s = source(), m = manifest(s);
+  assert.equal(parseTarget(m, s).requireChannelBinding, false);
+  m.migrationUrl += "&channel_binding=require";
+  assert.equal(parseTarget(m, s).requireChannelBinding, true);
+  for (const suffix of ["&channel_binding=prefer", "&channel_binding=disable", "&channel_binding=", "&channel_binding=require&channel_binding=require", "&sslmode=require", "&unexpected=require"]) {
+    const bad = manifest(s); bad.migrationUrl += suffix; assert.throws(() => parseTarget(bad, s));
+  }
+});
+test("required channel binding rejects fallback auth before password retrieval", () => {
+  const s = source(), m = manifest(s); m.migrationUrl += "&channel_binding=require";
+  const target = parseTarget(m, s);
+  for (const method of ["_handleAuthCleartextPassword", "_handleAuthMD5Password", "_handleAuthSASL"]) {
+    const client = new ReleaseClient(target); let rejected = 0, passwords = 0;
+    client.connection.stream = { encrypted: true, authorized: true };
+    client.connection.on("error", () => rejected++); client._getPassword = () => passwords++;
+    client[method]({ mechanisms: ["SCRAM-SHA-256"] });
+    assert.equal(rejected, 1); assert.equal(passwords, 0); assert.throws(() => assertReleaseTransport(client, target));
+  }
+});
+test("transport requires verified TLS and completed signed PLUS rather than offered or failed PLUS", () => {
+  const s = source(), m = manifest(s); m.migrationUrl += "&channel_binding=require";
+  const target = parseTarget(m, s), client = new ReleaseClient(target); let rejected = 0;
+  client.connection.stream = { encrypted: true, authorized: true };
+  client.connection.on("error", () => rejected++);
+  assert.throws(() => assertReleaseTransport(client, target));
+  client.saslSession = { mechanism: "SCRAM-SHA-256-PLUS", message: "SASLResponse", serverSignature: "c2ln" };
+  client._handleAuthSASLFinal({ data: "v=YmFk" });
+  assert.equal(rejected, 1); assert.throws(() => assertReleaseTransport(client, target));
+  client._handleAuthSASLFinal({ data: "v=c2ln" }); assert.doesNotThrow(() => assertReleaseTransport(client, target));
+  for (const stream of [{ encrypted: false, authorized: true }, { encrypted: true, authorized: false }, {}]) {
+    client.connection.stream = stream; assert.throws(() => assertReleaseTransport(client, target));
+  }
+});
+test("pinned pg actually chooses PLUS when offered and the verified TLS stream supports it", () => {
+  const s = source(), m = manifest(s); m.migrationUrl += "&channel_binding=require";
+  const target = parseTarget(m, s), client = new ReleaseClient(target); let mechanism;
+  client.connection.stream = { encrypted: true, authorized: true, getPeerCertificate() {} };
+  client.connection.sendSASLInitialResponseMessage = selected => { mechanism = selected; };
+  client._handleAuthSASL({ mechanisms: ["SCRAM-SHA-256", "SCRAM-SHA-256-PLUS"] });
+  assert.equal(mechanism, "SCRAM-SHA-256-PLUS"); assert.throws(() => assertReleaseTransport(client, target));
+});
+test("transport rejection is sanitized and occurs before even timeout or lock SQL", async () => {
+  const h = harness(); let sql = 0; h.client.query = async () => { sql++; throw new Error("must not query"); };
+  const { transport: _fixtureOnly, ...checks } = h.checks;
+  const result = await executeRelease(h.s, h.target, { apply: true, connect: () => h.client, checks, migrate: h.migrate });
+  assert.deepEqual(result, { ok: false, phase: "connection", outcome: "not-started", apply: true });
+  assert.equal(sql, 0); assert.equal(h.migrations, 0); assert.equal(h.ended, 1);
+});
+
 test("attestation accepts only the exact selected historical representation and known timestamp", () => {
   const s = source(), m = manifest(s); m.historicalPrefix[0].hash = s.migrations[0].historicalAllowed[1];
   const target = parseTarget(m, s), rows = target.prefix.map(row => ({ id: row.id, hash: row.hash, created_at: row.createdAt }));

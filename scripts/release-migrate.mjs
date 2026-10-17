@@ -2,9 +2,44 @@ import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { createRequire } from "node:module";
 import { argumentsFor, sourceContract, parseTarget, checkLedger, need, same, NEW_TABLES } from "./release-migrate-support.mjs";
 import { captureCatalog, verifyCatalog, captureRoles, captureData } from "./release-migrate-catalog.mjs";
 
+const pgVersion = createRequire(import.meta.url)("pg/package.json").version;
+const verifiedPlus = new WeakSet();
+/** Pinned pg 8.23.1 hooks: require PLUS before sending a fallback password,
+ * then retain only the mechanism whose server-final signature pg validated. */
+export class ReleaseClient extends pg.Client {
+  #requireChannelBinding;
+  constructor(target) { super(target.connection); need(pgVersion === "8.23.1"); this.#requireChannelBinding = target.requireChannelBinding === true; }
+  #rejectAuthentication() { this.connection.emit("error", new Error("Release transport rejected")); }
+  _handleAuthCleartextPassword(message) {
+    if (this.#requireChannelBinding) return this.#rejectAuthentication();
+    return super._handleAuthCleartextPassword(message);
+  }
+  _handleAuthMD5Password(message) {
+    if (this.#requireChannelBinding) return this.#rejectAuthentication();
+    return super._handleAuthMD5Password(message);
+  }
+  _handleAuthSASL(message) {
+    verifiedPlus.delete(this);
+    const stream = this.connection.stream;
+    if (this.#requireChannelBinding && (!stream?.encrypted || stream.authorized !== true || !this.enableChannelBinding || !message.mechanisms?.includes("SCRAM-SHA-256-PLUS"))) return this.#rejectAuthentication();
+    return super._handleAuthSASL(message);
+  }
+  _handleAuthSASLFinal(message) {
+    const plus = this.saslSession?.mechanism === "SCRAM-SHA-256-PLUS";
+    super._handleAuthSASLFinal(message);
+    if (plus && this.saslSession === null) verifiedPlus.add(this);
+  }
+}
+/** Call immediately after connect, before any SQL, in every private operator. */
+export function assertReleaseTransport(client, target) {
+  const stream = client.connection?.stream;
+  need(stream?.encrypted === true && stream.authorized === true);
+  need(!target.requireChannelBinding || (client instanceof ReleaseClient && verifiedPlus.has(client)));
+}
 export const RELEASE_LOCK = Object.freeze([214137, 151819]);
 export async function verifyIdentity(client, target) {
   const expected = target.expected;
@@ -52,18 +87,18 @@ export async function releaseSnapshot(client, source, target, checks = { identit
 /** Trusted operator composition only; no application/runtime import or env switch. */
 export async function executeRelease(source, target, options = {}) {
   const apply = options.apply === true;
-  const checks = { identity: verifyIdentity, catalog: captureCatalog, verifyCatalog, roles: captureRoles, data: captureData, ...options.checks };
+  const checks = { transport: assertReleaseTransport, identity: verifyIdentity, catalog: captureCatalog, verifyCatalog, roles: captureRoles, data: captureData, ...options.checks };
   let client, connected = false, locked = false, timer, expired = false, connectionFailed = false, phase = "connection", outcome = "not-started", result;
   const onError = () => { connectionFailed = true; };
   const healthy = () => need(!expired && !connectionFailed);
   try {
     source.recheck();
-    client = await (options.connect ?? (config => new pg.Client(config)))(target.connection);
+    client = await (options.connect ?? (() => new ReleaseClient(target)))(target.connection);
     // Idle connection failures are EventEmitter events, not query rejections.
     // Keep the listener through end() so no raw driver error escapes the CLI.
     client.on("error", onError);
     timer = setTimeout(() => { expired = true; void client.end().catch(() => undefined); }, 90_000); timer.unref?.();
-    await client.connect(); connected = true; healthy();
+    await client.connect(); connected = true; healthy(); checks.transport(client, target);
     await client.query("SET statement_timeout='12s'; SET lock_timeout='5s'; SET idle_in_transaction_session_timeout='15s'");
     phase = "lock";
     need((await client.query("SELECT pg_catalog.pg_try_advisory_lock($1,$2) AS locked", RELEASE_LOCK)).rows[0]?.locked === true); locked = true;
