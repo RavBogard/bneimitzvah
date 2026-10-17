@@ -22,7 +22,7 @@ export function singleWriteProtocol({run,slot,kind,ifMatch,oidcToken}){
   const key=keyFor(run,slot);need(typeof oidcToken==='string'&&oidcToken.length>0&&oidcToken.length<16384&&!/[\r\n]/.test(oidcToken));
   need(kind==='permit'?ifMatch===undefined:tag(ifMatch));const body=singleWriteBody(kind);
   const url=new URL('https://vercel.com/api/blob/');url.searchParams.set('pathname',key);
-  const headers={'x-api-blob-request-id':`${P.storeId}:${Date.now()}:${randomBytes(8).toString('hex')}`,'x-vercel-blob-store-id':P.storeId,'x-api-blob-request-attempt':'0','x-api-version':'13',
+  const headers={'x-api-blob-request-id':`${P.storeId.slice(6)}:${Date.now()}:${randomBytes(8).toString('hex')}`,'x-vercel-blob-store-id':P.storeId.slice(6),'x-api-blob-request-attempt':'0','x-api-version':'13',
     authorization:`Bearer ${oidcToken}`,'x-vercel-blob-access':'private','x-content-type':'application/octet-stream','x-add-random-suffix':'0','x-allow-overwrite':kind==='permit'?'0':'1','x-cache-control-max-age':'60'};
   if(ifMatch!==undefined)headers['x-if-match']=ifMatch;
   return {url,body,options:{protocol:'https:',hostname:'vercel.com',port:443,path:url.pathname+url.search,method:'PUT',headers,rejectUnauthorized:true,agent:false}};

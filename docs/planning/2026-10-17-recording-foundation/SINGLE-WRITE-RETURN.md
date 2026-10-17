@@ -26,3 +26,11 @@ Bounds: two keys,6MiB conservative outgoing body-attempt budget (includes reject
 - `node .local-logs/run-isolated.mjs single-write-build npm run build`: default production build PASS, prebuild silent. No enabled proof/native claim.
 
 Independent tests/review, exact integration CI, separately reviewed root operator and one explicitly authorized native round remain. No source push/deploy. Root-owned spec and reviewer-owned files remain outside this commit.
+
+## Independent protocol finding and bounded repair
+
+The first independent actual-SDK comparison found c332's raw store wire header incorrectly retained `store_`; the SDK strips that prefix in resolveBlobAuth and uses the normalized ID in BOTH x-vercel-blob-store-id and request-ID prefix. Corrected those two adapter fields; ordinary public-SDK calls continue to receive the original fixed full store ID. The author assertion now independently requires the normalized wire ID/nonce prefix. No other protocol or authorization rule changed.
+
+Author repair confirmation17/17 includes the independent eight groups,1.62s. First author repair attempt introduced a test-only JavaScript replacement-string expansion/syntax error; restored the owned test from its committed version and applied a literal callback replacement, preserving all assertions. Independent first SDK comparison failure and harness retry0 correction remain separately attributed in its review.
+
+Final repaired composed69/69 PASS via single-write-repair-composed (same prior command plus tests/private-media-single-write-review.test.mjs); typecheck and default production build PASS via single-write-repair-type/build. Independent peer rerun awaits this immutable repair. No provider/native/credential/journal operations.
