@@ -119,7 +119,70 @@ export async function runPrivateMediaSingleWriteProbe(env=process.env,deps={}){
   }catch{return result(false,writeAttempted?'requires-reconciliation':'failed');}
   finally{finished=true;clearTimeout(timer);controller.abort();for(const t of transports)t.destroy();for(const r of resources)discard(r);}
 }
+
+export const PRIVATE_MEDIA_SINGLE_READ_PROBE=Object.freeze({schema:'private-media-single-read/v1',mode:'read-only-v1',storeId:P.storeId,
+  maxApplicationCalls:8,totalTimeoutMs:60000,callTimeoutMs:10000,bodyIdleMs:5000,maxEmptyReads:64,maxBodyBytes:1048576,errorBytes:4096,
+  phases:Object.freeze(['selection','metadata-before','sdk-load','grant','presign','head','get','headers','body','metadata-after','complete','deadline'])});
+const Q=PRIVATE_MEDIA_SINGLE_READ_PROBE;
+const readObservations=()=>({metadataBefore:false,metadataAfter:false,head:'none',status:'none',contentTypeExpected:false,contentLengthPresent:false,
+  contentLengthExpected:false,contentEncodingPresent:false,urlConfined:false,urlExact:false,etagMatchesHead:false,body:'none'});
+const readResult=(ok,phase,observations)=>Object.freeze({schema:Q.schema,readOnly:true,ok,phase,outcome:ok?'observed':'failed',observations:Object.freeze({...observations})});
+/** Read-only observation of one pre-existing synthetic normal key. It neither
+ * changes nor upgrades the frozen ordinary/held write proof above. */
+export async function runPrivateMediaSingleReadProbe(env=process.env,deps={}){
+  let phase='selection',finished=false,timer,token,end,callMs,idleMs,calls=0,grantExpiry;
+  const observations=readObservations(),controller=new AbortController(),resources=new Set(),now=deps.now??Date.now;
+  function live(){if(performance.now()>=end){phase='deadline';controller.abort();}need(!finished&&!controller.signal.aborted);assertPrivateMediaNativeContext(env,now(),token);if(grantExpiry!==undefined)need(now()<grantExpiry);}
+  async function bound(action,ms){let alarm;const deadline=performance.now()+ms;try{const value=await Promise.race([Promise.resolve().then(action),new Promise((_,reject)=>{alarm=setTimeout(()=>{phase='deadline';controller.abort();reject(0);},ms);})]);if(performance.now()>=deadline){phase='deadline';controller.abort();throw 0;}live();return value;}finally{clearTimeout(alarm);}}
+  async function step(label,action,provider=true){phase=label;live();return bound(()=>{live();if(provider)need(++calls<=Q.maxApplicationCalls);return action();},Math.max(1,Math.min(callMs,end-performance.now())));}
+  try{
+    const supplied=Object.keys(env).filter(key=>key.startsWith(prefix));if(!supplied.length)return null;
+    need(supplied.length===3&&supplied.every(key=>flags.includes(key))&&env[flags[0]]===Q.mode&&env[flags[1]]===Q.storeId);
+    const run=env[flags[2]],key=keyFor(run,'normal');need(!Object.keys(env).some(key=>key.startsWith('PRIVATE_MEDIA_OIDC_PROBE_')||key.startsWith('PRIVATE_MEDIA_OBJECT_PROBE_')));
+    callMs=deps.callTimeoutMs??Q.callTimeoutMs;idleMs=deps.bodyIdleMs??Q.bodyIdleMs;const total=deps.totalTimeoutMs??Q.totalTimeoutMs;
+    for(const [v,max]of[[callMs,Q.callTimeoutMs],[idleMs,Q.bodyIdleMs],[total,Q.totalTimeoutMs]])need(Number.isSafeInteger(v)&&v>0&&v<=max);
+    end=performance.now()+total;timer=setTimeout(()=>{phase='deadline';controller.abort();},total);token=assertPrivateMediaNativeContext(env,now());
+    const loadSdk=async()=>{live();if(!deps.loadSdk){const metadata=JSON.parse(await readFile(new URL('../package.json',import.meta.resolve('@vercel/blob')),'utf8'));live();need(metadata.version===I.sdkVersion);}const sdk=await(deps.loadSdk??(()=>import('@vercel/blob')))();live();return sdk;};
+    const metadataEnv=facade(env,run);
+    async function metadata(label){const value=await step(label,()=>runPrivateMediaOidcProbe(metadataEnv,{now,timeoutMs:Math.max(1,Math.floor(Math.min(callMs,end-performance.now()))),loadSdk}));need(value?.ok&&value.mode==='production-allow'&&value.environmentMatch&&value.outcome==='allowed');}
+    await metadata('metadata-before');observations.metadataBefore=true;
+    const sdk=await step('sdk-load',loadSdk,false),options=()=>({oidcToken:token,storeId:Q.storeId,abortSignal:controller.signal});
+    const until=now()+Q.totalTimeoutMs;
+    const grant=await step('grant',()=>sdk.issueSignedToken({...options(),pathname:key,operations:['get'],validUntil:until}));
+    need(object(grant)&&typeof grant.delegationToken==='string'&&grant.delegationToken.length<=4096&&typeof grant.clientSigningToken==='string'&&/^[A-Za-z0-9_-]{43}$/.test(grant.clientSigningToken)
+      &&Number.isSafeInteger(grant.validUntil)&&grant.validUntil>now()&&grant.validUntil<=until);
+    const parts=grant.delegationToken.split('.');need(parts.length===2&&parts.every(part=>/^[A-Za-z0-9_-]+$/.test(part)));
+    const raw=Buffer.from(parts[0],'base64url');need(raw.toString('base64url')===parts[0]);const scope=JSON.parse(new TextDecoder('utf8',{fatal:true}).decode(raw));
+    need(object(scope)&&typeof scope.storeId==='string'&&scope.storeId.replace(/^store_/,'').toLowerCase()===Q.storeId.slice(6).toLowerCase()&&scope.pathname===key
+      &&Array.isArray(scope.operations)&&scope.operations.length===1&&scope.operations[0]==='get'&&scope.validUntil===grant.validUntil);grantExpiry=grant.validUntil;
+    const signed=await step('presign',()=>sdk.presignUrl(grant,{operation:'get',pathname:key,access:'private',validUntil:grant.validUntil,useCache:false}),false);
+    need(typeof signed?.presignedUrl==='string'&&signed.presignedUrl.length<=8192);
+    function confined(value){need(typeof value==='string'&&value.length>0&&value.length<=8192);const url=new URL(value);need(url.origin===origin&&url.pathname===`/${key}`&&!url.hash&&!url.username&&!url.password
+      &&url.searchParams.size===3&&url.searchParams.get('cache')==='0'&&url.searchParams.get('vercel-blob-delegation')===grant.delegationToken&&/^[A-Za-z0-9_-]{43}$/.test(url.searchParams.get('vercel-blob-signature')??''));return url;}
+    const url=confined(signed.presignedUrl);const signature=url.searchParams.get('vercel-blob-signature');
+    let headTag;
+    await step('head',async()=>{try{const head=await sdk.head(key,options());need(object(head)&&head.pathname===key&&typeof head.url==='string'&&head.url.length<=8192&&Number.isSafeInteger(head.size)&&head.size>=0&&head.size<=Q.maxBodyBytes);const headUrl=new URL(head.url);need(headUrl.origin===origin&&headUrl.pathname===`/${key}`&&!headUrl.search&&!headUrl.hash&&!headUrl.username&&!headUrl.password);if(head.etag!==undefined&&head.etag!==null)need(typeof head.etag==='string'&&head.etag.length<=P.etagBytes);observations.head=head.size===P.permitBytes?'permit':head.size===P.uploadBytes?'upload':head.size===P.retireBytes?'retire':'other';headTag=tag(head.etag)?head.etag:undefined;}
+      catch(error){need(typeof sdk.BlobNotFoundError==='function'&&error instanceof sdk.BlobNotFoundError);observations.head='missing';}});
+    const response=await step('get',async()=>{const value=await(deps.fetch??globalThis.fetch)(url,{method:'GET',signal:controller.signal,redirect:'error',credentials:'omit',referrerPolicy:'no-referrer',cache:'no-store'});
+      if(finished||controller.signal.aborted){discard(value?.body);throw 0;}if(value?.body)resources.add(value.body);return value;});
+    phase='headers';live();need(response&&Number.isInteger(response.status)&&response.headers&&typeof response.headers.get==='function');
+    observations.status=response.status===200?'ok':response.status===206?'partial':[401,403].includes(response.status)?'denied':response.status===404?'missing':response.status===412?'precondition':'other';
+    need(!response.redirected);const observed=confined(response.url);need(observed.searchParams.get('vercel-blob-signature')===signature);observations.urlConfined=true;observations.urlExact=response.url===signed.presignedUrl;
+    observations.contentTypeExpected=response.headers.get('content-type')==='application/octet-stream';
+    const length=response.headers.get('content-length');observations.contentLengthPresent=length!==null;observations.contentLengthExpected=length===String(Q.maxBodyBytes);
+    observations.contentEncodingPresent=response.headers.has('content-encoding');const getTag=response.headers.get('etag');need(getTag===null||typeof getTag==='string'&&getTag.length<=P.etagBytes);observations.etagMatchesHead=headTag!==undefined&&getTag===headTag;
+    need(length===null||/^\d+$/.test(length)&&Number.isSafeInteger(Number(length))&&Number(length)<=Q.maxBodyBytes);
+    need(response.status===200);phase='body';need(response.body);const reader=response.body.getReader();resources.add(reader);let count=0,empty=0,progress=performance.now();const digest=createHash('sha256');
+    try{for(;;){live();const remaining=idleMs-(performance.now()-progress);if(remaining<=0){phase='deadline';controller.abort();throw 0;}const part=await bound(()=>reader.read(),Math.min(remaining,end-performance.now()));if(part.done)break;need(part.value instanceof Uint8Array);count+=part.value.length;need(count<=Q.maxBodyBytes);if(part.value.length){empty=0;progress=performance.now();digest.update(part.value);}else need(++empty<=Q.maxEmptyReads);}
+      const actual=digest.digest('hex');observations.body=['permit','upload','retire'].find(kind=>singleWriteBody(kind).length===count&&hash(singleWriteBody(kind))===actual)??'other';
+    }finally{resources.delete(reader);discard(reader);}
+    need(observations.body!=='other');await metadata('metadata-after');observations.metadataAfter=true;live();phase='complete';return readResult(true,phase,observations);
+  }catch{return readResult(false,phase,observations);}
+  finally{finished=true;clearTimeout(timer);controller.abort();for(const resource of resources)discard(resource);}
+}
+
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
-  const value=process.argv.length===2?await runPrivateMediaSingleWriteProbe():{schema:P.schema,ok:false,phase:'selection',outcome:'failed',writeAttempted:false,requiresReconciliation:false,race:'none',evidence:'none',checks:{ordinaryVerified:false,staleDenied:false,ordinaryRetired:false,heldRetired:false}};
+  const reading=process.env[flags[0]]===Q.mode;
+  const value=process.argv.length===2?(reading?await runPrivateMediaSingleReadProbe():await runPrivateMediaSingleWriteProbe()):reading?readResult(false,'selection',readObservations()):{schema:P.schema,ok:false,phase:'selection',outcome:'failed',writeAttempted:false,requiresReconciliation:false,race:'none',evidence:'none',checks:{ordinaryVerified:false,staleDenied:false,ordinaryRetired:false,heldRetired:false}};
   if(value){process.stdout.write(JSON.stringify(value)+'\n');process.exitCode=value.ok?0:1;}
 }
