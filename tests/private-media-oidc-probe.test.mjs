@@ -4,7 +4,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { MockAgent, getGlobalDispatcher, setGlobalDispatcher } from "undici";
 import { isolatedEnv } from "./helpers/isolatedEnv.mjs";
-import { PRIVATE_MEDIA_PROBE as P, runPrivateMediaOidcProbe as probe } from "../scripts/private-media-oidc-probe.mjs";
+import { PRIVATE_MEDIA_PROBE as P, PRIVATE_MEDIA_DIAGNOSTIC_CHECKS, runPrivateMediaOidcProbe as probe } from "../scripts/private-media-oidc-probe.mjs";
 
 const now=Date.UTC(2026,9,17,12), run="12345678-1234-4123-8123-123456789abc";
 const encode=value=>Buffer.from(JSON.stringify(value)).toString("base64url");
@@ -26,6 +26,18 @@ const closed=value=>{
   assert.deepEqual(Object.keys(value).sort(),["environmentMatch","expectation","mode","ok","outcome"]);
   assert.ok(!JSON.stringify(value).includes("synthetic-sensitive"));
 };
+async function diagnosed(env,deps=dependencies(allowed)){
+  const records=[];
+  const value=await probe(env,{...deps,onDiagnostic:record=>records.push(record)});
+  return {value,records};
+}
+function failure(actual,phase,check){
+  assert.equal(actual.value.outcome,"failed");closed(actual.value);
+  assert.deepEqual(actual.records,[{schema:"private-media-oidc-diagnostic/v1",phase,check}]);
+  assert.ok(PRIVATE_MEDIA_DIAGNOSTIC_CHECKS[phase].includes(check));
+  assert.ok(Object.isFrozen(actual.records[0]));
+  assert.ok(!JSON.stringify(actual.records).includes("synthetic-sensitive"));
+}
 
 test("default prebuild is silent and has no SDK loading, even with ambient provider configuration",async()=>{
   let loads=0;
@@ -48,6 +60,19 @@ test("default prebuild is silent and has no SDK loading, even with ambient provi
     assert.equal(pkg.dependencies["@vercel/blob"],"2.8.2");
     assert.equal(pkg.scripts.prebuild,"node scripts/private-media-oidc-probe.mjs");
     assert.equal(pkg.scripts.build,"next build");
+  }finally{await isolated.cleanup();}
+});
+
+test("CLI enabled failure preserves the exact main result and emits one closed literal diagnostic afterward",async()=>{
+  const isolated=await isolatedEnv({...environment(),VERCEL_OIDC_TOKEN:"synthetic-sensitive-malformed"});
+  try{
+    const child=spawnSync(process.execPath,["scripts/private-media-oidc-probe.mjs"],{env:isolated.env,encoding:"utf8"});
+    assert.equal(child.status,1);assert.equal(child.stderr,"");
+    const records=child.stdout.trim().split(/\r?\n/).map(line=>JSON.parse(line));
+    assert.equal(records.length,2);
+    assert.deepEqual(records[0],{ok:false,mode:"production-allow",environmentMatch:false,expectation:"allow",outcome:"failed"});
+    assert.deepEqual(records[1],{schema:"private-media-oidc-diagnostic/v1",phase:"identity",check:"token-encoding"});
+    assert.ok(!child.stdout.includes("synthetic-sensitive"));
   }finally{await isolated.cleanup();}
 });
 
@@ -172,9 +197,87 @@ test("actual pinned SDK maps specific provider denial, but generic 403/config/5x
         const url=new URL(path,"https://vercel.com");
         return url.pathname==="/api/blob" && url.searchParams.get("limit")==="1" && url.searchParams.get("prefix")===`acceptance/${run}/`;
       }}).reply(()=>{calls++;return {statusCode:status,data:body,responseOptions:{headers:{"content-type":"application/json"}}};});
-      const value=await probe(environment("preview-deny"),{now:()=>now});
+      const {value,records}=await diagnosed(environment("preview-deny"),{now:()=>now});
       assert.equal(value.outcome,expected);assert.equal(value.ok,expected==="denied");assert.equal(calls,1);closed(value);
+      assert.deepEqual(records,expected==="failed"?[{schema:"private-media-oidc-diagnostic/v1",phase:"sdk-request",check:"provider-result"}]:[]);
       agent.assertNoPendingInterceptors();
     }
   }finally{setGlobalDispatcher(previous);await agent.close();}
+});
+
+test("selection and environment diagnostic labels identify fixed checks without reflecting flags or values",async()=>{
+  for(const [changed,check] of [
+    [{PRIVATE_MEDIA_OIDC_PROBE_EXTRA:"synthetic-sensitive"},"flag-set"],
+    [{PRIVATE_MEDIA_OIDC_PROBE_MODE:"synthetic-sensitive"},"mode"],
+    [{PRIVATE_MEDIA_OIDC_PROBE_STORE_ID:"synthetic-sensitive"},"store"],
+    [{PRIVATE_MEDIA_OIDC_PROBE_RUN_ID:"synthetic-sensitive"},"run"],
+  ])failure(await diagnosed({...environment(),...changed}),"selection",check);
+  for(const [name,check] of [
+    ["VERCEL_BLOB_API_URL","endpoint-override"],["NEXT_PUBLIC_VERCEL_BLOB_API_URL","endpoint-override"],
+    ["VERCEL_BLOB_API_VERSION_OVERRIDE","version-override"],["NEXT_PUBLIC_VERCEL_BLOB_API_VERSION_OVERRIDE","version-override"],
+    ["VERCEL_BLOB_PROXY_THROUGH_ALTERNATIVE_API","proxy-override"],["NEXT_PUBLIC_VERCEL_BLOB_PROXY_THROUGH_ALTERNATIVE_API","proxy-override"],
+    ["DEBUG","debug"],["NEXT_PUBLIC_DEBUG","debug"],["NODE_OPTIONS","node-options"],["NODE_EXTRA_CA_CERTS","custom-ca"],["NODE_TLS_REJECT_UNAUTHORIZED","insecure-tls"],
+  ])failure(await diagnosed({...environment(),[name]:name==="NODE_TLS_REJECT_UNAUTHORIZED"?"0":"synthetic-sensitive"}),"environment-guard",check);
+});
+
+test("identity diagnostics distinguish each claim family without returning claim data",async()=>{
+  failure(await diagnosed({...environment(),VERCEL_OIDC_TOKEN:undefined}),"identity","token-presence");
+  failure(await diagnosed({...environment(),VERCEL_OIDC_TOKEN:"synthetic-sensitive"}),"identity","token-encoding");
+  const env=environment(),parts=env.VERCEL_OIDC_TOKEN.split(".");parts[0]=encode({typ:"JWT",alg:"HS256",kid:"synthetic-sensitive"});
+  failure(await diagnosed({...env,VERCEL_OIDC_TOKEN:parts.join(".")}),"identity","header-algorithm");
+  for(const [claims,check] of [
+    [{owner:"synthetic-sensitive"},"owner-name"],[{owner_id:"synthetic-sensitive"},"owner-id"],
+    [{project:"synthetic-sensitive"},"project-name"],[{project_id:"synthetic-sensitive"},"project-id"],
+    [{environment:"synthetic-sensitive"},"environment"],[{custom_environment_id:"synthetic-sensitive"},"custom-environment"],
+    [{sub:"synthetic-sensitive"},"subject"],[{iss:"synthetic-sensitive"},"issuer"],[{aud:"synthetic-sensitive"},"audience"],
+    [{exp:"synthetic-sensitive"},"timestamp-types"],[{iat:undefined},"timestamp-types"],
+    [{iat:now/1000+1},"issued-at"],[{nbf:now/1000+1},"not-before"],
+    [{exp:now/1000},"expiry-freshness"],[{exp:now/1000+8000},"lifetime"],
+  ])failure(await diagnosed(environment("production-allow",claims)),"identity",check);
+  for(const [header,check] of [[{typ:"synthetic-sensitive",alg:"RS256",kid:"fixture"},"header-type"],[{typ:"JWT",alg:"RS256",kid:""},"header-key"]]){
+    const pieces=environment().VERCEL_OIDC_TOKEN.split(".");pieces[0]=encode(header);
+    failure(await diagnosed({...environment(),VERCEL_OIDC_TOKEN:pieces.join(".")}),"identity",check);
+  }
+  for(const [changed,check] of [[{VERCEL_ENV:"synthetic-sensitive"},"native-environment"],[{VERCEL_TARGET_ENV:"synthetic-sensitive"},"native-target"],
+    [{VERCEL:undefined},"native-hosted"],[{VERCEL_PROJECT_ID:"synthetic-sensitive"},"native-project"],[{VERCEL_ORG_ID:"synthetic-sensitive"},"native-org"]]){
+    failure(await diagnosed({...environment(),...changed}),"identity",check);
+  }
+});
+
+test("disabled, positive and recognized-denial outcomes have no diagnostic, including unexpected access",async()=>{
+  assert.deepEqual(await diagnosed({}),{value:null,records:[]});
+  for(const mode of ["production-allow","preview-deny","development-deny"]){
+    for(const list of [allowed,denied]){
+      const actual=await diagnosed(environment(mode),dependencies(list));
+      assert.equal(actual.records.length,0);closed(actual.value);
+    }
+  }
+});
+
+test("SDK and post-await diagnostics retain existing failures and never inspect hostile error text",async()=>{
+  const bad=()=>{throw new Proxy({}, {get(){throw Error("synthetic-sensitive");},getPrototypeOf(){throw Error("synthetic-sensitive");}});};
+  failure(await diagnosed(environment(),{now:()=>now,loadSdk:bad}),"sdk-import","import");
+  failure(await diagnosed(environment(),{now:()=>now,loadSdk:at=>{at("synthetic-sensitive","synthetic-sensitive");throw 0;}}),"sdk-import","import");
+  failure(await diagnosed(environment(),{...dependencies(allowed),timeoutMs:10001}),"sdk-import","deadline-options");
+  failure(await diagnosed(environment(),dependencies(bad)),"sdk-request","provider-result");
+  failure(await diagnosed(environment(),dependencies(async()=>({blobs:[],hasMore:"synthetic-sensitive"}))),"sdk-request","response-shape");
+  for(const list of [allowed,denied]){
+    let clock=now;
+    failure(await diagnosed(environment(),{...dependencies(async()=>{clock=now+301000;return list();}),now:()=>clock}),"post-identity","expiry-freshness");
+  }
+  const env=environment();
+  failure(await diagnosed(env,dependencies(async()=>{env.VERCEL_OIDC_TOKEN=environment("production-allow",{iat:now/1000-20}).VERCEL_OIDC_TOKEN;return allowed();})),"post-identity","token-stable");
+});
+
+test("deadline diagnostics snapshot the awaited stage once and ignore late import/request settlement",async()=>{
+  let load,calls=0;const imported=[];
+  const waiting=probe(environment(),{now:()=>now,timeoutMs:5,onDiagnostic:record=>imported.push(record),loadSdk:()=>new Promise(resolve=>{load=resolve;})});
+  const first=await waiting;failure({value:first,records:imported},"deadline","sdk-import");
+  load({BlobError,list:()=>{calls++;return allowed();}});await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(calls,0);failure({value:first,records:imported},"deadline","sdk-import");
+  let reject;const requested=[];
+  const request=probe(environment(),{...dependencies(()=>new Promise((_,fail)=>{reject=fail;})),timeoutMs:5,onDiagnostic:record=>requested.push(record)});
+  const second=await request;failure({value:second,records:requested},"deadline","sdk-request");
+  reject(new BlobOidcEnvironmentNotAllowedError("synthetic-sensitive"));await new Promise(resolve=>setImmediate(resolve));
+  failure({value:second,records:requested},"deadline","sdk-request");
 });
