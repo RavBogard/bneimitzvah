@@ -55,3 +55,15 @@ This supersedes the original submitted-only eligibility in source freeze578b5fc 
 - Author composed typecheck: **PASS** via `node .local-logs/run-isolated.mjs recording-all-retention-typecheck npm run typecheck`; log `.local-logs/recording-all-retention-typecheck.log`. No broad app/native PostgreSQL/browser/provider check rerun by author.
 
 Root owns the updated binding policy/spec documents separately. This amendment requires independent re-review and updated adversarial/native retention coverage before new source acceptance; earlier submitted-only results are historical evidence, not proof of the amended behavior.
+
+## Combined integration checkpoint, 2026-10-17
+
+On `codex/recording-ledger-integration`, normal merge `77975c6d7fd67bae9ce3fb9ca7e0b7c107710e65` combines accepted ledger `f5b17215302f60ba18d385e97d2a014066636971` with verified combined calendar/guard/parser candidate `1b18c68`. Git's ort merge completed without conflicts; no product or test repair was necessary. This integration follows the accepted all-recordings amendment and independent evidence carried by the ledger parent; the earlier pending-review language above describes its original checkpoint, not a new submitted-only policy.
+
+Exact comparisons pass: all ledger types/schema/0020/data/service/HTTP/runtime files match `f5b1721`; all components/app source, study normalizer and reference tooling/private predicate match `1b18c68`. Consequently the private/submitted anniversary rule and current-calendar401 concealment remain intact without another authority mechanism, media path, schema expansion or UI change. Historical migrations/operators are unchanged.
+
+- `node .local-logs/run-isolated.mjs recording-combined-typecheck npm run typecheck`: **PASS**; log `.local-logs/recording-combined-typecheck.log`.
+- `node .local-logs/run-isolated.mjs recording-combined-focused npm run test:app -- tests/app/recording-ledger.test.ts tests/app/recording-ledger-migration.test.ts tests/app/recording-ledger-review.test.ts tests/app/practice-calendar-client.test.ts tests/app/practice-calendar-review.test.ts tests/app/practice-calendar-session.test.ts`: **47/47**, six files,10.89s; log `.local-logs/recording-combined-focused.log`.
+- `git diff --check`: **PASS**. No new tests were necessary for a conflict-free byte-preserving merge. No broad/full suite, native PostgreSQL, browser, provider, migration apply, mail or production operation was run by author.
+
+Root owns independent merge verification and exact final hosted gates. No push/main modification/deployment was performed by author; migration0020 remains local until root's separately reviewed release sequence.
