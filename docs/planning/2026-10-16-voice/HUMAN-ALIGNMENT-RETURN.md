@@ -323,7 +323,7 @@ Also fixed: release options are range-checked, missing consonants are refused, a
 
 **Pronunciation (Daniel, after listening to Bereshit 1 and its haftarah):** "It sounds perfect actually." PocketTorah's reader matches what CRC students should learn, so generated chant is needed only where no recording exists.
 
-**Coverage built:** 431 of 432 recordings, 7,057 verses. That is every aliyah of all 54 parashot except Haazinu 1, whose song layout the engine's score refuses, plus all 54 weekly haftarot, five of them in two parts. Holiday, special-Shabbat and megillah files are not yet mapped to readings. Alignment is running.
+**Coverage built:** 431 of 432 recordings, 7,073 verses. That is every aliyah of all 54 parashot except Haazinu 1, whose song layout the engine's score refuses, plus all 54 weekly haftarot, five of them in two parts. The archive's other 12 files (`torah-1` to `torah-12`, about 20 s each) are not readings. Alignment is complete; see the player hand-off below.
 
 ## Generation parked (Daniel, 2026-10-16)
 
@@ -362,3 +362,45 @@ Range `2f8119b..1f1d596` on `voice/human-alignment`. It is engine and tooling on
   - No inheritance of earlier listening results.
   - Generation is parked, so this integrates only if Codex wants the engine kept in sync. It can equally wait.
 
+
+## Verse player hand-off for Codex (2026-10-17)
+
+Codex owns the player, storage and student surface. This section gives it the data and the rules.
+
+**The index:** `C:/private/pockettorah/verse-index.json` (4.6 MB, schema `pockettorah-verse-index/v1`), built by the voice stream's `verse_index.py` from the per-recording alignments in `C:/private/pockettorah/align/`. It stays out of the repository with the audio. Codex picks where both are served from.
+
+```
+{ schema, source, method,
+  recordings: [ { key: "Bereshit-1" | "Bereshit-h", parsha, part: "1".."7" | "h", table: "torah" | "haftarah",
+                  ref, archiveFile: "<file in archive.org PockettorahAudioFiles>", seconds, wordLabelsMatched,
+                  verses: [ { ref: "Genesis 1:1", start, end,             // seconds in the recording: the verse cut
+                              words: [ { he, start, label? } ],           // engine words in order; he = MAM word with marks
+                              alignScore, startVsSoundOnsetMs, review?, labelGapMedianMs } ] } ] }
+```
+
+**How to play a verse:** seek to `start` and stop at `end`. Highlight word *k* from `words[k].start` until the next word's start. Use `start`, not `label`: PocketTorah's own labels lead the voice by about 0.25–0.5 s, measured against sound onsets after pauses, while the aligned starts land within about 40 ms. Display the words from `he`, because splitting the verse text on spaces disagrees with the engine's word list in some verses (maqaf, ketiv/qere).
+
+**Cut rule:**
+- A verse runs from 80 ms before its first aligned sound to 150 ms after its last vowel's loudness end, and never past 80 ms before the next verse.
+- A breath before the first word is left out.
+- Where pitched sound precedes the aligned first word, the start moves back to it and the verse carries `review`. 36 verses carry it.
+
+**Quality across all 7,073 verses:**
+- Verse starts sit a median 34 ms from the measured sound onset.
+- Of the 338 that differ by more than 150 ms, almost all are breaths before the verse or quiet stretches after it.
+- The label-count check: 422 of 431 recordings have exactly as many PocketTorah labels as engine words, and the other 9 differ by 1 or 2 words.
+- **Spot check:** 26 verses for Daniel at https://claude.ai/artifact/EXjZ6aSD4SLAW9kHd8cHmZ, results pending.
+
+**Range corrections:** PocketTorah's `aliyah.json` is wrong in two places, and both are corrected in the index:
+- **Vayera haftarah:** the data says `Kings_1 4:1-37`, but the haftarah and the recording are II Kings 4:1–37.
+- **Masei haftarah:** the data says `Jeremiah ... 3:4 - 3:5`, but the recording ends at 3:4, the Ashkenazi ending. The label count confirms it.
+
+**Gaps, which fall back to generated chant under G3 or show no audio:**
+- Haazinu aliyah 1 (the song layout).
+- Holiday, special-Shabbat and megillah readings.
+- Any community custom that differs from PocketTorah's ranges.
+
+**Rules carried over:**
+- Show the credit "PocketTorah (not-a-box media lab), CC BY-SA 3.0" wherever a recording plays.
+- These recordings are human, not generated chant, so G3 does not hold them. Daniel approved the source and the pronunciation. They are still student-visible, so the player follows the normal student-surface review.
+- No generated chant reaches a student before G3.
