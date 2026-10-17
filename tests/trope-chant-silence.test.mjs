@@ -39,3 +39,9 @@ test("malformed inputs and options are refused", () => {
   assert.throws(() => chantSilenceCuts(x, rate, [0], { keepMs: "80" }), /options/);
   assert.deepEqual(chantSilenceCuts(x, rate, [0, 0.5]), [0, 0], "a take with no pause has nothing to cut");
 });
+
+test("review regressions: keep may not exceed the minimum run, and the last onset must lie inside the take", () => {
+  const x = take(1, [[0.2, 0.32]]);
+  assert.throws(() => chantSilenceCuts(x, rate, [0, 0.5], { keepMs: 200 }), /options/);
+  assert.throws(() => chantSilenceCuts(x, rate, [0, 0.5, 99]), /onset/);
+});

@@ -273,3 +273,28 @@ Daniel: "It's gonna have to be tts." The route is the existing Phonikud-TTS path
 
 **First fully unread render (run `unread-Btts-v1`):** Genesis 1:2, Genesis 1:3 and I Samuel 20:19. The engine melody, modelled timing, Phonikud speech and SVC with Daniel's prompt; nothing recorded of these verses. Awaiting Daniel's flags.
 
+**Unread v1 verdict (Daniel):** "very impressive". He flagged 3 of 35 words:
+- וָבֹהוּ: "the final vowel was too cut off". The TTS path had no phrase-end release.
+- וַיְהִי: "the ה sounds like a ח". SVC renders an F0-less h as a fricative.
+- נִסְתַּרְתָּ: "just too cramped". The model gives a consonant-heavy syllable no extra time.
+- The haftarah verse "broadly has more of those weird reverb sounds".
+
+**Fixes:**
+- `speech2sing.py --release-ms` (a phrase's last syllable carries on into the rest, with a linear fade, leaving `--release-gap-ms` 40 before the next phrase).
+- `speech2sing.py --voiced h` (h keeps the score F0).
+- Timing model term `delta·consonants`, with defaults gamma 0.75 and delta 0.2. Leave-one-verse-out error is 0.366, against 0.373.
+- Run `unread-Btts-v2` uses model `timing-daniel-v2`, release 150 ms and voiced h. U10 is also rendered from the WORLD-stretched source to compare against the reverb.
+
+**Fifth review (adversarial, b3c6178..f31711b): five defects, all fixed.**
+1. A modelled pack's `score.json` said `measured`. `applyMeasuredTiming` now takes the source.
+2. The aligner's proposal tag was not bumped for the pause rule; it is now r5.
+3. `predictSyllableMs` could undercut `applyMeasuredTiming`'s per-note floor for unequal notes. The floor now uses the notes' score lengths, and a test builds every calibration verse at tempoScale 1, 0.1 and 0.01.
+4. In midpoint mode the pause rule left the consonant in silence; the rule is now onset mode only.
+5. `chantSilenceCuts` could cut a negative amount when keepMs exceeded minRunMs; that setting is refused now. The last onset is range-checked too.
+
+Also fixed: holes in `voicedPhones` are refused, `f0-voicing.json` lists the effective voiceless set, and the tests that passed vacuously now check their own preconditions.
+
+**Left as noted:**
+- chant-silence stops one frame short of the next onset, as the approved v9 record did, so a silence needs about 110 ms to count as 100.
+- If CTC was right that a consonant follows the previous word directly, the pause rule's fade_out can still walk through that consonant. Proposals are reviewed by ear.
+

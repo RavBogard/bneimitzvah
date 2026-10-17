@@ -136,14 +136,15 @@ def main():
             p1 = fade_in(nxt, p0 + 0.02)
             if p1 - p0 >= 0.05:
                 events.append((p0, p1)); edges.append(("pause", p0, p1)); continue
-        if word_boundary and tokens[i]["role"] != "vowel" and i + 1 < len(spans) and tokens[i + 1]["word"] == tokens[i]["word"] \
+        if a.boundary == "onset" and word_boundary and tokens[i]["role"] != "vowel" and i + 1 < len(spans) and tokens[i + 1]["word"] == tokens[i]["word"] \
                 and spans[i + 1].start * frame_s - spans[i].end * frame_s >= a.pause:
             # CTC can mark a word's first consonant right after the previous word and leave the reader's pause
             # (a look at the text, a breath) between that consonant and the rest of the word, so the consonant
             # swallows the pause. The pause comes before the word: the consonant starts where the loudness
             # rises ahead of the next phone, and keeps at least 30 ms before that phone's own boundary.
+            # Onset mode only: a midpoint edge would sit inside the silence and leave the consonant there.
             after = spans[i + 1].start * frame_s
-            after_edge = after + a.onset_offset if a.boundary == "onset" else (spans[i].end * frame_s + after) / 2
+            after_edge = after + a.onset_offset
             p0 = fade_out(prev_end, after - 0.1)
             p1 = min(fade_in(after, p0 + 0.02), after_edge - 0.03)
             if p1 - p0 >= 0.05:
@@ -237,7 +238,7 @@ def main():
                       "audioSha256": sha256(a.audio), "encoding": encoding, "sampleRate": rate, "channels": info.channels,
                       "frames": info.frames, "downmix": "none" if info.channels == 1 else "average",
                       "consentRecordId": meta["consentRecordId"], "consentScope": meta["consentScope"]},
-        "annotation": {"units": "samples", "method": "proposed-then-reviewed", "proposalSource": f"w2v-{a.revision[:7]}-{a.boundary}-r4",
+        "annotation": {"units": "samples", "method": "proposed-then-reviewed", "proposalSource": f"w2v-{a.revision[:7]}-{a.boundary}-r5",
                        "reviewState": "proposed", "reviewRecordId": None},
         "syllables": syllables,
         "events": [{"kind": "pause", "proposed": {"start": to_sample(e0), "end": to_sample(e1)}, "reviewed": None} for e0, e1 in events],

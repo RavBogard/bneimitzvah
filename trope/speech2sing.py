@@ -3,7 +3,7 @@ each phrase of a plan from trope/speech2sing.mjs, then speaks it again with the 
 the model, and writes the f0 file SoulX-Singer-SVC re-sings it with.
 
   <tts-env>\Scripts\python trope/speech2sing.py <plan.json> <out_dir> --model michael.onnx --config model.config.json
-      [--prompt-meta prompt.json] [--noise 0.333] [--noise-w 0.8] [--length 1] [--max-cons 0.6] [--stretch world|none]
+      [--prompt-meta prompt.json] [--noise 0.333] [--noise-w 0.8] [--length 1] [--max-cons 0.6] [--stretch world|none] [--release-ms 0] [--voiced h]
 
 Durations inside the TTS: a Piper ONNX graph computes w_ceil (frames per input id, 22050 Hz / hop 256 =
 11.6 ms) in its /Ceil node. We derive two graphs from the voice once, next to it: *.dur.onnx (also outputs
@@ -115,11 +115,12 @@ def spread(total, weights):
     return out.tolist()
 
 
-def impose(phrase, own, nat, max_cons):
-    """Natural frames per id -> imposed frames, and the frame where the phrase's first vowel starts."""
+def impose(phrase, own, nat, max_cons, release=0):
+    """Natural frames per id -> imposed frames, and the frame where the phrase's first vowel starts. The last
+    syllable runs `release` frames past its note into the following rest, for its fade."""
     syls = phrase["syllables"]
     n = len(syls)
-    bound = [round(s["t"] * FPS) for s in syls] + [round((syls[-1]["t"] + syls[-1]["dur"]) * FPS)]
+    bound = [round(s["t"] * FPS) for s in syls] + [round((syls[-1]["t"] + syls[-1]["dur"]) * FPS) + release]
     out = [0] * len(own)
     idx = lambda si, roles: [i for i, (s, r, _) in enumerate(own) if s == si and r in roles]
     # the first syllable's onset keeps its spoken length, before the first note
@@ -194,6 +195,14 @@ def main():
     ap.add_argument("--max-cons", type=float, default=0.6)
     ap.add_argument("--stretch", choices=["none", "world"], default="world")
     ap.add_argument("--no-world-pitch", dest="world_pitch", action="store_false")
+    # A phrase's last syllable carries on up to --release-ms into the rest and fades out there, instead of
+    # stopping dead at its note end (Daniel, 2026-10-16: a phrase-final vowel "too cut off"), leaving at least
+    # --release-gap-ms before the next phrase.
+    ap.add_argument("--release-ms", type=float, default=0.0)
+    ap.add_argument("--release-gap-ms", type=float, default=40.0)
+    # Phonikud characters that keep the score f0 although voiceless by default, e.g. h between vowels, which
+    # SVC otherwise renders as a fricative ("the ה sounds like a ח").
+    ap.add_argument("--voiced", default="")
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
     import onnxruntime as ort
@@ -216,16 +225,26 @@ def main():
     covered = np.zeros(total, bool)
     raw_parts, report = [], []
     t0 = time.time()
-    for pi, ph in enumerate(plan["phrases"]):
+    unvoiced = VOICELESS - set(a.voiced)
+    if not set(a.voiced) <= VOICELESS:
+        raise SystemExit("--voiced lists only voiceless Phonikud characters")
+    phrases = plan["phrases"]
+    for pi, ph in enumerate(phrases):
         ids, own = phrase_ids(ph, id_map)
         audio, w = run(s_dur, ids, scales)
         nat = np.asarray(w, dtype=float).reshape(-1)
         raw_parts += [audio.astype(np.float32), np.zeros(int(0.3 * SR), np.float32)]
-        new, start_f, bound = impose(ph, own, nat, a.max_cons)
+        nxt = phrases[pi + 1]["start"] if pi + 1 < len(phrases) else plan["seconds"] + 0.5
+        room = max(0.0, nxt - ph["end"] - a.release_gap_ms / 1000)
+        release = int(min(a.release_ms / 1000, room) * FPS)
+        new, start_f, bound = impose(ph, own, nat, a.max_cons, release)
         y = run(s_timed, ids, scales, new)[0].astype(np.float32)
         s0 = start_f * HOP
         exp = sum(new) * HOP
-        y = y[:exp]
+        y = y[:exp].copy()
+        if release:
+            r = min(len(y), release * HOP)
+            y[len(y) - r:] *= np.linspace(1.0, 0.0, r, dtype=np.float32)
         lo, hi = max(0, s0), min(total, s0 + len(y))
         timed[lo:hi] += y[lo - s0:hi - s0]
         if a.stretch == "world":
@@ -238,7 +257,7 @@ def main():
             a0, a1 = max(0, f * HOP), min(total, (f + n) * HOP)
             if a1 > a0:
                 covered[a0:a1] = role not in ("bos", "eos") or ch not in "^$"
-                if ch in VOICELESS:
+                if ch in unvoiced:
                     voiceless[a0:a1] = True
             f += n
         syl_rep = []

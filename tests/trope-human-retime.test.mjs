@@ -148,9 +148,9 @@ test("voicedPhones carries the score F0 through a default-voiceless phone and no
   const plain = f0At({}, "h"), voiced = f0At({ voicedPhones: ["h"] }, "h"), sh = f0At({ voicedPhones: ["h"] }, "ʃ");
   assert.ok(plain.frames.length > 1 && plain.frames.every(hz => hz === 0) && plain.piece.voiced === false, "h is voiceless by default");
   assert.ok(voiced.frames.length > 1 && voiced.frames.every(hz => hz > 100 && hz < 200) && voiced.piece.voiced === true, "h carries the score F0 when listed");
-  assert.ok(sh.frames.every(hz => hz === 0), "an unlisted voiceless phone stays voiceless");
+  assert.ok(sh.frames.length > 1 && sh.frames.every(hz => hz === 0), "an unlisted voiceless phone stays voiceless");
   assert.ok(JSON.stringify(voiced.options).includes('"voicedPhones":["h"]'), "the option is recorded in the manifest");
-  for (const voicedPhones of [["a"], ["h", "h"], "h", ["l"]]) assert.throws(() => build(record, target, audio, { voicedPhones }), e => e.code === "options");
+  for (const voicedPhones of [["a"], ["h", "h"], "h", ["l"], [, "h"]]) assert.throws(() => build(record, target, audio, { voicedPhones }), e => e.code === "options");
 });
 
 test("melisma holds one vowel without repeated consonants; final consonants stay inside the last note; splits never cut a phone", () => {

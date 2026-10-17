@@ -164,8 +164,8 @@ export function benchmarkIdentityMap({ passageId, targetHash, units, score, segm
     f0Parity: "not-claimed" };
 }
 
-function timedScore(score, syllableMs) {
-  try { return applyMeasuredTiming(score, syllableMs); }
+function timedScore(score, syllableMs, source) {
+  try { return applyMeasuredTiming(score, syllableMs, { source }); }
   catch (error) { if (error instanceof MeasuredTimingError) fail(`timing-${error.code}`); throw error; }
 }
 
@@ -195,7 +195,7 @@ export function buildBenchmarkPack(input, assets) {
         // Every syllable keeps its full measured score length. Shortening the syllable before an emitter
         // breath clipped phrase-final words by ear (Daniel, 2026-10-16), so v2's breath rests are added
         // on top; v1 instead carves its word gaps out of each word's last note, adding no time.
-        score = timedScore(engineScore, passage.timing.syllableMs);
+        score = timedScore(engineScore, passage.timing.syllableMs, passage.timing.source);
         const emitted = scoreToSoulx(score, { ...style, profile }).reduce((t, seg) => t + seg.time[1] - seg.time[0], 0);
         breathMs = emitted - Math.round(style.lead * 1000) - Math.round(score.seconds * 1000);
         if (score.seconds > BENCHMARK_LIMITS.seconds) fail("score");

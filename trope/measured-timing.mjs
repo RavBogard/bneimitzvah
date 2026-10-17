@@ -37,7 +37,8 @@ export function scoreSyllables(score) {
 }
 
 /** A new score whose syllables last syllableMs[k] milliseconds each, back to back from beat 0. */
-export function applyMeasuredTiming(score, syllableMs) {
+export function applyMeasuredTiming(score, syllableMs, { source = "measured" } = {}) {
+  if (!["measured", "modelled"].includes(source)) fail("source");
   const rows = scoreSyllables(score);
   if (!Array.isArray(syllableMs) || syllableMs.length !== rows.length) fail("syllable-count");
   if (syllableMs.some(ms => !Number.isSafeInteger(ms) || ms < MEASURED_LIMITS.syllableMinMs || ms > MEASURED_LIMITS.syllableMaxMs)) fail("syllable-bounds");
@@ -56,6 +57,6 @@ export function applyMeasuredTiming(score, syllableMs) {
   const last = score.events.at(-1), tailBeats = Math.max(0, (score.beats ?? last.t + last.dur) - (last.t + last.dur));
   const tailMs = Math.round(tailBeats * 60000 / score.tempo);
   out.tempo = 60; out.beats = (clockMs + tailMs) / 1000; out.seconds = (clockMs + tailMs) / 1000;
-  out.timing = { source: "measured", syllables: rows.length };
+  out.timing = { source, syllables: rows.length };
   return out;
 }

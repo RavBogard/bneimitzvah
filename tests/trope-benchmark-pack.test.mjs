@@ -193,6 +193,8 @@ test("measured timing keeps notes, order and text while each syllable lasts its 
   const modelled = clone(timedInput); modelled.passages[0].timing.source = "modelled";
   const m = build(modelled);
   assert.equal(m.manifest.passages[0].timing.source, "modelled"); assert.match(m.manifest.passages[0].timing.review, /model/);
+  assert.equal(artifact(m, "score").timing.source, "modelled", "the score artifact names its timing source too");
+  assert.equal(artifact(timed, "score").timing.source, "measured");
   const extra = clone(timedInput); extra.passages[0].timing.note = "x"; rejects(extra, "schema");
   const badId = clone(timedInput); badId.passages[0].timing.recordId = "../x"; rejects(badId, "identifier");
 });

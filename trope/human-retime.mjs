@@ -50,7 +50,7 @@ function options(input = {}) {
     || !(o.releaseMs >= 0 && o.releaseMs <= 400) || !(o.releaseGapMs >= 0 && o.releaseGapMs <= 200) || !(o.tailMs >= 0 && o.tailMs <= 1000)
     || !(o.steadyHeadMs >= 0 && o.steadyHeadMs <= 60) || !(o.steadyTailMs >= 0 && o.steadyTailMs <= 60)
     || !(o.releaseBreathMs === 0 || o.releaseBreathMs >= 20 && o.releaseBreathMs <= 400)
-    || !Array.isArray(o.voicedPhones) || o.voicedPhones.some((ph, i) => !voiceless.has(ph) || o.voicedPhones.indexOf(ph) !== i)) fail("options");
+    || !Array.isArray(o.voicedPhones) || Array.from(o.voicedPhones).some((ph, i) => !voiceless.has(ph) || o.voicedPhones.indexOf(ph) !== i)) fail("options");
   return Object.freeze({ ...o, voicedPhones: Object.freeze([...o.voicedPhones]) });
 }
 
@@ -337,7 +337,7 @@ export function buildHumanRetime(record, pack, audio, { code, alignmentFileSha25
       return { ...s, wav: `${base}.wav`, f0: `${base}-f0.npy`, frames: f.frames, voicedFrames: f.counts.voiced };
     });
     add(PATHS.voicing, canonicalJson({ schema: "chant-human-f0-voicing/v1", source: "score F0 sampled at each frame start from a 1 kHz scoreF0 curve; voicing from the retime map at each frame centre",
-      scoreF0: SCORE_F0, voiceless: VOICELESS, full, slices: plan.slices.map(s => f0Voicing(plan, bound.plan, s.dstStart, s.dstEnd)) }), "f0-voicing");
+      scoreF0: SCORE_F0, voiceless: VOICELESS.filter(ph => !plan.options.voicedPhones.includes(ph)), full, slices: plan.slices.map(s => f0Voicing(plan, bound.plan, s.dstStart, s.dstEnd)) }), "f0-voicing");
     const peak = speech.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
     add(PATHS.map, canonicalJson({ schema: "chant-human-retime-map/v1", targetHash: record.target.targetHash, passageId: record.target.passageId,
       units: { source: `original samples mapped to ${plan.rate} Hz by mapSample`, target: `${plan.rate} Hz samples of the executed timeline (timelineSamples), then the verse-final release tail (tailSamples)` },
