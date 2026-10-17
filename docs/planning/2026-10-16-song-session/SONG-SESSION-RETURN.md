@@ -138,3 +138,75 @@ Codex's reviewed tutor pagination repair `b9f12e9` is cherry-picked onto `design
   - The app-test and build rerun after the fixes was stopped by Claude Code for low system memory. It was not repeated; rerun it at integration.
   - The test role and database have been dropped.
 - **Next:** tutor lesson notes, and progress wiring, once Codex offers frozen lesson-log and progress refs. Then Phase 3, admin.
+
+## Moved onto Codex's editor/modal integration (2026-10-16)
+
+- New branch `design/song-session-progress`, from `origin/codex/editor-modal-integration` at `243d133`. That ref already contains my frozen tutor and editor work (as `37a4994` and `4b08fa8`), the pagination repair `b9f12e9`, Codex's departure-prompt and repeated-Escape fixes, and the accepted progress backend `2689d94`.
+- Slice 3 (tutor tabs, `3655031`) is carried as `dd28b2b`. It merged cleanly, but the merged file did not typecheck: my tabs code imported React's `KeyboardEvent` type, which shadowed the DOM type used by Codex's Escape guard. The import is renamed to `ReactKeyboardEvent` inside `dd28b2b`, so that commit typechecks on its own.
+- `design/song-session-staff` stays as it was, for reference.
+
+## Phase 2, slice 4: verse progress marks (2026-10-16)
+
+The UI side of Codex's accepted progress contract (`2689d94`, spec `2026-10-16-verse-progress-design.md`). No server, schema or migration file is touched.
+
+- **Students** (own mode and explicit child practice) mark each verse in the practice view: **Still working** or **Got it**. Tapping the chosen one again clears it back to unmarked.
+- **Tutors and admins** assess each verse in the practice view: **Not started**, **Working** or **Solid**. Under the buttons they see the student's own mark ("Student: got it").
+- **Parents** only read: the practice view and the verse cards show both marks, each named. Parents get no buttons.
+- **Verse cards** carry a small chip:
+  - for students, their own mark;
+  - for staff and parents, "Student: …" and "Tutor: …" as two separate chips.
+- **Header counts:** the line under the reading reference adds "N got it", and for staff also "N solid". These are the server's counts by stream, with nothing added when zero.
+- **The two streams stay separate**, as MISSION and the spec require. A student's "Got it" never changes the tutor's assessment, and the tutor's "Solid" never changes the student's mark. The browser test proves this against the stored rows.
+- **Writes:**
+  - One write at a time per verse, with the stored version as `expectedVersion`.
+  - A conflict or an unknown outcome is never resent. The store re-reads the page and shows the latest mark with a message on that verse.
+  - After every save the store re-reads the page, so the counts are always the server's.
+  - Page loads keep the higher version for each stream, so a read that raced a save never brings back an older mark.
+  - A stale-assignment answer reloads the reading once per assignment.
+  - 401, 403 and 404 clear the marks and go down the existing access-failure path. In child practice, `readProgress` in `provider.tsx` mirrors `readWork`: the same context checks and the same redirect to the parent page.
+- **Files:**
+  - New: `workspace/progress/{api.ts, store.ts, marks.tsx}`.
+  - Edited: `provider.tsx` (`readProgress`), `reading.tsx` (the store and the header count), `study/view.tsx` (`onShown`, `renderMark`, `renderLiftControls`), `study/annotations.tsx` (an optional `mark` slot in the card head), `study/lift.tsx` (an optional `controls` slot above Back/Next), `globals.css`.
+- **Adversarial review (second agent):** no Critical or High findings. Confirmed sound: the stream follows from the mode; there is no automatic replay; child-practice handling matches `readWork`; parsing matches the server's response shapes; and a change of student, context or revision clears the store. Fixed from its findings:
+  - counts could double-count when a refresh raced a save (the store now never adjusts counts itself);
+  - an older read could put back a newer saved mark;
+  - an unknown outcome said "wasn't saved" (it now re-reads and says "may not have saved");
+  - access loss from a progress request now clears the store;
+  - messages are per verse, not shared;
+  - the staff chip is named "Tutor: …";
+  - the descriptive line is no longer a live region, so only real messages are announced;
+  - parents' cards show both marks;
+  - the stale-assignment reload is limited to once.
+- **Test:** the new `tests/http-browser/progress-ui.test.ts` covers:
+  - a student marking in the practice view;
+  - the stored self-check and assessment rows;
+  - the chips and the header count;
+  - the tutor assessing while the student's mark is shown, with no student buttons;
+  - the student seeing "Your tutor: solid", then clearing their own mark while the assessment stays;
+  - a conflict made elsewhere being shown, not overwritten.
+  - Local-only captures: `progress-{student-lift-mobile, student-list-mobile, tutor-lift-desktop}`.
+- **Waiting on Daniel (student-visible wording):** this needs his sign-off before it reaches students.
+  - Buttons and labels: "Still working", "Got it" and "Your tutor: solid / working".
+  - Header: "N got it".
+  - Messages: "This verse was marked somewhere else. The latest mark is shown.", "That mark may not have saved. The latest mark is shown." and "Too many changes at once. Wait a moment, then try again."
+  - The tutor-side labels follow MISSION's own words (not started / working / solid).
+- **For Codex:** `study-ui.test.ts` fails one case locally with a 429 at sign-in ("discards held old-child text after a switch…"). It fails identically with my changes stashed, at `dd28b2b` on top of `243d133`, so it comes from the base. It is the five-per-window magic-link throttle, the same issue as `0d4b00b` fixed for the reading tests. I have not changed that file.
+- **Checks on the final tree:**
+  - Typecheck passes.
+  - `next build` compiles.
+  - App tests pass: 790, plus the 1 existing skip.
+  - `never-in-repo` passes, with the new files staged.
+  - Browser files pass one at a time on a disposable WSL PostgreSQL 16:
+    - progress-ui 2/2 and student-work-ui 10/10;
+    - tutor-route-ui 4/4 and service-learning-ui 13/13;
+    - reading-ui 4/4 and reading-preview-ui 7/7;
+    - workspace-ui 3/3, portal-ui 7/7 and modal-privacy-ui 2/2;
+    - browser 2/2 and canonical-navigation 4/4.
+  - study-ui is 5/6; the base-branch throttle case is described above.
+  - The test role and database have been dropped.
+- **Not covered by a browser case:**
+  - parent and admin views of the marks;
+  - child-practice marking;
+  - the stale-assignment reload;
+  - the unknown-outcome message.
+- **Next:** tutor lesson notes, once Codex publishes the frozen lesson-log ref (`f2aabe24` is reviewed source, not yet published as final). Then Phase 3, admin.

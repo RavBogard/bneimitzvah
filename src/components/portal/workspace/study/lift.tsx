@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useWorkspaceModal } from "../provider";
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 import type { AssignmentEnding } from "../../../../lib/hebrew/study-annotations";
@@ -23,8 +23,8 @@ export const icons = {
  * full ink and the rest receding. Next steps phrase by phrase, then verse by
  * verse. Each new phrase arrives with one squeegee wipe; reduced motion snaps.
  */
-export function LiftedLine({ verses, assignment, index, total, offset, onIndex, onClose, learner = false }: {
-  learner?: boolean; verses: StudyVerse[]; assignment: AssignmentEnding; index: number; total: number; offset: number; onIndex(index: number): void; onClose(): void;
+export function LiftedLine({ verses, assignment, index, total, offset, onIndex, onClose, learner = false, controls }: {
+  learner?: boolean; controls?(verseRef: string): ReactNode; verses: StudyVerse[]; assignment: AssignmentEnding; index: number; total: number; offset: number; onIndex(index: number): void; onClose(): void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null), id = useId(), prefs = useReadingPrefs(), setReadingPrefs = useSetReadingPrefs();
   const verse = verses[index], result = useVerseColors(verse, assignment, prefs.colors);
@@ -85,6 +85,7 @@ export function LiftedLine({ verses, assignment, index, total, offset, onIndex, 
       <Apparatus verse={verse} learner={learner} />
       {prefs.colors && <PhraseLegend colors={result} id={`${id}-v`} verseRef={verse.ref} />}
     </div>
+    {controls?.(verse.ref)}
     <div className="lift-nav">
       <button type="button" className="lift-step" onClick={previous} disabled={atStart}>{icons.up}<span>Back</span></button>
       <button type="button" className="lift-step lift-step-next" onClick={next} disabled={atEnd} autoFocus>{icons.down}<span>{phrases.length && phrase < phrases.length - 1 ? "Next phrase" : "Next verse"}</span></button>

@@ -595,3 +595,26 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 /* The tab already names the panel. */
 .page-tab-panel > .service-learning-panel > h2 { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .page-tab { transition: none; } }
+
+/* Verse marks: the student's own self-check and the tutor's assessment, kept separate. */
+.verse-marks { display: inline-flex; flex-wrap: wrap; justify-content: end; gap: 0.375rem; margin-inline-start: auto; }
+.verse-marks:empty { display: none; }
+.verse-marks + .verse-lift { margin-inline-start: 0; }
+.verse-mark { display: inline-flex; align-items: center; gap: 0.25rem; min-height: 28px; padding: 0 0.625rem; border-radius: 999px; background: var(--color-canvas); color: var(--color-muted); font-size: 0.8125rem; font-weight: 650; white-space: nowrap; }
+.verse-mark[data-state="got-it"], .verse-mark[data-state="solid"] { background: color-mix(in srgb, var(--color-teal) 14%, var(--color-surface)); color: var(--color-teal); }
+.verse-mark[data-state="working"] { background: color-mix(in srgb, var(--marigold) 22%, var(--color-surface)); color: var(--color-ink); }
+.verse-mark svg { width: 15px; height: 15px; }
+.hero-marked { white-space: nowrap; }
+.lift[open] { grid-template-rows: auto auto minmax(0, 1fr) auto auto; }
+.lift-progress { display: grid; justify-items: center; gap: 0.375rem; padding: 0.5rem 1rem 0; }
+.lift-marks { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+.lift-mark { display: inline-flex; align-items: center; gap: 0.375rem; min-height: 48px; padding: 0 1.25rem; border: 0; border-radius: 999px; background: rgb(255 255 255 / 0.14); color: #fff; font-size: 1rem; font-weight: 700; transition: background-color 160ms var(--ease-settle), color 160ms var(--ease-settle); }
+.lift-mark:hover { background: rgb(255 255 255 / 0.22); }
+.lift-mark[aria-pressed="true"] { background: #fff; color: var(--lake-deep); }
+.lift-mark[data-state="got-it"][aria-pressed="true"], .lift-mark[data-state="solid"][aria-pressed="true"] { color: var(--forest); }
+.lift-mark[data-state="working"][aria-pressed="true"] { background: var(--marigold); color: var(--on-ink); }
+.lift-mark[aria-disabled="true"] { cursor: progress; }
+.lift-progress-note:empty { min-height: 0; }
+.lift-progress-note { min-height: 1.5em; margin: 0; max-width: none; text-align: center; font-size: 0.9375rem; color: rgb(255 255 255 / 0.85); }
+@media (prefers-color-scheme: dark) { .lift-mark[aria-pressed="true"] { color: #10335e; } }
+@media (prefers-reduced-motion: reduce) { .lift-mark { transition: none; } }

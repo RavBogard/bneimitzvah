@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useId, useLayoutEffect, useRef, useState, type MutableRefObject, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import { type Assigned } from "../api";
 import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
 import { studyBinding, studyPlan, type StudyKind, type StudyPage } from "./api";
@@ -10,13 +10,16 @@ import { useReadingPrefs } from "../reading-prefs";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
 
 export type StudyReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
-export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderWork, renderActiveWork, onPage, learner = false, liftHandle, songSession = learner }: {
+export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderWork, renderActiveWork, onPage, learner = false, liftHandle, songSession = learner, onShown, renderMark, renderLiftControls }: {
   baseline: Assigned | null; register(value: StudyReload): () => void; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; onKindChange(kind: StudyKind): void;
   guardDeparture?(): Promise<boolean>; serviceHref?: string; renderWork?(kind: StudyKind, verseRef: string): ReactNode; renderActiveWork?(): ReactNode; onPage?(kind: StudyKind, offset: number, signal: AbortSignal): Promise<void>;
   /** Students and child practice see the reading without status or provenance prose. */
   learner?: boolean; liftHandle?: MutableRefObject<((index: number) => void) | null>;
   /** The Song session reading: English follows the remembered toolbar preference. */
   songSession?: boolean;
+  /** Called once a text page is on screen, so verse marks can load for it. */
+  onShown?(kind: StudyKind, offset: number, length: number): void;
+  renderMark?(kind: StudyKind, verseRef: string): ReactNode; renderLiftControls?(kind: StudyKind, verseRef: string): ReactNode;
 }) {
   const { readStudy, summary } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
   const [lift, setLift] = useState<{ page: StudyPage; index: number } | null>(null);
@@ -68,6 +71,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     } catch { /* Authority state has already cleared text and metadata. */ }
   }
   const livePage = key && state.binding === key && !state.loading ? state.page : undefined;
+  const shown = livePage && state.kind ? [state.kind, livePage.offset, livePage.verses.length] as const : null;
+  useEffect(() => { if (shown) onShown?.(...shown); }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
   if (liftHandle) liftHandle.current = livePage ? (index: number) => setLift({ page: livePage, index: Math.min(Math.max(index, 0), livePage.verses.length - 1) }) : null;
   if (!baseline) return <section className="assigned-study" aria-label="Assigned text"><p role="status">Text is hidden while the assignment is checked.</p></section>;
   if (!baseline.readings.length) return null;
@@ -83,7 +88,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {renderActiveWork?.()}
     </div> : current.page && <>
       <ol className={`study-verses${renderWork ? " study-verses-with-work" : ""}`} start={current.page.offset + 1}>{current.page.verses.map((verse,index) => {const position=aliyahPosition(kind,assignment!.aliyahStarts,assignment!.verses,verse.ref);return <li key={verse.ref}>{position && (position.startsHere || index===0) && <p className="student-aliyah">Aliyah {position.number}{position.startsHere?" starts here":" · continued from the previous text page"}</p>}<AnnotatedStudyVerse key={JSON.stringify([summary.sessionBinding, key, kind, current.page!.offset, verse.ref])} verse={verse} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup}
-        number={current.page!.offset + index + 1} learner={learner} showEnglish={songSession ? prefs.translation : true} onLift={() => setLift({ page: current.page!, index })} />{renderWork?.(kind, verse.ref)}</li>;})}</ol>
+        number={current.page!.offset + index + 1} learner={learner} showEnglish={songSession ? prefs.translation : true} onLift={() => setLift({ page: current.page!, index })} mark={renderMark?.(kind, verse.ref)} />{renderWork?.(kind, verse.ref)}</li>;})}</ol>
       {!learner && kind==="torah" && assignment!.aliyahStarts===null && <p className="field-help">Aliyah boundaries have not been recorded for this assignment.</p>}
       {learner ? !single && <p className="study-page-position">Verses {current.page.offset + 1}–{current.page.offset + current.page.verses.length} of {current.page.totalVerses}</p>
         : <p role="status">Verses {current.page.offset + 1}–{current.page.offset + current.page.verses.length} of {current.page.totalVerses}. {current.page.translation.status === "partial" ? "The selected English edition is missing for some verses." : current.page.translation.status === "unavailable" ? "The selected English edition is unavailable on this page." : "Selected English edition available."}</p>}
@@ -91,7 +96,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {!single && <nav className="study-pages" aria-label="Text pages"><button className="button-secondary" disabled={previous === undefined} onClick={() => previous !== undefined && void explicitLoad(kind, previous)}>Previous text page</button><button className="button-secondary" disabled={current.page.nextOffset === null} onClick={() => current.page?.nextOffset !== null && void explicitLoad(kind, current.page!.nextOffset!)}>Next text page</button></nav>}
       <div className="study-more"><StudyCredits chapters={current.page.chapters} summary={learner ? "About this text" : undefined} />{learner && <WorkspaceLink href="/trope-chart">Trope chart</WorkspaceLink>}</div>
       {lift && lift.page === current.page && <LiftedLine learner={learner} verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} index={lift.index} total={current.page.totalVerses} offset={current.page.offset}
-        onIndex={index => setLift({ page: lift.page, index })} onClose={() => setLift(null)} />}
+        onIndex={index => setLift({ page: lift.page, index })} onClose={() => setLift(null)} controls={renderLiftControls && (ref => renderLiftControls(kind, ref))} />}
     </>}
   </section>;
 }

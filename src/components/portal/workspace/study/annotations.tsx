@@ -67,8 +67,8 @@ export function PhraseLegend({ colors, id, verseRef }: { colors: ColorResult | n
 
 const interactive = "a, button, input, textarea, select, summary, details, label, dialog";
 /** Presentation state lives only in this authorized, current-page mount. */
-export function AnnotatedStudyVerse({ verse, assignment, group, number, showEnglish = true, onLift, learner = false }: {
-  verse: StudyVerse; assignment: AssignmentEnding; group: string; number?: number; showEnglish?: boolean; onLift?(): void; learner?: boolean;
+export function AnnotatedStudyVerse({ verse, assignment, group, number, showEnglish = true, onLift, learner = false, mark }: {
+  verse: StudyVerse; assignment: AssignmentEnding; group: string; number?: number; showEnglish?: boolean; onLift?(): void; learner?: boolean; mark?: ReactNode;
 }) {
   const prefs = useReadingPrefs(), id = `${group}-${verse.ref.replace(/[^A-Za-z0-9]+/g, "-")}`;
   const result = useVerseColors(verse, assignment, prefs.colors);
@@ -81,6 +81,7 @@ export function AnnotatedStudyVerse({ verse, assignment, group, number, showEngl
     <div className="verse-card-head">
       {number !== undefined && <span className="verse-number" aria-hidden="true">{number}</span>}
       <h4><bdi dir="ltr">{verse.ref}</bdi></h4>
+      {mark}
       {onLift && <button type="button" className="verse-lift" onClick={onLift} aria-label={`Practice ${verse.ref} up close`}>
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>}
