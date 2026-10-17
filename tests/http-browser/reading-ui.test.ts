@@ -15,14 +15,18 @@ vi.mock("server-only", () => ({}));
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
 let browserEnv:Awaited<ReturnType<typeof isolatedEnv>>|undefined;
 const contexts: BrowserContext[] = [];
+const cookies = new Map<"admin" | "tutor", Awaited<ReturnType<BrowserContext["cookies"]>>>();
 async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Reading UI browser operation failed; private details withheld"); } }
 async function navigate(tab: Page, path: string) { await safe(() => tab.goto(path, { waitUntil: "domcontentloaded", timeout: 30_000 })); }
 async function page(role: "admin" | "tutor", mobile = false) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 } }); contexts.push(context);
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
+  const signedIn = cookies.get(role); if (signedIn) await context.addCookies(signedIn);
   const tab = await context.newPage(); await navigate(tab, "/");
+  if (signedIn) return tab;
   const email = role === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
-  expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status === 200).toBe(true); await openAuthMail(tab, fixture.takeMail(email));
+  expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await openAuthMail(tab, fixture.takeMail(email));
+  cookies.set(role, await context.cookies());
   return tab;
 }
 async function api(tab: Page, path: string, body?: unknown) {
