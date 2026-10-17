@@ -99,6 +99,18 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   // Keep the editor draft mounted, but give departure review the sole modal
   // layer. This also makes access-check resume independent of effect ordering.
   useWorkspaceModal(sheet, sheetOpen && !work.departure);
+  // closedby is not available in every browser. Disabled controls can leave
+  // focus outside the sheet, so capture Escape at document level only while
+  // this visible editor is the actual active modal and has pending work.
+  useLayoutEffect(() => {
+    if (!editorBusy) return;
+    const blockEscape = (event: KeyboardEvent) => {
+      const node = sheet.current;
+      if (event.key === "Escape" && node?.open && node.matches(":modal") && !node.closest("[hidden], [inert]")) event.preventDefault();
+    };
+    document.addEventListener("keydown", blockEscape, true);
+    return () => document.removeEventListener("keydown", blockEscape, true);
+  }, [editorBusy]);
   // The sheet stays open while a review or confirmation is in flight, so its outcome is seen.
   const closeSheet = () => { if (!editorBusy) setSheetOpen(false); };
   useEffect(() => {

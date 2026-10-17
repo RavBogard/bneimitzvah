@@ -186,6 +186,11 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
     const diagnostics = await tab.locator("dialog.editor-sheet").evaluate(node => ({ events: (node as HTMLElement).dataset.modalDiagnostics, open: (node as HTMLDialogElement).open, modal: node.matches(":modal"), concealed: Boolean(node.closest("[hidden], [inert]")), pending: Boolean(node.querySelector<HTMLButtonElement>(".sheet-close")?.disabled), labelled: Boolean(node.querySelector("#reading-editor-title")) }));
     await ui(sheet, `${phase}: ${JSON.stringify(diagnostics)}`).toBeVisible(); await ui(close, phase).toBeDisabled();
     await ui(sheet).toHaveAttribute("closedby", "none");
+    // Exercise the scoped keyboard fallback without pretending to run another
+    // browser: this Chromium run also asserts native closedBy support above.
+    await safe(() => sheet.evaluate(node => node.removeAttribute("closedby")));
+    await safe(() => tab.keyboard.press("Escape")); await safe(() => tab.keyboard.press("Escape")); await ui(sheet, `${phase}: keyboard fallback`).toBeVisible();
+    await safe(() => sheet.evaluate(node => node.setAttribute("closedby", "none")));
     await safe(() => close.evaluate(node => (node as HTMLButtonElement).click())); await ui(sheet).toBeVisible();
     expect(await tab.evaluate(() => document.querySelectorAll("dialog:modal").length)).toBe(1);
   }
