@@ -170,13 +170,13 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
     await tab.route(pattern, async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
     return { release, ready: () => ui.poll(() => held).toBe(true), remove: () => tab.unroute(pattern) };
   }
-  async function rejectClosing() {
-    await safe(() => tab.keyboard.press("Escape")); await ui(sheet).toBeVisible(); await ui(close).toBeDisabled();
+  async function rejectClosing(phase: string) {
+    await safe(() => tab.keyboard.press("Escape")); await ui(sheet, phase).toBeVisible(); await ui(close, phase).toBeDisabled();
     await safe(() => close.evaluate(node => (node as HTMLButtonElement).click())); await ui(sheet).toBeVisible();
     expect(await tab.evaluate(() => document.querySelectorAll("dialog:modal").length)).toBe(1);
   }
   const prepare = await hold("**/reading/prepare");
-  try { await click(tab, "Prepare reading review"); await safe(() => tab.keyboard.press("Escape")); await prepare.ready(); await rejectClosing(); }
+  try { await click(tab, "Prepare reading review"); await safe(() => tab.keyboard.press("Escape")); await prepare.ready(); await rejectClosing("prepare response held"); }
   finally { prepare.release(); }
   await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled(); await prepare.remove();
   await capture(tab, "reading-tutor-prepared-busy-checked-mobile");
@@ -185,14 +185,14 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
     await safe(() => tab.setViewportSize({ width: 390, height: 844 }));
   }
   const confirm = await hold("**/reading/confirm"), reload = await hold("**/reading?**");
-  try { await click(tab, "Confirm assigned reading"); await safe(() => tab.keyboard.press("Escape")); await confirm.ready(); await rejectClosing(); }
+  try { await click(tab, "Confirm assigned reading"); await safe(() => tab.keyboard.press("Escape")); await confirm.ready(); await rejectClosing("confirm response held"); }
   finally { confirm.release(); }
-  try { await reload.ready(); await ui(tab.getByText("Checking the current assignment, text and saved work…", { exact: true })).toBeVisible(); await rejectClosing(); }
+  try { await reload.ready(); await ui(tab.getByText("Checking the current assignment, text and saved work…", { exact: true })).toBeVisible(); await rejectClosing("post-confirm metadata reload held"); }
   finally { reload.release(); }
   await ui(sheet.getByText("Reading confirmed and reloaded from the server. The assignment above is current.", { exact: true })).toBeVisible();
   await confirm.remove(); await reload.remove(); await capture(tab, "reading-tutor-confirmed-busy-checked-mobile");
   const explicitReload = await hold("**/reading?**");
-  try { await click(tab, "Reload current reading"); await safe(() => tab.keyboard.press("Escape")); await explicitReload.ready(); await rejectClosing(); }
+  try { await click(tab, "Reload current reading"); await safe(() => tab.keyboard.press("Escape")); await explicitReload.ready(); await rejectClosing("explicit metadata reload held"); }
   finally { explicitReload.release(); }
   await ui(sheet.getByText("Current reading reloaded. Prepare a new review to make a change.", { exact: true })).toBeVisible(); await explicitReload.remove();
   await ui(close).toBeEnabled(); await safe(() => tab.keyboard.press("Escape")); await ui(sheet).toBeHidden();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { workspaceApi, type Assigned } from "./api";
 import { customReadingRanges, readingBaseline, fallbackLabels, type ReadingKind, type ReadingProposal, type StaffMode } from "./reading-proposal";
 import { ReadingPreview } from "./reading-preview";
@@ -21,7 +21,9 @@ export function ReadingEditor({ mode, baseline, reload, onBusy }: { mode: StaffM
   const key = baseline ? readingBaseline(baseline, kind) : null, keyRef = useRef(key); keyRef.current = key;
   const lastKey = useRef<string | null>(null);
   useEffect(() => { alive.current = true; return () => { alive.current = false; generation.current++; }; }, []);
-  useEffect(() => { onBusy?.(pending !== null); }, [pending, onBusy]);
+  // Publish the close guard before paint/keyboard interaction, including the
+  // first Escape immediately after prepare, confirm or reload starts.
+  useLayoutEffect(() => { onBusy?.(pending !== null); }, [pending, onBusy]);
   useEffect(() => {
     generation.current++; setReview(null);
     if (review && lastKey.current !== null && key !== lastKey.current) setMessage("The current reading is being checked or has changed. Your draft is retained; prepare a new review before confirming.");
