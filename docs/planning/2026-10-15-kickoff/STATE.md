@@ -1,5 +1,7 @@
 # State — CRC B'nei Mitzvah portal
 
+**Active 2026-10-17:** storage-independent student-recording ledger implementation is under way in managed `codex/student-recording-ledger` from released `0ce58b6`; local migration0020 is reserved. Accepted contract: `docs/superpowers/specs/2026-10-17-student-recording-ledger-design.md`. Independent implementation review follows the freeze. No storage/provider/audio capture, physical deletion or production migration is included. Never-submitted recording retention awaits Daniel's answer. Claude's calendar and reference-index assignments continue separately; production remains the verified roster/admin release below. See the latest [coordination note](../2026-10-16-parallel-work/COORDINATION.md) for ownership.
+
 Authority: `MISSION.md` (Daniel's rulings). Plan: `PLAN-CODE-2026-10-15.md`. This file says where the work stands. Update it at the end of every session and every phase.
 
 ## Deployed roster and admin checkpoint — 2026-10-17
