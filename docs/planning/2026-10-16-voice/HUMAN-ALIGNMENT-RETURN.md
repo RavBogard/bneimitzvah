@@ -321,3 +321,7 @@ Also fixed: release options are range-checked, missing consonants are refused, a
 - **Storage.** Audio stays out of the repository, as always; serving it needs a storage decision on Codex's side.
 - **Release.** This audio is not generated chant, so G3 does not hold it, but it is student-visible. Daniel approved the source.
 
+**Pronunciation (Daniel, after listening to Bereshit 1 and its haftarah):** "It sounds perfect actually." PocketTorah's reader matches what CRC students should learn, so generated chant is needed only where no recording exists.
+
+**Coverage built:** 431 of 432 recordings, 7,057 verses. That is every aliyah of all 54 parashot except Haazinu 1, whose song layout the engine's score refuses, plus all 54 weekly haftarot, five of them in two parts. Holiday, special-Shabbat and megillah files are not yet mapped to readings. Alignment is running.
+
