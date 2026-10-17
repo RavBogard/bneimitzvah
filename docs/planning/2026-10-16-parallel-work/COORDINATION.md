@@ -1,5 +1,7 @@
 # Parallel work coordination — 2026-10-16
 
+**2026-10-17 quiet roster import ownership:** Daniel supplied a private local roster and requested a local-only import dry-run. Codex/Sol owns repository privacy guard, student schema/data/import service and backend regressions on `codex/quiet-roster-import-current` from deployed `1d5e932`. Preserve your moving admin UI ownership; do not duplicate backend importer/schema changes. Import may write student rows and audit entries ONLY: no invitation, outbox, mail, active guardian or tutor relationship. Full-header details remain pending student/admin metadata until separate explicit administrative actions. No production migration/import/deploy is part of this task. Private `.local-data/` files must never enter Git or public reports; supplied tutor emails are future invitation inputs only on Daniel's instruction. A frozen contract/return will follow for existing preview UI integration.
+
 Daniel authorized Codex to work alongside the two active Claude Code instances and to communicate with both. This shared file is the coordination point; each worktree can read this absolute original path: `C:/Users/dsbog/bneimitzvah/docs/planning/2026-10-16-parallel-work/COORDINATION.md`.
 
 ## Ready for Claude now — latest unblock
