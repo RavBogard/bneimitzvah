@@ -10,6 +10,7 @@ import { fetchStudyPage, type StudyKind, type StudyPage } from "./study/api";
 import { fetchWork, type WorkOperation, type WorkPage, type WorkHistory, type WorkReceipt, type WorkRecovery } from "./work/api";
 import { fetchProgress, type ProgressOperation, type ProgressRows, type ProgressSaved } from "./progress/api";
 import { serviceApi, type ServiceMetadata, type ServicePlan, type ServiceUnitResponse } from "./service-learning/api";
+import { fetchLessons, type LessonOperation, type LessonResult } from "./lessons/api";
 import { reloadWorkspaceScopes, type ReloadRegistration } from "./reload-barrier";
 
 export const rolePaths = { student: "/workspace/student", parent: "/workspace/parent", tutor: "/workspace/tutor", admin: "/workspace/admin/students" } as const;
@@ -24,6 +25,7 @@ type Workspace = {
   readProgress(baseline: Assigned, kind: StudyKind, operation: ProgressOperation, signal: AbortSignal): Promise<ProgressRows | ProgressSaved>;
   readServiceMetadata(mode: ReadingMode, id: string, signal: AbortSignal): Promise<ServiceMetadata>;
   readServiceUnit(mode: ReadingMode, id: string, plan: ServicePlan, unitId: string, signal: AbortSignal): Promise<ServiceUnitResponse>;
+  readLessons(mode: ReadingMode, id: string, operation: LessonOperation, signal: AbortSignal): Promise<LessonResult>;
   verifyServiceSession(signal: AbortSignal): Promise<void>;
   serviceAuthorityFailed(status: number): void;
   registerWork(value: WorkLifecycle): () => void;
@@ -270,6 +272,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [practice, verifyWorkSession, clearWork, router, refresh]);
   const readServiceMetadata = useCallback((mode: ReadingMode, id: string, signal: AbortSignal) => serviceRead(mode, id, signal, selection => serviceApi.metadata(mode, id, signal, selection ?? undefined)), [serviceRead]);
   const readServiceUnit = useCallback((mode: ReadingMode, id: string, plan: ServicePlan, unitId: string, signal: AbortSignal) => serviceRead(mode, id, signal, selection => serviceApi.unit(mode, id, plan, unitId, signal, selection ?? undefined)), [serviceRead]);
+  // Lesson notes share the service path: fresh session checks around each request, and the same access-failure handling.
+  const readLessons = useCallback((mode: ReadingMode, id: string, operation: LessonOperation, signal: AbortSignal) => serviceRead(mode, id, signal, selection => fetchLessons(mode, id, operation, signal, selection ?? undefined)), [serviceRead]);
   const serviceAuthorityFailed = useCallback((status: number) => { if ([401, 403, 404].includes(status)) { clearWork(); refresh(); } }, [clearWork, refresh]);
   const verifyServiceSession = useCallback(async (signal: AbortSignal) => { try { await verifyWorkSession(signal); } catch (error) { if (!signal.aborted) serviceAuthorityFailed(statusOf(error)); throw error; } }, [verifyWorkSession, serviceAuthorityFailed]);
   const controlledLink = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -286,7 +290,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={refresh}>Check access again</button>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
-        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readWork, readProgress, readServiceMetadata, readServiceUnit, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, concealed: checking || failure !== null }}>
+        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readWork, readProgress, readServiceMetadata, readServiceUnit, readLessons, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, concealed: checking || failure !== null }}>
           {summary.roles.length > 1 && <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] || pathname.startsWith(`${rolePaths[role]}/`) ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>}
           {visibleNotice && <p className="workspace-notice" role="status">{visibleNotice}</p>}
           {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}

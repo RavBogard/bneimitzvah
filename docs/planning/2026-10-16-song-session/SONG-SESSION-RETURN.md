@@ -210,3 +210,62 @@ The UI side of Codex's accepted progress contract (`2689d94`, spec `2026-10-16-v
   - the stale-assignment reload;
   - the unknown-outcome message.
 - **Next:** tutor lesson notes, once Codex publishes the frozen lesson-log ref (`f2aabe24` is reviewed source, not yet published as final). Then Phase 3, admin.
+
+
+## Phase 2, slice 5: lesson notes (2026-10-16)
+
+Built on Codex's published lesson-log backend: `origin/codex/lesson-log-foundation` at `9b914625`, merged (not rebased) into the new branch `design/song-session-lessons`. The merge keeps the frozen `dd28b2b` (tabs) and `6398b3f` (progress) unchanged. No server, schema or migration file is touched.
+
+- **Tutors** get a third tab, **Lessons**, after Reading and Service parts. It shows the student's lesson notes newest first. **Add a lesson** opens a side sheet with the date (today by default) and "What you worked on". The sheet says "The student and their family can read this."
+- **Edit** appears on a note only when the server says `canEdit`. **Delete lesson** is inside the edit sheet and asks first: "Delete this lesson note? It can't be brought back."
+- **Admins** get the same panel below service parts on the admin student page (not tabbed).
+- **Parents, students and child practice** see a read-only **Lesson notes** list below service parts. Its parser rejects any read-only answer that offers `canEdit` or `canDelete`.
+- **Writes are never resent.**
+  - On a conflict or an unclear outcome, the sheet re-reads the list and shows what is really saved.
+  - If the note saved, the sheet closes as saved.
+  - If someone else changed it, the latest version appears in the sheet with the tutor's text kept. Saving again is the tutor's explicit choice to replace it.
+  - If it was deleted elsewhere, the text is kept and saving adds it as a new lesson.
+  - A new lesson keeps its `entryId` across retries, so the backend's exact-replay rule means a retry can never add it twice.
+- **Unsaved notes:**
+  - Closing a sheet with unsaved text, or leaving the student or role, asks "Keep this lesson note?" (Keep writing / Discard note).
+  - The panel registers with `registerWork` and `registerDeparture` and the beforeunload guard, like the service editor.
+  - A routine reload (focus, access check) clears only the list, never the open note.
+  - A session, student or role change discards both.
+- **Access:** `readLessons` in `provider.tsx` goes through the existing `serviceRead` path. That gives session checks before and after each request, the child-practice redirect, and clear-and-refresh on 401/403/404.
+- **Files:**
+  - New: `workspace/lessons/{api.ts, panel.tsx}`, `tests/http-browser/lessons-ui.test.ts`.
+  - Edited: `provider.tsx`, `reading.tsx`, `globals.css`.
+- **Test** (2 cases), covering:
+  - add, with today's date and the family note;
+  - keep and then discard an unsaved note;
+  - edit;
+  - a change made in another tab shown rather than overwritten, then replaced on purpose;
+  - deleting after confirmation;
+  - the stored rows and versions checked through the API;
+  - the parent and student read-only views with no buttons;
+  - a lost request and a lost answer, each settling to exactly one saved lesson.
+  - Local-only captures: `lessons-{tutor-sheet-desktop, tutor-conflict-desktop, tutor-list-desktop, student-mobile}`.
+- **Accessibility fix found by the test:** a label wrapping the textarea made the field's accessible name include the typed text. Each field now has its own `label for`.
+- **Adversarial review (second agent), all findings fixed:**
+  - A second Escape could close the sheet natively and leave hidden state. The dialogs now re-sync on `close`, and Escape is blocked while a save is in flight.
+  - A lesson not found on the first page while older pages exist now keeps its `entryId`, so a retry can't duplicate it.
+  - Focus goes to the note once the sheet can be typed in, to "Keep it" when the delete confirm opens, and back to "Delete lesson" when it closes. Both live regions stay mounted.
+  - `pending` no longer sticks after a 401/403/404, and a failed refresh shows the list's error state.
+  - Hidden control characters are normalized (VT/FF to newline) or named in a message.
+  - "Your earlier save went through" replaces "changed somewhere else" when the tutor's own uncertain save is what landed.
+  - Edit buttons name the lesson's date and the first 40 characters of the note.
+- **Regressions caught by the sweep, fixed:** the sheet now uses its own `lesson-sheet` class, sharing the verse editor's sheet CSS, so `dialog.editor-sheet` stays unique for reading-ui. In my own tab test (service-learning-ui), ArrowLeft from Reading now wraps to Lessons.
+- **Not covered by a browser case:** the admin view, child-practice reads, paging ("Show earlier lessons"), the 401/403/404 clearing path, and a wrong-student answer. The parser rejects those answers, but no test drives them.
+- **Waiting on Daniel (student- and family-visible wording):** "Lesson notes", "No lessons yet" and its empty-state lines, the lesson date and byline format, and "Lessons" as the tutor tab. The tutor-side lines also need his look: "The student and their family can read this.", the save, conflict and delete messages, and "Keep this lesson note?".
+- **Checks on the final tree:**
+  - Typecheck passes; `next build` compiles.
+  - App tests: 800 passed, plus the 1 existing skip. They were run with two workers because the machine was short on memory.
+  - `never-in-repo` passes with the new files staged.
+  - Every browser file passes, run one at a time on a disposable WSL PostgreSQL 16:
+    - lessons-ui 2/2, progress-ui 2/2, study-ui 6/6, student-work-ui 10/10;
+    - tutor-route-ui 4/4, service-learning-ui 13/13, reading-ui 4/4, reading-preview-ui 7/7;
+    - workspace-ui 3/3, portal-ui 7/7, modal-privacy-ui 2/2;
+    - browser 2/2, canonical-navigation 4/4.
+  - The test role and database have been dropped.
+- **For Codex:** the service-draft dialog adaptation and the final integration are yours, as agreed. Nothing is pushed and no migration is applied.
+- **Next:** Phase 3, admin.

@@ -236,6 +236,8 @@ it("puts a tutor's service parts in a tab beside the reading, keeping open mater
   await ui(tab.getByRole("button", { name: "Start", exact: true })).toBeFocused();
   await safe(() => serviceTab.click()); await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
   await safe(() => tab.keyboard.press("Home")); await ui(readingTab).toHaveAttribute("aria-selected", "true"); await ui(readingTab).toBeFocused();
+  // Left from the first tab wraps to the last (Lessons), then steps back to Service parts.
+  await safe(() => tab.keyboard.press("ArrowLeft")); await ui(tabs.getByRole("tab", { name: "Lessons", exact: true })).toHaveAttribute("aria-selected", "true");
   await safe(() => tab.keyboard.press("ArrowLeft")); await ui(serviceTab).toHaveAttribute("aria-selected", "true"); await ui(serviceTab).toBeFocused();
   // An unsent service draft survives the panel being hidden.
   await click(tab, "Choose service parts"); await safe(() => panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ }).check());

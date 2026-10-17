@@ -15,6 +15,7 @@ import { ReadingToolbar } from "./reading-toolbar";
 import { ReadingPrefsScope } from "./reading-prefs";
 import { ProgressStore } from "./progress/store";
 import { LiftProgress, useProgressSummary, VerseMark } from "./progress/marks";
+import { LessonLog, type LessonReload } from "./lessons/panel";
 
 const dayMs = 86_400_000;
 /** "Sat, Jan 2, 2027" and whole days until it, computed on the calendar date only. */
@@ -39,8 +40,8 @@ function AssignmentContext({ row, current = false }: { row: Reading; current?: b
   </article>;
 }
 
-type PageTab = "reading" | "service";
-const pageTabs: [PageTab, string][] = [["reading", "Reading"], ["service", "Service parts"]];
+type PageTab = "reading" | "service" | "lessons";
+const pageTabs: [PageTab, string][] = [["reading", "Reading"], ["service", "Service parts"], ["lessons", "Lessons"]];
 
 export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: ReadingMode; studentId: string; onStudentReload?(student: Student): void }) {
   const { readVerified: read, readWork, readProgress, epoch, busy, selectChild, registerReload, registerWork, completeWork, registerDeparture, guardDeparture } = useWorkspace();
@@ -52,6 +53,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const study = useRef<StudyReload | null>(null);
   const service = useRef<ServiceReload | null>(null);
   const registerService = useCallback((value: ServiceReload) => { service.current = value; return () => { if (service.current === value) service.current = null; }; }, []);
+  const lessons = useRef<LessonReload | null>(null);
+  const registerLessons = useCallback((value: LessonReload) => { lessons.current = value; return () => { if (lessons.current === value) lessons.current = null; }; }, []);
   const registerStudy = useCallback((value: StudyReload) => { study.current = value; return () => { if (study.current === value) study.current = null; }; }, []);
   const studyDenied = useCallback((status: number) => { setResult({ key, error: status }); }, [key]);
   const environment = useRef({ read, readWork, readProgress, mode, studentId, studyDenied, reload: () => undefined as unknown }); environment.current = { read, readWork, readProgress, mode, studentId, studyDenied, reload: () => load().catch(() => undefined) };
@@ -71,7 +74,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   }, [work, needsUnload]);
   const load = useCallback(async () => {
     abort.current?.abort(); const request = new AbortController(), turn = ++sequence.current; abort.current = request;
-    work.pause(); study.current?.clear(); service.current?.clear();
+    work.pause(); study.current?.clear(); service.current?.clear(); lessons.current?.clear();
     let lifecycle = work.lifecycle;
     setResult(previous => previous.key === key ? { ...previous, loading: true } : { key, loading: true });
     try {
@@ -81,7 +84,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       if (request.signal.aborted || turn !== sequence.current || lifecycle !== work.lifecycle) throw new Error("Reading request replaced");
       onStudentReload?.(value.student); work.configure(value, true); progress.configure(value); lifecycle = work.lifecycle; setResult({ key, value, loading: true });
       const kind = value.readings.some(row => row.kind === selectedKindRef.current) ? selectedKindRef.current : value.readings[0]?.kind;
-      await Promise.all([study.current?.reload(value, request.signal), kind ? work.reload(request.signal, kind) : undefined, service.current?.reload(value, request.signal)]);
+      await Promise.all([study.current?.reload(value, request.signal), kind ? work.reload(request.signal, kind) : undefined, service.current?.reload(value, request.signal), lessons.current?.reload(value, request.signal)]);
       if (request.signal.aborted || turn !== sequence.current || lifecycle !== work.lifecycle) throw new Error("Reading request replaced");
       work.accept(lifecycle); completeWork(work);
       setResult({ key, value });
@@ -218,5 +221,6 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close verse editor" disabled={editorBusy} onClick={closeSheet}>{icons.close}</button></div>{editor}
     </dialog> : <div id={editorId} className="reading-editor-anchor">{editor}</div>)}
     {tabPanel("service", <ServiceLearningPanel id={serviceId} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} onDepartureActive={setServiceDepartureActive} />)}
+    {tabPanel("lessons", <LessonLog mode={mode} studentId={studentId} register={registerLessons} tabbed={tabbed} />)}
   </ReadingPrefsScope>;
 }
