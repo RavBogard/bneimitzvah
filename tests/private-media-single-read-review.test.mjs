@@ -8,6 +8,12 @@ import {PRIVATE_MEDIA_PROBE as I} from '../scripts/private-media-oidc-probe.mjs'
 import {PRIVATE_MEDIA_SINGLE_READ_PROBE as R,runPrivateMediaSingleReadProbe as probe,runPrivateMediaSingleWriteProbe as writer,singleWriteBody} from '../scripts/private-media-single-write-probe.mjs';
 const run='cccccccc-cccc-4ccc-8ccc-cccccccccccc',key=`acceptance/${run}/single-write/normal.bin`,origin=`https://${I.storeId.slice(6)}.private.blob.vercel-storage.com`,plainUrl=`${origin}/${key}`;
 const encode=v=>Buffer.from(JSON.stringify(v)).toString('base64url'),blocked=ms=>Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,ms);
+function immutableSpans(source){
+  // Normalize complete line endings before a regex can separate CR from LF.
+  const normalized=source.replace(/\r\n/g,'\n');
+  return [/function selection\(env\)[\s\S]*?(?=\nfunction facade)/,/export async function runPrivateMediaSingleWriteProbe\([\s\S]*?\n}/].map(pattern=>{const span=normalized.match(pattern)?.[0];assert.ok(span);return span;});
+}
+function unchangedWriter(actual,baseline){assert.deepEqual(immutableSpans(actual),immutableSpans(baseline));}
 function environment(){const seconds=Math.floor(Date.now()/1000);return {PRIVATE_MEDIA_SINGLE_WRITE_PROBE_MODE:'read-only-v1',PRIVATE_MEDIA_SINGLE_WRITE_PROBE_STORE_ID:I.storeId,PRIVATE_MEDIA_SINGLE_WRITE_PROBE_RUN_ID:run,
   VERCEL:'1',VERCEL_ENV:'production',VERCEL_PROJECT_ID:I.projectId,VERCEL_ORG_ID:I.teamId,
   VERCEL_OIDC_TOKEN:`${encode({typ:'JWT',alg:'RS256',kid:'review-key'})}.${encode({iss:`https://oidc.vercel.com/${I.teamSlug}`,aud:`https://vercel.com/${I.teamSlug}`,owner:I.teamSlug,owner_id:I.teamId,project:I.projectName,project_id:I.projectId,environment:'production',sub:`owner:${I.teamSlug}:project:${I.projectName}:environment:production`,iat:seconds-1,nbf:seconds-1,exp:seconds+600})}.${encode('synthetic')}`};}
@@ -32,10 +38,18 @@ function fixture(){
 function closed(v){assert.deepEqual(Object.keys(v).sort(),['observations','ok','outcome','phase','readOnly','schema']);assert.equal(v.schema,'private-media-single-read/v1');assert.equal(v.readOnly,true);assert.ok(R.phases.includes(v.phase));assert.deepEqual(Object.keys(v.observations).sort(),['body','contentEncodingPresent','contentLengthExpected','contentLengthPresent','contentTypeExpected','etagMatchesHead','head','metadataAfter','metadataBefore','status','urlConfined','urlExact']);assert.equal(Object.hasOwn(v,'checks'),false);assert.equal(Object.hasOwn(v,'writeAttempted'),false);assert.equal(JSON.stringify(v).includes(run),false);}
 function readerResponse(url,read,headers={},onCancel=()=>{}){return {url:String(url),redirected:false,status:200,headers:new Headers({'content-type':'application/octet-stream',...headers}),body:{getReader(){return {read,cancel:onCancel,releaseLock(){}};},cancel:onCancel}};}
 
+test('review immutability extraction tolerates only whole-source LF/CRLF differences and rejects changed code or spacing',()=>{
+  const lf='function selection(env){return env;}\nfunction facade(){}\nexport async function runPrivateMediaSingleWriteProbe(env){\n  return env;\n}\n';
+  const crlf=lf.replace(/\n/g,'\r\n');
+  unchangedWriter(lf,crlf);unchangedWriter(crlf,lf);
+  // The old post-extraction normalization left this boundary's CR behind.
+  unchangedWriter(lf.replace('\nfunction facade','\r\nfunction facade'),lf);
+  for(const changed of [lf.replace('return env;}','return null;}'),lf.replace('  return env;','  return null;'),lf.replace('  return env;','  return  env;')])assert.throws(()=>unchangedWriter(changed,lf),{code:'ERR_ASSERTION'});
+});
 test('review preserves writer and selection bytes and CLI chooses the read-only schema before refusing identity',async()=>{
   const isolated=await isolatedEnv();try{
     const current=await readFile(new URL('../scripts/private-media-single-write-probe.mjs',import.meta.url),'utf8'),old=execFileSync('git',['show','8caaeda2e24269f4c3b8d872a69d4942931371f2:scripts/private-media-single-write-probe.mjs'],{env:isolated.env,encoding:'utf8'});
-    for(const pattern of [/function selection\(env\)[\s\S]*?(?=\nfunction facade)/,/export async function runPrivateMediaSingleWriteProbe\([\s\S]*?\n}/]){const actual=current.match(pattern)?.[0],baseline=old.match(pattern)?.[0];assert.ok(actual&&baseline);assert.equal(actual.replace(/\r\n/g,'\n'),baseline.replace(/\r\n/g,'\n'));}
+    unchangedWriter(current,old);
     let output;try{output=execFileSync(process.execPath,['scripts/private-media-single-write-probe.mjs'],{env:{...isolated.env,PRIVATE_MEDIA_SINGLE_WRITE_PROBE_MODE:'read-only-v1',PRIVATE_MEDIA_SINGLE_WRITE_PROBE_STORE_ID:I.storeId,PRIVATE_MEDIA_SINGLE_WRITE_PROBE_RUN_ID:run},encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:5000});}catch(error){assert.equal(error.status,1);output=error.stdout;}
     const v=JSON.parse(output);closed(v);assert.equal(v.ok,false);assert.equal(v.observations.metadataBefore,false);
   }finally{await isolated.cleanup();}

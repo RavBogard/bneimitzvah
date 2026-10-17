@@ -16,7 +16,7 @@ Command, from the managed checkout:
 
 `node .local-logs/run-isolated.mjs single-read-independent node --test tests/private-media-single-read-review.test.mjs`
 
-Result: **9/9 passed, 520.62ms**. Log: `.local-logs/single-read-independent.log`. No initial independent failure, retry, test correction, or source fix occurred after the immutable freeze.
+Result: **9/9 passed, 520.62ms**. Log: `.local-logs/single-read-independent.log`. That first local run had no independent failure or source correction; the later hosted Windows test defect and its repair are recorded below.
 
 Distinct checks cover:
 
@@ -31,6 +31,13 @@ The encoding/header disagreement uses an already-decoded synthetic response; it 
 
 Author evidence, attributed rather than independently repeated: new normal11 plus prior69 composed **80/80 passed**, typecheck/default build passed, staged repository protection3/3 passed. Independent isolation3/3 passed (157.07ms), and the staged repository protection3/3 passed (see `.local-logs/single-read-review-isolation.log` and `.local-logs/single-read-review-protection.log`). Final diff checks are clean.
 
+## Hosted Windows test-only correction
+
+Exact hosted run `39061726895`, Windows job `117480898975`, reported Node339/340: the historical-source comparison failed at its selection capture. Root's finished-job log `.local-logs/single-read-windows-job.log` isolated the sole difference to a trailing CR: the lookahead split CRLF before `function facade`, leaving a lone CR inside the captured selection text. Normalizing only after extraction could not remove that orphaned CR. This was an independent-test extraction defect, not a change in product source or the frozen writer.
+
+The owned helper now normalizes CRLF to LF on each whole source input before extracting either immutable span. It neither trims nor otherwise changes whitespace. A new regression covers LF versus CRLF in both directions, the precise mixed boundary that failed, and rejection of changed selection code, changed writer code, and changed intra-line spacing. The actual historical Git comparison, isolated CLI refusal, native SDK GET-only tests and all security assertions remain.
+
+Focused command: `node .local-logs/run-isolated.mjs single-read-crlf-own node --test tests/private-media-single-read-review.test.mjs`: **10/10 passed, 527.73ms**. Composed command: `node .local-logs/run-isolated.mjs single-read-crlf-composed node --test tests/private-media-single-read-review.test.mjs tests/private-media-single-read-probe.test.mjs tests/private-media-single-write-probe.test.mjs tests/private-media-single-write-review.test.mjs tests/private-media-object-probe.test.mjs tests/private-media-object-review.test.mjs tests/private-media-oidc-probe.test.mjs tests/private-media-oidc-review.test.mjs tests/private-media-oidc-diagnostic-review.test.mjs tests/private-media-oidc-hosted-review.test.mjs tests/isolation.test.mjs`: **90/90 passed, 1.81s**. Both use the scrubbed isolated runner with cleanup. Product source remains exactly `f9ed95c`; no provider, credentials, operational journals, native diagnosis or held release were accessed or advanced. Final staged repository protection3/3 passed (`.local-logs/single-read-crlf-protection.log`); diff checks were clean.
 ## Evidence limits and remaining gate
 
 There were no provider calls, credentials, operational journals, database operations, real media or deployment actions in this review. All generated response bodies are synthetic and MockAgent prevents external SDK network access. Product source remains unchanged from `f9ed95c`.
