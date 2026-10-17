@@ -1,0 +1,27 @@
+# Runtime read independent implementation review
+
+Accepted bounded source `f4e4d1c49adbf001664928a60856d3c88a8ccee0`, including the preceding separate C-test isolation correction `b1c3775`. No additional source blocker found. This is independent offline source/behavior acceptance, not observed Vercel runtime identity, provider acceptance, protection configuration, recording namespace proof or media activation. No source repairs were made.
+
+Reviewed source blobs: `private-transport.ts` `67d87d98cc31e7e1cb2b96c909c572f562002e79`; `runtime-read-probe.ts` `056f7104fd93a77579efc71881bfd0bb37c44d85`; route `ddf6f734cd1af86a3923cc11f31b276d5b644fde`; unchanged `runtime-oidc.ts` `1f67eed6223d70531f81251a5d0169fe435cf213`.
+
+## Findings and boundaries
+
+The shared engine stays private. Its new fixed purpose admits only metadata/direct GET for the literal accepted normal R33 synthetic object; the exported acceptance factory exposes only verify and returns frozen boolean/phase facts. There is no caller key/URL/header/token/body selector or write/delegation member. The normal C wrapper retains all five methods and its closed recording-slot namespace; the refactor preserves C body snapshots, metadata string requirement, early persistent response-error ownership and mandatory retirement permit tag. Existing actual pinned SDK comparison and all repaired C regressions pass in composition. Constructor mock seams remain trusted internal dependencies, not application request configuration.
+
+The Node/force-dynamic route selects before lazy credential import. All three isolated flags, correct Production/project/deployment metadata and exact generated request host are required. Default/partial/mixed, Preview/Development and normal/custom aliases refuse. Incoming headers/query parameters do not supply context credentials, provider/key or flags. Explicit HEAD and other supported method exports avoid Next's automatic HEAD-to-GET execution; GET itself is method-first. Actual pinned Next automatic-method dispatch with the probe ENABLED remained zero-I/O for all nonGET methods.
+
+The fixed factory binds one acquired current context token across both operations and retains C's complete-byte, identity-encoding, MIME/length/strong-tag/hash/TLS/header/error/body/empty-read/idle/total constraints. Root's20-second parent budget includes lazy import; two operations are sequential and each remains under C10s total/5s progress limits. Independent synchronous-starvation and late-settlement cases fail without starting later work or rewriting a completed deadline response. Metadata/parent/idle/context failures cannot substitute a key, retry or advance into body reads. Early rejected response owns repeated late errors and throwing cleanup without reflecting provider details.
+
+Responses are fixed schema/phase/boolean facts, private,no-store/nosniff, with no tokens/claims/raw errors/tags/object paths/URLs/media. Malformed result accessors/symbols/extra fields and contradictory success cannot manufacture an observed result. Native metadata labels are selected inputs and do not establish that this Function actually receives them or that a locally decoded JWT signature is valid; the provider remains the signature authority.
+
+## Independent evidence
+
+Commands used the existing checkout-local isolated runner, with no inherited service credentials and blocked HTTPS mocks only:
+
+- `node .local-logs/run-isolated.mjs runtime-read-independent node node_modules/vitest/vitest.mjs run tests/app/private-media-runtime-read-review.test.ts`: **9/9 PASS**,96ms testtime/287ms runner; initial run had no failures. `.local-logs/runtime-read-independent.log`.
+- Composed independent review + author runtime-read, C transport normal/review and runtime-OIDC normal/review: **54/54 across6 files PASS**. `.local-logs/runtime-read-independent-composed.log`. The unchanged PCM/policy suites already passed in the author's173-case composition; they were not redundantly rerun here.
+- Final composed typecheck **PASS**; Node isolation **3/3 PASS**. `.local-logs/runtime-read-independent-type.log`, `runtime-read-independent-isolation.log`. Reuse author's default build evidence: source/dependencies unchanged by this review.
+- Owned staged repository-protection result follows below. Exact source blobs remained frozen; only this report and the new review test enter the independent commit.
+
+Root still owns separate operator review/exact integration gates, immutable protected deployment/run binding, runtime flag delivery, anonymous harmless-path GET AND proof-path HEAD SSO challenge evidence, and an existing authenticated browser GET. There is no public test capability, curl/bypass key, persistent config change, provider/control-plane/browser/credential/journal/database operation or deployment in this review. Native success can establish only the shared engine/current request identity/fixed non-audio marker, not normal recording-key namespace or an enabled recording workflow. Per-invocation budgets are not cumulative traffic/spending limits.
+Final owned staged repository protection: **3/3 PASS**; see `.local-logs/runtime-read-independent-protection.log`. Final staged diff check clean. Independent acceptance binds the four source blobs above unchanged; only the two owned review paths are committed.
