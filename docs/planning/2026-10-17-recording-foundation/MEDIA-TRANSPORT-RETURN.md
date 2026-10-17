@@ -43,4 +43,3 @@ Final repaired staged protection3/3 PASS36.30s: `.local-logs/media-transport-rep
 ## Root integration acceptance, 2026-10-17
 
 Repaired source `a071e5f6`, peer `f917d1a9` and test-only isolation repair `b1c3775c` are integrated with B. All four [exact hosted jobs39068315180](https://github.com/RavBogard/bneimitzvah/actions/runs/39068315180) at `b1de975d07af0bb8e10a5ce46f535cb4b3ce358e` pass: Node360 per OS, app1084 Linux/1083 plus one existing skip Windows, SQL42/restricted PostgreSQL153, authenticated browser137/public15, type/default builds. Root full local Node360/app1083 plus that skip pass. Initial combined isolation failure and correction remain in the peer follow-up; no checker was weakened. Native request-context/direct-GET behavior, the recording namespace and composed media workflow remain unproved. No route/provider/worker/real audio is activated by this acceptance.
-
