@@ -8,3 +8,4 @@ export * from "./progress-schema";
 export * from "./lesson-log-schema";
 export * from "./practice-calendar-schema";
 export * from "./recording-schema";
+export * from "./recording-receipt-schema";
