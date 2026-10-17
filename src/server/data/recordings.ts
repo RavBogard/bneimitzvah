@@ -32,7 +32,11 @@ export async function asset<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>
   const [row] = await tx.select().from(t).where(and(scope(actor), eq(t.assetId, assetId))).for("update"); return row ?? null;
 }
 export async function insert<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: RecordingActor, descriptor: VerifiedRecordingDescriptor, createdAt: Date) {
-  const [row] = await tx.insert(t).values({ id: randomUUID(), tenantId: actor.tenantId, studentId: actor.studentId, assetId: descriptor.assetId,
+  return insertWithId(tx, actor, randomUUID(), descriptor, createdAt);
+}
+/** Internal trusted composition only; an ID supplies no authority. */
+export async function insertWithId<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: RecordingActor, id: string, descriptor: VerifiedRecordingDescriptor, createdAt: Date) {
+  const [row] = await tx.insert(t).values({ id, tenantId: actor.tenantId, studentId: actor.studentId, assetId: descriptor.assetId,
     contentSha256: descriptor.contentSha256, ...descriptor.media, state: "private", revision: 1, createdAt }).onConflictDoNothing().returning();
   return row ?? null;
 }
