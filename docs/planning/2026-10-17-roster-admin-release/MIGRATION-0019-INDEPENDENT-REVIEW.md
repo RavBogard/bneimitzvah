@@ -30,3 +30,13 @@ Frozen SHA-256:
 | tests/postgres/release-roster.integration.mjs | 41f69e29460b6ed859013474f275a455a7d864eecb1820827e6a20befa03e798 |
 
 No blocking source finding remains. Root retains commit/repository gates, actual default source validation from the exact LF candidate, reviewed target check-only and explicit release sequencing. None is represented as already completed here.
+
+## Hosted SQL file-isolation follow-up
+
+Hosted run `39028397076` reached the combined Node SQL glob and recorded18 passed/6 failed nodes. Old-operator lost-ack and new-operator postcommit cases received not-started instead of their expected migration/committed outcomes; the old CRLF case explicitly failed in recheck. This failed run is retained as evidence, not relabeled a migration success.
+
+Independent read-only source/log review found that the SQL command launches its three files concurrently. Both release fixture families create/drop uniquely owned roles and memberships on the same PostgreSQL cluster. Their databases isolate table data, but the protected operator snapshots deliberately include all pg_roles and pg_auth_members. Concurrent fixture setup/cleanup can therefore change before/recheck snapshots and cause a correct pre-migration refusal. Per-database operator advisory locks do not serialize fixture creation in other databases. The observed phases are consistent with this mechanism; exact changed-role snapshot deltas were not captured, so the cause is source-supported rather than a measured interleaving trace.
+
+The independently accepted repair is exactly one package.json script change: `node --test --test-concurrency=1 "tests/postgres/*.integration.mjs"`. The glob and every SQL test remain. Production role comparisons, both operators, tests and their explicit physical-connection contention cases are unchanged. This serializes test files, not the concurrency intentionally exercised inside the cases. Source diff and whitespace checks passed on base `1d9d0f78622e712dcd99ceea9548ac8830fdb17f`. No additional independent test run was performed for this line-only review. The author's combined actual24-node SQL run is pending the existing full-app lane finishing; replacement hosted CI also remains pending.
+
+Separately attributed root evidence: exact LF candidate1d9 passed the default protected source proof (20 migration pins) and actual production PostgreSQL18 check-only, returning ledger19. No apply occurred. This closes the earlier default-source/target compatibility uncertainty for that candidate; it does not claim application or turn the failed hosted suite green.
