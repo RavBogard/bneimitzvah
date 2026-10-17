@@ -229,3 +229,16 @@ Left as noted:
 - A word ending in voiceless ך (for example בַדֶּרֶךְ) still copies its full breath after a pause.
 
 The test that the breath is not faded twice is still missing.
+
+## Four passages: P01, P02, P09, P11 (2026-10-16, private)
+
+Daniel recorded `2026-10-16-daniel-four-passages` (256 s, one take) from a script page: 9 s of room silence, then each passage spoken and then sung. Where he restarted, the last complete attempt is used; `segments.json` beside the take records the cuts and his remarks. The page's text was too small to read with glasses, and it has since been enlarged.
+
+He said he made up the trope melodies ("the timing should be fine; just the melodies off"). So the targets use his chant's syllable timing, with the same chant-pause removal as V'ahavta v9, and the engine's own score for the melody: two packs, `daniel-four-torah-sungtime` and `daniel-four-haftarah-sungtime`.
+
+GATE: timed the engine's melody to an improvised chant — proceeded because Daniel judged the timing sound, the melody comes from the score, and the render is private research audio under G3.
+
+**Aligner change:** at a reading pause in P11 (1.6 s before וַיִּפָּקֵד), CTC had marked the word's first consonant straight after the previous word. The consonant then swallowed the pause and failed `consonant-fit`. `propose_alignment.py` now also counts a gap of `--pause` or more between a word's first consonant and the next phone as a pause before the word, with the consonant starting where the loudness rises. The other three passages' proposals are unchanged byte for byte.
+
+Run `four-Bhuman-v1b` (floor 0.25, provisional word review `review-daniel-four-spoken-words-1p`): median vowel ratio 1.4–1.6 for P01, P02 and P09, and 2.2 for P11, whose spoken reading is faster than his chant. Awaiting Daniel's listening on a flag page.
+

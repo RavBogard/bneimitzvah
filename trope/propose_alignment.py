@@ -10,7 +10,8 @@ via torchaudio.functional.forced_align. CTC emits peaky spans (one or a few 20 m
 sound's start. With --boundary onset (default) the boundary between two phones is the next span's start plus
 --onset-offset; the older midpoint rule put boundaries audibly too early (Daniel's 2026-10-16 listening:
 word endings clipped, the next word starting with the previous word's sound, worst at doubled consonants and
-vowel-initial words). A gap of at least --pause seconds at a word boundary becomes a proposed pause, whose
+vowel-initial words). A gap of at least --pause seconds at a word boundary, or right after a word's first
+consonant, becomes a proposed pause before that word, whose
 edges, like the verse's first and last edges, follow the loudness (--edge-db above the clip's noise floor;
 the first edge looks back at most --lead-back seconds). The proposal covers the take contiguously. Every boundary is a proposal: reviewed stays null, so trope/human-retime.mjs refuses the record
 until a person reviews it. Nothing here claims alignment accuracy.
@@ -133,6 +134,18 @@ def main():
             # A pause: the last sound runs until its loudness fades; the next starts where it rises.
             p0 = fade_out(prev_end, nxt - 0.05)
             p1 = fade_in(nxt, p0 + 0.02)
+            if p1 - p0 >= 0.05:
+                events.append((p0, p1)); edges.append(("pause", p0, p1)); continue
+        if word_boundary and tokens[i]["role"] != "vowel" and i + 1 < len(spans) and tokens[i + 1]["word"] == tokens[i]["word"] \
+                and spans[i + 1].start * frame_s - spans[i].end * frame_s >= a.pause:
+            # CTC can mark a word's first consonant right after the previous word and leave the reader's pause
+            # (a look at the text, a breath) between that consonant and the rest of the word, so the consonant
+            # swallows the pause. The pause comes before the word: the consonant starts where the loudness
+            # rises ahead of the next phone, and keeps at least 30 ms before that phone's own boundary.
+            after = spans[i + 1].start * frame_s
+            after_edge = after + a.onset_offset if a.boundary == "onset" else (spans[i].end * frame_s + after) / 2
+            p0 = fade_out(prev_end, after - 0.1)
+            p1 = min(fade_in(after, p0 + 0.02), after_edge - 0.03)
             if p1 - p0 >= 0.05:
                 events.append((p0, p1)); edges.append(("pause", p0, p1)); continue
         # Between sounds: CTC spans mark a sound's start, so the boundary sits at the next span's start
