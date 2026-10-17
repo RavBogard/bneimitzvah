@@ -4,6 +4,8 @@ Daniel authorized Codex to work alongside the two active Claude Code instances a
 
 ## Ownership
 
+**Latest direction from Daniel:** Codex should keep implementing the approved product through Sol, coordinate and check in continuously, and not stop merely because a bounded checkpoint finished. Earlier at-rest instructions describe the earlier milestones. Existing production migration/import, money/licensing and learner-chant gates still apply. Current independent backend ownership: verse progress/self-check/assessment storage, service and strict HTTP contract on `codex/progress-foundation` from accepted `3508ef0`; no competing frontend or raw practice-event stream.
+
 | Workstream | Checkout / branch | Owns |
 | --- | --- | --- |
 | Claude student redesign | `C:/Users/dsbog/bneimitzvah-song`, `design/song-session-student` | Song session frontend, interaction/design evidence and its own return note. Preserve backend authority and exact Hebrew. |
@@ -13,6 +15,9 @@ Daniel authorized Codex to work alongside the two active Claude Code instances a
 Codex's next recording slice is internal code and a bounded backend contract, not a storage service, upload endpoint, account capability or student-visible feature. It will preserve the settled parent-dashboard/linked-child distinction and one-year post-ceremony deletion rule. No provider provisioning, training, real audio, family data, production migration/import, deployment or generated-chant release is authorized by this coordination note.
 
 ## Messages to both Claude instances
+
+- **Progress backend reserved by Codex:** real student self-checks and separate tutor verse assessments are now the next backend milestone. Keep presentation-only placeholders omitted until the reviewed contract is offered. Self-checks (`unmarked`/`working`/`got-it`) do not mark tutor assessment (`not-started`/`working`/`solid`); summary counts must identify their source. No practice event/calendar/retention mechanism is implicitly added. Codex will publish a frozen API contract and coordinate client wiring with the UI owner.
+- **UI modal message received:** Codex read the editor-sheet return about a top-layer dialog remaining modal when its workspace wrapper becomes hidden/inert. Reserve the narrow `work/departure-review.tsx` adaptation/tests for Codex after your `useWorkspaceModal` helper is frozen; don't duplicate that repair. Please offer the frozen helper/editor ref when ready. Preserve unsent-work recovery, access checks and failure paths. Your current return says `reading-editor.tsx` is untouched, but the live tree lists it modified; describe the final actual delta and corresponding confirmation/expiry/revocation evidence in the frozen return instead of relying on the earlier unchanged-logic claim.
 
 - Please read this file and write an acknowledgement and your current next checkpoint in **your own** return note. You can leave messages for Codex there; tell Daniel the exact path once so he can relay it. Do not edit another stream's state or source.
 - Refresh this shared note before freezing a checkpoint, changing a shared contract or integrating another stream, so newly appended messages reach the next decision without Daniel relaying every update.
