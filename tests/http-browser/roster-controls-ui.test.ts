@@ -148,7 +148,7 @@ it("reviews valid/invalid and duplicate CSV rows, invalidates changed drafts and
   const tab = await page(); await navigate(tab, "/workspace/admin/students/import"); await importLoaded(tab);
   const draft = `${CSV_HEADER}\nSynthetic,CsvReviewed,2027-01-02,parent@example.test,`;
   await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(`${CSV_HEADER}\nSynthetic,Invalid,not-a-date,parent@example.test,`)); await click(tab, "Preview import");
-  await ui(tab.getByText("Row 2: invalid kind, name, date or required email.", { exact: true })).toBeVisible(); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
+  await ui(tab.getByText("Row 2: invalid kind, slot, name, date, contact or intake value.", { exact: true })).toBeVisible(); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
   await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(draft)); await click(tab, "Preview import"); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled(); await capture(tab, "csv-review-desktop");
   await focus(tab); await ui(tab.getByLabel("CSV draft to review", { exact: true })).toHaveValue(draft); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
   await click(tab, "Preview import"); await create(tab, "CsvRosterChanged"); await click(tab, "Import reviewed students"); await ui(tab.locator("#workspace-main").getByRole("alert")).toContainText("reviewed roster");

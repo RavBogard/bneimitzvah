@@ -10,7 +10,7 @@ import { parsePick,type Pick } from "../../lib/readings/leyning.mjs";
 import { expandReadingRanges,type CeremonyDate,type VerseCounts } from "../../lib/readings/ranges";
 import { proposeReading,ReadingUnavailable,type Calendar,type Snapshot } from "../../lib/readings/proposals";
 import { createBindings,digest } from "./bindings";
-import { identifier,parseStudentCsv,revision,studentInput,type StudentInput } from "./validation";
+import { identifier,parseStudentCsv,revision,studentInput,type StudentInput,type CsvParse } from "./validation";
 import { readingDate } from "../../lib/readings/reading-date";
 import { validatedSnapshot } from "./preparation";
 import { aliyahStarts } from "../../lib/readings/aliyah-starts";
@@ -47,6 +47,22 @@ function duplicates(rows:StudentInput[],existing:StudentInput[],rowNumbers:numbe
   const seen=new Set(existing.map(duplicateKey));const indices:number[]=[];
   rows.forEach((row,index)=>{const key=duplicateKey(row);if(seen.has(key))indices.push(rowNumbers[index]);seen.add(key);});return indices;
 }
+const normalizedTutorName=(value:string)=>value.normalize("NFKC").trim().replace(/\s+/g," ").toLowerCase();
+function matchedImport(parsed:CsvParse,tutors:Awaited<ReturnType<typeof data.importTutors>>){
+  const names=new Set(parsed.rows.map(row=>row.importMetadata?.tutorName).filter((name):name is string=>!!name).map(normalizedTutorName));
+  const relevant=tutors.filter(tutor=>names.has(normalizedTutorName(tutor.name)));
+  const tutorMatches:{row:number;status:"matched"|"unmatched"|"ambiguous"}[]=[],missingSecondParentRows:number[]=[];
+  const rows=parsed.rows.map((row,index)=>{
+    const metadata=row.importMetadata;if(!metadata)return row;
+    if(!metadata.parent2Name || !row.secondParentEmail)missingSecondParentRows.push(parsed.rowNumbers[index]);
+    if(!metadata.tutorName)return row;
+    const matches=relevant.filter(tutor=>normalizedTutorName(tutor.name)===normalizedTutorName(metadata.tutorName!));
+    const tutorMatch=matches.length===1?{status:"matched" as const,grantId:matches[0].grantId}:{status:matches.length?"ambiguous" as const:"unmatched" as const};
+    tutorMatches.push({row:parsed.rowNumbers[index],status:tutorMatch.status});
+    return {...row,importMetadata:{...metadata,tutorMatch}};
+  });
+  return {rows,tutorMatches,missingSecondParentRows,tutorSnapshot:digest(relevant)};
+}
 
 export function createStudentService<Q extends PgQueryResultHKT>(input:{
   access:ReturnType<typeof createAccessService<Q>>; signingSecret:string;
@@ -60,7 +76,7 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
     return input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
       const rows=await data.roster(tx,actor.tenantId);
       if(rows.length>5000)throw new AccessDenied(403);
-      return rows.map(({id,firstName,lastName,ceremonyDate,serviceSlot,studentKind,parentEmail,ownEmail,disabledAt,revision})=>({id,firstName,lastName,ceremonyDate,serviceSlot,studentKind,parentEmail,ownEmail,disabledAt,revision}));
+      return rows.map(({id,firstName,lastName,ceremonyDate,serviceSlot,studentKind,parentEmail,ownEmail,hebrewName,secondParentEmail,importMetadata,disabledAt,revision})=>({id,firstName,lastName,ceremonyDate,serviceSlot,studentKind,parentEmail,ownEmail,hebrewName,secondParentEmail,importMetadata,disabledAt,revision}));
     });
   }
   async function create(request:CookieMutationRequest,selection:Mode&{student:unknown}){
@@ -79,6 +95,7 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       const current=await data.editableStudent(tx,actor.tenantId,id);
       if(!current || current.disabledAt)throw new AccessDenied(404);
       if(current.revision!==expected)return conflict();
+      if(values.ownEmail!==null && values.ownEmail===(values.secondParentEmail===undefined?current.secondParentEmail:values.secondParentEmail))throw new AccessDenied(403);
       const updated=await data.updateStudent(tx,actor.tenantId,id,expected,values);
       if(!updated)return conflict();
       const readingNeedsReview=current.ceremonyDate!==values.ceremonyDate || current.serviceSlot!==values.serviceSlot;
@@ -106,10 +123,15 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
     return input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
       requireCookieMutation(request,actor.origin);
       const existing=await data.roster(tx,actor.tenantId);if(existing.length>5000)throw new AccessDenied(403);
+      assertSessionLive(actor.authSessionExpiresAt);
+      const tutors=parsed.rows.some(row=>row.importMetadata?.tutorName)?await data.importTutors(tx,actor.tenantId):[];if(tutors.length>5000)throw new AccessDenied(403);
+      assertSessionLive(actor.authSessionExpiresAt);
+      const matched=matchedImport(parsed,tutors);
       const duplicateRows=duplicates(parsed.rows,existing,parsed.rowNumbers);
       const canConfirm=parsed.issues.length===0 && (!duplicateRows.length || selection.allowDuplicates);
-      const binding=canConfirm?bindings.sign({purpose:"student-import",actor:actorBinding(actor),input:digest(selection.csv),roster:rosterState(existing),allowDuplicates:selection.allowDuplicates}):null;
-      return {validRows:parsed.rows.length,issues:parsed.issues,duplicateRows,requiresDuplicateConfirmation:duplicateRows.length>0,canConfirm,binding};
+      const binding=canConfirm?bindings.sign({purpose:"student-import",actor:actorBinding(actor),input:digest(selection.csv),roster:rosterState(existing),tutors:matched.tutorSnapshot,allowDuplicates:selection.allowDuplicates}):null;
+      return {validRows:parsed.rows.length,issues:parsed.issues,duplicateRows,requiresDuplicateConfirmation:duplicateRows.length>0,canConfirm,binding,
+        tutorMatches:matched.tutorMatches,missingSecondParentRows:matched.missingSecondParentRows,tutorAssignmentsPending:true as const};
     });
   }
   async function confirmImport(request:CookieMutationRequest,selection:Mode&{csv:string;allowDuplicates:boolean;binding:string}){
@@ -119,10 +141,16 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       requireCookieMutation(request,actor.origin);
       if(!sameActor(claim,actor) || claim.input!==digest(selection.csv) || claim.allowDuplicates!==selection.allowDuplicates)throw new AccessDenied(403);
       const existing=await data.roster(tx,actor.tenantId);if(existing.length>5000)throw new AccessDenied(403);
+      assertSessionLive(actor.authSessionExpiresAt);
       if(claim.roster!==rosterState(existing))return conflict();
+      const tutors=parsed.rows.some(row=>row.importMetadata?.tutorName)?await data.importTutors(tx,actor.tenantId):[];if(tutors.length>5000)throw new AccessDenied(403);
+      assertSessionLive(actor.authSessionExpiresAt);
+      const matched=matchedImport(parsed,tutors);
+      if(claim.tutors!==matched.tutorSnapshot)return conflict();
       if(duplicates(parsed.rows,existing,parsed.rowNumbers).length && !selection.allowDuplicates)throw new AccessDenied(403);
       const ids:string[]=[];
-      for(const values of parsed.rows){const student=await data.insertStudent(tx,actor.tenantId,values);await data.audit(tx,actor,"student.import",student.id);ids.push(student.id);}
+      for(const values of matched.rows){assertSessionLive(actor.authSessionExpiresAt);const student=await data.insertStudent(tx,actor.tenantId,values);await data.audit(tx,actor,"student.import",student.id);ids.push(student.id);}
+      assertSessionLive(actor.authSessionExpiresAt);
       return {ok:true as const,ids};
     });
   }

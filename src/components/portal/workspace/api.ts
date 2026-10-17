@@ -7,8 +7,10 @@ import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 export type BaseMode = "student" | "parent" | "tutor" | "admin";
 export type ReadingMode = BaseMode | "child-practice";
 export type Student = { id: string; firstName: string; lastName: string; ceremonyDate: string; revision: number };
-export type RosterStudent = Student & { studentKind: "child" | "adult"; serviceSlot: "morning" | "havdalah" | "unknown"; parentEmail: string | null; ownEmail: string | null; disabledAt: string | null };
-export type StudentInput = Omit<RosterStudent, "id" | "revision" | "disabledAt">;
+export type ImportMetadata={version:1;parent1Name:string|null;householdPhone:string|null;parent2Name:string|null;parashahLabel:string|null;tutorName:string|null;
+  tutorMatch:{status:"matched";grantId:string}|{status:"unmatched"|"ambiguous"}|null;adminNotes:string|null};
+export type RosterStudent = Student & { studentKind: "child" | "adult"; serviceSlot: "morning" | "havdalah" | "unknown"; parentEmail: string | null; ownEmail: string | null; disabledAt: string | null;hebrewName?:string|null;secondParentEmail?:string|null;importMetadata?:ImportMetadata|null };
+export type StudentInput = Omit<RosterStudent, "id" | "revision" | "disabledAt" | "importMetadata">;
 export type Context = { id: string; authorityRevision: number; studentId: string; studentRevision: number; expiresAt: string };
 export type Selection = { handle: string; context: Context };
 export type Reading = { id: string; kind: "torah" | "haftarah"; revision: number; ranges: string[]; verses: string[]; needsReview: boolean; aliyahStarts:string[]|null;
@@ -27,11 +29,29 @@ function instant(value: unknown): string { if (typeof value !== "string" || !Num
 function date(value: unknown): string { const s = text(value, 10), parsed = new Date(s + "T00:00:00Z"); if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== s) return bad(); return s; }
 const studentKeys = ["id", "firstName", "lastName", "ceremonyDate", "revision"];
 function studentFields(row: Record<string, unknown>): Student { return { id: identifier(row.id), firstName: text(row.firstName), lastName: text(row.lastName), ceremonyDate: date(row.ceremonyDate), revision: positive(row.revision) }; }
+function intakeText(value:unknown,max:number,multiline=false):string|null {
+  if(value===null)return null;
+  if(typeof value!=="string" || !value.trim() || value!==value.trim() || new TextEncoder().encode(value).length>max || (multiline?/[\x00-\x09\x0b-\x1f\x7f-\x9f]/:/[\x00-\x1f\x7f-\x9f]/).test(value) || /[<>]/.test(value))return bad();
+  return value;
+}
+function importMetadata(value:unknown):ImportMetadata|null {
+  if(value===null)return null;
+  const row=object(value,["version","parent1Name","householdPhone","parent2Name","parashahLabel","tutorName","tutorMatch","adminNotes"]);if(row.version!==1)return bad();
+  let tutorMatch:ImportMetadata["tutorMatch"]=null;
+  if(row.tutorMatch!==null){
+    if(!row.tutorMatch || typeof row.tutorMatch!=="object")return bad();
+    const match=object(row.tutorMatch,"status" in row.tutorMatch && row.tutorMatch.status==="matched"?["status","grantId"]:["status"]);
+    if(match.status==="matched")tutorMatch={status:"matched",grantId:identifier(match.grantId)};
+    else if(match.status==="unmatched" || match.status==="ambiguous")tutorMatch={status:match.status};else return bad();
+  }
+  return {version:1,parent1Name:intakeText(row.parent1Name,400),householdPhone:intakeText(row.householdPhone,100),parent2Name:intakeText(row.parent2Name,400),parashahLabel:intakeText(row.parashahLabel,400),tutorName:intakeText(row.tutorName,400),tutorMatch,adminNotes:intakeText(row.adminNotes,4096,true)};
+}
 export function parseStudents(value: unknown, roster = false): Student[] | RosterStudent[] {
   const rows = object(value, ["students"]).students;
   if (!Array.isArray(rows) || rows.length > (roster ? 5000 : 100)) return bad();
   const result = rows.map(value => {
-    const row = object(value, roster ? [...studentKeys, "studentKind", "serviceSlot", "parentEmail", "ownEmail", "disabledAt"] : studentKeys), student = studentFields(row);
+    const rich=roster && !!value && typeof value==="object" && Object.hasOwn(value,"importMetadata");
+    const row = object(value, roster ? [...studentKeys, "studentKind", "serviceSlot", "parentEmail", "ownEmail", "disabledAt",...(rich?["hebrewName","secondParentEmail","importMetadata"]:[])] : studentKeys), student = studentFields(row);
     if (!roster) return student;
     if (row.studentKind !== "child" && row.studentKind !== "adult") return bad();
     const studentKind = row.studentKind;
@@ -40,7 +60,9 @@ export function parseStudents(value: unknown, roster = false): Student[] | Roste
     const mailbox = (value: unknown) => { const result = text(value, 254); if (!/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(result) || result !== result.trim().toLowerCase()) return bad(); return result; };
     const parentEmail = row.parentEmail === null ? null : mailbox(row.parentEmail), ownEmail = row.ownEmail === null ? null : mailbox(row.ownEmail);
     if ((studentKind === "child" && parentEmail === null) || (studentKind === "adult" && ownEmail === null) || (ownEmail !== null && ownEmail === parentEmail)) return bad();
-    return { ...student, studentKind, serviceSlot, parentEmail, ownEmail, disabledAt: row.disabledAt === null ? null : instant(row.disabledAt) };
+    const intake=rich?{hebrewName:intakeText(row.hebrewName,400),secondParentEmail:row.secondParentEmail===null?null:mailbox(row.secondParentEmail),importMetadata:importMetadata(row.importMetadata)}:{};
+    if(ownEmail!==null && intake.secondParentEmail===ownEmail)return bad();
+    return { ...student, studentKind, serviceSlot, parentEmail, ownEmail, disabledAt: row.disabledAt === null ? null : instant(row.disabledAt),...intake };
   });
   if (new Set(result.map(row => row.id)).size !== result.length) return bad();
   return result;

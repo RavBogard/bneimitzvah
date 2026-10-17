@@ -74,10 +74,12 @@ function staffMode(value: unknown): "admin" | "tutor" { const result = baseMode(
 const objectBody = async (request: Request, required: string[], optional: string[] = [], profile: "ordinary" | "binding" | "csv" | "work" = "ordinary") =>
   closedObject(await readJsonBody(request, profile), required, optional);
 function studentInput(value: unknown) {
-  const row = closedObject(value, ["firstName", "lastName", "ceremonyDate"], ["studentKind", "serviceSlot", "parentEmail", "ownEmail"]);
+  const row = closedObject(value, ["firstName", "lastName", "ceremonyDate"], ["studentKind", "serviceSlot", "parentEmail", "ownEmail", "hebrewName", "secondParentEmail"]);
   return { firstName: text(row.firstName, 100), lastName: text(row.lastName, 100), ceremonyDate: text(row.ceremonyDate, 10), studentKind: row.studentKind, serviceSlot: row.serviceSlot,
     parentEmail: row.parentEmail === undefined || row.parentEmail === null ? null : text(row.parentEmail, 254, 0),
-    ownEmail: row.ownEmail === undefined || row.ownEmail === null ? null : text(row.ownEmail, 254, 0) };
+    ownEmail: row.ownEmail === undefined || row.ownEmail === null ? null : text(row.ownEmail, 254, 0),
+    ...(row.hebrewName === undefined ? {} : { hebrewName: row.hebrewName === null ? null : text(row.hebrewName, 400, 0) }),
+    ...(row.secondParentEmail === undefined ? {} : { secondParentEmail: row.secondParentEmail === null ? null : text(row.secondParentEmail, 254, 0) }) };
 }
 const studentView = (s: StudentView) => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, ceremonyDate: s.ceremonyDate, revision: s.revision });
 const contextView = (c: PracticeContextView | null) => c ? { id: c.id, authorityRevision: c.authorityRevision, studentId: c.studentId, studentRevision: c.studentRevision, expiresAt: c.expiresAt } : null;
@@ -247,7 +249,9 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         if (request.method === "GET") {
           const rows = await runtime.students.listRoster(request, { mode: "admin" });
           return privateJson({ students: rows.map(row => ({ id: row.id, firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate,
-            studentKind: row.studentKind, serviceSlot: row.serviceSlot, parentEmail: row.parentEmail, ownEmail: row.ownEmail, disabledAt: row.disabledAt?.toISOString() ?? null, revision: row.revision })) });
+            studentKind: row.studentKind, serviceSlot: row.serviceSlot, parentEmail: row.parentEmail, ownEmail: row.ownEmail,
+            hebrewName: row.hebrewName, secondParentEmail: row.secondParentEmail, importMetadata: row.importMetadata,
+            disabledAt: row.disabledAt?.toISOString() ?? null, revision: row.revision })) });
         }
         const body = await objectBody(request, ["student"]), value = await runtime.students.create(request, { mode: "admin", student: studentInput(body.student) });
         return privateJson({ id: value.id, revision: value.revision }, 201);
@@ -269,7 +273,8 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         if (selected.kind === "csv-preview") {
           const value = await runtime.students.previewImport(request, { mode: "admin", csv, allowDuplicates });
           return privateJson({ validRows: value.validRows, issues: value.issues.map(issue => ({ row: issue.row, code: issue.code })), duplicateRows: value.duplicateRows,
-            requiresDuplicateConfirmation: value.requiresDuplicateConfirmation, canConfirm: value.canConfirm, binding: value.binding });
+            requiresDuplicateConfirmation: value.requiresDuplicateConfirmation, canConfirm: value.canConfirm, binding: value.binding,
+            tutorMatches: value.tutorMatches, missingSecondParentRows: value.missingSecondParentRows, tutorAssignmentsPending: value.tutorAssignmentsPending });
         }
         const value = await runtime.students.confirmImport(request, { mode: "admin", csv, allowDuplicates, binding: text(body.binding, 48000) });
         return value.ok ? privateJson({ ok: true, ids: value.ids }, 201) : stale();

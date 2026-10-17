@@ -1,10 +1,10 @@
 import "server-only";
 import { pruneRemoved } from "./progress";
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction, Actor } from "../access/types";
-import type { StudentInput } from "../students/validation";
+import type { StudentInput, ImportedStudentInput } from "../students/validation";
 import * as s from "../db/index";
 
 export async function roster<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string){
@@ -21,7 +21,14 @@ export async function studentReadingContext<Q extends PgQueryResultHKT>(tx:Acces
 export async function readingAssignmentVersion<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string,studentId:string,kind:"torah"|"haftarah"){
   const [row]=await tx.select({id:s.assignment.id,revision:s.assignment.revision}).from(s.assignment).where(and(eq(s.assignment.tenantId,tenantId),eq(s.assignment.studentId,studentId),eq(s.assignment.kind,kind))).for("share");return row;
 }
-export async function insertStudent<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string,input:StudentInput){
+export async function importTutors<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string){
+  return tx.select({grantId:s.roleGrant.id,grantRevision:s.roleGrant.revision,membershipId:s.membership.id,authorityRevision:s.membership.authorityRevision,userId:s.user.id,name:s.user.name})
+    .from(s.roleGrant).innerJoin(s.membership,and(eq(s.membership.tenantId,s.roleGrant.tenantId),eq(s.membership.id,s.roleGrant.membershipId)))
+    .innerJoin(s.user,eq(s.user.id,s.membership.userId))
+    .where(and(eq(s.roleGrant.tenantId,tenantId),eq(s.membership.tenantId,tenantId),eq(s.roleGrant.role,"tutor"),isNull(s.roleGrant.revokedAt),isNull(s.membership.disabledAt),eq(s.user.emailVerified,true)))
+    .orderBy(asc(s.roleGrant.id)).limit(5001).for("share",{of:[s.membership,s.roleGrant]});
+}
+export async function insertStudent<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string,input:ImportedStudentInput){
   const [row]=await tx.insert(s.student).values({...input,tenantId}).returning();return row;
 }
 export async function updateStudent<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string,id:string,expected:number,patch:Partial<StudentInput>&{disabledAt?:Date}){

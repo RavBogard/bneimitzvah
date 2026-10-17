@@ -53,11 +53,14 @@ export const roleGrant = pgTable("role_grant", {
   check("role_grant_cantor_tutor", sql`not ${t.isCantor} or ${t.role} = 'tutor'`),
 ]);
 
+export type StudentImportMetadata={version:1;parent1Name:string|null;householdPhone:string|null;parent2Name:string|null;parashahLabel:string|null;tutorName:string|null;
+  tutorMatch:{status:"matched";grantId:string}|{status:"unmatched"|"ambiguous"}|null;adminNotes:string|null};
 export const student = pgTable("student", {
   id: id(), tenantId: tenantId(), firstName: text("first_name").notNull(), lastName: text("last_name").notNull(),
   studentKind: text("student_kind").$type<"child" | "adult">().default("child").notNull(),
   serviceSlot: text("service_slot").$type<"morning" | "havdalah" | "unknown">().default("unknown").notNull(),
   ceremonyDate: date("ceremony_date").notNull(), parentEmail: text("parent_email"), ownEmail: text("own_email"),
+  hebrewName: text("hebrew_name"), secondParentEmail: text("second_parent_email"), importMetadata: jsonb("import_metadata").$type<StudentImportMetadata>(),
   disabledAt: timestamp("disabled_at", { withTimezone: true }), revision: integer("revision").default(1).notNull(), createdAt: createdAt(),
 }, (t) => [
   unique("student_tenant_id_key").on(t.tenantId, t.id),
@@ -66,6 +69,24 @@ export const student = pgTable("student", {
   check("student_contacts_required", sql`(${t.parentEmail} is null or length(trim(${t.parentEmail})) > 0) and (${t.ownEmail} is null or length(trim(${t.ownEmail})) > 0) and ((${t.studentKind} = 'child' and ${t.parentEmail} is not null) or (${t.studentKind} = 'adult' and ${t.ownEmail} is not null))`),
   check("student_names_required", sql`length(trim(${t.firstName})) > 0 and length(trim(${t.lastName})) > 0`),
   check("student_revision_positive", sql`${t.revision} > 0`),
+  check("student_hebrew_name_bounded", sql`${t.hebrewName} is null or (length(trim(${t.hebrewName})) > 0 and octet_length(${t.hebrewName}) <= 400)`),
+  check("student_second_parent_bounded", sql`${t.secondParentEmail} is null or (length(trim(${t.secondParentEmail})) > 0 and octet_length(${t.secondParentEmail}) <= 254)`),
+  check("student_import_metadata_closed", sql`${t.importMetadata} is null or coalesce(
+    jsonb_typeof(${t.importMetadata}) = 'object' and ${t.importMetadata}->'version' = '1'::jsonb
+    and ${t.importMetadata} ?& array['version','parent1Name','householdPhone','parent2Name','parashahLabel','tutorName','tutorMatch','adminNotes']
+    and ${t.importMetadata} - array['version','parent1Name','householdPhone','parent2Name','parashahLabel','tutorName','tutorMatch','adminNotes']::text[] = '{}'::jsonb
+    and (${t.importMetadata}->'parent1Name' = 'null'::jsonb or (jsonb_typeof(${t.importMetadata}->'parent1Name') = 'string' and octet_length(${t.importMetadata}->>'parent1Name') <= 400))
+    and (${t.importMetadata}->'householdPhone' = 'null'::jsonb or (jsonb_typeof(${t.importMetadata}->'householdPhone') = 'string' and octet_length(${t.importMetadata}->>'householdPhone') <= 100))
+    and (${t.importMetadata}->'parent2Name' = 'null'::jsonb or (jsonb_typeof(${t.importMetadata}->'parent2Name') = 'string' and octet_length(${t.importMetadata}->>'parent2Name') <= 400))
+    and (${t.importMetadata}->'parashahLabel' = 'null'::jsonb or (jsonb_typeof(${t.importMetadata}->'parashahLabel') = 'string' and octet_length(${t.importMetadata}->>'parashahLabel') <= 400))
+    and (${t.importMetadata}->'tutorName' = 'null'::jsonb or (jsonb_typeof(${t.importMetadata}->'tutorName') = 'string' and octet_length(${t.importMetadata}->>'tutorName') <= 400))
+    and (${t.importMetadata}->'adminNotes' = 'null'::jsonb or (jsonb_typeof(${t.importMetadata}->'adminNotes') = 'string' and octet_length(${t.importMetadata}->>'adminNotes') <= 4096))
+    and (${t.importMetadata}->'tutorMatch' = 'null'::jsonb or (jsonb_typeof(${t.importMetadata}->'tutorMatch') = 'object' and (
+      (${t.importMetadata}->'tutorMatch'->>'status' = 'matched' and ${t.importMetadata}->'tutorMatch' ? 'grantId'
+        and (${t.importMetadata}->'tutorMatch') - array['status','grantId']::text[] = '{}'::jsonb
+        and ${t.importMetadata}->'tutorMatch'->>'grantId' ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+      or (${t.importMetadata}->'tutorMatch'->>'status' in ('unmatched','ambiguous') and (${t.importMetadata}->'tutorMatch') - 'status' = '{}'::jsonb)
+    ))), false)`),
 ]);
 
 export const studentIdentity = pgTable("student_identity", {
