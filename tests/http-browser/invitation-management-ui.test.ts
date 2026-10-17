@@ -29,9 +29,11 @@ async function page(role: "admin" | "tutor", mobile = false) {
 }
 const main = (tab: Page) => tab.locator("#workspace-main");
 const record = (tab: Page, id: string) => tab.locator(`article[aria-labelledby="invite-${id}"]`);
+const status = (tab: Page, id: string) => record(tab, id).locator(".invite-status");
+const failedMail = "The email failed to send. Nothing is resent automatically; use Send again if you want to try once more.";
 async function click(tab: Page, name: string) { await safe(() => tab.getByRole("button", { name, exact: true }).click()); }
 async function fill(tab: Page, email: string, role = "parent") {
-  await safe(() => tab.getByLabel("Invitation role", { exact: true }).selectOption(role)); await safe(() => tab.getByLabel("Recipient email", { exact: true }).fill(email));
+  await safe(() => tab.getByRole("radio", { name: role[0].toUpperCase() + role.slice(1), exact: true }).check()); await safe(() => tab.getByLabel("Recipient email", { exact: true }).fill(email));
   if (role !== "tutor") await safe(() => tab.getByLabel("Student to link", { exact: true }).selectOption(fixture.student.id));
 }
 async function capture(tab: Page, name: string) {
@@ -39,9 +41,9 @@ async function capture(tab: Page, name: string) {
   await ui(main(tab).getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden();
   await ui(tab.getByRole("heading", { name: "Invitations", level: 1, exact: true })).toBeVisible();
   await ui(tab.getByText("Checking current invitation records…", { exact: true })).toBeHidden();
-  if (name.includes("review")) await ui(tab.getByRole("button", { name: "Send reviewed invitation", exact: true })).toBeEnabled();
-  if (name.includes("failed")) await ui(tab.getByText("Mail failure recorded. No resend will happen automatically; review a reissue if appropriate.", { exact: true })).toBeVisible();
-  if (name.includes("unknown")) await ui(main(tab).getByRole("alert")).toContainText("outcome is unknown");
+  if (name.includes("review")) await ui(tab.getByRole("button", { name: "Send invitation", exact: true })).toBeEnabled();
+  if (name.includes("failed")) await ui(tab.getByText(failedMail, { exact: true })).toBeVisible();
+  if (name.includes("unknown")) await ui(main(tab).getByRole("alert")).toContainText("couldn’t confirm whether this went through");
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const directory = join(process.cwd(), ".impeccable", "review"); await mkdir(directory, { recursive: true });
   await safe(() => tab.screenshot({ path: join(directory, `${name}.png`), fullPage: true }));
@@ -65,19 +67,21 @@ it("reviews a parent invitation before sending, then separately reviews reissue 
   expect((await api(tab, "/api/admin/invitations")).data.invitations.length === 0).toBe(true); await capture(tab, "invitation-review-desktop");
   let writes = 0;
   await tab.route(`${BROWSER_ORIGIN}/api/admin/invitations`, async route => { if (route.request().method() === "POST") writes++; const response = await route.fetch(); await route.fulfill({ response }); });
-  await safe(() => tab.getByRole("button", { name: "Send reviewed invitation", exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); }));
-  await ui(tab.getByRole("status", { name: "Latest invitation action", exact: true })).toContainText("Mail request accepted");
+  await safe(() => tab.getByRole("button", { name: "Send invitation", exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); }));
+  await ui(tab.getByRole("status", { name: "Latest invitation action", exact: true })).toContainText("The email went to the mail service.");
+  await ui(tab.getByRole("dialog")).toBeHidden();
   await ui(tab.getByText("Checking current invitation records…", { exact: true })).toBeHidden(); expect(writes).toBe(1);
   const first = (await api(tab, "/api/admin/invitations")).data.invitations[0];
   expect(first.role === "parent" && first.status === "pending" && first.delivery.status === "sent").toBe(true);
-  await ui(record(tab, first.id).getByText("Pending", { exact: true })).toBeVisible(); await capture(tab, "invitation-list-desktop");
-  await safe(() => record(tab, first.id).getByRole("button", { name: "Review reissue", exact: true }).click());
-  await click(tab, "Cancel invitation action"); expect((await api(tab, "/api/admin/invitations")).data.invitations.length === 1).toBe(true);
-  await safe(() => record(tab, first.id).getByRole("button", { name: "Review reissue", exact: true }).click()); await click(tab, "Confirm reissue");
-  await ui(record(tab, first.id).locator("dd").filter({ hasText: /^Revoked$/ })).toBeVisible();
+  await ui(status(tab, first.id)).toHaveText("Pending"); await capture(tab, "invitation-list-desktop");
+  await safe(() => record(tab, first.id).getByRole("button", { name: /^Send again to / }).click());
+  await ui(tab.getByRole("dialog").getByRole("heading", { name: "Send this invitation again?", exact: true })).toBeFocused();
+  await click(tab, "Cancel"); await ui(tab.getByRole("dialog")).toBeHidden(); await ui(record(tab, first.id).getByRole("button", { name: /^Send again to / })).toBeFocused(); expect((await api(tab, "/api/admin/invitations")).data.invitations.length === 1).toBe(true);
+  await safe(() => record(tab, first.id).getByRole("button", { name: /^Send again to / }).click()); await click(tab, "Send new invitation");
+  await ui(status(tab, first.id)).toHaveText("Revoked");
   const rows = (await api(tab, "/api/admin/invitations")).data.invitations;
   const replacement = rows.find((row: { id: string }) => row.id !== first.id); expect(Boolean(replacement && replacement.status === "pending" && replacement.delivery.status === "sent")).toBe(true);
-  await safe(() => record(tab, replacement.id).getByRole("button", { name: "Review revocation", exact: true }).click()); await click(tab, "Confirm revocation"); await ui(record(tab, replacement.id).locator("dd").filter({ hasText: /^Revoked$/ })).toBeVisible();
+  await safe(() => record(tab, replacement.id).getByRole("button", { name: /^Revoke invitation to / }).click()); await click(tab, "Revoke invitation"); await ui(status(tab, replacement.id)).toHaveText("Revoked");
   expect(await tab.evaluate(() => !/\/invitations\/open\?token=/.test(document.body.textContent ?? "") && !/token=/.test(location.href))).toBe(true);
 });
 
@@ -97,18 +101,18 @@ it("separates failed delivery from pending lifecycle and preserves unknown reiss
         && rects.every(rect => rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1);
     });
   })).toBe(true);
-  await capture(tab, "invitation-review-mobile"); await click(tab, "Send reviewed invitation");
-  await ui(tab.getByText("Mail failure recorded. No resend will happen automatically; review a reissue if appropriate.", { exact: true })).toBeVisible();
+  await capture(tab, "invitation-review-mobile"); await click(tab, "Send invitation");
+  await ui(tab.getByText(failedMail, { exact: true })).toBeVisible();
   await ui(tab.getByText("Checking current invitation records…", { exact: true })).toBeHidden();
   const failed = (await api(tab, "/api/admin/invitations")).data.invitations.find((row: { recipientEmail: string }) => row.recipientEmail === longRecipient); expect(failed.status === "pending" && failed.delivery.status === "failed").toBe(true);
-  await ui(record(tab, failed.id).getByText("Pending", { exact: true })).toBeVisible(); await capture(tab, "invitation-failed-mobile"); failDelivery = false;
+  await ui(status(tab, failed.id)).toHaveText("Pending"); await ui(record(tab, failed.id).getByText("Email failed", { exact: true })).toBeVisible(); await capture(tab, "invitation-failed-mobile"); failDelivery = false;
   let reissues = 0;
   await tab.route(`**/api/admin/invitations/${failed.id}/reissue`, async route => { reissues++; const response = await route.fetch(); await response.dispose(); await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); });
-  await safe(() => record(tab, failed.id).getByRole("button", { name: "Review reissue", exact: true }).click()); await click(tab, "Confirm reissue");
-  await ui(main(tab).getByRole("alert")).toContainText("outcome is unknown"); await capture(tab, "invitation-unknown-mobile");
+  await safe(() => record(tab, failed.id).getByRole("button", { name: /^Send again to / }).click()); await click(tab, "Send new invitation");
+  await ui(main(tab).getByRole("alert")).toContainText("couldn’t confirm whether this went through"); await capture(tab, "invitation-unknown-mobile");
   expect(reissues).toBe(1); await focusChecked(tab); expect(reissues).toBe(1); await ui(tab.getByRole("button", { name: "Review invitation", exact: true })).toBeDisabled();
-  await click(tab, "Reload invitations"); await ui(record(tab, failed.id).locator("dd").filter({ hasText: /^Revoked$/ })).toBeVisible(); expect(reissues).toBe(1);
-  await ui(tab.getByRole("status", { name: "Latest invitation action", exact: true })).toContainText("Request outcome unconfirmed");
+  await click(tab, "Reload invitations"); await ui(status(tab, failed.id)).toHaveText("Revoked"); expect(reissues).toBe(1);
+  await ui(tab.getByRole("status", { name: "Latest invitation action", exact: true })).toContainText("We couldn’t confirm whether the last action went through.");
 });
 
 it("retains same-session drafts, invalidates changed student targets, requires fresh admin writes and discards drafts for a different session", async () => {
@@ -116,11 +120,11 @@ it("retains same-session drafts, invalidates changed student targets, requires f
   await ui(tab.getByLabel("Recipient email", { exact: true })).toHaveValue("synthetic-retained-draft@example.test"); await click(tab, "Review invitation");
   const [student] = await fixture.ownerDb.select().from(s.student).where(eq(s.student.id, fixture.student.id));
   await fixture.ownerDb.update(s.student).set({ revision: student.revision + 1, ceremonyDate: "2027-01-09" }).where(eq(s.student.id, student.id));
-  await focusChecked(tab); await ui(main(tab).getByRole("alert")).toContainText("reviewed target changed");
-  expect(await tab.getByRole("button", { name: "Send reviewed invitation", exact: true }).count()).toBe(0);
+  await focusChecked(tab); await ui(main(tab).getByRole("alert")).toContainText("changed since you reviewed this");
+  expect(await tab.getByRole("button", { name: "Send invitation", exact: true }).count()).toBe(0);
   await click(tab, "Reload invitations"); await click(tab, "Review invitation");
   await fixture.ownerDb.update(s.session).set({ createdAt: new Date(Date.now() - 60 * 60_000) }).where(eq(s.session.userId, fixture.admin.id));
-  await click(tab, "Send reviewed invitation"); await ui(main(tab).getByRole("alert")).toContainText("fresh sign-in");
+  await click(tab, "Send invitation"); await ui(main(tab).getByRole("alert")).toContainText("sign in again");
   await ui(tab.getByRole("link", { name: "Check account and sign in again", exact: true })).toBeVisible();
   const tutor = await page("tutor"); await navigate(tutor, "/workspace/admin/invitations"); await ui(tutor.getByRole("heading", { name: "Role unavailable", exact: true })).toBeVisible();
   expect(await tutor.getByLabel("Recipient email", { exact: true }).count()).toBe(0);

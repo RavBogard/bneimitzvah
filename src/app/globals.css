@@ -776,3 +776,52 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
   .people-row { grid-template-columns: auto minmax(0, 1fr); }
   .people-actions { grid-column: 1 / -1; justify-content: flex-start; margin-inline-start: 2.875rem; }
 }
+
+/* Invitations: compose card on the page, sent invitations as rows, the review in a sheet. */
+.invitation-compose .roster-choice { margin-top: 1rem; }
+.invitation-compose .roster-form-grid { max-width: none; gap: 1rem 1.25rem; }
+.invitation-compose input, .invitation-compose select { width: 100%; border: 0; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--color-control-rule); }
+.invitation-compose input:focus-visible, .invitation-compose select:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--lake); }
+.invitation-compose form .button-primary { width: auto; min-width: min(100%, 12rem); margin-top: 0.5rem; }
+.invitation-outcome { margin: 0 0 1.25rem; padding: 0.875rem 1rem; border-radius: var(--radius-control); background: var(--color-surface); box-shadow: inset 4px 0 0 var(--forest), inset 0 0 0 1px var(--color-rule); }
+.invitation-outcome-warn { box-shadow: inset 4px 0 0 var(--marigold), inset 0 0 0 1px var(--color-rule); }
+.invitation-outcome p { margin: 0.25rem 0 0; color: var(--color-muted); }
+.invitation-outcome .invitation-outcome-title { margin: 0; color: var(--color-ink); font-weight: 650; }
+.invitation-list-head { margin: 1.75rem 0 0.75rem; }
+.invitation-row { display: block; }
+.invitation-row-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.125rem 1rem; align-items: center; }
+.invitation-row-body h3 { margin: 0; font-size: 1.0625rem; font-weight: 700; overflow-wrap: anywhere; }
+.invitation-row-body .invitation-recipient { grid-column: 1; margin: 0; overflow-wrap: anywhere; }
+.invitation-row-body .people-status { grid-column: 1; }
+.invitation-row-actions { grid-column: 2; grid-row: 1 / span 3; }
+.invite-status { padding: 0.0625rem 0.5rem; border-radius: 999px; font-size: 0.8125rem; font-weight: 650; background: var(--color-canvas); box-shadow: inset 0 0 0 1px var(--color-control-rule); color: var(--color-muted); }
+.invite-status-pending { background: var(--lake-tint); box-shadow: none; color: var(--lake-deep); }
+.invite-status-accepted { background: var(--forest); box-shadow: none; color: #fff; }
+.invite-mail-failed { color: var(--color-danger); font-weight: 600; }
+.access-sheet .invitation-details > div { grid-template-columns: 6rem minmax(0, 1fr); }
+@media (prefers-color-scheme: dark) { .invite-status-pending { color: var(--color-ink); } }
+@media (max-width: 640px) {
+  .invitation-compose .roster-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .invitation-row-body { grid-template-columns: minmax(0, 1fr); }
+  .invitation-row-actions { grid-column: 1; grid-row: auto; justify-content: flex-start; }
+}
+.invitation-workspace .invitation-compose, .invitation-workspace .invitation-list-section, .invitation-workspace .invitation-outcome { margin-top: 0; border-top: 0; }
+.invitation-workspace .invitation-compose { padding-top: 1.25rem; }
+.invitation-workspace .invitation-list-section { padding-top: 0; }
+.invitation-workspace .invitation-outcome { padding-top: 0.875rem; }
+.invitation-workspace .invitation-records { margin: 0; }
+.invitation-workspace .invitation-records > li { padding-block: 0.75rem; border-bottom: 0; }
+.access-sheet .invitation-action-review { margin-top: 0; padding-top: 0; border-top: 0; }
+@media (max-width: 640px) { .invitation-row-actions { margin-inline-start: -0.875rem; } }
+
+/* Import: the two steps as cards. */
+.csv-workspace .csv-draft, .csv-workspace .csv-review { max-width: 48rem; margin-top: 0; border-top: 0; padding-top: 1.25rem; }
+.csv-workspace .csv-format { margin-block: 0 1.25rem; }
+.csv-step { display: flex; align-items: center; gap: 0.625rem; margin: 0 0 1rem; font-size: 1.25rem; font-weight: 750; letter-spacing: -0.01em; }
+.csv-step:focus { outline: none; }
+.csv-step > span { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 999px; background: var(--lake); color: #fff; font-size: 0.9375rem; font-weight: 750; }
+.csv-workspace .csv-draft label { font-weight: 650; }
+.csv-workspace .csv-draft textarea { border: 0; box-shadow: inset 0 0 0 1px var(--color-control-rule); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.875rem; }
+.csv-workspace .csv-draft textarea:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--lake); }
+.csv-workspace .csv-duplicate-choice { display: flex; align-items: center; gap: 0.625rem; min-height: 44px; margin: 0.75rem 0; font-weight: 500; }
+.csv-workspace .csv-duplicate-choice input { width: 20px; min-height: 0; height: 20px; }

@@ -413,3 +413,42 @@ No authority or privacy hole was found. Unchanged: access logic, the double-subm
   - browser 2/2, canonical-navigation 4/4, egress 1/1, production-denial 2/2, server-isolation 1/1, server-review 2/2, service-learning-http 1/1.
 
 **Review status:** a second agent adversarially reviewed each admin slice, finding no authority or privacy break; its fixes are in. Daniel's look at the admin screens and the staff wording is still open. The older branch `design/song-session-admin` (on `26057b1`) is superseded by this one.
+
+
+## Phase 3, slice 3: Invitations and Import (2026-10-17)
+
+Branch `design/song-session-admin-invites`, on the frozen admin ref `df10e59`. Screens only; the invitation and import logic is unchanged apart from wording.
+
+- **Invitations** (`invitations/*.tsx`):
+  - The "Invite someone" card stays on the page. The role is a Parent / Student / Tutor pill choice, with the email and student side by side and one short help line per role.
+  - "Review invitation" opens the check in a sheet: "Check before sending", "Send this invitation again?" or "Revoke this invitation?". It shows the recipient, role and student, and one plain consequence.
+  - Sent invitations are rows. Each has a status chip (Pending / Accepted / Expired / Revoked), the mail state ("Email sent", "Email failed" in red, "Email unconfirmed"), and short "Sent" and "Expires/Accepted/Revoked" dates with the exact time in the tooltip. Pending and expired rows offer "Send again" and "Revoke"; their accessible names include the recipient.
+  - Outcomes read as results:
+    - "Invitation created…", "A new invitation replaced the old one…" and "Invitation revoked. The link no longer works."
+    - Mail: "The email went to the mail service. We can’t see whether it reached their inbox." Or it failed, or couldn't be confirmed.
+    - Unknown outcomes stay blocked, with a full "Reload invitations" button.
+  - The prefill from People and the same-session draft rules are unchanged.
+- **Import** (`csv-import/workspace.tsx`): the two steps are numbered cards, "1 Add your list" and "2 Review student import", with a monospace draft and a calmer lede. The logic and wording are otherwise unchanged.
+
+### Decided here (GATE log)
+
+- GATE: staff-only wording on Invitations and Import, including the outcome lines and the per-role help. Proceeded because it is staff-visible and follows the UX analysis (results, not server states). Each line was checked against the server: revoke and reissue set `revokedAt` in the same transaction, and "nothing was sent" appears only before the POST. Listed for Daniel's look.
+
+### Adversarial review (second agent)
+
+No authority, privacy or double-send defect was found. Unchanged: fresh load plus `matches` before POST, the gate, blocked after unknown outcomes, no retry, prefill rules and no token exposure. The status/date mapping was checked against the server for all states. Fixed from its findings:
+
+- A refused "Review invitation" no longer leaves a stale focus target that a later reload would jump to.
+- The tutor help says "Once they accept, they become a tutor".
+- A revoke in progress says "Checking and revoking…".
+- Dates show the year when it isn't this year, and the exact times are kept as tooltips. The email-attempt time is kept for screen readers, and the pager shows "Page N".
+- Not built: tests for Escape while sending and the second-Escape reopen. These paths are shared with the People and student sheets and are reviewed in code.
+
+### Checks
+
+- Typecheck and `next build` pass.
+- App tests: 826 passed, plus the 1 existing skip (two workers). `never-in-repo` passes.
+- invitation-management-ui 3/3, admin-ui 2/2, roster-controls-ui 7/7 (import cases included). The other browser files passed on `df10e59`; this slice changes only the invitation and import screens and their CSS.
+- Captures (local): `.impeccable/review/invitation-{review-desktop,list-desktop,review-mobile,failed-mobile,unknown-mobile}.png` and `csv-review-{desktop,mobile}.png`.
+
+**Frozen ref for Codex:** this commit on `design/song-session-admin-invites` (parent `df10e59`). It is separate from the release; nothing is pushed.
