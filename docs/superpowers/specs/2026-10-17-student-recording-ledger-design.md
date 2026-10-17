@@ -1,8 +1,8 @@
 # Settled decisions (Daniel, binding)
 
-Extend the independently accepted [recording foundation](2026-10-16-recording-foundation-design.md), not its reference/generated-audio paths. Student recordings begin private; submission is explicit. Parent dashboards receive no recording information. Exact linked-child practice can operate that child's recordings. Current assigned tutors/admins receive submitted recordings only. Submitted audio is deleted one calendar year after ceremony; no automated scoring. No licensed text, recordings, credentials or family fixtures enter Git.
+Extend the independently accepted [recording foundation](2026-10-16-recording-foundation-design.md), not its reference/generated-audio paths. Student recordings begin private; submission is explicit. Parent dashboards receive no recording information. Exact linked-child practice can operate that child's recordings. Current assigned tutors/admins receive submitted recordings only. All student audio is deleted one calendar year after ceremony; no automated scoring. No licensed text, recordings, credentials or family fixtures enter Git.
 
-Daniel has been asked whether unsent private recordings share the same deadline. That answer remains pending at this contract checkpoint; retain the existing submitted-only ruling until it arrives. This does not authorize indefinite private retention or a production release with an unresolved policy.
+**Amended2026-10-17 (Daniel, direct answer):** Private unsent recordings share the same one-year deadline as submitted recordings, with earlier student deletion allowed. This supersedes this contract's earlier pending/submitted-only retention scope. The source checkpoint3d7f84f and its review record the prior policy; the following amendment requires its own bounded implementation and independent regression review before acceptance. No storage or production permission is inferred.
 
 ## Root architecture decision and bounded deliverable
 
@@ -38,9 +38,9 @@ Student/child projection: id, revision, private/submitted state, verified media 
 
 Use a fresh trusted instant and America/Chicago calendar dates, inclusive at the one-year anniversary, with Gregorian Feb29 clamping; support valid ceremony9999's year10000 anniversary as the deployed practice-calendar implementation already does. The older pure policy's unrepresentable string boundary must not silently reject a valid roster student or guess an expiry. Reuse reviewed calendar arithmetic deliberately; no historical0018 edits.
 
-Until Daniel answers the private-recording question, submitted records become unreadable/unsubmittable when due; private expiry is unresolved. Registration and submission after the overall anniversary are refused (local microphone capture is outside this server ledger). Own-student/child deletion requests remain allowed when a record is due, with fresh authority and an exact expected revision; an already deleting record is a no-op only at its current revision and adds no audit. Staff still see no due/deleting metadata. A ceremony-date invoker trigger, after the student lock, uses actual post-wait time and both OLD and NEW ceremony dates: any still-submitted record overdue under either date becomes permanently deleting, in the same transaction as the date update. A postponement cannot revive overdue audio. Preserve existing practice-history retention and roster audit behavior; do not expose recording changes through the roster response.
+All private and submitted records become unreadable/unsubmittable when due. Registration and submission after the overall anniversary are refused (local microphone capture is outside this server ledger). Own-student/child deletion requests remain allowed when a record is due, with fresh authority and an exact expected revision; an already deleting record is a no-op only at its current revision and adds no audit. Staff still see no due/deleting metadata. A ceremony-date invoker trigger, after the student lock, uses actual post-wait time and both OLD and NEW ceremony dates: any still-private or submitted record overdue under either date becomes permanently deleting, in the same transaction as the date update. Private records take revision1→2 and retain NULL submission time; submitted records take revision2→3 and preserve submission time. A postponement cannot revive overdue audio. Preserve existing practice-history retention and roster audit behavior; do not expose recording changes through the roster response.
 
-No physical deletion is claimed. Production use requires a bounded trusted cleanup worker and approved storage, plus the resolved private-retention ruling. Background cleanup must later work even after user/session/student access is revoked; it must not require an active student session.
+No physical deletion is claimed. Production use requires a bounded trusted cleanup worker and approved storage. Background cleanup must later work even after user/session/student access is revoked; it must not require an active student session. Future app-controlled offline copies must honor the same anniversary through the reviewed expiry/lease contract.
 
 ### HTTP integration boundary
 
@@ -54,6 +54,6 @@ Evidence must cover native RLS/composite FK/immutable lifecycle and fresh/replay
 
 # Open items that wait on Daniel
 
-- Whether private unsent student recordings share the one-year deadline (question pending).
+- The private-unsent retention question is resolved above; no further retention choice is required from Daniel for this ledger scope.
 - Concrete storage/provider spend approval, after source/design/cost review is ready; nothing is provisioned now.
 - New student-visible recording UI review and later offline authorization policy remain future gates. Existing generation parking and reference licensing/quality review remain separate.

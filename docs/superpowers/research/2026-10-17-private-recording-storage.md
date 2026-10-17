@@ -33,5 +33,5 @@ Illustrative storage-only arithmetic:34 students ×20 retained recordings ×5MB 
 - Exact SDK version and synthetic local adapter tests; verify upload grants cannot read/delete/list/overwrite and callbacks cannot register another capture.
 - Live synthetic Production-only access/Preview denial, and large-object playback with real runtime streaming/range behavior.
 - Bounded media verification mechanism within hosting execution/memory limits; MIME declarations alone are insufficient.
-- Retention/deletion worker authority and reconciliation contract, including never-submitted private recordings.
+- Retention/deletion worker authority and reconciliation contract. Daniel confirmed2026-10-17 that private and submitted student recordings share the same one-year anniversary deadline; implementation and cleanup must cover both states.
 - Concrete cost configuration approved by Daniel before provisioning.
