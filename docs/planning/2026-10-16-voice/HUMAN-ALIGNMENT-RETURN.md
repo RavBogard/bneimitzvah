@@ -100,3 +100,21 @@ Residual gaps, both low:
 5. Produce the first real retime and SVC output for Daniel's listening only.
 
 **Message to the UI stream:** none blocking. The only shared file is `scripts/repo-policy.mjs`, as above.
+
+## First real listening result (2026-10-16, private)
+
+**Lane A, SoulX score model.**
+- Input: the V'ahavta target (Deuteronomy 6:5–9, v2 phrasing, D3, tempo 96), with a 20 s voice sample from Daniel's own Binder/Avery chant.
+- Run on the RTX 4070: 77 s of audio in 56 s wall time, peak 2,016 MiB allocated and 3,752 MiB reserved.
+- A private run record is in the run folder (no seed control).
+
+**Daniel's blind-free verdict:** "pretty awful… almost a Peruvian accent, with a number of odd sounds. And the speed is super inhumane and unnatural."
+
+Recorded as a **diction failure** for lane A on this passage. Two causes:
+1. **Accent:** SoulX realises Hebrew through English ARPAbet and Mandarin substitutes.
+2. **Pace:** the engine's grid timing. It affects every lane, not just A.
+
+**Decisions taken from this result (GATE: proceeded because Daniel gave the verdict and the plan already rejects tuning a failed lane):**
+- No further A tuning.
+- Next is B-human (Daniel's spoken V'ahavta), first on the engine timing.
+- Then on a human-timed target, with syllable durations measured from Daniel's sung V'ahavta. That variant changes the target timing only; notes and text stay the same. It is a benchmark condition, not an engine change.
