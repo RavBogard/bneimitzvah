@@ -1,0 +1,92 @@
+"use client";
+import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+import type { AssignmentEnding } from "../../../../lib/hebrew/study-annotations";
+import { useReadingPrefs, useSetReadingPrefs } from "../reading-prefs";
+import type { StudyVerse } from "./api";
+import { Apparatus, phraseGroups, PhraseLegend, StudyHebrew, useVerseColors } from "./annotations";
+
+const icon = (d: string) => <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d={d} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+export const icons = {
+  close: icon("M6 6l12 12M18 6L6 18"),
+  up: icon("M6 15l6-6 6 6"),
+  down: icon("M6 9l6 6 6-6"),
+  colors: icon("M4 7h7M4 12h11M4 17h6M15 7h5M18 12h2M13 17h7"),
+  translate: icon("M4 6h9M8.5 4v2c0 4-2 7-4.5 8.5M6 10c1.5 2 3.5 3.5 6 4.5M13 20l4-9 4 9M14.5 17h5"),
+  size: icon("M3 19l5-13 5 13M4.8 14h6.4M15 19l3-8 3 8M15.9 16.5h4.2"),
+  hear: icon("M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"),
+};
+
+/**
+ * The lifted line: one verse at poster scale, its current phrase printed in
+ * full ink and the rest receding. Next steps phrase by phrase, then verse by
+ * verse. Each new phrase arrives with one squeegee wipe; reduced motion snaps.
+ */
+export function LiftedLine({ verses, assignment, index, total, offset, onIndex, onClose, learner = false }: {
+  learner?: boolean; verses: StudyVerse[]; assignment: AssignmentEnding; index: number; total: number; offset: number; onIndex(index: number): void; onClose(): void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null), id = useId(), prefs = useReadingPrefs(), setReadingPrefs = useSetReadingPrefs();
+  const verse = verses[index], result = useVerseColors(verse, assignment, prefs.colors);
+  const colors = result?.status === "ready" ? result : null, phrases = colors ? phraseGroups(colors) : [];
+  const [phrase, setPhrase] = useState(0);
+  const pointer = useRef<{ x: number; y: number } | null>(null);
+  useEffect(() => { setPhrase(0); }, [index, prefs.colors]);
+  useEffect(() => {
+    const node = dialog.current; if (!node) return;
+    const origin = document.activeElement as HTMLElement | null;
+    if (!node.open) node.showModal();
+    return () => { if (node.open) node.close(); origin?.focus?.(); };
+  }, []);
+  const active = phrases[phrase]?.phrase ?? null;
+  const stage = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = stage.current; if (!node) return;
+    const target = active === null ? null : node.querySelector<HTMLElement>(`[data-phrase="${active}"]`);
+    if (target) target.scrollIntoView({ block: "center", behavior: reduced() ? "auto" : "smooth" }); else node.scrollTo({ top: 0 });
+  }, [active, index]);
+  const atStart = index === 0 && phrase === 0, atEnd = index === verses.length - 1 && (phrases.length === 0 || phrase === phrases.length - 1);
+  function next() {
+    if (phrases.length && phrase < phrases.length - 1) setPhrase(phrase + 1);
+    else if (index < verses.length - 1) onIndex(index + 1);
+  }
+  function previous() {
+    if (phrases.length && phrase > 0) setPhrase(phrase - 1);
+    else if (index > 0) onIndex(index - 1);
+  }
+  function key(event: React.KeyboardEvent) {
+    if (event.target instanceof HTMLElement && event.target.closest("button, [popover]") && (event.key === " " || event.key === "Enter")) return;
+    if (["ArrowDown", "PageDown", " "].includes(event.key)) { event.preventDefault(); next(); }
+    else if (["ArrowUp", "PageUp"].includes(event.key)) { event.preventDefault(); previous(); }
+  }
+  function down(event: ReactPointerEvent) { if (event.pointerType !== "mouse") pointer.current = { x: event.clientX, y: event.clientY }; }
+  function up(event: ReactPointerEvent) {
+    const start = pointer.current; pointer.current = null; if (!start) return;
+    const dy = event.clientY - start.y, dx = event.clientX - start.x;
+    if (Math.abs(dy) < 48 || Math.abs(dy) < Math.abs(dx) * 1.2) return;
+    // A long verse scrolls first; the swipe steps only from the scroll edge.
+    const node = stage.current, scrollable = node && node.scrollHeight > node.clientHeight + 4;
+    if (scrollable && (dy < 0 ? node.scrollTop + node.clientHeight < node.scrollHeight - 4 : node.scrollTop > 4)) return;
+    if (dy < 0) next(); else previous();
+  }
+  const number = offset + index + 1;
+  return <dialog ref={dialog} className="lift" aria-labelledby={`${id}-title`} onCancel={event => { event.preventDefault(); onClose(); }} onKeyDown={key}>
+    <div className="lift-bar">
+      <button type="button" className="lift-icon" onClick={onClose} aria-label="Close practice view">{icons.close}</button>
+      <p className="lift-count" aria-live="polite">Verse {number} of {total}{phrases.length > 1 && <span className="lift-count-phrase"> · phrase {phrase + 1} of {phrases.length}</span>}</p>
+      <button type="button" className="lift-icon" aria-pressed={prefs.colors} aria-label="Phrase colors" onClick={() => setReadingPrefs({ colors: !prefs.colors })}>{icons.colors}</button>
+    </div>
+    <ol className="lift-rail" aria-hidden="true">{verses.map((row, position) => <li key={row.ref} data-state={position < index ? "past" : position === index ? "current" : undefined} />)}</ol>
+    <div ref={stage} className="lift-stage" onPointerDown={down} onPointerUp={up} onPointerCancel={() => { pointer.current = null; }}>
+      <h2 id={`${id}-title`} className="lift-ref"><bdi dir="ltr">{verse.ref}</bdi></h2>
+      <StudyHebrew key={verse.ref} verse={verse} colors={colors} id={`${id}-v`} className={`lift-hebrew${active !== null ? " lift-phrasing" : ""}`} />
+      {active !== null && <style>{`.lift-phrasing [data-phrase="${active}"]{opacity:1;animation:ink-pull 560ms var(--ease-settle) both;animation-delay:calc((var(--w) - ${phrases[phrase].first - 1}) * 70ms)}`}</style>}
+      {prefs.translation && <p className="lift-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
+      <Apparatus verse={verse} learner={learner} />
+      {prefs.colors && <PhraseLegend colors={result} id={`${id}-v`} verseRef={verse.ref} />}
+    </div>
+    <div className="lift-nav">
+      <button type="button" className="lift-step" onClick={previous} disabled={atStart}>{icons.up}<span>Back</span></button>
+      <button type="button" className="lift-step lift-step-next" onClick={next} disabled={atEnd} autoFocus>{icons.down}<span>{phrases.length && phrase < phrases.length - 1 ? "Next phrase" : "Next verse"}</span></button>
+    </div>
+  </dialog>;
+}

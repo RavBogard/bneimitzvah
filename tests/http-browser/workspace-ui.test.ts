@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
+import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
 
@@ -58,7 +59,7 @@ async function checkedRefresh(tab: Page, trigger: () => Promise<unknown>) {
 }
 beforeAll(async () => {
   try {
-    assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard(); fixture = await browserFixture(); sibling = (await fixture.practice()).sibling;
+    assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard(); fixture = await browserFixture({ studyLoad: async request => syntheticUiStudyPage(request) }); sibling = (await fixture.practice()).sibling;
     stop = await startBrowserServer(fixture.withRuntime); browser = await chromium.launch({ headless: true });
   } catch { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); throw new Error("Workspace browser setup failed; private details withheld"); }
 }, 120_000);
@@ -144,17 +145,17 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await tab.route("**/api/practice/enter", async route => { const response = await route.fetch(); rawHandle = (await response.json()).handle; await route.fulfill({ response }); });
   await safe(() => tab.getByRole("button", { name: "Enter child practice", exact: true }).click());
   await ui(tab.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
-  await ui(tab.getByText("Genesis 1:1-3", { exact: true })).toBeVisible();
+  await ui(tab.getByText("Genesis 1:1\u20133", { exact: true })).toBeVisible();
   await capture(tab, "workspace-child-confirmed-reading");
   await tab.setViewportSize({ width: 390, height: 844 });
   await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).focus());
   await safe(() => tab.keyboard.press("Tab"));
-  await ui(tab.locator(".reading-student-context").getByRole("link", { name: "Service parts", exact: true }), "First Tab after Refresh reaches Service parts").toBeFocused();
-  await safe(() => tab.keyboard.press("Tab"));
-  const assignedReferences = tab.locator(".reading-current-assignment > details");
-  await ui(assignedReferences.locator(":scope > summary"), "Second Tab reaches the assigned-reference disclosure").toBeFocused();
+  await ui(tab.getByRole("button", { name: "Start", exact: true }), "First Tab after Refresh reaches Start").toBeFocused();
+  await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
   await safe(() => tab.keyboard.press("Enter"));
-  await ui(assignedReferences, "Enter opens the focused assigned-reference disclosure").toHaveAttribute("open", "");
+  await ui(tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }), "Enter opens practice from the focused Start button").toBeVisible();
+  await safe(() => tab.keyboard.press("Escape"));
+  await ui(tab.getByRole("dialog")).toHaveCount(0);
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await capture(tab, "workspace-child-confirmed-reading");
   await tab.evaluate(() => { document.documentElement.style.fontSize = "200%"; });

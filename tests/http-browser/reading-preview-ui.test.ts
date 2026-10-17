@@ -305,7 +305,7 @@ it("shows recorded student boundaries and page continuation, distinguishing unre
     await fixture.ownerDb.update(s.assignment).set({ aliyahStarts: aliyahStarts === null ? null : [], revision: assignment.revision + (aliyahStarts === null ? 1 : 2) }).where(eq(s.assignment.id, assignment.id));
     await click(learner, "Refresh reading");
     if (aliyahStarts === null) {
-      await ui(study.getByText("Aliyah boundaries have not been recorded for this assignment.", { exact: true })).toBeVisible();
+      expect(await study.getByText("Aliyah boundaries have not been recorded for this assignment.", { exact: true }).count()).toBe(0); // Students see no assignment status.
       expect(await study.locator(".student-aliyah").count()).toBe(0);
     } else {
       await ui(study.getByText("Aliyah 1 starts here", { exact: true })).toBeVisible();

@@ -1,49 +1,102 @@
 ---
 name: CRC B'nei Mitzvah
-description: A quiet, reading-first interface for congregation practice and access.
+description: A song session for a student's own verses; flat screen-print inks, one lifted line at a time.
 colors:
-  surface: "#fff"
-  canvas: "#f6f7f6"
-  ink: "#222c35"
-  muted: "#53616a"
-  action: "#8a0a14"
-  action-hover: "#680911"
-  teal: "#0b6a62"
-  rule: "#d5dcda"
+  lake: "#1d5ba6"
+  lake-deep: "#154680"
+  lake-tint: "#dbe8f6"
+  marigold: "#f7b500"
+  forest: "#1e6b47"
+  surface: "#ffffff"
+  canvas: "#ebf2fa"
+  ink: "#13202f"
+  muted: "#4b5a6b"
+  rule: "#d2dfee"
+  control-rule: "#8da3bb"
+  hover: "#e3edf8"
+  danger: "#b42318"
+  night-lake: "#10335e"
+  night-canvas: "#0b1626"
+  night-surface: "#13233a"
+  night-ink: "#e9f0f8"
+  night-muted: "#a8b8ca"
+  night-action: "#8dbbf5"
+  night-action-fill: "#2f6cbd"
+  night-forest: "#7fd1a8"
+  night-rule: "#24384f"
 typography:
-  headline:
-    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-    fontSize: "3rem"
-    fontWeight: 600
-    lineHeight: 1.14
+  display:
+    fontFamily: "Bricolage Grotesque, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "clamp(2.5rem, 7.5vw, 4.25rem)"
+    fontWeight: 800
+    lineHeight: 1
     letterSpacing: "-0.035em"
+  headline:
+    fontFamily: "Bricolage Grotesque, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "3rem"
+    fontWeight: 750
+    lineHeight: 1.08
+    letterSpacing: "-0.03em"
   title:
-    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    fontFamily: "Bricolage Grotesque, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "1.5rem"
-    fontWeight: 600
-    lineHeight: 1.3
+    fontWeight: 700
+    lineHeight: 1.25
     letterSpacing: "-0.02em"
   body:
-    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    fontFamily: "Bricolage Grotesque, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "1rem"
-    lineHeight: 1.6
+    fontWeight: 400
+    lineHeight: 1.55
   label:
-    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-    fontSize: "1rem"
+    fontFamily: "Bricolage Grotesque, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "0.9375rem"
     fontWeight: 600
+    lineHeight: 1.2
+  hebrew:
+    fontFamily: "CRC Noto Serif Hebrew, Noto Serif Hebrew, Times New Roman, serif"
+    fontSize: "2rem"
+    fontWeight: 400
+    lineHeight: 2
+    letterSpacing: "normal"
+    fontFeature: "\"mark\", \"mkmk\""
+  hebrew-lifted:
+    fontFamily: "CRC Noto Serif Hebrew, Noto Serif Hebrew, Times New Roman, serif"
+    fontSize: "3.2rem"
+    fontWeight: 400
+    lineHeight: 1.9
+    fontFeature: "\"mark\", \"mkmk\""
 rounded:
-  control: "6px"
+  control: "12px"
+  object: "16px"
+  dock: "22px"
+  pill: "999px"
 spacing:
   unit: "0.5rem"
+  xs: "0.25rem"
+  sm: "0.75rem"
+  md: "1rem"
+  lg: "1.5rem"
+  xl: "2rem"
 components:
+  button-start:
+    backgroundColor: "{colors.lake}"
+    textColor: "{colors.surface}"
+    typography: "{typography.label}"
+    rounded: "{rounded.pill}"
+    padding: "0 2.25rem"
+    height: "56px"
+  button-start-hover:
+    backgroundColor: "{colors.lake-deep}"
+    textColor: "{colors.surface}"
   button-primary:
-    backgroundColor: "{colors.action}"
+    backgroundColor: "{colors.lake}"
     textColor: "{colors.surface}"
     rounded: "{rounded.control}"
     padding: "0.6875rem 1.125rem"
     height: "48px"
   button-primary-hover:
-    backgroundColor: "{colors.action-hover}"
+    backgroundColor: "{colors.lake-deep}"
     textColor: "{colors.surface}"
   button-secondary:
     backgroundColor: "{colors.surface}"
@@ -51,103 +104,230 @@ components:
     rounded: "{rounded.control}"
     padding: "0.6875rem 1.125rem"
     height: "48px"
-  input-email:
+  button-hero-secondary:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.pill}"
+    padding: "0 1.25rem"
+    height: "48px"
+  segmented-selected:
+    backgroundColor: "{colors.lake}"
+    textColor: "{colors.surface}"
+    rounded: "{rounded.pill}"
+    padding: "0 1.25rem"
+    height: "44px"
+  input:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
     rounded: "{rounded.control}"
     padding: "0.6875rem 0.875rem"
     height: "48px"
+  app-bar:
+    backgroundColor: "{colors.lake}"
+    textColor: "{colors.surface}"
+    height: "60px"
+  verse-card:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.object}"
+    padding: "0.875rem 1.25rem 1rem"
+  verse-number:
+    backgroundColor: "{colors.lake-tint}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.pill}"
+    size: "1.875rem"
+  countdown-chip:
+    backgroundColor: "{colors.marigold}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.pill}"
+    padding: "0.125rem 0.625rem"
+  aliyah-marker:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.forest}"
+    rounded: "{rounded.pill}"
+    padding: "0 0.75rem"
+    height: "32px"
+  reading-toolbar:
+    backgroundColor: "{colors.lake}"
+    textColor: "{colors.surface}"
+    rounded: "{rounded.dock}"
+    padding: "0.375rem"
+  toolbar-item-pressed:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.lake-deep}"
+    rounded: "{rounded.object}"
+    height: "56px"
+  lift-sheet:
+    backgroundColor: "{colors.lake}"
+    textColor: "{colors.surface}"
+  lift-step-next:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.lake-deep}"
+    rounded: "{rounded.pill}"
+    height: "56px"
 ---
 
 # Design System: CRC B'nei Mitzvah
 
 ## Overview
 
-**Creative North Star: "Annotated Score"**
+**Creative North Star: "Song session"**
 
-The implemented entry surface uses a white working field, legible ink, a restrained burgundy action, and precise rules. The page leads with the reading as its destination while its neighboring task area reports actual access and invitation state. This entry composition describes authentication and invitations; the implemented assigned-reading/editor and public chart compositions are recorded separately in `.impeccable/surfaces/src-app-workspace-page-tsx.md` and `.impeccable/surfaces/src-app-trope-chart-page-tsx.md`.
+Locked by Daniel on 2026-10-16 (direction seed 8ac4194f; contract in `.impeccable/surfaces/src-app-workspace-page-tsx.md`), replacing the earlier "Annotated score" world. A student's own verses are a song session, not a record: the camp and NFTY song-session sheet, printed in flat screen-print inks. Lake blue owns the shell, white verse objects sit on a lake-tinted canvas, marigold marks time and change, forest marks what is settled. Dark mode is the same inks on night-lake navy, not an inverted theme.
 
-The current controls feel familiar and deliberate. Spacing creates the hierarchy, and text explains state without ornamental imagery.
+The energy comes from committed color, a characterful humanist grotesque at poster scale, and one signature interaction: the lifted line, where a tapped verse fills the screen on a lake-blue sheet and its trope phrases are printed one at a time with a single squeegee-wipe of ink. Everything else is calm, standard web controls sized for thumbs. The world refuses both the annotated document page and the gamified language-app clone; Daniel's tone ruling, "It can't be cheesy or cringe," is a visual constraint as much as a copy one.
+
+**Scope of what is built.** The student, child-practice and parent reading surfaces are fully in this world (app bar, reading hero, segmented kind control, verse cards, toolbar, lifted line). Staff (tutor and admin) and entry surfaces inherit the tokens, font, radii and lake action color only; their compositions still use the older ruled-section layouts, and their redesign is a later phase. The Working / Got it self-check, the per-verse position rail on the reading page and the "ink pull on Got it" celebration are not built: there is no progress backend. The ink pull currently runs when the lifted line advances to a phrase.
 
 **Key Characteristics:**
-- A flat white field with fine rules and a compact congregation masthead.
-- A reading-first introduction beside a live task area on wide screens.
-- Clear, touch-sized controls and a single-column phone layout.
-- Explicit role and invitation details before access changes.
+- Flat inks on a tinted canvas; depth comes from color fields and hairlines, never from elevation.
+- One accent field (lake blue) for the shell, the primary action and the lifted sheet.
+- Marigold only as a fill behind dark type or as a focus ring and position mark; never as text.
+- Verses are big, rounded, tappable white objects with a hairline.
+- Hebrew is set in Noto Serif Hebrew with four named size steps driven by one toolbar control.
+- Masoretic apparatus sits under the Hebrew line in small muted text, never inside it.
+- One authored motion (the ink pull); reduced motion snaps.
 
 ## Colors
 
-The palette uses one action accent, one confirmed-state accent, and quiet neutrals.
+Screen-print inks: one saturated blue that owns the frame, one warm yellow for time and change, one green for settled, and cool tinted neutrals.
 
 ### Primary
-- **Burgundy action** (`colors.action`): primary actions, links, and request errors; the deeper variant (`colors.action-hover`) marks hover.
+- **Lake Blue** (`lake`): the app bar, the reading toolbar, the selected segment, the Start button and every primary button, the lifted-line sheet, links and the caret. The hover and pressed state is **Deep Lake** (`lake-deep`), which is also the text color on white pressed toolbar items and the lift's Next button.
+- **Lake Tint** (`lake-tint`): verse-number discs, the selected text-size row, the pressed secondary button.
 
 ### Secondary
-- **Confirmed teal** (`colors.teal`): the available-role list and the keyboard focus outline. It is used for state identification, not as a substitute for words.
+- **Marigold** (`marigold`): the ceremony countdown chip, text selection, the current segment of the lift's verse rail, and the focus ring on lake-blue surfaces (and everywhere in dark mode). Always a fill or a ring; any text on it is Ink.
+
+### Tertiary
+- **Forest** (`forest`): settled state. Today that is the aliyah-start marker (forest text on white with a forest hairline) and the role list on entry. In code the variable is still `--color-teal`, a legacy name.
 
 ### Neutral
-- **White surface** (`colors.surface`): page, task area, controls, and skip link.
-- **Pale canvas** (`colors.canvas`): disabled input and scrollbar track.
-- **Ink** (`colors.ink`): principal text, strong task rule, and brand.
-- **Muted ink** (`colors.muted`): introduction, supporting notes, field help, and footer.
-- **Quiet rule** (`colors.rule`): header, footer, notes, and form divider.
+- **White Surface** (`surface`): verse cards, the segmented control track, open translation panels, secondary buttons, the toolbar's pressed item.
+- **Lake Canvas** (`canvas`): the page; it also rings the floating toolbar so it reads as separate from the verses beneath it.
+- **Ink** (`ink`): text, and the text on marigold and on phrase-color blocks.
+- **Muted Ink** (`muted`): dates, verse references, meta lines, apparatus notes, field help.
+- **Hairline** (`rule`): the 1px inset outline on every card, track and pill.
+- **Control Rule** (`control-rule`): the visible outline on inputs and secondary buttons, where a hairline would be too faint.
+- **Hover Wash** (`hover`): hover fill on secondary and icon buttons.
+- **Danger** (`danger`): request errors only.
 
-**The State Has Words Rule.** Color reinforces an explicit label or message; role and invitation state remain understandable without color.
+### Dark mode
+Same roles on night-lake navy: `night-canvas` page, `night-surface` cards, `night-ink` and `night-muted` text, `night-rule` hairlines, `night-action` for links and text actions, `night-action-fill` behind white text on buttons, `night-forest` for settled. The app bar, toolbar and lifted sheet use `night-lake`; marigold becomes the focus ring everywhere.
+
+### Phrase family colors
+The lifted line and the verse cards print trope phrases with the pastel family colors already defined by the trope chart catalog (`src/lib/trope/chart-catalog`), always with Ink text and a 0.18em corner. They are content data shared with the chart, not shell colors, and are always paired with a named legend chip and word range so color never carries meaning alone.
+
+### Named Rules
+**The Marigold Is Never Text Rule.** Marigold appears as a fill behind Ink type, a ring, or a rail mark. It is never a text or icon color.
+
+**The One Field Rule.** Lake blue is the only saturated field in the shell. If a new surface needs emphasis, it gets lake or a white object on canvas, not a new hue.
 
 ## Typography
 
-The entry surface uses the system UI stack in the frontmatter for headings, body, labels, and controls. This remains the approved interface typography; Hebrew-only content uses the separate Reading Type Rule below and its surface-local sizes.
+**Display and UI Font:** Bricolage Grotesque 1.001, self-hosted variable (optical size 12–96, weight 200–800, width 75–100) with `font-optical-sizing: auto`, falling back to system-ui
+**Scripture Font:** CRC Noto Serif Hebrew (Noto Serif Hebrew 2.004, self-hosted), then Noto Serif Hebrew, Times New Roman, serif
 
-- **Headline** (`typography.headline`): the short introductory task, capped at roughly twelve characters per line on desktop and reduced at phone widths.
-- **Title** (`typography.title`): the adjacent live access or invitation state.
-- **Body** (`typography.body`): explanations and recovery text; paragraphs remain within approximately 65 characters.
-- **Label** (`typography.label`): field labels and action text.
+**Character:** A characterful humanist grotesque with ink-trap personality at large sizes and plain legibility at small ones, against a classical Hebrew serif. The English is loud only where it is a heading; the Hebrew is always the most important text on the page. Provenance and licenses for both fonts are in `public/fonts/PROVENANCE.md`.
 
-**The Reading Type Rule.** Assigned Hebrew and standalone trope-chart samples use the Hebrew-only `.hebrew[lang="he"]` content class from `src/styles/hebrew-font.module.css`: locally hosted `CRC Noto Serif Hebrew` (Noto Serif Hebrew 2.004), then `Noto Serif Hebrew`, `Times New Roman`, serif. The approved font and complete adjacent SIL Open Font License 1.1 notice are pinned byte-for-byte under `public/fonts/noto-serif-hebrew/`; retain that notice and provenance. The class sets weight 400, disables synthesized faces and enables mark/mkmk features; RTL direction remains explicit. Reading type stays 2rem with line height 2. Chart-local screen/print sizes belong to its surface brief, not the global UI ramp. Headings, English, controls and editor drafts retain the system UI stack. Bounded synthetic browser/print evidence does not establish full-corpus vowel/cantillation fidelity, musical pedagogy, security, real-provider coverage or student-release approval.
+### Hierarchy
+- **Display** (800, clamp 2.5rem–4.25rem, line height 1, -0.035em): the reading reference in the hero ("Genesis 1:1–3"), the single next decision. On phones it runs clamp(2.5rem, 12vw, 3.25rem); the empty-state headline uses clamp(1.75rem, 6vw, 2.5rem).
+- **Headline** (750, 3rem, 1.08): entry-page h1 (2.5rem at 900px, 2.25rem at 640px). Workspace h1 is 2.25rem, 1.875rem on phones.
+- **Title** (700, 1.5rem, 1.25): section h2s such as Service parts.
+- **Body** (400, 1rem, 1.55, max 65ch): running text; English translation sits at 1.7 line height, max 62ch.
+- **Label** (600, 0.9375rem): verse references, translation and notes pills, segmented items. Supporting steps: 1.0625rem 700 for the student name; 0.875rem for meta, chips and apparatus; 0.8125rem 600 for toolbar labels.
+- **Hebrew** (400, 2rem, line height 2, `mark` and `mkmk` features, no synthesis): every verse. Four named steps, no slider: Small 1.625rem, Standard 2rem, Large 2.5rem, Huge 3.125rem, set on the reading section through one `--hebrew-size` property.
+- **Hebrew, lifted** (400, 1.6 times the chosen step, line height 1.9, max 22ch, centered): the lifted line; 3.2rem at Standard.
+
+### Named Rules
+**The Named Steps Rule.** Hebrew size is one of four named steps chosen from the toolbar and remembered per student; nothing else resizes scripture.
+
+**The Hebrew Stays Whole Rule.** Qere labels, paragraph signs and notes are set in the UI face at small size and sit beside or under the Hebrew line; no apparatus text is styled as scripture.
 
 ## Layout
 
-The entry shell is centered and capped at 78rem, with a two-column introduction and task grid at desktop widths. The task begins with an ink rule; the introduction and page edges use quiet rules. The `--space-unit` rhythm is 0.5rem, while major composition uses larger multiples: the desktop grid gap is 6rem and top padding is 6rem.
+A single reading column on a tinted canvas inside a 78rem shell (4rem side padding, 2rem at 900px, 1rem at 640px). On learner surfaces the order is fixed: app bar, reading hero (name, date, countdown chip, refresh; display reference; meta line; Start), segmented Torah / Haftarah / Service parts control, then verse cards stacked 0.75rem apart, then "About this text" and the trope chart link, then the service parts panel as a white object.
 
-At 900px the shell padding and grid gap contract and the headline reduces. At 640px the grid becomes one column, with the task following the introduction, shell padding at 1.5rem, and full-width task actions. The enlarged-text phone capture remains vertically scrollable without horizontal overflow.
+Phones (390 reference): the Start button spans the full width, the toolbar floats as a dock 0.75rem above the bottom safe area (max 30rem wide), and the page reserves 8rem of bottom padding for it. Translation and notes follow each verse.
 
-**The Adjacent Task Rule.** Keep the current action or access state next to the introduction on wide screens, and immediately after it on narrow screens.
+Desktop (above 1000px): the hero is capped at 52rem; verse cards take about 1.65fr with the translation-and-notes pill or panel in a column beside each verse (min 18rem); the toolbar becomes a sticky 6.5rem vertical rail beside the reading, 1.5rem from the top. The text-size menu centers in the viewport.
+
+Spacing is a 0.5rem unit used in quarter, half and whole steps: 0.25rem inside tracks, 0.75rem between verse cards and in action rows, 1–1.5rem inside objects and between sections, 2rem before the main reading. Touch targets are 44px minimum, 48px for buttons and inputs, 56px for Start, toolbar items and lift steps.
 
 ## Elevation & Depth
 
-The entry surface is flat: it uses no box shadows or raised cards. Depth comes from white space, text hierarchy, pale disabled control fill, and one-pixel rules. Focus uses a visible three-pixel teal outline offset from the control.
+Flat. There are no drop shadows and no visible gradients anywhere. Depth is made three ways: a saturated field against the canvas (app bar, toolbar, lifted sheet), white objects on the tinted canvas, and hairlines. Hairlines are drawn as inset 1px box-shadows so they do not change layout, and the floating toolbar and its menu wear a 2px canvas-colored ring so they read as cut out of the page rather than lifted above it.
 
-**The Open Surface Rule.** Use line weight and spacing to separate content; this entry surface has no shadow vocabulary.
+### Shadow Vocabulary
+- **Hairline** (`box-shadow: inset 0 0 0 1px var(--color-rule)`): every card, segmented track, pill and open panel.
+- **Hover outline** (`box-shadow: inset 0 0 0 2px var(--lake)`): a liftable verse card under the pointer.
+- **Canvas cut** (`box-shadow: 0 0 0 2px var(--color-canvas)`): the floating toolbar and its menu.
+
+### Named Rules
+**The Print, Don't Float Rule.** box-shadow is used only as an inset hairline or a zero-blur ring. Nothing casts a shadow; nothing has blur.
 
 ## Shapes
 
-Buttons and inputs share a gently curved control corner (`rounded.control`). Rules and dividers remain straight. Controls are at least 48px high; the lower-emphasis text action keeps a 44px touch height. The task area is an open column rather than a boxed card.
+Soft, generous corners that read as cut paper: 12px on controls, 16px on objects (verse cards, open panels, toolbar items), 22px on the toolbar dock (20px on its menu, 14px on menu rows), and full pills for every chip, segmented control, the Start button, hero secondary buttons, the role nav and the lift steps. Number discs are circles. Phrase-color blocks use a 0.18em corner and clone across line breaks. Only inline dividers inside a card (the apparatus) are dashed.
 
 ## Components
 
 ### Buttons
-- **Primary:** solid burgundy, white semibold text, 48px minimum height, with a deeper hover and active state.
-- **Secondary:** white with an outlined border and ink text; the border strengthens on hover.
-- **Text action:** underlined burgundy text for a secondary path such as switching accounts.
-- **Focus and pending:** keyboard focus gets the teal outline; pending controls are disabled and visibly subdued. Background and border changes settle over 160ms, except when reduced motion is requested.
+Thumb-sized, pill-shaped where they move the student forward, rounded rectangles where they submit forms.
+- **Start:** lake fill, white 1.125rem 750 text, full pill, 56px tall, 9rem minimum; full width on phones. Hover deep lake; press scales to 0.97.
+- **Primary (forms):** lake fill, white 600 text, 12px corner, 48px, 0.6875rem by 1.125rem padding. Hover and active deep lake.
+- **Secondary:** white with a control-rule outline, ink text, 12px. Hover wash with an ink outline; active lake tint.
+- **Hero secondary:** white pill with control-rule outline, 48px, 650 weight ("Enter child practice", "Return to parent view", "Service parts").
+- **Icon buttons:** 44–48px transparent circles with 20–22px inline SVG strokes (2px, round caps); hover wash, or 14% white on lake surfaces.
+- **Focus:** 3px solid outline offset 4px, deep lake in light mode; marigold on lake surfaces and throughout dark mode.
+
+### Chips
+- **Countdown chip:** marigold fill, Ink 650 0.875rem text, pill, beside the ceremony date.
+- **Aliyah marker:** white pill with a forest hairline and forest 650 0.875rem text, 32px tall, above the verse where the aliyah starts.
+- **Phrase legend chip:** white pill with hairline holding a family-color pill (Ink 600 text) and a muted word range.
+- **Verse number:** lake-tint disc, 1.875rem, Ink 750 tabular figures.
+
+### Segmented control
+A white pill track with a hairline and 0.25rem padding; transparent 44px pill items; the selected item is a lake pill with white text. Used for Torah / Haftarah / Service parts and for the role nav.
+
+### Cards / Containers
+- **Corner Style:** 16px.
+- **Background:** white surface on the lake canvas.
+- **Shadow Strategy:** inset hairline only; see Elevation.
+- **Internal Padding:** 0.875rem 1.25rem 1rem (1rem sides on phones).
+- **Verse card:** head row (number disc, muted reference, lift button at the end), Hebrew, optional English, apparatus under a dashed hairline. The whole card is tappable to lift, except its controls and selected text.
 
 ### Inputs / Fields
-- **Email field:** white fill, gray-green one-pixel border, ink value, burgundy caret, and the shared control corner. A visible label and short help line accompany it. The disabled field uses the pale canvas.
+- **Style:** white, control-rule 1px outline, 12px corner, 48px tall, lake caret; 600 labels above.
+- **Focus:** the global 3px focus outline.
+- **Disabled:** canvas fill; disabled buttons drop to 60% opacity.
 
 ### Navigation
-- **Masthead:** the CRC name is a compact ink link, paired with a muted congregation name. A skip link appears on focus, and ordinary links use underlined burgundy text.
+- **App bar:** a full-bleed lake band 60px tall with the brand in white 750 and an Account pill on the right; night-lake in dark mode.
+- **Role nav:** the segmented pill track; the current role is a lake pill.
+- **Footer:** centered muted 0.8125rem line, no rule.
 
-### Invitation details
-- **Reviewed access:** a two-column definition list names the role and, when present, the student. The expiry stays visible above the explicit acceptance action. Mixed-direction names use a directional isolate.
+### Reading toolbar (signature)
+One dock drives every verse: Colors, English, text size, and Hear. Lake fill, 22px corner, four equal 56px items with an SVG icon over a 0.8125rem 600 label; a pressed toggle becomes a white tile with deep-lake text. The size item opens a white menu of four rows, each showing a Hebrew sample letter at that step. Hear stays disabled and labeled "coming soon" until the G3 chant gate. Floating dock on phones; sticky vertical rail on desktop. Preferences are remembered per student (colors on by default).
+
+### The lifted line (signature)
+A full-screen modal dialog on a lake sheet (night-lake in dark mode). Top bar: close, "Verse n of N · phrase p of P", phrase-color toggle. Under it a rail of 4px segments: past segments 75% white, the current one marigold, the rest 28% white. The verse is centered at 1.6 times the chosen Hebrew step; while phrasing, words outside the current phrase recede to 32% opacity and the current phrase's color block wipes in word by word (`ink-pull`, 560ms on `cubic-bezier(0.16, 1, 0.3, 1)`, 70ms stagger). Translation, apparatus and the phrase legend sit below. Bottom: a translucent Back pill and a white Next phrase / Next verse pill, both 56px. Vertical swipe and arrow keys step; a long verse scrolls before it steps; reduced motion removes all animation.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** keep current access and invitation outcomes explicit in headings, labels, and recovery copy.
-- **Do** preserve a readable one-column flow and touch-sized actions on phones.
-- **Do** use the restrained burgundy for action and teal for focus or confirmed-role emphasis.
+- **Do** keep lake blue as the one saturated field: app bar, toolbar, selected segment, Start, the lifted sheet.
+- **Do** put Ink type on marigold and on phrase colors, and pair every phrase color with a named legend chip.
+- **Do** draw edges with inset 1px hairlines and separate floating elements with a 2px canvas ring.
+- **Do** size Hebrew only through the four named steps (1.625, 2, 2.5, 3.125rem) and keep line height 2.
+- **Do** keep apparatus (qere notes, paragraph signs, aliyah markers, sources) outside the Hebrew line, in small muted UI type.
+- **Do** honor reduced motion: the ink pull and smooth scrolls snap.
+- **Do** keep touch targets at 44px or more, 56px for the main forward action.
 
 ### Don't:
-- **Don't** imply an unimplemented reading workspace or invent passage content in the entry surface.
-- **Don't** use color alone to communicate role or acceptance state.
-- **Don't** add decorative depth to this flat entry system without an implemented reason.
+- **Don't** use marigold as text or icon color.
+- **Don't** add drop shadows, blur or visible gradients; the world is flat print.
+- **Don't** add mascots, confetti, streak flames, badges, emoji, exclamation points, pep-talk copy or sound effects (Daniel's pinned tone ruling).
+- **Don't** show status, revision, edition or provenance on learner reading surfaces; sources live in "About this text."
+- **Don't** add a second authored motion; the ink pull is the only one.
+- **Don't** introduce a free text-size slider or resize scripture any other way.

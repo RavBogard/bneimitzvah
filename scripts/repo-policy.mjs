@@ -103,8 +103,11 @@ async function fontWorktreeState(root, file) {
 }
 
 function missingFontPair(present, findings, suffix = "") {
-  if (!FONT_ASSETS.some(asset => present.has(asset.path))) return;
-  for (const asset of FONT_ASSETS) if (!present.has(asset.path)) findings.push(`${asset.path}${suffix}: required paired font asset missing`);
+  for (const family of new Set(FONT_ASSETS.map(asset => asset.family))) {
+    const members = FONT_ASSETS.filter(asset => asset.family === family);
+    if (!members.some(asset => present.has(asset.path))) continue;
+    for (const asset of members) if (!present.has(asset.path)) findings.push(`${asset.path}${suffix}: required paired font asset missing`);
+  }
 }
 
 function inspectFontBytes(asset, content, findings, suffix = "") {

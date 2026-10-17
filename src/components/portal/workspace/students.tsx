@@ -54,7 +54,7 @@ function StudentSelection({ mode, switching = false }: { mode: "student" | "pare
       : <><ul className="student-selection-list">{rows.map(row => <li key={row.id}><button className="button-secondary" disabled={busy || context?.studentId === row.id} onClick={() => void selectChild(row.id)}>Switch practice to <bdi dir="auto">{row.firstName} {row.lastName}</bdi></button></li>)}</ul>{more && <button className="button-text" disabled={busy || paging} onClick={() => void loadMore()}>{paging ? "Loading children…" : "Load more children"}</button>}</>}
   </section>;
   const heading = mode === "student" ? "Your assigned reading" : mode === "parent" ? "Your children’s readings" : "Your assigned students";
-  return <section className="role-workspace"><h1>{heading}</h1>
+  return <section className="role-workspace"><h1 className={mode === "student" ? "sr-only" : undefined}>{heading}</h1>
     {mode !== "student" && <p>{mode === "parent" ? "Choose a child to view their reading. Entering child practice is a separate action." : "Choose an assigned student to view their confirmed reading."}</p>}
     {loading ? <p role="status">Loading available students…</p> : error ? <div role="alert"><p>Students couldn’t be loaded. No previous selection is being shown.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload students</button></div>
       : !rows.length ? <p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p>
@@ -67,8 +67,8 @@ export function PracticeWorkspace({ studentId }: { studentId: string }) {
   const { context, busy, exitPractice } = useWorkspace(), router = useRouter();
   useEffect(() => { if (!context && !busy) router.replace("/workspace/parent"); }, [context, busy, router]);
   if (!context || context.studentId !== studentId) return <section className="workspace-state"><h1>Choose a child to practice</h1><p>This tab does not have a matching practice selection. Reloading never restores a practice handle.</p><Link href="/workspace/parent">Choose a linked child</Link></section>;
-  return <RequireRole role="parent"><section className="role-workspace"><div className="workspace-heading-row"><h1>Child practice</h1><button className="button-secondary" disabled={busy} onClick={() => void exitPractice()}>{busy ? "Closing practice…" : "Return to parent view"}</button></div>
-    <p role="status">This tab is in child practice. Your other tabs keep their own selections.</p>
+  return <RequireRole role="parent"><section className="role-workspace"><div className="workspace-heading-row practice-bar"><h1>Child practice</h1><button className="button-hero-secondary" disabled={busy} onClick={() => void exitPractice()}>{busy ? "Closing practice…" : "Return to parent view"}</button></div>
+    <p role="status" className="field-help practice-scope">This tab only. Other tabs keep their own selections.</p>
     <ReadingPanel mode="child-practice" studentId={studentId} /><StudentSelection mode="parent" switching />
   </section></RequireRole>;
 }

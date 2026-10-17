@@ -65,7 +65,7 @@ export function VerseTools({ coordinator, kind, verseRef }: { coordinator: WorkC
   const learner = scope.baseline.mode === "student" || scope.baseline.mode === "child-practice", staff = scope.baseline.mode === "tutor" || scope.baseline.mode === "admin", editable = stream === "draft" ? learner : staff;
   const assignment = scope.baseline.readings.find(row => row.kind === kind)!;
   return <details className="verse-work" open={active} onToggle={event => { if (event.currentTarget.open && !active) void coordinator.open(kind, verseRef); else if (!event.currentTarget.open && active) coordinator.close(kind, verseRef); }}>
-    <summary>Translation &amp; notes · <bdi dir="ltr">{verseRef}</bdi></summary>
+    <summary>{learner ? "Your translation & notes" : "Translation & notes"}<span className={learner ? "sr-only" : undefined}> · <bdi dir="ltr">{verseRef}</bdi></span></summary>
     {active && <div className="verse-work-content">
       <div className="work-streams" role="group" aria-label={`Work for ${verseRef}`}><button className="button-text" aria-pressed={stream === "draft"} aria-controls={`${id}-draft`} onClick={() => setStream("draft")}>{learner ? "My translation" : "Student translation"}</button><button className="button-text" aria-pressed={stream === "note"} aria-controls={`${id}-note`} onClick={() => setStream("note")}>{learner ? "Notes from your teachers" : "Student-visible notes"}</button></div>
       {(!verse || !cell || !cell.verified) && <div role="status"><p>{scope.loading ? "Loading saved work…" : "Saved work unavailable"}</p><button className="button-secondary" disabled={scope.loading} onClick={() => void coordinator.loadPage(kind, assignment.verses.indexOf(verseRef))}>Retry work</button></div>}
