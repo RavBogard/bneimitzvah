@@ -475,6 +475,21 @@ test("the verse's last word releases into a bounded tail beyond the timeline, an
   assert.equal(json(result, "f0-voicing.json").full.frames, Math.ceil(map.totalSamples / 480));
 });
 
+test("a verse without a final rest releases into a real tail, and short vowels keep a two-frame middle", async () => {
+  const { steadySplit } = await import("../trope/human-retime.mjs");
+  const target = packFor("בָ־גָ֑", "Genesis 1:1"), audio = synthetic(target.identity, { pauseAfter: new Set() });
+  const result = build(recordFor(target, audio), target, audio), map = json(result, "retime-map.json");
+  assert.ok(map.tailSamples > 0 && map.tailSamples <= Math.round(0.2 * 24000), "tail within tailMs");
+  assert.equal(map.totalSamples, map.timelineSamples + map.tailSamples); assert.equal(map.slices.at(-1).dstEnd, map.totalSamples);
+  const speech = parseWav(new Uint8Array(result.artifacts["retimed-speech.wav"])).channelData[0];
+  assert.equal(speech.length, map.totalSamples);
+  assert.equal(json(result, "f0-voicing.json").full.frames, Math.ceil(map.totalSamples / 480));
+  const o = { steadyHeadMs: 25, steadyTailMs: 35 };
+  assert.deepEqual(steadySplit(960, 24000, o), { head: 0, tail: 0 });
+  const mid = steadySplit(1440, 24000, o); assert.ok(1440 - mid.head - mid.tail >= 960);
+  assert.deepEqual(steadySplit(4800, 24000, o), { head: 600, tail: 840 });
+});
+
 test("a lengthened vowel keeps its first 25 ms and last 35 ms at natural speed and stretches only its steady middle", async () => {
   const { stretchSteady } = await import("../trope/human-retime.mjs");
   const rate = 24000, vowel = Float64Array.from({ length: 4800 }, (_, i) => Math.sin(2 * Math.PI * 200 * i / rate) * (i < 600 ? i / 600 : 1));

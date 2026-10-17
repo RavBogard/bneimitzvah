@@ -167,7 +167,8 @@ def main():
     # Voiced closure: before b, d, g, m or n the lips or tongue often close while the voice keeps going,
     # a quiet low hum that CTC counts as the end of the vowel. Stretched, it is heard as an extra m or n
     # (Daniel, 2026-10-16: "elohechaM", "anochiN"). Where the vowel's end is that hum (at least 7 dB
-    # below the vowel's own level, with low-band energy dominating), the boundary moves back to it.
+    # below the vowel's own level, with low-band energy dominating), the boundary moves back to it,
+    # by at most 120 ms (the largest move heard in Daniel's take was 81 ms).
     murmur_moves = []
     def band_ratio(t):
         i = int(t * rate)
@@ -194,9 +195,13 @@ def main():
         while cut > 0 and hum[cut - 1]:
             cut -= 1
         new = times[cut] if cut < len(times) else v1
+        new = max(new, v1 - 0.12)
         if v1 - new >= 0.02 and new - v0 >= 0.04:
             bounds[i] = (v0, new); bounds[i + 1] = (new, bounds[i + 1][1])
-            murmur_moves.append({"phone": tokens[i + 1]["phone"], "movedMs": round((v1 - new) * 1000)})
+            murmur_moves.append({"token": i, "vowel": tokens[i]["phone"], "phone": tokens[i + 1]["phone"], "word": tokens[i]["word"],
+                                 "nextWord": tokens[i + 1]["word"], "clipSeconds": round(new, 3), "movedMs": round((v1 - new) * 1000)})
+    if any(b1 - b0 < 0.005 for b0, b1 in bounds):
+        raise SystemExit("a phone span fell under 5 ms after the voiced-closure pass; refusing this proposal")
     syllables = [{"syllableId": s["id"], "onset": [], "vowel": None, "coda": []} for s in identity["syllables"]]
     detail = []
     for t, (b0, b1), sp in zip(tokens, bounds, spans):

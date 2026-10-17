@@ -147,6 +147,10 @@ export function planRetime(bound, input) {
       push(own.vowel, b[k], vowelLength, s);
       const ratio = vowelLength / length(own.vowel);
       if (ratio > o.warnVowelRatio) warnings.push({ code: "vowel-stretch-high", at: s.id, ratio: round6(ratio) });
+      // Only the steady middle is stretched, so its own ratio is the one that is heard.
+      const { head, tail } = steadySplit(length(own.vowel), R, o), middle = length(own.vowel) - head - tail;
+      const middleRatio = vowelLength > length(own.vowel) && middle > 0 ? (vowelLength - head - tail) / middle : ratio;
+      if (middleRatio > o.warnVowelRatio && middleRatio > ratio) warnings.push({ code: "vowel-middle-stretch-high", at: s.id, ratio: round6(middleRatio) });
       let c = b[k] + vowelLength;
       consonants.forEach((phone, i) => { push(phone, c, sizes[i], i < own.coda.length ? s : next); c += sizes[i]; });
       if (c !== b[k + 1]) fail("timeline");
@@ -156,7 +160,11 @@ export function planRetime(bound, input) {
   }
   // The verse's last word has no rest after it inside the target, so it may release into a short tail
   // beyond the executed timeline (heard as cut off without one, Daniel, 2026-10-16).
-  const tailRoom = Math.round(o.tailMs * R / 1000);
+  // The tail never pushes the passage past the length limit or the last slice past the segment limit;
+  // the last cut can move back by up to maxSplitShiftMs, so that much room is kept in reserve.
+  const lastNominal = identity.segments.length > 1 ? toSample(identity.segments.at(-1).startMs) : 0;
+  const tailRoom = Math.max(0, Math.min(Math.round(o.tailMs * R / 1000), BENCHMARK_LIMITS.seconds * R - total,
+    BENCHMARK_LIMITS.segmentSeconds * R - (total - lastNominal) - (lastNominal ? Math.round(o.maxSplitShiftMs * R / 1000) : 0)));
   cursor = Math.max(cursor, release(total + tailRoom + Math.round(o.releaseGapMs * R / 1000)) ?? cursor);
   const tailSamples = Math.max(0, cursor - total);
   silence(cursor, total);
@@ -217,16 +225,25 @@ export function planRetime(bound, input) {
 }
 
 /**
+ * Natural-speed head and tail of a vowel of the given length. The middle keeps at least two WSOLA frames,
+ * so a short vowel is not stretched from one looped grain (review, 2026-10-16); head and tail shrink in
+ * proportion, down to zero for a vowel of two frames or less, which is then stretched whole.
+ */
+export function steadySplit(length, rate, { steadyHeadMs, steadyTailMs }) {
+  let head = Math.round(steadyHeadMs * rate / 1000), tail = Math.round(steadyTailMs * rate / 1000);
+  const spare = Math.max(0, length - 2 * Math.round(WSOLA.frameMs * rate / 1000));
+  if (head + tail > spare) { const k = spare / (head + tail); head = Math.floor(head * k); tail = Math.floor(tail * k); }
+  return { head, tail };
+}
+
+/**
  * Lengthen a vowel by stretching only its steady middle. The first steadyHeadMs and last steadyTailMs
  * stay at natural speed: they carry the glides from and into the neighbouring sounds, and stretching
  * them made a following consonant audible inside the vowel (Daniel, 2026-10-16: "elohechaM",
  * "anochiN", a final "-ta" heard as "teh"). Shortening still scales the whole piece.
  */
-export function stretchSteady(piece, target, rate, { steadyHeadMs, steadyTailMs }) {
-  let head = Math.round(steadyHeadMs * rate / 1000), tail = Math.round(steadyTailMs * rate / 1000);
-  const quarter = Math.floor(piece.length / 4);
-  head = Math.min(head, quarter); tail = Math.min(tail, quarter);
-  const middle = piece.length - head - tail;
+export function stretchSteady(piece, target, rate, options) {
+  const { head, tail } = steadySplit(piece.length, rate, options), middle = piece.length - head - tail;
   if (target <= piece.length || middle < 16 || target - head - tail < 1) return wsola(piece, target, rate);
   const out = new Float64Array(target);
   out.set(piece.subarray(0, head), 0);
@@ -307,8 +324,8 @@ export function buildHumanRetime(record, pack, audio, { code, alignmentFileSha25
       scoreF0: SCORE_F0, voiceless: VOICELESS, full, slices: plan.slices.map(s => f0Voicing(plan, bound.plan, s.dstStart, s.dstEnd)) }), "f0-voicing");
     const peak = speech.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
     add(PATHS.map, canonicalJson({ schema: "chant-human-retime-map/v1", targetHash: record.target.targetHash, passageId: record.target.passageId,
-      units: { source: `original samples mapped to ${plan.rate} Hz by mapSample`, target: `${plan.rate} Hz samples of the executed timeline` },
-      totalSamples: plan.totalSamples, timelineSamples: plan.timelineSamples, tailSamples: plan.tailSamples, totalMs: plan.totalMs, pieces: plan.pieces, notes: plan.noteMap, melismas: plan.melismas, slices, dropped: plan.dropped, releases: plan.releases,
+      units: { source: `original samples mapped to ${plan.rate} Hz by mapSample`, target: `${plan.rate} Hz samples of the executed timeline (timelineSamples), then the verse-final release tail (tailSamples)` },
+      totalSamples: plan.totalSamples, timelineSamples: plan.timelineSamples, tailSamples: plan.tailSamples, totalMs: plan.totalMs, totalMsCovers: "the executed timeline only, without the tail", pieces: plan.pieces, notes: plan.noteMap, melismas: plan.melismas, slices, dropped: plan.dropped, releases: plan.releases,
       warnings: plan.warnings, absentConsonants: plan.pieces.filter(p => p.method === "absent").length, peakAbsolute: round6(peak), reviewDeviation: bound.reviewDeviation }), "retime-map");
     const manifest = { schema: RETIME_SCHEMA, releaseStatus: "private-unreleased", lane: "B-human", stage: "retime",
       targetReview: "pending", targetReviewAssertion: record.target.targetReviewRecordId
