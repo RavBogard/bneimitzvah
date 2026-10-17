@@ -1,4 +1,8 @@
-# Identity-representation write proof â€” author return
+# Identity-representation write proof - author return
+
+## Root integration
+
+Author source `1cf87a1d54ce419305e017d80d0c0a5055ff30d3` is independently accepted at `4445b377dd9c6ad4be5784e5afe04496ffe733b8`: independent8 and composed109 pass, with staged protection3/3 and no source correction. Root's full Node suite passes360/360 in40.76s (`.local-logs/identity-write-integration-node.log`). Author type/default build evidence applies to the unchanged source. Exact hosted integration remains required before a separately prepared, independently reviewed and source-pinned root operator can start ONE fresh identity round. No new native write or production release has occurred; the old failed round remains failed. Root also preserved a separately reviewed provider-disabled receipt/admission implementation contract; it does not authorize real-media transport or database production application.
 
 ## Source and scope
 
