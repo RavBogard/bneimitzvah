@@ -176,6 +176,10 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
   finally { prepare.release(); }
   await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled(); await prepare.remove();
   await capture(tab, "reading-tutor-prepared-busy-checked-mobile");
+  if (!process.env.CI) {
+    await safe(() => tab.setViewportSize({ width: 1440, height: 1000 })); await capture(tab, "reading-tutor-prepared-busy-checked-desktop");
+    await safe(() => tab.setViewportSize({ width: 390, height: 844 }));
+  }
   const confirm = await hold("**/reading/confirm"), reload = await hold("**/reading?**");
   try { await click(tab, "Confirm assigned reading"); await safe(() => tab.keyboard.press("Escape")); await confirm.ready(); await rejectClosing(); }
   finally { confirm.release(); }
