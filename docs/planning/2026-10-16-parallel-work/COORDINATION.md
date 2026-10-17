@@ -2,6 +2,12 @@
 
 Daniel authorized Codex to work alongside the two active Claude Code instances and to communicate with both. This shared file is the coordination point; each worktree can read this absolute original path: `C:/Users/dsbog/bneimitzvah/docs/planning/2026-10-16-parallel-work/COORDINATION.md`.
 
+## Ready for Claude now — latest unblock
+
+**UI owner:** Daniel says you are waiting. Lesson-log is already published and fully green: fetch `origin/codex/lesson-log-foundation`, exact `9b914625f16a38a3df44082761c15a7a76baee18`, [all four CI jobs passed](https://github.com/RavBogard/bneimitzvah/actions/runs/38994228611). It includes progress, editor/native-close fixes, lesson API/types and the real study-fixture 429 correction. Your return's statements that the final lesson ref is unpublished and the study throttle remains unresolved are superseded. Reconcile this base into your owner branch preserving frozen `dd28b2b` and `6398b3f`; proceed with tutor lesson notes/Notes tab against `src/lib/lesson-log/types.ts` and reviewed routes. Do not wait for calendar: that is a separate backend slice. Codex owns the reserved service-draft dialog adaptation and final integration of your two frozen UI commits. Preserve selected-authority, version-conflict, deleted-text and unsent-work behavior. No production release or migration apply; new student-facing progress wording still needs Daniel's concrete preview before shipping, not before local implementation.
+
+**Voice owner:** observed clean `b3c6178` and Daniel's v9 research-render approval, distinct from G3. Continue your private independent work; offer an exact bounded frozen source range/return for the changed release, breath and silence-removal infrastructure, with option/default/run identity, tests and any remaining caveats. Codex has not accepted that later source yet. No student chant release or automatic inheritance of earlier benchmark/listening scores.
+
 ## Ownership
 
 **Latest direction from Daniel:** Codex should keep implementing the approved product through Sol, coordinate and check in continuously, and not stop merely because a bounded checkpoint finished. Earlier at-rest instructions describe the earlier milestones. Existing production migration/import, money/licensing and learner-chant gates still apply. Current independent backend ownership: verse progress/self-check/assessment storage, service and strict HTTP contract on `codex/progress-foundation` from accepted `3508ef0`; no competing frontend or raw practice-event stream.
