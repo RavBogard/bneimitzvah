@@ -8,9 +8,10 @@ import { AnnotatedStudyVerse } from "./annotations";
 import { LiftedLine } from "./lift";
 import { useReadingPrefs } from "../reading-prefs";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
+import { PortalRequestError } from "../../api";
 
 export type StudyReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
-export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderWork, renderActiveWork, onPage, learner = false, liftHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit }: {
+export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderWork, renderActiveWork, onPage, learner = false, liftHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, active = true }: {
   baseline: Assigned | null; register(value: StudyReload): () => void; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; onKindChange(kind: StudyKind): void;
   guardDeparture?(): Promise<boolean>; serviceHref?: string; renderWork?(kind: StudyKind, verseRef: string): ReactNode; renderActiveWork?(): ReactNode; onPage?(kind: StudyKind, offset: number, signal: AbortSignal): Promise<void>;
   /** Students and child practice see the reading without status or provenance prose. */
@@ -22,8 +23,9 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   renderMark?(kind: StudyKind, verseRef: string): ReactNode; renderLiftControls?(kind: StudyKind, verseRef: string): ReactNode;
   /** Called only when the reader explicitly opens a verse: tapping it, Start, or stepping to another verse. Never on a reload. */
   onVisit?(kind: StudyKind, verseRef: string): void;
+  onHearReady?(ready: boolean): void; active?: boolean;
 }) {
-  const { readStudy, summary } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
+  const { readStudy, readReference, summary, concealed, epoch } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
   const [lift, setLift] = useState<{ page: StudyPage; index: number } | null>(null);
   const metadata = useRef<Assigned | null>(null), controller = useRef<AbortController | null>(null), generation = useRef(0);
   const selection = useRef<{ kind: StudyKind; offset: number; assignmentKey: string } | null>(null);
@@ -73,10 +75,13 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     } catch { /* Authority state has already cleared text and metadata. */ }
   }
   const livePage = key && state.binding === key && !state.loading ? state.page : undefined;
+  const canHear = Boolean(livePage && !concealed && active);
+  useLayoutEffect(() => { onHearReady?.(canHear); return () => onHearReady?.(false); }, [canHear, onHearReady]);
+  useLayoutEffect(() => { if (concealed || !active) setLift(null); }, [concealed, active, epoch]);
   const shown = livePage && state.kind ? [state.kind, livePage.offset, livePage.verses.length] as const : null;
   useEffect(() => { if (shown) onShown?.(...shown); }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
   const open = (page: StudyPage, index: number) => { setLift({ page, index }); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
-  if (liftHandle) liftHandle.current = livePage ? (index: number) => open(livePage, Math.min(Math.max(index, 0), livePage.verses.length - 1)) : null;
+  if (liftHandle) liftHandle.current = livePage && canHear ? (index: number) => open(livePage, Math.min(Math.max(index, 0), livePage.verses.length - 1)) : null;
   if (!baseline) return <section className="assigned-study" aria-label="Assigned text"><p role="status">Text is hidden while the assignment is checked.</p></section>;
   if (!baseline.readings.length) return null;
   const kind = current?.kind ?? selection.current?.kind ?? baseline.readings[0].kind, assignment = baseline.readings.find(row => row.kind === kind);
@@ -98,7 +103,14 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {!learner && <p className="field-help">Hebrew: Miqra according to the Masorah. English reference: JPS2023. No alternate edition is substituted.</p>}
       {!single && <nav className="study-pages" aria-label="Text pages"><button className="button-secondary" disabled={previous === undefined} onClick={() => previous !== undefined && void explicitLoad(kind, previous)}>Previous text page</button><button className="button-secondary" disabled={current.page.nextOffset === null} onClick={() => current.page?.nextOffset !== null && void explicitLoad(kind, current.page!.nextOffset!)}>Next text page</button></nav>}
       <div className="study-more"><StudyCredits chapters={current.page.chapters} summary={learner ? "About this text" : undefined} />{learner && <WorkspaceLink href="/trope-chart">Trope chart</WorkspaceLink>}</div>
-      {lift && lift.page === current.page && <LiftedLine learner={learner} verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} index={lift.index} total={current.page.totalVerses} offset={current.page.offset}
+      {lift && canHear && lift.page === current.page && <LiftedLine learner={learner} verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} index={lift.index} total={current.page.totalVerses} offset={current.page.offset}
+        reference={{ scopeKey: JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current]), load: async signal => {
+          const value = baseline, page = current.page!, turn = generation.current;
+          if (signal.aborted || metadata.current !== value || lift.page !== page) throw new PortalRequestError(409);
+          const result = await readReference(value, kind, page.offset + lift.index, signal);
+          if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
+          return result;
+        } }}
         onIndex={index => open(lift.page, index)} onClose={() => setLift(null)} controls={renderLiftControls && (ref => renderLiftControls(kind, ref))} />}
     </>}
   </section>;

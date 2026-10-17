@@ -1,8 +1,8 @@
 // Public code may name these schemas; schema-bearing data must remain private.
 const LITERAL_SCHEMA = /"schema"\s*:\s*"chant-(?:benchmark-(?:input|pack|identity|run)|human-[a-z0-9-]+|listening-[a-z0-9-]+)\//;
 const DECODED_SCHEMA = /^chant-(?:benchmark-(?:input|pack|identity|run)|human-[a-z0-9-]+|listening-[a-z0-9-]+)\//;
-const REFERENCE_LITERAL_SCHEMA = /"schema"\s*:\s*"pockettorah-verse-index\/v1"/;
-const REFERENCE_SCHEMA = "pockettorah-verse-index/v1";
+const REFERENCE_LITERAL_SCHEMA = /"schema"\s*:\s*"(?:pockettorah-verse-index|reference-catalog)\/v1"/;
+const REFERENCE_SCHEMAS = new Set(["pockettorah-verse-index/v1", "reference-catalog/v1"]);
 export const PRIVATE_BENCHMARK_REASON = "private chant-benchmark record";
 export const PRIVATE_REFERENCE_INDEX_REASON = "private reference-audio index";
 export const PRIVATE_BENCHMARK_BUDGET_REASON = "private benchmark inspection budget exceeded";
@@ -48,7 +48,7 @@ export function privateBenchmarkProblem(text, data = false) {
       if (item.depth > PRIVATE_BENCHMARK_LIMITS.maxDepth) return PRIVATE_BENCHMARK_BUDGET_REASON;
       if (!item.value || typeof item.value !== "object") continue;
       if (Object.hasOwn(item.value, "schema") && typeof item.value.schema === "string" && DECODED_SCHEMA.test(item.value.schema)) return PRIVATE_BENCHMARK_REASON;
-      if (Object.hasOwn(item.value, "schema") && item.value.schema === REFERENCE_SCHEMA) return PRIVATE_REFERENCE_INDEX_REASON;
+      if (Object.hasOwn(item.value, "schema") && REFERENCE_SCHEMAS.has(item.value.schema)) return PRIVATE_REFERENCE_INDEX_REASON;
       const keys = Object.keys(item.value);
       nodes += keys.length;
       if (nodes > PRIVATE_BENCHMARK_LIMITS.maxNodes) return PRIVATE_BENCHMARK_BUDGET_REASON;

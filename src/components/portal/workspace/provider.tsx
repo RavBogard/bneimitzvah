@@ -7,6 +7,8 @@ import { parseSession, PortalRequestError, requestPortal, roleNames, type Sessio
 import { workspaceApi, type Assigned, type Context, type ReadingMode } from "./api";
 import { PracticeCoordinator } from "./practice";
 import { fetchStudyPage, type StudyKind, type StudyPage } from "./study/api";
+import { fetchReferenceAudio } from "./study/reference-api";
+import type { ReferenceResolution } from "../../../lib/reference-audio/source";
 import { fetchWork, type WorkOperation, type WorkPage, type WorkHistory, type WorkReceipt, type WorkRecovery } from "./work/api";
 import { fetchProgress, type ProgressOperation, type ProgressRows, type ProgressSaved } from "./progress/api";
 import { serviceApi, type ServiceMetadata, type ServicePlan, type ServiceUnitResponse } from "./service-learning/api";
@@ -22,6 +24,7 @@ type Workspace = {
   read(mode: ReadingMode, id: string, signal: AbortSignal): Promise<Assigned>;
   readVerified(mode: ReadingMode, id: string, signal: AbortSignal): Promise<Assigned>;
   readStudy(baseline: Assigned, kind: StudyKind, offset: number, signal: AbortSignal): Promise<StudyPage>;
+  readReference(baseline: Assigned, kind: StudyKind, offset: number, signal: AbortSignal): Promise<ReferenceResolution>;
   readWork(baseline: Assigned, kind: StudyKind, operation: WorkOperation, signal: AbortSignal): Promise<WorkPage | WorkHistory | WorkReceipt | WorkRecovery>;
   readProgress(baseline: Assigned, kind: StudyKind, operation: ProgressOperation, signal: AbortSignal): Promise<ProgressRows | ProgressSaved>;
   readServiceMetadata(mode: ReadingMode, id: string, signal: AbortSignal): Promise<ServiceMetadata>;
@@ -275,6 +278,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [practice, verifyWorkSession, clearWork, router, refresh]);
   const readServiceMetadata = useCallback((mode: ReadingMode, id: string, signal: AbortSignal) => serviceRead(mode, id, signal, selection => serviceApi.metadata(mode, id, signal, selection ?? undefined)), [serviceRead]);
+  const readReference = useCallback((baseline: Assigned, kind: StudyKind, offset: number, signal: AbortSignal) => {
+    const selected = practice.selection;
+    if (baseline.mode === "child-practice" && (!selected || selected.context.studentId !== baseline.student.id || selected.context.id !== baseline.context?.id
+      || selected.context.authorityRevision !== baseline.context.authorityRevision || selected.context.expiresAt !== baseline.context.expiresAt)) return Promise.reject(new PortalRequestError(409));
+    return serviceRead(baseline.mode, baseline.student.id, signal, selection => fetchReferenceAudio(baseline, kind, offset, signal, selection ?? undefined));
+  }, [practice, serviceRead]);
   const readServiceUnit = useCallback((mode: ReadingMode, id: string, plan: ServicePlan, unitId: string, signal: AbortSignal) => serviceRead(mode, id, signal, selection => serviceApi.unit(mode, id, plan, unitId, signal, selection ?? undefined)), [serviceRead]);
   // Lesson notes share the service path: fresh session checks around each request, and the same access-failure handling.
   const readLessons = useCallback((mode: ReadingMode, id: string, operation: LessonOperation, signal: AbortSignal) => serviceRead(mode, id, signal, selection => fetchLessons(mode, id, operation, signal, selection ?? undefined)), [serviceRead]);
@@ -298,7 +307,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={refresh}>Check access again</button>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
-        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readWork, readProgress, readServiceMetadata, readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, concealed: checking || failure !== null }}>
+        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readReference, readWork, readProgress, readServiceMetadata, readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, concealed: checking || failure !== null }}>
           {summary.roles.length > 1 && <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] || pathname.startsWith(`${rolePaths[role]}/`) ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>}
           {visibleNotice && <p className="workspace-notice" role="status">{visibleNotice}</p>}
           {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}

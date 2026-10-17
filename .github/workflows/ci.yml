@@ -59,6 +59,8 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: disposable-ci-only
       - run: npx playwright install --with-deps chromium
+      - name: Install synthetic reference-audio test encoder
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - run: npm run build
       - name: Exercise browser HTTP authority and built production denial
         run: npm run test:http:browser

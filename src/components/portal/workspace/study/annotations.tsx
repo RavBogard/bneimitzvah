@@ -7,6 +7,7 @@ import hebrewStyles from "../../../../styles/hebrew-font.module.css";
 import { useReadingPrefs } from "../reading-prefs";
 import type { StudyVerse } from "./api";
 import styles from "./annotations.module.css";
+import referenceStyles from "./reference-player.module.css";
 
 const families = new Map(PHRASE_FAMILIES.map(family => [family.id, family]));
 type Ready = Extract<ColorResult, { status: "ready" }>;
@@ -26,7 +27,7 @@ export function useVerseColors(verse: StudyVerse, assignment: AssignmentEnding, 
   return useMemo(() => enabled ? colorStudyVerse(verse.ref, verse.hebrew, { kind, confirmed, verses: verses ? verses.split("\n") : [] }) : null, [enabled, verse, kind, confirmed, verses]);
 }
 
-export function StudyHebrew({ verse, colors, id, className = "" }: { verse: StudyVerse; colors: Ready | null; id: string; className?: string }) {
+export function StudyHebrew({ verse, colors, id, className = "", activeWord = null, onWordSelect }: { verse: StudyVerse; colors: Ready | null; id: string; className?: string; activeWord?: number | null; onWordSelect?(index: number): void }) {
   const projection = useMemo(() => {
     if (colors) return colors.projection;
     const result = projectStudyVerse(verse.ref, verse.hebrew);
@@ -35,8 +36,9 @@ export function StudyHebrew({ verse, colors, id, className = "" }: { verse: Stud
   const parts = (pieces: readonly DisplayPart[]) => pieces.map((part, index) => {
     const word = part.wordIndex === null ? null : colors?.words[part.wordIndex];
     const family = word?.family ? families.get(word.family) : null;
+    const active = part.wordIndex !== null && part.wordIndex === activeWord;
     return <span key={index} data-word-index={part.wordIndex ?? undefined} data-family={family?.id} data-phrase={word?.phrase ?? undefined}
-      className={family ? styles.word : undefined} style={family ? { "--phrase-color": family.color, "--w": part.wordIndex } as CSSProperties : undefined}
+      data-reference-active={active ? "true" : undefined} className={[family ? styles.word : "", active ? referenceStyles.activeWord : ""].filter(Boolean).join(" ") || undefined} style={family ? { "--phrase-color": family.color, "--w": part.wordIndex } as CSSProperties : undefined}
       aria-describedby={!family || word?.phrase === null || word?.phrase === undefined ? undefined : `${id}-phrase-${word.phrase}`}>{part.text}</span>;
   });
   const alternative = (written: string, read: ReactNode) => <><span>{written}</span><span className="study-read-alternative"> [<span className="study-qere-label" lang="en" dir="ltr">read / qere:</span> {read}]</span></>;
@@ -44,7 +46,12 @@ export function StudyHebrew({ verse, colors, id, className = "" }: { verse: Stud
   const trailing = (index: number, count: number, kind: string) => kind === "gap" && verse.hebrew.paragraphAfter !== null && index === count - 1;
   const gap = (kind: "petuchah" | "setumah") => <span className="study-paragraph-gap"><span lang="en" dir="ltr">[{kind === "petuchah" ? "open paragraph" : "closed paragraph"}]</span></span>;
   const sign = <span role="img" aria-label="Inverted nun, Masoretic sign">׆</span>;
-  return <p className={`study-hebrew ${hebrewStyles.hebrew} ${className}`.trim()} lang="he" dir="rtl">{projection ? projection.runs.map((run, index) => run.kind === "text" ? <span key={run.segment}>{parts(run.parts)}</span>
+  return <p className={`study-hebrew ${hebrewStyles.hebrew} ${className}`.trim()} lang="he" dir="rtl" onClick={onWordSelect ? event => {
+    if (window.getSelection()?.toString()) return;
+    const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-word-index]") : null;
+    if (!target || !event.currentTarget.contains(target)) return;
+    const index = Number(target.dataset.wordIndex); if (Number.isSafeInteger(index) && index >= 0 && projection && index < projection.words.length) onWordSelect(index);
+  } : undefined}>{projection ? projection.runs.map((run, index) => run.kind === "text" ? <span key={run.segment}>{parts(run.parts)}</span>
     : run.kind === "alternative" ? <span className="study-alternative" key={run.segment}>{alternative(run.written, parts(run.read))}</span>
       : run.kind === "gap" && trailing(index, projection.runs.length, run.kind) ? null : <span key={run.segment}>{run.kind === "gap" ? gap(run.break) : sign}</span>)
     : verse.hebrew.segments.map((segment, index) => segment.kind === "text" ? <span key={index}>{segment.text}</span>

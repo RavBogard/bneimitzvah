@@ -6,6 +6,7 @@ export type RuntimeConfig = Readonly<{
   deployment: DeploymentScope; origin: string; databaseUrl: string; authSecret: string;
   google?: Readonly<{ clientId: string; clientSecret: string }>;
   mail: Readonly<{ apiKey: string; from: string }>;
+  referenceAudio?: Readonly<{ catalogSha256: string; storeId: string; studentRelease: boolean }>;
 }>;
 const clean = (s: unknown): s is string => typeof s === "string" && s.length > 0 && s.trim() === s && !/[\x00-\x20\x7f]/.test(s);
 // Configuration selects exactly one; this is not a request-host alias list.
@@ -44,8 +45,15 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
       if (!clean(env.GOOGLE_CLIENT_ID) || !clean(env.GOOGLE_CLIENT_SECRET) || env.GOOGLE_CLIENT_ID.length > 512 || env.GOOGLE_CLIENT_SECRET.length > 512) throw 0;
       google = Object.freeze({ clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET });
     }
+    let referenceAudio: RuntimeConfig["referenceAudio"];
+    const catalogSha256 = env.REFERENCE_AUDIO_CATALOG_SHA256, release = env.REFERENCE_AUDIO_STUDENT_RELEASE;
+    if (release !== undefined && release !== "true" && release !== "false") throw 0;
+    if (catalogSha256 !== undefined) {
+      if (!/^[a-f0-9]{64}$/.test(catalogSha256) || typeof env.BLOB_STORE_ID !== "string" || !/^store_[A-Za-z0-9]{8,64}$/.test(env.BLOB_STORE_ID)) throw 0;
+      referenceAudio = Object.freeze({ catalogSha256, storeId: env.BLOB_STORE_ID, studentRelease: release === "true" });
+    } else if (release === "true") throw 0;
     return Object.freeze({ deployment: Object.freeze({ environment, deployment: env.PORTAL_DEPLOYMENT }), origin: origin.origin,
-      databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google,
+      databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio,
       mail: Object.freeze({ apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM }) });
   } catch { throw new RuntimeUnavailable(); }
 }

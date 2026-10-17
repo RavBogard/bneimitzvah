@@ -4,7 +4,7 @@ import { textSizes, useReadingPrefs, useSetReadingPrefs } from "./reading-prefs"
 import { icons } from "./study/lift";
 
 /** One toolbar drives every verse on the page through shared preferences. */
-export function ReadingToolbar() {
+export function ReadingToolbar({ onHear }: { onHear?(): void } = {}) {
   const prefs = useReadingPrefs(), setReadingPrefs = useSetReadingPrefs(), id = useId(), menu = `${id}-size`;
   const size = textSizes.find(row => row.id === prefs.size)!;
   return <nav className="reading-toolbar" aria-label="Reading tools">
@@ -16,6 +16,6 @@ export function ReadingToolbar() {
         onClick={event => { setReadingPrefs({ size: row.id }); (event.currentTarget.parentElement as HTMLElement & { hidePopover?(): void }).hidePopover?.(); }}>
         <span className="toolbar-menu-sample" lang="he" dir="rtl" aria-hidden="true">אָ</span>{row.label}</button>)}
     </div>
-    <button type="button" className="toolbar-item" disabled>{icons.hear}<span>Hear</span><span className="toolbar-soon">coming soon</span></button>
+    <button type="button" className="toolbar-item" disabled={!onHear} onClick={onHear}>{icons.hear}<span>Hear</span></button>
   </nav>;
 }

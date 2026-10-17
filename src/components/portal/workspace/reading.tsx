@@ -46,7 +46,7 @@ type PageTab = "reading" | "service" | "lessons";
 const pageTabs: [PageTab, string][] = [["reading", "Reading"], ["service", "Service parts"], ["lessons", "Lessons"]];
 
 export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: ReadingMode; studentId: string; onStudentReload?(student: Student): void }) {
-  const { readVerified: read, readWork, readProgress, readPracticeCalendar, epoch, busy, selectChild, registerReload, registerWork, completeWork, registerDeparture, guardDeparture } = useWorkspace();
+  const { readVerified: read, readWork, readProgress, readPracticeCalendar, epoch, busy, concealed, selectChild, registerReload, registerWork, completeWork, registerDeparture, guardDeparture } = useWorkspace();
   const key = `${mode}:${studentId}:${epoch}`;
   const serviceId = useId();
   const [result, setResult] = useState<{ key: string; value?: Assigned; error?: number; loading?: boolean }>({ key: "" }), [retry, setRetry] = useState(0);
@@ -114,6 +114,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   // Tutors and admins teach from the same Song session reading, and keep the staff assignment details.
   const staff = mode === "tutor" || mode === "admin", song = learner || staff, editorId = `${serviceId}-editor`;
   const lift = useRef<((index: number) => void) | null>(null);
+  const [hearReady, setHearReady] = useState(false);
   // Staff change verses in a sheet over the reading instead of a form below it.
   const [sheetOpen, setSheetOpen] = useState(false), [serviceDepartureActive, setServiceDepartureActive] = useState(false), sheet = useRef<HTMLDialogElement>(null), sheetOrigin = useRef<HTMLElement | null>(null);
   // Keep the editor draft mounted, but give departure review the sole modal
@@ -215,12 +216,12 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
         : <AssignmentContext row={selectedReading} current />}</>}</>}
       {tabPanel("reading", <><AssignedStudyText baseline={current?.value ?? null} register={registerStudy} reloadMetadata={load} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} onKindChange={setSelectedKind}
         guardDeparture={guardReading} serviceHref={tabbed ? undefined : `#${serviceId}`} renderWork={(kind, verseRef) => <VerseTools coordinator={work} kind={kind} verseRef={verseRef} />} renderActiveWork={() => work.active && <VerseTools coordinator={work} kind={work.active.kind} verseRef={work.active.ref} />}
-        onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} learner={learner} songSession={song} liftHandle={lift}
+        onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} learner={learner} songSession={song} liftHandle={lift} onHearReady={setHearReady} active={!tabbed || tab === "reading"}
         onShown={(kind, offset, length) => progress.ensure(kind, offset, length)} renderMark={(kind, verseRef) => <VerseMark store={progress} kind={kind} verseRef={verseRef} />} renderLiftControls={(kind, verseRef) => <LiftProgress store={progress} kind={kind} verseRef={verseRef} />} onVisit={(kind, verseRef) => calendar.visitVerse(kind, verseRef)} />
       {work.notice && <p className="field-help" role="status">{work.notice}</p>}
       {!learner && otherReadings.length > 0 && <details className="reading-other-assignments"><summary>Other confirmed reading details</summary>{otherReadings.map(row => <AssignmentContext key={row.id} row={row} />)}</details>}</>)}
     </section>
-    {student && song && (!tabbed || tab === "reading") && <ReadingToolbar />}
+    {student && song && (!tabbed || tab === "reading") && <ReadingToolbar onHear={hearReady && !concealed && !current?.loading ? () => lift.current?.(0) : undefined} />}
     {student && !song && <aside className="reading-tools" aria-labelledby="tools-heading"><h2 id="tools-heading">Practice tools</h2>
       <p>The confirmed assignment appears here. Use the review form below to propose and confirm changes.</p>
       <p>Open translation and notes beside each verse. Audio practice is not available yet.</p>

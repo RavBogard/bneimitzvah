@@ -143,7 +143,7 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   expect(await learner.locator(".student-aliyah").count()).toBe(0);
   for (const prose of ["Confirmed assignment", "Calendar source", "Selected English edition available.", "Unsent work stays only in this tab"]) expect(await learner.getByText(prose).count()).toBe(0);
   await ui(colorsControl(learner)).toHaveAttribute("aria-pressed", "true");
-  await ui(learner.getByRole("button", { name: "Hear coming soon", exact: true })).toBeDisabled();
+  await ui(learner.getByRole("button", { name: "Hear", exact: true })).toBeEnabled();
   await firstHebrewInViewport(learner);
   await capture(learner, "study-student-partial-mobile");
   const assigned = await api(adminTab, `/api/students/${fixture.student.id}/reading?mode=admin`);

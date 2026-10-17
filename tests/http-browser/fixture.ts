@@ -7,6 +7,9 @@ import { createReadingPreviewService } from "../../src/server/students/preview";
 import { createStudentService } from "../../src/server/students/service";
 import { createPracticeService } from "../../src/server/practice/service";
 import { createPortalService } from "../../src/server/portal/service";
+import { createReferenceAudioService } from "../../src/server/reference-audio/service";
+import type { ReferenceCatalog } from "../../src/server/reference-audio/catalog";
+import { ReferenceUnavailable } from "../../src/server/reference-audio/catalog";
 import { createStudyService } from "../../src/server/study/service";
 import { createServiceLearningService } from "../../src/server/service-learning/service";
 import { createStudentWorkService } from "../../src/server/student-work/service";
@@ -30,7 +33,7 @@ import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
 const secret = () => randomBytes(48).toString("base64url");
 type Mail = { email: string; url: string };
 
-export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage> } = {}) {
+export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean } = {}) {
   const base = await postgresAccessFixture();
   try {
     // The shared disposable fixture creates the DB, migrations and restricted
@@ -53,6 +56,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     const pendingInvitations = createPendingInvitations({ secret: secret(), origin: BROWSER_ORIGIN, environment: "local" });
     const readingPreview=createReadingPreviewService({access,signingSecret:secret(),loadReading:async(date,calendar)=>({fetchedAt:Date.now(),snapshot:{date:parseCeremonyDate(date),calendar,classification:date===options.emptyReadingDate?"missing":"regular",reading:date===options.emptyReadingDate?null:{parashah:"Synthetic",type:"shabbat",summary:"",source:"Hebcal",aliyot:[{n:1,ref:"Genesis 1:1-6:8"},{n:"M",ref:"Numbers 28:9-10"}],triennial:null},haftarah:date===options.emptyReadingDate?null:"Isaiah 1:1-2"}}),loadText:options.studyLoad??(async()=>{throw new StudyUnavailable("upstream");})});
     const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, readingPreview, progress: createProgressService({ access, practice }), lessonLog: createLessonLogService({ access, practice }), practiceCalendar: createPracticeCalendarService({ access, practice }), recordings: createStudentRecordingService({ access, practice }), portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
+      referenceAudio: createReferenceAudioService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), loadCatalog: options.referenceCatalogLoad ?? (async () => { throw new ReferenceUnavailable(); }), studentRelease: options.referenceStudentRelease === true }),
       study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }), studentWork: createStudentWorkService({ access, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
     serviceLearning: createServiceLearningService({ access: access, practice, signingSecret: secret() }),
       googleChallenges: createGoogleChallenges({ db, origin: BROWSER_ORIGIN, secret: secret() }),

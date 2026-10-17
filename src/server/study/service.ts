@@ -33,9 +33,9 @@ function equal(a: Binding, b: Binding) {
     && a.context.authorityRevision === b.context.authorityRevision && a.context.studentId === b.context.studentId
     && a.context.studentRevision === b.context.studentRevision && a.context.expiresAt === b.context.expiresAt;
 }
-export function createStudyService<Q extends PgQueryResultHKT>(input: {
+export function createStudyService<Q extends PgQueryResultHKT, P extends StudyPage = StudyPage>(input: {
   access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>;
-  load: (request: StudyRequest) => Promise<StudyPage>;
+  load: (request: StudyRequest) => Promise<P>;
 }) {
   return Object.freeze({ async read(original: AccessRequest & { signal?: AbortSignal }, supplied: StudySelection) {
     // Keep the same request binding across both passes; no mutable caller header

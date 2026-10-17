@@ -19,6 +19,9 @@ import { createGoogleChallenges } from "../http/google-challenge";
 import { createPersistentReadingCache } from "../data/reading-cache";
 import { createPersistentStudyCache } from "../data/study-cache";
 import { createSefariaStudyReader } from "../study/sefaria";
+import { createReferenceAudioService } from "../reference-audio/service";
+import { createReferenceCatalogLoader } from "../reference-audio/storage";
+import { ReferenceUnavailable, type ReferenceCatalog } from "../reference-audio/catalog";
 import { createStudyService } from "../study/service";
 import { createServiceLearningService } from "../service-learning/service";
 import { createStudentWorkService } from "../student-work/service";
@@ -48,6 +51,43 @@ function sharedStudyTasks(fetch: typeof globalThis.fetch) {
   if (!tasks) { tasks = createPublicStudyCoalescer(); publicStudyTasks.set(fetch, tasks); }
   return tasks;
 }
+let referenceCatalogCache: Readonly<{ key: string; catalog: ReferenceCatalog }> | undefined;
+
+/** Configured construction stays lazy. The only credential comes from native
+ * platform request context, supplied explicitly to the pinned private get. */
+export function createRuntimeReferenceLoader(config: RuntimeConfig["referenceAudio"]) {
+  if (!config) return async () => { throw new ReferenceUnavailable(); };
+  const { catalogSha256, storeId } = config;
+  const load = createReferenceCatalogLoader({ sha256: catalogSha256, get: async (path, { signal }) => {
+    let result: Awaited<ReturnType<typeof import("@vercel/blob")["get"]>>;
+    try {
+      // These are the pinned SDK's endpoint override names, never request input.
+      if (process.env.VERCEL_BLOB_API_URL !== undefined || process.env.NEXT_PUBLIC_VERCEL_BLOB_API_URL !== undefined) throw 0;
+      const { getContext } = await import("@vercel/oidc");
+      if (signal.aborted) throw 0;
+      const token = getContext().headers?.["x-vercel-oidc-token"];
+      if (typeof token !== "string" || token.length < 1 || token.length > 16384 || token.trim() !== token || /[\s\x00-\x1f\x7f]/.test(token)) throw 0;
+      const { get } = await import("@vercel/blob");
+      if (signal.aborted || getContext().headers?.["x-vercel-oidc-token"] !== token) throw 0;
+      result = await get(path, { access: "private", storeId, oidcToken: token, abortSignal: signal, useCache: false });
+      if (signal.aborted || getContext().headers?.["x-vercel-oidc-token"] !== token || !result || result.statusCode !== 200 || !(result.stream instanceof ReadableStream)) throw 0;
+      return result.stream;
+    } catch {
+      try { if (result!?.stream) void result!.stream.cancel().catch(() => {}); } catch {}
+      throw new ReferenceUnavailable();
+    }
+  } });
+  const key = `${storeId}:${catalogSha256}`;
+  return async (signal?: AbortSignal) => {
+    if (signal?.aborted) throw new ReferenceUnavailable();
+    if (referenceCatalogCache?.key === key) return referenceCatalogCache.catalog;
+    const catalog = await load(signal);
+    if (signal?.aborted) throw new ReferenceUnavailable();
+    // One immutable success only; never cache promises, failures or request data.
+    referenceCatalogCache = Object.freeze({ key, catalog });
+    return catalog;
+  };
+}
 export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch,
   studyTasks: PublicStudyCoalescer = sharedStudyTasks(fetch)) {
   const send = createMailTransport({ ...config.mail, origin: config.origin, fetch });
@@ -66,6 +106,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const recordings = createStudentRecordingService({ access, practice });
   const loadText = createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS, cache: createPersistentStudyCache(db), coalescer: studyTasks });
   const study = createStudyService({ access, practice, load: loadText });
+  const referenceAudio = createReferenceAudioService({ access, practice, loadText, loadCatalog: createRuntimeReferenceLoader(config.referenceAudio), studentRelease: config.referenceAudio?.studentRelease });
   const readingPreview = createReadingPreviewService({ access, loadReading, loadText, signingSecret:purposeSecret(config,"reading-preview") });
   const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding") });
   const relationships = createRelationshipService({ access });
@@ -77,7 +118,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingPreview, studentWork, progress, lessonLog, practiceCalendar, recordings, serviceLearning, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, referenceAudio, readingPreview, studentWork, progress, lessonLog, practiceCalendar, recordings, serviceLearning, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

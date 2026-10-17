@@ -1,4 +1,5 @@
 import "server-only";
+import { parseReferenceResolution, type ReferenceResolution } from "../../lib/reference-audio/source";
 import type { HttpRuntime } from "../runtime/composition";
 import type { ActiveMode } from "../access/types";
 import { AccessDenied } from "../access/errors";
@@ -13,7 +14,7 @@ import { closedObject, uniqueQuery } from "./query";
 import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
-type Kind = "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
+type Kind = "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
   | "admin-students" | "edit" | "disable" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "pending" | "accept"
   | "eligible-tutors" | "relationships" | "tutor-assign" | "tutor-unassign" | "guardian-revoke" | "identity-revoke" | "guardian-practice" | "grant-revoke" | "cantor";
 type Route = { kind: Kind; methods: readonly string[]; id?: string; linkId?: string };
@@ -32,6 +33,8 @@ function route(pathname: string): Route | null {
   if (Object.hasOwn(exact, pathname)) return exact[pathname];
   const preview = /^\/api\/students\/([^/]+)\/reading\/preview\/(prepare|page)$/.exec(pathname);
   if(preview)return {kind:preview[2]==="prepare"?"preview-prepare":"preview-page",methods:["POST"],id:preview[1]};
+  const reference = /^\/api\/students\/([^/]+)\/reference-audio$/.exec(pathname);
+  if (reference) return { kind: "reference-audio", methods: ["GET"], id: reference[1] };
   const study = /^\/api\/students\/([^/]+)\/study-text$/.exec(pathname);
   if (study) return { kind: "study-text", methods: ["GET"], id: study[1] };
   const student = /^\/api\/students\/([^/]+)(?:\/(reading)(?:\/(prepare|confirm))?)?$/.exec(pathname);
@@ -94,6 +97,17 @@ function studyPageView(page: StudyPage): { [key: string]: JsonValue } {
       editions: chapter.editions.map(edition => ({ key: edition.key, versionTitle: edition.versionTitle, language: edition.language, creator: edition.creator,
         sourceUrl: edition.sourceUrl, license: edition.license, licenseUrl: edition.licenseUrl, changes: edition.changes })) })) };
 }
+function referenceView(value: ReferenceResolution): JsonValue {
+  const parsed = parseReferenceResolution(value); if (!parsed) throw new Error("Reference projection unavailable");
+  const v = parsed.verse, source = parsed.source;
+  if (v.playback.status !== "unavailable" && (!("table" in v) || !("attribution" in v))) throw new Error("Reference projection unavailable");
+  const verse: JsonValue = v.playback.status === "unavailable" ? { schema: v.schema, ref: v.ref, playback: { status: "unavailable", reason: "asset-not-approved" }, words: { status: "unavailable", reason: "no-playback" } }
+    : { schema: v.schema, ref: v.ref, table: "table" in v ? v.table : null,
+      playback: { status: v.playback.status, asset: v.playback.asset, clip: { start: v.playback.clip.start, end: v.playback.clip.end }, ...(v.playback.status === "needs-review" ? { review: v.playback.review } : {}) },
+      words: v.words.status === "ready" ? { status: "ready", readingTextSha256: v.words.readingTextSha256, starts: [...v.words.starts] } : { status: "unavailable", reason: v.words.reason },
+      attribution: { ...("attribution" in v ? v.attribution : {}) } };
+  return { verse, source: source ? { schema: source.schema, asset: source.asset, url: source.url, sha256: source.sha256, bytes: source.bytes } : null };
+}
 const aliyot = (rows: Aliyah[]) => rows.map(row => ({ n: row.n, ref: row.ref, verses: row.verses ?? null, reason: row.reason ?? null }));
 function snapshotView(snapshot: Snapshot) {
   const r = snapshot.reading;
@@ -122,7 +136,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", selected.methods.join(", ")); return response;
     }
     const practiceRoute = selected.kind.startsWith("practice-");
-    if (!practiceRoute && selected.kind !== "reading" && selected.kind !== "study-text" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
+    if (!practiceRoute && selected.kind !== "reading" && selected.kind !== "study-text" && selected.kind !== "reference-audio" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
     // Dispatcher resolves the actual host before this adapter. Services still
     // independently reauthorize; no body/Origin/forwarded claim chooses tenant.
     if (request.method === "POST") requireCookieMutation(request, runtime.origin);
@@ -207,6 +221,19 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       case "student": {
         const query = uniqueQuery(request.url, ["mode"]);
         return privateJson({ student: studentView(await runtime.access.readStudent(request, { mode: baseMode(query.get("mode")), studentId: id! })) });
+      }
+      case "reference-audio": {
+        const query = uniqueQuery(request.url, ["mode", "kind", "assignmentId", "assignmentRevision", "translation", "offset", "asset"]);
+        const kind = query.get("kind"), translation = query.get("translation"), revisionValue = query.get("assignmentRevision"), offset = query.get("offset"), asset = query.get("asset");
+        if ((kind !== "torah" && kind !== "haftarah") || translation !== "jps2023" || !revisionValue || !/^[1-9][0-9]{0,9}$/.test(revisionValue)
+          || offset === null || !/^(?:0|[1-9][0-9]{0,2})$/.test(offset) || asset !== null && !/^ra_[a-f0-9]{32}$/.test(asset)) throw new HttpBoundaryError();
+        let value;
+        try { value = await runtime.referenceAudio.read(request, { mode: mode(query.get("mode"), true), studentId: id!, kind,
+          assignmentId: identifier(query.get("assignmentId")), assignmentRevision: integer(Number(revisionValue)), translation, offset: Number(offset), ...(asset === null ? {} : { asset }) }); }
+        catch (error) { if (error instanceof StudyUnavailable && error.code === "invalid-request") throw new HttpBoundaryError(); throw error; }
+        if (!value.ok) return stale();
+        return privateJson({ studentId: value.studentId, studentRevision: value.studentRevision, mode: value.mode, context: contextView(value.context),
+          assignment: { id: value.assignment.id, revision: value.assignment.revision, kind: value.assignment.kind, needsReview: value.assignment.needsReview }, reference: referenceView(value.reference) });
       }
       case "study-text": {
         const query = uniqueQuery(request.url, ["mode", "kind", "assignmentId", "assignmentRevision", "translation", "offset"]);
