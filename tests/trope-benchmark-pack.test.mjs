@@ -162,3 +162,35 @@ test("CLI checks the frozen input checksum, writes one private pack and returns 
     const refused = await call(sha256(invalidData), join(root, "invalid-provenance")); assert.equal(refused.code, 1); await assert.rejects(lstat(join(root, "invalid-provenance")), { code: "ENOENT" });
   } finally { await cleanup(); }
 }));
+
+test("measured timing keeps notes, order and text while each syllable lasts its measured time, minus the emitter's breaths", () => {
+  const row = JSON.parse(load("./fixtures/trope/calibration-torah.json")).verses.find(v => v.ref === "Genesis 24:12");
+  const base = input([passage(row.he, { ref: row.ref })]), engine = build(base);
+  const score = artifact(engine, "score"), engineSyllables = artifact(engine, "identity-map").syllables;
+  // Invented durations; a melisma gets at least 80 ms per note, as a sung one would.
+  const measured = engineSyllables.map((s, k) => Math.max(150 + (k % 4) * 90 + (k % 7 === 6 ? 700 : 0), 80 * s.noteIds.length));
+  const timedInput = clone(base); timedInput.passages[0].timing = { source: "measured", recordId: "timing-test", syllableMs: measured };
+  const timed = build(timedInput), tScore = artifact(timed, "score"), map = artifact(timed, "identity-map");
+  assert.notEqual(timed.manifest.passages[0].targetHash, engine.manifest.passages[0].targetHash);
+  assert.equal(timed.manifest.passages[0].timing.source, "measured"); assert.equal(engine.manifest.passages[0].timing, "engine");
+  assert.deepEqual(tScore.events.map(e => [e.unit, e.syllable, e.midi, e.slur]), score.events.map(e => [e.unit, e.syllable, e.midi, e.slur]));
+  assert.equal(tScore.tempo, 60);
+  // Each syllable's sung notes plus any breath rest after it add up to the measured time.
+  const notes = new Map(map.notes.map(n => [n.id, n])), byStart = new Map(map.notes.map(n => [n.startMs, n]));
+  map.syllables.forEach((s, k) => {
+    const own = s.noteIds.map(id => notes.get(id)), end = own.at(-1).startMs + own.at(-1).durationMs;
+    const rest = byStart.get(end)?.rest ? byStart.get(end).durationMs : 0;
+    const next = map.syllables[k + 1] ? notes.get(map.syllables[k + 1].noteIds[0]).startMs : null;
+    const sung = own.reduce((t, n) => t + n.durationMs, 0), total = sung + (next === null ? 0 : rest);
+    // The breath rest replaces part of the syllable; at most half the measured time is given up.
+    if (rest && next !== null) { assert.ok(sung >= Math.ceil(measured[k] / 2), `syllable ${k} kept`); assert.ok(total >= measured[k], `syllable ${k} total`); }
+    else assert.equal(total, measured[k], `syllable ${k}`);
+  });
+  assert.equal(map.parity.executedTiming, true);
+  assert.ok(timed.manifest.passages[0].timing.emitterBreathMsRemoved >= 0);
+  const short = clone(timedInput); short.passages[0].timing.syllableMs.pop(); rejects(short, "timing-syllable-count");
+  const tiny = clone(timedInput); tiny.passages[0].timing.syllableMs[0] = 10; rejects(tiny, "timing-bounds");
+  const wrong = clone(timedInput); wrong.passages[0].timing.source = "guess"; rejects(wrong, "timing");
+  const extra = clone(timedInput); extra.passages[0].timing.note = "x"; rejects(extra, "schema");
+  const badId = clone(timedInput); badId.passages[0].timing.recordId = "../x"; rejects(badId, "identifier");
+});

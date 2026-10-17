@@ -4,6 +4,7 @@ import { verseUnits } from "./text.mjs";
 import { scoreVerse, SPECIAL_MELODIES } from "./melody.mjs";
 import { scoreToSoulx, SOULX_STYLES, syllableToken } from "./soulx.mjs";
 import { buildPlan, segmentNotes } from "./speech2sing.mjs";
+import { applyMeasuredTiming, emitterBreaths, MEASURED_LIMITS, MeasuredTimingError } from "./measured-timing.mjs";
 
 export const BENCHMARK_LIMITS = Object.freeze({ inputBytes: 262144, textBytes: 8192, passages: 12,
   words: 512, syllables: 2048, notes: 8192, seconds: 180, segmentSeconds: 30,
@@ -49,7 +50,16 @@ function validateInput(input) {
   if (!Array.isArray(input.passages) || !input.passages.length || input.passages.length > BENCHMARK_LIMITS.passages) fail("bounds");
   const ids = new Set();
   for (const passage of input.passages) {
-    object(passage, ["id", "ref", "he", "textSha256", "flags"]); id(passage.id);
+    // Optional measured timing: same notes and text, syllable durations from a private human take.
+    const timed = Object.hasOwn(passage, "timing");
+    object(passage, timed ? ["id", "ref", "he", "textSha256", "flags", "timing"] : ["id", "ref", "he", "textSha256", "flags"]); id(passage.id);
+    if (timed) {
+      object(passage.timing, ["source", "recordId", "syllableMs"]);
+      if (passage.timing.source !== "measured" || !Array.isArray(passage.timing.syllableMs) || !passage.timing.syllableMs.length
+        || passage.timing.syllableMs.length > BENCHMARK_LIMITS.syllables) fail("timing");
+      id(passage.timing.recordId);
+      if (passage.timing.syllableMs.some(ms => !Number.isSafeInteger(ms) || ms < MEASURED_LIMITS.syllableMinMs || ms > MEASURED_LIMITS.syllableMaxMs)) fail("timing-bounds");
+    }
     if (ids.has(passage.id.toLowerCase())) fail("identifier"); ids.add(passage.id.toLowerCase());
     const book = typeof passage.ref === "string" && REF.exec(passage.ref)?.[1];
     if (!book || (TORAH.has(book) ? "torah" : "haftarah") !== BENCHMARK_TABLES[p.table]) fail("reference-table");
@@ -153,6 +163,11 @@ export function benchmarkIdentityMap({ passageId, targetHash, units, score, segm
     f0Parity: "not-claimed" };
 }
 
+function timedScore(score, syllableMs) {
+  try { return applyMeasuredTiming(score, syllableMs); }
+  catch (error) { if (error instanceof MeasuredTimingError) fail(`timing-${error.code}`); throw error; }
+}
+
 /** Trusted assets are exact local file bytes supplied by the CLI, never private input. */
 export function buildBenchmarkPack(input, assets) {
   try {
@@ -172,14 +187,28 @@ export function buildBenchmarkPack(input, assets) {
       const syllables = units.units.flatMap(unit => unit.syllables);
       if (!units.units.length || units.warnings.length || units.units.reduce((n, unit) => n + unit.words.length, 0) > BENCHMARK_LIMITS.words
         || syllables.length > BENCHMARK_LIMITS.syllables || syllables.some(s => !s.ph.some(p => profile.symbols[p]?.type === "vowel"))) fail("units");
-      const score = scoreVerse(units, { table, key: input.performance.key, tempo: input.performance.tempo, elision: false });
-      if (score.events.length > BENCHMARK_LIMITS.notes || score.seconds > BENCHMARK_LIMITS.seconds || score.units.some(unit => unit.cell.fallback)) fail("score");
+      const engineScore = scoreVerse(units, { table, key: input.performance.key, tempo: input.performance.tempo, elision: false });
+      if (engineScore.events.length > BENCHMARK_LIMITS.notes || engineScore.seconds > BENCHMARK_LIMITS.seconds || engineScore.units.some(unit => unit.cell.fallback)) fail("score");
+      let score = engineScore, breathMs = null;
+      if (passage.timing) {
+        // Measured inter-onset times already hold the chanter's breaths, so each syllable the emitter
+        // follows with a breath rest is shortened by that rest, and the score is timed once more.
+        const draft = timedScore(engineScore, passage.timing.syllableMs);
+        const breaths = emitterBreaths(draft, scoreToSoulx(draft, { ...style, profile }));
+        // Never take more than half a syllable: the chanter may not have breathed where the emitter does.
+        const removed = passage.timing.syllableMs.map((ms, k) => Math.min(breaths.get(k) ?? 0, Math.floor(ms / 2)));
+        breathMs = removed.reduce((a, b) => a + b, 0);
+        score = timedScore(engineScore, passage.timing.syllableMs.map((ms, k) => ms - removed[k]));
+        if (score.seconds > BENCHMARK_LIMITS.seconds) fail("score");
+      }
       const segments = scoreToSoulx(score, { ...style, profile });
       const plan = buildPlan(score, segments, { profile, units });
       const identities = benchmarkIdentityMap({ passageId: passage.id, targetHash, units, score, segments, plan, profile, style });
       const directory = passage.id;
       for (const [name, data] of [["units", units], ["score", score], ["a-soulx-target", segments], ["b-speech-plan", plan], ["identity-map", identities]]) add(`${directory}/${name}.json`, data);
       passages.push({ id: passage.id, ref: passage.ref, textSha256: passage.textSha256, flags: passage.flags, targetHash, directory,
+        timing: passage.timing ? { source: "measured", recordId: passage.timing.recordId, syllables: passage.timing.syllableMs.length, emitterBreathMsRemoved: breathMs,
+          review: "measured values are assertions from a private take; not reviewed here" } : "engine",
         seconds: plan.seconds, segments: segments.length, notes: score.events.length, syllables: syllables.length, targetReview: "pending" });
     }
     const manifest = { schema: "chant-benchmark-pack/v1", benchmarkId: input.benchmarkId, releaseStatus: "private-unreleased", targetReview: "pending",

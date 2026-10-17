@@ -55,7 +55,7 @@ async function codeRevision() {
 export async function loadBenchmarkAssets(tableName, inputFileSha256) {
   try {
     if (!Object.hasOwn(BENCHMARK_TABLES, tableName)) rejected("performance");
-    const files = {}, paths = ["trope/text.mjs", "trope/lib-trope.cjs", "trope/melody.mjs", "trope/soulx.mjs", "trope/speech2sing.mjs", "trope/benchmark-pack.mjs", "scripts/trope-benchmark-pack.mjs"];
+    const files = {}, paths = ["trope/text.mjs", "trope/lib-trope.cjs", "trope/melody.mjs", "trope/soulx.mjs", "trope/speech2sing.mjs", "trope/benchmark-pack.mjs", "trope/measured-timing.mjs", "scripts/trope-benchmark-pack.mjs", "scripts/private-paths.mjs"];
     const vendor = async path => {
       for (const entry of (await readdir(join(REPOSITORY, path), { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
         const child = `${path}/${entry.name}`;
