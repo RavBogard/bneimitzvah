@@ -3,6 +3,7 @@ import { createSefariaStudyReader, planStudyPage, STUDY_LIMITS } from "../../src
 import { JPS2023, MAM, versionParameter } from "../../src/server/study/versions";
 import { StudyUnavailable, type StudyRequest } from "../../src/server/study/types";
 import { expandReadingRanges, type VerseCounts } from "../../src/lib/readings/ranges";
+import { parseStudyContent, studyRangePlan } from "../../src/components/portal/workspace/study/api";
 vi.mock("server-only", () => ({}));
 
 const counts: VerseCounts = { Genesis: [3, 2], Isaiah: [2] };
@@ -52,6 +53,26 @@ it("normalizes an unassigned plain trivial verse without poisoning the selected 
   expect(selected.verses[0].hebrew.text).toBe("אָב בָ֣ ג׃".normalize("NFC"));
   expect(selected.verses[0].hebrew.readingText).toBe(selected.verses[0].hebrew.text);
   expect(selected.verses[0].hebrew.segments.some(segment => segment.kind === "alternative")).toBe(false);
+});
+
+it("a reversed unassigned ketiv-qere pair no longer poisons the chapter and selected data round-trips through the closed client parser", async () => {
+  const data = payload();
+  data.versions[0].text[1] = 'אָב <span class="mam-kq"><span class="mam-kq-q">[דָ֖ הָ֑]</span><span class="mam-kq-k">בָ֔־גָ</span></span> וָ׃';
+  const fetch = vi.fn<typeof globalThis.fetch>(async () => response(data));
+  const unrelated = await reader(fetch)(request(["Genesis 1:1"])); expect(unrelated.verses.map(verse => verse.ref)).toEqual(["Genesis 1:1"]);
+  const selected = await reader(fetch)(request(["Genesis 1:2"]));
+  expect(selected.verses[0].hebrew).toMatchObject({ text: "אָב בָ֔־גָ וָ׃".normalize("NFC"), readingText: "אָב דָ֖ הָ֑ וָ׃".normalize("NFC") });
+  const client = parseStudyContent(JSON.parse(JSON.stringify(selected)), studyRangePlan(["Genesis 1:2"], "torah", 0), 0, 1);
+  expect(client).toEqual(selected); expect(fetch).toHaveBeenCalledTimes(2);
+});
+
+it.each([
+  '<span class="mam-kq-q">[בָ]</span><span class="mam-kq-q">[גָ]</span>',
+  '<span class="mam-kq-q">[]</span><span class="mam-kq-k">גָ</span>',
+  '<span class="mam-kq-q">[בָ]</span><span class="mam-kq-k"><span class="unknown">גָ</span></span>',
+])("keeps rejecting malformed reversed pairs in an unassigned verse (%#)", sides => {
+  const data = payload(); data.versions[0].text[1] = `אָב <span class="mam-kq">${sides}</span> דָ׃`;
+  return expect(reader(async () => response(data))(request(["Genesis 1:1"]))).rejects.toMatchObject({ code: "invalid-response" });
 });
 
 it.each([
