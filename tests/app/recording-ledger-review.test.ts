@@ -22,7 +22,7 @@ async function fixture() {
 }
 async function denied(operation: Promise<unknown>) { try { await operation; return 0; } catch (error) { return error instanceof AccessDenied ? error.status : 503; } }
 
-test("post-query anniversary crossing repages retained private rows behind a full expired submitted page without leaking staff cursors", async () => {
+test("post-query anniversary crossing hides private and submitted pages and cursors while preserving explicit own deletion", async () => {
   const f = await fixture(), privateId = randomUUID(), submitted = Array.from({ length: 51 }, () => randomUUID());
   await f.owner(async () => {
     await f.db.insert(s.studentRecording).values([...submitted, privateId].map((id, i) => ({ id, tenantId: "crc", studentId: f.selected.studentId, ...descriptor().media,
@@ -32,11 +32,14 @@ test("post-query anniversary crossing repages retained private rows behind a ful
   const original = data.page;
   vi.spyOn(data, "page").mockImplementationOnce(async (...args) => { const rows = await original(...args); expect(rows).toHaveLength(51); f.setClock(due); return rows; });
   const page = await f.recordings.page(f.mutation(), f.selected);
-  expect(page.entries.map(row => row.id)).toEqual([privateId]); expect(page.nextCursor).toBeNull();
+  expect(page.entries).toEqual([]); expect(page.nextCursor).toBeNull();
   const staff = { ...f.selected, mode: "tutor" as const };
   expect((await f.recordings.page(f.request("/recording-review"), staff)).entries).toEqual([]);
   expect(await denied(f.recordings.page(f.request("/recording-review"), staff, privateId))).toBe(404);
   expect(await denied(f.recordings.page(f.mutation(), f.selected, submitted[0]))).toBe(404);
+  expect(await denied(f.recordings.page(f.mutation(), f.selected, privateId))).toBe(404);
+  expect(await f.recordings.remove(f.mutation(), f.selected, { recordingId: privateId, expectedRevision: 1 })).toEqual({ ok: true, recording: { id: privateId, revision: 2, state: "deleting" } });
+  expect(await f.owner(() => f.db.select().from(s.studentRecording).where(eq(s.studentRecording.id, privateId)))).toMatchObject([{ state: "deleting", revision: 2, submittedAt: null }]);
 });
 
 test("anniversary crossing after actual creation/submission audit rolls back the metadata and audit together", async () => {

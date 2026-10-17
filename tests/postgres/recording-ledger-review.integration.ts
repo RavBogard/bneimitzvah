@@ -127,3 +127,34 @@ test("native old-expired ceremony postponement irreversibly deletes submitted he
   await f.ownerDb.update(s.student).set({ ceremonyDate: "2100-01-01" }).where(eq(s.student.id, f.student.id));
   expect(await f.ownerDb.select().from(s.studentRecording)).toMatchObject([{ id, state: "deleting", revision: 3 }]); expect(await f.ownerDb.select().from(s.auditEvent)).toEqual(audits);
 });
+
+for (const mode of ["student", "child-practice"] as const) test(`private metadata expiry after an observed row wait hides the ${mode} ${mode === "student" ? "page" : "cursor"}`, async () => {
+  const f = await fixture(), deadline = Date.parse("2026-03-01T06:00:00Z");
+  await f.ownerDb.update(s.student).set({ ceremonyDate: "2025-03-01" }).where(eq(s.student.id, f.student.id)); f.clock(deadline - 1);
+  const { id } = await recording(f), audits = await f.ownerDb.select().from(s.auditEvent);
+  const ownerPid = (await query<{ pid: number }>(f.owner, "select pg_backend_pid() as pid")).rows[0].pid;
+  const entered = deferred(), release = deferred(), hold = safe(f.ownerDb.transaction(async tx => { await tx.execute(sql`select id from student_recording where id=${id} for update`); entered.resolve(); await release.promise; }));
+  let result: Promise<unknown> | undefined;
+  try {
+    await waitForEntry(entered.promise, hold);
+    result = safe(f.serviceA.page(mode === "student" ? f.mutation() : f.mutation("tutor", f.context.handle), mode === "student" ? f.selected : f.child, mode === "student" ? undefined : id));
+    await f.waitForLock(f.pidA, ownerPid); f.clock(deadline);
+  } finally { release.resolve(); await Promise.all([hold, result]); }
+  expect(await result).toMatchObject(mode === "student" ? { ok: true, entries: [], nextCursor: null } : { denied: 404 });
+  expect(await f.ownerDb.select().from(s.studentRecording)).toMatchObject([{ id, state: "private", revision: 1, submittedAt: null }]); expect(await f.ownerDb.select().from(s.auditEvent)).toEqual(audits);
+  expect(await f.serviceA.remove(f.mutation(), f.selected, { recordingId: id, expectedRevision: 1 })).toMatchObject({ ok: true, recording: { state: "deleting", revision: 2 } });
+});
+
+for (const expired of ["old", "new"] as const) test(`restricted ceremony edit with ${expired} expired date irreversibly stages private recordings with rollback and NULL submission`, async () => {
+  const f = await fixture(), initial = expired === "old" ? "2000-01-01" : "2099-01-01", replacement = expired === "old" ? "2099-01-01" : "2000-01-01";
+  await f.ownerDb.update(s.student).set({ ceremonyDate: initial }).where(eq(s.student.id, f.student.id)); f.clock(expired === "old" ? Date.parse("2000-01-01T12:00:00Z") : Date.now());
+  const { id } = await recording(f), audits = await f.ownerDb.select().from(s.auditEvent);
+  await expect(withTenantTransaction(f.aDb, { tenantId: "crc" }, async tx => { await tx.update(s.student).set({ ceremonyDate: replacement }).where(eq(s.student.id, f.student.id)); throw new Error("Synthetic private rollback"); })).rejects.toThrow("Synthetic private rollback");
+  expect(await f.ownerDb.select().from(s.student).where(eq(s.student.id, f.student.id))).toMatchObject([{ ceremonyDate: initial }]);
+  expect(await f.ownerDb.select().from(s.studentRecording)).toMatchObject([{ id, state: "private", revision: 1, submittedAt: null, deletionRequestedAt: null }]);
+  await withTenantTransaction(f.aDb, { tenantId: "crc" }, tx => tx.update(s.student).set({ ceremonyDate: replacement }).where(eq(s.student.id, f.student.id)));
+  const rows = await f.ownerDb.select().from(s.studentRecording); expect(rows).toMatchObject([{ id, state: "deleting", revision: 2, submittedAt: null, deletionRequestedAt: expect.any(Date) }]);
+  await withTenantTransaction(f.aDb, { tenantId: "crc" }, tx => tx.update(s.student).set({ ceremonyDate: "2100-01-01" }).where(eq(s.student.id, f.student.id)));
+  expect(await f.ownerDb.select().from(s.studentRecording)).toEqual(rows); expect(await f.ownerDb.select().from(s.auditEvent)).toEqual(audits);
+  expect(await f.registrarA.register(f.mutation(), f.selected, { ...descriptor(), assetId: rows[0].assetId, contentSha256: rows[0].contentSha256, media: { mediaType: "audio/webm;codecs=opus", byteLength: rows[0].byteLength, durationMs: rows[0].durationMs } })).toEqual(conflict);
+});

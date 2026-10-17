@@ -26,3 +26,27 @@ Owned test SHA-256:
 - `tests/postgres/recording-ledger-review.integration.ts`: `efdd506059752ae1df08f52a06f022c8a1296000928c641f656cf26b800b6273`
 
 The implementer's normal11/11 and typecheck passes are separate reported evidence, reused for unchanged normal route/DTO/calendar/migration-upgrade cases rather than represented as independent runs. Root owns full app/Node/build, fresh combined SQL/restricted regression, repository protection and hosted CI. Private-unsent retention remains the recorded unresolved production policy; storage/cleanup/recording UI and any later byte capability need their own reviewed contracts.
+
+## All-state retention amendment — independently accepted
+
+The preceding section records the earlier submitted-only policy and its historical evidence. Daniel subsequently resolved private-unsent retention: **all student recordings, private and submitted, share the one-calendar-year ceremony deadline**. This amendment supersedes the preceding unresolved-policy statement. Reviewed product delta: `a6d4a33788c52722d74272d141dc3248fabbbd77`, with authoritative policy/specification commit `0ffd92eef898f020eaa84039fb04027b4f4c2841`. No storage, provider, physical deletion, recording UI or production operation is authorized or certified by this review.
+
+Bounded source review finds the implementation matches that decision. The shared visible filter returns SQL false when due, covering both list and cursor resolution for private/submitted records. The existing fresh-clock requery after awaited cursor/page reads therefore cannot preserve newly expired private metadata. Registration/submission still refuse due work; authorized own/child deletion remains available. The same SECURITY INVOKER ceremony trigger now includes private and submitted states under its existing actual post-student-lock clock and OLD-or-NEW due condition. Private1 transitions to deleting2 with NULL submission; submitted2 transitions to deleting3 with its existing submission preserved. Timestamp bounds, irreversible lifecycle, tenant scope, grants, capability selection and public DTOs are unchanged. No old release operator or historical0018 migration was widened.
+
+Independent amendment evidence:
+
+```text
+node .local-logs/run-isolated.mjs recording-all-states-review-typecheck npm run typecheck
+node .local-logs/run-isolated.mjs recording-all-states-review-app npm run test:app -- tests/app/recording-ledger-review.test.ts
+node .local-logs/recording-all-states-pg-isolated.mjs
+```
+
+Composed typecheck passed. Amended app **3/3 passed, 5.98 s**, including a post-query anniversary crossing behind51 submitted rows: neither private nor submitted metadata/cursors remain visible, while exact-revision own private deletion succeeds as deleting2 with NULL submittedAt. Existing audit-deadline rollback and overlapping-parent zero-data-access assertions remain.
+
+Actual restricted PostgreSQL **18/18 passed in one amendment run, 10.63 s**; `.local-logs/recording-all-states-independent-pg.log`. This includes the fourteen prior native cases without removing their submitted/session/context/CAS/RLS assertions, plus four new cases. Two new cases require observed row-blocking edges before advancing the trusted retention clock: an own-student private page becomes empty and an explicit-child private cursor becomes404, with unchanged ledger/audit rows; authorized deletion still succeeds after expiry. Two restricted tenant transactions test OLD-expired and NEW-expired ceremony dates, transaction rollback of both ceremony and recording changes, private1→deleting2 with NULL submission, unchanged deletion rows after further postponement, retained-asset conflict and no invented recording audit. Total required and observed native blocking edges in this run: **14** (prior12 plus two new private-read waits).
+
+The ignored runner was copied from the previously inspected recording runner with log names changed to preserve prior evidence. It rechecked exact loopback55439/data-directory/native16.15 identity, used a fresh owned anchor and fixture-owned databases/restricted roles, and reported owned anchor removed:true. All fixtures closed; no shared role/password/database repair, browser, provider or production activity occurred. The exclusive native lane was released. Product source remained byte-identical to `a6d4a33`; HEAD was policy/doc-only descendant `0ffd92e` during execution.
+
+Amended test Git blobs: app `924b554de7f4483991364e84e8a30e12886f7900`; native `b5ab73348d0419af37605c662ebf82ee0acb87cb`. SHA-256 respectively `4dccdc8422bd36bfe6ce647ca0fff8e2d1e2f1e75c9334be108b6afea50fb706` and `b53ac89869cc3767d56efcefe7a8f134acd66f6f04eecd016cc0c4e2e32b1e99`.
+
+**Accepted for this bounded all-state retention amendment.** No remaining implementation blocker found. The implementer's reported normal11/typecheck is separate attribution, not an independent execution claim. Broader/fresh SQL suites and exact hosted CI remain root-owned; no unrelated full-suite repetition was needed for these focused findings. Storage/physical cleanup and future recording UI remain separate gates, while the private-retention product choice is resolved.
