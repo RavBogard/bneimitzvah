@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/private-media-oidc-probe.mjs",
     "build": "next build",
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
@@ -26,6 +27,7 @@
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.10",
     "@neondatabase/serverless": "1.2.0",
+    "@vercel/blob": "2.8.2",
     "better-auth": "1.7.10",
     "drizzle-orm": "0.45.4",
     "next": "16.4.2",
