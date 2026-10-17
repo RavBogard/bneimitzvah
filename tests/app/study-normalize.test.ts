@@ -62,6 +62,15 @@ describe("synthetic study plaintext normalization", () => {
   ])("rejects malformed or unreviewed semantic side pairs (%#)", sides => {
     expect(() => normalizeHebrew(`אָב <span class="mam-kq">${sides}</span> דָ׃`)).toThrow("Unsupported study markup");
   });
+  it.each(["&#xfeff;", "&#x202e;", "&#x2066;", "&#x85;"])("validates decoded inter-side text before whitespace elision (%s)", control => {
+    const k = '<span class="mam-kq-k">בָ</span>', q = '<span class="mam-kq-q">[גָ]</span>';
+    for (const [first, second] of [[k, q], [q, k]]) {
+      for (const content of [`${control}${first}${second}`, `${first}${control}${second}`, `${first}${second}${control}`]) {
+        expect(() => normalizeHebrew(`אָב <span class="mam-kq">${content}</span> דָ׃`)).toThrow("Unsupported study markup");
+      }
+    }
+    expect(normalizeHebrew(`אָב <span class="mam-kq">\n${q}\t ${k}\n</span> דָ׃`).readingText).toBe("אָב גָ דָ׃".normalize("NFC"));
+  });
   it("preserves the reviewed plain trivial form as identical written/read text and one spoken word", () => {
     const form = "בָ֣\u034f", verse = normalizeHebrew(`אָב <span class="mam-kq-trivial">${form}</span> ג׃`);
     expect(verse.text).toBe(`אָב ${form} ג׃`.normalize("NFC"));
