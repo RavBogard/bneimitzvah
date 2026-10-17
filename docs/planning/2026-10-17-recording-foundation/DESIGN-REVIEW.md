@@ -1,0 +1,35 @@
+# Student recording ledger — independent contract review
+
+Reviewed the draft `2026-10-17-student-recording-ledger-design.md` against the accepted `2026-10-16-recording-foundation-design.md`, targeted current practice/progress authority primitives and the recording inventory. Read-only architecture review; no source implementation, tests, private media, providers or production access. Root retains contract decisions before implementation.
+
+Source base `0ce58b6bd8da0c9e31288314986c278fa7db1360`; reviewed draft SHA-256 `e1b074cf333707f348f1447656113b718051f63a933cc4358d02642b80599e28` before root incorporates these corrections.
+
+## Assessment
+
+The storage-independent slice is coherent: student-level metadata, explicit submission, base-parent denial, exact child-practice authority, submitted-only current staff reads, no HTTP registration/bytes/cleanup completion, irreversible deletion requests and no claimed physical deletion. It preserves the existing reference/generated-audio separation and parked generation. Plain student ownership avoids the known regenerated assignment-verse UUID lifetime problem. No new grant or consent path is needed.
+
+The following precision should be incorporated before implementation; no larger architecture is needed:
+
+1. **Use the actual authority API.** The current export is `createPracticeService().withPracticeCapability`, with literal `read` or `practice-write`; no existing `withPracticingStudent` export exists. Preserve tenant/user/session/membership/grant/student/relationship/context locks and use a recording-specific selected-mode operation gate. A generic parent read or overlapping staff grant must never select recording authority.
+2. **Enforce initial privacy in SQL.** State/revision/timestamp consistency checks alone can admit an inserted submitted/revision2 row. The INSERT path must explicitly require private/revision1 with null submission/deletion instants. UPDATE triggers then enforce the two actual transition chains, immutable capture/student/asset facts and submission instant, and exact no-op identity. Narrow grants and invoker semantics remain correct.
+3. **Repeat retention checks after waits.** Fresh session/context checks do not establish a fresh retention decision. A list/cursor query can start before the Chicago anniversary and finish after it. Require a fresh post-await retention fence before every list/receipt/replay return and metadata commit, including unique-asset waits, row locks and audit. A stale pre-query instant must not return overdue submitted metadata or permit a late submission. Recompute the visible page/cursor consistently or refuse/restart safely; never expose hidden rows/counts while repairing pagination.
+4. **Specify mutation/no-op boundaries.** Recommended: owner/selected child may request deletion even when a submitted recording is overdue; retention denial must not prevent cleanup requests. Only a fresh matching current expectedRevision can return a submit/delete no-op, without audit. Stale versions conflict. Competing private submit/delete uses one atomic CAS winner; once deleting wins it cannot be submitted/revived. Registration's asset-idempotent retry is distinct: fresh exact authorized descriptor may return its current permitted record without changing state; due/deleting/collision paths stay generic.
+5. **Make the registration separation structural.** A service type that hides a register method is weaker than an actual runtime object that excludes it. Compose only list/submit/delete-request methods into HttpRuntime; construct the internal registration seam separately. Keep verified descriptor/asset/hash types server-only. Registration validates facts supplied by a future trusted decoder and capture-ownership check; it is not proof that media verification exists today.
+
+## Retention, projection and pagination details to preserve
+
+The draft's OLD-or-NEW overdue ceremony trigger is necessary to prevent postponement resurrection. Student UPDATE must precede recording locks; use post-lock clock_timestamp, Chicago date comparison, Feb29 clamping and internal year10000. Automatic retention state changes should not manufacture an audit saying a user requested deletion; retain the roster's normal audit transaction and rollback behavior. Preserve submittedAt when marking deleting. No notification or physical cleanup is implied.
+
+Filter tenant/student/mode/state/retention before cursor resolution, row locking, one-extra-row calculation and DTO projection. Keep separate immutable ordering fields for student versus staff, with opaque ID cursors and uniform missing/foreign/hidden cursor failure. The date-only media DTO may contain verified duration but must not expose asset/hash, exact instants, source actor/context or private counts. Lists remain observational and do not create practice/progress events.
+
+The current no-DELETE/deleting-row rule prevents asset replay in this slice. A future worker that physically removes the ledger row also removes its unique-asset dedup memory; that future contract must not claim permanent once-ever registration without a reviewed immutable asset lifecycle. This does not block the retained-deleting local slice and is not a request for indefinite receipts.
+
+## Gates and acceptance evidence
+
+Private-unsent deadline remains Daniel's pending product decision. Preserve the submitted-only ruling meanwhile, and keep unresolved private cleanup explicit as a production recording-release gate. No provider, scheduler, frontend, byte delivery or real capture is authorized by this spec review. Existing recording-policy tests prove their pure contract only; they do not establish endpoint authorization.
+
+Implementation should demonstrate native insertion/lifecycle/FK/RLS attacks; own/child writes and parent/overlapping-role denial; staff private/cursor exclusion; exact asset retry/collision and CAS races; post-wait session/context/anniversary fences; atomic audit rollback; reschedule no-resurrection and rollback; and registration absence from routes/runtime. Root can settle the routine details above without another broad audit or a new user question. No tests were run for this design-only review.
+
+## Final contract acceptance
+
+Root's revised draft SHA-256 `e81619b53e2b0531c94fed5920ded3efa6293ce3c11229d85091603198e6e253` is accepted for this bounded implementation. The follow-up inspected only the agreed corrections: actual practice API; private/revision1 INSERT trigger; structural separation of registration from runtime; fresh retention checks after waits including reads/replays; due-record deletion with current-revision no-op; one CAS winner; no fabricated retention-trigger audit; and deduplication limited to retained assets with future cleanup responsibility explicit. These edits match the review without expanding into storage, audio, UI, notifications or production. Implementation and its independent adversarial evidence remain future work; the private-unsent policy question remains a production gate.
