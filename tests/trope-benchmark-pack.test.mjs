@@ -190,6 +190,9 @@ test("measured timing keeps notes, order and text while each syllable lasts its 
   const short = clone(timedInput); short.passages[0].timing.syllableMs.pop(); rejects(short, "timing-syllable-count");
   const tiny = clone(timedInput); tiny.passages[0].timing.syllableMs[0] = 10; rejects(tiny, "timing-bounds");
   const wrong = clone(timedInput); wrong.passages[0].timing.source = "guess"; rejects(wrong, "timing");
+  const modelled = clone(timedInput); modelled.passages[0].timing.source = "modelled";
+  const m = build(modelled);
+  assert.equal(m.manifest.passages[0].timing.source, "modelled"); assert.match(m.manifest.passages[0].timing.review, /model/);
   const extra = clone(timedInput); extra.passages[0].timing.note = "x"; rejects(extra, "schema");
   const badId = clone(timedInput); badId.passages[0].timing.recordId = "../x"; rejects(badId, "identifier");
 });

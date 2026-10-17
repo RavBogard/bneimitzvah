@@ -255,3 +255,21 @@ Run `four-Bhuman-v1b` (floor 0.25, provisional word review `review-daniel-four-s
 - Daniel is recording a slow spoken take, paced against his own chant, which the script page now plays.
 - A new retime option, `voicedPhones` (CLI `--voiced-phones h`, recorded in the manifest), carries the score F0 through listed default-voiceless phones. It will be rendered on and off for comparison.
 
+## Lane B-TTS and modelled timing (2026-10-16, private)
+
+Daniel: "It's gonna have to be tts." The route is the existing Phonikud-TTS path (`trope/speech2sing.py`, voice `michael`, non-commercial licence, accepted earlier by Daniel as an intermediate stage because SVC replaces its voice). The CPU environment was installed per the home-setup plan, section 5.
+
+**Same targets as B-human v1b (run `four-Btts-v1`):**
+- Whisper large-v3 character error is 0.26 for the TTS source against 0.44 for Daniel's own reading.
+- Daniel flagged 11 of 46 words, mostly as "weird reverb sounding things or extra long pronunciation or both". 8 of the 11 were also flagged in B-human.
+- So the shared cause is the target timing, not the source. Flagged words run 1.55 times the model's typical length, against 1.31 for unflagged words. The worst are מֹשֶׁה at 2.8, its final syllable 2.1 s, and לֹא at 4.1. His improvised P11 chant is slow throughout.
+
+**Timing model (`trope/timing-model.mjs`, tests in `tests/trope-timing-model.test.mjs`):**
+- log(ms) = global + gamma·log(notes) + three nested effects: the syllable's place against its word's accent; that place by accent role; and that place by accent name, with verse-final or phrase-final marked. Each effect is a median shrunk by n/(n+6), with gamma 0.5.
+- Leave-one-verse-out over 11 verses (306 syllables): mean |log error| falls from 0.452 for the engine rhythm, scaled, to 0.373.
+- It wins on all seven V'ahavta verses; the four improvised verses are about even.
+- The fitted model is derived from private recordings and lives at `C:/private/chant-benchmark/models/timing-daniel-v1.json`, not in the repo.
+- Packs now accept `timing.source: "modelled"` and say so in their manifest.
+
+**First fully unread render (run `unread-Btts-v1`):** Genesis 1:2, Genesis 1:3 and I Samuel 20:19. The engine melody, modelled timing, Phonikud speech and SVC with Daniel's prompt; nothing recorded of these verses. Awaiting Daniel's flags.
+

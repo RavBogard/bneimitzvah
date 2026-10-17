@@ -50,12 +50,13 @@ function validateInput(input) {
   if (!Array.isArray(input.passages) || !input.passages.length || input.passages.length > BENCHMARK_LIMITS.passages) fail("bounds");
   const ids = new Set();
   for (const passage of input.passages) {
-    // Optional measured timing: same notes and text, syllable durations from a private human take.
+    // Optional timing: same notes and text, syllable durations from a private human take ("measured") or
+    // predicted by a timing model fitted to such takes ("modelled", trope/timing-model.mjs).
     const timed = Object.hasOwn(passage, "timing");
     object(passage, timed ? ["id", "ref", "he", "textSha256", "flags", "timing"] : ["id", "ref", "he", "textSha256", "flags"]); id(passage.id);
     if (timed) {
       object(passage.timing, ["source", "recordId", "syllableMs"]);
-      if (passage.timing.source !== "measured" || !Array.isArray(passage.timing.syllableMs) || !passage.timing.syllableMs.length
+      if (!["measured", "modelled"].includes(passage.timing.source) || !Array.isArray(passage.timing.syllableMs) || !passage.timing.syllableMs.length
         || passage.timing.syllableMs.length > BENCHMARK_LIMITS.syllables) fail("timing");
       id(passage.timing.recordId);
       if (passage.timing.syllableMs.some(ms => !Number.isSafeInteger(ms) || ms < MEASURED_LIMITS.syllableMinMs || ms > MEASURED_LIMITS.syllableMaxMs)) fail("timing-bounds");
@@ -205,9 +206,9 @@ export function buildBenchmarkPack(input, assets) {
       const directory = passage.id;
       for (const [name, data] of [["units", units], ["score", score], ["a-soulx-target", segments], ["b-speech-plan", plan], ["identity-map", identities]]) add(`${directory}/${name}.json`, data);
       passages.push({ id: passage.id, ref: passage.ref, textSha256: passage.textSha256, flags: passage.flags, targetHash, directory,
-        timing: passage.timing ? { source: "measured", recordId: passage.timing.recordId, syllables: passage.timing.syllableMs.length, emitterBreathMsAdded: breathMs,
+        timing: passage.timing ? { source: passage.timing.source, recordId: passage.timing.recordId, syllables: passage.timing.syllableMs.length, emitterBreathMsAdded: breathMs,
           wordGaps: input.performance.style === "v1" ? "v1 carves word gaps out of each word's last note" : "none",
-          review: "measured values are assertions from a private take; not reviewed here" } : "engine",
+          review: passage.timing.source === "measured" ? "measured values are assertions from a private take; not reviewed here" : "modelled values are predictions from a model fitted to private takes; not reviewed here" } : "engine",
         seconds: plan.seconds, segments: segments.length, notes: score.events.length, syllables: syllables.length, targetReview: "pending" });
     }
     const manifest = { schema: "chant-benchmark-pack/v1", benchmarkId: input.benchmarkId, releaseStatus: "private-unreleased", targetReview: "pending",
