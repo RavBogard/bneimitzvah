@@ -85,8 +85,8 @@ async function loadSdk(at){
 }
 function guardedEnvironment(env,at){
   const checks=["endpoint-override","version-override","proxy-override"];
-  for(const [index,key] of [...overrides,...overrides.map(name=>"NEXT_PUBLIC_"+name),"DEBUG","NEXT_PUBLIC_DEBUG","NODE_OPTIONS","NODE_EXTRA_CA_CERTS"].entries()){
-    at("environment-guard",index<6?checks[index%3]:["debug","debug","node-options","custom-ca"][index-6]);
+  for(const [index,key] of [...overrides,...overrides.map(name=>"NEXT_PUBLIC_"+name),"DEBUG","NEXT_PUBLIC_DEBUG","NODE_EXTRA_CA_CERTS"].entries()){
+    at("environment-guard",index<6?checks[index%3]:["debug","debug","custom-ca"][index-6]);
     need(env[key]===undefined || env[key]==="");
   }
   at("environment-guard","insecure-tls");need(env.NODE_TLS_REJECT_UNAUTHORIZED!=="0");
@@ -108,7 +108,15 @@ export async function runPrivateMediaOidcProbe(env=process.env,dependencies={}){
   try{
     selected=selection(env,at);if(!selected)return null;
     guardedEnvironment(env,at);
-    const now=dependencies.now??Date.now,token=identity(env,selected,now(),at);environmentMatch=true;
+    const now=dependencies.now??Date.now,token=identity(env,selected,now(),at);
+    // Native Production/Preview reached here only after the full matching,
+    // fresh profile (including VERCEL=1). Startup hooks already ran: this is
+    // explicit hosted-runtime trust, not proof that options are harmless.
+    // The root operator separately binds exact native deployment/source.
+    if(selected.environment==="development"){
+      at("environment-guard","node-options");need(env.NODE_OPTIONS===undefined || env.NODE_OPTIONS==="");
+    }
+    environmentMatch=true;
     at("sdk-import","deadline-options");
     const timeout=dependencies.timeoutMs??PRIVATE_MEDIA_PROBE.timeoutMs;
     need(Number.isSafeInteger(timeout) && timeout>0 && timeout<=PRIVATE_MEDIA_PROBE.timeoutMs);

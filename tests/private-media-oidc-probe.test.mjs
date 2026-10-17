@@ -111,9 +111,61 @@ test("SDK endpoint/debug/TLS overrides fail closed before import, never route ar
   const names=["VERCEL_BLOB_API_URL","VERCEL_BLOB_API_VERSION_OVERRIDE","VERCEL_BLOB_PROXY_THROUGH_ALTERNATIVE_API"];
   for(const name of [...names,...names.map(name=>`NEXT_PUBLIC_${name}`),"DEBUG","NEXT_PUBLIC_DEBUG","NODE_OPTIONS","NODE_EXTRA_CA_CERTS","NODE_TLS_REJECT_UNAUTHORIZED"]){
     let loads=0;
-    const value=await probe({...environment(),[name]:name==="NODE_TLS_REJECT_UNAUTHORIZED"?"0":"synthetic-sensitive"},
+    const value=await probe({...environment(name==="NODE_OPTIONS"?"development-deny":"production-allow"),[name]:name==="NODE_TLS_REJECT_UNAUTHORIZED"?"0":"synthetic-sensitive"},
       {loadSdk:async()=>{loads++;throw 0;}});
     assert.equal(value.ok,false);assert.equal(loads,0);closed(value);
+  }
+});
+
+test("both fully validated native profiles may reach one SDK request without inspecting inherited startup options",async()=>{
+  for(const mode of ["production-allow","preview-deny"])for(const opaque of [false,true]){
+    const env={...environment(mode),NODE_OPTIONS:"synthetic-sensitive-inherited-startup"};
+    let reads=0,imports=0,calls=0;
+    if(opaque)Object.defineProperty(env,"NODE_OPTIONS",{get(){reads++;throw Error("synthetic-sensitive-options-must-not-be-inspected");}});
+    const deps=dependencies(async options=>{
+      calls++;assert.equal(options.oidcToken,env.VERCEL_OIDC_TOKEN);assert.equal(options.storeId,P.storeId);
+      return mode==="production-allow"?allowed():denied();
+    });
+    const load=deps.loadSdk;deps.loadSdk=async()=>{imports++;return load();};
+    const actual=await diagnosed(env,deps);
+    assert.equal(actual.value.ok,true);assert.equal(actual.value.environmentMatch,true);assert.deepEqual(actual.records,[]);
+    assert.equal(imports,1);assert.equal(calls,1);assert.equal(reads,0);assert.ok(Object.hasOwn(env,"NODE_OPTIONS"));closed(actual.value);
+  }
+});
+
+test("startup exception never authorizes labels alone, invalid identity or Development SDK work",async()=>{
+  for(const env of [
+    {...environment(),VERCEL_OIDC_TOKEN:undefined},
+    {...environment(),VERCEL_OIDC_TOKEN:"synthetic-sensitive-not-a-token"},
+    environment("production-allow",{owner_id:"other"}),
+    environment("preview-deny",{project_id:"other"}),
+    environment("production-allow",{exp:now/1000}),
+    {...environment(),VERCEL:undefined},
+    {...environment("preview-deny"),VERCEL_ENV:"production"},
+  ]){
+    let imports=0,calls=0;
+    const actual=await diagnosed({...env,NODE_OPTIONS:"synthetic-sensitive"},{now:()=>now,loadSdk:async()=>{imports++;return {BlobError,list:async()=>{calls++;return allowed();}};}});
+    assert.equal(actual.value.ok,false);assert.equal(actual.value.environmentMatch,false);assert.equal(imports,0);assert.equal(calls,0);
+    assert.equal(actual.records.length,1);assert.equal(actual.records[0].phase,"identity");closed(actual.value);
+  }
+  let calls=0;
+  failure(await diagnosed({...environment("development-deny"),NODE_OPTIONS:"synthetic-sensitive"},dependencies(async()=>{calls++;return denied();})),"environment-guard","node-options");
+  assert.equal(calls,0);
+  for(const NODE_OPTIONS of [undefined,""]){
+    const actual=await diagnosed({...environment("development-deny"),NODE_OPTIONS},dependencies(async()=>{calls++;return denied();}));
+    assert.equal(actual.value.ok,true);assert.deepEqual(actual.records,[]);
+  }
+  assert.equal(calls,2);
+});
+
+test("every other environment guard remains strict for native profiles with inherited startup options",async()=>{
+  const names=["VERCEL_BLOB_API_URL","VERCEL_BLOB_API_VERSION_OVERRIDE","VERCEL_BLOB_PROXY_THROUGH_ALTERNATIVE_API"];
+  for(const mode of ["production-allow","preview-deny"])for(const name of [...names,...names.map(key=>`NEXT_PUBLIC_${key}`),"DEBUG","NEXT_PUBLIC_DEBUG","NODE_EXTRA_CA_CERTS","NODE_TLS_REJECT_UNAUTHORIZED"]){
+    let imports=0;
+    const actual=await diagnosed({...environment(mode),NODE_OPTIONS:"synthetic-sensitive-inherited",[name]:name==="NODE_TLS_REJECT_UNAUTHORIZED"?"0":"synthetic-sensitive-other"},
+      {now:()=>now,loadSdk:async()=>{imports++;throw 0;}});
+    assert.equal(actual.value.ok,false);assert.equal(imports,0);assert.equal(actual.records[0].phase,"environment-guard");
+    assert.notEqual(actual.records[0].check,"node-options");closed(actual.value);
   }
 });
 
@@ -197,7 +249,7 @@ test("actual pinned SDK maps specific provider denial, but generic 403/config/5x
         const url=new URL(path,"https://vercel.com");
         return url.pathname==="/api/blob" && url.searchParams.get("limit")==="1" && url.searchParams.get("prefix")===`acceptance/${run}/`;
       }}).reply(()=>{calls++;return {statusCode:status,data:body,responseOptions:{headers:{"content-type":"application/json"}}};});
-      const {value,records}=await diagnosed(environment("preview-deny"),{now:()=>now});
+      const {value,records}=await diagnosed({...environment("preview-deny"),NODE_OPTIONS:"synthetic-sensitive-inherited"},{now:()=>now});
       assert.equal(value.outcome,expected);assert.equal(value.ok,expected==="denied");assert.equal(calls,1);closed(value);
       assert.deepEqual(records,expected==="failed"?[{schema:"private-media-oidc-diagnostic/v1",phase:"sdk-request",check:"provider-result"}]:[]);
       agent.assertNoPendingInterceptors();
@@ -217,7 +269,7 @@ test("selection and environment diagnostic labels identify fixed checks without 
     ["VERCEL_BLOB_API_VERSION_OVERRIDE","version-override"],["NEXT_PUBLIC_VERCEL_BLOB_API_VERSION_OVERRIDE","version-override"],
     ["VERCEL_BLOB_PROXY_THROUGH_ALTERNATIVE_API","proxy-override"],["NEXT_PUBLIC_VERCEL_BLOB_PROXY_THROUGH_ALTERNATIVE_API","proxy-override"],
     ["DEBUG","debug"],["NEXT_PUBLIC_DEBUG","debug"],["NODE_OPTIONS","node-options"],["NODE_EXTRA_CA_CERTS","custom-ca"],["NODE_TLS_REJECT_UNAUTHORIZED","insecure-tls"],
-  ])failure(await diagnosed({...environment(),[name]:name==="NODE_TLS_REJECT_UNAUTHORIZED"?"0":"synthetic-sensitive"}),"environment-guard",check);
+  ])failure(await diagnosed({...environment(name==="NODE_OPTIONS"?"development-deny":"production-allow"),[name]:name==="NODE_TLS_REJECT_UNAUTHORIZED"?"0":"synthetic-sensitive"}),"environment-guard",check);
 });
 
 test("identity diagnostics distinguish each claim family without returning claim data",async()=>{
