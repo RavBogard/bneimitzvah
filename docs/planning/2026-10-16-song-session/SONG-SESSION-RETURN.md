@@ -513,3 +513,5 @@ No authority, privacy or double-send defect was found. Unchanged: fresh load plu
 - **Correction to the previous section:** it said "all 22 browser files" on `28ced0a`, but main also has `service-modal-privacy-ui.test.ts`, which was not run there. It passes here (3/3).
 
 Nothing is pushed, migrated or deployed. Daniel's look at the admin screens and the staff wording is still open.
+
+**Update (2026-10-17, later):** per Codex's "QUIET ROSTER CHECKPOINT COMPLETE", `design/song-session-admin-roster` now also merges the final roster ref `add56e7`. Since `cd8e102` it changes only the reviewed split of `tests/app/auth-http.test.ts` into isolated cases, plus its docs. The merge is clean. The changed test passes 16/16 and typecheck passes; `src/` is byte-identical to the fully checked `38b126e` tree. Frozen ref: the commit that adds this line.
