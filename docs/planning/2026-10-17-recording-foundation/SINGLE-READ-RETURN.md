@@ -1,5 +1,15 @@
 # Same-key read-only diagnosis — author return
 
+## Final root integration and native observation
+
+All four exact hosted jobs [39062338854](https://github.com/RavBogard/bneimitzvah/actions/runs/39062338854) pass source `92585f2ade456e240429966a5592918c5080089b`, including repaired Windows preservation coverage, Node341 per OS, app108 files, both type/builds and native database/authenticated/public browser gates. The earlier39061726895 ended Windows failure/Ubuntu cancellation with both browser and PostgreSQL successful; its full failure log is preserved separately.
+
+Root changed only the ignored read operator's pending source literal to exact92585f2. Independent reverse substitution reproduced preparation SHA256a65c11a8 byte exactly; final helper seal is `38afee8cf4bcd4266b689b22bbfdd4ab68b60b92f006d57080439215c6f7cabd`, with all immutable ancestors unchanged. Pinned default readiness passed. ONE `--start` returned pending for new read-only run `0906fe2b-09f8-4d16-9d52-7cb9913210ac`, staged deployment `dpl_DUUqhp4btcEUVdG3mSD7BvhNSJCx`; later GET-only reconciliation returned complete/observed. The protected read-only journal is separate from the failed write journal.
+
+Closed observations: metadataBefore=true, metadataAfter=true, head=upload, status=ok, contentTypeExpected=true, contentLengthPresent=false, contentLengthExpected=false, contentEncodingPresent=true, urlConfined=true, urlExact=true, etagMatchesHead=false, body=upload. This verifies the current bounded known synthetic upload body, and exposes current representation differences rejected by the old verifier. It does not identify the exact historical failing predicate, recover historical B/header values, prove retirement/held-write behavior or authorize replay, cleanup or normal release. The original write remains failed/requires-review; canonicalbc stayed unchanged throughout. Original ignored logs `single-read-pinned-readiness.log`, `single-read-production-start.log`, `single-read-production-check.log` and `single-read-production-check-final.log` preserve the closed outputs; managed replacement full CI log is separate from the first failed run.
+
+Root's next decision is a separately reviewed representation-verification derivative and fresh round, never a replay of v1. The provider-disabled receipt/admission draft is separate planning input, not runtime/schema activation. Earlier pending paragraphs below are historical.
+
 Bounded implementation from checkpoint40f1d79 and accepted single-write-read diagnostic spec. Native write proof8caaeda remains failed/requires-review at verify; neither that round nor its objects/journal were replayed, reset, cleaned or changed. Canonicalbc and protected operations are root-owned. No actual provider/credential/DB/journal operation occurred here.
 
 ## Changes
