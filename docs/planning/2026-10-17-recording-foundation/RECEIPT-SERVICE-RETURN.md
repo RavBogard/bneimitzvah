@@ -30,3 +30,7 @@ The initial app run failed 7/7 through the existing sanitizer: two scalar ORM se
 ## Remaining boundary
 
 Independent B adversarial review and root integration/CI remain. This is receipt-only serialized admission observed alongside current ledger rows: the unchanged legacy registrar bypasses this gate. Joining every increasing writer is mandatory before any route/provider/finalization activation. No claim of universal physical-request bounds, provider billing cap, completed upload, deletion worker or real recording readiness is made. Transport C is separately owned and unwired.
+## Root integration acceptance, 2026-10-17
+
+Source `b9ce5fc8` and peer `49a9a531` are integrated with independently accepted C and the policy-preserving test-only isolation fix. All four [exact hosted jobs39068315180](https://github.com/RavBogard/bneimitzvah/actions/runs/39068315180) at `b1de975d07af0bb8e10a5ce46f535cb4b3ce358e` pass: Node360 per OS, app1084 Linux/1083 plus one existing skip Windows, SQL42/restricted PostgreSQL153, authenticated browser137/public15, type/default builds. Root local Node360/app1083 plus that skip pass. This accepts the disabled service only; production migration, routes, dispatch, worker authority and real media remain inactive. Later Q must independently close the documented reviewed-application-writer bypass; no such acceptance is inferred here.
+
