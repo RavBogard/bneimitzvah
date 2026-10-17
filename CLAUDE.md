@@ -4,6 +4,8 @@ Read first, every session: `docs/planning/2026-10-15-kickoff/MISSION.md` (Daniel
 
 ## Rules
 
+- **Current release authority, Daniel2026-10-17:** Continue until the product is finished; deploy at will. Separate student-visible approval is superseded by this direct authorization. Required tests/adversarial review, new-spend/licensing/second-tenant gates and G3 remain. See MISSION's dated authority amendment; do not repeatedly ask for UI release permission.
+
 - **Never in the repo:** JPS or any licensed text, student or family data, recordings, rendered audio, model weights, credentials. `tests/never-in-repo.test.mjs` must stay green; never weaken it to pass.
 - **G3 gate:** no student hears generated chant until Daniel passes the listening review (at least 95% melody passes, zero "would teach wrong"), after G1 and G2. No code path may serve an unreleased render to a student.
 - **Engine:** `trope/` stays dependency-free Node plus its vendored, licensed copies with `PROVENANCE.md`. Nothing is installed into it. Its tests run with `node --test`. The app never imports the Python side.

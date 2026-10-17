@@ -20,6 +20,8 @@ Daniel confirmed on 2026-10-15 that all three settings matter: independent pract
 
 ## Product Purpose
 
+Current delivery authority, Daniel2026-10-17: continue through full feature completion and deploy at will. Separate student-visible release approvals are no longer required. Preserve the selected Annotated score direction, independent high-stakes reviews, new-spend/licensing gates, generated-chant listening gate and Daniel-only human testing until feature complete.
+
 Put a student's Torah and haftarah readings, equally prominent, assigned service parts, text tools, chosen commentary, translation drafts and practice recordings in one place. The 1.0 success criterion remains a real CRC student and tutor completing a real reading with Daniel as rabbi without a workaround. D'var drafting/feedback, mitzvah projects and general family logistics are outside 1.0. Custom siddur/prayer inputs and packets are v2; collect none now.
 
 Daniel requires the full planned product to be feature complete before any other human tests it. Daniel alone reviews and tests during development; automated tests and agent reviews continue throughout. The real-student/tutor pilot follows completion of the planned features, including MCP and generated chant, and Daniel's approval to proceed.
