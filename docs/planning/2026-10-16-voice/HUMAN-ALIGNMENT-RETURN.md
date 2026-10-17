@@ -163,3 +163,21 @@ Recorded as a **diction failure** for lane A on this passage. Two causes:
 4. The v1 breath accounting was wrong.
 
 Later changes (`c265184`: verse-final rest and tail) have not been independently reviewed yet.
+
+## Latest listening results (2026-10-16, private)
+
+| Run | Change | Daniel's verdict |
+|---|---|---|
+| sung-time v3 | Final syllables measured by loudness; verse-final rest kept; bounded tail release. | Three words still wrong: "ve'ahavteh", "elohechaM", "anochiN". |
+| v4 | Steady-middle vowel stretch (`d2ba4f3`). | **"No change."** The hypothesis is refuted for these three words. The change is kept as a general improvement; it is not a confirmed fix. |
+| v5 | Voiced-closure (murmur) boundary rule (`2ada343`, `--murmur-db 5`). Measurement showed about 90 ms of low-band hum, already closing for ב, counted as the end of the "a" in אֱלֹהֶיךָ. 14 boundaries before b, d, m or n moved 20–81 ms. | **"This is much better. We're getting there."** |
+
+The v5 word review is recorded as provisional (`review-daniel-vahavta-words-2p`), because the moved cuts were not re-heard word by word.
+
+**Remaining, attributed to the spoken source rather than the pipeline:**
+- **"teh":** the final vowel of וְאָהַבְתָּ is reduced in the spoken take.
+- **"anochiN":** Daniel read מְצַוְּךָ without the sung sheva ("mtsavcha"). The aligner then placed the target's "e" over מ hum.
+
+**Requested from Daniel:** a slow, deliberate spoken take with every vowel and every sung sheva sounded.
+
+**Not yet independently reviewed:** `c265184`, `d2ba4f3` and `2ada343`. Review started.
