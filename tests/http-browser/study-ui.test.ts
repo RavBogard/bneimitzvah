@@ -198,6 +198,11 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and restores ke
       });
       expect(lines).toBeGreaterThan(2);
       expect(await tab.evaluate(() => innerWidth === 390 && innerHeight === 844 && document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      const firstWord = await first.locator('[data-word-index="0"]').first().evaluate(node => {
+        const range = document.createRange(); range.selectNodeContents(node); const bounds = range.getBoundingClientRect();
+        return { top: bounds.top, bottom: bounds.bottom };
+      });
+      expect(firstWord.top).toBeGreaterThanOrEqual(0); expect(firstWord.bottom).toBeLessThanOrEqual(820);
       const readingText = await first.textContent();
       await safe(() => tab.screenshot({ path: join(directory, `${size.toLowerCase()}-reading.png`) }));
       await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).focus()); await safe(() => tab.keyboard.press("Tab"));
@@ -208,6 +213,19 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and restores ke
       expect(await dialog.locator(".study-hebrew").textContent()).toBe(readingText);
       expect(await dialog.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
       await safe(() => tab.screenshot({ path: join(directory, `${size.toLowerCase()}-lift.png`) }));
+      if (size === "Huge") {
+        const stage = dialog.locator(".lift-stage");
+        expect(await stage.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
+        await safe(() => stage.evaluate(node => { node.scrollTop = node.scrollHeight; }));
+        const finalWord = dialog.locator("[data-word-index]").last(); await ui(finalWord).toBeVisible();
+        const usable = await finalWord.evaluate(node => {
+          const word = node.getBoundingClientRect(), stage = node.closest(".lift-stage")!.getBoundingClientRect(), dialog = node.closest("dialog")!.getBoundingClientRect();
+          return word.top >= Math.max(stage.top, dialog.top) && word.bottom <= Math.min(stage.bottom, dialog.bottom) + 1
+            && word.left >= Math.max(stage.left, dialog.left) && word.right <= Math.min(stage.right, dialog.right) + 1;
+        });
+        expect(usable, "The final Huge word is reachable inside the scrollable practice stage").toBe(true);
+        await safe(() => tab.screenshot({ path: join(directory, "huge-lift-end.png") }));
+      }
       await safe(() => tab.keyboard.press("Escape")); await ui(dialog).toHaveCount(0); await ui(start).toBeFocused();
     }
   } finally {
