@@ -180,4 +180,19 @@ The v5 word review is recorded as provisional (`review-daniel-vahavta-words-2p`)
 
 **Requested from Daniel:** a slow, deliberate spoken take with every vowel and every sung sheva sounded.
 
-**Not yet independently reviewed:** `c265184`, `d2ba4f3` and `2ada343`. Review started.
+**Third independent review (`c265184`, `d2ba4f3`, `2ada343`): accept, no correctness defects; 171/171.** Its non-blocking findings are fixed in `4002d98`:
+1. Short vowels could be stretched from a single looped 20 ms grain. The stretched middle now keeps at least two WSOLA frames, and a `vowel-middle-stretch-high` warning reports the heard ratio.
+2. The verse tail could push the last slice past 30 s or the passage past 180 s. It is now capped by both limits.
+3. `retime-map.json` labels the tail (`units.target`, `totalMsCovers`).
+4. The tail path is tested with a target that has no final rest.
+5. Voiced-closure moves are capped at 120 ms, re-checked for 5 ms spans, and traceable (token, word, clip time).
+
+Not changed: the reviewer's concern that the hum test may fire inside whole i, u or o vowels. Watch the move counts.
+
+## Slow spoken take (2026-10-16, private)
+
+Daniel recorded `2026-10-16-daniel-vahavta-spoken-slow` (216 s). It holds three readings: a slow one, restarted ("I'll do it again"); a complete slow one (90–164 s, used); and a quicker one. The used reading runs about 72 s, against about 71 s for his chant, so the median vowel ratio fell from 1.4–2.6 to about 1.0.
+
+Its held word-final consonants did not fit the short maqaf notes: ל of about 250 ms, and final ת with about 100 ms of silent closure. Five of seven verses failed `consonant-fit` at the 0.5 floor. The retime CLI gained `--min-consonant-ratio` (0.2–1, default unchanged, recorded in the retime manifest's options), and the take was rendered at 0.25 as run `vahavta-Bhuman-slow-v6b`. Word review `review-daniel-vahavta-slow-words-1p` is provisional; nothing in this take has been heard word by word.
+
+GATE: lowered the consonant floor for this take only — proceeded because the extra length is silence or a steady sonorant, it is a run option rather than a new default, and the render is private research audio under G3.

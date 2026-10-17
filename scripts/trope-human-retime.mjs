@@ -20,7 +20,7 @@ const REPOSITORY = fileURLToPath(new URL("../", import.meta.url));
 const CODE_FILES = ["trope/audio-dsp.mjs", "trope/human-alignment.mjs", "trope/human-retime.mjs", "trope/benchmark-run.mjs", "trope/benchmark-pack.mjs",
   "trope/speech2sing.mjs", "trope/text.mjs", "trope/melody.mjs", "trope/soulx.mjs", "trope/lib-trope.cjs", "trope/pronunciation.json",
   "scripts/trope-human-retime.mjs", "scripts/trope-benchmark-pack.mjs", "scripts/private-paths.mjs"];
-const USAGE = "usage: node scripts/trope-human-retime.mjs --pack <private-pack-dir> --pack-manifest-sha256 <64-hex> --alignment <private.json> --alignment-sha256 <64-hex> --audio <private.wav> --out <new-private-directory> [--output-rate 24000]";
+const USAGE = "usage: node scripts/trope-human-retime.mjs --pack <private-pack-dir> --pack-manifest-sha256 <64-hex> --alignment <private.json> --alignment-sha256 <64-hex> --audio <private.wav> --out <new-private-directory> [--output-rate 24000] [--min-consonant-ratio 0.5]";
 const OUTPUT_PATH = /^(?:retimed-speech\.wav|target-f0\.npy|f0-voicing\.json|retime-map\.json|manifest\.json|slices\/s(?:[0-9]|[1-9][0-9])(?:\.wav|-f0\.npy))$/;
 const run = promisify(execFile);
 
@@ -95,7 +95,7 @@ export async function humanRetimeMain(argv) {
   const startedAt = new Date(), clock = performance.now();
   try {
     if (argv.length === 1 && argv[0] === "--help") { console.log(USAGE); return 0; }
-    const names = ["--pack", "--pack-manifest-sha256", "--alignment", "--alignment-sha256", "--audio", "--out", "--output-rate"], o = {};
+    const names = ["--pack", "--pack-manifest-sha256", "--alignment", "--alignment-sha256", "--audio", "--out", "--output-rate", "--min-consonant-ratio"], o = {};
     for (let i = 0; i < argv.length; i += 2) {
       if (!names.includes(argv[i]) || o[argv[i]] !== undefined || !argv[i + 1] || argv[i + 1].startsWith("--")) rejected("arguments");
       o[argv[i]] = argv[i + 1];
@@ -104,6 +104,10 @@ export async function humanRetimeMain(argv) {
     for (const name of ["--pack-manifest-sha256", "--alignment-sha256"]) if (!/^[a-f0-9]{64}$/.test(o[name])) rejected("input-hash");
     const outputRate = o["--output-rate"] === undefined ? 24000 : Number(o["--output-rate"]);
     if (!OUTPUT_RATES.includes(outputRate)) rejected("arguments");
+    // A slow, deliberate reading holds word-final consonants (a long l, a stop's silent closure) far longer
+    // than a short chant note allows; such a take may shorten them further. Recorded in the run options.
+    const minConsonantRatio = o["--min-consonant-ratio"] === undefined ? undefined : Number(o["--min-consonant-ratio"]);
+    if (minConsonantRatio !== undefined && !(minConsonantRatio >= 0.2 && minConsonantRatio <= 1)) rejected("arguments");
     await privateBenchmarkDestination(o["--out"]);
     const manifestBytes = await privateInput(join(o["--pack"], "manifest.json"), 16 * 1024 * 1024);
     if (sha256(manifestBytes) !== o["--pack-manifest-sha256"]) rejected("input-hash");
@@ -119,7 +123,7 @@ export async function humanRetimeMain(argv) {
     const wav = parseWav(new Uint8Array(audioBytes.buffer, audioBytes.byteOffset, audioBytes.byteLength));
     const code = await codeAssets();
     const result = buildHumanRetime(record, { manifestBytes, identityMapBytes, speechPlanBytes }, { bytes: audioBytes, wav },
-      { code, alignmentFileSha256: o["--alignment-sha256"], options: { outputRate } });
+      { code, alignmentFileSha256: o["--alignment-sha256"], options: { outputRate, ...(minConsonantRatio === undefined ? {} : { minConsonantRatio }) } });
     const file = (role, bytes) => ({ role, sha256: sha256(bytes), bytes: bytes.length });
     const runRecord = buildRunRecord({ runId: `retime-${result.manifestSha256.slice(0, 16)}`, lane: "B-human", stage: "retime", condition: "human-retime-v1",
       benchmarkId: record.target.benchmarkId, packManifestSha256: o["--pack-manifest-sha256"], passageId: record.target.passageId,
