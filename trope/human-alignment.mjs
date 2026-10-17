@@ -19,6 +19,7 @@ const ENCODINGS = new Set(["pcm16", "pcm24", "pcm32", "float32"]);
 // Only sounds commonly unrealised in careful Israeli reading may be reviewed as absent; any other
 // missing consonant is a recording or target problem, not something to retime around.
 export const ABSENT_ALLOWED = Object.freeze(["ʔ", "h"]);
+export const REVIEW_GRANULARITIES = Object.freeze(["phone", "word-listening"]);
 
 export class AlignmentError extends Error {
   constructor(code) { super(`Human alignment rejected (${code}); private details withheld`); this.name = "AlignmentError"; this.code = code; }
@@ -72,7 +73,12 @@ export function validateAlignmentRecord(record) {
   object(r.consentScope, SCOPES);
   if (SCOPES.some(key => typeof r.consentScope[key] !== "boolean")) fail("schema");
   const a = record.annotation;
-  object(a, ["units", "method", "proposalSource", "reviewState", "reviewRecordId"]);
+  object(a, ["units", "method", "proposalSource", "reviewState", "reviewRecordId"], ["reviewGranularity"]);
+  // "phone": a person checked every boundary. "word-listening": a person heard each word's slice and
+  // approved it; the phone boundaries inside stay exactly the machine proposal and are labelled so.
+  const granularity = a.reviewGranularity ?? "phone";
+  if (!REVIEW_GRANULARITIES.includes(granularity)) fail("schema");
+  if (granularity === "word-listening" && a.method !== "proposed-then-reviewed") fail("annotation-method");
   if (a.units !== "samples" || !["manual", "proposed-then-reviewed"].includes(a.method) || !["proposed", "reviewed"].includes(a.reviewState)) fail("schema");
   nullableId(a.proposalSource); nullableId(a.reviewRecordId);
   if ((a.method === "manual") !== (a.proposalSource === null)) fail("annotation-method");
@@ -99,6 +105,10 @@ export function validateAlignmentRecord(record) {
   const reviewedEverywhere = record.syllables.every(s => [...s.onset, s.vowel, ...s.coda].every(x => x.reviewed !== null)) && record.events.every(e => e.reviewed !== null);
   if (a.reviewState === "reviewed" && !reviewedEverywhere) fail("review-incomplete");
   if (a.method === "manual" && (record.syllables.some(s => [...s.onset, s.vowel, ...s.coda].some(x => x.proposed !== null)) || record.events.some(e => e.proposed !== null))) fail("annotation-method");
+  if (granularity === "word-listening" && a.reviewState === "reviewed") {
+    const same = x => x.proposed !== null && JSON.stringify(x.proposed) === JSON.stringify(x.reviewed);
+    if (!record.syllables.every(s => [...s.onset, s.vowel, ...s.coda].every(same)) || !record.events.every(same)) fail("word-review-moved");
+  }
   if (Buffer.byteLength(JSON.stringify(record)) > ALIGNMENT_LIMITS.bytes) fail("bounds");
   return record;
 }
@@ -181,4 +191,22 @@ export function proposalDeviation(record) {
   const ms = v => Math.round(v * 1e6 / rate) / 1000;
   return { boundariesCompared: deltas.length, absentChanges, meanAbsMs: deltas.length ? ms(deltas.reduce((a, b) => a + b, 0) / deltas.length) : null,
     maxAbsMs: deltas.length ? ms(Math.max(...deltas)) : null, meaning: "diagnostic difference between recorded proposals and human review; not an alignment-accuracy claim" };
+}
+
+/**
+ * Turn a machine proposal into a word-listening review: every word of the target must be in
+ * approvedWordIds (a person heard its slice and accepted it), and every boundary is copied unchanged
+ * from the proposal. Returns a new record; the proposal is not modified.
+ */
+export function applyWordListeningReview(proposal, identity, approvedWordIds, reviewRecordId) {
+  validateAlignmentRecord(proposal);
+  if (proposal.annotation.method !== "proposed-then-reviewed" || proposal.annotation.reviewState !== "proposed") fail("annotation-method");
+  id(reviewRecordId);
+  const approved = new Set(approvedWordIds), words = identity.words.map(w => w.id);
+  if (!Array.isArray(approvedWordIds) || approved.size !== approvedWordIds.length || [...approved].some(w => !words.includes(w))) fail("word-review");
+  if (words.some(w => !approved.has(w))) fail("word-review-incomplete");
+  const copy = structuredClone(proposal), review = x => { if (x.proposed === null) fail("review-incomplete"); x.reviewed = structuredClone(x.proposed); };
+  copy.syllables.forEach(s => [...s.onset, s.vowel, ...s.coda].forEach(review)); copy.events.forEach(review);
+  copy.annotation = { ...copy.annotation, reviewState: "reviewed", reviewRecordId, reviewGranularity: "word-listening" };
+  return validateAlignmentRecord(copy);
 }

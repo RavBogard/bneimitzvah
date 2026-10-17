@@ -13,7 +13,7 @@ import { promisify } from "node:util";
 import { isolatedEnv } from "./helpers/isolatedEnv.mjs";
 import { buildBenchmarkPack, canonicalJson, sha256 } from "../trope/benchmark-pack.mjs";
 import { parseWav, resample, wsola, npyFloat32, floatWav, mapSample, AudioDspError } from "../trope/audio-dsp.mjs";
-import { validateAlignmentRecord, bindAlignment, AlignmentError } from "../trope/human-alignment.mjs";
+import { validateAlignmentRecord, bindAlignment, applyWordListeningReview, AlignmentError } from "../trope/human-alignment.mjs";
 import { buildHumanRetime, planRetime, spread, RetimeError, VOICELESS } from "../trope/human-retime.mjs";
 import { buildRunRecord, buildListeningKey, RunRecordError } from "../trope/benchmark-run.mjs";
 
@@ -210,6 +210,29 @@ test("reviewed boundaries alone are processed; proposals are retained separately
   assert.throws(() => build(unreviewed, target, audio), e => e instanceof AlignmentError && e.code === "review-incomplete");
   const manualWithProposal = clone(record); manualWithProposal.annotation.method = "manual"; manualWithProposal.annotation.proposalSource = null;
   assert.throws(() => validateAlignmentRecord(manualWithProposal), e => e.code === "annotation-method");
+});
+
+test("a word-listening review approves every word by ear and keeps machine phone boundaries labelled as such", () => {
+  const target = packFor("בָ־גָ֑ דָֽ׃", "Genesis 1:1"), audio = synthetic(target.identity, { proposals: true });
+  const proposal = recordFor(target, audio, { proposals: true });
+  proposal.annotation.reviewState = "proposed"; proposal.annotation.reviewRecordId = null;
+  for (const s of proposal.syllables) for (const x of [...s.onset, s.vowel, ...s.coda]) { x.proposed = x.reviewed; x.reviewed = null; }
+  for (const e of proposal.events) { e.proposed = e.reviewed; e.reviewed = null; }
+  const before = canonicalJson(proposal), words = target.identity.words.map(w => w.id);
+  assert.throws(() => build(proposal, target, audio), e => e.code === "review-pending");
+  assert.throws(() => applyWordListeningReview(proposal, target.identity, words.slice(1), "review-ear"), e => e.code === "word-review-incomplete");
+  assert.throws(() => applyWordListeningReview(proposal, target.identity, [...words, "x"], "review-ear"), e => e.code === "word-review");
+  const reviewed = applyWordListeningReview(proposal, target.identity, words, "review-ear");
+  assert.equal(canonicalJson(proposal), before, "proposal untouched");
+  assert.equal(reviewed.annotation.reviewGranularity, "word-listening"); assert.equal(reviewed.annotation.reviewState, "reviewed");
+  const result = build(reviewed, target, audio);
+  assert.equal(result.manifest.binding.reviewGranularity, "word-listening"); assert.equal(result.manifest.binding.annotationMethod, "proposed-then-reviewed");
+  const moved = clone(reviewed); moved.syllables[0].vowel.reviewed.end -= 1; moved.syllables[1].onset[0].reviewed.start -= 1;
+  assert.throws(() => validateAlignmentRecord(moved), e => e.code === "word-review-moved");
+  const manual = clone(reviewed); manual.annotation.method = "manual"; manual.annotation.proposalSource = null;
+  assert.throws(() => validateAlignmentRecord(manual), e => e.code === "annotation-method");
+  const odd = clone(reviewed); odd.annotation.reviewGranularity = "glance"; assert.throws(() => validateAlignmentRecord(odd), e => e.code === "schema");
+  const plain = synthetic(target.identity); assert.equal(build(recordFor(target, plain), target, plain).manifest.binding.reviewGranularity, "phone");
 });
 
 test("malformed, stale, mismatched, incomplete and unconsented inputs are rejected before any audio is produced", () => {
