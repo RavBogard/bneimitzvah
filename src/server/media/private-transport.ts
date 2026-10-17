@@ -11,6 +11,16 @@ const sha = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");
 const need = (v: unknown): void => { if (!v) throw 0; };
 const strong = (v: unknown): v is string => typeof v === "string" && v.length <= 256 && /^"[\x21\x23-\x7e]+"$/.test(v);
 const marker = (kind: "permit" | "retire") => Uint8Array.from({ length: kind === "permit" ? 31 : 33 }, (_, i) => kind === "permit" ? (i * 3 + 7) % 256 : (i * 5 + 193) % 256);
+const typedArrayPrototype = Object.getPrototypeOf(Uint8Array.prototype);
+const intrinsic = (name: "byteLength" | "byteOffset" | "buffer", value: Uint8Array) => Reflect.apply(Object.getOwnPropertyDescriptor(typedArrayPrototype, name)!.get!, value, []);
+function copyChunk(value: Uint8Array | undefined, expected: number) {
+  need(value instanceof Uint8Array);
+  // Never inspect shadowable .length/.byteLength/.buffer/.byteOffset or pass the
+  // original array to Buffer.from. A fresh bounded view owns the copy boundary.
+  const length = intrinsic("byteLength", value!), offset = intrinsic("byteOffset", value!), buffer = intrinsic("buffer", value!);
+  need(Number.isSafeInteger(length) && length === expected && length >= 2 && length <= MEDIA_LIMITS.body && Number.isSafeInteger(offset) && offset >= 0);
+  return Buffer.from(new Uint8Array(buffer, offset, length));
+}
 type Representation = "chunk" | "permit" | "retire";
 type Dependencies = {
   storeGeneration: string; request?: typeof httpsRequest;
@@ -33,7 +43,9 @@ export function createPrivateMediaTransport({ storeGeneration, request = httpsRe
   }
   function metadata(value: unknown, key: string): MediaFacts {
     need(value && typeof value === "object" && !Array.isArray(value));
-    const v = value as Record<string, unknown>, u = new URL(String(v.url));
+    const v = value as Record<string, unknown>;
+    need(typeof v.url === "string" && v.url.length <= 2048);
+    const u = new URL(v.url as string);
     need(u.origin === origin && u.pathname === `/${key}` && !u.search && !u.hash && !u.username && !u.password && v.pathname === key && v.contentType === "application/octet-stream" && strong(v.etag));
     need(Number.isSafeInteger(v.size) && (v.size as number) >= 0 && (v.size as number) <= MEDIA_LIMITS.body);
     return Object.freeze({ byteLength: v.size as number, etag: v.etag as string });
@@ -67,6 +79,9 @@ export function createPrivateMediaTransport({ storeGeneration, request = httpsRe
             if (finished) { response.on("error", () => {}); try { response.destroy(); } catch {} return; }
             res = response;
             try {
+              // Own error delivery before any rejecting TLS/header/body check.
+              // Keep this listener through destroy and repeated late events.
+              response.on("error", fail); response.once("aborted", fail); response.once("close", () => { if (!response.complete) fail(); });
               live(); need(performance.now() - progress < idleMs); need((response.socket as import("node:tls").TLSSocket)?.encrypted && (response.socket as import("node:tls").TLSSocket).authorized);
               const headerBytes = response.rawHeaders.reduce((n, s) => n + Buffer.byteLength(s) + 2, 0); need(headerBytes <= MEDIA_LIMITS.headers);
               const status = response.statusCode; need(Number.isInteger(status));
@@ -97,7 +112,6 @@ export function createPrivateMediaTransport({ storeGeneration, request = httpsRe
                   else fail();
                 }
               }));
-              response.on("error", fail); response.once("aborted", fail); response.once("close", () => { if (!response.complete) fail(); });
             } catch { fail(); }
           });
           req.on("error", fail);
@@ -115,10 +129,9 @@ export function createPrivateMediaTransport({ storeGeneration, request = httpsRe
   function put(input: MediaSlot, kind: Representation, body: Uint8Array | undefined, condition: string | undefined, permit: string | undefined, options?: MediaOperation) {
     return operate<Readonly<{ etag: string }>>("PUT", input, options, b => {
       need(kind === "permit" ? condition === undefined : strong(condition));
-      need(kind !== "chunk" || body instanceof Uint8Array && body.byteLength === b.expectedBytes);
-      const bytes = kind === "chunk" ? Buffer.from(body!) : marker(kind);
+      const bytes = kind === "chunk" ? copyChunk(body, b.expectedBytes) : marker(kind);
       need(kind !== "chunk" || sha(bytes) === b.bodySha256);
-      need(permit === undefined || strong(permit));
+      need(kind === "permit" ? permit === undefined : strong(permit));
       const url = new URL("https://vercel.com/api/blob/"); url.searchParams.set("pathname", b.key);
       return { url, body: bytes, headers: { ...controlHeaders(), "content-length": String(bytes.length), "x-vercel-blob-access": "private", "x-content-type": "application/octet-stream", "x-add-random-suffix": "0", "x-allow-overwrite": kind === "permit" ? "0" : "1", "x-cache-control-max-age": "60", ...(condition ? { "x-if-match": condition } : {}) },
         parse: (_status, bytesResponse) => {

@@ -14,14 +14,14 @@ const slot = (): MediaSlot => ({ storeGeneration: "synthetic-v1", assetId: "aaaa
 const key = `recordings/v1/${slot().assetId}/chunk-00`;
 const facts = (etag = tag, size = data.length) => ({ url: `${origin}/${key}`, pathname: key, size, contentType: "application/octet-stream", etag });
 const credentials = () => ({ acquire: () => ({ token: "synthetic", assertFresh() {} }) });
-type Answer = { status?: number; bytes?: Uint8Array; headers?: Record<string, string>; chunks?: Uint8Array[]; mutate?: (r: EventEmitter) => void; complete?: boolean; tls?: boolean };
+type Answer = { status?: number; bytes?: Uint8Array; headers?: Record<string, string>; chunks?: Uint8Array[]; mutate?: (r: EventEmitter) => void; complete?: boolean; tls?: boolean; destroyThrows?: boolean };
 function wire(answer: Answer = {}, automatic = true) {
   let callback: ((r: unknown) => void) | undefined, destroyed = 0;
   const requests: { options: RequestOptions; bytes: Buffer }[] = [];
   let req: EventEmitter & { destroy: () => void; end: (b?: Uint8Array) => void };
   const send = () => {
     const bytes = answer.bytes ?? Buffer.from(JSON.stringify(facts())), headers = answer.headers ?? { "content-length": String(bytes.length), "content-type": "application/octet-stream", etag: tag };
-    const res = Object.assign(new EventEmitter(), { statusCode: answer.status ?? 200, headers, rawHeaders: Object.entries(headers).flat(), complete: answer.complete ?? true, socket: { encrypted: true, authorized: answer.tls ?? true }, destroy: () => { destroyed++; } });
+    const res = Object.assign(new EventEmitter(), { statusCode: answer.status ?? 200, headers, rawHeaders: Object.entries(headers).flat(), complete: answer.complete ?? true, socket: { encrypted: true, authorized: answer.tls ?? true }, destroy: () => { destroyed++; if (answer.destroyThrows) throw Error("synthetic-cleanup-detail"); } });
     callback!(res); answer.mutate?.(res); for (const chunk of answer.chunks ?? [bytes]) res.emit("data", chunk); res.emit("end");
   };
   const request = ((options: RequestOptions, cb: (r: unknown) => void) => {
@@ -55,6 +55,7 @@ test("invalid bindings/input never acquire credentials or dispatch; caller mutat
   const w = wire(), t = transport(w, { credentials: { acquire: () => { acquired++; return credentials().acquire(); } } });
   for (const bad of [{ ...slot(), url: "https://example.test" }, { ...slot(), storeGeneration: "other" }, { ...slot(), slotIndex: 28 }, { ...slot(), expectedBytes: 3 }, { ...slot(), assetId: "../other" }, { ...slot(), bodySha256: "other" }]) expect(await t.putChunk(bad, data, tag)).toEqual({ ok: false, outcome: "unavailable" });
   expect(await t.putChunk(slot(), Uint8Array.of(1, 2), tag)).toEqual({ ok: false, outcome: "unavailable" });
+  expect(await t.putRetirement(slot(), tag, undefined as unknown as string)).toEqual({ ok: false, outcome: "unavailable" });
   const huge = new Uint8Array(MEDIA_LIMITS.body + 1), copy = vi.spyOn(Buffer, "from");
   expect(await t.putChunk(slot(), huge, tag)).toEqual({ ok: false, outcome: "unavailable" });
   expect(copy.mock.calls.some(call => call[0] === huge)).toBe(false); copy.mockRestore();
@@ -72,6 +73,24 @@ test("specific completed condition errors are distinct from every uncertain writ
   expect(await transport(wire({ status: 404, bytes: Buffer.from('{"error":{"code":"not_found"}}') })).metadata(slot())).toEqual({ ok: false, outcome: "not-found" });
   expect(await transport(wire({ status: 404, bytes: Buffer.from('{"error":{"code":"store_not_found"}}') })).metadata(slot())).toEqual({ ok: false, outcome: "unavailable" });
   expect(await transport(wire({ bytes: Buffer.from("malformed") })).putPermit(slot())).toEqual({ ok: false, outcome: "unknown-write" });
+});
+
+test("intrinsic typed-array extent bounds copies even with hostile length, offset and buffer shadows", async () => {
+  const huge = new Uint8Array(MEDIA_LIMITS.body + 2); Object.defineProperty(huge, "byteLength", { value: data.length }); Object.defineProperty(huge, "length", { value: data.length });
+  const w = wire(), copied = vi.spyOn(Buffer, "from");
+  expect(await transport(w).putChunk(slot(), huge, tag)).toEqual({ ok: false, outcome: "unavailable" });
+  expect(copied.mock.calls.some(call => call[0] === huge)).toBe(false); expect(w.requests.length).toBe(0); copied.mockRestore();
+  const backing = Uint8Array.from([0, ...data, 0]), view = backing.subarray(1, 1 + data.length); let reads = 0;
+  for (const name of ["length", "byteLength", "byteOffset", "buffer"]) Object.defineProperty(view, name, { get() { reads++; throw Error("synthetic-property-trap"); } });
+  const actual = wire(); expect((await transport(actual).putChunk(slot(), view, '"permit"')).ok).toBe(true); expect(actual.requests[0].bytes).toEqual(Buffer.from(data)); expect(reads).toBe(0);
+});
+
+test("PUT and metadata URL fields must be bounded strings, never coerced arrays or objects", async () => {
+  for (const url of [[facts().url], { url: facts().url }, null, 1, "x".repeat(2049)]) {
+    const body = Buffer.from(JSON.stringify({ ...facts(), url }));
+    expect(await transport(wire({ bytes: body })).metadata(slot())).toEqual({ ok: false, outcome: "unavailable" });
+    expect(await transport(wire({ bytes: body })).putPermit(slot())).toEqual({ ok: false, outcome: "unknown-write" });
+  }
 });
 
 test("GET refuses encoding/status/length/type/tag/hash/incomplete bodies and owns received byte memory", async () => {
@@ -111,6 +130,13 @@ test("current context is checked after I/O and again after promise settlement wi
   const w = wire({ mutate: r => { r.on("end", () => { valid = false; }); } });
   const c = { acquire: () => ({ token: "synthetic", assertFresh() { if (!valid) throw Error("synthetic-private-detail"); } }) };
   expect(await transport(w, { credentials: c }).putPermit(slot())).toEqual({ ok: false, outcome: "unknown-write" });
+});
+
+test("early TLS/header rejection retains an error observer despite repeated late errors and throwing cleanup", async () => {
+  for (const variant of [{ tls: false }, { headers: { "content-length": "8193" } }]) {
+    const w = wire({ ...variant, destroyThrows: true, mutate: r => { r.emit("error", Error("synthetic-private-detail")); r.emit("error", Error("synthetic-private-detail")); } });
+    expect(await transport(w).putPermit(slot())).toEqual({ ok: false, outcome: "unknown-write" }); expect(w.destroyed).toBeGreaterThan(0);
+  }
 });
 
 test("actual pinned SDK semantic PUT/control metadata/direct OIDC GET mapping matches without any network", async () => {
