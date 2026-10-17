@@ -198,18 +198,23 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
   try { await click(tab, "Prepare reading review"); await safe(() => tab.keyboard.press("Escape")); await prepare.ready(); await rejectClosing("prepare response held"); }
   finally { prepare.release(); }
   await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled(); await prepare.remove();
-  await capture(tab, "reading-tutor-prepared-busy-checked-mobile");
-  if (!process.env.CI) {
-    await safe(() => tab.setViewportSize({ width: 1440, height: 1000 })); await capture(tab, "reading-tutor-prepared-busy-checked-desktop");
-    await safe(() => tab.setViewportSize({ width: 390, height: 844 }));
-  }
+  // Synthetic phone/desktop review captures were already accepted from this
+  // unchanged product source; this regression exercises behavior only.
   const confirm = await hold("**/reading/confirm"), reload = await hold("**/reading?**");
   try { await click(tab, "Confirm assigned reading"); await safe(() => tab.keyboard.press("Escape")); await confirm.ready(); await rejectClosing("confirm response held"); }
   finally { confirm.release(); }
   try { await reload.ready(); await ui(tab.getByText("Checking the current assignment, text and saved work…", { exact: true })).toBeVisible(); await rejectClosing("post-confirm metadata reload held"); }
   finally { reload.release(); }
   await ui(sheet.getByText("Reading confirmed and reloaded from the server. The assignment above is current.", { exact: true })).toBeVisible();
-  await confirm.remove(); await reload.remove(); await capture(tab, "reading-tutor-confirmed-busy-checked-mobile");
+  await confirm.remove(); await reload.remove();
+  // Explicit recovery is offered only after a blocked review, not after a
+  // successful confirmation. Exercise that real branch with a lost/stale
+  // preparation response, while still sending the authorized server request.
+  await tab.route("**/reading/prepare", async route => {
+    const response = await route.fetch(); await response.dispose();
+    await route.fulfill({ status: 409, contentType: "application/json", body: '{"error":"conflict"}' });
+  });
+  await click(tab, "Prepare reading review"); await ui(sheet.getByRole("alert")).toContainText("changed while this proposal"); await tab.unroute("**/reading/prepare");
   const explicitReload = await hold("**/reading?**");
   try { await click(tab, "Reload current reading"); await safe(() => tab.keyboard.press("Escape")); await explicitReload.ready(); await rejectClosing("explicit metadata reload held"); }
   finally { explicitReload.release(); }
