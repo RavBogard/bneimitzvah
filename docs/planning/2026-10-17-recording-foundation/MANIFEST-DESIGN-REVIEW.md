@@ -28,3 +28,8 @@ The previous synthetic SDK-control-JSON and CLI duplicate-build concessions rema
 Accepted for the root-authorized bounded implementation with those precision requirements. Separate author/independent mocked tests, exact integration gates, root-only operator review and actual native two-key observations remain necessary. No evidence in this note claims actual ordinary-write retirement has already passed, receipt cleanup is complete, or student recording save exists.
 
 Reviewed spec SHA256: `96341bbef715a6c4c66e4ead54c2a8ba659493b34b9b8d44f8c0df48a5574634`.
+## Final bounded adapter amendment accepted
+
+Root checkpoint8a15a7a incorporated all three precision requirements: only all-new-flags-absent is disabled, R must actually dispatch asynchronously before bounded U release without inferred locking, and R ETag differs from A and the replaced B. The approved adapter is a closed ordinary Node HTTPS PUT for held U/racing R only, independently compared against real SDK2.8.2 MockAgent serialization; no arbitrary endpoint/header bag, live credential capture, dispatcher hook or dependency. Fresh context/OIDC/store/version/condition/content/access/overwrite/nonce/attempt0 is required, with fixed verified HTTPS origin/port/path and known Content-Length/Expect100. Other normal calls use the public SDK. This narrow seam is sound for observing actual dispatch, since the SDK has no supported interception hook; actual provider behavior remains unproved until root native acceptance. No new authority or broader transport exception is accepted.
+
+Final amended spec SHA256: `231972d0450040339bb369b07b325e617e154b7007a4d3bc9083385c61323dff`.
