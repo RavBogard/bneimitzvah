@@ -1,5 +1,13 @@
 # Original-ID registration checkpoint
 
+## Root integrated release — 2026-10-17
+
+Exact `bc10207a38acfcf1bafc7e850b1fed1236989c13` is main and normal READY canonical deployment `dpl_3B3w2Qqq5b7anwq3LJ4zt6ADwCe1`. Source7b7a3b7, independent2ab4479 and the root contract are integrated. All four [hosted jobs39056624743](https://github.com/RavBogard/bneimitzvah/actions/runs/39056624743) pass: Node303 per OS; app1028 Linux/1027 Windows+one existing skip in108files; nativeSQL34, restricted PostgreSQL140, authenticated browser137, public browser15, both typechecks/builds. Root local Node303, app1027+skip/108files325.63s, type/default build and final staged protection pass. Full ignored logs: `.local-logs/original-id-{full-node,full-app,full-type,full-build,integration-guard,hosted-complete}.log`.
+
+The root-only read-only release derivative2ea0e9b5 reverses only approved pins/unique rollback filename to acceptedb9 exactly; independent12/12 offline cases pass. Root recorded the protected immutable38d5 rollback reference, then non-force fast-forwarded main. The first bound release check refused during cutover; separate default status then a fresh complete bound check returned release-ready/canaryTargetMatch true. No failed deployment was replayed or staged test promoted. Normal canonical alias, exact main/source, absent probe metadata/exposed flags and the existing OIDC/private store/sole Production link/env reference all pass. Immutable record: protected `original-id-release-bc10207-rollback.json`, not Git.
+
+Matching canonical/anonymous-private/alias/test-route/Google-challenge HTTP checks pass. Unchanged hash-pinned563f native canary passes five route events/five matching native rows, exact source and zero secret canaries. Prior evidence is protected in `native-auth-before-bc10207`; new closed result remains ignored. No production schema/data/import/invitation/mail/provider-object or real audio operation occurred. Existing privacy/retention and registrar absence from runtime remain unchanged. This closes the internal seam checkpoint only; original author pending statements below retain their historical stage.
+
 The server-internal registrar can compose caller writes, an exact original recording ID and its creation audit in one existing authorized transaction. No runtime/HTTP route, receipt schema, byte verification or provider operation is added. Legacy random-ID registration and asset-based retries remain intact.
 
 ## Changes
