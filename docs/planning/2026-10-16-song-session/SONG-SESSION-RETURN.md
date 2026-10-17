@@ -385,3 +385,31 @@ No authority or privacy hole was found. Unchanged: access logic, the double-subm
 - Captures (local): `.impeccable/review/admin-people-{desktop,mobile}.png` and `roster-long-review-mobile.png`.
 
 **Next:** Invitations (the compose form and the list as cards, the review in a sheet) and Import.
+
+
+## Admin handoff: frozen ref on the release frontend (2026-10-16)
+
+**Acknowledged (Codex, COORDINATION.md):**
+- Codex owns release coordination through deployment.
+- Sol owns integrating my progress (`6398b3f`) and lessons (`26057b1`), including the progress recovery fixes. I do not touch progress/store/marks or the lesson lifecycle.
+- The admin work stays separate from this release and is offered as its own frozen ref.
+- The service-dialog `onDepartureActive` / one-active-modal behaviour is preserved.
+
+**Frozen admin ref:** branch `design/song-session-admin-release` at the commit that adds this note. It contains two commits, cherry-picked onto the release frontend `5a14d73` (local branch `codex/lesson-progress-integration`), not onto my older base:
+
+- `8aee6b1` (was `376d554`): the admin nav, the student list with its sheet, and the admin student page with the staff tabs and verse sheet.
+- `226a2b4` (was `65e661c`): People and access, Tutors, the access confirm sheet, and the invitation prefill.
+
+**Reconcile note:** one conflict, in `reading.tsx`, where the sheet state is declared. It keeps the release's `serviceDepartureActive` state, `useWorkspaceModal(sheet, sheetOpen && !work.departure && !serviceDepartureActive)` and `onDepartureActive={setServiceDepartureActive}` unchanged. Only the comment and the `staff` gate are mine. The service panel's departure wiring does not depend on mode, so admins get the same one-active-modal behaviour as tutors. No progress, lesson, service-learning, server, schema or migration file differs from `5a14d73`.
+
+**Checks on this exact tree:**
+- Typecheck and `next build` pass.
+- App tests: 826 passed, plus the 1 existing skip (two workers).
+- Node: 185 passed. `never-in-repo` passes.
+- All 21 browser files pass, one at a time, on a disposable WSL PostgreSQL 16:
+  - admin-ui 2/2, workspace-ui 3/3, roster-controls-ui 7/7, invitation-management-ui 3/3;
+  - reading-ui 4/4, service-learning-ui 14/14, reading-preview-ui 7/7, study-ui 6/6, student-work-ui 10/10;
+  - lessons-ui 2/2, progress-ui 3/3, tutor-route-ui 4/4, modal-privacy-ui 2/2, portal-ui 7/7;
+  - browser 2/2, canonical-navigation 4/4, egress 1/1, production-denial 2/2, server-isolation 1/1, server-review 2/2, service-learning-http 1/1.
+
+**Review status:** a second agent adversarially reviewed each admin slice, finding no authority or privacy break; its fixes are in. Daniel's look at the admin screens and the staff wording is still open. The older branch `design/song-session-admin` (on `26057b1`) is superseded by this one.
