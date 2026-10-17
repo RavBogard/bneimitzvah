@@ -9,7 +9,7 @@ import pg from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { disposableConfig, query } from "./disposable.mjs";
-import { RELEASE_BASE, sha, need } from "../../scripts/release-migrate-support.mjs";
+import { RELEASE_BASE, sha, need, parseTarget } from "../../scripts/release-migrate-support.mjs";
 import { executeRelease } from "../../scripts/release-migrate.mjs";
 import { captureCatalog, verifyCatalog } from "../../scripts/release-migrate-catalog.mjs";
 
@@ -43,7 +43,7 @@ async function fixture() {
     const migrations = [];
     for (const [index, row] of journal.entries.entries()) {
       const bytes = git("show", `${RELEASE_BASE}:${sourceFolder}/${row.tag}.sql`); await writeFile(join(folder, `${row.tag}.sql`), bytes);
-      migrations.push({ index, tag: row.tag, hash: sha(bytes), createdAt: row.when });
+      migrations.push({ index, tag: row.tag, hash: sha(bytes), createdAt: row.when, historicalAllowed: index < 11 || index === 13 ? [sha(bytes), sha(Buffer.from(bytes.toString("utf8").replace(/\n/g, "\r\n")))] : [sha(bytes)] });
     }
     await writeFile(join(folder, "meta", "_journal.json"), JSON.stringify({ ...journal, entries: journal.entries.slice(0, 15) }));
     await migrate(drizzle(owner, { logger: false }), { migrationsFolder: folder });
@@ -56,12 +56,30 @@ async function fixture() {
     const source = { migrations, reference, recheck() {} };
     // Trusted direct composition lets this disposable test attest PG16/18 and
     // loopback. The public CLI still requires the production Neon/PG18 contract.
-    const target = { connection, prefix, expected: { database, owner: ownerRole, ownerOid: identity.oid, runtimeRole, serverMajor: major, tenantId: "crc", canonicalOrigin: "https://beitmitzvah.centralreform.org" } };
+    const parsed = parseTarget({ version: 1, migrationUrl: `postgresql://${ownerRole}:${password}@ep-synthetic.neon.tech/${database}?sslmode=require`,
+      expected: { hostname: "ep-synthetic.neon.tech", database, owner: ownerRole, ownerOid: identity.oid, runtimeRole, serverMajor: 18, tenantId: "crc", canonicalOrigin: "https://beitmitzvah.centralreform.org" },
+      historicalPrefix: prefix, provenance: { sourceCommit: RELEASE_BASE, method: "owner-readonly", observedAt: "2026-10-16T00:00:00.000Z" } }, source);
+    // Preserve the REAL parseTarget startup/query options. Override only the
+    // transport/attested major for this explicit disposable loopback test.
+    const target = { ...parsed, expected: { ...parsed.expected, serverMajor: major }, connection: { ...parsed.connection, host: config.host, port: config.port, ssl: false } };
     await writeFile(join(folder, "meta", "_journal.json"), JSON.stringify(journal));
-    const run = (apply = false, operation) => executeRelease(source, target, { apply, connect: () => new pg.Client(connection), migrate: operation ?? (client => migrate(drizzle(client, { logger: false }), { migrationsFolder: folder })) });
+    const run = (apply = false, operation) => executeRelease(source, target, { apply, connect: () => new pg.Client(target.connection), migrate: operation ?? (client => migrate(drizzle(client, { logger: false }), { migrationsFolder: folder })) });
     return { owner, connection, source, target, folder, journal, run, close };
   } catch { await close().catch(() => undefined); throw new Error("Release disposable fixture failed; details withheld"); }
 }
+
+test("configured operator startup targets public schema for the non-superuser migration owner", { timeout: 120000 }, async () => {
+  const f = await fixture(), client = new pg.Client(f.target.connection);
+  try {
+    await client.connect(); const schema = (await query(client, "SELECT current_schema() AS schema")).rows[0].schema;
+    const result = await f.run(true);
+    assert.deepEqual({ schema, result }, { schema: "public", result: { ok: true, phase: "complete", outcome: "applied", apply: true, ledgerRows: 19 } });
+    await query(f.owner, "GRANT CREATE ON SCHEMA public TO PUBLIC");
+    try { const denied = await f.run(); assert.equal(denied.ok, false); assert.equal(denied.phase, "preflight"); assert.equal(denied.outcome, "not-started"); }
+    finally { await query(f.owner, "REVOKE CREATE ON SCHEMA public FROM PUBLIC"); }
+    assert.equal((await f.run()).outcome, "already-applied");
+  } finally { await client.end(); await f.close(); }
+});
 
 test("real release migration wrapper preserves exact history, refuses concurrent operators, rolls back SQL failure and checks applied state without DDL", { timeout: 120000 }, async t => {
   let f;

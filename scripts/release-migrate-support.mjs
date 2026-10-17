@@ -78,7 +78,7 @@ export function parseTarget(value, source) {
     need(Number.isSafeInteger(entry.id) && entry.id > 0 && (index === 0 || entry.id > row.historicalPrefix[index - 1].id));
     need(migration.historicalAllowed.includes(entry.hash) && entry.createdAt === migration.createdAt); return { ...entry };
   });
-  return { expected, prefix, connection: { host: url.hostname, port: 5432, database: expected.database, user: expected.owner, password: decodeURIComponent(url.password), ssl: { rejectUnauthorized: true, servername: url.hostname }, enableChannelBinding: true, options: "-c search_path=pg_catalog,public", client_encoding: "UTF8", connectionTimeoutMillis: 5000, query_timeout: 15000, statement_timeout: 12000, application_name: "portal-release-migrate" } };
+  return { expected, prefix, connection: { host: url.hostname, port: 5432, database: expected.database, user: expected.owner, password: decodeURIComponent(url.password), ssl: { rejectUnauthorized: true, servername: url.hostname }, enableChannelBinding: true, options: "-c search_path=public,pg_catalog", client_encoding: "UTF8", connectionTimeoutMillis: 5000, query_timeout: 15000, statement_timeout: 12000, application_name: "portal-release-migrate" } };
 }
 export function checkLedger(rows, source, target) {
   need(Array.isArray(rows) && [15, 19].includes(rows.length));
