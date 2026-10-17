@@ -1,5 +1,17 @@
 # Trusted ordinary single-write proof — author return
 
+## Root integration and actual native observation
+
+All four exact hosted jobs39059337274 pass source8caaeda2e24269f4c3b8d872a69d4942931371f2: Node320 per OS, app1028 Linux/1027 plus existing skip Windows, SQL34, restricted PostgreSQL140, authenticated browser137/public15, both type/build. Root local full Node320/32039.65s and final staged protection3/3 pass. Source remains bounded/offline accepted; native acceptance did NOT pass.
+
+The ignored root operator was independently repaired before use: initial56e3 missed old mixed-probe output;6721 fixed that but missed contradictory current-schema stderr; final preparationf1aaaa passed author23+peer6/root29 offline. Root changed only source pending→8caaeda, reverse-hash exactf1aaaa, final helper29ee92f0ed016dcf8e7d901bea4f4306cb08a07b873cc02c040e3aa0197150f8 independently sealed. Both read-only readiness checks passed, final sourcePinned=true/canonicalUnchanged=true.
+
+ONE actual staged round: run a316e6c1-043c-494c-b3f2-01d0586516ca, deployment dpl_CLEzVNg4XJ9MUPs34zLuzxeUY7NA. Start returned expected pending; subsequent check returned terminal requires-review. Probe: phase verify, requires-reconciliation, writeAttempted=true, all ordinaryVerified/staleDenied/ordinaryRetired/heldRetired false; race/evidence none. No held race was reached. Canonical remained dpl_3B3w2Qqq5b7anwq3LJ4zt6ADwCe1/sourcebc10207. No real audio, schema, data import, mail, cleanup or publication occurred. Original protected single-write v1 journal is retained; do not replay/reset it or promote the staged artifact.
+
+Source ordering shows positive P/U SDK responses and B!=A preceded verify, but grant/presign/HEAD/full GET/body predicates share that phase. The exact failure is not observable from the closed result. Code-only comparison identifies hypotheses, not a diagnosis: immediate HEAD after overwrite versus earlier create-only probe; full GET versus previous range206; mandatory Content-Length matching decoded1MiB; exact response URL string versus structural confinement; whole-body hash. Do not weaken any assertion based on these hypotheses. Next is a separately reviewed, bounded READ-ONLY diagnostic of this same synthetic normal key, with finer closed observations. It cannot turn the failed write proof into a pass. No new write round is authorized without root resolving the evidence and explicitly approving a new journal/round.
+
+Normal-release reader preparationa906ce4aa854a855a50d441358cb7bcdd014cdc23012730028949b8ad1da29bf passed author12+independent5 offline only; syntheticID remains pending, all live modes blocked. This is preserved future preparation, not release permission or evidence that the native premise passed.
+
 Root-approved manifest architecture at8a15a7a; this source is only the next default-silent synthetic acceptance script. It adds no recording receipt, schema, route, worker, browser write capability or real media. No provider/credential/DB/journal operation occurred.
 
 ## Source and fixed contract
