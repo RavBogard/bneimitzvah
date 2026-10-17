@@ -86,6 +86,7 @@ export function AnnotatedStudyVerse({ verse, assignment, group, number, showEngl
       </button>}
     </div>
     <StudyHebrew verse={verse} colors={colors} id={id} />
+    {colors && <div className="sr-only"><PhraseLegend colors={colors} id={id} verseRef={verse.ref} /></div>}
     {result && result.status !== "ready" && <p role="status" className="field-help">{unavailableText(result)}</p>}
     {showEnglish && <p className="study-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
     <Apparatus verse={verse} learner={learner} />
