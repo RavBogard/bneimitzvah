@@ -11,6 +11,37 @@ export const NEW_TABLES = ["service_catalog", "service_catalog_lifecycle", "stud
 export const NEW_FUNCTIONS = ["portal_immutable_service_catalog", "portal_service_lifecycle_revision", "portal_progress_version", "portal_lesson_log_version", "portal_practice_anniversary_due", "portal_practice_ceremony_change"].sort();
 export const sha = value => createHash("sha256").update(value).digest("hex");
 export const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+export function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]));
+  return value;
+}
+const digestRecord = value => sha(Buffer.from(JSON.stringify(canonical(value))));
+export function historicalFunctionContract(reference, sql, migration) {
+  const names = ["portal_immutable_audit", "portal_immutable_columns"], records = reference.historicalFunctions;
+  need(Array.isArray(records) && records.length === names.length && typeof sql === "string" && !sql.includes("\r") && sha(sql) === migration.hash);
+  for (const [i, name] of names.entries()) {
+    const record = records[i]; need(record?.name === name && record.arguments === "");
+    const declaration = `CREATE FUNCTION ${name}() RETURNS trigger LANGUAGE plpgsql AS $$`;
+    const pieces = sql.split(declaration); need(pieces.length === 2);
+    const end = pieces[1].indexOf("$$;"); need(end >= 0 && record.source === pieces[1].slice(0, end));
+    for (const catalog of [reference.baseline, reference.final]) {
+      const matches = catalog.functions.filter(fn => fn.name === name && fn.arguments === "");
+      need(matches.length === 1 && matches[0].sha256 === digestRecord(record));
+    }
+  }
+  return records;
+}
+/** Select expected bytes only; never normalize the observed database catalog. */
+export function selectedReference(source, target, ledgerLength) {
+  need(ledgerLength === 15 || ledgerLength === 19);
+  const base = ledgerLength === 15 ? source.reference.baseline : source.reference.final;
+  const migration = source.migrations[2], chosen = target.prefix[2]?.hash;
+  if (chosen === migration.hash) return base;
+  need(migration.historicalAllowed.length === 2 && chosen === migration.historicalAllowed[1] && source.historicalFunctions?.length === 2);
+  const changed = new Map(source.historicalFunctions.map(record => [record.name, digestRecord({ ...record, source: record.source.replace(/\n/g, "\r\n") })]));
+  return { ...base, functions: base.functions.map(fn => changed.has(fn.name) && fn.arguments === "" ? { ...fn, sha256: changed.get(fn.name) } : fn) };
+}
 export function need(value) { if (!value) throw new Error("Release precondition failed"); }
 export function closed(value, keys) {
   need(value && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype);
@@ -55,8 +86,9 @@ export function sourceContract(expectedCommit, options = {}) {
   const provenance = sha(Buffer.from(JSON.stringify([...blobs].map(([path, bytes]) => [path, sha(bytes)]))));
   const reference = JSON.parse(read("scripts/release-migrate-reference.json").toString("utf8"));
   need(reference.version === 1 && reference.sourceCommit === RELEASE_BASE && reference.migrationsSHA256 === provenance && reference.baseline && reference.final);
+  const historicalFunctions = historicalFunctionContract(reference, blobs.get(`${folder}/${migrations[2].tag}.sql`).toString("utf8"), migrations[2]);
   const recheck = () => { check(); for (const [path, bytes] of blobs) need(bytes.equals(read(path))); for (const path of RELEASE_FILES) need(git("show", `${expectedCommit}:${path}`).equals(read(path))); };
-  return { expectedCommit, migrations, provenance, reference, recheck };
+  return { expectedCommit, migrations, provenance, reference, historicalFunctions, recheck };
 }
 export function parseTarget(value, source) {
   const row = closed(value, ["version", "migrationUrl", "expected", "historicalPrefix", "provenance"]);

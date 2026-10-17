@@ -1,7 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { argumentsFor, parseTarget, checkLedger, sourceContract, sha, RELEASE_BASE, RELEASE_FILES, NEW_TABLES } from "../scripts/release-migrate-support.mjs";
+import { argumentsFor, parseTarget, checkLedger, sourceContract, sha, RELEASE_BASE, RELEASE_FILES, NEW_TABLES, canonical, historicalFunctionContract, selectedReference } from "../scripts/release-migrate-support.mjs";
 import { executeRelease, runRelease, ReleaseClient, assertReleaseTransport } from "../scripts/release-migrate.mjs";
 import { verifyCatalog } from "../scripts/release-migrate-catalog.mjs";
 
@@ -151,12 +153,14 @@ test("catalog equality rejects extra objects, privileges, filtered triggers and 
 
 function sourceFixture() {
   const names = [], blobs = new Map(), journal = { entries: [] };
-  for (let i = 0; i < 19; i++) { const tag = `m${String(i).padStart(4, "0")}`; journal.entries.push({ idx: i, version: "7", when: 1000 + i, tag, breakpoints: true }); names.push(`src/server/db/migrations/${tag}.sql`); blobs.set(names.at(-1), Buffer.from(`SELECT ${i};\n`)); }
+  for (let i = 0; i < 19; i++) { const tag = `m${String(i).padStart(4, "0")}`; journal.entries.push({ idx: i, version: "7", when: 1000 + i, tag, breakpoints: true }); names.push(`src/server/db/migrations/${tag}.sql`); blobs.set(names.at(-1), Buffer.from(i === 2 ? ["portal_immutable_audit", "portal_immutable_columns"].map(name => `CREATE FUNCTION ${name}() RETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN RETURN NEW; END $$;\n`).join("") : `SELECT ${i};\n`)); }
   for (let i = 0; i < 18; i++) { names.push(`src/server/db/migrations/meta/${i}_snapshot.json`); blobs.set(names.at(-1), Buffer.from(`{"id":${i}}\n`)); }
   names.push("src/server/db/migrations/meta/_journal.json"); blobs.set(names.at(-1), Buffer.from(JSON.stringify(journal))); names.sort();
   const provenance = sha(Buffer.from(JSON.stringify(names.map(path => [path, sha(blobs.get(path))]))));
+  const records = ["portal_immutable_audit", "portal_immutable_columns"].map(name => ({ name, arguments: "", source: "\nBEGIN RETURN NEW; END " }));
+  const functions = records.map(row => ({ name: row.name, arguments: row.arguments, sha256: sha(JSON.stringify(canonical(row))) }));
   const files = new Map(blobs);
-  for (const path of RELEASE_FILES) files.set(path, Buffer.from(path === "scripts/release-migrate-reference.json" ? JSON.stringify({ version: 1, sourceCommit: RELEASE_BASE, migrationsSHA256: provenance, baseline: { tables: [] }, final: { tables: [] } }) : "// pinned\n"));
+  for (const path of RELEASE_FILES) files.set(path, Buffer.from(path === "scripts/release-migrate-reference.json" ? JSON.stringify({ version: 1, sourceCommit: RELEASE_BASE, migrationsSHA256: provenance, baseline: { tables: [], functions }, final: { tables: [], functions }, historicalFunctions: records }) : "// pinned\n"));
   const committed = new Map(files);
   let dirty = false;
   const git = (...args) => {
@@ -173,4 +177,24 @@ test("source contract checks exact Git bytes and rejects CRLF, dirty/untracked m
   const f = sourceFixture(); assert.equal(sourceContract(candidate, f).migrations.length, 19);
   for (const path of ["src/server/db/migrations/m0015.sql", "scripts/release-migrate.mjs"]) { const g = sourceFixture(); g.files.set(path, Buffer.from("changed\r\n")); assert.throws(() => sourceContract(candidate, g)); }
   const dirty = sourceFixture(); dirty.dirty(); assert.throws(() => sourceContract(candidate, dirty));
+});
+
+test("historical expected function bytes are derived only from chosen migration2 LF or CRLF", () => {
+  const reference = JSON.parse(readFileSync(new URL("../scripts/release-migrate-reference.json", import.meta.url)));
+  const sql = execFileSync("git", ["show", `${RELEASE_BASE}:src/server/db/migrations/0002_tenant_security.sql`], { windowsHide: true }).toString("utf8");
+  const s = source(); s.migrations[2] = { ...s.migrations[2], hash: sha(sql), historicalAllowed: [sha(sql), sha(sql.replace(/\n/g, "\r\n"))] }; s.reference = reference;
+  const records = historicalFunctionContract(reference, sql, s.migrations[2]); s.historicalFunctions = records;
+  const lf = parseTarget(manifest(s), s), crlf = parseTarget({ ...manifest(s), historicalPrefix: manifest(s).historicalPrefix.map((row, i) => i === 2 ? { ...row, hash: s.migrations[2].historicalAllowed[1] } : row) }, s);
+  for (const length of [15, 19]) {
+    const expectedLF = selectedReference(s, lf, length), expectedCRLF = selectedReference(s, crlf, length);
+    const actualLF = { tables: [], functions: records, types: [] }, actualCRLF = { ...actualLF, functions: records.map(row => ({ ...row, source: row.source.replace(/\n/g, "\r\n") })) };
+    const onlyFunctions = expected => ({ ...expected, tables: [], types: [], functions: expected.functions.filter(fn => records.some(row => row.name === fn.name)) });
+    verifyCatalog(actualLF, onlyFunctions(expectedLF)); verifyCatalog(actualCRLF, onlyFunctions(expectedCRLF));
+    assert.throws(() => verifyCatalog(actualLF, onlyFunctions(expectedCRLF))); assert.throws(() => verifyCatalog(actualCRLF, onlyFunctions(expectedLF)));
+    for (const mutate of [r => r.source += " ", r => r.source = r.source.replace("23514", "23515"), r => r.security_definer = true, r => r.grants = [{ role: "PUBLIC", privilege: "EXECUTE" }]]) {
+      const bad = structuredClone(actualCRLF); mutate(bad.functions[0]); assert.throws(() => verifyCatalog(bad, onlyFunctions(expectedCRLF)));
+    }
+    const wrong = structuredClone(reference); wrong.historicalFunctions.reverse(); assert.throws(() => historicalFunctionContract(wrong, sql, s.migrations[2]));
+    const changedBody = structuredClone(reference); changedBody.historicalFunctions[0].source += " "; assert.throws(() => historicalFunctionContract(changedBody, sql, s.migrations[2]));
+  }
 });

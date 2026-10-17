@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { createRequire } from "node:module";
-import { argumentsFor, sourceContract, parseTarget, checkLedger, need, same, NEW_TABLES } from "./release-migrate-support.mjs";
+import { argumentsFor, sourceContract, parseTarget, checkLedger, need, same, NEW_TABLES, selectedReference } from "./release-migrate-support.mjs";
 import { captureCatalog, verifyCatalog, captureRoles, captureData } from "./release-migrate-catalog.mjs";
 
 const pgVersion = createRequire(import.meta.url)("pg/package.json").version;
@@ -77,7 +77,7 @@ export async function releaseSnapshot(client, source, target, checks = { identit
     await checks.identity(client, target);
     const ledger = checkLedger((await client.query("SELECT id,hash,created_at FROM drizzle.__drizzle_migrations ORDER BY created_at,id")).rows, source, target);
     const catalog = await checks.catalog(client, target.expected.owner);
-    checks.verifyCatalog(catalog, ledger.length === 15 ? source.reference.baseline : source.reference.final);
+    checks.verifyCatalog(catalog, selectedReference(source, target, ledger.length));
     const roles = await checks.roles(client);
     const data = await checks.data(client, catalog.tables.map(row => row.name));
     await client.query("ROLLBACK");

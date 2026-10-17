@@ -1,4 +1,4 @@
-import { need, same, sha } from "./release-migrate-support.mjs";
+import { need, same, sha, canonical } from "./release-migrate-support.mjs";
 
 // Only catalog metadata and server-side row counts/digests leave PostgreSQL.
 // OIDs and generated FK-trigger names are not portable reference identities.
@@ -93,11 +93,7 @@ export async function captureCatalog(client, owner) {
   need(types.length <= 256 && types.every(row => row.owner === "$OWNER" && (row.kind === "e" || row.kind === "c" || row.kind === "b" && row.element)));
   return canonical({ tables, functions, types });
 }
-export function canonical(value) {
-  if (Array.isArray(value)) return value.map(canonical);
-  if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]));
-  return value;
-}
+export { canonical };
 export function referenceCatalog(catalog) {
   const digest = value => sha(Buffer.from(JSON.stringify(canonical(value))));
   return {

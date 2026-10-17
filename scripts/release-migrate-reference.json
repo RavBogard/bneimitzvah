@@ -1700,5 +1700,57 @@
         "sha256": "cee4ce3ba4d6aa9b73ef22bf5cc7f5fcbe3fa1da33762fc8796822d9f54ac302"
       }
     ]
-  }
+  },
+  "historicalFunctions": [
+    {
+      "arguments": "",
+      "binary": null,
+      "config": null,
+      "grants": [
+        {
+          "grantable": false,
+          "grantor": "$OWNER",
+          "privilege": "EXECUTE",
+          "role": "PUBLIC"
+        }
+      ],
+      "kind": "f",
+      "language": "plpgsql",
+      "leakproof": false,
+      "name": "portal_immutable_audit",
+      "owner": "$OWNER",
+      "parallel": "u",
+      "result": "trigger",
+      "returns_set": false,
+      "security_definer": false,
+      "source": "\nBEGIN RAISE EXCEPTION 'Audit events are append only' USING ERRCODE = '23514'; END ",
+      "strict": false,
+      "volatility": "v"
+    },
+    {
+      "arguments": "",
+      "binary": null,
+      "config": null,
+      "grants": [
+        {
+          "grantable": false,
+          "grantor": "$OWNER",
+          "privilege": "EXECUTE",
+          "role": "PUBLIC"
+        }
+      ],
+      "kind": "f",
+      "language": "plpgsql",
+      "leakproof": false,
+      "name": "portal_immutable_columns",
+      "owner": "$OWNER",
+      "parallel": "u",
+      "result": "trigger",
+      "returns_set": false,
+      "security_definer": false,
+      "source": "\nDECLARE column_name text;\nBEGIN\n  FOREACH column_name IN ARRAY TG_ARGV LOOP\n    IF to_jsonb(OLD)->column_name IS DISTINCT FROM to_jsonb(NEW)->column_name THEN\n      RAISE EXCEPTION 'Immutable authority identity' USING ERRCODE = '23514';\n    END IF;\n  END LOOP;\n  IF to_jsonb(OLD)->>'revoked_at' IS NOT NULL AND to_jsonb(NEW)->>'revoked_at' IS NULL THEN\n    RAISE EXCEPTION 'Revoked authority cannot be restored' USING ERRCODE = '23514';\n  END IF;\n  RETURN NEW;\nEND ",
+      "strict": false,
+      "volatility": "v"
+    }
+  ]
 }

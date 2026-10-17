@@ -9,11 +9,11 @@ import pg from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { disposableConfig, query } from "./disposable.mjs";
-import { RELEASE_BASE, sha, need, parseTarget } from "../../scripts/release-migrate-support.mjs";
+import { RELEASE_BASE, sha, need, parseTarget, historicalFunctionContract, selectedReference } from "../../scripts/release-migrate-support.mjs";
 import { executeRelease } from "../../scripts/release-migrate.mjs";
 import { captureCatalog, verifyCatalog } from "../../scripts/release-migrate-catalog.mjs";
 
-async function fixture() {
+async function fixture(options = {}) {
   const config = disposableConfig(), suffix = randomBytes(8).toString("hex"), database = `release_test_${suffix}`, ownerRole = `release_owner_${suffix}`, runtimeRole = `release_runtime_${suffix}`, password = randomBytes(32).toString("hex");
   const anchor = new pg.Client(config); let owner, folder, createdDb = false, createdOwner = false, createdRuntime = false;
   async function close() {
@@ -42,18 +42,19 @@ async function fixture() {
     const sourceFolder = "src/server/db/migrations", journal = JSON.parse(git("show", `${RELEASE_BASE}:${sourceFolder}/meta/_journal.json`));
     const migrations = [];
     for (const [index, row] of journal.entries.entries()) {
-      const bytes = git("show", `${RELEASE_BASE}:${sourceFolder}/${row.tag}.sql`); await writeFile(join(folder, `${row.tag}.sql`), bytes);
+      const bytes = git("show", `${RELEASE_BASE}:${sourceFolder}/${row.tag}.sql`); await writeFile(join(folder, `${row.tag}.sql`), options.crlfHistory && index === 2 ? Buffer.from(bytes.toString("utf8").replace(/\n/g, "\r\n")) : bytes);
       migrations.push({ index, tag: row.tag, hash: sha(bytes), createdAt: row.when, historicalAllowed: index < 11 || index === 13 ? [sha(bytes), sha(Buffer.from(bytes.toString("utf8").replace(/\n/g, "\r\n")))] : [sha(bytes)] });
     }
     await writeFile(join(folder, "meta", "_journal.json"), JSON.stringify({ ...journal, entries: journal.entries.slice(0, 15) }));
     await migrate(drizzle(owner, { logger: false }), { migrationsFolder: folder });
     const reference = JSON.parse(await readFile(new URL("../../scripts/release-migrate-reference.json", import.meta.url), "utf8"));
-    await owner.query("BEGIN READ ONLY"); verifyCatalog(await captureCatalog(owner, ownerRole), reference.baseline); await owner.query("ROLLBACK");
+
     await query(owner, `INSERT INTO public.student(tenant_id,first_name,last_name,ceremony_date,parent_email) VALUES('crc','Synthetic','Release','2027-01-02','fixture@example.test')`);
     const prefix = (await query(owner, "SELECT id,hash,created_at FROM drizzle.__drizzle_migrations ORDER BY created_at,id")).rows.map(row => ({ id: row.id, hash: row.hash, createdAt: Number(row.created_at) }));
     const identity = (await query(owner, "SELECT oid::text AS oid FROM pg_roles WHERE rolname=current_user")).rows[0];
     const major = Number((await query(owner, "SHOW server_version_num")).rows[0].server_version_num.slice(0, 2));
-    const source = { migrations, reference, recheck() {} };
+    const securitySQL = git("show", `${RELEASE_BASE}:${sourceFolder}/${journal.entries[2].tag}.sql`).toString("utf8");
+    const source = { migrations, reference, historicalFunctions: historicalFunctionContract(reference, securitySQL, migrations[2]), recheck() {} };
     // Trusted direct composition lets this disposable test attest PG16/18 and
     // loopback. The public CLI still requires the production Neon/PG18 contract.
     const parsed = parseTarget({ version: 1, migrationUrl: `postgresql://${ownerRole}:${password}@ep-synthetic.neon.tech/${database}?sslmode=require`,
@@ -62,6 +63,7 @@ async function fixture() {
     // Preserve the REAL parseTarget startup/query options. Override only the
     // transport/attested major for this explicit disposable loopback test.
     const target = { ...parsed, expected: { ...parsed.expected, serverMajor: major }, connection: { ...parsed.connection, host: config.host, port: config.port, ssl: false } };
+    await owner.query("BEGIN READ ONLY"); verifyCatalog(await captureCatalog(owner, ownerRole), selectedReference(source, target, 15)); await owner.query("ROLLBACK");
     await writeFile(join(folder, "meta", "_journal.json"), JSON.stringify(journal));
     const run = (apply = false, operation) => executeRelease(source, target, { apply, checks: { transport() {} }, /* Explicit disposable loopback only. */ connect: () => new pg.Client(target.connection), migrate: operation ?? (client => migrate(drizzle(client, { logger: false }), { migrationsFolder: folder })) });
     return { owner, connection, source, target, folder, journal, run, close };
@@ -133,4 +135,17 @@ test("real committed write conflict and lost COMMIT acknowledgement remain non-d
       } finally { await f.close(); }
     });
   }
+});
+
+test("attested exact CRLF migration2 functions survive 15-to-19 upgrade and check-only idempotence", { timeout: 120000 }, async () => {
+  const f = await fixture({ crlfHistory: true });
+  try {
+    assert.notEqual(f.target.prefix[2].hash, f.source.migrations[2].hash);
+    assert.equal((await f.run()).outcome, "checked");
+    assert.deepEqual(await f.run(true), { ok: true, phase: "complete", outcome: "applied", apply: true, ledgerRows: 19 });
+    assert.equal((await f.run(true)).outcome, "already-applied");
+    const wrong = { ...f.target, prefix: f.target.prefix.map((row, i) => i === 2 ? { ...row, hash: f.source.migrations[2].hash } : row) };
+    const refused = await executeRelease(f.source, wrong, { checks: { transport() {} }, connect: () => new pg.Client(wrong.connection) });
+    assert.equal(refused.ok, false); assert.equal(refused.outcome, "not-started");
+  } finally { await f.close(); }
 });
