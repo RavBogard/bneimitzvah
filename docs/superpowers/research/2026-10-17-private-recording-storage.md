@@ -26,7 +26,7 @@ Private delivery defaults/examples must be overridden with `Cache-Control: priva
 
 The current default-region table lists storage at$0.023/GB-month, simple operations$0.40/million, advanced operations$5/million, and Blob transfer$0.05/GB. Region and plan allowances matter. Private delivery additionally incurs Function-to-browser transfer and applicable origin-transfer charges; storage price alone is not total cost. [Current pricing](https://vercel.com/docs/vercel-blob/usage-and-pricing).
 
-Illustrative storage-only arithmetic:34 students ×20 retained recordings ×5MB ≈3.4GB, about$0.08/month before allowances. This is an assumption, not measured demand or a spend ceiling. Obtain the actual team plan/region and expected listening volume, calculate transfer and operations, then present a concrete bounded spend notice to Daniel. No new paid service, upgrade, store, credential connection or upload has been created by this research.
+Illustrative storage-only arithmetic:34 students ×20 retained recordings ×5MB ≈3.4GB, about$0.08/month before allowances. This is an assumption, not measured demand or a spend ceiling. A read-only authenticated team lookup confirmed the existing Vercel plan is **Pro, active** on2026-10-17; no billing setting changed. Determine the store region and expected listening volume, calculate transfer and operations, then present a concrete bounded spend notice to Daniel. No new paid service, upgrade, store, credential connection or upload has been created by this research.
 
 ## Remaining evidence
 
