@@ -7,6 +7,7 @@ import { handleServiceLearningRequest, serviceLearningRouteMethods } from "./ser
 import { handleProgressRequest, progressRouteMethods } from "./progress";
 import { handleLessonLogRequest, lessonLogRouteMethods } from "./lesson-log";
 import { handlePracticeCalendarRequest, practiceCalendarRouteMethods } from "./practice-calendar";
+import { handleRecordingsRequest, recordingsRouteMethods } from "./recordings";
 import { errorResponse, HttpBoundaryError } from "./responses";
 
 export type HttpRuntimeScope = (action: (runtime: HttpRuntime) => Promise<Response>) => Promise<Response>;
@@ -26,7 +27,7 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
   return async (request: Request): Promise<Response> => {
     try {
       const url = new URL(request.url);
-      const methods = authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname) ?? serviceLearningRouteMethods(url.pathname) ?? progressRouteMethods(url.pathname) ?? lessonLogRouteMethods(url.pathname) ?? practiceCalendarRouteMethods(url.pathname);
+      const methods = authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname) ?? serviceLearningRouteMethods(url.pathname) ?? progressRouteMethods(url.pathname) ?? lessonLogRouteMethods(url.pathname) ?? practiceCalendarRouteMethods(url.pathname) ?? recordingsRouteMethods(url.pathname);
       // No provider configuration or connection required to refuse unowned
       // endpoints (including private SDK session/profile/password APIs).
       if (!methods) throw new HttpBoundaryError(404);
@@ -40,7 +41,7 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
       return await withRuntime(async (runtime) => {
         try {
           await runtime.resolveHost(request);
-          return await handleAuthRequest(request, runtime) ?? await handleStudentWorkRequest(request, runtime) ?? await handleServiceLearningRequest(request, runtime) ?? await handleProgressRequest(request, runtime) ?? await handleLessonLogRequest(request, runtime) ?? await handlePracticeCalendarRequest(request, runtime) ?? await handlePortalRequest(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
+          return await handleAuthRequest(request, runtime) ?? await handleStudentWorkRequest(request, runtime) ?? await handleServiceLearningRequest(request, runtime) ?? await handleProgressRequest(request, runtime) ?? await handleLessonLogRequest(request, runtime) ?? await handlePracticeCalendarRequest(request, runtime) ?? await handleRecordingsRequest(request, runtime) ?? await handlePortalRequest(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
         } catch (error) {
           // Expected HTTP400/413/etc stay inside the scoped runtime callback;
           // otherwise its generic application-error boundary would make503.
