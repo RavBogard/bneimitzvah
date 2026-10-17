@@ -40,8 +40,8 @@ async function page(role: "admin" | "tutor" | "student", mobile = false) {
 async function workspace(tab: Page, role: "admin" | "tutor" | "student" | "parent") {
   await safe(() => tab.goto(role === "admin" ? `/workspace/admin/students/${fixture.student.id}/reading` : `/workspace/${role}`, { waitUntil: "domcontentloaded" }));
   if (role === "tutor" || role === "parent") await safe(() => tab.getByLabel(role === "parent" ? "Child" : "Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
-  // Tutors reach service parts through the tab beside the reading.
-  if (role === "tutor") await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
+  // Staff reach service parts through the tab beside the reading.
+  if (role === "tutor" || role === "admin") await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
   await ui(panel(tab).getByRole("heading", { name: "Service parts", exact: true })).toBeVisible();
   await ui(panel(tab).getByText("Checking assigned service parts…", { exact: true })).toBeHidden();
 }
@@ -143,13 +143,13 @@ it("keeps service reading and its local retry available when scripture text retu
 it("requires explicit draft disposal on controlled departure while allowing its own confirmation to respect scripture guards", async () => {
   const tab = await page("admin"); await workspace(tab, "admin"); await click(tab, "Choose service parts");
   await safe(() => panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ }).check());
-  await safe(() => tab.getByRole("link", { name: "Back to student roster", exact: true }).click());
+  await safe(() => tab.getByRole("link", { name: "All students", exact: true }).click());
   const dialog = tab.getByRole("dialog", { name: "Keep this service draft?", exact: true }); await ui(dialog).toBeVisible();
   await click(tab, "Keep editing service parts"); await ui(dialog).toBeHidden();
   await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
-  await safe(() => tab.getByRole("link", { name: "Back to student roster", exact: true }).click());
+  await safe(() => tab.getByRole("link", { name: "All students", exact: true }).click());
   await click(tab, "Discard service draft and continue");
-  await ui(tab.getByRole("heading", { name: "Student roster", exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: "Students", level: 1, exact: true })).toBeVisible();
 });
 
 it("retains staff choices through focus revalidation, clears its review, and expires a fresh review without saving", async () => {

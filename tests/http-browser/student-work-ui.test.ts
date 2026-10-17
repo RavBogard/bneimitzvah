@@ -261,7 +261,7 @@ it("guards controlled leave and settles hidden lifecycle checks while retaining 
   await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); expect((await refreshed).status()).toBe(200); await accountReady(tab); await captureAccount(tab);
   expect((await fixture.ownerDb.select().from(s.translationDraft).where(and(eq(s.translationDraft.studentId, fixture.student.id), eq(s.translationDraft.verseRef, "Genesis 1:4"), eq(s.translationDraft.text, discarded)))).length).toBe(0);
   const admin = await page("admin"); await staff(admin); const notePanel = await tools(admin, "Genesis 1:7"); await safe(() => notePanel.getByRole("button", { name: "Student-visible notes", exact: true }).click());
-  await safe(() => notePanel.getByRole("textbox").fill("Synthetic explicitly saved on departure")); await safe(() => admin.getByRole("link", { name: "Back to student roster", exact: true }).click()); await ui(admin.getByRole("dialog")).toBeVisible(); await click(admin, "Save and continue"); await ui.poll(() => new URL(admin.url()).pathname).toBe("/workspace/admin/students");
+  await safe(() => notePanel.getByRole("textbox").fill("Synthetic explicitly saved on departure")); await safe(() => admin.getByRole("link", { name: "All students", exact: true }).click()); await ui(admin.getByRole("dialog")).toBeVisible(); await click(admin, "Save and continue"); await ui.poll(() => new URL(admin.url()).pathname).toBe("/workspace/admin/students");
   expect((await fixture.ownerDb.select().from(s.tutorNote).where(and(eq(s.tutorNote.verseRef, "Genesis 1:7"), eq(s.tutorNote.text, "Synthetic explicitly saved on departure")))).length).toBe(1);
 });
 

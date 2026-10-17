@@ -38,7 +38,7 @@ async function capture(tab: Page, name: string) {
   if (process.env.CI) return;
   await ui(tab.locator("#workspace-main").getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
   if (name === "workspace-admin-draft") await ui(tab.getByLabel("First name", { exact: true })).toBeVisible();
-  else if (name === "workspace-admin-roster") await ui(tab.getByRole("button", { name: "Synthetic revised Workspace", exact: true })).toBeVisible();
+  else if (name === "workspace-admin-roster") await ui(tab.getByRole("button", { name: "Details for Synthetic revised Workspace", exact: true })).toBeVisible();
   else await ui(tab.getByRole("heading", { name: name.includes("empty-assignment") ? "Synthetic Sibling" : "Synthetic Learner", exact: true })).toBeVisible();
   const directory = join(process.cwd(), ".impeccable", "review"); await mkdir(directory, { recursive: true });
   await safe(() => tab.screenshot({ path: join(directory, `${name}-${(tab.viewportSize()?.width ?? 0) < 640 ? "mobile" : "desktop"}.png`), fullPage: true }));
@@ -92,17 +92,18 @@ it("creates and edits a real roster record, blocks stale409 overwrite and leaves
   await safe(() => tab.getByRole("button", { name: "Add student", exact: true }).click());
   for (const [label, value] of [["First name", "Synthetic"], ["Last name", "Workspace"], ["Ceremony date", "2027-01-02"], ["Parent email", "workspace-parent@example.test"]]) await safe(() => tab.getByLabel(label, { exact: true }).fill(value));
   await safe(() => tab.getByRole("button", { name: "Save student", exact: true }).click());
-  await ui(tab.getByRole("button", { name: "Synthetic Workspace", exact: true })).toBeVisible();
-  await safe(() => tab.getByRole("button", { name: "Synthetic Workspace", exact: true }).click());
+  await ui(tab.getByRole("button", { name: "Edit details for Synthetic Workspace", exact: true })).toBeVisible();
+  await safe(() => tab.getByRole("button", { name: "Edit details for Synthetic Workspace", exact: true }).click());
   await safe(() => tab.getByLabel("First name", { exact: true }).fill("Draft retained"));
   const current = (await api(tab, "/api/admin/students")).data.students.find((row: { lastName: string }) => row.lastName === "Workspace");
   expect(Boolean(current)).toBe(true);
   await fixture.ownerDb.update(s.student).set({ revision: current.revision + 1 }).where(eq(s.student.id, current.id));
   await safe(() => tab.getByRole("button", { name: "Save student", exact: true }).click());
-  await ui(tab.locator("#workspace-main").getByRole("alert")).toContainText("changed since you opened"); await ui(tab.getByRole("button", { name: "Save student", exact: true })).toBeDisabled();
-  await safe(() => tab.getByRole("button", { name: "Reload roster", exact: true }).click());
-  await ui(tab.getByText("This student changed since you opened the form. Reload the roster before trying again; your draft has not overwritten their record.", { exact: true })).toBeHidden();
-  await safe(() => tab.getByRole("button", { name: "Synthetic Workspace", exact: true }).click());
+  await ui(tab.getByRole("dialog").getByRole("alert")).toContainText("since you opened it"); await ui(tab.getByRole("button", { name: "Save student", exact: true })).toBeDisabled();
+  await safe(() => tab.getByRole("dialog").getByRole("button", { name: "Reload roster", exact: true }).click());
+  await ui(tab.getByText("Someone changed this student since you opened it. Nothing was overwritten. Reload the roster to see the current details.", { exact: true })).toBeHidden();
+  await ui(tab.getByRole("dialog")).toBeHidden();
+  await safe(() => tab.getByRole("button", { name: "Edit details for Synthetic Workspace", exact: true }).click());
   await safe(() => tab.getByLabel("First name", { exact: true }).fill("Synthetic revised"));
   let release!: () => void, mutations = 0; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/api/admin/students/*/edit", async route => { mutations++; const response = await route.fetch(); await gate; await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); await response.dispose(); });
@@ -111,26 +112,26 @@ it("creates and edits a real roster record, blocks stale409 overwrite and leaves
     await focus(tab);
   } finally { release(); }
   await ui(tab.getByRole("button", { name: "Save student", exact: true })).toBeDisabled(); expect(mutations).toBe(1);
-  await safe(() => tab.getByRole("button", { name: "Reload roster", exact: true }).click());
-  await ui(tab.getByRole("button", { name: "Synthetic revised Workspace", exact: true })).toBeVisible();
-  expect(await tab.getByText(/Your draft is retained but cannot be submitted/).count()).toBe(0);
-  await safe(() => tab.getByRole("button", { name: "Synthetic revised Workspace", exact: true }).click());
+  // Either outcome message is honest here (the write may have landed); both block saving until a reload.
+  await ui(tab.getByRole("dialog").getByRole("alert")).toHaveText(/^(We couldn’t confirm whether this saved|This student changed while you were away)/);
+  await safe(() => tab.getByRole("dialog").getByRole("button", { name: "Reload roster", exact: true }).click());
+  await ui(tab.getByRole("button", { name: "Edit details for Synthetic revised Workspace", exact: true })).toBeVisible();
+  expect(await tab.getByText(/Your draft is kept here but can’t be saved/).count()).toBe(0);
+  await safe(() => tab.getByRole("button", { name: "Edit details for Synthetic revised Workspace", exact: true }).click());
   await safe(() => tab.getByRole("button", { name: "Disable student", exact: true }).click());
   await safe(() => tab.getByRole("button", { name: "Confirm disable", exact: true }).click());
-  const disabledRow = tab.getByRole("row").filter({ has: tab.getByRole("button", { name: "Synthetic revised Workspace", exact: true }) });
-  await ui(disabledRow.getByRole("cell", { name: "Disabled", exact: true })).toBeVisible();
-  await safe(() => tab.getByRole("button", { name: "Synthetic revised Workspace", exact: true }).click());
-  await ui(tab.getByText("This student is disabled. Their record is kept for reference; editing and reactivation are not offered here.", { exact: true })).toBeVisible();
+  const rows = tab.getByRole("list", { name: "Students", exact: true }).getByRole("listitem");
+  const disabledRow = rows.filter({ has: tab.getByRole("button", { name: "Details for Synthetic revised Workspace", exact: true }) });
+  await ui(disabledRow.getByText("Disabled", { exact: true })).toBeVisible();
+  expect(await disabledRow.getByRole("link").filter({ hasText: "Synthetic revised Workspace" }).count()).toBe(0);
+  await ui(tab.getByText("Synthetic revised Workspace is disabled. Their record stays in the list.", { exact: true })).toBeVisible();
+  await safe(() => tab.getByRole("button", { name: "Details for Synthetic revised Workspace", exact: true }).click());
+  await ui(tab.getByText("This student is disabled. Their record is kept for reference; editing and reactivation aren’t offered here.", { exact: true })).toBeVisible();
   expect(await tab.getByRole("button", { name: "Save student", exact: true }).count()).toBe(0);
   expect(await tab.getByRole("button", { name: "Disable student", exact: true }).count()).toBe(0);
-  await ui(tab.getByRole("cell", { name: "Active", exact: true }).first()).toBeVisible();
-  expect(await tab.locator(".roster-table").evaluate(table => {
-    const cells = [...table.querySelectorAll("tr > :nth-child(2), tr > :nth-child(3)")];
-    return cells.length > 0 && cells.every(cell => {
-      const range = document.createRange(); range.selectNodeContents(cell);
-      return getComputedStyle(cell).whiteSpace === "nowrap" && new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size === 1;
-    });
-  })).toBe(true);
+  await safe(() => tab.getByRole("button", { name: "Close student details", exact: true }).click());
+  // Active students carry no status chip and link to their page.
+  await ui(rows.filter({ hasNot: tab.getByText("Disabled", { exact: true }) }).first().getByRole("link").first()).toBeVisible();
   await capture(tab, "workspace-admin-roster");
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

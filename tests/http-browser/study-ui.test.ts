@@ -122,6 +122,8 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await ui(adminTab.locator(".assigned-study").getByText("Closed paragraph (setumah) after this verse.", { exact: true }).first()).toBeVisible();
   expect(await adminTab.locator(".study-hebrew").first().getAttribute("lang") === "he" && await adminTab.locator(".study-hebrew").first().getAttribute("dir") === "rtl").toBe(true);
   expect(await adminTab.locator(".study-english img").count()).toBe(0);
+  // Staff read with English off by default, as tutors do; the toolbar turns it on.
+  await safe(() => adminTab.getByRole("navigation", { name: "Reading tools", exact: true }).getByRole("button", { name: "English", exact: true }).click());
   await ui(adminTab.getByText("English reference unavailable for this verse.", { exact: true })).toBeVisible();
   await safe(() => adminTab.getByText("Text sources, licenses and changes", { exact: true }).click());
   await ui(adminTab.getByRole("link", { name: "CC-BY-SA-4.0", exact: true })).toBeVisible(); await ui(adminTab.getByRole("link", { name: "CC-BY-NC-4.0", exact: true })).toBeVisible();
@@ -314,7 +316,10 @@ it("preserves staff drafts, explicit paging and same-session text revalidation w
   // This case intentionally expires the session, so acquire its own real SDK
   // sign-in instead of reusing an earlier case's cached role session.
   const tab = await page("admin", false, true); await navigate(tab, `/workspace/admin/students/${fixture.student.id}/reading`); await loaded(tab, "Genesis 1:1");
+  // The verse editor is a sheet over the reading; its draft stays mounted while it is closed.
+  await safe(() => tab.getByRole("button", { name: /^(Change|Assign) verses$/ }).click());
   await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("custom")); await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:4-5"));
+  await safe(() => tab.getByRole("button", { name: "Close verse editor", exact: true }).click());
   unavailable = true; await click(tab, "Refresh reading"); await ui(tab.getByRole("heading", { name: "Text unavailable", level: 4, exact: true })).toBeVisible();
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5"); expect(await tab.locator(".study-hebrew").count()).toBe(0);
   unavailable = false; english = "unavailable"; await click(tab, "Reload assigned text"); await loaded(tab, "Genesis 1:1"); await capture(tab, "study-english-unavailable-desktop"); english = "partial";

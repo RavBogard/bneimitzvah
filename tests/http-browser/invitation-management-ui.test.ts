@@ -37,7 +37,7 @@ async function fill(tab: Page, email: string, role = "parent") {
 async function capture(tab: Page, name: string) {
   if (process.env.CI) return;
   await ui(main(tab).getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden();
-  await ui(tab.getByRole("heading", { name: "Admin invitations", level: 1, exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: "Invitations", level: 1, exact: true })).toBeVisible();
   await ui(tab.getByText("Checking current invitation records…", { exact: true })).toBeHidden();
   if (name.includes("review")) await ui(tab.getByRole("button", { name: "Send reviewed invitation", exact: true })).toBeEnabled();
   if (name.includes("failed")) await ui(tab.getByText("Mail failure recorded. No resend will happen automatically; review a reissue if appropriate.", { exact: true })).toBeVisible();
@@ -60,7 +60,7 @@ beforeAll(async () => {
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
 it("reviews a parent invitation before sending, then separately reviews reissue and exact revocation with authoritative lifecycle updates", async () => {
-  const tab = await page("admin"); await navigate(tab, "/workspace/admin/students"); await safe(() => tab.getByRole("link", { name: "Manage invitations", exact: true }).click());
+  const tab = await page("admin"); await navigate(tab, "/workspace/admin/students"); await safe(() => tab.getByRole("navigation", { name: "Admin", exact: true }).getByRole("link", { name: "Invitations", exact: true }).click());
   await fill(tab, "synthetic-managed-parent@example.test"); await click(tab, "Review invitation");
   expect((await api(tab, "/api/admin/invitations")).data.invitations.length === 0).toBe(true); await capture(tab, "invitation-review-desktop");
   let writes = 0;

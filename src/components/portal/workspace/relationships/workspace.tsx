@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { RequireRole, statusOf, useWorkspace } from "../provider";
+import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "../provider";
+import { AdminNav } from "../admin-nav";
 import { identityLabels, makeReview, relationshipApi, type Action, type Relationships, type Review, type Tutor } from "./api";
 import { AccessReview } from "./review";
 
@@ -63,8 +64,7 @@ function Access({ studentId }: { studentId?: string }) {
   const linkedTutorLabels = identityLabels(data?.tutors.map(row => ({ id: row.tutorGrantId, displayName: row.displayName })) ?? []);
   const parentLabels = identityLabels(data?.guardians.map(row => ({ id: row.parentGrantId, displayName: row.displayName })) ?? []);
   const studentLabels = identityLabels(data?.identities.map(row => ({ id: row.studentGrantId, displayName: row.displayName })) ?? []);
-  return <section className="role-workspace access-workspace"><h1>{studentId ? "Student access" : "Congregation tutors"}</h1>
-    <p><Link href="/workspace/admin/students">Student roster</Link> · <Link href="/workspace/admin/invitations">Manage invitations</Link>{studentId && <> · <Link href="/workspace/admin/tutors">Manage tutors</Link></>}</p>
+  return <section className="role-workspace access-workspace admin-workspace"><AdminNav />{studentId && <div className="admin-crumbs"><WorkspaceLink href={`/workspace/admin/students/${studentId}/reading`}>Student page</WorkspaceLink></div>}<h1>{studentId ? "People and access" : "Tutors"}</h1>
     <p>{studentId ? "Manage the people linked to this student. A student link and a congregation role have different effects." : "Active, verified tutor identities in this congregation. Invitations create access only after acceptance."}</p>
     {message && <p className={blocked || !message.startsWith("Access change saved") ? "request-error" : "workspace-notice"} role={blocked ? "alert" : "status"}>{message}</p>}
     {review && <AccessReview review={review} pending={pending} confirm={confirm} cancel={() => setReview(null)} />}

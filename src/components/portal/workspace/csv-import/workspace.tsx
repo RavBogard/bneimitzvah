@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { RequireRole, statusOf, useWorkspace } from "../provider";
+import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "../provider";
+import { AdminNav } from "../admin-nav";
 import { workspaceApi, type RosterStudent } from "../api";
 import { checkCsvSize, CSV_HEADER, CSV_ADULT_HEADER, csvApi, REVIEW_TTL, type Preview } from "./api";
 
@@ -83,7 +84,7 @@ function Import() {
     catch { if (alive.current) setMessage("The roster could not be checked. Try reloading it or check account access."); }
   }
   const locked = pending || loading || Boolean(blocked) || !roster;
-  return <section className="role-workspace csv-workspace"><h1>Import students</h1><p><Link href="/workspace/admin/students">Student roster</Link> · <Link href="/workspace/admin/invitations">Manage invitations</Link></p>
+  return <section className="role-workspace csv-workspace admin-workspace"><AdminNav /><div className="admin-crumbs"><WorkspaceLink href="/workspace/admin/students">All students</WorkspaceLink></div><h1>Import students</h1>
     <p>Create student records from a CSV. Invitations and assigned-reading confirmation are separate tasks.</p>
     {message && <p className={blocked || !receipt ? "request-error" : "workspace-notice"} role={blocked ? "alert" : "status"}>{message}</p>}
     {receipt !== null && <p role="status">{receipt} student {receipt === 1 ? "record created" : "records created"}. No invitations were sent.</p>}

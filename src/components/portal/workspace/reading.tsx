@@ -102,10 +102,10 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const selectedReading = readings.find(row => row.kind === selectedKind) ?? readings[0];
   const otherReadings = readings.filter(row => row.id !== selectedReading?.id);
   const learner = mode === "student" || mode === "child-practice" || mode === "parent";
-  // Tutors teach from the same Song session reading, and keep the staff assignment details.
-  const song = learner || mode === "tutor", editorId = `${serviceId}-editor`;
+  // Tutors and admins teach from the same Song session reading, and keep the staff assignment details.
+  const staff = mode === "tutor" || mode === "admin", song = learner || staff, editorId = `${serviceId}-editor`;
   const lift = useRef<((index: number) => void) | null>(null);
-  // Tutors change verses in a sheet over the reading instead of a form below it.
+  // Staff change verses in a sheet over the reading instead of a form below it.
   const [sheetOpen, setSheetOpen] = useState(false), [serviceDepartureActive, setServiceDepartureActive] = useState(false), sheet = useRef<HTMLDialogElement>(null), sheetOrigin = useRef<HTMLElement | null>(null);
   // Keep the editor draft mounted, but give departure review the sole modal
   // layer. This also makes access-check resume independent of effect ordering.
@@ -131,9 +131,9 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
     origin?.focus(); sheetOrigin.current = null;
   }, [sheetOpen]);
   const openSheet = (event: { currentTarget: HTMLElement }) => { sheetOrigin.current = event.currentTarget; setSheetOpen(true); };
-  // Tutors switch between the reading and service parts as tabs. Both stay mounted,
+  // Staff switch between the reading, service parts and lessons as tabs. All stay mounted,
   // so reloads, access checks and unsent work behave exactly as on one long page.
-  const tabbed = mode === "tutor", [tab, setTab] = useState<PageTab>("reading");
+  const tabbed = staff, [tab, setTab] = useState<PageTab>("reading");
   useLayoutEffect(() => { setTab("reading"); }, [studentId]);
   // The tabs exist only once the student has loaded; until then (or after a failed load) both panels show.
   const tabsShown = tabbed && Boolean(student);
@@ -183,14 +183,14 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
           <p className="hero-date"><time dateTime={student.ceremonyDate}>{countdown!.label}</time>{countdown!.phrase && <span className="hero-days">{countdown!.phrase}</span>}</p>
           <button type="button" className="hero-icon" aria-label="Refresh reading" onClick={() => setRetry(value => value + 1)}>{refreshIcon}</button>
         </div>
-        {readings.length === 0 ? <div className="reading-empty"><h3 className="hero-reference hero-reference-empty">No reading has been assigned yet</h3><p className="hero-meta">Your tutor or rabbi will add your verses here.</p>
-          <div className="hero-actions">{mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : "Enter child practice"}</button>}{mode === "tutor" && <button type="button" className="button-hero-secondary" onClick={openSheet}>Assign verses</button>}{!tabbed && <a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a>}</div></div> : <>
+        {readings.length === 0 ? <div className="reading-empty"><h3 className="hero-reference hero-reference-empty">No reading has been assigned yet</h3><p className="hero-meta">{staff ? "Choose the verses this student will read." : "Your tutor or rabbi will add your verses here."}</p>
+          <div className="hero-actions">{mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : "Enter child practice"}</button>}{staff && <button type="button" className="button-hero-secondary" onClick={openSheet}>Assign verses</button>}{!tabbed && <a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a>}</div></div> : <>
           <h3 className="hero-reference">{displayRange(selectedReading.ranges)}</h3>
           <p className="hero-meta">{selectedReading.kind === "torah" ? "Torah" : "Haftarah"} · {selectedReading.verses.length} {selectedReading.verses.length === 1 ? "verse" : "verses"}{marked && <span className="hero-marked"> · {marked}</span>}</p>
           <div className="hero-actions">
             <button type="button" className="button-start" onClick={startReading}>Start</button>
             {mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : "Enter child practice"}</button>}
-            {mode === "tutor" && <button type="button" className="button-hero-secondary" onClick={openSheet}>Change verses</button>}
+            {staff && <><button type="button" className="button-hero-secondary" onClick={openSheet}>Change verses</button><WorkspaceLink className="button-hero-secondary" href="/trope-chart">Trope chart</WorkspaceLink></>}
             {readings.length < 2 && !tabbed && <a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a>}
           </div></>}
       </header>
@@ -217,7 +217,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       <p><WorkspaceLink href="/trope-chart">Open the printable trope chart</WorkspaceLink></p>
       <p className="field-help">Unsent work stays only in this tab. Controlled workspace changes ask you to review it.</p>
     </aside>}
-  </div>{current?.loading && <p role="status">Checking the current assignment, text and saved work…</p>}{editor && (mode === "tutor" ? <dialog ref={sheet} id={editorId} className="editor-sheet" aria-labelledby="reading-editor-title" closedby={editorBusy ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); closeSheet(); }}>
+  </div>{current?.loading && <p role="status">Checking the current assignment, text and saved work…</p>}{editor && (staff ? <dialog ref={sheet} id={editorId} className="editor-sheet" aria-labelledby="reading-editor-title" closedby={editorBusy ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); closeSheet(); }}>
       <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close verse editor" disabled={editorBusy} onClick={closeSheet}>{icons.close}</button></div>{editor}
     </dialog> : <div id={editorId} className="reading-editor-anchor">{editor}</div>)}
     {tabPanel("service", <ServiceLearningPanel id={serviceId} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} onDepartureActive={setServiceDepartureActive} />)}

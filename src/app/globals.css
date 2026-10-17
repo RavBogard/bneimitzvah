@@ -543,10 +543,10 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 
 /* Phase 2: the tutor's verse editor as a sheet over the reading. Phones get the
    whole screen; wider screens keep the reading visible to its left. */
-.editor-sheet, .lesson-sheet { position: fixed; inset: 0 0 0 auto; width: min(46rem, 100%); height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: var(--color-canvas); color: var(--color-ink); overflow-y: auto; overscroll-behavior: contain; }
-.editor-sheet[open], .lesson-sheet[open] { display: block; }
-.editor-sheet::backdrop, .lesson-sheet::backdrop { background: rgb(11 22 38 / 0.5); }
-.editor-sheet :focus-visible, .lesson-sheet :focus-visible { outline-offset: 3px; }
+.editor-sheet, .lesson-sheet, .roster-sheet { position: fixed; inset: 0 0 0 auto; width: min(46rem, 100%); height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: var(--color-canvas); color: var(--color-ink); overflow-y: auto; overscroll-behavior: contain; }
+.editor-sheet[open], .lesson-sheet[open], .roster-sheet[open] { display: block; }
+.editor-sheet::backdrop, .lesson-sheet::backdrop, .roster-sheet::backdrop { background: rgb(11 22 38 / 0.5); }
+.editor-sheet :focus-visible, .lesson-sheet :focus-visible, .roster-sheet :focus-visible { outline-offset: 3px; }
 .sheet-bar { position: sticky; top: 0; z-index: 3; display: flex; justify-content: flex-end; padding: 0.5rem 0.75rem; background: var(--color-canvas); }
 .sheet-close { display: inline-grid; place-items: center; width: 48px; height: 48px; border: 0; border-radius: 999px; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); color: var(--color-ink); }
 .sheet-close:hover { box-shadow: inset 0 0 0 2px var(--lake); }
@@ -668,3 +668,77 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .lesson-delete-confirm > p { margin: 0 0 0.75rem; font-weight: 650; }
 .lesson-form-actions .lesson-delete-go { background: #b42318; }
 .lesson-form-actions .lesson-delete-go:hover { background: #8f1c13; }
+
+/* Admin (Phase 3): the same inks, restrained. One nav across the admin areas,
+   a quiet list of students, and details in a sheet over the list. */
+.admin-nav { display: flex; gap: 1.5rem; margin: -0.5rem 0 1.75rem; border-bottom: 1px solid var(--color-rule); overflow-x: auto; scrollbar-width: none; }
+.admin-nav a { display: inline-flex; align-items: center; min-height: 48px; margin-bottom: -1px; border-bottom: 3px solid transparent; color: var(--color-muted); font-size: 1.0625rem; font-weight: 650; text-decoration: none; white-space: nowrap; }
+.admin-nav a:hover { color: var(--color-ink); }
+.admin-nav a[aria-current] { color: var(--color-ink); border-bottom-color: var(--lake); }
+.admin-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+.admin-head h1 { margin: 0; }
+.admin-head-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.admin-pill { border-radius: 999px; padding-inline: 1.25rem; text-decoration: none; }
+.admin-state, .admin-empty { padding: 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.admin-state h2 { margin-top: 0; }
+.admin-empty p { margin: 0; color: var(--color-muted); }
+.admin-empty .admin-empty-title { margin-bottom: 0.25rem; color: var(--color-ink); font-weight: 700; }
+.roster-message { margin: 0 0 1.25rem; }
+.roster-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin-bottom: 0.75rem; }
+.roster-search { position: relative; flex: 1 1 18rem; max-width: 26rem; margin: 0; font-weight: 400; }
+.roster-search svg { position: absolute; inset-inline-start: 0.875rem; top: 50%; translate: 0 -50%; color: var(--color-muted); pointer-events: none; }
+.roster-search input { padding-inline-start: 2.75rem; border: 0; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--color-control-rule); }
+.roster-search input:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--lake); }
+.roster-count { margin: 0; color: var(--color-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+.roster-reload { margin-inline-start: auto; }
+.roster-list { list-style: none; margin: 0 0 1.5rem; padding: 0; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.roster-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; padding-inline-end: 0.75rem; }
+.roster-row + .roster-row { border-top: 1px solid var(--color-rule); }
+.roster-row-main { display: grid; gap: 0.25rem; min-height: 72px; align-content: center; padding: 0.75rem 1.25rem; color: var(--color-ink); text-decoration: none; border-radius: var(--radius-object); }
+a.roster-row-main:hover { background: var(--color-hover); color: var(--color-ink); }
+a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-underline-offset: 0.18em; }
+.roster-row-name { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-size: 1.125rem; font-weight: 750; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.roster-row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; color: var(--color-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+.roster-row-days { background: var(--marigold); color: var(--on-ink); font-weight: 650; font-size: 0.8125rem; padding: 0.0625rem 0.5rem; border-radius: 999px; }
+.roster-chip { padding: 0.0625rem 0.5rem; border-radius: 999px; background: var(--color-canvas); box-shadow: inset 0 0 0 1px var(--color-control-rule); color: var(--color-muted); font-size: 0.8125rem; font-weight: 650; letter-spacing: 0; }
+.roster-row-disabled .roster-row-name { color: var(--color-muted); }
+.roster-row-actions { display: flex; gap: 0.25rem; }
+.roster-action { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 0.875rem; border: 0; border-radius: 999px; background: transparent; color: var(--color-action); font: inherit; font-size: 0.9375rem; font-weight: 600; text-decoration: none; cursor: pointer; }
+.roster-action:hover { background: var(--color-hover); color: var(--color-action-hover); }
+.roster-action:disabled { color: var(--color-muted); cursor: default; background: transparent; }
+.roster-pages { margin-top: 0; }
+.roster-sheet .roster-editor { margin: 0; padding: 0 1.25rem max(3rem, env(safe-area-inset-bottom)); border: 0; }
+.roster-sheet .roster-editor h2 { margin: 0 0 1.25rem; font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; overflow-wrap: anywhere; }
+.roster-sheet .roster-editor h2:focus { outline: none; }
+.roster-reload-inline { margin: -0.5rem 0 1.25rem; }
+.roster-form .roster-form-grid { max-width: none; gap: 1rem 1.25rem; margin-bottom: 1rem; }
+.roster-field label { font-weight: 650; }
+.roster-sheet input:not([type="radio"]), .roster-sheet select { width: 100%; border: 0; border-radius: 12px; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-control-rule); }
+.roster-sheet input:not([type="radio"]):focus-visible, .roster-sheet select:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--lake); }
+.roster-sheet input:disabled, .roster-sheet select:disabled { background: var(--color-canvas); }
+.roster-choice { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1rem; padding: 0; border: 0; }
+.roster-choice legend { width: 100%; margin-bottom: 0.5rem; padding: 0; font-weight: 650; }
+.roster-choice label { position: relative; display: inline-flex; align-items: center; min-height: 44px; margin: 0; padding: 0 1.25rem; border-radius: 999px; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-control-rule); font-weight: 600; cursor: pointer; }
+.roster-choice input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; opacity: 0; cursor: pointer; }
+.roster-choice label:has(input:checked) { background: var(--lake); color: #fff; box-shadow: none; }
+.roster-choice label:has(input:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+.roster-choice:disabled label { opacity: 0.6; cursor: default; }
+.roster-sheet .disable-student { margin-top: 2rem; }
+.roster-sheet .disable-student h3 { margin: 0; font-size: 1.0625rem; }
+.roster-sheet .form-actions { margin-top: 1rem; }
+.roster-danger { background: #b42318; }
+.roster-danger:hover { background: #8f1c13; }
+@media (max-width: 640px) {
+  .admin-head h1 { font-size: 2rem; }
+  .roster-search { max-width: none; flex-basis: 100%; }
+  .roster-row { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0 0.5rem 0.5rem; }
+  .roster-row-main { padding: 0.75rem 0.75rem 0.25rem; min-height: 0; }
+  .roster-row-actions { padding-inline-start: 0.25rem; }
+  .roster-form .roster-form-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.admin-crumbs { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin: -0.75rem 0 1rem; }
+.admin-crumbs a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; text-decoration: none; }
+.admin-crumbs a:first-child::before { content: "\2039" / ""; margin-inline-end: 0.375rem; font-size: 1.25em; line-height: 1; }
+.admin-crumbs a.admin-crumb-action::before { content: none; }
+.admin-crumbs a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+.roster-sheet form .button-primary { width: auto; min-width: min(100%, 12rem); }

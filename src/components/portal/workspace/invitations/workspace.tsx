@@ -1,8 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { workspaceApi, type RosterStudent } from "../api";
-import { RequireRole, statusOf, useWorkspace } from "../provider";
+import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "../provider";
+import { AdminNav } from "../admin-nav";
 import { invitationApi, invitationTargetFingerprint, issueReview, INVITATION_PAGE_SIZE, type InviteDraft, type Invitation, type Receipt } from "./api";
 import { InvitationForm } from "./form";
 import { InvitationList } from "./list";
@@ -86,11 +86,11 @@ function Invitations() {
     if (next && snapshot.rows.length === INVITATION_PAGE_SIZE) setCursors(previous => [...previous, snapshot.rows[snapshot.rows.length - 1].id]);
     else if (!next && cursors.length > 1) setCursors(previous => previous.slice(0, -1));
   }
-  return <section className="role-workspace invitation-workspace"><Link href="/workspace/admin/students">Back to student roster</Link><h1>Admin invitations</h1>
+  return <section className="role-workspace invitation-workspace admin-workspace"><AdminNav /><h1>Invitations</h1>
     <p>Private congregation invitations. Lifecycle and mail outcome are separate: pending does not prove an invitation is currently redeemable. Acceptance always rechecks live recipient and student access.</p>
     <InvitationForm draft={draft} change={change} students={snapshot?.students ?? []} ready={Boolean(snapshot && !loading && !failure)} pending={pending} blocked={blocked} review={reviewIssue} />
     {message && <p className={blocked ? "request-error" : "field-help"} role={blocked ? "alert" : "status"}>{message}</p>}
-    {accessError && <Link href="/">Check account and sign in again</Link>}
+    {accessError && <WorkspaceLink href="/">Check account and sign in again</WorkspaceLink>}
     {outcome && <section className="invitation-outcome" aria-label="Latest invitation action" role="status"><h2>Latest action</h2><p>{outcome.unknown ? "Request outcome unconfirmed. A reload may show a recorded change, but must not be treated as a resend."
       : outcome.kind === "revoke" ? "Revocation acknowledged by the server. Use the refreshed lifecycle below for the current record."
       : outcome.kind === "reissue" ? "Replacement invitation acknowledged by the server. Only the refreshed records establish the old invitation’s current lifecycle; the replacement may be on another page."

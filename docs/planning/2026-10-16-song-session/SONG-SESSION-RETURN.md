@@ -269,3 +269,70 @@ Built on Codex's published lesson-log backend: `origin/codex/lesson-log-foundati
   - The test role and database have been dropped.
 - **For Codex:** the service-draft dialog adaptation and the final integration are yours, as agreed. Nothing is pushed and no migration is applied.
 - **Next:** Phase 3, admin.
+
+
+## Phase 3, slice 1: admin nav, student list and student page (2026-10-16)
+
+Branch `design/song-session-admin`, on top of the lessons commit `26057b1`. Screens only: no server, API, schema or migration file is touched.
+
+- **One admin nav.** Students · Invitations · Tutors sits under the app bar on every admin page (`admin-nav.tsx`). A student's own pages count as Students (`aria-current="location"`). The ad hoc link rows ("Manage invitations · Manage tutors · Import students", "Back to student roster") are gone.
+- **Students list** (`roster.tsx`), replacing the table and the form under it:
+  - Each row shows the name, ceremony date, a marigold days-to-go chip, Child/Adult and the service slot. Disabled students are muted, carry a "Disabled" chip and have no page link.
+  - Tapping a name opens the student's page. "Edit" and "People" sit at the end of each row.
+  - "Find a student" filters by name, ignoring accents and case. A miss says so. The count line reads "2 students · 1 disabled".
+  - Import and Add student are the two header actions.
+- **Add and edit in a sheet**, the same right-hand sheet as the verse editor and lesson notes:
+  - Student kind is a two-pill choice (Child / Adult) instead of a select. The email fields follow the kind's order.
+  - The disable step lives at the bottom of the sheet.
+  - Load, save, disable, conflict and access-check behaviour is unchanged: no retry, and Save stays disabled after a 409, a 401/403/404 or an unclear outcome until a reload.
+  - The sheet leaves the top layer during an access check and returns with the draft (`useWorkspaceModal`).
+- **Admin student page** (`admin-reading.tsx`, `reading.tsx`): admins get the tutor's page, with the hero, the Reading · Service parts · Lessons tabs and the verse editor in a sheet. `staff = tutor || admin` replaces the tutor-only gates. An "All students" breadcrumb and a "People and access" link sit above the hero.
+- **People, Invitations, Tutors and Import** get the nav and new headings ("People and access", "Invitations", "Tutors"). Their bodies are unchanged; their redesign is the next slice.
+- **Staff empty state:** "Choose the verses this student will read." replaces the learner line for tutors and admins. Staff also get a "Trope chart" link in the hero, which the review found admins had lost.
+
+### Decided here (GATE log)
+
+- GATE: staff-only wording on admin screens (headings, "Edit", "People", "People and access", "All students", the result messages "Added … No invitation has been sent.", "Saved …", "… is disabled. Their record stays in the list.", the conflict and unclear-outcome lines, and the staff empty-state line). Proceeded because it is staff-visible, not student-visible, and follows the UX analysis ruling: outcomes phrased as results, caveats in the detail view. It is listed below for Daniel's look anyway.
+- GATE: Cancel or Escape in the student sheet discards the draft without a "keep this?" prompt, as the old "Cancel edit" did. Proceeded because it keeps the existing behaviour; a prompt like lesson notes' can follow if Daniel wants one.
+- Roster chips for tutor, parent invited and reading confirmed (from the UX analysis) are **not** built. The roster API does not return them, and a per-student read would be N requests. **For Codex:** a roster summary field (tutor count, parent invited, readings confirmed or needing review) would let the list show them.
+
+### Adversarial review (second agent)
+
+No privacy or authority break was found. The sheet closes during access checks, and Save stays blocked after conflicts and unclear outcomes. Fixed from its findings:
+
+- **Medium:** closing the sheet after an unclear or conflicting save had cleared the warning, inviting a duplicate add. The warning now stays on the list with a "Reload roster" button, and Add and Edit stay disabled until a reload. A new browser case covers this: a 503 on add, close, the warning still shown, Add disabled, then a reload shows the student once.
+- Focus returns to the opener (or Add) after the reload that follows a save, instead of being lost.
+- After an access check, focus returns to the field the admin was in, not the heading.
+- A close that races a starting save reopens the sheet instead of leaving it stuck.
+- An empty roster has a reload button.
+- Not changed: the old non-Song staff branch in `reading.tsx` (the "Practice tools" aside and the inline editor) is now unreachable, since every mode is learner or staff. It is left in place for Codex's integration and can be removed in a later cleanup.
+
+### Tests
+
+- **New** `admin-ui.test.ts` (2 cases): the nav across areas; search and its miss; Add in the sheet, with Escape returning focus to Add; edit focus and kind pills; the unclear-save case above; and the student page tabs, verse sheet, Lessons tab and People link on desktop and phone.
+- **Adapted, with no lost coverage:**
+  - workspace-ui: the roster cases use the sheet. The 409 alert is now asserted inside the dialog, and Reload closes it. After the delayed 503, either honest message is accepted (the old test asserted none). The table `nowrap` check went with the table.
+  - roster-controls-ui: kind pills and the new result lines.
+  - Admin cases in reading-ui, reading-preview-ui and study-ui open the verse sheet as the tutor cases do, closing it to work in the verse notes. "Reading" is selected as a combobox because the Reading tab panel shares the label.
+  - study-ui turns English on for admins, as for tutors.
+  - service-learning-ui opens the Service parts tab for admins.
+  - invitation-management-ui and student-work-ui use the new nav and breadcrumb names.
+
+### Checks
+
+- Typecheck passes; `next build` compiles.
+- App tests: 800 passed, plus the 1 existing skip, run with two workers.
+- `never-in-repo` passes with the files staged.
+- Every browser file passes, one at a time, on a disposable WSL PostgreSQL 16. Claude Code stopped one background sweep for low memory; the rest were run in the foreground.
+  - admin-ui 2/2, workspace-ui 3/3, roster-controls-ui 7/7, invitation-management-ui 3/3;
+  - reading-ui 4/4, reading-preview-ui 7/7, study-ui 6/6, service-learning-ui 13/13, student-work-ui 10/10;
+  - tutor-route-ui 4/4, lessons-ui 2/2, progress-ui 2/2, modal-privacy-ui 2/2, portal-ui 7/7;
+  - browser 2/2, canonical-navigation 4/4, egress 1/1, production-denial 2/2, server-isolation 1/1, server-review 2/2, service-learning-http 1/1.
+- Local captures (not committed): `.impeccable/review/admin-{roster-desktop,roster-sheet-desktop,student-desktop,student-mobile,people-mobile}.png` and `workspace-admin-roster-mobile.png`.
+
+### Waiting on Daniel
+
+- A look at the admin screens, and the staff wording above.
+- Whether the student sheet should ask before discarding a typed draft.
+
+**Next:** Phase 3, slice 2. People and access gets grouped cards, plain status, the confirm step in a sheet, no raw role identifier, and "Invite a parent" from the student. Then Invitations and Tutors, then Import.

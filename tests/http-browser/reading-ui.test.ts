@@ -66,7 +66,8 @@ afterAll(async () => { await Promise.all(contexts.map(context => context.close()
 
 it("lets an admin review actual calendar choices, confirm once and replace only after authoritative reload", async () => {
   const tab = await page("admin"); await navigate(tab, "/workspace/admin/students");
-  await safe(() => tab.getByRole("link", { name: "Review reading for Synthetic Learner", exact: true }).click());
+  await safe(() => tab.getByRole("list", { name: "Students", exact: true }).getByRole("link", { name: /^Synthetic Learner/ }).click());
+  await openEditor(tab);
   await ui(tab.getByLabel("Selection method",{exact:true})).toHaveValue("custom");
   await safe(()=>tab.getByLabel("Selection method",{exact:true}).selectOption("calendar"));
   await click(tab, "Prepare reading review");
@@ -85,7 +86,7 @@ it("lets an admin review actual calendar choices, confirm once and replace only 
   await tab.unroute("**/reading/confirm");
   const haftarahPreparations: Record<string, unknown>[] = [];
   tab.on("request", request => { if (request.method() === "POST" && new URL(request.url()).pathname.endsWith("/reading/prepare")) haftarahPreparations.push(request.postDataJSON()); });
-  await safe(()=>tab.getByLabel("Reading",{exact:true}).selectOption("haftarah"));
+  await safe(()=>tab.getByRole("combobox", { name: "Reading", exact: true }).selectOption("haftarah"));
   await ui(tab.getByLabel("Selection method", { exact: true })).toHaveValue("custom");
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("");
   // Each kind has its own draft. An empty custom draft uses native validation;
@@ -100,6 +101,8 @@ it("lets an admin review actual calendar choices, confirm once and replace only 
   expect(await tab.getByRole("button",{name:"Confirm assigned reading",exact:true}).count()).toBe(0);
   await click(tab,"Use calendar haftarah: Isaiah 1:1-2");
   await click(tab,"Confirm assigned reading");
+  await ui(main(tab).getByText("Reading confirmed and reloaded from the server. The assignment above is current.", { exact: true })).toBeVisible();
+  await closeEditor(tab);
   // The practice panel keeps Torah selected; Haftarah is intentionally in the
   // secondary assignment disclosure until the user opens it.
   const other=tab.locator(".reading-other-assignments");
@@ -228,13 +231,13 @@ it("handles an empty calendar without invention and exposes no editor in parent 
   const tab = await page("admin");
   const created = await api(tab, "/api/admin/students", { student: { firstName: "Synthetic", lastName: "Empty Calendar", ceremonyDate: "2027-01-09", parentEmail: "empty-calendar@example.test" } });
   expect(created.status === 201 || created.status === 200).toBe(true);
-  await navigate(tab, `/workspace/admin/students/${created.data.id}/reading`);
+  await navigate(tab, `/workspace/admin/students/${created.data.id}/reading`); await openEditor(tab);
   await ui(tab.getByLabel("Selection method",{exact:true})).toHaveValue("custom");
   await safe(()=>tab.getByLabel("Selection method",{exact:true}).selectOption("calendar")); await click(tab, "Prepare reading review");
   await ui(tab.getByText("The service slot is not yet set. Choose custom references; no calendar date has been assumed.",{exact:true})).toBeVisible();
   await ui(tab.getByText("No calendar selections are available for this date.", { exact: true })).toBeVisible();
   expect(await tab.getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
-  await safe(() => tab.getByLabel("Reading", { exact: true }).selectOption("haftarah"));
+  await safe(() => tab.getByRole("combobox", { name: "Reading", exact: true }).selectOption("haftarah"));
   await ui(tab.getByLabel("Selection method", { exact: true })).toHaveValue("custom");
   await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("calendar")); await click(tab, "Prepare reading review");
   await ui(tab.getByText("No haftarah was returned for this date. Use custom references if appropriate.", { exact: true })).toBeVisible();
