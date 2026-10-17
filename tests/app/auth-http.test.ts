@@ -142,17 +142,26 @@ test("discarded hostile Forwarded cannot bypass real Google nonce/body verificat
   expect(forged.status).toBe(404);
 });
 
-test("real verifier refuses missing/mismatching nonce, wrong audience/issuer/expiry/signature and unverified same-email linking", async () => {
-  const variants = [{ nonce: undefined }, { nonce: "attacker" }, { aud: "foreign-client" }, { iss: "https://foreign.example.test" }, { exp: 1 }, { email_verified: false }];
-  for (const override of variants) {
-    const f = await fixture(); const token = googleTokens();
-    await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "http-identity@example.test" }));
-    await f.dispatch(f.request("/api/auth/email/confirm", { token: tokenOf(f.messages[0].url) }));
-    const issued = await challenge(f);
-    const response = await f.dispatch(f.request("/api/auth/sign-in/social", { credential: token(issued.nonce, override), challengeId: issued.challengeId, csrfToken: issued.csrfToken }, { cookie: issued.cookie }));
-    expect(response.status).toBe(400);
-    expect((await f.db.select().from(schema.account)).length).toBe(0);
-  }
+// Each case owns one migrated database and JWKS mock. Keeping all seven under
+// one deadline retained fixtures and could let a timed-out body outlive cleanup.
+test.each([
+  { label: "missing nonce", override: { nonce: undefined } },
+  { label: "mismatching nonce", override: { nonce: "attacker" } },
+  { label: "wrong audience", override: { aud: "foreign-client" } },
+  { label: "wrong issuer", override: { iss: "https://foreign.example.test" } },
+  { label: "expired token", override: { exp: 1 } },
+  { label: "unverified same-email linking", override: { email_verified: false } },
+])("real verifier refuses $label without linking an account", async ({ override }) => {
+  const f = await fixture(); const token = googleTokens();
+  await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "http-identity@example.test" }));
+  await f.dispatch(f.request("/api/auth/email/confirm", { token: tokenOf(f.messages[0].url) }));
+  const issued = await challenge(f);
+  const response = await f.dispatch(f.request("/api/auth/sign-in/social", { credential: token(issued.nonce, override), challengeId: issued.challengeId, csrfToken: issued.csrfToken }, { cookie: issued.cookie }));
+  expect(response.status).toBe(400);
+  expect((await f.db.select().from(schema.account)).length).toBe(0);
+});
+
+test("real verifier refuses a bad signature", async () => {
   const f = await fixture(); const token = googleTokens(); const issued = await challenge(f);
   const valid = token(issued.nonce); const pieces = valid.split("."); pieces[2] = "A".repeat(pieces[2].length);
   const response = await f.dispatch(f.request("/api/auth/sign-in/social", { credential: pieces.join("."), challengeId: issued.challengeId, csrfToken: issued.csrfToken }, { cookie: issued.cookie }));
