@@ -19,6 +19,7 @@ let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop:
 let sibling: { id: string }, adminTab: Page, studentTab: Page, calls = 0, unavailable = false, longVerse = false;
 let english: "available" | "partial" | "unavailable" = "partial";
 const contexts: BrowserContext[] = [], modes = new Set<string>();
+const cookies = new Map<"admin" | "tutor" | "student", Awaited<ReturnType<BrowserContext["cookies"]>>>();
 async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Study UI browser operation failed; private details withheld"); } }
 async function navigate(tab: Page, path: string) { await safe(() => tab.goto(path, { waitUntil: "domcontentloaded", timeout: 30_000 })); }
 async function api(tab: Page, path: string, body?: unknown) {
@@ -27,14 +28,18 @@ async function api(tab: Page, path: string, body?: unknown) {
     return { status: response.status, data: await response.json() };
   }, { path, body }));
 }
-async function page(who: "admin" | "tutor" | "student", mobile = false) {
+async function page(who: "admin" | "tutor" | "student", mobile = false, fresh = false) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 } }); contexts.push(context);
   await context.route("**/*", async route => { try {
     const url = new URL(route.request().url()); if (url.origin !== BROWSER_ORIGIN) { await route.abort(); return; }
     if (url.pathname.endsWith("/study-text")) modes.add(url.searchParams.get("mode") ?? ""); await route.continue();
   } catch { await route.abort(); } });
-  const tab = await context.newPage(); await navigate(tab, "/"); const email = who === "student" ? "pg-study-student@example.test" : who === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
-  expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); return tab;
+  // Reuse only a known live role session from this disposable fixture. Extra
+  // independent cases must not exhaust the real magic-link throttle.
+  const signedIn = fresh ? undefined : cookies.get(who); if (signedIn) await context.addCookies(signedIn);
+  const tab = await context.newPage(); await navigate(tab, "/"); if (signedIn) return tab;
+  const email = who === "student" ? "pg-study-student@example.test" : who === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
+  expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); cookies.set(who, await context.cookies()); return tab;
 }
 async function click(tab: Page, name: string) {
   try { await safe(() => tab.getByRole("button", { name, exact: true }).click()); }
@@ -306,10 +311,9 @@ it("discards held old-child text after a switch, keeps another tab independent, 
 });
 
 it("preserves staff drafts, explicit paging and same-session text revalidation while rejecting stale responses and clearing on expired session", async () => {
-  // Reuse the real initial admin session: the plugin permits five magic-link
-  // requests per origin/path in 60 seconds, and a sixth sign-in is unnecessary
-  // for this same-session revalidation and explicit expiry scenario.
-  const tab = adminTab; await navigate(tab, `/workspace/admin/students/${fixture.student.id}/reading`); await loaded(tab, "Genesis 1:1");
+  // This case intentionally expires the session, so acquire its own real SDK
+  // sign-in instead of reusing an earlier case's cached role session.
+  const tab = await page("admin", false, true); await navigate(tab, `/workspace/admin/students/${fixture.student.id}/reading`); await loaded(tab, "Genesis 1:1");
   await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("custom")); await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:4-5"));
   unavailable = true; await click(tab, "Refresh reading"); await ui(tab.getByRole("heading", { name: "Text unavailable", level: 4, exact: true })).toBeVisible();
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5"); expect(await tab.locator(".study-hebrew").count()).toBe(0);
