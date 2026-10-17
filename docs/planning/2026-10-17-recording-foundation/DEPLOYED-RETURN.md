@@ -1,5 +1,7 @@
 # Recording foundation release — 2026-10-17
 
+**Superseding infrastructure checkpoint:** exact main `38d5a1d213058044a01272d2813b30267f2bc390` is normal READY canonical deployment `dpl_A3g2GoyQ6KFEK9VbvRHHeXEFTQ8f`. Exact hosted CI, canonical-alias/source/normal-build verification, matching live HTTP and native auth canary all pass. Dedicated private Production-only OIDC configuration and the actual64-byte synthetic object roundtrip are accepted; [operational return](OBJECT-PROBE-RETURN.md) records source/operator/review evidence and limitations. The synthetic Ajf deployment remains a test artifact. No migration/import/mail or real recording action accompanied this release. Recording transport/UI/physical maintenance remains unfinished. The paragraphs below retain the prior e9 ledger deployment history.
+
 Main and canonical production are exact `e9b0287b67c8e4644cb2383be8205ff14f2f4c97`, READY deployment `dpl_Ddi1uAWUe9Uif9s6PRAeU4ukxRsN`, at https://beitmitzvah.centralreform.org. This completes the bounded metadata/capture prerequisite release, **not the student recording feature**.
 
 ## Included and verified
