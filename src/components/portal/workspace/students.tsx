@@ -33,8 +33,17 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
     setError(false);
     try {
       let values = await workspaceApi.students(mode, undefined, request.signal), page = values;
+      if (request.signal.aborted || turn !== sequence.current) return;
       const count = preserve ? rowsRef.current.length : 100;
-      while (page.length === 100 && values.length < count) { page = await workspaceApi.students(mode, page[page.length - 1].id, request.signal); values = [...values, ...page]; }
+      // A focused route may name an authorized student beyond the first page.
+      // Exhaust the authorized list before reporting that its target is absent.
+      while (page.length === 100 && (values.length < count || routeStudentId && !values.some(row => row.id === routeStudentId))) {
+        const cursor = page[page.length - 1].id;
+        page = await workspaceApi.students(mode, cursor, request.signal);
+        if (request.signal.aborted || turn !== sequence.current) return;
+        if (page.some(row => row.id <= cursor || values.some(previous => previous.id === row.id))) throw new Error("Student page unavailable");
+        values = [...values, ...page];
+      }
       if (request.signal.aborted || turn !== sequence.current) return;
       setRows(previous => {
         const known = previous.find(row => row.id === selectedRef.current);
@@ -44,7 +53,7 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
       setSelected(previous => previous && values.some(row => row.id === previous) ? previous : routeStudentId && values.some(row => row.id === routeStudentId) ? routeStudentId : mode === "student" && values.length === 1 ? values[0].id : null);
     } catch (error) { if (!request.signal.aborted && turn === sequence.current) { setError(true); throw error; } }
     finally { if (!request.signal.aborted && turn === sequence.current) setLoading(false); }
-  }, [mode]);
+  }, [mode, routeStudentId]);
   useEffect(() => registerReload(() => load(true)), [registerReload, load]);
   useEffect(() => { void load(false).catch(() => undefined); return () => { sequence.current++; abort.current?.abort(); }; }, [load, epoch, retry]);
   async function loadMore() {
