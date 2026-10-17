@@ -249,7 +249,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   return <div className="portal-shell workspace-shell">
     <a className="skip-link" href="#workspace-main">Skip to workspace</a>
-    <header className="portal-header"><Link className="portal-brand" href="/" onClick={event => controlledLink(event, "/")}>CRC B’nei Mitzvah</Link><Link href="/account" onClick={event => controlledLink(event, "/account")}>Account and sign out</Link></header>
+    <header className="portal-header app-bar"><Link className="portal-brand" href="/" onClick={event => controlledLink(event, "/")}>CRC Beit Mitzvah</Link><Link className="app-bar-account" href="/account" onClick={event => controlledLink(event, "/account")} aria-label="Account and sign out"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M5 20c1.2-3.6 3.8-5.5 7-5.5s5.8 1.9 7 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg><span>Account</span></Link></header>
     <main id="workspace-main" className="workspace-main">
       {(checking || !summary) && <section className="workspace-state" aria-live="polite"><h1>{failure === null ? "Checking your access" : failure === 401 ? "Sign in to continue" : failure === 403 || failure === 404 ? "Access has changed" : "Workspace unavailable"}</h1>
         <p>{failure === null ? "Your student information is hidden until access has been checked." : failure === 401 ? "Use the account on your invitation." : failure === 403 || failure === 404 ? "The requested access is not available. Your previous student view has been cleared." : "We couldn’t load the workspace. Please try again shortly."}</p>
@@ -257,13 +257,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
         <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readWork, readServiceMetadata, readServiceUnit, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload }}>
-          <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>
+          {summary.roles.length > 1 && <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>}
           {visibleNotice && <p className="workspace-notice" role="status">{visibleNotice}</p>}
           {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}
           {children}
         </WorkspaceContext.Provider></div>}
     </main>
-    <footer className="portal-footer"><span>Learning at Central Reform Congregation</span><span>Access is checked for each request.</span></footer>
+    <footer className="portal-footer"><span>Central Reform Congregation</span></footer>
   </div>;
 }
 

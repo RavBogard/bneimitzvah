@@ -10,6 +10,19 @@ import { WorkCoordinator } from "./work/coordinator";
 import { VerseTools } from "./work/verse-tools";
 import { DepartureReview } from "./work/departure-review";
 import { ServiceLearningPanel, type ServiceReload } from "./service-learning/panel";
+import { ReadingToolbar } from "./reading-toolbar";
+import { ReadingPrefsScope } from "./reading-prefs";
+
+const dayMs = 86_400_000;
+/** "Sat, Jan 2, 2027" and whole days until it, computed on the calendar date only. */
+export function ceremonyCountdown(date: string, now = new Date()) {
+  const [year, month, day] = date.split("-").map(Number), ceremony = Date.UTC(year, month - 1, day);
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()), days = Math.round((ceremony - today) / dayMs);
+  const label = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(ceremony);
+  return { label, days, phrase: days > 1 ? `${days} days to go` : days === 1 ? "Tomorrow" : days === 0 ? "Today" : null };
+}
+const displayRange = (ranges: string[]) => ranges.join("; ").replace(/(\d)-(\d)/g, "$1\u2013$2");
+const refreshIcon = <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
 function AssignmentContext({ row, current = false }: { row: Reading; current?: boolean }) {
   return <article className={`confirmed-reading${current ? " reading-current-assignment" : ""}`}>
@@ -75,32 +88,51 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const student = current?.value?.student, readings = current?.value?.readings ?? [];
   const selectedReading = readings.find(row => row.kind === selectedKind) ?? readings[0];
   const otherReadings = readings.filter(row => row.id !== selectedReading?.id);
-  return <><DepartureReview coordinator={work} /><div className="reading-workspace reading-with-work" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
+  const learner = mode === "student" || mode === "child-practice" || mode === "parent";
+  const lift = useRef<((index: number) => void) | null>(null);
+  const countdown = student ? ceremonyCountdown(student.ceremonyDate) : null;
+  return <ReadingPrefsScope studentId={studentId}><DepartureReview coordinator={work} /><div className="reading-workspace reading-with-work" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
     <section aria-label="Assigned reading">
       {!student ? <div className="workspace-state" aria-live="polite"><h2>{current?.error ? "Reading unavailable" : "Loading the assigned reading"}</h2>
         <p>{current?.error === 404 || current?.error === 403 ? "This reading is no longer available in the selected role. Choose another available student." : current?.error ? "We couldn’t load the confirmed assignment. No previous student’s reading is being shown." : "Checking the selected student and confirmed references."}</p>
         {current?.error && <button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload reading</button>}</div> : <>
+      {learner ? <header className="reading-hero reading-current-assignment" aria-labelledby="reading-heading">
+        <div className="hero-who">
+          <h2 id="reading-heading" className="hero-name"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
+          <p className="hero-date"><time dateTime={student.ceremonyDate}>{countdown!.label}</time>{countdown!.phrase && <span className="hero-days">{countdown!.phrase}</span>}</p>
+          <button type="button" className="hero-icon" aria-label="Refresh reading" onClick={() => setRetry(value => value + 1)}>{refreshIcon}</button>
+        </div>
+        {readings.length === 0 ? <div className="reading-empty"><h3 className="hero-reference hero-reference-empty">No reading has been assigned yet</h3><p className="hero-meta">Your tutor or rabbi will add your verses here.</p>
+          <div className="hero-actions">{mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : "Enter child practice"}</button>}<a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a></div></div> : <>
+          <h3 className="hero-reference">{displayRange(selectedReading.ranges)}</h3>
+          <p className="hero-meta">{selectedReading.kind === "torah" ? "Torah" : "Haftarah"} · {selectedReading.verses.length} {selectedReading.verses.length === 1 ? "verse" : "verses"}</p>
+          <div className="hero-actions">
+            <button type="button" className="button-start" onClick={() => lift.current ? lift.current(0) : document.querySelector(".study-verses")?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })}>Start</button>
+            {mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : "Enter child practice"}</button>}
+            {readings.length < 2 && <a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a>}
+          </div></>}
+      </header> : <>
       <h2 id="reading-heading"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
       <div className="reading-student-context"><p className="reading-date">Ceremony date: <time dateTime={student.ceremonyDate}>{student.ceremonyDate}</time></p>
       <button className="button-text" aria-label="Refresh reading" onClick={() => setRetry(value => value + 1)}>Refresh</button>
       {readings.length < 2 && <a className="button-text service-entry" href={`#${serviceId}`}>Service parts</a>}</div>
       {current?.loading && <p role="status">Checking the current assignment…</p>}
       {readings.length === 0 ? <div className="reading-empty"><h3>No reading has been assigned yet</h3><p>Your tutor or rabbi will confirm the verses here.</p></div>
-        : <AssignmentContext row={selectedReading} current />}</>}
+        : <AssignmentContext row={selectedReading} current />}</>}</>}
       <AssignedStudyText baseline={current?.value ?? null} register={registerStudy} reloadMetadata={load} authorityFailed={status => { work.clear(); studyDenied(status); }} onKindChange={setSelectedKind}
         guardDeparture={guardDeparture} serviceHref={`#${serviceId}`} renderWork={(kind, verseRef) => <VerseTools coordinator={work} kind={kind} verseRef={verseRef} />} renderActiveWork={() => work.active && <VerseTools coordinator={work} kind={work.active.kind} verseRef={work.active.ref} />}
-        onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} />
+        onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} learner={learner} liftHandle={lift} />
       {work.notice && <p className="field-help" role="status">{work.notice}</p>}
-      {otherReadings.length > 0 && <details className="reading-other-assignments"><summary>Other confirmed reading details</summary>{otherReadings.map(row => <AssignmentContext key={row.id} row={row} />)}</details>}
+      {!learner && otherReadings.length > 0 && <details className="reading-other-assignments"><summary>Other confirmed reading details</summary>{otherReadings.map(row => <AssignmentContext key={row.id} row={row} />)}</details>}
     </section>
-    {student && <aside className="reading-tools" aria-labelledby="tools-heading"><h2 id="tools-heading">{mode === "parent" ? "Parent view" : mode === "child-practice" ? "Child practice" : "Practice tools"}</h2>
-      <p>{mode === "parent" ? "You’re viewing this child’s assignment. Parent access is read-only." : mode === "child-practice" ? "You’re practicing as the child named here, through your own parent account. Staff actions are separate." : mode === "tutor" || mode === "admin" ? "The confirmed assignment appears here. Use the review form below to propose and confirm changes." : "Your confirmed references appear here first."}</p>
+    {student && learner && <ReadingToolbar />}
+    {student && !learner && <aside className="reading-tools" aria-labelledby="tools-heading"><h2 id="tools-heading">Practice tools</h2>
+      <p>The confirmed assignment appears here. Use the review form below to propose and confirm changes.</p>
       <p>Open translation and notes beside each verse. Audio practice is not available yet.</p>
       <p><WorkspaceLink href="/trope-chart">Open the printable trope chart</WorkspaceLink></p>
-      <p className="field-help">Unsent work stays only in this tab. Controlled workspace changes ask you to review it. Your browser may warn before reload or close; Back, Forward, closing the browser or an unexpected route change can discard work. A warning and delivery cannot be guaranteed.</p>
-      {mode === "parent" && <button className="button-primary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : "Enter child practice"}</button>}
+      <p className="field-help">Unsent work stays only in this tab. Controlled workspace changes ask you to review it.</p>
     </aside>}
   </div>{current?.loading && <p role="status">Checking the current assignment, text and saved work…</p>}{editor}
     <ServiceLearningPanel id={serviceId} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} />
-  </>;
+  </ReadingPrefsScope>;
 }

@@ -1,71 +1,553 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-16T04:42:02Z",
+  "generatedAt": "2026-10-17T00:00:02+00:00",
   "title": "Design System: CRC B'nei Mitzvah",
   "extensions": {
     "colorMeta": {
-      "surface": { "role": "neutral", "displayName": "White Surface", "tonalRamp": ["oklch(15% 0 0)", "oklch(27% 0 0)", "oklch(39% 0 0)", "oklch(51% 0 0)", "oklch(63% 0 0)", "oklch(75% 0 0)", "oklch(87% 0 0)", "oklch(99% 0 0)"] },
-      "canvas": { "role": "neutral", "displayName": "Pale Canvas", "tonalRamp": ["oklch(15% 0.004 160)", "oklch(27% 0.004 160)", "oklch(39% 0.004 160)", "oklch(51% 0.004 160)", "oklch(63% 0.004 160)", "oklch(75% 0.004 160)", "oklch(87% 0.004 160)", "oklch(97% 0.004 160)"] },
-      "ink": { "role": "neutral", "displayName": "Ink", "tonalRamp": ["oklch(15% 0.018 245)", "oklch(27% 0.018 245)", "oklch(39% 0.018 245)", "oklch(51% 0.018 245)", "oklch(63% 0.018 245)", "oklch(75% 0.018 245)", "oklch(87% 0.018 245)", "oklch(95% 0.018 245)"] },
-      "muted": { "role": "neutral", "displayName": "Muted Ink", "tonalRamp": ["oklch(15% 0.018 215)", "oklch(27% 0.018 215)", "oklch(39% 0.018 215)", "oklch(51% 0.018 215)", "oklch(63% 0.018 215)", "oklch(75% 0.018 215)", "oklch(87% 0.018 215)", "oklch(95% 0.018 215)"] },
-      "action": { "role": "primary", "displayName": "Burgundy Action", "tonalRamp": ["oklch(15% 0.10 25)", "oklch(27% 0.10 25)", "oklch(39% 0.10 25)", "oklch(51% 0.10 25)", "oklch(63% 0.10 25)", "oklch(75% 0.10 25)", "oklch(87% 0.10 25)", "oklch(95% 0.10 25)"] },
-      "action-hover": { "role": "primary", "displayName": "Deep Burgundy", "tonalRamp": ["oklch(15% 0.09 25)", "oklch(27% 0.09 25)", "oklch(39% 0.09 25)", "oklch(51% 0.09 25)", "oklch(63% 0.09 25)", "oklch(75% 0.09 25)", "oklch(87% 0.09 25)", "oklch(95% 0.09 25)"] },
-      "teal": { "role": "secondary", "displayName": "Confirmed Teal", "tonalRamp": ["oklch(15% 0.07 175)", "oklch(27% 0.07 175)", "oklch(39% 0.07 175)", "oklch(51% 0.07 175)", "oklch(63% 0.07 175)", "oklch(75% 0.07 175)", "oklch(87% 0.07 175)", "oklch(95% 0.07 175)"] },
-      "rule": { "role": "neutral", "displayName": "Quiet Rule", "tonalRamp": ["oklch(15% 0.008 170)", "oklch(27% 0.008 170)", "oklch(39% 0.008 170)", "oklch(51% 0.008 170)", "oklch(63% 0.008 170)", "oklch(75% 0.008 170)", "oklch(87% 0.008 170)", "oklch(95% 0.008 170)"] }
+      "lake": {
+        "role": "primary",
+        "displayName": "Lake Blue",
+        "canonical": "#1d5ba6",
+        "tonalRamp": [
+          "#010b1e",
+          "#0a2547",
+          "#1a4274",
+          "#2c61a5",
+          "#4d84ca",
+          "#7ca8e1",
+          "#abccf8",
+          "#dbf1ff"
+        ]
+      },
+      "lake-deep": {
+        "role": "primary",
+        "displayName": "Deep Lake",
+        "canonical": "#154680",
+        "tonalRamp": [
+          "#020b1a",
+          "#102541",
+          "#23436b",
+          "#386299",
+          "#5884bd",
+          "#84a8d6",
+          "#b0ccef",
+          "#dff0ff"
+        ]
+      },
+      "lake-tint": {
+        "role": "primary",
+        "displayName": "Lake Tint",
+        "canonical": "#dbe8f6",
+        "tonalRamp": [
+          "#090b0e",
+          "#21262b",
+          "#3b434b",
+          "#58626d",
+          "#79848f",
+          "#9da6af",
+          "#c3cad1",
+          "#ebeff4"
+        ]
+      },
+      "marigold": {
+        "role": "secondary",
+        "displayName": "Marigold",
+        "canonical": "#f7b500",
+        "tonalRamp": [
+          "#160700",
+          "#391e00",
+          "#613800",
+          "#8b5400",
+          "#af7600",
+          "#ca9d43",
+          "#e6c487",
+          "#ffecc5"
+        ]
+      },
+      "forest": {
+        "role": "tertiary",
+        "displayName": "Forest",
+        "canonical": "#1e6b47",
+        "tonalRamp": [
+          "#010f06",
+          "#0b2c1c",
+          "#1c4d34",
+          "#2f704f",
+          "#52926f",
+          "#81b296",
+          "#afd4bd",
+          "#def5e7"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "White Surface",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Lake Canvas",
+        "canonical": "#ebf2fa",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232528",
+          "#3e4247",
+          "#5c6268",
+          "#7d8389",
+          "#a1a6ab",
+          "#c6c9ce",
+          "#eceff1"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#13202f",
+        "tonalRamp": [
+          "#080b10",
+          "#1f262e",
+          "#39434f",
+          "#556373",
+          "#758495",
+          "#9ba6b4",
+          "#c1cad5",
+          "#e9eff6"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#4b5a6b",
+        "tonalRamp": [
+          "#080c10",
+          "#1f262d",
+          "#39434f",
+          "#556372",
+          "#758494",
+          "#9ba6b4",
+          "#c1cad5",
+          "#e9eff6"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#d2dfee",
+        "tonalRamp": [
+          "#090b0f",
+          "#21262b",
+          "#3b434b",
+          "#58626e",
+          "#798490",
+          "#9da6b0",
+          "#c3cad2",
+          "#ebeff4"
+        ]
+      },
+      "control-rule": {
+        "role": "neutral",
+        "displayName": "Control Rule",
+        "canonical": "#8da3bb",
+        "tonalRamp": [
+          "#070c11",
+          "#1d2630",
+          "#364352",
+          "#516377",
+          "#718499",
+          "#97a7b8",
+          "#bfcbd8",
+          "#e8eff8"
+        ]
+      },
+      "hover": {
+        "role": "neutral",
+        "displayName": "Hover Wash",
+        "canonical": "#e3edf8",
+        "tonalRamp": [
+          "#090b0e",
+          "#22252a",
+          "#3d4349",
+          "#5a626b",
+          "#7b838c",
+          "#9fa6ad",
+          "#c5cacf",
+          "#ebeff2"
+        ]
+      },
+      "danger": {
+        "role": "neutral",
+        "displayName": "Danger",
+        "canonical": "#b42318",
+        "tonalRamp": [
+          "#1f0000",
+          "#490905",
+          "#781a12",
+          "#ab2d21",
+          "#d35343",
+          "#eb8474",
+          "#ffb2a5",
+          "#ffe0d7"
+        ]
+      },
+      "night-lake": {
+        "role": "primary",
+        "displayName": "Night Lake (dark-mode app bar, toolbar, lifted sheet)",
+        "canonical": "#10335e",
+        "tonalRamp": [
+          "#040b17",
+          "#16263b",
+          "#2b4362",
+          "#42638d",
+          "#6384b1",
+          "#8ca7cc",
+          "#b6cbe7",
+          "#e2f0ff"
+        ]
+      },
+      "night-canvas": {
+        "role": "neutral",
+        "displayName": "Night Canvas (dark page)",
+        "canonical": "#0b1626",
+        "tonalRamp": [
+          "#080b10",
+          "#1f252e",
+          "#394350",
+          "#566274",
+          "#768396",
+          "#9ba6b6",
+          "#c2cad6",
+          "#eaeff7"
+        ]
+      },
+      "night-surface": {
+        "role": "neutral",
+        "displayName": "Night Surface (dark cards)",
+        "canonical": "#13233a",
+        "tonalRamp": [
+          "#070b12",
+          "#1d2632",
+          "#364355",
+          "#51627b",
+          "#72849d",
+          "#98a6bb",
+          "#bfcada",
+          "#e8effa"
+        ]
+      },
+      "night-ink": {
+        "role": "neutral",
+        "displayName": "Night Ink (dark text)",
+        "canonical": "#e9f0f8",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232528",
+          "#3e4247",
+          "#5c6268",
+          "#7d8389",
+          "#a1a6ab",
+          "#c6c9ce",
+          "#eceff1"
+        ]
+      },
+      "night-muted": {
+        "role": "neutral",
+        "displayName": "Night Muted (dark secondary text)",
+        "canonical": "#a8b8ca",
+        "tonalRamp": [
+          "#080c0f",
+          "#1f262d",
+          "#39434e",
+          "#566371",
+          "#768493",
+          "#9ba6b3",
+          "#c2cad4",
+          "#eaeff5"
+        ]
+      },
+      "night-action": {
+        "role": "primary",
+        "displayName": "Night Action (dark links and text actions)",
+        "canonical": "#8dbbf5",
+        "tonalRamp": [
+          "#030b18",
+          "#13263d",
+          "#274366",
+          "#3d6392",
+          "#5d85b6",
+          "#88a8d0",
+          "#b3cbea",
+          "#e0f0ff"
+        ]
+      },
+      "night-action-fill": {
+        "role": "primary",
+        "displayName": "Night Action Fill (dark button fill)",
+        "canonical": "#2f6cbd",
+        "tonalRamp": [
+          "#010b1e",
+          "#092448",
+          "#194176",
+          "#2b61a8",
+          "#4c83ce",
+          "#7ba7e4",
+          "#aaccfa",
+          "#dbf0ff"
+        ]
+      },
+      "night-forest": {
+        "role": "tertiary",
+        "displayName": "Night Forest (dark settled state)",
+        "canonical": "#7fd1a8",
+        "tonalRamp": [
+          "#000f07",
+          "#062d1d",
+          "#154e35",
+          "#267150",
+          "#4b9371",
+          "#7cb397",
+          "#acd4be",
+          "#dcf6e7"
+        ]
+      },
+      "night-rule": {
+        "role": "neutral",
+        "displayName": "Night Hairline",
+        "canonical": "#24384f",
+        "tonalRamp": [
+          "#070c12",
+          "#1c2631",
+          "#354354",
+          "#50637a",
+          "#70849c",
+          "#96a7bb",
+          "#becbda",
+          "#e7eff9"
+        ]
+      }
     },
     "typographyMeta": {
-      "headline": { "displayName": "Headline", "purpose": "Short introductory task." },
-      "title": { "displayName": "Task title", "purpose": "Live access or invitation state." },
-      "body": { "displayName": "Body", "purpose": "Explanation and recovery copy." },
-      "label": { "displayName": "Label", "purpose": "Fields and action text." }
+      "display": {
+        "displayName": "Display",
+        "purpose": "The hero reading reference, the single next decision. Phones: clamp(2.5rem, 12vw, 3.25rem)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Entry h1; workspace h1 runs 2.25rem (1.875rem on phones)."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section h2s."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text, max 65ch; translation at line height 1.7, max 62ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Verse references, pills, segmented items; toolbar labels at 0.8125rem."
+      },
+      "hebrew": {
+        "displayName": "Hebrew",
+        "purpose": "Every verse. Named steps via --hebrew-size: Small 1.625rem, Standard 2rem, Large 2.5rem, Huge 3.125rem."
+      },
+      "hebrew-lifted": {
+        "displayName": "Hebrew, lifted",
+        "purpose": "The lifted line: 1.6x the chosen step, centered, max 22ch."
+      }
     },
-    "shadows": [],
-    "motion": [{ "name": "ease-settle", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "160ms button background and border state transitions; suppressed for reduced motion." }],
-    "breakpoints": [{ "name": "compact", "value": "900px" }, { "name": "phone", "value": "640px" }]
+    "shadows": [
+      {
+        "name": "hairline",
+        "value": "inset 0 0 0 1px var(--color-rule)",
+        "purpose": "Every card, track, pill and open panel; a layout-neutral edge."
+      },
+      {
+        "name": "hover-outline",
+        "value": "inset 0 0 0 2px var(--lake)",
+        "purpose": "A liftable verse card under the pointer."
+      },
+      {
+        "name": "canvas-cut",
+        "value": "0 0 0 2px var(--color-canvas)",
+        "purpose": "The floating toolbar and its menu read as cut from the page, not lifted."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-settle",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "All state transitions and the ink pull."
+      },
+      {
+        "name": "state-transition",
+        "value": "160ms",
+        "purpose": "Background, outline and press-scale transitions on controls."
+      },
+      {
+        "name": "ink-pull",
+        "value": "560ms ease-settle, 70ms per-word stagger",
+        "purpose": "The only authored motion: the current phrase's color block wipes in on the lifted line. Reduced motion removes it."
+      },
+      {
+        "name": "recede",
+        "value": "opacity 0.32, 240ms ease-settle",
+        "purpose": "Words outside the current phrase on the lifted line."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "640px"
+      },
+      {
+        "name": "tablet",
+        "value": "900px"
+      },
+      {
+        "name": "desktop-tools",
+        "value": "1001px"
+      }
+    ]
   },
   "components": [
     {
-      "name": "Primary Button", "kind": "button", "refersTo": "button-primary", "description": "The explicit next action in the current task state.",
-      "html": "<button class=\"ds-btn-primary\">Accept invitation</button>",
-      "css": ".ds-btn-primary { min-height:48px; padding:0.6875rem 1.125rem; border:1px solid transparent; border-radius:var(--radius-control,6px); background:var(--color-action,#8a0a14); color:var(--color-surface,#fff); font:600 1rem/1.45 system-ui,sans-serif; cursor:pointer; transition:background-color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-primary:hover { background:var(--color-action-hover,#680911); } .ds-btn-primary:active { background:#51070d; } .ds-btn-primary:focus-visible { outline:3px solid var(--color-focus,#0b6a62); outline-offset:4px; } .ds-btn-primary:disabled { opacity:.6; cursor:wait; } @media (prefers-reduced-motion:reduce) { .ds-btn-primary { transition:none; } }"
+      "name": "Start Button",
+      "kind": "button",
+      "refersTo": "button-start",
+      "description": "The single next decision in the reading hero; full width on phones.",
+      "html": "<button class=\"ds-btn-start\">Start</button>",
+      "css": ".ds-btn-start { font-family: 'Bricolage Grotesque', system-ui, sans-serif; min-height: 56px; min-width: 9rem; padding: 0 2.25rem; border: 0; border-radius: 999px; background: var(--color-action-fill, #1d5ba6); color: #fff; font-size: 1.125rem; font-weight: 750; letter-spacing: -0.01em; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), transform 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-start:hover { background: var(--lake-deep, #154680); } .ds-btn-start:active { transform: scale(0.97); } .ds-btn-start:focus-visible { outline: 3px solid var(--color-focus, #154680); outline-offset: 4px; }"
     },
     {
-      "name": "Secondary Button", "kind": "button", "refersTo": "button-secondary", "description": "Alternate sign-in or account action.",
-      "html": "<button class=\"ds-btn-secondary\">Continue with Google</button>",
-      "css": ".ds-btn-secondary { min-height:48px; padding:0.6875rem 1.125rem; border:1px solid #83918e; border-radius:var(--radius-control,6px); background:var(--color-surface,#fff); color:var(--color-ink,#222c35); font:600 1rem/1.45 system-ui,sans-serif; cursor:pointer; transition:background-color 160ms cubic-bezier(0.16,1,0.3,1),border-color 160ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-secondary:hover { background:#edf2f0; border-color:var(--color-ink,#222c35); } .ds-btn-secondary:active { background:#dfe8e4; } .ds-btn-secondary:focus-visible { outline:3px solid var(--color-focus,#0b6a62); outline-offset:4px; } .ds-btn-secondary:disabled { opacity:.6; cursor:wait; } @media (prefers-reduced-motion:reduce) { .ds-btn-secondary { transition:none; } }"
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Form submission and staff confirmations.",
+      "html": "<button class=\"ds-btn-primary\">Check access again</button>",
+      "css": ".ds-btn-primary { font-family: 'Bricolage Grotesque', system-ui, sans-serif; display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0.6875rem 1.125rem; border: 1px solid transparent; border-radius: 12px; background: var(--color-action-fill, #1d5ba6); color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-primary:hover, .ds-btn-primary:active { background: var(--lake-deep, #154680); } .ds-btn-primary:focus-visible { outline: 3px solid var(--color-focus, #154680); outline-offset: 4px; }"
     },
     {
-      "name": "Text Action", "kind": "button", "description": "Lower-emphasis account switch below invitation acceptance.",
-      "html": "<button class=\"ds-btn-text\">Sign out to use another account</button>",
-      "css": ".ds-btn-text { display:block; min-height:44px; padding:.75rem 0; border:0; background:transparent; color:var(--color-action,#8a0a14); font:.9375rem/1.45 system-ui,sans-serif; text-decoration:underline; text-underline-offset:.2em; cursor:pointer; } .ds-btn-text:hover { color:var(--color-action-hover,#680911); } .ds-btn-text:focus-visible { outline:3px solid var(--color-focus,#0b6a62); outline-offset:4px; }"
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Reload, paging and other non-forward actions.",
+      "html": "<button class=\"ds-btn-secondary\">Next text page</button>",
+      "css": ".ds-btn-secondary { font-family: 'Bricolage Grotesque', system-ui, sans-serif; display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0.6875rem 1.125rem; border: 1px solid var(--color-control-rule, #8da3bb); border-radius: 12px; background: var(--color-surface, #fff); color: var(--color-ink, #13202f); font-size: 1rem; font-weight: 600; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), border-color 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-secondary:hover { background: var(--color-hover, #e3edf8); border-color: var(--color-ink, #13202f); } .ds-btn-secondary:active { background: var(--lake-tint, #dbe8f6); } .ds-btn-secondary:focus-visible { outline: 3px solid var(--color-focus, #154680); outline-offset: 4px; }"
     },
     {
-      "name": "Email Field", "kind": "input", "refersTo": "input-email", "description": "Labeled email entry with short invitation guidance.",
-      "html": "<label class=\"ds-field-label\" for=\"ds-email\">Email address</label><input class=\"ds-email\" id=\"ds-email\" type=\"email\"><p class=\"ds-field-help\">Use the address on your invitation.</p>",
-      "css": ".ds-field-label { display:block; margin-bottom:.5rem; color:var(--color-ink,#222c35); font:600 1rem/1.6 system-ui,sans-serif; } .ds-email { display:block; width:100%; min-height:48px; padding:.6875rem .875rem; border:1px solid #83918e; border-radius:var(--radius-control,6px); background:var(--color-surface,#fff); color:var(--color-ink,#222c35); caret-color:var(--color-action,#8a0a14); font:1rem/1.6 system-ui,sans-serif; } .ds-email:focus-visible { outline:3px solid var(--color-focus,#0b6a62); outline-offset:4px; } .ds-email:disabled { background:var(--color-canvas,#f6f7f6); } .ds-field-help { margin:.5rem 0 0; color:var(--color-muted,#53616a); font:.875rem/1.6 system-ui,sans-serif; }"
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labeled field with a visible control-rule outline.",
+      "html": "<label class=\"ds-label\" for=\"ds-email\">Email</label><input class=\"ds-input\" id=\"ds-email\" type=\"email\" placeholder=\"name@example.test\">",
+      "css": ".ds-label { font-family: 'Bricolage Grotesque', system-ui, sans-serif; display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--color-ink, #13202f); } .ds-input { font-family: 'Bricolage Grotesque', system-ui, sans-serif; display: block; width: 100%; min-height: 48px; padding: 0.6875rem 0.875rem; border: 1px solid var(--color-control-rule, #8da3bb); border-radius: 12px; background: var(--color-surface, #fff); color: var(--color-ink, #13202f); font-size: 1rem; caret-color: var(--color-action, #1d5ba6); } .ds-input:focus-visible { outline: 3px solid var(--color-focus, #154680); outline-offset: 4px; }"
     },
     {
-      "name": "Masthead", "kind": "nav", "description": "Compact CRC identity and congregation attribution.",
-      "html": "<nav class=\"ds-masthead\"><a class=\"ds-brand\" href=\"#\">CRC B’nei Mitzvah</a><span class=\"ds-congregation\">Central Reform Congregation</span></nav>",
-      "css": ".ds-masthead { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; padding:1.75rem 0; border-bottom:1px solid var(--color-rule,#d5dcda); font-family:system-ui,sans-serif; } .ds-brand { color:var(--color-ink,#222c35); font-size:1.125rem; font-weight:650; letter-spacing:-.02em; text-decoration:none; } .ds-brand:hover { color:var(--color-action-hover,#680911); } .ds-brand:focus-visible { outline:3px solid var(--color-focus,#0b6a62); outline-offset:4px; } .ds-congregation { color:var(--color-muted,#53616a); font-size:.875rem; }"
+      "name": "Segmented Control",
+      "kind": "nav",
+      "refersTo": "segmented-selected",
+      "description": "Torah / Haftarah / Service parts, and the role nav.",
+      "html": "<div class=\"ds-seg\" role=\"group\"><button aria-pressed=\"true\">Torah</button><button aria-pressed=\"false\">Haftarah</button><button aria-pressed=\"false\">Service parts</button></div>",
+      "css": ".ds-seg { font-family: 'Bricolage Grotesque', system-ui, sans-serif; display: inline-flex; gap: 0.25rem; padding: 0.25rem; border-radius: 999px; background: var(--color-surface, #fff); box-shadow: inset 0 0 0 1px var(--color-rule, #d2dfee); } .ds-seg button { font: inherit; font-weight: 600; min-height: 44px; padding: 0 1.25rem; border: 0; border-radius: 999px; background: transparent; color: var(--color-ink, #13202f); cursor: pointer; } .ds-seg button:hover { background: var(--color-hover, #e3edf8); } .ds-seg button[aria-pressed=\"true\"] { background: var(--lake, #1d5ba6); color: #fff; } .ds-seg button:focus-visible { outline: 3px solid var(--color-focus, #154680); outline-offset: 4px; }"
     },
     {
-      "name": "Invitation Details", "kind": "custom", "description": "Explicit role and target review before acceptance.",
-      "html": "<dl class=\"ds-invite\"><div><dt>Access</dt><dd>Parent</dd></div><div><dt>Student</dt><dd><bdi dir=\"auto\">Student name</bdi></dd></div></dl>",
-      "css": ".ds-invite { margin:1.75rem 0; color:var(--color-ink,#222c35); font:1rem/1.6 system-ui,sans-serif; font-variant-numeric:tabular-nums; } .ds-invite>div { display:grid; grid-template-columns:5rem minmax(0,1fr); gap:1rem; margin-top:.75rem; } .ds-invite dt { color:var(--color-muted,#53616a); } .ds-invite dd { margin:0; font-weight:600; }"
+      "name": "Countdown and Aliyah Chips",
+      "kind": "chip",
+      "refersTo": "countdown-chip",
+      "description": "Marigold countdown beside the ceremony date; forest aliyah-start marker above a verse.",
+      "html": "<span class=\"ds-chip-days\">78 days to go</span> <span class=\"ds-chip-aliyah\">Aliyah 1 starts here</span>",
+      "css": ".ds-chip-days { font-family: 'Bricolage Grotesque', system-ui, sans-serif; background: var(--marigold, #f7b500); color: var(--on-ink, #13202f); font-weight: 650; font-size: 0.875rem; padding: 0.125rem 0.625rem; border-radius: 999px; } .ds-chip-aliyah { font-family: 'Bricolage Grotesque', system-ui, sans-serif; display: inline-flex; align-items: center; min-height: 32px; padding: 0 0.75rem; border-radius: 999px; background: var(--color-surface, #fff); box-shadow: inset 0 0 0 1px var(--color-teal, #1e6b47); color: var(--color-teal, #1e6b47); font-size: 0.875rem; font-weight: 650; }"
+    },
+    {
+      "name": "Verse Card",
+      "kind": "card",
+      "refersTo": "verse-card",
+      "description": "A tappable verse object: number disc, reference, lift button, Hebrew with phrase colors, apparatus.",
+      "html": "<article class=\"ds-verse\"><div class=\"ds-verse-head\"><span class=\"ds-verse-num\">1</span><h4>Genesis 1:1</h4><button class=\"ds-verse-lift\" aria-label=\"Practice up close\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" aria-hidden=\"true\"><path d=\"M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button></div><p class=\"ds-hebrew\" lang=\"he\" dir=\"rtl\"><span class=\"ds-phrase\" style=\"--phrase-color:#9ec5ff\">בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים</span> <span class=\"ds-phrase\" style=\"--phrase-color:#f59a9a\">אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃</span></p><div class=\"ds-apparatus\">Closed paragraph (setumah) after this verse.</div></article>",
+      "css": ".ds-verse { font-family: 'Bricolage Grotesque', system-ui, sans-serif; background: var(--color-surface, #fff); border-radius: 16px; box-shadow: inset 0 0 0 1px var(--color-rule, #d2dfee); padding: 0.875rem 1.25rem 1rem; color: var(--color-ink, #13202f); cursor: pointer; transition: box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-verse:hover { box-shadow: inset 0 0 0 2px var(--lake, #1d5ba6); } .ds-verse-head { display: flex; align-items: center; gap: 0.625rem; min-height: 44px; } .ds-verse-head h4 { margin: 0; color: var(--color-muted, #4b5a6b); font-size: 0.9375rem; font-weight: 600; } .ds-verse-num { display: inline-grid; place-items: center; min-width: 1.875rem; height: 1.875rem; border-radius: 999px; background: var(--lake-tint, #dbe8f6); font-weight: 750; font-size: 0.9375rem; } .ds-verse-lift { margin-inline-start: auto; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 999px; background: transparent; color: var(--color-action, #1d5ba6); cursor: pointer; } .ds-verse-lift:hover { background: var(--color-hover, #e3edf8); } .ds-verse-lift:focus-visible { outline: 3px solid var(--color-focus, #154680); outline-offset: 4px; } .ds-hebrew { font-family: 'CRC Noto Serif Hebrew', 'Noto Serif Hebrew', 'Times New Roman', serif; font-size: 2rem; line-height: 2; margin: 0.5rem 0 0.25rem; font-feature-settings: 'mark', 'mkmk'; } .ds-phrase { background: var(--phrase-color); color: #13202f; border-radius: 0.18em; box-decoration-break: clone; -webkit-box-decoration-break: clone; } .ds-apparatus { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--color-rule, #d2dfee); font-size: 0.875rem; color: var(--color-muted, #4b5a6b); }"
+    },
+    {
+      "name": "Reading Toolbar",
+      "kind": "nav",
+      "refersTo": "reading-toolbar",
+      "description": "One lake dock drives every verse: Colors, English, text size, Hear (disabled until G3).",
+      "html": "<nav class=\"ds-toolbar\" aria-label=\"Reading tools\"><button aria-pressed=\"true\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\"><path d=\"M4 7h7M4 12h11M4 17h6M15 7h5M18 12h2M13 17h7\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg><span>Colors</span></button><button aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\"><path d=\"M4 6h9M8.5 4v2c0 4-2 7-4.5 8.5M6 10c1.5 2 3.5 3.5 6 4.5M13 20l4-9 4 9M14.5 17h5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg><span>English</span></button><button><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\"><path d=\"M3 19l5-13 5 13M4.8 14h6.4M15 19l3-8 3 8M15.9 16.5h4.2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg><span>Standard</span></button><button disabled><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" aria-hidden=\"true\"><path d=\"M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg><span>Hear</span><small>coming soon</small></button></nav>",
+      "css": ".ds-toolbar { font-family: 'Bricolage Grotesque', system-ui, sans-serif; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.25rem; width: min(100%, 30rem); padding: 0.375rem; border-radius: 22px; background: var(--lake, #1d5ba6); box-shadow: 0 0 0 2px var(--color-canvas, #ebf2fa); } .ds-toolbar button { font: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.125rem; min-height: 56px; padding: 0.375rem 0.25rem; border: 0; border-radius: 16px; background: transparent; color: #fff; font-size: 0.8125rem; font-weight: 600; line-height: 1.2; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-toolbar button:hover { background: rgb(255 255 255 / 0.12); } .ds-toolbar button[aria-pressed=\"true\"] { background: #fff; color: var(--lake-deep, #154680); } .ds-toolbar button:disabled { cursor: not-allowed; color: rgb(255 255 255 / 0.62); } .ds-toolbar small { font-size: 0.75rem; font-weight: 500; color: rgb(255 255 255 / 0.82); } .ds-toolbar button:focus-visible { outline: 3px solid var(--marigold, #f7b500); outline-offset: 2px; }"
+    },
+    {
+      "name": "Lifted Line",
+      "kind": "custom",
+      "refersTo": "lift-sheet",
+      "description": "Signature: one verse at poster scale on a lake sheet, current phrase inked with the ink pull, rail and steps.",
+      "html": "<div class=\"ds-lift\"><p class=\"ds-lift-count\">Verse 1 of 3 <span>· phrase 1 of 2</span></p><ol class=\"ds-lift-rail\" aria-hidden=\"true\"><li data-state=\"current\"></li><li></li><li></li></ol><p class=\"ds-lift-ref\">Genesis 1:1</p><p class=\"ds-lift-hebrew\" lang=\"he\" dir=\"rtl\"><span class=\"ds-lift-on\" style=\"--phrase-color:#9ec5ff\">בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים</span> <span class=\"ds-lift-off\">אֵ֥ת הַשָּׁמַ֖יִם</span></p><div class=\"ds-lift-nav\"><button class=\"ds-lift-step\" disabled>Back</button><button class=\"ds-lift-step ds-lift-next\">Next phrase</button></div></div>",
+      "css": ".ds-lift { font-family: 'Bricolage Grotesque', system-ui, sans-serif; background: var(--lake, #1d5ba6); color: #fff; padding: 1rem; border-radius: 16px; text-align: center; } .ds-lift-count { margin: 0; font-weight: 650; } .ds-lift-count span { font-weight: 500; opacity: 0.8; } .ds-lift-rail { list-style: none; display: flex; gap: 3px; margin: 0.5rem 0 0; padding: 0; } .ds-lift-rail li { flex: 1; height: 4px; border-radius: 2px; background: rgb(255 255 255 / 0.28); } .ds-lift-rail li[data-state=\"current\"] { background: var(--marigold, #f7b500); } .ds-lift-ref { margin: 1.5rem 0 0; font-weight: 650; opacity: 0.85; } .ds-lift-hebrew { font-family: 'CRC Noto Serif Hebrew', 'Noto Serif Hebrew', serif; font-size: 3.2rem; line-height: 1.9; margin: 0.5rem 0 1rem; } .ds-lift-on { background: linear-gradient(var(--phrase-color), var(--phrase-color)) right / 100% 100% no-repeat; color: #13202f; border-radius: 0.18em; animation: ds-ink-pull 560ms cubic-bezier(0.16, 1, 0.3, 1) both; } .ds-lift-off { opacity: 0.32; } @keyframes ds-ink-pull { from { background-size: 0% 100%; } to { background-size: 100% 100%; } } @media (prefers-reduced-motion: reduce) { .ds-lift-on { animation: none; } } .ds-lift-nav { display: grid; grid-template-columns: 1fr 2fr; gap: 0.75rem; } .ds-lift-step { font: inherit; min-height: 56px; border: 0; border-radius: 999px; background: rgb(255 255 255 / 0.14); color: #fff; font-size: 1.0625rem; font-weight: 700; cursor: pointer; } .ds-lift-step:hover { background: rgb(255 255 255 / 0.22); } .ds-lift-step:disabled { opacity: 0.4; cursor: default; } .ds-lift-next { background: #fff; color: var(--lake-deep, #154680); } .ds-lift-next:hover { background: var(--lake-tint, #dbe8f6); } .ds-lift-step:focus-visible { outline: 3px solid var(--marigold, #f7b500); outline-offset: 3px; }"
     }
   ],
   "narrative": {
-    "northStar": "Annotated Score",
-    "overview": "The implemented entry surface uses a white working field, legible ink, a restrained burgundy action, and precise rules. The page leads with the reading as its destination while its neighboring task area reports actual access and invitation state. This is the initial authentication and invitation slice; a Hebrew passage and its practice tools have not been implemented or visually specified by this file. The current controls feel familiar and deliberate. Spacing creates the hierarchy, and text explains state without ornamental imagery.",
-    "keyCharacteristics": ["A flat white field with fine rules and a compact congregation masthead.", "A reading-first introduction beside a live task area on wide screens.", "Clear, touch-sized controls and a single-column phone layout.", "Explicit role and invitation details before access changes."],
-    "rules": [
-      { "name": "The State Has Words Rule", "body": "Color reinforces an explicit label or message; role and invitation state remain understandable without color.", "section": "colors" },
-      { "name": "The Reading Type Rule", "body": "Hebrew reading requires its own verified vowel and cantillation rendering when actual licensed content is implemented. The current `[lang=\"he\"]` selector establishes right-to-left direction and mark features, but no Hebrew passage or compiled Hebrew font is present yet.", "section": "typography" },
-      { "name": "The Adjacent Task Rule", "body": "Keep the current action or access state next to the introduction on wide screens, and immediately after it on narrow screens.", "section": "layout" },
-      { "name": "The Open Surface Rule", "body": "Use line weight and spacing to separate content; this entry surface has no shadow vocabulary.", "section": "elevation" }
+    "northStar": "Song session",
+    "overview": "Locked by Daniel on 2026-10-16 (direction seed 8ac4194f; contract in `.impeccable/surfaces/src-app-workspace-page-tsx.md`), replacing the earlier \"Annotated score\" world. A student's own verses are a song session, not a record: the camp and NFTY song-session sheet, printed in flat screen-print inks. Lake blue owns the shell, white verse objects sit on a lake-tinted canvas, marigold marks time and change, forest marks what is settled. Dark mode is the same inks on night-lake navy, not an inverted theme.\n\nThe energy comes from committed color, a characterful humanist grotesque at poster scale, and one signature interaction: the lifted line, where a tapped verse fills the screen on a lake-blue sheet and its trope phrases are printed one at a time with a single squeegee-wipe of ink. Everything else is calm, standard web controls sized for thumbs. The world refuses both the annotated document page and the gamified language-app clone; Daniel's tone ruling, \"It can't be cheesy or cringe,\" is a visual constraint as much as a copy one.\n\n**Scope of what is built.** The student, child-practice and parent reading surfaces are fully in this world (app bar, reading hero, segmented kind control, verse cards, toolbar, lifted line). Staff (tutor and admin) and entry surfaces inherit the tokens, font, radii and lake action color only; their compositions still use the older ruled-section layouts, and their redesign is a later phase. The Working / Got it self-check, the per-verse position rail on the reading page and the \"ink pull on Got it\" celebration are not built: there is no progress backend. The ink pull currently runs when the lifted line advances to a phrase.",
+    "keyCharacteristics": [
+      "Flat inks on a tinted canvas; depth comes from color fields and hairlines, never from elevation.",
+      "One accent field (lake blue) for the shell, the primary action and the lifted sheet.",
+      "Marigold only as a fill behind dark type or as a focus ring and position mark; never as text.",
+      "Verses are big, rounded, tappable white objects with a hairline.",
+      "Hebrew is set in Noto Serif Hebrew with four named size steps driven by one toolbar control.",
+      "Masoretic apparatus sits under the Hebrew line in small muted text, never inside it.",
+      "One authored motion (the ink pull); reduced motion snaps."
     ],
-    "dos": ["**Do** keep current access and invitation outcomes explicit in headings, labels, and recovery copy.", "**Do** preserve a readable one-column flow and touch-sized actions on phones.", "**Do** use the restrained burgundy for action and teal for focus or confirmed-role emphasis."],
-    "donts": ["**Don't** imply an unimplemented reading workspace or invent passage content in the entry surface.", "**Don't** use color alone to communicate role or acceptance state.", "**Don't** add decorative depth to this flat entry system without an implemented reason."]
+    "rules": [
+      {
+        "name": "The Marigold Is Never Text Rule",
+        "body": "Marigold appears as a fill behind Ink type, a ring, or a rail mark. It is never a text or icon color.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Field Rule",
+        "body": "Lake blue is the only saturated field in the shell. If a new surface needs emphasis, it gets lake or a white object on canvas, not a new hue.",
+        "section": "colors"
+      },
+      {
+        "name": "The Named Steps Rule",
+        "body": "Hebrew size is one of four named steps chosen from the toolbar and remembered per student; nothing else resizes scripture.",
+        "section": "typography"
+      },
+      {
+        "name": "The Hebrew Stays Whole Rule",
+        "body": "Qere labels, paragraph signs and notes are set in the UI face at small size and sit beside or under the Hebrew line; no apparatus text is styled as scripture.",
+        "section": "typography"
+      },
+      {
+        "name": "The Print, Don't Float Rule",
+        "body": "box-shadow is used only as an inset hairline or a zero-blur ring. Nothing casts a shadow; nothing has blur.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep lake blue as the one saturated field: app bar, toolbar, selected segment, Start, the lifted sheet.",
+      "**Do** put Ink type on marigold and on phrase colors, and pair every phrase color with a named legend chip.",
+      "**Do** draw edges with inset 1px hairlines and separate floating elements with a 2px canvas ring.",
+      "**Do** size Hebrew only through the four named steps (1.625, 2, 2.5, 3.125rem) and keep line height 2.",
+      "**Do** keep apparatus (qere notes, paragraph signs, aliyah markers, sources) outside the Hebrew line, in small muted UI type.",
+      "**Do** honor reduced motion: the ink pull and smooth scrolls snap.",
+      "**Do** keep touch targets at 44px or more, 56px for the main forward action."
+    ],
+    "donts": [
+      "**Don't** use marigold as text or icon color.",
+      "**Don't** add drop shadows, blur or visible gradients; the world is flat print.",
+      "**Don't** add mascots, confetti, streak flames, badges, emoji, exclamation points, pep-talk copy or sound effects (Daniel's pinned tone ruling).",
+      "**Don't** show status, revision, edition or provenance on learner reading surfaces; sources live in \"About this text.\"",
+      "**Don't** add a second authored motion; the ink pull is the only one.",
+      "**Don't** introduce a free text-size slider or resize scripture any other way."
+    ]
   }
 }

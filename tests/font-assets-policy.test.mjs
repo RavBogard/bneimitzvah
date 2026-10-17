@@ -10,9 +10,12 @@ import { isolatedEnv } from "./helpers/isolatedEnv.mjs";
 
 const fontPath = "public/fonts/noto-serif-hebrew/NotoSerifHebrew.ttf";
 const licensePath = "public/fonts/noto-serif-hebrew/OFL.txt";
-async function officialPair() {
+const brandFontPath = "public/fonts/bricolage-grotesque/BricolageGrotesque.ttf";
+const brandLicensePath = "public/fonts/bricolage-grotesque/OFL.txt";
+const familyAssets = family => FONT_ASSETS.filter(asset => asset.family === family);
+async function officialPair(family = "noto-serif-hebrew") {
   const result = new Map();
-  for (const asset of FONT_ASSETS) {
+  for (const asset of familyAssets(family)) {
     const bytes = await readFile(new URL(`../${asset.path}`, import.meta.url));
     assert.ok(matchesAssetPin(bytes, asset), "official asset must match its immutable pin"); result.set(asset.path, bytes);
   }
@@ -29,7 +32,10 @@ async function fixture(action) {
 }
 
 test("font manifest is a fixed immutable pair and byte comparison has no repository override", () => {
-  assert.equal(FONT_ASSETS.length, 2);
+  assert.equal(FONT_ASSETS.length, 4);
+  assert.deepEqual(FONT_ASSETS.map(asset => [asset.family, asset.kind]), [["noto-serif-hebrew", "font"], ["noto-serif-hebrew", "license"], ["bricolage-grotesque", "font"], ["bricolage-grotesque", "license"]]);
+  assert.equal(reviewedFontAsset(brandFontPath).sha256, "413e7357809ddd12fd80a96a8a396de0e401638d4acd3cb3e37532f0472ac682");
+  assert.equal(reviewedFontAsset(brandLicensePath).sha256, "4b5a7d8f37f5602621c8a8d7358a6a2e71317e6c231c661e15aef0275d3e07ba");
   assert.equal(reviewedFontAsset(fontPath).size, 183600);
   assert.equal(reviewedFontAsset(licensePath).size, 4382);
   assert.equal(reviewedFontAsset(fontPath).sha256, "93caef921360788dc3b0e32136bb26f16bc57717ec482d48fc7fd43820617165");
@@ -154,7 +160,7 @@ test("official unchanged font and full notice pass the whole policy in candidate
     assert.deepEqual((await inspectRepository(root, env)).findings, []);
     git("add", fontPath, licensePath);
     assert.deepEqual((await inspectRepository(root, env)).findings, []);
-    for (const asset of FONT_ASSETS) assert.ok(matchesAssetPin(git("show", `:${asset.path}`), asset), "indexed bytes must retain the official pin");
+    for (const asset of familyAssets("noto-serif-hebrew")) assert.ok(matchesAssetPin(git("show", `:${asset.path}`), asset), "indexed bytes must retain the official pin");
   });
 });
 
@@ -185,7 +191,7 @@ test("real official pair keeps staged tampering and candidate tampering independ
 test("exact-path byte attributes preserve real font and OFL through autocrlf checkout", async () => {
   const pair = await officialPair(), attributes = await readFile(new URL("../.gitattributes", import.meta.url), "utf8");
   const rules = attributes.split(/\r?\n/).filter(line => line && !line.startsWith("#"));
-  assert.deepEqual(rules, [`/${fontPath} -text`, `/${licensePath} -text`]);
+  assert.deepEqual(rules, [`/${fontPath} -text`, `/${licensePath} -text`, `/${brandFontPath} -text`, `/${brandLicensePath} -text`]);
   await fixture(async ({ root, env, git, put }) => {
     git("config", "core.autocrlf", "true"); await put(".gitattributes", attributes);
     for (const [path, bytes] of pair) await put(path, bytes); git("add", ".gitattributes", fontPath, licensePath);
@@ -193,7 +199,7 @@ test("exact-path byte attributes preserve real font and OFL through autocrlf che
     for (const path of pair.keys()) assert.ok(declared.includes(`${path}: text: unset`));
     for (const path of pair.keys()) await rm(join(root, path));
     git("checkout-index", "--force", "--", fontPath, licensePath);
-    for (const asset of FONT_ASSETS) {
+    for (const asset of familyAssets("noto-serif-hebrew")) {
       assert.ok(matchesAssetPin(await readFile(join(root, asset.path)), asset), "checked-out bytes must match the original official pin");
       assert.ok(matchesAssetPin(git("show", `:${asset.path}`), asset), "indexed bytes must match the original official pin");
     }
@@ -209,5 +215,36 @@ test("official font bytes cannot be accepted at an unlisted renamed path", async
     const result = await inspectRepository(root, env);
     assert.ok(result.findings.includes(`${renamed}: unlisted font asset`));
     assert.ok(result.findings.includes(`${fontPath}: required paired font asset missing`));
+  });
+});
+
+test("each reviewed font family pairs with its own notice and never borrows another family's", async () => {
+  const brand = await officialPair("bricolage-grotesque"), hebrew = await officialPair();
+  await fixture(async ({ root, env, git, put }) => {
+    for (const [path, bytes] of brand) await put(path, bytes);
+    assert.deepEqual((await inspectRepository(root, env)).findings, []);
+    git("add", brandFontPath, brandLicensePath);
+    assert.deepEqual((await inspectRepository(root, env)).findings, []);
+    await rm(join(root, brandLicensePath)); git("rm", "--cached", "--quiet", brandLicensePath);
+    await put(licensePath, hebrew.get(licensePath));
+    const result = await inspectRepository(root, env);
+    assert.ok(result.findings.includes(`${brandLicensePath}: required paired font asset missing`));
+    assert.ok(result.findings.includes(`${brandLicensePath} (index): required paired font asset missing`));
+    assert.ok(result.findings.includes(`${fontPath}: required paired font asset missing`));
+  });
+});
+
+test("exact-path byte attributes also preserve the Bricolage pair through autocrlf checkout", async () => {
+  const pair = await officialPair("bricolage-grotesque"), attributes = await readFile(new URL("../.gitattributes", import.meta.url), "utf8");
+  await fixture(async ({ root, env, git, put }) => {
+    git("config", "core.autocrlf", "true"); await put(".gitattributes", attributes);
+    for (const [path, bytes] of pair) await put(path, bytes); git("add", ".gitattributes", brandFontPath, brandLicensePath);
+    for (const path of pair.keys()) await rm(join(root, path));
+    git("checkout-index", "--force", "--", brandFontPath, brandLicensePath);
+    for (const asset of familyAssets("bricolage-grotesque")) {
+      assert.ok(matchesAssetPin(await readFile(join(root, asset.path)), asset), "checked-out bytes must match the original official pin");
+      assert.ok(matchesAssetPin(git("show", `:${asset.path}`), asset), "indexed bytes must match the original official pin");
+    }
+    assert.deepEqual((await inspectRepository(root, env)).findings, []);
   });
 });

@@ -67,10 +67,15 @@ async function firstHebrewInViewport(tab: Page) {
   expect(geometry.referenceBottom!, diagnostic).toBeLessThanOrEqual(geometry.top);
   if (geometry.markerBottom !== null) expect(geometry.markerBottom, diagnostic).toBeLessThanOrEqual(geometry.referenceTop!);
 }
+function colorsControl(tab: Page) { return tab.getByRole("navigation", { name: "Reading tools", exact: true }).getByRole("button", { name: "Colors", exact: true }); }
+async function setColors(tab: Page, on: boolean) {
+  const control = colorsControl(tab);
+  if (await control.getAttribute("aria-pressed") !== String(on)) await safe(() => control.click());
+  await ui(control).toHaveAttribute("aria-pressed", String(on));
+}
 async function colorVerse(tab: Page, ref: string) {
-  const article = verse(tab, ref).locator("article"), aids = article.locator("details");
-  if (await aids.getAttribute("open") === null) await safe(() => aids.locator("summary").click());
-  await safe(() => aids.getByRole("checkbox").check());
+  const article = verse(tab, ref).locator("article");
+  if (await colorsControl(tab).count()) await setColors(tab, true);
   await ui(article.locator("[data-family]").first()).toBeVisible();
   return article;
 }
@@ -79,7 +84,13 @@ async function capture(tab: Page, name: string) {
   await ui(tab.locator("#workspace-main").getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden();
   await ui(tab.locator(".study-hebrew").first()).toBeVisible(); expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const directory = join(process.cwd(), ".impeccable", "review"); await mkdir(directory, { recursive: true });
+  await safe(() => tab.addStyleTag({ content: "nextjs-portal { display: none !important; }" }));
   await safe(() => tab.screenshot({ path: join(directory, `${name}.png`), fullPage: true }));
+  if (tab.viewportSize()?.width === 390) await safe(() => tab.screenshot({ path: join(directory, `${name}-viewport.png`) }));
+}
+async function captureDark(tab: Page, name: string) {
+  if (process.env.CI) return;
+  await safe(() => tab.emulateMedia({ colorScheme: "dark" })); await capture(tab, name); await safe(() => tab.emulateMedia({ colorScheme: "light" }));
 }
 beforeAll(async () => {
   try {
@@ -115,8 +126,11 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await safe(() => tutor.getByRole("link", { name: "Parent", exact: true }).click()); await safe(() => tutor.getByLabel("Child", { exact: true }).selectOption(fixture.student.id)); await loaded(tutor, "Genesis 1:1");
   expect(await tutor.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0);
   const learner = await page("student", true); await navigate(learner, "/workspace/student"); await loaded(learner, "Genesis 1:1"); expect(await learner.getByLabel("Student", { exact: true }).count()).toBe(0);
-  await ui(learner.getByText("Aliyah boundaries have not been recorded for this assignment.", { exact: true })).toBeVisible();
+  expect(await learner.getByText("Aliyah boundaries have not been recorded for this assignment.", { exact: true }).count()).toBe(0);
   expect(await learner.locator(".student-aliyah").count()).toBe(0);
+  for (const prose of ["Confirmed assignment", "Calendar source", "Selected English edition available.", "Unsent work stays only in this tab"]) expect(await learner.getByText(prose).count()).toBe(0);
+  await ui(colorsControl(learner)).toHaveAttribute("aria-pressed", "true");
+  await ui(learner.getByRole("button", { name: "Hear coming soon", exact: true })).toBeDisabled();
   await firstHebrewInViewport(learner);
   await capture(learner, "study-student-partial-mobile");
   const assigned = await api(adminTab, `/api/students/${fixture.student.id}/reading?mode=admin`);
@@ -127,27 +141,33 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await click(learner, "Refresh reading"); await loaded(learner, "Genesis 1:1");
   await ui(learner.getByText("Aliyah 1 starts here", { exact: true })).toBeVisible();
   await firstHebrewInViewport(learner);
-  await capture(learner, "study-student-one-aliyah-mobile");
+  await capture(learner, "study-student-one-aliyah-mobile"); await captureDark(learner, "study-student-one-aliyah-mobile-dark");
+  if (!process.env.CI) { await safe(() => learner.setViewportSize({ width: 1440, height: 1000 })); await capture(learner, "study-student-one-aliyah-desktop"); await safe(() => learner.setViewportSize({ width: 390, height: 844 })); }
   const first = verse(learner, "Genesis 1:1").locator("article"), hebrew = first.locator(".study-hebrew");
   const original = await safe(() => hebrew.textContent()), beforeColors = calls;
-  expect(await learner.locator(".study-verses article details[open]").count()).toBe(0);
-  expect(await learner.locator(".study-verses [data-word-index]").count()).toBe(0); // No eager projection on first display.
-  expect(await first.locator(".study-hebrew").evaluate(element => element.compareDocumentPosition(element.parentElement!.querySelector("details")!) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy();
+  expect(await learner.locator(".study-verses article details").count()).toBe(0); // One toolbar replaces per-verse aids.
   await colorVerse(learner, "Genesis 1:1");
-  expect(await hebrew.textContent() === original && calls === beforeColors).toBe(true);
-  await ui(first.getByRole("list", { name: "Phrase families for Genesis 1:1", exact: true })).toContainText("etnachta");
-  await ui(first.getByRole("list", { name: "Phrase families for Genesis 1:1", exact: true })).toContainText("Word 1");
-  expect(await first.locator(".study-alternative > span:first-child [data-family]").count()).toBe(0);
   const indices = await first.locator("[data-word-index]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-word-index")).join(","));
-  await safe(() => first.getByRole("checkbox").uncheck()); expect(await first.locator("[data-family]").count()).toBe(0);
+  await setColors(learner, false); expect(await learner.locator(".study-verses [data-family], .study-verses [data-word-index]").count()).toBe(0); // No projection while colors are off.
+  expect(await hebrew.textContent() === original && calls === beforeColors).toBe(true);
+  await setColors(learner, true); await colorVerse(learner, "Genesis 1:1");
   expect(await first.locator("[data-word-index]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-word-index")).join(","))).toBe(indices);
-  await safe(() => first.getByRole("checkbox").check());
-  await colorVerse(learner, "Genesis 1:2"); expect(await first.locator("details[open]").count()).toBe(0);
-  expect(await learner.locator(".study-verses article details[open]").count()).toBe(1);
-  await colorVerse(learner, "Genesis 1:1"); await capture(learner, "study-colors-mobile");
+  expect(await hebrew.textContent() === original && calls === beforeColors).toBe(true);
+  expect(await first.locator(".study-alternative > span:first-child [data-family]").count()).toBe(0);
+  await capture(learner, "study-colors-mobile");
+  await safe(() => first.getByRole("button", { name: "Practice Genesis 1:1 up close", exact: true }).click());
+  const lifted = learner.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(lifted).toBeVisible();
+  await ui(lifted.getByRole("list", { name: "Phrase families for Genesis 1:1", exact: true })).toContainText("etnachta");
+  await ui(lifted.getByRole("list", { name: "Phrase families for Genesis 1:1", exact: true })).toContainText("Word 1");
+  await ui(lifted.getByText(/Verse 1 of 3/)).toBeVisible();
+  await capture(learner, "study-lift-mobile"); await captureDark(learner, "study-lift-mobile-dark");
+  for (let step = 0; step < 12 && await lifted.getByRole("heading", { name: "Genesis 1:1", exact: true }).count(); step++) await safe(() => lifted.getByRole("button", { name: /^Next (phrase|verse)$/ }).click());
+  await ui(learner.getByRole("dialog", { name: "Genesis 1:2", exact: true })).toBeVisible();
+  await safe(() => learner.getByRole("button", { name: "Close practice view", exact: true }).click()); await ui(learner.getByRole("dialog")).toHaveCount(0);
+  expect(calls).toBe(beforeColors);
   await click(learner, "Haftarah text"); await loaded(learner, "Isaiah 1:1"); expect(await learner.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true }).count()).toBe(0);
-  await ui(learner.locator(".reading-current-assignment").getByRole("heading", { name: "Haftarah", level: 3, exact: true })).toBeVisible();
-  await ui(learner.locator(".reading-current-assignment").getByText("Isaiah 1:1-2", { exact: true })).toBeVisible();
+  await ui(learner.locator(".reading-hero").getByRole("heading", { name: "Isaiah 1:1\u20132", level: 3, exact: true })).toBeVisible();
+  await ui(learner.locator(".reading-hero").getByText("Haftarah \u00b7 2 verses", { exact: true })).toBeVisible();
   const middle = await colorVerse(learner, "Isaiah 1:1"), final = await colorVerse(learner, "Isaiah 1:2");
   expect(await middle.locator('[data-family="sof-pasuk"]').count()).toBeGreaterThan(0);
   expect(await final.locator('[data-family="sof-haftarah"]').count()).toBeGreaterThan(0);
@@ -167,8 +187,8 @@ it("keeps unsent typing and an unknown save intact while phrase controls change"
     await ui.poll(() => committed).toBe(true);
     await safe(() => field.fill("Synthetic queued typing kept through phrase colors"));
     await ui(panel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab.", { timeout: 18_000 });
-    const article = await colorVerse(tab, "Genesis 1:1");
-    await safe(() => article.getByRole("checkbox").uncheck()); await safe(() => article.getByRole("checkbox").check());
+    await colorVerse(tab, "Genesis 1:1");
+    await setColors(tab, false); await setColors(tab, true);
     await colorVerse(tab, "Genesis 1:2");
     await ui(field).toHaveValue("Synthetic queued typing kept through phrase colors");
     await ui(panel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab."); expect(writes).toBe(1);
@@ -180,13 +200,14 @@ it("keeps unsent typing and an unknown save intact while phrase controls change"
 it("discards held old-child text after a switch, keeps another tab independent, and clears text after relationship revocation", async () => {
   const tab = await page("tutor", true); await navigate(tab, "/workspace/parent"); await safe(() => tab.getByLabel("Child", { exact: true }).selectOption(fixture.student.id)); await click(tab, "Enter child practice"); await loaded(tab, "Genesis 1:1");
   const other = await tab.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => other.getByLabel("Child", { exact: true }).selectOption(fixture.student.id)); await click(other, "Enter child practice"); await loaded(other, "Genesis 1:1");
-  await colorVerse(tab, "Genesis 1:1");
+  await colorVerse(tab, "Genesis 1:1"); await setColors(tab, false); // Remembered for this child only.
   const pattern = new RegExp(`/api/students/${fixture.student.id}/study-text\\?`); let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route(pattern, async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   await click(tab, "Refresh reading"); await ui.poll(() => held).toBe(true);
   try { await click(tab, "Switch practice to Synthetic Sibling"); await loaded(tab, "Genesis 2:1"); } finally { release(); }
   await tab.unroute(pattern); expect(await tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true }).count()).toBe(0);
-  expect(await tab.locator(".study-verses [data-family]").count()).toBe(0);
+  expect(await tab.locator(".study-verses article[data-verse-ref]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-verse-ref")).join(","))).toBe("Genesis 2:1,Genesis 2:2");
+  await ui(colorsControl(tab)).toHaveAttribute("aria-pressed", "true"); await ui(tab.locator(".study-verses [data-family]").first()).toBeVisible(); // The sibling keeps their own default.
   await colorVerse(tab, "Genesis 2:1");
   await capture(tab, "study-child-sibling-mobile");
   const relationships = await api(adminTab, `/api/admin/students/${sibling.id}/relationships`);
@@ -212,7 +233,8 @@ it("preserves staff drafts, explicit paging and same-session text revalidation w
   await click(tab, "Refresh reading"); await ui(tab.locator(".study-verses > li")).toHaveCount(100);
   await colorVerse(tab, "Genesis 1:1");
   const beforeNext = calls; await click(tab, "Next text page"); await ui(tab.locator(".study-verses > li")).toHaveCount(4); expect(calls - beforeNext).toBe(1);
-  expect(await tab.locator(".study-verses [data-family], .study-verses article details[open]").count()).toBe(0);
+  expect(await tab.locator(".study-verses article details[open]").count()).toBe(0);
+  await ui(tab.locator(".study-verses [data-family]").first()).toBeVisible();
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/study-text?**", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   try {
@@ -227,7 +249,7 @@ it("preserves staff drafts, explicit paging and same-session text revalidation w
   await click(tab, "Previous text page"); await ui(tab.getByRole("heading", { name: "Assignment changed", level: 4, exact: true })).toBeVisible();
   expect(await tab.locator(".study-hebrew").count()).toBe(0);
   await click(tab, "Refresh reading and text"); await loaded(tab, "Genesis 2:1"); await ui(tab.locator(".study-verses > li")).toHaveCount(2);
-  await ui(tab.getByRole("button", { name: "Previous text page", exact: true })).toBeDisabled();
+  expect(await tab.getByRole("navigation", { name: "Text pages", exact: true }).count()).toBe(0); // A single page shows no paging controls.
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5");
   await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(s.session.userId, fixture.admin.id));
   await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui(tab.getByRole("heading", { name: "Sign in to continue", level: 1, exact: true })).toBeVisible(); expect(await tab.locator(".study-hebrew").count()).toBe(0);

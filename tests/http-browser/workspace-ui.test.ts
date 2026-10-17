@@ -144,14 +144,13 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await tab.route("**/api/practice/enter", async route => { const response = await route.fetch(); rawHandle = (await response.json()).handle; await route.fulfill({ response }); });
   await safe(() => tab.getByRole("button", { name: "Enter child practice", exact: true }).click());
   await ui(tab.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
-  await ui(tab.getByText("Genesis 1:1-3", { exact: true })).toBeVisible();
+  await ui(tab.getByText("Genesis 1:1\u20133", { exact: true })).toBeVisible();
   await capture(tab, "workspace-child-confirmed-reading");
   await tab.setViewportSize({ width: 390, height: 844 });
   await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).focus());
   await safe(() => tab.keyboard.press("Tab"));
-  expect(await tab.evaluate(() => document.activeElement?.tagName === "SUMMARY")).toBe(true);
-  await safe(() => tab.keyboard.press("Enter"));
-  expect(await tab.locator("details").first().getAttribute("open") !== null).toBe(true);
+  expect(await tab.evaluate(() => document.activeElement?.textContent === "Start")).toBe(true); // One step from the reading to practice.
+
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await capture(tab, "workspace-child-confirmed-reading");
   await tab.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
