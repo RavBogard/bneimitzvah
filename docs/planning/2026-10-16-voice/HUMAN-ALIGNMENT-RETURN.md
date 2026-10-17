@@ -202,3 +202,5 @@ GATE: lowered the consonant floor for this take only — proceeded because the e
 **Measured cause:** the slow reading pauses after more phrase ends, so 16 releases switched from a sustained vowel to a 150 ms copy of the take's decay. That decay is unvoiced exhale: about 10–15 dB below the vowel, with an autocorrelation voicing score of about 0.2, held flat rather than decaying. SVC renders unvoiced F0 there as breath.
 
 **Fix (run `vahavta-Bhuman-slow-v7`):** a final vowel or voiced continuant is now held, voiced, for the release, ending in at most `releaseBreathMs` (default 60) of the take's decay. Releases record `heldSamples`, `breathSamples` and the source `held-then-take-decay`. Awaiting Daniel's listening.
+
+**v7 verdict (Daniel):** "Still a little too much. But this is seriously getting so just better. Now it's just nitpicking." The default `releaseBreathMs` is now 30, and run `vahavta-Bhuman-slow-v8` is awaiting his listening.

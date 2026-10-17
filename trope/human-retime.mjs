@@ -18,7 +18,7 @@ import { canonicalJson, sha256, BENCHMARK_LIMITS } from "./benchmark-pack.mjs";
 
 export const RETIME_SCHEMA = "chant-human-retime/v1";
 export const RETIME_DEFAULTS = Object.freeze({ outputRate: 24000, maxConsonantShare: 0.6, minConsonantRatio: 0.5, minVowelMs: 20,
-  fadeMs: 5, maxSplitShiftMs: 2000, f0Fps: 50, warnVowelRatio: 8, warnNoteVowelCoverage: 0.5, releaseMs: 150, releaseGapMs: 40, tailMs: 200, steadyHeadMs: 25, steadyTailMs: 35, releaseBreathMs: 60 });
+  fadeMs: 5, maxSplitShiftMs: 2000, f0Fps: 50, warnVowelRatio: 8, warnNoteVowelCoverage: 0.5, releaseMs: 150, releaseGapMs: 40, tailMs: 200, steadyHeadMs: 25, steadyTailMs: 35, releaseBreathMs: 30 });
 export const OUTPUT_RATES = Object.freeze([16000, 22050, 24000, 44100, 48000]);
 // Phonikud characters that carry no voicing; the F0 sent to SVC is 0 over them, as in speech2sing.py.
 export const VOICELESS = Object.freeze(["p", "t", "k", "f", "s", "ʃ", "χ", "h", "ʔ", "ts"]);

@@ -189,8 +189,8 @@ test("phrase endings release into the rest: the take's own decay after a pause, 
   assert.equal(copied.syllableId, target.identity.syllables[1].id);
   const vowel = map.pieces.find(p => p.role === "vowel" && p.syllableId === copied.syllableId);
   assert.equal(copied.dstStart, vowel.dstEnd); assert.equal(copied.srcStart, vowel.srcEnd);
-  // The vowel is held, voiced, for most of the release; only the last 60 ms is the take's breath.
-  assert.ok(vowel.heldSamples > 0 && copied.dstEnd - copied.dstStart <= Math.round(0.06 * 24000));
+  // The vowel is held, voiced, for most of the release; only the last 30 ms is the take's breath.
+  assert.ok(vowel.heldSamples > 0 && copied.dstEnd - copied.dstStart <= Math.round(0.03 * 24000));
   const split = map.releases.find(r => r.syllableId === copied.syllableId);
   assert.equal(split.source, "held-then-take-decay"); assert.equal(split.samples, split.heldSamples + split.breathSamples);
   const whole = json(build(recordFor(target, audio), target, audio, { releaseBreathMs: 150 }), "retime-map.json");
