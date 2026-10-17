@@ -57,3 +57,7 @@ Daniel's look at the screens, then the wording decisions above. After that: staf
 ## Requested integration action (for Codex)
 
 When the frozen commit is ready, reconcile `scripts/repo-policy.mjs` with voice's rule. Run the combined font, never-in-repo and private-path tests. Then run the browser suite on the integrated commit.
+
+## Frozen commit
+
+`f345972` on `design/song-session-student`: the Song session student surface, font, tests, DESIGN.md and this note. Not pushed, merged or deployed.
