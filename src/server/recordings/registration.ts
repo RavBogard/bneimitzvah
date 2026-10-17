@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { RecordingConflict, RecordingReceipt, RecordingSelection } from "../../lib/recordings/types";
 import { createRecordingAuthority, type RecordingDependencies, type RecordingRequest, type RecordingFreshness } from "./authority";
@@ -7,6 +8,8 @@ import type { AccessTransaction } from "../access/types";
 import type { StudentView } from "../data/students";
 import { receipt } from "./service";
 import * as data from "../data/recordings";
+import * as admission from "../data/recording-receipts";
+import { withinRecordingCapacity } from "./capacity";
 import * as validate from "./validation";
 import type { VerifiedRecordingDescriptor } from "./validation";
 
@@ -14,6 +17,10 @@ import type { VerifiedRecordingDescriptor } from "./validation";
 export class RecordingRegistrationConflict extends Error {
   readonly code = "conflict";
   constructor() { super("Recording registration conflict"); this.name = "RecordingRegistrationConflict"; }
+}
+export class RecordingRegistrationLimit extends Error {
+  readonly code = "limit";
+  constructor() { super("Recording registration limit reached"); this.name = "RecordingRegistrationLimit"; }
 }
 export type RecordingRegistrationScope<Q extends PgQueryResultHKT> = Readonly<{
   tx: AccessTransaction<Q>; actor: data.RecordingActor; student: StudentView; fresh: RecordingFreshness;
@@ -32,33 +39,42 @@ function matches(row: data.RecordingRow, descriptor: VerifiedRecordingDescriptor
 export function createStudentRecordingRegistrar<Q extends PgQueryResultHKT>(input: RecordingDependencies<Q>) {
   const authorized = createRecordingAuthority(input);
   async function registerCore(tx: AccessTransaction<Q>, actor: data.RecordingActor, fresh: RecordingFreshness,
-    descriptor: VerifiedRecordingDescriptor, conflict: AccessDenied, originalId?: string): Promise<RecordingReceipt> {
-    const instant = new Date(fresh().instant);
-    let row = originalId === undefined ? await data.insert(tx, actor, descriptor, instant) : await data.insertWithId(tx, actor, originalId, descriptor, instant);
-    fresh();
-    if (!row) {
-      fresh();
-      row = originalId === undefined ? await data.asset(tx, actor, descriptor.assetId) : await data.lock(tx, actor, originalId);
-      fresh();
-      if (!row || !matches(row, descriptor)) throw conflict;
-    } else {
-      fresh(); await data.audit(tx, actor, "create", row.id); fresh();
+    descriptor: VerifiedRecordingDescriptor, conflict: AccessDenied, limit: AccessDenied, originalId?: string): Promise<RecordingReceipt> {
+    fresh(); const previous = await data.registrationRow(tx, actor, descriptor.assetId, originalId); fresh();
+    // The asset retry uses the existing actual ID. A new implicit identity is
+    // chosen exactly once under admission, never regenerated after a collision.
+    const id = originalId ?? previous?.id ?? randomUUID();
+    const reserved = await admission.reserved(tx, actor.tenantId, id, descriptor.assetId); fresh();
+    if (reserved) throw conflict;
+    if (previous) {
+      if (previous.id !== id || !matches(previous, descriptor)) throw conflict;
+      return receipt(previous);
     }
-    return receipt(row);
+    const clock = await admission.clock(tx); fresh();
+    const totals = await admission.aggregates(tx, actor, clock, fresh); fresh();
+    if (!withinRecordingCapacity(totals, descriptor.media.byteLength)) throw limit;
+    const row = await data.insertWithId(tx, actor, id, descriptor, new Date(fresh().instant)); fresh();
+    // A raw SQL/global-ID race is a refusal, not a replay/adoption or new ID.
+    if (!row) throw conflict;
+    await data.audit(tx, actor, "create", row.id); fresh(); return receipt(row);
   }
   return Object.freeze({
     async register(request: RecordingRequest, selection: RecordingSelection, supplied: VerifiedRecordingDescriptor): Promise<RecordingReceipt | RecordingConflict> {
       const descriptor = validate.descriptor(supplied);
       // Only this exact private signal crosses the existing auth sanitizer.
-      const conflict = new AccessDenied(404);
-      try { return await authorized(request, selection, true, false, (tx, actor, _student, fresh) => registerCore(tx, actor, fresh, descriptor, conflict)); }
-      catch (error) { if (error === conflict) return { ok: false, code: "conflict" }; throw error; }
+      const conflict = new AccessDenied(404), limit = new AccessDenied(404);
+      try { return await authorized(request, selection, true, false, async (tx, actor, _student, fresh) => {
+        await admission.mutex(tx, actor.tenantId, fresh); fresh();
+        return registerCore(tx, actor, fresh, descriptor, conflict, limit);
+      }); }
+      catch (error) { if (error === conflict) return { ok: false, code: "conflict" }; if (error === limit) throw new RecordingRegistrationLimit(); throw error; }
     },
     async withRegistrationAuthority<T>(request: RecordingRequest, selection: RecordingSelection,
       action: (scope: RecordingRegistrationScope<Q>) => T | Promise<T>): Promise<T> {
-      const conflict = new AccessDenied(404);
+      const conflict = new AccessDenied(404), limit = new AccessDenied(404);
       try {
         return await authorized(request, selection, true, false, async (tx, actor, student, fresh) => {
+          await admission.mutex(tx, actor.tenantId, fresh); fresh();
           let active = true, used = false, pending = false, poisoned = false, failure: unknown, tracked: Promise<RecordingReceipt> | undefined;
           const poison = (error: unknown) => { if (!poisoned) { poisoned = true; failure = error; } };
           const checkpoint: RecordingFreshness = () => { if (!active || poisoned) throw unavailable(); return fresh(); };
@@ -70,7 +86,7 @@ export function createStudentRecordingRegistrar<Q extends PgQueryResultHKT>(inpu
             tracked = (async () => {
               try {
                 checkpoint(); const id = validate.recordingId(originalRecordingId), descriptor = validate.descriptor(supplied); checkpoint();
-                return await registerCore(tx, actor, checkpoint, descriptor, conflict, id);
+                return await registerCore(tx, actor, checkpoint, descriptor, conflict, limit, id);
               } catch (error) { poison(error); throw error; }
             })();
             // Observe even a caller's unawaited rejection; the outer scope still
@@ -91,6 +107,7 @@ export function createStudentRecordingRegistrar<Q extends PgQueryResultHKT>(inpu
         });
       } catch (error) {
         if (error === conflict) throw new RecordingRegistrationConflict();
+        if (error === limit) throw new RecordingRegistrationLimit();
         throw error;
       }
     },

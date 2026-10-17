@@ -6,7 +6,7 @@ import { eq, sql } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import * as data from "../../src/server/data/recording-receipts";
 import { createPracticeService } from "../../src/server/practice/service";
-import { createStudentRecordingRegistrar } from "../../src/server/recordings/registration";
+import { createStudentRecordingRegistrar, RecordingRegistrationLimit } from "../../src/server/recordings/registration";
 import { createRecordingReceiptService, createRecordingReceiptTestMaintenance, RecordingReceiptConflict, RecordingReceiptLimit, type ReceiptView } from "../../src/server/recordings/receipts";
 import { AccessDenied } from "../../src/server/access/errors";
 import { deferred, postgresAccessFixture, waitForEntry } from "./access-fixture";
@@ -138,8 +138,9 @@ test("session expiry after a measured SQL wait remains401 and cannot emit commit
 
 test("a later legacy identity collision is locked and refused instead of adopted on replay or opening", async () => {
   const f = await fixture(), request = admit(), row = await f.aService.admit(f.mutation(), f.selected, request);
-  const registrar = createStudentRecordingRegistrar(f.dependenciesA);
-  await registrar.withRegistrationAuthority(f.mutation(), f.selected, x => x.registerVerified(row.originalRecordingId, { assetId: row.assetId, contentSha256: "a".repeat(64), media: { mediaType: "audio/webm;codecs=opus", byteLength: 2048, durationMs: 2000 } }));
+  // Privileged historical overlap, deliberately outside the application writer
+  // invariant. The guarded registrar now refuses to manufacture this fixture.
+  await f.ownerDb.insert(s.studentRecording).values({ id: row.originalRecordingId, tenantId: "crc", studentId: f.student.id, assetId: row.assetId, contentSha256: "a".repeat(64), mediaType: "audio/webm;codecs=opus", byteLength: 2048, durationMs: 2000, state: "private", revision: 1, createdAt: new Date() });
   expect(await safe(f.aService.admit(f.mutation(), f.selected, request))).toEqual({ error: "conflict" });
   expect(await safe(f.aService.prepareSlot(f.mutation(), f.selected, { ...target(row), bodySha256: "a".repeat(64), permitEtag: '"A"' }))).toEqual({ error: "conflict" });
   expect((await f.slots())[0].state).toBe("reserved"); expect(await f.heads()).toHaveLength(1); expect(await f.ownerDb.select().from(s.studentRecording)).toHaveLength(1);
@@ -160,7 +161,7 @@ test("unknown admission COMMIT is reconciled only by its same UUID without escap
   expect(await f.slots()).toHaveLength(1); expect((await f.slots())[0].everUploadOpened).toBe(false);
 });
 
-test("a real prepared-slot wait crossing retention rolls back opening; legacy increasing writer bypass remains an explicit activation blocker", async () => {
+test("a real prepared-slot wait crossing retention rolls back opening; legacy registration now waits and freshly refuses full capacity", async () => {
   const f = await fixture(), row = await f.aService.admit(f.mutation(), f.selected, admit()), prepared = await f.aService.prepareSlot(f.mutation(), f.selected, { ...target(row), bodySha256: "a".repeat(64), permitEtag: '"A"' });
   const entered = deferred(), release = deferred(), ownerPid = (await query<{ pid: number }>(f.owner, "select pg_backend_pid() as pid")).rows[0].pid;
   const hold = safe(f.ownerDb.transaction(async tx => { await tx.execute(sql`lock table recording_receipt_slot in share mode`); entered.resolve(); await release.promise; }));
@@ -169,13 +170,16 @@ test("a real prepared-slot wait crossing retention rolls back opening; legacy in
   finally { release.resolve(); await Promise.all([hold, opening]); }
   expect(await opening).toEqual({ error: 404 }); expect((await f.slots())[0].everUploadOpened).toBe(false);
   f.clock(Date.now());
+  await f.ownerDb.insert(s.studentRecording).values(Array.from({ length: 998 }, () => ({ id: randomUUID(), tenantId: "crc", studentId: f.student.id, assetId: randomUUID(), contentSha256: "b".repeat(64), mediaType: "audio/webm;codecs=opus", byteLength: 100, durationMs: 100, state: "private" as const, revision: 1, createdAt: new Date() })));
   const aggregate = data.aggregates, aggregateEntered = deferred(), aggregateRelease = deferred();
   const spy = vi.spyOn(data, "aggregates").mockImplementation(async (...args) => { const totals = await aggregate(...args); aggregateEntered.resolve(); await aggregateRelease.promise; return totals; });
   const admission = safe(f.aService.admit(f.mutation(), f.selected, admit()));
   const registrar = createStudentRecordingRegistrar({ access: f.b, practice: createPracticeService({ access: f.b }) });
+  let legacy: Promise<unknown> | undefined;
   try { await waitForEntry(aggregateEntered.promise, admission);
-    // Another actor's legacy path does not acquire recording_admission.
-    await registrar.withRegistrationAuthority(f.mutation("tutor", f.context.handle), f.child, x => x.registerVerified(randomUUID(), { assetId: randomUUID(), contentSha256: "b".repeat(64), media: { mediaType: "audio/webm;codecs=opus", byteLength: 2048, durationMs: 2000 } }));
-  } finally { aggregateRelease.resolve(); await admission; spy.mockRestore(); }
-  expect(await admission).toHaveProperty("value"); expect(await f.ownerDb.select().from(s.studentRecording)).toHaveLength(1);
+    legacy = registrar.withRegistrationAuthority(f.mutation("tutor", f.context.handle), f.child, x => x.registerVerified(randomUUID(), { assetId: randomUUID(), contentSha256: "b".repeat(64), media: { mediaType: "audio/webm;codecs=opus", byteLength: 2048, durationMs: 2000 } })).then(value => value, error => error);
+    await f.waitForLock(f.pidB, f.pidA);
+  } finally { aggregateRelease.resolve(); await Promise.all([admission, legacy]); spy.mockRestore(); }
+  expect(await admission).toHaveProperty("value"); expect(await legacy).toBeInstanceOf(RecordingRegistrationLimit);
+  expect(await f.ownerDb.select().from(s.studentRecording)).toHaveLength(998);
 });

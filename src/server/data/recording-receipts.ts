@@ -21,6 +21,11 @@ export async function lock<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>,
 export async function hint<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, id: string) { const [row] = await tx.select().from(h).where(and(eq(h.tenantId, tenantId), eq(h.id, id))); return row ?? null; }
 export async function slots<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, row: ReceiptRow) { return tx.select().from(slot).where(and(eq(slot.tenantId, row.tenantId), eq(slot.receiptId, row.id))).orderBy(asc(slot.slotIndex)).for("update"); }
 export async function collision<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, id: string, assetId: string) { const rows = await tx.select({ id: ledger.id }).from(ledger).where(or(eq(ledger.id, id), eq(ledger.assetId, assetId))).limit(1); return rows.length !== 0; }
+/** Immutable reservation lookup under admission; no head lock or adoption. */
+export async function reserved<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, id: string, assetId: string) {
+  const rows = await tx.select({ id: h.id }).from(h).where(and(eq(h.tenantId, tenantId), or(eq(h.originalRecordingId, id), eq(h.assetId, assetId)))).limit(1);
+  return rows.length !== 0;
+}
 // A collision is a refusal, never adoption. At most ONE present ledger row is
 // locked, preserving the maintenance one-logical-head ordering even if corrupt
 // external provenance collides with two distinct immutable ledger identities.
@@ -43,8 +48,8 @@ export async function terminal<Q extends PgQueryResultHKT>(tx: AccessTransaction
 }
 export async function closeSlots<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, row: ReceiptRow) { return tx.update(slot).set({ state: "never-opened", revision: sql`${slot.revision}+1`, audioLiabilityReleased: true }).where(and(eq(slot.tenantId, row.tenantId), eq(slot.receiptId, row.id), eq(slot.state, "retiring"), eq(slot.everUploadOpened, false))).returning(); }
 
-// Exact primary-data aggregates under the receipt admission mutex. Legacy
-// registrar INSERTs remain outside this gate: this is NOT a universal cap.
+// Exact primary-data aggregates under the common application-writer mutex.
+// This is not a restriction on arbitrary privileged SQL INSERTs.
 export async function aggregates<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: RecordingActor, instant: string, fresh: () => unknown) {
   const student = sql`${h.studentId}=${actor.studentId}`, user = sql`${h.actorUserId}=${actor.userId}`, hour = sql`${h.admittedAt}>${instant}::timestamptz-interval '1 hour' AND ${h.admittedAt}<=${instant}::timestamptz`, day = sql`${h.admittedAt}>${instant}::timestamptz-interval '24 hours' AND ${h.admittedAt}<=${instant}::timestamptz`;
   const [r] = await tx.select({

@@ -7,6 +7,7 @@ import type { StudentView } from "../data/students";
 import type { RecordingActor } from "../data/recordings";
 import * as data from "../data/recording-receipts";
 import * as validate from "./receipt-validation";
+import { withinRecordingCapacity } from "./capacity";
 import { createRecordingAuthority, type RecordingDependencies, type RecordingFreshness, type RecordingRequest } from "./authority";
 
 export class RecordingReceiptConflict extends Error { readonly code = "conflict"; constructor() { super("Recording receipt conflict"); this.name = "RecordingReceiptConflict"; } }
@@ -37,8 +38,7 @@ function withinLimits(m: Awaited<ReturnType<typeof data.aggregates>>, bytes: num
   return m.studentActive + 1n <= 2n && m.actorActive + 1n <= 2n && m.tenantActive + 1n <= 128n
     && m.studentHour + 1n <= 4n && m.actorHour + 1n <= 4n && m.tenantHour + 1n <= 200n
     && m.studentDay + 1n <= 8n && m.actorDay + 1n <= 8n && m.tenantDay + 1n <= 512n
-    && m.studentBytes + BigInt(bytes) <= 10n * 1024n ** 3n && m.tenantBytes + BigInt(bytes) <= 256n * 1024n ** 3n
-    && m.studentTakes + 1n <= 1000n && m.tenantTakes + 1n <= 20000n && m.studentIds + 1n <= 4096n && m.tenantIds + 1n <= 65536n;
+    && withinRecordingCapacity(m, bytes);
 }
 
 /** Internal provider-disabled service. No runtime/HTTP composition or sender. */
