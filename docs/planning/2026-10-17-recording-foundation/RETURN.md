@@ -1,5 +1,9 @@
 # Student recording ledger return
 
+**Current policy checkpoint2026-10-17:** Daniel resolved retention for **all** private/submitted student recordings. Binding documents/spec0ffd92e and source amend­menta6d4a33 supersede this return's earlier submitted-only/pending paragraphs. Independent review/testsb18a676 accept the bounded delta: normal app11, independent app3 and all18 actual PostgreSQL cases pass, with14 observed blocking edges. Private and submitted records are hidden by the same due page/cursor filter; the old/new-ceremony trigger stages private1→deleting2 with NULL submission and submitted2→deleting3 with preserved submission, atomically and irreversibly. Restricted rollback, fresh-clock waits, no fabricated audit, after-due own/child deletion and replay refusal are covered. Composed typechecks pass; owned native fixtures/anchor were removed. [Independent review](IMPLEMENTATION-REVIEW.md) preserves the earlier policy history and exact amendment evidence.
+
+Earlier exact source3d7f84f passed all four [hosted jobs39031725771](https://github.com/RavBogard/bneimitzvah/actions/runs/39031725771). The amended final combined tree still needs its own exact hosted gates. **Source-only, not production:** no storage/upload/playback/physical cleanup, no0020 apply, no roster import, invitation or mail. Current main is separately deployed8f8abc5; new recording use remains held until the complete media and cleanup path is reviewed.
+
 Contract: [student-recording ledger design](../../superpowers/specs/2026-10-17-student-recording-ledger-design.md). Product/normal-test freeze: `578b5fc8f252ef2b27b09b811e7bcf465a171f18`, based on released `0ce58b6` plus root's accepted contract documents `7175c49`.
 
 ## Implemented boundary
