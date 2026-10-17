@@ -8,7 +8,7 @@ import { eq } from "drizzle-orm";
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
-import { syntheticUiStudyPage } from "../helpers/study-ui";
+import { syntheticUiStudyPage, syntheticUiLongStudyPage } from "../helpers/study-ui";
 import { expandReadingRanges } from "../../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 import { StudyUnavailable } from "../../src/server/study/types";
@@ -16,7 +16,7 @@ import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
-let sibling: { id: string }, adminTab: Page, calls = 0, unavailable = false;
+let sibling: { id: string }, adminTab: Page, studentTab: Page, calls = 0, unavailable = false, longVerse = false;
 let english: "available" | "partial" | "unavailable" = "partial";
 const contexts: BrowserContext[] = [], modes = new Set<string>();
 async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Study UI browser operation failed; private details withheld"); } }
@@ -95,7 +95,7 @@ async function captureDark(tab: Page, name: string) {
 beforeAll(async () => {
   try {
     assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard();
-    fixture = await browserFixture({ studyLoad: async request => { calls++; if (unavailable) throw new StudyUnavailable("upstream"); return syntheticUiStudyPage(request, english); } });
+    fixture = await browserFixture({ studyLoad: async request => { calls++; if (unavailable) throw new StudyUnavailable("upstream"); return longVerse ? syntheticUiLongStudyPage(request) : syntheticUiStudyPage(request, english); } });
     sibling = (await fixture.practice()).sibling;
     const learner = await fixture.signIn("pg-study-student");
     const [member] = await fixture.ownerDb.insert(s.membership).values({ tenantId: "crc", userId: learner.id }).returning();
@@ -126,6 +126,7 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await safe(() => tutor.getByRole("link", { name: "Parent", exact: true }).click()); await safe(() => tutor.getByLabel("Child", { exact: true }).selectOption(fixture.student.id)); await loaded(tutor, "Genesis 1:1");
   expect(await tutor.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0);
   const learner = await page("student", true); await navigate(learner, "/workspace/student"); await loaded(learner, "Genesis 1:1"); expect(await learner.getByLabel("Student", { exact: true }).count()).toBe(0);
+  studentTab = learner;
   expect(await learner.getByText("Aliyah boundaries have not been recorded for this assignment.", { exact: true }).count()).toBe(0);
   expect(await learner.locator(".student-aliyah").count()).toBe(0);
   for (const prose of ["Confirmed assignment", "Calendar source", "Selected English edition available.", "Unsent work stays only in this tab"]) expect(await learner.getByText(prose).count()).toBe(0);
@@ -174,6 +175,49 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await colorVerse(adminTab, "Genesis 1:1"); await capture(adminTab, "study-colors-desktop");
   await safe(() => adminTab.evaluate(() => { document.documentElement.style.zoom = "2"; })); await capture(adminTab, "study-colors-desktop-200");
   await safe(() => adminTab.evaluate(() => { document.documentElement.style.zoom = ""; }));
+});
+
+it("wraps a synthetic long verse at Standard and Huge on a phone and restores keyboard focus after lifted practice", async () => {
+  const tab = studentTab, directory = join(process.cwd(), ".local-logs", "frozen-longverse-review");
+  await mkdir(directory, { recursive: true });
+  longVerse = true;
+  try {
+    await click(tab, "Torah text"); await click(tab, "Refresh reading"); await loaded(tab, "Genesis 1:1");
+    const first = verse(tab, "Genesis 1:1").locator(".study-hebrew");
+    for (const size of ["Standard", "Huge"] as const) {
+      const toolbar = tab.getByRole("navigation", { name: "Reading tools", exact: true });
+      await safe(() => toolbar.getByRole("button", { name: /^Text size:/ }).click());
+      await safe(() => toolbar.getByRole("group", { name: "Hebrew text size", exact: true }).getByRole("button", { name: new RegExp(`${size}$`) }).click());
+      await safe(() => tab.evaluate(async () => {
+        await document.fonts.ready; scrollTo(0, 0);
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      }));
+      const lines = await first.evaluate(node => {
+        const range = document.createRange(); range.selectNodeContents(node);
+        return new Set([...range.getClientRects()].filter(rect => rect.width > 0).map(rect => Math.round(rect.top))).size;
+      });
+      expect(lines).toBeGreaterThan(2);
+      expect(await tab.evaluate(() => innerWidth === 390 && innerHeight === 844 && document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      const readingText = await first.textContent();
+      await safe(() => tab.screenshot({ path: join(directory, `${size.toLowerCase()}-reading.png`) }));
+      await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).focus()); await safe(() => tab.keyboard.press("Tab"));
+      const start = tab.getByRole("button", { name: "Start", exact: true }); await ui(start).toBeFocused();
+      await safe(() => tab.keyboard.press("Enter"));
+      const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
+      await ui(dialog.getByRole("button", { name: "Close practice view", exact: true })).toBeVisible();
+      expect(await dialog.locator(".study-hebrew").textContent()).toBe(readingText);
+      expect(await dialog.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+      await safe(() => tab.screenshot({ path: join(directory, `${size.toLowerCase()}-lift.png`) }));
+      await safe(() => tab.keyboard.press("Escape")); await ui(dialog).toHaveCount(0); await ui(start).toBeFocused();
+    }
+  } finally {
+    longVerse = false;
+    if (await tab.getByRole("dialog").count()) await safe(() => tab.keyboard.press("Escape"));
+    const toolbar = tab.getByRole("navigation", { name: "Reading tools", exact: true });
+    await safe(() => toolbar.getByRole("button", { name: /^Text size:/ }).click());
+    await safe(() => toolbar.getByRole("group", { name: "Hebrew text size", exact: true }).getByRole("button", { name: /Standard$/ }).click());
+    await click(tab, "Refresh reading"); await loaded(tab, "Genesis 1:1");
+  }
 });
 
 it("keeps unsent typing and an unknown save intact while phrase controls change", async () => {

@@ -15,3 +15,10 @@ export function syntheticUiStudyPage(request: StudyRequest, english: "available"
     translation: { key: "jps2023", status: count === verses.length ? "available" : count === 0 ? "unavailable" : "partial" },
     chapters: plan.chapters.map(chapter => ({ ref: chapter.ref, sefariaUrl: `https://www.sefaria.org/${encodeURIComponent(chapter.book)}.${chapter.number}`, fetchedAt: Date.now(), hash: "c".repeat(64), editions: english === "unavailable" ? [MAM] : [MAM, JPS2023] })) };
 }
+
+// Repeated invented syllables exercise wrapping and scrolling without copying a passage.
+export function syntheticUiLongStudyPage(request: StudyRequest): StudyPage {
+  const page = syntheticUiStudyPage(request);
+  const hebrew = normalizeHebrew(`${Array.from({ length: 12 }, () => "אָ֑ב גַּ֖ד דָּ֥ה הַֽו").join(" ")} <span class="mam-kq"><span class="mam-kq-k">זָ</span><span class="mam-kq-q">[גַּ]</span></span><span class="mam-spi-samekh">{ס}</span>`);
+  return { ...page, verses: page.verses.map((verse, index) => index === 0 ? { ...verse, hebrew } : verse) };
+}
