@@ -204,3 +204,12 @@ GATE: lowered the consonant floor for this take only — proceeded because the e
 **Fix (run `vahavta-Bhuman-slow-v7`):** a final vowel or voiced continuant is now held, voiced, for the release, ending in at most `releaseBreathMs` (default 60) of the take's decay. Releases record `heldSamples`, `breathSamples` and the source `held-then-take-decay`. Awaiting Daniel's listening.
 
 **v7 verdict (Daniel):** "Still a little too much. But this is seriously getting so just better. Now it's just nitpicking." The default `releaseBreathMs` is now 30, and run `vahavta-Bhuman-slow-v8` is awaiting his listening.
+
+**Word flags on v8 (Daniel, on a private flag page that stores taps in its own database):** six final vowels ran long: אֱלֹהֶיךָ, לְבָבְךָ, יָדֶךָ, בֵּיתֶךָ, מִצְוֺתָי, מִצְרַיִם.
+- Five of the six have 130–360 ms of silence after them in the chant. Measured timing had folded that silence into the syllable, and the emitter adds its own breath there too, so the pause was counted twice.
+- Four of the six also had the v7 hold at full level.
+- לְבָבְךָ has no gap in the chant; it is probably the known vowel-to-vowel join with וּבְכׇל.
+
+**Fixes (run `vahavta-Bhuman-slow-v9`, pack `daniel-vahavta-siddur-sungtime4`):**
+- Measured syllables lose the chant's silent runs of 100 ms or more below −30 dBFS, keeping 80 ms for a closure. 3.69 s were removed; the timing record is `timing-daniel-vahavta-sung-3-silence-removed`.
+- A held vowel now fades linearly from the start of its hold through the breath.

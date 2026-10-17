@@ -193,6 +193,9 @@ test("phrase endings release into the rest: the take's own decay after a pause, 
   assert.ok(vowel.heldSamples > 0 && copied.dstEnd - copied.dstStart <= Math.round(0.03 * 24000));
   const split = map.releases.find(r => r.syllableId === copied.syllableId);
   assert.equal(split.source, "held-then-take-decay"); assert.equal(split.samples, split.heldSamples + split.breathSamples);
+  // The hold is one decay from its start through the breath, not a full-level tail.
+  const peak = (a, z) => speech.slice(a, z).reduce((m, s) => Math.max(m, Math.abs(s)), 0), h0 = vowel.dstEnd - vowel.heldSamples, q = vowel.heldSamples >> 2;
+  assert.ok(peak(vowel.dstEnd - q, vowel.dstEnd) < 0.6 * peak(h0 - q, h0), "held vowel fades from the start of its hold");
   const whole = json(build(recordFor(target, audio), target, audio, { releaseBreathMs: 150 }), "retime-map.json");
   assert.ok(whole.releases.some(r => r.source === "take-decay" && r.heldSamples === 0), "a full-length breath leaves nothing to hold");
   // The verse-final vowel has no pause after it in the take (the trailing room tone follows), so it

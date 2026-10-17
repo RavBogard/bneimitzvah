@@ -273,7 +273,12 @@ export function renderRetime(plan, sourceAtRate) {
   phones.forEach((p, i) => {
     const before = phones[i - 1], after = phones[i + 1];
     if (!before || before.dstEnd !== p.dstStart || before.srcEnd !== p.srcStart) fade(out, p.dstStart, p.dstEnd, n, "in");
-    if (p.kind === "release") fade(out, p.dstStart, p.dstEnd, p.dstEnd - p.dstStart, "out");
+    if (p.heldSamples) {
+      // A held vowel fades from the start of its hold through the take's breath, as one decay. At full
+      // level until the breath it was heard as the final vowel running long (Daniel, 2026-10-16).
+      const from = p.dstEnd - p.heldSamples, to = after && after.kind === "release" && after.dstStart === p.dstEnd ? after.dstEnd : p.dstEnd;
+      for (let i = from; i < to; i++) out[i] *= 1 - (i - from + 1) / (to - from);
+    } else if (p.kind === "release") { if (!before?.heldSamples) fade(out, p.dstStart, p.dstEnd, p.dstEnd - p.dstStart, "out"); }
     else if (p.releaseSamples) fade(out, p.dstStart, p.dstEnd, p.releaseSamples, "out");
     else if (!after || after.dstStart !== p.dstEnd || after.srcStart !== p.srcEnd) fade(out, p.dstStart, p.dstEnd, n, "out");
   });
