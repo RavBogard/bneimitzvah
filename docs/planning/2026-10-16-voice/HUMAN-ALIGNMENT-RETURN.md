@@ -118,3 +118,22 @@ Recorded as a **diction failure** for lane A on this passage. Two causes:
 - No further A tuning.
 - Next is B-human (Daniel's spoken V'ahavta), first on the engine timing.
 - Then on a human-timed target, with syllable durations measured from Daniel's sung V'ahavta. That variant changes the target timing only; notes and text stay the same. It is a benchmark condition, not an engine change.
+
+## Second real listening result: B-human (2026-10-16, private)
+
+**Run:** lane B-human on the full siddur V'ahavta (Deuteronomy 6:5–9 and Numbers 15:40–41), engine grid timing.
+- Source: Daniel's spoken take.
+- Alignment: the machine proposal, boundary rule `onset-20ms`, with spectral cuts at vowel-to-vowel joins between words.
+- Review: word-listening review `review-daniel-vahavta-words-1`. It is recorded as accepted for a diagnostic run: vowel-to-vowel joins are not tight by ear, which Daniel accepted as inherent to connected speech.
+- Retime: all 7 verses passed with no rejections. Warnings: 34 vowel stretches above 8× and 6 notes mostly consonant.
+- SoulX-SVC on the RTX 4070: 115 s of audio in 86 s wall time, including the model load; peak 2,419 MiB allocated.
+
+**Daniel's verdict:** "It sounds really really fake, but it is an improvement."
+
+**Reading:**
+- Native Hebrew input improves on lane A's foreign-phone diction.
+- The remaining fakeness is attributed provisionally to grid timing and large vowel stretches. This is not yet separated by experiment.
+
+**Measurement:** Daniel's sung V'ahavta runs about 71 s against the engine's 115 s for the same 196 syllables. Per verse it is 45–74% of engine length. Median sung syllables are 0.20–0.32 s, ranging 0.06–2.08 s, against the engine's near-constant 0.313 s. These come from a CTC alignment of singing, unreviewed.
+
+**Next condition:** a measured-timing target (same notes and text; syllable durations from the sung take), then B-human on it.
