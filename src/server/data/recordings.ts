@@ -31,11 +31,13 @@ export async function lock<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>,
 export async function asset<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: RecordingActor, assetId: string) {
   const [row] = await tx.select().from(t).where(and(scope(actor), eq(t.assetId, assetId))).for("update"); return row ?? null;
 }
-export async function insert<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: RecordingActor, descriptor: VerifiedRecordingDescriptor, createdAt: Date) {
-  return insertWithId(tx, actor, randomUUID(), descriptor, createdAt);
+/** One actual row at most: never acquire two independent identity locks. */
+export async function registrationRow<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: RecordingActor, assetId: string, id?: string): Promise<RecordingRow | null> {
+  const [row] = await tx.select().from(t).where(and(scope(actor), id ? or(eq(t.id, id), eq(t.assetId, assetId)) : eq(t.assetId, assetId))).limit(1).for("update");
+  return row ?? null;
 }
 /** Internal trusted composition only; an ID supplies no authority. */
-export async function insertWithId<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: RecordingActor, id: string, descriptor: VerifiedRecordingDescriptor, createdAt: Date) {
+export async function insertWithId<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: RecordingActor, id: string, descriptor: VerifiedRecordingDescriptor, createdAt: Date): Promise<RecordingRow | null> {
   const [row] = await tx.insert(t).values({ id, tenantId: actor.tenantId, studentId: actor.studentId, assetId: descriptor.assetId,
     contentSha256: descriptor.contentSha256, ...descriptor.media, state: "private", revision: 1, createdAt }).onConflictDoNothing().returning();
   return row ?? null;

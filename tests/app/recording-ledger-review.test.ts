@@ -59,7 +59,7 @@ test("anniversary crossing after actual creation/submission audit rolls back the
 });
 
 test("overlapping parent mode is denied before every recording lookup or registration attempt", async () => {
-  const f = await fixture(), selected = { ...f.selected, mode: "parent" as const }, calls = [vi.spyOn(data, "page"), vi.spyOn(data, "cursor"), vi.spyOn(data, "lock"), vi.spyOn(data, "insert")];
+  const f = await fixture(), selected = { ...f.selected, mode: "parent" as const }, calls = [vi.spyOn(data, "page"), vi.spyOn(data, "cursor"), vi.spyOn(data, "lock"), vi.spyOn(data, "insertWithId")];
   const request = f.request("/recording-review", { who: "multi", method: "POST" });
   expect(await denied(f.recordings.page(request, selected, randomUUID()))).toBe(403);
   expect(await denied(f.recordings.submit(request, selected, { recordingId: randomUUID(), expectedRevision: 1 }))).toBe(403);
