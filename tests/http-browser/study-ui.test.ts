@@ -216,7 +216,12 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and restores ke
       if (size === "Huge") {
         const stage = dialog.locator(".lift-stage");
         expect(await stage.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
-        await safe(() => stage.evaluate(node => { node.scrollTop = node.scrollHeight; }));
+        // Apparatus and the phrase legend follow the Hebrew. Center the actual
+        // final read word inside this stage instead of scrolling past it.
+        await safe(() => stage.evaluate(node => {
+          const words = node.querySelectorAll("[data-word-index]"), word = words[words.length - 1].getBoundingClientRect(), bounds = node.getBoundingClientRect();
+          node.scrollTop += (word.top + word.bottom - bounds.top - bounds.bottom) / 2;
+        }));
         const finalWord = dialog.locator("[data-word-index]").last(); await ui(finalWord).toBeVisible();
         const usable = await finalWord.evaluate(node => {
           const word = node.getBoundingClientRect(), stage = node.closest(".lift-stage")!.getBoundingClientRect(), dialog = node.closest("dialog")!.getBoundingClientRect();
