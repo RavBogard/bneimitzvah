@@ -10,6 +10,7 @@ vi.mock("@vercel/oidc", async importOriginal => ({ ...await importOriginal<typeo
 }));
 import * as oidc from "@vercel/oidc";
 import { createRuntimeMediaOidc, MEDIA_IDENTITY as p } from "../../src/server/media/runtime-oidc";
+import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 
 const instant = 1800000000000, scopeKey = Symbol.for("@vercel/request-context");
 function token(change: Record<string, unknown> = {}, header: unknown = { typ: "JWT", alg: "RS256", kid: "review" }) {
@@ -34,14 +35,18 @@ test("real public getContext preserves concurrent async request scopes and never
   } finally { storage.disable(); restoreScope(previous); }
 });
 
-test("context acquisition performs no credential file/process work and hostile context exceptions are closed", () => {
+test("context acquisition performs no credential file/process work and hostile context exceptions are closed", async () => {
+  const isolated = await isolatedEnv();
   const reads = vi.spyOn(fs, "readFileSync").mockImplementation(() => { throw Error("forbidden-file"); }), spawn = vi.spyOn(children, "spawn").mockImplementation(() => { throw Error("forbidden-child"); });
   let acquired: ReturnType<ReturnType<typeof createRuntimeMediaOidc>["acquire"]> | undefined;
   let failed: unknown;
   try {
     acquired = createRuntimeMediaOidc({ context: () => ({ headers: { "x-vercel-oidc-token": token() } }), now: () => instant }).acquire(); acquired.assertFresh();
     try { createRuntimeMediaOidc({ context: () => { throw Error("private-input-detail"); } }).acquire(); } catch (error) { failed = error; }
-  } finally { reads.mockRestore(); spawn.mockRestore(); }
+  } finally { reads.mockRestore(); spawn.mockRestore(); await isolated.cleanup(); }
+  // A process is never launched: the negative spy throws before any native
+  // spawn. Retain the same credential-free fixture discipline as child tests.
+  expect(Object.hasOwn(isolated.env, "VERCEL_OIDC_TOKEN")).toBe(false); expect(Object.hasOwn(isolated.env, "BLOB_READ_WRITE_TOKEN")).toBe(false);
   expect(acquired?.token).toBe(token()); expect(failed).toBeInstanceOf(Error); expect((failed as Error).message).toBe("media-credential-unavailable");
   expect(vi.mocked(oidc.getVercelOidcToken)).not.toHaveBeenCalled();
 });
