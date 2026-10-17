@@ -156,6 +156,7 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await ui(tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }), "Enter opens practice from the focused Start button").toBeVisible();
   await safe(() => tab.keyboard.press("Escape"));
   await ui(tab.getByRole("dialog")).toHaveCount(0);
+  await ui(tab.getByRole("button", { name: "Start", exact: true }), "Closing practice restores focus to Start").toBeFocused();
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await capture(tab, "workspace-child-confirmed-reading");
   await tab.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
