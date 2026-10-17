@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { normalizeEnglish, normalizeHebrew } from "../../src/server/study/normalize";
+import { projectStudyVerse } from "../../src/lib/hebrew/study-tokens";
 vi.mock("server-only", () => ({}));
 
 describe("synthetic study plaintext normalization", () => {
@@ -15,6 +16,42 @@ describe("synthetic study plaintext normalization", () => {
     expect(verse.text).toBe("אָב כְּתָב ג׃".normalize("NFC"));
     expect(verse.readingText).toBe("אָב קְרִי ג׃".normalize("NFC"));
     expect(verse.segments.find(segment => segment.kind === "alternative")).toEqual({ kind: "alternative", written: "כְּתָב".normalize("NFC"), read: "קְרִי".normalize("NFC") });
+  });
+  it("preserves the reviewed plain trivial form as identical written/read text and one spoken word", () => {
+    const form = "בָ֣\u034f", verse = normalizeHebrew(`אָב <span class="mam-kq-trivial">${form}</span> ג׃`);
+    expect(verse.text).toBe(`אָב ${form} ג׃`.normalize("NFC"));
+    expect(verse.readingText).toBe(verse.text);
+    expect(verse.segments.every(segment => segment.kind === "text")).toBe(true);
+    expect(verse.segments.map(segment => segment.kind === "text" ? segment.text : "").join("")).toBe(verse.text);
+    const projected = projectStudyVerse("Genesis 1:1", verse);
+    expect(projected.status).toBe("ready");
+    if (projected.status !== "ready") throw new Error("Synthetic trivial projection unavailable");
+    expect(projected.projection.words.map(word => word.text)).toEqual(["אָב", form.normalize("NFC"), "ג"]);
+    expect(projected.projection.words.map(word => word.index)).toEqual([0, 1, 2]);
+    expect(projected.projection.runs.every(run => run.kind === "text")).toBe(true);
+    expect(Object.isFrozen(verse.segments[1])).toBe(true);
+  });
+  it.each([
+    '<span class="mam-kq-trivial"></span>', '<span class="mam-kq-trivial"> </span>',
+    '<span class="mam-kq-trivial">[]</span>', '<span class="mam-kq-trivial">[בָ]</span>',
+    '<span class="mam-kq-trivial">Synthetic</span>', '<span class="mam-kq-trivial"><b>בָ</b></span>',
+    '<span class="mam-kq-trivial"><span>בָ</span></span>',
+    '<span class="mam-kq-trivial"><span class="mam-kq-k">בָ</span><span class="mam-kq-q">[גָ]</span></span>',
+    '<span class="mam-kq-trivial"><!-- hidden -->בָ</span>',
+    '<span class="mam-kq-trivial extra">בָ</span>', '<span class="mam-kq-trivial mam-kq-trivial">בָ</span>',
+    '<span class="mam-kq-trivial" title="synthetic">בָ</span>',
+    '<span class="mam-kq-trivial" onclick="throw()">בָ</span>', '<span class="mam-kq-trivial">בָ&#x202e;</span>',
+    '<span class="mam-kq-trivial">בָ\u0000</span>', '<span class="mam-kq-trivial">בָ\ud800</span>',
+    '<span class="mam-kq-trivial">בָ</span',
+  ])("rejects unreviewed trivial-wrapper shapes and attributes (%#)", input => {
+    expect(() => normalizeHebrew(`אָב ${input} ג׃`)).toThrow("Unsupported study markup");
+  });
+  it.each([
+    '<span class="mam-kq"><span class="mam-kq-k"></span><span class="mam-kq-q">[בָ]</span></span>',
+    '<span class="mam-kq"><span class="mam-kq-k">בָ</span><span class="mam-kq-q">[]</span></span>',
+    '<span class="mam-kq"><span class="mam-kq-q">[בָ]</span></span>',
+  ])("does not broaden exceptional empty/missing ketiv-qere behavior (%#)", input => {
+    expect(() => normalizeHebrew(`אָב ${input} ג׃`)).toThrow("Unsupported study markup");
   });
   it("separates internal/terminal paragraph markers and inverted nun from words", () => {
     const verse = normalizeHebrew('<span class="mam-spi-invnun"><b>׆</b></span>אָב<span class="mam-spi-samekh">{ס}</span>ג׃ <small><span class="mam-spi-pe">{פ}</span></small><br>');

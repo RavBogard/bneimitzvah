@@ -56,6 +56,14 @@ export function normalizeHebrew(input: unknown): HebrewVerse {
     if (note(el)) return;
     if (el.tagName === "span" && cls.length === 1) {
       const semantic = cls[0];
+      if (semantic === "mam-kq-trivial") {
+        // Reviewed MAM shape: one plain text form, not a two-sided alternative.
+        // Do not strip unknown/nested semantics or manufacture a second reading.
+        if (el.childNodes.length !== 1 || el.childNodes[0].nodeName !== "#text") invalid();
+        const text = plain((el.childNodes[0] as DefaultTreeAdapterMap["textNode"]).value, true);
+        if (!/[א-ת]/u.test(text) || /[\[\]]/.test(text)) invalid();
+        addText(text); return;
+      }
       if (semantic === "mam-kq") {
         const children = el.childNodes.filter(child => !(child.nodeName === "#text" && /^\s*$/.test((child as DefaultTreeAdapterMap["textNode"]).value)));
         if (children.length !== 2) invalid();
