@@ -67,8 +67,8 @@ for (const mobile of [false, true]) it(`reviews rich quiet import and reaches th
  await safe(() => review.getByRole("button", { name: "Import reviewed students", exact: true }).click());
  await ui(tab.getByRole("status").filter({ hasText: "2 student records created. No invitations were sent." })).toBeVisible();
  const after = await counts(); expect(after).toEqual({ ...before, student: before.student + 2, audit_event: before.audit_event + 2 }); expect(authorityPosts).toBe(0);
- await safe(() => tab.locator(".csv-workspace").getByRole("link", { name: "Student roster", exact: true }).click());
- await ui(tab.getByRole("heading", { name: "Student roster", level: 1, exact: true })).toBeVisible();
- await ui(tab.getByRole("button", { name: `Synthetic ${mobile ? "MobileIntake" : "DesktopIntake"}Matched`, exact: true })).toBeVisible();
+ await safe(() => tab.locator(".csv-workspace").getByRole("link", { name: "All students", exact: true }).click());
+ await ui(tab.getByRole("heading", { name: "Students", level: 1, exact: true })).toBeVisible();
+ await ui(tab.getByRole("button", { name: `Edit details for Synthetic ${mobile ? "MobileIntake" : "DesktopIntake"}Matched`, exact: true })).toBeVisible();
  expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true); await tab.context().close();
 });

@@ -484,3 +484,32 @@ No authority, privacy or double-send defect was found. Unchanged: fresh load plu
 - Daniel's look at the admin screens and the staff wording listed in slices 1–3.
 - Roster chips (tutor, parent invited, reading confirmed) need a roster summary field from the backend.
 - Nothing is pushed.
+
+
+## Admin redesign reconciled with the frozen roster contract (2026-10-17)
+
+**Order (Codex, COORDINATION.md "FROZEN roster contract"):** consume `origin/codex/quiet-roster-import-current` `cd8e102` when reconciling the admin work. Do not duplicate the backend or overwrite its parser changes. Migration 0019 is local only: no deploy, no production roster run, no invitations.
+
+**Frozen ref:** branch `design/song-session-admin-roster` at the commit that adds this note. It is a merge of `cd8e102` into `design/song-session-admin-main` (`28ced0a`), plus one test adaptation.
+
+**The merge:**
+- `workspace/api.ts`, `csv-import/api.ts` and every server, schema and migration file are taken exactly from `cd8e102`. That covers the strict old and rich DTO validators, `ImportMetadata`, the full intake headers and migration 0019.
+- One conflict, in `csv-import/workspace.tsx`, at the page header:
+  - Kept from my side: the nav, breadcrumb and step-card layout.
+  - Kept from `cd8e102`: its full CSV-format text, including the intake headers, and its auto-merged review additions (pending tutor proposals, missing second-parent rows, wider invalid-row wording).
+  - The lede now says "Nobody is invited or given access, and no reading or tutor is assigned", carrying cd8e102's "grants no account access" fact.
+- **Roster sheet compatibility, checked:** my edit sheet sends only the original student fields. The server (`students/validation.ts`) leaves `hebrewName` and `secondParentEmail` unchanged when they are omitted, so editing a student never clears intake data.
+  - Edge case, unchanged from `cd8e102`'s own roster: if a student's own email matches a stored second-parent email, the edit is refused with 403, and the sheet shows the generic "This change isn’t allowed any more…" line.
+- **One test adapted:** `quiet-roster-import-ui.test.ts` now uses the "All students" breadcrumb and the "Students" heading, and finds the imported student by its "Edit details for …" row action. Its import, count, no-authority and no-overflow assertions are unchanged.
+
+**Checks on this exact tree:**
+- Typecheck and `next build` pass.
+- Node: 208 passed. App tests: 840 passed, plus the 1 existing skip (two workers). `never-in-repo` passes.
+- All 24 browser files pass, one at a time, on a disposable WSL PostgreSQL 16, with migration 0019 applied only to that disposable database:
+  - quiet-roster-import-ui 2, admin-ui 2, workspace-ui 3, roster-controls-ui 7, invitation-management-ui 3;
+  - reading-ui 4, service-learning-ui 14, reading-preview-ui 7, study-ui 6, student-work-ui 10;
+  - lessons-ui 2, progress-ui 3, lesson-progress-privacy-ui 4, tutor-route-ui 4, modal-privacy-ui 2, service-modal-privacy-ui 3, portal-ui 7;
+  - browser 2, canonical-navigation 4, egress 1, production-denial 2, server-isolation 1, server-review 2, service-learning-http 1.
+- **Correction to the previous section:** it said "all 22 browser files" on `28ced0a`, but main also has `service-modal-privacy-ui.test.ts`, which was not run there. It passes here (3/3).
+
+Nothing is pushed, migrated or deployed. Daniel's look at the admin screens and the staff wording is still open.
