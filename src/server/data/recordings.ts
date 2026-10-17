@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, lt, or } from "drizzle-orm";
+import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction, StudentActor } from "../access/types";
 import type { PracticeActor } from "../practice/types";
@@ -13,8 +13,8 @@ const t = s.studentRecording;
 const scope = (actor: RecordingActor) => and(eq(t.tenantId, actor.tenantId), eq(t.studentId, actor.studentId));
 export const staff = (actor: RecordingActor) => actor.mode === "tutor" || actor.mode === "admin";
 function visible(actor: RecordingActor, due: boolean) {
-  return staff(actor) ? due ? eq(t.state, "unreadable") : eq(t.state, "submitted")
-    : due ? eq(t.state, "private") : or(eq(t.state, "private"), eq(t.state, "submitted"));
+  if (due) return sql`false`;
+  return staff(actor) ? eq(t.state, "submitted") : or(eq(t.state, "private"), eq(t.state, "submitted"));
 }
 export async function cursor<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: RecordingActor, id: string, due: boolean) {
   const [row] = await tx.select().from(t).where(and(scope(actor), eq(t.id, id), visible(actor, due))).for("share");

@@ -96,18 +96,31 @@ test("recording native guards force tenant integrity, private inserts, immutable
   expect((await f.owner(() => f.db.execute(sql`select relrowsecurity,relforcerowsecurity from pg_class where relname='student_recording'`))).rows).toEqual([{ relrowsecurity: true, relforcerowsecurity: true }]);
 });
 
-test("recording expiry hides submitted metadata and blocks registration/replay while due deletion remains authorized", async () => {
+test("recording expiry hides private and submitted metadata/cursors and blocks registration/replay while due deletion remains authorized", async () => {
   const f = await fixture(); let now = Date.parse("2028-01-02T05:59:59.999Z");
   const dependencies = { ...f.dependencies, now: () => now }, registrar = createStudentRecordingRegistrar(dependencies), recordings = createStudentRecordingService(dependencies);
   const value = descriptor(), initial = await registrar.register(f.recordingRequest(), f.selection, value); expect(initial.ok).toBe(true);
   if (!initial.ok) throw new Error("Synthetic registration failed");
+  const privateValue = descriptor(), privateRecord = await registrar.register(f.recordingRequest(), f.selection, privateValue); expect(privateRecord.ok).toBe(true);
+  if (!privateRecord.ok) throw new Error("Synthetic private registration failed");
   await recordings.submit(f.recordingRequest(), f.selection, { recordingId: initial.recording.id, expectedRevision: 1 });
-  expect((await recordings.page(f.recordingRequest(), f.selection)).entries).toHaveLength(1);
+  expect((await recordings.page(f.recordingRequest(), f.selection)).entries).toHaveLength(2);
+  const child = await f.runtime.practice.enter(f.request(f.path, { method: "POST" }), { studentId: f.selection.studentId });
+  const childRequest = () => f.request(f.path, { method: "POST", handle: child.handle }), childSelection = { ...f.selection, mode: "child-practice" as const };
   now++;
-  expect((await recordings.page(f.recordingRequest(), f.selection)).entries).toEqual([]);
+  for (const [request, selection] of [[f.recordingRequest(), f.selection], [childRequest(), childSelection], [f.request(f.path, { who: "admin" }), { ...f.selection, mode: "admin" as const }]] as const) {
+    expect(await recordings.page(request, selection)).toEqual({ ok: true, studentId: f.selection.studentId, mode: selection.mode, entries: [], nextCursor: null });
+    for (const id of [initial.recording.id, privateRecord.recording.id]) await expect(recordings.page(request, selection, id)).rejects.toMatchObject({ status: 404 });
+  }
   await expect(registrar.register(f.recordingRequest(), f.selection, value)).rejects.toMatchObject({ status: 404 });
+  await expect(registrar.register(f.recordingRequest(), f.selection, privateValue)).rejects.toMatchObject({ status: 404 });
   await expect(recordings.submit(f.recordingRequest(), f.selection, { recordingId: initial.recording.id, expectedRevision: 2 })).rejects.toMatchObject({ status: 404 });
+  await expect(recordings.submit(f.recordingRequest(), f.selection, { recordingId: privateRecord.recording.id, expectedRevision: 1 })).rejects.toMatchObject({ status: 404 });
   expect((await recordings.remove(f.recordingRequest(), f.selection, { recordingId: initial.recording.id, expectedRevision: 2 })).ok).toBe(true);
+  expect(await recordings.remove(childRequest(), childSelection, { recordingId: privateRecord.recording.id, expectedRevision: 1 })).toEqual({ ok: true, recording: { id: privateRecord.recording.id, revision: 2, state: "deleting" } });
+  const auditsBeforeNoop = await f.owner(() => f.db.select().from(s.auditEvent));
+  expect(await recordings.remove(childRequest(), childSelection, { recordingId: privateRecord.recording.id, expectedRevision: 2 })).toEqual({ ok: true, recording: { id: privateRecord.recording.id, revision: 2, state: "deleting" } });
+  expect(await f.owner(() => f.db.select().from(s.auditEvent))).toEqual(auditsBeforeNoop);
 });
 
 test("recording linked-child authority binds the exact context and opaque cursors reveal no private staff rows", async () => {

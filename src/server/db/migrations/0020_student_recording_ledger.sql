@@ -77,7 +77,7 @@ BEGIN
       OR public.portal_practice_anniversary_due(NEW.ceremony_date, actual_now) THEN
     UPDATE public.student_recording SET state = 'deleting', revision = revision + 1,
       deletion_requested_at = greatest(actual_now, created_at, submitted_at)
-      WHERE tenant_id = OLD.tenant_id AND student_id = OLD.id AND state = 'submitted';
+      WHERE tenant_id = OLD.tenant_id AND student_id = OLD.id AND state IN ('private','submitted');
   END IF;
   RETURN NEW;
 END $$;

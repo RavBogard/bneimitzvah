@@ -47,8 +47,8 @@ export function createStudentRecordingService<Q extends PgQueryResultHKT>(input:
       return authorized(request, selection, false, "read", async (tx, actor, _student, fresh) => {
         let due = fresh().due;
         // At most one anniversary crossing can occur in an ordinary monotonic
-        // request. Requery the newly visible set so retained private rows aren't
-        // lost behind a page of recordings that expired while SQL was awaited.
+        // request. Requery the newly visible set so neither private nor submitted
+        // metadata survives an anniversary crossing while SQL was awaited.
         for (let attempt = 0; attempt < 2; attempt++) {
           const cursor = afterId ? await data.cursor(tx, actor, afterId, due) : undefined;
           let latest = fresh().due;
