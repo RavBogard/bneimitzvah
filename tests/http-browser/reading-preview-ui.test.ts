@@ -38,7 +38,7 @@ async function page(role: "admin" | "tutor" | "student" = "admin") {
 }
 async function reading(tab: Page, role = "admin") {
   await safe(() => tab.goto(role === "admin" ? `/workspace/admin/students/${fixture.student.id}/reading` : "/workspace/tutor", { waitUntil: "domcontentloaded" }));
-  if (role === "tutor") await safe(() => tab.getByLabel("Student", { exact: true }).selectOption(fixture.student.id));
+  if (role === "tutor") await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible();
 }
 async function assertDesktopStudyColumns(tab: Page) {
@@ -152,7 +152,7 @@ it("clears preview text during access revalidation and fences a late response, w
     release(); await ui.poll(() => delivered).toBe(true); await ui(panel(tab).locator(".study-verses")).toHaveCount(0);
   } finally { release(); await tab.unroute("**/reading/preview/page"); }
   expect((await api(tab, `/api/students/${fixture.student.id}/reading/preview/prepare`, { mode: "parent", kind: "torah", source: "calendar" })).status).toBe(400);
-  await safe(() => tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" })); await safe(() => tab.getByLabel("Child", { exact: true }).selectOption(fixture.student.id));
+  await safe(() => tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" })); await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.locator(".reading-current-assignment")).toBeVisible(); expect(await tab.getByRole("button", { name: "Preview custom references", exact: true }).count()).toBe(0);
 });
 

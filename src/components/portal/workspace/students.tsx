@@ -4,14 +4,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { workspaceApi, type Student } from "./api";
-import { RequireRole, statusOf, useWorkspace } from "./provider";
-import { ReadingPanel } from "./reading";
+import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "./provider";
+import { ceremonyCountdown, ReadingPanel } from "./reading";
 import { reconcileSelectedStudent } from "./student-label";
 
-export function StudentWorkspace({ mode }: { mode: "student" | "parent" | "tutor" }) {
-  return <RequireRole role={mode}><StudentSelection mode={mode} /></RequireRole>;
+export function StudentWorkspace({ mode, studentId }: { mode: "student" | "parent" | "tutor"; studentId?: string }) {
+  return <RequireRole role={mode}><StudentSelection key={studentId ?? ""} mode={mode} routeStudentId={studentId} /></RequireRole>;
 }
-function StudentSelection({ mode, switching = false }: { mode: "student" | "parent" | "tutor"; switching?: boolean }) {
+
+/** A student as a card: name first, then the date and how far away it is. */
+function StudentCardBody({ row }: { row: Student }) {
+  const countdown = ceremonyCountdown(row.ceremonyDate);
+  return <><span className="student-card-name"><bdi dir="auto">{row.firstName} {row.lastName}</bdi></span>
+    <span className="student-card-date"><time dateTime={row.ceremonyDate}>{countdown.label}</time>{countdown.phrase && <span className="student-card-days">{countdown.phrase}</span>}</span></>;
+}
+
+function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "student" | "parent" | "tutor"; switching?: boolean; routeStudentId?: string }) {
   const { epoch, context, busy, selectChild, registerReload, guardDeparture } = useWorkspace();
   const [rows, setRows] = useState<Student[]>([]), [selected, setSelected] = useState<string | null>(null), [error, setError] = useState(false), [loading, setLoading] = useState(true), [more, setMore] = useState(false);
   const [retry, setRetry] = useState(0), gate = useRef(false), sequence = useRef(0);
@@ -32,7 +40,8 @@ function StudentSelection({ mode, switching = false }: { mode: "student" | "pare
         const known = previous.find(row => row.id === selectedRef.current);
         return known ? reconcileSelectedStudent(values, selectedRef.current, known) : values;
       }); setMore(page.length === 100);
-      setSelected(previous => previous && values.some(row => row.id === previous) ? previous : mode === "student" && values.length === 1 ? values[0].id : null);
+      // A route id is only honoured when it is in this account's authorized list.
+      setSelected(previous => previous && values.some(row => row.id === previous) ? previous : routeStudentId && values.some(row => row.id === routeStudentId) ? routeStudentId : mode === "student" && values.length === 1 ? values[0].id : null);
     } catch (error) { if (!request.signal.aborted && turn === sequence.current) { setError(true); throw error; } }
     finally { if (!request.signal.aborted && turn === sequence.current) setLoading(false); }
   }, [mode]);
@@ -54,11 +63,16 @@ function StudentSelection({ mode, switching = false }: { mode: "student" | "pare
       : <><ul className="student-selection-list">{rows.map(row => <li key={row.id}><button className="button-secondary" disabled={busy || context?.studentId === row.id} onClick={() => void selectChild(row.id)}>Switch practice to <bdi dir="auto">{row.firstName} {row.lastName}</bdi></button></li>)}</ul>{more && <button className="button-text" disabled={busy || paging} onClick={() => void loadMore()}>{paging ? "Loading children…" : "Load more children"}</button>}</>}
   </section>;
   const heading = mode === "student" ? "Your assigned reading" : mode === "parent" ? "Your children’s readings" : "Your assigned students";
-  return <section className="role-workspace"><h1 className={mode === "student" ? "sr-only" : undefined}>{heading}</h1>
-    {mode !== "student" && <p>{mode === "parent" ? "Choose a child to view their reading. Entering child practice is a separate action." : "Choose an assigned student to view their confirmed reading."}</p>}
+  const focused = Boolean(routeStudentId);
+  return <section className={`role-workspace${focused ? " role-workspace-focused" : ""}`}><h1 className="sr-only">{heading}</h1>
+    {mode !== "student" && !focused && <p className="selection-lede">{mode === "parent" ? "Choose a child to see their reading." : "Who are you teaching today?"}</p>}
     {loading ? <p role="status">Loading available students…</p> : error ? <div role="alert"><p>Students couldn’t be loaded. No previous selection is being shown.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload students</button></div>
       : !rows.length ? <p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p>
-        : <>{(mode !== "student" || rows.length !== 1) && <><label htmlFor="workspace-student">{mode === "parent" ? "Child" : "Student"}</label><select id="workspace-student" value={selected ?? ""} onChange={event => { const id = event.target.value || null; void guardDeparture().then(leave => { if (leave) setSelected(id); }); }}><option value="">Choose a student</option>{rows.map(row => <option key={row.id} value={row.id}>{row.firstName} {row.lastName} — {row.ceremonyDate}</option>)}</select>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
+        : <>{(mode !== "student" || rows.length !== 1) && <><ul className={`student-cards${focused || selected ? " student-cards-compact" : ""}`} aria-label={mode === "parent" ? "Child" : "Student"}>{rows.map(row => <li key={row.id}>
+            {mode === "tutor" ? <WorkspaceLink href={`/workspace/tutor/${row.id}`} className="student-card" data-student-id={row.id} aria-current={selected === row.id ? "page" : undefined}><StudentCardBody row={row} /></WorkspaceLink>
+              : <button type="button" className="student-card" data-student-id={row.id} aria-pressed={selected === row.id} onClick={() => { void guardDeparture().then(leave => { if (leave) setSelected(row.id); }); }}><StudentCardBody row={row} /></button>}
+          </li>)}</ul>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
+          {focused && !selected && <div className="workspace-state"><h2>Student not found</h2><p>This student isn’t in your list. Choose one of your students above.</p></div>}
           {selected && <ReadingPanel mode={mode} studentId={selected} onStudentReload={reconcileStudent} />}</>}
   </section>;
 }

@@ -122,8 +122,12 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await ui(adminTab.getByRole("link", { name: "CC-BY-SA-4.0", exact: true })).toBeVisible(); await ui(adminTab.getByRole("link", { name: "CC-BY-NC-4.0", exact: true })).toBeVisible();
   expect(await adminTab.locator(".study-credits a").evaluateAll(links => links.every(link => (link as HTMLAnchorElement).protocol === "https:" && /^(www\.sefaria\.org|he\.wikisource\.org|jps\.org|creativecommons\.org)$/.test((link as HTMLAnchorElement).hostname) && link.getAttribute("rel")?.includes("noopener")))).toBe(true);
   await capture(adminTab, "study-admin-partial-desktop");
-  const tutor = await page("tutor"); await navigate(tutor, "/workspace/tutor"); await safe(() => tutor.getByLabel("Student", { exact: true }).selectOption(fixture.student.id)); await loaded(tutor, "Genesis 1:1");
-  await safe(() => tutor.getByRole("link", { name: "Parent", exact: true }).click()); await safe(() => tutor.getByLabel("Child", { exact: true }).selectOption(fixture.student.id)); await loaded(tutor, "Genesis 1:1");
+  const tutor = await page("tutor"); await navigate(tutor, "/workspace/tutor"); await safe(() => tutor.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(tutor, "Genesis 1:1");
+  expect(new URL(tutor.url()).pathname).toBe(`/workspace/tutor/${fixture.student.id}`); // A stable page per student.
+  await navigate(tutor, `/workspace/tutor/${crypto.randomUUID()}`); await ui(tutor.getByRole("heading", { name: "Student not found", exact: true })).toBeVisible();
+  expect(await tutor.locator(".study-verses").count()).toBe(0); // A route id outside the tutor's list loads nothing.
+  await navigate(tutor, `/workspace/tutor/${fixture.student.id}`); await loaded(tutor, "Genesis 1:1");
+  await safe(() => tutor.getByRole("link", { name: "Parent", exact: true }).click()); await safe(() => tutor.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(tutor, "Genesis 1:1");
   expect(await tutor.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0);
   const learner = await page("student", true); await navigate(learner, "/workspace/student"); await loaded(learner, "Genesis 1:1"); expect(await learner.getByLabel("Student", { exact: true }).count()).toBe(0);
   studentTab = learner;
@@ -265,8 +269,8 @@ it("keeps unsent typing and an unknown save intact while phrase controls change"
 });
 
 it("discards held old-child text after a switch, keeps another tab independent, and clears text after relationship revocation", async () => {
-  const tab = await page("tutor", true); await navigate(tab, "/workspace/parent"); await safe(() => tab.getByLabel("Child", { exact: true }).selectOption(fixture.student.id)); await click(tab, "Enter child practice"); await loaded(tab, "Genesis 1:1");
-  const other = await tab.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => other.getByLabel("Child", { exact: true }).selectOption(fixture.student.id)); await click(other, "Enter child practice"); await loaded(other, "Genesis 1:1");
+  const tab = await page("tutor", true); await navigate(tab, "/workspace/parent"); await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await click(tab, "Enter child practice"); await loaded(tab, "Genesis 1:1");
+  const other = await tab.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => other.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await click(other, "Enter child practice"); await loaded(other, "Genesis 1:1");
   await colorVerse(tab, "Genesis 1:1"); await setColors(tab, false); // Remembered for this child only.
   const pattern = new RegExp(`/api/students/${fixture.student.id}/study-text\\?`); let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route(pattern, async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });

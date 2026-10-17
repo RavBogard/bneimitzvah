@@ -61,3 +61,15 @@ When the frozen commit is ready, reconcile `scripts/repo-policy.mjs` with voice'
 ## Frozen commit
 
 `f345972` on `design/song-session-student`: the Song session student surface, font, tests, DESIGN.md and this note. Not pushed, merged or deployed.
+
+## Phase 2, slice 1: tutor daily path (2026-10-16)
+
+Daniel said "Continue" after the Phase 1 freeze. The two student-wording calls stay as built and flagged.
+
+- **Tutor home:** "Who are you teaching today?" student cards replace the dropdown. Each card shows the name, ceremony date and countdown. Parent child selection uses the same cards as buttons.
+- **Stable page per student:** `/workspace/tutor/<studentId>`. A route id is honoured only if it is in the tutor's authorized list. Otherwise the page shows "Student not found" and loads nothing; the server still authorizes every read. The other students sit in a compact chip strip for back-to-back lessons.
+- **Tutor reading:** the Song session hero, toolbar and lifted line, plus a "Change verses" jump to the editor. Staff assignment details stay, and "Needs review" is a marigold chip instead of red text.
+- **Role nav:** stays current on per-student pages.
+- **Tests:** card selection is scoped to the "Student" or "Child" list so a role switch can't race. A new browser check covers the per-student route and a foreign id.
+- **Checks:** typecheck passes; app tests 685 passed, 1 existing skip; repository guard passes. Browser files reading, study, student-work, workspace, roster-controls, reading-preview, service-learning and portal all pass, run one at a time.
+- **Next slices:** the reading editor as a sheet where the preview is the picker, with one confirm per task and the server-side review binding unchanged. Then service parts and notes as tabs.

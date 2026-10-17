@@ -10,11 +10,13 @@ import { useReadingPrefs } from "../reading-prefs";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
 
 export type StudyReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
-export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderWork, renderActiveWork, onPage, learner = false, liftHandle }: {
+export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderWork, renderActiveWork, onPage, learner = false, liftHandle, songSession = learner }: {
   baseline: Assigned | null; register(value: StudyReload): () => void; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; onKindChange(kind: StudyKind): void;
   guardDeparture?(): Promise<boolean>; serviceHref?: string; renderWork?(kind: StudyKind, verseRef: string): ReactNode; renderActiveWork?(): ReactNode; onPage?(kind: StudyKind, offset: number, signal: AbortSignal): Promise<void>;
   /** Students and child practice see the reading without status or provenance prose. */
   learner?: boolean; liftHandle?: MutableRefObject<((index: number) => void) | null>;
+  /** The Song session reading: English follows the remembered toolbar preference. */
+  songSession?: boolean;
 }) {
   const { readStudy, summary } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
   const [lift, setLift] = useState<{ page: StudyPage; index: number } | null>(null);
@@ -81,7 +83,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {renderActiveWork?.()}
     </div> : current.page && <>
       <ol className={`study-verses${renderWork ? " study-verses-with-work" : ""}`} start={current.page.offset + 1}>{current.page.verses.map((verse,index) => {const position=aliyahPosition(kind,assignment!.aliyahStarts,assignment!.verses,verse.ref);return <li key={verse.ref}>{position && (position.startsHere || index===0) && <p className="student-aliyah">Aliyah {position.number}{position.startsHere?" starts here":" · continued from the previous text page"}</p>}<AnnotatedStudyVerse key={JSON.stringify([summary.sessionBinding, key, kind, current.page!.offset, verse.ref])} verse={verse} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup}
-        number={current.page!.offset + index + 1} learner={learner} showEnglish={learner ? prefs.translation : true} onLift={() => setLift({ page: current.page!, index })} />{renderWork?.(kind, verse.ref)}</li>;})}</ol>
+        number={current.page!.offset + index + 1} learner={learner} showEnglish={songSession ? prefs.translation : true} onLift={() => setLift({ page: current.page!, index })} />{renderWork?.(kind, verse.ref)}</li>;})}</ol>
       {!learner && kind==="torah" && assignment!.aliyahStarts===null && <p className="field-help">Aliyah boundaries have not been recorded for this assignment.</p>}
       {learner ? !single && <p className="study-page-position">Verses {current.page.offset + 1}–{current.page.offset + current.page.verses.length} of {current.page.totalVerses}</p>
         : <p role="status">Verses {current.page.offset + 1}–{current.page.offset + current.page.verses.length} of {current.page.totalVerses}. {current.page.translation.status === "partial" ? "The selected English edition is missing for some verses." : current.page.translation.status === "unavailable" ? "The selected English edition is unavailable on this page." : "Selected English edition available."}</p>}

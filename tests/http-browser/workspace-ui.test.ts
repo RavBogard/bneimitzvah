@@ -137,7 +137,7 @@ it("creates and edits a real roster record, blocks stale409 overwrite and leaves
 
 it("keeps sibling tab handles isolated, rejects a copied practice URL and discards delayed old-child reads after switching", async () => {
   const tab = await page(); await signIn(tab, "pg-tutor@example.test"); await navigate(tab, "/workspace/parent");
-  await safe(() => tab.getByLabel("Child", { exact: true }).selectOption(fixture.student.id));
+  await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.getByRole("heading", { name: "Synthetic Learner", exact: true })).toBeVisible();
   const copied = await tab.context().newPage(); await navigate(copied, `/workspace/practice/${fixture.student.id}`);
   await ui(copied.getByLabel("Child", { exact: true })).toBeVisible();
@@ -164,7 +164,7 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await capture(tab, "workspace-child-confirmed-reading-zoom");
   await tab.evaluate(() => { document.documentElement.style.fontSize = ""; });
   await tab.setViewportSize({ width: 1440, height: 1000 });
-  await safe(() => copied.getByLabel("Child", { exact: true }).selectOption(sibling.id)); await safe(() => copied.getByRole("button", { name: "Enter child practice", exact: true }).click());
+  await safe(() => copied.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click()); await safe(() => copied.getByRole("button", { name: "Enter child practice", exact: true }).click());
   await ui(copied.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route(`**/api/students/${fixture.student.id}/reading?mode=child-practice`, async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
@@ -185,14 +185,14 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await ui(tab.locator("#workspace-main").getByText("You’re back in your read-only parent view.", { exact: true })).toBeVisible();
   await ui(copied.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   await safe(() => tab.getByRole("link", { name: "Tutor", exact: true }).click());
-  await safe(() => tab.getByLabel("Student", { exact: true }).selectOption(fixture.student.id));
+  await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.getByText("Genesis 1:1-3", { exact: true })).toBeVisible();
   expect(await tab.locator("#workspace-main").getByText("You’re back in your read-only parent view.", { exact: true }).count()).toBe(0);
   expect(await tab.getByRole("button", { name: "Enter child practice", exact: true }).count()).toBe(0);
   // A real exit response arriving after role navigation must neither announce
   // parent mode nor send the active tutor back to the parent workspace.
   await safe(() => tab.getByRole("link", { name: "Parent", exact: true }).click());
-  await safe(() => tab.getByLabel("Child", { exact: true }).selectOption(fixture.student.id));
+  await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await safe(() => tab.getByRole("button", { name: "Enter child practice", exact: true }).click());
   await ui(tab.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
   let finishExit!: () => void, exitHeld = false, exitDelivered = false;
@@ -208,7 +208,7 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await safe(() => tab.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))));
   await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/workspace/tutor`);
   expect(await tab.locator("#workspace-main").getByText(/read-only parent view|server closure could not be confirmed/).count()).toBe(0);
-  await safe(() => tab.getByLabel("Student", { exact: true }).selectOption(fixture.student.id));
+  await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.getByText("Genesis 1:1-3", { exact: true })).toBeVisible();
   await capture(tab, "workspace-tutor-reading");
 });

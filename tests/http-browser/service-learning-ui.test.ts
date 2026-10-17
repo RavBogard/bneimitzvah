@@ -39,7 +39,7 @@ async function page(role: "admin" | "tutor" | "student", mobile = false) {
 }
 async function workspace(tab: Page, role: "admin" | "tutor" | "student" | "parent") {
   await safe(() => tab.goto(role === "admin" ? `/workspace/admin/students/${fixture.student.id}/reading` : `/workspace/${role}`, { waitUntil: "domcontentloaded" }));
-  if (role === "tutor" || role === "parent") await safe(() => tab.getByLabel(role === "parent" ? "Child" : "Student", { exact: true }).selectOption(fixture.student.id));
+  if (role === "tutor" || role === "parent") await safe(() => tab.getByLabel(role === "parent" ? "Child" : "Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(panel(tab).getByRole("heading", { name: "Service parts", exact: true })).toBeVisible();
   await ui(panel(tab).getByText("Checking assigned service parts…", { exact: true })).toBeHidden();
 }

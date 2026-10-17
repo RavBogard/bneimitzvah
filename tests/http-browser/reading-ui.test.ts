@@ -98,7 +98,7 @@ it("lets an admin review actual calendar choices, confirm once and replace only 
 
 it("retains a tutor draft during visible access revalidation, invalidates edited/stale reviews and never retries an uncertain confirmation", async () => {
   const tab = await page("tutor", true); await navigate(tab, "/workspace/tutor");
-  await safe(() => tab.getByLabel("Student", { exact: true }).selectOption(fixture.student.id)); await custom(tab, "Genesis 1:1-3");
+  await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await custom(tab, "Genesis 1:1-3");
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }); });
   try {
@@ -123,7 +123,7 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
     await ui(assignment.locator(".reading-review")).toContainText("Needs review with your tutor or rabbi");
     await ui(assignment.locator(".reading-review")).toBeVisible();
   }
-  await ui(tab.getByLabel("Student", { exact: true }).locator("option:checked")).toHaveText("Synthetic Learner — 2027-01-09");
+  await ui(tab.getByLabel("Student", { exact: true }).locator('[aria-current="page"]')).toContainText(/Synthetic Learner\s*Sat, Jan 9, 2027/);
   await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:4-5")); expect(await tab.getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
   await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
@@ -134,7 +134,7 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
   await click(tab, "Reload current reading"); await click(tab, "Prepare reading review"); await capture(tab, "reading-tutor-prepared-mobile");
   await click(tab, "Confirm assigned reading");
   await ui(main(tab).getByText("Reading confirmed and reloaded from the server. The assignment above is current.", { exact: true })).toBeVisible();
-  await ui(tab.getByLabel("Student", { exact: true }).locator("option:checked")).toHaveText("Synthetic Learner — 2027-01-09");
+  await ui(tab.getByLabel("Student", { exact: true }).locator('[aria-current="page"]')).toContainText(/Synthetic Learner\s*Sat, Jan 9, 2027/);
   await capture(tab, "reading-tutor-confirmed-mobile");
   await custom(tab, "Genesis 1:6-7"); await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
   let mutations = 0;
@@ -162,7 +162,7 @@ it("handles an empty calendar without invention and exposes no editor in parent 
   await ui(tab.getByText("No haftarah was returned for this date. Use custom references if appropriate.", { exact: true })).toBeVisible();
   await custom(tab, "Isaiah 1:1-2"); await click(tab, "Prepare reading review"); await click(tab, "Confirm assigned reading");
   await ui(tab.locator(".confirmed-reading").getByText("Isaiah 1:1-2", { exact: true })).toBeVisible();
-  const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).selectOption(fixture.student.id));
+  const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(parent.getByRole("heading", { name: "Synthetic Learner", level: 2, exact: true })).toBeVisible(); expect(await parent.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0);
   expect((await api(parent, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "parent", ranges: ["Genesis 1:1"] })).status === 400).toBe(true);
   await click(parent, "Enter child practice"); await ui(parent.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();

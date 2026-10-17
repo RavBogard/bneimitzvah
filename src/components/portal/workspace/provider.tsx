@@ -257,7 +257,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
         <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readWork, readServiceMetadata, readServiceUnit, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload }}>
-          {summary.roles.length > 1 && <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>}
+          {summary.roles.length > 1 && <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] || pathname.startsWith(`${rolePaths[role]}/`) ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>}
           {visibleNotice && <p className="workspace-notice" role="status">{visibleNotice}</p>}
           {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}
           {children}
@@ -267,9 +267,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   </div>;
 }
 
-export function WorkspaceLink({ href, children }: { href: string; children: ReactNode }) {
+export function WorkspaceLink({ href, children, ...rest }: { href: string; children: ReactNode } & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "onClick">) {
   const { guardDeparture } = useWorkspace(), router = useRouter();
-  return <Link href={href} onClick={event => { if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); void guardDeparture().then(leave => { if (leave) router.push(href); }); }}>{children}</Link>;
+  return <Link {...rest} href={href} onClick={event => { if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return; event.preventDefault(); void guardDeparture().then(leave => { if (leave) router.push(href); }); }}>{children}</Link>;
 }
 
 export function RequireRole({ role, children }: { role: keyof typeof rolePaths; children: ReactNode }) {
