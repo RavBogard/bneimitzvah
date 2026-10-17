@@ -8,6 +8,7 @@ import { authRouteMethods } from "../../src/server/http/auth";
 import { portalRouteMethods } from "../../src/server/http/portal";
 import { serviceLearningRouteMethods } from "../../src/server/http/service-learning";
 import { studentWorkRouteMethods } from "../../src/server/http/student-work";
+import { progressRouteMethods } from "../../src/server/http/progress";
 import { closeNextDevelopment } from "./next-lifecycle";
 
 export const BROWSER_PORT = 3187;
@@ -88,7 +89,7 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope) {
       const request = safeRequest(req);
       if (!request) { await send(res, new Response(null, { status: 400 })); return; }
       const pathname = new URL(request.url).pathname;
-      if (!authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname)) { await nextHandler(req, res); return; }
+      if (!authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname)) { await nextHandler(req, res); return; }
       await send(res, await dispatch(request));
     } catch { if (!res.headersSent) await send(res, new Response(null, { status: 503 })); else res.destroy(); }
   });
