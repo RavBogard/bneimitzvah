@@ -63,7 +63,8 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
   }, [fetchFirst]);
   const discardAll = useCallback(() => {
     generation.current++; writeRequest.current?.abort(); writeRequest.current = null; setDraft(null); setPending(null); setConfirmDelete(false); setNotice(""); setListNotice("");
-    departure.current?.(true); departure.current = null; setLeaving(false); clearList();
+    // Cleanup cannot grant the navigation that was waiting for a user decision.
+    departure.current?.(false); departure.current = null; setLeaving(false); clearList();
   }, [clearList]);
   useLayoutEffect(() => register({ clear: clearList, reload }), [register, clearList, reload]);
   useLayoutEffect(() => registerWork({
