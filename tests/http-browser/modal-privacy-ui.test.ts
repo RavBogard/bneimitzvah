@@ -73,7 +73,11 @@ it("conceals the sole departure modal during a held access check, then resumes t
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   await safe(() => tab.keyboard.press("Escape")); await ui(editor(tab)).toBeHidden();
   await ui(tab.getByRole("button", { name: "Change verses", exact: true })).toBeFocused();
-  await ui(tab.locator(".verse-work").first().getByRole("textbox")).toHaveValue(draft);
+  // Revalidation remounts VerseTools with its default read-only draft stream;
+  // reselect the note stream before testing the coordinator's retained text.
+  const notePanel = tab.locator(".verse-work").first();
+  await safe(() => notePanel.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  await ui(notePanel.getByRole("textbox")).toHaveValue(draft);
   await click(tab, "Change verses"); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   expect(writes).toBe(0); await tab.unroute("**/api/session");
 });
