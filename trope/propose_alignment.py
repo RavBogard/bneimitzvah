@@ -6,10 +6,13 @@ r"""Machine-proposed phone boundaries for one spoken take (chant-human-alignment
 
 CTC forced alignment of the target's exact phone sequence (the identity map's bPhones, in Phonikud IPA) with
 facebook/wav2vec2-xlsr-53-espeak-cv-ft (Apache-2.0; multilingual IPA phone recognizer), pinned by revision,
-via torchaudio.functional.forced_align. CTC emits peaky spans (one or a few 20 ms frames per phone); the
-boundary between two phones is placed at the midpoint between one span's end and the next span's start, so
-the proposal covers the take contiguously. A gap of at least --pause seconds at a word boundary becomes a
-proposed pause. Every boundary is a proposal: reviewed stays null, so trope/human-retime.mjs refuses the record
+via torchaudio.functional.forced_align. CTC emits peaky spans (one or a few 20 ms frames per phone) near a
+sound's start. With --boundary onset (default) the boundary between two phones is the next span's start plus
+--onset-offset; the older midpoint rule put boundaries audibly too early (Daniel's 2026-10-16 listening:
+word endings clipped, the next word starting with the previous word's sound, worst at doubled consonants and
+vowel-initial words). A gap of at least --pause seconds at a word boundary becomes a proposed pause, whose
+edges, like the verse's first and last edges, follow the loudness (--edge-db above the clip's noise floor;
+the first edge looks back at most --lead-back seconds). The proposal covers the take contiguously. Every boundary is a proposal: reviewed stays null, so trope/human-retime.mjs refuses the record
 until a person reviews it. Nothing here claims alignment accuracy.
 
 Writes the record and, beside it, <out>.scores.json: per phone the CTC span and mean log-probability, and per
@@ -42,6 +45,10 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--revision", default="2c733782da5604684829819a5eb744c193fe9398")
     ap.add_argument("--pause", type=float, default=0.25)
+    ap.add_argument("--boundary", choices=["onset", "midpoint"], default="onset")
+    ap.add_argument("--onset-offset", type=float, default=0.015)
+    ap.add_argument("--edge-db", type=float, default=12.0)
+    ap.add_argument("--lead-back", type=float, default=0.25)
     ap.add_argument("--meta", required=True, help="JSON with alignmentId, sampleId, speakerId, takeNumber, consentRecordId, consentScope, targetReviewRecordId")
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
@@ -90,17 +97,36 @@ def main():
     logp = emission[0]
 
     # Contiguous proposal in seconds within the clip, then original sample indices.
-    edges = [spans[0].start * frame_s]
+    # Loudness in 10 ms frames over the clip, against the clip's own noise floor (10th percentile).
+    seg = x[s0:s1]
+    hop = int(0.01 * rate)
+    db = np.array([20 * np.log10(np.sqrt(np.mean(seg[i:i + hop] ** 2)) + 1e-9) for i in range(0, len(seg) - hop, hop)])
+    floor = float(np.percentile(db, 10))
+    loud = lambda t: db[min(len(db) - 1, max(0, int(t / 0.01)))] > floor + a.edge_db
+    def fade_out(t, limit):   # forward from t while still sounding, never past limit
+        while t + 0.01 < limit and loud(t):
+            t += 0.01
+        return min(t, limit)
+    def fade_in(t, limit):    # backward from t while still sounding, never before limit
+        while t - 0.01 > limit and loud(t - 0.01):
+            t -= 0.01
+        return max(t, limit)
+    clip_s = clip16.shape[1] / 16000
+    edges = [fade_in(spans[0].start * frame_s, max(0.0, spans[0].start * frame_s - a.lead_back))]
     events = []
     for i in range(1, len(spans)):
         prev_end, nxt = spans[i - 1].end * frame_s, spans[i].start * frame_s
         word_boundary = tokens[i]["word"] != tokens[i - 1]["word"]
         if word_boundary and nxt - prev_end >= a.pause:
-            events.append((prev_end + 0.04, nxt - 0.04))
-            edges.append(("pause", prev_end + 0.04, nxt - 0.04))
-        else:
-            edges.append((prev_end + nxt) / 2)
-    end_s = min(spans[-1].end * frame_s + 0.06, clip16.shape[1] / 16000)
+            # A pause: the last sound runs until its loudness fades; the next starts where it rises.
+            p0 = fade_out(prev_end, nxt - 0.05)
+            p1 = fade_in(nxt, p0 + 0.02)
+            if p1 - p0 >= 0.05:
+                events.append((p0, p1)); edges.append(("pause", p0, p1)); continue
+        # Between sounds: CTC spans mark a sound's start, so the boundary sits at the next span's start
+        # (plus a small offset), not halfway between spans, which put boundaries too early by ear.
+        edges.append(nxt + a.onset_offset if a.boundary == "onset" else (prev_end + nxt) / 2)
+    end_s = fade_out(spans[-1].end * frame_s, clip_s - 0.01)
     to_sample = lambda t: s0 + int(round(t * rate))
     bounds = []   # (start, end) per token
     cursor = edges[0]
@@ -132,7 +158,7 @@ def main():
                       "audioSha256": sha256(a.audio), "encoding": encoding, "sampleRate": rate, "channels": info.channels,
                       "frames": info.frames, "downmix": "none" if info.channels == 1 else "average",
                       "consentRecordId": meta["consentRecordId"], "consentScope": meta["consentScope"]},
-        "annotation": {"units": "samples", "method": "proposed-then-reviewed", "proposalSource": "wav2vec2-espeak-2c73378",
+        "annotation": {"units": "samples", "method": "proposed-then-reviewed", "proposalSource": f"wav2vec2-espeak-2c73378-{a.boundary}",
                        "reviewState": "proposed", "reviewRecordId": None},
         "syllables": syllables,
         "events": [{"kind": "pause", "proposed": {"start": to_sample(e0), "end": to_sample(e1)}, "reviewed": None} for e0, e1 in events],
@@ -144,7 +170,7 @@ def main():
         words.append({"wordId": w["id"], "he": w["he"], "start": round(a.start + bounds[ids[0]][0], 3), "end": round(a.start + bounds[ids[-1]][1], 3),
                       "lowestPhoneLogProb": min(r["meanLogProb"] for r in rows)})
     json.dump(record, open(a.out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    json.dump({"model": MODEL, "revision": a.revision, "clip": [a.start, a.end], "frameSeconds": frame_s, "phones": detail, "words": words,
+    json.dump({"model": MODEL, "revision": a.revision, "clip": [a.start, a.end], "boundaryRule": a.boundary, "onsetOffset": a.onset_offset, "edgeDb": a.edge_db, "frameSeconds": frame_s, "phones": detail, "words": words,
                "meaning": "CTC confidence diagnostics for review; not an alignment-accuracy measure"},
               open(a.out + ".scores.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     for w in words:
