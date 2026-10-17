@@ -55,3 +55,6 @@ Thumbs.db
 
 # local verification output
 .local-logs/
+
+# private local data (family rosters, contacts) — never committed
+.local-data/
