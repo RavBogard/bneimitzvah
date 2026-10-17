@@ -49,6 +49,7 @@ def main():
     # By ear (Daniel, 2026-10-16): the midpoint was too early and onset + 15 ms a touch too late.
     ap.add_argument("--onset-offset", type=float, default=-0.02)
     ap.add_argument("--edge-db", type=float, default=12.0)
+    ap.add_argument("--murmur-db", type=float, default=7.0, help="0 turns off the voiced-closure boundary rule")
     ap.add_argument("--lead-back", type=float, default=0.25)
     ap.add_argument("--meta", required=True, help="JSON with alignmentId, sampleId, speakerId, takeNumber, consentRecordId, consentScope, targetReviewRecordId")
     a = ap.parse_args()
@@ -163,6 +164,39 @@ def main():
             bounds.append((cursor, nxt[1])); cursor = nxt[2]
         else:
             bounds.append((cursor, nxt)); cursor = nxt
+    # Voiced closure: before b, d, g, m or n the lips or tongue often close while the voice keeps going,
+    # a quiet low hum that CTC counts as the end of the vowel. Stretched, it is heard as an extra m or n
+    # (Daniel, 2026-10-16: "elohechaM", "anochiN"). Where the vowel's end is that hum (at least 7 dB
+    # below the vowel's own level, with low-band energy dominating), the boundary moves back to it.
+    murmur_moves = []
+    def band_ratio(t):
+        i = int(t * rate)
+        frame = seg[i:i + hop]
+        if len(frame) < hop:
+            return 0.0, -120.0
+        spec = np.abs(np.fft.rfft(frame * np.hanning(len(frame)), 2048)); f = np.fft.rfftfreq(2048, 1 / rate)
+        level = 20 * np.log10(np.sqrt(np.mean(frame ** 2)) + 1e-9)
+        return float(spec[(f > 80) & (f < 400)].sum() / (spec[(f > 400) & (f < 2500)].sum() + 1e-9)), level
+    for i in range(len(tokens) - 1):
+        if a.murmur_db <= 0 or tokens[i]["role"] != "vowel" or tokens[i + 1]["phone"] not in ("b", "d", "g", "m", "n") or bounds[i][1] != bounds[i + 1][0]:
+            continue
+        v0, v1 = bounds[i]
+        times = [v0 + k * 0.01 for k in range(int((v1 - v0) / 0.01))]
+        if len(times) < 8:
+            continue
+        stats = [band_ratio(t) for t in times]
+        head = sorted(level for _, level in stats[: max(3, int(len(stats) * 0.6))])
+        median = head[len(head) // 2]
+        raw = [ratio > 0.6 and level < median - a.murmur_db for ratio, level in stats]
+        # A single frame that misses the test inside a run of hum does not end the run.
+        hum = [raw[k] or (0 < k < len(raw) - 1 and raw[k - 1] and raw[k + 1]) for k in range(len(raw))]
+        cut = len(hum)
+        while cut > 0 and hum[cut - 1]:
+            cut -= 1
+        new = times[cut] if cut < len(times) else v1
+        if v1 - new >= 0.02 and new - v0 >= 0.04:
+            bounds[i] = (v0, new); bounds[i + 1] = (new, bounds[i + 1][1])
+            murmur_moves.append({"phone": tokens[i + 1]["phone"], "movedMs": round((v1 - new) * 1000)})
     syllables = [{"syllableId": s["id"], "onset": [], "vowel": None, "coda": []} for s in identity["syllables"]]
     detail = []
     for t, (b0, b1), sp in zip(tokens, bounds, spans):
@@ -185,7 +219,7 @@ def main():
                       "audioSha256": sha256(a.audio), "encoding": encoding, "sampleRate": rate, "channels": info.channels,
                       "frames": info.frames, "downmix": "none" if info.channels == 1 else "average",
                       "consentRecordId": meta["consentRecordId"], "consentScope": meta["consentScope"]},
-        "annotation": {"units": "samples", "method": "proposed-then-reviewed", "proposalSource": f"w2v-{a.revision[:7]}-{a.boundary}-r3",
+        "annotation": {"units": "samples", "method": "proposed-then-reviewed", "proposalSource": f"w2v-{a.revision[:7]}-{a.boundary}-r4",
                        "reviewState": "proposed", "reviewRecordId": None},
         "syllables": syllables,
         "events": [{"kind": "pause", "proposed": {"start": to_sample(e0), "end": to_sample(e1)}, "reviewed": None} for e0, e1 in events],
@@ -197,7 +231,7 @@ def main():
         words.append({"wordId": w["id"], "he": w["he"], "start": round(a.start + bounds[ids[0]][0], 3), "end": round(a.start + bounds[ids[-1]][1], 3),
                       "lowestPhoneLogProb": min(r["meanLogProb"] for r in rows)})
     json.dump(record, open(a.out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    json.dump({"model": MODEL, "revision": a.revision, "clip": [a.start, a.end], "boundaryRule": a.boundary, "onsetOffset": a.onset_offset, "edgeDb": a.edge_db, "frameSeconds": frame_s, "phones": detail, "words": words,
+    json.dump({"model": MODEL, "revision": a.revision, "clip": [a.start, a.end], "boundaryRule": a.boundary, "onsetOffset": a.onset_offset, "edgeDb": a.edge_db, "murmurDb": a.murmur_db, "murmurMoves": murmur_moves, "frameSeconds": frame_s, "phones": detail, "words": words,
                "meaning": "CTC confidence diagnostics for review; not an alignment-accuracy measure"},
               open(a.out + ".scores.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     for w in words:
