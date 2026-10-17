@@ -213,3 +213,5 @@ GATE: lowered the consonant floor for this take only — proceeded because the e
 **Fixes (run `vahavta-Bhuman-slow-v9`, pack `daniel-vahavta-siddur-sungtime4`):**
 - Measured syllables lose the chant's silent runs of 100 ms or more below −30 dBFS, keeping 80 ms for a closure. 3.69 s were removed; the timing record is `timing-daniel-vahavta-sung-3-silence-removed`.
 - A held vowel now fades linearly from the start of its hold through the breath.
+
+**v9 verdict (Daniel):** "Approved." He flagged no words on the second flag page (its `flags` collection read back empty). This approves v9 as the current state of the B-human research render. It is not the G3 listening review: no student hears it, and the formal review (at least 95% melody passes, zero "would teach wrong") is still to come.
