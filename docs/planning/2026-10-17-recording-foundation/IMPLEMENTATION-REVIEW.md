@@ -1,0 +1,28 @@
+# Student recording ledger — independent implementation review
+
+Accepted within the storage-independent contract at product freeze `578b5fc8f252ef2b27b09b811e7bcf465a171f18`, implementing reviewed draft SHA-256 `e81619b53e2b0531c94fed5920ded3efa6293ce3c11229d85091603198e6e253`. No product changes were made by this reviewer. No upload, bytes, decoding, playback, storage, notification, private audio or production operation was performed or certified. Broad integration and exact hosted gates remain root-owned.
+
+## Source findings
+
+No blocking implementation defect found. The actual runtime object exposes only page/submit/remove; registration is a separate server-only factory, absent from runtime composition and HTTP routing. Its descriptor validates claimed verified facts but is explicitly not a decoder or proof of capture ownership; the future trusted pipeline must supply that verification.
+
+Selected-mode gates precede recording lookup: base parent always denies even with overlapping grants, staff reads only visible submitted rows and cannot mutate, own student and exact child practice reuse literal read/practice-write capability. Tenant/student/context and row locks stay in existing order. Fresh real session/context expiry and fresh recording-retention checks surround awaited recording/unique/audit operations, including no-op/conflict paths. List queries filter before cursor/one-extra-row handling, lock only visible rows and requery if the anniversary crosses. Opaque IDs reveal no hidden timestamp or private count; DTOs omit asset/hash/actor/context/exact instants.
+
+Native0020 uses FORCE RLS, composite tenant/student FK, global retained-asset uniqueness and narrow column UPDATE grants without runtime DELETE. The INSERT trigger requires private/revision1/null lifecycle times. Immutable capture identity, consecutive state transitions, current-revision no-ops and submission-time preservation prevent resets and resurrection. The ceremony trigger uses post-student-lock clock_timestamp and OLD-or-NEW anniversary checks, retains the submitted instant, marks submitted rows deleting atomically and fabricates no recording audit. The reviewed Chicago/year10000 arithmetic is reused rather than changing historical0018. Old release operators were not widened: current0020 must remain outside their pinned release trees.
+
+## Independent checks
+
+`node .local-logs/run-isolated.mjs recording-review-typecheck npm run typecheck` passed with both owned test files. `node .local-logs/run-isolated.mjs recording-review-app npm run test:app -- tests/app/recording-ledger-review.test.ts` passed3/3 in7.90s. Cases establish that a post-query anniversary crossing repages a private row behind51 newly expired submitted rows, expired/private cursors stay hidden from staff, creation/submission audit-wait deadline crossings roll back metadata and audit, and overlapping parent mode reaches no recording data method.
+
+Actual restricted PostgreSQL ran via inspected ignored `.local-logs/recording-pg-isolated.mjs`: exact loopback55439, expected data-directory/version16.15 assertion, isolated environment, fresh owned anchor, and existing fixture-owned databases/restricted roles. No shared database reset, role/password repair, browser or provider action. Initial14-case run passed13 and failed one reviewer test setup; `.local-logs/recording-independent-pg.log`,16.97s. The stale test supplied revision99, outside valid1..3, so correct pre-lock validation meant its expected blocking edge never occurred. Changing only that fixture input to valid-but-stale revision3 preserved the actual lock and expiry assertions. Affected-case confirmation `node .local-logs/recording-pg-isolated.mjs -t "observed recording-row wait overrides stale"` passed1/1 in2.10s,13 unselected; `.local-logs/recording-independent-pg-corrected.log`.
+
+Cumulative14 native cases successfully covered, not a fabricated single14/14 run. Twelve actual PostgreSQL blocking edges were required and observed: three asset-uniqueness waits, two conflicting submit/delete CAS waits, five row waits with fresh session/context expiry overriding mutation/no-op/stale outcomes, and two audit-table waits crossing the retention deadline. Remaining native cases attack initial privacy, tenant RLS/FK, immutable columns/runtime DELETE and irreversible transitions, plus OLD-expired ceremony postponement/rollback/no fabricated audit. Different own-student and delegated-parent actors exercise real asset uniqueness rather than a shared actor lock. Unique retries create one row/audit, mismatch remains generic, deletion never revives, and expired work rolls back.
+
+Both native runs closed their fresh fixtures and reported owned anchor removed:true; the lane was explicitly released. Product source remained unchanged at578b5fc. No SQL errors or family data were printed. Native16.15 evidence is not a claim of production PostgreSQL18 application.
+
+Owned test SHA-256:
+
+- `tests/app/recording-ledger-review.test.ts`: `e103edf40b70dea038625568d1065ed927ad1dc3527467b0133ab59c66ad3bf2`
+- `tests/postgres/recording-ledger-review.integration.ts`: `efdd506059752ae1df08f52a06f022c8a1296000928c641f656cf26b800b6273`
+
+The implementer's normal11/11 and typecheck passes are separate reported evidence, reused for unchanged normal route/DTO/calendar/migration-upgrade cases rather than represented as independent runs. Root owns full app/Node/build, fresh combined SQL/restricted regression, repository protection and hosted CI. Private-unsent retention remains the recorded unresolved production policy; storage/cleanup/recording UI and any later byte capability need their own reviewed contracts.
