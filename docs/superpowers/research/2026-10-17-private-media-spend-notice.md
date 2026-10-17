@@ -1,6 +1,6 @@
 # Private recording storage: costs and options — 2026-10-17
 
-Status: **not approved or provisioned**. Daniel requested a better estimate rather than accepting the earlier $25 allowance. This revision supersedes that allowance and illustration. Deployment authority continues; new service spending waits for Daniel under MISSION. No store, paid writes, plan changes or shared billing/CDN changes have been made.
+Status: **Daniel approved private Vercel Blob on 2026-10-17 after reviewing this estimate**, Production-only and synthetic-first, ordinary $5–8/month planning target with review of a forecast above $10; usage billing is not a hard cap. This supersedes the earlier unapproved $25 allowance. Provisioning is being prepared; no store, paid writes or shared billing/CDN changes have yet been made. New provider/scope/spending changes still require Daniel under MISSION.
 
 ## Existing account, checked read-only
 
@@ -53,6 +53,8 @@ At 64 kbps student storage, modeled typical storage/transfer falls to about $1.2
 
 A separate Cloudflare Worker delivery service could reduce Vercel response charges at larger scale but needs its own reviewed authorization architecture/cost model. Public buckets/reusable public links are not a student-recording cost shortcut.
 
-## Concrete decision pending
+## Approved scope and remaining activation gates
 
-Daniel can choose private Blob on the existing account, private R2 with separate setup, or leave storage unprovisioned while local work continues. Blob approval would create only `beitmitzvah-private-media` in `iad1`, connect Production only, use OIDC and begin with synthetic acceptance objects. It would not authorize shared billing/CDN changes, family audio before access/cleanup acceptance, invitations, real roster import or generated chant release. Any budget is a planning amount, not an enforced limit.
+Daniel chose private Blob on the existing account. Create only `beitmitzvah-private-media` in `iad1`, connect Production only, use OIDC and begin with synthetic acceptance objects. This does not authorize shared billing/CDN changes, family audio before access/cleanup acceptance, invitations, real roster import or generated chant release. The budget is a planning amount, not an enforced limit.
+
+Follow-up engineering review found an additional provider acceptance concern: grant expiry and an absent-object read do not prove an earlier upload cannot finish later. Actual scoped-write, byte-cap, concurrent/late-PUT and cleanup behavior must be verified before real recordings. R2 documents commit-time conditional writes that support a permanent non-audio same-key barrier; an equivalent Blob guarantee is not assumed. R2 remains an alternative if needed, not an approved provider switch. Approved synthetic Blob testing may investigate the chosen provider; a failing guarantee is an architecture issue to resolve, not permission to weaken irreversible recording access/deletion.
