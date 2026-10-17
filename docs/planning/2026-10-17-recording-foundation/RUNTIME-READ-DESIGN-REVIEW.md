@@ -1,0 +1,25 @@
+# Protected runtime read design review
+
+Independent design-only review of `2026-10-17-private-media-runtime-read-design.md` and the accepted transport C design. No implementation, native request, credential, provider/control-plane operation, journal access or test execution. The source/runtime and operator still need separate independent reviews.
+
+## Conclusion
+
+Bounded acceptance with the two concrete corrections below, both accepted by root during this review. Root owns the matching spec amendment. No broader recording activation is implied.
+
+1. **Block automatic HEAD execution.** Pinned Next16.4.2 `node_modules/next/dist/server/route-modules/app-route/helpers/auto-implement-methods.js` explicitly implements missing HEAD as `methods.HEAD = handlers.GET`. A GET-only export can therefore run provider I/O for HEAD despite discarding its response body. Require an explicit no-I/O HEAD response AND a method-first guard in GET before selection, credential/module loading or provider work. Exercise actual method dispatch, not only calling a helper with a fabricated GET request. Other methods must also dispatch zero provider work.
+2. **Define per-deployment runtime flag delivery.** The prior probes' build-only flags do not establish that this request-time route receives its selection. Root selected explicit nonsecret deployment runtime `--env` flags, distinct from build flags and without persistent project settings. The reviewed operator must bind the exact runtime mode/store/run to the owned deployment and reject old/mixed flags. No token or credential belongs in either flag set. Ordinary/main builds remain disabled.
+
+## Boundaries that are sound
+
+- The fixed accepted retirement marker is not a normal recording key. An acceptance-only factory may reuse C's internal closed engine after C acceptance; it must not add a path/URL/header/token override to the normal `recordings/v1/<asset>/chunk-NN` API. The factory returns fixed validated facts, not private bytes or tags. Preserve normal namespace/codec behavior with tests. Native success proves this engine and fixed acceptance object only; the recording namespace/composed upload remains unproved.
+- Pinned `@vercel/oidc` `dist/get-context.js` reads the platform `Symbol.for('@vercel/request-context')` accessor. Its sync/async token helpers have environment fallback/refresh paths; this proof correctly excludes them and application request headers. Decode/profile checks do not verify a token signature. Provider acceptance plus exact full-body validation is required for success. Neither the context accessor nor the earlier hosted startup exception proves an unhooked process.
+- Exactly one metadata lookup and one conditional direct identity GET per invocation, sharing the absolute20-second parent budget and C's tighter operation/progress/size/error bounds, is sufficient. Unknown/missing/changed marker, encoding, redirect, tag, length, hash, context or deadline fails closed without mutation, retry, fallback, replacement key or cleanup. Missing/mixed selection, wrong runtime identity, HEAD and disabled modes need zero-dispatch assertions.
+- The closed result must come only after both operations and final context validation. Mode/run and fixed booleans are safe; no claims, tags, body, URLs or raw provider error are needed. Operator attribution independently binds exact source/deployment/project/target/run rather than trusting a returned run alone. Cache denial applies to success and failure; no service worker should cache this route.
+
+## Operational precision for the source/operator review
+
+- The anonymous protection check must use a harmless path on the exact generated host, not the enabled proof route. An absent protection challenge must not itself execute an anonymous Blob read. Existing `all_except_custom_domains` metadata is a preflight condition; actual recognized SSO challenge is the required observation before the authenticated proof. Preserve canonical alias/source before and after and do not create a bypass credential.
+- Protection is supplied by Vercel, not portal student authority. Per-request two-call/time limits are not a cumulative invocation or spending cap. The selected deployment necessarily exists before its challenge is observed; the safe scope of any unexpected exposure is only a fixed non-audio marker and closed result. Stop if protection is absent; never interpret that deployment as suitable for real media. Exact deployment-host binding should refuse normal/custom aliases even if the same selected artifact is reachable there.
+- Preserve immutable source/run/deployment journal attribution, terminal/unknown distinction and explicit read-only reconciliation. A timed-out or malformed response cannot authorize a new deploy/run, promote an artifact, rewrite the old marker or apply0021. Subsequent normal release must independently show flags absent and disabled route behavior.
+
+The above are bounded design requirements, not evidence that deployed request-context credentials, direct OIDC GET or native protection have already passed. Those remain the purpose of the later reviewed proof.
