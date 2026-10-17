@@ -75,5 +75,9 @@ test("malformed models, examples and options are refused", () => {
   assert.throws(() => predictSyllableMs({ schema: "x" }, features), /model/);
   assert.throws(() => predictSyllableMs(fitTimingModel([{ features, syllableMs: features.map(rule) }]), features, { tempoScale: 0 }), /model/);
   assert.throws(() => syllableTimingFeatures({}, {}), /input/);
+  const m = fitTimingModel([{ features, syllableMs: features.map(rule) }]), row = { notes: 2, consonants: 1, keys: ["pos:pre", "a", "b"] };
+  assert.throws(() => predictSyllableMs(m, [{ ...row, noteBeats: [0.004, 1] }]), /note-ratio/, "a note-length ratio no syllable can hold is refused, not clamped");
+  assert.throws(() => predictSyllableMs(m, [{ ...row, noteBeats: [0.5, 0.5], consonants: undefined }]), /features/);
+  assert.throws(() => predictSyllableMs({ ...m, delta: "0.2" }, features), /model/);
   assert.throws(() => predictSyllableMs({ ...fitTimingModel([{ features, syllableMs: features.map(rule) }]), gamma: undefined }, features), /model/);
 });

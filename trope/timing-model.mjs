@@ -78,12 +78,15 @@ export function fitTimingModel(examples, options = {}) {
  * its notes' score lengths (largest remainder, so each part is at least its floor). */
 export function predictSyllableMs(model, features, { tempoScale = 1 } = {}) {
   if (model?.schema !== TIMING_MODEL_SCHEMA || typeof model.effects !== "object" || !Number.isFinite(model.global) || !Number.isFinite(model.gamma)
+    || !(model.delta === undefined || Number.isFinite(model.delta))
     || !(tempoScale > 0)) fail("model");
   return features.map(f => {
     const log = model.global + model.gamma * Math.log(f.notes) + (model.delta ?? 0) * f.consonants + f.keys.reduce((sum, key) => sum + (model.effects[key] ?? 0), 0);
     const beats = Array.isArray(f.noteBeats) && f.noteBeats.length === f.notes && f.noteBeats.every(b => b > 0) ? f.noteBeats : fail("features");
     const total = beats.reduce((a, b) => a + b, 0);
     const floor = Math.max(MEASURED_LIMITS.syllableMinMs, Math.ceil((MEASURED_LIMITS.noteMinMs + 1) * total / Math.min(...beats)));
+    if (floor > MEASURED_LIMITS.syllableMaxMs) fail("note-ratio");
+    if (!Number.isInteger(f.consonants) || f.consonants < 0) fail("features");
     return Math.min(MEASURED_LIMITS.syllableMaxMs, Math.max(floor, Math.round(Math.exp(log) * tempoScale)));
   });
 }

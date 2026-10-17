@@ -298,3 +298,11 @@ Also fixed: holes in `voicedPhones` are refused, `f0-voicing.json` lists the eff
 - chant-silence stops one frame short of the next onset, as the approved v9 record did, so a silence needs about 110 ms to count as 100.
 - If CTC was right that a consonant follows the previous word directly, the pause rule's fade_out can still walk through that consonant. Proposals are reviewed by ear.
 
+**Sixth review (adversarial, 39ccaa7): four defects, all fixed.**
+1. The release fade swallowed a closed final syllable's coda. A release is now for an open final syllable only, and its fade runs from `release` frames before the final vowel ends.
+2. The release could reach the next phrase's lead consonants and borrow its pitch. The room now stops LEAD_S (0.2 s) before the next phrase's first note, and the phrase's last pitch is held over the released frames.
+3. The WORLD-stretched source got the longer vowel without the fade; both sources are faded now.
+4. A note-length ratio over about 190 was clamped into an impossible syllable. It is refused (`note-ratio`).
+
+Also fixed: release options are range-checked, missing consonants are refused, and a non-numeric delta is refused. Run `unread-Btts-v3` replaces v2 on the same page; Daniel had not flagged v2.
+

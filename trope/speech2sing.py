@@ -37,6 +37,7 @@ SR = 22050
 HOP = 256
 FPS = SR / HOP
 VOICELESS = set("ptkfsʃχhʔ")   # Phonikud characters (ts is t + s)
+LEAD_S = 0.2                   # how early a phrase's first consonants may start before its first note (speech2sing.mjs leadMs)
 
 
 def derive_models(path):
@@ -228,27 +229,46 @@ def main():
     unvoiced = VOICELESS - set(a.voiced)
     if not set(a.voiced) <= VOICELESS:
         raise SystemExit("--voiced lists only voiceless Phonikud characters")
+    if not (0 <= a.release_ms <= 400 and 0 <= a.release_gap_ms <= 200):
+        raise SystemExit("--release-ms must be 0-400 and --release-gap-ms 0-200")
+    held = []   # (first sample, last sample, f0 frame to hold) of each phrase-final release
     phrases = plan["phrases"]
     for pi, ph in enumerate(phrases):
         ids, own = phrase_ids(ph, id_map)
         audio, w = run(s_dur, ids, scales)
         nat = np.asarray(w, dtype=float).reshape(-1)
         raw_parts += [audio.astype(np.float32), np.zeros(int(0.3 * SR), np.float32)]
-        nxt = phrases[pi + 1]["start"] if pi + 1 < len(phrases) else plan["seconds"] + 0.5
+        # The release is for an open final syllable only: a closed one ends in its own consonant, which a fade
+        # would swallow. The room stops short of the next phrase's lead consonants, spoken up to
+        # LEAD_S before its first note, and of --release-gap-ms.
+        last = len(ph["syllables"]) - 1
+        open_end = not [1 for (si, r, _) in own if si == last and r == "coda"]
+        nxt = phrases[pi + 1]["start"] - LEAD_S if pi + 1 < len(phrases) else plan["seconds"] + 0.5
         room = max(0.0, nxt - ph["end"] - a.release_gap_ms / 1000)
-        release = int(min(a.release_ms / 1000, room) * FPS)
+        release = int(min(a.release_ms / 1000, room) * FPS) if open_end else 0
         new, start_f, bound = impose(ph, own, nat, a.max_cons, release)
         y = run(s_timed, ids, scales, new)[0].astype(np.float32)
         s0 = start_f * HOP
         exp = sum(new) * HOP
         y = y[:exp].copy()
+        # Fade from `release` frames before the final vowel ends through the end of the phrase (only the end
+        # marker follows an open vowel), and hold the phrase's last pitch over the released frames.
+        fade = None
         if release:
-            r = min(len(y), release * HOP)
-            y[len(y) - r:] *= np.linspace(1.0, 0.0, r, dtype=np.float32)
+            v_end = (sum(new[: max(i for i, (si, r, _) in enumerate(own) if si == last and r == "vowel") + 1])) * HOP
+            f0_at = max(0, int(round(ph["end"] * 50)) - 1)
+            fade = (max(0, v_end - release * HOP), len(y))
+            held.append((s0 + v_end - release * HOP, s0 + len(y), f0_at))
+        def faded(sig):
+            if fade and len(sig) > fade[0]:
+                sig = sig.copy(); n = len(sig) - fade[0]
+                sig[fade[0]:] *= np.linspace(1.0, 0.0, n, dtype=np.float32)
+            return sig
+        y = faded(y)
         lo, hi = max(0, s0), min(total, s0 + len(y))
         timed[lo:hi] += y[lo - s0:hi - s0]
         if a.stretch == "world":
-            yw = world_stretch(audio, own, nat, new, len(y))
+            yw = faded(world_stretch(audio, own, nat, new, len(y)))
             hi2 = min(total, s0 + len(yw))
             warped[lo:hi2] += yw[lo - s0:hi2 - s0]
         # voicing from the imposed frames: voiceless consonants (and their pads) are unvoiced
@@ -298,6 +318,11 @@ def main():
         c = int((k + 0.5) / 50 * SR)
         if f0[k] == 0 and c < total and covered[c] and not voiceless[c] and len(nz):
             f0[k] = curve[nz[np.argmin(np.abs(nz - k))]]
+    for h0, h1, at in held:
+        hold = curve[min(at, n50 - 1)] or (f0[f0[: at + 1] > 0][-1] if (f0[: at + 1] > 0).any() else 0)
+        for k in range(int(h0 / SR * 50), min(n50, int(math.ceil(h1 / SR * 50)))):
+            if f0[k] > 0:
+                f0[k] = hold
     np.save(os.path.join(a.out, "target_f0.npy"), f0)
     if a.world_pitch:
         wp = world_pitch(timed * g, f0)
