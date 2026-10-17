@@ -1,7 +1,10 @@
 // Public code may name these schemas; schema-bearing data must remain private.
 const LITERAL_SCHEMA = /"schema"\s*:\s*"chant-(?:benchmark-(?:input|pack|identity|run)|human-[a-z0-9-]+|listening-[a-z0-9-]+)\//;
 const DECODED_SCHEMA = /^chant-(?:benchmark-(?:input|pack|identity|run)|human-[a-z0-9-]+|listening-[a-z0-9-]+)\//;
+const REFERENCE_LITERAL_SCHEMA = /"schema"\s*:\s*"pockettorah-verse-index\/v1"/;
+const REFERENCE_SCHEMA = "pockettorah-verse-index/v1";
 export const PRIVATE_BENCHMARK_REASON = "private chant-benchmark record";
+export const PRIVATE_REFERENCE_INDEX_REASON = "private reference-audio index";
 export const PRIVATE_BENCHMARK_BUDGET_REASON = "private benchmark inspection budget exceeded";
 export const PRIVATE_BENCHMARK_LIMITS = Object.freeze({ maxBytes: 4 * 1024 * 1024, maxDepth: 64, maxNodes: 100_000 });
 
@@ -29,6 +32,7 @@ function tooDeep(text) {
  * Whole JSON objects/arrays are also recognized under source extensions. */
 export function privateBenchmarkProblem(text, data = false) {
   if (data && LITERAL_SCHEMA.test(text)) return PRIVATE_BENCHMARK_REASON;
+  if (data && REFERENCE_LITERAL_SCHEMA.test(text)) return PRIVATE_REFERENCE_INDEX_REASON;
   // Common UTF-8 exports may carry a leading BOM. Remove framing only for
   // inspection, never quoted/content BOMs; the original bytes still set bounds.
   const inspectionText = text.startsWith("\uFEFF") ? text.slice(1) : text;
@@ -44,6 +48,7 @@ export function privateBenchmarkProblem(text, data = false) {
       if (item.depth > PRIVATE_BENCHMARK_LIMITS.maxDepth) return PRIVATE_BENCHMARK_BUDGET_REASON;
       if (!item.value || typeof item.value !== "object") continue;
       if (Object.hasOwn(item.value, "schema") && typeof item.value.schema === "string" && DECODED_SCHEMA.test(item.value.schema)) return PRIVATE_BENCHMARK_REASON;
+      if (Object.hasOwn(item.value, "schema") && item.value.schema === REFERENCE_SCHEMA) return PRIVATE_REFERENCE_INDEX_REASON;
       const keys = Object.keys(item.value);
       nodes += keys.length;
       if (nodes > PRIVATE_BENCHMARK_LIMITS.maxNodes) return PRIVATE_BENCHMARK_BUDGET_REASON;
