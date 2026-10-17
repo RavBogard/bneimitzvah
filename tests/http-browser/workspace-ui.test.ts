@@ -149,9 +149,12 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await tab.setViewportSize({ width: 390, height: 844 });
   await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).focus());
   await safe(() => tab.keyboard.press("Tab"));
-  expect(await tab.evaluate(() => document.activeElement?.tagName === "SUMMARY")).toBe(true);
+  await ui(tab.locator(".reading-student-context").getByRole("link", { name: "Service parts", exact: true }), "First Tab after Refresh reaches Service parts").toBeFocused();
+  await safe(() => tab.keyboard.press("Tab"));
+  const assignedReferences = tab.locator(".reading-current-assignment > details");
+  await ui(assignedReferences.locator(":scope > summary"), "Second Tab reaches the assigned-reference disclosure").toBeFocused();
   await safe(() => tab.keyboard.press("Enter"));
-  expect(await tab.locator("details").first().getAttribute("open") !== null).toBe(true);
+  await ui(assignedReferences, "Enter opens the focused assigned-reference disclosure").toHaveAttribute("open", "");
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await capture(tab, "workspace-child-confirmed-reading");
   await tab.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
