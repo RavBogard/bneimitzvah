@@ -286,9 +286,11 @@ it("suspends the reading sheet for a service decision and removes every modal du
   expect(phases).toEqual([{ modals: 1, service: true, sheet: false }, { modals: 0, service: false, sheet: false }, { modals: 1, service: true, sheet: false }]);
   await ui(tab.getByRole("button", { name: "Keep editing service parts", exact: true })).toBeFocused();
   await safe(() => tab.keyboard.press("Escape")); await ui(prompt).toBeHidden(); await ui(sheet).toBeVisible();
+  expect(await snapshot()).toEqual({ modals: 1, service: false, sheet: true });
   expect(await sheet.evaluate(node => node.contains(document.activeElement))).toBe(true);
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   await safe(() => tab.keyboard.press("Escape")); await ui(sheet).toBeHidden();
+  expect(await snapshot()).toEqual({ modals: 0, service: false, sheet: false });
   await ui(tab.getByRole("button", { name: "Change verses", exact: true })).toBeFocused();
   await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
   await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked(); expect(writes).toBe(0);
@@ -297,9 +299,11 @@ it("suspends the reading sheet for a service decision and removes every modal du
   // the conceal-driven close above must preserve the pending decision.
   await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click()); await click(tab, "Haftarah text"); await ui(prompt).toBeVisible();
   await safe(() => prompt.evaluate(node => (node as HTMLDialogElement).close())); await ui(prompt).toBeHidden();
+  expect(await snapshot()).toEqual({ modals: 0, service: false, sheet: false });
   await ui(panel(tab).getByRole("button", { name: "Reload catalog and discard draft", exact: true })).toBeFocused();
   await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click()); await click(tab, "Haftarah text"); await ui(prompt).toBeVisible();
   await click(tab, "Discard service draft and continue"); await ui(prompt).toBeHidden();
+  expect(await snapshot()).toEqual({ modals: 0, service: false, sheet: false });
   await ui(tab.getByRole("tab", { name: "Reading", exact: true })).toHaveAttribute("aria-selected", "true");
   await ui(tab.getByRole("button", { name: "Haftarah text", exact: true })).toHaveAttribute("aria-pressed", "true"); expect(writes).toBe(0);
 });
