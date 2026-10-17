@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { type Assigned, type Reading, type ReadingMode, type Student } from "./api";
-import { statusOf, useWorkspace, WorkspaceLink } from "./provider";
+import { statusOf, useWorkspace, useWorkspaceModal, WorkspaceLink } from "./provider";
+import { icons } from "./study/lift";
 import { ReadingEditor } from "./reading-editor";
 import { AssignedStudyText, type StudyReload } from "./study/view";
 import type { StudyKind } from "./study/api";
@@ -84,7 +85,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   useEffect(() => registerReload(async () => { await load(); }), [registerReload, load]);
   useEffect(() => { void load().catch(() => undefined); return () => { sequence.current++; abort.current?.abort(); }; }, [load, retry]);
   const current = result.key === key ? result : null;
-  const editor = mode === "admin" || mode === "tutor" ? <ReadingEditor key={`${mode}:${studentId}`} mode={mode} baseline={current?.loading ? null : current?.value ?? null} reload={load} /> : null;
+  const [editorBusy, setEditorBusy] = useState(false);
+  const editor = mode === "admin" || mode === "tutor" ? <ReadingEditor key={`${mode}:${studentId}`} mode={mode} baseline={current?.loading ? null : current?.value ?? null} reload={load} onBusy={setEditorBusy} /> : null;
   const student = current?.value?.student, readings = current?.value?.readings ?? [];
   const selectedReading = readings.find(row => row.kind === selectedKind) ?? readings[0];
   const otherReadings = readings.filter(row => row.id !== selectedReading?.id);
@@ -92,6 +94,18 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   // Tutors teach from the same Song session reading, and keep the staff assignment details.
   const song = learner || mode === "tutor", editorId = `${serviceId}-editor`;
   const lift = useRef<((index: number) => void) | null>(null);
+  // Tutors change verses in a sheet over the reading instead of a form below it.
+  const [sheetOpen, setSheetOpen] = useState(false), sheet = useRef<HTMLDialogElement>(null), sheetOrigin = useRef<HTMLElement | null>(null);
+  useWorkspaceModal(sheet, sheetOpen);
+  // The sheet stays open while a review or confirmation is in flight, so its outcome is seen.
+  const closeSheet = () => { if (!editorBusy) setSheetOpen(false); };
+  useEffect(() => {
+    if (sheetOpen || !sheetOrigin.current) return;
+    // "Assign verses" becomes "Change verses" once a reading is confirmed.
+    const origin = sheetOrigin.current.isConnected ? sheetOrigin.current : document.querySelector<HTMLElement>(".reading-hero .hero-actions button.button-hero-secondary");
+    origin?.focus(); sheetOrigin.current = null;
+  }, [sheetOpen]);
+  const openSheet = (event: { currentTarget: HTMLElement }) => { sheetOrigin.current = event.currentTarget; setSheetOpen(true); };
   const countdown = student ? ceremonyCountdown(student.ceremonyDate) : null;
   return <ReadingPrefsScope studentId={studentId}><DepartureReview coordinator={work} /><div className="reading-workspace reading-with-work" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
     <section aria-label="Assigned reading">
@@ -105,13 +119,13 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
           <button type="button" className="hero-icon" aria-label="Refresh reading" onClick={() => setRetry(value => value + 1)}>{refreshIcon}</button>
         </div>
         {readings.length === 0 ? <div className="reading-empty"><h3 className="hero-reference hero-reference-empty">No reading has been assigned yet</h3><p className="hero-meta">Your tutor or rabbi will add your verses here.</p>
-          <div className="hero-actions">{mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : "Enter child practice"}</button>}<a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a></div></div> : <>
+          <div className="hero-actions">{mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : "Enter child practice"}</button>}{mode === "tutor" && <button type="button" className="button-hero-secondary" onClick={openSheet}>Assign verses</button>}<a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a></div></div> : <>
           <h3 className="hero-reference">{displayRange(selectedReading.ranges)}</h3>
           <p className="hero-meta">{selectedReading.kind === "torah" ? "Torah" : "Haftarah"} · {selectedReading.verses.length} {selectedReading.verses.length === 1 ? "verse" : "verses"}</p>
           <div className="hero-actions">
             <button type="button" className="button-start" onClick={() => lift.current ? lift.current(0) : document.querySelector(".study-verses")?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })}>Start</button>
             {mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : "Enter child practice"}</button>}
-            {mode === "tutor" && <a className="button-hero-secondary" href={`#${editorId}`}>Change verses</a>}
+            {mode === "tutor" && <button type="button" className="button-hero-secondary" onClick={openSheet}>Change verses</button>}
             {readings.length < 2 && <a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a>}
           </div></>}
       </header>
@@ -136,7 +150,9 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       <p><WorkspaceLink href="/trope-chart">Open the printable trope chart</WorkspaceLink></p>
       <p className="field-help">Unsent work stays only in this tab. Controlled workspace changes ask you to review it.</p>
     </aside>}
-  </div>{current?.loading && <p role="status">Checking the current assignment, text and saved work…</p>}{editor && <div id={editorId} className="reading-editor-anchor">{editor}</div>}
+  </div>{current?.loading && <p role="status">Checking the current assignment, text and saved work…</p>}{editor && (mode === "tutor" ? <dialog ref={sheet} id={editorId} className="editor-sheet" aria-labelledby="reading-editor-title" onCancel={event => { event.preventDefault(); closeSheet(); }}>
+      <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close verse editor" disabled={editorBusy} onClick={closeSheet}>{icons.close}</button></div>{editor}
+    </dialog> : <div id={editorId} className="reading-editor-anchor">{editor}</div>)}
     <ServiceLearningPanel id={serviceId} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} />
   </ReadingPrefsScope>;
 }

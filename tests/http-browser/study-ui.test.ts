@@ -247,6 +247,20 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and restores ke
   }
 });
 
+it("leaves no modal practice view over the hidden page while access is rechecked, then returns a usable reading", async () => {
+  const tab = studentTab; await loaded(tab, "Genesis 1:1"); await click(tab, "Start");
+  const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
+  let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
+  await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
+  try {
+    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
+    await ui(tab.getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeVisible();
+    expect(await tab.evaluate(() => document.querySelector("dialog:modal") === null)).toBe(true); // A modal inside the hidden workspace would block every click.
+  } finally { release(); await tab.unroute("**/api/session"); }
+  await loaded(tab, "Genesis 1:1"); await ui(dialog).toHaveCount(0); // The reading reloads; practice starts again from Start.
+  await click(tab, "Start"); await ui(dialog).toBeVisible(); await safe(() => tab.keyboard.press("Escape")); await ui(dialog).toHaveCount(0);
+});
+
 it("keeps unsent typing and an unknown save intact while phrase controls change", async () => {
   const tab = await page("student"); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
   const panel = verse(tab, "Genesis 1:1").locator(".verse-work"); await safe(() => panel.locator("summary").click());

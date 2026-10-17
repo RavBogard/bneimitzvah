@@ -38,7 +38,7 @@ async function page(role: "admin" | "tutor" | "student" = "admin") {
 }
 async function reading(tab: Page, role = "admin") {
   await safe(() => tab.goto(role === "admin" ? `/workspace/admin/students/${fixture.student.id}/reading` : "/workspace/tutor", { waitUntil: "domcontentloaded" }));
-  if (role === "tutor") await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+  if (role === "tutor") { await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await safe(() => tab.getByRole("button", { name: /^(Change|Assign) verses$/ }).click()); }
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible();
 }
 async function assertDesktopStudyColumns(tab: Page) {
@@ -151,6 +151,16 @@ it("clears preview text during access revalidation and fences a late response, w
     await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
     release(); await ui.poll(() => delivered).toBe(true); await ui(panel(tab).locator(".study-verses")).toHaveCount(0);
   } finally { release(); await tab.unroute("**/reading/preview/page"); }
+  if (!process.env.CI) { // The tutor sheet: the preview is the picker, with the selection kept in reach.
+    await click(tab, "Preview custom references"); await ui(panel(tab).locator(".study-verses li").first()).toBeVisible();
+    await click(tab, "Start at Genesis 1:1"); await safe(() => tab.getByRole("button", { name: "End at Genesis 1:2", exact: true }).scrollIntoViewIfNeeded());
+    const directory = join(process.cwd(), ".impeccable", "review"); await mkdir(directory, { recursive: true });
+    await safe(() => tab.screenshot({ path: join(directory, "tutor-sheet-picker-desktop.png") }));
+    const size = tab.viewportSize(); await safe(() => tab.setViewportSize({ width: 390, height: 844 }));
+    expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await safe(() => tab.screenshot({ path: join(directory, "tutor-sheet-picker-mobile.png") }));
+    if (size) await safe(() => tab.setViewportSize(size));
+  }
   expect((await api(tab, `/api/students/${fixture.student.id}/reading/preview/prepare`, { mode: "parent", kind: "torah", source: "calendar" })).status).toBe(400);
   await safe(() => tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" })); await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.locator(".reading-current-assignment")).toBeVisible(); expect(await tab.getByRole("button", { name: "Preview custom references", exact: true }).count()).toBe(0);

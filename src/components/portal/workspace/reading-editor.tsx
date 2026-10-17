@@ -10,7 +10,7 @@ import { aliyahStarts } from "../../../lib/readings/aliyah-starts";
 import { expandReadingRanges } from "../../../lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 
-export function ReadingEditor({ mode, baseline, reload }: { mode: StaffMode; baseline: Assigned | null; reload(): Promise<Assigned> }) {
+export function ReadingEditor({ mode, baseline, reload, onBusy }: { mode: StaffMode; baseline: Assigned | null; reload(): Promise<Assigned>; onBusy?(busy: boolean): void }) {
   const { guardDeparture } = useWorkspace();
   const [kind, setKind] = useState<ReadingKind>("torah"), [drafts,setDrafts]=useState<Record<ReadingKind,ReadingDraft>>(()=>({torah:emptyReadingDraft(),haftarah:emptyReadingDraft()}));
   const draft=drafts[kind],{method,custom}=draft,currentAssignment=baseline?.readings.find(row=>row.kind===kind);
@@ -21,6 +21,7 @@ export function ReadingEditor({ mode, baseline, reload }: { mode: StaffMode; bas
   const key = baseline ? readingBaseline(baseline, kind) : null, keyRef = useRef(key); keyRef.current = key;
   const lastKey = useRef<string | null>(null);
   useEffect(() => { alive.current = true; return () => { alive.current = false; generation.current++; }; }, []);
+  useEffect(() => { onBusy?.(pending !== null); }, [pending, onBusy]);
   useEffect(() => {
     generation.current++; setReview(null);
     if (review && lastKey.current !== null && key !== lastKey.current) setMessage("The current reading is being checked or has changed. Your draft is retained; prepare a new review before confirming.");

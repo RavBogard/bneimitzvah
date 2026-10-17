@@ -42,8 +42,17 @@ async function capture(tab: Page, name: string) {
   if (name.includes("conflict")) await ui(main(tab).getByRole("alert")).toContainText("changed after this review");
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const directory = join(process.cwd(), ".impeccable", "review"); await mkdir(directory, { recursive: true });
-  await safe(() => tab.screenshot({ path: join(directory, `${name}.png`), fullPage: true }));
+  // An open sheet scrolls inside itself, so it is captured at the outcome rather than as a full page.
+  const sheet = tab.locator("dialog.editor-sheet[open]");
+  if (await sheet.count()) {
+    const outcome = name.includes("prepared") ? sheet.getByRole("button", { name: "Confirm assigned reading", exact: true }) : name.includes("conflict") ? sheet.getByRole("alert") : sheet.getByText(/^Reading confirmed/);
+    await safe(() => outcome.evaluate(node => node.scrollIntoView({ block: "center" })));
+    await safe(() => tab.screenshot({ path: join(directory, `${name}.png`) }));
+  } else await safe(() => tab.screenshot({ path: join(directory, `${name}.png`), fullPage: true }));
 }
+// Tutors change verses in a sheet over the reading; admin keeps the inline editor.
+async function openEditor(tab: Page) { await safe(() => tab.getByRole("button", { name: /^(Change|Assign) verses$/ }).click()); await ui(tab.getByRole("dialog", { name: "Set the assigned reading" })).toBeVisible(); }
+async function closeEditor(tab: Page) { await click(tab, "Close verse editor"); await ui(tab.getByRole("dialog", { name: "Set the assigned reading" })).toBeHidden(); }
 async function custom(tab: Page, value: string) { await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("custom")); await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill(value)); }
 beforeAll(async () => {
   try { assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard(); fixture = await browserFixture({ emptyReadingDate: "2027-01-09" }); await fixture.ownerDb.update(s.student).set({serviceSlot:"morning"}).where(eq(s.student.id,fixture.student.id)); stop = await startBrowserServer(fixture.withRuntime); browserEnv=await isolatedEnv(); browser = await chromium.launch({ headless: true, env:browserEnv.env }); }
@@ -98,7 +107,7 @@ it("lets an admin review actual calendar choices, confirm once and replace only 
 
 it("retains a tutor draft during visible access revalidation, invalidates edited/stale reviews and never retries an uncertain confirmation", async () => {
   const tab = await page("tutor", true); await navigate(tab, "/workspace/tutor");
-  await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await custom(tab, "Genesis 1:1-3");
+  await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await openEditor(tab); await custom(tab, "Genesis 1:1-3");
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }); });
   try {
@@ -116,7 +125,7 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
   await click(tab, "Prepare reading review"); await ui(main(tab).getByRole("alert")).toContainText("changed while this proposal");
   expect(await tab.getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
   await click(tab, "Reload current reading");
-  await ui(tab.locator(".confirmed-reading")).toHaveCount(2);
+  await ui(tab.locator(".confirmed-reading")).toHaveCount(2); await closeEditor(tab);
   await safe(()=>tab.locator(".reading-other-assignments > summary").click());
   for(const kind of ["Torah","Haftarah"]){
     const assignment=tab.locator(".confirmed-reading").filter({has:tab.getByRole("heading",{name:kind,exact:true})});
@@ -124,6 +133,7 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
     await ui(assignment.locator(".reading-review")).toBeVisible();
   }
   await ui(tab.getByLabel("Student", { exact: true }).locator('[aria-current="page"]')).toContainText(/Synthetic Learner\s*Sat, Jan 9, 2027/);
+  await openEditor(tab); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-3"); // The draft survives closing the sheet.
   await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:4-5")); expect(await tab.getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
   await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();

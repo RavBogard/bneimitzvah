@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { parseSession, PortalRequestError, requestPortal, roleNames, type SessionSummary } from "../api";
@@ -29,9 +29,22 @@ type Workspace = {
   registerDeparture(guard: () => Promise<boolean>): () => void;
   guardDeparture(): Promise<boolean>;
   registerReload(reload: () => Promise<void>): () => void;
+  /** True while access is being checked or has failed: the workspace is hidden. */
+  concealed: boolean;
 };
 const WorkspaceContext = createContext<Workspace | null>(null);
 export function useWorkspace() { const value = useContext(WorkspaceContext); if (!value) throw new Error("Workspace unavailable"); return value; }
+/** Shows a modal dialog only while the workspace is visible. A modal left open
+ *  inside the hidden workspace renders nothing yet still blocks the whole page,
+ *  so it leaves the top layer during an access check and returns afterwards. */
+export function useWorkspaceModal(dialog: RefObject<HTMLDialogElement | null>, open: boolean) {
+  const concealed = useContext(WorkspaceContext)?.concealed ?? false;
+  useLayoutEffect(() => {
+    const node = dialog.current; if (!node) return;
+    if (open && !concealed) { if (!node.open) node.showModal(); }
+    else if (node.open) node.close();
+  }, [dialog, open, concealed]);
+}
 export const statusOf = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
 const isParentPath = (path: string) => path === rolePaths.parent || path.startsWith("/workspace/practice/");
 
@@ -256,7 +269,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={refresh}>Check access again</button>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
-        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readWork, readServiceMetadata, readServiceUnit, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload }}>
+        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readWork, readServiceMetadata, readServiceUnit, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, concealed: checking || failure !== null }}>
           {summary.roles.length > 1 && <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] || pathname.startsWith(`${rolePaths[role]}/`) ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>}
           {visibleNotice && <p className="workspace-notice" role="status">{visibleNotice}</p>}
           {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}

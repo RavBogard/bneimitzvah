@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useWorkspaceModal } from "../provider";
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 import type { AssignmentEnding } from "../../../../lib/hebrew/study-annotations";
 import { useReadingPrefs, useSetReadingPrefs } from "../reading-prefs";
@@ -31,12 +32,12 @@ export function LiftedLine({ verses, assignment, index, total, offset, onIndex, 
   const [phrase, setPhrase] = useState(0);
   const pointer = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => { setPhrase(0); }, [index, prefs.colors]);
-  useEffect(() => {
-    const node = dialog.current; if (!node) return;
-    const origin = document.activeElement as HTMLElement | null;
-    if (!node.open) node.showModal();
-    return () => { if (node.open) node.close(); origin?.focus?.(); };
+  // Runs before the modal opens (the hook below is a layout effect too) so focus returns to the opener.
+  useLayoutEffect(() => {
+    const node = dialog.current, origin = document.activeElement as HTMLElement | null;
+    return () => { if (node?.open) node.close(); origin?.focus?.(); };
   }, []);
+  useWorkspaceModal(dialog, true);
   const active = phrases[phrase]?.phrase ?? null;
   const stage = useRef<HTMLDivElement>(null);
   useEffect(() => {
