@@ -27,12 +27,17 @@ type Dependencies = {
   credentials?: ReturnType<typeof createRuntimeMediaOidc>;
   totalMs?: number; idleMs?: number;
 };
-/** Internal only; no route/callsite is installed. User/receipt authority belongs
+/** Normal recording operations remain unwired. User/receipt authority belongs
  * to the separately reviewed caller, never to a slot descriptor or OIDC token. */
-export function createPrivateMediaTransport({ storeGeneration, request = httpsRequest, credentials = createRuntimeMediaOidc(), totalMs = MEDIA_LIMITS.totalMs, idleMs = MEDIA_LIMITS.idleMs }: Dependencies) {
+function createPrivateMediaEngine({ storeGeneration, request = httpsRequest, credentials = createRuntimeMediaOidc(), totalMs = MEDIA_LIMITS.totalMs, idleMs = MEDIA_LIMITS.idleMs }: Dependencies, purpose: "recording" | "fixed-runtime-read") {
   need(typeof storeGeneration === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(storeGeneration));
   need(Number.isInteger(totalMs) && totalMs > 0 && totalMs <= MEDIA_LIMITS.totalMs && Number.isInteger(idleMs) && idleMs > 0 && idleMs <= MEDIA_LIMITS.idleMs);
-  function binding(input: MediaSlot) {
+  function binding(input: MediaSlot | undefined) {
+    if (purpose === "fixed-runtime-read") {
+      need(input === undefined);
+      return Object.freeze({ key: "acceptance/d0386074-64c4-40cc-8ef0-f0ca895b599b/single-write/normal.bin", expectedBytes: 33, bodySha256: sha(marker("retire")) });
+    }
+    if (!input) throw 0;
     need(input && typeof input === "object" && [Object.prototype, null].includes(Object.getPrototypeOf(input)));
     const keys = ["storeGeneration", "assetId", "slotIndex", "expectedBytes", "bodySha256"];
     need(Reflect.ownKeys(input).length === keys.length && keys.every(k => Object.hasOwn(input, k) && Object.getOwnPropertyDescriptor(input, k)?.get === undefined && Object.getOwnPropertyDescriptor(input, k)?.set === undefined));
@@ -50,7 +55,7 @@ export function createPrivateMediaTransport({ storeGeneration, request = httpsRe
     need(Number.isSafeInteger(v.size) && (v.size as number) >= 0 && (v.size as number) <= MEDIA_LIMITS.body);
     return Object.freeze({ byteLength: v.size as number, etag: v.etag as string });
   }
-  async function operate<T>(method: "PUT" | "GET", input: MediaSlot, options: MediaOperation | undefined, prepare: (b: ReturnType<typeof binding>) => { url: URL; headers?: Record<string, string>; body?: Uint8Array; parse: (status: number, bytes: Buffer, response: IncomingMessage, b: ReturnType<typeof binding>) => T }): Promise<MediaResult<T>> {
+  async function operate<T>(method: "PUT" | "GET", input: MediaSlot | undefined, options: MediaOperation | undefined, prepare: (b: ReturnType<typeof binding>) => { url: URL; headers?: Record<string, string>; body?: Uint8Array; parse: (status: number, bytes: Buffer, response: IncomingMessage, b: ReturnType<typeof binding>) => T }): Promise<MediaResult<T>> {
     const started = performance.now(); let attempted = false, req: ClientRequest | undefined, res: IncomingMessage | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined, idleTimer: ReturnType<typeof setTimeout> | undefined, stop = () => {}, finished = false;
     let signal: AbortSignal | undefined;
@@ -60,6 +65,7 @@ export function createPrivateMediaTransport({ storeGeneration, request = httpsRe
       signal = options?.signal;
       need(signal === undefined || signal instanceof AbortSignal);
       need(options?.deadline === undefined || Number.isFinite(options.deadline));
+      need(purpose === "recording" || method === "GET");
       const deadline = Math.min(started + totalMs, options?.deadline ?? Infinity), b = binding(input), job = prepare(b), credential: MediaCredential = credentials.acquire();
       let progress = started, empty = 0, total = 0;
       const live = () => { need(!finished && !signal?.aborted && performance.now() < deadline); credential.assertFresh(); };
@@ -146,8 +152,8 @@ export function createPrivateMediaTransport({ storeGeneration, request = httpsRe
     putPermit: (input: MediaSlot, options?: MediaOperation) => put(input, "permit", undefined, undefined, undefined, options),
     putChunk: (input: MediaSlot, bytes: Uint8Array, permitTag: string, options?: MediaOperation) => put(input, "chunk", bytes, permitTag, permitTag, options),
     putRetirement: (input: MediaSlot, currentTag: string, permitTag: string, options?: MediaOperation) => put(input, "retire", undefined, currentTag, permitTag, options),
-    metadata: (input: MediaSlot, options?: MediaOperation) => operate<MediaFacts>("GET", input, options, b => { const url = new URL("https://vercel.com/api/blob"); url.searchParams.set("url", b.key); return { url, headers: controlHeaders(), parse: (_s, bytes) => metadata(JSON.parse(new TextDecoder("utf8", { fatal: true }).decode(bytes)), b.key) }; }),
-    read: (input: MediaSlot, representation: Representation, expectedTag: string, options?: MediaOperation) => operate<Readonly<{ bytes: Uint8Array; etag: string }>>("GET", input, options, b => {
+    metadata: (input: MediaSlot | undefined, options?: MediaOperation) => operate<MediaFacts>("GET", input, options, b => { const url = new URL("https://vercel.com/api/blob"); url.searchParams.set("url", b.key); return { url, headers: controlHeaders(), parse: (_s, bytes) => metadata(JSON.parse(new TextDecoder("utf8", { fatal: true }).decode(bytes)), b.key) }; }),
+    read: (input: MediaSlot | undefined, representation: Representation, expectedTag: string, options?: MediaOperation) => operate<Readonly<{ bytes: Uint8Array; etag: string }>>("GET", input, options, b => {
       need(["chunk", "permit", "retire"].includes(representation) && strong(expectedTag));
       const expected = representation === "chunk" ? { length: b.expectedBytes, hash: b.bodySha256 } : (() => { const bytes = marker(representation); return { length: bytes.length, hash: sha(bytes) }; })();
       const url = new URL(`${origin}/${b.key}`); url.searchParams.set("cache", "0");
@@ -157,4 +163,43 @@ export function createPrivateMediaTransport({ storeGeneration, request = httpsRe
       } };
     }),
   });
+}
+
+/** The public normal API retains its exact slot-only namespace and signatures. */
+export function createPrivateMediaTransport(input: Dependencies) {
+  const engine = createPrivateMediaEngine(input, "recording");
+  return Object.freeze({
+    putPermit: (slot: MediaSlot, options?: MediaOperation) => engine.putPermit(slot, options),
+    putChunk: (slot: MediaSlot, bytes: Uint8Array, permitTag: string, options?: MediaOperation) => engine.putChunk(slot, bytes, permitTag, options),
+    putRetirement: (slot: MediaSlot, currentTag: string, permitTag: string, options?: MediaOperation) => engine.putRetirement(slot, currentTag, permitTag, options),
+    metadata: (slot: MediaSlot, options?: MediaOperation) => engine.metadata(slot, options),
+    read: (slot: MediaSlot, representation: Representation, expectedTag: string, options?: MediaOperation) => engine.read(slot, representation, expectedTag, options),
+  });
+}
+
+export type RuntimeReadFacts = Readonly<{ ok: boolean; phase: "context" | "metadata" | "body" | "complete"; checks: Readonly<{ contextProfile: boolean; metadata: boolean; exactBody: boolean }> }>;
+/** Acceptance-only, fixed non-audio key. No key/URL/header/token argument and no
+ * write method or byte/tag result escapes this factory. Not recording access. */
+export function createRuntimeReadAcceptance(input: Omit<Dependencies, "storeGeneration"> = {}) {
+  const credentials = input.credentials ?? createRuntimeMediaOidc();
+  return Object.freeze({ async verify(options?: MediaOperation): Promise<RuntimeReadFacts> {
+    let phase: RuntimeReadFacts["phase"] = "context";
+    const checks = { contextProfile: false, metadata: false, exactBody: false };
+    const result = (ok: boolean): RuntimeReadFacts => Object.freeze({ ok, phase, checks: Object.freeze({ ...checks }) });
+    try {
+      const deadline = Math.min(performance.now() + 20000, options?.deadline ?? Infinity), signal = options?.signal;
+      const original = credentials.acquire();
+      const fresh = () => { need(!signal?.aborted && performance.now() < deadline); original.assertFresh(); };
+      fresh(); checks.contextProfile = true;
+      const scoped = { acquire() { fresh(); const current = credentials.acquire(); need(current.token === original.token); return current; } };
+      const engine = createPrivateMediaEngine({ ...input, storeGeneration: "runtime-read-proof-v1", credentials: scoped }, "fixed-runtime-read");
+      phase = "metadata";
+      const metadata = await engine.metadata(undefined, { signal, deadline }); fresh();
+      if (!metadata.ok || metadata.value.byteLength !== 33) return result(false);
+      checks.metadata = true; phase = "body";
+      const body = await engine.read(undefined, "retire", metadata.value.etag, { signal, deadline }); fresh();
+      if (!body.ok) return result(false);
+      checks.exactBody = true; phase = "complete"; fresh(); return result(true);
+    } catch { return result(false); }
+  } });
 }
