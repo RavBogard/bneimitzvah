@@ -152,7 +152,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       <p><WorkspaceLink href="/trope-chart">Open the printable trope chart</WorkspaceLink></p>
       <p className="field-help">Unsent work stays only in this tab. Controlled workspace changes ask you to review it.</p>
     </aside>}
-  </div>{current?.loading && <p role="status">Checking the current assignment, text and saved work…</p>}{editor && (mode === "tutor" ? <dialog ref={sheet} id={editorId} className="editor-sheet" aria-labelledby="reading-editor-title" onCancel={event => { event.preventDefault(); closeSheet(); }}>
+  </div>{current?.loading && <p role="status">Checking the current assignment, text and saved work…</p>}{editor && (mode === "tutor" ? <dialog ref={sheet} id={editorId} className="editor-sheet" aria-labelledby="reading-editor-title" closedby={editorBusy ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); closeSheet(); }}>
       <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close verse editor" disabled={editorBusy} onClick={closeSheet}>{icons.close}</button></div>{editor}
     </dialog> : <div id={editorId} className="reading-editor-anchor">{editor}</div>)}
     <ServiceLearningPanel id={serviceId} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} />

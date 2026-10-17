@@ -165,13 +165,27 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
   await custom(tab, "Genesis 1:8-9");
   const sheet = tab.getByRole("dialog", { name: "Set the assigned reading", exact: true });
   const close = tab.getByRole("button", { name: "Close verse editor", exact: true });
+  expect(await tab.locator("dialog.editor-sheet").evaluate(node => "closedBy" in node)).toBe(true);
+  await safe(() => tab.locator("dialog.editor-sheet").evaluate(node => {
+    const samples: object[] = [];
+    for (const type of ["keydown", "cancel", "close"]) node.addEventListener(type, event => {
+      if (type === "keydown" && (event as KeyboardEvent).key !== "Escape") return;
+      queueMicrotask(() => {
+        samples.push({ phase: type, cancelable: event.cancelable, prevented: event.defaultPrevented, open: (node as HTMLDialogElement).open, modal: node.matches(":modal"), concealed: Boolean(node.closest("[hidden], [inert]")), pending: Boolean(node.querySelector<HTMLButtonElement>(".sheet-close")?.disabled) });
+        (node as HTMLElement).dataset.modalDiagnostics = JSON.stringify(samples.slice(-12));
+      });
+    });
+  }));
   async function hold(pattern: string) {
     let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
     await tab.route(pattern, async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
     return { release, ready: () => ui.poll(() => held).toBe(true), remove: () => tab.unroute(pattern) };
   }
   async function rejectClosing(phase: string) {
-    await safe(() => tab.keyboard.press("Escape")); await ui(sheet, phase).toBeVisible(); await ui(close, phase).toBeDisabled();
+    await safe(() => tab.keyboard.press("Escape"));
+    const diagnostics = await tab.locator("dialog.editor-sheet").evaluate(node => ({ events: (node as HTMLElement).dataset.modalDiagnostics, open: (node as HTMLDialogElement).open, modal: node.matches(":modal"), concealed: Boolean(node.closest("[hidden], [inert]")), pending: Boolean(node.querySelector<HTMLButtonElement>(".sheet-close")?.disabled), labelled: Boolean(node.querySelector("#reading-editor-title")) }));
+    await ui(sheet, `${phase}: ${JSON.stringify(diagnostics)}`).toBeVisible(); await ui(close, phase).toBeDisabled();
+    await ui(sheet).toHaveAttribute("closedby", "none");
     await safe(() => close.evaluate(node => (node as HTMLButtonElement).click())); await ui(sheet).toBeVisible();
     expect(await tab.evaluate(() => document.querySelectorAll("dialog:modal").length)).toBe(1);
   }
@@ -195,7 +209,7 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
   try { await click(tab, "Reload current reading"); await safe(() => tab.keyboard.press("Escape")); await explicitReload.ready(); await rejectClosing("explicit metadata reload held"); }
   finally { explicitReload.release(); }
   await ui(sheet.getByText("Current reading reloaded. Prepare a new review to make a change.", { exact: true })).toBeVisible(); await explicitReload.remove();
-  await ui(close).toBeEnabled(); await safe(() => tab.keyboard.press("Escape")); await ui(sheet).toBeHidden();
+  await ui(close).toBeEnabled(); await ui(sheet).toHaveAttribute("closedby", "closerequest"); await safe(() => tab.keyboard.press("Escape")); await ui(sheet).toBeHidden();
   await ui(tab.getByRole("button", { name: "Change verses", exact: true })).toBeFocused();
   await openEditor(tab); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:8-9"); await closeEditor(tab);
 });
