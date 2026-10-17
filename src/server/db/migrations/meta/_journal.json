@@ -113,6 +113,13 @@
       "when": 1792186604468,
       "tag": "0015_service_learning_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792200700545,
+      "tag": "0016_verse_progress_foundation",
+      "breakpoints": true
     }
   ]
 }

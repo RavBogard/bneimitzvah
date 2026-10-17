@@ -1,4 +1,5 @@
 import "server-only";
+import { pruneRemoved } from "./progress";
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -49,6 +50,7 @@ export async function persistAssignment<Q extends PgQueryResultHKT>(tx:AccessTra
     ? await tx.insert(s.assignment).values({...values,tenantId:actor.tenantId,studentId,kind}).onConflictDoNothing({target:[s.assignment.tenantId,s.assignment.studentId,s.assignment.kind]}).returning()
     : await tx.update(s.assignment).set({...values,revision:expected+1}).where(and(eq(s.assignment.tenantId,actor.tenantId),eq(s.assignment.studentId,studentId),eq(s.assignment.kind,kind),eq(s.assignment.revision,expected))).returning();
   if(!row)return null;
+  await pruneRemoved(tx,actor.tenantId,studentId,row.id,input.verses);
   await tx.delete(s.assignmentVerse).where(and(eq(s.assignmentVerse.tenantId,actor.tenantId),eq(s.assignmentVerse.assignmentId,row.id)));
   await tx.insert(s.assignmentVerse).values(input.verses.map((verseRef,index)=>({tenantId:actor.tenantId,studentId,assignmentId:row.id,ordinal:index+1,verseRef})));
   return {id:row.id,revision:row.revision};

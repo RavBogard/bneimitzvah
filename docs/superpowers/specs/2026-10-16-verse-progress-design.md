@@ -53,6 +53,23 @@ FORCE RLS on both tables uses the existing tenant `USING`/`WITH CHECK` pattern; 
 
 ## Bounded implementation and acceptance
 
+The client-safe TypeScript contract is `src/lib/progress/types.ts`; it imports no server/database module. Example using synthetic identifiers only:
+
+```http
+POST /api/students/10000000-0000-4000-8000-000000000001/progress/self-check
+Content-Type: application/json
+```
+
+```json
+{"mode":"student","kind":"torah","assignmentId":"10000000-0000-4000-8000-000000000002","assignmentRevision":1,"verseRef":"Genesis 1:1","state":"working","expectedVersion":0}
+```
+
+```json
+{"ok":true,"binding":{"studentId":"10000000-0000-4000-8000-000000000001","mode":"student","kind":"torah","assignmentId":"10000000-0000-4000-8000-000000000002","assignmentRevision":1},"verseRef":"Genesis 1:1","stream":"self-check","state":"working","version":1}
+```
+
+The corresponding page request is `GET /api/students/10000000-0000-4000-8000-000000000001/progress?mode=student&kind=torah&assignmentId=10000000-0000-4000-8000-000000000002&assignmentRevision=1&offset=0`. Each row is shaped as `{"verseRef":"Genesis 1:1","selfCheck":{"state":"working","version":1},"assessment":{"state":"not-started","version":0}}`. Page counts name each stream separately. Use `/assessment` with explicit tutor/admin mode and that stream's expected version for assessment writes. A parent-assisted self-check uses child-practice mode and the already established practice header, never a context secret in JSON or the URL.
+
 Own new progress schema/data/service/HTTP/validation and tests; integrate only required schema exports, runtime/dispatch and atomic roster pruning. Add local migration **0016**, generated with the existing pinned tool plus reviewed security SQL. Do not edit frontend, historical migrations, moving UI/voice files, original shared STATE/COORDINATION or package pins.
 
 Focused synthetic validation/service/HTTP/schema tests must cover closed DTOs, no read writes, both independent CAS streams/default clearing, counts, exact binding and retention/removal/re-add semantics. Actual restricted PostgreSQL tests must prove tenant/FK/RLS behavior, same-stream contention, independent-stream concurrency, replacement/prune ordering, completed revocation/context switch and expiry after awaited locks/uniqueness. Reuse existing fixtures and isolated child environments; keep logs ignored and return only sanitized failures. Independent adversarial review is required before final source acceptance and exact-tree hosted CI. Production apply remains held.
