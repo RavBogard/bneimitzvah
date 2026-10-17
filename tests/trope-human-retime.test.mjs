@@ -458,3 +458,19 @@ test("review regressions: a phrase ending in an absent consonant still releases,
   assert.throws(() => applyWordListeningReview(proposal, other, other.words.map(w => w.id), "review-x"), e => e.code === "word-review-target");
   assert.throws(() => applyWordListeningReview(proposal, target.identity, {}, "review-x"), e => e.code === "word-review");
 });
+
+test("the verse's last word releases into a bounded tail beyond the timeline, and slices still cover everything", () => {
+  const target = packFor("בָ־גָ֑ דָֽ׃", "Genesis 1:1"), audio = synthetic(target.identity, { pauseAfter: new Set() });
+  const plain = json(build(recordFor(target, audio), target, audio, { tailMs: 0 }), "retime-map.json");
+  const result = build(recordFor(target, audio), target, audio), map = json(result, "retime-map.json");
+  assert.equal(plain.tailSamples, 0); assert.equal(plain.totalSamples, plain.timelineSamples);
+  // This target already ends with a rest, so the release fits inside it; the tail is only a fallback.
+  assert.ok(map.tailSamples >= 0 && map.tailSamples <= Math.round(0.24 * 24000), "bounded tail");
+  assert.equal(map.timelineSamples, Math.round(target.plan.seconds * 24000)); assert.equal(map.totalSamples, map.timelineSamples + map.tailSamples);
+  const last = target.identity.syllables.at(-1).id;
+  assert.ok(map.releases.some(r => r.syllableId === last), "verse-final word released");
+  assert.equal(map.slices.at(-1).dstEnd, map.totalSamples);
+  const speech = parseWav(new Uint8Array(result.artifacts["retimed-speech.wav"])).channelData[0];
+  assert.equal(speech.length, map.totalSamples); assert.ok(Math.abs(speech.at(-1)) < 1e-3);
+  assert.equal(json(result, "f0-voicing.json").full.frames, Math.ceil(map.totalSamples / 480));
+});

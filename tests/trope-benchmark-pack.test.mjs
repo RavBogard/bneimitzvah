@@ -175,6 +175,10 @@ test("measured timing keeps notes, order and text while each syllable lasts its 
   assert.equal(timed.manifest.passages[0].timing.source, "measured"); assert.equal(engine.manifest.passages[0].timing, "engine");
   assert.deepEqual(tScore.events.map(e => [e.unit, e.syllable, e.midi, e.slur]), score.events.map(e => [e.unit, e.syllable, e.midi, e.slur]));
   assert.equal(tScore.tempo, 60);
+  // The engine's verse-final rest survives, so the last word still has room to release.
+  const engineTail = (score.beats - (score.events.at(-1).t + score.events.at(-1).dur)) * 60 / score.tempo;
+  const timedTail = tScore.beats - (tScore.events.at(-1).t + tScore.events.at(-1).dur);
+  assert.ok(engineTail > 0); assert.ok(Math.abs(timedTail - engineTail) < 0.002);
   // Each syllable's sung notes add up to exactly its measured time.
   const notes = new Map(map.notes.map(n => [n.id, n]));
   map.syllables.forEach((s, k) => {

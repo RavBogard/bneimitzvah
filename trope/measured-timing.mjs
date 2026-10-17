@@ -52,7 +52,10 @@ export function applyMeasuredTiming(score, syllableMs) {
       if (notes?.[j]) notes[j].dur = parts[j] / 1000;
     });
   });
-  out.tempo = 60; out.beats = clockMs / 1000; out.seconds = clockMs / 1000;
+  // Keep the engine's verse-final rest (the breath after sof pasuk), converted to seconds.
+  const last = score.events.at(-1), tailBeats = Math.max(0, (score.beats ?? last.t + last.dur) - (last.t + last.dur));
+  const tailMs = Math.round(tailBeats * 60000 / score.tempo);
+  out.tempo = 60; out.beats = (clockMs + tailMs) / 1000; out.seconds = (clockMs + tailMs) / 1000;
   out.timing = { source: "measured", syllables: rows.length };
   return out;
 }

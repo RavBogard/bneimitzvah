@@ -18,7 +18,7 @@ import { canonicalJson, sha256, BENCHMARK_LIMITS } from "./benchmark-pack.mjs";
 
 export const RETIME_SCHEMA = "chant-human-retime/v1";
 export const RETIME_DEFAULTS = Object.freeze({ outputRate: 24000, maxConsonantShare: 0.6, minConsonantRatio: 0.5, minVowelMs: 20,
-  fadeMs: 5, maxSplitShiftMs: 2000, f0Fps: 50, warnVowelRatio: 8, warnNoteVowelCoverage: 0.5, releaseMs: 150, releaseGapMs: 40 });
+  fadeMs: 5, maxSplitShiftMs: 2000, f0Fps: 50, warnVowelRatio: 8, warnNoteVowelCoverage: 0.5, releaseMs: 150, releaseGapMs: 40, tailMs: 200 });
 export const OUTPUT_RATES = Object.freeze([16000, 22050, 24000, 44100, 48000]);
 // Phonikud characters that carry no voicing; the F0 sent to SVC is 0 over them, as in speech2sing.py.
 export const VOICELESS = Object.freeze(["p", "t", "k", "f", "s", "ʃ", "χ", "h", "ʔ", "ts"]);
@@ -47,7 +47,7 @@ function options(input = {}) {
   if (Object.keys(input).some(key => !Object.hasOwn(RETIME_DEFAULTS, key)) || !OUTPUT_RATES.includes(o.outputRate)
     || !(o.maxConsonantShare > 0 && o.maxConsonantShare < 1) || !(o.minConsonantRatio > 0 && o.minConsonantRatio <= 1)
     || !(o.minVowelMs > 0) || !(o.fadeMs >= 0 && o.fadeMs <= 20) || !(o.maxSplitShiftMs >= 0) || o.f0Fps !== 50
-    || !(o.releaseMs >= 0 && o.releaseMs <= 400) || !(o.releaseGapMs >= 0 && o.releaseGapMs <= 200)) fail("options");
+    || !(o.releaseMs >= 0 && o.releaseMs <= 400) || !(o.releaseGapMs >= 0 && o.releaseGapMs <= 200) || !(o.tailMs >= 0 && o.tailMs <= 1000)) fail("options");
   return Object.freeze(o);
 }
 
@@ -61,7 +61,7 @@ export function planRetime(bound, input) {
   const notes = new Map(identity.notes.map(n => [n.id, n]));
   const totalMs = identity.notes.reduce((end, n) => Math.max(end, n.startMs + n.durationMs), 0);
   if (Math.round(plan.seconds * 1000) !== totalMs || totalMs > BENCHMARK_LIMITS.seconds * 1000) fail("timeline");
-  const total = toSample(totalMs);
+  let total = toSample(totalMs);
 
   // Target syllables from the identity map's executed notes; their notes must be one contiguous run.
   const syllables = identity.syllables.map((s, index) => {
@@ -153,8 +153,14 @@ export function planRetime(bound, input) {
     cursor = b.at(-1);
     pendingRelease = pieces.filter(p => p.kind === "phone" && p.dstEnd > p.dstStart).at(-1);
   }
-  cursor = Math.max(cursor, release(total) ?? cursor);
+  // The verse's last word has no rest after it inside the target, so it may release into a short tail
+  // beyond the executed timeline (heard as cut off without one, Daniel, 2026-10-16).
+  const tailRoom = Math.round(o.tailMs * R / 1000);
+  cursor = Math.max(cursor, release(total + tailRoom + Math.round(o.releaseGapMs * R / 1000)) ?? cursor);
+  const tailSamples = Math.max(0, cursor - total);
   silence(cursor, total);
+  const timelineSamples = total;
+  total += tailSamples;
   const sounding = pieces.filter(p => p.dstEnd > p.dstStart);
   for (let i = 1; i < sounding.length; i++) if (sounding[i].dstStart !== sounding[i - 1].dstEnd) fail("timeline");
   if (!sounding.length || sounding[0].dstStart !== 0 || sounding.at(-1).dstEnd !== total) fail("timeline");
@@ -206,7 +212,7 @@ export function planRetime(bound, input) {
 
   const dropped = [{ kind: "leading", srcStart: 0, srcEnd: map(bound.sourceRegion.start) }, ...bound.events.map(e => ({ kind: e.kind, srcStart: map(e.start), srcEnd: map(e.end) })),
     { kind: "trailing", srcStart: map(bound.sourceRegion.end), srcEnd: map(bound.record.recording.frames) }].filter(d => d.srcEnd > d.srcStart);
-  return { options: o, rate: R, totalSamples: total, totalMs, pieces, noteMap, melismas, slices, dropped, releases, warnings };
+  return { options: o, rate: R, totalSamples: total, timelineSamples, tailSamples, totalMs, pieces, noteMap, melismas, slices, dropped, releases, warnings };
 }
 
 /** Render the plan from the original samples. Same input bytes and plan give the same samples. */
@@ -231,7 +237,7 @@ export function renderRetime(plan, sourceAtRate) {
 
 /** Score F0 (Hz, 0 = unvoiced) and voicing per 50 fps frame over [from, to) of the target timeline. */
 export function f0Voicing(plan, speechPlan, from = 0, to = plan.totalSamples) {
-  const curve = scoreF0(speechPlan.notes, { ...SCORE_F0, seconds: plan.totalMs / 1000 });
+  const curve = scoreF0(speechPlan.notes, { ...SCORE_F0, seconds: plan.totalSamples / plan.rate });
   const nearest = new Int32Array(curve.length).fill(-1);
   for (let i = 0, last = -1; i < curve.length; i++) { if (curve[i] > 0) last = i; nearest[i] = last; }
   for (let i = curve.length - 1, next = -1; i >= 0; i--) {
@@ -282,7 +288,7 @@ export function buildHumanRetime(record, pack, audio, { code, alignmentFileSha25
     const peak = speech.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
     add(PATHS.map, canonicalJson({ schema: "chant-human-retime-map/v1", targetHash: record.target.targetHash, passageId: record.target.passageId,
       units: { source: `original samples mapped to ${plan.rate} Hz by mapSample`, target: `${plan.rate} Hz samples of the executed timeline` },
-      totalSamples: plan.totalSamples, totalMs: plan.totalMs, pieces: plan.pieces, notes: plan.noteMap, melismas: plan.melismas, slices, dropped: plan.dropped, releases: plan.releases,
+      totalSamples: plan.totalSamples, timelineSamples: plan.timelineSamples, tailSamples: plan.tailSamples, totalMs: plan.totalMs, pieces: plan.pieces, notes: plan.noteMap, melismas: plan.melismas, slices, dropped: plan.dropped, releases: plan.releases,
       warnings: plan.warnings, absentConsonants: plan.pieces.filter(p => p.method === "absent").length, peakAbsolute: round6(peak), reviewDeviation: bound.reviewDeviation }), "retime-map");
     const manifest = { schema: RETIME_SCHEMA, releaseStatus: "private-unreleased", lane: "B-human", stage: "retime",
       targetReview: "pending", targetReviewAssertion: record.target.targetReviewRecordId
