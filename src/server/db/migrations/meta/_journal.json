@@ -190,6 +190,13 @@
       "when": 1792356000000,
       "tag": "0026_oauth_provider_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1792359600000,
+      "tag": "0027_oauth_link_lock_permission",
+      "breakpoints": true
     }
   ]
 }
