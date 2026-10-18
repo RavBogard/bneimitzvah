@@ -1,4 +1,5 @@
 import "server-only";
+import type { RelatedSourcePage } from "../study/sources/discovery";
 import { parseReferenceResolution, type ReferenceResolution } from "../../lib/reference-audio/source";
 import type { StudyWordAids } from "../../lib/hebrew/word-aids";
 import { WORD_DETAILS_LIMITS, type StudyWordDetails } from "../../lib/hebrew/word-details";
@@ -16,7 +17,7 @@ import { closedObject, uniqueQuery } from "./query";
 import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
-type Kind = "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "study-word-details" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
+type Kind = "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "study-word-details" | "study-sources" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
   | "admin-students" | "edit" | "disable" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "pending" | "accept"
   | "eligible-tutors" | "relationships" | "tutor-assign" | "tutor-unassign" | "guardian-revoke" | "identity-revoke" | "guardian-practice" | "grant-revoke" | "cantor";
 type Route = { kind: Kind; methods: readonly string[]; id?: string; linkId?: string };
@@ -39,6 +40,8 @@ function route(pathname: string): Route | null {
   if (reference) return { kind: "reference-audio", methods: ["GET"], id: reference[1] };
   const wordAids = /^\/api\/students\/([^/]+)\/study-word-aids$/.exec(pathname);
   if (wordAids) return { kind: "study-word-aids", methods: ["GET"], id: wordAids[1] };
+  const sources = /^\/api\/students\/([^/]+)\/study-sources$/.exec(pathname);
+  if (sources) return { kind: "study-sources", methods: ["GET"], id: sources[1] };
   const wordDetails = /^\/api\/students\/([^/]+)\/study-word-details$/.exec(pathname);
   if (wordDetails) return { kind: "study-word-details", methods: ["GET"], id: wordDetails[1] };
   const study = /^\/api\/students\/([^/]+)\/study-text$/.exec(pathname);
@@ -161,7 +164,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", selected.methods.join(", ")); return response;
     }
     const practiceRoute = selected.kind.startsWith("practice-");
-    if (!practiceRoute && selected.kind !== "reading" && selected.kind !== "study-text" && selected.kind !== "study-word-aids" && selected.kind !== "study-word-details" && selected.kind !== "reference-audio" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
+    if (!practiceRoute && selected.kind !== "reading" && selected.kind !== "study-text" && selected.kind !== "study-word-aids" && selected.kind !== "study-word-details" && selected.kind !== "study-sources" && selected.kind !== "reference-audio" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
     // Dispatcher resolves the actual host before this adapter. Services still
     // independently reauthorize; no body/Origin/forwarded claim chooses tenant.
     if (request.method === "POST") requireCookieMutation(request, runtime.origin);
@@ -259,6 +262,28 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         if (!value.ok) return stale();
         return privateJson({ studentId: value.studentId, studentRevision: value.studentRevision, mode: value.mode, context: contextView(value.context),
           assignment: { id: value.assignment.id, revision: value.assignment.revision, kind: value.assignment.kind, needsReview: value.assignment.needsReview }, reference: referenceView(value.reference) });
+      }
+      case "study-sources": {
+        if (request.body !== null || request.headers.has("transfer-encoding") || (request.headers.has("content-length") && request.headers.get("content-length") !== "0")) throw new HttpBoundaryError();
+        const query = uniqueQuery(request.url, ["mode", "kind", "assignmentId", "assignmentRevision", "translation", "offset", "sourceOffset", "catalogHash"]);
+        const kind = query.get("kind"), translation = query.get("translation"), revisionValue = query.get("assignmentRevision"), offset = query.get("offset"), sourceOffset = query.get("sourceOffset"), catalogHash = query.get("catalogHash");
+        if ((kind !== "torah" && kind !== "haftarah") || translation !== "jps2023" || !revisionValue || !/^[1-9][0-9]{0,9}$/.test(revisionValue)
+          || offset === null || !/^(?:0|[1-9][0-9]{0,2})$/.test(offset) || sourceOffset === null || !/^(?:0|[1-9][0-9]{0,3})$/.test(sourceOffset)
+          || Number(sourceOffset) > 4090 || Number(sourceOffset) % 10 !== 0 || catalogHash !== null && !/^[a-f0-9]{64}$/.test(catalogHash) || Number(sourceOffset) > 0 && catalogHash === null) throw new HttpBoundaryError();
+        let value;
+        try { value = await runtime.studySources.read(request, { mode: mode(query.get("mode"), true), studentId: id!, kind,
+          assignmentId: identifier(query.get("assignmentId")), assignmentRevision: integer(Number(revisionValue)), translation, offset: Number(offset) },
+          { sourceOffset: Number(sourceOffset), ...(catalogHash === null ? {} : { catalogHash }) }); }
+        catch (error) { if (error instanceof StudyUnavailable && error.code === "invalid-request") throw new HttpBoundaryError(); throw error; }
+        if (!value.ok) return value.code === "source-catalog-changed" ? privateJson({ ok: false, code: "source-catalog-changed" }, 409) : stale();
+        const page: RelatedSourcePage = value.sources;
+        const body = { studentId: value.studentId, studentRevision: value.studentRevision, mode: value.mode, context: contextView(value.context),
+          assignment: { id: value.assignment.id, revision: value.assignment.revision, kind: value.assignment.kind, needsReview: value.assignment.needsReview },
+          sources: { schema: page.schema, ref: page.ref, catalogHash: page.catalogHash, sourceOffset: page.sourceOffset, pageSize: page.pageSize,
+            totalEntries: page.totalEntries, receivedRows: page.receivedRows, heldCount: page.heldCount, duplicateCount: page.duplicateCount, nextSourceOffset: page.nextSourceOffset,
+            entries: page.entries.map(entry => ({ id: entry.id, ref: entry.ref, indexTitle: entry.indexTitle, category: entry.category, labels: { en: entry.labels.en, he: entry.labels.he } })) } };
+        if (Buffer.byteLength(JSON.stringify(body)) > 64 * 1024) throw new StudyUnavailable("upstream");
+        return privateJson(body);
       }
       case "study-word-details": {
         if (request.body !== null || request.headers.has("transfer-encoding") || (request.headers.has("content-length") && request.headers.get("content-length") !== "0")) throw new HttpBoundaryError();
