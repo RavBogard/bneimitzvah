@@ -76,6 +76,25 @@ export async function downloadReferenceAudio(sourceValue: ReferenceSource, signa
   finally { clearTimeout(totalTimer); signal.removeEventListener("abort", externalAbort); try { reader?.releaseLock(); } catch {} }
 }
 
+// Module-private capability: callers can clear it, never supply an unverified Blob.
+const assetReuses = new WeakMap<object, (source: ReferenceSource, signal: AbortSignal, io: { fetch?: typeof fetch; digest?: typeof sha256 }) => Promise<Blob>>();
+export function createReferenceAudioReuse() {
+  let generation = 0, entry: { key: string; blob: Blob } | undefined;
+  const capability = Object.freeze({ clear() { generation++; entry = undefined; } });
+  assetReuses.set(capability, async (value, signal, io) => {
+    const source = parseReferenceSource(value);
+    if (!source || signal.aborted) throw unavailable();
+    const key = JSON.stringify([source.url, source.sha256, source.bytes]);
+    if (entry?.key === key) return entry.blob;
+    const mine = ++generation; entry = undefined;
+    const blob = await downloadReferenceAudio(source, signal, io);
+    if (signal.aborted || mine !== generation) throw unavailable();
+    entry = { key, blob }; return blob;
+  });
+  return capability;
+}
+export type ReferenceAudioReuse = ReturnType<typeof createReferenceAudioReuse>;
+
 export type ReferencePlaybackState = Readonly<{
   status: "idle" | "loading" | "ready" | "playing" | "unavailable" | "error";
   selection: "verse" | number; repeat: boolean; speed: number; speedSupported: boolean;
@@ -86,6 +105,7 @@ type Scheduler = { frame(fn: FrameRequestCallback): number; cancelFrame(id: numb
 export type ReferencePlaybackOptions = {
   load(signal: AbortSignal): Promise<ReferenceResolution>;
   ref: string; readingText: string; wordCount: number;
+  assetReuse?: ReferenceAudioReuse;
   onState?(state: ReferencePlaybackState): void; onActiveWord?(index: number | null): void;
   // Platform seams for deterministic offline tests; no configurable production caps.
   audio?(): ReferenceAudioElement; fetch?: typeof fetch; digest?: typeof sha256;
@@ -170,7 +190,9 @@ export function createReferencePlayback(options: ReferencePlaybackOptions) {
       }
       const current = createReferenceTimeline(resolution.verse, { ref: options.ref, readingTextSha256: hash, wordCount: options.wordCount });
       if (!current || current.asset !== resolution.source.asset) { publish({ status: "unavailable" }); return; }
-      const blob = await awaitLive(downloadReferenceAudio(resolution.source, signal, { fetch: options.fetch, digest: options.digest }));
+      const reuse = options.assetReuse === undefined ? undefined : assetReuses.get(options.assetReuse);
+      if (options.assetReuse !== undefined && !reuse) throw unavailable();
+      const blob = await awaitLive(reuse ? reuse(resolution.source, signal, { fetch: options.fetch, digest: options.digest }) : downloadReferenceAudio(resolution.source, signal, { fetch: options.fetch, digest: options.digest }));
       live();
       timeline = current; url = (options.createUrl ?? URL.createObjectURL)(blob);
       audio = (options.audio ?? (() => new Audio()))();

@@ -4,7 +4,9 @@ import { type Assigned } from "../api";
 import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
 import { studyBinding, studyPlan, type StudyKind, type StudyPage } from "./api";
 import { StudyCredits } from "./credits";
-import { AnnotatedStudyVerse } from "./annotations";
+import { Apparatus, FlowingStudyText } from "./annotations";
+import { ReadingPlayer, type ReadingPlayerHandle } from "./reading-player";
+import type { ReadingSelection } from "./main-playback";
 import { LiftedLine } from "./lift";
 import { useReadingPrefs } from "../reading-prefs";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
@@ -26,6 +28,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   onHearReady?(ready: boolean): void; active?: boolean;
 }) {
   const { readStudy, readReference, summary, concealed, epoch } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
+  const playback = useRef<ReadingPlayerHandle | null>(null), registerPlayback = useCallback((value: ReadingPlayerHandle | null) => { playback.current = value; }, []);
+  const [playingWord, setPlayingWord] = useState<{ verse: number; index: number } | null>(null);
   const [lift, setLift] = useState<{ page: StudyPage; index: number } | null>(null);
   const metadata = useRef<Assigned | null>(null), controller = useRef<AbortController | null>(null), generation = useRef(0);
   const selection = useRef<{ kind: StudyKind; offset: number; assignmentKey: string } | null>(null);
@@ -82,7 +86,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   useLayoutEffect(() => { if (concealed || !active) setLift(null); }, [concealed, active, epoch]);
   const shown = livePage && state.kind ? [state.kind, livePage.offset, livePage.verses.length] as const : null;
   useEffect(() => { if (shown) onShown?.(...shown); }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
-  const open = (page: StudyPage, index: number) => { setLift({ page, index }); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
+  const hear = (page: StudyPage, index: number, word: ReadingSelection = "verse") => { playback.current?.select(index, word); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
+  const open = (page: StudyPage, index: number) => { playback.current?.pause(); setLift({ page, index }); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
   if (liftHandle) {
     // Parent Start brings this tab forward and opens it in the same event.
     // Inactivity still unmounts media; it does not revoke this explicit opener.
@@ -90,7 +95,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     liftHandle.current = livePage && !concealed ? (index: number) => {
       if (openerScope.current !== scope || scope.concealed || metadata.current !== baseline
         || generation.current !== turn || controller.current?.signal.aborted) return;
-      open(livePage, Math.min(Math.max(index, 0), livePage.verses.length - 1));
+      hear(livePage, Math.min(Math.max(index, 0), livePage.verses.length - 1));
     } : null;
   }
   if (!baseline) return <section className="assigned-study" aria-label="Assigned text"><p role="status">Text is hidden while the assignment is checked.</p></section>;
@@ -106,8 +111,23 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       <button className="button-secondary" onClick={() => { if (current.error === 409) void reloadMetadata().catch(() => undefined); else void explicitLoad(kind, selection.current?.offset ?? 0); }}>{current.error === 409 ? "Refresh reading and text" : "Reload assigned text"}</button>
       {renderActiveWork?.()}
     </div> : current.page && <>
-      <ol className={`study-verses${renderWork ? " study-verses-with-work" : ""}`} start={current.page.offset + 1}>{current.page.verses.map((verse,index) => {const position=aliyahPosition(kind,assignment!.aliyahStarts,assignment!.verses,verse.ref);return <li key={verse.ref}>{position && (position.startsHere || index===0) && <p className="student-aliyah">Aliyah {position.number}{position.startsHere?" starts here":" · continued from the previous text page"}</p>}<AnnotatedStudyVerse key={JSON.stringify([summary.sessionBinding, key, kind, current.page!.offset, verse.ref])} verse={verse} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup}
-        number={current.page!.offset + index + 1} learner={learner} showEnglish={songSession ? prefs.translation : true} onLift={() => open(current.page!, index)} mark={renderMark?.(kind, verse.ref)} />{renderWork?.(kind, verse.ref)}</li>;})}</ol>
+      <FlowingStudyText verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord}
+        sections={current.page.verses.flatMap((verse, index) => { const position = aliyahPosition(kind, assignment!.aliyahStarts, assignment!.verses, verse.ref); return position && (position.startsHere || index === 0) ? [{ index, label: `Aliyah ${position.number}${position.startsHere ? " starts here" : " · continued from the previous text page"}` }] : []; })}
+        onVerse={index => hear(current.page!, index)} onWord={(index, word) => hear(current.page!, index, word)} />
+      {!concealed && <ReadingPlayer key={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current])}
+        scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current])} verses={current.page.verses} active={active && !lift}
+        register={registerPlayback} onActiveWord={setPlayingWord} load={async (index, signal) => {
+          const value = baseline, page = current.page!, turn = generation.current;
+          if (signal.aborted || metadata.current !== value || page !== livePage || !page.verses[index]) throw new PortalRequestError(409);
+          const result = await readReference(value, kind, page.offset + index, signal);
+          if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
+          return result;
+        }} />}
+      <div className="study-verse-details">{current.page.verses.map((verse, index) => <div key={verse.ref} className="study-verse-detail" data-verse-ref={verse.ref}>
+        <div className="verse-card-head"><h4>Verse tools · <bdi dir="ltr">{verse.ref}</bdi></h4>{renderMark?.(kind, verse.ref)}<button type="button" className="button-text" onClick={() => open(current.page!, index)}>View {verse.ref} up close</button></div>
+        {(songSession ? prefs.translation : true) && <p className="study-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
+        <Apparatus verse={verse} learner={learner} />{renderWork?.(kind, verse.ref)}
+      </div>)}</div>
       {!learner && kind==="torah" && assignment!.aliyahStarts===null && <p className="field-help">Aliyah boundaries have not been recorded for this assignment.</p>}
       {learner ? !single && <p className="study-page-position">Verses {current.page.offset + 1}–{current.page.offset + current.page.verses.length} of {current.page.totalVerses}</p>
         : <p role="status">Verses {current.page.offset + 1}–{current.page.offset + current.page.verses.length} of {current.page.totalVerses}. {current.page.translation.status === "partial" ? "The selected English edition is missing for some verses." : current.page.translation.status === "unavailable" ? "The selected English edition is unavailable on this page." : "Selected English edition available."}</p>}

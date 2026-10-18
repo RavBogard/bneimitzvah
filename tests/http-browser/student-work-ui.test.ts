@@ -50,7 +50,7 @@ async function loaded(tab: Page, ref = "Genesis 1:1") {
     throw new Error(`Assigned reading not visible; HTTP ${httpEvidence.get(tab)?.join(",")}; fixed states ${states.join(",") || "none"}; page error count ${browserErrors.get(tab) ?? 0}`);
   }
 }
-function verse(tab: Page, ref = "Genesis 1:1") { return tab.locator(".study-verses > li").filter({ has: tab.getByRole("heading", { name: ref, level: 4, exact: true }) }); }
+function verse(tab: Page, ref = "Genesis 1:1") { return tab.locator(`.study-verse-detail[data-verse-ref="${ref}"]`); }
 async function tools(tab: Page, ref = "Genesis 1:1") { const panel = verse(tab, ref).locator(".verse-work"); if (await panel.getAttribute("open") === null) await safe(() => panel.locator("summary").first().click()); await ui(panel.locator(".verse-work-content")).toBeVisible(); return panel; }
 async function singleRecovery(panel: Locator, message: string) {
   await ui(panel.locator(".work-editor [role=status]")).toHaveCount(1);
@@ -74,7 +74,7 @@ async function capture(tab: Page, name: string) {
   const directory = join(process.cwd(), ".impeccable", "review"); await mkdir(directory, { recursive: true });
   async function expectedState() {
     await ui(tab.locator(".reading-with-work")).toBeVisible();
-    const panel = tab.locator(".study-verses .verse-work[open]"); await ui(panel).toBeVisible();
+    const panel = tab.locator(".study-verse-details .verse-work[open]"); await ui(panel).toBeVisible();
     if (state === "revision-review" || state === "revision-unknown") {
       await ui(panel.getByRole("textbox")).toHaveJSProperty("readOnly", true);
       await ui(panel.getByRole("region", { name: /Review unsent translation/ })).toBeVisible();
@@ -227,42 +227,59 @@ it("supports composition and byte validation, clear without repeated empty versi
   expect(await tab.evaluate(() => localStorage.length === 0 && sessionStorage.length === 0)).toBe(true);
 });
 
-it("guards controlled leave and settles hidden lifecycle checks while retaining staged work through text outage", async () => {
+it("guards controlled leave, explicit reload barriers and quiet retained reading through text outage", async () => {
+  let phase = "initial-departure";
+  try {
   const tab = await page("student"); await learner(tab); const panel = await tools(tab, "Genesis 1:4");
   await safe(() => panel.getByRole("textbox").fill("Synthetic departure edit")); await safe(() => tab.getByRole("link", { name: "Account and sign out", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await ui(tab.getByRole("dialog").getByRole("button", { name: "Keep working", exact: true })).toBeFocused(); await click(tab, "Keep working"); await ui(tab.getByRole("link", { name: "Account and sign out", exact: true })).toBeFocused(); await ui(panel.getByRole("textbox")).toHaveValue("Synthetic departure edit");
+  phase = "explicit-text-outage";
   // Pause before debounce, then verify all three independent reads hold the reveal barrier.
-  await safe(() => panel.getByRole("textbox").fill("Synthetic retained during text outage")); unavailable = true; await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
-  await ui(tab.getByRole("heading", { name: "Text unavailable", exact: true })).toBeVisible(); unavailable = false; await ui(tab.locator(".verse-work textarea")).toHaveValue("Synthetic retained during text outage");
-  await safe(() => tab.locator(".verse-work").getByRole("button", { name: "Save now", exact: true }).click()); await ui(tab.locator(".verse-work .work-status")).toHaveText("Saved");
-  await click(tab, "Reload assigned text"); await loaded(tab); await tools(tab, "Genesis 1:4");
+  // Dispatch only these deliberate reloads without moving focus: a real pointer
+  // click blurs/saves the textarea before the barrier (covered by other cases).
+  await safe(() => panel.getByRole("textbox").fill("Synthetic retained during text outage")); unavailable = true; phase = "outage-refresh-click"; await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).dispatchEvent("click"));
+  phase = "outage-heading"; await ui(tab.getByRole("heading", { name: "Text unavailable", exact: true })).toBeVisible(); unavailable = false; phase = "outage-retained-draft"; await ui(tab.locator(".verse-work textarea")).toHaveValue("Synthetic retained during text outage");
+  const outageSave = tab.locator(".verse-work").getByRole("button", { name: "Save now", exact: true });
+  phase = "outage-save";
+  await safe(() => outageSave.click()); phase = "outage-saved"; await ui(tab.locator(".verse-work .work-status")).toHaveText("Saved");
+  phase = "outage-reload"; await click(tab, "Reload assigned text"); await loaded(tab); await tools(tab, "Genesis 1:4");
+  phase = "held-text-barrier";
   // Work can finish first, but a held text response still prevents queued writes.
   let releaseText!: () => void, textHeld = false, workRead = false, writeCount = 0; const textGate = new Promise<void>(resolve => { releaseText = resolve; });
   await tab.route("**/work/draft", async route => { writeCount++; await route.continue(); });
   await tab.route("**/work?**", async route => { const response = await route.fetch(); workRead = true; await route.fulfill({ response }); });
   await tab.route("**/study-text?**", async route => { const response = await route.fetch(); textHeld = true; await textGate; await route.fulfill({ response }).catch(() => undefined); });
-  const staged = await tools(tab, "Genesis 1:4"); await safe(() => staged.getByRole("textbox").fill("Synthetic queued behind text barrier")); await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
+  const staged = await tools(tab, "Genesis 1:4"); await safe(() => staged.getByRole("textbox").fill("Synthetic queued behind text barrier")); await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).dispatchEvent("click"));
   await ui.poll(() => textHeld && workRead).toBe(true); await safe(() => tab.waitForTimeout(1100)); expect(writeCount).toBe(0); await ui(tab.locator(".study-hebrew").first()).toBeHidden();
   releaseText(); await tab.unroute("**/study-text?**"); await tab.unroute("**/work?**"); await loaded(tab); await ui(staged.locator(".work-status")).toHaveText("Saved"); await tab.unroute("**/work/draft");
+  phase = "held-metadata-barrier";
   // The same pause applies while assignment metadata has not yet returned.
   let releaseMetadata!: () => void, metadataHeld = false; const metadataGate = new Promise<void>(resolve => { releaseMetadata = resolve; }); writeCount = 0;
   await tab.route("**/work/draft", async route => { writeCount++; await route.continue(); });
   await tab.route("**/reading?**", async route => { const response = await route.fetch(); metadataHeld = true; await metadataGate; await route.fulfill({ response }).catch(() => undefined); });
-  await safe(() => staged.getByRole("textbox").fill("Synthetic queued behind metadata barrier")); await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => metadataHeld).toBe(true); await safe(() => tab.waitForTimeout(1100)); expect(writeCount).toBe(0);
+  await safe(() => staged.getByRole("textbox").fill("Synthetic queued behind metadata barrier")); await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).dispatchEvent("click")); await ui.poll(() => metadataHeld).toBe(true); await safe(() => tab.waitForTimeout(1100)); expect(writeCount).toBe(0);
   releaseMetadata(); await tab.unroute("**/reading?**"); await loaded(tab); await ui(staged.locator(".work-status")).toHaveText("Saved"); await tab.unroute("**/work/draft");
-  let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; }); await tab.route("**/work?**", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
-  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeVisible(); await ui(tab.locator(".study-hebrew").first()).toBeHidden(); release(); await tab.unroute("**/work?**"); await loaded(tab);
+  phase = "quiet-session-retention";
+  let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; }); await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
+  const existingReading = await tab.locator(".study-verses").elementHandle();
+  try { await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); await ui(tab.locator(".study-hebrew").first()).toBeVisible(); expect(await existingReading!.evaluate(node => node === document.querySelector(".study-verses"))).toBe(true); await ui(staged.getByRole("textbox")).toHaveValue("Synthetic queued behind metadata barrier"); }
+  finally { release(); await tab.unroute("**/api/session"); await existingReading?.dispose(); }
+  await loaded(tab);
+  phase = "discard-departure";
   const leaving = await tools(tab, "Genesis 1:4"), discarded = "Synthetic discard before departure";
   // An unfinished composition stays unsent even when the ordinary link click blurs the field.
   await safe(() => leaving.getByRole("textbox").dispatchEvent("compositionstart")); await safe(() => leaving.getByRole("textbox").fill(discarded));
   await safe(() => tab.getByRole("link", { name: "Account and sign out", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await click(tab, "Discard unsent edits and continue");
   await ui(tab.getByRole("dialog")).toBeHidden(); await accountReady(tab);
   // A fresh access check must keep sign-out available, rather than briefly visiting / and returning to the reading.
+  phase = "account-session-check";
   const refreshed = tab.waitForResponse(response => new URL(response.url()).pathname === "/api/session");
   await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); expect((await refreshed).status()).toBe(200); await accountReady(tab); await captureAccount(tab);
   expect((await fixture.ownerDb.select().from(s.translationDraft).where(and(eq(s.translationDraft.studentId, fixture.student.id), eq(s.translationDraft.verseRef, "Genesis 1:4"), eq(s.translationDraft.text, discarded)))).length).toBe(0);
+  phase = "staff-save-departure";
   const admin = await page("admin"); await staff(admin); const notePanel = await tools(admin, "Genesis 1:7"); await safe(() => notePanel.getByRole("button", { name: "Student-visible notes", exact: true }).click());
   await safe(() => notePanel.getByRole("textbox").fill("Synthetic explicitly saved on departure")); await safe(() => admin.getByRole("link", { name: "All students", exact: true }).click()); await ui(admin.getByRole("dialog")).toBeVisible(); await click(admin, "Save and continue"); await ui.poll(() => new URL(admin.url()).pathname).toBe("/workspace/admin/students");
   expect((await fixture.ownerDb.select().from(s.tutorNote).where(and(eq(s.tutorNote.verseRef, "Genesis 1:7"), eq(s.tutorNote.text, "Synthetic explicitly saved on departure")))).length).toBe(1);
+  } catch { throw new Error(`Student work lifecycle fixed phase: ${phase}; private details withheld`); }
 });
 
 it("honors a real byte-adaptive work page and preserves original assignment labels through remove and re-add", async () => {
@@ -290,7 +307,12 @@ async function reviseSameVerses(admin: Page) {
   expect(prepare.status, "revision preparation HTTP status").toBe(200); expect(prepare.data.status === "prepared", "revision preparation fixed state").toBe(true);
   expect((await api(admin, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: prepare.data.binding }, "revision confirm")).status, "revision confirmation HTTP status").toBe(200);
 }
-async function focusRefresh(tab: Page) { await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await loaded(tab); }
+async function focusRefresh(tab: Page) {
+  // These callers changed the actual assignment revision. Observe the resulting
+  // authorized text reload rather than accepting the still-mounted old heading.
+  const freshText = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/study-text") && response.status() === 200);
+  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await freshText; await loaded(tab);
+}
 
 it("retains unsent text after an assignment-only revision for explicit review without autosave", async () => {
   const student = await page("student"), admin = await page("admin"); await learner(student);

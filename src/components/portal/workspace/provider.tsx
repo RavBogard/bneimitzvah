@@ -15,6 +15,7 @@ import { serviceApi, type ServiceMetadata, type ServicePlan, type ServiceUnitRes
 import { fetchLessons, type LessonOperation, type LessonResult } from "./lessons/api";
 import { fetchPracticeCalendar, type PracticeAck, type PracticeDates, type PracticeOperation } from "./practice-calendar/api";
 import { reloadWorkspaceScopes, type ReloadRegistration } from "./reload-barrier";
+import { createQuietRefresh } from "./quiet-refresh";
 
 export const rolePaths = { student: "/workspace/student", parent: "/workspace/parent", tutor: "/workspace/tutor", admin: "/workspace/admin/students" } as const;
 type WorkLifecycle = { pause(): void; clear(): void; settle(): Promise<void>; hasUnsaved(): boolean; reveal(): void };
@@ -38,6 +39,7 @@ type Workspace = {
   registerDeparture(guard: () => Promise<boolean>): () => void;
   guardDeparture(): Promise<boolean>;
   registerReload(reload: () => Promise<void>): () => void;
+  registerQuiet(verify: (signal: AbortSignal) => Promise<boolean>): () => void;
   /** True while access is being checked or has failed: the workspace is hidden. */
   concealed: boolean;
 };
@@ -70,6 +72,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [workNotice, setWorkNotice] = useState("");
   const sequence = useRef(0), currentPath = useRef(pathname), routeRevision = useRef(0), sessionAbort = useRef<AbortController | null>(null);
   const binding = useRef<string | null>(null), reloaders = useRef(new Set<ReloadRegistration>());
+  const quiet = useRef<ReturnType<typeof createQuietRefresh> | null>(null);
+  const quietScopes = useRef(new Set<(signal: AbortSignal) => Promise<boolean>>()), quietRevision = useRef(0);
   const work = useRef(new Set<WorkLifecycle>()), departures = useRef(new Set<() => Promise<boolean>>());
   const completeWork = useCallback((value: WorkLifecycle) => { if (!checkingRef.current && work.current.has(value)) value.reveal(); }, []);
   const registerWork = useCallback((value: WorkLifecycle) => { work.current.add(value); return () => {
@@ -80,10 +84,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const guardDeparture = useCallback(async () => { for (const guard of departures.current) if (!await guard()) return false; return true; }, []);
   const clearWork = useCallback(() => { work.current.forEach(value => value.clear()); }, []);
   const registerReload = useCallback((reload: () => Promise<void>) => { const registration = { reload }; reloaders.current.add(registration); return () => { reloaders.current.delete(registration); }; }, []);
+  const registerQuiet = useCallback((verify: (signal: AbortSignal) => Promise<boolean>) => {
+    quietScopes.current.add(verify); quietRevision.current++;
+    return () => { quietScopes.current.delete(verify); quietRevision.current++; };
+  }, []);
   if (currentPath.current !== pathname) { currentPath.current = pathname; routeRevision.current++; }
   const visibleNotice = isParentPath(pathname) ? notice : "";
 
   const refresh = useCallback(() => {
+    quiet.current?.cancel();
     const turn = ++sequence.current;
     sessionAbort.current?.abort();
     const request = new AbortController(); sessionAbort.current = request;
@@ -140,15 +149,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const visible = () => {
-      if (document.visibilityState === "visible") refresh();
-      else { sequence.current++; sessionAbort.current?.abort(); checkingRef.current = true; practice.pause(); work.current.forEach(value => value.pause()); setChecking(true); }
+      if (document.visibilityState === "visible") quiet.current?.request();
+      else quiet.current?.cancel();
     };
-    const shown = () => refresh();
-    window.addEventListener("focus", refresh); window.addEventListener("pageshow", shown); document.addEventListener("visibilitychange", visible);
+    const shown = () => quiet.current?.request();
+    window.addEventListener("focus", shown); window.addEventListener("pageshow", shown); document.addEventListener("visibilitychange", visible);
     return () => {
+      quiet.current?.cancel();
       sequence.current++; sessionAbort.current?.abort(); clearWork(); practice.invalidate();
       if (!practice.pending) void practice.exit().catch(() => undefined);
-      window.removeEventListener("focus", refresh); window.removeEventListener("pageshow", shown); document.removeEventListener("visibilitychange", visible);
+      window.removeEventListener("focus", shown); window.removeEventListener("pageshow", shown); document.removeEventListener("visibilitychange", visible);
     };
   }, [refresh, practice, clearWork]);
   useEffect(() => { if (!isParentPath(pathname)) setNotice(""); refresh(); }, [pathname, refresh]);
@@ -166,6 +176,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   async function selectChild(id: string) {
     if (practice.pending) return;
     if (!await guardDeparture()) return;
+    quiet.current?.cancel();
     clearWork();
     const route = routeRevision.current;
     setBusy(true); setContext(null); setNotice(""); setEpoch(value => value + 1);
@@ -182,6 +193,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   async function exitPractice() {
     if (practice.pending) return;
     if (!await guardDeparture()) return;
+    quiet.current?.cancel();
     clearWork();
     const route = routeRevision.current;
     setBusy(true); setContext(null); setEpoch(value => value + 1);
@@ -215,6 +227,42 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     await verifyWorkSession(signal);
     return value;
   }, [read, verifyWorkSession]);
+  const quietEnvironment = useRef({ readVerified, refresh }); quietEnvironment.current = { readVerified, refresh };
+  if (!quiet.current) {
+    const capture = () => !binding.current || checkingRef.current ? null
+      : JSON.stringify([binding.current, currentPath.current, routeRevision.current, practice.generation, sequence.current, quietRevision.current]);
+    quiet.current = createQuietRefresh({
+      capture,
+      verify: async (signal, snapshot) => {
+        const expected = binding.current;
+        const live = () => { if (signal.aborted || capture() !== snapshot) throw new PortalRequestError(409); };
+        live();
+        const first = parseSession(await requestPortal("/api/session", undefined, signal)); live();
+        if (first.sessionBinding !== expected) throw new PortalRequestError(401);
+        const scopes = [...quietScopes.current];
+        const unchanged = await Promise.all(scopes.map(verify => verify(signal))); live();
+        // An active child can outlive a reading registration during a transition.
+        if (!scopes.length && practice.selection) {
+          const active = practice.selection;
+          if (currentPath.current !== `/workspace/practice/${active.context.studentId}` || Date.parse(active.context.expiresAt) <= Date.now()) throw new PortalRequestError(404);
+          await quietEnvironment.current.readVerified("child-practice", active.context.studentId, signal); live();
+        }
+        const final = parseSession(await requestPortal("/api/session", undefined, signal)); live();
+        if (final.sessionBinding !== expected) throw new PortalRequestError(401);
+        return unchanged.every(Boolean);
+      },
+      denied: error => [401, 403, 404].includes(statusOf(error)),
+      changed: reason => {
+        if (reason === "metadata") { quietEnvironment.current.refresh(); return; }
+        const active = practice.selection;
+        clearWork(); practice.invalidate(); setContext(null); setEpoch(value => value + 1);
+        if (active && currentPath.current === `/workspace/practice/${active.context.studentId}`) {
+          setNotice("Practice access changed. Choose an available child again."); router.replace("/workspace/parent");
+        }
+        quietEnvironment.current.refresh();
+      },
+    });
+  }
   const readStudy = useCallback(async (baseline: Assigned, kind: StudyKind, offset: number, signal: AbortSignal) => {
     const generation = practice.generation, active = practice.selection, mode = baseline.mode, id = baseline.student.id;
     if (mode === "child-practice" && (!active || active.context.studentId !== id)) throw new PortalRequestError(404);
@@ -307,7 +355,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={refresh}>Check access again</button>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
-        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readReference, readWork, readProgress, readServiceMetadata, readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, concealed: checking || failure !== null }}>
+        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readReference, readWork, readProgress, readServiceMetadata, readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, registerQuiet, concealed: checking || failure !== null }}>
           {summary.roles.length > 1 && <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] || pathname.startsWith(`${rolePaths[role]}/`) ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>}
           {visibleNotice && <p className="workspace-notice" role="status">{visibleNotice}</p>}
           {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}

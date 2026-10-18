@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { type Assigned, type Reading, type ReadingMode, type Student } from "./api";
 import { statusOf, useWorkspace, useWorkspaceModal, WorkspaceLink } from "./provider";
+import { PortalRequestError } from "../api";
+import { quietReadingAuthority } from "./quiet-refresh";
 import { icons } from "./study/lift";
 import { ReadingEditor } from "./reading-editor";
 import { AssignedStudyText, type StudyReload } from "./study/view";
@@ -46,7 +48,7 @@ type PageTab = "reading" | "service" | "lessons";
 const pageTabs: [PageTab, string][] = [["reading", "Reading"], ["service", "Service parts"], ["lessons", "Lessons"]];
 
 export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: ReadingMode; studentId: string; onStudentReload?(student: Student): void }) {
-  const { readVerified: read, readWork, readProgress, readPracticeCalendar, epoch, busy, concealed, selectChild, registerReload, registerWork, completeWork, registerDeparture, guardDeparture } = useWorkspace();
+  const { readVerified: read, readWork, readProgress, readPracticeCalendar, epoch, busy, concealed, selectChild, registerReload, registerQuiet, registerWork, completeWork, registerDeparture, guardDeparture } = useWorkspace();
   const key = `${mode}:${studentId}:${epoch}`;
   const serviceId = useId();
   const [result, setResult] = useState<{ key: string; value?: Assigned; error?: number; loading?: boolean }>({ key: "" }), [retry, setRetry] = useState(0);
@@ -103,6 +105,17 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   }, [read, mode, studentId, key, onStudentReload, work, progress, calendar, completeWork]);
   const selectedKindRef = useRef(selectedKind); selectedKindRef.current = selectedKind;
   useEffect(() => registerReload(async () => { await load(); }), [registerReload, load]);
+  const authorizedReading = result.key === key && !result.loading ? result.value : undefined;
+  useLayoutEffect(() => {
+    if (!authorizedReading) return;
+    // Capture the complete closed metadata without changing UI/work state.
+    const expected = JSON.stringify(authorizedReading), authority = quietReadingAuthority(authorizedReading);
+    return registerQuiet(async signal => {
+      const fresh = await read(mode, studentId, signal);
+      if (!signal.aborted && quietReadingAuthority(fresh) !== authority) throw new PortalRequestError(404);
+      return !signal.aborted && JSON.stringify(fresh) === expected;
+    });
+  }, [authorizedReading, registerQuiet, read, mode, studentId]);
   useEffect(() => { void load().catch(() => undefined); return () => { sequence.current++; abort.current?.abort(); }; }, [load, retry]);
   const current = result.key === key ? result : null;
   const [editorBusy, setEditorBusy] = useState(false);
@@ -214,17 +227,16 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       {current?.loading && <p role="status">Checking the current assignment…</p>}
       {readings.length === 0 ? <div className="reading-empty"><h3>No reading has been assigned yet</h3><p>Your tutor or rabbi will confirm the verses here.</p></div>
         : <AssignmentContext row={selectedReading} current />}</>}</>}
-      {tabPanel("reading", <><AssignedStudyText baseline={current?.value ?? null} register={registerStudy} reloadMetadata={load} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} onKindChange={setSelectedKind}
+      {tabPanel("reading", <><div className="reading-passage-layout">{student && song && (!tabbed || tab === "reading") && <ReadingToolbar onHear={hearReady && !concealed && !current?.loading ? () => lift.current?.(0) : undefined} />}<AssignedStudyText baseline={current?.value ?? null} register={registerStudy} reloadMetadata={load} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} onKindChange={setSelectedKind}
         guardDeparture={guardReading} serviceHref={tabbed ? undefined : `#${serviceId}`} renderWork={(kind, verseRef) => <VerseTools coordinator={work} kind={kind} verseRef={verseRef} />} renderActiveWork={() => work.active && <VerseTools coordinator={work} kind={work.active.kind} verseRef={work.active.ref} />}
         onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} learner={learner} songSession={song} liftHandle={lift} onHearReady={setHearReady} active={!tabbed || tab === "reading"}
-        onShown={(kind, offset, length) => progress.ensure(kind, offset, length)} renderMark={(kind, verseRef) => <VerseMark store={progress} kind={kind} verseRef={verseRef} />} renderLiftControls={(kind, verseRef) => <LiftProgress store={progress} kind={kind} verseRef={verseRef} />} onVisit={(kind, verseRef) => calendar.visitVerse(kind, verseRef)} />
+        onShown={(kind, offset, length) => progress.ensure(kind, offset, length)} renderMark={(kind, verseRef) => <VerseMark store={progress} kind={kind} verseRef={verseRef} />} renderLiftControls={(kind, verseRef) => <LiftProgress store={progress} kind={kind} verseRef={verseRef} />} onVisit={(kind, verseRef) => calendar.visitVerse(kind, verseRef)} /></div>
       {work.notice && <p className="field-help" role="status">{work.notice}</p>}
       {!learner && otherReadings.length > 0 && <details className="reading-other-assignments"><summary>Other confirmed reading details</summary>{otherReadings.map(row => <AssignmentContext key={row.id} row={row} />)}</details>}</>)}
     </section>
-    {student && song && (!tabbed || tab === "reading") && <ReadingToolbar onHear={hearReady && !concealed && !current?.loading ? () => lift.current?.(0) : undefined} />}
     {student && !song && <aside className="reading-tools" aria-labelledby="tools-heading"><h2 id="tools-heading">Practice tools</h2>
       <p>The confirmed assignment appears here. Use the review form below to propose and confirm changes.</p>
-      <p>Open translation and notes beside each verse. Audio practice is not available yet.</p>
+      <p>Click a word or verse control to listen. Translation and notes stay beside the reading.</p>
       <p><WorkspaceLink href="/trope-chart">Open the printable trope chart</WorkspaceLink></p>
       <p className="field-help">Unsent work stays only in this tab. Controlled workspace changes ask you to review it.</p>
     </aside>}

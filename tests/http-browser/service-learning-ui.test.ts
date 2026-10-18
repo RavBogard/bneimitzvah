@@ -229,10 +229,11 @@ it("puts a tutor's service parts in a tab beside the reading, keeping open mater
   await ui(panel(tab).getByText("Checking assigned service parts…", { exact: true })).toBeHidden();
   await click(tab, "Synthetic part 0"); await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
   await capture(tab, "tutor-service-tab");
-  // Start belongs to the reading: it brings the reading forward and opens practice there.
+  // Start brings the main reading forward and explicitly requests verse playback.
   await click(tab, "Start");
-  await ui(readingTab).toHaveAttribute("aria-selected", "true"); await ui(tab.locator("dialog.lift")).toBeVisible();
-  await safe(() => tab.keyboard.press("Escape")); await ui(tab.locator("dialog.lift")).toHaveCount(0);
+  await ui(readingTab).toHaveAttribute("aria-selected", "true"); await ui(tab.locator("dialog.lift")).toHaveCount(0);
+  const inline = tab.getByRole("region", { name: "Reading playback", exact: true }); await ui(inline).toContainText("Genesis 1:1");
+  await ui(inline.getByText("The recording couldn’t be loaded. Try again.", { exact: true })).toBeVisible();
   await ui(tab.getByRole("button", { name: "Start", exact: true })).toBeFocused();
   await safe(() => serviceTab.click()); await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
   await safe(() => tab.keyboard.press("Home")); await ui(readingTab).toHaveAttribute("aria-selected", "true"); await ui(readingTab).toBeFocused();

@@ -3,3 +3,14 @@
 .legend > li { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem 0.25rem 0.25rem; border-radius: 999px; background: var(--color-surface); border: 1px solid var(--color-rule); font-size: 0.875rem; overflow-wrap: anywhere; }
 .chip { display: inline-block; padding: 0.125rem 0.625rem; border-radius: 999px; background: var(--phrase-color); color: #13202f; font-weight: 600; }
 .wordRange { color: var(--color-muted); font-variant-numeric: tabular-nums; }
+
+.flow { max-width: 72rem; margin-inline: auto; }
+.flowParagraph { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: var(--hebrew-size, 2rem); line-height: 2.15; margin-block: 1rem; text-align: start; overflow-wrap: anywhere; }
+.inlineHebrew[lang="he"] { display: inline; font-size: inherit; line-height: inherit; margin: 0; }
+.flowVerse { display: inline; }
+.verseNumber { display: inline; vertical-align: super; font: 600 0.875rem/1.8 "Bricolage Grotesque", sans-serif; color: var(--lake-deep); background: transparent; border: 0; padding: 0.35rem; cursor: pointer; border-radius: var(--radius-control); }
+.verseNumber:hover { background: var(--lake-tint); }
+.verseNumber:focus-visible, .playable [data-word-index]:focus-visible { outline: 3px solid var(--marigold); outline-offset: 3px; }
+.playable [data-word-index] { cursor: pointer; border-radius: 0.18em; }
+.playable [data-word-index]:hover { text-decoration: underline; text-underline-offset: 0.15em; }
+.closedGap { display: inline-block; inline-size: 4.5em; }

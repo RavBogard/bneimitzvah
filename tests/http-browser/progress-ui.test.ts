@@ -37,7 +37,8 @@ async function workspace(tab: Page, role: "tutor" | "student") {
   if (role === "tutor") await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();
 }
-const card = (tab: Page, ref: string) => tab.locator(".study-verses > li").filter({ has: tab.getByRole("heading", { name: ref, level: 4, exact: true }) });
+const card = (tab: Page, ref: string) => tab.locator(`.study-verse-detail[data-verse-ref="${ref}"]`);
+async function openPractice(tab: Page) { await safe(() => tab.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }).click()); await ui(lift(tab)).toBeVisible(); }
 const lift = (tab: Page) => tab.locator("dialog.lift");
 async function liftTo(tab: Page, ref: string) {
   for (let step = 0; step < 12 && (await lift(tab).locator(".lift-ref").textContent()) !== ref; step++) await safe(() => lift(tab).locator(".lift-step-next").click());
@@ -82,7 +83,7 @@ afterAll(async () => { await Promise.all(contexts.map(context => context.close()
 it("lets a student mark verses in practice and a tutor assess them, keeping the two marks separate and visible to each other", async () => {
   const student = await page("student", true); await workspace(student, "student");
   await ui(student.locator(".verse-mark")).toHaveCount(0);
-  await safe(() => student.getByRole("button", { name: "Start", exact: true }).click()); await ui(lift(student)).toBeVisible();
+  await openPractice(student);
   await ui(lift(student).locator(".lift-ref")).toHaveText("Genesis 1:1");
   await ui(await mark(student, "How Genesis 1:1 is going", "Got it")).toHaveAttribute("aria-pressed", "true");
   await liftTo(student, "Genesis 1:2");
@@ -99,7 +100,7 @@ it("lets a student mark verses in practice and a tutor assess them, keeping the 
 
   const tutor = await page("tutor"); await workspace(tutor, "tutor");
   await ui(card(tutor, "Genesis 1:1").locator(".verse-mark")).toHaveText("Student: got it");
-  await safe(() => tutor.getByRole("button", { name: "Start", exact: true }).click()); await ui(lift(tutor)).toBeVisible();
+  await openPractice(tutor);
   await ui(lift(tutor).getByRole("group", { name: "How Genesis 1:1 is going" })).toHaveCount(0);
   await ui(lift(tutor).locator(".lift-progress-note:not([role])")).toHaveText("Student: got it");
   await ui(await mark(tutor, "Assessment for Genesis 1:1", "Solid")).toHaveAttribute("aria-pressed", "true");
@@ -114,7 +115,7 @@ it("lets a student mark verses in practice and a tutor assess them, keeping the 
   // The student sees the tutor's assessment, and clearing their own mark leaves it alone.
   await safe(() => student.getByRole("button", { name: "Refresh reading", exact: true }).click());
   await ui(card(student, "Genesis 1:1").locator(".verse-mark")).toHaveText("Got it");
-  await safe(() => student.getByRole("button", { name: "Start", exact: true }).click());
+  await openPractice(student);
   await ui(lift(student).locator(".lift-progress-note:not([role])")).toHaveText("Your tutor: solid");
   await ui(await mark(student, "How Genesis 1:1 is going", "Got it")).toHaveAttribute("aria-pressed", "false");
   saved = await progress(student, "student");
@@ -124,7 +125,7 @@ it("lets a student mark verses in practice and a tutor assess them, keeping the 
 
 it("shows the latest mark instead of overwriting one made elsewhere", async () => {
   const student = await page("student"); await workspace(student, "student");
-  await safe(() => student.getByRole("button", { name: "Start", exact: true }).click()); await liftTo(student, "Genesis 1:3");
+  await openPractice(student); await liftTo(student, "Genesis 1:3");
   const { binding } = await progress(student, "student");
   expect((await api(student, `/api/students/${fixture.student.id}/progress/self-check`, { ...binding, verseRef: "Genesis 1:3", state: "working", expectedVersion: 0 })).status).toBe(200);
   await safe(() => lift(student).getByRole("button", { name: "Got it", exact: true }).click());
@@ -137,7 +138,7 @@ it("shows the latest mark instead of overwriting one made elsewhere", async () =
 
 it("keeps an uncertain mark unverified until an explicit read succeeds, without replaying the write", async () => {
   const student = await page("student", true); await workspace(student, "student");
-  await safe(() => student.getByRole("button", { name: "Start", exact: true }).click());
+  await openPractice(student);
   let posts = 0, reads = 0, release!: () => void;
   const held = new Promise<void>(resolve => { release = resolve; });
   const pattern = `**/api/students/${fixture.student.id}/progress**`;

@@ -47,7 +47,7 @@ async function click(tab: Page, name: string) {
   catch { const steps = new Set(["Refresh reading", "Reload assigned text", "Next text page", "Previous text page", "Refresh reading and text", "Haftarah text"]); throw new Error(`Study UI ${steps.has(name) ? name : "controlled action"} failed; private details withheld`); }
 }
 async function loaded(tab: Page, ref: string) { await ui(tab.locator(".study-verses").getByRole("heading", { name: ref, level: 4, exact: true })).toBeVisible(); }
-function verse(tab: Page, ref: string) { return tab.locator(".study-verses > li").filter({ has: tab.getByRole("heading", { name: ref, level: 4, exact: true }) }); }
+function verse(tab: Page, ref: string) { return tab.locator(`.study-verses [data-verse-ref="${ref}"]`); }
 async function firstHebrewInViewport(tab: Page) {
   await safe(() => tab.evaluate(async () => {
     await document.fonts.ready;
@@ -57,8 +57,8 @@ async function firstHebrewInViewport(tab: Page) {
   }));
   const geometry = await tab.locator(".study-hebrew > span").first().evaluate(span => {
     const range = document.createRange(); range.selectNodeContents(span); const bounds = range.getBoundingClientRect();
-    const marker = span.closest("li")?.querySelector(":scope > .student-aliyah")?.getBoundingClientRect();
-    const reference = span.closest("article")?.querySelector("h4")?.getBoundingClientRect();
+    const marker = span.closest("p")?.parentElement?.querySelector(":scope > .student-aliyah")?.getBoundingClientRect();
+    const reference = span.closest("[data-verse-ref]")?.querySelector("button")?.getBoundingClientRect();
     return { scrollY, top: bounds.top, bottom: bounds.bottom, viewportWidth: innerWidth, viewportHeight: innerHeight, markerBottom: marker?.bottom ?? null,
       referenceTop: reference?.top ?? null, referenceBottom: reference?.bottom ?? null,
       bodyFont: getComputedStyle(document.body).fontFamily, hebrewFont: getComputedStyle(span).fontFamily, fontsStatus: document.fonts.status };
@@ -70,7 +70,8 @@ async function firstHebrewInViewport(tab: Page) {
   // Reserve room for platform font differences instead of just clipping below 844px.
   expect(geometry.bottom, diagnostic).toBeLessThanOrEqual(geometry.viewportHeight - 24);
   expect(geometry.referenceTop, diagnostic).not.toBeNull(); expect(geometry.referenceBottom, diagnostic).not.toBeNull();
-  expect(geometry.referenceBottom!, diagnostic).toBeLessThanOrEqual(geometry.top);
+  expect(geometry.referenceTop!, diagnostic).toBeLessThanOrEqual(geometry.bottom);
+  expect(geometry.referenceBottom!, diagnostic).toBeLessThanOrEqual(geometry.bottom);
   if (geometry.markerBottom !== null) expect(geometry.markerBottom, diagnostic).toBeLessThanOrEqual(geometry.referenceTop!);
 }
 function colorsControl(tab: Page) { return tab.getByRole("navigation", { name: "Reading tools", exact: true }).getByRole("button", { name: "Colors", exact: true }); }
@@ -80,7 +81,7 @@ async function setColors(tab: Page, on: boolean) {
   await ui(control).toHaveAttribute("aria-pressed", String(on));
 }
 async function colorVerse(tab: Page, ref: string) {
-  const article = verse(tab, ref).locator("article");
+  const article = verse(tab, ref);
   if (await colorsControl(tab).count()) await setColors(tab, true);
   await ui(article.locator("[data-family]").first()).toBeVisible();
   return article;
@@ -156,9 +157,10 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await firstHebrewInViewport(learner);
   await capture(learner, "study-student-one-aliyah-mobile"); await captureDark(learner, "study-student-one-aliyah-mobile-dark");
   if (!process.env.CI) { await safe(() => learner.setViewportSize({ width: 1440, height: 1000 })); await capture(learner, "study-student-one-aliyah-desktop"); await safe(() => learner.setViewportSize({ width: 390, height: 844 })); }
-  const first = verse(learner, "Genesis 1:1").locator("article"), hebrew = first.locator(".study-hebrew");
+  const first = verse(learner, "Genesis 1:1"), hebrew = first.locator(".study-hebrew");
   const original = await safe(() => hebrew.textContent()), beforeColors = calls;
-  expect(await learner.locator(".study-verses article details").count()).toBe(0); // One toolbar replaces per-verse aids.
+  await ui(learner.getByRole("navigation", { name: "Reading tools", exact: true })).toHaveCount(1);
+  expect(await learner.locator(".study-verses details").count()).toBe(0); // One toolbar replaces per-verse aids in the actual flow.
   await colorVerse(learner, "Genesis 1:1");
   const indices = await first.locator("[data-word-index]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-word-index")).join(","));
   const synthetic = syntheticUiStudyPage({ kind: "torah", ranges: ["Genesis 1:1"], verses: ["Genesis 1:1"], offset: 0, translation: "jps2023" }).verses[0];
@@ -175,7 +177,7 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   expect(await hebrew.textContent() === original && calls === beforeColors).toBe(true);
   expect(await first.locator(".study-alternative > span:first-child [data-family]").count()).toBe(0);
   await capture(learner, "study-colors-mobile");
-  await safe(() => first.getByRole("button", { name: "Practice Genesis 1:1 up close", exact: true }).click());
+  await safe(() => learner.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }).click());
   const lifted = learner.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(lifted).toBeVisible();
   await ui(lifted.getByRole("list", { name: "Phrase families for Genesis 1:1", exact: true })).toContainText("etnachta");
   await ui(lifted.getByRole("list", { name: "Phrase families for Genesis 1:1", exact: true })).toContainText("Word 1");
@@ -196,7 +198,7 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await safe(() => adminTab.evaluate(() => { document.documentElement.style.zoom = ""; }));
 });
 
-it("wraps a synthetic long verse at Standard and Huge on a phone and restores keyboard focus after lifted practice", async () => {
+it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start inline and restores keyboard focus after optional close-up", async () => {
   const tab = studentTab, directory = join(process.cwd(), ".local-logs", "frozen-longverse-review");
   await mkdir(directory, { recursive: true });
   longVerse = true;
@@ -221,12 +223,17 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and restores ke
         const range = document.createRange(); range.selectNodeContents(node); const bounds = range.getBoundingClientRect();
         return { top: bounds.top, bottom: bounds.bottom };
       });
-      expect(firstWord.top).toBeGreaterThanOrEqual(0); expect(firstWord.bottom).toBeLessThanOrEqual(820);
+      expect(firstWord.top).toBeGreaterThanOrEqual(0); expect(firstWord.bottom).toBeLessThanOrEqual(await tab.evaluate(() => innerHeight));
+      const clearance = await tab.evaluate(() => ({ toolbar: document.querySelector(".reading-toolbar")!.getBoundingClientRect().bottom, passage: document.querySelector(".study-verses")!.getBoundingClientRect().top }));
+      expect(clearance.toolbar).toBeLessThanOrEqual(clearance.passage);
       const readingText = await first.textContent();
       await safe(() => tab.screenshot({ path: join(directory, `${size.toLowerCase()}-reading.png`) }));
       await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).focus()); await safe(() => tab.keyboard.press("Tab"));
       const start = tab.getByRole("button", { name: "Start", exact: true }); await ui(start).toBeFocused();
       await safe(() => tab.keyboard.press("Enter"));
+      const inline = tab.getByRole("region", { name: "Reading playback", exact: true }); await ui(inline).toBeVisible();
+      await ui(inline).toContainText("Genesis 1:1"); await ui(inline.getByText("The recording couldn’t be loaded. Try again.", { exact: true })).toBeVisible(); await ui(tab.getByRole("dialog")).toHaveCount(0);
+      const closeup = tab.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }); await safe(() => closeup.click());
       const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
       await ui(dialog.getByRole("button", { name: "Close practice view", exact: true })).toBeVisible();
       expect(await dialog.locator(".study-hebrew").textContent()).toBe(readingText);
@@ -250,7 +257,7 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and restores ke
         expect(usable, "The final Huge word is reachable inside the scrollable practice stage").toBe(true);
         await safe(() => tab.screenshot({ path: join(directory, "huge-lift-end.png") }));
       }
-      await safe(() => tab.keyboard.press("Escape")); await ui(dialog).toHaveCount(0); await ui(start).toBeFocused();
+      await safe(() => tab.keyboard.press("Escape")); await ui(dialog).toHaveCount(0); await ui(closeup).toBeFocused();
     }
   } finally {
     longVerse = false;
@@ -262,24 +269,25 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and restores ke
   }
 });
 
-it("leaves no modal practice view over the hidden page while access is rechecked, then returns a usable reading", async () => {
+it("retains optional close-up during a quiet unchanged access check without requiring it for Start", async () => {
   const tab = await page("student", true); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1"); await click(tab, "Start");
-  const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
+  const inline = tab.getByRole("region", { name: "Reading playback", exact: true }); await ui(inline).toContainText("Genesis 1:1");
+  await ui(inline.getByText("The recording couldn’t be loaded. Try again.", { exact: true })).toBeVisible(); await ui(tab.getByRole("dialog")).toHaveCount(0);
+  await click(tab, "View Genesis 1:1 up close"); const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   try {
     await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
-    await ui(tab.getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeVisible();
-    expect(await tab.evaluate(() => document.querySelector("dialog:modal") === null)).toBe(true); // A modal inside the hidden workspace would block every click.
+    await ui(tab.getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden(); await ui(dialog).toBeVisible();
   } finally { release(); await tab.unroute("**/api/session"); }
-  await loaded(tab, "Genesis 1:1"); await ui(dialog).toHaveCount(0); // The reading reloads; practice starts again from Start.
+  await loaded(tab, "Genesis 1:1"); await ui(dialog).toBeVisible(); await safe(() => tab.keyboard.press("Escape")); await ui(dialog).toHaveCount(0);
   const start = tab.getByRole("button", { name: "Start", exact: true }); await safe(() => start.focus()); await safe(() => tab.keyboard.press("Enter"));
-  await ui(dialog).toBeVisible(); await safe(() => tab.keyboard.press("Escape")); await ui(dialog).toHaveCount(0); await ui(start).toBeFocused();
+  await ui(inline).toContainText("Genesis 1:1"); await ui(tab.getByRole("dialog")).toHaveCount(0);
 });
 
 it("keeps unsent typing and an unknown save intact while phrase controls change", async () => {
   const tab = await page("student"); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
-  const panel = verse(tab, "Genesis 1:1").locator(".verse-work"); await safe(() => panel.locator("summary").click());
+  const panel = tab.locator('.study-verse-detail[data-verse-ref="Genesis 1:1"] .verse-work'); await safe(() => panel.locator("summary").click());
   const field = panel.getByRole("textbox"); await ui(field).toBeVisible();
   let release!: () => void, committed = false, writes = 0; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/work/draft", async route => { writes++; const response = await route.fetch(); committed = response.status() === 200; await gate; await route.fulfill({ response }).catch(() => undefined); });
@@ -307,7 +315,7 @@ it("discards held old-child text after a switch, keeps another tab independent, 
   await click(tab, "Refresh reading"); await ui.poll(() => held).toBe(true);
   try { await click(tab, "Switch practice to Synthetic Sibling"); await loaded(tab, "Genesis 2:1"); } finally { release(); }
   await tab.unroute(pattern); expect(await tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true }).count()).toBe(0);
-  expect(await tab.locator(".study-verses article[data-verse-ref]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-verse-ref")).join(","))).toBe("Genesis 2:1,Genesis 2:2");
+  expect(await tab.locator(".study-verses [data-verse-ref]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-verse-ref")).join(","))).toBe("Genesis 2:1,Genesis 2:2");
   await ui(colorsControl(tab)).toHaveAttribute("aria-pressed", "true"); await ui(tab.locator(".study-verses [data-family]").first()).toBeVisible(); // The sibling keeps their own default.
   await colorVerse(tab, "Genesis 2:1");
   await capture(tab, "study-child-sibling-mobile");
@@ -320,7 +328,7 @@ it("discards held old-child text after a switch, keeps another tab independent, 
   expect(modes.size === 5 && [...modes].every(mode => ["student", "parent", "tutor", "admin", "child-practice"].includes(mode))).toBe(true);
 });
 
-it("preserves staff drafts, explicit paging and same-session text revalidation while rejecting stale responses and clearing on expired session", async () => {
+it("preserves staff drafts, paging and quiet same-session reading while rejecting stale responses and expired session", async () => {
   // This case intentionally expires the session, so acquire its own real SDK
   // sign-in instead of reusing an earlier case's cached role session.
   const tab = await page("admin", false, true); await navigate(tab, `/workspace/admin/students/${fixture.student.id}/reading`); await loaded(tab, "Genesis 1:1");
@@ -333,25 +341,36 @@ it("preserves staff drafts, explicit paging and same-session text revalidation w
   unavailable = false; english = "unavailable"; await click(tab, "Reload assigned text"); await loaded(tab, "Genesis 1:1"); await capture(tab, "study-english-unavailable-desktop"); english = "partial";
   const prepared = await api(tab, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "admin", ranges: ["Genesis 1:1-4:24"] }); expect(prepared.status === 200 && prepared.data.status === "prepared").toBe(true);
   expect((await api(tab, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: prepared.data.binding })).status === 200).toBe(true);
-  await click(tab, "Refresh reading"); await ui(tab.locator(".study-verses > li")).toHaveCount(100);
+  await click(tab, "Refresh reading"); await ui(tab.locator(".study-verses [data-verse-ref]")).toHaveCount(100);
   await colorVerse(tab, "Genesis 1:1");
-  const beforeNext = calls; await click(tab, "Next text page"); await ui(tab.locator(".study-verses > li")).toHaveCount(4); expect(calls - beforeNext).toBe(1);
-  expect(await tab.locator(".study-verses article details[open]").count()).toBe(0);
+  const beforeNext = calls; await click(tab, "Next text page"); await ui(tab.locator(".study-verses [data-verse-ref]")).toHaveCount(4); expect(calls - beforeNext).toBe(1);
+  await ui(tab.getByRole("navigation", { name: "Reading tools", exact: true })).toHaveCount(1);
+  expect(await tab.locator(".study-verses details[open]").count()).toBe(0);
   await ui(tab.locator(".study-verses [data-family]").first()).toBeVisible();
-  let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
-  await tab.route("**/study-text?**", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
+  let release!: () => void, held = false, metadataReleased = false, verifiedSessions = 0; const gate = new Promise<void>(resolve => { release = resolve; });
+  const existingText = await tab.locator(".study-verses").elementHandle();
+  let textReloads = 0; const countText = (request: import("playwright").Request) => { if (new URL(request.url()).pathname.endsWith("/study-text")) textReloads++; }; tab.on("request", countText);
+  const scroll = await tab.evaluate(() => { window.scrollTo(0, 240); return window.scrollY; });
+  const countVerifiedSession = (response: import("playwright").Response) => { if (metadataReleased && new URL(response.url()).pathname === "/api/session" && response.status() === 200) verifiedSessions++; }; tab.on("response", countVerifiedSession);
+  await tab.route("**/reading?**", async route => { const response = await route.fetch(); held = true; await gate; metadataReleased = true; await route.fulfill({ response }).catch(() => undefined); });
   try {
     await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
-    await ui(tab.locator("#workspace-main").getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeVisible(); await ui(tab.locator(".study-verses")).toBeHidden();
+    await ui(tab.locator("#workspace-main").getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden(); await ui(tab.locator(".study-verses")).toBeVisible();
+    expect(await existingText!.evaluate(node => node === document.querySelector(".study-verses"))).toBe(true); expect(await tab.evaluate(() => window.scrollY)).toBe(scroll); expect(textReloads).toBe(0);
+    await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5");
   } finally { release(); }
-  await ui(tab.locator(".study-verses")).toBeVisible(); await ui(tab.locator(".study-verses > li")).toHaveCount(4); await tab.unroute("**/study-text?**");
+  // Observe readVerified's trailing session and the provider's final session;
+  // unrelated long-lived browser requests are not a quiet-authority barrier.
+  await ui.poll(() => verifiedSessions).toBeGreaterThanOrEqual(2); tab.off("response", countVerifiedSession);
+  await ui(tab.locator(".study-verses")).toBeVisible(); await ui(tab.locator(".study-verses [data-verse-ref]")).toHaveCount(4); await tab.unroute("**/reading?**");
+  expect(await existingText!.evaluate(node => node === document.querySelector(".study-verses"))).toBe(true); expect(textReloads).toBe(0); tab.off("request", countText); await existingText?.dispose();
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5");
   const replacement = await api(tab, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "admin", ranges: ["Genesis 2:1-2"] });
   expect(replacement.status === 200 && replacement.data.status === "prepared").toBe(true);
   expect((await api(tab, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: replacement.data.binding })).status === 200).toBe(true);
   await click(tab, "Previous text page"); await ui(tab.getByRole("heading", { name: "Assignment changed", level: 4, exact: true })).toBeVisible();
   expect(await tab.locator(".study-hebrew").count()).toBe(0);
-  await click(tab, "Refresh reading and text"); await loaded(tab, "Genesis 2:1"); await ui(tab.locator(".study-verses > li")).toHaveCount(2);
+  await click(tab, "Refresh reading and text"); await loaded(tab, "Genesis 2:1"); await ui(tab.locator(".study-verses [data-verse-ref]")).toHaveCount(2);
   expect(await tab.getByRole("navigation", { name: "Text pages", exact: true }).count()).toBe(0); // A single page shows no paging controls.
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5");
   await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(s.session.userId, fixture.admin.id));

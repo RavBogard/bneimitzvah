@@ -38,6 +38,12 @@ export function ReferencePlayer({ scopeKey, verseRef, readingText, wordCount, lo
       if (player.current === controller) player.current = null;
     };
   }, [scopeKey, verseRef, readingText, wordCount, registerWordSelection, registerPause]);
+  useLayoutEffect(() => {
+    const background = () => { if (document.visibilityState !== "visible") player.current?.pause(); };
+    const leave = () => player.current?.pause();
+    document.addEventListener("visibilitychange", background); window.addEventListener("pagehide", leave);
+    return () => { document.removeEventListener("visibilitychange", background); window.removeEventListener("pagehide", leave); };
+  }, []);
   const ready = state.status === "ready" || state.status === "playing";
   const message = state.status === "idle" ? "Load the reference recording when you’re ready to listen."
     : state.status === "loading" ? "Loading and checking the recording…"

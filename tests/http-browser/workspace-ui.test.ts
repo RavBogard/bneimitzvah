@@ -73,15 +73,28 @@ it("retains a draft through same-session Zoom focus and visible return, then dis
   await ui(tab.getByRole("button", { name: "Add student", exact: true })).toBeEnabled();
   await safe(() => tab.getByRole("button", { name: "Add student", exact: true }).click());
   await safe(() => tab.getByLabel("First name", { exact: true }).fill("Unsaved synthetic draft"));
-  await checkedRefresh(tab, () => focus(tab));
+  const quietCheck = async (trigger: () => Promise<unknown>) => {
+    let release!: () => void, seen = false; const gate = new Promise<void>(resolve => { release = resolve; });
+    const pattern = `${BROWSER_ORIGIN}/api/session`;
+    await tab.route(pattern, async route => { seen = true; const response = await route.fetch(); await gate; await route.fulfill({ response }).catch(() => undefined); });
+    try {
+      await trigger(); await ui.poll(() => seen).toBe(true);
+      await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
+      await ui(tab.getByLabel("First name", { exact: true })).toBeVisible();
+      await ui(tab.getByLabel("First name", { exact: true })).toHaveValue("Unsaved synthetic draft");
+    } finally { release(); }
+    await tab.waitForLoadState("networkidle"); await tab.unroute(pattern);
+  };
+  await quietCheck(() => focus(tab));
   await ui(tab.getByLabel("First name", { exact: true })).toBeVisible(); await ui(tab.getByLabel("First name", { exact: true })).toHaveValue("Unsaved synthetic draft");
   await safe(() => tab.evaluate(() => { Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" }); document.dispatchEvent(new Event("visibilitychange")); }));
-  await ui(tab.getByLabel("First name", { exact: true })).toBeHidden();
-  await checkedRefresh(tab, () => safe(() => tab.evaluate(() => { Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" }); document.dispatchEvent(new Event("visibilitychange")); })));
+  await ui(tab.getByLabel("First name", { exact: true })).toBeVisible();
+  await quietCheck(() => safe(() => tab.evaluate(() => { Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" }); document.dispatchEvent(new Event("visibilitychange")); })));
   await ui(tab.getByLabel("First name", { exact: true })).toBeVisible(); await ui(tab.getByLabel("First name", { exact: true })).toHaveValue("Unsaved synthetic draft");
   await capture(tab, "workspace-admin-draft");
   const fresh = await page(); await signIn(fresh, "pg-admin@example.test");
-  await tab.context().addCookies(await fresh.context().cookies()); await checkedRefresh(tab, () => focus(tab));
+  await tab.context().addCookies(await fresh.context().cookies()); await focus(tab);
+  await ui(tab.getByLabel("First name", { exact: true })).toHaveCount(0);
   await ui(tab.getByRole("button", { name: "Add student", exact: true })).toBeVisible(); await ui(tab.getByRole("button", { name: "Add student", exact: true })).toBeEnabled();
   expect(await tab.getByLabel("First name", { exact: true }).count()).toBe(0);
   expect(await tab.evaluate(() => !JSON.stringify({ local: { ...localStorage }, tab: { ...sessionStorage } }).includes("Unsaved synthetic draft"))).toBe(true);
