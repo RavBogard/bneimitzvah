@@ -9,6 +9,7 @@ import { PracticeCoordinator } from "./practice";
 import { fetchStudyPage, type StudyKind, type StudyPage, type StudyVerse } from "./study/api";
 import { fetchReferenceAudio } from "./study/reference-api";
 import { fetchWordToolsAids, fetchWordToolsDetails } from "./study/word-tools-api";
+import { createSourceAssignmentClient, SourceClientError, type SourceAssignmentClient } from "./study/sources/api";
 import type { StudyWordAids } from "../../../lib/hebrew/word-aids";
 import type { StudyWordDetails } from "../../../lib/hebrew/word-details";
 import type { ReferenceResolution } from "../../../lib/reference-audio/source";
@@ -31,6 +32,7 @@ type Workspace = {
   readReference(baseline: Assigned, kind: StudyKind, offset: number, signal: AbortSignal): Promise<ReferenceResolution>;
   readWordAids(baseline: Assigned, kind: StudyKind, offset: number, verse: StudyVerse, signal: AbortSignal): Promise<StudyWordAids>;
   readWordDetails(baseline: Assigned, kind: StudyKind, offset: number, verse: StudyVerse, index: number, signal: AbortSignal): Promise<StudyWordDetails>;
+  createSources(baseline: Assigned, kind: StudyKind, offset: number): SourceAssignmentClient;
   readWork(baseline: Assigned, kind: StudyKind, operation: WorkOperation, signal: AbortSignal): Promise<WorkPage | WorkHistory | WorkReceipt | WorkRecovery>;
   readProgress(baseline: Assigned, kind: StudyKind, operation: ProgressOperation, signal: AbortSignal): Promise<ProgressRows | ProgressSaved>;
   readServiceMetadata(mode: ReadingMode, id: string, signal: AbortSignal): Promise<ServiceMetadata>;
@@ -349,6 +351,49 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       || selected.context.authorityRevision !== baseline.context.authorityRevision || selected.context.expiresAt !== baseline.context.expiresAt)) return Promise.reject(new PortalRequestError(409));
     return serviceRead(baseline.mode, baseline.student.id, signal, selection => fetchWordToolsDetails(baseline, kind, offset, verse, index, signal, selection ?? undefined));
   }, [practice, serviceRead]);
+  const createSources = useCallback((baseline: Assigned, kind: StudyKind, offset: number): SourceAssignmentClient => {
+    const base = structuredClone(baseline);
+    const selected = practice.selection, generation = practice.generation, route = routeRevision.current, turn = sequence.current, session = binding.current;
+    if (base.mode === "child-practice" && (!selected || selected.context.studentId !== base.student.id || selected.context.id !== base.context?.id)) throw new PortalRequestError(404);
+    const captured = selected ? structuredClone(selected) : undefined;
+    const client = createSourceAssignmentClient({ baseline: base, kind, offset, selection: base.mode === "child-practice" ? captured : undefined });
+    const sameOwner = () => generation === practice.generation && route === routeRevision.current && turn === sequence.current && session !== null && session === binding.current
+      && (base.mode !== "child-practice" || practice.selection?.handle === captured?.handle && practice.selection?.context.id === captured?.context.id);
+    const check = (signal: AbortSignal) => { if (signal.aborted || !sameOwner()) throw new SourceClientError(409, "stale-revision"); };
+    const probe = async (signal: AbortSignal) => {
+      check(signal);
+      const fresh = parseSession(await requestPortal("/api/session", undefined, signal));
+      check(signal); // An obsolete probe cannot clear a replacement workspace.
+      if (fresh.sessionBinding !== session) throw new PortalRequestError(401);
+    };
+    const authorityFailure = (error: unknown, signal: AbortSignal) => {
+      if (signal.aborted || !sameOwner() || ![401, 403, 404].includes(statusOf(error))) return;
+      clearWork();
+      if (base.mode === "child-practice" && currentPath.current === `/workspace/practice/${base.student.id}`) {
+        practice.invalidate(); setContext(null); setNotice("Practice access changed. Choose an available child again."); setEpoch(value => value + 1); router.replace("/workspace/parent");
+      } else refresh();
+    };
+    async function run<T>(signal: AbortSignal, action: () => Promise<T>, mutation: boolean): Promise<T> {
+      let dispatched = false;
+      try {
+        await probe(signal); check(signal);
+        let value: T | undefined, error: unknown, failed = false;
+        dispatched = mutation;
+        try { value = await action(); } catch (caught) { error = caught; failed = true; authorityFailure(caught, signal); }
+        // Stage even a definite API refusal until the final live session/fence check.
+        await probe(signal); check(signal);
+        if (failed) throw error;
+        return value as T;
+      } catch (error) {
+        authorityFailure(error, signal);
+        if (dispatched && !(error instanceof SourceClientError && error.definite && sameOwner() && !signal.aborted)) throw new SourceClientError();
+        throw error;
+      }
+    }
+    return Object.freeze({ ref: client.ref, canEdit: client.canEdit,
+      read: signal => run(signal, () => client.read(signal), false), discover: (paging, signal) => run(signal, () => client.discover(paging, signal), false),
+      write: (intent, signal) => run(signal, () => client.write(intent, signal), true), receipt: (intent, signal) => run(signal, () => client.receipt(intent, signal), true) });
+  }, [practice, clearWork, refresh, router]);
   const readServiceUnit = useCallback((mode: ReadingMode, id: string, plan: ServicePlan, unitId: string, signal: AbortSignal) => serviceRead(mode, id, signal, selection => serviceApi.unit(mode, id, plan, unitId, signal, selection ?? undefined)), [serviceRead]);
   // Lesson notes share the service path: fresh session checks around each request, and the same access-failure handling.
   const readLessons = useCallback((mode: ReadingMode, id: string, operation: LessonOperation, signal: AbortSignal) => serviceRead(mode, id, signal, selection => fetchLessons(mode, id, operation, signal, selection ?? undefined)), [serviceRead]);
@@ -372,7 +417,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={refresh}>Check access again</button>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
-        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readReference, readWordAids, readWordDetails, readWork, readProgress, readServiceMetadata, readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, registerQuiet, concealed: checking || failure !== null }}>
+        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readReference, readWordAids, readWordDetails, createSources, readWork, readProgress, readServiceMetadata, readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, registerQuiet, concealed: checking || failure !== null }}>
           {summary.roles.length > 1 && <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] || pathname.startsWith(`${rolePaths[role]}/`) ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>}
           {visibleNotice && <p className="workspace-notice" role="status">{visibleNotice}</p>}
           {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}

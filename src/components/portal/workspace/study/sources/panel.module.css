@@ -1,0 +1,30 @@
+.sources { margin-block: 1.25rem 0.5rem; color: var(--color-ink); min-width: 0; }
+.sources button, .choice { font: inherit; }
+.disclosure { min-height: 44px; padding: 0.5rem 1rem; border: 1px solid var(--color-action); border-radius: 999px; background: transparent; color: var(--color-action); cursor: pointer; }
+.disclosure[aria-expanded="true"], .disclosure:hover { background: var(--lake-tint); }
+.panel { max-width: 65ch; padding-block-start: 1rem; }
+.panel h5 { margin: 1.25rem 0 0.5rem; font-size: 1rem; line-height: 1.4; }
+.panel > h5:first-child { margin-block-start: 0; }
+.panel p { line-height: 1.6; }
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { padding-block: 0.75rem; border-block-end: 1px solid var(--color-rule); }
+.citation { display: flex; flex-direction: column; align-items: flex-start; gap: 0.2rem; min-width: 0; overflow-wrap: anywhere; line-height: 1.5; }
+.title { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; font-weight: 600; }
+.title bdi { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 1.125rem; }
+.ref { font-size: 0.9375rem; }
+.category, .note, .credit { color: var(--color-muted); font-size: 0.875rem; }
+.choice { display: flex; align-items: flex-start; gap: 0.75rem; min-height: 44px; cursor: pointer; }
+.choice input { accent-color: var(--color-action); inline-size: 1.125rem; block-size: 1.125rem; flex-shrink: 0; margin-block: 0.25rem; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-block: 1rem; }
+.actions > span { font-size: 0.9375rem; }
+.actions button, .browse > button { min-height: 44px; padding: 0.5rem 0.85rem; border: 1px solid var(--color-rule); border-radius: var(--radius-control); color: var(--color-action); background: var(--color-surface); cursor: pointer; }
+.actions .save { background: var(--color-action-fill); color: #fff; border-color: transparent; }
+.actions button:enabled:hover, .browse > button:enabled:hover { background: var(--lake-tint); color: var(--color-action); }
+.sources button:disabled { opacity: 0.5; cursor: default; }
+.sources button:focus-visible, .sources a:focus-visible, .sources input:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.link { display: inline; min-height: 44px; border: 0; background: transparent; padding: 0; color: var(--color-action); text-decoration: underline; text-underline-offset: 0.2em; cursor: pointer; }
+.notice { margin-block: 1rem; }
+.notice p { margin-block: 0.5rem; }
+.browse { margin-block-start: 1.5rem; }
+.credit a { color: var(--color-action); text-underline-offset: 0.2em; }
+@media (max-width: 36rem) { .actions { align-items: stretch; } .actions button { max-width: 100%; } .citation { max-width: 100%; } }

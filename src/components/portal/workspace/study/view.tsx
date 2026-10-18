@@ -8,6 +8,7 @@ import { Apparatus, FlowingStudyText } from "./annotations";
 import { ReadingPlayer, type ReadingPlayerHandle } from "./reading-player";
 import type { ReadingSelection } from "./main-playback";
 import { WordTools, type WordToolsHandle } from "./word-tools";
+import { SourcesPanel } from "./sources/panel";
 import { LiftedLine } from "./lift";
 import { useReadingPrefs } from "../reading-prefs";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
@@ -144,6 +145,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
         <div className="verse-card-head"><h4>Verse tools · <bdi dir="ltr">{verse.ref}</bdi></h4>{renderMark?.(kind, verse.ref)}<button type="button" className="button-text" onClick={() => open(current.page!, index)}>View {verse.ref} up close</button></div>
         {(songSession ? prefs.translation : true) && <p className="study-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
         <Apparatus verse={verse} learner={learner} />{renderWork?.(kind, verse.ref)}
+        {!concealed && <SourcesPanel key={`sources:${JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page!.offset, generation.current, verse.ref])}`}
+          scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page!.offset, generation.current, verse.ref])} baseline={baseline} kind={kind} offset={current.page!.offset + index} onRefreshReading={reloadMetadata} />}
       </div>)}</div>
       {!learner && kind==="torah" && assignment!.aliyahStarts===null && <p className="field-help">Aliyah boundaries have not been recorded for this assignment.</p>}
       {learner ? !single && <p className="study-page-position">Verses {current.page.offset + 1}–{current.page.offset + current.page.verses.length} of {current.page.totalVerses}</p>

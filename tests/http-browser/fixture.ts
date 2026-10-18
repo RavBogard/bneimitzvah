@@ -1,6 +1,6 @@
 import { createSourceAssignmentsService } from "../../src/server/study/source-assignments-service";
 import { createStudySourceDiscoveryService } from "../../src/server/study/source-discovery-service";
-import { parseRelatedMetadata } from "../../src/server/study/sources/metadata";
+import { parseRelatedMetadata, type RelatedSourceCatalog } from "../../src/server/study/sources/metadata";
 import { randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { createAuthStack } from "../../src/server/auth/factory";
@@ -39,7 +39,7 @@ import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
 const secret = () => randomBytes(48).toString("base64url");
 type Mail = { email: string; url: string };
 
-export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; wordDetailsSource?: StepSourceLoader } = {}) {
+export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog> } = {}) {
   const base = await postgresAccessFixture();
   try {
     // The shared disposable fixture creates the DB, migrations and restricted
@@ -64,8 +64,8 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, readingPreview, progress: createProgressService({ access, practice }), lessonLog: createLessonLogService({ access, practice }), practiceCalendar: createPracticeCalendarService({ access, practice }), recordings: createStudentRecordingService({ access, practice }), portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
       referenceAudio: createReferenceAudioService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), loadCatalog: options.referenceCatalogLoad ?? (async () => { throw new ReferenceUnavailable(); }), studentRelease: options.referenceStudentRelease === true }),
       studyWordAids: createStudyWordAidsService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }),
-      sourceAssignments: createSourceAssignmentsService({ access, practice, related: async ref => parseRelatedMetadata([], ref) }),
-      studySources: createStudySourceDiscoveryService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), related: async ref => parseRelatedMetadata([], ref) }),
+      sourceAssignments: createSourceAssignmentsService({ access, practice, related: options.relatedReader ?? (async ref => parseRelatedMetadata([], ref)) }),
+      studySources: createStudySourceDiscoveryService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), related: options.relatedReader ?? (async ref => parseRelatedMetadata([], ref)) }),
       studyWordDetails: createStudyWordDetailsService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), source: options.wordDetailsSource ?? { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) } }),
       study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }), studentWork: createStudentWorkService({ access, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
     serviceLearning: createServiceLearningService({ access: access, practice, signingSecret: secret() }),

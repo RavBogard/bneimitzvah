@@ -204,7 +204,10 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
         <div className="hero-who">
           <h2 id="reading-heading" className="hero-name"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
           <p className="hero-date"><time dateTime={student.ceremonyDate}>{countdown!.label}</time>{countdown!.phrase && <span className="hero-days">{countdown!.phrase}</span>}</p>
-          <button type="button" className="hero-icon" aria-label="Refresh reading" onClick={() => setRetry(value => value + 1)}>{refreshIcon}</button>
+          <button type="button" className="hero-icon" aria-label="Refresh reading" onClick={() => {
+            const target = studyDenied, turn = sequence.current;
+            void guardReading().then(leave => { if (leave && environment.current.studyDenied === target && sequence.current === turn && !abort.current?.signal.aborted) setRetry(value => value + 1); });
+          }}>{refreshIcon}</button>
         </div>
         {readings.length === 0 ? <div className="reading-empty"><h3 className="hero-reference hero-reference-empty">No reading has been assigned yet</h3><p className="hero-meta">{staff ? "Choose the verses this student will read." : "Your tutor or rabbi will add your verses here."}</p>
           <div className="hero-actions">{mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : "Enter child practice"}</button>}{staff && <button type="button" className="button-hero-secondary" onClick={openSheet}>Assign verses</button>}{!tabbed && <a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a>}</div></div> : <>
