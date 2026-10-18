@@ -1,5 +1,6 @@
 import "server-only";
 import { createHonorsService } from "../honors/service";
+import { loadHonoreeMaterial } from "../honoree/material-loader";
 import { createHonoreeService } from "../honoree/service";
 import { createSourceContentService } from "../study/source-content-service";
 import { createSefariaContentReader } from "../study/sources/content-reader";
@@ -125,9 +126,8 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const sourceContent = createSourceContentService({ access, practice, related: sourceMetadata.related, editions: sourceMetadata.editions, content: createSefariaContentReader({ fetch }).text });
   const sourceAssignments = createSourceAssignmentsService({ access, practice, related: createSefariaMetadataReader({ fetch }).related });
   const honors = createHonorsService({ access });
-  // B1: no real material projector/approval, so issue/read fail closed. This
-  // service is not dispatched as a public guest route before bearer review.
-  const honoree = createHonoreeService({ db, access, deployment: config.deployment, origin: config.origin, signingSecret: config.authSecret });
+  // Approved material is loaded within the existing RLS transaction.
+  const honoree = createHonoreeService({ db, access, deployment: config.deployment, origin: config.origin, signingSecret: config.authSecret, projectMaterial: loadHonoreeMaterial });
   const studySources = createStudySourceDiscoveryService({ access, practice, loadText, related: createSefariaMetadataReader({ fetch }).related });
   const studyWordDetails = createStudyWordDetailsService({ access, practice, loadText, source: stepSource });
   const referenceAudio = createReferenceAudioService({ access, practice, loadText, loadCatalog: createRuntimeReferenceLoader(config.referenceAudio), studentRelease: config.referenceAudio?.studentRelease });
