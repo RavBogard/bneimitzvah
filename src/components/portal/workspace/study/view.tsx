@@ -5,7 +5,7 @@ import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
 import { studyBinding, studyPlan, type StudyKind, type StudyPage } from "./api";
 import { StudyCredits } from "./credits";
 import { Apparatus, FlowingStudyText } from "./annotations";
-import { ReadingPlayer, type ReadingPlayerHandle } from "./reading-player";
+import { ReadingPlayer, playMainVerseForWord, type ReadingPlayerHandle } from "./reading-player";
 import type { ReadingSelection } from "./main-playback";
 import { WordTools, type WordToolsHandle } from "./word-tools";
 import { SourcesPanel } from "./sources/panel";
@@ -116,7 +116,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     </div> : current.page && <>
       <FlowingStudyText verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord}
         sections={current.page.verses.flatMap((verse, index) => { const position = aliyahPosition(kind, assignment!.aliyahStarts, assignment!.verses, verse.ref); return position && (position.startsHere || index === 0) ? [{ index, label: `Aliyah ${position.number}${position.startsHere ? " starts here" : " · continued from the previous text page"}` }] : []; })}
-        onVerse={index => hear(current.page!, index)} onWord={(index, word) => hear(current.page!, index, word)} />
+        onVerse={index => hear(current.page!, index)} onWord={(index, word) => { playMainVerseForWord(playback.current, tools.current, index, word); onVisit?.(kind, current.page!.verses[index].ref); }} />
       {!concealed && <ReadingPlayer key={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current])}
         scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current])} verses={current.page.verses} active={active && !lift}
         register={registerPlayback} onActiveWord={setPlayingWord} load={async (index, signal) => {

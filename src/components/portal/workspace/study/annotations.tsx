@@ -27,7 +27,7 @@ export function useVerseColors(verse: StudyVerse, assignment: AssignmentEnding, 
   return useMemo(() => enabled ? colorStudyVerse(verse.ref, verse.hebrew, { kind, confirmed, verses: verses ? verses.split("\n") : [] }) : null, [enabled, verse, kind, confirmed, verses]);
 }
 
-export function StudyHebrew({ verse, colors, id, className = "", activeWord = null, onWordSelect, inline = false }: { verse: StudyVerse; inline?: boolean; colors: Ready | null; id: string; className?: string; activeWord?: number | null; onWordSelect?(index: number): void }) {
+export function StudyHebrew({ verse, colors, id, className = "", activeWord = null, onWordSelect, inline = false, wordAction = "word" }: { verse: StudyVerse; inline?: boolean; colors: Ready | null; id: string; className?: string; activeWord?: number | null; onWordSelect?(index: number): void; wordAction?: "word" | "verse" }) {
   const projection = useMemo(() => {
     if (colors) return colors.projection;
     const result = projectStudyVerse(verse.ref, verse.hebrew);
@@ -42,7 +42,7 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
     const firstPart = part.wordIndex !== null && !focusableWords.has(part.wordIndex);
     if (part.wordIndex !== null) focusableWords.add(part.wordIndex);
     return <span key={index} role={onWordSelect && firstPart ? "button" : undefined} tabIndex={onWordSelect && firstPart ? 0 : undefined}
-      aria-label={onWordSelect && firstPart ? `Hear word ${part.wordIndex! + 1} of ${verse.ref}` : undefined} data-word-index={part.wordIndex ?? undefined} data-family={family?.id} data-phrase={word?.phrase ?? undefined}
+      aria-label={onWordSelect && firstPart ? wordAction === "verse" ? `Hear whole verse ${verse.ref}; select word ${part.wordIndex! + 1} for tools` : `Hear word ${part.wordIndex! + 1} of ${verse.ref}` : undefined} data-word-index={part.wordIndex ?? undefined} data-family={family?.id} data-phrase={word?.phrase ?? undefined}
       data-reference-active={active ? "true" : undefined} className={[family ? styles.word : "", active ? referenceStyles.activeWord : ""].filter(Boolean).join(" ") || undefined} style={family ? { "--phrase-color": family.color, "--w": part.wordIndex } as CSSProperties : undefined}
       aria-describedby={!family || word?.phrase === null || word?.phrase === undefined ? undefined : `${id}-phrase-${word.phrase}`}>{part.text}</span>;
   });
@@ -136,7 +136,7 @@ function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord }: {
     <span className="sr-only" role="heading" aria-level={4} dir="ltr">{verse.ref}</span>
     {onVerse ? <button type="button" className={styles.verseNumber} onClick={onVerse} aria-label={`Hear ${verse.ref}`} title={verse.ref}>{number ?? verse.ref}</button>
       : <sup title={verse.ref}>{number ?? verse.ref}</sup>}{" "}
-    <StudyHebrew verse={verse} colors={colors} id={id} inline activeWord={activeWord} onWordSelect={onWord} />{" "}
+    <StudyHebrew verse={verse} colors={colors} id={id} inline activeWord={activeWord} onWordSelect={onWord} wordAction="verse" />{" "}
     {verse.hebrew.paragraphAfter === "setumah" && <span className={styles.closedGap} role="img" aria-label="Closed paragraph" />}
     {colors && <span className="sr-only">{phraseGroups(colors).map(row => <span key={row.phrase} id={`${id}-phrase-${row.phrase}`}>{row.family.label}, {range(row.first, row.last)}. </span>)}</span>}
   </span>;

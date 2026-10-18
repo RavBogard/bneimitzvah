@@ -4,8 +4,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
 import { createReadingPlayback } from "../../src/components/portal/workspace/study/main-playback";
-import { FlowingStudyText, studyFlowGroups } from "../../src/components/portal/workspace/study/annotations";
-import { ReadingPlayer } from "../../src/components/portal/workspace/study/reading-player";
+import { FlowingStudyText, StudyHebrew, studyFlowGroups } from "../../src/components/portal/workspace/study/annotations";
+import { ReadingPlayer, playMainVerseForWord } from "../../src/components/portal/workspace/study/reading-player";
 import { createReferencePlayback, createReferenceAudioReuse, type ReferenceAudioElement } from "../../src/lib/reference-audio/playback";
 import type { ReferenceResolution } from "../../src/lib/reference-audio/source";
 import { REFERENCE_ATTRIBUTION } from "../../src/lib/reference-audio/contract";
@@ -35,6 +35,42 @@ function fixture(load = vi.fn(async (index: number) => resolution(index)), fetch
   return { owner, media, revoked, active, load, fetcher, platform };
 }
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+it("main second-word activation plays the whole verse from its start while grammar retains the tapped word and highlights advance", async () => {
+  const f = fixture(), selected = vi.fn(), pending: Promise<void>[] = [];
+  const player = { select(index: number, selection?: "verse" | number) { pending.push(f.owner.select(index, selection)); } };
+  playMainVerseForWord(player, { select: selected }, 0, 1); await Promise.all(pending);
+  expect(f.owner.state.selection).toBe("verse"); expect(f.media[0].currentTime).toBe(10); expect(selected).toHaveBeenLastCalledWith(0, 1);
+  f.media[0].currentTime = 10.6; f.media[0].dispatchEvent(new Event("timeupdate")); expect(f.active.at(-1)).toEqual({ verse: 0, index: 0 });
+  f.media[0].currentTime = 12.1; f.media[0].dispatchEvent(new Event("timeupdate")); expect(f.active.at(-1)).toEqual({ verse: 0, index: 1 });
+  await f.owner.select(0, 1); expect(f.owner.state.selection).toBe(1); expect(f.media[0].currentTime).toBe(12); f.owner.dispose();
+});
+
+it("rapid main word intents still choose the latest whole verse and never start a held older selection", async () => {
+  const held = deferred<ReferenceResolution>(), f = fixture(vi.fn(index => index ? Promise.resolve(resolution(index)) : held.promise)), pending: Promise<void>[] = [], tools = vi.fn();
+  const player = { select(index: number, selection?: "verse" | number) { pending.push(f.owner.select(index, selection)); } };
+  playMainVerseForWord(player, { select: tools }, 0, 2); playMainVerseForWord(player, { select: tools }, 1, 1);
+  await pending[1]; held.resolve(resolution(0)); await pending[0];
+  expect(f.owner.state).toMatchObject({ verse: 1, selection: "verse" }); expect(f.media).toHaveLength(1); expect(f.media[0].currentTime).toBe(20);
+  expect(f.media[0].play).toHaveBeenCalledTimes(1); expect(tools).toHaveBeenLastCalledWith(1, 1); f.owner.dispose();
+});
+
+it("main verse playback needs no word timing but an explicit numeric drill still refuses missing timing", async () => {
+  const f = fixture(vi.fn(async index => resolution(index, false))), pending: Promise<void>[] = [];
+  playMainVerseForWord({ select(index, selection) { pending.push(f.owner.select(index, selection)); } }, null, 0, 1); await Promise.all(pending);
+  expect(f.owner.state).toMatchObject({ selection: "verse", timingHeld: false }); expect(f.media[0].play).toHaveBeenCalledTimes(1);
+  await f.owner.select(0, 1); expect(f.owner.state.timingHeld).toBe(true); expect(f.media[0].play).toHaveBeenCalledTimes(1); f.owner.dispose();
+});
+
+it("flowing keyboard affordances name whole verse while lifted/explicit word labels retain word identity", () => {
+  const verse: StudyVerse = { ref: "Genesis 1:1", english: null, hebrew: { text, readingText: text, paragraphAfter: null, segments: [{ kind: "text", text }] } };
+  const flowing = renderToStaticMarkup(createElement(FlowingStudyText, { verses: [verse], assignment: { kind: "torah", confirmed: true, verses: [verse.ref] }, group: "main", activeWord: null, onWord() {}, onVerse() {} }));
+  expect(flowing).toContain('tabindex="0"'); expect(flowing).toContain('Hear whole verse Genesis 1:1; select word 2 for tools');
+  const lifted = renderToStaticMarkup(createElement(StudyHebrew, { verse, colors: null, id: "lifted", onWordSelect() {} }));
+  expect(lifted).toContain('Hear word 2 of Genesis 1:1'); expect(lifted).not.toContain("Hear whole verse");
+  const initial = renderToStaticMarkup(createElement(ReadingPlayer, { scopeKey: "main", verses: [verse], active: true, load: vi.fn(), register() {}, onActiveWord() {} }));
+  expect(initial).toContain("hear the whole verse"); expect(initial).not.toContain("Click a word to hear it");
+});
 
 it("plays a clicked word in one explicit request, reuses same-verse media and adjacent verified bytes but refreshes authority", async () => {
   const f = fixture(); expect(f.load).not.toHaveBeenCalled(); expect(f.fetcher).not.toHaveBeenCalled();
@@ -99,7 +135,7 @@ it("flows consecutive Hebrew without verse cards, while preserving actual breaks
   expect(studyFlowGroups([{ ...verses[0], hebrew: { ...verses[0].hebrew, paragraphAfter: "petuchah" } }, ...verses.slice(1)])).toEqual([[0],[1],[2],[3]]);
   const markup = renderToStaticMarkup(createElement(FlowingStudyText, { verses, assignment: { kind: "torah", confirmed: true, verses: verses.map(value => value.ref) }, group: "synthetic", onVerse() {}, onWord() {}, activeWord: { verse: 0, index: 1 } }));
   expect(markup).not.toContain("verse-card"); expect(markup).not.toContain("<article"); expect(markup).not.toContain("<dialog");
-  expect(markup).toContain('aria-label="Hear Genesis 1:1"'); expect(markup).toContain('aria-label="Hear word 2 of Genesis 1:1"'); expect(markup).toContain('data-reference-active="true"'); expect(markup).toMatch(/זָח<\/span><span class="study-read-alternative"/);
+  expect(markup).toContain('aria-label="Hear Genesis 1:1"'); expect(markup).toContain('aria-label="Hear whole verse Genesis 1:1; select word 2 for tools"'); expect(markup).toContain('data-reference-active="true"'); expect(markup).toMatch(/זָח<\/span><span class="study-read-alternative"/);
   const load = vi.fn(); renderToStaticMarkup(createElement(ReadingPlayer, { scopeKey: "synthetic", verses, active: true, load, register() {}, onActiveWord() {} })); expect(load).not.toHaveBeenCalled();
 });
 

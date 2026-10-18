@@ -19,7 +19,7 @@ test("readonly flowing renderer removes listening affordances but assigned rende
   const read = renderToStaticMarkup(createElement(FlowingStudyText, common));
   expect(read).not.toContain('role="button"'); expect(read).not.toContain('aria-label="Hear'); expect(read).toContain("<sup");
   const assigned = renderToStaticMarkup(createElement(FlowingStudyText, { ...common, onWord() {}, onVerse() {} }));
-  expect(assigned).toContain('aria-label="Hear Genesis 1:1"'); expect(assigned).toContain('role="button"'); expect(assigned).toContain("Hear word 1 of Genesis 1:1");
+  expect(assigned).toContain('aria-label="Hear Genesis 1:1"'); expect(assigned).toContain('role="button"'); expect(assigned).toContain("Hear whole verse Genesis 1:1; select word 1 for tools");
 });
 
 test("unresolved slot and temporary failures offer honest recovery with no invented portion or assignment operation", () => {

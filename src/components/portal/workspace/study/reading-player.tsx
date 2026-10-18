@@ -7,6 +7,12 @@ import { createReadingPlayback, type ReadingPlaybackState, type ReadingSelection
 import type { StudyVerse } from "./api";
 import styles from "./reading-player.module.css";
 export type ReadingPlayerHandle = { select(index: number, selection?: ReadingSelection): void; pause(): void };
+/** Main-text activation chooses the verse; grammar retains the tapped word.
+ * Explicit Practice/WordTools drills continue to use numeric selections. */
+export function playMainVerseForWord(player: Pick<ReadingPlayerHandle, "select"> | null, tools: { select(verse: number, word: number): void } | null, verse: number, word: number) {
+  if (!Number.isSafeInteger(verse) || verse < 0 || !Number.isSafeInteger(word) || word < 0) return;
+  player?.select(verse, "verse"); tools?.select(verse, word);
+}
 export function ReadingPlayer({ scopeKey, verses, active, load, register, onActiveWord }: {
   scopeKey: string; verses: readonly StudyVerse[]; active: boolean;
   load(index: number, signal: AbortSignal): Promise<ReferenceResolution>;
@@ -44,11 +50,11 @@ export function ReadingPlayer({ scopeKey, verses, active, load, register, onActi
   const selected = state?.verse === null || state?.verse === undefined ? null : verses[state.verse], playback = state?.playback;
   const ready = playback?.status === "ready" || playback?.status === "playing", loading = playback?.status === "loading";
   const held = Boolean(state?.timingHeld), words = selected ? projectStudyVerse(selected.ref, selected.hebrew) : null;
-  const message = !selected ? "Click a word to hear it, or use a verse number to hear the verse."
+  const message = !selected ? "Tap a word or verse number to hear the whole verse. Choose a word in Practice for a word drill."
     : held ? "Word timing isn’t available for this recording. Choose Whole verse to listen."
       : loading ? "Loading recording…" : playback?.status === "unavailable" ? "A reviewed recording isn’t available for this verse."
         : playback?.status === "error" ? "The recording couldn’t be loaded. Try again." : playback?.retryPlay ? "Your browser needs another tap. Press Play to hear your selection."
-          : state?.suspended ? "Playback paused. Choose a word or press Play when you’re ready." : "Click another word to hear it. Repeat keeps your selected word or verse.";
+          : state?.suspended ? "Playback paused. Tap the reading or press Play when you’re ready." : "Tapping the reading plays a whole verse. Practice and Word tools offer word drills. Repeat keeps the current selection.";
   return <section className={styles.player} aria-label="Reading playback">
     <div className={styles.top}><p className={styles.selection}>{selected ? <><bdi>{selected.ref}</bdi> · {state?.selection === "verse" ? "Whole verse" : `Word ${(state?.selection as number) + 1}`}</> : "Listen to your reading"}</p>
       <div className={styles.controls}><button type="button" disabled={!selected || loading || held} onClick={() => playback?.status === "playing" ? owner.current?.pause() : void owner.current?.play()}>{playback?.status === "playing" ? "Pause" : playback?.status === "error" ? "Try again" : "Play"}</button>

@@ -97,17 +97,19 @@ afterAll(async () => {
 }, 120_000);
 
 
-it("plays main-text words on the first click, verifies offsets/loops/pitch and reuses one adjacent-verse asset", async () => {
+it("plays whole verses from main-text words, verifies explicit word offsets/loops/pitch and reuses one adjacent-verse asset", async () => {
   const { tab, state } = await page(); let resolutions = 0;
   tab.on("request", request => { if (new URL(request.url()).pathname.endsWith("/reference-audio")) resolutions++; });
   expect(state.requests).toBe(0); expect((await native(tab)).count).toBe(0); await ui(tab.locator(".study-verses .verse-card")).toHaveCount(0);
-  await word(tab, 1, 0).click(); await playing(tab); expect(state.requests).toBe(1); expect(resolutions).toBe(1);
+  await word(tab, 1, 1).click(); await playing(tab); expect(state.requests).toBe(1); expect(resolutions).toBe(1);
   const firstNativeSrc = (await native(tab)).src;
   expect(typeof firstNativeSrc === "string" && firstNativeSrc.startsWith("blob:")).toBe(true);
-  expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(1.1); await ui(word(tab, 1, 0)).toHaveAttribute("data-reference-active", "true");
+  expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(1); expect((await native(tab)).currentTime).toBeLessThan(2);
+  await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse"); await ui(word(tab, 1, 0)).toHaveAttribute("data-reference-active", "true");
+  await tab.getByRole("button", { name: "Word tools", exact: true }).click(); await ui(tab.getByText("Genesis 1:1 · Word 2 of 2", { exact: true })).toBeVisible(); await tab.getByRole("button", { name: "Word tools", exact: true }).click();
   expect(state.sawCookie || state.sawReferer).toBe(false); await ui(tab.getByRole("dialog")).toHaveCount(0);
   await player(tab).getByLabel("Speed", { exact: true }).selectOption("0.5"); expect(await native(tab)).toMatchObject({ rate: 0.5, preservesPitch: true });
-  await word(tab, 1, 1).click(); await playing(tab); await player(tab).getByRole("button", { name: "Repeat", exact: true }).click();
+  await player(tab).getByLabel("Practice", { exact: true }).selectOption("1"); await playing(tab); expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(3); expect((await native(tab)).currentTime).toBeLessThan(4); await player(tab).getByRole("button", { name: "Repeat", exact: true }).click();
   await tab.evaluate(() => { (window as TrackedWindow).referenceAudios.at(-1)!.currentTime = 4.96; });
   await expect.poll(async () => { const time = (await native(tab)).currentTime ?? 9; return time >= 3 && time < 3.6; }).toBe(true);
   await word(tab, 2, 0).click(); await playing(tab); await ui(player(tab)).toContainText("Genesis 1:2");
@@ -116,7 +118,7 @@ it("plays main-text words on the first click, verifies offsets/loops/pitch and r
   await ui(word(tab, 2, 0)).toHaveAttribute("data-reference-active", "true");
   await player(tab).getByRole("button", { name: "Pause", exact: true }).click(); expect((await native(tab)).paused).toBe(true);
 });
-it("supports colors-off qere/maqaf and keyboard word or verse playback in the phone main text", async () => {
+it("supports colors-off qere/maqaf and keyboard whole-verse playback in the phone main text", async () => {
   const { tab, state } = await page(true, "admin", contexts[0]);
   const clearance = await tab.evaluate(() => {
     const toolbar = document.querySelector(".reading-toolbar")!, flow = document.querySelector(".study-verses")!;
@@ -125,8 +127,11 @@ it("supports colors-off qere/maqaf and keyboard word or verse playback in the ph
   expect(clearance.position).toBe("static"); expect(clearance.bars).toBe(1); expect(clearance.bottom).toBeLessThanOrEqual(clearance.top);
   await tab.getByRole("button", { name: "Colors", exact: true }).click(); await ui(tab.locator(".study-verses [data-family]")).toHaveCount(0);
   const qere = tab.locator('.study-verses [data-verse-ref="Genesis 1:1"] .study-read-alternative [data-word-index="1"]');
-  await qere.focus(); await qere.press("Enter"); await playing(tab); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("1");
-  expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(3); await ui(qere).toHaveAttribute("data-reference-active", "true");
+  await ui(qere).toHaveAttribute("aria-label", "Hear whole verse Genesis 1:1; select word 2 for tools");
+  await qere.focus(); await qere.press("Enter"); await playing(tab); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse");
+  expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(1); expect((await native(tab)).currentTime).toBeLessThan(2);
+  await tab.evaluate(() => { const audio = (window as TrackedWindow).referenceAudios.at(-1)!; audio.currentTime = 3.2; audio.dispatchEvent(new Event("timeupdate")); }); await ui(qere).toHaveAttribute("data-reference-active", "true");
+  await qere.press("Space"); await playing(tab); expect((await native(tab)).currentTime).toBeLessThan(2);
   await ui(tab.locator('.study-verses .study-alternative > span:first-child [data-word-index]')).toHaveCount(0);
   expect(await tab.locator('.study-verses [data-verse-ref="Genesis 1:1"]').innerText()).toContain("־");
   await tab.getByRole("button", { name: "Hear Genesis 1:2", exact: true }).click(); await playing(tab); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse");
@@ -139,7 +144,7 @@ it("supports colors-off qere/maqaf and keyboard word or verse playback in the ph
 it("latest held selection wins; changed page and corrupt bytes never create or revive obsolete media", async () => {
   const { tab, state, hold } = await page(false, "admin", contexts[0]), held = hold();
   await word(tab, 1, 0).click(); await held.started; await word(tab, 2, 1).click(); held.release(); await playing(tab);
-  await ui(player(tab)).toContainText("Genesis 1:2"); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("1"); expect((await native(tab)).count).toBe(1);
+  await ui(player(tab)).toContainText("Genesis 1:2"); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse"); expect((await native(tab)).count).toBe(1); expect((await native(tab)).currentTime).toBeLessThan(2);
   await tab.reload(); await ui(tab.locator(".study-verses")).toBeVisible(); state.held = null; state.corrupt = true;
   await word(tab, 1, 0).click(); await ui(player(tab).getByText("The recording couldn’t be loaded. Try again.", { exact: true })).toBeVisible(); expect((await native(tab)).count).toBe(0);
 });
@@ -170,11 +175,14 @@ it("Start and Hear play the main verse and never require or reopen the optional 
   await reading.click(); expect(await native(tab)).toMatchObject({ count: 1, paused: true, src: null });
   await tab.getByRole("button", { name: "Close-up", exact: true }).click(); await playing(tab); expect(state.requests).toBe(1); expect((await native(tab)).count).toBe(2);
 });
-it("never broadens a word lacking timing to whole-verse playback, and restores only on explicit verse selection", async () => {
+it("plays main verses without word timing but refuses explicit untimed word drills", async () => {
   const { tab } = await page(false, "admin", contexts[0]);
   await tab.route("**/reference-audio?**", async route => { const actual = await route.fetch(), body = await actual.json(); body.reference.verse.words = { status: "unavailable", reason: "no-words" }; await route.fulfill({ response: actual, json: body }); });
-  await word(tab, 1, 1).click(); await ui(player(tab).getByText(/Choose Whole verse to listen/)).toBeVisible(); expect((await native(tab)).paused).toBe(true);
+  await word(tab, 1, 1).click(); await playing(tab); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse");
+  await ui(tab.locator('.study-verses [data-reference-active="true"]')).toHaveCount(0);
+  await player(tab).getByLabel("Practice", { exact: true }).selectOption("1"); await ui(player(tab).getByText(/Choose Whole verse to listen/)).toBeVisible(); expect((await native(tab)).paused).toBe(true);
   await ui(player(tab).getByRole("button", { name: "Play", exact: true })).toBeDisabled(); await ui(player(tab).getByRole("button", { name: "Repeat", exact: true })).toBeDisabled();
   await player(tab).getByLabel("Practice", { exact: true }).selectOption("verse"); await playing(tab);
-  await word(tab, 1, 0).click(); await expect.poll(async () => (await native(tab)).paused).toBe(true); await ui(player(tab).getByRole("button", { name: "Play", exact: true })).toBeDisabled();
+  await tab.getByRole("button", { name: "Word tools", exact: true }).click(); await tab.getByRole("button", { name: "Hear this word", exact: true }).click();
+  await expect.poll(async () => (await native(tab)).paused).toBe(true); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("1"); await ui(player(tab).getByRole("button", { name: "Play", exact: true })).toBeDisabled();
 });
