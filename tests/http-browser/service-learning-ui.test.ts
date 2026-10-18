@@ -273,9 +273,10 @@ it("suspends the reading sheet for a service decision and retains only that righ
   await click(tab, "Change verses");
   const sheet = tab.locator("dialog.editor-sheet"), prompt = tab.getByRole("dialog", { name: "Keep this service draft?", exact: true });
   await ui(sheet).toBeVisible();
-  await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("custom"));
+  await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
+  await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
-  await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
+  await click(tab, "Review reading"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
   let writes = 0; tab.on("request", request => { if (request.method() === "POST" && /\/(reading|service-plan)\/confirm$/.test(new URL(request.url()).pathname)) writes++; });
   await click(tab, "Confirm assigned reading"); await ui(prompt).toBeVisible();
   const snapshot = () => tab.evaluate(() => ({ modals: document.querySelectorAll("dialog:modal").length, service: Boolean(document.querySelector(".service-learning-panel dialog:modal")), sheet: Boolean(document.querySelector("dialog.editor-sheet:modal")) }));

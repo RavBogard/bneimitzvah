@@ -47,9 +47,10 @@ async function choose(tab: Page, part = 1) {
 }
 async function prepareReading(tab: Page) {
   await click(tab, "Change verses"); await ui(sheet(tab)).toBeVisible();
-  await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("custom"));
+  await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
+  await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
-  await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
+  await click(tab, "Review reading"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
 }
 async function pendingService(tab: Page) {
   await choose(tab); await prepareReading(tab); await click(tab, "Confirm assigned reading");

@@ -32,9 +32,10 @@ async function pendingDeparture(tab: Page, draft: string) {
   await safe(() => verse.getByRole("button", { name: "Student-visible notes", exact: true }).click());
   await safe(() => verse.getByRole("textbox").fill(draft));
   await click(tab, "Change verses"); await ui(editor(tab)).toBeVisible();
-  await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("custom"));
+  await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
+  await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
-  await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
+  await click(tab, "Review reading"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
   await click(tab, "Confirm assigned reading"); await ui(departure(tab)).toBeVisible(); await ui(editor(tab)).toBeHidden();
   expect(await tab.evaluate(() => document.querySelectorAll("dialog:modal").length)).toBe(1);
 }

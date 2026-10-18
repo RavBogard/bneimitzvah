@@ -334,7 +334,7 @@ it("preserves staff drafts, paging and quiet same-session reading while rejectin
   const tab = await page("admin", false, true); await navigate(tab, `/workspace/admin/students/${fixture.student.id}/reading`); await loaded(tab, "Genesis 1:1");
   // The verse editor is a sheet over the reading; its draft stays mounted while it is closed.
   await safe(() => tab.getByRole("button", { name: /^(Change|Assign) verses$/ }).click());
-  await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("custom")); await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:4-5"));
+  await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom")); await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click()); await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:4-5"));
   await safe(() => tab.getByRole("button", { name: "Close verse editor", exact: true }).click());
   unavailable = true; await click(tab, "Refresh reading"); await ui(tab.getByRole("heading", { name: "Text unavailable", level: 4, exact: true })).toBeVisible();
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5"); expect(await tab.locator(".study-hebrew").count()).toBe(0);

@@ -120,7 +120,6 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   useEffect(() => { void load().catch(() => undefined); return () => { sequence.current++; abort.current?.abort(); }; }, [load, retry]);
   const current = result.key === key ? result : null;
   const [editorBusy, setEditorBusy] = useState(false);
-  const editor = mode === "admin" || mode === "tutor" ? <ReadingEditor key={`${mode}:${studentId}`} mode={mode} baseline={current?.loading ? null : current?.value ?? null} reload={load} onBusy={setEditorBusy} /> : null;
   const student = current?.value?.student, readings = current?.value?.readings ?? [];
   const selectedReading = readings.find(row => row.kind === selectedKind) ?? readings[0];
   const otherReadings = readings.filter(row => row.id !== selectedReading?.id);
@@ -131,6 +130,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const [hearReady, setHearReady] = useState(false);
   // Staff change verses in a sheet over the reading instead of a form below it.
   const [sheetOpen, setSheetOpen] = useState(false), [serviceDepartureActive, setServiceDepartureActive] = useState(false), sheet = useRef<HTMLDialogElement>(null), sheetOrigin = useRef<HTMLElement | null>(null);
+  const editor = mode === "admin" || mode === "tutor" ? <ReadingEditor key={`${mode}:${studentId}`} mode={mode} baseline={current?.loading ? null : current?.value ?? null} reload={load} onBusy={setEditorBusy} active={sheetOpen && !work.departure && !serviceDepartureActive} /> : null;
   // Keep the editor draft mounted, but give departure review the sole modal
   // layer. This also makes access-check resume independent of effect ordering.
   useWorkspaceModal(sheet, sheetOpen && !work.departure && !serviceDepartureActive);
