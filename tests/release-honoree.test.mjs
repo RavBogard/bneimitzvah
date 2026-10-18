@@ -2,7 +2,6 @@ import { test,after } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { isolatedEnv } from "./helpers/isolatedEnv.mjs";
 import { sha,canonical } from "../scripts/release-migrate-support.mjs";
 import { HONORS_BASE } from "../scripts/release-migrate-honors-support.mjs";
@@ -11,12 +10,17 @@ import { executeHonoreeRelease,runHonoreeRelease,captureHonoreeData,captureHonor
 const isolation=await isolatedEnv();after(()=>isolation.cleanup());
 const cache=new Map(),git=(...args)=>{const key=JSON.stringify(args);try{if(!cache.has(key))cache.set(key,execFileSync("git",args,{cwd:new URL("..",import.meta.url),env:isolation.env,windowsHide:true,maxBuffer:16*1024*1024,stdio:["ignore","pipe","pipe"]}));return cache.get(key);}catch{throw Error("Immutable honoree fixture unavailable; details withheld");}};
 const blob=(ref,path)=>git("show",ref+":"+path),folder="src/server/db/migrations",candidate="a".repeat(40),tree=ref=>git("ls-tree","-r","--name-only",ref,"--",folder).toString("utf8").trim().split("\n"),sql=blob(HONOREE_BASE,folder+"/0023_honoree_links.sql").toString("utf8");
+// Resolve once, then read immutable native-fixture bytes by exact commit. A
+// Windows checkout may contain CRLF; runtime source/reference guards stay exact.
+const installedFixtureCommit=git("rev-parse","HEAD").toString("utf8").trim();
+assert.match(installedFixtureCommit,/^[a-f0-9]{40}$/);
+const installedNativeBytes=blob(installedFixtureCommit,HONOREE_REFERENCE);
 function sourceFixture(){
  const names=tree(HONOREE_BASE),files=new Map(names.map(p=>[p,blob(HONOREE_BASE,p)])),committed=new Map(files),events=[];let dirty=false,future=false,ancestor=true,head=candidate;
  // New files are virtual candidate blobs, not mutable checkout fixtures or files
  // incorrectly expected to exist in the older immutable B3 commit.
  for(const path of HONOREE_FILES){const bytes=Buffer.from("Synthetic candidate file: "+path);files.set(path,bytes);committed.set(path,bytes);}
- const nativeBytes=readFileSync(new URL("../"+HONOREE_REFERENCE,import.meta.url));files.set(HONOREE_REFERENCE,nativeBytes);committed.set(HONOREE_REFERENCE,nativeBytes);
+ files.set(HONOREE_REFERENCE,installedNativeBytes);committed.set(HONOREE_REFERENCE,installedNativeBytes);
  const overrides=new Map();
  const injected=(...args)=>{events.push(args);if(args[0]==="rev-parse")return Buffer.from(head);if(args[0]==="merge-base"){if(!ancestor)throw 0;return Buffer.alloc(0);}if(args[0]==="status")return Buffer.from(dirty?"?? synthetic drift":"");if(args[0]==="ls-tree")return Buffer.from((args[3]===candidate?[...names,...(future?[folder+"/0024_unreviewed.sql"]:[])]:tree(args[3])).join("\n"));if(args[0]==="show"){const ref=args[1].slice(0,40),path=args[1].slice(41);if(overrides.has(args[1]))return overrides.get(args[1]);if(ref===candidate)return committed.get(path)??blob(HONOREE_BASE,path);return blob(ref,path);}throw Error("Unexpected synthetic source command");};
  return {git:injected,read:path=>files.get(path)??blob(HONOREE_BASE,path),files,committed,overrides,events,dirty(){dirty=true;},future(){future=true;},ancestor(){ancestor=false;},head(){head="b".repeat(40);}};
@@ -35,7 +39,7 @@ function harness(o={}){
 
 test("installed owned native reference has exact byte/catalog pins and satisfies the complete source contract",()=>{
  assert.match(HONOREE_REFERENCE_SHA,/^[a-f0-9]{64}$/);assert.match(HONOREE_CATALOG_SHA,/^[a-f0-9]{64}$/);
- const bytes=readFileSync(new URL("../"+HONOREE_REFERENCE,import.meta.url)),reference=JSON.parse(bytes);
+ const bytes=installedNativeBytes,reference=JSON.parse(bytes);
  assert.equal(reference.evidence,"owned-native-capture");assert.equal(reference.sourceCommit,HONOREE_BASE);assert.equal(reference.migrationSHA256,sha(sql));
  assert.equal(sha(bytes),HONOREE_REFERENCE_SHA);assert.equal(sha(JSON.stringify(canonical(reference.after))),HONOREE_CATALOG_SHA);
  const before=JSON.stringify(reference),s=honoreeSourceContract(candidate,sourceFixture());
@@ -45,11 +49,14 @@ test("installed owned native reference has exact byte/catalog pins and satisfies
 });
 
 test("corrupted and MODEL ONLY references fail before target access despite internally matching candidate source bytes; no override",async()=>{
- const nativeBytes=readFileSync(new URL("../"+HONOREE_REFERENCE,import.meta.url)),native=JSON.parse(nativeBytes);
+ const nativeBytes=installedNativeBytes,native=JSON.parse(nativeBytes);
  const modeled={version:1,evidence:"MODEL ONLY - synthetic structural fixture",sourceCommit:HONOREE_BASE,migrationSHA256:sha(sql),before:null,after:null};
  const corrupted=structuredClone(native);corrupted.evidence="MODEL ONLY - cannot become accepted native evidence";
  const changedAfter=structuredClone(native);changedAfter.after={tables:[],functions:[],types:[]};
- const badReferences=[Buffer.concat([nativeBytes,Buffer.from(" ")]),Buffer.from(JSON.stringify(modeled)),Buffer.from(JSON.stringify(corrupted)),Buffer.from(JSON.stringify(changedAfter))];
+ assert.equal(nativeBytes.includes(13),false);
+ const crlfBytes=Buffer.from(nativeBytes.toString("utf8").replace(/\n/g,"\r\n"));
+ assert.notEqual(sha(crlfBytes),HONOREE_REFERENCE_SHA);assert.deepEqual(JSON.parse(crlfBytes),native);
+ const badReferences=[crlfBytes,Buffer.concat([nativeBytes,Buffer.from(" ")]),Buffer.from(JSON.stringify(modeled)),Buffer.from(JSON.stringify(corrupted)),Buffer.from(JSON.stringify(changedAfter))];
  for(const bytes of badReferences){
   const f=sourceFixture();f.files.set(HONOREE_REFERENCE,bytes);f.committed.set(HONOREE_REFERENCE,bytes);
   const checked=honoreeReferenceSource(candidate,f);assert.throws(()=>validateHonoreeReference(bytes,checked));
@@ -64,7 +71,7 @@ test("exact immutable24-source contract protects old operators/history/journal, 
  const f=sourceFixture(),s=honoreeSourceDelta(candidate,f);assert.equal(s.migrations.length,24);assert.equal(s.migrations[23].hash,sha(sql));assert.equal(s.migrations[23].historicalAllowed.length,1);assert.equal(s.migrations[2].historicalAllowed.length,2);
  for(const change of [f=>f.dirty(),f=>f.future(),f=>f.ancestor(),f=>f.head(),f=>f.files.set(HONOREE_FILES[0],Buffer.from("drift")),f=>f.files.set("scripts/release-migrate-honors.mjs",Buffer.from("drift")),f=>f.files.set(folder+"/0023_honoree_links.sql",Buffer.from(sql.replace(/\n/g,"\r\n"))),f=>f.overrides.set(HONORS_BASE+":"+folder+"/0022_honors_version.sql",Buffer.from("changed history")),f=>{const p=folder+"/meta/_journal.json",j=JSON.parse(f.files.get(p));j.entries[0].when++;const b=Buffer.from(JSON.stringify(j));f.files.set(p,b);f.committed.set(p,b);}]){const bad=sourceFixture();change(bad);assert.throws(()=>honoreeSourceDelta(candidate,bad));}
  f.files.set(HONOREE_FILES[1],Buffer.from("late drift"));assert.throws(()=>s.recheck());
- for(const args of cache.keys())assert.ok(!JSON.parse(args).some(v=>v==="HEAD"));
+ for(const args of cache.keys()){const values=JSON.parse(args);if(values[0]==="rev-parse")assert.deepEqual(values,["rev-parse","HEAD"]);else assert.ok(!values.some(v=>v.includes("HEAD")));}
 });
 
 test("source-guard-only capture composition retains every historical native reference without pretending new evidence",()=>{

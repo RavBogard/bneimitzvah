@@ -8,6 +8,8 @@ The first capture failed without localizing its validation phase. A second diagn
 
 This is reference installation, not final operator acceptance or production deployment. Fresh exact-commit manual PostgreSQL acceptance, CI, production check/apply and deployment remain required. PostgreSQL 16 fixture evidence does not establish the production PostgreSQL 18 TLS/channel-binding checks. The [approved material checkpoint](HONOREE-MATERIAL-RETURN.md) is separate; migration still creates no approvals or guest links.
 
+The first integrated candidate1865c69 was held by Windows CI: the new offline fixture test read CRLF checkout bytes instead of the committed LF native reference. The test-only correction reads that fixture from one resolved immutable Git commit and explicitly proves that a JSON-equivalent CRLF variant is still rejected before target access. Runtime source/reference checks and native pins remain unchanged. Focused checks pass14/14. The earlier unused final-test manifest and failed hosted result are retained; final acceptance must use the corrected committed candidate and a fresh manifest.
+
 Production remains31481c56bd32c6a26ffda206b09864f332f15d33 with23 ledger rows through0022. Management122a35f7fa4eea45c690d8be7f96bc80025ee5a2 passes all four [hosted39124427440 jobs](https://github.com/RavBogard/bneimitzvah/actions/runs/39124427440), but has not deployed. The [dedicated release design](../../superpowers/specs/2026-10-18-honoree-release-design.md) pins122a35f as immutable source for0023.
 
 ## Accepted preparation, not a runnable production release
