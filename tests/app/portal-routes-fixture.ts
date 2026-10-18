@@ -21,6 +21,7 @@ import { createReferenceAudioService } from "../../src/server/reference-audio/se
 import { ReferenceUnavailable } from "../../src/server/reference-audio/catalog";
 import { createStudyService } from "../../src/server/study/service";
 import { createStudyWordAidsService } from "../../src/server/study/word-aids-service";
+import { createStudyWordDetailsService } from "../../src/server/study/word-details-service";
 import { createServiceLearningService } from "../../src/server/service-learning/service";
 import { createStudentWorkService } from "../../src/server/student-work/service";
 import { createStudentRecordingService } from "../../src/server/recordings/service";
@@ -49,6 +50,7 @@ export async function portalRoutesFixture() {
   const runtime: HttpRuntime = { origin: "http://localhost:3000", auth: f.auth, access: f.service, practice, invitations, students, readingPreview, studentWork: createStudentWorkService({ access: f.service, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
     referenceAudio: createReferenceAudioService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, loadCatalog: async () => { throw new ReferenceUnavailable(); } }),
     studyWordAids: createStudyWordAidsService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); } }),
+    studyWordDetails: createStudyWordDetailsService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, source: { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) } }),
     study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }), progress: createProgressService({ access: f.service, practice }), lessonLog: createLessonLogService({ access: f.service, practice }), practiceCalendar: createPracticeCalendarService({ access: f.service, practice }), recordings: createStudentRecordingService({ access: f.service, practice }),
     portal: createPortalService({ access: f.service, practice, sessionBindingSecret: randomBytes(48).toString("base64url") }), relationships: createRelationshipService({ access: f.service }), pendingInvitations,
     serviceLearning: createServiceLearningService({ access: f.service, practice, signingSecret: randomBytes(48).toString("base64url") }),

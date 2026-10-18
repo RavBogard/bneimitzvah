@@ -1,6 +1,7 @@
 import "server-only";
 import { parseReferenceResolution, type ReferenceResolution } from "../../lib/reference-audio/source";
 import type { StudyWordAids } from "../../lib/hebrew/word-aids";
+import { WORD_DETAILS_LIMITS, type StudyWordDetails } from "../../lib/hebrew/word-details";
 import type { HttpRuntime } from "../runtime/composition";
 import type { ActiveMode } from "../access/types";
 import { AccessDenied } from "../access/errors";
@@ -15,7 +16,7 @@ import { closedObject, uniqueQuery } from "./query";
 import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
-type Kind = "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
+type Kind = "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "study-word-details" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
   | "admin-students" | "edit" | "disable" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "pending" | "accept"
   | "eligible-tutors" | "relationships" | "tutor-assign" | "tutor-unassign" | "guardian-revoke" | "identity-revoke" | "guardian-practice" | "grant-revoke" | "cantor";
 type Route = { kind: Kind; methods: readonly string[]; id?: string; linkId?: string };
@@ -38,6 +39,8 @@ function route(pathname: string): Route | null {
   if (reference) return { kind: "reference-audio", methods: ["GET"], id: reference[1] };
   const wordAids = /^\/api\/students\/([^/]+)\/study-word-aids$/.exec(pathname);
   if (wordAids) return { kind: "study-word-aids", methods: ["GET"], id: wordAids[1] };
+  const wordDetails = /^\/api\/students\/([^/]+)\/study-word-details$/.exec(pathname);
+  if (wordDetails) return { kind: "study-word-details", methods: ["GET"], id: wordDetails[1] };
   const study = /^\/api\/students\/([^/]+)\/study-text$/.exec(pathname);
   if (study) return { kind: "study-text", methods: ["GET"], id: study[1] };
   const student = /^\/api\/students\/([^/]+)(?:\/(reading)(?:\/(prepare|confirm))?)?$/.exec(pathname);
@@ -95,6 +98,19 @@ function wordAidsView(value: StudyWordAids): JsonValue {
     words: value.words.map((word): JsonValue => word.status === "unavailable" ? { index: word.index, status: word.status, reason: word.reason }
       : { index: word.index, status: word.status, syllables: word.syllables.map(part => ({ start: part.start, end: part.end, stress: part.stress })) }) };
 }
+function wordDetailsView(value: StudyWordDetails): JsonValue {
+  if (value.status === "unavailable" && value.reason === "reconstruction") return { schema: value.schema, ref: value.ref, wordIndex: value.wordIndex, status: value.status, reason: value.reason };
+  const identity = { schema: value.schema, ref: value.ref, wordIndex: value.wordIndex, readingTextSha256: value.readingTextSha256, wordCount: value.wordCount,
+    attribution: { name: value.attribution.name, source: value.attribution.source, commit: value.attribution.commit, license: value.attribution.license, licenseUrl: value.attribution.licenseUrl, changes: value.attribution.changes } };
+  if (value.status === "unavailable") return { ...identity, status: value.status, reason: value.reason };
+  const grammar = value.occurrence.grammar;
+  return { ...identity, status: value.status, occurrence: { gloss: value.occurrence.gloss,
+    grammar: grammar.status === "unavailable" ? { status: grammar.status, reason: grammar.reason } : { status: grammar.status, language: grammar.language, morphemes: grammar.morphemes.map(part => ({ partOfSpeech: part.partOfSpeech,
+      ...(part.stem === undefined ? {} : { stem: part.stem }), ...(part.form === undefined ? {} : { form: part.form }), ...(part.person === undefined ? {} : { person: part.person }),
+      ...(part.gender === undefined ? {} : { gender: part.gender }), ...(part.number === undefined ? {} : { number: part.number }), ...(part.state === undefined ? {} : { state: part.state }), ...(part.definite === undefined ? {} : { definite: part.definite }) })) } },
+    dictionary: value.dictionary.map((entry): JsonValue => entry.status === "unavailable" ? { lemma: entry.lemma, status: entry.status, reason: entry.reason }
+      : { lemma: entry.lemma, status: entry.status, headword: entry.headword, dictionaryGloss: entry.dictionaryGloss }) };
+}
 function studyPageView(page: StudyPage): { [key: string]: JsonValue } {
   return { offset: page.offset, nextOffset: page.nextOffset, totalVerses: page.totalVerses,
     translation: { key: page.translation.key, status: page.translation.status },
@@ -145,7 +161,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", selected.methods.join(", ")); return response;
     }
     const practiceRoute = selected.kind.startsWith("practice-");
-    if (!practiceRoute && selected.kind !== "reading" && selected.kind !== "study-text" && selected.kind !== "study-word-aids" && selected.kind !== "reference-audio" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
+    if (!practiceRoute && selected.kind !== "reading" && selected.kind !== "study-text" && selected.kind !== "study-word-aids" && selected.kind !== "study-word-details" && selected.kind !== "reference-audio" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
     // Dispatcher resolves the actual host before this adapter. Services still
     // independently reauthorize; no body/Origin/forwarded claim chooses tenant.
     if (request.method === "POST") requireCookieMutation(request, runtime.origin);
@@ -243,6 +259,22 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         if (!value.ok) return stale();
         return privateJson({ studentId: value.studentId, studentRevision: value.studentRevision, mode: value.mode, context: contextView(value.context),
           assignment: { id: value.assignment.id, revision: value.assignment.revision, kind: value.assignment.kind, needsReview: value.assignment.needsReview }, reference: referenceView(value.reference) });
+      }
+      case "study-word-details": {
+        if (request.body !== null || request.headers.has("transfer-encoding") || (request.headers.has("content-length") && request.headers.get("content-length") !== "0")) throw new HttpBoundaryError();
+        const query = uniqueQuery(request.url, ["mode", "kind", "assignmentId", "assignmentRevision", "translation", "offset", "wordIndex"]);
+        const kind = query.get("kind"), translation = query.get("translation"), revisionValue = query.get("assignmentRevision"), offset = query.get("offset"), wordIndex = query.get("wordIndex");
+        if ((kind !== "torah" && kind !== "haftarah") || translation !== "jps2023" || !revisionValue || !/^[1-9][0-9]{0,9}$/.test(revisionValue)
+          || offset === null || !/^(?:0|[1-9][0-9]{0,2})$/.test(offset) || wordIndex === null || !/^(?:0|[1-9][0-9]{0,2})$/.test(wordIndex) || Number(wordIndex) >= WORD_DETAILS_LIMITS.words) throw new HttpBoundaryError();
+        let value;
+        try { value = await runtime.studyWordDetails.read(request, { mode: mode(query.get("mode"), true), studentId: id!, kind,
+          assignmentId: identifier(query.get("assignmentId")), assignmentRevision: integer(Number(revisionValue)), translation, offset: Number(offset) }, Number(wordIndex)); }
+        catch (error) { if (error instanceof StudyUnavailable && error.code === "invalid-request") throw new HttpBoundaryError(); throw error; }
+        if (!value.ok) return stale();
+        const body = { studentId: value.studentId, studentRevision: value.studentRevision, mode: value.mode, context: contextView(value.context),
+          assignment: { id: value.assignment.id, revision: value.assignment.revision, kind: value.assignment.kind, needsReview: value.assignment.needsReview }, wordDetails: wordDetailsView(value.wordDetails) };
+        if (Buffer.byteLength(JSON.stringify(body)) > WORD_DETAILS_LIMITS.bytes) throw new StudyUnavailable("upstream");
+        return privateJson(body);
       }
       case "study-word-aids": {
         const query = uniqueQuery(request.url, ["mode", "kind", "assignmentId", "assignmentRevision", "translation", "offset"]);

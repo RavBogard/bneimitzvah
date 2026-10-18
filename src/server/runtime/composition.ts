@@ -24,6 +24,9 @@ import { createReferenceCatalogLoader } from "../reference-audio/storage";
 import { ReferenceUnavailable, type ReferenceCatalog } from "../reference-audio/catalog";
 import { createStudyService } from "../study/service";
 import { createStudyWordAidsService } from "../study/word-aids-service";
+import { createStudyWordDetailsService } from "../study/word-details-service";
+import { createStepSource } from "../study/lexical/source";
+import type { StepSourceLoader } from "../study/lexical/source-loader";
 import { createServiceLearningService } from "../service-learning/service";
 import { createStudentWorkService } from "../student-work/service";
 import { createProgressService } from "../progress/service";
@@ -47,6 +50,9 @@ const purposeSecret = (config: RuntimeConfig, purpose: string) => createHmac("sh
 // Explicit component boundary permits offline tests without environment flags,
 // mock credentials, public endpoints or alternate production database fallback.
 const publicStudyTasks = new WeakMap<typeof globalThis.fetch, PublicStudyCoalescer>();
+// Public immutable source facts only; construction performs no I/O. Never
+// create one cache per authenticated request or store an actor in this instance.
+const publicStepSource = createStepSource();
 function sharedStudyTasks(fetch: typeof globalThis.fetch) {
   let tasks = publicStudyTasks.get(fetch);
   if (!tasks) { tasks = createPublicStudyCoalescer(); publicStudyTasks.set(fetch, tasks); }
@@ -90,7 +96,7 @@ export function createRuntimeReferenceLoader(config: RuntimeConfig["referenceAud
   };
 }
 export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch,
-  studyTasks: PublicStudyCoalescer = sharedStudyTasks(fetch)) {
+  studyTasks: PublicStudyCoalescer = sharedStudyTasks(fetch), stepSource: StepSourceLoader = publicStepSource) {
   const send = createMailTransport({ ...config.mail, origin: config.origin, fetch });
   const auth = createAuthStack(db, schema, { origin: config.origin, secret: config.authSecret, google: config.google,
     sendMagicLink: ({ email, url, token }) => send("magic-link", { email, url: projectMagicLink(url, token, config.origin) }) });
@@ -108,6 +114,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const loadText = createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS, cache: createPersistentStudyCache(db), coalescer: studyTasks });
   const study = createStudyService({ access, practice, load: loadText });
   const studyWordAids = createStudyWordAidsService({ access, practice, loadText });
+  const studyWordDetails = createStudyWordDetailsService({ access, practice, loadText, source: stepSource });
   const referenceAudio = createReferenceAudioService({ access, practice, loadText, loadCatalog: createRuntimeReferenceLoader(config.referenceAudio), studentRelease: config.referenceAudio?.studentRelease });
   const readingPreview = createReadingPreviewService({ access, loadReading, loadText, signingSecret:purposeSecret(config,"reading-preview") });
   const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding") });
@@ -120,7 +127,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, studyWordAids, referenceAudio, readingPreview, studentWork, progress, lessonLog, practiceCalendar, recordings, serviceLearning, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, studyWordAids, studyWordDetails, referenceAudio, readingPreview, studentWork, progress, lessonLog, practiceCalendar, recordings, serviceLearning, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;
