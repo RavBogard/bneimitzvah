@@ -35,8 +35,8 @@ async function pendingDeparture(tab: Page, draft: string) {
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
   await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
-  await click(tab, "Review reading"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
-  await click(tab, "Confirm assigned reading"); await ui(departure(tab)).toBeVisible(); await ui(editor(tab)).toBeHidden();
+  await click(tab, "Review assignment"); await ui(tab.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled();
+  await click(tab, "Save assignment"); await ui(departure(tab)).toBeVisible(); await ui(editor(tab)).toBeHidden();
   expect(await tab.evaluate(() => document.querySelectorAll("dialog:modal").length)).toBe(1);
 }
 beforeAll(async () => {

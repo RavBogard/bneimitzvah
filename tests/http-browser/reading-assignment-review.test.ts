@@ -3,7 +3,7 @@ import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
@@ -80,7 +80,7 @@ it("loads date suggestions only when the actual editor opens and stages a native
   });
   await navigate(tab); await tab.waitForLoadState("networkidle"); expect(suggestions).toBe(0);
   const before = await api(tab, readPath());
-  await open(tab); await ui(sheet(tab).getByText(/Suggested portion: Synthetic/)).toBeVisible();
+  await open(tab); await ui(sheet(tab).getByText(/Suggested for this service: Synthetic/)).toBeVisible();
   await ui(field(tab, "Passage")).toHaveValue("custom");
   await ui(field(tab, "Passage")).toBeEnabled();
   await ui(field(tab, "Passage").locator("option")).toContainText(["Choose my own verses", "Full", "Aliyah 1"]);
@@ -90,14 +90,14 @@ it("loads date suggestions only when the actual editor opens and stages a native
   expect(suggestions).toBe(1); expect(requests[0]).toEqual({ mode: "admin", kind: "torah" });
   await ui(field(tab, "Passage")).toHaveValue("custom");
   await ui(sheet(tab).getByLabel("Custom verse ranges", { exact: true })).toBeHidden();
-  expect(await sheet(tab).getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
+  expect(await sheet(tab).getByRole("button", { name: "Save assignment", exact: true }).count()).toBe(0);
   await capture(tab, "initial");
   // Actual native selects are focusable and operable without reference syntax.
   await safe(() => field(tab, "Book").focus()); await safe(() => tab.keyboard.press("g")); await safe(() => tab.keyboard.press("Enter"));
   await ui(field(tab, "Book")).toHaveValue("Genesis");
   await safe(() => field(tab, "End verse").focus()); await safe(() => tab.keyboard.press("ArrowDown")); await safe(() => tab.keyboard.press("Enter"));
   await ui(field(tab, "End verse")).toHaveValue("2");
-  await click(tab, "Review reading");
+  await click(tab, "Review assignment");
   await ui(sheet(tab).getByRole("heading", { name: "Review Torah assignment", exact: true })).toBeVisible();
   await ui(sheet(tab).locator(".reading-proposal")).toContainText("Genesis 1:1-2");
   await capture(tab, "review");
@@ -125,7 +125,7 @@ it("fences delayed Torah suggestions on kind changes and closed editor lifetimes
     await tab.waitForLoadState("networkidle");
     await ui(field(tab, "Passage").locator("option")).toContainText(["Choose my own verses", "Isaiah 1:1-2"]);
     expect(await field(tab, "Passage").getByRole("option", { name: /Aliyah/ }).count()).toBe(0);
-    expect(await sheet(tab).getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
+    expect(await sheet(tab).getByRole("button", { name: "Save assignment", exact: true }).count()).toBe(0);
   } finally { release(); await tab.unroute("**/reading/prepare"); }
 });
 
@@ -135,18 +135,20 @@ it("initializes ordered multiple ranges without flattening them and confirms a c
   expect(prepared.status).toBe(200); expect(prepared.data.status).toBe("prepared");
   expect((await api(tab, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: prepared.data.binding })).status).toBe(200);
   const before = (await api(tab, readPath())).data.readings[0];
-  await navigate(tab); await open(tab); await ui(sheet(tab).getByText(/Suggested portion: Synthetic/)).toBeVisible();
-  await ui(field(tab, "Book")).toBeDisabled();
+  await navigate(tab); await open(tab); await ui(sheet(tab).getByText(/Suggested for this service: Synthetic/)).toBeVisible();
+  // Plain multiple ranges get one picker each; they are never flattened into one passage.
+  await ui(sheet(tab).getByRole("group", { name: "Passage 1", exact: true }).getByRole("combobox", { name: "Start chapter", exact: true })).toHaveValue("1");
+  await ui(sheet(tab).getByRole("group", { name: "Passage 2", exact: true }).getByRole("combobox", { name: "Start chapter", exact: true })).toHaveValue("2");
   await safe(() => sheet(tab).getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await ui(sheet(tab).getByLabel("Custom verse ranges", { exact: true })).toHaveValue(ranges.join("\n"));
   await safe(() => sheet(tab).getByLabel("Subsequent aliyah starts", { exact: true }).fill("Genesis 2:1"));
   let request: Record<string, unknown> | undefined;
   tab.on("request", value => { if (new URL(value.url()).pathname.endsWith("/reading/prepare")) request = value.postDataJSON(); });
-  await click(tab, "Review reading"); await ui(sheet(tab).locator(".reading-preserved-context")).toBeVisible();
+  await click(tab, "Review assignment"); await ui(sheet(tab).locator(".reading-preserved-context")).toBeVisible();
   expect(request).toMatchObject({ preparationMode: "current-assignment", expectedAssignmentRevision: before.revision, aliyahStarts: ["Genesis 2:1"] });
   expect(request).not.toHaveProperty("ranges"); expect(request).not.toHaveProperty("pick");
-  await click(tab, "Confirm assigned reading");
-  await ui(sheet(tab).getByText("Reading confirmed and reloaded from the server. The assignment above is current.", { exact: true })).toBeVisible();
+  await click(tab, "Save assignment");
+  await ui(sheet(tab).getByText("Saved. The current reading above shows what the student will see.", { exact: true })).toBeVisible();
   const after = (await api(tab, readPath())).data.readings[0];
   expect(after).toEqual({ ...before, revision: before.revision + 1, aliyahStarts: ["Genesis 2:1"] });
 });
@@ -169,4 +171,44 @@ it("erases private suggestions when the actual SDK session expires while a sugge
     expect(await tab.locator(".reading-editor").count()).toBe(0);
     expect((await api(tab, `/api/students/${fixture.student.id}/reading?mode=tutor`)).status).toBe(401);
   } finally { release(); await tab.unroute("**/reading/prepare"); }
+});
+
+it("assigns two chosen passages divided into aliyot from pickers and saves exactly what was reviewed", async () => {
+  const tab = await page(); await navigate(tab); await open(tab);
+  await ui(sheet(tab).getByText(/Suggested for this service: Synthetic/)).toBeVisible();
+  const passage = (name: RegExp) => sheet(tab).getByRole("group", { name });
+  const picker = (group: RegExp, name: string) => passage(group).getByRole("combobox", { name, exact: true });
+  while (await sheet(tab).getByRole("button", { name: /^Remove passage \d+$/ }).count() > 0) await safe(() => sheet(tab).getByRole("button", { name: /^Remove passage \d+$/ }).last().click());
+  const first = /^(Custom passage|Passage 1)$/;
+  await safe(() => picker(first, "Book").selectOption("Exodus")); await safe(() => picker(first, "End verse").selectOption("3"));
+  await click(tab, "Add another passage");
+  await safe(() => picker(/^Passage 2$/, "Start chapter").selectOption("2")); await safe(() => picker(/^Passage 2$/, "Start verse").selectOption("1"));
+  await ui(sheet(tab).getByText("Your selection: Exodus 1:1-3; Exodus 2:1-4 (7 verses)", { exact: true })).toBeVisible();
+  await safe(() => sheet(tab).getByText(/^Divide into aliyot \(optional\)/).click());
+  // Divisions saved for the earlier verses don't fit these; the editor asks before starting over.
+  if (await sheet(tab).getByRole("button", { name: "Start divisions again", exact: true }).count()) await click(tab, "Start divisions again");
+  await click(tab, "Add an aliyah division");
+  await safe(() => sheet(tab).getByRole("combobox", { name: "Aliyah 2 starts at", exact: true }).selectOption("Exodus 2:1"));
+  await ui(sheet(tab).getByLabel("Subsequent aliyah starts", { exact: true })).toHaveValue("Exodus 2:1");
+  await click(tab, "Review assignment");
+  const review = sheet(tab).locator(".reading-proposal");
+  await ui(review).toContainText("Exodus 1:1-3; Exodus 2:1-4"); await ui(review).toContainText("7 verses · Verses you chose");
+  await ui(review).toContainText("2 aliyot."); await ui(review).toContainText("Replaces");
+  await click(tab, "Save assignment");
+  await ui(sheet(tab).getByText("Saved. The current reading above shows what the student will see.", { exact: true })).toBeVisible();
+  await ui(sheet(tab).locator("p", { hasText: "Current Torah:" })).toContainText("Exodus 1:1-3; Exodus 2:1-4 (7 verses)");
+  const saved = (await api(tab, readPath())).data.readings.find((row: { kind: string }) => row.kind === "torah");
+  expect(saved).toMatchObject({ ranges: ["Exodus 1:1-3", "Exodus 2:1-4"], aliyahStarts: ["Exodus 2:1"], needsReview: false });
+});
+
+it("flags a saved reading after a ceremony change without replacing it", async () => {
+  const tab = await page();
+  await fixture.ownerDb.update(s.assignment).set({ proposalSnapshot: sql`jsonb_set(coalesce(${s.assignment.proposalSnapshot}, '{}'::jsonb), '{needsReview}', 'true'::jsonb)` })
+    .where(and(eq(s.assignment.studentId, fixture.student.id), eq(s.assignment.kind, "torah")));
+  const before = (await api(tab, readPath())).data.readings.find((row: { kind: string }) => row.kind === "torah");
+  expect(before.needsReview).toBe(true);
+  await navigate(tab); await open(tab);
+  await ui(sheet(tab).getByRole("note")).toContainText("The ceremony date or service changed after it was saved. The saved verses have not been changed");
+  await close(tab);
+  expect((await api(tab, readPath())).data.readings.find((row: { kind: string }) => row.kind === "torah")).toEqual(before);
 });

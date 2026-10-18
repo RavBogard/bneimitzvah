@@ -41,15 +41,15 @@ async function capture(tab: Page, name: string) {
   if (process.env.CI) return;
   await ui(main(tab).getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden();
   await ui(tab.getByRole("heading", { name: "Set the assigned reading", level: 2, exact: true })).toBeVisible();
-  if (name.includes("prepared")) await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
-  if (name.includes("confirmed")) await ui(main(tab).getByText("Reading confirmed and reloaded from the server. The assignment above is current.", { exact: true })).toBeVisible();
+  if (name.includes("prepared")) await ui(tab.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled();
+  if (name.includes("confirmed")) await ui(main(tab).getByText("Saved. The current reading above shows what the student will see.", { exact: true })).toBeVisible();
   if (name.includes("conflict")) await ui(main(tab).getByRole("alert")).toContainText("changed after this review");
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const directory = join(process.cwd(), ".impeccable", "review"); await mkdir(directory, { recursive: true });
   // An open sheet scrolls inside itself, so it is captured at the outcome rather than as a full page.
   const sheet = tab.locator("dialog.editor-sheet[open]");
   if (await sheet.count()) {
-    const outcome = name.includes("prepared") ? sheet.getByRole("button", { name: "Confirm assigned reading", exact: true }) : name.includes("conflict") ? sheet.getByRole("alert") : sheet.getByText(/^Reading confirmed/);
+    const outcome = name.includes("prepared") ? sheet.getByRole("button", { name: "Save assignment", exact: true }) : name.includes("conflict") ? sheet.getByRole("alert") : sheet.getByText(/^Saved\. The current reading/);
     await safe(() => outcome.evaluate(node => node.scrollIntoView({ block: "center" })));
     await safe(() => tab.screenshot({ path: join(directory, `${name}.png`) }));
   } else await safe(() => tab.screenshot({ path: join(directory, `${name}.png`), fullPage: true }));
@@ -71,14 +71,14 @@ it("lets an admin review actual calendar choices, confirm once and replace only 
   await ui(tab.getByLabel("Passage",{exact:true})).toHaveValue("custom");
   await ui(tab.getByLabel("Passage", { exact: true }).getByRole("option", { name: /Triennial/ })).toHaveCount(0);
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("aliyah:1"));
-  expect(await tab.getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
-  await click(tab, "Review reading");
+  expect(await tab.getByRole("button", { name: "Save assignment", exact: true }).count()).toBe(0);
+  await click(tab, "Review assignment");
   await ui(tab.getByRole("heading", { name: "No reading has been assigned yet", level: 3, exact: true })).toBeVisible();
   await capture(tab, "reading-admin-prepared-desktop");
   let confirmations = 0;
   await tab.route("**/reading/confirm", async route => { confirmations++; const response = await route.fetch(); await route.fulfill({ response }); });
-  await safe(() => tab.getByRole("button", { name: "Confirm assigned reading", exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); }));
-  await ui(main(tab).getByText("Reading confirmed and reloaded from the server. The assignment above is current.", { exact: true })).toBeVisible();
+  await safe(() => tab.getByRole("button", { name: "Save assignment", exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); }));
+  await ui(main(tab).getByText("Saved. The current reading above shows what the student will see.", { exact: true })).toBeVisible();
   expect(confirmations).toBe(1);
   await ui(tab.locator(".confirmed-reading").getByText("Genesis 1:31-2:2", { exact: true })).toBeVisible();
   await capture(tab, "reading-admin-confirmed-desktop");
@@ -91,14 +91,14 @@ it("lets an admin review actual calendar choices, confirm once and replace only 
   await ui(tab.locator(".reading-editor").getByText(/^Calendar:/)).toBeVisible();
   // Each kind has its own draft. Empty custom passages use native validation;
   // the automatic suggestion read must not stage or inherit a Torah choice.
-  await click(tab,"Review reading");
+  await click(tab,"Review assignment");
   expect(await tab.getByLabel("Book", { exact: true }).evaluate(field => (field as HTMLSelectElement).validity.valueMissing)).toBe(true);
   expect(haftarahPreparations).toEqual([{ mode: "admin", kind: "haftarah" }]);
-  expect(await tab.getByRole("button",{name:"Confirm assigned reading",exact:true}).count()).toBe(0);
+  expect(await tab.getByRole("button",{name:"Save assignment",exact:true}).count()).toBe(0);
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("calendar-haftarah"));
-  await click(tab, "Review reading");
-  await click(tab,"Confirm assigned reading");
-  await ui(main(tab).getByText("Reading confirmed and reloaded from the server. The assignment above is current.", { exact: true })).toBeVisible();
+  await click(tab, "Review assignment");
+  await click(tab,"Save assignment");
+  await ui(main(tab).getByText("Saved. The current reading above shows what the student will see.", { exact: true })).toBeVisible();
   await closeEditor(tab);
   // The practice panel keeps Torah selected; Haftarah is intentionally in the
   // secondary assignment disclosure until the user opens it.
@@ -133,9 +133,9 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
   expect((await api(admin, `/api/admin/students/${beforePrepare.id}/edit`, { expectedRevision: beforePrepare.revision, student: {
     firstName: "Synthetic", lastName: "Learner", ceremonyDate: "2027-01-09", serviceSlot:"havdalah", parentEmail: "fixture@example.test"
   } })).status === 200).toBe(true);
-  await click(tab, "Review reading"); await ui(main(tab).getByRole("alert")).toContainText("changed while this proposal");
-  expect(await tab.getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
-  await click(tab, "Reload current reading");
+  await click(tab, "Review assignment"); await ui(main(tab).getByRole("alert")).toContainText("changed while this review");
+  expect(await tab.getByRole("button", { name: "Save assignment", exact: true }).count()).toBe(0);
+  await click(tab, "Check what saved");
   await ui(tab.locator(".confirmed-reading")).toHaveCount(2); await closeEditor(tab);
   await safe(()=>tab.locator(".reading-other-assignments > summary").click());
   for(const kind of ["Torah","Haftarah"]){
@@ -145,26 +145,26 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
   }
   await ui(tab.getByLabel("Student", { exact: true }).locator('[aria-current="page"]')).toContainText(/Synthetic Learner\s*Sat, Jan 9, 2027/);
   await openEditor(tab); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-3"); // The draft survives closing the sheet.
-  await click(tab, "Review reading"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
-  await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:4-5")); expect(await tab.getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
-  await click(tab, "Review reading"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
+  await click(tab, "Review assignment"); await ui(tab.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled();
+  await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:4-5")); expect(await tab.getByRole("button", { name: "Save assignment", exact: true }).count()).toBe(0);
+  await click(tab, "Review assignment"); await ui(tab.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled();
   const [student] = await fixture.ownerDb.select().from(s.student).where(eq(s.student.id, fixture.student.id));
   expect((await api(admin, `/api/admin/students/${student.id}/edit`,{expectedRevision:student.revision,student:{firstName:student.firstName,lastName:student.lastName,ceremonyDate:student.ceremonyDate,serviceSlot:"morning",parentEmail:"fixture@example.test"}})).status).toBe(200);
-  await click(tab, "Confirm assigned reading"); await ui(main(tab).getByRole("alert")).toContainText("changed after this review");
+  await click(tab, "Save assignment"); await ui(main(tab).getByRole("alert")).toContainText("changed after this review");
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5"); await capture(tab, "reading-tutor-conflict-mobile");
-  await click(tab, "Reload current reading"); await click(tab, "Review reading"); await capture(tab, "reading-tutor-prepared-mobile");
-  await click(tab, "Confirm assigned reading");
-  await ui(main(tab).getByText("Reading confirmed and reloaded from the server. The assignment above is current.", { exact: true })).toBeVisible();
+  await click(tab, "Check what saved"); await click(tab, "Review assignment"); await capture(tab, "reading-tutor-prepared-mobile");
+  await click(tab, "Save assignment");
+  await ui(main(tab).getByText("Saved. The current reading above shows what the student will see.", { exact: true })).toBeVisible();
   await ui(tab.getByLabel("Student", { exact: true }).locator('[aria-current="page"]')).toContainText(/Synthetic Learner\s*Sat, Jan 9, 2027/);
   await capture(tab, "reading-tutor-confirmed-mobile");
-  await custom(tab, "Genesis 1:6-7"); await click(tab, "Review reading"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
+  await custom(tab, "Genesis 1:6-7"); await click(tab, "Review assignment"); await ui(tab.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled();
   let mutations = 0;
   await tab.route("**/reading/confirm", async route => { mutations++; const response = await route.fetch(); await response.dispose(); await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); });
-  await click(tab, "Confirm assigned reading"); await ui(main(tab).getByRole("alert")).toContainText("may have saved");
+  await click(tab, "Save assignment"); await ui(main(tab).getByRole("alert")).toContainText("may have saved");
   await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible(); expect(mutations).toBe(1);
-  await ui(tab.getByRole("button", { name: "Review reading", exact: true })).toBeDisabled();
-  await click(tab, "Reload current reading"); await ui(tab.locator(".confirmed-reading").getByText("Genesis 1:6-7", { exact: true })).toBeVisible(); expect(mutations).toBe(1);
+  await ui(tab.getByRole("button", { name: "Review assignment", exact: true })).toBeDisabled();
+  await click(tab, "Check what saved"); await ui(tab.locator(".confirmed-reading").getByText("Genesis 1:6-7", { exact: true })).toBeVisible(); expect(mutations).toBe(1);
 });
 
 it("keeps the tutor sheet visible through prepare, confirm and local reload waits, rejecting immediate Escape and close until the outcome is visible", async () => {
@@ -202,17 +202,17 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
     expect(await tab.evaluate(() => document.querySelectorAll("dialog:modal").length)).toBe(1);
   }
   const prepare = await hold("**/reading/prepare");
-  try { await click(tab, "Review reading"); await safe(() => tab.keyboard.press("Escape")); await prepare.ready(); await rejectClosing("prepare response held"); }
+  try { await click(tab, "Review assignment"); await safe(() => tab.keyboard.press("Escape")); await prepare.ready(); await rejectClosing("prepare response held"); }
   finally { prepare.release(); }
-  await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled(); await prepare.remove();
+  await ui(tab.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled(); await prepare.remove();
   // Synthetic phone/desktop review captures were already accepted from this
   // unchanged product source; this regression exercises behavior only.
   const confirm = await hold("**/reading/confirm"), reload = await hold("**/reading?**");
-  try { await click(tab, "Confirm assigned reading"); await safe(() => tab.keyboard.press("Escape")); await confirm.ready(); await rejectClosing("confirm response held"); }
+  try { await click(tab, "Save assignment"); await safe(() => tab.keyboard.press("Escape")); await confirm.ready(); await rejectClosing("confirm response held"); }
   finally { confirm.release(); }
   try { await reload.ready(); await ui(tab.getByText("Checking the current assignment, text and saved work…", { exact: true })).toBeVisible(); await rejectClosing("post-confirm metadata reload held"); }
   finally { reload.release(); }
-  await ui(sheet.getByText("Reading confirmed and reloaded from the server. The assignment above is current.", { exact: true })).toBeVisible();
+  await ui(sheet.getByText("Saved. The current reading above shows what the student will see.", { exact: true })).toBeVisible();
   await confirm.remove(); await reload.remove();
   // Explicit recovery is offered only after a blocked review, not after a
   // successful confirmation. Exercise that real branch with a lost/stale
@@ -221,11 +221,11 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
     const response = await route.fetch(); await response.dispose();
     await route.fulfill({ status: 409, contentType: "application/json", body: '{"error":"conflict"}' });
   });
-  await click(tab, "Review reading"); await ui(sheet.getByRole("alert")).toContainText("changed while this proposal"); await tab.unroute("**/reading/prepare");
+  await click(tab, "Review assignment"); await ui(sheet.getByRole("alert")).toContainText("changed while this review"); await tab.unroute("**/reading/prepare");
   const explicitReload = await hold("**/reading?**");
-  try { await click(tab, "Reload current reading"); await safe(() => tab.keyboard.press("Escape")); await explicitReload.ready(); await rejectClosing("explicit metadata reload held"); }
+  try { await click(tab, "Check what saved"); await safe(() => tab.keyboard.press("Escape")); await explicitReload.ready(); await rejectClosing("explicit metadata reload held"); }
   finally { explicitReload.release(); }
-  await ui(sheet.getByText("Current reading reloaded. Prepare a new review to make a change.", { exact: true })).toBeVisible(); await explicitReload.remove();
+  await ui(sheet.getByText("Showing what is saved now. Review the assignment again to make a change.", { exact: true })).toBeVisible(); await explicitReload.remove();
   await ui(close).toBeEnabled(); await ui(sheet).toHaveAttribute("closedby", "closerequest"); await safe(() => tab.keyboard.press("Escape")); await ui(sheet).toBeHidden();
   await ui(tab.getByRole("button", { name: "Change verses", exact: true })).toBeFocused();
   await openEditor(tab); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:8-9"); await closeEditor(tab);
@@ -240,12 +240,12 @@ it("handles an empty calendar without invention and exposes no editor in parent 
   await ui(tab.getByText(/^The service slot is not yet set\./)).toBeVisible();
   await ui(tab.getByText("No calendar selections are available. Choose your own verses.", { exact: true })).toBeVisible();
   await ui(tab.getByLabel("Passage", { exact: true }).getByRole("option")).toHaveCount(1);
-  expect(await tab.getByRole("button", { name: "Confirm assigned reading", exact: true }).count()).toBe(0);
+  expect(await tab.getByRole("button", { name: "Save assignment", exact: true }).count()).toBe(0);
   await safe(() => tab.getByRole("combobox", { name: "Reading", exact: true }).selectOption("haftarah"));
   await ui(tab.getByLabel("Passage", { exact: true })).toHaveValue("custom");
   await ui(tab.locator(".reading-editor").getByText(/^Calendar:/)).toBeVisible();
   await ui(tab.getByText("No calendar selections are available. Choose your own verses.", { exact: true })).toBeVisible();
-  await custom(tab, "Isaiah 1:1-2"); await click(tab, "Review reading"); await click(tab, "Confirm assigned reading");
+  await custom(tab, "Isaiah 1:1-2"); await click(tab, "Review assignment"); await click(tab, "Save assignment");
   await ui(tab.locator(".confirmed-reading").getByText("Isaiah 1:1-2", { exact: true })).toBeVisible();
   const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(parent.getByRole("heading", { name: "Synthetic Learner", level: 2, exact: true })).toBeVisible(); expect(await parent.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0);

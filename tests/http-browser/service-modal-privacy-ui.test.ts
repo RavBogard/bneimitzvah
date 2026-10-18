@@ -50,10 +50,10 @@ async function prepareReading(tab: Page) {
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
   await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
-  await click(tab, "Review reading"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
+  await click(tab, "Review assignment"); await ui(tab.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled();
 }
 async function pendingService(tab: Page) {
-  await choose(tab); await prepareReading(tab); await click(tab, "Confirm assigned reading");
+  await choose(tab); await prepareReading(tab); await click(tab, "Save assignment");
   await ui(serviceGuard(tab)).toBeVisible(); await ui(sheet(tab)).toBeHidden(); expect(await modalCount(tab)).toBe(1);
 }
 async function holdSession(tab: Page) {
@@ -120,7 +120,7 @@ it("serializes service and unknown-note guards, and canceling the later decision
   await tab.route("**/work/note", async route => { const response = await route.fetch(); expect(response.status()).toBe(200); await response.dispose(); await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); });
   await safe(() => note.getByRole("button", { name: "Add student-visible note", exact: true }).click());
   await ui(note.locator(".work-status")).toContainText("Save not confirmed");
-  await prepareReading(tab); await click(tab, "Confirm assigned reading");
+  await prepareReading(tab); await click(tab, "Save assignment");
   await ui(serviceGuard(tab)).toBeVisible(); expect(await modalCount(tab)).toBe(1); await ui(sheet(tab)).toBeHidden();
   await click(tab, "Discard service draft and continue"); await ui(serviceGuard(tab)).toBeHidden(); await ui(workGuard(tab)).toBeVisible();
   expect(await modalCount(tab)).toBe(1); await ui(sheet(tab)).toBeHidden();

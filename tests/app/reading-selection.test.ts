@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { changePassage, passageFromCustom, passageReference, readingBooks } from "../../src/components/portal/workspace/reading-selection";
+import { addedDivision, changePassage, divisionChoices, followingPassage, passageFromCustom, passageReference, passagesFromCustom, readingBooks } from "../../src/components/portal/workspace/reading-selection";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 import { expandReadingRanges } from "../../src/lib/readings/ranges";
 
@@ -35,4 +35,27 @@ it("round trips every canonical book's last verse and adjacent chapter boundary 
       expect(expandReadingRanges([passageReference(passageFromCustom(boundary, "haftarah")!)], "haftarah", TANAKH_VERSE_COUNTS)).toHaveLength(2);
     }
   }
+});
+
+it("reads several plain passages for separate pickers and keeps any manual line out of them", () => {
+  expect(passagesFromCustom("", "torah")).toEqual([]);
+  expect(passagesFromCustom("Genesis 1:1-5\nGenesis 2:1-3", "torah")).toEqual([
+    { book: "Genesis", startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 5 },
+    { book: "Genesis", startChapter: 2, startVerse: 1, endChapter: 2, endVerse: 3 }]);
+  expect(passagesFromCustom("Genesis 1:1-5\nGenesis 1:99", "torah")).toBeNull();
+});
+
+it("starts an added passage right after the previous one without leaving the book", () => {
+  expect(followingPassage({ book: "Genesis", startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 5 })).toMatchObject({ startChapter: 1, startVerse: 6, endVerse: 6 });
+  expect(followingPassage({ book: "Genesis", startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 31 })).toMatchObject({ startChapter: 2, startVerse: 1 });
+  expect(followingPassage({ book: "Genesis", startChapter: 50, startVerse: 1, endChapter: 50, endVerse: 26 })).toMatchObject({ startChapter: 50, startVerse: 26 });
+});
+
+it("offers aliyah starts only in order inside the selected verses", () => {
+  const verses = expandReadingRanges(["Genesis 1:1-10"], "torah", TANAKH_VERSE_COUNTS);
+  expect(addedDivision(verses, [])).toBe("Genesis 1:6");
+  expect(addedDivision(verses, ["Genesis 1:6"])).toBe("Genesis 1:9");
+  expect(addedDivision(verses, ["Genesis 1:10"])).toBeNull();
+  expect(divisionChoices(verses, ["Genesis 1:4", "Genesis 1:8"], 0)).toEqual(["Genesis 1:2", "Genesis 1:3", "Genesis 1:4", "Genesis 1:5", "Genesis 1:6", "Genesis 1:7"]);
+  expect(divisionChoices(verses, ["Genesis 1:4", "Genesis 1:8"], 1)).toEqual(["Genesis 1:5", "Genesis 1:6", "Genesis 1:7", "Genesis 1:8", "Genesis 1:9", "Genesis 1:10"]);
 });

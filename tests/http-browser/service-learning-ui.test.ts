@@ -276,9 +276,9 @@ it("suspends the reading sheet for a service decision and retains only that righ
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
   await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
-  await click(tab, "Review reading"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
+  await click(tab, "Review assignment"); await ui(tab.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled();
   let writes = 0; tab.on("request", request => { if (request.method() === "POST" && /\/(reading|service-plan)\/confirm$/.test(new URL(request.url()).pathname)) writes++; });
-  await click(tab, "Confirm assigned reading"); await ui(prompt).toBeVisible();
+  await click(tab, "Save assignment"); await ui(prompt).toBeVisible();
   const snapshot = () => tab.evaluate(() => ({ modals: document.querySelectorAll("dialog:modal").length, service: Boolean(document.querySelector(".service-learning-panel dialog:modal")), sheet: Boolean(document.querySelector("dialog.editor-sheet:modal")) }));
   const phases = [await snapshot()];
   let release!: () => void, held = false, delivered = 0; const gate = new Promise<void>(resolve => { release = resolve; });

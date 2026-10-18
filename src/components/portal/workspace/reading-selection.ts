@@ -17,6 +17,35 @@ export function passageFromCustom(custom: string, kind: ReadingKind): Passage | 
   } catch { return null; }
 }
 
+/** Every line must be a valid single passage; otherwise the ranges stay manual. Empty is no passages. */
+export function passagesFromCustom(custom: string, kind: ReadingKind): Passage[] | null {
+  const refs = custom.split(/\r?\n/).map(ref => ref.trim()).filter(Boolean), passages: Passage[] = [];
+  for (const ref of refs) { const passage = passageFromCustom(ref, kind); if (!passage) return null; passages.push(passage); }
+  return passages;
+}
+
+/** "Add another passage" starts just after the previous one, in the same book when the book continues. */
+export function followingPassage(previous: Passage): Passage {
+  const counts = TANAKH_VERSE_COUNTS[previous.book];
+  let chapter = previous.endChapter, verse = previous.endVerse + 1;
+  if (verse > counts[chapter - 1]) { chapter++; verse = 1; }
+  if (chapter > counts.length) { chapter = previous.endChapter; verse = previous.endVerse; }
+  return { book: previous.book, startChapter: chapter, startVerse: verse, endChapter: chapter, endVerse: verse };
+}
+
+/** Aliyah starts presented as choices: each start must follow the previous one inside the selected verses. */
+export function divisionChoices(verses: readonly string[], starts: readonly string[], index: number): string[] {
+  const after = index === 0 ? 0 : verses.indexOf(starts[index - 1]) + 1, before = index + 1 < starts.length ? verses.indexOf(starts[index + 1]) : verses.length;
+  return verses.slice(Math.max(1, after), before < 0 ? verses.length : before);
+}
+
+/** A new division splits the last aliyah roughly in half; null when it has no room for another. */
+export function addedDivision(verses: readonly string[], starts: readonly string[]): string | null {
+  const from = starts.length ? verses.indexOf(starts[starts.length - 1]) : 0;
+  if (from < 0 || verses.length - from < 2) return null;
+  return verses[from + Math.ceil((verses.length - from) / 2)] ?? null;
+}
+
 export function passageReference(passage: Passage): string {
   const { book, startChapter, startVerse, endChapter, endVerse } = passage;
   const first = `${book} ${startChapter}:${startVerse}`;
