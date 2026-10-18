@@ -137,7 +137,7 @@ it("keeps Sources closed and metadata idle until explicit open/browse; readonly 
   await panel(tab).getByRole("button", { name: "Next sources", exact: true }).click(); await ui(panel(tab)).toContainText("Invented source 13");
   await ui(panel(tab).getByRole("checkbox")).toHaveCount(0); await ui(panel(tab).getByRole("button", { name: "Save sources", exact: true })).toHaveCount(0); expect(posts).toBe(0); expect(calendars).toBe(0); await noAudio(tab);
   const child = await page("tutor"); await child.getByRole("link", { name: "Parent", exact: true }).click();
-  await child.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await child.getByRole("button", { name: "Enter child practice", exact: true }).click();
+  await child.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await child.getByRole("button", { name: "Practice with Synthetic", exact: true }).click();
   await ui(child.locator(".study-verses")).toBeVisible(); await open(child); await browse(child); await ui(panel(child).getByRole("checkbox")).toHaveCount(0); await ui(panel(child).getByRole("button", { name: "Save sources", exact: true })).toHaveCount(0); await noAudio(child);
 });
 
@@ -211,7 +211,7 @@ it("offers an honest unknown-save departure without automatic retry, then clears
   await disclosure.click(); await ui(dialog).toContainText("It may still complete if you leave"); await dialog.getByRole("button", { name: "Keep working", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Check save", exact: true })).toBeVisible(); expect(posts).toBe(1);
   await disclosure.click(); await dialog.getByRole("button", { name: "Leave without confirming", exact: true }).click(); await ui(disclosure).toHaveAttribute("aria-expanded", "false"); expect(posts).toBe(1);
   const after = await fixture.ownerDb.select().from(s.verseSourceAssignment).where(and(eq(s.verseSourceAssignment.studentId, fixture.student.id), eq(s.verseSourceAssignment.verseRef, "Genesis 1:1"))); expect(after.length).toBe(before.length);
-  await tab.getByRole("link", { name: "Parent", exact: true }).click(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Enter child practice", exact: true }).click(); await ui(tab.locator(".study-verses")).toBeVisible(); await open(tab); await browse(tab);
+  await tab.getByRole("link", { name: "Parent", exact: true }).click(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(tab.locator(".study-verses")).toBeVisible(); await open(tab); await browse(tab);
   await tab.getByRole("button", { name: "Switch practice to Synthetic Sibling", exact: true }).click(); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible(); await ui(panel(tab).getByRole("button", { name: "Sources", exact: true })).toHaveAttribute("aria-expanded", "false");
   await open(tab); await ui(assigned(tab)).toHaveCount(0); await browse(tab);
   await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(0) }).where(eq(s.session.userId, fixture.tutor.id)); const expired = tab.waitForResponse(value => new URL(value.url()).pathname === "/api/session" && value.status() === 401); await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await expired;

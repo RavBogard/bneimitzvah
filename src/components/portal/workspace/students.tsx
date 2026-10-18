@@ -94,7 +94,8 @@ export function PracticeWorkspace({ studentId }: { studentId: string }) {
   if (!context || context.studentId !== studentId) return <section className="workspace-state"><h1>Choose a child to practice</h1><p>This tab does not have a matching practice selection. Reloading never restores a practice handle.</p><Link href="/workspace/parent">Choose a linked child</Link></section>;
   return <RequireRole role="parent"><section className="role-workspace"><div className="workspace-heading-row practice-bar"><h1>Child practice</h1><button className="button-hero-secondary" disabled={busy} onClick={() => void exitPractice()}>{busy ? "Closing practice…" : "Return to parent view"}</button></div>
     <p role="status" className="field-help practice-scope">This tab only. Other tabs keep their own selections.</p>
-    <ReadingPanel mode="child-practice" studentId={studentId} /><StudentSelection mode="parent" switching />
+    <StudentSelection mode="parent" switching />
+    <ReadingPanel mode="child-practice" studentId={studentId} />
   </section></RequireRole>;
 }
 

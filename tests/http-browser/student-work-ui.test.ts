@@ -114,7 +114,7 @@ async function capture(tab: Page, name: string) {
   } finally { await tab.evaluate(() => { document.documentElement.style.removeProperty("font-size"); }); if (original) await tab.setViewportSize(original); }
 }
 async function accountReady(tab: Page) {
-  await ui(tab.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: "Your account", exact: true })).toBeVisible();
   await ui(tab.getByRole("button", { name: "Sign out", exact: true })).toBeEnabled();
   expect(new URL(tab.url()).pathname).toBe("/account");
 }
@@ -166,7 +166,7 @@ it("edits own and assisted translations, preserves Unicode and literal markup, a
   await capture(student, "student-edit-mobile");
   const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(parent); const parentPanel = await tools(parent);
   expect(await parentPanel.getByRole("textbox").count()).toBe(0); await ui(parentPanel.getByText(text, { exact: true })).toBeVisible(); await capture(parent, "parent-readonly-desktop");
-  await click(parent, "Enter child practice"); await loaded(parent); const childPanel = await tools(parent); await safe(() => childPanel.getByRole("textbox").fill("Synthetic assisted reading")); await safe(() => childPanel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(childPanel.locator(".work-status")).toHaveText("Saved");
+  await click(parent, "Practice with Synthetic"); await loaded(parent); const childPanel = await tools(parent); await safe(() => childPanel.getByRole("textbox").fill("Synthetic assisted reading")); await safe(() => childPanel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(childPanel.locator(".work-status")).toHaveText("Saved");
   await safe(() => childPanel.getByRole("button", { name: "Notes from your teachers", exact: true }).click()); expect(await childPanel.getByRole("textbox").count()).toBe(0); expect(await childPanel.getByRole("button", { name: "Add student-visible note", exact: true }).count()).toBe(0);
   const admin = await page("admin"); await staff(admin); const adminPanel = await tools(admin); expect(await adminPanel.getByRole("textbox").count()).toBe(0); await ui(adminPanel.getByText("Synthetic assisted reading", { exact: true })).toBeVisible(); await ui(adminPanel.getByText(/Assisted child practice/)).toBeVisible();
   await safe(() => adminPanel.getByRole("button", { name: "Student-visible notes", exact: true }).click()); await safe(() => adminPanel.getByRole("textbox").fill("Synthetic teacher note <strong>literal</strong>")); expect(await fixture.ownerDb.select().from(s.tutorNote)).toHaveLength(0);
@@ -356,7 +356,7 @@ it("blocks an uncertain old save through recovery outages until explicit authori
 });
 
 it("clears old child work on forced revocation and fences an actual committed late reply across context loss", async () => {
-  const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(parent); await click(parent, "Enter child practice"); await loaded(parent);
+  const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(parent); await click(parent, "Practice with Synthetic"); await loaded(parent);
   let releaseUnknown!: () => void, committedUnknown = false; const unknownGate = new Promise<void>(resolve => { releaseUnknown = resolve; }), bodies: { child: string; text: string }[] = [];
   await parent.route("**/work/draft", async route => { bodies.push({ child: new URL(route.request().url()).pathname.split("/")[3], text: route.request().postDataJSON().text }); const response = await route.fetch(); committedUnknown = response.status() === 200; await unknownGate; await route.fulfill({ response }).catch(() => undefined); });
   const uncertain = await tools(parent, "Genesis 1:9"); await safe(() => uncertain.getByRole("textbox").fill("Synthetic original child uncertain save")); await safe(() => uncertain.getByRole("button", { name: "Save now", exact: true }).click()); await ui.poll(() => committedUnknown).toBe(true); await safe(() => uncertain.getByRole("textbox").fill("Synthetic old child queue must not post"));

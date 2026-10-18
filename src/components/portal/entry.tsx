@@ -8,6 +8,8 @@ import { GoogleSignIn } from "./google-sign-in";
 type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "accepted" | "uncertain" }
   | { kind: "signed-in"; summary: SessionSummary } | { kind: "invitation"; review: InvitationReview };
 type Action = "google" | "email" | "accept" | "sign-out";
+const rolePath = (role: SessionSummary["roles"][number]) => role === "admin" ? "/workspace/admin/students" : `/workspace/${role}`;
+const roleTasks: Record<SessionSummary["roles"][number], string> = { student: "your assigned reading", parent: "your child’s preparation and practice", tutor: "the students you teach", admin: "students, people and setup" };
 const failure = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
 
 export function PortalEntry({ invitation = false, authenticationError = false, autoEnterStudent = true }: { invitation?: boolean; authenticationError?: boolean; autoEnterStudent?: boolean }) {
@@ -85,12 +87,12 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
   }
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void action("email"); }
   const title = view.kind === "loading" ? "Checking your access" : view.kind === "unavailable" ? "Sign-in is unavailable" : view.kind === "sign-in" ? linkRequested ? "Check your email" : "Sign in"
-    : view.kind === "signed-in" ? "You’re signed in" : view.kind === "invitation" ? "Review your invitation" : view.kind === "accepted" ? "Invitation accepted"
+    : view.kind === "signed-in" ? autoEnterStudent ? "You’re signed in" : "Your account" : view.kind === "invitation" ? "Review your invitation" : view.kind === "accepted" ? "Invitation accepted"
       : view.kind === "invalid-invitation" ? "Invitation unavailable" : view.kind === "uncertain" ? "We couldn’t confirm the result" : "Access is unavailable";
 
   return <div className="portal-shell">
     <a className="skip-link" href="#portal-main">Skip to sign-in and access</a>
-    <header className="portal-header"><a className="portal-brand" href="/" aria-label="CRC B'nei Mitzvah home">CRC B’nei Mitzvah</a><span>Central Reform Congregation</span></header>
+    <header className="portal-header"><a className="portal-brand" href="/" aria-label="CRC Beit Mitzvah home">CRC Beit Mitzvah</a><span>Central Reform Congregation</span></header>
     <main id="portal-main" className="entry-layout">
       <div className="entry-introduction">
         <h1>{invitation ? "Join your congregation’s practice" : "Open your reading"}</h1>
@@ -121,8 +123,9 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
               <button type="submit" className="button-primary" disabled={pending !== null}>{pending === "email" ? "Sending link…" : "Email me a sign-in link"}</button>
             </form></>)}
         {view.kind === "signed-in" && <>
-          {view.summary.roles.length ? <><p>Choose the workspace you want to use. Each role stays separate.</p><ul className="role-list" aria-label="Available roles">{view.summary.roles.map(role => <li key={role}><a href={role === "admin" ? "/workspace/admin/students" : `/workspace/${role}`}>{roleNames[role]}</a></li>)}</ul></>
+          {view.summary.roles.length ? <><p>{view.summary.roles.length === 1 ? "Continue to your work." : "This account has more than one role. Choose what you want to do now; you can switch later from the top of the page."}</p><ul className="role-list" aria-label="Available roles">{view.summary.roles.map(role => <li key={role}><a href={rolePath(role)}>{roleNames[role]}</a><span className="field-help"> · {roleTasks[role]}</span></li>)}</ul></>
             : <><p>No congregation role is linked to this account yet.</p><p>If you received an invitation, open its email link while signed in. Otherwise, ask your tutor or the congregation for an invitation.</p></>}
+          <p className="field-help">Signing out removes your private reading and notes from this device’s screen. Use it on a shared phone or computer.</p>
           <button type="button" className="button-secondary" disabled={pending !== null} onClick={() => void action("sign-out")}>{pending === "sign-out" ? "Signing out…" : "Sign out"}</button>
         </>}
         {view.kind === "invitation" && <><p>Check the details before joining. Accepting adds this access to your signed-in account.</p>
@@ -132,7 +135,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
           <button type="button" className="button-primary" disabled={pending !== null} onClick={() => void action("accept")}>{pending === "accept" ? "Accepting invitation…" : "Accept invitation"}</button>
           <button type="button" className="button-text" disabled={pending !== null} onClick={() => void action("sign-out")}>Sign out to use another account</button>
         </>}
-        {view.kind === "accepted" && <><p role="status">Your invitation has been accepted. You can check your account’s access in the portal.</p><a className="button-primary" href="/">Continue to the portal</a></>}
+        {view.kind === "accepted" && <><p role="status">Your invitation has been accepted.</p><a className="button-primary" href="/">Continue</a></>}
         {view.kind === "invalid-invitation" && <><p>This invitation may have changed, expired, already been accepted, or belong to another account. No new access has been added by this request.</p><p>Open the latest invitation email, or ask the congregation for a new invitation.</p><button type="button" className="button-primary" onClick={retry}>{message ? "Review invitation again" : "Check invitation again"}</button><a className="button-text" href="/">Check my access</a></>}
         {view.kind === "uncertain" && <><p>The request was interrupted. Your invitation may have been accepted. Check your access before trying again.</p><a className="button-primary" href="/">Check my access</a><button type="button" className="button-text" onClick={retry}>Review invitation again</button></>}
         {view.kind === "forbidden" && <><p>This account can’t use the requested access right now. Ask the congregation for help, or sign in with a different account.</p><button type="button" className="button-secondary" disabled={pending !== null} onClick={() => void action("sign-out")}>{pending === "sign-out" ? "Signing out…" : "Sign out"}</button></>}
