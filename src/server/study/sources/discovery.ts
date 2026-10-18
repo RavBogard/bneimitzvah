@@ -26,9 +26,8 @@ export function sourcePageSelection(value: unknown): SourcePageSelection {
     || hash && (!Object.hasOwn(hash, "value") || typeof hash.value !== "string" || !/^[a-f0-9]{64}$/.test(hash.value)) || Number(sourceOffset) > 0 && !hash) return fail();
   return Object.freeze({ sourceOffset: Number(sourceOffset), ...(hash ? { catalogHash: hash.value as string } : {}) });
 }
-export function discoverRelatedPage(catalog: unknown, requestedRef: string, supplied: SourcePageSelection):
-  Readonly<{ status: "ready"; page: RelatedSourcePage }> | Readonly<{ status: "catalog-changed" }> | Readonly<{ status: "invalid-page" }> {
-  const selection = sourcePageSelection(supplied), ref = sourceMetadataVerse(requestedRef), row = object(catalog);
+export function projectRelatedCatalog(catalog: unknown, requestedRef: string) {
+  const ref = sourceMetadataVerse(requestedRef), row = object(catalog);
   if (field(row, "schema") !== "study-related-metadata/v1" || field(row, "verse") !== ref) return fail();
   const receivedRows = count(field(row, "receivedRows")), heldCount = count(field(row, "heldCount")), duplicateCount = count(field(row, "duplicateCount"));
   const raw = field(row, "entries");
@@ -50,6 +49,12 @@ export function discoverRelatedPage(catalog: unknown, requestedRef: string, supp
   const serialized = JSON.stringify({ schema: "study-related-catalog-hash/v1", ref, receivedRows, heldCount, duplicateCount, entries });
   if (Buffer.byteLength(serialized) > L.bytes) return fail();
   const catalogHash = createHash("sha256").update(serialized).digest("hex");
+  return Object.freeze({ ref, catalogHash, receivedRows, heldCount, duplicateCount, entries: Object.freeze(entries) });
+}
+export function discoverRelatedPage(catalog: unknown, requestedRef: string, supplied: SourcePageSelection):
+  Readonly<{ status: "ready"; page: RelatedSourcePage }> | Readonly<{ status: "catalog-changed" }> | Readonly<{ status: "invalid-page" }> {
+  const selection = sourcePageSelection(supplied);
+  const { ref, catalogHash, receivedRows, heldCount, duplicateCount, entries } = projectRelatedCatalog(catalog, requestedRef);
   if (selection.catalogHash !== undefined && selection.catalogHash !== catalogHash) return Object.freeze({ status: "catalog-changed" });
   if (selection.sourceOffset >= entries.length && (selection.sourceOffset !== 0 || entries.length !== 0)) return Object.freeze({ status: "invalid-page" });
   const end = Math.min(entries.length, selection.sourceOffset + 10);
