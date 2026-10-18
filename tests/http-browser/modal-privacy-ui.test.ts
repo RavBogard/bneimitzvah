@@ -29,13 +29,14 @@ async function page() {
 }
 async function pendingDeparture(tab: Page, draft: string) {
   const verse = tab.locator(".verse-work").first(); await safe(() => verse.locator("summary").click());
-  await safe(() => verse.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  await safe(() => verse.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await safe(() => verse.getByRole("textbox").fill(draft));
   await click(tab, "Change verses"); await ui(editor(tab)).toBeVisible();
-  await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("custom"));
+  await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
+  await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
-  await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
-  await click(tab, "Confirm assigned reading"); await ui(departure(tab)).toBeVisible(); await ui(editor(tab)).toBeHidden();
+  await click(tab, "Review assignment"); await ui(tab.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled();
+  await click(tab, "Save assignment"); await ui(departure(tab)).toBeVisible(); await ui(editor(tab)).toBeHidden();
   expect(await tab.evaluate(() => document.querySelectorAll("dialog:modal").length)).toBe(1);
 }
 beforeAll(async () => {
@@ -75,7 +76,7 @@ it("retains the sole rightful departure modal during a quiet check without confi
   await ui(tab.getByRole("button", { name: "Change verses", exact: true })).toBeFocused();
   // The retained note stream remains independently selectable after the guard.
   const notePanel = tab.locator(".verse-work").first();
-  await safe(() => notePanel.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  await safe(() => notePanel.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await ui(notePanel.getByRole("textbox")).toHaveValue(draft);
   await click(tab, "Change verses"); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   expect(writes).toBe(0); await tab.unroute("**/api/session");

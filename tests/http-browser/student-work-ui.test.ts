@@ -78,12 +78,12 @@ async function capture(tab: Page, name: string) {
     if (state === "revision-review" || state === "revision-unknown") {
       await ui(panel.getByRole("textbox")).toHaveJSProperty("readOnly", true);
       await ui(panel.getByRole("region", { name: /Review unsent translation/ })).toBeVisible();
-      if (state === "revision-unknown") await ui(panel.getByRole("button", { name: "Check earlier save", exact: true })).toBeVisible();
+      if (state === "revision-unknown") await ui(panel.getByRole("button", { name: "Check what saved", exact: true })).toBeVisible();
       else await ui(panel.getByRole("button", { name: "Review and keep my text", exact: true })).toBeEnabled();
     } else if (state === "unknown") {
       await ui(panel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab.");
-      await ui(panel.getByRole("button", { name: "Check save", exact: true })).toBeVisible();
-      await ui(panel.getByRole("button", { name: "Retry the same save", exact: true })).toBeVisible();
+      await ui(panel.getByRole("button", { name: "Check what saved", exact: true })).toBeVisible();
+      await ui(panel.getByRole("button", { name: "Send the same save again", exact: true })).toBeVisible();
       await ui(panel.locator(".work-history > summary")).toBeVisible();
     } else if (state === "conflict") {
       await ui(panel.locator(".work-status")).toHaveText("An earlier save succeeded. A newer version is saved. Review before saving yours.");
@@ -114,7 +114,7 @@ async function capture(tab: Page, name: string) {
   } finally { await tab.evaluate(() => { document.documentElement.style.removeProperty("font-size"); }); if (original) await tab.setViewportSize(original); }
 }
 async function accountReady(tab: Page) {
-  await ui(tab.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: "Your account", exact: true })).toBeVisible();
   await ui(tab.getByRole("button", { name: "Sign out", exact: true })).toBeEnabled();
   expect(new URL(tab.url()).pathname).toBe("/account");
 }
@@ -166,13 +166,13 @@ it("edits own and assisted translations, preserves Unicode and literal markup, a
   await capture(student, "student-edit-mobile");
   const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(parent); const parentPanel = await tools(parent);
   expect(await parentPanel.getByRole("textbox").count()).toBe(0); await ui(parentPanel.getByText(text, { exact: true })).toBeVisible(); await capture(parent, "parent-readonly-desktop");
-  await click(parent, "Enter child practice"); await loaded(parent); const childPanel = await tools(parent); await safe(() => childPanel.getByRole("textbox").fill("Synthetic assisted reading")); await safe(() => childPanel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(childPanel.locator(".work-status")).toHaveText("Saved");
+  await click(parent, "Practice with Synthetic"); await loaded(parent); const childPanel = await tools(parent); await safe(() => childPanel.getByRole("textbox").fill("Synthetic assisted reading")); await safe(() => childPanel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(childPanel.locator(".work-status")).toHaveText("Saved");
   await safe(() => childPanel.getByRole("button", { name: "Notes from your teachers", exact: true }).click()); expect(await childPanel.getByRole("textbox").count()).toBe(0); expect(await childPanel.getByRole("button", { name: "Add student-visible note", exact: true }).count()).toBe(0);
   const admin = await page("admin"); await staff(admin); const adminPanel = await tools(admin); expect(await adminPanel.getByRole("textbox").count()).toBe(0); await ui(adminPanel.getByText("Synthetic assisted reading", { exact: true })).toBeVisible(); await ui(adminPanel.getByText(/Assisted child practice/)).toBeVisible();
-  await safe(() => adminPanel.getByRole("button", { name: "Student-visible notes", exact: true }).click()); await safe(() => adminPanel.getByRole("textbox").fill("Synthetic teacher note <strong>literal</strong>")); expect(await fixture.ownerDb.select().from(s.tutorNote)).toHaveLength(0);
+  await safe(() => adminPanel.getByRole("button", { name: "Teacher notes", exact: true }).click()); await safe(() => adminPanel.getByRole("textbox").fill("Synthetic teacher note <strong>literal</strong>")); expect(await fixture.ownerDb.select().from(s.tutorNote)).toHaveLength(0);
   await capture(admin, "staff-visible-note-desktop"); await safe(() => adminPanel.getByRole("button", { name: "Add student-visible note", exact: true }).click()); await ui(adminPanel.getByText("Synthetic teacher note <strong>literal</strong>", { exact: true })).toBeVisible();
   const tutor = await page("tutor"); await navigate(tutor, "/workspace/tutor"); await safe(() => tutor.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(tutor); const tutorPanel = await tools(tutor);
-  expect(await tutorPanel.getByRole("textbox").count()).toBe(0); await safe(() => tutorPanel.getByRole("button", { name: "Student-visible notes", exact: true }).click()); await safe(() => tutorPanel.getByRole("textbox").fill("Synthetic assigned tutor note")); await safe(() => tutorPanel.getByRole("button", { name: "Add student-visible note", exact: true }).click()); await ui(tutorPanel.getByText("Synthetic assigned tutor note", { exact: true })).toBeVisible();
+  expect(await tutorPanel.getByRole("textbox").count()).toBe(0); await safe(() => tutorPanel.getByRole("button", { name: "Teacher notes", exact: true }).click()); await safe(() => tutorPanel.getByRole("textbox").fill("Synthetic assigned tutor note")); await safe(() => tutorPanel.getByRole("button", { name: "Add student-visible note", exact: true }).click()); await ui(tutorPanel.getByText("Synthetic assigned tutor note", { exact: true })).toBeVisible();
   await click(student, "Refresh reading"); await loaded(student); const refreshed = await tools(student); await safe(() => refreshed.getByRole("button", { name: "Notes from your teachers", exact: true }).click());
   for (const text of ["Synthetic teacher note <strong>literal</strong>", "Synthetic assigned tutor note"]) {
     const note = refreshed.locator(".work-notes article").filter({ hasText: text }); await ui(note.getByText(text, { exact: true })).toBeVisible(); await ui(note.getByText("Portal member", { exact: true })).toBeVisible();
@@ -188,15 +188,15 @@ it("holds one real committed POST acknowledgement, queues typing and recovers ex
   await singleRecovery(panel, "Save not confirmed. Your text is still in this tab.");
   expect(calls).toBe(1); const [row] = await fixture.ownerDb.select().from(s.translationDraft).where(eq(s.translationDraft.mutationId, mutationId)); expect(row.version === 1 && row.text === "Synthetic lost acknowledgement").toBe(true);
   expect((await fixture.ownerDb.select().from(s.auditEvent).where(eq(s.auditEvent.targetId, row.id))).length).toBe(1); await capture(tab, "unknown-desktop");
-  release(); await tab.unroute("**/work/draft"); await safe(() => panel.getByRole("button", { name: "Check save", exact: true }).click()); await ui(field).toHaveValue("Synthetic latest queued edit"); await ui(panel.locator(".work-status")).toHaveText("Saved", { timeout: 18_000 });
+  release(); await tab.unroute("**/work/draft"); await safe(() => panel.getByRole("button", { name: "Check what saved", exact: true }).click()); await ui(field).toHaveValue("Synthetic latest queued edit"); await ui(panel.locator(".work-status")).toHaveText("Saved", { timeout: 18_000 });
   const rows = await fixture.ownerDb.select().from(s.translationDraft).where(and(eq(s.translationDraft.verseRef, "Genesis 1:2"), eq(s.translationDraft.studentId, fixture.student.id))); expect(rows.length === 2 && rows.filter(row => row.mutationId === mutationId).length === 1).toBe(true);
   // A real missing receipt also permits only the original UUID/body retry.
   const retryPanel = await tools(tab, "Genesis 1:8"), bodies: string[] = [];
   await tab.route("**/work/draft", async route => { bodies.push(route.request().postData() ?? ""); if (bodies.length === 1) await route.abort(); else { const response = await route.fetch(); await route.fulfill({ response }); } });
   await safe(() => retryPanel.getByRole("textbox").fill("Synthetic identical retry")); await safe(() => retryPanel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(retryPanel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab.");
-  await safe(() => retryPanel.getByRole("button", { name: "Check save", exact: true }).click());
+  await safe(() => retryPanel.getByRole("button", { name: "Check what saved", exact: true }).click());
   await singleRecovery(retryPanel, "Save not confirmed. Your text is still in this tab. No receipt was found; the request may still have saved. You can retry the same save under this assignment.");
-  await safe(() => retryPanel.getByRole("button", { name: "Retry the same save", exact: true }).click()); await ui(retryPanel.locator(".work-status")).toHaveText("Saved"); expect(bodies.length === 2 && bodies[0] === bodies[1]).toBe(true); await tab.unroute("**/work/draft");
+  await safe(() => retryPanel.getByRole("button", { name: "Send the same save again", exact: true }).click()); await ui(retryPanel.locator(".work-status")).toHaveText("Saved"); expect(bodies.length === 2 && bodies[0] === bodies[1]).toBe(true); await tab.unroute("**/work/draft");
   const retryRows = await fixture.ownerDb.select().from(s.translationDraft).where(and(eq(s.translationDraft.verseRef, "Genesis 1:8"), eq(s.translationDraft.studentId, fixture.student.id))); expect(retryRows.length === 1 && (await fixture.ownerDb.select().from(s.auditEvent).where(eq(s.auditEvent.targetId, retryRows[0].id))).length === 1).toBe(true);
 });
 
@@ -206,7 +206,7 @@ it("compares newer real head after lost acknowledgement and two-tab CAS contenti
   await first.route("**/work/draft", async route => { const response = await route.fetch(); committed = response.status() === 200; await gate; await route.fulfill({ response }).catch(() => undefined); });
   await safe(() => a.getByRole("textbox").fill("Synthetic committed earlier")); await safe(() => a.getByRole("button", { name: "Save now", exact: true }).click()); await ui.poll(() => committed).toBe(true);
   expect((await append(second, "Genesis 1:3", "Synthetic newer saved head", 1)).status === 200).toBe(true); await safe(() => a.getByRole("textbox").fill("Synthetic retained queued comparison")); await ui(a.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab.", { timeout: 18_000 });
-  release(); await first.unroute("**/work/draft"); await safe(() => a.getByRole("button", { name: "Check save", exact: true }).click()); await singleRecovery(a, "An earlier save succeeded. A newer version is saved. Review before saving yours."); await ui(a.getByRole("textbox")).toHaveValue("Synthetic retained queued comparison"); await ui(a.locator(".work-comparison")).toContainText("Synthetic newer saved head"); await capture(first, "conflict-mobile");
+  release(); await first.unroute("**/work/draft"); await safe(() => a.getByRole("button", { name: "Check what saved", exact: true }).click()); await singleRecovery(a, "An earlier save succeeded. A newer version is saved. Review before saving yours."); await ui(a.getByRole("textbox")).toHaveValue("Synthetic retained queued comparison"); await ui(a.locator(".work-comparison")).toContainText("Synthetic newer saved head"); await capture(first, "conflict-mobile");
   await safe(() => b.getByRole("textbox").fill("Synthetic stale tab text")); await safe(() => b.getByRole("button", { name: "Save now", exact: true }).click()); await singleRecovery(b, "Another version was saved. Review before saving yours."); expect((await head(second, "Genesis 1:3"))?.version === 2).toBe(true);
 });
 
@@ -276,7 +276,7 @@ it("guards controlled leave, explicit reload barriers and quiet retained reading
   await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); expect((await refreshed).status()).toBe(200); await accountReady(tab); await captureAccount(tab);
   expect((await fixture.ownerDb.select().from(s.translationDraft).where(and(eq(s.translationDraft.studentId, fixture.student.id), eq(s.translationDraft.verseRef, "Genesis 1:4"), eq(s.translationDraft.text, discarded)))).length).toBe(0);
   phase = "staff-save-departure";
-  const admin = await page("admin"); await staff(admin); const notePanel = await tools(admin, "Genesis 1:7"); await safe(() => notePanel.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  const admin = await page("admin"); await staff(admin); const notePanel = await tools(admin, "Genesis 1:7"); await safe(() => notePanel.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await safe(() => notePanel.getByRole("textbox").fill("Synthetic explicitly saved on departure")); await safe(() => admin.getByRole("link", { name: "All students", exact: true }).click()); await ui(admin.getByRole("dialog")).toBeVisible(); await click(admin, "Save and continue"); await ui.poll(() => new URL(admin.url()).pathname).toBe("/workspace/admin/students");
   expect((await fixture.ownerDb.select().from(s.tutorNote).where(and(eq(s.tutorNote.verseRef, "Genesis 1:7"), eq(s.tutorNote.text, "Synthetic explicitly saved on departure")))).length).toBe(1);
   } catch { throw new Error(`Student work lifecycle fixed phase: ${phase}; private details withheld`); }
@@ -348,15 +348,15 @@ it("blocks an uncertain old save through recovery outages until explicit authori
   let panel = await tools(student, "Genesis 1:14"); await safe(() => panel.getByRole("textbox").fill("Synthetic unsaved old revision")); await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(panel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab.");
   await reviseSameVerses(admin); await focusRefresh(student); panel = await tools(student, "Genesis 1:14");
   await ui(panel.getByRole("textbox")).toHaveValue("Synthetic unsaved old revision"); await ui(panel.locator(".work-status")).toHaveText("We couldn’t confirm the earlier save. Your text stays here; check again before saving anything new.");
-  expect(await panel.getByRole("button", { name: "Retry the same save", exact: true }).count()).toBe(0); expect(await panel.getByRole("button", { name: "Review and keep my text", exact: true }).count()).toBe(0); await capture(student, "revision-unknown"); expect(bodies).toHaveLength(1);
-  await student.unroute("**/work/recovery"); await safe(() => panel.getByRole("button", { name: "Check earlier save", exact: true }).click());
+  expect(await panel.getByRole("button", { name: "Send the same save again", exact: true }).count()).toBe(0); expect(await panel.getByRole("button", { name: "Review and keep my text", exact: true }).count()).toBe(0); await capture(student, "revision-unknown"); expect(bodies).toHaveLength(1);
+  await student.unroute("**/work/recovery"); await safe(() => panel.getByRole("button", { name: "Check what saved", exact: true }).click());
   await ui(panel.locator(".work-status")).toHaveText("The earlier save did not complete. Review your unsent text before saving it again."); expect(bodies).toHaveLength(1);
   await student.unroute("**/work/draft"); await safe(() => panel.getByRole("button", { name: "Review and keep my text", exact: true }).click()); await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(panel.locator(".work-status")).toHaveText("Saved");
   expect(bodies).toHaveLength(2); expect(bodies[1].mutationId).not.toBe(bodies[0].mutationId); expect(bodies[1].assignmentRevision).toBeGreaterThan(bodies[0].assignmentRevision);
 });
 
 it("clears old child work on forced revocation and fences an actual committed late reply across context loss", async () => {
-  const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(parent); await click(parent, "Enter child practice"); await loaded(parent);
+  const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(parent); await click(parent, "Practice with Synthetic"); await loaded(parent);
   let releaseUnknown!: () => void, committedUnknown = false; const unknownGate = new Promise<void>(resolve => { releaseUnknown = resolve; }), bodies: { child: string; text: string }[] = [];
   await parent.route("**/work/draft", async route => { bodies.push({ child: new URL(route.request().url()).pathname.split("/")[3], text: route.request().postDataJSON().text }); const response = await route.fetch(); committedUnknown = response.status() === 200; await unknownGate; await route.fulfill({ response }).catch(() => undefined); });
   const uncertain = await tools(parent, "Genesis 1:9"); await safe(() => uncertain.getByRole("textbox").fill("Synthetic original child uncertain save")); await safe(() => uncertain.getByRole("button", { name: "Save now", exact: true }).click()); await ui.poll(() => committedUnknown).toBe(true); await safe(() => uncertain.getByRole("textbox").fill("Synthetic old child queue must not post"));

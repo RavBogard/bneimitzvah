@@ -126,6 +126,21 @@ test("response body reading consumes lifetime and concealment cancels a stalled 
   expect(cancel).toHaveBeenCalled(); expect(late.reading.hidden).toBe(true); expect(late.reading.textContent).toBe("");
 });
 
+test("an app or tab switch says the blessings closed for privacy, while refusal and expiry keep the general wording", async () => {
+  for (const event of ["visibilitychange", "pagehide", "beforeunload", "pageshow", "freeze"]) {
+    const f = await harness(); await f.open(); if (event === "visibilitychange") f.document.visibilityState = "hidden";
+    f.events.get(event)!({ persisted: true });
+    expect(f.reading.hidden).toBe(true); expect(f.heading.textContent).toBe("Your blessings were closed for privacy");
+    expect(f.status.textContent).toContain("doesn’t cancel your invitation"); expect(f.status.textContent).toContain("open the original invitation link again");
+  }
+  let resolve!: (response: Response) => void;
+  const pending = await harness({ fetch: () => new Promise(done => { resolve = done; }) }), opened = pending.open();
+  pending.document.visibilityState = "hidden"; pending.events.get("visibilitychange")!(); pending.document.visibilityState = "visible"; resolve(reply()); await opened;
+  expect(pending.heading.textContent).toBe("Your blessings were closed for privacy"); expect(pending.reading.hidden).toBe(true);
+  const expired = await harness(); await expired.open(); expired.setNow(90100); expired.expire();
+  expect(expired.heading.textContent).toBe("This invitation is unavailable"); expect(expired.status.textContent).toContain("Reopen the original invitation");
+});
+
 test("concealment, departure, bfcache, freeze and timeout clear synchronously and late results never restore", async () => {
   for (const event of ["visibilitychange", "pagehide", "beforeunload", "pageshow", "freeze", "timeout"]) {
     const f = await harness(); await f.open(); expect(f.reading.hidden).toBe(false);

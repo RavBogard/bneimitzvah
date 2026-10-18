@@ -36,6 +36,12 @@ Ignored evidence: `.local-logs/mcp-delegation-{focused,types,protection}-v1-firs
 
 Final repository protection passes **3/3** (45.47s), and the whitespace diff check passes. Source is held for independent review; no push, production apply or deployment is included.
 
+## Independent integration acceptance and remaining gates
+
+Google prerequisite55ba0dd passes all four hosted jobs39146995149. Its actual PostgreSQL18.6 log confirms `google-session-provenance.integration.ts` **3/3 PASS**, superseding only the earlier pending-native status. No production migration or column-dependent deployment followed.
+
+The dormant storage review found and independently reproduced the two defects recorded in the separate repair section below; the original nine passes did not cover those cases. Root accepts the repaired local source73a5cbf on author18 and independent10 focused passes, typecheck and repository protection. This is local acceptance only. Four extended native cases, the combined final candidate's hosted checks, provider persistence and the live authority/transport boundary remain separate gates. The approved UI handoff is merged alongside these held prerequisites for integration testing, not permission to deploy the two unapplied migrations' code.
+
 ### Independent review correction: exact IDs and public session lookup
 
 Review of checkpoint `4e02a0c093e594afeb62dcd0b2717918a798406f` found two genuine gaps: nonempty trimmed content still admitted surrounding spaces, and invoker-security `search_path=pg_catalog,public` did not prevent an implicitly searched temporary `session` relation from shadowing the real expiry lookup. The focused repair adds exact `id=btrim(id)` checks for both client and consent IDs in SQL/Drizzle and qualifies the guard's only relation lookup as `public.session`. No elevated privileges or broader grants are added.

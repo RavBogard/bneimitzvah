@@ -29,10 +29,11 @@ async function invitation(page: Page) {
 }
 const fulfill = (route: Route, life: string | null = "90000") => route.fulfill({ status: 200, contentType: "application/json; charset=utf-8",
   headers: { "cache-control": "private, no-store", ...(life === null ? {} : { "X-Honoree-Remaining-Ms": life }) }, body: JSON.stringify(fixture()) });
-async function cleared(page: Page) {
+// Leaving the page (an app or tab switch) has its own wording; every other cause keeps the general one.
+async function cleared(page: Page, heading = "This invitation is unavailable") {
   await expect(page.locator("#reading")).toBeHidden();
   expect(await page.locator("#reading").evaluate(node => node.childNodes.length === 0)).toBe(true);
-  await expect(page.locator("#heading")).toHaveText("This invitation is unavailable");
+  await expect(page.locator("#heading")).toHaveText(heading);
 }
 
 test("static CSP document reads anonymous synthetic text safely in both themes", async ({ page, context }, info) => {
@@ -113,6 +114,7 @@ for (const reason of ["departure", "timeout"] as const) {
     await page.goto("/honoree"); await arrived;
     if (reason === "timeout") await page.clock.fastForward(12001);
     else await page.evaluate(() => { window.dispatchEvent(new PageTransitionEvent("pagehide")); window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true })); });
-    await cleared(page); release(); await finished; await cleared(page);
+    const heading = reason === "timeout" ? undefined : "Your blessings were closed for privacy";
+    await cleared(page, heading); release(); await finished; await cleared(page, heading);
   });
 }

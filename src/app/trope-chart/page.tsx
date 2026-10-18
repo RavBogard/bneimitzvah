@@ -6,7 +6,7 @@ import { accentLabel, accentSample, CHART_ACCENTS, ENDING_SAMPLE, LEGARMEH_SAMPL
 import hebrew from "../../styles/hebrew-font.module.css";
 import styles from "./chart.module.css";
 
-export const metadata: Metadata = { title: "Trope chart | CRC B'nei Mitzvah" };
+export const metadata: Metadata = { title: "Trope chart | CRC Beit Mitzvah" };
 function Mark({ accent }: { accent: ChartAccent }) {
   return <li className={styles.mark} data-chart-accent={accent.codepoint}>
     <span className={`${styles.sample} ${hebrew.hebrew}`} lang="he" dir="rtl" aria-label={`${accentLabel(accent)} on a sample letter`}>{accentSample(accent)}</span>
@@ -17,7 +17,7 @@ function Mark({ accent }: { accent: ChartAccent }) {
 export default function TropeChartPage() {
   return <div className={`portal-shell ${styles.shell}`} data-chart-page>
     <a className="skip-link" href="#trope-chart-main">Skip to chart</a>
-    <header className={`portal-header ${styles.header}`}><Link className="portal-brand" href="/">CRC B’nei Mitzvah</Link><Link className={styles.back} href="/workspace">Return to workspace</Link></header>
+    <header className={`portal-header ${styles.header}`}><Link className="portal-brand" href="/">CRC Beit Mitzvah</Link><Link className={styles.back} href="/workspace">Return to workspace</Link></header>
     <main id="trope-chart-main" className={styles.main}>
       <div className={styles.introduction}><h1 className={styles.title}>Trope chart</h1><p>Find the signs, their names and the phrase families used in your reading.</p><PrintChart /></div>
       <section aria-labelledby="phrase-families-heading"><h2 id="phrase-families-heading" className={styles.sectionHeading}>Phrase families</h2><p className={styles.explanation}>Color belongs to a whole phrase, ending at its closing sign. It does not give every sign its own permanent color or melody.</p>

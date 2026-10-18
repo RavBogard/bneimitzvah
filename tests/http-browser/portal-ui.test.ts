@@ -251,7 +251,7 @@ it("keeps invitation landing nonaccepting and accepts one reviewed binding only,
   } finally { release(); }
   await ui(recipient.getByRole("heading", { name: "Invitation accepted", exact: true })).toBeVisible();
   await clean(recipient, [token, email]);
-  await safe(() => recipient.getByRole("link", { name: "Continue to the portal", exact: true }).click());
+  await safe(() => recipient.getByRole("link", { name: "Continue", exact: true }).click());
   await ui(recipient.getByRole("heading", { name: "Your assigned reading", exact: true })).toBeVisible();
   expect(new URL(recipient.url()).pathname === "/workspace/student").toBe(true);
   expect(await recipient.getByRole("heading", { name: "Choose your workspace", exact: true }).count()).toBe(0);

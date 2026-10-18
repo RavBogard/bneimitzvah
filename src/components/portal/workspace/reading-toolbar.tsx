@@ -16,6 +16,6 @@ export function ReadingToolbar({ onHear }: { onHear?(): void } = {}) {
         onClick={event => { setReadingPrefs({ size: row.id }); (event.currentTarget.parentElement as HTMLElement & { hidePopover?(): void }).hidePopover?.(); }}>
         <span className="toolbar-menu-sample" lang="he" dir="rtl" aria-hidden="true">אָ</span>{row.label}</button>)}
     </div>
-    <button type="button" className="toolbar-item" disabled={!onHear} onClick={onHear}>{icons.hear}<span>Hear</span></button>
+    <button type="button" className="toolbar-item" disabled={!onHear} onClick={onHear}>{icons.hear}<span>Close-up</span></button>
   </nav>;
 }

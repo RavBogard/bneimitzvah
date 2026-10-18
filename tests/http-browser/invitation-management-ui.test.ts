@@ -74,7 +74,7 @@ it("reviews a parent invitation before sending, then separately reviews reissue 
   await ui(tab.getByText("Checking current invitation records…", { exact: true })).toBeHidden(); expect(writes).toBe(1);
   const first = (await api(tab, "/api/admin/invitations")).data.invitations[0];
   expect(first.role === "parent" && first.status === "pending" && first.delivery.status === "sent").toBe(true);
-  await ui(status(tab, first.id)).toHaveText("Pending"); await capture(tab, "invitation-list-desktop");
+  await ui(status(tab, first.id)).toHaveText("Not accepted yet"); await capture(tab, "invitation-list-desktop");
   await safe(() => record(tab, first.id).getByRole("button", { name: /^Send again to / }).click());
   await ui(tab.getByRole("dialog").getByRole("heading", { name: "Send this invitation again?", exact: true })).toBeFocused();
   await click(tab, "Cancel"); await ui(tab.getByRole("dialog")).toBeHidden(); await ui(record(tab, first.id).getByRole("button", { name: /^Send again to / })).toBeFocused(); expect((await api(tab, "/api/admin/invitations")).data.invitations.length === 1).toBe(true);
@@ -106,7 +106,7 @@ it("separates failed delivery from pending lifecycle and preserves unknown reiss
   await ui(tab.getByText(failedMail, { exact: true })).toBeVisible();
   await ui(tab.getByText("Checking current invitation records…", { exact: true })).toBeHidden();
   const failed = (await api(tab, "/api/admin/invitations")).data.invitations.find((row: { recipientEmail: string }) => row.recipientEmail === longRecipient); expect(failed.status === "pending" && failed.delivery.status === "failed").toBe(true);
-  await ui(status(tab, failed.id)).toHaveText("Pending"); await ui(record(tab, failed.id).getByText("Email failed", { exact: true })).toBeVisible(); await capture(tab, "invitation-failed-mobile"); failDelivery = false;
+  await ui(status(tab, failed.id)).toHaveText("Not accepted yet"); await ui(record(tab, failed.id).getByText("Email failed", { exact: true })).toBeVisible(); await capture(tab, "invitation-failed-mobile"); failDelivery = false;
   let reissues = 0;
   await tab.route(`**/api/admin/invitations/${failed.id}/reissue`, async route => { reissues++; const response = await route.fetch(); await response.dispose(); await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); });
   await safe(() => record(tab, failed.id).getByRole("button", { name: /^Send again to / }).click()); await click(tab, "Send new invitation");

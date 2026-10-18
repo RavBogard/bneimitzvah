@@ -72,20 +72,21 @@ export async function adminRequest(path: string, body?: object, signal?: AbortSi
 export type Group = "tutors" | "guardians" | "identities";
 export type Action = { kind: "assign"; grantId: string } | { kind: "link"; group: Group; linkId: string } | { kind: "practice"; linkId: string; enabled: boolean }
   | { kind: "grant"; group?: Group; linkId?: string; grantId: string } | { kind: "cantor"; grantId: string; enabled: boolean };
-export type Review = { action: Action; title: string; person: string; student?: Relationships["student"]; grantId: string; linkId?: string; consequence: string; path: string; body: Record<string, unknown>; fingerprint: string };
+// scope says who is affected before the consequence: this student only, every student, or a congregation setting.
+export type Review = { action: Action; title: string; person: string; student?: Relationships["student"]; grantId: string; linkId?: string; scope: "student" | "congregation" | "setting"; consequence: string; path: string; body: Record<string, unknown>; fingerprint: string };
 export function makeReview(action: Action, data: Relationships | null, tutors: Tutor[]): Review {
   const student = data?.student, base = student ? `/api/admin/students/${identifier(student.id)}/relationships` : "";
-  let person: string, grantId: string, linkId: string | undefined, title: string, consequence: string, path: string, body: Record<string, unknown>, target: unknown;
+  let person: string, grantId: string, linkId: string | undefined, title: string, scope: Review["scope"] = "student", consequence: string, path: string, body: Record<string, unknown>, target: unknown;
   if (action.kind === "assign" || action.kind === "cantor" || action.kind === "grant" && !action.group) {
     const tutor = tutors.find(row => row.id === action.grantId); if (!tutor) throw new PortalRequestError(409);
     person = tutor.displayName; grantId = tutor.id; target = tutor;
     if (action.kind === "assign") {
       if (!student || student.disabled || data!.tutors.some(row => row.tutorGrantId === tutor.id)) throw new PortalRequestError(409);
-      title = "Assign tutor"; consequence = "This tutor will be able to view and teach this student's assigned work."; path = `${base}/tutors`; body = { tutorGrantId: tutor.id, expectedState: "unassigned" };
+      title = "Assign tutor"; consequence = "This tutor will be able to open and teach this student's reading, service parts and lessons."; path = `${base}/tutors`; body = { tutorGrantId: tutor.id, expectedState: "unassigned" };
     } else if (action.kind === "cantor") {
-      title = action.enabled ? "Mark as cantor" : "Remove cantor flag"; consequence = "This changes the cantor flag on the congregation tutor role. Student assignments stay separate."; path = `/api/admin/tutors/${tutor.id}/cantor`; body = { expectedRevision: tutor.revision, isCantor: action.enabled };
+      title = action.enabled ? "Mark as cantor" : "Remove cantor flag"; scope = "setting"; consequence = "This changes only the cantor label on this tutor. Their students and access stay the same."; path = `/api/admin/tutors/${tutor.id}/cantor`; body = { expectedRevision: tutor.revision, isCantor: action.enabled };
     } else {
-      title = "Revoke tutor role"; consequence = "This removes this tutor's access to ALL assigned students in this congregation."; path = `/api/admin/grants/${tutor.id}/revoke`; body = { expectedRevision: tutor.revision, expectedState: "active" };
+      title = "Remove as a tutor"; scope = "congregation"; consequence = "This tutor loses access to every student they teach in this congregation. To stop them teaching one student only, open that student's People page."; path = `/api/admin/grants/${tutor.id}/revoke`; body = { expectedRevision: tutor.revision, expectedState: "active" };
     }
   } else {
     if (!student || !data) throw new PortalRequestError(409);
@@ -96,18 +97,18 @@ export function makeReview(action: Action, data: Relationships | null, tutors: T
     const revision = "parentGrantRevision" in row ? row.parentGrantRevision : "studentGrantRevision" in row ? row.studentGrantRevision : row.tutorGrantRevision;
     if (action.kind === "practice") {
       if (!("practiceEnabled" in row) || action.enabled && (student.disabled || !row.effectiveRead)) throw new PortalRequestError(409);
-      title = action.enabled ? "Allow child practice" : "Stop child practice"; consequence = "This changes practice through this parent's account for this child only. Ordinary parent reading access remains separate."; path = `${base}/guardians/${row.id}/practice`; body = { expectedRevision: row.revision, practiceEnabled: action.enabled };
+      title = action.enabled ? "Allow child practice" : "Stop child practice"; consequence = action.enabled ? "This parent will be able to practise as this child from their own account. Nothing changes for their other children." : "This parent will no longer practise as this child. They can still read this child's work, and nothing changes for their other children."; path = `${base}/guardians/${row.id}/practice`; body = { expectedRevision: row.revision, practiceEnabled: action.enabled };
     } else if (action.kind === "link") {
-      title = group === "tutors" ? "Remove tutor assignment" : group === "guardians" ? "Remove parent link" : "Remove student sign-in link";
-      consequence = "This removes this person's link to this student only. Their other student links and congregation roles remain separate."; path = `${base}/${group}/${row.id}/revoke`; body = { expectedState: "active" };
+      title = group === "tutors" ? "Remove tutor from this student" : group === "guardians" ? "Remove parent from this student" : "Remove this student sign-in";
+      consequence = group === "identities" ? "This account will no longer open this student's practice. Nothing else changes." : `This person loses access to ${student.firstName} only. Anyone else they ${group === "tutors" ? "teach" : "are linked to"} keeps the same access.`; path = `${base}/${group}/${row.id}/revoke`; body = { expectedState: "active" };
     } else {
       if (action.kind !== "grant" || action.grantId !== grantId) throw new PortalRequestError(409);
-      title = group === "guardians" ? "Revoke parent role" : group === "identities" ? "Revoke student role" : "Revoke tutor role";
-      consequence = group === "guardians" ? "This removes this parent's access to ALL linked children in this congregation." : group === "identities" ? "This removes this identity's student access throughout this congregation." : "This removes this tutor's access to ALL assigned students in this congregation.";
+      title = group === "guardians" ? "Remove as a parent" : group === "identities" ? "Remove as a student" : "Remove as a tutor"; scope = "congregation";
+      consequence = group === "guardians" ? `This parent loses access to every linked child in this congregation, not only ${student.firstName}.` : group === "identities" ? `This account loses student access everywhere in this congregation, not only for ${student.firstName}.` : `This tutor loses access to every student they teach in this congregation, not only ${student.firstName}.`;
       path = `/api/admin/grants/${grantId}/revoke`; body = { expectedRevision: revision, expectedState: "active" };
     }
   }
-  return { action, title, person, student, grantId, linkId, consequence, path, body, fingerprint: JSON.stringify([action, student ?? null, target]) };
+  return { action, title, person, student, grantId, linkId, scope, consequence, path, body, fingerprint: JSON.stringify([action, student ?? null, target]) };
 }
 export const relationshipApi = {
   async inspect(id: string, signal?: AbortSignal) { return parseRelationships(await adminRequest(`/api/admin/students/${identifier(id)}/relationships`, undefined, signal), id); },

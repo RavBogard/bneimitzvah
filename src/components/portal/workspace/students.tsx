@@ -7,7 +7,7 @@ import { workspaceApi, type Student } from "./api";
 import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "./provider";
 import { ceremonyCountdown, ReadingPanel } from "./reading";
 import { reconcileSelectedStudent } from "./student-label";
-import { HonorsEntry } from "./honors/sheet";
+import { HonorsEntry, HonorsNote } from "./honors/sheet";
 
 export function StudentWorkspace({ mode, studentId }: { mode: "student" | "parent" | "tutor"; studentId?: string }) {
   return <RequireRole role={mode}><StudentSelection key={studentId ?? ""} mode={mode} routeStudentId={studentId} /></RequireRole>;
@@ -84,7 +84,8 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
           </li>)}</ul>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
           {focused && !selected && <div className="workspace-state"><h2>Student not found</h2><p>This student isn’t in your list. Choose one of your students above.</p></div>}
           {selected && mode === "parent" && !context && <HonorsEntry key={selected} studentId={selected} name={`${rows.find(row => row.id === selected)?.firstName ?? ""} ${rows.find(row => row.id === selected)?.lastName ?? ""}`} />}
-          {selected && <ReadingPanel mode={mode} studentId={selected} onStudentReload={reconcileStudent} />}</>}
+          {selected && <ReadingPanel mode={mode} studentId={selected} onStudentReload={reconcileStudent} />}
+          {selected && mode === "student" && <HonorsNote />}</>}
   </section>;
 }
 
@@ -94,7 +95,8 @@ export function PracticeWorkspace({ studentId }: { studentId: string }) {
   if (!context || context.studentId !== studentId) return <section className="workspace-state"><h1>Choose a child to practice</h1><p>This tab does not have a matching practice selection. Reloading never restores a practice handle.</p><Link href="/workspace/parent">Choose a linked child</Link></section>;
   return <RequireRole role="parent"><section className="role-workspace"><div className="workspace-heading-row practice-bar"><h1>Child practice</h1><button className="button-hero-secondary" disabled={busy} onClick={() => void exitPractice()}>{busy ? "Closing practice…" : "Return to parent view"}</button></div>
     <p role="status" className="field-help practice-scope">This tab only. Other tabs keep their own selections.</p>
-    <ReadingPanel mode="child-practice" studentId={studentId} /><StudentSelection mode="parent" switching />
+    <StudentSelection mode="parent" switching />
+    <ReadingPanel mode="child-practice" studentId={studentId} />
   </section></RequireRole>;
 }
 

@@ -7,13 +7,13 @@ import styles from "./panel.module.css";
 export function SourceContentReader({ owner, state, source, onClose }: { owner: SourceContentOwner; state: SourceContentState; source: SourceCitation; onClose(): void }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (state.phase === "editions" || state.phase === "text") heading.current?.focus(); }, [state.phase, state.page?.editionOffset]);
-  const message = state.error === "unsupported-source" ? "This source’s format isn’t available here yet. Choose another source."
-    : state.error === "unsupported-edition" ? "This edition isn’t available here. Choose another edition."
+  const message = state.error === "unsupported-source" ? "This source can’t be shown here yet. That’s a limit of this site, not something you did. Choose another source."
+    : state.error === "unsupported-edition" ? "This edition can’t be shown here. Try another edition of the same source."
     : state.error === "source-not-found" ? "This source is no longer in this list. Close it and review the sources."
     : state.phase === "stale" ? "The reading or sources changed. Close this source and refresh the reading before choosing again."
     : "This source couldn’t be loaded. Try again when you’re ready.";
   return <section className={styles.reader} aria-label={`Read source: ${source.ref}`} aria-busy={state.phase === "loading-editions" || state.phase === "loading-text"}>
-    <div className={styles.readerHeading}><h5 ref={heading} tabIndex={-1}><bdi dir="auto">{source.labels.en ?? source.indexTitle}</bdi></h5><button type="button" className={styles.link} onClick={onClose}>Close source</button></div>
+    <div className={styles.readerHeading}><h5 ref={heading} tabIndex={-1}><bdi dir="auto">{source.labels.en ?? source.indexTitle}</bdi></h5><button type="button" className={styles.link} onClick={onClose}>Back to the verse</button></div>
     <p className={styles.ref}><bdi dir="auto">{source.ref}</bdi></p>
     {(state.phase === "loading-editions" || state.phase === "loading-text") && <p role="status">{state.phase === "loading-editions" ? "Loading editions…" : "Loading source…"}</p>}
     {(state.phase === "held" || state.phase === "unavailable" || state.phase === "stale") && <div role="status"><p>{message}</p>{state.phase === "unavailable" && <button type="button" className={styles.link} onClick={() => void owner.retry()}>Try source again</button>}</div>}
@@ -24,7 +24,7 @@ export function SourceContentReader({ owner, state, source, onClose }: { owner: 
       <ul className={styles.list} aria-label="Source editions">{state.page.entries.map(edition => <li key={JSON.stringify([edition.versionTitle, edition.language])}>
         <p className={styles.editionTitle}><bdi dir="auto">{edition.versionTitle}</bdi></p>
         <p className={styles.note}>{edition.actualLanguage === "he" ? "Hebrew" : edition.actualLanguage === "en" ? "English" : "Other or unspecified language"} · <bdi dir="auto">{edition.license ?? "Rights not recorded"}</bdi></p>
-        {eligibleSourceEdition(edition) ? <button type="button" className={styles.link} onClick={() => void owner.choose({ editionCatalogHash: state.page!.editionCatalogHash, edition, language: edition.actualLanguage })}>Read {edition.actualLanguage === "he" ? "Hebrew" : "English"} edition</button> : <p className={styles.note}>This edition isn’t available to read here.</p>}
+        {eligibleSourceEdition(edition) ? <button type="button" className={styles.link} onClick={() => void owner.choose({ editionCatalogHash: state.page!.editionCatalogHash, edition, language: edition.actualLanguage })}>Read {edition.actualLanguage === "he" ? "Hebrew" : "English"} edition</button> : <p className={styles.note}>Can’t be shown here.</p>}
       </li>)}</ul>
       <div className={styles.actions}><span>{state.page.editionOffset + (state.page.entries.length ? 1 : 0)}–{state.page.editionOffset + state.page.entries.length} of {state.page.totalEntries} editions</span>
         {state.page.editionOffset > 0 && <button type="button" onClick={() => void owner.page({ editionOffset: state.page!.editionOffset - 10, editionCatalogHash: state.page!.editionCatalogHash })}>Previous editions</button>}

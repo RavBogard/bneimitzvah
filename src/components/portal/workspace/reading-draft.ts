@@ -5,9 +5,10 @@ export type ReadingDraft = {
   cuts: string;
   cutsEdited: boolean;
   current: { id: string; revision: number } | null;
+  calendarPick: string;
 };
 
-export const emptyReadingDraft = (): ReadingDraft => ({ method: "custom", custom: "", cuts: "", cutsEdited: false, current: null });
+export const emptyReadingDraft = (): ReadingDraft => ({ method: "custom", custom: "", cuts: "", cutsEdited: false, current: null, calendarPick: "" });
 
 export function currentReadingDraft(reading: Reading): ReadingDraft {
   const torah = reading.kind === "torah";
@@ -16,6 +17,7 @@ export function currentReadingDraft(reading: Reading): ReadingDraft {
     cuts: torah ? reading.aliyahStarts?.join("\n") ?? "" : "",
     cutsEdited: torah && reading.aliyahStarts !== null,
     current: torah ? { id: reading.id, revision: reading.revision } : null,
+    calendarPick: "",
   };
 }
 

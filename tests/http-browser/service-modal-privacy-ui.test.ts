@@ -47,12 +47,13 @@ async function choose(tab: Page, part = 1) {
 }
 async function prepareReading(tab: Page) {
   await click(tab, "Change verses"); await ui(sheet(tab)).toBeVisible();
-  await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("custom"));
+  await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
+  await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
-  await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
+  await click(tab, "Review assignment"); await ui(tab.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled();
 }
 async function pendingService(tab: Page) {
-  await choose(tab); await prepareReading(tab); await click(tab, "Confirm assigned reading");
+  await choose(tab); await prepareReading(tab); await click(tab, "Save assignment");
   await ui(serviceGuard(tab)).toBeVisible(); await ui(sheet(tab)).toBeHidden(); expect(await modalCount(tab)).toBe(1);
 }
 async function holdSession(tab: Page) {
@@ -113,17 +114,17 @@ it("serializes service and unknown-note guards, and canceling the later decision
   const tab = await page(), writes = countWrites(tab), text = "Synthetic uncertain service-guard note";
   await choose(tab);
   const note = tab.locator(".verse-work").first(); await safe(() => note.locator("summary").first().click());
-  await safe(() => note.getByRole("button", { name: "Student-visible notes", exact: true }).click()); await safe(() => note.getByRole("textbox").fill(text));
+  await safe(() => note.getByRole("button", { name: "Teacher notes", exact: true }).click()); await safe(() => note.getByRole("textbox").fill(text));
   // A real authorized commit followed by a lost response creates an unknown
   // outcome. No second POST may be issued by the departure sequence.
   await tab.route("**/work/note", async route => { const response = await route.fetch(); expect(response.status()).toBe(200); await response.dispose(); await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); });
   await safe(() => note.getByRole("button", { name: "Add student-visible note", exact: true }).click());
   await ui(note.locator(".work-status")).toContainText("Save not confirmed");
-  await prepareReading(tab); await click(tab, "Confirm assigned reading");
+  await prepareReading(tab); await click(tab, "Save assignment");
   await ui(serviceGuard(tab)).toBeVisible(); expect(await modalCount(tab)).toBe(1); await ui(sheet(tab)).toBeHidden();
   await click(tab, "Discard service draft and continue"); await ui(serviceGuard(tab)).toBeHidden(); await ui(workGuard(tab)).toBeVisible();
   expect(await modalCount(tab)).toBe(1); await ui(sheet(tab)).toBeHidden();
-  await ui(tab.getByRole("button", { name: "Check save and continue", exact: true })).toBeVisible();
+  await ui(tab.getByRole("button", { name: "Check what saved and continue", exact: true })).toBeVisible();
   await click(tab, "Keep working"); await ui(workGuard(tab)).toBeHidden(); await ui(sheet(tab)).toBeVisible();
   expect(await modalCount(tab)).toBe(1); expect(await sheet(tab).evaluate(node => node.contains(document.activeElement))).toBe(true);
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
@@ -133,7 +134,7 @@ it("serializes service and unknown-note guards, and canceling the later decision
   await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click());
   await ui(tab.getByRole("tab", { name: "Reading", exact: true })).toHaveAttribute("aria-selected", "true");
   if (await note.getAttribute("open") === null) await safe(() => note.locator("summary").first().click());
-  await safe(() => note.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  await safe(() => note.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await ui(note.getByRole("textbox")).toHaveValue(text); await ui(note.locator(".work-status")).toContainText("Save not confirmed");
   expect(writes).toEqual({ confirm: 0, note: 1 }); await tab.unroute("**/work/note");
   // An explicit departure clears the unknown local copy and unmounts both
