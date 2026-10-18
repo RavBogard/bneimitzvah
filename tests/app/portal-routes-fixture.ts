@@ -1,3 +1,4 @@
+import { createSourceContentService } from "../../src/server/study/source-content-service";
 import { createSourceAssignmentsService } from "../../src/server/study/source-assignments-service";
 import { createStudySourceDiscoveryService } from "../../src/server/study/source-discovery-service";
 import { parseRelatedMetadata } from "../../src/server/study/sources/metadata";
@@ -53,6 +54,7 @@ export async function portalRoutesFixture() {
   const runtime: HttpRuntime = { origin: "http://localhost:3000", auth: f.auth, access: f.service, practice, invitations, students, readingPreview, studentWork: createStudentWorkService({ access: f.service, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
     referenceAudio: createReferenceAudioService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, loadCatalog: async () => { throw new ReferenceUnavailable(); } }),
     studyWordAids: createStudyWordAidsService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); } }),
+    sourceContent: createSourceContentService({ access: f.service, practice, related: async () => { throw new Error("Source content unavailable"); }, editions: async () => { throw new Error("Source content unavailable"); }, content: async () => { throw new Error("Source content unavailable"); } }),
     sourceAssignments: createSourceAssignmentsService({ access: f.service, practice, related: async ref => parseRelatedMetadata([], ref) }),
     studySources: createStudySourceDiscoveryService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, related: async ref => parseRelatedMetadata([], ref) }),
     studyWordDetails: createStudyWordDetailsService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, source: { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) } }),

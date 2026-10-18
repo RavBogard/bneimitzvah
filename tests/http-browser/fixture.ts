@@ -1,3 +1,4 @@
+import { createSourceContentService } from "../../src/server/study/source-content-service";
 import { createSourceAssignmentsService } from "../../src/server/study/source-assignments-service";
 import { createStudySourceDiscoveryService } from "../../src/server/study/source-discovery-service";
 import { parseRelatedMetadata, type RelatedSourceCatalog } from "../../src/server/study/sources/metadata";
@@ -64,6 +65,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, readingPreview, progress: createProgressService({ access, practice }), lessonLog: createLessonLogService({ access, practice }), practiceCalendar: createPracticeCalendarService({ access, practice }), recordings: createStudentRecordingService({ access, practice }), portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
       referenceAudio: createReferenceAudioService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), loadCatalog: options.referenceCatalogLoad ?? (async () => { throw new ReferenceUnavailable(); }), studentRelease: options.referenceStudentRelease === true }),
       studyWordAids: createStudyWordAidsService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }),
+      sourceContent: createSourceContentService({ access, practice, related: async () => { throw new Error("Source content unavailable"); }, editions: async () => { throw new Error("Source content unavailable"); }, content: async () => { throw new Error("Source content unavailable"); } }),
       sourceAssignments: createSourceAssignmentsService({ access, practice, related: options.relatedReader ?? (async ref => parseRelatedMetadata([], ref)) }),
       studySources: createStudySourceDiscoveryService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), related: options.relatedReader ?? (async ref => parseRelatedMetadata([], ref)) }),
       studyWordDetails: createStudyWordDetailsService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), source: options.wordDetailsSource ?? { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) } }),

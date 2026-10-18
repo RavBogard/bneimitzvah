@@ -4,7 +4,7 @@
 
 Commentary belongs to the student's own verses; authorized readers may browse sources and staff may assign them. Human commentary has no extra generated-summary approval gate. Preserve the flowing Hebrew, direct reference playback, quiet unchanged tab return and absence of transliteration. Generated voices and student recordings remain parked.
 
-Root accepts the bounded author-feasibility and independent design reviews for this backend first slice. This is not complete commentary coverage or authorization to invent clergy defaults. There is no UI, new schema, cache, storage, invitation or mail work here. The inline Sources release is separately checkpointed at c3018e2045a855ce1c63ed169126c8ed06dc0bbb; its exact hosted gate remains pending.
+Root accepts the bounded author-feasibility and independent design reviews for this backend first slice. This is not complete commentary coverage or authorization to invent clergy defaults. There is no UI, new schema, cache, storage, invitation or mail work here. The inline Sources release was separately checkpointed at c3018e2045a855ce1c63ed169126c8ed06dc0bbb; its first exact hosted gate held deployment for an explicit-refresh compatibility repair. That behavior-only repair and this backend have separate local reviews and will share a fresh combined hosted release gate.
 
 ## Authority and source binding
 
@@ -21,6 +21,8 @@ Add private/no-store GET endpoints `/api/students/:id/source-editions` and `/api
 Edition listing adds editionOffset (explicit zero, then multiples10 through510), with editionCatalogHash required after page0. Text instead requires editionCatalogHash, exact bounded editionTitle without the selector delimiter, and language=`he|en`, mapped only to `hebrew|english`. No default/priority version, orientation-based language inference, fallback or missing-segment filling.
 
 Return the existing small authority/reading/verse envelope, one closed source identity and either a ten-entry edition page or one scalar text/provenance result. Expose set version or related hash only for its actual lane. Do not expose private authority bindings or raw provider objects. Fix these error classes before code freeze: invalid request400; live denial401/403/404; stale reading, changed current source set, related catalog or edition catalog409; deliberately unsupported source/edition profile422; transport/malformed/timeout503. Use fixed closed codes; no provider detail or source excerpt in errors.
+
+The fixed failure projection is `{ok:false,error:code}`. Codes are invalid-request400; stale-revision, source-set-changed, source-catalog-changed and edition-catalog-changed409; unsupported-source and unsupported-edition422; unavailable503. Existing denied401/403/404 projections remain. A valid source ID absent from the current authorized set/catalog is404; after public lookup this outcome is staged through final authorization too. In the internal body-fetch selector, language denotes the resolved legacy metadata bucket, actualLanguage the selected he/en, and motherTongue the fixed hebrew/english selector. Do not confuse request-language intent with legacy orientation.
 
 ## Editions and current rights
 
@@ -45,6 +47,8 @@ Sol author owns the narrow context extraction, pure edition/content projections,
 Acceptance covers both source lanes and actual modes, early denial/no I/O, mutation of original inputs/headers, final session/guardian/grant/child/reading/head drift, provider failure precedence, deterministic complete paging, ambiguous selectors, exact rights/provenance/language/version/ref, strict string addresses, output/transport bounds and late cleanup. Explicitly exhaust provider budget while revoking access/changing head and prove final denial/staleness wins. Reuse existing source-assignment read/write/receipt regressions after extraction; independently review authorization. No licensed body or raw response in Git/logs/tests: invented fixtures only.
 
 The completed earlier live probe remains held: numeric address checks failed and actual address values were not retained. Official upstream string serialization supports the new contract, not a retrospective pass. No further API call is authorized by this design. Root may separately authorize one fixed live parser check after offline freeze; a live-ready claim requires that evidence and exact hosted release checks.
+
+Root's separately authorized post-freeze check subsequently made exactly one fixed body GET through the real bounded reader/parser and passed the numeric string leaf profile. It retained only closed observations/counts/hashes and used historical public metadata: no fresh-catalog or authenticated-service claim. The earlier GET2 remains held. Initial helper setup failed before making any request; its zero-call result and the successful no-I/O setup correction are preserved. See the [content return](../../planning/2026-10-17-study-word-grammar/SOURCE-CONTENT-RETURN.md).
 
 ## Open items that wait on Daniel
 
