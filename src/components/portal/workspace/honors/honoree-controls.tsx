@@ -9,8 +9,8 @@ export function HonoreeControls({ startVerse, owner, state, blocked }: { startVe
   return <div className={styles.honoree} aria-labelledby={id}>
     <h4 id={id}>Blessing link</h4><p className={styles.help}>For the people on this aliyah only. Nothing is sent: you copy the link and share it yourself. The full link is shown once, right after it’s created.</p>
     {!issueReady && <p className={styles.help}>Save the names, and review any ceremony or reading change, before creating a link.</p>}
-    {record && <p className={styles.help}>A link was created{record.issuedAt ? ` ${date(record.issuedAt)}` : ""}{record.expiresAt ? ` and works until ${date(record.expiresAt)}` : ""}. Its full address isn’t kept, so it can’t be shown again; replace it to get a new one. This doesn’t confirm the blessings are ready to open.</p>}
-    {owner.known(startVerse) && record === null && <p className={styles.help}>No link has been created for this aliyah.</p>}
+    {record && <p className={styles.help}>A current link is recorded{record.issuedAt ? `, created ${date(record.issuedAt)}` : ""}{record.expiresAt ? `, with a recorded expiry of ${date(record.expiresAt)}` : ""}. Its full address isn’t kept, so it can’t be shown again; replace it to get a new one. This record doesn’t confirm the link opens or that the blessings are ready.</p>}
+    {owner.known(startVerse) && record === null && <p className={styles.help}>No current link is recorded for this aliyah.</p>}
     <div className={styles.actions}>
       <button type="button" className="button-secondary" disabled={locked} onClick={() => void owner.status(startVerse)}>Check link</button>
       {!record && <button type="button" className="button-secondary" disabled={locked || !issueReady || !owner.known(startVerse)} onClick={() => void owner.issue(startVerse)}>Create blessing link</button>}

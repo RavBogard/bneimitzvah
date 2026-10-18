@@ -89,7 +89,7 @@ async function fakeStatus(tab: Page, child: Child, currentLink: typeof record | 
   const predicate = matches(child, "/status"), handler = async (route: Route) => route.request().method() === "POST" ? json(route, { ok: true, currentLink }) : route.fallback();
   await tab.route(predicate, handler); return () => tab.unroute(predicate, handler);
 }
-async function knownEmpty(tab: Page) { await button(tab, "Check link").click(); await ui(group(tab).getByText("No link has been created for this aliyah.", { exact: true }).first()).toBeVisible(); }
+async function knownEmpty(tab: Page) { await button(tab, "Check link").click(); await ui(group(tab).getByText("No current link is recorded for this aliyah.", { exact: true }).first()).toBeVisible(); }
 
 beforeAll(async () => {
   try {
