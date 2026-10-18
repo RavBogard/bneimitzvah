@@ -36,10 +36,28 @@ async function page(who: "admin" | "tutor" | "student" = "admin", mobile = false
 }
 async function open(tab: Page, ref = "Genesis 1:1") { await panel(tab, ref).getByRole("button", { name: "Sources", exact: true }).click(); await ui(panel(tab, ref).getByRole("button", { name: "Browse related sources", exact: true })).toBeEnabled(); }
 async function browse(tab: Page, ref = "Genesis 1:1") { await panel(tab, ref).getByRole("button", { name: "Browse related sources", exact: true }).click(); await ui(panel(tab, ref).getByRole("list", { name: "Related sources", exact: true })).toBeVisible(); }
+type SourceResponseBody = Awaited<ReturnType<import("playwright").APIResponse["json"]>>;
+async function observeSourceResponse(tab: Page, endpoint: "source-assignments" | "source-assignments/receipt", action: () => Promise<void>) {
+  const matches = (url: URL) => url.origin === BROWSER_ORIGIN && url.pathname === `/api/students/${fixture.student.id}/${endpoint}`;
+  let resolve!: (value: SourceResponseBody) => void, reject!: (error: unknown) => void;
+  const captured = new Promise<SourceResponseBody>((yes, no) => { resolve = yes; reject = no; });
+  const observe = async (route: Route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    try {
+      // Read the real upstream response independently of Chromium's body cache.
+      const response = await route.fetch({ maxRedirects: 0, maxRetries: 0 });
+      let parsed: { value: SourceResponseBody } | { error: unknown };
+      try { expect(response.status()).toBe(200); parsed = { value: await response.json() }; } catch (error) { parsed = { error }; }
+      await route.fulfill({ response });
+      if ("error" in parsed) reject(parsed.error); else resolve(parsed.value);
+    } catch (error) { try { await route.abort("failed"); } catch {} reject(error); }
+  };
+  await tab.route(matches, observe);
+  try { const [value] = await Promise.all([captured, action()]); return value; }
+  finally { await tab.unroute(matches, observe); }
+}
 async function save(tab: Page, ref = "Genesis 1:1") {
-  // Capture the body when its response arrives, before waiting for later UI work.
-  const response = tab.waitForResponse(value => new URL(value.url()).pathname.endsWith("/source-assignments") && value.request().method() === "POST" && value.status() === 200).then(value => value.json());
-  const [value] = await Promise.all([response, panel(tab, ref).getByRole("button", { name: "Save sources", exact: true }).click()]);
+  const value = await observeSourceResponse(tab, "source-assignments", () => panel(tab, ref).getByRole("button", { name: "Save sources", exact: true }).click());
   await ui(panel(tab, ref).getByText("Sources saved.", { exact: true })).toBeVisible(); return value;
 }
 async function quiet(tab: Page) { let sessions = 0; const response = (value: import("playwright").Response) => { if (new URL(value.url()).pathname === "/api/session" && value.status() === 200) sessions++; }; tab.on("response", response); try { await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await ui.poll(() => sessions).toBeGreaterThanOrEqual(4); } finally { tab.off("response", response); } }
@@ -165,7 +183,7 @@ it("keeps a missing receipt unconfirmed and retries only the exact original UUID
   const sent: unknown[] = []; let drop = true;
   await tab.route("**/source-assignments", async route => { if (route.request().method() !== "POST") return route.continue(); sent.push(route.request().postDataJSON()); if (drop) { drop = false; await route.abort("failed"); } else await route.continue(); });
   await panel(tab).getByRole("button", { name: "Save sources", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Check save", exact: true })).toBeEnabled(); expect(sent).toHaveLength(1);
-  const checked = tab.waitForResponse(value => new URL(value.url()).pathname.endsWith("/source-assignments/receipt") && value.status() === 200); await panel(tab).getByRole("button", { name: "Check save", exact: true }).click(); expect((await (await checked).json()).outcome).toBe("unconfirmed");
+  const checked = await observeSourceResponse(tab, "source-assignments/receipt", () => panel(tab).getByRole("button", { name: "Check save", exact: true }).click()); expect(checked.outcome).toBe("unconfirmed");
   await ui(panel(tab).getByRole("button", { name: "Retry same save", exact: true })).toBeEnabled(); expect(sent).toHaveLength(1);
   await panel(tab).getByRole("button", { name: "Retry same save", exact: true }).click(); await ui(panel(tab).getByText("Sources saved.", { exact: true })).toBeVisible(); expect(sent).toHaveLength(2); expect(sent[1]).toEqual(sent[0]); await noAudio(tab);
 });
