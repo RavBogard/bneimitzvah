@@ -16,6 +16,7 @@ import { createPracticeService } from "../../src/server/practice/service";
 import { createPortalService } from "../../src/server/portal/service";
 import { createReferenceAudioService } from "../../src/server/reference-audio/service";
 import { createShortReferenceAudioService } from "../../src/server/reference-audio/short-service";
+import type { ShortSourceManifest } from "../../src/server/reference-audio/short-source-manifest";
 import { createShortExplorationService } from "../../src/server/reference-audio/short-exploration-service";
 import type { ReferenceCatalog } from "../../src/server/reference-audio/catalog";
 import { ReferenceUnavailable } from "../../src/server/reference-audio/catalog";
@@ -46,7 +47,7 @@ import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
 const secret = () => randomBytes(48).toString("base64url");
 type Mail = { email: string; url: string };
 
-export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown> } = {}) {
+export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; referenceShortManifestLoad?: (signal?: AbortSignal) => Promise<ShortSourceManifest>; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown> } = {}) {
   const base = await postgresAccessFixture();
   try {
     // The shared disposable fixture creates the DB, migrations and restricted
@@ -73,7 +74,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       readingExploration: createReadingExplorationService({ access, practice, signingSecret: explorationSecret, loadReading: async (date, calendar) => ({ fetchedAt: Date.now(), snapshot: { date: parseCeremonyDate(date), calendar, classification: "regular", reading: { parashah: "Synthetic", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:1-6:8" }], triennial: null }, haftarah: null } }), loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }),
       shortExplorationAudio: createShortExplorationService({ access, practice, signingSecret: explorationSecret, loadReading: async () => { throw new StudyUnavailable("upstream"); }, loadText: async () => { throw new StudyUnavailable("upstream"); }, loadCatalog: async () => { throw new ReferenceUnavailable(); }, loadManifest: async () => { throw new ReferenceUnavailable(); } }),
       referenceAudio: createReferenceAudioService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), loadCatalog: options.referenceCatalogLoad ?? (async () => { throw new ReferenceUnavailable(); }), studentRelease: options.referenceStudentRelease === true }),
-      shortReferenceAudio: createShortReferenceAudioService({ access, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, loadCatalog: async () => { throw new ReferenceUnavailable(); }, loadManifest: async () => { throw new ReferenceUnavailable(); } }),
+      shortReferenceAudio: createShortReferenceAudioService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), loadCatalog: options.referenceCatalogLoad ?? (async () => { throw new ReferenceUnavailable(); }), loadManifest: options.referenceShortManifestLoad ?? (async () => { throw new ReferenceUnavailable(); }), studentRelease: options.referenceStudentRelease === true }),
       studyWordAids: createStudyWordAidsService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }),
       sourceContent: createSourceContentService({ access, practice, related: options.relatedReader ?? (async () => { throw new Error("Source content unavailable"); }), editions: options.sourceEditionReader ?? (async () => { throw new Error("Source content unavailable"); }), content: options.sourceContentReader ?? (async () => { throw new Error("Source content unavailable"); }) }),
       sourceAssignments: createSourceAssignmentsService({ access, practice, related: options.relatedReader ?? (async ref => parseRelatedMetadata([], ref)) }),

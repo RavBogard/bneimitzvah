@@ -13,6 +13,7 @@ import { LiftedLine } from "./lift";
 import { useReadingPrefs } from "../reading-prefs";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
 import { PortalRequestError } from "../../api";
+import type { ShortReferenceOwner } from "./short-reference-bridge";
 
 export type StudyReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
 export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderWork, renderActiveWork, onPage, learner = false, liftHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, active = true }: {
@@ -29,7 +30,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   onVisit?(kind: StudyKind, verseRef: string): void;
   onHearReady?(ready: boolean): void; active?: boolean;
 }) {
-  const { readStudy, readReference, readWordAids, readWordDetails, summary, concealed, epoch } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
+  const { readStudy, readReference, createShortReferenceOwner, readWordAids, readWordDetails, summary, concealed, epoch } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
+  const shortMetadata = useRef<ShortReferenceOwner | null>(null);
   const playback = useRef<ReadingPlayerHandle | null>(null), registerPlayback = useCallback((value: ReadingPlayerHandle | null) => { playback.current = value; }, []);
   const tools = useRef<WordToolsHandle | null>(null), registerTools = useCallback((value: WordToolsHandle | null) => { tools.current = value; }, []);
   const [playingWord, setPlayingWord] = useState<{ verse: number; index: number } | null>(null);
@@ -38,8 +40,9 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const selection = useRef<{ kind: StudyKind; offset: number; assignmentKey: string } | null>(null);
   const [state, setState] = useState<{ binding: string; kind?: StudyKind; page?: StudyPage; error?: number; loading?: boolean }>({ binding: "" });
   const key = baseline ? studyBinding(baseline) : "";
-  const clear = useCallback(() => { generation.current++; controller.current?.abort(); setLift(null); setState({ binding: "", loading: true }); }, []);
+  const clear = useCallback(() => { playback.current?.suspend(); shortMetadata.current?.dispose(); shortMetadata.current = null; generation.current++; controller.current?.abort(); setLift(null); setState({ binding: "", loading: true }); }, []);
   const load = useCallback(async (value: Assigned, kind: StudyKind, offset: number, outer?: AbortSignal) => {
+    playback.current?.suspend(); shortMetadata.current?.dispose(); shortMetadata.current = null;
     controller.current?.abort(); const request = new AbortController(), turn = ++generation.current; controller.current = request;
     const abort = () => request.abort(); if (outer?.aborted) abort(); outer?.addEventListener("abort", abort, { once: true });
     const binding = studyBinding(value), assignment = value.readings.find(row => row.kind === kind)!;
@@ -83,6 +86,29 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   }
   const livePage = key && state.binding === key && !state.loading ? state.page : undefined;
   const canHear = Boolean(livePage && !concealed && active);
+  const shortView = useRef({ baseline, page: livePage, kind: state.kind, active, concealed, lift });
+  shortView.current = { baseline, page: livePage, kind: state.kind, active, concealed, lift };
+  useLayoutEffect(() => {
+    if (!baseline || !livePage || !state.kind || concealed) return;
+    const value = baseline, page = livePage, kind = state.kind, turn = generation.current;
+    const live = () => { const now = shortView.current; return now.baseline === value && metadata.current === value && now.page === page && now.kind === kind
+      && turn === generation.current && !now.concealed && now.active && !now.lift && document.visibilityState === "visible"; };
+    let owned: ShortReferenceOwner;
+    try { owned = createShortReferenceOwner(value, kind, page.offset, live); } catch { return; }
+    shortMetadata.current = owned;
+    if (live()) void owned.prepare().catch(() => undefined);
+    return () => { owned.dispose(); if (shortMetadata.current === owned) shortMetadata.current = null; };
+  }, [baseline, livePage, state.kind, createShortReferenceOwner, epoch, key, concealed]);
+  useLayoutEffect(() => {
+    if (concealed || !active || lift) shortMetadata.current?.suspend();
+    else if (document.visibilityState === "visible") void shortMetadata.current?.prepare().catch(() => undefined);
+  }, [concealed, active, lift]);
+  useLayoutEffect(() => {
+    const background = () => { if (document.visibilityState !== "visible") shortMetadata.current?.suspend(); else void shortMetadata.current?.prepare().catch(() => undefined); };
+    const leave = () => shortMetadata.current?.suspend();
+    document.addEventListener("visibilitychange", background); window.addEventListener("pagehide", leave);
+    return () => { document.removeEventListener("visibilitychange", background); window.removeEventListener("pagehide", leave); };
+  }, []);
   const openerScope = useRef({ baseline, page: livePage, concealed, epoch });
   openerScope.current = { baseline, page: livePage, concealed, epoch };
   useLayoutEffect(() => { onHearReady?.(canHear); return () => onHearReady?.(false); }, [canHear, onHearReady]);
@@ -90,7 +116,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const shown = livePage && state.kind ? [state.kind, livePage.offset, livePage.verses.length] as const : null;
   useEffect(() => { if (shown) onShown?.(...shown); }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
   const hear = (page: StudyPage, index: number, word: ReadingSelection = "verse") => { playback.current?.select(index, word); if (word === "verse") tools.current?.selectVerse(index); else tools.current?.select(index, word); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
-  const open = (page: StudyPage, index: number) => { playback.current?.pause(); setLift({ page, index }); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
+  const open = (page: StudyPage, index: number) => { playback.current?.suspend(); shortMetadata.current?.suspend(); setLift({ page, index }); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
   if (liftHandle) {
     // Parent Start brings this tab forward and opens it in the same event.
     // Inactivity still unmounts media; it does not revoke this explicit opener.
@@ -122,7 +148,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
         register={registerPlayback} onActiveWord={setPlayingWord} load={async (index, signal) => {
           const value = baseline, page = current.page!, turn = generation.current;
           if (signal.aborted || metadata.current !== value || page !== livePage || !page.verses[index]) throw new PortalRequestError(409);
-          const result = await readReference(value, kind, page.offset + index, signal);
+          const owned = shortMetadata.current; if (!owned) throw new PortalRequestError(409);
+          const result = await owned.load(index, signal);
           if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
           return result;
         }} />}

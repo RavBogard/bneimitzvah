@@ -124,7 +124,15 @@ it("loads date suggestions only when the actual editor opens and stages a native
 });
 
 it("fences delayed Torah suggestions on kind changes and closed editor lifetimes", async () => {
-  const tab = await page(); await navigate(tab);
+  const tab = await page();
+  const evidence = { phase: "navigate", responses: [] as { kind: string; status: number }[], failed: [] as string[] }; barrierDiagnostic = evidence;
+  const prepareKind = (request: import("playwright").Request) => {
+    if (!new URL(request.url()).pathname.endsWith("/reading/prepare")) return null;
+    try { const kind = request.postDataJSON()?.kind; return kind === "torah" || kind === "haftarah" ? kind : "unknown"; } catch { return "unknown"; }
+  };
+  tab.on("response", response => { const kind = prepareKind(response.request()); if (kind && evidence.responses.length < 16) evidence.responses.push({ kind, status: response.status() }); });
+  tab.on("requestfailed", request => { const kind = prepareKind(request); if (kind && evidence.failed.length < 16) evidence.failed.push(kind); });
+  await navigate(tab);
   let release!: () => void, entered = false, settled = false;
   const gate = new Promise<void>(yes => { release = yes; });
   await tab.route("**/reading/prepare", async route => {
@@ -135,18 +143,24 @@ it("fences delayed Torah suggestions on kind changes and closed editor lifetimes
     } else await route.fulfill({ response });
   });
   try {
-    await open(tab); await ui.poll(() => entered).toBe(true);
+    evidence.phase = "open-held-torah"; await open(tab); await ui.poll(() => entered).toBe(true);
+    evidence.phase = "switch-haftarah";
     await safe(() => field(tab, "Reading").selectOption("haftarah"));
     await ui(field(tab, "Passage")).toBeEnabled();
     await ui(field(tab, "Passage").locator("option")).toContainText(["Choose my own verses", "Isaiah 1:1-2"]);
-    await close(tab); release(); await ui.poll(() => settled).toBe(true);
+    evidence.phase = "close-release-torah"; await close(tab); release(); await ui.poll(() => settled).toBe(true);
     const reopenedHaftarah = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/prepare") && response.request().postDataJSON().kind === "haftarah");
+    evidence.phase = "reopen-haftarah";
     await open(tab); await ui(field(tab, "Reading")).toHaveValue("haftarah");
-    const refreshed = await reopenedHaftarah; expect(refreshed.status()).toBe(200); expect(await refreshed.finished()).toBe(null);
+    const refreshed = await reopenedHaftarah; expect(refreshed.status()).toBe(200);
+    // The parsed response enables these options. Transport finished() is not
+    // needed to prove this new editor lifetime consumed the current suggestion.
+    evidence.phase = "reopened-options";
     await ui(field(tab, "Passage")).toBeEnabled();
     await ui(field(tab, "Passage").locator("option")).toContainText(["Choose my own verses", "Isaiah 1:1-2"]);
     expect(await field(tab, "Passage").getByRole("option", { name: /Aliyah/ }).count()).toBe(0);
     expect(await sheet(tab).getByRole("button", { name: "Save assignment", exact: true }).count()).toBe(0);
+    evidence.phase = "complete";
   } finally { release(); await tab.unroute("**/reading/prepare"); }
 });
 
