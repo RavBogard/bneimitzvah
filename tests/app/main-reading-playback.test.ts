@@ -73,9 +73,13 @@ it("rejects wrong ref/text timing despite reusable bytes, malformed capabilities
   await bypass.load(); expect(bypass.state.status).toBe("error"); bypass.dispose();
 });
 it("clear fences an in-flight verified Blob and never caches a failed or obsolete download", async () => {
-  const capability = createReferenceAudioReuse(), f = fixture(), gate = deferred<Response>(), fetcher = vi.fn<typeof fetch>().mockImplementationOnce(() => gate.promise).mockImplementation(async () => response());
+  const capability = createReferenceAudioReuse(), f = fixture(), gate = deferred<Response>(), entered = deferred<void>();
+  const fetcher = vi.fn<typeof fetch>().mockImplementationOnce(() => { entered.resolve(undefined); return gate.promise; }).mockImplementation(async () => response());
   const make = () => createReferencePlayback({ ...f.platform, fetch: fetcher, ref: "Genesis 1:1", readingText: text, wordCount: 3, load: async () => resolution(0), assetReuse: capability });
-  const first = make(), loading = first.load(); await new Promise(resolve => setTimeout(resolve, 0)); capability.clear(); gate.resolve(response()); await loading; expect(first.state.status).toBe("error"); expect(f.media).toHaveLength(0);
+  const first = make(), loading = first.load();
+  // The real text digest precedes fetch; a timer tick cannot prove entry.
+  await entered.promise; expect(fetcher).toHaveBeenCalledTimes(1); expect(first.state.status).toBe("loading"); expect(f.media).toHaveLength(0);
+  capability.clear(); gate.resolve(response()); await loading; expect(first.state.status).toBe("error"); expect(f.media).toHaveLength(0);
   const second = make(); await second.load(); expect(second.state.status).toBe("ready"); expect(fetcher).toHaveBeenCalledTimes(2); first.dispose(); second.dispose(); capability.clear();
 });
 it("preserves play-rejection retry and ignores escaped selection after disposal", async () => {
