@@ -1,5 +1,13 @@
 # Honoree database release preparation — 2026-10-18
 
+## Material activation remains held after the separate local test
+
+The disposable material-approval diagnostic acknowledged COMMIT, then failed verification/cleanup after 94.260 seconds. The owned fixture databases and roles were removed, the exact cluster was stopped and removed, and source/tool and port checks passed. Production was not contacted. This is distinct from the successful schema release below; do not replay0023 or treat the diagnostic as material acceptance.
+
+The reviewed source-guard optimization captures private copies of immutable committed Git bytes once. Each subsequent recheck still validates live HEAD, repository root, ancestry and dirty state, and rereads every protected file and migration byte. Copied private migration anchors also resist mutation through the exposed snapshot map. No timeout, database guard, source normalization or release authority changes. Three new regression cases cover repeated live checks without repeated immutable Git reads, every protected/migration byte drifting in place, and late repository-state drift. Focused honoree17/17 and nearby release34/34 tests passed under isolation; independent review accepted the diff. The elapsed time suggests a watchdog interaction but does not establish its exact cause.
+
+Next: checkpoint the optimized guard, select and independently review a fresh exact source/tool freeze, and pass the actual five owner plus three loader cases. The production two-row approval remains held until that acceptance. No actual honoree link, import, invitation or mail is part of this work.
+
 ## Final release accepted
 
 Exact `3f1c357d7ebadb2419e50196145ad1f5625dddcc` passes the five manual owned PostgreSQL16 cases, with no skipped/cancelled tests and verified cluster/database/role/port cleanup. Independent review accepted both the frozen harness and actual result. All four [exact hosted jobs39129786654](https://github.com/RavBogard/bneimitzvah/actions/runs/39129786654) pass, including the corrected Windows immutable-Git-fixture test. The earlier failed captures and Windows result remain preserved; they were not relabeled as passes.

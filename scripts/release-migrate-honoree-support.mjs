@@ -134,12 +134,15 @@ export function honoreeSourceDelta(expectedCommit,options={}){
  const folder="src/server/db/migrations",tree=commit=>text("ls-tree","-r","--name-only",commit,"--",folder).split("\n").filter(Boolean),all=tree(HONOREE_BASE),prior=tree(HONORS_BASE);
  need(equal(all,tree(expectedCommit))&&equal(all.filter(p=>!prior.includes(p)),[`${folder}/0023_honoree_links.sql`,`${folder}/meta/0023_snapshot.json`].sort())&&prior.every(p=>all.includes(p)));
  const blobs=new Map();for(const path of all){const bytes=git("show",`${HONOREE_BASE}:${path}`);need(bytes.equals(git("show",`${expectedCommit}:${path}`))&&bytes.equals(read(path)));if(prior.includes(path)&&!path.endsWith("/_journal.json"))need(bytes.equals(git("show",`${HONORS_BASE}:${path}`)));blobs.set(path,bytes);}
- for(const path of oldFiles)need(git("show",`${HONOREE_BASE}:${path}`).equals(git("show",`${expectedCommit}:${path}`))&&git("show",`${expectedCommit}:${path}`).equals(read(path)));
- for(const path of HONOREE_FILES)need(git("show",`${expectedCommit}:${path}`).equals(read(path)));
+ const protectedBlobs=new Map();
+ for(const path of oldFiles){const bytes=Buffer.from(git("show",`${expectedCommit}:${path}`));need(git("show",`${HONOREE_BASE}:${path}`).equals(bytes)&&bytes.equals(read(path)));protectedBlobs.set(path,bytes);}
+ for(const path of HONOREE_FILES){const bytes=Buffer.from(git("show",`${expectedCommit}:${path}`));need(bytes.equals(read(path)));protectedBlobs.set(path,bytes);}
  const journal=JSON.parse(blobs.get(`${folder}/meta/_journal.json`)),oldJournal=JSON.parse(git("show",`${HONORS_BASE}:${folder}/meta/_journal.json`));
  need(journal.entries?.length===24&&equal({...journal,entries:journal.entries.slice(0,23)},oldJournal)&&journal.entries.every((r,i)=>r.idx===i&&r.version==="7"&&r.breakpoints===true&&Number.isSafeInteger(r.when)&&(!i||r.when>journal.entries[i-1].when))&&journal.entries[23].tag==="0023_honoree_links");
  const migrations=journal.entries.map((r,index)=>{const bytes=blobs.get(`${folder}/${r.tag}.sql`);need(bytes&&!bytes.includes(13));const lf=sha(bytes),crlf=sha(Buffer.from(bytes.toString("utf8").replace(/\n/g,"\r\n")));return {index,tag:r.tag,createdAt:r.when,hash:lf,historicalAllowed:index<11||index===13?[...new Set([lf,crlf])]:[lf]};});
- const recheck=()=>{check();for(const[p,b]of blobs)need(b.equals(read(p)));for(const p of protectedFiles)need(git("show",`${expectedCommit}:${p}`).equals(read(p)));};
+ // Private copies keep injected Git/read buffers and the exposed blobs map outside the trust anchor.
+ const migrationBlobs=new Map([...blobs].map(([path,bytes])=>[path,Buffer.from(bytes)]));
+ const recheck=()=>{check();for(const[p,b]of migrationBlobs)need(b.equals(read(p)));for(const[p,b]of protectedBlobs)need(b.equals(read(p)));};
  return {expectedCommit,migrations,blobs,read,git,recheck,honorsSQL:blobs.get(`${folder}/0022_honors_version.sql`).toString("utf8"),honoreeSQL:blobs.get(`${folder}/0023_honoree_links.sql`).toString("utf8")};
 }
 /** Reference-capture seam validates committed source and all historical native

@@ -74,6 +74,41 @@ test("exact immutable24-source contract protects old operators/history/journal, 
  for(const args of cache.keys()){const values=JSON.parse(args);if(values[0]==="rev-parse")assert.deepEqual(values,["rev-parse","HEAD"]);else assert.ok(!values.some(v=>v.includes("HEAD")));}
 });
 
+test("source rechecks reuse only owned immutable blobs while live repository and every working byte repeat",()=>{
+ const f=sourceFixture(),s=honoreeSourceDelta(candidate,f),protectedPaths=f.events.find(args=>args[0]==="status").slice(5),paths=[...new Set([...tree(HONOREE_BASE),...protectedPaths])];
+ assert.ok(protectedPaths.length>=HONOREE_FILES.length);for(const path of HONOREE_FILES)assert.ok(protectedPaths.includes(path));
+ const constructionShows=f.events.filter(args=>args[0]==="show").length,reads=[];
+ // read is intentionally a live closure, not a construction-time file snapshot.
+ const measured=sourceFixture(),read=measured.read,measuredSource=honoreeSourceDelta(candidate,{...measured,read:path=>{reads.push(path);return read(path);}});
+ reads.length=0;f.events.length=0;measured.events.length=0;
+ for(let i=0;i<3;i++){s.recheck();measuredSource.recheck();}
+ assert.equal(constructionShows>protectedPaths.length,true);
+ assert.equal(f.events.filter(args=>args[0]==="show").length,0);assert.equal(measured.events.filter(args=>args[0]==="show").length,0);
+ for(const name of ["rev-parse","merge-base","status"]){assert.equal(f.events.filter(args=>args[0]===name).length,3);assert.equal(measured.events.filter(args=>args[0]===name).length,3);}
+ for(const path of paths)assert.equal(reads.filter(value=>value===path).length,3);
+});
+
+test("every protected file and migration rejects late in-place shared-buffer drift despite exposed snapshot mutation",()=>{
+ const initial=sourceFixture();honoreeSourceDelta(candidate,initial);
+ const protectedPaths=initial.events.find(args=>args[0]==="status").slice(5),paths=[...new Set([...tree(HONOREE_BASE),...protectedPaths])];
+ for(const path of paths){
+  const f=sourceFixture(),shared=Buffer.from(f.read(path));assert.ok(shared.length>0);
+  f.files.set(path,shared);f.committed.set(path,shared);f.overrides.set(HONOREE_BASE+":"+path,shared);
+  const s=honoreeSourceDelta(candidate,f);
+  // The injected Git blob, working read and public migration snapshot can alias.
+  // None may become the private expected-byte anchor after construction.
+  const exposed=s.blobs.get(path);if(exposed){if(exposed!==shared)exposed[0]^=1;s.blobs.set(path,shared);}
+  shared[0]^=1;
+  assert.throws(()=>s.recheck(),"late byte drift must refuse: "+path);
+ }
+});
+
+test("late HEAD ancestry and dirty changes still refuse after successful repeated byte rechecks",()=>{
+ for(const change of [f=>f.head(),f=>f.ancestor(),f=>f.dirty()]){
+  const f=sourceFixture(),s=honoreeSourceDelta(candidate,f);s.recheck();s.recheck();change(f);assert.throws(()=>s.recheck());
+ }
+});
+
 test("source-guard-only capture composition retains every historical native reference without pretending new evidence",()=>{
  const s=source();assert.equal(s.migrations.length,24);assert.ok(s.honorsAfter.tables.some(t=>t.name==="honors_version"));assert.ok(s.honorsAfter.tables.some(t=>t.name==="student_recording"));assert.ok(s.honorsAfter.tables.some(t=>t.name==="verse_source_assignment"));assert.equal(honoreeSQLContract(s.honoreeSQL).foreign.length,22);
  const t=target(s);assert.equal(t.requireChannelBinding,true);
