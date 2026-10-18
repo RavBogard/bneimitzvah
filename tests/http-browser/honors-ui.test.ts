@@ -16,6 +16,7 @@ let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop:
 let failed = false;
 const contexts: BrowserContext[] = [], children: { id: string; name: string; assignmentId: string }[] = [];
 const cookies: Partial<Record<"parent" | "admin" | "student", Awaited<ReturnType<BrowserContext["cookies"]>>>> = {};
+type QuietWitness = { complete: boolean; failed: boolean; eof: number; expected: number; dispose(): void };
 const sheet = (page: Page) => page.getByRole("dialog", { name: "Family honors", exact: true });
 const group = (page: Page, name: string) => sheet(page).getByRole("region", { name, exact: true });
 async function api(page: Page, path: string, body?: unknown) { return page.evaluate(async ({ path, body }) => { const response = await fetch(path, { method: body === undefined ? "GET" : "POST", cache: "no-store", headers: body === undefined ? {} : { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) }); return { status: response.status, data: await response.json() }; }, { path, body }); }
@@ -47,12 +48,17 @@ async function observe(tab: Page, id: string, receipt: boolean, action: () => Pr
 }
 async function save(tab: Page, id: string) { const result = await observe(tab, id, false, () => sheet(tab).getByRole("button", { name: "Save honors", exact: true }).click()); await ui(sheet(tab).getByRole("status").filter({ hasText: "Honors saved." })).toBeVisible(); return result; }
 async function focus(tab: Page) {
-  // Parent: provider2 + reading2 + honors2 proofs; admin roster: provider2 + honors2.
-  // The provider's final proof starts only after every registered scope settles.
-  const expected = new URL(tab.url()).pathname === "/workspace/admin/students" ? 4 : 6;
+  const admin = new URL(tab.url()).pathname === "/workspace/admin/students";
+  // These fixtures have an assigned authorized reading. Wait until its loading
+  // render ends and its layout-effect quiet registration has committed. The
+  // honors sheet still opens independently; this is only the quiet-test setup.
+  if (!admin) await ui(tab.locator(".reading-workspace:not([hidden]) .reading-hero")).toBeVisible();
+  // Provider2 + authorized reading2 + honors2; admin roster has no reading scope.
+  // The final provider proof begins only after every registered scope settles.
+  const expected = admin ? 4 : 6;
   await tab.evaluate(expected => {
-    const browser = window as Window & { honorsQuietWitness?: { complete: boolean; failed: boolean; dispose(): void } }, original = window.fetch, channel = new MessageChannel(); let eof = 0;
-    const witness = { complete: false, failed: false, dispose() { if (window.fetch === wrapped) window.fetch = original; channel.port1.close(); channel.port2.close(); if (browser.honorsQuietWitness === witness) delete browser.honorsQuietWitness; } };
+    const browser = window as Window & { honorsQuietWitness?: QuietWitness }, original = window.fetch, channel = new MessageChannel(); let eof = 0;
+    const witness: QuietWitness = { complete: false, failed: false, get eof() { return eof; }, expected, dispose() { if (window.fetch === wrapped) window.fetch = original; channel.port1.close(); channel.port2.close(); if (browser.honorsQuietWitness === witness) delete browser.honorsQuietWitness; } };
     channel.port1.onmessage = () => { witness.complete = true; };
     const wrapped: typeof window.fetch = async (...args) => {
       const response = await original(...args), input = args[0], url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, location.href);
@@ -63,7 +69,7 @@ async function focus(tab: Page) {
         Object.defineProperty(body, "getReader", { configurable: true, value: (...readerArgs: unknown[]) => {
           const reader = Reflect.apply(getReader, body, readerArgs), read = reader.read; let ended = false;
           reader.read = (...readArgs: unknown[]) => (Reflect.apply(read, reader, readArgs) as Promise<{ done: boolean }>).then(part => {
-            // Observe only the parser's actual EOF. Forward the original result,
+            // Observe only actual parser EOF; preserve original result objects,
             // bytes, rejection, cancellation and release semantics unchanged.
             if (part.done && !ended) { ended = true; if (++eof === expected) channel.port2.postMessage(null); } return part;
           }, (error: unknown) => { witness.failed = true; throw error; });
@@ -74,8 +80,8 @@ async function focus(tab: Page) {
     };
     browser.honorsQuietWitness = witness; window.fetch = wrapped; window.dispatchEvent(new Event("focus"));
   }, expected);
-  try { await ui.poll(() => tab.evaluate(() => { const witness = (window as Window & { honorsQuietWitness?: { complete: boolean; failed: boolean } }).honorsQuietWitness; return { complete: witness?.complete ?? false, failed: witness?.failed ?? false }; })).toEqual({ complete: true, failed: false }); }
-  finally { await tab.evaluate(() => (window as Window & { honorsQuietWitness?: { dispose(): void } }).honorsQuietWitness?.dispose()); }
+  try { await ui.poll(() => tab.evaluate(() => { const witness = (window as Window & { honorsQuietWitness?: QuietWitness }).honorsQuietWitness; return { complete: witness?.complete ?? false, failed: witness?.failed ?? false }; })).toEqual({ complete: true, failed: false }); }
+  finally { await tab.evaluate(() => (window as Window & { honorsQuietWitness?: QuietWitness }).honorsQuietWitness?.dispose()); }
 }
 async function rows(id: string) { return fixture.ownerDb.select().from(s.honorsVersion).where(eq(s.honorsVersion.studentId, id)); }
 async function audits(id: string) { return fixture.ownerDb.select().from(s.auditEvent).where(and(eq(s.auditEvent.actingStudentId, id), eq(s.auditEvent.action, "honors.set"))); }
