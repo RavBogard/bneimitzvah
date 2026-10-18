@@ -15,6 +15,7 @@ vi.mock("server-only", () => ({}));
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser;
 let stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
 let isolation: Awaited<ReturnType<typeof isolatedEnv>> | undefined;
+let barrierDiagnostic: { phase: string; responses: { kind: string; status: number }[]; failed: string[] } | undefined;
 const contexts: BrowserContext[] = [], cookies = new Map<string, Awaited<ReturnType<BrowserContext["cookies"]>>>();
 const safe = async <T>(action: () => Promise<T>): Promise<T> => { try { return await action(); } catch { throw new Error("Reading assignment review browser operation failed; private details withheld"); } };
 const sheet = (tab: Page) => tab.getByRole("dialog", { name: "Set the assigned reading", exact: true });
@@ -67,18 +68,35 @@ beforeAll(async () => {
     stop = await startBrowserServer(fixture.withRuntime); isolation = await isolatedEnv(); browser = await chromium.launch({ headless: true, env: isolation.env });
   } catch { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await isolation?.cleanup(); throw new Error("Reading assignment review setup failed; private details withheld"); }
 }, 120_000);
-afterEach(async () => { await Promise.all(contexts.splice(0).map(context => context.close().catch(() => undefined))); });
+afterEach(async () => {
+  if (barrierDiagnostic) console.log("Reading review barrier: " + JSON.stringify(barrierDiagnostic));
+  barrierDiagnostic = undefined;
+  await Promise.all(contexts.splice(0).map(context => context.close().catch(() => undefined)));
+});
 afterAll(async () => { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await isolation?.cleanup(); }, 120_000);
 
 it("loads date suggestions only when the actual editor opens and stages a native keyboard-selected passage without saving", async () => {
   const tab = await page(); let suggestions = 0, confirmations = 0;
+  const evidence = { phase: "navigate", responses: [] as { kind: string; status: number }[], failed: [] as string[] }; barrierDiagnostic = evidence;
+  const category = (path: string) => path.endsWith("/reading/explore/prepare") ? "exploration-prepare" : path.endsWith("/reading/explore/page") ? "exploration-page" : path.endsWith("/reading/prepare") ? "editor-prepare" : null;
+  tab.on("response", response => { const kind = category(new URL(response.url()).pathname); if (kind && evidence.responses.length < 16) evidence.responses.push({ kind, status: response.status() }); });
+  tab.on("requestfailed", request => { const kind = category(new URL(request.url()).pathname); if (kind && evidence.failed.length < 16) evidence.failed.push(kind); });
   const requests: unknown[] = [];
   tab.on("request", request => {
     const path = new URL(request.url()).pathname;
     if (path.endsWith("/reading/prepare")) { suggestions++; requests.push(request.postDataJSON()); }
     if (path.endsWith("/reading/confirm")) confirmations++;
   });
-  await navigate(tab); await tab.waitForLoadState("networkidle"); expect(suggestions).toBe(0);
+  // Missing Torah legitimately starts read-only exploration. Its text loader is
+  // deliberately unavailable in this fixture; settle that actual request/render,
+  // rather than treating unrelated network silence as editor readiness.
+  const explorationPage = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/explore/page") && response.request().method() === "POST");
+  await navigate(tab); evidence.phase = "exploration-response"; const explored = await explorationPage; expect(explored.status()).toBe(503);
+  // The client rejects a non-OK status without consuming its body. Observe its
+  // completed error render, not Response.finished() on that failed fetch.
+  evidence.phase = "exploration-error-render";
+  await ui(tab.getByText("The Torah portion couldn’t be loaded. Try again in a moment.", { exact: true })).toBeVisible();
+  await ui(sheet(tab)).toBeHidden(); expect(suggestions).toBe(0); evidence.phase = "initial-reading-api";
   const before = await api(tab, readPath());
   await open(tab); await ui(sheet(tab).getByText(/Suggested for this service: Synthetic/)).toBeVisible();
   await ui(field(tab, "Passage")).toHaveValue("custom");
@@ -101,7 +119,8 @@ it("loads date suggestions only when the actual editor opens and stages a native
   await ui(sheet(tab).getByRole("heading", { name: "Review Torah assignment", exact: true })).toBeVisible();
   await ui(sheet(tab).locator(".reading-proposal")).toContainText("Genesis 1:1-2");
   await capture(tab, "review");
-  expect(confirmations).toBe(0); expect((await api(tab, readPath())).data).toEqual(before.data);
+  evidence.phase = "unchanged-reading-api"; expect(confirmations).toBe(0); expect((await api(tab, readPath())).data).toEqual(before.data);
+  barrierDiagnostic = undefined;
 });
 
 it("fences delayed Torah suggestions on kind changes and closed editor lifetimes", async () => {
@@ -121,8 +140,10 @@ it("fences delayed Torah suggestions on kind changes and closed editor lifetimes
     await ui(field(tab, "Passage")).toBeEnabled();
     await ui(field(tab, "Passage").locator("option")).toContainText(["Choose my own verses", "Isaiah 1:1-2"]);
     await close(tab); release(); await ui.poll(() => settled).toBe(true);
+    const reopenedHaftarah = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/prepare") && response.request().postDataJSON().kind === "haftarah");
     await open(tab); await ui(field(tab, "Reading")).toHaveValue("haftarah");
-    await tab.waitForLoadState("networkidle");
+    const refreshed = await reopenedHaftarah; expect(refreshed.status()).toBe(200); expect(await refreshed.finished()).toBe(null);
+    await ui(field(tab, "Passage")).toBeEnabled();
     await ui(field(tab, "Passage").locator("option")).toContainText(["Choose my own verses", "Isaiah 1:1-2"]);
     expect(await field(tab, "Passage").getByRole("option", { name: /Aliyah/ }).count()).toBe(0);
     expect(await sheet(tab).getByRole("button", { name: "Save assignment", exact: true }).count()).toBe(0);

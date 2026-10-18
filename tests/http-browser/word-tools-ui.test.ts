@@ -108,15 +108,18 @@ it("keeps tools closed on primary word playback; explicit open remembers that wo
   const { tab, state } = await page(); let requests = 0;
   tab.on("request", request => { if (/\/study-word-(aids|details)$/.test(new URL(request.url()).pathname)) requests++; });
   await ui(tools(tab).getByRole("button", { name: "Word tools" })).toHaveAttribute("aria-expanded", "false");
-  await word(tab, 1, 1).click(); await playing(tab); await player(tab).getByRole("button", { name: "Repeat", exact: true }).click(); expect(requests).toBe(0);
+  await word(tab, 1, 1).click(); await playing(tab);
+  await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse"); expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(1); expect((await native(tab)).currentTime).toBeLessThan(2);
+  await player(tab).getByRole("button", { name: "Repeat", exact: true }).click(); expect(requests).toBe(0);
   await openTools(tab); await ui(tools(tab)).toContainText("Word 2 of 2"); await ui(tools(tab)).toContainText("Synthetic occurrence second");
   await tools(tab).getByRole("button", { name: "Next word", exact: true }).click(); await ui(tools(tab)).toContainText("Genesis 1:2"); await ui(tools(tab)).toContainText("Word 1 of 2");
-  await ui(player(tab)).toContainText("Genesis 1:1"); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("1");
+  await ui(player(tab)).toContainText("Genesis 1:1"); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse");
   await ui(tools(tab).getByText("Synthetic occurrence first", { exact: true })).toBeVisible(); const settled = requests;
   // Native repeat/highlight callbacks never select or fetch a study word.
   await tab.evaluate(() => { const audio = window.toolsAudios.at(-1)!; audio.currentTime = 1.5; audio.dispatchEvent(new Event("timeupdate")); });
   await ui(tools(tab)).toContainText("Genesis 1:2"); expect(requests).toBe(settled); expect(state.requests).toBe(1);
-  await tools(tab).getByRole("button", { name: "Hear this word", exact: true }).click(); await playing(tab); await ui(player(tab)).toContainText("Genesis 1:2"); expect(state.requests).toBe(1);
+  await tools(tab).getByRole("button", { name: "Hear this word", exact: true }).click(); await playing(tab); await ui(player(tab)).toContainText("Genesis 1:2");
+  await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("0"); expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(1.1); expect((await native(tab)).currentTime).toBeLessThan(2); expect(state.requests).toBe(1);
   expect(state.sawCookie || state.sawReferer).toBe(false);
 });
 it("supports phone keyboard study with no loaded audio; qere/maqaf, independent holds and stress remain in flow", async () => {
