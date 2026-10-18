@@ -75,7 +75,7 @@ beforeAll(async () => {
 }, 120_000);
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await isolation?.cleanup(); }, 120_000);
 
-it("shows the student's week, reports a visit only for an explicitly opened verse on the server's day, and keeps nothing while access is checked", async () => {
+it("shows the student's week, reports explicit inline verse visits on the server's day, and retains dates through unchanged quiet checks", async () => {
   for (const mobile of [false, true]) {
     const tab = await page("student", mobile), seen = traffic(tab);
     const day = await serverDay(tab, () => safe(() => tab.goto("/workspace/student", { waitUntil: "domcontentloaded" })));
@@ -84,30 +84,34 @@ it("shows the student's week, reports a visit only for an explicitly opened vers
     // Loading the page, its text and its calendar is not practice.
     expect(seen.posts).toHaveLength(0);
     const before = await rows();
-    await click(tab, "Start"); await ui(tab.locator("dialog.lift")).toBeVisible();
+    await click(tab, "Start"); await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toContainText("Genesis 1:1");
+    expect(await tab.locator("dialog.lift").count()).toBe(0);
     await ui.poll(() => seen.posts.length).toBe(1);
     expect(seen.posts[0]).toEqual({ context: null, body: { mode: "student", eventId: expect.stringMatching(/^[0-9a-f-]{36}$/), expectedDay: day, action: "visit", target: { type: "verse", kind: "torah", assignmentId, assignmentRevision: 1, verseRef: "Genesis 1:1" } } });
-    await safe(() => tab.getByRole("button", { name: "Close practice view", exact: true }).click());
     await todayMarked(tab, true);
     await ui(week(tab).locator(".practice-day-today .sr-only")).toContainText("today: practiced");
     // Opening another verse is a new visit; opening the same one again adds nothing.
-    await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:2"]').click()); await ui.poll(() => seen.posts.length).toBe(2);
+    await click(tab, "Hear Genesis 1:2"); await ui.poll(() => seen.posts.length).toBe(2);
     expect(seen.posts[1].body).toMatchObject({ expectedDay: day, target: { verseRef: "Genesis 1:2" } }); expect(seen.posts[1].body.eventId).not.toBe(seen.posts[0].body.eventId);
-    await safe(() => tab.getByRole("button", { name: "Close practice view", exact: true }).click());
-    await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:2"]').click()); await safe(() => tab.getByRole("button", { name: "Close practice view", exact: true }).click());
+    await click(tab, "Hear Genesis 1:2");
     expect(seen.posts).toHaveLength(2);
     const after = await rows(); expect(after.days).toBe(1); expect(after.events - before.events).toBe(2);
-    // An access check hides and clears the calendar; it comes back from a fresh read, and the refresh reports nothing.
+    // Same-authority quiet verification retains the calendar and sends no visit.
     let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
     const hold = async (route: Route) => { held = true; await gate; await route.fallback().catch(() => undefined); };
     await safe(() => tab.route("**/api/session", hold));
-    const readsBefore = seen.reads.length;
+    const readsBefore = seen.reads.length; let metadataSeen = false, finalSessions = 0;
+    const observed = (response: import("playwright").Response) => { const path = new URL(response.url()).pathname;
+      if (path === `/api/students/${fixture.student.id}/reading` && response.status() === 200) metadataSeen = true;
+      if (metadataSeen && path === "/api/session" && response.status() === 200) finalSessions++;
+    }; tab.on("response", observed);
     try {
       await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
-      await ui(checking(tab)).toBeVisible(); expect(await tab.locator(".practice-day").count()).toBe(0);
+      await ui(checking(tab)).toBeHidden(); await ui(week(tab).getByRole("listitem")).toHaveCount(7); await todayMarked(tab, true); expect(seen.posts).toHaveLength(2);
     } finally { release(); }
     await ui(checking(tab)).toBeHidden(); await ui(week(tab).getByRole("listitem")).toHaveCount(7); await todayMarked(tab, true);
-    expect(seen.reads.length).toBeGreaterThan(readsBefore); expect(seen.posts).toHaveLength(2);
+    await ui.poll(() => finalSessions).toBeGreaterThanOrEqual(2); tab.off("response", observed);
+    expect(seen.reads.length).toBe(readsBefore); expect(seen.posts).toHaveLength(2);
     await safe(() => tab.unroute("**/api/session", hold));
     // The month view is a plain disclosure: keyboard opens it and steps between months.
     const summary = tab.getByText("Practice calendar", { exact: true });
@@ -133,10 +137,9 @@ it("re-reads after a stale day without resending, and the next explicit open use
   let stale = true;
   await safe(() => tab.route("**/practice-events", async route => { if (!stale) return route.fallback(); stale = false; await route.fulfill({ status: 409, contentType: "application/json", body: '{"ok":false,"code":"stale-day"}' }); }));
   const reread = tab.waitForRequest(request => isCalendar(request));
-  await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:3"]').click()); await safe(() => reread);
-  await safe(() => tab.getByRole("button", { name: "Close practice view", exact: true }).click());
+  await click(tab, "Hear Genesis 1:3"); await safe(() => reread);
   await ui(week(tab).getByRole("listitem")).toHaveCount(7); expect(seen.posts).toHaveLength(1);
-  await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:3"]').click()); await ui.poll(() => seen.posts.length).toBe(2);
+  await click(tab, "Hear Genesis 1:3"); await ui.poll(() => seen.posts.length).toBe(2);
   expect(seen.posts[1].body).toMatchObject({ expectedDay: day, target: { verseRef: "Genesis 1:3" } }); expect(seen.posts[1].body.eventId).not.toBe(seen.posts[0].body.eventId);
   await safe(() => tab.context().close());
 });
@@ -157,7 +160,6 @@ it("shows dates only in an explicitly selected child practice, reports with that
   await click(tab, "Start"); await ui.poll(() => seen.posts.length).toBe(1);
   expect(seen.posts[0].context).toEqual(expect.any(String));
   expect(seen.posts[0].body).toMatchObject({ mode: "child-practice", expectedDay: day, action: "visit", target: { type: "verse", assignmentId, verseRef: "Genesis 1:1" } });
-  await safe(() => tab.getByRole("button", { name: "Close practice view", exact: true }).click());
   await capture(tab, "practice-calendar-child");
   await click(tab, "Return to parent view");
   await ui(tab.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeHidden();

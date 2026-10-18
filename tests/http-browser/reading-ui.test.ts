@@ -116,12 +116,19 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
   const tab = await page("tutor", true); await navigate(tab, "/workspace/tutor");
   await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await openEditor(tab); await custom(tab, "Genesis 1:1-3");
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
+  let metadataSeen = false, finalSessions = 0;
+  const observed = (response: import("playwright").Response) => { const path = new URL(response.url()).pathname;
+    if (path === `/api/students/${fixture.student.id}/reading` && response.status() === 200) metadataSeen = true;
+    if (metadataSeen && path === "/api/session" && response.status() === 200) finalSessions++;
+  }; tab.on("response", observed);
   await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }); });
   try {
     await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
-    await ui(main(tab).getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeVisible();
-    await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeHidden();
+    await ui(main(tab).getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden();
+    await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible();
+    await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-3");
   } finally { release(); }
+  await ui.poll(() => finalSessions).toBeGreaterThanOrEqual(2); tab.off("response", observed);
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible(); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-3");
   await tab.unroute("**/api/session");
   const [beforePrepare] = await fixture.ownerDb.select().from(s.student).where(eq(s.student.id, fixture.student.id));

@@ -47,20 +47,20 @@ async function reading(tab: Page, role = "admin") {
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible();
 }
 async function assertDesktopStudyColumns(tab: Page) {
-  const layout = await safe(() => tab.locator(".assigned-study .study-verses-with-work > li").first().evaluate(li => {
-    const marker = li.querySelector(":scope > .student-aliyah"), verse = li.querySelector(":scope > article"), tools = li.querySelector(":scope > .verse-work");
-    if (!marker || !verse || !tools) return null;
+  const layout = await safe(() => tab.locator(".assigned-study").evaluate(section => {
+    const flow = section.querySelector(".study-verses"), marker = flow?.querySelector(".student-aliyah"), verse = flow?.querySelector('p[lang="he"]'), tools = section.querySelector(".study-verse-detail");
+    if (!marker || !verse || !tools || !flow) return null;
     const bounds = (element: Element) => { const rect = element.getBoundingClientRect(); return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }; };
-    return { marker: bounds(marker), markerColumn: getComputedStyle(marker).gridColumn, verse: bounds(verse), tools: bounds(tools) };
+    return { marker: bounds(marker), flow: bounds(flow), verse: bounds(verse), tools: bounds(tools), viewport: innerWidth, words: flow.querySelectorAll("[data-word-index]").length };
   }));
   expect(layout).not.toBeNull();
-  expect(Math.abs(layout!.verse.top - layout!.tools.top)).toBeLessThanOrEqual(1);
-  expect(layout!.verse.right).toBeLessThan(layout!.tools.left);
-  expect(Math.abs(layout!.marker.left - layout!.verse.left)).toBeLessThanOrEqual(1);
-  // The marker occupies a full grid row while retaining the incumbent prose measure.
-  expect(layout!.markerColumn).toBe("1 / -1");
-  expect(layout!.marker.right).toBeLessThanOrEqual(layout!.tools.right);
+  expect(layout!.words).toBeGreaterThan(0);
+  expect(layout!.verse.left).toBeGreaterThanOrEqual(0); expect(layout!.verse.right).toBeLessThanOrEqual(layout!.viewport);
+  expect(layout!.tools.left).toBeGreaterThanOrEqual(0); expect(layout!.tools.right).toBeLessThanOrEqual(layout!.viewport);
+  // The real section marker precedes the flowing passage, with individual
+  // verse tools below the passage rather than obsolete side-by-side cards.
   expect(layout!.marker.bottom).toBeLessThanOrEqual(layout!.verse.top);
+  expect(layout!.flow.bottom).toBeLessThanOrEqual(layout!.tools.top);
 }
 async function captures(tab: Page, stage: "selection" | "cut-review" | "student-markers", selector: string) {
   if (process.env.CI) return;
@@ -143,19 +143,38 @@ it("previews explicit manual fallback and discards a delayed manual response whe
   await click(tab, "Preview custom references"); await ui(panel(tab).getByRole("heading", { name: "Genesis 4:1", exact: true })).toBeVisible();
 });
 
-it("clears preview text during access revalidation and fences a late response, while parent mode has no preview authority", async () => {
+it("retains a bound preview through unchanged quiet verification, fences explicit refresh, and gives parent mode no preview authority", async () => {
   const tab = await page("tutor"); await reading(tab, "tutor");
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
   let release!: () => void, held = false, delivered = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/reading/preview/page", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered = true; });
   try {
     await click(tab, "Preview custom references"); await ui.poll(() => held).toBe(true);
-    const rechecked=tab.waitForResponse(response=>new URL(response.url()).pathname==="/api/session" && response.status()===200);
-    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));await safe(()=>rechecked);
+    let metadataSeen = false, finalSessions = 0;
+    const observed = (response: import("playwright").Response) => { const path = new URL(response.url()).pathname;
+      if (path === `/api/students/${fixture.student.id}/reading` && response.status() === 200) metadataSeen = true;
+      if (metadataSeen && path === "/api/session" && response.status() === 200) finalSessions++;
+    }; tab.on("response", observed);
+    await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => finalSessions).toBeGreaterThanOrEqual(2); tab.off("response", observed);
+    await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
     await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible();
     await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
-    release(); await ui.poll(() => delivered).toBe(true); await ui(panel(tab).locator(".study-verses")).toHaveCount(0);
+    release(); await ui.poll(() => delivered).toBe(true); await ui(panel(tab).locator(".study-verses")).toHaveCount(1);
   } finally { release(); await tab.unroute("**/reading/preview/page"); }
+  // Explicit Refresh remains a blocking lifecycle boundary. Dispatch the real
+  // page control without asking a modal-covered pointer to reach it.
+  let releaseRefresh!: () => void, heldRefresh = false, deliveredRefresh = false;
+  const refreshGate = new Promise<void>(resolve => { releaseRefresh = resolve; });
+  const holdRefresh = async (route: import("playwright").Route) => { const response = await route.fetch(); heldRefresh = true; await refreshGate; await route.fulfill({ response }).catch(() => undefined); deliveredRefresh = true; };
+  await tab.route("**/reading/preview/page", holdRefresh);
+  try {
+    await click(tab, "Preview custom references"); await ui.poll(() => heldRefresh).toBe(true);
+    const reloaded = tab.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/reading` && response.status() === 200);
+    await tab.locator('button[aria-label="Refresh reading"]').evaluate(button => (button as HTMLButtonElement).click()); await reloaded;
+    await ui(panel(tab).locator(".study-verses")).toHaveCount(0);
+    releaseRefresh(); await ui.poll(() => deliveredRefresh).toBe(true); await ui(panel(tab).locator(".study-verses")).toHaveCount(0);
+    await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
+  } finally { releaseRefresh(); await tab.unroute("**/reading/preview/page", holdRefresh); }
   if (!process.env.CI) { // The tutor sheet: the preview is the picker, with the selection kept in reach.
     await click(tab, "Preview custom references"); await ui(panel(tab).locator(".study-verses li").first()).toBeVisible();
     await click(tab, "Start at Genesis 1:1"); await safe(() => tab.getByRole("button", { name: "End at Genesis 1:2", exact: true }).scrollIntoViewIfNeeded());

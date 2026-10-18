@@ -167,10 +167,14 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await ui(tab.getByRole("button", { name: "Start", exact: true }), "First Tab after Refresh reaches Start").toBeFocused();
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
   await safe(() => tab.keyboard.press("Enter"));
-  await ui(tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }), "Enter opens practice from the focused Start button").toBeVisible();
+  const playback = tab.getByRole("region", { name: "Reading playback", exact: true });
+  await ui(playback, "Enter activates the inline first verse from the focused Start button").toContainText("Genesis 1:1");
+  await ui(playback.getByRole("status")).toHaveText("The recording couldn’t be loaded. Try again.");
+  await ui(playback.getByRole("button", { name: "Try again", exact: true })).toBeEnabled();
+  await ui(tab.getByRole("dialog")).toHaveCount(0);
   await safe(() => tab.keyboard.press("Escape"));
   await ui(tab.getByRole("dialog")).toHaveCount(0);
-  await ui(tab.getByRole("button", { name: "Start", exact: true }), "Closing practice restores focus to Start").toBeFocused();
+  await ui(tab.getByRole("button", { name: "Start", exact: true }), "Inline Start keeps its keyboard focus without requiring a dialog").toBeFocused();
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await capture(tab, "workspace-child-confirmed-reading");
   await tab.evaluate(() => { document.documentElement.style.fontSize = "200%"; });

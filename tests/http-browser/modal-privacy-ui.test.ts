@@ -52,19 +52,19 @@ beforeAll(async () => {
 }, 120_000);
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await browserEnv?.cleanup(); }, 120_000);
 
-it("conceals the sole departure modal during a held access check, then resumes the guarded editor and rightful unsent note without confirming", async () => {
+it("retains the sole rightful departure modal during a quiet check without confirming or losing its guarded editor and note", async () => {
   const tab = await page(), draft = "Synthetic same-authority modal privacy draft";
   let writes = 0; tab.on("request", request => { if (request.method() === "POST" && /\/(reading\/confirm|work\/note)$/.test(new URL(request.url()).pathname)) writes++; });
   await pendingDeparture(tab, draft);
-  let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
-  await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
+  let release!: () => void, held = false, delivered = 0; const gate = new Promise<void>(resolve => { release = resolve; });
+  await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered++; });
   try {
     await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
-    await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeVisible();
-    expect(await tab.evaluate(() => document.querySelectorAll("dialog:modal").length)).toBe(0);
-    await ui(departure(tab)).toBeHidden(); await ui(editor(tab)).toBeHidden();
+    await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
+    expect(await tab.evaluate(() => document.querySelectorAll("dialog:modal").length)).toBe(1);
+    await ui(departure(tab)).toBeVisible(); await ui(editor(tab)).toBeHidden(); expect(writes).toBe(0);
   } finally { release(); }
-  await ui(departure(tab)).toBeVisible(); await ui(editor(tab)).toBeHidden();
+  await ui.poll(() => delivered).toBeGreaterThanOrEqual(4); await ui(departure(tab)).toBeVisible(); await ui(editor(tab)).toBeHidden();
   expect(await tab.evaluate(() => document.querySelectorAll("dialog:modal").length)).toBe(1);
   await ui(tab.getByRole("button", { name: "Keep working", exact: true })).toBeFocused();
   // A real click proves the pending decision remains above the retained sheet.
@@ -73,8 +73,7 @@ it("conceals the sole departure modal during a held access check, then resumes t
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   await safe(() => tab.keyboard.press("Escape")); await ui(editor(tab)).toBeHidden();
   await ui(tab.getByRole("button", { name: "Change verses", exact: true })).toBeFocused();
-  // Revalidation remounts VerseTools with its default read-only draft stream;
-  // reselect the note stream before testing the coordinator's retained text.
+  // The retained note stream remains independently selectable after the guard.
   const notePanel = tab.locator(".verse-work").first();
   await safe(() => notePanel.getByRole("button", { name: "Student-visible notes", exact: true }).click());
   await ui(notePanel.getByRole("textbox")).toHaveValue(draft);

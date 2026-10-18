@@ -49,11 +49,12 @@ async function capture(tab: Page, name: string) {
   await safe(() => tab.screenshot({ path: join(directory, `${name}.png`), fullPage: true }));
 }
 async function focusChecked(tab: Page) {
-  let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
-  await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }); });
-  try { await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true); await ui(main(tab).getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeVisible(); await ui(tab.getByLabel("Recipient email", { exact: true })).toBeHidden(); }
+  let release!: () => void, held = false, delivered = 0; const gate = new Promise<void>(resolve => { release = resolve; });
+  const email = tab.getByLabel("Recipient email", { exact: true }), draft = await email.inputValue();
+  await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }); delivered++; });
+  try { await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true); await ui(main(tab).getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden(); await ui(email).toHaveValue(draft); }
   finally { release(); }
-  await ui(tab.getByLabel("Recipient email", { exact: true })).toBeVisible(); await tab.unroute("**/api/session");
+  await ui.poll(() => delivered).toBeGreaterThanOrEqual(2); await tab.unroute("**/api/session");
 }
 beforeAll(async () => {
   try { assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard(); fixture = await browserFixture({ failInvitationDelivery: () => failDelivery }); stop = await startBrowserServer(fixture.withRuntime); browser = await chromium.launch({ headless: true }); }
@@ -120,7 +121,9 @@ it("retains same-session drafts, invalidates changed student targets, requires f
   await ui(tab.getByLabel("Recipient email", { exact: true })).toHaveValue("synthetic-retained-draft@example.test"); await click(tab, "Review invitation");
   const [student] = await fixture.ownerDb.select().from(s.student).where(eq(s.student.id, fixture.student.id));
   await fixture.ownerDb.update(s.student).set({ revision: student.revision + 1, ceremonyDate: "2027-01-09" }).where(eq(s.student.id, student.id));
-  await focusChecked(tab); await ui(main(tab).getByRole("alert")).toContainText("changed since you reviewed this");
+  let targetPosts = 0; await tab.route("**/api/admin/invitations", async route => { if (route.request().method() === "POST") targetPosts++; await route.continue(); });
+  await focusChecked(tab); await ui(tab.getByRole("button", { name: "Send invitation", exact: true })).toBeEnabled();
+  await click(tab, "Send invitation"); await ui(main(tab).getByRole("alert")).toContainText("changed since you reviewed this"); expect(targetPosts).toBe(0); await tab.unroute("**/api/admin/invitations");
   expect(await tab.getByRole("button", { name: "Send invitation", exact: true }).count()).toBe(0);
   await click(tab, "Reload invitations"); await click(tab, "Review invitation");
   await fixture.ownerDb.update(s.session).set({ createdAt: new Date(Date.now() - 60 * 60_000) }).where(eq(s.session.userId, fixture.admin.id));

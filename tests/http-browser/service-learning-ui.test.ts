@@ -152,16 +152,17 @@ it("requires explicit draft disposal on controlled departure while allowing its 
   await ui(tab.getByRole("heading", { name: "Students", level: 1, exact: true })).toBeVisible();
 });
 
-it("retains staff choices through focus revalidation, clears its review, and expires a fresh review without saving", async () => {
+it("retains staff choices and an unchanged review through quiet validation, then expires a fresh review without saving", async () => {
   const tab = await page("admin"); await workspace(tab, "admin"); await click(tab, "Choose service parts");
   await safe(() => panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ }).check());
   await click(tab, "Prepare service review");
   await ui(panel(tab).getByRole("button", { name: "Confirm service plan", exact: true })).toBeEnabled();
   const before = (await api(tab, fixture.student.id, "?mode=admin")).data;
-  await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
+  let verified = 0; const count = (response: import("playwright").Response) => { if (new URL(response.url()).pathname === "/api/session" && response.status() === 200) verified++; }; tab.on("response", count);
+  try { await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => verified).toBeGreaterThanOrEqual(4); } finally { tab.off("response", count); }
   await ui(panel(tab).getByRole("button", { name: "Prepare service review", exact: true })).toBeEnabled();
   await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
-  expect(await panel(tab).getByRole("button", { name: "Confirm service plan", exact: true }).count()).toBe(0);
+  await ui(panel(tab).getByRole("button", { name: "Confirm service plan", exact: true })).toBeEnabled();
   expect((await api(tab, fixture.student.id, "?mode=admin")).data).toEqual(before);
   let confirmations = 0;
   await tab.route("**/service-plan/confirm", async route => { confirmations++; await route.continue(); });
@@ -264,7 +265,7 @@ async function capture(tab: Page, name: string) {
   await tab.setViewportSize({ width: 1440, height: 1000 });
 }
 
-it("suspends the reading sheet for a service decision and removes every modal during an access check before restoring the draft and focus", async () => {
+it("suspends the reading sheet for a service decision and retains only that rightful modal during quiet validation", async () => {
   const admin = await page("admin"); await assign(admin, fixture.student.id, [content.first]);
   const tab = await page("tutor"); await workspace(tab, "tutor");
   await click(tab, "Choose service parts"); await safe(() => panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ }).check());
@@ -279,14 +280,14 @@ it("suspends the reading sheet for a service decision and removes every modal du
   await click(tab, "Confirm assigned reading"); await ui(prompt).toBeVisible();
   const snapshot = () => tab.evaluate(() => ({ modals: document.querySelectorAll("dialog:modal").length, service: Boolean(document.querySelector(".service-learning-panel dialog:modal")), sheet: Boolean(document.querySelector("dialog.editor-sheet:modal")) }));
   const phases = [await snapshot()];
-  let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
-  await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
+  let release!: () => void, held = false, delivered = 0; const gate = new Promise<void>(resolve => { release = resolve; });
+  await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered++; });
   try {
     await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
-    await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeVisible(); phases.push(await snapshot());
+    await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); await ui(prompt).toBeVisible(); expect(writes).toBe(0); phases.push(await snapshot());
   } finally { release(); }
-  await ui(prompt).toBeVisible(); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); phases.push(await snapshot());
-  expect(phases).toEqual([{ modals: 1, service: true, sheet: false }, { modals: 0, service: false, sheet: false }, { modals: 1, service: true, sheet: false }]);
+  await ui.poll(() => delivered).toBeGreaterThanOrEqual(4); await ui(prompt).toBeVisible(); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); phases.push(await snapshot());
+  expect(phases).toEqual([{ modals: 1, service: true, sheet: false }, { modals: 1, service: true, sheet: false }, { modals: 1, service: true, sheet: false }]);
   await ui(tab.getByRole("button", { name: "Keep editing service parts", exact: true })).toBeFocused();
   await safe(() => tab.keyboard.press("Escape")); await ui(prompt).toBeHidden(); await ui(sheet).toBeVisible();
   expect(await snapshot()).toEqual({ modals: 1, service: false, sheet: true });
@@ -299,7 +300,7 @@ it("suspends the reading sheet for a service decision and removes every modal du
   await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked(); expect(writes).toBe(0);
   await tab.unroute("**/api/session");
   // A real native close must settle this idle decision as cancellation, while
-  // the conceal-driven close above must preserve the pending decision.
+  // the quiet validation above must preserve the pending decision.
   await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click()); await click(tab, "Haftarah text"); await ui(prompt).toBeVisible();
   await safe(() => prompt.evaluate(node => (node as HTMLDialogElement).close())); await ui(prompt).toBeHidden();
   expect(await snapshot()).toEqual({ modals: 0, service: false, sheet: false });

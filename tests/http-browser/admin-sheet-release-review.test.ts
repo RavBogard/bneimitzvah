@@ -35,9 +35,9 @@ async function page(kind: Kind) {
   await safe(() => tab.goto(path, { waitUntil: "domcontentloaded" })); return tab;
 }
 async function holdSession(tab: Page) {
-  let release!: () => void, held = false, status = 0; const gate = new Promise<void>(resolve => { release = resolve; });
-  await tab.route("**/api/session", async route => { const response = await route.fetch(); status = response.status(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
-  return { release, status: () => status, ready: () => ui.poll(() => held).toBe(true), remove: () => tab.unroute("**/api/session") };
+  let release!: () => void, held = false, status = 0, delivered = 0; const gate = new Promise<void>(resolve => { release = resolve; });
+  await tab.route("**/api/session", async route => { const response = await route.fetch(); status = response.status(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered++; });
+  return { release, status: () => status, ready: () => ui.poll(() => held).toBe(true), completed: () => ui.poll(() => delivered).toBeGreaterThanOrEqual(2), remove: () => tab.unroute("**/api/session") };
 }
 async function open(tab: Page, kind: Kind, after = false) {
   if (kind === "roster") {
@@ -76,13 +76,12 @@ for (const kind of ["roster", "access", "invitation"] as const) it(`admin ${kind
   const session = await holdSession(tab);
   try {
     await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await session.ready(); expect(session.status()).toBe(200);
-    await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeVisible(); expect(await modalCount(tab)).toBe(0); await ui(dialog(tab)).toBeHidden();
+    await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden(); expect(await modalCount(tab)).toBe(1); await ui(dialog(tab)).toBeVisible(); await verifyRetained(tab, kind); expect(observedPosts).toBe(0);
   } finally { session.release(); }
-  await ui(dialog(tab)).toBeVisible(); expect(await modalCount(tab)).toBe(1); await verifyRetained(tab, kind); await session.remove();
-  // Access reload unmounts its old row button, so its documented fallback is
-  // the page heading; the persistent Add/Review openers regain focus directly.
+  await session.completed(); await ui(dialog(tab)).toBeVisible(); expect(await modalCount(tab)).toBe(1); await verifyRetained(tab, kind); await session.remove();
+  // Quiet validation retains the rightful opener instead of reloading its row.
   await safe(() => tab.keyboard.press("Escape")); await ui(dialog(tab)).toBeHidden(); expect(await modalCount(tab)).toBe(0);
-  const opener = kind === "roster" ? tab.getByRole("button", { name: "Add student", exact: true }) : kind === "access" ? tab.getByRole("heading", { name: "Tutors", level: 1, exact: true }) : tab.getByRole("button", { name: "Review invitation", exact: true });
+  const opener = kind === "roster" ? tab.getByRole("button", { name: "Add student", exact: true }) : kind === "access" ? tab.getByRole("button", { name: /^Mark as cantor / }) : tab.getByRole("button", { name: "Review invitation", exact: true });
   await ui(opener).toBeFocused(); expect(observedPosts).toBe(0); await open(tab, kind);
 
   const pattern = BROWSER_ORIGIN + mutationPath; let release!: () => void, held = false, posts = 0, responseStatus = 0; const gate = new Promise<void>(resolve => { release = resolve; });
@@ -120,7 +119,8 @@ for (const kind of ["roster", "access", "invitation"] as const) it(`admin ${kind
   const denied = await holdSession(tab);
   try {
     await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await denied.ready(); expect(denied.status()).toBe(401);
-    expect(await modalCount(tab)).toBe(0); await ui(dialog(tab)).toBeHidden();
+    // The held401 is not yet known to the client; actual delivery below clears it.
+    expect(await modalCount(tab)).toBe(1); await ui(dialog(tab)).toBeVisible();
   } finally { denied.release(); }
   await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible();
   expect(await modalCount(tab)).toBe(0); expect(await tab.locator("dialog").count()).toBe(0);
