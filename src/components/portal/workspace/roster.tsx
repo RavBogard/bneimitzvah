@@ -16,11 +16,13 @@ const searchable = (value: string) => value.normalize("NFKD").replace(/\p{M}/gu,
 const PAGE = 25;
 export function AdminWorkspace() { return <RequireRole role="admin"><Roster /></RequireRole>; }
 function Roster() {
-  const { registerReload } = useWorkspace();
+  const { registerReload, registerDeparture } = useWorkspace();
   const [rows, setRows] = useState<RosterStudent[]>([]), [loading, setLoading] = useState(true), [unavailable, setUnavailable] = useState(false);
   const [current, setCurrent] = useState<RosterStudent | null>(null), [form, setForm] = useState<StudentInput>(empty), [editing, setEditing] = useState(false);
   const [pending, setPending] = useState(false), [message, setMessage] = useState(""), [conflict, setConflict] = useState(false), [confirmDisable, setConfirmDisable] = useState(false), [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
+  // Closing a changed form asks Keep editing / Discard changes, like lesson notes and honors.
+  const [discarding, setDiscarding] = useState(false), departure = useRef<((leave: boolean) => void) | null>(null), keepEditing = useRef<HTMLButtonElement>(null);
   const [honorsStudent, setHonorsStudent] = useState<RosterStudent | null>(null), honorsOrigin = useRef<HTMLButtonElement | null>(null);
   const gate = useRef(false), turn = useRef(0), abort = useRef<AbortController | null>(null), formHeading = useRef<HTMLHeadingElement>(null);
   const sheet = useRef<HTMLDialogElement>(null), origin = useRef<HTMLElement | null>(null), addButton = useRef<HTMLButtonElement>(null);
@@ -49,7 +51,9 @@ function Roster() {
   useEffect(() => { void load().catch(() => undefined); return () => { lifetime.current++; turn.current++; abort.current?.abort(); }; }, [load]);
   // Adding and editing happen in a sheet over the list. It leaves the top layer during access checks and comes back with the draft.
   const sheetOpen = editing && !loading && !unavailable, sheetShown = useWorkspaceModal(sheet, sheetOpen);
-  const shown = useRef({ sheetShown, pending }); shown.current = { sheetShown, pending };
+  // An attempted save with an unclear outcome is not an unsaved draft: its message stays on the list instead.
+  const dirty = editing && !current?.disabledAt && !conflict && JSON.stringify(form) !== JSON.stringify(current ? draft(current) : empty);
+  const shown = useRef({ sheetShown, pending, dirty }); shown.current = { sheetShown, pending, dirty };
   // Focus starts on the heading; after an access check hides and returns the sheet, it goes back to the field the admin was in.
   // showModal focuses the close button first, so only focus after the sheet has settled is remembered.
   const lastFocus = useRef<HTMLElement | null>(null), settled = useRef(false);
@@ -70,9 +74,23 @@ function Roster() {
     document.addEventListener("keydown", block, true); return () => document.removeEventListener("keydown", block, true);
   }, [pending]);
   // An unresolved outcome (conflict or unclear save) stays on the list after the sheet closes, and blocks new edits until a reload.
-  function closeEditor() { if (gate.current) return; setEditing(false); setCurrent(null); setForm(empty); setConfirmDisable(false); }
+  function closeEditor() { if (gate.current) return; setEditing(false); setCurrent(null); setForm(empty); setConfirmDisable(false); setDiscarding(false); departure.current?.(true); departure.current = null; }
+  function requestClose() { if (gate.current) return; if (shown.current.dirty) setDiscarding(true); else closeEditor(); }
+  function keep() { setDiscarding(false); departure.current?.(false); departure.current = null; }
+  useLayoutEffect(() => { if (discarding) keepEditing.current?.focus(); }, [discarding]);
+  // Controlled navigation away from a changed student form asks first.
+  useLayoutEffect(() => registerDeparture(async () => {
+    if (!shown.current.dirty) return true;
+    if (departure.current) return false;
+    setDiscarding(true); return new Promise<boolean>(resolve => { departure.current = resolve; });
+  }), [registerDeparture]);
+  useEffect(() => {
+    if (!dirty) return;
+    const unload = (event: BeforeUnloadEvent) => { if (shown.current.dirty) { event.preventDefault(); event.returnValue = ""; } };
+    window.addEventListener("beforeunload", unload); return () => window.removeEventListener("beforeunload", unload);
+  }, [dirty]);
   // A second Escape can close a dialog without a cancel event. Bring state back in line.
-  function sheetClosed() { const now = shown.current; if (!now.sheetShown) return; if (now.pending || gate.current) sheet.current?.showModal(); else closeEditor(); }
+  function sheetClosed() { const now = shown.current; if (!now.sheetShown) return; if (now.pending || gate.current) sheet.current?.showModal(); else if (now.dirty) { sheet.current?.showModal(); setDiscarding(true); } else closeEditor(); }
   function choose(row: RosterStudent | null, event: { currentTarget: HTMLElement }) {
     if (conflict) return;
     origin.current = event.currentTarget; lastFocus.current = null;
@@ -134,10 +152,12 @@ function Roster() {
           : !matches.length && <div className="admin-empty"><p className="admin-empty-title">No student matches “<bdi dir="auto">{query.trim()}</bdi>”</p><p>Check the spelling, or search by first or last name.</p></div>}
         {pageCount > 1 && <nav className="roster-pages" aria-label="Roster pages"><button className="button-secondary admin-pill" disabled={pending || page === 0} onClick={() => setPage(value => value - 1)}>Previous page</button><button className="button-secondary admin-pill" disabled={pending || page + 1 >= pageCount} onClick={() => setPage(value => value + 1)}>Next page</button></nav>}
       </>}
-    <dialog ref={sheet} className="roster-sheet" aria-labelledby="roster-editor-title" onFocus={event => { const node = event.target as HTMLElement; if (settled.current && node !== formHeading.current) lastFocus.current = node; }} closedby={pending ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); if (!pending) closeEditor(); }} onClose={sheetClosed}>
-      <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close student details" disabled={pending} onClick={closeEditor}>{icons.close}</button></div>
+    <dialog ref={sheet} className="roster-sheet" aria-labelledby="roster-editor-title" onFocus={event => { const node = event.target as HTMLElement; if (settled.current && node !== formHeading.current) lastFocus.current = node; }} closedby={pending ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); if (!pending) requestClose(); }} onClose={sheetClosed}>
+      <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close student details" disabled={pending} onClick={requestClose}>{icons.close}</button></div>
       {sheetOpen && <section className="roster-editor" aria-labelledby="roster-editor-title">
         <h2 id="roster-editor-title" tabIndex={-1} ref={formHeading}>{current ? <bdi dir="auto">{fullName(current)}</bdi> : "Add a student"}</h2>
+        {discarding && <div className="roster-discard" role="group" aria-labelledby="roster-discard-question"><p id="roster-discard-question"><strong>Discard your changes?</strong> They haven’t been saved.</p>
+          <div className="form-actions"><button ref={keepEditing} type="button" className="button-primary admin-pill" onClick={keep}>Keep editing</button><button type="button" className="button-secondary admin-pill" onClick={closeEditor}>Discard changes</button></div></div>}
         {notice}{conflict && <button type="button" className="button-secondary admin-pill roster-reload-inline" disabled={pending} onClick={() => void load().catch(() => undefined)}>Reload roster</button>}
         {current?.disabledAt ? <><p>This student is disabled. Their record is kept for reference; editing and reactivation aren’t offered here.</p><dl className="invitation-details"><div><dt>Parent contact</dt><dd><bdi dir="auto">{current.parentEmail ?? "Not supplied"}</bdi></dd></div>{current.ownEmail && <div><dt>Student contact</dt><dd><bdi dir="auto">{current.ownEmail}</bdi></dd></div>}</dl></>
           : <form onSubmit={submit} className="roster-form">
@@ -146,7 +166,7 @@ function Roster() {
             <div className="roster-form-grid">{input("ceremonyDate")}<div className="roster-field"><label htmlFor="roster-serviceSlot">Service slot</label><select id="roster-serviceSlot" value={form.serviceSlot} disabled={pending || conflict} onChange={event => setForm(previous => ({ ...previous, serviceSlot: event.target.value as StudentInput["serviceSlot"] }))}><option value="unknown">Not set yet</option><option value="morning">Morning (10:00)</option><option value="havdalah">Havdalah / afternoon (4:00)</option></select></div></div>
             <div className="roster-form-grid">{form.studentKind === "child" ? <>{input("parentEmail")}{input("ownEmail")}</> : <>{input("ownEmail")}{input("parentEmail")}</>}</div>
             <p className="field-help">{form.studentKind === "child" ? "Children need a parent email." : "Adults need their own email."} Saving doesn’t send an invitation or change who can sign in; use People for that.{current ? " Changing the date or service keeps the verses and marks both readings for review." : ""}</p>
-            <div className="form-actions"><button className="button-primary admin-pill" disabled={pending || conflict}>{pending ? "Saving…" : "Save student"}</button><button type="button" className="button-secondary admin-pill" disabled={pending} onClick={closeEditor}>Cancel</button></div>
+            <div className="form-actions"><button className="button-primary admin-pill" disabled={pending || conflict}>{pending ? "Saving…" : "Save student"}</button><button type="button" className="button-secondary admin-pill" disabled={pending} onClick={requestClose}>Cancel</button></div>
           </form>}
         {current && !current.disabledAt && <div className="disable-student"><h3>Disable this student</h3><p>Stops access to their practice. Their record and history are kept.</p>
           {!confirmDisable ? <button className="button-secondary admin-pill" disabled={pending || conflict} onClick={() => setConfirmDisable(true)}>Disable student</button>

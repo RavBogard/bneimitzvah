@@ -80,7 +80,10 @@ for (const kind of ["roster", "access", "invitation"] as const) it(`admin ${kind
   } finally { session.release(); }
   await session.completed(); await ui(dialog(tab)).toBeVisible(); expect(await modalCount(tab)).toBe(1); await verifyRetained(tab, kind); await session.remove();
   // Quiet validation retains the rightful opener instead of reloading its row.
-  await safe(() => tab.keyboard.press("Escape")); await ui(dialog(tab)).toBeHidden(); expect(await modalCount(tab)).toBe(0);
+  await safe(() => tab.keyboard.press("Escape"));
+  // A retained roster draft asks before it is discarded; the other sheets close directly.
+  if (kind === "roster") await safe(() => dialog(tab).getByRole("button", { name: "Discard changes", exact: true }).click());
+  await ui(dialog(tab)).toBeHidden(); expect(await modalCount(tab)).toBe(0);
   const opener = kind === "roster" ? tab.getByRole("button", { name: "Add student", exact: true }) : kind === "access" ? tab.getByRole("button", { name: /^Mark as cantor / }) : tab.getByRole("button", { name: "Review invitation", exact: true });
   await ui(opener).toBeFocused(); expect(observedPosts).toBe(0); await open(tab, kind);
 
