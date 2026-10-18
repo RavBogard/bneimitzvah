@@ -1,6 +1,12 @@
 # Honoree database release preparation — 2026-10-18
 
-## Material activation remains held after the separate local test
+## Material activation accepted
+
+Application checkpoint `84400a2cac0b3cda42148dd9a25d40efeda2daca` passes all four hosted jobs39138907656 and is READY on the canonical domain. The refreshed actual five owner and three restricted-role loader cases passed with zero failures, pending or skipped tests and verified complete cleanup. The wrapper's original exit1 is preserved: Vitest wrote its JSON report to a file and printed a banner; the wrapper expected stdout JSON. Independent review reconciled the exact private report hash, unique suite, timestamps and pinned reporter behavior with the original child exit0 and cleanup evidence. This accepts the actual eight assertions, not the failed wrapper status.
+
+The separate default owner production check returned complete/checked. Explicit apply then returned complete/activated with acknowledged COMMIT and successful same-connection verification. Exactly two approved slot rows were added; all other data, roles and catalog were preserved. Actual PostgreSQL18 direct verified TLS and required SCRAM channel binding passed. No schema migration, source import, real link, invitation or mail accompanied activation. Runtime approval INSERT remains denied. Private evidence is retained in the v5 owner production-check/apply projections and native reconciliation review; never retry an unknown COMMIT or replay0023.
+
+## Earlier material preparation — failed diagnostic retained
 
 The disposable material-approval diagnostic acknowledged COMMIT, then failed verification/cleanup after 94.260 seconds. The owned fixture databases and roles were removed, the exact cluster was stopped and removed, and source/tool and port checks passed. Production was not contacted. This is distinct from the successful schema release below; do not replay0023 or treat the diagnostic as material acceptance.
 

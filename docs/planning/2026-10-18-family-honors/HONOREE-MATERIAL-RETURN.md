@@ -1,5 +1,7 @@
 # Approved honoree booklet material checkpoint
 
+**Activation update, 2026-10-18:** the separately reviewed owner operator has now committed and verified the two approved slot rows in production after actual five-owner/three-loader acceptance. [Release return](./HONOREE-RELEASE-RETURN.md) records the reconciled reporter-format failure, complete cleanup and production check/apply. No real link, invitation or mail was created. The paragraphs below describe the earlier projector checkpoint; its narrower permission, lossless content and runtime authorization boundaries remain unchanged.
+
 The server can project CRC's approved before/after Torah blessings, including English and required credits, into the existing private honoree response. Daniel's permission is recorded in MISSION and the [material design](../../superpowers/specs/2026-10-18-approved-honoree-material-design.md). This checkpoint does not activate material, issue invitations or links, publish the booklet, or share audio.
 
 The projector consumes every selected source block exactly once, preserves multiline Hebrew, excludes transliteration and unrelated units, and rejects unsupported content. The loader verifies the existing immutable catalog and source pins inside the already-authorized RLS transaction. Existing release, digest, credit, revocation and final-response expiry checks remain in force. No guest UI or schema change is included.
