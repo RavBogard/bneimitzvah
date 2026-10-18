@@ -10,17 +10,19 @@ import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
 import * as s from "../../src/server/db/index";
+import { installReadingRouteGuard } from "./reading-route-guard";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
 let browserEnv:Awaited<ReturnType<typeof isolatedEnv>>|undefined;
 const contexts: BrowserContext[] = [];
+const routeGuards = new Map<BrowserContext, Awaited<ReturnType<typeof installReadingRouteGuard>>>();
 const cookies = new Map<"admin" | "tutor", Awaited<ReturnType<BrowserContext["cookies"]>>>();
 async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Reading UI browser operation failed; private details withheld"); } }
 async function navigate(tab: Page, path: string) { await safe(() => tab.goto(path, { waitUntil: "domcontentloaded", timeout: 30_000 })); }
 async function page(role: "admin" | "tutor", mobile = false) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 } }); contexts.push(context);
-  await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
+  routeGuards.set(context, await installReadingRouteGuard(context, BROWSER_ORIGIN));
   const signedIn = cookies.get(role); if (signedIn) await context.addCookies(signedIn);
   const tab = await context.newPage(); await navigate(tab, "/");
   if (signedIn) return tab;
@@ -62,7 +64,11 @@ beforeAll(async () => {
   try { assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard(); fixture = await browserFixture({ emptyReadingDate: "2027-01-09" }); await fixture.ownerDb.update(s.student).set({serviceSlot:"morning"}).where(eq(s.student.id,fixture.student.id)); stop = await startBrowserServer(fixture.withRuntime); browserEnv=await isolatedEnv(); browser = await chromium.launch({ headless: true, env:browserEnv.env }); }
   catch { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await browserEnv?.cleanup(); throw new Error("Reading UI setup failed; private details withheld"); }
 }, 120_000);
-afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await browserEnv?.cleanup(); }, 120_000);
+afterAll(async () => {
+  const closed = await Promise.allSettled(contexts.map(context => routeGuards.get(context)?.close() ?? context.close()));
+  await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await browserEnv?.cleanup();
+  if (closed.some(result => result.status === "rejected")) throw new Error("Reading UI route/context cleanup failed; private details withheld");
+}, 120_000);
 
 it("lets an admin review actual calendar choices, confirm once and replace only after authoritative reload", async () => {
   const tab = await page("admin"); await navigate(tab, "/workspace/admin/students");
