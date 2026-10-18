@@ -1,0 +1,27 @@
+# Inline source reading — return point
+
+## Current checkpoint
+
+The reader is accepted locally on `codex/source-reader-ui`, following the [accepted design](../../superpowers/specs/2026-10-18-inline-source-reading-design.md). It is not part of deployed709a032. Author functional freeze covers11 files, manifest SHA256 `7e74c3a2300f4a3a8b91b143e9a7a8b1f4c253abd79a773c7a851a7fd180ea75`. Functional and bounded visual reviews pass; final staged protection, exact hosted checks and deployment are the remaining release steps.
+
+Every authorized reader can open an actual assigned or related citation and explicitly choose an eligible edition. The reader lives inside the existing Sources disclosure, independent of staff checkboxes, save state and original pending intent. It never assigns a citation, chooses a default edition, starts audio or fetches source metadata on tab return. Known source-head/catalog resets and actual authority/reading changes invalidate its captured state; unchanged quiet checks retain text and scroll.
+
+The client validates the closed original reading/source envelope, complete edition paging, actual versus legacy language and exact text/provenance. Complete responses and scalar text have separate byte caps. A45-second action budget includes original-session checks; new endpoint transport is bounded at30 seconds with5-second body idle. Existing client limits remain unchanged. Only an exact authorized `source-not-found`404 is local; other404s, including malformed/truncated denial responses, retain authority handling. The server's narrow new distinction preserves final authorization precedence and does not change source-write or receipt behavior.
+
+## Functional verification
+
+- Author67 focused checks and TypeScript pass, with a separate final nine-case budget confirmation. Initial author signal-controller/type mistakes and a UTF8 fixture correction were repaired and retained. Prefreeze independent review also caught duplicate edition-selector pairs and malformed404 normalization; both were corrected before acceptance.
+- Independent client/lifetime15/15 and plain TypeScript pass. Root's unchanged backend adversarial24/24 and normal production build pass on the new local404 distinction.
+- First disposable browser window passed unchanged Sources7 but the new six cases stopped at setup401: the test seeded runtime state using a cookie from a different fixture SDK secret. The reviewer changed only the owned setup to obtain the actual runtime cookie and seed through real HTTP. The corrected new6/6 then passed, covering all five read modes, both lanes, zero reading mutations, quiet DOM/scroll with no source GET, staff draft/local absence, known head/catalog resets, exact uncertain-intent retry, actual guardian revocation/late response and post-request session expiry. No old assertion was weakened. Both windows were stopped and removed; fixture listeners are absent.
+
+## Bounded visual review
+
+The single detector run over four changed UI targets returned zero primary findings and five advisory local font-size findings. It has not been rerun, and the global design system remains unchanged.
+
+The first12-image synthetic packet passed mechanical checks but failed root's visual validity check. Five images labeled Hebrew contained mostly English filler with a small Hebrew token. Three overlapping detail captures also included an offscreen skip link because of capture positioning. No UI verdict followed. Exactly six affected images were replaced with genuinely invented Hebrew and corrected document clipping; originals and their manifest are preserved. The other six images retain their original hashes. An initial correction attempt failed before replacing images; the bounded retry passed. No product or CSS change was part of this evidence correction.
+
+Root validated only the six replacements, then a fresh Sol6.1 finish reviewer read the complete corrected12-image packet and returned **ship**, with no material fixes. Packet manifest SHA256 is `42b54a397073b7f980fc38446e81885c91cc4e7591fc712462888d8e0d02cbbc`; the private finish report SHA256 is `6b4955280bb6d2a0692dc4cb7a4cb73ae96cf757daae10c914eb07d41dc6202e`. A fresh Sol substitute was used because the named Impeccable role is unavailable. The inherited design contract and world remain unchanged; absent separate comp/quality-bar inputs were identified rather than invented. This verdict covers the bounded visual region, not authorization or production readiness. The independent functional report was amended to retract the original packet's validity claim.
+
+## Next action and limits
+
+The fresh Sol documenter substitute updated only the incumbent workspace inventory; global design files and historical rules remain unchanged. Save a reviewed checkpoint, run final staged protection and exact Windows/Linux, PostgreSQL and browser CI, then deploy the exact accepted commit. No migration needs replaying. The current parser still holds parent/range/named-node sources and broader rights profiles rather than guessing or truncating them. A separate independently reviewed extent design is planning only. Synthetic source data, browser automation and a standalone earlier parser probe do not establish full commentary coverage, linguistic acceptance or iOS hardware behavior. Reference listening acceptance remains separately pending; generated voices and student recordings are parked.

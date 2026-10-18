@@ -74,3 +74,12 @@ test("absolute per-call deadline fences synchronous returns in every public stag
  time=0;const service=f.build({content:vi.fn(async()=>{await f.owner(()=>f.db.update(s.session).set({expiresAt:new Date(0)}).where(eq(s.session.id,f.identities.admin.sessionId)));time=10001;return body();})});
  await expect(service.text(f.readRequest(),f.selection,f.intent)).rejects.toMatchObject({status:401});
 });
+
+test("authorized absent sources are local404 while genuine scope denial retains its fixed authority envelope",async()=>{
+ const f=await fixture();const missing={...f.intent,sourceId:"absent"};expect(await f.service.text(f.readRequest(),f.selection,missing)).toEqual({ok:false,error:"source-not-found"});
+ await f.assign();const {sourceCatalogHash,...rest}=missing;expect(await f.service.text(f.readRequest(),f.selection,{...rest,sourceScope:"assigned",expectedSetVersion:1})).toEqual({ok:false,error:"source-not-found"});
+ const dispatch=createHttpDispatcher(async action=>action({...f.runtime,sourceContent:f.service})),path=`/api/students/${f.selection.studentId}/source-text`,query=new URLSearchParams(Object.entries({...f.selection,...missing}).filter(([k])=>k!=="studentId").map(([k,v])=>[k,String(v)]));
+ const local=await dispatch(f.request(`${path}?${query}`,{who:"admin"}));expect(local.status).toBe(404);expect(await local.json()).toEqual({ok:false,error:"source-not-found"});
+ const stale=f.build({related:vi.fn(async()=>{await f.owner(()=>f.db.update(s.student).set({revision:sql`${s.student.revision}+1`}).where(eq(s.student.id,f.selection.studentId)));return await f.loaders.related();})});expect(await stale.text(f.readRequest(),f.selection,missing)).toEqual({ok:false,error:"stale-revision"});
+ const deny=f.build({related:vi.fn(async()=>{await f.owner(()=>f.db.update(s.session).set({expiresAt:new Date(0)}).where(eq(s.session.id,f.identities.admin.sessionId)));return await f.loaders.related();})});await expect(deny.text(f.readRequest(),f.selection,missing)).rejects.toMatchObject({status:401});
+});

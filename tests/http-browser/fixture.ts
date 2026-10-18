@@ -1,7 +1,8 @@
 import { createSourceContentService } from "../../src/server/study/source-content-service";
 import { createSourceAssignmentsService } from "../../src/server/study/source-assignments-service";
 import { createStudySourceDiscoveryService } from "../../src/server/study/source-discovery-service";
-import { parseRelatedMetadata, type RelatedSourceCatalog } from "../../src/server/study/sources/metadata";
+import { parseRelatedMetadata, type RelatedSourceCatalog, type SourceEditionCatalog } from "../../src/server/study/sources/metadata";
+import type { ContentSelection } from "../../src/server/study/sources/content";
 import { randomBytes } from "node:crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { createAuthStack } from "../../src/server/auth/factory";
@@ -40,7 +41,7 @@ import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
 const secret = () => randomBytes(48).toString("base64url");
 type Mail = { email: string; url: string };
 
-export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog> } = {}) {
+export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown> } = {}) {
   const base = await postgresAccessFixture();
   try {
     // The shared disposable fixture creates the DB, migrations and restricted
@@ -65,7 +66,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     const runtime: HttpRuntime = { origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, readingPreview, progress: createProgressService({ access, practice }), lessonLog: createLessonLogService({ access, practice }), practiceCalendar: createPracticeCalendarService({ access, practice }), recordings: createStudentRecordingService({ access, practice }), portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
       referenceAudio: createReferenceAudioService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), loadCatalog: options.referenceCatalogLoad ?? (async () => { throw new ReferenceUnavailable(); }), studentRelease: options.referenceStudentRelease === true }),
       studyWordAids: createStudyWordAidsService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }),
-      sourceContent: createSourceContentService({ access, practice, related: async () => { throw new Error("Source content unavailable"); }, editions: async () => { throw new Error("Source content unavailable"); }, content: async () => { throw new Error("Source content unavailable"); } }),
+      sourceContent: createSourceContentService({ access, practice, related: options.relatedReader ?? (async () => { throw new Error("Source content unavailable"); }), editions: options.sourceEditionReader ?? (async () => { throw new Error("Source content unavailable"); }), content: options.sourceContentReader ?? (async () => { throw new Error("Source content unavailable"); }) }),
       sourceAssignments: createSourceAssignmentsService({ access, practice, related: options.relatedReader ?? (async ref => parseRelatedMetadata([], ref)) }),
       studySources: createStudySourceDiscoveryService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), related: options.relatedReader ?? (async ref => parseRelatedMetadata([], ref)) }),
       studyWordDetails: createStudyWordDetailsService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), source: options.wordDetailsSource ?? { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) } }),

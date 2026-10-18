@@ -1,11 +1,14 @@
 "use client";
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { Assigned } from "../../api";
 import { useWorkspace } from "../../provider";
 import type { StudyKind } from "../api";
 import type { SourceAssignmentClient, SourceCitation } from "./api";
 import { createSourceSelection, type SourceDeparture, type SourceSelectionState } from "./selection";
 import { SourceDepartureReview } from "./departure-review";
+import { createSourceContentOwner, type SourceContentOwner, type SourceContentState } from "./content-owner";
+import { SourceContentReader } from "./content-reader";
+import type { SourceContentTarget } from "./content-api";
 import styles from "./panel.module.css";
 
 /** Small navigation adapter; abandoning a request never claims cancellation or rollback. */
@@ -42,8 +45,12 @@ function Citation({ value }: { value: SourceCitation }) {
   return <span className={styles.citation}><span className={styles.title}>{value.labels.en ?? value.indexTitle}{value.labels.he && <bdi lang="he" dir="rtl">{value.labels.he}</bdi>}</span><bdi className={styles.ref} dir="auto">{value.ref}</bdi><span className={styles.category}>{value.category}</span></span>;
 }
 export function SourcesPanel({ scopeKey, baseline, kind, offset, onRefreshReading }: { scopeKey: string; baseline: Assigned; kind: StudyKind; offset: number; onRefreshReading(): Promise<unknown> }) {
-  const { createSources, registerDeparture, registerWork, guardDeparture } = useWorkspace(), id = useId();
+  const { createSources, createSourceContent, registerDeparture, registerWork, guardDeparture } = useWorkspace(), id = useId();
   const lifetime = useRef<SourcePanelLifetime | null>(null), labels = useRef(new Map<string, SourceCitation>()), catalog = useRef<string | null>(null);
+  type Reader = { target: SourceContentTarget; owner: SourceContentOwner; state: SourceContentState; unregister(): void; origin: HTMLButtonElement };
+  const reader = useRef<Reader | null>(null), [reading, setReading] = useState<Reader | null>(null);
+  const clearReader = useCallback(() => { const previous = reader.current; reader.current = null; previous?.owner.dispose(); previous?.unregister(); setReading(null); }, []);
+  useLayoutEffect(() => clearReader, [clearReader]);
   const [state, setState] = useState<SourceSelectionState | null>(null), [review, setReview] = useState<SourceDeparture | null>(null), [unavailable, setUnavailable] = useState(false);
   useLayoutEffect(() => {
     let active = true; labels.current.clear(); catalog.current = null; setState(null); setReview(null); setUnavailable(false);
@@ -51,6 +58,9 @@ export function SourcesPanel({ scopeKey, baseline, kind, offset, onRefreshReadin
     try { api = createSources(baseline, kind, offset); } catch { setUnavailable(true); return; }
     const current = createSourcePanelLifetime({ scopeKey, api, onReview: value => { if (active) setReview(value); }, onState: value => {
       if (!active) return;
+      const target = reader.current?.target;
+      if (target && (!value.open || value.phase === "disposed" || target.sourceScope === "assigned" && (!value.current || value.current.currentVersion !== target.expectedSetVersion || !value.current.citations.some(source => JSON.stringify(source) === JSON.stringify(target.source)))
+        || target.sourceScope === "related" && (value.catalogChanged || !value.page || value.page.catalogHash !== target.sourceCatalogHash))) clearReader();
       if (value.page && value.page.catalogHash !== catalog.current) { labels.current.clear(); catalog.current = value.page.catalogHash; }
       for (const entry of value.page?.entries ?? []) labels.current.set(entry.id, entry);
       for (const entry of value.current?.citations ?? []) labels.current.set(entry.id, entry);
@@ -59,10 +69,10 @@ export function SourcesPanel({ scopeKey, baseline, kind, offset, onRefreshReadin
     } });
     lifetime.current = current; setState(current.owner.state);
     const removeDeparture = registerDeparture(current.guard, "sources"), removeWork = registerWork(current);
-    return () => { active = false; current.dispose(); removeDeparture(); removeWork(); if (lifetime.current === current) lifetime.current = null; labels.current.clear(); };
+    return () => { active = false; clearReader(); current.dispose(); removeDeparture(); removeWork(); if (lifetime.current === current) lifetime.current = null; labels.current.clear(); };
     // baseline is captured by the owner identified by the complete parent scope key.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scopeKey, createSources, registerDeparture, registerWork]);
+  }, [scopeKey, createSources, registerDeparture, registerWork, clearReader]);
   const current = state?.scopeKey === scopeKey ? state : null, open = current?.open ?? false;
   const needsDeparture = Boolean(current?.dirty || current?.pending);
   useEffect(() => {
@@ -80,6 +90,25 @@ export function SourcesPanel({ scopeKey, baseline, kind, offset, onRefreshReadin
     if (session.owner.state.phase === "disposed") session.reset();
     await session.owner.discardAndReload();
   }
+  function readCitation(citation: SourceCitation, origin: HTMLButtonElement) {
+    const session = lifetime.current, selected = session?.owner.state;
+    if (!session || !selected?.open) return;
+    const assigned = selected.current?.citations.find(source => source.id === citation.id);
+    let target: SourceContentTarget;
+    if (assigned && selected.current!.currentVersion > 0) target = { source: assigned, sourceScope: "assigned", expectedSetVersion: selected.current!.currentVersion };
+    else {
+      if (selected.catalogChanged || !selected.page || selected.page.catalogHash !== catalog.current || JSON.stringify(labels.current.get(citation.id)) !== JSON.stringify(citation)) return;
+      target = { source: citation, sourceScope: "related", sourceCatalogHash: selected.page.catalogHash };
+    }
+    clearReader();
+    let client: ReturnType<typeof createSourceContent>;
+    try { client = createSourceContent(baseline, kind, offset, target); } catch { return; }
+    let next!: Reader;
+    const owner = createSourceContentOwner({ api: client, onChange: value => { if (reader.current === next) { next.state = value; setReading({ ...next }); } } });
+    next = { target, owner, state: owner.state, origin, unregister: registerWork({ pause: clearReader, clear: clearReader, settle: async () => {}, hasUnsaved: () => false, reveal() {} }) };
+    reader.current = next; setReading({ ...next }); void owner.open();
+  }
+  const readButton = (citation: SourceCitation) => <button type="button" className={styles.link} aria-label={`Read source: ${citation.ref}`} onClick={event => readCitation(citation, event.currentTarget)}>Read source</button>;
   const staff = baseline.mode === "admin" || baseline.mode === "tutor", editing = staff && current?.phase === "ready" && !current.pending;
   const selected = new Set(current?.draftIds ?? []), assigned = current?.current?.citations ?? [], additions = current?.draftIds.filter(value => !assigned.some(entry => entry.id === value)) ?? [];
   const unknown = current?.phase === "unknown" || current?.phase === "checking", busy = current?.phase === "saving" || current?.phase === "checking";
@@ -90,8 +119,8 @@ export function SourcesPanel({ scopeKey, baseline, kind, offset, onRefreshReadin
     {open && current && <div id={`${id}-body`} className={styles.panel}>
       <h5>Assigned sources</h5>
       {current.phase === "loading" && <p role="status">Loading sources…</p>}
-      {current.current && <>{assigned.length ? <ul className={styles.list} aria-label="Assigned sources">{assigned.map(entry => <li key={entry.id}>{staff ? checkbox(entry) : <Citation value={entry} />}</li>)}</ul> : <p>No sources have been assigned to this verse.</p>}
-        {staff && additions.length > 0 && <><h5>New choices</h5><ul className={styles.list} aria-label="New source choices">{additions.map(value => <li key={value}>{labels.current.get(value) ? checkbox(labels.current.get(value)!) : <span>Selected source awaiting review</span>}</li>)}</ul></>}
+      {current.current && <>{assigned.length ? <ul className={styles.list} aria-label="Assigned sources">{assigned.map(entry => <li key={entry.id}>{staff ? checkbox(entry) : <Citation value={entry} />}{readButton(entry)}</li>)}</ul> : <p>No sources have been assigned to this verse.</p>}
+        {staff && additions.length > 0 && <><h5>New choices</h5><ul className={styles.list} aria-label="New source choices">{additions.map(value => <li key={value}>{labels.current.get(value) ? checkbox(labels.current.get(value)!) : <span>Selected source awaiting review</span>}{labels.current.get(value) && readButton(labels.current.get(value)!)}</li>)}</ul></>}
       </>}
       {current.phase === "unavailable" && <p role="status">The assigned sources couldn’t be loaded. <button type="button" className={styles.link} onClick={() => void latest()}>Try sources again</button></p>}
       {current.phase === "refresh-required" && <p role="status">Your save was confirmed, and the assigned sources have changed again. <button type="button" className={styles.link} onClick={() => void latest()}>Load latest assigned sources</button></p>}
@@ -102,12 +131,13 @@ export function SourcesPanel({ scopeKey, baseline, kind, offset, onRefreshReadin
       </div>}
       {staff && current.current && <div className={styles.actions}><span>{selected.size} of 32 sources selected</span><button type="button" className={styles.save} disabled={!editing || !current.dirty || current.browsing} onClick={() => void lifetime.current?.owner.save()}>Save sources</button>{current.dirty && !current.pending && !busy && <button type="button" onClick={() => void latest()}>Discard choices</button>}</div>}
       {current.lastCommit && current.phase === "ready" && !current.dirty && <p role="status">Sources saved.</p>}
+      {reading && <SourceContentReader owner={reading.owner} state={reading.state} source={reading.target.source} onClose={() => { const origin = reader.current?.origin; clearReader(); if (origin?.isConnected) origin.focus(); }} />}
       {current.current && <div className={styles.browse}><button type="button" disabled={busy || Boolean(current.pending) || current.browsing || current.catalogChanged} onClick={() => void lifetime.current?.owner.browse()}>{current.browsing ? "Loading related sources…" : "Browse related sources"}</button>
         {current.catalogChanged && <p role="status">The related sources changed. Review the list before adding new choices. <button type="button" className={styles.link} onClick={() => { const owner = lifetime.current?.owner; if (owner?.reviewCatalog()) void owner.browse(); }}>Review related sources</button></p>}
         {current.error === "unavailable" && current.phase === "ready" && <p role="status">Related sources couldn’t be loaded. The assigned sources are still available.</p>}
-        {current.page && <><h5>Related sources</h5>{current.page.entries.length ? <ul className={styles.list} aria-label="Related sources">{current.page.entries.map(entry => <li key={entry.id}>{staff ? checkbox(entry) : <Citation value={entry} />}</li>)}</ul> : <p>No related sources are listed for this verse.</p>}
+        {current.page && <><h5>Related sources</h5>{current.page.entries.length ? <ul className={styles.list} aria-label="Related sources">{current.page.entries.map(entry => <li key={entry.id}>{staff ? checkbox(entry) : <Citation value={entry} />}{readButton(entry)}</li>)}</ul> : <p>No related sources are listed for this verse.</p>}
           <div className={styles.actions}><span>{current.page.sourceOffset + (current.page.entries.length ? 1 : 0)}–{current.page.sourceOffset + current.page.entries.length} of {current.page.totalEntries}</span><button type="button" disabled={current.page.nextSourceOffset === null || current.browsing || busy || Boolean(current.pending) || current.catalogChanged} onClick={() => void lifetime.current?.owner.nextPage()}>Next sources</button></div>
-          <p className={styles.credit}>Related-source listings from <a href="https://www.sefaria.org/" target="_blank" rel="noreferrer">Sefaria</a>. Source text isn’t shown here.</p>
+          <p className={styles.credit}>Related-source listings from <a href="https://www.sefaria.org/" target="_blank" rel="noreferrer">Sefaria</a>. Choose an edition to read an available source.</p>
         </>}
       </div>}
     </div>}

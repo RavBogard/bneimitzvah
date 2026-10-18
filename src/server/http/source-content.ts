@@ -18,7 +18,7 @@ export async function handleSourceContentRequest(request:Request,runtime:HttpRun
     const value=Object.fromEntries([...query].filter(([k])=>!binding.includes(k)).map(([k,v])=>[k,k==="expectedSetVersion"||k==="editionOffset"?number(v):v]));
     const result=found.text?await runtime.sourceContent.text(request,selected,textIntent(value)):await runtime.sourceContent.editions(request,selected,editionIntent(value));
     if(result.ok)return privateJson(result as JsonValue);
-    const status=result.error==="invalid-request"?400:result.error==="unavailable"?503:result.error==="unsupported-source"||result.error==="unsupported-edition"?422:409;
+    const status=result.error==="source-not-found"?404:result.error==="invalid-request"?400:result.error==="unavailable"?503:result.error==="unsupported-source"||result.error==="unsupported-edition"?422:409;
     const headers=privateHeaders();headers.set("content-type","application/json; charset=utf-8");return new Response(JSON.stringify(result),{status,headers});
   }catch(error){return errorResponse(error);}
 }

@@ -11,7 +11,7 @@ import { projectRelatedCatalog } from "./sources/discovery";
 import { projectEditionCatalog, editionPage, selectEdition, type EditionPage } from "./sources/editions";
 import { parseSourceContent, supportedEdition, sourceLeaf, SourceContentUnsupported, SourceContentUnavailable, SOURCE_CONTENT_LIMITS as L, MOTHER_TONGUES, type ContentSelection, type SourceText } from "./sources/content";
 import type { RelatedSourceCatalog, RelatedSourceMetadata, SourceEditionCatalog } from "./sources/metadata";
-export type SourceContentError="invalid-request"|"stale-revision"|"source-set-changed"|"source-catalog-changed"|"edition-catalog-changed"|"unsupported-source"|"unsupported-edition"|"unavailable";
+export type SourceContentError="source-not-found"|"invalid-request"|"stale-revision"|"source-set-changed"|"source-catalog-changed"|"edition-catalog-changed"|"unsupported-source"|"unsupported-edition"|"unavailable";
 const failure=(error:SourceContentError)=>Object.freeze({ok:false as const,error});
 type PublicOutcome={status:"ready";source:RelatedSourceMetadata;editions:EditionPage}|{status:"ready";source:RelatedSourceMetadata;text:SourceText}|{status:"missing"}|{status:"error";error:SourceContentError};
 /** Bounded provider cancellation never becomes the caller/final authority signal. */
@@ -42,7 +42,7 @@ export function createSourceContentService<Q extends PgQueryResultHKT>(input:{ac
         const head=await assignments.latest(tx,actor,selection,intent.verseRef);
         if(!head||head.version!==intent.expectedSetVersion)return {tag:"error" as const,error:"source-set-changed" as const};
         const citations=assignments.citations(head);source=citations.find(row=>row.id===intent.sourceId);
-        if(!source)throw new AccessDenied(404);
+        if(!source)return {tag:"error" as const,error:"source-not-found" as const};
         headBinding=JSON.stringify([head.id,head.version,citations]);
       }
       return {tag:"captured" as const,binding:captured.binding,envelope:captured.envelope,source,headBinding};
@@ -75,7 +75,7 @@ export function createSourceContentService<Q extends PgQueryResultHKT>(input:{ac
         const head=await assignments.latest(tx,actor,selection,intent.verseRef);
         if(!head||JSON.stringify([head.id,head.version,assignments.citations(head)])!==first.headBinding)return failure("source-set-changed");
       }
-      if(outcome.status==="missing")throw new AccessDenied(404);
+      if(outcome.status==="missing")return failure("source-not-found");
       if(outcome.status==="error")return failure(outcome.error);
       const result=Object.freeze({ok:true as const,...captured.envelope,source:outcome.source,...(intent.sourceScope==="assigned"?{expectedSetVersion:intent.expectedSetVersion}:{sourceCatalogHash:intent.sourceCatalogHash}),...("text"in outcome?{text:outcome.text}:{editions:outcome.editions})});
       captured.live();return result;

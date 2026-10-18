@@ -2,7 +2,7 @@
 
 ## Current checkpoint
 
-The first backend slice is implemented and independently accepted locally. It adds private `source-editions` and `source-text` reads for a source belonging to the student's current assigned verse. There is no content UI, new migration, provider cache, default edition or generated summary in this checkpoint. Exact hosted checks and deployment remain pending.
+The first backend slice is deployed at exact709a032982c7c57821ac7638cbeb6780c52d252b after all four [hosted jobs39100441095](https://github.com/RavBogard/bneimitzvah/actions/runs/39100441095) passed. Normal deployment dpl_aDFpdqSmGvniuSqsqMMhxtNSQyMy is READY/canonical with exact source/project/team/Production identity and eight public entry/denial canaries passing. It adds private `source-editions` and `source-text` reads for a source belonging to the student's current assigned verse. No SQL ran in this release. There is no content UI, new migration, provider cache, default edition or generated summary in709; the inline reader is a separate active branch.
 
 The [design](../../superpowers/specs/2026-10-18-selected-source-content-design.md) defines two lanes: a retained citation under the current immutable assignment head, or a source resolved from the freshly observed related catalog. Each request captures the original live session, student, relationship and reading, performs public work outside the transaction, then checks authority and the original binding again. A changed current source head also invalidates assigned-source reads. The shared dispatcher grants ordinary read only; staff write and receipt behavior remain in the original source-assignment service.
 
@@ -23,6 +23,6 @@ The original GET2 remains historically held: its numeric-address checks failed a
 
 ## Next action and limits
 
-The separately reviewed Sources explicit-refresh compatibility repair is saved at ff52683: focused46/types and independent browser17/17 pass. Save the bounded backend checkpoint and require exact Windows/Linux, PostgreSQL and browser CI before deployment. No database migration needs replaying. Then build explicit edition selection and source reading into the existing verse tools, extending coverage honestly where the current leaf profile holds a source.
+The Sources explicit-refresh repairff52683 and backend709 release are complete: focused46/types, independent browser17/17, root production build, final staged protection6/6 and exact hosted checks pass. No database migration needs replaying. The separate inline reader is now implemented locally and undergoing independent acceptance under its [design](../../superpowers/specs/2026-10-18-inline-source-reading-design.md). Broader source coverage remains outstanding where the current leaf profile holds a source.
 
 Reference playback remains administrator-only pending Daniel's actual-source word-tap/tab-return acceptance. Generated voices and student recordings remain parked. No roster import, mail, invitation, new spending or full1.0 completion is implied.

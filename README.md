@@ -1,14 +1,14 @@
 # CRC B'nei Mitzvah
 
-A web portal for b'nei mitzvah students at Central Reform Congregation, St. Louis. A student signs in and finds their own Torah reading: the Hebrew with vowels and cantillation, a translation, the trope coloured by family, commentary their rabbi and tutor chose for them, and tools to work out their own translation word by word.
+A web portal for child and adult Beit Mitzvah students at Central Reform Congregation, St. Louis. Students prepare their assigned Torah, haftarah and service readings with Hebrew text, translation, existing reference recordings and verse-specific study tools. The primary practice flow is direct word/verse playback in a continuous Hebrew passage.
 
-Tutors and rabbis see their students, assign sources, leave notes, and hear what students record. Parents get a read-only view. The portal is built for one congregation now and more later: every record belongs to a congregation from the schema up.
+Tutors and rabbis manage assigned readings, sources and notes. Parents can use their own account and explicitly open a linked child's practice view. Every record belongs to a congregation. The current release serves CRC; adding another congregation remains a separate gate.
 
-The trope engine computes chant scores from the te'amim using published melody tables (Standard Reform, Binder/Avery, first). Its history-preserving move from the `trope-engine-research` branch of [RavBogard/haftarah](https://github.com/RavBogard/haftarah) retains 25 historical commits, standalone helpers and 109 engine tests passing on Windows and Linux. Daniel confirmed noncommercial use and public repository inclusion of the Binder/Avery tables; [the provenance note](trope/PROVENANCE.md) records the separate code, table and fixture terms. No student hears generated chant until it passes the required listening review.
+Generated voices are outside1.0, and student recordings are parked. The retained trope engine computes chant scores from the te'amim using published melody tables. Its history-preserving move from the `trope-engine-research` branch of [RavBogard/haftarah](https://github.com/RavBogard/haftarah) preserves its research history and standalone tests. Daniel confirmed noncommercial use and public repository inclusion of the Binder/Avery tables; [the provenance note](trope/PROVENANCE.md) records the separate code, table and fixture terms. Future generated chant remains subject to its listening gates.
 
 ## Status
 
-Phase 0 foundation is published with passing Windows/Linux/browser CI and a deployed technical placeholder at [bneimitzvah.vercel.app](https://bneimitzvah.vercel.app). Phase 1 brings the engine and its history into this repository. The planned student and staff workflows are not implemented yet. See [STATE.md](docs/planning/2026-10-15-kickoff/STATE.md) and [the engine return note](docs/planning/2026-10-15-kickoff/ENGINE-MIGRATION-RETURN.md) for gate results.
+The portal is deployed at [beitmitzvah.centralreform.org](https://beitmitzvah.centralreform.org). Authentication, roster/access management, assigned reading, practice and study features are being delivered in reviewed checkpoints. Revised1.0 is still in progress; [STATE.md](docs/planning/2026-10-15-kickoff/STATE.md) records the exact production commit, pending gates and next work. Reference playback remains administrator-only until Daniel accepts actual-source word-tap and tab-return behavior. Automated synthetic checks do not replace that listening/phone acceptance.
 
 ## Run it
 
@@ -26,11 +26,11 @@ npx playwright install chromium # one-time browser download for local checks
 npm run test:e2e                # Playwright
 ```
 
-`npm test` runs the engine and Node policy/isolation tests, then a real offline PGlite database probe. The integrated local checks pass 119 Node tests and 1 Vitest test. The engine passes 109 tests on Windows and Ubuntu WSL; CI runs the combined suite on Windows and Linux. Database schema, Drizzle dependencies and `db:*` scripts arrive together in Phase 2; there are no placeholder migration commands.
+`npm test` runs engine, policy/isolation and application tests against offline fixtures and PGlite. CI also checks Windows/Linux builds, native PostgreSQL authority and actual HTTP/browser behavior. Use the existing isolated test harnesses for subprocesses; they do not inherit application credentials. Production schema changes use reviewed release operators and their recorded fingerprints, rather than replaying development migration commands.
 
 ## Never in this repo
 
-This repository is intended to be public. JPS or any other licensed translation, student or family data, recordings, rendered audio, model weights and credentials never enter it. Texts will be fetched from Sefaria and cached in the database. `tests/never-in-repo.test.mjs` checks tracked content, staged blobs and untracked publish candidates, including ignored files if force-staged. Local ignored files are outside the publish set.
+This repository is intended to be public. JPS or any other licensed translation, student or family data, recordings, rendered audio, model weights and credentials never enter it. Text is fetched from Sefaria at runtime under the reviewed provenance and storage rules. `tests/never-in-repo.test.mjs` checks tracked content, staged blobs and untracked publish candidates, including ignored files if force-staged. Local ignored files, including `.local-data/`, are outside the publish set and must never be committed.
 
 The guard detects prohibited filenames, known credential formats, non-synthetic email addresses and publisher/version markers in data files. These heuristics cannot prove a text's licence or identify every piece of personal data. New fixtures still require review and provenance; the synthetic portal fixture path is not permission to commit real student information. Failures report filenames and reasons without printing matching content.
 
