@@ -1,0 +1,81 @@
+# Portal MCP read foundation
+
+## Settled decisions (Daniel, binding)
+
+MISSION ruling26 requires a Google-authenticated portal MCP for CRC rabbis/admins and tutors working from Cowork. Existing roles and student relationships remain authoritative. The current1.0 scope includes MCP, read-only Maven intake and one downstream roster Sheet; generated voices, student recordings, offline/PWA and notification extras are parked. Imports remain quiet. Actual held roster import, family invitations, new spending and second-tenant provisioning are not authorized by implementation work.
+
+This first bounded slice provides authenticated `list_students` and `get_student`. It does not complete the MCP milestone: staff mutations, labelled summary drafts with web-only rabbi approval, Maven preview/reconciliation and the Sheet follow separately. Existing Google and magic-link browser sign-in must continue unchanged. Do not introduce new navigation or a browser access-check overlay.
+
+## Architecture decisions — root, 2026-10-18
+
+Use the published Better Auth MCP1.7.10 composition with the existing Better Auth1.7.10 identity stack and official SDK2.3.1. The MCP plugin already includes its OAuth provider; do not register a second provider. Keep the SDK's default legacy-stateless behavior so Claude's advertised2025 initialize clients work. Do not copy the optional latest-only `legacy: 'reject'` example or Maven's unrelated UAT seam.
+
+The isolated published-package proof accepted2025-11-25,2025-06-18 and2025-03-26 initialization and six synthetic list/get calls. It verified web-standard Request/Response handling and package provenance, not OAuth, provider persistence, live authorization, Next deployment or an actual Cowork connection. Exact SDK APIs and complete schema must be captured from the retained published artifacts before application changes; do not infer them from current repository-main examples.
+
+The initial resource is exactly `https://beitmitzvah.centralreform.org/api/mcp`, served through a stateless, request-local handler. No cross-user server/context cache or durable MCP transport session. Use the canonical auth issuer configured in the existing auth stack, with exact resource/issuer checks. Google and Maven tokens are never portal MCP credentials. Reuse the existing host/deployment resolver; aliases must not become trusted mutation or bearer endpoints or redirect credential-bearing requests.
+
+## Actual API findings and activation hold
+
+The exact published-package inspection identifies seven OAuth models plus `jwks`, and continued use of the existing verification model. It provides real before-code verification-create and access-token-claims hooks, but no automatic portal delegation or Google-session provenance. Returning false from the verification hook is insufficient; denial must throw. These are source findings, not passed OAuth-flow tests.
+
+The selected MCP plugin does not itself install the separate bearer-to-cookie plugin. Nevertheless, browser identity lookup must explicitly remove Authorization before invoking its cookie-session SDK. Compose JWT with `disableSettingJwtHeader:true`; its default session hook otherwise adds an unrelated JWT response header. Both boundaries require regression tests before provider composition.
+
+The first independently reviewable implementation is the browser cookie boundary. It does not enable MCP. Provider/schema/endpoint activation remains held until the following contracts and their actual-library synthetic tests are accepted:
+
+- Persist real Google-session provenance at successful session creation; a linked Google account, verified email or recent session is insufficient. Existing unmarked sessions remain valid for the browser but cannot authorize a Google-only MCP connection.
+- Establish the server-owned delegation identity before provider consent lookup, with an exact client/resource/session/tenant/staff-grant binding and lock order. Missing or stale mapping denies issuance and access. Separate adapter writes are not presumed atomic.
+- Prove origin-session checks on refresh issuance and resource use. If that cannot be established through supported hooks, disable refresh issuance and its advertised grant for the first local proof; do not silently ship repeated 15-minute reconnection as the final experience.
+- Resolve the preregistered public-client discovery mismatch: the installed provider omits `none` when both dynamic registration and client discovery are disabled. A closed metadata projection may describe the actual supported preregistered public-client method only after a real exchange proof. Opening registration or remote metadata fetching is not a workaround.
+- Specify exact discovery/OAuth methods, parsing limits and response headers, plus the JSON-only MCP response and final authorization fence. No private result may escape through an unexamined SSE stream, batch, notification or delayed callback after its live checks.
+
+These are implementation gates owned by the integration stream; no new decision or credentials are requested from Daniel for local proof. This design establishes direction, not blanket approval to enable OAuth endpoints.
+
+## Client, login and consent
+
+Start with one server-preregistered public hosted-Cowork client. Its only callback is exactly `https://claude.ai/api/mcp/auth_callback`; require authorization code and S256 PKCE, with token authentication method `none`. The connection instructions may supply a public client ID, never a shared client secret. Disable unreviewed dynamic registration and client-metadata fetching, and advertise only capabilities actually exposed. Claude Code loopback callbacks and guessed published-identity metadata URLs are outside this slice.
+
+Google login proves identity, not delegation. Consent must show the server-owned client identity, CRC resource and read scope to a currently eligible staff member. Parent/student-only accounts cannot consent to staff access. Continuation state must be bounded, expiring and server-validated; no arbitrary redirect or client-supplied tenant/role. The consent view is a separate frontend contract to coordinate with the UX stream, not a new navigation project.
+
+Initial scope is `portal:read`. Use a15-minute access lifetime and rotated refresh credentials bounded by the originating real auth session's expiry. A refresh cannot extend that session or revive revoked consent. Exact provider configuration and replay behavior must be proven before enabling refresh. Do not invent unsupported plugin options or an independent token protocol.
+
+## Authentication to live portal authority
+
+Create a separate server-only verified MCP evidence boundary. It must validate the presented token's issuer, audience/resource, expiry and read scope, and recheck current provider token/client/consent state. Missing or invalid bearer must not fall back to a browser cookie. No token in query strings, logs, error details or tool results.
+
+Bind the delegation to an actual Better Auth user and originating session, canonical tenant, membership and consenting staff grant/revisions through server-owned persisted evidence. Session expiry/sign-out, delegation/client/consent revocation, disabled identity/tenant/membership/grant and applicable relationship removal must prevent subsequent access despite an otherwise unexpired token. A changed authority revision requires renewed evidence rather than silently increasing the connection's authority. The precise provider hook and durable mapping must be established from actual APIs before schema/handler implementation. Missing mapping fails closed.
+
+Never synthesize cookies, Origin, session IDs or role claims to enter `createVerifiedIdentityAccess`. Its cookie contract remains intact. Factor only genuinely shared live-record/role logic into an internal boundary, preserving its lock order and tenant/RLS behavior. MCP evidence must carry a real server-verified identity and be revalidated inside the authorized transaction. Keep caller-controlled data distinct from proof constructors.
+
+Authorization follows the existing race contract: revocation that wins the relevant authorization locks denies access; expiry is checked again after awaited work before projecting a private response. Preserve the existing final-response checks and generic foreign/unrelated denials. Do not promise impossible instantaneous revocation of already delivered data.
+
+Opaque-token validation or JWT verification plus authoritative revocation lookup are acceptable only through the documented provider boundary. Offline JWT signature validation alone is insufficient. Any private resource-server introspection credential belongs to server configuration; the public Cowork client cannot serve as a confidential introspection caller.
+
+## Domain and response boundaries
+
+`list_students` uses the live access service: tenant roster for admin, assigned students only for tutors. Bound pagination and result size. It must not expose the admin roster serializer wholesale.
+
+`get_student` requires a current student-read relationship for that student and tenant. Return a closed staff preparation projection: stable portal student ID, display/Hebrew names, ceremony date, service slot/kind and assigned reading references, limited to fields the existing authority permits. No full emails, household phone/address, credentials, sessions, grants, guest links, recording/media capabilities, private prayer bodies or unapproved summary publication. Raw Maven facts are not this response type.
+
+Tool arguments cannot select tenant, actor, role, email identity, SQL or an arbitrary API URL. Student IDs are lookup keys, not authority. Unsupported writes remain unregistered. Do not promote the pure Maven decoder/planner into an apply capability or silently establish identity from names, dates or household data.
+
+## HTTP, persistence and frontend contracts
+
+Keep explicit auth HTTP allowlists. Do not mount the SDK's generic auth catch-all, forward arbitrary headers/cookies, or expose unrelated administrative auth endpoints. Document required metadata, authorization, token, revocation, consent and resource routes with exact methods, public/authenticated classification, error/header projection and body bounds. Public discovery contains static protocol metadata only. Tokens and authorization codes must not enter diagnostic logs.
+
+Capture the exact plugin schema, including resource, signing-key or additional models when required; the earlier five-table inventory is not a migration definition. Review adapter types, ownership, RLS/grants, indexes, token-secret storage, uniqueness, expiry/replay and cleanup. Apply no generated schema to production. Preserve all existing rows, the schema24 release and the two active material approvals. Schema migration, provider configuration and public-client setup require separate reviewed checkpoints and native acceptance.
+
+Before frontend implementation, publish a concrete consent DTO/action/recovery contract to the UX stream. Client labels are server-owned text; avoid arbitrary remote logos/metadata fetches. Existing sign-in, student reading and quiet tab-return behavior remain acceptance gates.
+
+## Verification and release
+
+1. Capture and review actual SDK schema/APIs and the delegation hook before app implementation. If the required binding cannot be established, return the concrete gap to root; do not weaken authority checks.
+2. Implement bounded read-service/projection and identity adapter slices with explicit ownership. Test admin/tutor/parent/student matrices, foreign IDs, stale grants/relationships, disabled/expired sessions, absent/revoked delegation and after-await expiry.
+3. Exercise real authorization-code/PKCE/resource/redirect/consent/rotation/replay behavior with synthetic records and the installed libraries. Test failure paths and private log/header/body projection, not mocked verification presented as real auth.
+4. Independently review auth, tenancy, persistence and revocation races. Run required native migration/RLS, browser sign-in and hosted Windows/Linux/integration checks before production changes. Keep new endpoints disabled until their schema/configuration and authority gates are ready.
+5. Verify exact deployment identity and Daniel's actual Cowork connection. No other human pilot before the complete product and Daniel's approval. No real roster import or invitation accompanies this foundation.
+
+Primary references: [MCP authorization](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization), [Better Auth MCP composition](https://better-auth.com/docs/plugins/mcp), [provider resources](https://better-auth.com/docs/plugins/oauth-provider#resources), [Claude connector authentication](https://claude.com/docs/connectors/building/authentication). Retained scratch proof and published package lock are ignored local evidence, not application installation.
+
+## Open items that wait on Daniel
+
+No decision is required to finish local contracts and synthetic implementation. Actual Cowork connection/consent will require Daniel after the reviewed endpoint and setup instructions are ready. The roster Sheet's eventual ownership/sharing and credential grant are separate concrete setup decisions; do not request or install them during this slice. Existing spending, licensing, real-data and second-tenant gates remain.
