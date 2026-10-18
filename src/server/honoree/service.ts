@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
-import type { AccessDatabase, AccessRequest, DeploymentScope, StudentActor } from "../access/types";
+import type { AccessDatabase, AccessRequest, AccessTransaction, DeploymentScope, StudentActor } from "../access/types";
 import type { createAccessService } from "../access/service";
 import { withTenantTransaction } from "../db/runtime";
 import { resolveTenantHost } from "../tenancy/resolve";
@@ -39,12 +39,12 @@ function returnBarrier(request: Request, sessionExpiresAt?: number, expiresAt?: 
   }
 }
 export function createHonoreeService<Q extends PgQueryResultHKT>(input: { db: AccessDatabase<Q>; access: ReturnType<typeof createAccessService<Q>>; deployment: DeploymentScope; origin: string; signingSecret: string;
-  /** Trusted synthetic composition seam. Runtime deliberately supplies none in B1. */
-  projectMaterial?: (release: data.Release) => Promise<GuestMaterial | null> }) {
+  /** Material stays inside the already-authorized transaction and its live checks. */
+  projectMaterial?: (release: data.Release, tx: AccessTransaction<Q>, live: () => void) => Promise<GuestMaterial | null> }) {
   const tokenScope = (tenantId: string) => createHonoreeTokens({ secret: input.signingSecret, origin: input.origin, environment: input.deployment.environment, project: "crc-bneimitzvah", tenantId });
-  async function projection(release: data.Release | null) {
+  async function projection(release: data.Release | null, tx: AccessTransaction<Q>, live: () => void) {
     if (!release || !input.projectMaterial) return unavailable();
-    const projected = await input.projectMaterial(release); if (!projected) return unavailable();
+    const projected = await input.projectMaterial(release, tx, live); live(); if (!projected) return unavailable();
     const result = material(projected, release.projectionDigest), pair = unitPair(release.slot);
     if (release.beforeId !== pair[0] || release.afterId !== pair[1] || result.version !== release.materialVersion || JSON.stringify(result.credits) !== JSON.stringify(release.notices)) return unavailable();
     return result;
@@ -76,7 +76,7 @@ export function createHonoreeService<Q extends PgQueryResultHKT>(input: { db: Ac
         const head = await honors.latest(tx, actor); live(); ready(current, head, write.startVerse);
         if (head!.version !== write.expectedVersion || current.hash !== write.contextHash) return conflict;
         release = await data.release(tx, actor.tenantId, current.snapshot.serviceSlot as "morning" | "havdalah"); live();
-        await projection(release); live();
+        await projection(release, tx, live); live();
       }
       const epochs = await data.epochs(tx, actor.tenantId, actor.studentId, write.startVerse); live();
       const existing = await data.lockLink(tx, actor.tenantId, actor.studentId, write.startVerse, write.linkId ?? undefined); live();
@@ -135,7 +135,7 @@ export function createHonoreeService<Q extends PgQueryResultHKT>(input: { db: Ac
         let current = await capture(tx, issuer.actor, issuer.student); live();
         if (current.unknownSlot) return unavailable();
         const release = await data.release(tx, resolved.tenantId, current.snapshot.serviceSlot as "morning" | "havdalah", found.materialReleaseId); live();
-        const projected = await projection(release); live();
+        const projected = await projection(release, tx, live); live();
         const epochs = await data.epochs(tx, resolved.tenantId, found.studentId, found.startVerse); live();
         const row = await data.lockLink(tx, resolved.tenantId, found.studentId, found.startVerse, proof.id); live();
         if (!row || row.tokenHash !== proof.hash || row.revokedAt || !epochs || row.readingEpoch !== epochs.reading || row.groupEpoch !== epochs.group) return unavailable();

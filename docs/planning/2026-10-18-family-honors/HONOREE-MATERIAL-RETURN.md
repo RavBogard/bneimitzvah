@@ -1,0 +1,9 @@
+# Approved honoree booklet material checkpoint
+
+The server can project CRC's approved before/after Torah blessings, including English and required credits, into the existing private honoree response. Daniel's permission is recorded in MISSION and the [material design](../../superpowers/specs/2026-10-18-approved-honoree-material-design.md). This checkpoint does not activate material, issue invitations or links, publish the booklet, or share audio.
+
+The projector consumes every selected source block exactly once, preserves multiline Hebrew, excludes transliteration and unrelated units, and rejects unsupported content. The loader verifies the existing immutable catalog and source pins inside the already-authorized RLS transaction. Existing release, digest, credit, revocation and final-response expiry checks remain in force. No guest UI or schema change is included.
+
+Verification: nine new projector/loader checks, 19 existing honoree/transport checks, 16 existing adversarial checks, one independently authored projection-boundary check, whole-project typecheck, repository protection and the normal production build pass. Independent source review accepts authorization, tenancy, projection and expiry boundaries. A separate private check parsed the actual pinned source for both service slots and produced the same projection digest; source text and notices remain outside Git and logs. This establishes parser/projector compatibility, not successful production activation.
+
+Next: integrate with the independently reviewed dedicated 0023 release, complete exact-commit CI/native acceptance, and prepare a separate owner-only material activation contract. Runtime material INSERT remains unavailable. Production is unchanged at this checkpoint. Adult self-edit and blessing audio remain unresolved; no real roster import, mail or invitations are authorized.
