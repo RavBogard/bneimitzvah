@@ -22,7 +22,7 @@ async function files(folder) {
 async function absent(path) { try { await lstat(path); return false; } catch (e) { return e.code === "ENOENT"; } }
 async function resolverControlHome(parent) {
   await mkdir(parent, { recursive: true });
-  return mkdtemp(join(parent, "reference-short-resolver-control-"));
+  return realpath(await mkdtemp(join(parent, "reference-short-resolver-control-")));
 }
 
 const syntheticToolsPath = process.argv.length === 4 && process.argv[2] === "--synthetic-tools" ? process.argv[3] : null;
@@ -36,7 +36,7 @@ test("offline compiler arguments retain genuine closure, strict checks and no em
 });
 
 test("exact empty source pins are accepted but empty executable tools remain refused", async () => {
-  const home = await mkdtemp(join(tmpdir(), "short-build-empty-control-"));
+  const home = await realpath(await mkdtemp(join(tmpdir(), "short-build-empty-control-")));
   try {
     const empty = join(home, "empty-tool"); await writeFile(empty, "", { flag: "wx" });
     const paths = ["scripts/reference-short-build.mjs", "scripts/private-paths.mjs", "tests/helpers/isolatedEnv.mjs", "src/server/reference-audio/short-source-build.ts", "src/lib/reference-audio/short-source-tags.ts", "src/server/reference-audio/short-source-body.ts", "node_modules/server-only/empty.js"];
@@ -58,10 +58,11 @@ test("selection parsing hashes the exact snapshot, not a separately checked path
 });
 
 test("output lexical junction ancestors are refused before any output creation", async () => {
-  const home = await mkdtemp(join(tmpdir(), "short-build-output-control-"));
+  const home = await realpath(await mkdtemp(join(tmpdir(), "short-build-output-control-")));
   try {
     assert.equal(await insideGitWorkingTree(home), false); assert.equal(await realpath(home), resolve(home));
     const actual = join(home, "actual"), alias = join(home, "alias"); await mkdir(actual); await symlink(actual, alias, process.platform === "win32" ? "junction" : "dir");
+    assert.notEqual(resolve(alias), resolve(actual)); assert.equal(await realpath(alias), actual);
     assert.equal(await prepareShortBuildOutputPath(join(actual, "new"), join(home, "audio")), join(actual, "new"));
     await assert.rejects(prepareShortBuildOutputPath(join(alias, "new"), join(home, "audio")), e => e.code === "path");
     assert.equal(await absent(join(actual, "new")), true);
@@ -71,7 +72,7 @@ test("output lexical junction ancestors are refused before any output creation",
 test("resolver control creates its missing code-only parent on a clean checkout", async () => {
   const iso = await isolatedEnv({ CI: "1" });
   try {
-    const parent = join(iso.home, "absent-local-logs"); assert.equal(await absent(parent), true);
+    const parent = join(await realpath(iso.home), "absent-local-logs"); assert.equal(await absent(parent), true);
     const home = await resolverControlHome(parent);
     assert.equal(await realpath(home), resolve(home)); assert.equal((await lstat(home)).isDirectory(), true);
     assert.deepEqual(await readdir(home), []);
@@ -102,7 +103,7 @@ test("finite synthetic offline batch proves reproducible tagged mono/stereo cuts
   const iso = await isolatedEnv({ CI: "1" }); let home;
   const aggregate = { syntheticOnly: true, realCorpusRead: false, publication: false, cleanup: false };
   try {
-    home = await mkdtemp(join(tmpdir(), "reference-short-builder-fixture-")); assert.equal(await insideGitWorkingTree(home), false); const physical = await realpath(home); assert.equal(physical, resolve(home));
+    home = await realpath(await mkdtemp(join(tmpdir(), "reference-short-builder-fixture-"))); assert.equal(await insideGitWorkingTree(home), false); const physical = await realpath(home); assert.equal(physical, resolve(home));
     assert.equal(await insideGitWorkingTree(syntheticToolsPath), false);
     const tools = JSON.parse(await readFile(syntheticToolsPath, "utf8"));
     assert.deepEqual(Object.keys(tools).sort(), ["compiler", "ffmpeg", "ffprobe", "node"]);
