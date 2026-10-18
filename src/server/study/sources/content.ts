@@ -1,4 +1,6 @@
 import "server-only";
+import { sourceNumericCitation, parseSourceSegments, type SourceSegments } from "./content-extents";
+export type { SourceSegments, SourceSegment } from "./content-extents";
 import type { RelatedSourceMetadata, SourceEditionMetadata } from "./metadata";
 export class SourceContentUnsupported extends Error { constructor(readonly profile: "source"|"edition") {super("Source content profile unsupported");} }
 export class SourceContentUnavailable extends Error { constructor(){super("Source content unavailable");} }
@@ -26,4 +28,11 @@ export function parseSourceContent(value:unknown,input:Readonly<{source:RelatedS
   for(const [key,expected]of Object.entries({versionTitle:edition.versionTitle,language:edition.language,actualLanguage:language,languageFamilyName:MOTHER_TONGUES[language],license:edition.license,versionSource:edition.source}))if(get(version,key)!==expected)return fail();
   const text=get(version,"text");if(typeof text!=="string"||!text.trim()||!text.isWellFormed()||Buffer.byteLength(text)>SOURCE_CONTENT_LIMITS.scalarBytes||/[<>\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/u.test(text)||/&(?:#[0-9]+|#x[a-fA-F0-9]+|[A-Za-z][A-Za-z0-9]+);/.test(text))return fail();
   return Object.freeze({schema:"study-source-text/v1",ref:source.ref,text,edition:Object.freeze({versionTitle:edition.versionTitle,language:edition.language,actualLanguage:language}),provenance:Object.freeze({provider:"Sefaria",sourceRef:source.ref,editionTitle:edition.versionTitle,license:edition.license as "Public Domain"|"CC0",versionSource:edition.source!,format:"text_only"})});
+}
+
+/** Scalar v1 remains its own parser; only explicit proven collections use the new schema. */
+export function parseSourceContentResponse(value: unknown, input: Readonly<{source:RelatedSourceMetadata;edition:SourceEditionMetadata;language:"he"|"en"}>): SourceText | SourceSegments {
+  const citation=sourceNumericCitation(input.source),row=object(value);
+  if(citation.rangeEnd===null && get(row,"textDepth")===citation.coordinates.length)return parseSourceContent(value,input);
+  return parseSourceSegments(value,input);
 }

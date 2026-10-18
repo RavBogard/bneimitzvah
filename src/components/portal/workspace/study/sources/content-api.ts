@@ -10,6 +10,9 @@ export type SourceEdition = Readonly<{ versionTitle: string; language: string; a
 export type EditionChoice = Readonly<{ editionCatalogHash: string; edition: SourceEdition; language: "he" | "en" }>;
 export type SourceEditionPage = Readonly<{ schema: "study-edition-page/v1"; workTitle: string; editionCatalogHash: string; editionOffset: number; pageSize: 10; totalEntries: number; receivedRows: number; heldCount: number; duplicateCount: number; nextEditionOffset: number | null; entries: readonly SourceEdition[] }>;
 export type SourceText = Readonly<{ schema: "study-source-text/v1"; ref: string; text: string; edition: Readonly<{ versionTitle: string; language: string; actualLanguage: "he" | "en" }>; provenance: Readonly<{ provider: "Sefaria"; sourceRef: string; editionTitle: string; license: "Public Domain" | "CC0"; versionSource: string; format: "text_only" }> }>;
+export type SourceSegment = Readonly<{ref:string;status:"text";text:string}> | Readonly<{ref:string;status:"missing";text:null}>;
+export type SourceSegments = Readonly<{schema:"study-source-segments/v1";ref:string;extent:Readonly<{kind:"parent"|"range";parentRef:string;requestedStart:string|null;requestedEnd:string|null;observedStart:string|null;observedEnd:string|null}>;segments:readonly SourceSegment[];edition:SourceText["edition"];provenance:SourceText["provenance"]}>;
+export type SourceContent = SourceText | SourceSegments;
 export type SourceContentErrorCode = "source-not-found" | "invalid-request" | "stale-revision" | "source-set-changed" | "source-catalog-changed" | "edition-catalog-changed" | "unsupported-source" | "unsupported-edition" | "unavailable";
 export class SourceContentError extends PortalRequestError { constructor(status = 503, readonly code: SourceContentErrorCode = "unavailable") { super(status); } }
 export const isSourceMissing = (error: unknown) => error instanceof SourceContentError && error.status === 404 && error.code === "source-not-found";
@@ -81,7 +84,31 @@ export function parseSourceTextResponse(raw: unknown, c: SourceContentCapture, s
   if (bytes(JSON.stringify(raw)) > 131072) return fail();
   return Object.freeze({ schema: "study-source-text/v1", ref: c.target.source.ref, text, edition: Object.freeze({ versionTitle: selected.versionTitle, language: selected.language, actualLanguage: choice.language }), provenance: Object.freeze({ provider: "Sefaria", sourceRef: c.target.source.ref, editionTitle: selected.versionTitle, license: selected.license as "Public Domain" | "CC0", versionSource: selected.source!, format: "text_only" }) });
 }
-export interface SourceContentClient { editions(page: EditionPageRequest, signal: AbortSignal): Promise<SourceEditionPage>; text(choice: EditionChoice, signal: AbortSignal): Promise<SourceText> }
+function contentCoordinate(value:string):number { if(!/^[1-9][0-9]*$/.test(value)||value.length>10)return fail();const n=Number(value);return n<=2147483647?n:fail(); }
+export function parseSourceSegmentsResponse(raw:unknown,c:SourceContentCapture,supplied:EditionChoice):SourceSegments {
+  const choice=captureEditionChoice(supplied),row=record(envelope(raw,c,"text"),["schema","ref","extent","segments","edition","provenance"]),extent=record(row.extent,["kind","parentRef","requestedStart","requestedEnd","observedStart","observedEnd"]);
+  const source=c.target.source,prefix=source.indexTitle+" "; if(!source.ref.startsWith(prefix))return fail(); const match=/^([1-9][0-9]*(?::[1-9][0-9]*)*)(?:-([1-9][0-9]*))?$/.exec(source.ref.slice(prefix.length));if(!match)return fail();
+  const coordinates=match[1].split(":"),range=match[2]!==undefined,depth=range?coordinates.length:coordinates.length+1;
+  if(depth<2||depth>4)return fail();coordinates.forEach(contentCoordinate);
+  const start=range?contentCoordinate(coordinates[coordinates.length-1]):1,end=range?contentCoordinate(match[2]):null;
+  if(range&&(end!<=start||end!-start+1>64))return fail();
+  const parentRef=range?prefix+coordinates.slice(0,-1).join(":"):source.ref,values=list(row.segments,64);
+  if(range&&values.length!==end!-start+1)return fail();
+  const observedStart=values.length?String(start):null,observedEnd=values.length?String(start+values.length-1):null;
+  if(row.schema!=="study-source-segments/v1"||row.ref!==source.ref||extent.kind!==(range?"range":"parent")||extent.parentRef!==parentRef||extent.requestedStart!==(range?String(start):null)||extent.requestedEnd!==(range?String(end):null)||extent.observedStart!==observedStart||extent.observedEnd!==observedEnd)return fail();
+  const e=record(row.edition,["versionTitle","language","actualLanguage"]),p=record(row.provenance,["provider","sourceRef","editionTitle","license","versionSource","format"]),selected=choice.edition;
+  if(e.versionTitle!==selected.versionTitle||e.language!==selected.language||e.actualLanguage!==choice.language||p.provider!=="Sefaria"||p.sourceRef!==source.ref||p.editionTitle!==selected.versionTitle||p.license!==selected.license||p.versionSource!==selected.source||p.format!=="text_only")return fail();
+  let aggregate=0;const captured=values.map((value,index)=>{const segment=record(value,["ref","status","text"]),ref=`${parentRef}:${start+index}`;if(segment.ref!==ref)return fail();
+    if(segment.status==="missing"){if(segment.text!==null)return fail();return {status:"missing" as const,text:null};}
+    const text=segment.text;if(segment.status!=="text"||typeof text!=="string"||!text.trim()||!text.isWellFormed()||bytes(text)>65536||/[<>\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/u.test(text)||/&(?:#[0-9]+|#x[a-fA-F0-9]+|[A-Za-z][A-Za-z0-9]+);/.test(text))return fail();aggregate+=bytes(text);if(aggregate>65536)return fail();return {status:"text" as const,text}; });
+  if(bytes(JSON.stringify(raw))>131072)return fail();
+  return Object.freeze({schema:"study-source-segments/v1",ref:source.ref,extent:Object.freeze({kind:range?"range":"parent",parentRef,requestedStart:range?String(start):null,requestedEnd:range?String(end):null,observedStart,observedEnd}),segments:Object.freeze(captured.map((segment,index)=>Object.freeze({ref:`${parentRef}:${start+index}`,...segment}))),edition:Object.freeze({versionTitle:selected.versionTitle,language:selected.language,actualLanguage:choice.language}),provenance:Object.freeze({provider:"Sefaria",sourceRef:source.ref,editionTitle:selected.versionTitle,license:selected.license as "Public Domain"|"CC0",versionSource:selected.source!,format:"text_only"})});
+}
+export function parseSourceContentResponse(raw:unknown,c:SourceContentCapture,choice:EditionChoice):SourceContent {
+  const top=raw&&typeof raw==="object"?Object.getOwnPropertyDescriptor(raw,"text"):undefined,payload=top&&Object.hasOwn(top,"value")?top.value:null,schema=payload&&typeof payload==="object"?Object.getOwnPropertyDescriptor(payload,"schema"):undefined;
+  return schema&&Object.hasOwn(schema,"value")&&schema.value==="study-source-segments/v1"?parseSourceSegmentsResponse(raw,c,choice):parseSourceTextResponse(raw,c,choice);
+}
+export interface SourceContentClient { editions(page: EditionPageRequest, signal: AbortSignal): Promise<SourceEditionPage>; text(choice: EditionChoice, signal: AbortSignal): Promise<SourceContent> }
 export function createSourceContentClient(binding: SourceBinding, target: SourceContentTarget): SourceContentClient {
   const captured = captureSourceContent(binding, target), { base, plan, kind, verse, selected } = captured;
   async function request<T>(path: string, signal: AbortSignal, parse: (raw: unknown) => T): Promise<T> {
@@ -115,6 +142,6 @@ export function createSourceContentClient(binding: SourceBinding, target: Source
   const endpoint = `/api/students/${identifier(base.student.id)}/source-`;
   return Object.freeze({
     editions(input: EditionPageRequest, signal: AbortSignal) { const page = captureEditionPage(input), q = query(); q.set("editionOffset", String(page.editionOffset)); if (page.editionCatalogHash) q.set("editionCatalogHash", page.editionCatalogHash); return request(`${endpoint}editions?${q}`, signal, raw => parseSourceEditionResponse(raw, captured, page)); },
-    text(input: EditionChoice, signal: AbortSignal) { const choice = captureEditionChoice(input), q = query(); q.set("editionCatalogHash", choice.editionCatalogHash); q.set("editionTitle", choice.edition.versionTitle); q.set("language", choice.language); return request(`${endpoint}text?${q}`, signal, raw => parseSourceTextResponse(raw, captured, choice)); }
+    text(input: EditionChoice, signal: AbortSignal) { const choice = captureEditionChoice(input), q = query(); q.set("editionCatalogHash", choice.editionCatalogHash); q.set("editionTitle", choice.edition.versionTitle); q.set("language", choice.language); return request(`${endpoint}text?${q}`, signal, raw => parseSourceContentResponse(raw, captured, choice)); }
   });
 }

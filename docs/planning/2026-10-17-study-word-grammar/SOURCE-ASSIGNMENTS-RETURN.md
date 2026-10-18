@@ -2,7 +2,9 @@
 
 ## Current checkpoint
 
-**Latest pending gate:** inline-reader candidatecc6fa60 is held after CI39102733819 exposed one Sources helper response-body timing failure. A test-only early-JSON capture repair preserves the same save assertions and passes deterministic scheduling plus instrumented Sources7 checks. See [inline reader return](INLINE-SOURCE-READING-RETURN.md); a new exact gate remains required. Production709 is unaffected.
+**Current release:** exact0b98a2f passed all four CI39104065579 jobs, is on main and has a READY canonical deployment with eight canaries passing. Sources controls and the explicit scalar edition reader are live; ordered extents remain separate local work. No migration replay or mail accompanied this release.
+
+**Historical pending gate, subsequently repaired and released:** inline-reader candidatecc6fa60 is held after CI39102733819 exposed one Sources helper response-body timing failure. A test-only early-JSON capture repair preserves the same save assertions and passes deterministic scheduling plus instrumented Sources7 checks. See [inline reader return](INLINE-SOURCE-READING-RETURN.md); a new exact gate remains required. Production709 is unaffected.
 
 **Latest release:** Sources assignment controls and the explicit-edition content backend are live at exact709a032 after all four CI39100441095 jobs and eight production canaries passed. The refresh compatibility repair is included. See [source backend return](SOURCE-CONTENT-RETURN.md) and [pending inline reader return](INLINE-SOURCE-READING-RETURN.md). Historical checkpoint details below retain their original scope; the new inline text UI is not yet deployed.
 

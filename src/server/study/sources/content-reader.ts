@@ -1,4 +1,5 @@
 import "server-only";
+import { sourceNumericCitation } from "./content-extents";
 import { SourceContentUnavailable, SOURCE_CONTENT_LIMITS, MOTHER_TONGUES, type ContentSelection } from "./content";
 import { sourceMetadataWork } from "./metadata";
 const BOUNDS = Object.freeze({totalMs:10000,idleMs:5000,emptyReads:64,headerLength:128});
@@ -64,7 +65,8 @@ export function createSefariaContentReader(input:{fetch?:typeof globalThis.fetch
   return Object.freeze({async text(selection:ContentSelection,signal:AbortSignal):Promise<unknown>{
     try {
       const ref=sourceMetadataWork(selection.ref),work=sourceMetadataWork(selection.indexTitle),title=sourceMetadataWork(selection.editionTitle);
-      if(!ref.startsWith(work+" ")||!/^([1-9][0-9]*)(:[1-9][0-9]*)*$/.test(ref.slice(work.length+1))||title.includes("|")||selection.actualLanguage!=="he"&&selection.actualLanguage!=="en"||selection.motherTongue!==MOTHER_TONGUES[selection.actualLanguage])return fail();
+      sourceNumericCitation({ref,indexTitle:work});
+      if(title.includes("|")||selection.actualLanguage!=="he"&&selection.actualLanguage!=="en"||selection.motherTongue!==MOTHER_TONGUES[selection.actualLanguage])return fail();
       const url=new URL(`https://www.sefaria.org/api/v3/texts/${encodeURIComponent(ref)}`);
       url.searchParams.set("version",`${selection.motherTongue}|${title}`);url.searchParams.set("fill_in_missing_segments","0");url.searchParams.set("return_format","text_only");
       return await request(url,signal,value=>value);

@@ -76,7 +76,7 @@ test("review actual128KiB stream bound is independent from64KiB text and header 
   const client = createSourceContentClient({ baseline: base(), kind: "torah", offset: 0 }, target());
   vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(text()) + " ".repeat(131072), { headers: { "content-type": "application/json" } }))); await expect(client.text(choice, new AbortController().signal)).rejects.toBeDefined();
   vi.stubGlobal("fetch", vi.fn(async () => response(text('"'.repeat(65536))))); await expect(client.text(choice, new AbortController().signal)).rejects.toBeDefined();
-  vi.stubGlobal("fetch", vi.fn(async () => response(text("x".repeat(65536))))); expect((await client.text(choice, new AbortController().signal)).text.length).toBe(65536);
+  vi.stubGlobal("fetch", vi.fn(async () => response(text("x".repeat(65536))))); const scalar = await client.text(choice, new AbortController().signal); expect(scalar.schema).toBe("study-source-text/v1"); if (scalar.schema !== "study-source-text/v1") throw new Error("Expected scalar compatibility"); expect(scalar.text.length).toBe(65536);
 });
 
 test("review transport30s headers/5s body idle and late nonsettling cancellation cannot hang", async () => {

@@ -9,11 +9,12 @@ import { selection as validateSelection, type SourceAssignmentSelection } from "
 import * as validate from "./source-content-validation";
 import { projectRelatedCatalog } from "./sources/discovery";
 import { projectEditionCatalog, editionPage, selectEdition, type EditionPage } from "./sources/editions";
-import { parseSourceContent, supportedEdition, sourceLeaf, SourceContentUnsupported, SourceContentUnavailable, SOURCE_CONTENT_LIMITS as L, MOTHER_TONGUES, type ContentSelection, type SourceText } from "./sources/content";
+import { parseSourceContentResponse, supportedEdition, SourceContentUnsupported, SourceContentUnavailable, SOURCE_CONTENT_LIMITS as L, MOTHER_TONGUES, type ContentSelection, type SourceText, type SourceSegments } from "./sources/content";
+import { sourceNumericCitation } from "./sources/content-extents";
 import type { RelatedSourceCatalog, RelatedSourceMetadata, SourceEditionCatalog } from "./sources/metadata";
 export type SourceContentError="source-not-found"|"invalid-request"|"stale-revision"|"source-set-changed"|"source-catalog-changed"|"edition-catalog-changed"|"unsupported-source"|"unsupported-edition"|"unavailable";
 const failure=(error:SourceContentError)=>Object.freeze({ok:false as const,error});
-type PublicOutcome={status:"ready";source:RelatedSourceMetadata;editions:EditionPage}|{status:"ready";source:RelatedSourceMetadata;text:SourceText}|{status:"missing"}|{status:"error";error:SourceContentError};
+type PublicOutcome={status:"ready";source:RelatedSourceMetadata;editions:EditionPage}|{status:"ready";source:RelatedSourceMetadata;text:SourceText|SourceSegments}|{status:"missing"}|{status:"error";error:SourceContentError};
 /** Bounded provider cancellation never becomes the caller/final authority signal. */
 async function publicPhase<T>(caller:AbortSignal|undefined,action:(call:<V>(load:(signal:AbortSignal)=>Promise<V>)=>Promise<V>)=>Promise<T>):Promise<T>{
   const phase=new AbortController(),end=performance.now()+L.totalMs;
@@ -61,10 +62,10 @@ export function createSourceContentService<Q extends PgQueryResultHKT>(input:{ac
       const catalog=projectEditionCatalog(await call(signal=>input.editions(source.indexTitle,signal)),source.indexTitle);
       if(intent.editionCatalogHash!==undefined&&catalog.editionCatalogHash!==intent.editionCatalogHash)return {status:"error",error:"edition-catalog-changed"};
       if(!text){try{return {status:"ready",source,editions:editionPage(catalog,(intent as validate.EditionIntent).editionOffset)};}catch{return {status:"error",error:"invalid-request"};}}
-      const selected=intent as validate.TextIntent;sourceLeaf(source);
+      const selected=intent as validate.TextIntent;sourceNumericCitation(source);
       const edition=selectEdition(catalog,selected.language,selected.editionTitle);if(!edition)throw new SourceContentUnsupported("edition");supportedEdition(edition,selected.language);
       const raw=await call(signal=>input.content(Object.freeze({ref:source.ref,indexTitle:source.indexTitle,editionTitle:edition.versionTitle,language:edition.language,actualLanguage:selected.language,motherTongue:MOTHER_TONGUES[selected.language]}),signal));
-      const content=parseSourceContent(raw,{source,edition,language:selected.language});return {status:"ready",source,text:content};
+      const content=parseSourceContentResponse(raw,{source,edition,language:selected.language});return {status:"ready",source,text:content};
       })();
       if(projected.status==="ready"){const result={ok:true,...first.envelope,source:projected.source,...(intent.sourceScope==="assigned"?{expectedSetVersion:intent.expectedSetVersion}:{sourceCatalogHash:intent.sourceCatalogHash}),...("text"in projected?{text:projected.text}:{editions:projected.editions})};if(Buffer.byteLength(JSON.stringify(result))>L.responseBytes)return {status:"error",error:"unavailable"};}
       return projected;

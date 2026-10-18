@@ -1,6 +1,6 @@
 import { PortalRequestError } from "../../../api";
-import { captureEditionChoice, captureEditionPage, eligibleSourceEdition, isSourceMissing, SourceContentError, type EditionChoice, type EditionPageRequest, type SourceContentClient, type SourceContentErrorCode, type SourceEditionPage, type SourceText } from "./content-api";
-export type SourceContentState = Readonly<{ phase: "closed" | "loading-editions" | "editions" | "loading-text" | "text" | "held" | "unavailable" | "stale" | "disposed"; page: SourceEditionPage | null; choice: EditionChoice | null; text: SourceText | null; error: SourceContentErrorCode | null }>;
+import { captureEditionChoice, captureEditionPage, eligibleSourceEdition, isSourceMissing, SourceContentError, type EditionChoice, type EditionPageRequest, type SourceContentClient, type SourceContentErrorCode, type SourceEditionPage, type SourceContent } from "./content-api";
+export type SourceContentState = Readonly<{ phase: "closed" | "loading-editions" | "editions" | "loading-text" | "text" | "held" | "unavailable" | "stale" | "disposed"; page: SourceEditionPage | null; choice: EditionChoice | null; text: SourceContent | null; error: SourceContentErrorCode | null }>;
 export function createSourceContentOwner(input: { api: SourceContentClient; onChange?(state: SourceContentState): void }) {
   let state: SourceContentState = Object.freeze({ phase: "closed", page: null, choice: null, text: null, error: null }), disposed = false, turn = 0, active: AbortController | undefined;
   const seen = new Map<string, { offset: number; signature: string }>(); let catalog: string | null = null, facts: string | null = null, retry: (() => Promise<boolean>) | undefined;

@@ -33,7 +33,15 @@ export function SourceContentReader({ owner, state, source, onClose }: { owner: 
     </>}
     {state.phase === "text" && state.text && <>
       <p className={styles.editionTitle}><bdi dir="auto">{state.text.edition.versionTitle}</bdi></p>
-      <div className={styles.sourceText} lang={state.text.edition.actualLanguage} dir={state.text.edition.actualLanguage === "he" ? "rtl" : "ltr"}>{state.text.text}</div>
+      {state.text.schema === "study-source-text/v1" ? <div className={styles.sourceText} lang={state.text.edition.actualLanguage} dir={state.text.edition.actualLanguage === "he" ? "rtl" : "ltr"}>{state.text.text}</div> : <>
+        {state.text.extent.kind === "parent" && <p className={styles.note}>Segments observed in this edition. Other segments may exist in other editions.</p>}
+        {!state.text.segments.length && <p role="status">No segments were returned for this source in this edition.</p>}
+        {state.text.segments.length > 0 && state.text.segments.every(segment => segment.status === "missing") && <p role="status">No text was returned for these segments in this edition.</p>}
+        <ol className={styles.segmentList} aria-label="Source segments">{state.text.segments.map(segment => <li key={segment.ref}>
+          <p className={styles.ref}><bdi dir="auto">{segment.ref}</bdi></p>
+          {segment.status === "text" ? <div className={styles.sourceText} lang={state.text!.edition.actualLanguage} dir={state.text!.edition.actualLanguage === "he" ? "rtl" : "ltr"}>{segment.text}</div> : <p className={styles.note}>No text was returned for this segment in this edition.</p>}
+        </li>)}</ol>
+      </>}
       <p className={styles.credit}>Sefaria · <bdi dir="auto">{state.text.provenance.sourceRef}</bdi> · <bdi dir="auto">{state.text.provenance.editionTitle}</bdi> · <bdi dir="auto">{state.text.provenance.license}</bdi></p>
       <p className={styles.provenance}><bdi dir="auto">{state.text.provenance.versionSource}</bdi></p>
       <p className={styles.note}>Observed edition text, formatted as plain text by Sefaria.</p>

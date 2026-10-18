@@ -2,6 +2,8 @@
 
 ## Current checkpoint
 
+**Latest release:** the scalar backend now has its [inline explicit-edition reader](INLINE-SOURCE-READING-RETURN.md) deployed at exact0b98a2f, with all four CI39104065579 jobs, canonical identity and eight canaries passing. [Ordered extents](SOURCE-CONTENT-EXTENTS-RETURN.md) are accepted locally but not deployed. Historical backend evidence below retains its original scope.
+
 The first backend slice is deployed at exact709a032982c7c57821ac7638cbeb6780c52d252b after all four [hosted jobs39100441095](https://github.com/RavBogard/bneimitzvah/actions/runs/39100441095) passed. Normal deployment dpl_aDFpdqSmGvniuSqsqMMhxtNSQyMy is READY/canonical with exact source/project/team/Production identity and eight public entry/denial canaries passing. It adds private `source-editions` and `source-text` reads for a source belonging to the student's current assigned verse. No SQL ran in this release. There is no content UI, new migration, provider cache, default edition or generated summary in709; the inline reader is a separate active branch.
 
 The [design](../../superpowers/specs/2026-10-18-selected-source-content-design.md) defines two lanes: a retained citation under the current immutable assignment head, or a source resolved from the freshly observed related catalog. Each request captures the original live session, student, relationship and reading, performs public work outside the transaction, then checks authority and the original binding again. A changed current source head also invalidates assigned-source reads. The shared dispatcher grants ordinary read only; staff write and receipt behavior remain in the original source-assignment service.
