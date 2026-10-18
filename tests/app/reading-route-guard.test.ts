@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { BrowserContext, Route } from "playwright";
-import { installReadingRouteGuard } from "../http-browser/reading-route-guard";
+import { installReadingRouteGuard, readingRouteCleanupError } from "../http-browser/reading-route-guard";
 
 const origin = "http://127.0.0.1:3187";
 async function fixture(close = async () => {}) {
@@ -33,7 +33,7 @@ describe("reading browser egress guard lifecycle", () => {
     await f.handle(route);
     expect(route.continue.mock.calls.length + route.abort.mock.calls.length).toBe(1);
     const result = await f.guard.close().then(() => "unexpected success", error => error.message);
-    expect(result).toMatch(/^Reading UI route (continue|abort) failed while active$/);
+    expect(result).toMatch(/^Reading UI route (continue|abort) failed while active \(other\)$/);
     expect(result.includes("private")).toBe(false);
   });
   it("does not accept a closed-target error during an active test", async () => {
@@ -69,5 +69,26 @@ describe("reading browser egress guard lifecycle", () => {
   it("retains context-close failure after draining routes", async () => {
     const f = await fixture(async () => { throw Error("private close detail"); });
     await expect(f.guard.close()).rejects.toThrow(/^Reading UI context close failed$/);
+  });
+  it.each([
+    [`route.continue: ${closed}`, "known-close"],
+    ["route.continue: Route is already handled! private synthetic detail", "already-handled"],
+    ["private synthetic request detail", "other"],
+  ])("reports only the closed active failure classification", async (message, kind) => {
+    const f = await fixture(), route = f.route(origin, async () => { throw Error(message); });
+    await f.handle(route);
+    const error = readingRouteCleanupError(await Promise.allSettled([f.guard.close()]));
+    expect(error?.message).toBe(`Reading UI route/context cleanup failed: Reading UI route continue failed while active (${kind}); private details withheld`);
+    expect(route.abort).not.toHaveBeenCalled();
+  });
+  it("rejects untrusted cleanup errors without copying their message or forged labels", () => {
+    const error = readingRouteCleanupError([{ status: "rejected", reason: Error("Reading UI route continue failed while active (other); private synthetic secret") }]);
+    expect(error?.message).toBe("Reading UI route/context cleanup failed: Unclassified reading cleanup failure; private details withheld");
+    expect(readingRouteCleanupError([{ status: "fulfilled", value: undefined }])).toBeUndefined();
+  });
+  it("surfaces context-close failure through the suite boundary without its original message", async () => {
+    const f = await fixture(async () => { throw Error("private synthetic close detail"); });
+    const error = readingRouteCleanupError(await Promise.allSettled([f.guard.close()]));
+    expect(error?.message).toBe("Reading UI route/context cleanup failed: Reading UI context close failed; private details withheld");
   });
 });
