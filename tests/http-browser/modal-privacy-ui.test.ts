@@ -29,7 +29,7 @@ async function page() {
 }
 async function pendingDeparture(tab: Page, draft: string) {
   const verse = tab.locator(".verse-work").first(); await safe(() => verse.locator("summary").click());
-  await safe(() => verse.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  await safe(() => verse.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await safe(() => verse.getByRole("textbox").fill(draft));
   await click(tab, "Change verses"); await ui(editor(tab)).toBeVisible();
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
@@ -76,7 +76,7 @@ it("retains the sole rightful departure modal during a quiet check without confi
   await ui(tab.getByRole("button", { name: "Change verses", exact: true })).toBeFocused();
   // The retained note stream remains independently selectable after the guard.
   const notePanel = tab.locator(".verse-work").first();
-  await safe(() => notePanel.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  await safe(() => notePanel.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await ui(notePanel.getByRole("textbox")).toHaveValue(draft);
   await click(tab, "Change verses"); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   expect(writes).toBe(0); await tab.unroute("**/api/session");

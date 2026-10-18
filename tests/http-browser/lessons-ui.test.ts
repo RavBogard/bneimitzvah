@@ -42,7 +42,7 @@ const entry = (tab: Page, text: string) => lessons(tab).locator(".lesson-entry")
 const editButton = (tab: Page, text: string) => entry(tab, text).getByRole("button", { name: /^Edit lesson from / });
 async function lessonTab(tab: Page) {
   await safe(() => tab.getByRole("tab", { name: "Lessons", exact: true }).click());
-  await ui(lessons(tab).getByRole("button", { name: "Add a lesson", exact: true })).toBeEnabled();
+  await ui(lessons(tab).getByRole("button", { name: "Add lesson note", exact: true })).toBeEnabled();
 }
 async function write(tab: Page, text: string, date?: string) {
   if (date) await safe(() => sheet(tab).getByLabel("Lesson date", { exact: true }).fill(date));
@@ -80,8 +80,8 @@ it("lets a tutor add, edit and delete lessons, keeps an unsaved note, shows a ch
   await ui(lessons(tutor).getByText("No lessons yet", { exact: true })).toBeVisible();
 
   // Add: today's date is filled in, and the tutor is told the family reads this.
-  await safe(() => lessons(tutor).getByRole("button", { name: "Add a lesson", exact: true }).click());
-  await ui(sheet(tutor).getByRole("heading", { name: "Add a lesson", exact: true })).toBeVisible();
+  await safe(() => lessons(tutor).getByRole("button", { name: "Add lesson note", exact: true }).click());
+  await ui(sheet(tutor).getByRole("heading", { name: "Add lesson note", exact: true })).toBeVisible();
   await ui(sheet(tutor).getByLabel("Lesson date", { exact: true })).toHaveValue(today());
   await ui(sheet(tutor).getByText("The student and their family can read this.", { exact: true })).toBeVisible();
   await ui(sheet(tutor).getByLabel("What you worked on", { exact: true })).toBeFocused();
@@ -95,7 +95,7 @@ it("lets a tutor add, edit and delete lessons, keeps an unsaved note, shows a ch
   expect(rows.map(row => [row.lessonDate, row.summary, row.version, row.canEdit, row.canDelete])).toEqual([[today(), "Synthetic lesson: chanted the first verse.\nNext time: verse two.", 1, true, true]]);
 
   // An unsaved note asks before it is thrown away.
-  await safe(() => lessons(tutor).getByRole("button", { name: "Add a lesson", exact: true }).click());
+  await safe(() => lessons(tutor).getByRole("button", { name: "Add lesson note", exact: true }).click());
   await write(tutor, "Synthetic unsaved note.");
   await safe(() => sheet(tutor).getByRole("button", { name: "Close lesson note", exact: true }).click());
   const prompt = tutor.locator("dialog.work-departure").filter({ hasText: "Keep this lesson note?" });
@@ -119,7 +119,7 @@ it("lets a tutor add, edit and delete lessons, keeps an unsaved note, shows a ch
   // Edit.
   await ui(editButton(tutor, "Synthetic lesson")).toHaveAccessibleName(/^Edit lesson from \w{3}, \w{3} \d+: Synthetic lesson: chanted the first vers$/);
   await safe(() => editButton(tutor, "Synthetic lesson").click());
-  await ui(sheet(tutor).getByRole("heading", { name: "Edit lesson", exact: true })).toBeVisible();
+  await ui(sheet(tutor).getByRole("heading", { name: "Edit lesson note", exact: true })).toBeVisible();
   await write(tutor, "Synthetic lesson: chanted verses one and two.");
   await save(tutor);
   await ui(lessons(tutor).locator(".lesson-log-notice[role=status]")).toHaveText("Lesson updated.");
@@ -141,7 +141,7 @@ it("lets a tutor add, edit and delete lessons, keeps an unsaved note, shows a ch
   rows = await stored(tutor); expect(rows.map(row => [row.summary, row.version])).toEqual([["Synthetic lesson: all three verses.", 4]]);
 
   // A second, earlier lesson, then deleting it after confirming.
-  await safe(() => lessons(tutor).getByRole("button", { name: "Add a lesson", exact: true }).click());
+  await safe(() => lessons(tutor).getByRole("button", { name: "Add lesson note", exact: true }).click());
   await write(tutor, "Synthetic earlier lesson to delete.", "2026-09-03");
   await save(tutor);
   await ui(lessons(tutor).locator(".lesson-entry")).toHaveCount(2);
@@ -175,7 +175,7 @@ it("checks what really saved when a save's answer is lost, so retrying never add
 
   // The request never reaches the server: nothing is listed, so the tutor is asked to save again.
   await tutor.route("**/lesson-log", async route => { if (route.request().method() === "POST") await route.abort(); else await route.continue(); });
-  await safe(() => lessons(tutor).getByRole("button", { name: "Add a lesson", exact: true }).click());
+  await safe(() => lessons(tutor).getByRole("button", { name: "Add lesson note", exact: true }).click());
   await write(tutor, "Synthetic lesson with a lost answer.");
   await save(tutor);
   await ui(sheet(tutor).getByRole("status")).toHaveText("That lesson may not have saved. Save again; it won’t be added twice.");

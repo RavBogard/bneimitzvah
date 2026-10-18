@@ -71,7 +71,7 @@ it("all actual modes explicitly list/read editions without assignment writes, au
     const tab = await page(who, who === "student"); let posts = 0; tab.on("request", request => { if (request.method() === "POST" && /source-assignments|practice-calendar/.test(request.url())) posts++; });
     const before = [editionsCalls, bodyCalls]; await open(tab); expect([editionsCalls, bodyCalls]).toEqual(before); await readCitation(tab); expect(editionsCalls).toBe(before[0] + 1); expect(bodyCalls).toBe(before[1]);
     await readEdition(tab); await ui(reader(tab).getByRole("link")).toHaveCount(0); await reader(tab).getByRole("button", { name: "Back to editions", exact: true }).click(); await readEdition(tab, 0, "en"); expect(posts).toBe(0); await noAudio(tab);
-    await reader(tab).getByRole("button", { name: "Close source", exact: true }).click(); await ui(reader(tab)).toHaveCount(0);
+    await reader(tab).getByRole("button", { name: "Back to the verse", exact: true }).click(); await ui(reader(tab)).toHaveCount(0);
   }
   const child = await page("tutor"); await child.getByRole("link", { name: "Parent", exact: true }).click(); await child.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await ui(child.locator(".study-verses")).toBeVisible(); await open(child); await readCitation(child); await readEdition(child); await child.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(child.locator(".study-verses")).toBeVisible(); await open(child); await readCitation(child); await readEdition(child); await noAudio(child);
 });
@@ -90,7 +90,7 @@ it("reading preserves an unsaved staff draft; local source absence keeps it whil
   await readCitation(tab); await readEdition(tab); await ui(candidate).toBeChecked(); expect(posts).toBe(0);
   await reader(tab).getByRole("button", { name: "Back to editions", exact: true }).click(); await tab.route("**/source-text?**", route => route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ ok: false, error: "source-not-found" }) }));
   await reader(tab).getByRole("listitem").filter({ hasText: "Invented edition 001" }).getByRole("button").click(); await ui(reader(tab)).toContainText("no longer in this list"); await ui(candidate).toBeChecked(); await ui(tab.locator(".study-verses")).toBeVisible(); expect(posts).toBe(0); await tab.unroute("**/source-text?**");
-  await reader(tab).getByRole("button", { name: "Close source", exact: true }).click(); await readCitation(tab); await readEdition(tab);
+  await reader(tab).getByRole("button", { name: "Back to the verse", exact: true }).click(); await readCitation(tab); await readEdition(tab);
   const saved = tab.waitForResponse(value => value.request().method() === "POST" && new URL(value.url()).pathname.endsWith("/source-assignments") && value.status() === 200); await panel(tab).getByRole("button", { name: "Save sources", exact: true }).click(); await saved; await ui(reader(tab)).toHaveCount(0); expect(posts).toBe(1);
 });
 
@@ -131,7 +131,7 @@ it.runIf(process.env.INLINE_SOURCE_CAPTURE === "1" || process.env.INLINE_SOURCE_
     const facts = await tab.evaluate(() => { const skip = [...document.querySelectorAll("a")].find(node => node.textContent?.trim() === "Skip to workspace"), box = skip?.getBoundingClientRect(); return { width: innerWidth, height: innerHeight, scrollY, horizontalOverflow: document.documentElement.scrollWidth > innerWidth, reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches, skipOffscreen: !box || box.bottom <= 0 || box.right <= 0 || box.top >= innerHeight || box.left >= innerWidth }; });
     expect(facts.horizontalOverflow).toBe(false); expect(facts.reducedMotion).toBe(true); expect(facts.skipOffscreen).toBe(true); expect(await heading.evaluate(node => document.activeElement === node)).toBe(true);
     const controls: unknown[] = [];
-    for (const label of ["Close source", "Back to editions", "Read Hebrew edition", "Read English edition", "Next editions", "Save sources"]) { const control = panel(tab).getByRole("button", { name: label, exact: true }).first(); if (await control.count() && await control.isVisible()) controls.push({ name: label, rect: await control.boundingBox() }); }
+    for (const label of ["Back to the verse", "Back to editions", "Read Hebrew edition", "Read English edition", "Next editions", "Save sources"]) { const control = panel(tab).getByRole("button", { name: label, exact: true }).first(); if (await control.count() && await control.isVisible()) controls.push({ name: label, rect: await control.boundingBox() }); }
     const rect = target ? await target.boundingBox() : null;
     const clip = rect ? { x: Math.max(0, rect.x), y: rect.y + facts.scrollY, width: rect.width, height: rect.height } : null;
     async function skipOutsideClip() { return tab.evaluate(capture => { const skip = [...document.querySelectorAll("a")].find(node => node.textContent?.trim() === "Skip to workspace"), box = skip?.getBoundingClientRect(); if (!box) return true; const area = capture ?? { x: 0, y: 0, width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight }; const left = box.left + scrollX, top = box.top + scrollY; return left + box.width <= area.x || left >= area.x + area.width || top + box.height <= area.y || top >= area.y + area.height; }, clip); }
@@ -181,7 +181,7 @@ it.runIf(process.env.INLINE_SOURCE_CAPTURE === "1" || process.env.INLINE_SOURCE_
   await image(dd, "desktop-dark-local-missing-detail", "dark", "synthetic-exact-local-source-not-found404", reader(dd)); await dd.unroute("**/source-text?**");
   const pl = await page("student", true, "light", true); await open(pl); await readCitation(pl); await readEdition(pl, 0, "en");
   await image(pl, "phone-light-english-full", "light", "assigned-english"); await image(pl, "phone-light-english-detail", "light", "assigned-english-long-inert-provenance", reader(pl));
-  await reader(pl).getByRole("button", { name: "Close source", exact: true }).click(); await browse(pl); await panel(pl).getByRole("button", { name: "Next sources", exact: true }).click(); const unsupported = `${work}, Introduction`;
+  await reader(pl).getByRole("button", { name: "Back to the verse", exact: true }).click(); await browse(pl); await panel(pl).getByRole("button", { name: "Next sources", exact: true }).click(); const unsupported = `${work}, Introduction`;
   await sourceList(pl, "Related").getByRole("button", { name: `Read source: ${unsupported}`, exact: true }).click(); const held = panel(pl).getByRole("region", { name: `Read source: ${unsupported}`, exact: true }); await ui(held.getByRole("list", { name: "Source editions", exact: true })).toBeVisible(); await held.getByRole("listitem").filter({ hasText: "Invented edition 001" }).getByRole("button").click(); await ui(held).toContainText("format isn’t available");
   await image(pl, "phone-light-unsupported-source-detail", "light", "actual-server422-named-node-profile-hold", held);
   const pd = await page("student", true, "dark", true); await open(pd); await readCitation(pd); await readEdition(pd);

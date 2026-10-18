@@ -110,7 +110,7 @@ export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: str
       {printError && <p role="alert">{printError}</p>}
     </div>
     <footer className={styles.footer}><p role="status">{state?.phase === "saving" ? "Saving honors…" : state?.phase === "checking" ? "Checking the original save…" : state?.phase === "unknown" ? "Save not confirmed" : state?.savedNotice ? "Honors saved." : state?.dirty ? "Unsaved changes" : current?.saved ? `Saved version ${current.currentVersion}` : "No saved form yet"}</p>
-      {mode === "admin" && current?.saved && <button type="button" className="button-secondary" disabled={busy || linkUncertain || !!state?.pending || departure} onClick={() => void print()}>{printing ? "Verifying saved form…" : "Print saved form"}</button>}
+      {mode === "admin" && current?.saved && <button type="button" className="button-secondary" disabled={busy || linkUncertain || !!state?.pending || departure} onClick={() => void print()}>{printing ? "Verifying saved form…" : `Print saved version ${current.currentVersion}`}</button>}
       <button type="button" className="button-primary" disabled={!state?.dirty || state.phase !== "ready" || busy || linkUncertain || review || departure} onClick={() => { if (!links?.busy() && !links?.uncertain() && !printingRef.current && !pendingDeparture.current) { links?.hideSecret(); void owner?.save(); } }}>Save honors</button>
     </footer>
   </dialog>;

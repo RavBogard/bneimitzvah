@@ -129,7 +129,7 @@ it.runIf(process.env.SOURCE_EXTENTS_CAPTURE === "1")("captures four approved ord
     }, clip); }
     const beforeSkip = await skipFacts(); expect(beforeSkip.present).toBe(true); expect(beforeSkip.offscreen).toBe(true); expect(beforeSkip.outsideDocumentClip).toBe(true);
     const controls = [];
-    for (const label of ["Close source", "Back to editions"]) { const control = target.getByRole("button", { name: label, exact: true }); await ui(control).toBeVisible(); const bounds = await control.boundingBox(); expect(bounds).not.toBeNull(); expect(bounds!.height).toBeGreaterThanOrEqual(44); controls.push({ name: label, rect: bounds }); }
+    for (const label of ["Back to the verse", "Back to editions"]) { const control = target.getByRole("button", { name: label, exact: true }); await ui(control).toBeVisible(); const bounds = await control.boundingBox(); expect(bounds).not.toBeNull(); expect(bounds!.height).toBeGreaterThanOrEqual(44); controls.push({ name: label, rect: bounds }); }
     const png = await tab.screenshot({ fullPage: true, clip, animations: "disabled", style });
     expect(png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))).toBe(true); expect(png.length).toBeGreaterThan(1000); expect(png.length).toBeLessThan(16 * 1024 * 1024);
     const pixels = { width: png.readUInt32BE(16), height: png.readUInt32BE(20) }; expect(pixels.width).toBeGreaterThan(100); expect(pixels.height).toBeGreaterThan(100);

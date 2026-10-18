@@ -253,7 +253,7 @@ it("reviews and confirms only cuts with truthful preserved context, retaining sa
   await reading(tab); await closeSheet(tab);
   const tools = tab.locator(".assigned-study .verse-work").first();
   await safe(() => tools.locator("summary").first().click());
-  await safe(() => tools.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  await safe(() => tools.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await safe(() => tools.getByRole("textbox").fill("Synthetic note retained after a cut-only revision"));
   await safe(() => tools.getByRole("button", { name: "Add student-visible note", exact: true }).click());
   await ui(tools.locator(".work-notes")).toContainText("Synthetic note retained after a cut-only revision");
@@ -292,7 +292,7 @@ it("reviews and confirms only cuts with truthful preserved context, retaining sa
   await closeSheet(tab);
   const reloadedTools = tab.locator(".assigned-study .verse-work").first();
   if (await reloadedTools.getAttribute("open") === null) await safe(() => reloadedTools.locator("summary").first().click());
-  await safe(() => reloadedTools.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  await safe(() => reloadedTools.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await safe(() => reloadedTools.locator(".work-history > summary").click());
   await ui(reloadedTools.locator(".work-history")).toContainText("Synthetic note retained after a cut-only revision");
   await ui(reloadedTools.locator(".work-history")).toContainText(`Saved under an earlier assignment (revision ${assignment.revision})`);
@@ -304,7 +304,7 @@ it("requires an explicit current-assignment reseed after a cut-only revision and
   await closeSheet(tab);
   const tools = tab.locator(".assigned-study .verse-work").first();
   await safe(() => tools.locator("summary").first().click());
-  await safe(() => tools.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  await safe(() => tools.getByRole("button", { name: "Teacher notes", exact: true }).click());
   const text = "Synthetic unsent note recovered across a cut-only change";
   await safe(() => tools.getByRole("textbox").fill(text));
   const before = await api(tab, `/api/students/${fixture.student.id}/reading?mode=admin`), revision = before.data.readings[0].revision;
@@ -318,7 +318,7 @@ it("requires an explicit current-assignment reseed after a cut-only revision and
   await ui(tab.getByLabel("Subsequent aliyah starts", { exact: true })).toHaveValue("Genesis 1:3");
   await closeSheet(tab);
   const recovered = tab.locator(".assigned-study .verse-work").first();
-  await safe(() => recovered.getByRole("button", { name: "Student-visible notes", exact: true }).click());
+  await safe(() => recovered.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await ui(recovered.getByRole("textbox")).toHaveValue(text);
   await ui(recovered.getByRole("textbox")).toHaveAttribute("readonly", "");
   await ui(recovered.getByRole("region", { name: "Review unsent note for Genesis 1:1", exact: true })).toBeVisible();

@@ -133,7 +133,7 @@ it("opens a student's page with the staff tabs and verse sheet, and links to the
     await ui(tab.getByRole("dialog", { name: /verses|reading/i })).toBeVisible();
     await safe(() => tab.getByRole("button", { name: "Close verse editor", exact: true }).click());
     await safe(() => tabs.getByRole("tab", { name: "Lessons", exact: true }).click());
-    await ui(tab.getByRole("button", { name: "Add a lesson", exact: true })).toBeVisible();
+    await ui(tab.getByRole("button", { name: "Add lesson note", exact: true })).toBeVisible();
     await safe(() => tab.getByRole("link", { name: "People and access", exact: true }).click());
     await ui(tab.getByRole("heading", { name: "People and access", level: 1, exact: true })).toBeVisible();
     await ui(tab.getByRole("link", { name: "Student page", exact: true })).toBeVisible();
