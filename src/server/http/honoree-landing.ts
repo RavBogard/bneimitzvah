@@ -12,22 +12,26 @@ try {
   history.replaceState(null, "", location.pathname);
   if (!query && /^#token=hl1\.k1\.[A-Za-z0-9_-]{21}[AQgw]\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(fragment)) token = fragment.slice(7);
 } catch { token = ""; }
-let active = true, controller, reader, expiryTimer, requestTimer, deadline = 0;
-const unavailable = () => {
+let active = true, controller, reader, expiryTimer, requestTimer, deadline = 0, ended = "";
+// The first cause decides the wording only. Leaving the page (an app or tab switch) is told apart from
+// a link that could not be opened; neither says why a link was refused, and both clear the same way.
+const unavailable = cause => {
+  if (!ended) ended = cause === "away" ? "away" : "refused";
   active = false; token = ""; deadline = 0;
   controller?.abort(); void reader?.cancel().catch(() => {});
   clearTimeout(expiryTimer); clearTimeout(requestTimer);
   const content = document.getElementById("reading");
   if (content) { content.hidden = true; content.replaceChildren(); }
   const heading = document.getElementById("heading"), status = document.getElementById("status");
-  if (heading) heading.textContent = "This invitation is unavailable";
-  if (status) { status.hidden = false; status.textContent = "Reopen the original invitation. If it is still unavailable, ask the person who sent it for a new link."; }
+  if (heading) heading.textContent = ended === "away" ? "Your blessings were closed for privacy" : "This invitation is unavailable";
+  if (status) { status.hidden = false; status.textContent = ended === "away" ? "This page closes the blessings whenever you switch to another app or tab. That doesn’t cancel your invitation. To read them again, open the original invitation link again. If it doesn’t open, ask the person who sent it for a new link." : "Reopen the original invitation. If it is still unavailable, ask the person who sent it for a new link."; }
 };
-window.addEventListener("pagehide", unavailable);
-window.addEventListener("beforeunload", unavailable);
-window.addEventListener("pageshow", event => { if (event.persisted) unavailable(); });
-document.addEventListener("visibilitychange", () => { if (document.visibilityState !== "visible") unavailable(); });
-document.addEventListener("freeze", unavailable);
+const away = () => unavailable("away");
+window.addEventListener("pagehide", away);
+window.addEventListener("beforeunload", away);
+window.addEventListener("pageshow", event => { if (event.persisted) away(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState !== "visible") away(); });
+document.addEventListener("freeze", away);
 const closed = (value, keys) => {
   if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).sort().join() !== keys.slice().sort().join()) throw 0;
   return value;

@@ -84,7 +84,7 @@ it("shows the student's week, reports explicit inline verse visits on the server
     // Loading the page, its text and its calendar is not practice.
     expect(seen.posts).toHaveLength(0);
     const before = await rows();
-    await click(tab, "Start"); await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toContainText("Genesis 1:1");
+    await click(tab, "Practice up close"); await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toContainText("Genesis 1:1");
     expect(await tab.locator("dialog.lift").count()).toBe(0);
     await ui.poll(() => seen.posts.length).toBe(1);
     expect(seen.posts[0]).toEqual({ context: null, body: { mode: "student", eventId: expect.stringMatching(/^[0-9a-f-]{36}$/), expectedDay: day, action: "visit", target: { type: "verse", kind: "torah", assignmentId, assignmentRevision: 1, verseRef: "Genesis 1:1" } } });
@@ -150,14 +150,14 @@ it("shows dates only in an explicitly selected child practice, reports with that
   await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.locator("#reading-heading")).toBeVisible();
   // The read-only parent view has no calendar here, and asks for none.
-  await ui(tab.getByRole("button", { name: "Enter child practice", exact: true })).toBeVisible();
+  await ui(tab.getByRole("button", { name: "Practice with Synthetic", exact: true })).toBeVisible();
   expect(await week(tab).count()).toBe(0); expect(seen.reads).toHaveLength(0);
-  const day = await serverDay(tab, () => click(tab, "Enter child practice"));
+  const day = await serverDay(tab, () => click(tab, "Practice with Synthetic"));
   await ui(tab.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
   await ui(week(tab).getByRole("listitem")).toHaveCount(7); await todayMarked(tab, true);
   expect(seen.reads.every(url => new URL(url).searchParams.get("mode") === "child-practice")).toBe(true);
   expect(seen.posts).toHaveLength(0);
-  await click(tab, "Start"); await ui.poll(() => seen.posts.length).toBe(1);
+  await click(tab, "Practice up close"); await ui.poll(() => seen.posts.length).toBe(1);
   expect(seen.posts[0].context).toEqual(expect.any(String));
   expect(seen.posts[0].body).toMatchObject({ mode: "child-practice", expectedDay: day, action: "visit", target: { type: "verse", assignmentId, verseRef: "Genesis 1:1" } });
   await capture(tab, "practice-calendar-child");

@@ -100,7 +100,7 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
       await verifyServiceSession(controller.signal);
       if (!alive.current || controller.signal.aborted || turn !== generation.current || selectedContext !== context.current) return;
       setReview(proposal); queueMicrotask(() => reviewHeading.current?.focus());
-    } catch (error) { if (alive.current && !controller.signal.aborted && turn === generation.current) { if ([401, 403, 404].includes(statusOf(error))) serviceAuthorityFailed(statusOf(error)); else { setBlocked(true); setMessage(statusOf(error) === 409 ? "The student, service plan or catalog changed. Reload before preparing a new review. Your choices are retained." : "This service selection could not be verified. Reload the current plan before preparing again. Your choices are retained."); } } }
+    } catch (error) { if (alive.current && !controller.signal.aborted && turn === generation.current) { if ([401, 403, 404].includes(statusOf(error))) serviceAuthorityFailed(statusOf(error)); else { setBlocked(true); setMessage(statusOf(error) === 409 ? "The student or their service parts changed. Reload, then review again. Your choices are kept." : "These choices couldn’t be checked. Reload the current service parts, then review again. Your choices are kept."); } } }
     finally { gate.current = false; pendingRef.current = null; if (alive.current) setPending(null); }
   }
   async function confirm() {
@@ -121,8 +121,8 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
         if (!alive.current) return;
         if (fresh.state === "no-plan" || fresh.plan.id !== receipt.planId || fresh.plan.revision !== receipt.revision || receipt.cleared !== (fresh.state === "cleared")) throw new Error("Saved service plan differs");
         dirty.current = false; setCatalog(null); setSelected([]); seed.current = []; setClearIntent(false); setBlocked(false);
-        setMessage(receipt.cleared ? "Service plan cleared and reloaded from the server." : "Service parts confirmed and reloaded from the server.");
-      } catch (error) { if (alive.current) { if ([401, 403, 404].includes(statusOf(error))) serviceAuthorityFailed(statusOf(error)); else { setBlocked(true); setMessage(statusOf(error) === 409 ? "The service plan changed after this review. Reload it before preparing again. Your choices are retained." : "The confirmation outcome could not be established. It may have saved. Reload the plan before continuing; no automatic retry will occur."); } } }
+        setMessage(receipt.cleared ? "Saved. This student has no service parts now." : "Saved. These are the student’s service parts now.");
+      } catch (error) { if (alive.current) { if ([401, 403, 404].includes(statusOf(error))) serviceAuthorityFailed(statusOf(error)); else { setBlocked(true); setMessage(statusOf(error) === 409 ? "The service parts changed after this review. Reload them, then review again. Your choices are kept." : "We couldn’t confirm whether this saved. It may have saved. Check what saved before continuing; nothing will be sent twice automatically."); } } }
       finally { gate.current = false; pendingRef.current = null; if (alive.current) setPending(null); }
     })();
     task.current = operation; await operation; if (task.current === operation) task.current = null;
@@ -130,24 +130,24 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
   const active = catalog?.state === "available" ? catalog : null, disabled = pending !== null || paused || !baseline;
   return <section className="service-plan-editor" aria-labelledby="service-plan-editor-heading">
     <h3 id="service-plan-editor-heading">Set service parts</h3>
-    <p>The saved service plan stays in place until you review and explicitly confirm a selection.</p>
-    <button ref={catalogButton} className="button-secondary" disabled={disabled} onClick={() => void openCatalog()}>{pending === "catalog" ? "Loading service catalog…" : dirty.current || catalog ? "Reload catalog and discard draft" : "Choose service parts"}</button>
+    <p>Choose the parts this student will learn, check them, then save. Nothing changes for the student until you save.</p>
+    <button ref={catalogButton} className="button-secondary" disabled={disabled} onClick={() => void openCatalog()}>{pending === "catalog" ? "Loading service parts…" : dirty.current || catalog ? "Discard choices and start again" : "Choose service parts"}</button>
     {catalog?.state === "unknown-slot" && <p>Set the student’s morning or Havdalah / afternoon slot before choosing service parts. Existing assigned parts remain separate.</p>}
-    {catalog?.state === "unavailable" && <p>The service catalog is unavailable. The saved plan has not changed.</p>}
+    {catalog?.state === "unavailable" && <p>The list of service parts couldn’t be loaded. The saved service parts haven’t changed.</p>}
     {active && <>
       <p>Service: {active.serviceSlot === "morning" ? "Morning" : "Havdalah / afternoon"} · Ceremony: {active.ceremonyDate}.</p>
-      {metadata?.state === "assigned" && metadata.plan.catalogIdentity !== active.catalogIdentity && <p className="field-help">The saved plan uses an earlier source. Choose parts from the current catalog; no saved parts will be replaced until confirmation.</p>}
+      {metadata?.state === "assigned" && metadata.plan.catalogIdentity !== active.catalogIdentity && <p className="field-help">The saved service parts come from an earlier list. Choose from the current list; nothing saved is replaced until you save.</p>}
       <fieldset disabled={disabled || blocked || stale}><legend>Parts to assign</legend><ul className="service-catalog-choices">{active.units.map(unit => <li key={unit.id}><label><input type="checkbox" checked={selected.includes(unit.id)} onChange={event => edit(active.units.filter(row => row.id === unit.id ? event.target.checked : selected.includes(row.id)).map(row => row.id))} /><span>{unit.name}{unit.caption && <span className="field-help service-choice-caption">{unit.caption}</span>}</span></label></li>)}</ul></fieldset>
-      <div className="form-actions"><button className="button-secondary" disabled={disabled || blocked || stale || !selected.length && !clearIntent} onClick={() => void prepare()}>{pending === "prepare" ? "Preparing service review…" : "Prepare service review"}</button>
-        <button className="button-text" disabled={disabled || blocked || stale || !metadata || metadata.state === "no-plan" || metadata.state === "cleared"} onClick={() => edit([], true)}>Clear service plan</button></div>
+      <div className="form-actions"><button className="button-secondary" disabled={disabled || blocked || stale || !selected.length && !clearIntent} onClick={() => void prepare()}>{pending === "prepare" ? "Checking your choices…" : "Review service parts"}</button>
+        <button className="button-text" disabled={disabled || blocked || stale || !metadata || metadata.state === "no-plan" || metadata.state === "cleared"} onClick={() => edit([], true)}>Remove all service parts</button></div>
     </>}
-    {stale && <p role="status" className="request-error">The student or saved plan changed. Your choices are retained; reload the catalog explicitly before preparing a new review.</p>}
+    {stale && <p role="status" className="request-error">The student or their saved service parts changed. Your choices are kept; start again from the current list before reviewing.</p>}
     {message && <p role={blocked ? "alert" : "status"} className={blocked ? "request-error" : "field-help"}>{message}</p>}
-    {blocked && <button className="button-secondary" disabled={disabled} onClick={() => void reloadReading().catch(() => undefined)}>Reload current service plan</button>}
-    {review && active && <section className="service-plan-review" aria-labelledby="service-plan-review-heading"><h4 id="service-plan-review-heading" tabIndex={-1} ref={reviewHeading}>Review service plan</h4>
+    {blocked && <button className="button-secondary" disabled={disabled} onClick={() => void reloadReading().catch(() => undefined)}>Check what saved</button>}
+    {review && active && <section className="service-plan-review" aria-labelledby="service-plan-review-heading"><h4 id="service-plan-review-heading" tabIndex={-1} ref={reviewHeading}>Check before saving</h4>
       <p><bdi dir="auto">{baseline?.student.firstName} {baseline?.student.lastName}</bdi> · Ceremony: {review.review.ceremonyDate} · {review.review.serviceSlot === "morning" ? "Morning" : "Havdalah / afternoon"}.</p>
-      {review.clearsPlan ? <p>This will explicitly clear the service plan. No service parts will remain assigned.</p> : <><p>These exact parts will replace the saved service selection, in source order:</p><ol>{review.selectedIds.map(id => <li key={id}>{active.units.find(unit => unit.id === id)!.name}</li>)}</ol></>}
-      <p>No service assignment has changed yet.</p><button className="button-primary" disabled={disabled || blocked || stale || Date.now() >= review.expiresAt} onClick={() => void confirm()}>Confirm service plan</button>
+      {review.clearsPlan ? <p>This removes every service part. The student will have none assigned.</p> : <><p>These parts will replace the student’s current service parts, in service order:</p><ol>{review.selectedIds.map(id => <li key={id}>{active.units.find(unit => unit.id === id)!.name}</li>)}</ol></>}
+      <p>Nothing has changed yet.</p><button className="button-primary" disabled={disabled || blocked || stale || Date.now() >= review.expiresAt} onClick={() => void confirm()}>Save service parts</button>
     </section>}
     <dialog ref={dialog} className="work-departure" aria-labelledby="service-draft-departure-heading" onCancel={event => { event.preventDefault(); finishDeparture(false); }} onClose={() => { if (visible && !dialog.current?.open) finishDeparture(false); }}>
       <h2 id="service-draft-departure-heading">Keep this service draft?</h2><p>Your service choices have not been confirmed. Discard the draft to leave this student or role.</p>

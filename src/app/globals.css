@@ -265,6 +265,10 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .csv-format { max-width: 65ch; margin-block: 1.5rem; }
 .csv-draft { max-width: 44rem; }
 .csv-draft > input { margin-bottom: 1.5rem; }
+.csv-draft > p { margin: 0.5rem 0 0; max-width: 65ch; }
+.csv-template { display: inline-flex; margin: 1rem 0 1.5rem; }
+.csv-check { margin-bottom: 1.5rem; }
+.csv-nowrap { white-space: nowrap; }
 .csv-draft textarea { width: 100%; min-height: 14rem; resize: vertical; padding: 0.75rem; border: 1px solid var(--color-muted); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); caret-color: var(--color-action); font: inherit; }
 .csv-duplicate-choice { display: flex; align-items: start; gap: 0.75rem; padding-block: 0.75rem; margin-block: 0.5rem; font-weight: 400; }
 .csv-duplicate-choice input { flex: 0 0 auto; width: 1.25rem; height: 1.25rem; min-height: 0; margin: 0.2rem 0 0; accent-color: var(--color-action); }
@@ -792,6 +796,21 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .people-assign-row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 .people-assign-row select { flex: 1 1 16rem; width: auto; }
 .people-invite { margin-top: 1rem; }
+/* Setup: what is done and what is next for this student. The state word carries the meaning; colour only supports it. */
+.people-setup-list { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: 0.75rem; }
+.people-setup-list li { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 0.25rem 0.875rem; align-items: start; }
+.people-setup-list h3 { margin: 0; font-size: 1.0625rem; font-weight: 700; }
+.people-setup-list p { margin: 0.125rem 0 0; color: var(--color-muted); }
+.people-setup-list .button-text { min-height: 44px; padding-inline: 0; }
+.people-setup-state { justify-self: start; padding: 0.125rem 0.625rem; border-radius: 999px; font-size: 0.875rem; font-weight: 700; box-shadow: inset 0 0 0 1px var(--color-control-rule); color: var(--color-muted); }
+.people-setup-list li[data-state="Done"] .people-setup-state { color: var(--color-teal); box-shadow: inset 0 0 0 1px currentColor; }
+.people-setup-list li[data-state="To do"] .people-setup-state { color: var(--lake-deep); background: var(--lake-tint); box-shadow: none; }
+:root[data-theme="dark"] .people-setup-list li[data-state="To do"] .people-setup-state { color: var(--color-ink); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .people-setup-list li[data-state="To do"] .people-setup-state { color: var(--color-ink); } }
+/* Congregation-wide removal sits apart from the per-student actions, closed until asked for. */
+.people-wider summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 700; width: fit-content; }
+.people-wider > p { margin: 0.5rem 0 0; max-width: 38rem; color: var(--color-muted); }
+.access-scope { margin: 0 0 0.5rem; font-weight: 700; }
 .access-sheet .access-review { margin: 0; padding: 0 1.25rem max(3rem, env(safe-area-inset-bottom)); border: 0; }
 .access-sheet .access-review h2 { margin: 0 0 1rem; font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
 .access-sheet .access-review h2:focus { outline: none; }
@@ -853,3 +872,5 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .csv-workspace .csv-draft textarea:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--lake); }
 .csv-workspace .csv-duplicate-choice { display: flex; align-items: center; gap: 0.625rem; min-height: 44px; margin: 0.75rem 0; font-weight: 500; }
 .csv-workspace .csv-duplicate-choice input { width: 20px; min-height: 0; height: 20px; }
+.roster-discard { margin-block: 0 1.5rem; padding: 1rem 1.125rem; border-radius: var(--radius-control); background: color-mix(in srgb, var(--marigold) 14%, var(--color-surface)); }
+.roster-discard p { margin: 0 0 0.75rem; }

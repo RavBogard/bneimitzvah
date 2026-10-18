@@ -213,7 +213,7 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
   return <section className={`lesson-log${tabbed ? " lesson-log-tabbed" : ""}`} aria-labelledby={`${id}-heading`} aria-busy={current?.loading || undefined}>
     <div className="lesson-log-head"><h2 id={`${id}-heading`}>{title}</h2>
       {staff && tabbed && <p className="lesson-log-lede">Notes after each lesson. The student and their family can read them.</p>}
-      {staff && <button type="button" id={`${id}-add`} className="button-primary lesson-add" disabled={busy || !current?.page} onClick={event => open(null, event)}>Add a lesson</button>}</div>
+      {staff && <button type="button" id={`${id}-add`} className="button-primary lesson-add" disabled={busy || !current?.page} onClick={event => open(null, event)}>Add lesson note</button>}</div>
     <p className="lesson-log-notice" role="status">{listNotice}</p>
     {!current || current.loading ? <p className="field-help">Loading lessons…</p>
       : current.error ? <div className="lesson-log-empty"><p>{title} couldn’t be loaded.</p><button type="button" className="button-secondary" onClick={() => void retry()}>Try again</button></div>
@@ -230,7 +230,7 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
     {staff && <dialog ref={sheet} className="lesson-sheet" aria-labelledby={`${id}-sheet-title`} closedby={pending ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); void close(); }} onClose={sheetClosed}>
       <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close lesson note" disabled={Boolean(pending)} onClick={() => void close()}>{icons.close}</button></div>
       {draft && <form className="lesson-form" noValidate onSubmit={event => { event.preventDefault(); void save(); }}>
-        <h2 id={`${id}-sheet-title`}>{draft.base ? "Edit lesson" : "Add a lesson"}</h2>
+        <h2 id={`${id}-sheet-title`}>{draft.base ? "Edit lesson note" : "Add lesson note"}</h2>
         <p className="lesson-form-help">The student and their family can read this.</p>
         <div className="lesson-field"><label htmlFor={`${id}-date`}>Lesson date</label><input id={`${id}-date`} type="date" required value={draft.lessonDate} disabled={busy} onChange={event => edit({ lessonDate: event.target.value })} /></div>
         <div className="lesson-field"><label htmlFor={`${id}-summary`}>What you worked on</label><textarea ref={field} id={`${id}-summary`} rows={8} required dir="auto" value={draft.summary} disabled={busy} onChange={event => edit({ summary: event.target.value })} /></div>

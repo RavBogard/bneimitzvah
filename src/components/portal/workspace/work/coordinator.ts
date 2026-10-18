@@ -202,7 +202,7 @@ export class WorkCoordinator {
     const assignment = scope.baseline.readings.find(row => row.kind === scope.kind)!;
     if (receipt.committed.text !== pending.text || receipt.committedVersion !== pending.expectedVersion + 1 || receipt.committed.version !== receipt.committedVersion || receipt.committed.verseRef !== pending.verseRef || receipt.committed.assignmentId !== assignment.id || receipt.committed.assignmentRevision !== assignment.revision || receipt.currentLatestVersion < receipt.committedVersion
       || cell.head?.version === receipt.committedVersion && (cell.head.id !== receipt.committed.id || cell.head.text !== receipt.committed.text)) {
-      cell.phase = "unknown"; cell.verified = false; cell.error = "Save not confirmed. The response did not match this save. Check save again."; return;
+      cell.phase = "unknown"; cell.verified = false; cell.error = "Save not confirmed. The response did not match this save. Check what saved again."; return;
     }
     const observedNewer = (cell.head?.version ?? 0) > receipt.committedVersion;
     cell.pending = undefined; if (!observedNewer) cell.head = receipt.committed; cell.verified = !this.paused;
@@ -242,14 +242,14 @@ export class WorkCoordinator {
           cell.phase = head.version === receipt.committedVersion ? "ready" : "conflict"; cell.committedEarlier = head.version > receipt.committedVersion ? receipt.committedVersion : undefined;
           cell.error = cell.phase === "conflict" ? "An earlier save succeeded. A newer version is saved. Review before saving yours." : "";
           if (!this.paused && stream === "draft" && cell.phase === "ready") this.schedule(kind, ref, cell);
-        } else { cell.phase = "unknown"; cell.error = "The save receipt and current work could not be reconciled. Check save again."; }
+        } else { cell.phase = "unknown"; cell.error = "The save receipt and current work could not be reconciled. Check what saved again."; }
       } else if (absent && retry && !this.paused) await this.dispatch(scope, cell);
       else { cell.phase = "unknown"; cell.error = "Save not confirmed. No receipt was found; the request may still have saved. You can retry the same save under this assignment."; }
     } catch (error) {
       if (!this.current(scope, generation) || request.signal.aborted) return;
       if (authority(error)) { this.clear(); this.denied(status(error)); }
       else if (error instanceof WorkError && error.code === "stale-revision") { this.pause(); this.denied(409); }
-      else { cell.phase = "unknown"; cell.verified = false; cell.error = "Save not confirmed. Check save again when work is available."; }
+      else { cell.phase = "unknown"; cell.verified = false; cell.error = "Save not confirmed. Check what saved again when work is available."; }
     } finally { this.reads.delete(request); outer?.removeEventListener("abort", abort); if (this.current(scope, generation)) this.emit(); }
   }
   private async recoverRevision(scope: Scope, cell: WorkCell, pending: PendingWrite, request: AbortController, generation: number) {

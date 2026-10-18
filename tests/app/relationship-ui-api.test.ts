@@ -21,7 +21,7 @@ test("review fingerprints change for renamed targets, student disable, parent li
   for (const changed of [{ ...value, student: { ...value.student, firstName: "Changed" } }, { ...value, guardians: [{ ...value.guardians[0], revision: 5 }] }, { ...value, guardians: [{ ...value.guardians[0], parentGrantRevision: 6 }] }]) expect(makeReview(action, changed, [tutor]).fingerprint).not.toBe(review.fingerprint);
   expect(() => makeReview(action, { ...value, student: { ...value.student, disabled: true } }, [tutor])).toThrow();
   const grant = makeReview({ kind: "grant", group: "guardians", linkId: id(3), grantId: id(4) }, value, []);
-  expect(grant.body).toEqual({ expectedRevision: 5, expectedState: "active" }); expect(grant.consequence).toContain("ALL linked children");
+  expect(grant.body).toEqual({ expectedRevision: 5, expectedState: "active" }); expect(grant.consequence).toContain("every linked child"); expect(grant.scope).toBe("congregation");
   expect(makeReview({ kind: "link", group: "guardians", linkId: id(3) }, value, []).body).toEqual({ expectedState: "active" });
   expect(() => makeReview({ kind: "grant", group: "guardians", linkId: id(3), grantId: id(9) }, value, [])).toThrow();
 });

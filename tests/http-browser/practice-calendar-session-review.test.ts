@@ -95,7 +95,7 @@ it("ignores a held old calendar 401 after a real role and child-context replacem
   try {
     await click(tab, "View Genesis 1:1 up close"); await ui.poll(() => held).toBe(true); await click(tab, "Close practice view");
     await tab.getByRole("link", { name: "Parent", exact: true }).click(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click();
-    await click(tab, "Enter child practice"); await ready(tab); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();
+    await click(tab, "Practice with Synthetic"); await ready(tab); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();
   } finally { release(); }
   await completed; await tab.waitForLoadState("networkidle"); await ready(tab);
   await ui(tab.getByRole("heading", { name: "Child practice", exact: true, level: 1 })).toBeVisible(); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();

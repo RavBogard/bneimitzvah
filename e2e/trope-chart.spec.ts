@@ -7,7 +7,7 @@ test("public chart covers the catalog with the local Hebrew font and printable l
   const origins = new Set<string>();
   page.on("request", request => { if (request.url().startsWith("http")) origins.add(new URL(request.url()).origin); });
   expect((await page.goto("/trope-chart"))?.status()).toBe(200);
-  await expect(page).toHaveTitle("Trope chart | CRC B'nei Mitzvah");
+  await expect(page).toHaveTitle("Trope chart | CRC Beit Mitzvah");
   await expect(page.getByRole("heading", { level: 1, name: "Trope chart", exact: true })).toBeVisible();
   await expect(page.locator("[data-chart-family]")).toHaveCount(11);
   await expect(page.locator("[data-chart-accent]")).toHaveCount(30);

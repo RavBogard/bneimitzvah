@@ -1,0 +1,23 @@
+.passage { border: 0; padding: 0; margin-block: 1.5rem; min-width: 0; }
+.passage legend { font-weight: 700; margin-bottom: 0.75rem; }
+.book { margin-bottom: 1rem; }
+.endpoints { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+.passage select { width: 100%; min-height: 48px; }
+.disclosure { margin-block: 1.5rem; }
+.disclosure > summary { cursor: pointer; padding-block: 0.75rem; font-weight: 600; }
+.summary { margin-block: 1.25rem; overflow-wrap: anywhere; }
+.context { margin-block: 1rem 1.5rem; }
+@media (max-width: 600px) { .endpoints { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.passages { margin-block: 1.5rem; }
+.passages > .passage { margin-block: 0 1.25rem; }
+.divisions { list-style: none; padding: 0; margin-block: 1rem; display: grid; gap: 0.75rem; }
+.divisions li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.divisions select { min-height: 48px; min-width: 12rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; }
+.attention { margin-block: 1rem; padding: 0.75rem 1rem; border-inline-start: 4px solid var(--marigold); background: var(--color-surface); border-radius: 6px; }
+.attention p { margin: 0; }
+.divisions :global(.button-text), .actions :global(.button-text) { margin: 0; }
+.review dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.5rem 1rem; margin-block: 1rem; }
+.review dt { font-weight: 600; }
+.review dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .review dl { grid-template-columns: minmax(0, 1fr); } .review dd { margin-bottom: 0.5rem; } }

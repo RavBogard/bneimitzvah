@@ -97,14 +97,14 @@ it("keeps the saved plan unchanged through staff selection and authoritative rev
   await click(tab, "Choose service parts");
   await safe(() => panel(tab).getByRole("checkbox", { name: /Synthetic part 2/ }).check());
   await safe(() => panel(tab).getByRole("checkbox", { name: /Synthetic part 0/ }).check());
-  await click(tab, "Prepare service review");
-  await ui(panel(tab).getByRole("heading", { name: "Review service plan", exact: true })).toBeVisible();
+  await click(tab, "Review service parts");
+  await ui(panel(tab).getByRole("heading", { name: "Check before saving", exact: true })).toBeVisible();
   expect((await api(tab, fixture.student.id, "?mode=admin")).data).toEqual({ state: "no-plan" });
   expect(await panel(tab).locator(".service-plan-review ol li").allTextContents()).toEqual(["Synthetic part 0", "Synthetic part 2"]);
   expect(await panel(tab).locator(".service-unit").count()).toBe(0);
   await captures(tab, "review");
-  await click(tab, "Confirm service plan");
-  await ui(panel(tab).getByText("Service parts confirmed and reloaded from the server.", { exact: true })).toBeVisible();
+  await click(tab, "Save service parts");
+  await ui(panel(tab).getByText("Saved. These are the student’s service parts now.", { exact: true })).toBeVisible();
   expect((await api(tab, fixture.student.id, "?mode=admin")).data.units.map((unit: { id: string }) => unit.id)).toEqual([content.first, content.second]);
 });
 
@@ -155,14 +155,14 @@ it("requires explicit draft disposal on controlled departure while allowing its 
 it("retains staff choices and an unchanged review through quiet validation, then expires a fresh review without saving", async () => {
   const tab = await page("admin"); await workspace(tab, "admin"); await click(tab, "Choose service parts");
   await safe(() => panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ }).check());
-  await click(tab, "Prepare service review");
-  await ui(panel(tab).getByRole("button", { name: "Confirm service plan", exact: true })).toBeEnabled();
+  await click(tab, "Review service parts");
+  await ui(panel(tab).getByRole("button", { name: "Save service parts", exact: true })).toBeEnabled();
   const before = (await api(tab, fixture.student.id, "?mode=admin")).data;
   let verified = 0; const count = (response: import("playwright").Response) => { if (new URL(response.url()).pathname === "/api/session" && response.status() === 200) verified++; }; tab.on("response", count);
   try { await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => verified).toBeGreaterThanOrEqual(4); } finally { tab.off("response", count); }
-  await ui(panel(tab).getByRole("button", { name: "Prepare service review", exact: true })).toBeEnabled();
+  await ui(panel(tab).getByRole("button", { name: "Review service parts", exact: true })).toBeEnabled();
   await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
-  await ui(panel(tab).getByRole("button", { name: "Confirm service plan", exact: true })).toBeEnabled();
+  await ui(panel(tab).getByRole("button", { name: "Save service parts", exact: true })).toBeEnabled();
   expect((await api(tab, fixture.student.id, "?mode=admin")).data).toEqual(before);
   let confirmations = 0;
   await tab.route("**/service-plan/confirm", async route => { confirmations++; await route.continue(); });
@@ -170,10 +170,10 @@ it("retains staff choices and an unchanged review through quiet validation, then
     const response = await route.fetch(), body = await response.json();
     await route.fulfill({ response, json: { ...body, expiresAt: Date.now() + 1_500 } });
   });
-  await click(tab, "Prepare service review");
-  await ui(panel(tab).getByRole("button", { name: "Confirm service plan", exact: true })).toBeEnabled();
+  await click(tab, "Review service parts");
+  await ui(panel(tab).getByRole("button", { name: "Save service parts", exact: true })).toBeEnabled();
   await ui(panel(tab).getByText("This service review expired. Prepare a new review before confirming.", { exact: true })).toBeVisible();
-  expect(await panel(tab).getByRole("button", { name: "Confirm service plan", exact: true }).count()).toBe(0);
+  expect(await panel(tab).getByRole("button", { name: "Save service parts", exact: true }).count()).toBe(0);
   await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
   expect(confirmations).toBe(0); expect((await api(tab, fixture.student.id, "?mode=admin")).data).toEqual(before);
 });
@@ -181,16 +181,16 @@ it("retains staff choices and an unchanged review through quiet validation, then
 it("retains choices after an uncertain confirmation and requires authoritative reload without retry", async () => {
   const tab = await page("admin"); await workspace(tab, "admin"); await click(tab, "Choose service parts");
   await safe(() => panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ }).check());
-  await click(tab, "Prepare service review");
+  await click(tab, "Review service parts");
   const before = (await api(tab, fixture.student.id, "?mode=admin")).data;
   let confirmations = 0;
   await tab.route("**/service-plan/confirm", async route => { confirmations++; await route.fulfill({ status: 503, contentType: "application/json", body: "{}" }); });
-  await click(tab, "Confirm service plan");
+  await click(tab, "Save service parts");
   await ui(panel(tab).getByRole("alert")).toContainText("It may have saved");
   await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
-  await ui(panel(tab).getByRole("button", { name: "Prepare service review", exact: true })).toBeDisabled();
+  await ui(panel(tab).getByRole("button", { name: "Review service parts", exact: true })).toBeDisabled();
   expect(confirmations).toBe(1); expect((await api(tab, fixture.student.id, "?mode=admin")).data).toEqual(before);
-  await click(tab, "Reload current service plan"); await click(tab, "Reload catalog and discard draft");
+  await click(tab, "Check what saved"); await click(tab, "Discard choices and start again");
   await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).not.toBeChecked();
   expect(confirmations).toBe(1);
 });
@@ -198,16 +198,16 @@ it("retains choices after an uncertain confirmation and requires authoritative r
 it("rejects a stale review without overwriting a newer service plan, and explicitly reviews clearing", async () => {
   const tab = await page("admin"); await workspace(tab, "admin"); await click(tab, "Choose service parts");
   await safe(() => panel(tab).getByRole("checkbox", { name: /Synthetic part 0/ }).uncheck());
-  await click(tab, "Prepare service review"); await ui(panel(tab).getByRole("button", { name: "Confirm service plan", exact: true })).toBeEnabled();
+  await click(tab, "Review service parts"); await ui(panel(tab).getByRole("button", { name: "Save service parts", exact: true })).toBeEnabled();
   await assign(tab, fixture.student.id, [content.first]);
-  await click(tab, "Confirm service plan");
+  await click(tab, "Save service parts");
   await ui(panel(tab).getByRole("alert")).toContainText("changed after this review");
   expect((await api(tab, fixture.student.id, "?mode=admin")).data.units.map((unit: { id: string }) => unit.id)).toEqual([content.first]);
-  await click(tab, "Reload current service plan"); await click(tab, "Reload catalog and discard draft");
-  await click(tab, "Clear service plan"); await click(tab, "Prepare service review");
-  await ui(panel(tab).locator(".service-plan-review")).toContainText("This will explicitly clear the service plan.");
+  await click(tab, "Check what saved"); await click(tab, "Discard choices and start again");
+  await click(tab, "Remove all service parts"); await click(tab, "Review service parts");
+  await ui(panel(tab).locator(".service-plan-review")).toContainText("This removes every service part.");
   expect((await api(tab, fixture.student.id, "?mode=admin")).data.state).toBe("assigned");
-  await click(tab, "Confirm service plan"); await ui(panel(tab).getByText("Service plan cleared and reloaded from the server.", { exact: true })).toBeVisible();
+  await click(tab, "Save service parts"); await ui(panel(tab).getByText("Saved. This student has no service parts now.", { exact: true })).toBeVisible();
   expect((await api(tab, fixture.student.id, "?mode=admin")).data.state).toBe("cleared");
   await assign(tab, fixture.student.id, [content.first, content.second]);
 });
@@ -231,11 +231,11 @@ it("puts a tutor's service parts in a tab beside the reading, keeping open mater
   await click(tab, "Synthetic part 0"); await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
   await capture(tab, "tutor-service-tab");
   // Start brings the main reading forward and explicitly requests verse playback.
-  await click(tab, "Start");
+  await click(tab, "Practice up close");
   await ui(readingTab).toHaveAttribute("aria-selected", "true"); await ui(tab.locator("dialog.lift")).toHaveCount(0);
   const inline = tab.getByRole("region", { name: "Reading playback", exact: true }); await ui(inline).toContainText("Genesis 1:1");
   await ui(inline.getByText("The recording couldn’t be loaded. Try again.", { exact: true })).toBeVisible();
-  await ui(tab.getByRole("button", { name: "Start", exact: true })).toBeFocused();
+  await ui(tab.getByRole("button", { name: "Practice up close", exact: true })).toBeFocused();
   await safe(() => serviceTab.click()); await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
   await safe(() => tab.keyboard.press("Home")); await ui(readingTab).toHaveAttribute("aria-selected", "true"); await ui(readingTab).toBeFocused();
   // Left from the first tab wraps to the last (Lessons), then steps back to Service parts.
@@ -251,7 +251,7 @@ it("puts a tutor's service parts in a tab beside the reading, keeping open mater
   await ui(serviceTab).toHaveAttribute("aria-selected", "true");
   await click(tab, "Keep editing service parts"); await ui(prompt).toBeHidden();
   await ui(serviceTab).toHaveAttribute("aria-selected", "true"); await ui(panel(tab).getByRole("checkbox", { name: /Synthetic part 1/ })).toBeChecked();
-  await ui(panel(tab).getByRole("button", { name: "Reload catalog and discard draft", exact: true })).toBeFocused();
+  await ui(panel(tab).getByRole("button", { name: "Discard choices and start again", exact: true })).toBeFocused();
   await safe(() => readingTab.click()); await click(tab, "Haftarah text"); await click(tab, "Discard service draft and continue");
   await ui(readingTab).toHaveAttribute("aria-selected", "true");
   await ui(tab.getByRole("button", { name: "Haftarah text", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -273,11 +273,12 @@ it("suspends the reading sheet for a service decision and retains only that righ
   await click(tab, "Change verses");
   const sheet = tab.locator("dialog.editor-sheet"), prompt = tab.getByRole("dialog", { name: "Keep this service draft?", exact: true });
   await ui(sheet).toBeVisible();
-  await safe(() => tab.getByLabel("Selection method", { exact: true }).selectOption("custom"));
+  await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
+  await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click());
   await safe(() => tab.getByLabel("Custom verse ranges", { exact: true }).fill("Genesis 1:1-2"));
-  await click(tab, "Prepare reading review"); await ui(tab.getByRole("button", { name: "Confirm assigned reading", exact: true })).toBeEnabled();
+  await click(tab, "Review assignment"); await ui(tab.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled();
   let writes = 0; tab.on("request", request => { if (request.method() === "POST" && /\/(reading|service-plan)\/confirm$/.test(new URL(request.url()).pathname)) writes++; });
-  await click(tab, "Confirm assigned reading"); await ui(prompt).toBeVisible();
+  await click(tab, "Save assignment"); await ui(prompt).toBeVisible();
   const snapshot = () => tab.evaluate(() => ({ modals: document.querySelectorAll("dialog:modal").length, service: Boolean(document.querySelector(".service-learning-panel dialog:modal")), sheet: Boolean(document.querySelector("dialog.editor-sheet:modal")) }));
   const phases = [await snapshot()];
   let release!: () => void, held = false, delivered = 0; const gate = new Promise<void>(resolve => { release = resolve; });
@@ -304,7 +305,7 @@ it("suspends the reading sheet for a service decision and retains only that righ
   await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click()); await click(tab, "Haftarah text"); await ui(prompt).toBeVisible();
   await safe(() => prompt.evaluate(node => (node as HTMLDialogElement).close())); await ui(prompt).toBeHidden();
   expect(await snapshot()).toEqual({ modals: 0, service: false, sheet: false });
-  await ui(panel(tab).getByRole("button", { name: "Reload catalog and discard draft", exact: true })).toBeFocused();
+  await ui(panel(tab).getByRole("button", { name: "Discard choices and start again", exact: true })).toBeFocused();
   await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click()); await click(tab, "Haftarah text"); await ui(prompt).toBeVisible();
   await click(tab, "Discard service draft and continue"); await ui(prompt).toBeHidden();
   expect(await snapshot()).toEqual({ modals: 0, service: false, sheet: false });
@@ -334,7 +335,7 @@ it("clears a denied tutor draft and material immediately when the actual relatio
     .where(and(eq(s.tutorStudent.studentId, fixture.student.id), isNull(s.tutorStudent.revokedAt))).returning();
   expect(revoked).toHaveLength(1);
   try {
-    await click(tab, "Prepare service review");
+    await click(tab, "Review service parts");
     // The fresh roster removes this student. Its unmounted reading request must
     // not fail the remaining, still-authorized tutor workspace.
     await ui(tab.getByText("No student is currently linked to this role. Ask the congregation for help with your assignment.", { exact: true })).toBeVisible();
@@ -361,7 +362,7 @@ it("clears a denied tutor draft and material immediately when the actual relatio
 
 it("fences a late selected-unit response across linked-child switching and never restores the prior child's material", async () => {
   const admin = await page("admin"); await assign(admin, sibling.id, [content.second]);
-  const parent = await page("tutor"); await workspace(parent, "parent"); await click(parent, "Enter child practice");
+  const parent = await page("tutor"); await workspace(parent, "parent"); await click(parent, "Practice with Synthetic");
   await ui(parent.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
   let release!: () => void, held = false, delivered = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await parent.route("**/service-plan/unit", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered = true; });

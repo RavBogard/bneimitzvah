@@ -66,19 +66,19 @@ it("moves between admin areas, finds a student, and adds one in a sheet that ret
   await safe(() => tab.getByRole("searchbox", { name: "Find a student", exact: true }).fill(""));
   await ui(roster(tab).getByRole("listitem")).toHaveCount(2);
   await capture(tab, "admin-roster");
-  // Add opens a sheet; Escape closes it without saving and focus returns to Add.
+  // Add opens a sheet; Escape on a started form asks first, and discarding closes it without saving with focus back on Add.
   const add = tab.getByRole("button", { name: "Add student", exact: true });
   await safe(() => add.click());
   await ui(sheet(tab)).toBeVisible(); await ui(sheet(tab).getByRole("heading", { name: "Add a student", exact: true })).toBeFocused();
   await safe(() => sheet(tab).getByLabel("First name", { exact: true }).fill("Synthetic"));
-  await safe(() => tab.keyboard.press("Escape")); await ui(sheet(tab)).toBeHidden(); await ui(add).toBeFocused();
+  await safe(() => tab.keyboard.press("Escape")); await safe(() => sheet(tab).getByRole("button", { name: "Discard changes", exact: true }).click()); await ui(sheet(tab)).toBeHidden(); await ui(add).toBeFocused();
   await safe(() => add.click());
   await ui(sheet(tab).getByLabel("First name", { exact: true })).toHaveValue("");
   for (const [label, value] of [["First name", "Synthetic"], ["Last name", "Added"], ["Ceremony date", "2027-03-06"], ["Parent email", "synthetic-added@example.test"]]) await safe(() => sheet(tab).getByLabel(label, { exact: true }).fill(value));
   await capture(tab, "admin-roster-sheet", false);
   await safe(() => sheet(tab).getByRole("button", { name: "Save student", exact: true }).click());
   await ui(sheet(tab)).toBeHidden();
-  await ui(tab.getByText("Added Synthetic Added. No invitation has been sent.", { exact: true })).toBeVisible();
+  await ui(tab.getByText("Added Synthetic Added. No invitation has been sent. Use People to invite family and choose a tutor.", { exact: true })).toBeVisible();
   await ui(roster(tab).getByRole("listitem")).toHaveCount(3);
   // Edit opens the same sheet with the student's details; the student kind is a two-way choice.
   await safe(() => roster(tab).getByRole("button", { name: "Edit details for Synthetic Added", exact: true }).click());
@@ -86,6 +86,16 @@ it("moves between admin areas, finds a student, and adds one in a sheet that ret
   await ui(sheet(tab).getByRole("radio", { name: "Child", exact: true })).toBeChecked();
   await safe(() => sheet(tab).getByRole("button", { name: "Close student details", exact: true }).click());
   await ui(roster(tab).getByRole("button", { name: "Edit details for Synthetic Added", exact: true })).toBeFocused();
+  // A changed form asks before closing; an unchanged one (above) closes at once.
+  await safe(() => roster(tab).getByRole("button", { name: "Edit details for Synthetic Added", exact: true }).click());
+  await safe(() => sheet(tab).getByLabel("Last name", { exact: true }).fill("Changed"));
+  await safe(() => sheet(tab).getByRole("button", { name: "Close student details", exact: true }).click());
+  await ui(sheet(tab).getByRole("button", { name: "Keep editing", exact: true })).toBeFocused();
+  await safe(() => sheet(tab).getByRole("button", { name: "Keep editing", exact: true }).click());
+  await ui(sheet(tab).getByLabel("Last name", { exact: true })).toHaveValue("Changed");
+  await safe(() => tab.keyboard.press("Escape")); await ui(sheet(tab)).toBeVisible();
+  await safe(() => sheet(tab).getByRole("button", { name: "Discard changes", exact: true }).click());
+  await ui(sheet(tab)).toBeHidden(); await ui(roster(tab).getByText("Synthetic Added", { exact: true })).toBeVisible();
   // An unclear save outcome stays on the list after the sheet closes, and blocks adding again until a reload.
   let posts = 0;
   await tab.route("**/api/admin/students", async route => { if (route.request().method() !== "POST") return route.continue(); posts++; const response = await route.fetch(); await response.dispose(); await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); });
@@ -123,7 +133,7 @@ it("opens a student's page with the staff tabs and verse sheet, and links to the
     await ui(tab.getByRole("dialog", { name: /verses|reading/i })).toBeVisible();
     await safe(() => tab.getByRole("button", { name: "Close verse editor", exact: true }).click());
     await safe(() => tabs.getByRole("tab", { name: "Lessons", exact: true }).click());
-    await ui(tab.getByRole("button", { name: "Add a lesson", exact: true })).toBeVisible();
+    await ui(tab.getByRole("button", { name: "Add lesson note", exact: true })).toBeVisible();
     await safe(() => tab.getByRole("link", { name: "People and access", exact: true }).click());
     await ui(tab.getByRole("heading", { name: "People and access", level: 1, exact: true })).toBeVisible();
     await ui(tab.getByRole("link", { name: "Student page", exact: true })).toBeVisible();

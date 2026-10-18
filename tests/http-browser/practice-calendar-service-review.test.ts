@@ -100,8 +100,8 @@ it("reports only explicit service choices with exact bindings and never manufact
 it("drops a held service visit acknowledgement after a real child-context switch and keeps parent views dates-free", async () => {
   const tab = await page("parent"), seen = traffic(tab);
   await tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click();
-  await ui(tab.getByRole("button", { name: "Enter child practice", exact: true })).toBeVisible(); expect(await week(tab).count()).toBe(0); expect(seen.posts).toHaveLength(0);
-  await click(tab, "Enter child practice"); await ready(tab);
+  await ui(tab.getByRole("button", { name: "Practice with Synthetic", exact: true })).toBeVisible(); expect(await week(tab).count()).toBe(0); expect(seen.posts).toHaveLength(0);
+  await click(tab, "Practice with Synthetic"); await ready(tab);
   let release!: () => void, complete!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; }), completed = new Promise<void>(resolve => { complete = resolve; });
   const hold = async (route: Route) => { try { const response = await route.fetch(); expect(response.status()).toBe(200); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); } finally { complete(); } };
   const target = `**/api/students/${fixture.student.id}/practice-events`; await tab.route(target, hold);

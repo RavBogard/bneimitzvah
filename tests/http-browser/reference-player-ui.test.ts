@@ -149,7 +149,7 @@ it("backgrounding pauses/cancels without erasing text or resuming on return; rol
   await ui(reading).toBeVisible(); expect((await native(tab)).count).toBe(1); expect(state.requests).toBe(1);
   await word(tab, 1, 1).click(); await playing(tab); expect(state.requests).toBe(1);
   await tab.getByRole("link", { name: "Parent", exact: true }).click(); await expect.poll(async () => (await native(tab)).revoked).toBe(2); expect((await native(tab)).paused).toBe(true);
-  await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Enter child practice", exact: true }).click();
+  await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click();
   await ui(tab.locator(".study-verses")).toBeVisible(); await word(tab, 1, 0).click(); await playing(tab);
   await tab.getByRole("button", { name: "Switch practice to Synthetic Sibling", exact: true }).click(); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   expect(await native(tab)).toMatchObject({ count: 3, paused: true, src: null, revoked: 3 });
@@ -161,11 +161,11 @@ it("clears playback on real session denial while quiet unchanged checks retain t
 });
 it("Start and Hear play the main verse and never require or reopen the optional close-up", async () => {
   const { tab, state } = await page(false, "admin", contexts[0]), tabs = tab.getByRole("tablist", { name: "Student page" }), service = tabs.getByRole("tab", { name: "Service parts", exact: true }), reading = tabs.getByRole("tab", { name: "Reading", exact: true });
-  await service.click(); await ui(service).toHaveAttribute("aria-selected", "true"); await tab.getByRole("button", { name: "Start", exact: true }).click();
+  await service.click(); await ui(service).toHaveAttribute("aria-selected", "true"); await tab.getByRole("button", { name: "Practice up close", exact: true }).click();
   await ui(reading).toHaveAttribute("aria-selected", "true"); await playing(tab); await ui(tab.getByRole("dialog")).toHaveCount(0); expect(state.requests).toBe(1);
   await service.click(); await expect.poll(async () => (await native(tab)).revoked).toBe(1); expect((await native(tab)).paused).toBe(true);
   await reading.click(); expect(await native(tab)).toMatchObject({ count: 1, paused: true, src: null });
-  await tab.getByRole("button", { name: "Hear", exact: true }).click(); await playing(tab); expect(state.requests).toBe(1); expect((await native(tab)).count).toBe(2);
+  await tab.getByRole("button", { name: "Close-up", exact: true }).click(); await playing(tab); expect(state.requests).toBe(1); expect((await native(tab)).count).toBe(2);
 });
 it("never broadens a word lacking timing to whole-verse playback, and restores only on explicit verse selection", async () => {
   const { tab } = await page(false, "admin", contexts[0]);

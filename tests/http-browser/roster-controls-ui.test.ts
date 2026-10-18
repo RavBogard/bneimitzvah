@@ -33,7 +33,7 @@ async function page(who: "admin" | "tutor" = "admin", mobile = false) {
   return tab;
 }
 async function click(tab: Page, name: string) { await safe(() => tab.getByRole("button", { name, exact: true }).click()); }
-// Row actions are named for the person they change ("Unassign Synthetic Tutor"); this finds one by its verb within a card.
+// Row actions are named for the person they change ("Remove Synthetic Tutor from Synthetic"); this finds one by its verb within a card.
 function action(tab: Page, card: string, verb: string) { return tab.getByRole("region", { name: card, exact: true }).getByRole("button", { name: new RegExp(`^${verb} `) }); }
 async function accessLoaded(tab: Page) { await ui(tab.getByText("Checking current access…", { exact: true })).toBeHidden(); await ui(tab.getByRole("button", { name: "Reload access", exact: true })).toBeEnabled(); }
 async function importLoaded(tab: Page) { await ui(tab.getByText("Checking the current roster…", { exact: true })).toBeHidden(); await ui(tab.getByRole("button", { name: "Reload roster for import", exact: true })).toBeEnabled(); }
@@ -84,7 +84,7 @@ it("creates adults without parent contact, requires the contact for each kind an
   const contact = { firstName: "Synthetic", lastName: "AdultContact", ceremonyDate: "2027-01-02", studentKind: "adult", parentEmail: null, ownEmail: "synthetic-adult@example.test" };
   expect((await api(tab, "/api/admin/students", { student: { ...contact, ownEmail: null } })).status).toBe(403);
   await safe(() => tab.getByLabel("Student email", { exact: true }).fill(contact.ownEmail)); await capture(tab, "roster-adult-contact-desktop");
-  await click(tab, "Save student"); await ui(tab.getByText("Added Synthetic AdultContact. No invitation has been sent.", { exact: true })).toBeVisible();
+  await click(tab, "Save student"); await ui(tab.getByText("Added Synthetic AdultContact. No invitation has been sent. Use People to invite family and choose a tutor.", { exact: true })).toBeVisible();
   let row = (await api(tab, "/api/admin/students")).data.students.find((row: { lastName: string }) => row.lastName === contact.lastName);
   expect(row.serviceSlot === "unknown" && row.studentKind === "adult" && row.parentEmail === null && row.ownEmail === contact.ownEmail).toBe(true);
   const originalRevision = row.revision;
@@ -124,13 +124,13 @@ it("reviews tutor assignment/removal with fresh target reads, blocks duplicate s
   await ui(tab.getByText("Saved. Access is up to date.", { exact: true })).toBeVisible(); await ui(tab.getByRole("dialog")).toBeHidden(); await ui(tab.getByRole("heading", { name: "People and access", level: 1, exact: true })).toBeFocused(); expect(posts === 1 && targetReads >= 1).toBe(true); await accessLoaded(tab);
   const current = await api(tab, `/api/admin/students/${id}/relationships`); expect(current.data.tutors.length === 1).toBe(true);
   await api(tab, `/api/admin/students/${id}/disable`, { expectedRevision: current.data.student.revision }); await click(tab, "Reload access"); await accessLoaded(tab);
-  await ui(tab.getByLabel("Tutor to assign", { exact: true })).toBeDisabled(); await safe(() => action(tab, "Tutors", "Unassign").click()); await confirm(tab); expect((await api(tab, `/api/admin/students/${id}/relationships`)).data.tutors.length === 0).toBe(true);
+  await ui(tab.getByLabel("Tutor to assign", { exact: true })).toBeDisabled(); await safe(() => action(tab, "Tutors", "Remove").click()); await confirm(tab); expect((await api(tab, `/api/admin/students/${id}/relationships`)).data.tutors.length === 0).toBe(true);
   await tab.unroute(`**/api/admin/students/${id}/relationships**`);
 });
 
 it("revokes only the selected parent practice context, removes exact parent/student links and preserves sibling access", async () => {
-  const admin = await page(), parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await click(parent, "Enter child practice"); await ui(parent.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
-  const other = await parent.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => other.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click()); await click(other, "Enter child practice"); await ui(other.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
+  const admin = await page(), parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await click(parent, "Practice with Synthetic"); await ui(parent.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
+  const other = await parent.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => other.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click()); await click(other, "Practice with Synthetic"); await ui(other.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
   await navigate(admin, `/workspace/admin/students/${fixture.student.id}/access`); await accessLoaded(admin); await safe(() => action(admin, "Parents", "Stop child practice").click()); await confirm(admin);
   const denied = parent.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/reading` && response.status() === 404);
   // A real denial short-circuits the normal successful quiet probe sequence.
@@ -139,7 +139,7 @@ it("revokes only the selected parent practice context, removes exact parent/stud
   expect(await parent.locator(".reading-workspace").count()).toBe(0);
   await ui(parent.locator(".study-verses, .study-hebrew, .verse-work, dialog:modal")).toHaveCount(0);
   await focus(other); await ui(other.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
-  await safe(() => action(admin, "Parents", "Allow child practice").click()); await confirm(admin); await safe(() => action(admin, "Parents", "Unlink").click()); await confirm(admin); await safe(() => action(admin, "Student sign-in", "Unlink").click()); await confirm(admin);
+  await safe(() => action(admin, "Parents", "Allow child practice").click()); await confirm(admin); await safe(() => action(admin, "Parents", "Remove").click()); await confirm(admin); await safe(() => action(admin, "Student sign-in", "Remove").click()); await confirm(admin);
   const current = (await api(admin, `/api/admin/students/${fixture.student.id}/relationships`)).data; expect(current.guardians.length === 0 && current.identities.length === 0).toBe(true);
   expect((await api(admin, `/api/admin/students/${sibling.id}/relationships`)).data.guardians.length === 1).toBe(true);
 });
@@ -162,13 +162,13 @@ it("reviews valid/invalid and duplicate CSV rows, invalidates changed drafts and
   const tab = await page(); await navigate(tab, "/workspace/admin/students/import"); await importLoaded(tab);
   const draft = `${CSV_HEADER}\nSynthetic,CsvReviewed,2027-01-02,parent@example.test,`;
   await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(`${CSV_HEADER}\nSynthetic,Invalid,not-a-date,parent@example.test,`)); await click(tab, "Preview import");
-  await ui(tab.getByText("Row 2: invalid kind, slot, name, date, contact or intake value.", { exact: true })).toBeVisible(); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
+  await ui(tab.getByText("Row 2: check the ceremony date (YYYY-MM-DD, for example 2027-05-08).", { exact: true })).toBeVisible(); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
   await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(draft)); await click(tab, "Preview import"); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled(); await capture(tab, "csv-review-desktop");
   await focus(tab); await ui(tab.getByLabel("CSV draft to review", { exact: true })).toHaveValue(draft); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled();
-  await click(tab, "Preview import"); await create(tab, "CsvRosterChanged"); await click(tab, "Import reviewed students"); await ui(tab.locator("#workspace-main").getByRole("alert")).toContainText("reviewed roster");
+  await click(tab, "Preview import"); await create(tab, "CsvRosterChanged"); await click(tab, "Import reviewed students"); await ui(tab.locator("#workspace-main").getByRole("alert")).toContainText("changed after this review");
   expect((await fixture.ownerDb.select().from(s.student).where(eq(s.student.lastName, "CsvReviewed")))).toHaveLength(0);
   await click(tab, "Reload roster for import"); await importLoaded(tab); await click(tab, "Preview import"); await click(tab, "Import reviewed students"); await ui(tab.getByText("1 student record created. No invitations were sent.", { exact: true })).toBeVisible(); await importLoaded(tab);
-  await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(draft)); await click(tab, "Preview import"); await ui(tab.getByText(/Exact duplicate rows: 2\./)).toBeVisible(); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
+  await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(draft)); await click(tab, "Preview import"); await ui(tab.getByText(/earlier in this file: rows 2\./)).toBeVisible(); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
   await safe(() => tab.getByLabel("Allow additional records for exact duplicates", { exact: true }).check()); await click(tab, "Preview import"); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled();
   await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(draft + "\n")); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
 });
@@ -184,14 +184,15 @@ it("requires explicit roster inspection after an unknown import, never retries a
   await safe(() => retained.press("Control+Home")); await ui.poll(() => retained.evaluate(element => element.scrollTop)).toBe(0); await ui(retained).toHaveValue(draft);
   await ui(tab.getByLabel("Choose a CSV file", { exact: true })).toBeDisabled();
   await click(tab, "Reload roster for import"); await importLoaded(tab); await ui(tab.getByRole("heading", { name: "Inspect the current roster", exact: true })).toBeVisible(); await ui(tab.getByRole("link", { name: "Synthetic CsvUnknown", exact: true })).toBeVisible(); await ui(tab.getByRole("button", { name: "Preview import", exact: true })).toBeDisabled();
-  await click(tab, "I checked the roster; allow a new preview"); await ui(tab.getByLabel("Allow additional records for exact duplicates", { exact: true })).not.toBeChecked(); await click(tab, "Preview import"); await ui(tab.getByText(/Exact duplicate rows: 2,/)).toBeVisible(); expect(posts).toBe(1);
+  await click(tab, "I checked the roster; allow a new preview"); await ui(tab.getByLabel("Allow additional records for exact duplicates", { exact: true })).not.toBeChecked(); await click(tab, "Preview import"); await ui(tab.getByText(/earlier in this file: rows 2,/)).toBeVisible(); expect(posts).toBe(1);
   await tab.unroute("**/api/admin/students/import/confirm");
   await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(`${CSV_HEADER}\nSynthetic,CsvExpiry,2027-01-02,parent@example.test,`)); await tab.clock.install(); await click(tab, "Preview import"); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled(); await tab.clock.fastForward(5 * 60_000 + 1); await ui(tab.getByText("The import review expired. Preview the current draft again before importing.", { exact: true })).toBeVisible(); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
 });
 
 it("reviews congregation-wide parent/tutor grant consequences and denies tutor access to admin controls", async () => {
   const admin = await page(), tutor = await page("tutor"); await navigate(tutor, "/workspace/admin/tutors"); await ui(tutor.getByRole("heading", { name: "Role unavailable", exact: true })).toBeVisible();
-  await navigate(admin, `/workspace/admin/students/${sibling.id}/access`); await accessLoaded(admin); await safe(() => action(admin, "Parents", "Revoke parent role").click()); await ui(admin.locator(".access-review")).toContainText("ALL linked children"); await confirm(admin);
+  await navigate(admin, `/workspace/admin/students/${sibling.id}/access`); await accessLoaded(admin); await ui(action(admin, "Parents", "Remove")).toBeVisible(); expect(await admin.getByRole("region", { name: "Parents", exact: true }).getByRole("button", { name: /^Remove as a parent / }).count()).toBe(0);
+  await safe(() => admin.getByText("Remove someone across the congregation", { exact: true }).click()); await safe(() => action(admin, "Congregation-wide removal", "Remove as a parent").click()); await ui(admin.locator(".access-review")).toContainText("Changes access across the whole congregation."); await ui(admin.locator(".access-review")).toContainText("every linked child"); await confirm(admin);
   const current = (await api(admin, `/api/admin/students/${sibling.id}/relationships`)).data; expect(current.guardians[0].effectiveRead === false).toBe(true);
-  await navigate(admin, "/workspace/admin/tutors"); await accessLoaded(admin); await safe(() => action(admin, "Tutors", "Revoke tutor role").click()); await ui(admin.locator(".access-review")).toContainText("ALL assigned students"); await confirm(admin); await ui(admin.getByText("No tutors yet", { exact: true })).toBeVisible();
+  await navigate(admin, "/workspace/admin/tutors"); await accessLoaded(admin); await safe(() => action(admin, "Tutors", "Remove as a tutor").click()); await ui(admin.locator(".access-review")).toContainText("every student they teach"); await confirm(admin); await ui(admin.getByText("No tutors yet", { exact: true })).toBeVisible();
 });

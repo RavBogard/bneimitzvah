@@ -87,6 +87,8 @@ function Access({ studentId }: { studentId?: string }) {
   const open = (action: Action) => (event: { currentTarget: HTMLElement }) => { origin.current = event.currentTarget; choose(action); };
   // Row actions say whose access they change, so the visible verb is never ambiguous to a screen reader.
   const act = (label: string, name: string, action: Action, danger = false, off = false) => <button className={`roster-action${danger ? " people-danger" : ""}`} aria-label={`${label} ${name}`} disabled={disabled || off} onClick={open(action)}>{label}</button>;
+  // Removing someone from this student is the ordinary row action; it names the student so its scope is visible before the review.
+  const remove = (name: string, action: Action) => <button className="roster-action" aria-label={`Remove ${name} from ${data!.student.firstName}`} disabled={disabled} onClick={open(action)}>{`Remove from ${data!.student.firstName}`}</button>;
   const person = (name: string, status: ReactNode, actions: ReactNode, key: string) => <li key={key} className="people-row">
     <span className="people-avatar" aria-hidden="true">{initial(name)}</span>
     <div className="people-body"><h3><bdi dir="auto">{name}</bdi></h3><p className="people-status">{status}</p></div>
@@ -102,9 +104,10 @@ function Access({ studentId }: { studentId?: string }) {
     {message && !review && <p className={calm ? "workspace-notice roster-message" : "request-error roster-message"} role={blocked ? "alert" : "status"}>{message}</p>}
     {loading ? <p role="status">Checking current access…</p> : failed ? <div className="admin-state" role="alert"><h2>Access unavailable</h2><p>Current access couldn’t be loaded, so none of it is shown.</p><div className="form-actions"><button className="button-secondary admin-pill" disabled={pending || loading} onClick={() => void reload()}>Reload access</button><WorkspaceLink className="button-text" href="/">Check account and sign in again</WorkspaceLink></div></div> : snapshot && <>
       {data ? <>
+        {!data.student.disabled && <SetupSummary data={data} />}
         <section className="people-card" aria-labelledby="people-tutors"><div className="people-card-head"><h2 id="people-tutors">Tutors</h2><p>Can open this student’s reading, service parts and lessons.</p></div>
           {data.tutors.length ? <ul className="people-list">{data.tutors.map(row => person(linkedTutorLabels.get(row.tutorGrantId)!, <>{row.effectiveRead ? "Can teach this student" : "Access paused"}{row.isCantor && <span className="roster-chip">Cantor</span>}</>,
-            <>{act("Unassign", linkedTutorLabels.get(row.tutorGrantId)!, { kind: "link", group: "tutors", linkId: row.id })}{act("Revoke tutor role", linkedTutorLabels.get(row.tutorGrantId)!, { kind: "grant", group: "tutors", linkId: row.id, grantId: row.tutorGrantId }, true)}</>, row.id))}</ul>
+            remove(linkedTutorLabels.get(row.tutorGrantId)!, { kind: "link", group: "tutors", linkId: row.id }), row.id))}</ul>
             : <p className="people-empty">No tutor assigned yet.</p>}
           <div className="people-assign"><label htmlFor="access-tutor">Tutor to assign</label><div className="people-assign-row"><select id="access-tutor" disabled={disabled || data.student.disabled} value={selected} onChange={event => setSelected(event.target.value)}><option value="">Choose a tutor</option>{available.map(row => <option key={row.id} value={row.id}>{pickerLabels.get(row.id)}{row.isCantor ? " · Cantor" : ""}</option>)}</select>
             <button className="button-secondary admin-pill" disabled={disabled || data.student.disabled || !selected} onClick={open({ kind: "assign", grantId: selected })}>Assign</button></div>
@@ -113,18 +116,27 @@ function Access({ studentId }: { studentId?: string }) {
         <section className="people-card" aria-labelledby="people-parents"><div className="people-card-head"><h2 id="people-parents">Parents</h2><p>Can read this student’s work. Practising as the child is a separate permission.</p></div>
           {data.guardians.length ? <ul className="people-list">{data.guardians.map(row => person(parentLabels.get(row.parentGrantId)!, <>{row.effectiveRead ? "Can read" : "Access paused"} · {row.practiceEnabled ? (row.effectivePractice ? "Can practise as the child" : "Child practice allowed but unavailable") : "Child practice stopped"}</>,
             <>{act(row.practiceEnabled ? "Stop child practice" : "Allow child practice", parentLabels.get(row.parentGrantId)!, { kind: "practice", linkId: row.id, enabled: !row.practiceEnabled }, false, !row.practiceEnabled && (!row.effectiveRead || data.student.disabled))}
-              {act("Unlink", parentLabels.get(row.parentGrantId)!, { kind: "link", group: "guardians", linkId: row.id })}{act("Revoke parent role", parentLabels.get(row.parentGrantId)!, { kind: "grant", group: "guardians", linkId: row.id, grantId: row.parentGrantId }, true)}</>, row.id))}</ul>
+              {remove(parentLabels.get(row.parentGrantId)!, { kind: "link", group: "guardians", linkId: row.id })}</>, row.id))}</ul>
             : <p className="people-empty">No parent linked yet.</p>}
           {!data.student.disabled && <WorkspaceLink className="button-secondary admin-pill people-invite" href={`/workspace/admin/invitations?student=${encodeURIComponent(data.student.id)}&role=parent`}>Invite a parent</WorkspaceLink>}
         </section>
         <section className="people-card" aria-labelledby="people-students"><div className="people-card-head"><h2 id="people-students">Student sign-in</h2><p>The student’s own account. A parent practising as the child doesn’t need one.</p></div>
           {data.identities.length ? <ul className="people-list">{data.identities.map(row => person(studentLabels.get(row.studentGrantId)!, row.effectivePractice ? "Can sign in and practise" : "Access paused",
-            <>{act("Unlink", studentLabels.get(row.studentGrantId)!, { kind: "link", group: "identities", linkId: row.id })}{act("Revoke student role", studentLabels.get(row.studentGrantId)!, { kind: "grant", group: "identities", linkId: row.id, grantId: row.studentGrantId }, true)}</>, row.id))}</ul>
+            remove(studentLabels.get(row.studentGrantId)!, { kind: "link", group: "identities", linkId: row.id }), row.id))}</ul>
             : <p className="people-empty">No student sign-in linked.</p>}
           {!data.student.disabled && <WorkspaceLink className="button-secondary admin-pill people-invite" href={`/workspace/admin/invitations?student=${encodeURIComponent(data.student.id)}&role=student`}>Invite the student</WorkspaceLink>}
         </section>
+        {data.tutors.length + data.guardians.length + data.identities.length > 0 && <details className="people-card people-wider">
+          <summary>Remove someone across the congregation</summary>
+          <p>Only for someone who should stop being a tutor, parent or student here altogether. They lose access to every student, not just <bdi dir="auto">{data.student.firstName}</bdi>. To change only <bdi dir="auto">{data.student.firstName}</bdi>’s access, use the buttons above.</p>
+          <section aria-label="Congregation-wide removal"><ul className="people-list">
+            {data.tutors.map(row => person(linkedTutorLabels.get(row.tutorGrantId)!, "Tutor", act("Remove as a tutor", linkedTutorLabels.get(row.tutorGrantId)!, { kind: "grant", group: "tutors", linkId: row.id, grantId: row.tutorGrantId }, true), `wider-${row.id}`))}
+            {data.guardians.map(row => person(parentLabels.get(row.parentGrantId)!, "Parent", act("Remove as a parent", parentLabels.get(row.parentGrantId)!, { kind: "grant", group: "guardians", linkId: row.id, grantId: row.parentGrantId }, true), `wider-${row.id}`))}
+            {data.identities.map(row => person(studentLabels.get(row.studentGrantId)!, "Student sign-in", act("Remove as a student", studentLabels.get(row.studentGrantId)!, { kind: "grant", group: "identities", linkId: row.id, grantId: row.studentGrantId }, true), `wider-${row.id}`))}
+          </ul></section>
+        </details>}
       </> : snapshot.tutors.length ? <section className="people-card" aria-label="Tutors"><ul className="people-list">{snapshot.tutors.map(row => person(tutorLabels.get(row.id)!, row.isCantor ? <span className="roster-chip">Cantor</span> : "Tutor",
-          <>{act(row.isCantor ? "Remove cantor flag" : "Mark as cantor", tutorLabels.get(row.id)!, { kind: "cantor", grantId: row.id, enabled: !row.isCantor })}{act("Revoke tutor role", tutorLabels.get(row.id)!, { kind: "grant", grantId: row.id }, true)}</>, row.id))}</ul></section>
+          <>{act(row.isCantor ? "Remove cantor flag" : "Mark as cantor", tutorLabels.get(row.id)!, { kind: "cantor", grantId: row.id, enabled: !row.isCantor })}{act("Remove as a tutor", tutorLabels.get(row.id)!, { kind: "grant", grantId: row.id }, true)}</>, row.id))}</ul></section>
         : <div className="admin-empty"><p className="admin-empty-title">No tutors yet</p><p>Invite a tutor from Invitations. They appear here once they accept.</p></div>}
       {(cursors.length > 1 || snapshot.tutors.length === 100) && <nav className="roster-pages" aria-label="Tutor pages"><button className="button-secondary admin-pill" disabled={disabled || cursors.length === 1} onClick={() => { setReview(null); setSelected(""); setCursors(previous => previous.slice(0, -1)); }}>Previous tutor page</button><button className="button-secondary admin-pill" disabled={disabled || snapshot.tutors.length !== 100} onClick={() => { setReview(null); setSelected(""); setCursors(previous => [...previous, snapshot.tutors[snapshot.tutors.length - 1].id]); }}>Next tutor page</button></nav>}
     </>}
@@ -132,6 +144,26 @@ function Access({ studentId }: { studentId?: string }) {
       <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close access review" disabled={pending} onClick={() => setReview(null)}>{icons.close}</button></div>
       {review && <AccessReview review={review} pending={pending} confirm={confirm} cancel={() => setReview(null)} />}
     </dialog>
+  </section>;
+}
+
+// What is set up for this student and what still needs doing. Saved contact emails are not access:
+// a person has access only after they accept an invitation and appear on this page.
+function SetupSummary({ data }: { data: Relationships }) {
+  const first = data.student.firstName, id = encodeURIComponent(data.student.id);
+  const teaching = data.tutors.filter(row => row.effectiveRead).length, reading = data.guardians.filter(row => row.effectiveRead).length, signIn = data.identities.some(row => row.effectivePractice);
+  const focus = (target: string) => () => document.getElementById(target)?.focus();
+  const items: { title: string; state: "Done" | "To do" | "Optional"; text: string; next?: ReactNode }[] = [
+    { title: "Tutor", state: teaching ? "Done" : "To do", text: teaching ? `${teaching} ${teaching === 1 ? "tutor teaches" : "tutors teach"} ${first}.` : "Nobody teaches yet.",
+      next: !teaching && <button type="button" className="button-text" onClick={focus("access-tutor")}>Choose a tutor</button> },
+    { title: "Family access", state: reading ? "Done" : "To do", text: reading ? `${reading} ${reading === 1 ? "parent has" : "parents have"} accepted access.` : "No parent has accepted access yet. A parent email on the student record doesn’t give access by itself.",
+      next: !reading && <WorkspaceLink className="button-text" href={`/workspace/admin/invitations?student=${id}&role=parent`}>Send a parent invitation</WorkspaceLink> },
+    { title: "Student sign-in", state: signIn ? "Done" : "Optional", text: signIn ? `${first} signs in with their own account.` : "Not linked. A child can practise through a parent; an adult needs their own sign-in.",
+      next: !signIn && <WorkspaceLink className="button-text" href={`/workspace/admin/invitations?student=${id}&role=student`}>Send the student an invitation</WorkspaceLink> },
+  ];
+  return <section className="people-card people-setup" aria-labelledby="people-setup"><div className="people-card-head"><h2 id="people-setup">Setup</h2>
+    <p>An invitation gives access only once it is accepted; until then it stays under <WorkspaceLink href="/workspace/admin/invitations">Invitations</WorkspaceLink>. The reading is assigned on the <WorkspaceLink href={`/workspace/admin/students/${id}/reading`}>student page</WorkspaceLink>.</p></div>
+    <ul className="people-setup-list">{items.map(item => <li key={item.title} data-state={item.state}><span className="people-setup-state">{item.state}</span><div><h3>{item.title}</h3><p>{item.text}</p>{item.next}</div></li>)}</ul>
   </section>;
 }
 
