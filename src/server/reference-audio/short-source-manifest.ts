@@ -21,6 +21,7 @@ export type ShortSourceManifest = Readonly<{ [manifestBrand]: true }>;
 export type ShortSourceEntry = Readonly<{ [entryBrand]: true }>;
 type Entry = Readonly<{ source: ShortReferenceSource; blobKey: string; requiredBodyVerification: typeof SHORT_BODY_VERIFICATION_REQUIRED }>;
 const manifests = new WeakMap<object, ReadonlyMap<string, ShortSourceEntry>>(), entries = new WeakMap<object, Entry>();
+const manifestIdentities = new WeakMap<object, Readonly<{ parentSHA256: string; manifestSHA256: string }>>();
 const sha = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 const digest = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
 function copyBytes(value: unknown, max: number): Uint8Array {
@@ -119,7 +120,8 @@ export function createShortSourceManifestLoader(input: { sha256: string; parentC
         const receipt = Object.freeze({}) as ShortSourceEntry;
         entries.set(receipt, Object.freeze({ source, blobKey: source.path.slice(1), requiredBodyVerification: SHORT_BODY_VERIFICATION_REQUIRED })); map.set(source.id, receipt);
       }
-      live(); const handle = Object.freeze({}) as ShortSourceManifest; manifests.set(handle, map); return handle;
+      live(); const handle = Object.freeze({}) as ShortSourceManifest; manifests.set(handle, map);
+      manifestIdentities.set(handle, Object.freeze({ parentSHA256, manifestSHA256 })); return handle;
     } catch { controller.abort(); throw new ReferenceUnavailable(); }
     finally {
       signal?.removeEventListener("abort", abort); clearTimeout(timer);
@@ -138,6 +140,14 @@ export function lookupShortSource(manifest: ShortSourceManifest, id: unknown): S
 }
 export function readShortSourceEntry(entry: ShortSourceEntry): Entry {
   const value = entries.get(entry); if (!value) throw new ReferenceUnavailable(); return value;
+}
+
+/** Only a genuine loader can establish this identity. A sealed manifest from a
+ * different valid build is not authority for either configured pin here. */
+export function shortSourceManifestMatches(manifest: unknown, parentSHA256: unknown, manifestSHA256: unknown): manifest is ShortSourceManifest {
+  if (!manifest || typeof manifest !== "object" || !digest(parentSHA256) || !digest(manifestSHA256)) return false;
+  const identity = manifestIdentities.get(manifest);
+  return !!identity && identity.parentSHA256 === parentSHA256 && identity.manifestSHA256 === manifestSHA256;
 }
 
 /** Only a unique derivative of this exact resolved parent and enclosing native

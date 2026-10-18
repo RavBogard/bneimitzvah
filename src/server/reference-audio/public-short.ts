@@ -4,7 +4,7 @@ import { SHORT_SOURCE_ATTRIBUTION, SHORT_SOURCE_PREFIX, SHORT_SOURCE_LIMITS } fr
 import { SHORT_SOURCE_FFMPEG_TAGS } from "../../lib/reference-audio/short-source-tags";
 import { PRODUCTION_ORIGINS } from "../runtime/config";
 import { REFERENCE_CATALOG_LIMITS, ReferenceUnavailable } from "./catalog";
-import { createShortSourceManifestLoader, lookupShortSource, readShortSourceEntry } from "./short-source-manifest";
+import { createShortSourceManifestLoader, lookupShortSource, readShortSourceEntry, shortSourceManifestMatches, type ShortSourceManifest } from "./short-source-manifest";
 import { verifyShortSourceBody, readVerifiedShortSourceBody } from "./short-source-body";
 import type { ReferenceCatalogGet } from "./storage";
 
@@ -34,9 +34,10 @@ function selectedFile(request: Request, origin: string): string | null {
  * performs no I/O. No auth/session, database, request token or provider URL. */
 export function createPublicShortHandler(input?: Readonly<{
   origin: string; parentCatalogSHA256: string; manifestSHA256: string; get: ReferenceCatalogGet; live?: () => boolean;
+  loadManifest?: (signal?: AbortSignal) => Promise<ShortSourceManifest>;
 }>): PublicShortHandler {
   if (!input || !PRODUCTION_ORIGINS.includes(input.origin) || !digest(input.parentCatalogSHA256) || !digest(input.manifestSHA256)) return async () => failure(404);
-  const { origin, parentCatalogSHA256, manifestSHA256, get } = input, configured = input.live ?? (() => true);
+  const { origin, parentCatalogSHA256, manifestSHA256, get, loadManifest } = input, configured = input.live ?? (() => true);
   return async request => {
     if (!configured()) return failure(404);
     const hash = selectedFile(request, origin); if (!hash) return failure(404);
@@ -82,9 +83,14 @@ export function createPublicShortHandler(input?: Readonly<{
     }
     try {
       live();
-      const parent = await read(`reference-audio/pockettorah/catalog/${parentCatalogSHA256}.json`, REFERENCE_CATALOG_LIMITS.bytes);
-      if (createHash("sha256").update(parent).digest("hex") !== parentCatalogSHA256) refuse();
-      const manifest = await createShortSourceManifestLoader({ sha256: manifestSHA256, parentCatalogSHA256, parentCatalogBytes: parent, get })(controller.signal); live();
+      let manifest: ShortSourceManifest;
+      if (loadManifest) manifest = await bounded(loadManifest(controller.signal), 30000);
+      else {
+        const parent = await read(`reference-audio/pockettorah/catalog/${parentCatalogSHA256}.json`, REFERENCE_CATALOG_LIMITS.bytes);
+        if (createHash("sha256").update(parent).digest("hex") !== parentCatalogSHA256) refuse();
+        manifest = await createShortSourceManifestLoader({ sha256: manifestSHA256, parentCatalogSHA256, parentCatalogBytes: parent, get })(controller.signal);
+      }
+      live(); if (!shortSourceManifestMatches(manifest, parentCatalogSHA256, manifestSHA256)) refuse();
       const entry = lookupShortSource(manifest, `rs_${hash}`); if (!entry) return failure(404);
       const metadata = readShortSourceEntry(entry);
       if (metadata.source.path !== `${SHORT_SOURCE_PREFIX}${hash}.mp3` || metadata.source.sha256 !== hash || metadata.source.bytes > SHORT_SOURCE_LIMITS.bytes) refuse();

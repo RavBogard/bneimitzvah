@@ -3,6 +3,7 @@ import { PRODUCTION_ORIGINS } from "../runtime/config";
 import { ReferenceUnavailable } from "./catalog";
 import { createPublicShortHandler, type PublicShortHandler } from "./public-short";
 import type { ReferenceCatalogGet } from "./storage";
+import { createRuntimeShortMetadata } from "./runtime-short-metadata";
 
 type Environment = Readonly<Record<string, string | undefined>>;
 type Config = Readonly<{ origin: string; parentCatalogSHA256: string; manifestSHA256: string; storeId: string }>;
@@ -21,11 +22,12 @@ function select(env: Environment): Config | null {
 export function createRuntimePublicShort(env: Environment): PublicShortHandler {
   const config = select(env); if (!config) return createPublicShortHandler();
   const current = () => { const now = select(env); return now !== null && JSON.stringify(now) === JSON.stringify(config); };
-  const allowed = new Set([`reference-audio/pockettorah/catalog/${config.parentCatalogSHA256}.json`, `reference-audio/short-v1/manifests/${config.manifestSHA256}.json`]);
+  const metadata = createRuntimeShortMetadata({ origin: config.origin, deployment: { environment: "production", deployment: "production" },
+    referenceAudio: { storeId: config.storeId, catalogSha256: config.parentCatalogSHA256, studentRelease: false } }, env);
   const get: ReferenceCatalogGet = async (path, { signal }) => {
     let stream: ReadableStream<Uint8Array> | undefined;
     try {
-      if (!current() || signal.aborted || !allowed.has(path) && !/^reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$/.test(path)) throw 0;
+      if (!current() || signal.aborted || !/^reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$/.test(path)) throw 0;
       const { getContext } = await import("@vercel/oidc");
       if (!current() || signal.aborted) throw 0;
       const token = getContext().headers?.["x-vercel-oidc-token"];
@@ -41,7 +43,7 @@ export function createRuntimePublicShort(env: Environment): PublicShortHandler {
       throw new ReferenceUnavailable();
     }
   };
-  return createPublicShortHandler({ ...config, get, live: current });
+  return createPublicShortHandler({ ...config, get, live: current, loadManifest: metadata.loadManifest });
 }
 
 export const publicShortRequest = (request: Request) => createRuntimePublicShort(process.env)(request);
