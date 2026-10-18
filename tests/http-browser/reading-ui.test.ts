@@ -10,7 +10,7 @@ import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
 import * as s from "../../src/server/db/index";
-import { installReadingRouteGuard } from "./reading-route-guard";
+import { installReadingRouteGuard, readingRouteCleanupError } from "./reading-route-guard";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -67,7 +67,7 @@ beforeAll(async () => {
 afterAll(async () => {
   const closed = await Promise.allSettled(contexts.map(context => routeGuards.get(context)?.close() ?? context.close()));
   await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await browserEnv?.cleanup();
-  if (closed.some(result => result.status === "rejected")) throw new Error("Reading UI route/context cleanup failed; private details withheld");
+  const cleanupError = readingRouteCleanupError(closed); if (cleanupError) throw cleanupError;
 }, 120_000);
 
 it("lets an admin review actual calendar choices, confirm once and replace only after authoritative reload", async () => {
