@@ -169,6 +169,13 @@
       "when": 1792313994567,
       "tag": "0023_honoree_links",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792348800000,
+      "tag": "0024_auth_session_google_provenance",
+      "breakpoints": true
     }
   ]
 }

@@ -37,7 +37,21 @@ export function createAuthStack(
       encryptOAuthTokens: true,
       accountLinking: { enabled: true, trustedProviders: [], allowDifferentEmails: false },
     },
-    session: { expiresIn: 7 * 24 * 60 * 60, freshAge: 15 * 60, cookieCache: { enabled: false } },
+    session: {
+      expiresIn: 7 * 24 * 60 * 60, freshAge: 15 * 60, cookieCache: { enabled: false },
+      additionalFields: { googleAuthenticatedAt: { type: "date", required: false, input: false, returned: false } },
+    },
+    databaseHooks: { session: { create: { before: async (_session, context) => {
+      // In the pinned SDK this INSERT is reached only after the configured
+      // provider verified the idToken and resolved its user. Other creation
+      // paths cannot inherit provenance from a linked account or an old session.
+      const googleAuthenticated = Boolean(input.google && context?.path === "/sign-in/social"
+        && context.method === "POST" && context.body?.provider === "google"
+        && typeof context.body.idToken?.token === "string" && context.body.idToken.token.length > 0
+        && context.context.socialProviders.some(provider => provider.id === "google"));
+      // Always replace any supplied marker, including on non-Google creation.
+      return { data: { googleAuthenticatedAt: googleAuthenticated ? new Date() : null } };
+    } } } },
     rateLimit: { enabled: true, storage: "database", window: 60, max: 60 },
     advanced: { ipAddress: { ipAddressHeaders: [AUTH_RATE_LIMIT_HEADER], ipv6Subnet: 128 }, crossSubDomainCookies: { enabled: false }, useSecureCookies: origin.protocol === "https:" },
     // Provider/adapter diagnostics can contain identities or credentials. The app's
