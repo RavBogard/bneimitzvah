@@ -59,6 +59,25 @@ it("cancel fences queued and pending work; late failure cannot invalidate a newl
   f.scope("new scope"); f.gate.reject({ status: 403 }); await flush(); expect(f.changed).not.toHaveBeenCalled();
 });
 
+it("verified base-parent presentation/date/revision changes require metadata review without changing its selected authority", () => {
+  const value: Assigned = { mode: "parent", student: { id: "synthetic-student", firstName: "Synthetic", lastName: "Student", ceremonyDate: "2027-01-02", revision: 4 }, context: null, readings: [] };
+  const expected = quietReadingAuthority(value);
+  for (const key of ["firstName", "lastName", "ceremonyDate", "revision"] as const) {
+    const fresh = { ...value, student: { ...value.student, [key]: key === "revision" ? 5 : key === "ceremonyDate" ? "2027-02-06" : "Changed" } };
+    expect(JSON.stringify(fresh)).not.toBe(JSON.stringify(value));
+    expect(quietReadingAuthority(fresh)).toBe(expected);
+  }
+  expect(quietReadingAuthority({ ...value, student: { ...value.student, id: "another-student" } })).not.toBe(expected);
+  for (const mode of ["student", "tutor", "admin", "child-practice"] as const) {
+    expect(quietReadingAuthority({ ...value, mode })).not.toBe(expected);
+    const scoped = { ...value, mode };
+    expect(quietReadingAuthority({ ...scoped, student: { ...value.student, ceremonyDate: "2027-02-06" } })).not.toBe(quietReadingAuthority(scoped));
+  }
+  const context = { id: "synthetic-context", authorityRevision: 2, studentId: value.student.id, studentRevision: 4, expiresAt: "2026-10-18T00:00:00.000Z" };
+  expect(quietReadingAuthority({ ...value, context })).not.toBe(expected);
+  expect(quietReadingAuthority({ ...value, context, student: { ...value.student, revision: 5 } })).not.toBe(quietReadingAuthority({ ...value, context }));
+});
+
 it("starting focus checks cannot invalidate a concurrent write's captured generation or committed acknowledgement", async () => {
   let generation = 7, dirty = true, acknowledgement = "pending";
   const f = fixture(), commit = deferred<string>(), startedGeneration = generation;

@@ -1,7 +1,9 @@
 import type { Assigned } from "./api";
 
-/** Complete closed authority fields; assignment differences are reconciled separately. */
-export const quietReadingAuthority = (value: Pick<Assigned, "mode" | "student" | "context">) => JSON.stringify([value.mode, value.student, value.context]);
+/** A verified base guardian retains its selected target through metadata review.
+ * Other modes retain the complete incumbent student/context authority contract. */
+export const quietReadingAuthority = (value: Pick<Assigned, "mode" | "student" | "context">) => JSON.stringify([value.mode,
+  value.mode === "parent" && value.context === null ? { id: value.student.id } : value.student, value.context]);
 
 /** One background authority check per event burst/in-flight request. No UI cache. */
 export function createQuietRefresh(input: {

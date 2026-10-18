@@ -46,8 +46,36 @@ async function observe(tab: Page, id: string, receipt: boolean, action: () => Pr
   await tab.route(matches, handler); try { const [value] = await Promise.all([captured, action()]); return value; } finally { await tab.unroute(matches, handler); }
 }
 async function save(tab: Page, id: string) { const result = await observe(tab, id, false, () => sheet(tab).getByRole("button", { name: "Save honors", exact: true }).click()); await ui(sheet(tab).getByRole("status").filter({ hasText: "Honors saved." })).toBeVisible(); return result; }
-async function focus(tab: Page) { let sessions = 0; const count = (r: import("playwright").Response) => { if (new URL(r.url()).pathname === "/api/session") sessions++; }; tab.on("response", count);
-  try { await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await ui.poll(() => sessions).toBeGreaterThanOrEqual(new URL(tab.url()).pathname === "/workspace/admin/students" ? 4 : 6); } finally { tab.off("response", count); }
+async function focus(tab: Page) {
+  // Parent: provider2 + reading2 + honors2 proofs; admin roster: provider2 + honors2.
+  // The provider's final proof starts only after every registered scope settles.
+  const expected = new URL(tab.url()).pathname === "/workspace/admin/students" ? 4 : 6;
+  await tab.evaluate(expected => {
+    const browser = window as Window & { honorsQuietWitness?: { complete: boolean; failed: boolean; dispose(): void } }, original = window.fetch, channel = new MessageChannel(); let eof = 0;
+    const witness = { complete: false, failed: false, dispose() { if (window.fetch === wrapped) window.fetch = original; channel.port1.close(); channel.port2.close(); if (browser.honorsQuietWitness === witness) delete browser.honorsQuietWitness; } };
+    channel.port1.onmessage = () => { witness.complete = true; };
+    const wrapped: typeof window.fetch = async (...args) => {
+      const response = await original(...args), input = args[0], url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, location.href);
+      if (url.origin !== location.origin || url.pathname !== "/api/session") return response;
+      if (response.status !== 200) witness.failed = true;
+      const body = response.body;
+      if (body) { const getReader = body.getReader;
+        Object.defineProperty(body, "getReader", { configurable: true, value: (...readerArgs: unknown[]) => {
+          const reader = Reflect.apply(getReader, body, readerArgs), read = reader.read; let ended = false;
+          reader.read = (...readArgs: unknown[]) => (Reflect.apply(read, reader, readArgs) as Promise<{ done: boolean }>).then(part => {
+            // Observe only the parser's actual EOF. Forward the original result,
+            // bytes, rejection, cancellation and release semantics unchanged.
+            if (part.done && !ended) { ended = true; if (++eof === expected) channel.port2.postMessage(null); } return part;
+          }, (error: unknown) => { witness.failed = true; throw error; });
+          return reader;
+        } });
+      }
+      return response;
+    };
+    browser.honorsQuietWitness = witness; window.fetch = wrapped; window.dispatchEvent(new Event("focus"));
+  }, expected);
+  try { await ui.poll(() => tab.evaluate(() => { const witness = (window as Window & { honorsQuietWitness?: { complete: boolean; failed: boolean } }).honorsQuietWitness; return { complete: witness?.complete ?? false, failed: witness?.failed ?? false }; })).toEqual({ complete: true, failed: false }); }
+  finally { await tab.evaluate(() => (window as Window & { honorsQuietWitness?: { dispose(): void } }).honorsQuietWitness?.dispose()); }
 }
 async function rows(id: string) { return fixture.ownerDb.select().from(s.honorsVersion).where(eq(s.honorsVersion.studentId, id)); }
 async function audits(id: string) { return fixture.ownerDb.select().from(s.auditEvent).where(and(eq(s.auditEvent.actingStudentId, id), eq(s.auditEvent.action, "honors.set"))); }
@@ -120,7 +148,7 @@ it("lost committed response and unconfirmed receipt keep exact original UUID/bod
     await retryButton.click(); await ui.poll(() => retry).toBe(bodies[1]);
     await ui(sheet(tab).getByRole("status").filter({ hasText: "Saving honors…" })).toBeVisible(); await ui(sheet(tab).getByRole("button", { name: "Close family honors", exact: true })).toBeDisabled(); await ui(group(tab, "Opening the ark").getByLabel("English name", { exact: true })).toBeDisabled();
     await sheet(tab).press("Escape"); await sheet(tab).evaluate(node => (node as HTMLDialogElement).close()); await ui(sheet(tab)).toBeVisible(); await ui(sheet(tab).getByRole("button", { name: "Leave without confirmation", exact: true })).toHaveCount(0); await ui(sheet(tab).getByRole("status").filter({ hasText: "Saving honors…" })).toBeVisible();
-  } finally { release(); try { await tab.unroute(exact, holdRetry); } finally { if (retryBegan) await completed; } }
+  } finally { release(); try { if (retryBegan) await completed; } finally { await tab.unroute(exact, holdRetry); } }
   await ui(sheet(tab).getByRole("status").filter({ hasText: "Honors saved." })).toBeVisible(); expect(retry).toBe(bodies[1]); expect(JSON.parse(bodies[0]).mutationId).not.toBe(JSON.parse(bodies[1]).mutationId); expect(await rows(child.id)).toHaveLength(2); expect(await audits(child.id)).toHaveLength(2);
 });
 it("admin printing verifies only the saved copy; real guardian denial clears private fields", async () => {
