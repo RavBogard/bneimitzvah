@@ -102,6 +102,8 @@ it("plays main-text words on the first click, verifies offsets/loops/pitch and r
   tab.on("request", request => { if (new URL(request.url()).pathname.endsWith("/reference-audio")) resolutions++; });
   expect(state.requests).toBe(0); expect((await native(tab)).count).toBe(0); await ui(tab.locator(".study-verses .verse-card")).toHaveCount(0);
   await word(tab, 1, 0).click(); await playing(tab); expect(state.requests).toBe(1); expect(resolutions).toBe(1);
+  const firstNativeSrc = (await native(tab)).src;
+  expect(typeof firstNativeSrc === "string" && firstNativeSrc.startsWith("blob:")).toBe(true);
   expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(1.1); await ui(word(tab, 1, 0)).toHaveAttribute("data-reference-active", "true");
   expect(state.sawCookie || state.sawReferer).toBe(false); await ui(tab.getByRole("dialog")).toHaveCount(0);
   await player(tab).getByLabel("Speed", { exact: true }).selectOption("0.5"); expect(await native(tab)).toMatchObject({ rate: 0.5, preservesPitch: true });
@@ -109,8 +111,9 @@ it("plays main-text words on the first click, verifies offsets/loops/pitch and r
   await tab.evaluate(() => { (window as TrackedWindow).referenceAudios.at(-1)!.currentTime = 4.96; });
   await expect.poll(async () => { const time = (await native(tab)).currentTime ?? 9; return time >= 3 && time < 3.6; }).toBe(true);
   await word(tab, 2, 0).click(); await playing(tab); await ui(player(tab)).toContainText("Genesis 1:2");
-  expect(state.requests).toBe(1); expect(resolutions).toBe(2); expect(await native(tab)).toMatchObject({ count: 2, revoked: 1, rate: 0.5 }); await ui(player(tab).getByRole("button", { name: "Repeat", exact: true })).toHaveAttribute("aria-pressed", "true");
-  expect(await tab.evaluate(() => (window as TrackedWindow).referenceAudios[0].getAttribute("src"))).toBeNull();
+  expect(state.requests).toBe(1); expect(resolutions).toBe(2); expect(await native(tab)).toMatchObject({ count: 1, revoked: 0, rate: 0.5 }); await ui(player(tab).getByRole("button", { name: "Repeat", exact: true })).toHaveAttribute("aria-pressed", "true");
+  expect((await native(tab)).src === firstNativeSrc).toBe(true);
+  await ui(word(tab, 2, 0)).toHaveAttribute("data-reference-active", "true");
   await player(tab).getByRole("button", { name: "Pause", exact: true }).click(); expect((await native(tab)).paused).toBe(true);
 });
 it("supports colors-off qere/maqaf and keyboard word or verse playback in the phone main text", async () => {
