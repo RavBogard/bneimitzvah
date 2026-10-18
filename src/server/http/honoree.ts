@@ -1,6 +1,6 @@
 import "server-only";
 import type { HttpRuntime } from "../runtime/composition";
-import { intent, selection, bounded } from "../honoree/validation";
+import { intent, selection, start, bounded } from "../honoree/validation";
 import { closedObject, uniqueQuery } from "./query";
 import { readJsonBody } from "./body";
 import { requireCookieMutation } from "./mutations";
@@ -18,10 +18,23 @@ export function finishHonoreeGuestResponse(request: Request, response: Response,
   response.headers.set("X-Honoree-Remaining-Ms", String(remaining));
   return response;
 }
-// Only the exact guest path is dispatched. Authenticated adapters remain prepared.
+const managementReturn = new WeakMap<Response, () => void>();
+const managementPath = /^\/api\/students\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\/honoree-links(?:\/(receipt|status))?$/;
+export function honoreeManagementRouteMethods(path: string): readonly string[] | null { return managementPath.test(path) ? ["POST"] : null; }
+/** Only original management responses carry the captured session/credential
+ * fence. Runtime cleanup cannot turn a committed-but-withheld URL into a replay. */
+export function finishHonoreeManagementResponse(request: Request, response: Response): Response {
+  if (response.status !== 200 && response.status !== 409) return response;
+  try {
+    const assertReturnLive = managementReturn.get(response);
+    if (request.signal.aborted || !assertReturnLive) throw new HttpBoundaryError(404);
+    assertReturnLive();
+    return response;
+  } catch (error) { return errorResponse(error); }
+}
 export async function handleHonoreeRequest(request: Request, runtime: Pick<HttpRuntime, "honoree" | "origin">): Promise<Response | null> {
   const path = new URL(request.url).pathname;
-  const guest = path === "/api/honoree/read", match = /^\/api\/students\/([^/]+)\/honoree-links(?:\/(receipt))?$/.exec(path);
+  const guest = path === "/api/honoree/read", match = managementPath.exec(path);
   if (!guest && !match) return null;
   try {
     uniqueQuery(request.url, []);
@@ -38,9 +51,20 @@ export async function handleHonoreeRequest(request: Request, runtime: Pick<HttpR
       return response;
     }
     requireCookieMutation(request, runtime.origin);
+    if (match![2] === "status") {
+      const body = closedObject(await readJsonBody(request, "honoree"), ["mode", "startVerse"]);
+      const result = await runtime.honoree.statusForTransport(request, selection({ mode: body.mode, studentId: match![1] }), start(body.startVerse));
+      result.assertReturnLive();
+      const response = privateJson(bounded(result.dto) as unknown as JsonValue);
+      if (response.status === 200) managementReturn.set(response, result.assertReturnLive);
+      return response;
+    }
     const body = closedObject(await readJsonBody(request, "honoree"), ["mode", "operation", "mutationId", "expectedVersion", "contextHash", "startVerse", "linkId"]);
     const selected = selection({ mode: body.mode, studentId: match![1] }), write = intent({ operation: body.operation, mutationId: body.mutationId, expectedVersion: body.expectedVersion, contextHash: body.contextHash, startVerse: body.startVerse, linkId: body.linkId });
-    const result = match![2] ? await runtime.honoree.receipt(request, selected, write) : await runtime.honoree.mutate(request, selected, write);
-    return privateJson(bounded(result) as JsonValue, result.ok ? 200 : 409);
+    const result = match![2] ? await runtime.honoree.receiptForTransport(request, selected, write) : await runtime.honoree.mutateForTransport(request, selected, write);
+    result.assertReturnLive();
+    const response = privateJson(bounded(result.dto) as JsonValue, result.dto.ok ? 200 : 409);
+    if (response.status === 200 || response.status === 409) managementReturn.set(response, result.assertReturnLive);
+    return response;
   } catch (error) { return errorResponse(guest ? new HttpBoundaryError(404) : error); }
 }

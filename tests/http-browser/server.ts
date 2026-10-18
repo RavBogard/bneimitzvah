@@ -8,6 +8,7 @@ import { authRouteMethods } from "../../src/server/http/auth";
 import { portalRouteMethods } from "../../src/server/http/portal";
 import { sourceAssignmentsRouteMethods } from "../../src/server/http/source-assignments";
 import { honorsRouteMethods } from "../../src/server/http/honors";
+import { honoreeManagementRouteMethods } from "../../src/server/http/honoree";
 import { sourceContentRouteMethods } from "../../src/server/http/source-content";
 import { serviceLearningRouteMethods } from "../../src/server/http/service-learning";
 import { studentWorkRouteMethods } from "../../src/server/http/student-work";
@@ -94,7 +95,7 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope) {
       const request = safeRequest(req);
       if (!request) { await send(res, new Response(null, { status: 400 })); return; }
       const pathname = new URL(request.url).pathname;
-      if (!honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname)) { await nextHandler(req, res); return; }
+      if (!honoreeManagementRouteMethods(pathname) && !honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname)) { await nextHandler(req, res); return; }
       await send(res, await dispatch(request));
     } catch { if (!res.headersSent) await send(res, new Response(null, { status: 503 })); else res.destroy(); }
   });

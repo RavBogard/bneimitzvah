@@ -1,0 +1,23 @@
+# Honoree management return — 2026-10-18
+
+Production/main remains31481c56bd32c6a26ffda206b09864f332f15d33: the reviewed family form is live. This separate B3 checkpoint implements authenticated management over the locally merged form and B2 guest page. Real material and0023 production release remain held.
+
+## Behavior and boundaries
+
+Only exact base guardian/admin POST mutation, receipt and status paths activate. Existing tenant/host/cookie/Origin/fetch-site, saved-form/context/version, role and permanent epoch checks remain authoritative. No tutor/student/practice/adult-self-edit authority is added. Public service results stay unchanged; a transport-only synchronous closure checks captured session and newly issued credential expiry before serialization and again on the exact Response after runtime cleanup. No second authority read or public clock fields. Guest fences are unchanged. Refusal after COMMIT withholds output without claiming rollback; replay/receipt/status never recover plaintext.
+
+The existing family sheet gains a separate in-memory link owner and scoped controls. Clean saved reviewed nonempty groups gate issue/replacement; replacement/revocation require explicit confirmation. Recorded metadata does not promise current usability. An unconfirmed action keeps its exact original UUID/intent for receipt or same-action retry. Stale spans retain original receipt/revocation controls. A new acknowledged URL is shown once with explicit Copy; no automatic invitation, mail, opening, copying or persistence. Concealment/departure/session changes clear secrets synchronously and suppress late responses/copy completions. Save/edit/review/printing serialize with pending link work; printing excludes links. Absent material404 stays local and preserves the honors form.
+
+## Verification and retained failures
+
+Author backend40 plus compatibility22, client23 and whole types pass. Independent backend and client reviews accept exact source; two new adversarial cases pass, including captured-session renewal refusal after cleanup and original-intent recovery after span changes. Root final default build and historical-operator compatibility13 pass. Actual disposable PostgreSQL B6+A4 passes10/10 in10.40s with owned cleanup and original114 pins unchanged. Backend code is unchanged after this proof; subsequent deltas restore only departure copy and improve test capture framing.
+
+First actual browser run passed7/8: all three new cases passed, while an existing unknown-save check caught generalized departure wording. Only the UI copy was corrected to retain the established save wording and provide a separate link prompt; no test/oracle/timeout waiver. First captures are preserved in the ignored first-pass sibling; phone framing was corrected only in the test recipe. Actual confirmation C5+B3 passes8/8 in42.28s with all114 final pins and cleanup checks true. It proves real base-cookie/form/no-material denial with zero management writes; success/clipboard/recovery visuals use explicitly invalid all-A credentials and intercepted replies. It does not prove real material or signed guest delivery.
+
+Final source48 manifest SHA7231a93f7f92b21b1393d8896e7ffc7b85d24ea16f7c462faa0425f7ea92aabf and dependency66 SHA07e04513489d6fd3751cda4ccc3a2b4223eed65a59943d862acc8dc72406e785 identify confirmation. Root inspected all four final desktop/phone light/dark frames; primary phone URL/Copy geometry clears the footer. One detector exits0 with15 advisories (13 type-size, two radius); fresh bounded visual review returned ship, no material finding. [UI documentation](HONOREE-MANAGEMENT-UI-DOCUMENTATION.md) is complete with global design files unchanged; the final exact hosted gate remains next.
+
+## Release limits and next action
+
+Save this bounded source, documentation and exact hosted checkpoint. Prepare/review a dedicated0023-only operator with preservation of populated existing honors and exact deterministic epoch backfill; the0022 operator intentionally refuses this newer tree. Actual native reference/manual operator gates and final production verification precede deployment. Real blessing permission, required credits and projector remain unresolved and fail closed; adult self-edit remains denied. No real import, invitation/mail, generated voice, student recording, extra provider scope or spending accompanied these checks. This is not1.0 completion.
+
+Local evidence: honoree-native-management-first.log/cleanup.json; honoree-management-browser-first.log (held7/8); honoree-management-browser-v3.log/cleanup.json; separate independent backend/client/native-prep/v3/visual reports. Real student data, prayer bodies, screenshots, capabilities and credentials stay outside Git.

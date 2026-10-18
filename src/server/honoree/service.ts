@@ -20,6 +20,9 @@ const unavailable = (): never => { throw new AccessDenied(404); };
 const conflict = Object.freeze({ ok: false as const, code: "conflict" as const });
 type GuestDto = Readonly<{ ok: true; schemaVersion: 1; student: Readonly<{ firstName: string; ceremonyDate: string }>; aliyah: HonorsSpan; material: GuestMaterial; expiresAt: string }>;
 type GuestTransport = Readonly<{ dto: GuestDto; remainingMs: number }>;
+type MutationDto = Readonly<{ ok: false; code: "conflict" }> | Readonly<{ ok: true; outcome: "unconfirmed" }> | Readonly<{ ok: true; outcome: "committed"; replayed: boolean; operation: "issue" | "reissue" | "revoke"; linkId: string; startVerse: string; url?: string; expiresAt?: string }>;
+type StatusDto = Readonly<{ ok: true; currentLink: Readonly<{ id: string; startVerse: string; issuedAt: string; expiresAt: string }> | null }>;
+type ManagementTransport<T> = Readonly<{ dto: T; assertReturnLive(): void }>;
 type ReturnClock = Readonly<{ databaseNow: number; monotonicStart: number }>;
 function returnBarrier(request: Request, sessionExpiresAt?: number, expiresAt?: number, clock?: ReturnClock) {
   const wallNow = Date.now();
@@ -54,7 +57,9 @@ export function createHonoreeService<Q extends PgQueryResultHKT>(input: { db: Ac
   function compatible(row: data.Operation, actor: StudentActor, digest: string) {
     return row.requestDigest === digest && row.actorUserId === actor.userId && row.actorMembershipId === actor.membershipId && row.roleGrantId === actor.roleGrantId && row.role === actor.mode && row.guardianId === actor.relationshipId;
   }
-  async function mutate(original: Request, supplied: Selection, suppliedIntent: unknown, receiptOnly: boolean) {
+  function mutate(original: Request, supplied: Selection, suppliedIntent: unknown, receiptOnly: boolean, transport: true): Promise<ManagementTransport<MutationDto>>;
+  function mutate(original: Request, supplied: Selection, suppliedIntent: unknown, receiptOnly: boolean, transport?: false): Promise<MutationDto>;
+  async function mutate(original: Request, supplied: Selection, suppliedIntent: unknown, receiptOnly: boolean, transport = false): Promise<MutationDto | ManagementTransport<MutationDto>> {
     const selected = validate.selection(supplied), write = validate.intent(suppliedIntent), digest = validate.digest({ selected, write });
     const request = { url: original.url, method: original.method, signal: original.signal, headers: new Headers(original.headers) };
     let sessionExpiresAt: number | undefined, expiresAt: number | undefined, returnClock: ReturnClock | undefined;
@@ -107,8 +112,10 @@ export function createHonoreeService<Q extends PgQueryResultHKT>(input: { db: Ac
     // COMMIT may have completed here. Withhold a cancelled/expired URL without
     // pretending to undo committed link/receipt/audit rows. The original UUID
     // remains confirmable; recovering the secret requires explicit reissue.
-    returnBarrier(request, sessionExpiresAt, expiresAt, returnClock);
-    return result;
+    const sessionExpiry = sessionExpiresAt, expiry = expiresAt, clock = returnClock;
+    const assertReturnLive = () => { if (sessionExpiry === undefined) return unavailable(); returnBarrier(request, sessionExpiry, expiry, clock); };
+    assertReturnLive();
+    return transport ? Object.freeze({ dto: result, assertReturnLive }) : result;
   }
   function readGuest(original: Request, token: unknown, transport: true): Promise<GuestTransport>;
   function readGuest(original: Request, token: unknown, transport: false): Promise<GuestDto>;
@@ -146,25 +153,34 @@ export function createHonoreeService<Q extends PgQueryResultHKT>(input: { db: Ac
     } catch { return unavailable(); }
   }
 
+  function status(original: Request, supplied: Selection, suppliedStart: unknown, transport: true): Promise<ManagementTransport<StatusDto>>;
+  function status(original: Request, supplied: Selection, suppliedStart: unknown, transport?: false): Promise<StatusDto>;
+  /** Private management metadata, not a validity claim and never a guest DTO.
+   * A stale/expired present credential still requires explicit reissue/revoke. */
+  async function status(original: Request, supplied: Selection, suppliedStart: unknown, transport = false): Promise<StatusDto | ManagementTransport<StatusDto>> {
+    const selected = validate.selection(supplied), startVerse = validate.start(suppliedStart);
+    const request = { url: original.url, method: original.method, signal: original.signal, headers: new Headers(original.headers) };
+    let sessionExpiresAt: number | undefined;
+    const result = await input.access.withStudentCapability(request, { ...selected, capability: "honors-read" }, async (tx, actor) => {
+      sessionExpiresAt = actor.authSessionExpiresAt;
+      const live = () => { if (request.signal?.aborted || actor.authSessionExpiresAt <= Date.now()) return unavailable(); };
+      live(); const row = await data.lockLink(tx, actor.tenantId, actor.studentId, startVerse); live();
+      return validate.bounded(Object.freeze({ ok: true as const, currentLink: row ? Object.freeze({ id: row.id, startVerse: row.startVerse, issuedAt: row.issuedAt.toISOString(), expiresAt: row.expiresAt.toISOString() }) : null }), 1024);
+    });
+    const sessionExpiry = sessionExpiresAt;
+    const assertReturnLive = () => { if (sessionExpiry === undefined) return unavailable(); returnBarrier(request, sessionExpiry); };
+    assertReturnLive();
+    return transport ? Object.freeze({ dto: result, assertReturnLive }) : result;
+  }
+
   return Object.freeze({
     read: (request: Request, token: unknown) => readGuest(request, token, false),
     readForTransport: (request: Request, token: unknown) => readGuest(request, token, true),
     mutate: (request: Request, selected: Selection, write: unknown) => mutate(request, selected, write, false),
     receipt: (request: Request, selected: Selection, write: unknown) => mutate(request, selected, write, true),
-    /** Private management metadata, not a validity claim and never a guest DTO.
-     * A stale/expired present credential still requires explicit reissue/revoke. */
-    async status(original: Request, supplied: Selection, suppliedStart: unknown) {
-      const selected = validate.selection(supplied), startVerse = validate.start(suppliedStart);
-      const request = { url: original.url, method: original.method, signal: original.signal, headers: new Headers(original.headers) };
-      let sessionExpiresAt: number | undefined;
-      const result = await input.access.withStudentCapability(request, { ...selected, capability: "honors-read" }, async (tx, actor) => {
-        sessionExpiresAt = actor.authSessionExpiresAt;
-        const live = () => { if (request.signal?.aborted || actor.authSessionExpiresAt <= Date.now()) return unavailable(); };
-        live(); const row = await data.lockLink(tx, actor.tenantId, actor.studentId, startVerse); live();
-        return validate.bounded(Object.freeze({ ok: true as const, currentLink: row ? Object.freeze({ id: row.id, startVerse: row.startVerse, issuedAt: row.issuedAt.toISOString(), expiresAt: row.expiresAt.toISOString() }) : null }), 1024);
-      });
-      returnBarrier(request, sessionExpiresAt);
-      return result;
-    },
+    status: (request: Request, selected: Selection, start: unknown) => status(request, selected, start),
+    mutateForTransport: (request: Request, selected: Selection, write: unknown) => mutate(request, selected, write, false, true),
+    receiptForTransport: (request: Request, selected: Selection, write: unknown) => mutate(request, selected, write, true, true),
+    statusForTransport: (request: Request, selected: Selection, start: unknown) => status(request, selected, start, true),
   });
 }

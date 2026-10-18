@@ -12,7 +12,7 @@ import { handleLessonLogRequest, lessonLogRouteMethods } from "./lesson-log";
 import { handlePracticeCalendarRequest, practiceCalendarRouteMethods } from "./practice-calendar";
 import { handleRecordingsRequest, recordingsRouteMethods } from "./recordings";
 import { errorResponse, HttpBoundaryError } from "./responses";
-import { finishHonoreeGuestResponse, handleHonoreeRequest } from "./honoree";
+import { finishHonoreeGuestResponse, finishHonoreeManagementResponse, handleHonoreeRequest, honoreeManagementRouteMethods } from "./honoree";
 
 export type HttpRuntimeScope = (action: (runtime: HttpRuntime) => Promise<Response>) => Promise<Response>;
 function cookieBoundary(request: Request) {
@@ -48,7 +48,8 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
           return finishHonoreeGuestResponse(request, response, started);
         } catch { return denied(); }
       }
-      const methods = honorsRouteMethods(url.pathname) ?? sourceContentRouteMethods(url.pathname) ?? sourceAssignmentsRouteMethods(url.pathname) ?? authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname) ?? serviceLearningRouteMethods(url.pathname) ?? progressRouteMethods(url.pathname) ?? lessonLogRouteMethods(url.pathname) ?? practiceCalendarRouteMethods(url.pathname) ?? recordingsRouteMethods(url.pathname);
+      const managementMethods = honoreeManagementRouteMethods(url.pathname);
+      const methods = managementMethods ?? honorsRouteMethods(url.pathname) ?? sourceContentRouteMethods(url.pathname) ?? sourceAssignmentsRouteMethods(url.pathname) ?? authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname) ?? serviceLearningRouteMethods(url.pathname) ?? progressRouteMethods(url.pathname) ?? lessonLogRouteMethods(url.pathname) ?? practiceCalendarRouteMethods(url.pathname) ?? recordingsRouteMethods(url.pathname);
       // No provider configuration or connection required to refuse unowned
       // endpoints (including private SDK session/profile/password APIs).
       if (!methods) throw new HttpBoundaryError(404);
@@ -59,6 +60,15 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
       }
       if (request.url.length > 2048) throw new HttpBoundaryError();
       cookieBoundary(request);
+      if (managementMethods) {
+        const response = await withRuntime(async runtime => {
+          try {
+            await runtime.resolveHost(request);
+            return await handleHonoreeRequest(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
+          } catch (error) { return errorResponse(error); }
+        });
+        return finishHonoreeManagementResponse(request, response);
+      }
       return await withRuntime(async (runtime) => {
         try {
           await runtime.resolveHost(request);

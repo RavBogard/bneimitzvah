@@ -150,9 +150,9 @@ test("prepared guest HTTP uses one private 404 for all denials, strict bounded P
   }
   expect(await handleHonoreeRequest(request({}, "/not-owned"), runtime)).toBeNull();
 });
-test("authenticated honoree controls remain unavailable while only the guest read transport is activated",async()=>{
+test("only the three exact management paths are owned; operation and trailing-slash aliases remain unavailable",async()=>{
   const scope=vi.fn(async()=>{throw Error("Unreviewed route must not construct runtime");}), dispatch=createHttpDispatcher(scope);
-  for(const suffix of ["","/receipt","/status"]){
+  for(const suffix of ["/issue","/reissue","/revoke","/receipt/","/status/","/other"]){
     const path="/api/students/00000000-0000-0000-0000-000000000000/honoree-links"+suffix;
     const response=await dispatch(new Request("http://localhost:3000"+path,{method:"POST",headers:{"content-type":"application/json"},body:'{"token":"synthetic"}'}));
     expect(response.status).toBe(404);expect(await response.json()).toEqual({error:"not-found"});

@@ -1,10 +1,10 @@
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import type { AliyahPerson, GenerationPerson, HonorPerson, HonorsContextView, HonorsForm } from "../../../../lib/honors/types";
 import { newPerson, spanLabel } from "./draft";
 import styles from "./honors.module.css";
 type Person = HonorPerson | GenerationPerson | AliyahPerson;
-type PeopleProps = { title: string; help?: string; people: readonly Person[]; kind?: "generation" | "aliyah"; disabled: boolean; onChange(people: readonly Person[]): void };
-export function People({ title, help, people, kind, disabled, onChange }: PeopleProps) {
+type PeopleProps = { title: string; help?: string; people: readonly Person[]; kind?: "generation" | "aliyah"; disabled: boolean; after?: ReactNode; onChange(people: readonly Person[]): void };
+export function People({ title, help, people, kind, disabled, after, onChange }: PeopleProps) {
   const prefix = useId();
   const patch = (index: number, key: string, value: string) => onChange(people.map((p, i) => i === index ? { ...p, [key]: value } : p));
   const move = (i: number, direction: number) => { const next = [...people]; [next[i], next[i + direction]] = [next[i + direction], next[i]]; onChange(next); };
@@ -17,10 +17,10 @@ export function People({ title, help, people, kind, disabled, onChange }: People
         <div className={styles.rowActions}><span className={styles.position}>Person {i + 1}</span><button type="button" className="button-text" disabled={i === 0} aria-label={`Move person ${i + 1} up in ${title}`} onClick={() => move(i, -1)}>Move up</button><button type="button" className="button-text" disabled={i === people.length - 1} aria-label={`Move person ${i + 1} down in ${title}`} onClick={() => move(i, 1)}>Move down</button><button type="button" className="button-text" aria-label={`Remove person ${i + 1} from ${title}`} onClick={() => onChange(people.filter((_, n) => n !== i))}>Remove</button></div>
       </li>)}</ol>
       <button type="button" className="button-secondary" disabled={people.length >= 32} onClick={() => onChange([...people, { ...newPerson(), ...(kind ? { relationship: null } : {}), ...(kind === "aliyah" ? { hebrewName: null, parent1HebrewName: null, parent2HebrewName: null } : {}) }])}>Add person<span className="sr-only"> to {title}</span></button>
-    </fieldset>
+    </fieldset>{after}
   </section>;
 }
-export function HonorsFields({ draft, context, disabled, onChange }: { draft: HonorsForm; context: HonorsContextView; disabled: boolean; onChange(value: HonorsForm): void }) {
+export function HonorsFields({ draft, context, disabled, onChange, honoree, retainedHonoree }: { draft: HonorsForm; context: HonorsContextView; disabled: boolean; onChange(value: HonorsForm): void; honoree?(startVerse: string): ReactNode; retainedHonoree?: ReactNode }) {
   const ordinary = (key: "openingArk" | "generationToGeneration" | "undressingTorah" | "redressingTorah" | "closingArk", title: string, help: string) => <People title={title} help={help} kind={key === "generationToGeneration" ? "generation" : undefined} people={draft[key]} disabled={disabled} onChange={people => onChange({ ...draft, [key]: people })} />;
   const starts = new Set(draft.aliyot.map(g => g.startVerse));
   const spans = [...context.spans, ...draft.aliyot.filter(g => !context.spans.some(s => s.startVerse === g.startVerse)).map(g => ({ startVerse: g.startVerse, endVerse: g.startVerse }))];
@@ -30,10 +30,11 @@ export function HonorsFields({ draft, context, disabled, onChange }: { draft: Ho
     {ordinary("undressingTorah", "Undressing the Torah", "Usually one or two people; add more if needed.")}
     <section className={styles.aliyot} aria-label="Torah aliyot"><h3>Torah aliyot</h3><p className={styles.help}>The groups below follow the actual reading. Add everyone called together. Ask the rabbis for help with unknown Hebrew names.</p>
       {context.status !== "assigned" && <p className={styles.contextNotice}>{context.status === "unassigned" ? "No Torah reading is assigned yet." : "The tutor has not confirmed the aliyah divisions yet."} You can save the other ceremony roles now.</p>}
-      {spans.map((span, i) => <People key={span.startVerse} title={`Aliyah ${i + 1} · ${spanLabel(span)}`} kind="aliyah" people={draft.aliyot.find(g => g.startVerse === span.startVerse)?.participants ?? []} disabled={disabled} onChange={people => {
+      {spans.map((span, i) => <People key={span.startVerse} title={`Aliyah ${i + 1} · ${spanLabel(span)}`} kind="aliyah" people={draft.aliyot.find(g => g.startVerse === span.startVerse)?.participants ?? []} disabled={disabled} after={honoree?.(span.startVerse)} onChange={people => {
         const groups = draft.aliyot.filter(g => g.startVerse !== span.startVerse); if (people.length) groups.push({ startVerse: span.startVerse, participants: people as AliyahPerson[] });
         groups.sort((a, b) => spans.findIndex(s => s.startVerse === a.startVerse) - spans.findIndex(s => s.startVerse === b.startVerse)); onChange({ ...draft, aliyot: groups });
       }} />)}
+      {retainedHonoree}
       {!spans.length && !starts.size && <p className={styles.help}>Aliyah names can be added when the reading and its divisions are confirmed.</p>}
     </section>
     {ordinary("redressingTorah", "Redressing the Torah", "Add the people who will dress the Torah.")}

@@ -38,13 +38,13 @@ test("guest dispatch serves the unchanged minimal DTO and authoritative positive
   expect(response.headers.get("set-cookie")).toBeNull(); expect(response.headers.get("location")).toBeNull();
 });
 
-test("unsupported guest methods, queries and every cookie stay uniform404 before runtime; authenticated honoree adapters stay unowned", async () => {
+test("unsupported guest methods, queries and every cookie stay uniform404 before runtime; management aliases stay unowned", async () => {
   const scope = vi.fn<HttpRuntimeScope>(async () => { throw Error("No runtime expected"); }), dispatch = createHttpDispatcher(scope);
   const cases: RequestOptions[] = [
     { method: "GET" }, { method: "HEAD" }, { method: "OPTIONS" }, { method: "DELETE" }, { path: "/api/honoree/read?token=synthetic" },
     { headers: { cookie: "unknown=synthetic" } }, { headers: { cookie: "" } }, { headers: { cookie: "better-auth.session_token=synthetic" } },
     { headers: { cookie: "x=" + "x".repeat(17000) } }, { headers: { authorization: "synthetic" } }, { headers: { "X-Practice-Context": "synthetic" } },
-    ...["", "/receipt", "/status"].map(suffix => ({ path: "/api/students/00000000-0000-0000-0000-000000000000/honoree-links" + suffix })),
+    ...["/other", "/receipt/", "/status/"].map(suffix => ({ path: "/api/students/00000000-0000-0000-0000-000000000000/honoree-links" + suffix })),
     { path: "/api/honoree/read/" }, { path: "/api/honoree/other" },
   ];
   for (const options of cases) await denied(await dispatch(request("synthetic", options)));
