@@ -46,4 +46,4 @@
 .aliyot .group { border-top:0; border-bottom:1px solid var(--color-rule); padding:1rem 0 1.5rem; }
 .aliyot .group:last-child { border-bottom:0; padding-bottom:0; }
 .aliyot .group h3 { font-size:1.05rem; }
-@media(max-width:600px) { .body { padding:0 1.1rem 1.5rem; } .footer { padding:1rem 1.1rem max(1rem,env(safe-area-inset-bottom)); } .nameFields { grid-template-columns:1fr; } .entry { align-items:flex-start; flex-direction:column; } .rowActions { gap:.25rem .8rem; } .position { flex-basis:100%; } .footer>button { flex:1; } }
+@media(max-width:600px) { .body { padding:0 1.1rem 1.5rem; } .footer { padding:1rem 1.1rem max(1rem,env(safe-area-inset-bottom)); } .footer p { flex-basis:100%; } .nameFields { grid-template-columns:1fr; } .entry { align-items:flex-start; flex-direction:column; } .rowActions { gap:.25rem .8rem; } .position { flex-basis:100%; } .footer>button { flex:1 1 10rem; } }
