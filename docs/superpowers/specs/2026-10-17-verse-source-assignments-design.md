@@ -38,6 +38,8 @@ On unknown COMMIT, never automatically generate a new UUID, refresh expectedVers
 
 The independent review accepts a controlled identical-intent retry: it reruns the full two-phase protocol with its own fresh binding, while both unique stream-next-version and actor-mutation constraints plus exact raced-receipt comparison prevent a second logical commit. A read with no receipt remains unconfirmed. No automatic payload/catalogHash/version/UUID substitution or new authority adoption is permitted.
 
+After final authority/binding verification, check the exact compatible receipt again BEFORE current-head/no-op/public-error handling: the original can commit during a retry's delayed or failed metadata lookup. A matching receipt returns its original committed snapshot/latest-version integer despite that lookup outcome. After an INSERT uniqueness wait, compare the raced receipt exactly; never adopt an unrelated head or payload.
+
 V1 reconciliation is current-stream-only: verify the actual current reading revision and target as for writes. Reading drift returns stale/unconfirmed; it does not expose an old stream's historical receipt or claim that an old write was absent. Historical reconciliation is deferred, not silently simulated.
 
 ## Interface and composition boundary
