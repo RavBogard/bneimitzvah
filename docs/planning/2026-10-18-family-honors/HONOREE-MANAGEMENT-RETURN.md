@@ -1,5 +1,9 @@
 # Honoree management return — 2026-10-18
 
+**Exact hosted checkpoint:** Management source122a35f7fa4eea45c690d8be7f96bc80025ee5a2 passes all four jobs in [run39124427440](https://github.com/RavBogard/bneimitzvah/actions/runs/39124427440). Production remains31481c5 pending the separately reviewed0023 release; this result does not apply the schema or activate material.
+
+**Later Daniel permission amendment:** Invited CRC honorees' private expiring own-aliyah links may display the existing CRC Beit Mitzvah booklet's before/after Torah blessings, including its English translation and required credits. No booklet publication or audio sharing. The permission hold recorded at the checkpoint below is now resolved for that text only; exact source/notices and projector integration remain unfinished. Migration0023 still creates no material approval or capability rows.
+
 Production/main remains31481c56bd32c6a26ffda206b09864f332f15d33: the reviewed family form is live. This separate B3 checkpoint implements authenticated management over the locally merged form and B2 guest page. Real material and0023 production release remain held.
 
 ## Behavior and boundaries

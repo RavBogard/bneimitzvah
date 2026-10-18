@@ -2,6 +2,8 @@
 
 ## Settled decisions (Daniel, binding)
 
+**Amended2026-10-18:** Daniel explicitly permits invited CRC honorees' private expiring own-aliyah links to display before/after Torah blessings from CRC's existing Beit Mitzvah booklet, including its English translation and required credits. No booklet publication or audio sharing is approved. This resolves the earlier text permission question; exact source/notices, projection and independent bearer review remain required.
+
 The parent dashboard has one family-form write exception: honors. Honorees receive a signed, expiring, revocable no-login link with a deliberately narrow projection. Parent sign-in opening child practice does not grant staff authority or make the family form a child-practice feature. No visible transliteration. No automatic invitations, mail or external writes. Daniel authorized continuing the revised product to completion and deployment, and on 2026-10-18 explicitly asked for research in CRC's shared Drive.
 
 Generated voices and student recordings remain parked. This milestone does not activate them, import a real roster, provision another tenant, or change spending/provider permissions. Auth and tenancy changes require independent adversarial review before release.
