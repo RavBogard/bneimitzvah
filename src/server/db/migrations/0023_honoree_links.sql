@@ -179,13 +179,13 @@ INSERT INTO honoree_group_epoch(tenant_id,student_id,start_verse)
 --> statement-breakpoint
 CREATE FUNCTION public.portal_honoree_student_epoch() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,public AS $$
 BEGIN
- IF TG_OP='INSERT' THEN INSERT INTO honoree_reading_epoch(tenant_id,student_id) VALUES(NEW.tenant_id,NEW.id); 
- ELSIF ROW(NEW.ceremony_date,NEW.service_slot,NEW.disabled_at) IS DISTINCT FROM ROW(OLD.ceremony_date,OLD.service_slot,OLD.disabled_at) THEN
+ -- Roster creation remains quiet: only reading mutations establish a counter.
+ IF ROW(NEW.ceremony_date,NEW.service_slot,NEW.disabled_at) IS DISTINCT FROM ROW(OLD.ceremony_date,OLD.service_slot,OLD.disabled_at) THEN
   UPDATE honoree_reading_epoch SET epoch=epoch+1 WHERE tenant_id=NEW.tenant_id AND student_id=NEW.id;
  END IF; RETURN NEW;
 END $$;
 --> statement-breakpoint
-CREATE TRIGGER honoree_student_epoch AFTER INSERT OR UPDATE ON student FOR EACH ROW EXECUTE FUNCTION portal_honoree_student_epoch();
+CREATE TRIGGER honoree_student_epoch AFTER UPDATE ON student FOR EACH ROW EXECUTE FUNCTION portal_honoree_student_epoch();
 --> statement-breakpoint
 CREATE FUNCTION public.portal_honoree_assignment_epoch() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,public AS $$
 DECLARE before_row jsonb; after_row jsonb; target record;
@@ -194,7 +194,8 @@ BEGIN
  IF TG_OP<>'DELETE' THEN after_row:=to_jsonb(NEW); END IF;
  IF TG_OP='UPDATE' AND (before_row-ARRAY['created_at','set_by_membership_id','proposal_cache_id'])=(after_row-ARRAY['created_at','set_by_membership_id','proposal_cache_id']) THEN RETURN NEW; END IF;
  FOR target IN SELECT DISTINCT x->>'tenant_id' t,(x->>'student_id')::uuid s FROM (VALUES(before_row),(after_row)) v(x) WHERE x->>'kind'='torah' ORDER BY t,s LOOP
-  UPDATE honoree_reading_epoch SET epoch=epoch+1 WHERE tenant_id=target.t AND student_id=target.s;
+  INSERT INTO honoree_reading_epoch(tenant_id,student_id,epoch) VALUES(target.t,target.s,1)
+   ON CONFLICT(tenant_id,student_id) DO UPDATE SET epoch=honoree_reading_epoch.epoch+1;
  END LOOP; RETURN NULL;
 END $$;
 --> statement-breakpoint
@@ -208,7 +209,8 @@ BEGIN
  IF TG_OP='UPDATE' AND before_row=after_row THEN RETURN NEW; END IF;
  FOR target IN SELECT DISTINCT a.tenant_id t,a.student_id s FROM (VALUES(before_row),(after_row)) v(x)
  JOIN assignment a ON a.tenant_id=x->>'tenant_id' AND a.id=(x->>'assignment_id')::uuid AND a.kind='torah' ORDER BY t,s LOOP
-  UPDATE honoree_reading_epoch SET epoch=epoch+1 WHERE tenant_id=target.t AND student_id=target.s;
+  INSERT INTO honoree_reading_epoch(tenant_id,student_id,epoch) VALUES(target.t,target.s,1)
+   ON CONFLICT(tenant_id,student_id) DO UPDATE SET epoch=honoree_reading_epoch.epoch+1;
  END LOOP; RETURN NULL;
 END $$;
 --> statement-breakpoint

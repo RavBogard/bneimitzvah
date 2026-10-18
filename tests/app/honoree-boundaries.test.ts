@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { honoreeFixture } from "./honoree-fixture";
 import * as s from "../../src/server/db/index";
@@ -11,6 +11,57 @@ import { createHttpDispatcher } from "../../src/server/http/dispatch";
 const fixtures: Awaited<ReturnType<typeof honoreeFixture>>[] = [];
 afterEach(async () => { vi.restoreAllMocks(); for (const f of fixtures.splice(0)) await f.client.close(); });
 async function fixture() { const f = await honoreeFixture(); fixtures.push(f); return f; }
+
+test("fresh roster rows stay quiet until reading assignment, then counters fence issue, revocation and restoration", async () => {
+  const f = await fixture(), originalId = f.selected.studentId, freshId = randomUUID();
+  const counter = () => f.owner(() => f.db.select().from(s.honoreeReadingEpoch).where(eq(s.honoreeReadingEpoch.studentId, freshId)));
+  await f.owner(async () => {
+    const [original] = await f.db.select().from(s.student).where(eq(s.student.id, originalId));
+    await f.db.insert(s.student).values({ ...original, id: freshId });
+  });
+  expect(await counter()).toEqual([]);
+  // Even a roster correction cannot materialize a honoree counter.
+  await f.owner(async () => {
+    for (const serviceSlot of ["unknown", "morning"] as const)
+      await f.db.update(s.student).set({ serviceSlot }).where(eq(s.student.id, freshId));
+    await f.db.insert(s.guardian).values({ ...f.guardians[0], id: randomUUID(), studentId: freshId });
+  });
+  expect(await counter()).toEqual([]);
+  f.selected.studentId = freshId;
+  const unready = await f.honoreeIntent();
+  await expect(f.honoree.mutate(f.req(), f.selected, unready)).rejects.toBeDefined();
+  expect(await f.owner(() => f.db.select().from(s.honoreeLink))).toEqual([]);
+  let assignmentId!: string;
+  await f.owner(async () => {
+    const [assignment] = await f.db.insert(s.assignment).values({ ...f.assignment!, id: randomUUID(), studentId: freshId }).returning();
+    assignmentId = assignment.id;
+  });
+  expect(await counter()).toMatchObject([{ epoch: 1n }]);
+  // A counter alone is insufficient: complete ordered verses and saved honors
+  // still have to establish current readiness before issuing a link.
+  await expect(f.honoree.mutate(f.req(), f.selected, unready)).rejects.toBeDefined();
+  await f.owner(async () => {
+    const verses = await f.db.select().from(s.assignmentVerse).where(eq(s.assignmentVerse.assignmentId, f.assignment!.id));
+    await f.db.insert(s.assignmentVerse).values(verses.map(verse => ({ ...verse, id: randomUUID(), assignmentId, studentId: freshId })));
+  });
+  expect(await counter()).toMatchObject([{ epoch: 5n }]);
+  await f.service.replace(f.req(), f.selected, await f.intent(f.form));
+  const revoked = await f.issue();
+  expect(await f.honoree.read(f.guest(), revoked.token)).toMatchObject({ ok: true });
+  expect(await f.honoree.mutate(f.req(), f.selected, await f.honoreeIntent("revoke", revoked.id))).toMatchObject({ ok: true });
+  await expect(f.honoree.read(f.guest(), revoked.token)).rejects.toMatchObject({ status: 404 });
+  const stale = await f.issue();
+  await f.owner(async () => {
+    for (const serviceSlot of ["havdalah", "morning"] as const)
+      await f.db.update(s.student).set({ serviceSlot }).where(eq(s.student.id, freshId));
+    for (const verseRef of ["Genesis 1:5", "Genesis 1:4"])
+      await f.db.update(s.assignmentVerse).set({ verseRef }).where(and(eq(s.assignmentVerse.assignmentId, assignmentId), eq(s.assignmentVerse.ordinal, 4)));
+  });
+  expect(await counter()).toMatchObject([{ epoch: 9n }]);
+  await expect(f.honoree.read(f.guest(), stale.token)).rejects.toMatchObject({ status: 404 });
+  expect(await f.honoree.mutate(f.req(), f.selected, await f.honoreeIntent("revoke", stale.id))).toMatchObject({ ok: true });
+  await expect(f.honoree.read(f.guest(), revoked.token)).rejects.toMatchObject({ status: 404 });
+});
 
 test("direct slot/confirmation/cuts/verse changes away and back cannot revive a credential", async () => {
   const f = await fixture();

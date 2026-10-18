@@ -50,7 +50,7 @@ test("runtime has FORCE tenant RLS, monotonic column-only counters, immutable re
     expect(rights.rows).toHaveLength(5);for(const row of rights.rows)expect(row).toMatchObject({relrowsecurity:true,relforcerowsecurity:true,del:false});
     expect((await f.client.query("select has_column_privilege('portal_runtime','honoree_reading_epoch','epoch','UPDATE') epoch,has_column_privilege('portal_runtime','honoree_reading_epoch','student_id','UPDATE') identity,has_table_privilege('portal_runtime','honoree_operation','UPDATE') receipt,has_table_privilege('portal_runtime','honoree_material_release','INSERT') approval,has_column_privilege('portal_runtime','honoree_material_release','state','UPDATE') lifecycle")).rows).toEqual([{epoch:true,identity:false,receipt:false,approval:false,lifecycle:false}]);
     await f.client.exec("set app.tenant_id='other'");
-    expect(await f.db.select().from(s.honoreeLink)).toHaveLength(0);expect(await f.db.select().from(s.honoreeOperation)).toHaveLength(0);expect(await f.db.select().from(s.honoreeReadingEpoch)).toHaveLength(1);
+    expect(await f.db.select().from(s.honoreeLink)).toHaveLength(0);expect(await f.db.select().from(s.honoreeOperation)).toHaveLength(0);expect(await f.db.select().from(s.honoreeReadingEpoch)).toHaveLength(0);
     await expect(f.client.exec("insert into honoree_reading_epoch(tenant_id,student_id) select 'crc',id from student limit 1")).rejects.toBeDefined();
   }finally{await f.client.close();}
 });
