@@ -1,14 +1,27 @@
-import { test } from "node:test";
+import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { readFileSync, readdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { isolatedEnv } from "./helpers/isolatedEnv.mjs";
 import { RELEASE_BASE, RELEASE_FILES, sha, argumentsFor, canonical } from "../scripts/release-migrate-support.mjs";
 import { ROSTER_FILES, ROSTER_REFERENCE, validateRosterReference } from "../scripts/release-migrate-roster-support.mjs";
 import { RECORDINGS_FILES, RECORDINGS_REFERENCE, validateRecordingsReference } from "../scripts/release-migrate-recordings-support.mjs";
 import { SOURCE_ASSIGNMENTS_BASE, SOURCE_ASSIGNMENTS_FILES, SOURCE_ASSIGNMENTS_REFERENCE, validateSourceAssignmentsReference } from "../scripts/release-migrate-source-assignments-support.mjs";
 import { HONORS_BASE, HONORS_FILES, HONORS_CATALOG_SHA, HONORS_REFERENCE, HONORS_AFFECTED, honorsFunctionContract, honorsSourceDelta, honorsSourceContract, parseHonorsTarget, checkHonorsLedger, selectedHonorsReference, validateHonorsDelta, validateHonorsReference } from "../scripts/release-migrate-honors-support.mjs";
 import { captureHonorsData, executeHonorsRelease, runHonorsRelease } from "../scripts/release-migrate-honors.mjs";
-const read=path=>readFileSync(new URL("../"+path,import.meta.url)),json=path=>JSON.parse(read(path)),candidate="a".repeat(40),sql=read("src/server/db/migrations/0022_honors_version.sql").toString("utf8");
+// Unit fixtures model the reviewed0022 release, independent of autocrlf checkout
+// bytes and any later0023+ migration. Runtime source guards remain exact-byte.
+const fixtureRelease="e774b9877121e586ef856d289e614f77bdda3280",candidate="a".repeat(40);
+const isolation=await isolatedEnv();after(()=>isolation.cleanup());
+const cache=new Map(),gitBytes=(...args)=>{
+ const key=JSON.stringify(args);
+ try{if(!cache.has(key))cache.set(key,execFileSync("git",args,{cwd:new URL("..",import.meta.url),env:isolation.env,windowsHide:true,maxBuffer:16*1024*1024,stdio:["ignore","pipe","pipe"]}));return cache.get(key);}
+ catch{throw Error("Reviewed honors test fixture unavailable; details withheld");}
+};
+const blob=(commit,path)=>gitBytes("show",commit+":"+path),read=path=>blob(fixtureRelease,path),json=path=>JSON.parse(read(path));
+const folder="src/server/db/migrations",journal=JSON.parse(blob(HONORS_BASE,folder+"/meta/_journal.json"));
+const tree=commit=>gitBytes("ls-tree","-r","--name-only",commit,"--",folder).toString("utf8").trim().split("\n");
+const sql=blob(HONORS_BASE,folder+"/0022_honors_version.sql").toString("utf8");
 function source(){
  const reference=json("tests/fixtures/portal/release-migrate-reference.json"),roster=json(ROSTER_REFERENCE),recordings=json(RECORDINGS_REFERENCE),citations=json(SOURCE_ASSIGNMENTS_REFERENCE);
  const migrations=Array.from({length:23},(_,index)=>({index,hash:sha(`synthetic-LF-${index}`),historicalAllowed:[sha(`synthetic-LF-${index}`)],createdAt:1000+index}));
@@ -91,16 +104,47 @@ test("synthetic structural model allows only new honors authority/schema surface
 });
 
 function sourceTrees(){
- const folder='src/server/db/migrations',journal=json(folder+'/meta/_journal.json');assert.equal(journal.entries.length,23);
- const names=readdirSync(new URL('../'+folder+'/',import.meta.url)).filter(n=>/^\d{4}_.+\.sql$/.test(n)).map(n=>folder+'/'+n).concat(readdirSync(new URL('../'+folder+'/meta/',import.meta.url)).map(n=>folder+'/meta/'+n)).sort();
- const previousNames=names.filter(n=>!n.endsWith('/0022_honors_version.sql')&&!n.endsWith('/0022_snapshot.json')),oldFiles=[...RELEASE_FILES,...ROSTER_FILES,...RECORDINGS_FILES,...SOURCE_ASSIGNMENTS_FILES],committed=new Map([...names,...oldFiles,...HONORS_FILES].map(p=>[p,read(p)]));
- const historical=new Map(committed);historical.set(folder+'/meta/_journal.json',Buffer.from(JSON.stringify({...journal,entries:journal.entries.slice(0,22)})));
+ assert.equal(journal.entries.length,23);
+ const names=tree(HONORS_BASE),previousNames=tree(SOURCE_ASSIGNMENTS_BASE),oldFiles=[...RELEASE_FILES,...ROSTER_FILES,...RECORDINGS_FILES,...SOURCE_ASSIGNMENTS_FILES];
+ const committed=new Map([...names,...oldFiles].map(p=>[p,blob(HONORS_BASE,p)]));for(const p of HONORS_FILES)committed.set(p,read(p));
+ const historical=new Map(previousNames.map(p=>[p,blob(SOURCE_ASSIGNMENTS_BASE,p)]));
  const files=new Map(committed),events=[];let dirty=false,future=false,ancestor=true,head=candidate;
  const git=(...args)=>{events.push(args);if(args[0]==='rev-parse')return Buffer.from(head);if(args[0]==='merge-base'){assert.deepEqual(args,['merge-base','--is-ancestor',HONORS_BASE,candidate]);if(!ancestor)throw 0;return Buffer.alloc(0);}if(args[0]==='status')return Buffer.from(dirty?'?? synthetic changed':'');if(args[0]==='ls-tree'){const rows=args[3]===SOURCE_ASSIGNMENTS_BASE?previousNames:[...names,...(args[3]===candidate&&future?[folder+'/0023_unreviewed.sql']:[])];return Buffer.from(rows.join('\n'));}if(args[0]==='show'){const ref=args[1].slice(0,40),path=args[1].slice(41),bytes=(ref===SOURCE_ASSIGNMENTS_BASE?historical:committed).get(path);if(!bytes)throw Error('Synthetic absent source');return bytes;}throw Error('Unexpected synthetic Git command');};
  return{git,read:p=>files.get(p),files,committed,historical,events,dirty(){dirty=true;},future(){future=true;},ancestor(){ancestor=false;},head(){head='b'.repeat(40);}};
 }
 test("injected source-delta contract pins exact reviewed descendant/HEAD, immutable history/journal, clean protected paths, excludes0023",()=>{
  const f=sourceTrees(),s=honorsSourceDelta(candidate,f);assert.equal(s.migrations.length,23);assert.equal(s.migrations[22].hash,sha(sql));assert.ok(f.events.some(args=>args[0]==='status'&&args.includes(HONORS_REFERENCE)&&args.includes('src/server/db/migrations')));assert.equal(s.migrations[22].historicalAllowed.length,1);
- for(const change of [f=>f.dirty(),f=>f.future(),f=>f.ancestor(),f=>f.head(),f=>f.files.set(RELEASE_FILES[0],Buffer.from('changed')),f=>f.files.set(HONORS_FILES[0],Buffer.from('changed')),f=>f.files.set('src/server/db/migrations/0022_honors_version.sql',Buffer.from('changed')),f=>f.historical.set('src/server/db/migrations/'+json('src/server/db/migrations/meta/_journal.json').entries[0].tag+'.sql',Buffer.from('changed')),f=>{const j=JSON.parse(f.committed.get('src/server/db/migrations/meta/_journal.json'));j.entries[0].when++;f.committed.set('src/server/db/migrations/meta/_journal.json',Buffer.from(JSON.stringify(j)));f.files.set('src/server/db/migrations/meta/_journal.json',Buffer.from(JSON.stringify(j)));}]){const fixture=sourceTrees();change(fixture);assert.throws(()=>honorsSourceDelta(candidate,fixture));}
+ for(const change of [f=>f.dirty(),f=>f.future(),f=>f.ancestor(),f=>f.head(),f=>f.files.set(RELEASE_FILES[0],Buffer.from('changed')),f=>f.files.set(HONORS_FILES[0],Buffer.from('changed')),f=>f.files.set('src/server/db/migrations/0022_honors_version.sql',Buffer.from('changed')),f=>f.historical.set('src/server/db/migrations/'+journal.entries[0].tag+'.sql',Buffer.from('changed')),f=>{const j=JSON.parse(f.committed.get('src/server/db/migrations/meta/_journal.json'));j.entries[0].when++;f.committed.set('src/server/db/migrations/meta/_journal.json',Buffer.from(JSON.stringify(j)));f.files.set('src/server/db/migrations/meta/_journal.json',Buffer.from(JSON.stringify(j)));}]){const fixture=sourceTrees();change(fixture);assert.throws(()=>honorsSourceDelta(candidate,fixture));}
  f.files.set(HONORS_FILES[1],Buffer.from('changed later'));assert.throws(()=>s.recheck());
+});
+
+test("immutable LF fixtures survive simulated CRLF checkouts while runtime raw-byte guards still refuse them",()=>{
+ const crlf=bytes=>Buffer.from(bytes.toString("utf8").replace(/\n/g,"\r\n"));
+ const native=json(HONORS_REFERENCE),s=source(),checkoutSQL=crlf(Buffer.from(sql)),checkoutReference=crlf(read(HONORS_REFERENCE));
+ assert.equal(Buffer.from(sql).includes(13),false);assert.equal(read(HONORS_REFERENCE).includes(13),false);
+ assert.notEqual(sha(checkoutSQL),native.migrationSHA256);
+ assert.notEqual(sha(checkoutReference),"0f3f96231d77b2c392c3ccf38a5d3a1ef69ec9bc08c9be40e91ee354dffb4379");
+ // Reproduce the old source() checkout-hash failure, without altering real files.
+ const oldCheckoutSource={...s,migrations:s.migrations.map((m,i)=>i===22?{...m,hash:sha(checkoutSQL)}:m)};
+ assert.throws(()=>validateHonorsReference(native,oldCheckoutSource));
+ assert.deepEqual(validateHonorsReference(native,s),s.honorsAfter);
+ for(const[path,bytes]of [[folder+"/0022_honors_version.sql",checkoutSQL],[HONORS_REFERENCE,checkoutReference]]){
+  const f=sourceTrees();f.files.set(path,bytes);assert.throws(()=>honorsSourceDelta(candidate,f));
+ }
+ assert.equal(honorsSourceDelta(candidate,sourceTrees()).migrations.length,23);
+});
+
+test("historical0022 fixture is independent of current HEAD or later migration directory contents",()=>{
+ const baseline=sourceTrees(),fixed=honorsSourceDelta(candidate,baseline);
+ assert.equal(fixed.migrations.length,23);assert.equal(fixed.migrations[22].tag,"0022_honors_version");
+ assert.deepEqual([...baseline.committed.keys()].filter(p=>p.startsWith(folder+"/")),tree(HONORS_BASE));
+ assert.deepEqual([...baseline.historical.keys()],tree(SOURCE_ASSIGNMENTS_BASE));
+ const future=sourceTrees();future.future();assert.throws(()=>honorsSourceDelta(candidate,future));
+ // Every real Git read uses an immutable object ID. HEAD/dirty/future behavior
+ // belongs only to the injected operator model, never to fixture extraction.
+ for(const key of cache.keys()){
+  const args=JSON.parse(key);
+  if(args[0]==="show")assert.ok([HONORS_BASE,SOURCE_ASSIGNMENTS_BASE,fixtureRelease].includes(args[1].slice(0,40)));
+  else{assert.equal(args[0],"ls-tree");assert.ok([HONORS_BASE,SOURCE_ASSIGNMENTS_BASE].includes(args[3]));}
+ }
 });
