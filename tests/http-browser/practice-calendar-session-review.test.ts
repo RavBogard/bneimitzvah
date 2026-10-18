@@ -57,7 +57,9 @@ beforeAll(async () => {
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await isolation?.cleanup(); }, 120_000);
 
 it("conceals the whole own-student workspace when the calendar visit pre-probe finds actual session expiry", async () => {
-  const tab = await page(), seen = traffic(tab); await expired(); await click(tab, "Start"); await globallyGone(tab);
+  // Observe calendar pre-probe denial without starting the separate audio
+  // resolver/session probe that main-reading Start intentionally invokes.
+  const tab = await page(), seen = traffic(tab); await expired(); await click(tab, "View Genesis 1:1 up close"); await globallyGone(tab);
   expect(seen.sessions).toEqual([401, 401]); expect(seen.events).toEqual([]); await tab.context().close();
 });
 
