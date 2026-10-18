@@ -28,11 +28,11 @@ const stale = () => ({ ok: false as const, code: "stale-revision" as const });
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
 
 /** A proposal is a read scope, never a confirmed assignment or write capability. */
-export function createReadingExplorationService<Q extends PgQueryResultHKT>(input: {
+export function createReadingExplorationService<Q extends PgQueryResultHKT, Page extends StudyPage = StudyPage>(input: {
   access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>;
   signingSecret: string; now?: () => number;
   loadReading(date: string, calendar: Calendar): Promise<{ snapshot: Snapshot; fetchedAt: number }>;
-  loadText(request: StudyRequest): Promise<StudyPage>;
+  loadText(request: StudyRequest): Promise<Page>;
 }) {
   const now = input.now ?? Date.now, bindings = createBindings(input.signingSecret, now);
   function time() { const t = now(); if (!Number.isSafeInteger(t) || t < 0) throw new AccessDenied(403); return t; }

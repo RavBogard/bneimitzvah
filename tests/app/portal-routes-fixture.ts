@@ -1,5 +1,6 @@
 import { createHonoreeService } from "../../src/server/honoree/service";
 import { createShortReferenceAudioService } from "../../src/server/reference-audio/short-service";
+import { createShortExplorationService } from "../../src/server/reference-audio/short-exploration-service";
 import { createSourceContentService } from "../../src/server/study/source-content-service";
 import { createHonorsService } from "../../src/server/honors/service";
 import { createSourceAssignmentsService } from "../../src/server/study/source-assignments-service";
@@ -47,6 +48,7 @@ export async function portalRoutesFixture() {
   });
   const identities = { ...f.identities, recipient };
   const practice = createPracticeService({ access: f.service });
+  const explorationSecret = randomBytes(48).toString("base64url");
   const deliveries: { url: string }[] = []; let sendFails = false;
   const invitations = createInvitationService({ db: f.db, access: f.service, throttleSecret: randomBytes(48).toString("base64url"), transport: async message => {
     deliveries.push({ url: message.url }); if (sendFails) throw new Error("Synthetic delivery failure");
@@ -56,7 +58,8 @@ export async function portalRoutesFixture() {
   const pendingInvitations = createPendingInvitations({ secret: randomBytes(48).toString("base64url"), origin: "http://localhost:3000", environment: "local" });
   const readingPreview=createReadingPreviewService({access:f.service,signingSecret:randomBytes(48).toString("base64url"),loadReading:async(date,calendar)=>({fetchedAt:Date.now(),snapshot:{date:parseCeremonyDate(date),calendar,classification:"regular",reading:{parashah:"Synthetic",type:"shabbat",summary:"",source:"Hebcal",aliyot:[{n:1,ref:"Genesis 1:1-6:8"}],triennial:null},haftarah:"Isaiah 1:1-2"}}),loadText:async()=>{throw new StudyUnavailable("upstream");}});
   const runtime: HttpRuntime = { origin: "http://localhost:3000", honoree: createHonoreeService({ db: f.db, access: f.service, origin: "http://localhost:3000", deployment: { environment: "test", deployment: "suite" }, signingSecret: randomBytes(48).toString("base64url") }), honors: createHonorsService({ access: f.service }), auth: f.auth, access: f.service, practice, invitations, students, readingPreview, studentWork: createStudentWorkService({ access: f.service, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
-    readingExploration: createReadingExplorationService({ access: f.service, practice, signingSecret: randomBytes(48).toString("base64url"), loadReading: async () => { throw new StudyUnavailable("upstream"); }, loadText: async () => { throw new StudyUnavailable("upstream"); } }),
+    readingExploration: createReadingExplorationService({ access: f.service, practice, signingSecret: explorationSecret, loadReading: async () => { throw new StudyUnavailable("upstream"); }, loadText: async () => { throw new StudyUnavailable("upstream"); } }),
+    shortExplorationAudio: createShortExplorationService({ access: f.service, practice, signingSecret: explorationSecret, loadReading: async () => { throw new StudyUnavailable("upstream"); }, loadText: async () => { throw new StudyUnavailable("upstream"); }, loadCatalog: async () => { throw new ReferenceUnavailable(); }, loadManifest: async () => { throw new ReferenceUnavailable(); } }),
     referenceAudio: createReferenceAudioService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, loadCatalog: async () => { throw new ReferenceUnavailable(); } }),
     shortReferenceAudio: createShortReferenceAudioService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, loadCatalog: async () => { throw new ReferenceUnavailable(); }, loadManifest: async () => { throw new ReferenceUnavailable(); } }),
     studyWordAids: createStudyWordAidsService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); } }),

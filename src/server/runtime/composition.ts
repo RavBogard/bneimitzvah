@@ -30,6 +30,7 @@ import { createSefariaStudyReader } from "../study/sefaria";
 import { createReferenceAudioService } from "../reference-audio/service";
 import { createShortReferenceAudioService } from "../reference-audio/short-service";
 import { createRuntimeShortMetadata } from "../reference-audio/runtime-short-metadata";
+import { createShortExplorationService } from "../reference-audio/short-exploration-service";
 import { createReferenceCatalogLoader } from "../reference-audio/storage";
 import { ReferenceUnavailable, type ReferenceCatalog } from "../reference-audio/catalog";
 import { createStudyService } from "../study/service";
@@ -137,6 +138,8 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const referenceAudio = createReferenceAudioService({ access, practice, loadText, loadCatalog: createRuntimeReferenceLoader(config.referenceAudio), studentRelease: config.referenceAudio?.studentRelease });
   const shortMetadata = createRuntimeShortMetadata(config, process.env);
   const shortReferenceAudio = createShortReferenceAudioService({ access, practice, loadText, ...shortMetadata, studentRelease: config.referenceAudio?.studentRelease });
+  const shortExplorationAudio = createShortExplorationService({ access, practice, loadReading, loadText, signingSecret: purposeSecret(config, "reading-exploration"),
+    ...shortMetadata, studentRelease: config.referenceAudio?.studentRelease });
   const readingPreview = createReadingPreviewService({ access, loadReading, loadText, signingSecret:purposeSecret(config,"reading-preview") });
   const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding") });
   const relationships = createRelationshipService({ access });
@@ -148,7 +151,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, readingPreview, studentWork, progress, lessonLog, practiceCalendar, recordings, serviceLearning, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, lessonLog, practiceCalendar, recordings, serviceLearning, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;
