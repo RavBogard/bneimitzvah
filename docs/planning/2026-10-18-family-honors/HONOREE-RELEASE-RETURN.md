@@ -1,5 +1,15 @@
 # Honoree database release preparation — 2026-10-18
 
+## Final release accepted
+
+Exact `3f1c357d7ebadb2419e50196145ad1f5625dddcc` passes the five manual owned PostgreSQL16 cases, with no skipped/cancelled tests and verified cluster/database/role/port cleanup. Independent review accepted both the frozen harness and actual result. All four [exact hosted jobs39129786654](https://github.com/RavBogard/bneimitzvah/actions/runs/39129786654) pass, including the corrected Windows immutable-Git-fixture test. The earlier failed captures and Windows result remain preserved; they were not relabeled as passes.
+
+The dedicated production check returned checked at23 ledger rows; explicit apply returned applied at24 through0023. Its same-connection postcommit checks verified schema, old-data/role/catalog preservation, initial counter backfill and empty link/operation/material tables. Actual PostgreSQL18 direct verified TLS and required SCRAM channel binding passed. No material approval, guest link, real roster import, invitation or mail was created. Do not replay this migration.
+
+Main was fast-forwarded to the exact tested source. Normal Git deployment `dpl_5ZSgNgtaPC4ZH1EAVR3hJc1jaT2q` is READY at https://beitmitzvah.centralreform.org, with exact source/project/team/repository/Production/canonical identity verified against the trusted prior deployment. Anonymous checks passed for twelve entry/guest/private-denial cases across two runs: nine passed initially; three malformed test requests were retained as failures, corrected without an app change or relaxed expected status, and then passed.
+
+This supersedes the pre-release status in the historical preparation sections below. The actual reference and SQL remain unchanged. Private evidence is retained in the backend worktree's final-native-v2 report/review and production-check/apply logs, and the integration worktree's production identity/canary reports. The separate owner-only two-row blessing approval still requires its own independent review and disposable acceptance. This release does not complete1.0.
+
 ## Native reference installed after independent review
 
 The preparation below records the earlier model-only checkpoint. The reference now contains actual owned PostgreSQL 16.15 catalogs, with exact byte SHA256 `438276fcb901b723853152f42b05c83b462313b9d3e3e66219be866c0ee0fe2c` and after-catalog canonical SHA256 `640ae4499198878a35b4b3d8fb1a405118e74b85bae13248bd7e20899d5320bb`. The SQL and historical references are unchanged.
