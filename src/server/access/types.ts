@@ -6,7 +6,7 @@ import type * as schema from "../db/index";
 export type AccessDatabase<Q extends PgQueryResultHKT> = PgDatabase<Q, typeof schema>;
 export type AccessTransaction<Q extends PgQueryResultHKT> = PgTransaction<Q, typeof schema, ExtractTablesWithRelations<typeof schema>>;
 export type ActiveMode = "student" | "parent" | "tutor" | "admin";
-export type LockIntent = "read" | "data-write" | "authority-write";
+export type LockIntent = "read" | "data-write" | "authority-write" | "honoree-link-write";
 export type DeploymentScope = Readonly<{ environment: "production" | "preview" | "local" | "test"; deployment: string }>;
 export type AccessRequest = Readonly<{ url: string; headers: Headers }>;
 export type Actor = Readonly<{

@@ -34,7 +34,7 @@ export async function lockStudent<Q extends PgQueryResultHKT>(tx: AccessTransact
   const [student] = await tx.select({
     id: s.student.id, firstName: s.student.firstName, lastName: s.student.lastName,
     ceremonyDate: s.student.ceremonyDate, revision: s.student.revision, disabledAt: s.student.disabledAt,
-  }).from(s.student).where(and(eq(s.student.tenantId, tenantId), eq(s.student.id, studentId))).for(lockStrength(intent));
+  }).from(s.student).where(and(eq(s.student.tenantId, tenantId), eq(s.student.id, studentId))).for(intent === "honoree-link-write" ? "update" : lockStrength(intent));
   return student;
 }
 

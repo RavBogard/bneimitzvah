@@ -14,7 +14,7 @@ test("0022 upgrades existing data, replays and changes only honors stream and au
   const isolation = await isolatedEnv(), client = new PGlite();
   try {
     const folder = "src/server/db/migrations", journal = JSON.parse(await readFile(join(folder, "meta/_journal.json"), "utf8"));
-    expect(journal.entries.at(-1)).toMatchObject({ idx: 22, tag: "0022_honors_version" });
+    expect(journal.entries.find((entry: { idx: number }) => entry.idx === 22)).toMatchObject({ idx: 22, tag: "0022_honors_version" });
     const entries = journal.entries.filter((e: { idx: number }) => e.idx < 22), prior = join(isolation.home, "prior"); await mkdir(join(prior, "meta"), { recursive: true });
     await writeFile(join(prior, "meta/_journal.json"), JSON.stringify({ ...journal, entries }));
     for (const e of entries) await copyFile(join(folder, e.tag + ".sql"), join(prior, e.tag + ".sql"));

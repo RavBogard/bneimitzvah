@@ -10,7 +10,7 @@ import { AccessDenied } from "./errors";
 import type { AccessDatabase, AccessRequest, AccessTransaction, ActiveMode, Actor, DeploymentScope, LockIntent, StudentActor } from "./types";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-type StudentCapability = "read" | "set-reading" | "set-service-plan" | "practice-write" | "note-write" | "source-write" | "honors-read" | "honors-write";
+type StudentCapability = "read" | "set-reading" | "set-service-plan" | "practice-write" | "note-write" | "source-write" | "honors-read" | "honors-write" | "honoree-link-write";
 type AdminCapability = "read-relationships" | "read-invites" | "manage-students" | "manage-invites" | "manage-relationships" | "manage-defaults";
 const adminRules: Record<AdminCapability, { fresh: boolean; intent: LockIntent }> = {
   "read-relationships": { fresh: false, intent: "read" },
@@ -51,8 +51,8 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
   }
 
   async function withStudentCapability<T>(request: AccessRequest, selection: { mode: ActiveMode; studentId: string; capability: StudentCapability }, action: (tx: AccessTransaction<Q>, actor: StudentActor, student: StudentView) => Promise<T>) {
-    if (!["read", "set-reading", "set-service-plan", "practice-write", "note-write", "source-write", "honors-read", "honors-write"].includes(selection.capability)) throw new AccessDenied(403);
-    const intent: LockIntent = selection.capability === "read" || selection.capability === "honors-read" ? "read" : "data-write";
+    if (!["read", "set-reading", "set-service-plan", "practice-write", "note-write", "source-write", "honors-read", "honors-write", "honoree-link-write"].includes(selection.capability)) throw new AccessDenied(403);
+    const intent: LockIntent = selection.capability === "honoree-link-write" ? "honoree-link-write" : selection.capability === "read" || selection.capability === "honors-read" ? "read" : "data-write";
     return withActor(request, selection.mode, intent, false, async (tx, actor) => {
       if (!uuid.test(selection.studentId)) throw new AccessDenied(404);
       const student = await lockStudent(tx, actor.tenantId, selection.studentId, intent);
@@ -62,9 +62,9 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
       // First establish view access, then distinguish forbidden action from an
       // unavailable target. Foreign/missing/unrelated IDs share the same denial.
       if (selection.capability === "set-reading" && actor.mode !== "admin" && actor.mode !== "tutor") throw new AccessDenied(403);
-      if (selection.capability === "honors-read" || selection.capability === "honors-write") {
+      if (selection.capability === "honors-read" || selection.capability === "honors-write" || selection.capability === "honoree-link-write") {
         if (actor.mode !== "parent" && actor.mode !== "admin") throw new AccessDenied(403);
-        if (selection.capability === "honors-write") requireCookieMutation(request, actor.origin);
+        if (selection.capability !== "honors-read") requireCookieMutation(request, actor.origin);
       }
       if (selection.capability === "set-service-plan") {
         if (actor.mode !== "admin" && actor.mode !== "tutor") throw new AccessDenied(403);

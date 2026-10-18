@@ -10,3 +10,4 @@ export * from "./practice-calendar-schema";
 export * from "./recording-schema";
 export * from "./source-assignments-schema";
 export * from "./honors-schema";
+export * from "./honoree-schema";
