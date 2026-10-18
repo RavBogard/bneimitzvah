@@ -1,0 +1,9 @@
+# MCP authentication prerequisite return
+
+Browser identity now deletes Authorization from its copied SDK session headers alongside the existing Forwarded removal. Only the signed browser cookie can select this identity, even when a future SDK composition supports bearer authentication. Original request headers, exact host/tenant resolution, live identity/grant checks and disabled cookie-cache/session-refresh queries are preserved.
+
+`tests/app/access-cookie-boundary.test.ts` adds three regressions using actual installed Better Auth 1.7.10, its separate bearer plugin and the existing restricted-role PGlite fixture. Direct SDK controls prove the real bearer can authenticate without a cookie and can select another user despite a cookie. Browser access rejects absent/invalid cookies, retains the cookie's user/session despite another user's bearer, and preserves role, relationship, tenant and unknown-host denials. Assertions avoid printing credentials; the only mock replaces the server-only build marker.
+
+Verification: new boundary tests plus existing access/auth-stack/auth-http suites **41/41 PASS**, four files, 55.42 seconds. Isolated `npm run typecheck` **PASS**; repository protection **3/3 PASS**, 49.66 seconds; isolation home cleanup verified for both runs. Detailed ignored logs: `.local-logs/mcp-cookie-boundary-focused-v1-first.log`, `mcp-cookie-boundary-types-v1-first.log` and `mcp-cookie-boundary-repo-v1-first.log`. No failed checks occurred.
+
+This checkpoint changes no public endpoints, OAuth providers/plugins, configuration, dependencies, schema or Google settings. Google session provenance and MCP authorization/delegation remain separate design work. Independent adversarial review follows this commit; no push or deployment is included.

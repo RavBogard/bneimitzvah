@@ -18,6 +18,9 @@ export function createVerifiedIdentityAccess<Q extends PgQueryResultHKT>(input: 
       const resolved = await resolveTenantHost(input.db, request, deployment);
       if (options.mutation) requireCookieMutation(request, resolved.origin);
       const sessionHeaders = new Headers(request.headers);
+      // Browser identity uses only the signed session cookie, even if an SDK
+      // plugin later supports bearer credentials on its own endpoints.
+      sessionHeaders.delete("authorization");
       // Discard unused RFC proxy metadata before any SDK processing.
       sessionHeaders.delete("forwarded");
       const proof = await input.auth.api.getSession({ headers: sessionHeaders, query: { disableCookieCache: true, disableRefresh: true } });
