@@ -183,6 +183,13 @@
       "when": 1792352400000,
       "tag": "0025_mcp_delegation",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792356000000,
+      "tag": "0026_oauth_provider_storage",
+      "breakpoints": true
     }
   ]
 }
