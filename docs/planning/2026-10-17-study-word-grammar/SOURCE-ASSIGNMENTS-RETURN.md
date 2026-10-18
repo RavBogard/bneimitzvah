@@ -2,6 +2,8 @@
 
 ## Current checkpoint
 
+**Latest pending gate:** inline-reader candidatecc6fa60 is held after CI39102733819 exposed one Sources helper response-body timing failure. A test-only early-JSON capture repair preserves the same save assertions and passes deterministic scheduling plus instrumented Sources7 checks. See [inline reader return](INLINE-SOURCE-READING-RETURN.md); a new exact gate remains required. Production709 is unaffected.
+
 **Latest release:** Sources assignment controls and the explicit-edition content backend are live at exact709a032 after all four CI39100441095 jobs and eight production canaries passed. The refresh compatibility repair is included. See [source backend return](SOURCE-CONTENT-RETURN.md) and [pending inline reader return](INLINE-SOURCE-READING-RETURN.md). Historical checkpoint details below retain their original scope; the new inline text UI is not yet deployed.
 
 **Deployed:** exact0f31d0ce423782c2354e610530b75838b71cf270 passed all four CI39097297798 jobs and was fast-forwarded to main after the guarded production migration. Check-only matched ledger21; apply completed22 with expected catalog change and unchanged pre-existing data/roles. All three private apply snapshots (preflight, immediate recheck, after) are retained. Normal deployment dpl_ANNwig9ksLLKUCcpUSNebPCCibB9 is READY with exact source/project/team/Production/canonical identity and six public denial/entry checks passing. The core endpoints and nonvisual client are deployed, with no Sources panel or source bodies yet.

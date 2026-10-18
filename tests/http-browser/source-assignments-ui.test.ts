@@ -36,7 +36,12 @@ async function page(who: "admin" | "tutor" | "student" = "admin", mobile = false
 }
 async function open(tab: Page, ref = "Genesis 1:1") { await panel(tab, ref).getByRole("button", { name: "Sources", exact: true }).click(); await ui(panel(tab, ref).getByRole("button", { name: "Browse related sources", exact: true })).toBeEnabled(); }
 async function browse(tab: Page, ref = "Genesis 1:1") { await panel(tab, ref).getByRole("button", { name: "Browse related sources", exact: true }).click(); await ui(panel(tab, ref).getByRole("list", { name: "Related sources", exact: true })).toBeVisible(); }
-async function save(tab: Page, ref = "Genesis 1:1") { const response = tab.waitForResponse(value => new URL(value.url()).pathname.endsWith("/source-assignments") && value.request().method() === "POST" && value.status() === 200); await panel(tab, ref).getByRole("button", { name: "Save sources", exact: true }).click(); const value = await response; await ui(panel(tab, ref).getByText("Sources saved.", { exact: true })).toBeVisible(); return value.json(); }
+async function save(tab: Page, ref = "Genesis 1:1") {
+  // Capture the body when its response arrives, before waiting for later UI work.
+  const response = tab.waitForResponse(value => new URL(value.url()).pathname.endsWith("/source-assignments") && value.request().method() === "POST" && value.status() === 200).then(value => value.json());
+  const [value] = await Promise.all([response, panel(tab, ref).getByRole("button", { name: "Save sources", exact: true }).click()]);
+  await ui(panel(tab, ref).getByText("Sources saved.", { exact: true })).toBeVisible(); return value;
+}
 async function quiet(tab: Page) { let sessions = 0; const response = (value: import("playwright").Response) => { if (new URL(value.url()).pathname === "/api/session" && value.status() === 200) sessions++; }; tab.on("response", response); try { await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await ui.poll(() => sessions).toBeGreaterThanOrEqual(4); } finally { tab.off("response", response); } }
 async function noAudio(tab: Page) { expect(await tab.evaluate(() => window.sourceUiAudioCount)).toBe(0); }
 
