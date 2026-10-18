@@ -180,7 +180,7 @@ it("unknown original action keeps exact UUID/body, receipts never recover URL, r
     try {
       await open(tab, child, "parent"); await ui(sheet(tab).getByRole("region", { name: "Review changed ceremony", exact: true })).toBeVisible();
       await button(tab, "Check link").click(); await ui(button(tab, "Revoke link…")).toBeEnabled(); await ui(button(tab, "Replace link…")).toBeDisabled();
-      await ui(group(tab).getByText(/with a recorded expiry of/)).toBeVisible(); await ui(group(tab).getByText(/This does not confirm that the link is usable/)).toBeVisible(); await ui(group(tab).getByText(/works until/)).toHaveCount(0);
+      const recordedMetadata = group(tab).getByText(/with a recorded expiry of/); await ui(recordedMetadata).toBeVisible(); await ui(recordedMetadata).toContainText("This does not confirm that the link is usable."); await ui(group(tab).getByText(/works until/)).toHaveCount(0);
       await button(tab, "Revoke link…").click(); expect(bodies).toHaveLength(3); await button(tab, "Revoke recorded link").click(); await ui(group(tab).getByRole("status")).toHaveText("The recorded link was revoked.");
       await ui(group(tab).getByText("No current link record was found.", { exact: true })).toBeVisible();
       expect(bodies).toHaveLength(4); expect(JSON.parse(bodies[3])).toMatchObject({ operation: "revoke", linkId: fakeId, startVerse }); expect(JSON.parse(bodies[3]).mutationId).not.toBe(JSON.parse(bodies[2]).mutationId);
