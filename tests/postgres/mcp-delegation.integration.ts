@@ -67,20 +67,26 @@ test("native finite deadlines, UTC origin expiry and pending-only insertion are 
   // Actual restricted LOGIN pool can create a shadow, but the trigger must
   // read public.session even under pg_temp's implicit search-path precedence.
   const shadow=await pending(f),realExpiry=new Date(Date.now()+30_000),fakeExpiry=new Date(Date.now()+86400_000);
-  let shadowProved=false;
-  expect(await refused(()=>tenant(f,async tx=>{
+  let shadowProved=false,rolledBack=false;
+  try{await tenant(f,async tx=>{
     await tx.execute(sql`update public.session set expires_at=${realExpiry}::timestamptz at time zone 'UTC' where id=${shadow.sessionId}`);
     await tx.execute(sql`create temporary table session (id text,user_id text,expires_at timestamp) on commit drop`);
     await tx.execute(sql`insert into pg_temp.session values (${shadow.sessionId},${shadow.userId},${fakeExpiry}::timestamptz at time zone 'UTC')`);
-    const proof=await tx.execute<{valid:boolean}>(sql`select current_user='portal_runtime'
+    const proof=await tx.execute<{valid:boolean}>(sql`select current_user=session_user and current_user=current_database()
+      and current_user like 'portal_access_%' and pg_has_role(current_user,'portal_runtime','USAGE')
+      and exists(select 1 from pg_roles where rolname=current_user and rolcanlogin and rolinherit and not rolsuper and not rolcreatedb and not rolcreaterole and not rolreplication and not rolbypassrls)
+      and current_user<>pg_get_userbyid((select relowner from pg_class where oid='public.session'::regclass))
       and (select expires_at at time zone 'UTC' from session where id=${shadow.sessionId})>${shadow.hardDeadline}::timestamptz
       and (select expires_at at time zone 'UTC' from public.session where id=${shadow.sessionId})<${shadow.hardDeadline}::timestamptz as valid`);
     shadowProved=proof.rows[0].valid;expect(shadowProved).toBe(true);
-    await tx.execute(sql`insert into public.mcp_delegation
+    // Preconditions are outside the refusal catcher. A savepoint isolates only
+    // the intended INSERT error, so earlier setup failures cannot satisfy it.
+    expect(await refused(()=>tx.transaction(async insertTx=>{await insertTx.execute(sql`insert into public.mcp_delegation
       (id,tenant_id,user_id,session_id,membership_id,role_grant_id,role,membership_revision,grant_revision,pending_cookie_hash,request_fingerprint,scope,resource,client_id,created_at,selection_deadline,hard_deadline)
-      values (${shadow.id},${shadow.tenantId},${shadow.userId},${shadow.sessionId},${shadow.membershipId},${shadow.roleGrantId},${shadow.role},${shadow.membershipRevision},${shadow.grantRevision},${shadow.pendingCookieHash},${shadow.requestFingerprint},${shadow.scope},${shadow.resource},${shadow.clientId},${shadow.createdAt},${shadow.selectionDeadline},${shadow.hardDeadline})`);
-  }),["23514"])).toBe(true);
-  expect(shadowProved).toBe(true);
+      values (${shadow.id},${shadow.tenantId},${shadow.userId},${shadow.sessionId},${shadow.membershipId},${shadow.roleGrantId},${shadow.role},${shadow.membershipRevision},${shadow.grantRevision},${shadow.pendingCookieHash},${shadow.requestFingerprint},${shadow.scope},${shadow.resource},${shadow.clientId},${shadow.createdAt},${shadow.selectionDeadline},${shadow.hardDeadline})`);}),["23514"])).toBe(true);
+    throw Error("synthetic-shadow-rollback");
+  });}catch(error){rolledBack=error instanceof Error&&error.message==="synthetic-shadow-rollback";if(!rolledBack)throw Error("Synthetic native shadow precondition or INSERT check failed; details withheld");}
+  expect(shadowProved&&rolledBack).toBe(true);
   expect((await tenant(f,tx=>tx.select().from(s.mcpDelegation).where(eq(s.mcpDelegation.id,shadow.id)))).length).toBe(0);
   const valid=await pending(f);await tenant(f,tx=>tx.insert(s.mcpDelegation).values(valid));
 });
