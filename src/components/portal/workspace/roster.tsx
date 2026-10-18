@@ -6,6 +6,7 @@ import { RequireRole, statusOf, useWorkspace, useWorkspaceModal, WorkspaceLink }
 import { AdminNav } from "./admin-nav";
 import { ceremonyCountdown } from "./reading";
 import { icons } from "./study/lift";
+import { HonorsSheet } from "./honors/sheet";
 
 const empty: StudentInput = { firstName: "", lastName: "", ceremonyDate: "", studentKind: "child", serviceSlot: "unknown", parentEmail: "", ownEmail: null };
 function draft(row: RosterStudent): StudentInput { return { firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate, studentKind: row.studentKind, serviceSlot: row.serviceSlot, parentEmail: row.parentEmail, ownEmail: row.ownEmail }; }
@@ -20,6 +21,7 @@ function Roster() {
   const [current, setCurrent] = useState<RosterStudent | null>(null), [form, setForm] = useState<StudentInput>(empty), [editing, setEditing] = useState(false);
   const [pending, setPending] = useState(false), [message, setMessage] = useState(""), [conflict, setConflict] = useState(false), [confirmDisable, setConfirmDisable] = useState(false), [page, setPage] = useState(0);
   const [query, setQuery] = useState("");
+  const [honorsStudent, setHonorsStudent] = useState<RosterStudent | null>(null), honorsOrigin = useRef<HTMLButtonElement | null>(null);
   const gate = useRef(false), turn = useRef(0), abort = useRef<AbortController | null>(null), formHeading = useRef<HTMLHeadingElement>(null);
   const sheet = useRef<HTMLDialogElement>(null), origin = useRef<HTMLElement | null>(null), addButton = useRef<HTMLButtonElement>(null);
   const lifetime = useRef(0), currentRef = useRef(current); currentRef.current = current;
@@ -125,7 +127,7 @@ function Roster() {
             <span className="roster-row-meta"><time dateTime={row.ceremonyDate}>{when.label}</time>{!row.disabledAt && when.phrase && <span className="roster-row-days">{when.days > 1 ? `${when.days} days` : when.phrase}</span>}<span>{row.studentKind === "adult" ? "Adult" : "Child"}</span>{slot && <span>{slot}</span>}</span></>;
           return <li key={row.id} className={`roster-row${row.disabledAt ? " roster-row-disabled" : ""}`}>
             {row.disabledAt ? <div className="roster-row-main">{body}</div> : <WorkspaceLink className="roster-row-main" href={`/workspace/admin/students/${row.id}/reading`}>{body}</WorkspaceLink>}
-            <div className="roster-row-actions"><button type="button" className="roster-action" aria-label={`${row.disabledAt ? "Details" : "Edit details"} for ${name}`} disabled={pending || conflict} onClick={event => choose(row, event)}>{row.disabledAt ? "Details" : "Edit"}</button><WorkspaceLink className="roster-action" aria-label={`People for ${name}`} href={`/workspace/admin/students/${row.id}/access`}>People</WorkspaceLink></div>
+            <div className="roster-row-actions">{!row.disabledAt && <button type="button" className="roster-action" aria-label={`Honors for ${name}`} disabled={pending || editing || !!honorsStudent} onClick={event => { honorsOrigin.current = event.currentTarget; setHonorsStudent(row); }}>Honors</button>}<button type="button" className="roster-action" aria-label={`${row.disabledAt ? "Details" : "Edit details"} for ${name}`} disabled={pending || conflict} onClick={event => choose(row, event)}>{row.disabledAt ? "Details" : "Edit"}</button><WorkspaceLink className="roster-action" aria-label={`People for ${name}`} href={`/workspace/admin/students/${row.id}/access`}>People</WorkspaceLink></div>
           </li>;
         })}</ul>}
         {!rows.length ? <div className="admin-empty"><p className="admin-empty-title">No students yet</p><p>Add a student, or import a list from a spreadsheet.</p><button type="button" className="button-text" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
@@ -152,5 +154,6 @@ function Roster() {
         </div>}
       </section>}
     </dialog>
+    {honorsStudent && <HonorsSheet key={honorsStudent.id} studentId={honorsStudent.id} name={fullName(honorsStudent)} mode="admin" onClose={() => { setHonorsStudent(null); honorsOrigin.current?.focus(); }} />}
   </section>;
 }

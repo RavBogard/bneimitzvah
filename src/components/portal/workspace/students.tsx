@@ -7,6 +7,7 @@ import { workspaceApi, type Student } from "./api";
 import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "./provider";
 import { ceremonyCountdown, ReadingPanel } from "./reading";
 import { reconcileSelectedStudent } from "./student-label";
+import { HonorsEntry } from "./honors/sheet";
 
 export function StudentWorkspace({ mode, studentId }: { mode: "student" | "parent" | "tutor"; studentId?: string }) {
   return <RequireRole role={mode}><StudentSelection key={studentId ?? ""} mode={mode} routeStudentId={studentId} /></RequireRole>;
@@ -82,6 +83,7 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
               : <button type="button" className="student-card" data-student-id={row.id} aria-pressed={selected === row.id} onClick={() => { void guardDeparture().then(leave => { if (leave) setSelected(row.id); }); }}><StudentCardBody row={row} /></button>}
           </li>)}</ul>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
           {focused && !selected && <div className="workspace-state"><h2>Student not found</h2><p>This student isn’t in your list. Choose one of your students above.</p></div>}
+          {selected && mode === "parent" && !context && <HonorsEntry key={selected} studentId={selected} name={`${rows.find(row => row.id === selected)?.firstName ?? ""} ${rows.find(row => row.id === selected)?.lastName ?? ""}`} />}
           {selected && <ReadingPanel mode={mode} studentId={selected} onStudentReload={reconcileStudent} />}</>}
   </section>;
 }

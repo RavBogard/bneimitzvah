@@ -1,0 +1,49 @@
+.entry { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1.25rem 0; border-bottom:1px solid var(--color-rule); margin-bottom:1rem; }
+.entry h2 { font-size:1.2rem; margin:0 0 .25rem; }
+.entry p { margin:0; color:var(--color-muted); }
+.sheet { display:flex; flex-direction:column; }
+.sheet[open] { display:flex; }
+.sheet:not([open]) { display:none; }
+.body { padding:0 2rem 2rem; flex:1; }
+.title { font-size:clamp(1.65rem,4vw,2.2rem); line-height:1.15; margin:.5rem 0; }
+.student { font-size:1.1rem; margin:0 0 .5rem; }
+.meta,.help,.position { color:var(--color-muted); font-size:.9rem; line-height:1.5; }
+.meta { margin:0 0 1rem; }
+.intro { max-width:58ch; line-height:1.55; }
+.group,.aliyot { border-top:1px solid var(--color-rule); padding:1.6rem 0; }
+.group h3,.aliyot>h3 { font-size:1.2rem; margin:0 0 .5rem; }
+.group fieldset { border:0; margin:0; padding:0; min-width:0; }
+.group legend { font-weight:600; margin:.75rem 0; }
+.people { margin:0; padding:0; list-style:none; }
+.person { padding:.75rem 0 1rem; }
+.person+.person { border-top:1px solid var(--color-rule); }
+.nameFields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.9rem; }
+.nameFields label { display:flex; flex-direction:column; gap:.4rem; font-size:.9rem; font-weight:500; }
+.nameFields input { min-width:0; width:100%; min-height:48px; padding:.65rem .75rem; border:1px solid var(--color-rule); border-radius:4px; background:var(--color-surface); color:var(--color-ink); font:inherit; }
+.nameFields input[lang=he] { font-family:"CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size:1.1rem; }
+.sheet .nameFields input:focus-visible:not(:disabled),.sheet .review select:focus-visible { outline:2px solid var(--color-focus); outline-offset:3px; box-shadow:inset 0 0 0 1px var(--color-focus); }
+.more { margin:.75rem 0; }
+.more summary { min-height:44px; padding-block:.65rem; cursor:pointer; color:var(--color-action); font-size:.9rem; text-decoration:underline; text-underline-offset:4px; }
+.rowActions { display:flex; flex-wrap:wrap; align-items:center; column-gap:1rem; margin-top:.35rem; }
+.rowActions button { min-height:44px; font-size:.85rem; padding:.35rem 0; }
+.position { margin-right:auto; }
+.choices { display:flex; flex-wrap:wrap; gap:.5rem 1.5rem; }
+.choices label { min-height:48px; display:flex; align-items:center; gap:.6rem; cursor:pointer; }
+.choices input { accent-color:var(--color-action); width:1.1rem; height:1.1rem; }
+.footer { position:sticky; bottom:0; background:var(--color-canvas); border-top:1px solid var(--color-rule); padding:1rem 2rem max(1rem,env(safe-area-inset-bottom)); display:flex; flex-wrap:wrap; gap:.75rem 1rem; align-items:center; z-index:1; }
+.footer p { margin:0; font-size:.9rem; flex:1 1 12rem; }
+.footer button { min-height:48px; }
+.notice,.contextNotice,.review,.departure { border-block:1px solid var(--color-rule); padding:1rem 0; margin:1rem 0; line-height:1.55; overflow-wrap:anywhere; }
+.notice p,.departure p { margin:.25rem 0 .75rem; }
+.review { border-block-color:var(--color-control-rule); }
+.review h3 { margin:0 0 .5rem; font-size:1.15rem; }
+.review ol { padding-left:1.2rem; }
+.review li { margin:1rem 0; }
+.review label { display:flex; flex-direction:column; gap:.5rem; }
+.review select { min-height:48px; max-width:100%; background:var(--color-canvas); border:1px solid var(--color-rule); color:var(--color-ink); padding:.5rem; font:inherit; }
+.actions { display:flex; flex-wrap:wrap; gap:.75rem; }
+.error { color:var(--color-ink); margin:0; }
+.aliyot .group { border-top:0; border-bottom:1px solid var(--color-rule); padding:1rem 0 1.5rem; }
+.aliyot .group:last-child { border-bottom:0; padding-bottom:0; }
+.aliyot .group h3 { font-size:1.05rem; }
+@media(max-width:600px) { .body { padding:0 1.1rem 1.5rem; } .footer { padding:1rem 1.1rem max(1rem,env(safe-area-inset-bottom)); } .nameFields { grid-template-columns:1fr; } .entry { align-items:flex-start; flex-direction:column; } .rowActions { gap:.25rem .8rem; } .position { flex-basis:100%; } .footer>button { flex:1; } }
