@@ -4,7 +4,7 @@ const failureLabels = new Set([
   "Reading UI route handler failed",
   "Reading UI context close failed",
   ...["continue", "abort"].flatMap(action => ["active", "closing"].flatMap(phase =>
-    ["known-close", "already-handled", "other"].map(kind => `Reading UI route ${action} failed while ${phase} (${kind})`))),
+    ["known-close", "formatted-close", "already-handled", "other"].map(kind => `Reading UI route ${action} failed while ${phase} (${kind})`))),
 ]);
 class ReadingRouteGuardFailure extends Error {
   readonly labels: readonly string[];
@@ -47,10 +47,12 @@ export async function installReadingRouteGuard(context: Pick<BrowserContext, "ro
       const closed = "Target page, context or browser has been closed";
       const knownClose = error instanceof Error && (error.message === closed || error.message === `route.${action}: ${closed}`);
       if (closing && knownClose) return;
+      const formattedClose = error instanceof Error && [closed, `route.${action}: ${closed}`]
+        .some(prefix => error.message.startsWith(`${prefix}\n`) || error.message.startsWith(`${prefix}\r\n`));
       const alreadyHandled = error instanceof Error && (error.message === "Route is already handled!" || error.message.startsWith(`route.${action}: Route is already handled!`));
       // Retain every unexpected failure until teardown, without SDK messages
       // that may include private request URLs or credentials.
-      failures.add(`Reading UI route ${action} failed while ${closing ? "closing" : "active"} (${knownClose ? "known-close" : alreadyHandled ? "already-handled" : "other"})`);
+      failures.add(`Reading UI route ${action} failed while ${closing ? "closing" : "active"} (${knownClose ? "known-close" : formattedClose ? "formatted-close" : alreadyHandled ? "already-handled" : "other"})`);
     }
   }
   return {

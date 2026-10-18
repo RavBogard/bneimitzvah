@@ -91,4 +91,19 @@ describe("reading browser egress guard lifecycle", () => {
     const error = readingRouteCleanupError(await Promise.allSettled([f.guard.close()]));
     expect(error?.message).toBe("Reading UI route/context cleanup failed: Reading UI context close failed; private details withheld");
   });
+  it.each([
+    [`${closed}\nprivate synthetic request detail`, "formatted-close"],
+    [`route.continue: ${closed}\nhttps://private.example.test/?token=synthetic-secret`, "formatted-close"],
+    [`route.continue: ${closed}\r\nprivate synthetic request detail`, "formatted-close"],
+    [`route.continue: ${closed} extra\nprivate synthetic request detail`, "other"],
+  ])("keeps formatted and lookalike closure errors fatal during teardown without disclosing details", async (message, kind) => {
+    let reject!: (error: Error) => void;
+    const held = new Promise<void>((_resolve, fail) => { reject = fail; });
+    const f = await fixture(), route = f.route(origin, () => held), handled = f.handle(route);
+    const closing = f.guard.close(); reject(Error(message)); await handled;
+    const results = await Promise.allSettled([closing]);
+    expect(results[0].status).toBe("rejected");
+    expect(readingRouteCleanupError(results)?.message).toBe(`Reading UI route/context cleanup failed: Reading UI route continue failed while closing (${kind}); private details withheld`);
+    expect(route.abort).not.toHaveBeenCalled();
+  });
 });
