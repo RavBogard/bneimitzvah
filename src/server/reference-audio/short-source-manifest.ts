@@ -4,6 +4,8 @@ import { parseShortReferenceSource, SHORT_SOURCE_ATTRIBUTION, SHORT_SOURCE_RECIP
 import { referenceRecord } from "../../lib/reference-audio/source";
 import { parseReferenceCatalog, REFERENCE_CATALOG_LIMITS, ReferenceUnavailable, type ReferenceCatalog } from "./catalog";
 import type { ReferenceCatalogGet } from "./storage";
+import { parseReferenceResolution, type ReferenceResolution } from "../../lib/reference-audio/source";
+import { shortSourceRange } from "../../lib/reference-audio/short-source";
 
 export const SHORT_MANIFEST_SCHEMA = "reference-short-manifest/v1" as const;
 export const SHORT_MANIFEST_LIMITS = Object.freeze({ bytes: 8 * 1024 * 1024, entries: 10000 });
@@ -136,4 +138,25 @@ export function lookupShortSource(manifest: ShortSourceManifest, id: unknown): S
 }
 export function readShortSourceEntry(entry: ShortSourceEntry): Entry {
   const value = entries.get(entry); if (!value) throw new ReferenceUnavailable(); return value;
+}
+
+/** Only a unique derivative of this exact resolved parent and enclosing native
+ * verse grid may be selected. Membership is metadata authority, not body proof. */
+export function findShortSource(manifest: ShortSourceManifest, resolution: ReferenceResolution): ShortSourceEntry | null {
+  const map = manifests.get(manifest), resolved = parseReferenceResolution(resolution);
+  if (!map || !resolved) throw new ReferenceUnavailable();
+  if (!resolved.source || resolved.verse.playback.status !== "ready") return null;
+  const parent = resolved.source, clip = resolved.verse.playback.clip;
+  let match: ShortSourceEntry | null = null;
+  for (const entry of map.values()) {
+    const { source } = readShortSourceEntry(entry);
+    if (source.parent.asset !== parent.asset || source.parent.sha256 !== parent.sha256 || source.parent.bytes !== parent.bytes
+      || source.origin.firstFrame !== Math.floor(clip.start * source.sampleRate)
+      || source.origin.firstFrame + source.presentationFrames !== Math.ceil(clip.end * source.sampleRate)) continue;
+    const range = shortSourceRange(source, clip);
+    if (!range || range.firstFrame !== 0 || range.endFrame !== source.presentationFrames) continue;
+    if (match) return null;
+    match = entry;
+  }
+  return match;
 }
