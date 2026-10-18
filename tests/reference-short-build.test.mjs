@@ -20,6 +20,10 @@ async function files(folder) {
   await walk(folder); return paths;
 }
 async function absent(path) { try { await lstat(path); return false; } catch (e) { return e.code === "ENOENT"; } }
+async function resolverControlHome(parent) {
+  await mkdir(parent, { recursive: true });
+  return mkdtemp(join(parent, "reference-short-resolver-control-"));
+}
 
 const syntheticToolsPath = process.argv.length === 4 && process.argv[2] === "--synthetic-tools" ? process.argv[3] : null;
 if (process.argv.length > 2 && !syntheticToolsPath) throw new Error("Unsupported synthetic proof selection");
@@ -64,8 +68,19 @@ test("output lexical junction ancestors are refused before any output creation",
   } finally { await rm(home, { recursive: true }); }
 });
 
+test("resolver control creates its missing code-only parent on a clean checkout", async () => {
+  const iso = await isolatedEnv({ CI: "1" });
+  try {
+    const parent = join(iso.home, "absent-local-logs"); assert.equal(await absent(parent), true);
+    const home = await resolverControlHome(parent);
+    assert.equal(await realpath(home), resolve(home)); assert.equal((await lstat(home)).isDirectory(), true);
+    assert.deepEqual(await readdir(home), []);
+    await rm(home, { recursive: true }); assert.equal(await absent(home), true);
+  } finally { await iso.cleanup(); }
+});
+
 test("actual react-server importer resolution rejects a nearer server-only shadow before evaluation", async () => {
-  const iso = await isolatedEnv({ CI: "1" }), home = await mkdtemp(join(ROOT, ".local-logs/reference-short-resolver-control-"));
+  const iso = await isolatedEnv({ CI: "1" }), home = await resolverControlHome(join(ROOT, ".local-logs"));
   try {
     const expected = { emptyFile: await realpath(join(ROOT, "node_modules/server-only/empty.js")), packageFile: await realpath(join(ROOT, "node_modules/server-only/package.json")) };
     expected.emptySHA256 = sha(await readFile(expected.emptyFile)); expected.packageSHA256 = sha(await readFile(expected.packageFile));
