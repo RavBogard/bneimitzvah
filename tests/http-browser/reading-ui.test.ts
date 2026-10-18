@@ -79,7 +79,7 @@ it("lets an admin review actual calendar choices, confirm once and replace only 
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("aliyah:1"));
   expect(await tab.getByRole("button", { name: "Save assignment", exact: true }).count()).toBe(0);
   await click(tab, "Review assignment");
-  await ui(tab.getByRole("heading", { name: "No reading has been assigned yet", level: 3, exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: "Explore the full Torah portion", level: 3, exact: true })).toBeVisible();
   await capture(tab, "reading-admin-prepared-desktop");
   let confirmations = 0;
   await tab.route("**/reading/confirm", async route => { confirmations++; const response = await route.fetch(); await route.fulfill({ response }); });

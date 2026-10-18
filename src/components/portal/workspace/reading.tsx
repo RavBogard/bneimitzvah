@@ -9,6 +9,7 @@ import { quietReadingAuthority } from "./quiet-refresh";
 import { icons } from "./study/lift";
 import { ReadingEditor } from "./reading-editor";
 import { AssignedStudyText, type StudyReload } from "./study/view";
+import { ProposedTorahText } from "./study/exploration-view";
 import type { StudyKind } from "./study/api";
 import { WorkCoordinator } from "./work/coordinator";
 import { VerseTools } from "./work/verse-tools";
@@ -121,6 +122,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const current = result.key === key ? result : null;
   const [editorBusy, setEditorBusy] = useState(false);
   const student = current?.value?.student, readings = current?.value?.readings ?? [];
+  const exploring = Boolean(student) && mode !== "parent" && !readings.some(row => row.kind === "torah");
   const selectedReading = readings.find(row => row.kind === selectedKind) ?? readings[0];
   const otherReadings = readings.filter(row => row.id !== selectedReading?.id);
   const learner = mode === "student" || mode === "child-practice" || mode === "parent";
@@ -212,7 +214,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
           }}>{refreshIcon}</button>
         </div>
         {mode === "parent" && <p className="hero-meta">Read-only overview. Choose Practice with <bdi dir="auto">{student.firstName}</bdi> to mark verses together.</p>}
-        {readings.length === 0 ? <div className="reading-empty"><h3 className="hero-reference hero-reference-empty">No reading has been assigned yet</h3><p className="hero-meta">{staff ? "Choose the verses this student will read." : "Your tutor or rabbi will add your verses here."}</p>
+        {exploring || readings.length === 0 ? <div className="reading-empty"><h3 className="hero-reference hero-reference-empty">{exploring ? "Explore the full Torah portion" : "No reading has been assigned yet"}</h3><p className="hero-meta">{exploring ? "Read the portion while you and your tutor choose your verses." : staff ? "Choose the verses this student will read." : "Your tutor or rabbi will add your verses here."}</p>
           <div className="hero-actions">{mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : `Practice with ${student.firstName}`}</button>}{staff && <button type="button" className="button-hero-secondary" onClick={openSheet}>Assign verses</button>}{!tabbed && <a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a>}</div></div> : <>
           <h3 className="hero-reference">{displayRange(selectedReading.ranges)}</h3>
           <p className="hero-meta">{selectedReading.kind === "torah" ? "Torah" : "Haftarah"} · {selectedReading.verses.length} {selectedReading.verses.length === 1 ? "verse" : "verses"}{marked && <span className="hero-marked"> · {marked}</span>}</p>
@@ -233,7 +235,10 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       {current?.loading && <p role="status">Checking the current assignment…</p>}
       {readings.length === 0 ? <div className="reading-empty"><h3>No reading has been assigned yet</h3><p>Your tutor or rabbi will confirm the verses here.</p></div>
         : <AssignmentContext row={selectedReading} current />}</>}</>}
-      {tabPanel("reading", <><div className="reading-passage-layout">{student && song && (!tabbed || tab === "reading") && <ReadingToolbar onHear={hearReady && !concealed && !current?.loading ? () => lift.current?.(0) : undefined} />}<AssignedStudyText baseline={current?.value ?? null} register={registerStudy} reloadMetadata={load} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} onKindChange={setSelectedKind}
+      {tabPanel("reading", <><div className="reading-passage-layout">{student && song && (!tabbed || tab === "reading") && <ReadingToolbar onHear={!exploring && hearReady && !concealed && !current?.loading ? () => lift.current?.(0) : undefined} />}<ProposedTorahText baseline={current?.loading ? null : current?.value ?? null} reloadMetadata={load} active={!tabbed || tab === "reading"} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} />
+        {exploring && readings.length > 0 && <header><h3>Assigned Haftarah</h3><p className="reading-reference">{displayRange(readings[0].ranges)}</p>
+          <button type="button" className="button-secondary" disabled={!hearReady || concealed || current?.loading} onClick={() => lift.current?.(0)}>Haftarah up close</button></header>}
+        <AssignedStudyText baseline={current?.value ?? null} register={registerStudy} reloadMetadata={load} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} onKindChange={setSelectedKind}
         guardDeparture={guardReading} serviceHref={tabbed ? undefined : `#${serviceId}`} renderWork={(kind, verseRef) => <VerseTools coordinator={work} kind={kind} verseRef={verseRef} />} renderActiveWork={() => work.active && <VerseTools coordinator={work} kind={work.active.kind} verseRef={work.active.ref} />}
         onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} learner={learner} songSession={song} liftHandle={lift} onHearReady={setHearReady} active={!tabbed || tab === "reading"}
         onShown={(kind, offset, length) => progress.ensure(kind, offset, length)} renderMark={(kind, verseRef) => <VerseMark store={progress} kind={kind} verseRef={verseRef} />} renderLiftControls={(kind, verseRef) => <LiftProgress store={progress} kind={kind} verseRef={verseRef} />} onVisit={(kind, verseRef) => calendar.visitVerse(kind, verseRef)} /></div>

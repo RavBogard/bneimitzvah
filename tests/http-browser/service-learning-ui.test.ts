@@ -395,7 +395,7 @@ it("reads service-only student plans without scripture assignments and preserves
   expect(await tab.getByRole("link", { name: "Service parts", exact: true }).count()).toBe(1);
   await fixture.ownerDb.delete(s.assignmentVerse).where(eq(s.assignmentVerse.studentId, fixture.student.id)); await fixture.ownerDb.delete(s.assignment).where(eq(s.assignment.studentId, fixture.student.id));
   await click(tab, "Refresh reading");
-  await ui(tab.getByRole("heading", { name: "No reading has been assigned yet", exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: "Explore the full Torah portion", exact: true })).toBeVisible();
   await safe(() => tab.getByRole("link", { name: "Service parts", exact: true }).click()); await click(tab, "Synthetic part 0");
   await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
   await captures(tab, "service-only");
