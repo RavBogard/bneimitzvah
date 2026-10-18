@@ -65,7 +65,9 @@ it("suppresses a committed calendar acknowledgement when the post-probe finds ac
   const tab = await page(), seen = traffic(tab); let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   const hold = async (route: Route) => { const response = await route.fetch(); expect(response.status()).toBe(200); await expired(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); };
   await tab.route(eventPath(tab), hold);
-  try { await click(tab, "Start"); await ui.poll(() => held).toBe(true); } finally { release(); }
+  // Isolate the calendar's exact pre/post session probes from the separate
+  // reference-audio resolver used by main-text Start.
+  try { await click(tab, "View Genesis 1:1 up close"); await ui.poll(() => held).toBe(true); } finally { release(); }
   await globallyGone(tab); expect(seen.events).toEqual(["POST"]); expect(seen.sessions).toEqual([200, 401, 401]);
   expect(await fixture.ownerDb.select().from(s.practiceEvent).where(eq(s.practiceEvent.studentId, fixture.student.id))).toHaveLength(1); await tab.context().close();
 });
@@ -74,13 +76,13 @@ it("keeps calendar 403 and 404 local but makes a direct POST 401 globally termin
   const tab = await page(), seen = traffic(tab);
   for (const status of [403, 404]) {
     await tab.route(eventPath(tab), route => route.fulfill({ status, contentType: "application/json", body: "{}" }));
-    await click(tab, "Start"); await ui(week(tab)).toHaveCount(0); await ui(tab.locator(".study-verses")).toBeVisible();
+    await click(tab, "View Genesis 1:1 up close"); await ui(week(tab)).toHaveCount(0); await ui(tab.locator(".study-verses")).toBeVisible();
     expect(await tab.getByRole("heading", { name: "Sign in to continue", exact: true }).count()).toBe(0);
     await click(tab, "Close practice view"); await tab.waitForLoadState("networkidle"); expect(seen.sessions).toEqual([200]);
     await tab.unroute(eventPath(tab)); await click(tab, "Refresh reading"); await ready(tab); await tab.waitForLoadState("networkidle"); seen.sessions.length = 0;
   }
   await tab.route(eventPath(tab), async route => { await expired(); await route.fulfill({ status: 401, contentType: "application/json", body: "{}" }); });
-  await click(tab, "Start"); await globallyGone(tab); expect(seen.sessions).toEqual([200, 401]); expect(seen.events).toEqual(["POST", "POST", "POST"]); await tab.context().close();
+  await click(tab, "View Genesis 1:1 up close"); await globallyGone(tab); expect(seen.sessions).toEqual([200, 401]); expect(seen.events).toEqual(["POST", "POST", "POST"]); await tab.context().close();
 });
 
 it("ignores a held old calendar 401 after a real role and child-context replacement", async () => {
@@ -89,7 +91,7 @@ it("ignores a held old calendar 401 after a real role and child-context replacem
   const hold = async (route: Route) => { held = true; try { await gate; await route.fulfill({ status: 401, contentType: "application/json", body: "{}" }).catch(() => undefined); } finally { complete(); } };
   await tab.route(eventPath(tab), hold);
   try {
-    await click(tab, "Start"); await ui.poll(() => held).toBe(true); await click(tab, "Close practice view");
+    await click(tab, "View Genesis 1:1 up close"); await ui.poll(() => held).toBe(true); await click(tab, "Close practice view");
     await tab.getByRole("link", { name: "Parent", exact: true }).click(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click();
     await click(tab, "Enter child practice"); await ready(tab); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();
   } finally { release(); }

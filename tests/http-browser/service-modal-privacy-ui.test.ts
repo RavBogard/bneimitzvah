@@ -56,9 +56,9 @@ async function pendingService(tab: Page) {
   await ui(serviceGuard(tab)).toBeVisible(); await ui(sheet(tab)).toBeHidden(); expect(await modalCount(tab)).toBe(1);
 }
 async function holdSession(tab: Page) {
-  let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
-  await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
-  return { release, ready: () => ui.poll(() => held).toBe(true), remove: () => tab.unroute("**/api/session") };
+  let release!: () => void, held = false, delivered = 0; const gate = new Promise<void>(resolve => { release = resolve; });
+  await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered++; });
+  return { release, ready: () => ui.poll(() => held).toBe(true), completed: () => ui.poll(() => delivered).toBeGreaterThanOrEqual(4), remove: () => tab.unroute("**/api/session") };
 }
 function countWrites(tab: Page) {
   const counts = { confirm: 0, note: 0 };
@@ -85,18 +85,18 @@ beforeAll(async () => {
 }, 120_000);
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await environment?.cleanup(); }, 120_000);
 
-it("resumes only the rightful service decision after a held access check, preserves both drafts and focus, and leaves another tab independent", async () => {
+it("retains only the rightful service decision during a quiet check, preserving both drafts and focus while another tab stays independent", async () => {
   const tab = await page(), other = await page(), writes = countWrites(tab);
   await choose(other, 2); await safe(() => other.getByRole("tab", { name: "Service parts", exact: true }).click());
   await pendingService(tab); const hold = await holdSession(tab);
   try {
     await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await hold.ready();
-    await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeVisible();
-    expect(await modalCount(tab)).toBe(0); await ui(serviceGuard(tab)).toBeHidden(); await ui(sheet(tab)).toBeHidden();
+    await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
+    expect(await modalCount(tab)).toBe(1); await ui(serviceGuard(tab)).toBeVisible(); await ui(sheet(tab)).toBeHidden(); expect(writes).toEqual({ confirm: 0, note: 0 });
     expect(await modalCount(other)).toBe(0); await ui(panel(other).getByRole("checkbox", { name: /Synthetic part 2/ })).toBeChecked();
     await ui(other.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
   } finally { hold.release(); }
-  await ui(serviceGuard(tab)).toBeVisible(); expect(await modalCount(tab)).toBe(1); await ui(sheet(tab)).toBeHidden();
+  await hold.completed(); await ui(serviceGuard(tab)).toBeVisible(); expect(await modalCount(tab)).toBe(1); await ui(sheet(tab)).toBeHidden();
   await ui(tab.getByRole("button", { name: "Keep editing service parts", exact: true })).toBeFocused();
   await click(tab, "Keep editing service parts"); await ui(serviceGuard(tab)).toBeHidden(); await ui(sheet(tab)).toBeVisible();
   expect(await modalCount(tab)).toBe(1); expect(await sheet(tab).evaluate(node => node.contains(document.activeElement))).toBe(true);
@@ -150,7 +150,7 @@ it("clears pending service and reading modals after real session expiry or relat
   for (const failure of ["session", "relationship"] as const) {
     const tab = await page(true), writes = countWrites(tab); await pendingService(tab); const hold = await holdSession(tab);
     try {
-      await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await hold.ready(); expect(await modalCount(tab)).toBe(0);
+      await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await hold.ready(); expect(await modalCount(tab)).toBe(1); await ui(serviceGuard(tab)).toBeVisible();
       if (failure === "session") await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(s.session.userId, fixture.tutor.id));
       else await fixture.ownerDb.update(s.tutorStudent).set({ revokedAt: new Date() }).where(eq(s.tutorStudent.id, fixture.link.id));
     } finally { hold.release(); }

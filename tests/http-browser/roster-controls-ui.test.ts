@@ -51,7 +51,10 @@ async function capture(tab: Page, name: string) {
   const dir = join(process.cwd(), ".impeccable", "review"); await mkdir(dir, { recursive: true }); await safe(() => tab.screenshot({ path: join(dir, `${name}.png`), fullPage: true }));
 }
 async function focus(tab: Page) {
-  const next = tab.waitForResponse(response => new URL(response.url()).pathname === "/api/session"); await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await next;
+  let delivered = 0; const expected = new URL(tab.url()).pathname.startsWith("/workspace/practice/") ? 4 : 2;
+  const count = (response: import("playwright").Response) => { if (new URL(response.url()).pathname === "/api/session") delivered++; }; tab.on("response", count);
+  try { await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => delivered).toBeGreaterThanOrEqual(expected); }
+  finally { tab.off("response", count); }
   await ui(tab.locator("#workspace-main").getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
 }
 beforeAll(async () => {
@@ -129,9 +132,12 @@ it("revokes only the selected parent practice context, removes exact parent/stud
   const admin = await page(), parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await click(parent, "Enter child practice"); await ui(parent.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
   const other = await parent.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => other.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click()); await click(other, "Enter child practice"); await ui(other.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
   await navigate(admin, `/workspace/admin/students/${fixture.student.id}/access`); await accessLoaded(admin); await safe(() => action(admin, "Parents", "Stop child practice").click()); await confirm(admin);
-  const denied = parent.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/reading`);
-  await focus(parent); expect((await denied).status()).toBe(404); await ui.poll(() => new URL(parent.url()).pathname).toBe("/workspace/parent"); await ui(parent.getByText("Practice access changed. Choose an available child again.", { exact: true })).toBeVisible(); await ui(parent.getByLabel("Child", { exact: true })).toBeVisible();
+  const denied = parent.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/reading` && response.status() === 404);
+  // A real denial short-circuits the normal successful quiet probe sequence.
+  // Bind this case to the actual rejection and terminal recovery instead.
+  await safe(() => parent.evaluate(() => window.dispatchEvent(new Event("focus")))); expect((await denied).status()).toBe(404); await ui.poll(() => new URL(parent.url()).pathname).toBe("/workspace/parent"); await ui(parent.getByText("Practice access changed. Choose an available child again.", { exact: true })).toBeVisible(); await ui(parent.getByLabel("Child", { exact: true })).toBeVisible();
   expect(await parent.locator(".reading-workspace").count()).toBe(0);
+  await ui(parent.locator(".study-verses, .study-hebrew, .verse-work, dialog:modal")).toHaveCount(0);
   await focus(other); await ui(other.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
   await safe(() => action(admin, "Parents", "Allow child practice").click()); await confirm(admin); await safe(() => action(admin, "Parents", "Unlink").click()); await confirm(admin); await safe(() => action(admin, "Student sign-in", "Unlink").click()); await confirm(admin);
   const current = (await api(admin, `/api/admin/students/${fixture.student.id}/relationships`)).data; expect(current.guardians.length === 0 && current.identities.length === 0).toBe(true);
@@ -148,7 +154,7 @@ it("rejects changed reviewed identities before POST, isolates uncertain access o
   await tab.unroute(`**/api/admin/tutors/${fixture.tutorGrant.id}/cantor`);
   await tab.route(`**/api/admin/tutors/${fixture.tutorGrant.id}/cantor`, async route => { posts++; const response = await route.fetch(); await response.dispose(); await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); });
   await safe(() => action(tab, "Tutors", "Remove cantor flag").click()); await click(tab, "Confirm access change"); await ui(tab.locator("#workspace-main").getByRole("alert")).toContainText("couldn’t confirm whether this change saved"); await capture(tab, "roster-unknown-mobile");
-  await focus(tab); expect(posts).toBe(2); await ui(action(tab, "Tutors", "Mark as cantor")).toBeDisabled(); await click(tab, "Reload access"); await accessLoaded(tab); expect(posts).toBe(2);
+  await focus(tab); expect(posts).toBe(2); await ui(action(tab, "Tutors", "Remove cantor flag")).toBeDisabled(); await click(tab, "Reload access"); await accessLoaded(tab); expect(posts).toBe(2);
   await tab.unroute(`**/api/admin/tutors/${fixture.tutorGrant.id}/cantor`); await fixture.ownerDb.update(s.user).set({ name: "Synthetic Tutor" }).where(eq(s.user.id, fixture.tutor.id));
 });
 
@@ -158,8 +164,9 @@ it("reviews valid/invalid and duplicate CSV rows, invalidates changed drafts and
   await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(`${CSV_HEADER}\nSynthetic,Invalid,not-a-date,parent@example.test,`)); await click(tab, "Preview import");
   await ui(tab.getByText("Row 2: invalid kind, slot, name, date, contact or intake value.", { exact: true })).toBeVisible(); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
   await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(draft)); await click(tab, "Preview import"); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled(); await capture(tab, "csv-review-desktop");
-  await focus(tab); await ui(tab.getByLabel("CSV draft to review", { exact: true })).toHaveValue(draft); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
+  await focus(tab); await ui(tab.getByLabel("CSV draft to review", { exact: true })).toHaveValue(draft); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled();
   await click(tab, "Preview import"); await create(tab, "CsvRosterChanged"); await click(tab, "Import reviewed students"); await ui(tab.locator("#workspace-main").getByRole("alert")).toContainText("reviewed roster");
+  expect((await fixture.ownerDb.select().from(s.student).where(eq(s.student.lastName, "CsvReviewed")))).toHaveLength(0);
   await click(tab, "Reload roster for import"); await importLoaded(tab); await click(tab, "Preview import"); await click(tab, "Import reviewed students"); await ui(tab.getByText("1 student record created. No invitations were sent.", { exact: true })).toBeVisible(); await importLoaded(tab);
   await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(draft)); await click(tab, "Preview import"); await ui(tab.getByText(/Exact duplicate rows: 2\./)).toBeVisible(); expect(await tab.getByRole("button", { name: "Import reviewed students", exact: true }).count()).toBe(0);
   await safe(() => tab.getByLabel("Allow additional records for exact duplicates", { exact: true }).check()); await click(tab, "Preview import"); await ui(tab.getByRole("button", { name: "Import reviewed students", exact: true })).toBeEnabled();
