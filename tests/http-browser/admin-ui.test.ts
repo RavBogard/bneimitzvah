@@ -78,7 +78,7 @@ it("moves between admin areas, finds a student, and adds one in a sheet that ret
   await capture(tab, "admin-roster-sheet", false);
   await safe(() => sheet(tab).getByRole("button", { name: "Save student", exact: true }).click());
   await ui(sheet(tab)).toBeHidden();
-  await ui(tab.getByText("Added Synthetic Added. No invitation has been sent.", { exact: true })).toBeVisible();
+  await ui(tab.getByText("Added Synthetic Added. No invitation has been sent. Use People to invite family and choose a tutor.", { exact: true })).toBeVisible();
   await ui(roster(tab).getByRole("listitem")).toHaveCount(3);
   // Edit opens the same sheet with the student's details; the student kind is a two-way choice.
   await safe(() => roster(tab).getByRole("button", { name: "Edit details for Synthetic Added", exact: true }).click());

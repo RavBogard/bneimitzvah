@@ -104,7 +104,7 @@ function Roster() {
       const result = disable && current ? await workspaceApi.disable(current) : await workspaceApi.save(form, current ?? undefined);
       if (generation !== lifetime.current) return;
       const review = "readingNeedsReview" in result && result.readingNeedsReview;
-      const name = fullName(form), saved = disable && current ? `${fullName(current)} is disabled. Their record stays in the list.` : review ? `Saved ${name}. The date or service changed, so both readings need review.` : current ? `Saved ${name}.` : `Added ${name}. No invitation has been sent.`;
+      const name = fullName(form), saved = disable && current ? `${fullName(current)} is disabled. Their record stays in the list.` : review ? `Saved ${name}. The date or service changed, so both readings need review.` : current ? `Saved ${name}.` : `Added ${name}. No invitation has been sent. Use People to invite family and choose a tutor.`;
       let refreshed = true; try { await load(); } catch { refreshed = false; }
       if (generation === lifetime.current) setMessage(saved + (refreshed ? "" : " The list couldn’t be refreshed. Reload it to check the current record."));
     } catch (error) {

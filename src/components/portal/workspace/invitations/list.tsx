@@ -4,7 +4,7 @@ import { inviteRoleNames, type Invitation } from "./api";
 // Short dates; the year appears when it isn't this year, and the exact time is in the tooltip.
 const day = (value: string) => { const date = new Date(value); return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", ...(date.getFullYear() === new Date().getFullYear() ? {} : { year: "numeric" }) }).format(date); };
 const stamp = (label: string, value: string) => <span>{label} <time dateTime={value} title={new Date(value).toLocaleString()}>{day(value)}</time></span>;
-const statusNames = { pending: "Pending", accepted: "Accepted", expired: "Expired", revoked: "Revoked" } as const;
+const statusNames = { pending: "Not accepted yet", accepted: "Accepted", expired: "Expired", revoked: "Revoked" } as const;
 const mailNames = { sent: "Email sent", failed: "Email failed", pending: "Email unconfirmed" } as const;
 
 export function InvitationList({ rows, pending, blocked, select }: { rows: Invitation[]; pending: boolean; blocked: boolean; select(kind: "reissue" | "revoke", row: Invitation, opener: HTMLElement): void }) {

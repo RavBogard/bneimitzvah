@@ -5,6 +5,7 @@ import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "../provider"
 import { AdminNav } from "../admin-nav";
 import { workspaceApi, type RosterStudent } from "../api";
 import { checkCsvSize, CSV_HEADER, CSV_ADULT_HEADER, CSV_FULL_HEADER, CSV_FULL_ADULT_HEADER, csvApi, REVIEW_TTL, type Preview } from "./api";
+import { CSV_TEMPLATE, draftProblem, rowHints } from "./hints";
 
 type Review = { csv: string; allowDuplicates: boolean; value: Preview; expiresAt: number };
 type RosterRow = Pick<RosterStudent, "id" | "firstName" | "lastName" | "ceremonyDate" | "disabledAt">;
@@ -40,11 +41,13 @@ function Import() {
       if (file.size > 1024 * 1024) throw new Error("Size");
       const value = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(await file.arrayBuffer()); checkCsvSize(value, duplicates);
       if (!alive.current || turn !== draftTurn.current) return; setCsv(value); setReceipt(null);
-    } catch { if (alive.current && turn === draftTurn.current) setMessage("Choose a UTF-8 CSV within the 1 MiB file and 2 MiB request limits. The previous draft is retained."); }
+    } catch { if (alive.current && turn === draftTurn.current) setMessage("That file couldn’t be read. Save the spreadsheet as CSV (UTF-8) and choose it again. Your list here hasn’t changed."); }
     finally { if (fileInput.current) fileInput.current.value = ""; }
   }
   async function preview() {
     if (gate.current || blocked || loading || !roster) return;
+    // A draft that can't be read at all is explained here; nothing is sent.
+    const problem = draftProblem(csv); if (problem) { setReview(null); setReceipt(null); setMessage(problem); return; }
     gate.current = true; setPending(true); setMessage(""); setReview(null); setReceipt(null);
     const started = Date.now(), turn = ++draftTurn.current, draft = csv, allowDuplicates = duplicates;
     try {
@@ -55,8 +58,8 @@ function Import() {
     } catch (error) {
       if (!alive.current || turn !== draftTurn.current) return;
       const status = statusOf(error);
-      if ([401, 403, 404].includes(status)) { setRoster(null); setBlocked("denied"); setMessage("The preview is unavailable or no longer permitted. Check the exact CSV header and your current account access, then reload the roster."); }
-      else setMessage(status === 413 ? "The CSV exceeds the 1 MiB file or 2 MiB request limit." : "The CSV could not be reviewed. Check its exact supported header, matching column count, quoting and dates, then preview again.");
+      if ([401, 403, 404].includes(status)) { setRoster(null); setBlocked("denied"); setMessage("The preview isn’t available to this account any more. Check your account, then reload the roster."); }
+      else setMessage(status === 413 ? "This list is too large to import at once. Split it into files of up to 500 students and import each one." : "The list couldn’t be checked just now. Nothing was imported. Preview it again.");
     } finally { gate.current = false; if (alive.current) setPending(false); }
   }
   function commit() {
@@ -67,14 +70,14 @@ function Import() {
       try {
         const ids = await csvApi.confirm(checked.csv, checked.allowDuplicates, checked.value); if (!alive.current) return;
         setReview(null); setReceipt(ids.length); setCsv(""); setDuplicates(false);
-        try { await load(); if (alive.current) setMessage("Import saved. The current student roster has been refreshed."); }
-        catch { if (alive.current) { setBlocked("conflict"); setMessage("Import saved. The roster could not be refreshed. Reload it before another import."); } }
+        try { await load(); if (alive.current) setMessage("Import saved. The student list is up to date."); }
+        catch { if (alive.current) { setBlocked("conflict"); setMessage("Import saved, but the student list couldn’t be refreshed. Reload it before importing again."); } }
       } catch (error) {
         if (!alive.current) return; setReview(null); setCheckedRoster(false);
         const status = statusOf(error);
         if ([401, 403, 404].includes(status)) { setBlocked("denied"); setRoster(null); setMessage("The import review or account access is no longer valid. Reload the roster and prepare a new preview after checking your account."); }
-        else if (status === 409 || status === 400 || status === 413) { setBlocked("conflict"); setMessage("This import could not use the reviewed roster or input. Reload the roster and prepare a new preview."); }
-        else { setBlocked("unknown"); setMessage("The import outcome is unknown. Do not assume it failed. Reload and inspect the roster before starting another import. No automatic retry will occur."); }
+        else if (status === 409 || status === 400 || status === 413) { setBlocked("conflict"); setMessage("The student list changed after this review, so nothing was imported. Reload the roster and preview again."); }
+        else { setBlocked("unknown"); setMessage("We couldn’t confirm whether this import saved, so the import outcome is unknown. It may have saved. Check what saved before importing again; nothing will be sent twice automatically."); }
       } finally { gate.current = false; if (alive.current) setPending(false); }
     })(); mutation.current = operation; void operation.finally(() => { if (mutation.current === operation) mutation.current = null; });
   }
@@ -83,24 +86,28 @@ function Import() {
     try { await load(); if (!alive.current) return; if (blocked === "unknown") setCheckedRoster(true); else setBlocked(null); }
     catch { if (alive.current) setMessage("The roster could not be checked. Try reloading it or check account access."); }
   }
-  const locked = pending || loading || Boolean(blocked) || !roster;
+  const locked = pending || loading || Boolean(blocked) || !roster, hints = review ? rowHints(review.csv) : new Map<number, string>();
   return <section className="role-workspace csv-workspace admin-workspace"><AdminNav /><div className="admin-crumbs"><WorkspaceLink href="/workspace/admin/students">All students</WorkspaceLink></div><h1>Import students</h1>
-    <p className="people-student">Add many students at once from a spreadsheet saved as CSV. Nobody is invited or given access, and no reading or tutor is assigned.</p>
+    <p className="people-student">Add many students at once from a spreadsheet. Importing sends nothing: nobody is invited or given access, and no reading or tutor is assigned.</p>
     {message && <p className={blocked || !receipt ? "request-error" : "workspace-notice"} role={blocked ? "alert" : "status"}>{message}</p>}
+    {blocked === "unknown" && !checkedRoster && <button className="button-primary admin-pill csv-check" disabled={pending || loading} onClick={() => void reload()}>Check what saved</button>}
     {receipt !== null && <p role="status">{receipt} student {receipt === 1 ? "record created" : "records created"}. No invitations were sent.</p>}
-    <details className="csv-format"><summary>CSV format and limits</summary><p>Legacy format (v1) creates child records. Use this exact five-column header:</p><code>{CSV_HEADER}</code><p>Every row needs first and last names, a real YYYY-MM-DD ceremony date and parent email. The student email cell may be empty; a supplied student email must differ from either parent email.</p><p>Extended format (v2) supports child and adult records:</p><code>{CSV_ADULT_HEADER}</code><p>Set studentKind to child or adult explicitly. Children require parent email; adults require student email and may leave parent email empty. Supplied emails must be valid. Changing kind never changes linked account access.</p><p>Full intake format adds service slot, pending contacts and administrative details:</p><code>{CSV_FULL_HEADER}</code><p>For explicit child or adult kind, use:</p><code>{CSV_FULL_ADULT_HEADER}</code><p>Set service_slot to morning, havdalah or unknown. Tutor names match existing eligible tutors only; matches remain pending proposals. Parashah is a display label, not a reading assignment. Names, phone and notes stay in administrative intake.</p><p>Use UTF-8, up to 500 data rows and 1 MiB. The encoded request must also fit 2 MiB. Quoted commas, doubled quotes and line breaks in notes are supported. No extra columns or automatic header corrections.</p><p>Duplicates compare student kind and all five normalized values against existing records, including disabled students, and earlier input rows. Allowing duplicates creates additional records; it does not update, merge or skip them.</p></details>
-    <div className="csv-draft people-card"><h2 className="csv-step"><span aria-hidden="true">1</span>Add your list</h2><label htmlFor="csv-file">Choose a CSV file</label><input id="csv-file" type="file" accept=".csv,text/csv" ref={fileInput} disabled={pending || blocked === "unknown"} onChange={event => void readFile(event.target.files?.[0])} />
-      <label htmlFor="csv-draft">CSV draft to review</label><textarea id="csv-draft" spellCheck={false} autoComplete="off" disabled={pending} readOnly={blocked === "unknown"} value={csv} onChange={event => changeCsv(event.target.value)} />
+    <div className="csv-draft people-card"><h2 className="csv-step"><span aria-hidden="true">1</span>Add your list</h2>
+      <p>Start from the template: keep its first line and put one student on each line below it. Every student needs a kind (child or adult), first and last name and ceremony date (<span className="csv-nowrap">YYYY-MM-DD</span>). A child needs a parent email; an adult needs their own. Other columns can stay empty. Save it as CSV (UTF-8).</p>
+      <a className="button-secondary admin-pill csv-template" href={`data:text/csv;charset=utf-8,${encodeURIComponent(CSV_TEMPLATE)}`} download="students-template.csv">Download the template</a>
+      <label htmlFor="csv-file">Choose a CSV file</label><input id="csv-file" type="file" accept=".csv,text/csv" ref={fileInput} disabled={pending || blocked === "unknown"} onChange={event => void readFile(event.target.files?.[0])} />
+      <label htmlFor="csv-draft">CSV draft to review</label><p className="field-help">The file appears here. You can also paste the rows.</p><textarea id="csv-draft" spellCheck={false} autoComplete="off" disabled={pending} readOnly={blocked === "unknown"} value={csv} onChange={event => changeCsv(event.target.value)} />
       <label className="csv-duplicate-choice"><input type="checkbox" checked={duplicates} disabled={pending || Boolean(blocked)} onChange={event => { draftTurn.current++; setDuplicates(event.target.checked); setReview(null); }} />Allow additional records for exact duplicates</label>
       <button className="button-primary admin-pill" disabled={locked || !csv} onClick={() => void preview()}>{pending ? "Checking import…" : "Preview import"}</button>
     </div>
-    {review && <section className="csv-review people-card" aria-labelledby="csv-review-heading"><h2 id="csv-review-heading" className="csv-step" ref={heading} tabIndex={-1}><span aria-hidden="true">2</span>Review student import</h2><p>{review.value.validRows} valid {review.value.validRows === 1 ? "row" : "rows"}. {review.value.issues.length} invalid. {review.value.duplicateRows.length} exact duplicates.</p>
-      <p>Row numbers count CSV records, including the header; quoted line breaks do not start another record.</p>
-      {review.value.issues.length > 0 && <><h3>Fix these rows before importing</h3><ul>{review.value.issues.map(issue => <li key={issue.row}>Row {issue.row}: {issue.code === "invalid-columns" ? "columns do not match the selected header" : "invalid kind, slot, name, date, contact or intake value"}.</li>)}</ul></>}
+    <details className="csv-format"><summary>Advanced: other column layouts and limits</summary><p>The template above is the full layout. These shorter layouts also work.</p><p>Legacy format (v1) creates child records. Use this exact five-column header:</p><code>{CSV_HEADER}</code><p>Every row needs first and last names, a real YYYY-MM-DD ceremony date and parent email. The student email cell may be empty; a supplied student email must differ from either parent email.</p><p>Extended format (v2) supports child and adult records:</p><code>{CSV_ADULT_HEADER}</code><p>Set studentKind to child or adult explicitly. Children require parent email; adults require student email and may leave parent email empty. Supplied emails must be valid. Changing kind never changes linked account access.</p><p>Full intake format adds service slot, pending contacts and administrative details:</p><code>{CSV_FULL_HEADER}</code><p>For explicit child or adult kind, use:</p><code>{CSV_FULL_ADULT_HEADER}</code><p>Set service_slot to morning, havdalah or unknown. Tutor names match existing eligible tutors only; matches remain pending proposals. Parashah is a display label, not a reading assignment. Names, phone and notes stay in administrative intake.</p><p>Use UTF-8, up to 500 data rows and 1 MiB. The encoded request must also fit 2 MiB. Quoted commas, doubled quotes and line breaks in notes are supported. No extra columns or automatic header corrections.</p><p>Duplicates compare student kind and all five normalized values against existing records, including disabled students, and earlier input rows. Allowing duplicates creates additional records; it does not update, merge or skip them.</p></details>
+    {review && <section className="csv-review people-card" aria-labelledby="csv-review-heading"><h2 id="csv-review-heading" className="csv-step" ref={heading} tabIndex={-1}><span aria-hidden="true">2</span>Review student import</h2><p>{review.value.validRows} {review.value.validRows === 1 ? "row" : "rows"} ready. {review.value.issues.length} to fix. {review.value.duplicateRows.length} already on the roster or repeated.</p>
+      <p className="field-help">Row numbers match the spreadsheet: the column names are row 1.</p>
+      {review.value.issues.length > 0 && <><h3>Fix these rows before importing</h3><ul>{review.value.issues.map(issue => <li key={issue.row}>Row {issue.row}: {hints.get(issue.row) ?? (issue.code === "invalid-columns" ? "the number of columns doesn’t match the column names. Check for a missing or extra comma." : "check this row against the template.")}</li>)}</ul></>}
       {review.value.tutorMatches && <><h3>Pending tutor proposals</h3>{(["matched","unmatched","ambiguous"] as const).map(status=>{const rows=review.value.tutorMatches!.filter(match=>match.status===status).map(match=>match.row);return <p key={status}>{status==="matched"?"Matched existing tutors":status==="unmatched"?"Unmatched tutor names":"Ambiguous tutor names"}: {rows.length?`rows ${rows.join(", ")}`:"none"}.</p>;})}<p>These are proposals only. No tutor is assigned and no account access is created by this import.</p></>}
       {!!review.value.missingSecondParentRows?.length && <p>Second parent name or email is missing in rows {review.value.missingSecondParentRows.join(", ")}. Records can be imported; contact details alone grant no guardian access.</p>}
-      {review.value.duplicateRows.length > 0 && <p className="csv-duplicates">Exact duplicate rows: {review.value.duplicateRows.join(", ")}. {review.allowDuplicates ? "You chose to create additional records for these rows." : "Choose the duplicate option only if additional records are intended, then preview again."}</p>}
-      {review.value.canConfirm ? <><p>Confirm creation of {review.value.validRows} student records from the exact draft above. This review expires within five minutes; any draft or duplicate-choice change requires another preview.</p><div className="form-actions"><button className="button-primary admin-pill" disabled={locked} onClick={commit}>Import reviewed students</button><button className="button-secondary admin-pill" disabled={pending} onClick={() => setReview(null)}>Cancel import review</button></div></> : <p>No rows will be imported until the whole file can be confirmed.</p>}
+      {review.value.duplicateRows.length > 0 && <p className="csv-duplicates">Already on the roster or earlier in this file: rows {review.value.duplicateRows.join(", ")}. Importing them creates a second record; nothing is merged or updated. {review.allowDuplicates ? "You chose to create these additional records." : "Remove them from the list, or choose “Allow additional records for exact duplicates” and preview again if a second record is intended."}</p>}
+      {review.value.canConfirm ? <><p>This creates {review.value.validRows} student {review.value.validRows === 1 ? "record" : "records"} from the list above. Nothing is sent. Changing the list means previewing again, and this review lasts five minutes.</p><div className="form-actions"><button className="button-primary admin-pill" disabled={locked} onClick={commit}>Import reviewed students</button><button className="button-secondary admin-pill" disabled={pending} onClick={() => setReview(null)}>Cancel import review</button></div></> : <p>Nothing is imported until every row is ready. Fix the rows above in your spreadsheet or here, then preview again.</p>}
     </section>}
     <button className="button-text" disabled={pending || loading} onClick={() => void reload()}>Reload roster for import</button>
     {loading ? <p role="status">Checking the current roster…</p> : !roster ? <p role="alert">The roster is unavailable. Check account access or reload.</p> : blocked === "unknown" && checkedRoster && <section className="csv-recovery"><h2>Inspect the current roster</h2><p>Check these records against your CSV before starting a new preview. A new import may create additional records. This list cannot prove which request created a record.</p><ul className="access-records">{roster.map(row => <li key={row.id}><Link href={`/workspace/admin/students/${row.id}/access`}><bdi dir="auto">{row.firstName} {row.lastName}</bdi></Link> · <time>{row.ceremonyDate}</time> · {row.disabledAt ? "Disabled" : "Active"}</li>)}</ul>{!roster.length && <p>The current roster has no student records.</p>}<button className="button-secondary" onClick={() => { setBlocked(null); setCheckedRoster(false); setDuplicates(false); setMessage("Roster inspection acknowledged. A new preview is required; confirm only if another import is intended."); }}>I checked the roster; allow a new preview</button></section>}

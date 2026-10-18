@@ -59,7 +59,7 @@ for (const mobile of [false, true]) it(`reviews rich quiet import and reaches th
  await safe(() => tab.getByLabel("CSV draft to review", { exact: true }).fill(csv(mobile ? "MobileIntake" : "DesktopIntake")));
  await safe(() => tab.getByRole("button", { name: "Preview import", exact: true }).click()); const review = tab.locator(".csv-review");
  await ui(review.getByRole("heading", { name: "Review student import", exact: true })).toBeVisible();
- await ui(review).toContainText("2 valid rows. 0 invalid. 0 exact duplicates.");
+ await ui(review).toContainText("2 rows ready. 0 to fix. 0 already on the roster or repeated.");
  await ui(review).toContainText("Matched existing tutors: rows 2."); await ui(review).toContainText("Unmatched tutor names: rows 3."); await ui(review).toContainText("Ambiguous tutor names: none.");
  await ui(review).toContainText("These are proposals only. No tutor is assigned and no account access is created by this import.");
  await ui(review).toContainText("Second parent name or email is missing in rows 3. Records can be imported; contact details alone grant no guardian access.");
