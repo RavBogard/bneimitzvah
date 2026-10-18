@@ -1,0 +1,10 @@
+.passage { border: 0; padding: 0; margin-block: 1.5rem; min-width: 0; }
+.passage legend { font-weight: 700; margin-bottom: 0.75rem; }
+.book { margin-bottom: 1rem; }
+.endpoints { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+.passage select { width: 100%; min-height: 48px; }
+.disclosure { margin-block: 1.5rem; }
+.disclosure > summary { cursor: pointer; padding-block: 0.75rem; font-weight: 600; }
+.summary { margin-block: 1.25rem; overflow-wrap: anywhere; }
+.context { margin-block: 1rem 1.5rem; }
+@media (max-width: 600px) { .endpoints { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
