@@ -1,0 +1,25 @@
+# Family honors return — 2026-10-18
+
+Production remains **c241431**, the accepted source-reader release. Work is in managed `codex/family-honors`. Root owns architecture/integration; Sol implements. [Grounded design](../../superpowers/specs/2026-10-18-family-honors-design.md) follows the current blank October2026 CRC binder discovered through shared Drive. Do not ask Daniel to locate it again.
+
+## Checkpoint A: private backend accepted locally
+
+Dedicated base guardian/admin honors read/write; closed normalized draft fields; exact current Torah/date/slot/cut binding; append-only tenant-scoped family versions; global per-student original mutation UUID; whole-form CAS, original-intent receipts and atomic compact audits. No generic tutor/student/child-practice access or adult self-edit. A changed ceremony/reading requires explicit review rather than ordinal remapping. No Torah/null cuts permit honest non-aliyah drafts. Unknown Hebrew names remain unknown.
+
+Local migration0022 adds only the honors stream, validation functions, tenant-composite attribution, immutable runtime SELECT/INSERT access and the honors audit action. Runtime/HTTP wiring supplies authenticated read/save/receipt endpoints. **No production migration or release has run.** Never replay earlier migration wrappers.
+
+Validation: author14 checks; independent8 adversarial checks; whole-project types; root actual PostgreSQL4 and authenticated HTTP2; root repository protection all pass. Native uses independent physical clients, real uniqueness/blocking waits, actual SDK cookies and restricted runtime. It launches no Chromium UI. One owned local cluster ran the two lanes sequentially and closed with paths/listeners removed and all26 source pins unchanged. These results do not replace full integration, exact hosted CI, deployment checks or Daniel's acceptance.
+
+Closed findings: actual jsonb key order required canonical context reconstruction; independent SQL validation found Unicode edge whitespace the JS normalizer removes; SQL/JS trim and escaped-byte budget parity now pass. Independent review also found an omitted shared fixture in the initial25-file manifest; corrected26 includes it with no source change. Root clarified original UUID uniqueness across both guardians, including changed-actor conflicts without exposing earlier intents. First failures and the original manifest remain preserved locally.
+
+Accepted source manifest `.local-logs/honors-author-freeze-v2.json`: `c997ecd548956fa71179c413479be73060e9384a8a4fc40804d533a7b61dcb28`. Independent review `.local-logs/honors-independent-review.md`: `bd84b04498ce17347777e890f06a3410e57b1f8c1448b591dfc4c490cca82f20`. Evidence is local; no source text, audio, real family values or credentials were added to this repository.
+
+## Separate integration groundwork
+
+Planner commit **d65d4aa** adds only a provider-free normalized external-roster proposal function and synthetic tests. Root-confirmed23 and two author existing pure CSV parser regressions pass. Stable tenant/source IDs identify linked students; names/dates only suggest reconciliation. Missing optional updates preserve existing values; invalid or duplicated identities refuse the batch. Results omit raw private fields. No import, source adapter, persistence, route, mail, Sheet write or application capability exists in this slice. The actual current Maven lifecycle serializer removes its internal child source ID; a real adapter must obtain the right stable ID and explicit source fields rather than using a household/name/date substitute.
+
+## Next work and limits
+
+Continue the private family form and admin review/print using the accepted backend, inherited Song session world and existing quiet owner/departure/unknown-save behavior. In parallel, freeze the separate honoree bearer/material contract before implementation: exact approved blessing units, recipient permissions, bounded expiry, live revocation/reassignment checks and strict minimal projection. The shared Torah Blessings recording is a metadata-only candidate, not an activated audio mapping. Do not fabricate rights or publish garbled PDF extraction.
+
+Adult honors self-edit awaits Daniel's existing policy question; keep it denied meanwhile. Reference audio remains administrator-only/studentrelease=false pending Daniel's actual-source phone acceptance. No real roster import, invitations/mail, additional provider scopes, new spending, generated voices or student-recording activation. Honors UI/scoped links and the broader integrations remain unfinished; no1.0 completion claim.
