@@ -17,7 +17,7 @@ import { closedObject, uniqueQuery } from "./query";
 import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
-type Kind = "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "study-word-details" | "study-sources" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
+type Kind = "explore-prepare" | "explore-page" | "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "study-word-details" | "study-sources" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
   | "admin-students" | "edit" | "disable" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "pending" | "accept"
   | "eligible-tutors" | "relationships" | "tutor-assign" | "tutor-unassign" | "guardian-revoke" | "identity-revoke" | "guardian-practice" | "grant-revoke" | "cantor";
 type Route = { kind: Kind; methods: readonly string[]; id?: string; linkId?: string };
@@ -34,6 +34,8 @@ const exact: Record<string, Route> = {
 };
 function route(pathname: string): Route | null {
   if (Object.hasOwn(exact, pathname)) return exact[pathname];
+  const exploration = /^\/api\/students\/([^/]+)\/reading\/explore\/(prepare|page)$/.exec(pathname);
+  if (exploration) return { kind: exploration[2] === "prepare" ? "explore-prepare" : "explore-page", methods: ["POST"], id: exploration[1] };
   const preview = /^\/api\/students\/([^/]+)\/reading\/preview\/(prepare|page)$/.exec(pathname);
   if(preview)return {kind:preview[2]==="prepare"?"preview-prepare":"preview-page",methods:["POST"],id:preview[1]};
   const reference = /^\/api\/students\/([^/]+)\/reference-audio$/.exec(pathname);
@@ -164,13 +166,37 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", selected.methods.join(", ")); return response;
     }
     const practiceRoute = selected.kind.startsWith("practice-");
-    if (!practiceRoute && selected.kind !== "reading" && selected.kind !== "study-text" && selected.kind !== "study-word-aids" && selected.kind !== "study-word-details" && selected.kind !== "study-sources" && selected.kind !== "reference-audio" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
+    if (!practiceRoute && selected.kind !== "explore-prepare" && selected.kind !== "explore-page" && selected.kind !== "reading" && selected.kind !== "study-text" && selected.kind !== "study-word-aids" && selected.kind !== "study-word-details" && selected.kind !== "study-sources" && selected.kind !== "reference-audio" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
     // Dispatcher resolves the actual host before this adapter. Services still
     // independently reauthorize; no body/Origin/forwarded claim chooses tenant.
     if (request.method === "POST") requireCookieMutation(request, runtime.origin);
     const id = selected.id === undefined ? undefined : identifier(selected.id);
     const linkId = selected.linkId === undefined ? undefined : identifier(selected.linkId);
     switch (selected.kind) {
+      case "explore-prepare": {
+        uniqueQuery(request.url, []);
+        const body = await objectBody(request, ["mode"]);
+        const selectedMode = mode(body.mode, true);
+        if (selectedMode === "parent") throw new HttpBoundaryError();
+        const value = await runtime.readingExploration.prepare(request, { mode: selectedMode, studentId: id! });
+        if (!value.ok) return stale();
+        const context = { status: value.status, studentId: value.studentId, studentRevision: value.studentRevision, mode: value.mode, kind: value.kind,
+          ceremonyDate: value.ceremonyDate, serviceSlot: value.serviceSlot, readingDate: value.readingDate, calendar: value.calendar };
+        if (value.status === "assigned") return privateJson({ ...context, assignment: value.assignment });
+        if (value.status === "unresolved") return privateJson({ ...context, reason: value.reason });
+        return privateJson({ ...context, binding: value.binding, expiresAt: value.expiresAt, sourceFetchedAt: value.sourceFetchedAt, portion: value.portion,
+          ranges: [...value.ranges], verseCount: value.verseCount, pages: value.pages.map(row => ({ offset: row.offset, first: row.first, last: row.last, chapters: [...row.chapters] })) });
+      }
+      case "explore-page": {
+        uniqueQuery(request.url, []);
+        const body = await objectBody(request, ["mode", "binding", "offset"], [], "binding"), selectedMode = mode(body.mode, true);
+        if (selectedMode === "parent" || !Number.isSafeInteger(body.offset) || Number(body.offset) < 0 || Number(body.offset) > 999) throw new HttpBoundaryError();
+        let value;
+        try { value = await runtime.readingExploration.page(request, { mode: selectedMode, studentId: id!, binding: text(body.binding, 48000), offset: Number(body.offset) }); }
+        catch (error) { if (error instanceof StudyUnavailable && error.code === "invalid-request") throw new HttpBoundaryError(); throw error; }
+        if (!value.ok) return stale();
+        return privateJson({ studentId: value.studentId, studentRevision: value.studentRevision, mode: value.mode, kind: value.kind, expiresAt: value.expiresAt, ...studyPageView(value.page) });
+      }
       case "preview-prepare": {
         uniqueQuery(request.url,[]);
         const body=await objectBody(request,["mode","kind","source"],["ranges"]);

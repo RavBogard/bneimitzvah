@@ -4,7 +4,7 @@ import { AccessDenied } from "../access/errors";
 
 export const digest = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const TTL = 5 * 60_000;
-const purposes = new Set(["student-import", "student-reading", "reading-preview", "service-plan"]);
+const purposes = new Set(["student-import", "student-reading", "reading-preview", "reading-exploration", "service-plan"]);
 export function createBindings(secret: string, now: () => number) {
   if (typeof secret !== "string" || secret.length < 32) throw new Error("Private student service signing configuration required");
   const material = (purpose: string) => {

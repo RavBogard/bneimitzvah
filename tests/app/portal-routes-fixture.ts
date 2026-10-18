@@ -26,6 +26,7 @@ import { parseCeremonyDate } from "../../src/lib/readings/ranges";
 import { createReferenceAudioService } from "../../src/server/reference-audio/service";
 import { ReferenceUnavailable } from "../../src/server/reference-audio/catalog";
 import { createStudyService } from "../../src/server/study/service";
+import { createReadingExplorationService } from "../../src/server/study/exploration";
 import { createStudyWordAidsService } from "../../src/server/study/word-aids-service";
 import { createStudyWordDetailsService } from "../../src/server/study/word-details-service";
 import { createServiceLearningService } from "../../src/server/service-learning/service";
@@ -54,6 +55,7 @@ export async function portalRoutesFixture() {
   const pendingInvitations = createPendingInvitations({ secret: randomBytes(48).toString("base64url"), origin: "http://localhost:3000", environment: "local" });
   const readingPreview=createReadingPreviewService({access:f.service,signingSecret:randomBytes(48).toString("base64url"),loadReading:async(date,calendar)=>({fetchedAt:Date.now(),snapshot:{date:parseCeremonyDate(date),calendar,classification:"regular",reading:{parashah:"Synthetic",type:"shabbat",summary:"",source:"Hebcal",aliyot:[{n:1,ref:"Genesis 1:1-6:8"}],triennial:null},haftarah:"Isaiah 1:1-2"}}),loadText:async()=>{throw new StudyUnavailable("upstream");}});
   const runtime: HttpRuntime = { origin: "http://localhost:3000", honoree: createHonoreeService({ db: f.db, access: f.service, origin: "http://localhost:3000", deployment: { environment: "test", deployment: "suite" }, signingSecret: randomBytes(48).toString("base64url") }), honors: createHonorsService({ access: f.service }), auth: f.auth, access: f.service, practice, invitations, students, readingPreview, studentWork: createStudentWorkService({ access: f.service, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
+    readingExploration: createReadingExplorationService({ access: f.service, practice, signingSecret: randomBytes(48).toString("base64url"), loadReading: async () => { throw new StudyUnavailable("upstream"); }, loadText: async () => { throw new StudyUnavailable("upstream"); } }),
     referenceAudio: createReferenceAudioService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, loadCatalog: async () => { throw new ReferenceUnavailable(); } }),
     studyWordAids: createStudyWordAidsService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); } }),
     sourceContent: createSourceContentService({ access: f.service, practice, related: async () => { throw new Error("Source content unavailable"); }, editions: async () => { throw new Error("Source content unavailable"); }, content: async () => { throw new Error("Source content unavailable"); } }),

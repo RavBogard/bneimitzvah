@@ -31,6 +31,7 @@ import { createReferenceAudioService } from "../reference-audio/service";
 import { createReferenceCatalogLoader } from "../reference-audio/storage";
 import { ReferenceUnavailable, type ReferenceCatalog } from "../reference-audio/catalog";
 import { createStudyService } from "../study/service";
+import { createReadingExplorationService } from "../study/exploration";
 import { createStudyWordAidsService } from "../study/word-aids-service";
 import { createStudyWordDetailsService } from "../study/word-details-service";
 import { createStepSource } from "../study/lexical/source";
@@ -121,6 +122,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const recordings = createStudentRecordingService({ access, practice });
   const loadText = createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS, cache: createPersistentStudyCache(db), coalescer: studyTasks });
   const study = createStudyService({ access, practice, load: loadText });
+  const readingExploration = createReadingExplorationService({ access, practice, loadReading, loadText, signingSecret: purposeSecret(config, "reading-exploration") });
   const studyWordAids = createStudyWordAidsService({ access, practice, loadText });
   const sourceMetadata = createSefariaMetadataReader({ fetch });
   const sourceContent = createSourceContentService({ access, practice, related: sourceMetadata.related, editions: sourceMetadata.editions, content: createSefariaContentReader({ fetch }).text });
@@ -142,7 +144,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, readingPreview, studentWork, progress, lessonLog, practiceCalendar, recordings, serviceLearning, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, readingPreview, studentWork, progress, lessonLog, practiceCalendar, recordings, serviceLearning, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;
