@@ -97,14 +97,31 @@ it("lost committed response and unconfirmed receipt keep exact original UUID/bod
   const lost = async (route: Route) => { if (route.request().method() !== "POST") return route.fallback(); bodies.push(route.request().postData()!); const result = await route.fetch({ maxRedirects: 0, maxRetries: 0 }); expect(result.status()).toBe(200); await result.body(); await route.abort("failed"); };
   const exact = (url: URL) => url.origin === BROWSER_ORIGIN && url.pathname === path;
   await tab.route(exact, lost); await sheet(tab).getByRole("button", { name: "Save honors", exact: true }).click(); await ui(sheet(tab).getByRole("button", { name: "Check save", exact: true })).toBeVisible(); await tab.unroute(exact, lost);
-  await sheet(tab).getByRole("button", { name: "Close family honors", exact: true }).click(); await ui(sheet(tab).getByRole("heading", { name: "Leave with the save unconfirmed?", exact: true })).toBeVisible(); await sheet(tab).getByRole("button", { name: "Keep editing", exact: true }).click();
+  await sheet(tab).getByRole("button", { name: "Close family honors", exact: true }).click(); await ui(sheet(tab).getByRole("heading", { name: "Leave with the save unconfirmed?", exact: true })).toBeVisible();
+  const check = sheet(tab).getByRole("button", { name: "Check save", exact: true }), retryButton = sheet(tab).getByRole("button", { name: "Retry same save", exact: true });
+  await ui(check).toBeDisabled(); await ui(retryButton).toBeDisabled();
+  let promptPosts = 0; const promptRequest = (request: import("playwright").Request) => { if (request.method() === "POST" && [path, path + "/receipt"].includes(new URL(request.url()).pathname)) promptPosts++; }; tab.on("request", promptRequest);
+  await check.evaluate(button => (button as HTMLButtonElement).click()); await retryButton.evaluate(button => (button as HTMLButtonElement).click()); expect(promptPosts).toBe(0); tab.off("request", promptRequest);
+  await ui(sheet(tab).getByRole("heading", { name: "Leave with the save unconfirmed?", exact: true })).toBeVisible(); await sheet(tab).getByRole("button", { name: "Keep editing", exact: true }).click();
   let receiptBody = ""; const record = (request: import("playwright").Request) => { if (new URL(request.url()).pathname === path + "/receipt") receiptBody = request.postData()!; }; tab.on("request", record);
   const recovered = await observe(tab, child.id, true, () => sheet(tab).getByRole("button", { name: "Check save", exact: true }).click()); tab.off("request", record); expect(recovered.committedVersion).toBe(1); expect(receiptBody).toBe(bodies[0]); await ui(sheet(tab).getByRole("status").filter({ hasText: "Honors saved." })).toBeVisible(); expect(await rows(child.id)).toHaveLength(1);
   await group(tab, "Opening the ark").getByLabel("English name", { exact: true }).fill("Synthetic Exact Retry");
   const matches = (url: URL) => url.pathname === path, before = async (route: Route) => { if (route.request().method() !== "POST") return route.fallback(); bodies.push(route.request().postData()!); await route.abort("failed"); };
   await tab.route(matches, before); await sheet(tab).getByRole("button", { name: "Save honors", exact: true }).click(); await ui(sheet(tab).getByRole("button", { name: "Check save", exact: true })).toBeVisible(); await tab.unroute(matches, before);
   expect((await observe(tab, child.id, true, () => sheet(tab).getByRole("button", { name: "Check save", exact: true }).click())).outcome).toBe("unconfirmed");
-  let retry = ""; tab.on("request", r => { if (new URL(r.url()).pathname === path && r.method() === "POST") retry = r.postData()!; }); await observe(tab, child.id, false, () => sheet(tab).getByRole("button", { name: "Retry same save", exact: true }).click()); expect(retry).toBe(bodies[1]); expect(JSON.parse(bodies[0]).mutationId).not.toBe(JSON.parse(bodies[1]).mutationId); expect(await rows(child.id)).toHaveLength(2); expect(await audits(child.id)).toHaveLength(2);
+  let retry = "", retryBegan = false, release!: () => void, delivered!: () => void, rejectDelivery!: (error: unknown) => void;
+  const held = new Promise<void>(resolve => { release = resolve; }), completed = new Promise<void>((resolve, reject) => { delivered = resolve; rejectDelivery = reject; });
+  const holdRetry = async (route: Route) => { if (route.request().method() !== "POST") return route.fallback(); retryBegan = true; retry = route.request().postData()!;
+    try { await held; const response = await route.fetch({ maxRedirects: 0, maxRetries: 0 }); expect(response.status()).toBe(200); const value = await response.json(); expect(value.committedVersion).toBe(2); await route.fulfill({ response }); delivered(); }
+    catch (error) { try { await route.abort("failed"); } catch {} rejectDelivery(error); }
+  };
+  await tab.route(exact, holdRetry);
+  try {
+    await retryButton.click(); await ui.poll(() => retry).toBe(bodies[1]);
+    await ui(sheet(tab).getByRole("status").filter({ hasText: "Saving honors…" })).toBeVisible(); await ui(sheet(tab).getByRole("button", { name: "Close family honors", exact: true })).toBeDisabled(); await ui(group(tab, "Opening the ark").getByLabel("English name", { exact: true })).toBeDisabled();
+    await sheet(tab).press("Escape"); await sheet(tab).evaluate(node => (node as HTMLDialogElement).close()); await ui(sheet(tab)).toBeVisible(); await ui(sheet(tab).getByRole("button", { name: "Leave without confirmation", exact: true })).toHaveCount(0); await ui(sheet(tab).getByRole("status").filter({ hasText: "Saving honors…" })).toBeVisible();
+  } finally { release(); try { await tab.unroute(exact, holdRetry); } finally { if (retryBegan) await completed; } }
+  await ui(sheet(tab).getByRole("status").filter({ hasText: "Honors saved." })).toBeVisible(); expect(retry).toBe(bodies[1]); expect(JSON.parse(bodies[0]).mutationId).not.toBe(JSON.parse(bodies[1]).mutationId); expect(await rows(child.id)).toHaveLength(2); expect(await audits(child.id)).toHaveLength(2);
 });
 it("admin printing verifies only the saved copy; real guardian denial clears private fields", async () => {
   const child = children[3], tab = await page("admin"); await open(tab, child, "admin"); await add(tab, "Opening the ark", "Synthetic Saved Print"); await save(tab, child.id); await group(tab, "Opening the ark").getByLabel("English name", { exact: true }).fill("Synthetic Unsaved Never Print");
