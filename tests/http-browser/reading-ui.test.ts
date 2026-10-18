@@ -88,7 +88,7 @@ it("lets an admin review actual calendar choices, confirm once and replace only 
   expect(confirmations).toBe(1);
   await ui(tab.locator(".confirmed-reading").getByText("Genesis 1:31-2:2", { exact: true })).toBeVisible();
   await capture(tab, "reading-admin-confirmed-desktop");
-  await tab.unroute("**/reading/confirm");
+  await tab.unrouteAll({ behavior: "wait" });
   const haftarahPreparations: Record<string, unknown>[] = [];
   tab.on("request", request => { if (request.method() === "POST" && new URL(request.url()).pathname.endsWith("/reading/prepare")) haftarahPreparations.push(request.postDataJSON()); });
   await safe(()=>tab.getByRole("combobox", { name: "Reading", exact: true }).selectOption("haftarah"));
@@ -133,7 +133,7 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
   } finally { release(); }
   await ui.poll(() => finalSessions).toBeGreaterThanOrEqual(2); tab.off("response", observed);
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible(); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-3");
-  await tab.unroute("**/api/session");
+  await tab.unrouteAll({ behavior: "wait" });
   const [beforePrepare] = await fixture.ownerDb.select().from(s.student).where(eq(s.student.id, fixture.student.id));
   const admin = await page("admin");
   expect((await api(admin, `/api/admin/students/${beforePrepare.id}/edit`, { expectedRevision: beforePrepare.revision, student: {
@@ -192,7 +192,7 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
   async function hold(pattern: string) {
     let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
     await tab.route(pattern, async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
-    return { release, ready: () => ui.poll(() => held).toBe(true), remove: () => tab.unroute(pattern) };
+    return { release, ready: () => ui.poll(() => held).toBe(true), remove: () => tab.unrouteAll({ behavior: "wait" }) };
   }
   async function rejectClosing(phase: string) {
     await safe(() => tab.keyboard.press("Escape"));
@@ -227,7 +227,7 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
     const response = await route.fetch(); await response.dispose();
     await route.fulfill({ status: 409, contentType: "application/json", body: '{"error":"conflict"}' });
   });
-  await click(tab, "Review assignment"); await ui(sheet.getByRole("alert")).toContainText("changed while this review"); await tab.unroute("**/reading/prepare");
+  await click(tab, "Review assignment"); await ui(sheet.getByRole("alert")).toContainText("changed while this review"); await tab.unrouteAll({ behavior: "wait" });
   const explicitReload = await hold("**/reading?**");
   try { await click(tab, "Check what saved"); await safe(() => tab.keyboard.press("Escape")); await explicitReload.ready(); await rejectClosing("explicit metadata reload held"); }
   finally { explicitReload.release(); }
