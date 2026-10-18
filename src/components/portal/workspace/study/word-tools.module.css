@@ -1,0 +1,29 @@
+.tools { margin-block: 0 1.75rem; color: var(--color-ink); }
+.disclosure, .actions button, .retry { font: inherit; cursor: pointer; }
+.disclosure { min-height: 44px; padding: 0.5rem 1rem; border: 1px solid var(--color-action); border-radius: 999px; background: transparent; color: var(--color-action); }
+.disclosure[aria-expanded="true"] { background: var(--lake-tint); }
+.panel { padding-block-start: 1.25rem; max-width: 65ch; }
+.heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1.25rem; }
+.heading h4 { margin: 0; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 2.25rem; line-height: 1.8; }
+.heading p { margin: 0; font-size: 0.9375rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-block: 0.75rem 1.5rem; }
+.actions button { min-height: 44px; padding: 0.45rem 0.85rem; border: 1px solid var(--color-rule); border-radius: var(--radius-control); color: var(--color-action); background: var(--color-surface); }
+.actions button:disabled { opacity: 0.5; cursor: default; }
+.actions button:enabled:hover, .disclosure:hover { background: var(--lake-tint); }
+.tools button:focus-visible, .tools a:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.sections { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.5rem; }
+.panel h5 { margin: 0 0 0.4rem; font-size: 1rem; }
+.panel p { line-height: 1.6; }
+.panel section p { margin-block: 0.25rem 1rem; }
+.syllables { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 0.5rem; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 2rem; line-height: 1.9; }
+.syllables [data-stress="tonic"] { font-weight: 700; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
+.syllables [data-stress="secondary"] { text-decoration: underline dotted; text-underline-offset: 0.2em; }
+.grammar { margin: 0; padding-inline-start: 1.25rem; line-height: 1.7; }
+.dictionary { margin-block-start: 1.5rem; }
+.dictionary ul { list-style: none; margin: 0; padding: 0; }
+.dictionary li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1rem; margin-block: 0.5rem; }
+.dictionary bdi { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 1.5rem; }
+.note, .credit { font-size: 0.875rem; color: var(--color-muted); }
+.credit a, .retry { color: var(--color-action); text-underline-offset: 0.2em; }
+.retry { padding: 0; border: 0; background: transparent; text-decoration: underline; min-height: 44px; }
+@media (max-width: 36rem) { .sections { grid-template-columns: minmax(0, 1fr); gap: 1rem; } .actions { gap: 0.4rem; } }

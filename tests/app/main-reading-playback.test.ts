@@ -62,8 +62,13 @@ it("a word without proven timing pauses and holds instead of broadening to a ver
 it("background suspension cancels work and never resumes itself; explicit retry refreshes authority and may reuse verified bytes", async () => {
   const f = fixture(); await f.owner.select(0, 0); f.owner.setSpeed(0.75); f.owner.setRepeat(true); f.owner.suspend(); expect(f.media[0].src).toBe(""); expect(f.owner.state.suspended).toBe(true);
   await Promise.resolve(); expect(f.media).toHaveLength(1); await f.owner.play(); expect(f.media).toHaveLength(2); expect(f.media[1].playbackRate).toBe(0.75); expect(f.owner.state.playback.repeat).toBe(true); expect(f.load).toHaveBeenCalledTimes(2); expect(f.fetcher).toHaveBeenCalledTimes(1); f.owner.dispose();
-  const body = deferred<Response>(), g = fixture(undefined, vi.fn(() => body.promise)), work = g.owner.select(0, 1); await new Promise(resolve => setTimeout(resolve, 0));
-  g.owner.suspend(); await work; const late = response(), cancel = vi.spyOn(late.body!, "cancel"); body.resolve(late); await new Promise(resolve => setTimeout(resolve, 0)); expect(cancel).toHaveBeenCalledTimes(1); expect(g.media).toHaveLength(0); g.owner.dispose();
+  const body = deferred<Response>(), entered = deferred<void>(), canceled = deferred<void>();
+  const g = fixture(undefined, vi.fn(() => { entered.resolve(undefined); return body.promise; })), work = g.owner.select(0, 1);
+  // Text hashing is asynchronous: observe the held download before suspending.
+  await entered.promise; expect(g.fetcher).toHaveBeenCalledTimes(1); expect(g.owner.state.playback.status).toBe("loading"); expect(g.media).toHaveLength(0);
+  g.owner.suspend(); await work; const late = response(), originalCancel = late.body!.cancel.bind(late.body!);
+  const cancel = vi.spyOn(late.body!, "cancel").mockImplementation(async reason => { try { return await originalCancel(reason); } finally { canceled.resolve(undefined); } });
+  body.resolve(late); await canceled.promise; expect(cancel).toHaveBeenCalledTimes(1); expect(g.media).toHaveLength(0); g.owner.dispose();
 });
 it("rejects wrong ref/text timing despite reusable bytes, malformed capabilities and changed immutable source keys", async () => {
   const load = vi.fn(async (index: number) => { const value = resolution(index); return index ? { ...value, source: { ...source, url: source.url.replace("main", "other") } } : value; }), f = fixture(load);

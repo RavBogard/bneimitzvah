@@ -2,11 +2,11 @@
 
 ## Settled decisions (Daniel, binding)
 
-Keep the continuous Hebrew passage and direct word/verse reference listening as the primary experience. No transliteration. Study tools include Hebrew syllables/stress and word meanings/grammar. Preserve the incumbent Annotated score direction and the accepted phone toolbar correction. Do not revive the parked compulsory close-up guide at2b8cadf or its unresolved teardown problem.
+Keep the continuous Hebrew passage and direct word/verse reference listening as the primary experience. No transliteration. Study tools include Hebrew syllables/stress and word meanings/grammar. Preserve the incumbent palette, typography and passage-first direction recorded in DESIGN.md, including the accepted phone toolbar correction; no replacement visual world is being chosen. Do not revive the parked compulsory close-up guide at2b8cadf or its unresolved teardown problem.
 
 ## Bounded next interface milestone
 
-Build only after the authorized word-details backend and current direct-playback release pass their gates. Reuse the existing numeric word-aid endpoint and the new closed selected-word-details endpoint. No new schema, source, provider, package, audio controller, commentary generator or translation edition belongs to this slice.
+Start from the locally reviewed authorized word-details checkpoint. Isolated implementation may proceed while the direct-playback release checks run; final integration and production release require the current playback correction and complete composed release gates to pass. Reuse the existing numeric word-aid endpoint and the new closed selected-word-details endpoint. No new schema, source, provider, package, audio controller, commentary generator or translation edition belongs to this slice.
 
 Provide one optional Word tools disclosure beside the shared main-reading player. It stays closed initially. Opening it selects the latest explicitly chosen word, or the first word of the explicitly chosen verse, or the first canonical word on the current page. The disclosure contains the Hebrew word, its verse and position, Previous word/Next word controls, Hebrew syllables/stress when proved, a brief occurrence gloss and factual grammar, and separately labeled dictionary senses. It is an in-flow region on phones and must not cover the passage. It does not require or open the close-up modal, or split the main Hebrew into verse cards.
 
