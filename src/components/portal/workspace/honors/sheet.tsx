@@ -27,6 +27,10 @@ function ContextReview({ previous, current, state, owner, blocked, canReview }: 
 const slotName = (slot: string) => slot === "morning" ? "Morning service" : slot === "havdalah" ? "Havdalah service" : "Service time not confirmed";
 const longDate = (value: string) => new Intl.DateTimeFormat("en-US", { weekday: "short", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
 const when = (date: string, slot: string) => `${longDate(date)}, ${slot === "unknown" ? "service time not confirmed" : slotName(slot).toLowerCase()}`;
+// Students don't edit honors (adult self-editing is held). This says who does and how to send names.
+export function HonorsNote() {
+  return <section className={styles.entry} aria-label="Family honors"><div><h2>Family honors</h2><p>Your family or the congregation office arranges who takes part in your ceremony, such as opening the ark and the aliyot. If you’re arranging your own ceremony, send the names to the congregation office and they’ll enter them for you.</p></div></section>;
+}
 export function HonorsEntry({ studentId, name }: { studentId: string; name: string }) {
   const [open, setOpen] = useState(false), { busy, context } = useWorkspace(), origin = useRef<HTMLButtonElement>(null);
   return <><section className={styles.entry} aria-label="Family honors"><div><h2>Family honors</h2><p>Choose the people who will take part in the ceremony.</p></div><button ref={origin} type="button" className="button-secondary" disabled={busy || !!context} onClick={() => setOpen(true)}>Family honors</button></section>
