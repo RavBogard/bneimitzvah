@@ -10,15 +10,17 @@ This first bounded slice provides authenticated `list_students` and `get_student
 
 Use the published Better Auth MCP1.7.10 composition with the existing Better Auth1.7.10 identity stack and official SDK2.3.1. The MCP plugin already includes its OAuth provider; do not register a second provider. Keep the SDK's default legacy-stateless behavior so Claude's advertised2025 initialize clients work. Do not copy the optional latest-only `legacy: 'reject'` example or Maven's unrelated UAT seam.
 
+**Amended after actual-library review, 2026-10-18:** select resource-bound opaque access tokens with `disableJwtPlugin:true`, not audience JWTs. Do not compose `jwt()` or provision `jwks` for this path. Six independently reviewed synthetic cases establish real token issuance, same-process active validation and individual revocation without another confidential introspection credential. They establish no portal authorization, native locks or refresh policy.
+
 The isolated published-package proof accepted2025-11-25,2025-06-18 and2025-03-26 initialization and six synthetic list/get calls. It verified web-standard Request/Response handling and package provenance, not OAuth, provider persistence, live authorization, Next deployment or an actual Cowork connection. Exact SDK APIs and complete schema must be captured from the retained published artifacts before application changes; do not infer them from current repository-main examples.
 
 The initial resource is exactly `https://beitmitzvah.centralreform.org/api/mcp`, served through a stateless, request-local handler. No cross-user server/context cache or durable MCP transport session. Use the canonical auth issuer configured in the existing auth stack, with exact resource/issuer checks. Google and Maven tokens are never portal MCP credentials. Reuse the existing host/deployment resolver; aliases must not become trusted mutation or bearer endpoints or redirect credential-bearing requests.
 
 ## Actual API findings and activation hold
 
-The exact published-package inspection identifies seven OAuth models plus `jwks`, and continued use of the existing verification model. It provides real before-code verification-create and access-token-claims hooks, but no automatic portal delegation or Google-session provenance. Returning false from the verification hook is insufficient; denial must throw. These are source findings, not passed OAuth-flow tests.
+The exact published-package inspection identifies seven OAuth models and continued use of the existing verification model. The earlier JWT profile additionally required `jwks`; the selected opaque profile does not. Real before-code verification-create hooks exist, but no automatic portal delegation or Google-session provenance. Returning false from the verification hook is insufficient; denial must throw.
 
-The selected MCP plugin does not itself install the separate bearer-to-cookie plugin. Nevertheless, browser identity lookup must explicitly remove Authorization before invoking its cookie-session SDK. Compose JWT with `disableSettingJwtHeader:true`; its default session hook otherwise adds an unrelated JWT response header. Both boundaries require regression tests before provider composition.
+The selected MCP plugin does not itself install the separate bearer-to-cookie plugin. Nevertheless, browser identity lookup must explicitly remove Authorization before invoking its cookie-session SDK. This prerequisite has passed real-library negative controls and independent review. If JWT is reconsidered later, its default session hook also requires an explicit header policy; it is absent from the selected opaque composition.
 
 The first independently reviewable implementation is the browser cookie boundary. It does not enable MCP. Provider/schema/endpoint activation remains held until the following contracts and their actual-library synthetic tests are accepted:
 
@@ -28,7 +30,23 @@ The first independently reviewable implementation is the browser cookie boundary
 - Resolve the preregistered public-client discovery mismatch: the installed provider omits `none` when both dynamic registration and client discovery are disabled. A closed metadata projection may describe the actual supported preregistered public-client method only after a real exchange proof. Opening registration or remote metadata fetching is not a workaround.
 - Specify exact discovery/OAuth methods, parsing limits and response headers, plus the JSON-only MCP response and final authorization fence. No private result may escape through an unexamined SSE stream, batch, notification or delayed callback after its live checks.
 
+The actual opaque validation seam is a custom `createAuthEndpoint` with `metadata.SERVER_ONLY:true`, invoked only through its real `auth.api` method. Its genuine SDK context calls exported `getOAuthProviderApi` with the exact normalized options from the single MCP provider instance. Use its supported active-token API and a closed server-owned issuer/resource/client/scope policy. An internal validator may not accept a caller-selected policy or fabricated SDK context. Public HTTP invocation must remain unavailable; it is not a public introspection endpoint. Project stored referenceId through the supported claims hook, then validate the resulting delegation against live portal records.
+
+The built-in JWT revocation endpoint rejects individual JWT revocation. Opaque revocation deletes the actual token row and the supported active validator then denies it. Two SDK validation calls are not an atomic snapshot: the resource adapter still needs the accepted transaction, lock and final-expiry contract. Opaque refresh creation also does not run the earlier JWT issuance hook; refresh remains held until its own supported endpoint-hook and lifetime proof succeeds.
+
+Five further independently reviewed memory cases establish a feasible opaque refresh seam: actual token-endpoint before/after hooks, supported provider token hashing, live originating-session/binding refusal before consumption, managed rotation and clamping the new stored access/refresh deadlines before returning credentials. They do not establish native locking or atomicity. A deliberately failed after hook withheld body credentials while leaving the old refresh consumed and partially updated orphan rows. Preserve that result: production design must contain these orphans, define reconnect/recovery and final response/header checks, and never describe separate writes as a global rollback or automatically replay an uncertain refresh.
+
 These are implementation gates owned by the integration stream; no new decision or credentials are requested from Daniel for local proof. This design establishes direction, not blanket approval to enable OAuth endpoints.
+
+## Google-session provenance prerequisite
+
+This bounded prerequisite may be implemented without installing MCP packages or enabling any connector endpoint. Add nullable `session.google_authenticated_at`, exposed privately to the SDK as a non-input additional date field. Existing rows remain null. Keep the marker outside public DTOs. A database trigger must reject any change to the marker on UPDATE, including null-to-date backfill, while allowing ordinary session updates and deletion.
+
+Populate it only within the original session INSERT from the real `session.create.before` hook after successful configured Google idToken authentication. The current private HTTP adapter fixes the provider to Google after consuming its challenge, and the pinned SDK reaches session creation only after provider verification succeeds. Require that exact supported `/sign-in/social` idToken control flow and configured Google provider; an arbitrary submitted provider string alone is insufficient. Absent context, magic-link, direct session creation, unsupported flows and recreation without fresh verified Google authentication remain unmarked. Force caller-supplied marker values away. Never derive or backfill the marker from an account link, email verification, session age or an old session.
+
+Use the actual supported additional-field plumbing so the marker and session are one insert; do not substitute an after-hook second write. Browser authorization must continue to accept existing unmarked and magic-link sessions unchanged. MCP eligibility will later require this marker under the same live session lock, in addition to all staff/delegation checks; the marker by itself grants nothing.
+
+Acceptance requires actual SDK/Drizzle/PGlite insertion and failure tests with explicitly stubbed Google verification, rejection and magic-link paths, attempted caller marker injection, immutable-field enforcement, normal session update/delete/recreation, unchanged cookie role/tenant behavior and typecheck/repository protection. Stubbed verification is not a claim of real Google cryptography. Native migration/constraint acceptance and independent auth review remain required before production apply/deployment. Preserve the existing schema24 material approvals and frozen activation evidence; this prerequisite performs no production operation.
 
 ## Client, login and consent
 
@@ -48,7 +66,7 @@ Never synthesize cookies, Origin, session IDs or role claims to enter `createVer
 
 Authorization follows the existing race contract: revocation that wins the relevant authorization locks denies access; expiry is checked again after awaited work before projecting a private response. Preserve the existing final-response checks and generic foreign/unrelated denials. Do not promise impossible instantaneous revocation of already delivered data.
 
-Opaque-token validation or JWT verification plus authoritative revocation lookup are acceptable only through the documented provider boundary. Offline JWT signature validation alone is insufficient. Any private resource-server introspection credential belongs to server configuration; the public Cowork client cannot serve as a confidential introspection caller.
+Use the supported opaque active-token boundary described above, followed by live portal/consent checks. Its genuine server-only SDK context avoids a separate introspection credential. A public Cowork client must never be repurposed as a confidential introspection caller. Offline JWT verification is outside the selected path.
 
 ## Domain and response boundaries
 
