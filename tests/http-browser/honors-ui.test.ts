@@ -155,8 +155,17 @@ it("admin printing verifies only the saved copy; real guardian denial clears pri
   const child = children[3], tab = await page("admin"); await open(tab, child, "admin"); await add(tab, "Opening the ark", "Synthetic Saved Print"); await save(tab, child.id); await group(tab, "Opening the ark").getByLabel("English name", { exact: true }).fill("Synthetic Unsaved Never Print");
   await tab.evaluate(() => { const append = Element.prototype.append; Element.prototype.append = function (...nodes: (Node | string)[]) { append.apply(this, nodes); for (const node of nodes) if (node instanceof HTMLIFrameElement && node.title === "Saved family honors print copy") node.contentWindow!.print = () => { (window as unknown as { honorsPrinted: string }).honorsPrinted = node.contentDocument!.body.textContent ?? ""; }; }; });
   await sheet(tab).getByRole("button", { name: "Print saved form", exact: true }).click(); await ui.poll(() => tab.evaluate(() => (window as unknown as { honorsPrinted?: string }).honorsPrinted ?? "")).toContain("Synthetic Saved Print"); expect(await tab.evaluate(() => (window as unknown as { honorsPrinted: string }).honorsPrinted)).not.toContain("Synthetic Unsaved Never Print");
-  const parent = await page("parent"); await open(parent, child, "parent"); await ui(group(parent, "Opening the ark").getByLabel("English name", { exact: true })).toHaveValue("Synthetic Saved Print"); await fixture.ownerDb.update(s.guardian).set({ revokedAt: new Date() }).where(eq(s.guardian.studentId, child.id));
-  await parent.evaluate(() => window.dispatchEvent(new Event("focus"))); await ui(parent.locator('input[value="Synthetic Saved Print"]')).toHaveCount(0); expect(await rows(child.id)).toHaveLength(1);
+  const parent = await page("parent"); await open(parent, child, "parent"); await ui(group(parent, "Opening the ark").getByLabel("English name", { exact: true })).toHaveValue("Synthetic Saved Print");
+  // Complete the actual authorized cycle before changing its authority. A raw
+  // focus event during an earlier cycle is intentionally coalesced by provider.
+  await focus(parent); await ui(group(parent, "Opening the ark").getByLabel("English name", { exact: true })).toHaveValue("Synthetic Saved Print");
+  await fixture.ownerDb.update(s.guardian).set({ revokedAt: new Date() }).where(eq(s.guardian.studentId, child.id));
+  let denied = false;
+  const refusal = (response: import("playwright").Response) => { const url = new URL(response.url()); if (url.origin === BROWSER_ORIGIN && response.request().method() === "GET" && url.searchParams.get("mode") === "parent" && [`/api/students/${child.id}/honors`, `/api/students/${child.id}/reading`].includes(url.pathname) && response.status() === 404) denied = true; };
+  parent.on("response", refusal);
+  try { await parent.evaluate(() => window.dispatchEvent(new Event("focus"))); await ui.poll(() => denied).toBe(true); await ui(parent.locator('input[value="Synthetic Saved Print"]')).toHaveCount(0); }
+  finally { parent.off("response", refusal); }
+  expect(await rows(child.id)).toHaveLength(1);
 });
 it("adult student and child-practice views expose no honors controls or family form", async () => {
   const student = await page("student"); await student.goto("/workspace/student", { waitUntil: "domcontentloaded" }); await ui(student.locator(".role-workspace")).toBeVisible(); await ui(student.getByRole("button", { name: "Family honors", exact: true })).toHaveCount(0); expect((await api(student, `/api/students/${fixture.student.id}/honors?mode=student`)).status).toBe(403);
