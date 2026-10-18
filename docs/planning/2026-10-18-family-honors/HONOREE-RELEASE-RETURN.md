@@ -1,5 +1,13 @@
 # Honoree database release preparation — 2026-10-18
 
+## Native reference installed after independent review
+
+The preparation below records the earlier model-only checkpoint. The reference now contains actual owned PostgreSQL 16.15 catalogs, with exact byte SHA256 `438276fcb901b723853152f42b05c83b462313b9d3e3e66219be866c0ee0fe2c` and after-catalog canonical SHA256 `640ae4499198878a35b4b3d8fb1a405118e74b85bae13248bd7e20899d5320bb`. The SQL and historical references are unchanged.
+
+The first capture failed without localizing its validation phase. A second diagnostic capture preserved actual before/after catalogs and localized the failure to ordering of trigger metadata during validation. All SQL definitions matched. The repaired comparator proves complete trigger-record multisets, including duplicates, before aligning the expected old-table sequence with the immutable capture. It changes no database schema or actual captured objects. Independent review verified the strict delta, historical catalog composition, preserved old-data digests/roles, exact three reading and one group zero-epoch backfill, and empty capability tables; altered, missing and duplicate trigger records still fail. Original failures, unchanged diagnostic bytes and cleanup evidence remain preserved privately. The installed reference was derived from those reviewed actual catalogs; no synthetic model was substituted and no redundant third capture was run.
+
+This is reference installation, not final operator acceptance or production deployment. Fresh exact-commit manual PostgreSQL acceptance, CI, production check/apply and deployment remain required. PostgreSQL 16 fixture evidence does not establish the production PostgreSQL 18 TLS/channel-binding checks. The [approved material checkpoint](HONOREE-MATERIAL-RETURN.md) is separate; migration still creates no approvals or guest links.
+
 Production remains31481c56bd32c6a26ffda206b09864f332f15d33 with23 ledger rows through0022. Management122a35f7fa4eea45c690d8be7f96bc80025ee5a2 passes all four [hosted39124427440 jobs](https://github.com/RavBogard/bneimitzvah/actions/runs/39124427440), but has not deployed. The [dedicated release design](../../superpowers/specs/2026-10-18-honoree-release-design.md) pins122a35f as immutable source for0023.
 
 ## Accepted preparation, not a runnable production release

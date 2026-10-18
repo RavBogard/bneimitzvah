@@ -11,14 +11,14 @@ import { referenceCatalog } from "./release-migrate-catalog.mjs";
 export const HONOREE_BASE="122a35f7fa4eea45c690d8be7f96bc80025ee5a2";
 export const HONOREE_REFERENCE="tests/fixtures/portal/release-honoree-reference.json";
 export const HONOREE_FILES=["scripts/release-migrate-honoree.mjs","scripts/release-migrate-honoree-support.mjs",HONOREE_REFERENCE,"tests/release-honoree.test.mjs","tests/helpers/release-honoree-fixture.mjs","tests/postgres/release-honoree.acceptance.mjs"];
-// MODEL ONLY until root captures and an independent reviewer accepts actual metadata.
-// Null pins intentionally prevent every production source contract/target access.
-export const HONOREE_REFERENCE_SHA=null;
-export const HONOREE_CATALOG_SHA=null;
+// Independently reviewed owned native v2 catalogs; installation provenance is private.
+// Original capture failed at trigger ordering; repaired strict delta was reviewed offline.
+export const HONOREE_REFERENCE_SHA="438276fcb901b723853152f42b05c83b462313b9d3e3e66219be866c0ee0fe2c";
+export const HONOREE_CATALOG_SHA="640ae4499198878a35b4b3d8fb1a405118e74b85bae13248bd7e20899d5320bb";
 export const HONOREE_TABLES=["honoree_group_epoch","honoree_link","honoree_material_release","honoree_operation","honoree_reading_epoch"];
 export const HONOREE_AFFECTED=["assignment","assignment_verse","audit_event","guardian","honors_version","membership","role_grant","service_catalog","service_catalog_lifecycle","student","tenant"];
 const equal=(a,b)=>same(canonical(a),canonical(b));
-const order=values=>values.sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b),"en"));
+const order=values=>values.sort((a,b)=>JSON.stringify(canonical(a)).localeCompare(JSON.stringify(canonical(b)),"en"));
 const hashPattern=/^[a-f0-9]{64}$/;
 const names=value=>value.replaceAll('"','').split(',').map(s=>s.trim());
 
@@ -106,7 +106,12 @@ export function validateHonoreeDelta(value,sql){
  need(before.tables.every(t=>!HONOREE_TABLES.includes(t.name)));
  const added=after.tables.filter(t=>HONOREE_TABLES.includes(t.name));need(equal(added.map(t=>t.name).sort(),HONOREE_TABLES));
  for(const table of added)validateTable(table,contract.tables.find(t=>t.name===table.name),contract);
- for(const old of next.tables){const fresh=after.tables.find(t=>t.name===old.name);need(fresh);old.triggers=order([...old.triggers,...expectedTriggers(contract,old.name)]);
+ for(const old of next.tables){const fresh=after.tables.find(t=>t.name===old.name);need(fresh);
+  // Compare every trigger field and duplicate count independently of record
+  // property/array order, then preserve the captured sequence for the exact
+  // whole-catalog result. Never mutate or reorder the native input catalog.
+  need(equal(order([...old.triggers,...expectedTriggers(contract,old.name)]),order([...fresh.triggers])));
+  old.triggers=structuredClone(fresh.triggers);
   if(old.name==="audit_event"){
    const constraint=old.constraints.find(c=>c.name==="audit_action_known"),freshConstraint=fresh.constraints.find(c=>c.name===constraint?.name);need(constraint&&freshConstraint&&constraint.definition.endsWith("::text]))"));
    const definition=constraint.definition.replace(/::text\]\)\)$/, "::text, 'honoree.issue'::text, 'honoree.revoke'::text, 'honoree.reissue'::text]))");need(definition!==constraint.definition);Object.assign(constraint,{definition});

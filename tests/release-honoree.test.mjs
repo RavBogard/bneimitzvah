@@ -16,6 +16,7 @@ function sourceFixture(){
  // New files are virtual candidate blobs, not mutable checkout fixtures or files
  // incorrectly expected to exist in the older immutable B3 commit.
  for(const path of HONOREE_FILES){const bytes=Buffer.from("Synthetic candidate file: "+path);files.set(path,bytes);committed.set(path,bytes);}
+ const nativeBytes=readFileSync(new URL("../"+HONOREE_REFERENCE,import.meta.url));files.set(HONOREE_REFERENCE,nativeBytes);committed.set(HONOREE_REFERENCE,nativeBytes);
  const overrides=new Map();
  const injected=(...args)=>{events.push(args);if(args[0]==="rev-parse")return Buffer.from(head);if(args[0]==="merge-base"){if(!ancestor)throw 0;return Buffer.alloc(0);}if(args[0]==="status")return Buffer.from(dirty?"?? synthetic drift":"");if(args[0]==="ls-tree")return Buffer.from((args[3]===candidate?[...names,...(future?[folder+"/0024_unreviewed.sql"]:[])]:tree(args[3])).join("\n"));if(args[0]==="show"){const ref=args[1].slice(0,40),path=args[1].slice(41);if(overrides.has(args[1]))return overrides.get(args[1]);if(ref===candidate)return committed.get(path)??blob(HONOREE_BASE,path);return blob(ref,path);}throw Error("Unexpected synthetic source command");};
  return {git:injected,read:path=>files.get(path)??blob(HONOREE_BASE,path),files,committed,overrides,events,dirty(){dirty=true;},future(){future=true;},ancestor(){ancestor=false;},head(){head="b".repeat(40);}};
@@ -32,13 +33,30 @@ function harness(o={}){
  return{s,t,client,checks,migrate,events,get calls(){return calls;},get ends(){return ends;},get length(){return length;},run(apply=true){return executeHonoreeRelease(s,t,{apply,checks,connect:()=>client,migrate});}};
 }
 
-test("MODEL ONLY reference and null native pins fail closed before target access; no reference override",async()=>{
- assert.equal(HONOREE_REFERENCE_SHA,null);assert.equal(HONOREE_CATALOG_SHA,null);
- const placeholder=JSON.parse(readFileSync(new URL("../"+HONOREE_REFERENCE,import.meta.url),"utf8"));assert.match(placeholder.evidence,/MODEL ONLY/);assert.equal(placeholder.before,null);assert.equal(placeholder.after,null);
- assert.throws(()=>validateHonoreeReference(Buffer.from(JSON.stringify(placeholder)),source()));
- let reads=0,connects=0;const f=sourceFixture();
- const result=await runHonoreeRelease(["--expected-commit",candidate,"--target","synthetic.json"],{source:commit=>honoreeSourceContract(commit,f),readTarget(){reads++;},execution:{connect(){connects++;}}});
- assert.deepEqual(result,{ok:false,phase:"source",outcome:"not-started",apply:false});assert.equal(reads,0);assert.equal(connects,0);
+test("installed owned native reference has exact byte/catalog pins and satisfies the complete source contract",()=>{
+ assert.match(HONOREE_REFERENCE_SHA,/^[a-f0-9]{64}$/);assert.match(HONOREE_CATALOG_SHA,/^[a-f0-9]{64}$/);
+ const bytes=readFileSync(new URL("../"+HONOREE_REFERENCE,import.meta.url)),reference=JSON.parse(bytes);
+ assert.equal(reference.evidence,"owned-native-capture");assert.equal(reference.sourceCommit,HONOREE_BASE);assert.equal(reference.migrationSHA256,sha(sql));
+ assert.equal(sha(bytes),HONOREE_REFERENCE_SHA);assert.equal(sha(JSON.stringify(canonical(reference.after))),HONOREE_CATALOG_SHA);
+ const before=JSON.stringify(reference),s=honoreeSourceContract(candidate,sourceFixture());
+ assert.deepEqual(validateHonoreeReference(bytes,s),s.honoreeAfter);
+ for(const name of HONOREE_TABLES)assert.ok(s.honoreeAfter.tables.some(t=>t.name===name));
+ assert.equal(JSON.stringify(reference),before);s.recheck();
+});
+
+test("corrupted and MODEL ONLY references fail before target access despite internally matching candidate source bytes; no override",async()=>{
+ const nativeBytes=readFileSync(new URL("../"+HONOREE_REFERENCE,import.meta.url)),native=JSON.parse(nativeBytes);
+ const modeled={version:1,evidence:"MODEL ONLY - synthetic structural fixture",sourceCommit:HONOREE_BASE,migrationSHA256:sha(sql),before:null,after:null};
+ const corrupted=structuredClone(native);corrupted.evidence="MODEL ONLY - cannot become accepted native evidence";
+ const changedAfter=structuredClone(native);changedAfter.after={tables:[],functions:[],types:[]};
+ const badReferences=[Buffer.concat([nativeBytes,Buffer.from(" ")]),Buffer.from(JSON.stringify(modeled)),Buffer.from(JSON.stringify(corrupted)),Buffer.from(JSON.stringify(changedAfter))];
+ for(const bytes of badReferences){
+  const f=sourceFixture();f.files.set(HONOREE_REFERENCE,bytes);f.committed.set(HONOREE_REFERENCE,bytes);
+  const checked=honoreeReferenceSource(candidate,f);assert.throws(()=>validateHonoreeReference(bytes,checked));
+  let reads=0,connects=0;
+  const result=await runHonoreeRelease(["--expected-commit",candidate,"--target","synthetic.json"],{source:commit=>honoreeSourceContract(commit,f),readTarget(){reads++;},execution:{connect(){connects++;}}});
+  assert.deepEqual(result,{ok:false,phase:"source",outcome:"not-started",apply:false});assert.equal(reads,0);assert.equal(connects,0);
+ }
  for(const flag of ["--allow-model","--retry","--force"]){assert.equal((await runHonoreeRelease(["--expected-commit",candidate,"--target","synthetic.json",flag])).phase,"arguments");}
 });
 
@@ -159,5 +177,34 @@ test("closed nine CHECKs and eleven indexes reject the independent probes and pr
  reject(m=>table(m,"honoree_material_release").indexes.find(i=>i.name==="honoree_material_active_slot").definition="CREATE UNIQUE INDEX honoree_material_active_slot ON public.honoree_material_release USING btree (tenant_id, slot) WHERE (state = 'withdrawn'::text)");
  assert.throws(()=>honoreeSQLContract(sql.replace('"key_id"=\'k1\'','"key_id"=\'k2\'')));
  assert.throws(()=>honoreeSQLContract(sql.replace('"revoked_at" is null','"revoked_at" is not null')));
- assert.equal(HONOREE_REFERENCE_SHA,null);assert.equal(HONOREE_CATALOG_SHA,null);
+});
+
+test("exact trigger comparison accepts persisted mixed property orders and trigger-array permutations without mutating capture",()=>{
+ const model=deltaModel(),student=model.after.tables.find(t=>t.name==="student");
+ const existing={...student.triggers.find(t=>!t.internal),name:"synthetic_existing_guard",function_name:"portal_immutable_audit",type:27};
+ model.before.tables.find(t=>t.name==="student").triggers.push(structuredClone(existing));student.triggers.push(structuredClone(existing));
+ const variants=[model,canonical(model),JSON.parse(JSON.stringify(canonical(model)))];
+ const mixed=structuredClone(model);
+ for(const catalog of [mixed.before,mixed.after])for(const table of catalog.tables){
+  table.triggers=table.triggers.reverse().map((t,i)=>i%2?canonical(t):Object.fromEntries(Object.entries(t).reverse()));
+ }
+ variants.push(mixed);
+ for(const variant of variants){const original=JSON.stringify(variant);assert.ok(validateHonoreeDelta(variant,sql));assert.equal(JSON.stringify(variant),original,"native input and captured sequences must remain unchanged");}
+});
+
+test("trigger permutation acceptance retains exact user/RI/baseline records and multiplicity plus exact grants",()=>{
+ const model=canonical(deltaModel()),table=(m,name)=>m.after.tables.find(t=>t.name===name);
+ const baseline={...table(model,"student").triggers.find(t=>!t.internal),name:"synthetic_baseline_guard",function_name:"portal_immutable_audit",type:27};
+ model.before.tables.find(t=>t.name==="student").triggers.push(structuredClone(baseline));table(model,"student").triggers.push(structuredClone(baseline));
+ for(const name of ["honoree_link","student"]){
+  for(const internal of [true,false]){
+   const original=table(model,name).triggers.find(t=>name==="student"&&!internal?t.name==="synthetic_baseline_guard":t.internal===internal);assert.ok(original);
+   for(const kind of ["missing","duplicate","changed"]){
+    const bad=structuredClone(model),rows=table(bad,name).triggers,index=rows.findIndex(t=>JSON.stringify(t)===JSON.stringify(original));
+    if(kind==="missing")rows.splice(index,1);else if(kind==="duplicate")rows.push(structuredClone(original));else rows[index].enabled="D";
+    rows.reverse();assert.throws(()=>validateHonoreeDelta(bad,sql),name+" "+internal+" "+kind);
+   }
+  }
+ }
+ for(const mutate of [m=>table(m,"honoree_link").grants.push(structuredClone(table(m,"honoree_link").grants[0])),m=>table(m,"honoree_link").grants[0].grantable=true,m=>table(m,"honoree_link").triggers[0].arguments="00",m=>table(m,"honoree_link").triggers[0].condition="false"]){const bad=structuredClone(model);mutate(bad);assert.throws(()=>validateHonoreeDelta(bad,sql));}
 });
