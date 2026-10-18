@@ -1,5 +1,6 @@
 import "server-only";
 import { parseReferenceResolution, type ReferenceResolution } from "../../lib/reference-audio/source";
+import type { StudyWordAids } from "../../lib/hebrew/word-aids";
 import type { HttpRuntime } from "../runtime/composition";
 import type { ActiveMode } from "../access/types";
 import { AccessDenied } from "../access/errors";
@@ -14,7 +15,7 @@ import { closedObject, uniqueQuery } from "./query";
 import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
-type Kind = "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
+type Kind = "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
   | "admin-students" | "edit" | "disable" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "pending" | "accept"
   | "eligible-tutors" | "relationships" | "tutor-assign" | "tutor-unassign" | "guardian-revoke" | "identity-revoke" | "guardian-practice" | "grant-revoke" | "cantor";
 type Route = { kind: Kind; methods: readonly string[]; id?: string; linkId?: string };
@@ -35,6 +36,8 @@ function route(pathname: string): Route | null {
   if(preview)return {kind:preview[2]==="prepare"?"preview-prepare":"preview-page",methods:["POST"],id:preview[1]};
   const reference = /^\/api\/students\/([^/]+)\/reference-audio$/.exec(pathname);
   if (reference) return { kind: "reference-audio", methods: ["GET"], id: reference[1] };
+  const wordAids = /^\/api\/students\/([^/]+)\/study-word-aids$/.exec(pathname);
+  if (wordAids) return { kind: "study-word-aids", methods: ["GET"], id: wordAids[1] };
   const study = /^\/api\/students\/([^/]+)\/study-text$/.exec(pathname);
   if (study) return { kind: "study-text", methods: ["GET"], id: study[1] };
   const student = /^\/api\/students\/([^/]+)(?:\/(reading)(?:\/(prepare|confirm))?)?$/.exec(pathname);
@@ -86,6 +89,12 @@ function studentInput(value: unknown) {
 }
 const studentView = (s: StudentView) => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, ceremonyDate: s.ceremonyDate, revision: s.revision });
 const contextView = (c: PracticeContextView | null) => c ? { id: c.id, authorityRevision: c.authorityRevision, studentId: c.studentId, studentRevision: c.studentRevision, expiresAt: c.expiresAt } : null;
+function wordAidsView(value: StudyWordAids): JsonValue {
+  if (value.status === "unavailable") return { schema: value.schema, ref: value.ref, status: value.status, reason: value.reason };
+  return { schema: value.schema, ref: value.ref, status: value.status, readingTextSha256: value.readingTextSha256, wordCount: value.wordCount,
+    words: value.words.map((word): JsonValue => word.status === "unavailable" ? { index: word.index, status: word.status, reason: word.reason }
+      : { index: word.index, status: word.status, syllables: word.syllables.map(part => ({ start: part.start, end: part.end, stress: part.stress })) }) };
+}
 function studyPageView(page: StudyPage): { [key: string]: JsonValue } {
   return { offset: page.offset, nextOffset: page.nextOffset, totalVerses: page.totalVerses,
     translation: { key: page.translation.key, status: page.translation.status },
@@ -136,7 +145,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", selected.methods.join(", ")); return response;
     }
     const practiceRoute = selected.kind.startsWith("practice-");
-    if (!practiceRoute && selected.kind !== "reading" && selected.kind !== "study-text" && selected.kind !== "reference-audio" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
+    if (!practiceRoute && selected.kind !== "reading" && selected.kind !== "study-text" && selected.kind !== "study-word-aids" && selected.kind !== "reference-audio" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
     // Dispatcher resolves the actual host before this adapter. Services still
     // independently reauthorize; no body/Origin/forwarded claim chooses tenant.
     if (request.method === "POST") requireCookieMutation(request, runtime.origin);
@@ -234,6 +243,19 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         if (!value.ok) return stale();
         return privateJson({ studentId: value.studentId, studentRevision: value.studentRevision, mode: value.mode, context: contextView(value.context),
           assignment: { id: value.assignment.id, revision: value.assignment.revision, kind: value.assignment.kind, needsReview: value.assignment.needsReview }, reference: referenceView(value.reference) });
+      }
+      case "study-word-aids": {
+        const query = uniqueQuery(request.url, ["mode", "kind", "assignmentId", "assignmentRevision", "translation", "offset"]);
+        const kind = query.get("kind"), translation = query.get("translation"), revisionValue = query.get("assignmentRevision"), offset = query.get("offset");
+        if ((kind !== "torah" && kind !== "haftarah") || translation !== "jps2023" || !revisionValue || !/^[1-9][0-9]{0,9}$/.test(revisionValue)
+          || offset === null || !/^(?:0|[1-9][0-9]{0,2})$/.test(offset)) throw new HttpBoundaryError();
+        let value;
+        try { value = await runtime.studyWordAids.read(request, { mode: mode(query.get("mode"), true), studentId: id!, kind,
+          assignmentId: identifier(query.get("assignmentId")), assignmentRevision: integer(Number(revisionValue)), translation, offset: Number(offset) }); }
+        catch (error) { if (error instanceof StudyUnavailable && error.code === "invalid-request") throw new HttpBoundaryError(); throw error; }
+        if (!value.ok) return stale();
+        return privateJson({ studentId: value.studentId, studentRevision: value.studentRevision, mode: value.mode, context: contextView(value.context),
+          assignment: { id: value.assignment.id, revision: value.assignment.revision, kind: value.assignment.kind, needsReview: value.assignment.needsReview }, wordAids: wordAidsView(value.wordAids) });
       }
       case "study-text": {
         const query = uniqueQuery(request.url, ["mode", "kind", "assignmentId", "assignmentRevision", "translation", "offset"]);
