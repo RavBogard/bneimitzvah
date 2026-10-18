@@ -10,8 +10,19 @@ function ready(n: number, offset = 0, hash?: string) {
 }
 test("every entry beyond 64 remains reachable through explicit ten-entry pages through the final 4096 boundary", () => {
   for (const n of [0, 1, 10, 11, 71, 4096]) {
-    let page = ready(n), ids = [...page.entries.map(e => e.id)]; const hash = page.catalogHash;
-    while (page.nextSourceOffset !== null) { page = ready(n, page.nextSourceOffset, hash); ids.push(...page.entries.map(e => e.id)); }
+    // One provider catalog per traversal; production still reprojects and hashes it on every page.
+    const catalog = parseRelatedMetadata(rows(n), ref);
+    const next = (offset = 0, catalogHash?: string) => {
+      const result = discoverRelatedPage(catalog, ref, { sourceOffset: offset, ...(catalogHash ? { catalogHash } : {}) });
+      if (result.status !== "ready") throw new Error("Expected ready page");
+      expect(result.page.sourceOffset).toBe(offset); expect(result.page.totalEntries).toBe(n);
+      expect(result.page.entries.length).toBe(Math.min(10, n - offset));
+      if (catalogHash) expect(result.page.catalogHash).toBe(catalogHash);
+      return result.page;
+    };
+    let page = next(), ids = [...page.entries.map(e => e.id)]; const hash = page.catalogHash;
+    while (page.nextSourceOffset !== null) { page = next(page.nextSourceOffset, hash); ids.push(...page.entries.map(e => e.id)); }
+    expect(ids).toEqual(Array.from({ length: n }, (_, i) => `id_${String(i).padStart(4, "0")}`));
     expect(ids.length).toBe(n); expect(new Set(ids).size).toBe(n); expect(page.nextSourceOffset).toBeNull(); expect(page.entries.length).toBeLessThanOrEqual(10);
   }
 });
