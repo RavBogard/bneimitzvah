@@ -68,7 +68,7 @@ test("independent adversary: participant permutation invalidates its group, with
 
 test("independent adversary: native Request malformed transport never reaches guest service", async () => {
   const read = vi.fn(async () => { throw Error("Transport must deny before service"); });
-  const runtime = { origin: "http://localhost:3000", honoree: { read } as unknown as ReturnType<typeof createHonoreeService> };
+  const runtime = { origin: "http://localhost:3000", honoree: { readForTransport: read } as unknown as ReturnType<typeof createHonoreeService> };
   const inputs: { body: Uint8Array<ArrayBuffer>; headers: Record<string, string> }[] = [
     { body: new Uint8Array([0xc3, 0x28]), headers: {} },
     { body: new TextEncoder().encode('{"token":"synthetic"}'), headers: { "content-length": "1" } },

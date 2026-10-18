@@ -12,6 +12,7 @@ import { handleLessonLogRequest, lessonLogRouteMethods } from "./lesson-log";
 import { handlePracticeCalendarRequest, practiceCalendarRouteMethods } from "./practice-calendar";
 import { handleRecordingsRequest, recordingsRouteMethods } from "./recordings";
 import { errorResponse, HttpBoundaryError } from "./responses";
+import { finishHonoreeGuestResponse, handleHonoreeRequest } from "./honoree";
 
 export type HttpRuntimeScope = (action: (runtime: HttpRuntime) => Promise<Response>) => Promise<Response>;
 function cookieBoundary(request: Request) {
@@ -30,6 +31,23 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
   return async (request: Request): Promise<Response> => {
     try {
       const url = new URL(request.url);
+      if (url.pathname === "/api/honoree/read") {
+        const denied = () => errorResponse(new HttpBoundaryError(404));
+        // Guest capability transport never interprets authentication cookies or
+        // inherits the authenticated method/runtime diagnostic envelopes.
+        try {
+          if (request.method !== "POST" || url.search || request.url.length > 2048 || request.signal.aborted
+            || request.headers.has("cookie") || request.headers.has("authorization") || request.headers.has("X-Practice-Context")) return denied();
+          const started = performance.now();
+          const response = await withRuntime(async runtime => {
+            try { return await handleHonoreeRequest(request, runtime) ?? denied(); }
+            catch { return denied(); }
+          });
+          // Runtime cleanup can await after the service barrier. Subtract the
+          // entire scope duration conservatively before the final sync return.
+          return finishHonoreeGuestResponse(request, response, started);
+        } catch { return denied(); }
+      }
       const methods = honorsRouteMethods(url.pathname) ?? sourceContentRouteMethods(url.pathname) ?? sourceAssignmentsRouteMethods(url.pathname) ?? authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname) ?? serviceLearningRouteMethods(url.pathname) ?? progressRouteMethods(url.pathname) ?? lessonLogRouteMethods(url.pathname) ?? practiceCalendarRouteMethods(url.pathname) ?? recordingsRouteMethods(url.pathname);
       // No provider configuration or connection required to refuse unowned
       // endpoints (including private SDK session/profile/password APIs).

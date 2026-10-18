@@ -10,7 +10,7 @@ import * as data from "../data/honoree";
 import * as honors from "../data/honors";
 import * as s from "../db/index";
 import { capture, validMappings } from "../honors/context";
-import type { HonorsContextView } from "../../lib/honors/types";
+import type { HonorsContextView, HonorsSpan } from "../../lib/honors/types";
 import { createHonoreeTokens, hardExpiry } from "./tokens";
 import * as validate from "./validation";
 import { material, unitPair, type GuestMaterial } from "./recipient-material";
@@ -18,6 +18,8 @@ type Request = AccessRequest & { method?: string; signal?: AbortSignal };
 type Selection = Parameters<typeof validate.selection>[0];
 const unavailable = (): never => { throw new AccessDenied(404); };
 const conflict = Object.freeze({ ok: false as const, code: "conflict" as const });
+type GuestDto = Readonly<{ ok: true; schemaVersion: 1; student: Readonly<{ firstName: string; ceremonyDate: string }>; aliyah: HonorsSpan; material: GuestMaterial; expiresAt: string }>;
+type GuestTransport = Readonly<{ dto: GuestDto; remainingMs: number }>;
 type ReturnClock = Readonly<{ databaseNow: number; monotonicStart: number }>;
 function returnBarrier(request: Request, sessionExpiresAt?: number, expiresAt?: number, clock?: ReturnClock) {
   const wallNow = Date.now();
@@ -28,7 +30,9 @@ function returnBarrier(request: Request, sessionExpiresAt?: number, expiresAt?: 
   if (expiresAt !== undefined) {
     if (!clock) return unavailable();
     const now = Math.max(wallNow, clock.databaseNow + Math.max(0, performance.now() - clock.monotonicStart));
-    if (!Number.isFinite(now) || expiresAt <= now) return unavailable();
+    const remainingMs = Math.floor(expiresAt - now);
+    if (!Number.isSafeInteger(remainingMs) || remainingMs <= 0 || remainingMs > 90 * 86400000) return unavailable();
+    return remainingMs;
   }
 }
 export function createHonoreeService<Q extends PgQueryResultHKT>(input: { db: AccessDatabase<Q>; access: ReturnType<typeof createAccessService<Q>>; deployment: DeploymentScope; origin: string; signingSecret: string;
@@ -106,7 +110,46 @@ export function createHonoreeService<Q extends PgQueryResultHKT>(input: { db: Ac
     returnBarrier(request, sessionExpiresAt, expiresAt, returnClock);
     return result;
   }
-  return Object.freeze({ mutate: (request: Request, selected: Selection, write: unknown) => mutate(request, selected, write, false),
+  function readGuest(original: Request, token: unknown, transport: true): Promise<GuestTransport>;
+  function readGuest(original: Request, token: unknown, transport: false): Promise<GuestDto>;
+  async function readGuest(original: Request, token: unknown, transport: boolean) {
+    try {
+      const request = { url: original.url, method: original.method, signal: original.signal, headers: new Headers(original.headers) };
+      const live = () => { if (request.signal?.aborted) return unavailable(); };
+      live(); if (request.headers.has("cookie") || request.headers.has("authorization") || request.headers.has("X-Practice-Context")) return unavailable();
+      const resolved = await resolveTenantHost(input.db, request, input.deployment); live();
+      if (resolved.origin !== input.origin) return unavailable();
+      const proof = tokenScope(resolved.tenantId).verify(token);
+      let expiresAt: number | undefined, returnClock: ReturnClock | undefined;
+      const result = await withTenantTransaction(input.db, resolved, async tx => {
+        const found = await data.discover(tx, resolved.tenantId, proof.id); live();
+        if (!found || found.tokenHash !== proof.hash || found.keyId !== proof.keyId) return unavailable();
+        const issuer = await data.lockIssuer(tx, found, resolved.origin); live(); if (!issuer) return unavailable();
+        let current = await capture(tx, issuer.actor, issuer.student); live();
+        if (current.unknownSlot) return unavailable();
+        const release = await data.release(tx, resolved.tenantId, current.snapshot.serviceSlot as "morning" | "havdalah", found.materialReleaseId); live();
+        const projected = await projection(release); live();
+        const epochs = await data.epochs(tx, resolved.tenantId, found.studentId, found.startVerse); live();
+        const row = await data.lockLink(tx, resolved.tenantId, found.studentId, found.startVerse, proof.id); live();
+        if (!row || row.tokenHash !== proof.hash || row.revokedAt || !epochs || row.readingEpoch !== epochs.reading || row.groupEpoch !== epochs.group) return unavailable();
+        current = await capture(tx, issuer.actor, issuer.student); const head = await honors.latest(tx, issuer.actor); live();
+        const span = ready(current, head, row.startVerse);
+        if (row.contextHash !== current.hash) return unavailable();
+        const result = validate.bounded(Object.freeze({ ok: true as const, schemaVersion: 1 as const, student: Object.freeze({ firstName: issuer.student.firstName, ceremonyDate: issuer.student.ceremonyDate }), aliyah: span, material: projected, expiresAt: row.expiresAt.toISOString() }));
+        const monotonicStart = performance.now(), instant = await data.now(tx); live();
+        expiresAt = row.expiresAt.getTime(); returnClock = { databaseNow: instant, monotonicStart };
+        if (expiresAt <= instant) return unavailable(); return result;
+      });
+      const remainingMs = returnBarrier(request, undefined, expiresAt, returnClock);
+      if (remainingMs === undefined) return unavailable();
+      return transport ? Object.freeze({ dto: result, remainingMs }) : result;
+    } catch { return unavailable(); }
+  }
+
+  return Object.freeze({
+    read: (request: Request, token: unknown) => readGuest(request, token, false),
+    readForTransport: (request: Request, token: unknown) => readGuest(request, token, true),
+    mutate: (request: Request, selected: Selection, write: unknown) => mutate(request, selected, write, false),
     receipt: (request: Request, selected: Selection, write: unknown) => mutate(request, selected, write, true),
     /** Private management metadata, not a validity claim and never a guest DTO.
      * A stale/expired present credential still requires explicit reissue/revoke. */
@@ -122,38 +165,6 @@ export function createHonoreeService<Q extends PgQueryResultHKT>(input: { db: Ac
       });
       returnBarrier(request, sessionExpiresAt);
       return result;
-    },
-    async read(original: Request, token: unknown) {
-      try {
-        const request = { url: original.url, method: original.method, signal: original.signal, headers: new Headers(original.headers) };
-        const live = () => { if (request.signal?.aborted) return unavailable(); };
-        live(); if (request.headers.has("cookie") || request.headers.has("authorization") || request.headers.has("X-Practice-Context")) return unavailable();
-        const resolved = await resolveTenantHost(input.db, request, input.deployment); live();
-        if (resolved.origin !== input.origin) return unavailable();
-        const proof = tokenScope(resolved.tenantId).verify(token);
-        let expiresAt: number | undefined, returnClock: ReturnClock | undefined;
-        const result = await withTenantTransaction(input.db, resolved, async tx => {
-          const found = await data.discover(tx, resolved.tenantId, proof.id); live();
-          if (!found || found.tokenHash !== proof.hash || found.keyId !== proof.keyId) return unavailable();
-          const issuer = await data.lockIssuer(tx, found, resolved.origin); live(); if (!issuer) return unavailable();
-          let current = await capture(tx, issuer.actor, issuer.student); live();
-          if (current.unknownSlot) return unavailable();
-          const release = await data.release(tx, resolved.tenantId, current.snapshot.serviceSlot as "morning" | "havdalah", found.materialReleaseId); live();
-          const projected = await projection(release); live();
-          const epochs = await data.epochs(tx, resolved.tenantId, found.studentId, found.startVerse); live();
-          const row = await data.lockLink(tx, resolved.tenantId, found.studentId, found.startVerse, proof.id); live();
-          if (!row || row.tokenHash !== proof.hash || row.revokedAt || !epochs || row.readingEpoch !== epochs.reading || row.groupEpoch !== epochs.group) return unavailable();
-          current = await capture(tx, issuer.actor, issuer.student); const head = await honors.latest(tx, issuer.actor); live();
-          const span = ready(current, head, row.startVerse);
-          if (row.contextHash !== current.hash) return unavailable();
-          const result = validate.bounded(Object.freeze({ ok: true as const, schemaVersion: 1 as const, student: Object.freeze({ firstName: issuer.student.firstName, ceremonyDate: issuer.student.ceremonyDate }), aliyah: span, material: projected, expiresAt: row.expiresAt.toISOString() }));
-          const monotonicStart = performance.now(), instant = await data.now(tx); live();
-          expiresAt = row.expiresAt.getTime(); returnClock = { databaseNow: instant, monotonicStart };
-          if (expiresAt <= instant) return unavailable(); return result;
-        });
-        returnBarrier(request, undefined, expiresAt, returnClock);
-        return result;
-      } catch { return unavailable(); }
     },
   });
 }
