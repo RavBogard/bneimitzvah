@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSy
 import { type Assigned, type Reading, type ReadingMode, type Student } from "./api";
 import { statusOf, useWorkspace, useWorkspaceModal, WorkspaceLink } from "./provider";
 import { PortalRequestError } from "../api";
+import type { DeparturePurpose } from "./departure-guards";
 import { quietReadingAuthority } from "./quiet-refresh";
 import { icons } from "./study/lift";
 import { ReadingEditor } from "./reading-editor";
@@ -181,7 +182,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const tabPanel = (value: PageTab, children: ReactNode) => tabbed ? <div ref={node => { panels.current[value] = node; }} role={tabsShown ? "tabpanel" : undefined} id={panelId(value)} aria-labelledby={tabsShown ? tabId(value) : undefined} className="page-tab-panel" hidden={tabsShown && tab !== value}>{children}</div> : children;
   // Reading actions run from the Reading tab. If a draft prompt brought another tab
   // forward and the tutor chose to continue, return to the reading they asked for.
-  const guardReading = useCallback(async () => { const leave = await guardDeparture(); if (leave && tabbed) setTab("reading"); return leave; }, [guardDeparture, tabbed]);
+  const guardReading = useCallback(async (purpose?: DeparturePurpose) => { const leave = await guardDeparture(purpose); if (leave && tabbed) setTab("reading"); return leave; }, [guardDeparture, tabbed]);
   const startReading = () => {
     setTab("reading");
     if (lift.current) lift.current(0);
@@ -206,7 +207,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
           <p className="hero-date"><time dateTime={student.ceremonyDate}>{countdown!.label}</time>{countdown!.phrase && <span className="hero-days">{countdown!.phrase}</span>}</p>
           <button type="button" className="hero-icon" aria-label="Refresh reading" onClick={() => {
             const target = studyDenied, turn = sequence.current;
-            void guardReading().then(leave => { if (leave && environment.current.studyDenied === target && sequence.current === turn && !abort.current?.signal.aborted) setRetry(value => value + 1); });
+            // Explicit reload retains translation drafts; only Sources must settle before their owners are replaced.
+            void guardReading("sources").then(leave => { if (leave && environment.current.studyDenied === target && sequence.current === turn && !abort.current?.signal.aborted) setRetry(value => value + 1); });
           }}>{refreshIcon}</button>
         </div>
         {readings.length === 0 ? <div className="reading-empty"><h3 className="hero-reference hero-reference-empty">No reading has been assigned yet</h3><p className="hero-meta">{staff ? "Choose the verses this student will read." : "Your tutor or rabbi will add your verses here."}</p>

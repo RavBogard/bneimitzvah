@@ -1,4 +1,5 @@
 "use client";
+import { createDepartureGuards, type DeparturePurpose } from "./departure-guards";
 
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -43,8 +44,8 @@ type Workspace = {
   serviceAuthorityFailed(status: number): void;
   registerWork(value: WorkLifecycle): () => void;
   completeWork(value: WorkLifecycle): void;
-  registerDeparture(guard: () => Promise<boolean>): () => void;
-  guardDeparture(): Promise<boolean>;
+  registerDeparture(guard: () => Promise<boolean>, purpose?: DeparturePurpose): () => void;
+  guardDeparture(purpose?: DeparturePurpose): Promise<boolean>;
   registerReload(reload: () => Promise<void>): () => void;
   registerQuiet(verify: (signal: AbortSignal) => Promise<boolean>): () => void;
   /** True while access is being checked or has failed: the workspace is hidden. */
@@ -81,14 +82,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const binding = useRef<string | null>(null), reloaders = useRef(new Set<ReloadRegistration>());
   const quiet = useRef<ReturnType<typeof createQuietRefresh> | null>(null);
   const quietScopes = useRef(new Set<(signal: AbortSignal) => Promise<boolean>>()), quietRevision = useRef(0);
-  const work = useRef(new Set<WorkLifecycle>()), departures = useRef(new Set<() => Promise<boolean>>());
+  const work = useRef(new Set<WorkLifecycle>()), departures = useRef(createDepartureGuards());
   const completeWork = useCallback((value: WorkLifecycle) => { if (!checkingRef.current && work.current.has(value)) value.reveal(); }, []);
   const registerWork = useCallback((value: WorkLifecycle) => { work.current.add(value); return () => {
     if (value.hasUnsaved()) setWorkNotice("The view changed unexpectedly. Unsent work in the previous view was discarded; an unconfirmed request may have saved. Work cannot be restored after leaving the tab.");
     work.current.delete(value);
   }; }, []);
-  const registerDeparture = useCallback((guard: () => Promise<boolean>) => { departures.current.add(guard); return () => { departures.current.delete(guard); }; }, []);
-  const guardDeparture = useCallback(async () => { for (const guard of departures.current) if (!await guard()) return false; return true; }, []);
+  const registerDeparture = useCallback((guard: () => Promise<boolean>, purpose?: DeparturePurpose) => departures.current.register(guard, purpose), []);
+  const guardDeparture = useCallback((purpose?: DeparturePurpose) => departures.current.check(purpose), []);
   const clearWork = useCallback(() => { work.current.forEach(value => value.clear()); }, []);
   const registerReload = useCallback((reload: () => Promise<void>) => { const registration = { reload }; reloaders.current.add(registration); return () => { reloaders.current.delete(registration); }; }, []);
   const registerQuiet = useCallback((verify: (signal: AbortSignal) => Promise<boolean>) => {

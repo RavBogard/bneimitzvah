@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
+import { createDepartureGuards } from "../../src/components/portal/workspace/departure-guards";
 import type { Assigned } from "../../src/components/portal/workspace/api";
 import { SourceClientError, type CurrentSources, type SourceAssignmentClient, type SourceCommit, type SourceIntent, type SourcePage } from "../../src/components/portal/workspace/study/sources/api";
 import { createSourcePanelLifetime, refreshSourceReading, SourcesPanel } from "../../src/components/portal/workspace/study/sources/panel";
@@ -68,4 +69,27 @@ it("renders distinct dirty/uncertain departure semantics without promising rollb
   const render = (review: SourceDeparture) => renderToStaticMarkup(createElement(SourceDepartureReview, { review, onKeep() {}, onLeave() {} }));
   const dirtyHtml = render({ kind: "dirty", actions: ["keep-editing", "discard"] }), uncertain = render({ kind: "uncertain", actions: ["stay", "abandon"], saveMayComplete: true });
   expect(dirtyHtml).toContain("Keep working"); expect(dirtyHtml).toContain("Discard changes"); expect(uncertain).toContain("Leave without confirming"); expect(uncertain).toContain("may still complete"); expect(uncertain).not.toMatch(/UUID|COMMIT|rollback|cancelled/i);
+});
+
+it("same-reading refresh guards Sources only while ordinary navigation still reviews every unsaved participant", async () => {
+  const guards = createDepartureGuards(), retainedWork = vi.fn(async () => false), retainedService = vi.fn(async () => true);
+  guards.register(retainedWork); guards.register(retainedService);
+  const sources = await dirty(), removeSource = guards.register(sources.session.guard, "sources"), lifetime = { current: sources.session }, refresh = vi.fn(async () => undefined);
+  const declined = refreshSourceReading(lifetime, () => guards.check("sources"), refresh);
+  expect(sources.onReview).toHaveBeenLastCalledWith({ kind: "dirty", actions: ["keep-editing", "discard"] });
+  sources.session.keep(); expect(await declined).toBe(false); expect(refresh).not.toHaveBeenCalled(); expect(retainedWork).not.toHaveBeenCalled(); expect(retainedService).not.toHaveBeenCalled();
+  const approved = refreshSourceReading(lifetime, () => guards.check("sources"), refresh); sources.session.leave(); expect(await approved).toBe(true); expect(refresh).toHaveBeenCalledOnce(); expect(retainedWork).not.toHaveBeenCalled();
+  expect(await guards.check()).toBe(false); expect(retainedWork).toHaveBeenCalledOnce(); expect(retainedService).not.toHaveBeenCalled();
+  removeSource(); sources.session.dispose(); retainedWork.mockResolvedValue(true);
+  expect(await guards.check()).toBe(true); expect(retainedService).toHaveBeenCalledOnce();
+  expect(await guards.check("sources")).toBe(true); expect(retainedWork).toHaveBeenCalledTimes(2);
+});
+it("Sources-only refresh preserves uncertain-save review and abandons without consulting retained work", async () => {
+  const write = held<SourceCommit>(), entered = held<SourceIntent>(), sources = await dirty(fixture(api({ write: vi.fn(intent => { entered.resolve(intent); return write.promise; }) })));
+  const pending = sources.session.owner.save(), original = await entered.promise, guards = createDepartureGuards(), ordinary = vi.fn(async () => false), refresh = vi.fn(async () => undefined);
+  guards.register(ordinary); guards.register(sources.session.guard, "sources");
+  const attempt = refreshSourceReading({ current: sources.session }, () => guards.check("sources"), refresh);
+  expect(sources.onReview).toHaveBeenLastCalledWith({ kind: "uncertain", actions: ["stay", "abandon"], saveMayComplete: true });
+  sources.session.leave(); expect(await attempt).toBe(true); expect(ordinary).not.toHaveBeenCalled(); expect(refresh).toHaveBeenCalledOnce();
+  write.resolve(commit(original)); expect(await pending).toBe(false); expect(sources.session.owner.state.lastCommit).toBeNull(); sources.session.dispose();
 });

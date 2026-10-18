@@ -58,7 +58,7 @@ export function SourcesPanel({ scopeKey, baseline, kind, offset, onRefreshReadin
       setState(value);
     } });
     lifetime.current = current; setState(current.owner.state);
-    const removeDeparture = registerDeparture(current.guard), removeWork = registerWork(current);
+    const removeDeparture = registerDeparture(current.guard, "sources"), removeWork = registerWork(current);
     return () => { active = false; current.dispose(); removeDeparture(); removeWork(); if (lifetime.current === current) lifetime.current = null; labels.current.clear(); };
     // baseline is captured by the owner identified by the complete parent scope key.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -95,7 +95,7 @@ export function SourcesPanel({ scopeKey, baseline, kind, offset, onRefreshReadin
       </>}
       {current.phase === "unavailable" && <p role="status">The assigned sources couldn’t be loaded. <button type="button" className={styles.link} onClick={() => void latest()}>Try sources again</button></p>}
       {current.phase === "refresh-required" && <p role="status">Your save was confirmed, and the assigned sources have changed again. <button type="button" className={styles.link} onClick={() => void latest()}>Load latest assigned sources</button></p>}
-      {current.phase === "conflict" && <p role="status">{current.error === "stale-revision" ? "The reading changed. Review the reading before choosing sources." : "The source choices couldn’t be saved. Review the latest assigned sources before continuing."} <button type="button" className={styles.link} onClick={() => current.error === "stale-revision" ? void refreshSourceReading(lifetime, guardDeparture, onRefreshReading) : void latest()}>{current.error === "stale-revision" ? "Refresh reading" : "Review latest assigned sources"}</button></p>}
+      {current.phase === "conflict" && <p role="status">{current.error === "stale-revision" ? "The reading changed. Review the reading before choosing sources." : "The source choices couldn’t be saved. Review the latest assigned sources before continuing."} <button type="button" className={styles.link} onClick={() => current.error === "stale-revision" ? void refreshSourceReading(lifetime, () => guardDeparture("sources"), onRefreshReading) : void latest()}>{current.error === "stale-revision" ? "Refresh reading" : "Review latest assigned sources"}</button></p>}
       {(unknown || current.phase === "saving") && <div className={styles.notice} role="status"><p>{current.phase === "saving" ? "Saving sources…" : current.phase === "checking" ? "Checking the save…" : "Save not confirmed. It may still complete. Check this save before making another change."}</p>
         {current.phase === "unknown" && <div className={styles.actions}><button type="button" onClick={() => void lifetime.current?.owner.reconcile()}>Check save</button><button type="button" onClick={() => void lifetime.current?.owner.retryExact()}>Retry same save</button></div>}
         <p className={styles.note}>Closing or reloading this tab can’t confirm the save.</p>
