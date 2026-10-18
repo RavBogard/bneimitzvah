@@ -89,19 +89,82 @@ it("review clear plus a failed download cannot resurrect previously verified cac
 it("review newest selection owns held native metadata and suspension cannot resume it late", async () => {
   const r = rig(undefined, false), load = vi.fn(async (index: number) => resolved(index)), owner = pageOwner(r, load);
   const old = owner.select(0, 0); await vi.waitFor(() => expect(r.media).toHaveLength(1), { interval: 1 });
-  const latest = owner.select(1, 1); await vi.waitFor(() => expect(r.media).toHaveLength(2), { interval: 1 });
-  r.media[0].dispatchEvent(new Event("loadedmetadata")); r.media[1].dispatchEvent(new Event("loadedmetadata")); await Promise.all([old, latest]);
-  expect(r.media[0].play).not.toHaveBeenCalled(); expect(r.media[1].play).toHaveBeenCalledTimes(1); expect(r.media[1].currentTime).toBe(7);
-  owner.suspend(); const pending = owner.play(); await vi.waitFor(() => expect(r.media).toHaveLength(3), { interval: 1 }); owner.suspend(); await pending;
-  r.media[2].dispatchEvent(new Event("loadedmetadata")); await tick(); expect(r.media[2].play).not.toHaveBeenCalled(); expect(r.media[2].src).toBe("");
+  const latest = owner.select(1, 1); await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2), { interval: 1 });
+  expect(r.media).toHaveLength(1); r.media[0].dispatchEvent(new Event("loadedmetadata")); await Promise.all([old, latest]);
+  expect(r.media[0].play).toHaveBeenCalledTimes(1); expect(r.media[0].currentTime).toBe(7);
+  owner.suspend(); const pending = owner.play(); await vi.waitFor(() => expect(r.media).toHaveLength(2), { interval: 1 }); owner.suspend(); await pending;
+  r.media[1].dispatchEvent(new Event("loadedmetadata")); await tick(); expect(r.media[1].play).not.toHaveBeenCalled(); expect(r.media[1].src).toBe("");
   expect(load).toHaveBeenCalledTimes(3); expect(r.fetcher).toHaveBeenCalledTimes(1); owner.dispose();
 });
 
 it("review timing hold never silently plays a verse and explicit resume retains passage preferences", async () => {
   const r = rig(), load = vi.fn(async (index: number) => resolved(index, source, index === 0)), owner = pageOwner(r, load);
   await owner.select(0, 0); owner.setSpeed(0.5); owner.setRepeat(true);
-  await owner.select(1, 1); expect(owner.state.timingHeld).toBe(true); expect(r.media[1].play).not.toHaveBeenCalled();
-  owner.suspend(); await owner.play(); expect(owner.state.timingHeld).toBe(true); expect(r.media[2].play).not.toHaveBeenCalled();
+  await owner.select(1, 1); expect(owner.state.timingHeld).toBe(true); expect(r.media).toHaveLength(1); expect(r.media[0].play).toHaveBeenCalledTimes(1);
+  owner.suspend(); await owner.play(); expect(owner.state.timingHeld).toBe(true); expect(r.media[1].play).not.toHaveBeenCalled();
   await owner.select(1, "verse"); expect(owner.state.playback).toMatchObject({ status: "playing", speed: 0.5, repeat: true });
-  expect(r.media[2].currentTime).toBe(6); expect(r.media[2].play).toHaveBeenCalledTimes(1); expect(load).toHaveBeenCalledTimes(3); expect(r.fetcher).toHaveBeenCalledTimes(1); owner.dispose();
+  expect(r.media[1].currentTime).toBe(6); expect(r.media[1].play).toHaveBeenCalledTimes(1); expect(load).toHaveBeenCalledTimes(3); expect(r.fetcher).toHaveBeenCalledTimes(1); owner.dispose();
+});
+
+it("review a disposed verse cannot cancel the same-source owner download or play when that download completes", async () => {
+  const body = gate<Response>(), entered = gate<void>(); let signal: AbortSignal | null | undefined;
+  const r = rig(vi.fn(async (_url, init) => { signal = init?.signal; entered.resolve(); return body.promise; }));
+  const load = vi.fn(async (index: number) => resolved(index)), owner = pageOwner(r, load);
+  const old = owner.select(0, 0); await entered.promise;
+  const latest = owner.select(1, 1); await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2), { interval: 1 });
+  expect(signal?.aborted).toBe(false); expect(r.fetcher).toHaveBeenCalledTimes(1);
+  body.resolve(response()); await Promise.all([old, latest]);
+  expect(r.media).toHaveLength(1); expect(r.media[0].play).toHaveBeenCalledTimes(1); expect(r.media[0].currentTime).toBe(7);
+  owner.dispose(); expect(r.media[0].src).toBe(""); expect(r.revoked).toHaveLength(1);
+});
+
+it("review a previous pending play acknowledgement cannot pause the newer shared-media lease", async () => {
+  const r = rig(), delayed = gate<void>();
+  const native = r.platform.audio!; r.platform.audio = () => { const media = native() as Native; media.play.mockImplementationOnce(() => delayed.promise); return media as ReferenceAudioElement; };
+  const owner = pageOwner(r), old = owner.select(0, 0);
+  await vi.waitFor(() => expect(r.media[0]?.play).toHaveBeenCalledTimes(1), { interval: 1 });
+  await owner.select(1, 1); const paused = r.media[0].pause.mock.calls.length;
+  delayed.resolve(); await old; await tick();
+  expect(r.media).toHaveLength(1); expect(r.media[0].pause).toHaveBeenCalledTimes(paused); expect(owner.state.playback.status).toBe("playing"); expect(r.media[0].currentTime).toBe(7);
+  owner.dispose();
+});
+
+it("review final owner disposal aborts shared preparation and refuses every late media completion", async () => {
+  const body = gate<Response>(), entered = gate<void>(); let signal: AbortSignal | null | undefined;
+  const r = rig(vi.fn(async (_url, init) => { signal = init?.signal; entered.resolve(); return body.promise; })), owner = pageOwner(r);
+  const work = owner.select(0, 0); await entered.promise; owner.dispose(); await work;
+  expect(signal?.aborted).toBe(true); body.resolve(response()); await tick();
+  expect(r.media).toHaveLength(0); expect(r.fetcher).toHaveBeenCalledTimes(1); await owner.select(1, 1); expect(r.media).toHaveLength(0);
+});
+
+it("review queued old playing callbacks cannot pause the new owner's shared media", async () => {
+  const r = rig(), held: (EventListenerOrEventListenerObject | null)[] = [], native = r.platform.audio!;
+  r.platform.audio = () => { const media = native(), add = media.addEventListener.bind(media);
+    vi.spyOn(media,"addEventListener").mockImplementation((name, listener, options) => { if(name==="playing")held.push(listener); add(name,listener,options); }); return media; };
+  const owner = pageOwner(r); await owner.select(0, 0); expect(held).toHaveLength(2); const old = held[1];
+  await owner.select(1, 1); const paused = r.media[0].pause.mock.calls.length;
+  if(typeof old==="function")old.call(r.media[0],new Event("playing"));else old?.handleEvent(new Event("playing"));
+  expect(r.media[0].pause).toHaveBeenCalledTimes(paused); expect(owner.state.playback.status).toBe("playing");owner.dispose();
+});
+
+it("review warmed media never bypasses a new verse authority refusal or duration/text timing checks", async () => {
+  const r = rig(); let denied = true;
+  const owner = pageOwner(r, async index => { if (index && denied) throw Error("synthetic-denied"); return resolved(index); });
+  await owner.select(0, 0); await owner.select(1, 0);
+  expect(owner.state.playback.status).toBe("error"); expect(r.media[0].play).toHaveBeenCalledTimes(1); expect(r.fetcher).toHaveBeenCalledTimes(1);
+  denied = false; r.media[0].duration = 5; await owner.select(1, 0);
+  expect(owner.state.playback.status).toBe("error"); expect(r.media[0].play).toHaveBeenCalledTimes(1);
+  r.media[0].duration = 30; await owner.select(1, 0);
+  expect(owner.state.playback.status).toBe("playing"); expect(r.media).toHaveLength(1); expect(r.media[0].play).toHaveBeenCalledTimes(2); owner.dispose();
+});
+
+it("review exact source hash and byte-count changes cannot reuse already prepared media", async () => {
+  for (const changed of ["hash", "bytes"] as const) {
+    const other = changed === "hash" ? new Uint8Array([22,34,55]) : new Uint8Array([21,34,55,89]);
+    const next = { ...source, sha256: sha(other), bytes: other.length };
+    const r = rig(vi.fn<typeof fetch>().mockImplementationOnce(async () => response()).mockImplementation(async () => response(other)));
+    const owner = pageOwner(r, async index => resolved(index, index ? next : source));
+    await owner.select(0, 0); await owner.select(1, 1);
+    expect(r.fetcher).toHaveBeenCalledTimes(2); expect(r.media).toHaveLength(2); expect(r.media[0].src).toBe(""); expect(r.media[1].play).toHaveBeenCalledTimes(1); owner.dispose();
+  }
 });

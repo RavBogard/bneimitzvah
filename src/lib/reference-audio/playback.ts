@@ -106,11 +106,91 @@ export type ReferencePlaybackOptions = {
   load(signal: AbortSignal): Promise<ReferenceResolution>;
   ref: string; readingText: string; wordCount: number;
   assetReuse?: ReferenceAudioReuse;
+  mediaReuse?: ReferenceMediaReuse;
   onState?(state: ReferencePlaybackState): void; onActiveWord?(index: number | null): void;
   // Platform seams for deterministic offline tests; no configurable production caps.
   audio?(): ReferenceAudioElement; fetch?: typeof fetch; digest?: typeof sha256;
   createUrl?(blob: Blob): string; revokeUrl?(url: string): void; scheduler?: Scheduler;
 };
+
+type MediaLease = Readonly<{ media: ReferenceAudioElement; active(): boolean; release(): void }>;
+type MediaPlatform = Pick<ReferencePlaybackOptions, "fetch" | "digest" | "audio" | "createUrl" | "revokeUrl">;
+const mediaReuses = new WeakMap<object, (source: ReferenceSource, signal: AbortSignal, platform: MediaPlatform) => Promise<MediaLease>>();
+/** One reading owner, one exact source, one in-flight preparation. Cancelling a
+ * verse's wait does not cancel the owner's shared download. Media is never
+ * authority: every consumer must separately authorize and bind its timeline. */
+export function createReferenceMediaReuse() {
+  type Prepared = { media: ReferenceAudioElement; destroy(): void };
+  type Entry = { key: string; abort: AbortController; work: Promise<Prepared>; prepared?: Prepared };
+  const bytes = createReferenceAudioReuse();
+  let entry: Entry | undefined, claim = 0, leased = false;
+  function reset(clearBytes: boolean) {
+    claim++; leased = false;
+    const old = entry; entry = undefined; old?.abort.abort(); old?.prepared?.destroy();
+    if (clearBytes) bytes.clear();
+  }
+  const capability = Object.freeze({
+    // Background suspension drops native media/pending work, keeping completed
+    // verified bytes only. Final page/authority disposal clears those as well.
+    suspend() { reset(false); }, clear() { reset(true); },
+  });
+  mediaReuses.set(capability, async (value, signal, platform) => {
+    const source = parseReferenceSource(value);
+    if (!source || signal.aborted) throw unavailable();
+    const key = JSON.stringify([source.asset, source.url, source.sha256, source.bytes]);
+    if (entry?.key !== key) {
+      reset(false);
+      const selected: Entry = { key, abort: new AbortController(), work: undefined! };
+      entry = selected;
+      selected.work = (async () => {
+        const ownSignal = selected.abort.signal, end = performance.now() + REFERENCE_PLAYBACK_LIMITS.loadMs;
+        const live = () => { if (ownSignal.aborted || entry !== selected || performance.now() >= end) throw unavailable(); };
+        let prepared: Prepared | undefined;
+        try {
+          const blob = await assetReuses.get(bytes)!(source, ownSignal, platform); live();
+          const url = (platform.createUrl ?? URL.createObjectURL)(blob);
+          let media: ReferenceAudioElement;
+          try { media = (platform.audio ?? (() => new Audio()))(); }
+          catch { (platform.revokeUrl ?? URL.revokeObjectURL)(url); throw unavailable(); }
+          const noOwner = () => { if (entry !== selected || !leased) media.pause(); };
+          media.addEventListener("playing", noOwner);
+          let destroyed = false;
+          prepared = { media, destroy() {
+            if (destroyed) return; destroyed = true;
+            media.pause(); media.removeEventListener("playing", noOwner); media.removeAttribute("src"); media.load();
+            (platform.revokeUrl ?? URL.revokeObjectURL)(url);
+          } };
+          selected.prepared = prepared; live();
+          const metadata = new Promise<void>((resolve, reject) => {
+            const done = () => { cleanup(); resolve(); }, failed = () => { cleanup(); reject(unavailable()); };
+            const timer = setTimeout(failed, Math.max(1, Math.min(REFERENCE_PLAYBACK_LIMITS.metadataMs, end - performance.now())));
+            const cleanup = () => { clearTimeout(timer); media.removeEventListener("loadedmetadata", done); media.removeEventListener("error", failed); ownSignal.removeEventListener("abort", failed); };
+            media.addEventListener("loadedmetadata", done); media.addEventListener("error", failed); ownSignal.addEventListener("abort", failed, { once: true });
+            if (ownSignal.aborted) failed();
+          });
+          media.preload = "metadata"; media.src = url; media.load();
+          await metadata; live();
+          if (!Number.isFinite(media.duration) || media.duration <= 0) throw unavailable();
+          selected.prepared = prepared; return prepared;
+        } catch {
+          prepared?.destroy(); if (entry === selected) { entry = undefined; leased = false; }
+          throw unavailable();
+        }
+      })();
+      // A download may outlive its cancelled verse waiters. Keep failure
+      // observed even when nobody is waiting; a failed entry is not reused.
+      void selected.work.catch(() => {});
+    }
+    const selected = entry!, mine = ++claim; leased = false; selected.prepared?.media.pause();
+    const prepared = await selected.work;
+    if (signal.aborted || entry !== selected || mine !== claim) throw unavailable();
+    leased = true;
+    const active = () => entry === selected && mine === claim && leased;
+    return Object.freeze({ media: prepared.media, active, release() { if (active()) { leased = false; prepared.media.pause(); } } });
+  });
+  return capability;
+}
+export type ReferenceMediaReuse = ReturnType<typeof createReferenceMediaReuse>;
 
 /** One controller owns one authorized study mount. No load or play on creation. */
 export function createReferencePlayback(options: ReferencePlaybackOptions) {
@@ -118,22 +198,25 @@ export function createReferencePlayback(options: ReferencePlaybackOptions) {
   let state: ReferencePlaybackState = Object.freeze({ status: "idle", selection: "verse", repeat: false, speed: 1, speedSupported: false, wordsReady: false, wordCount: 0, retryPlay: false });
   let disposed = false, generation = 0, playGeneration = 0, wantsPlay = false, activeWord: number | null = null;
   let abort: AbortController | undefined, audio: ReferenceAudioElement | undefined, timeline: ReferenceTimeline | null = null, url: string | undefined;
+  let lease: MediaLease | undefined;
   let frame: number | undefined, timer: ReturnType<typeof setTimeout> | undefined;
   let detach = () => {};
   const publish = (patch: Partial<ReferencePlaybackState>) => { if (!disposed) { state = Object.freeze({ ...state, ...patch }); options.onState?.(state); } };
   const word = (index: number | null) => { if (activeWord !== index) { activeWord = index; options.onActiveWord?.(index); } };
   const stopClock = () => { if (frame !== undefined) scheduler.cancelFrame(frame); if (timer !== undefined) scheduler.clearTimer(timer); frame = undefined; timer = undefined; };
   const range = () => state.selection === "verse" ? referenceVerseLoop(timeline) : referenceWordLoop(timeline, state.selection);
-  function pause() { wantsPlay = false; playGeneration++; stopClock(); audio?.pause(); word(null); if (state.status === "playing") publish({ status: "ready" }); }
+  const ownsMedia = () => !lease || lease.active();
+  function pause() { wantsPlay = false; playGeneration++; stopClock(); if (ownsMedia()) audio?.pause(); word(null); if (state.status === "playing") publish({ status: "ready" }); }
   function clearMedia() {
     pause(); detach(); detach = () => {};
-    if (audio) { audio.removeAttribute("src"); audio.load(); audio = undefined; }
+    if (lease) { lease.release(); lease = undefined; audio = undefined; }
+    else if (audio) { audio.removeAttribute("src"); audio.load(); audio = undefined; }
     if (url) { (options.revokeUrl ?? URL.revokeObjectURL)(url); url = undefined; }
     timeline = null;
   }
   function sync() {
     stopClock();
-    if (disposed || !audio || !timeline || !wantsPlay) return;
+    if (disposed || !audio || !timeline || !wantsPlay || !ownsMedia()) return;
     const selected = range(); if (!selected) { pause(); return; }
     if (audio.currentTime >= selected.end) {
       if (!state.repeat) { pause(); audio.currentTime = selected.end; return; }
@@ -144,7 +227,7 @@ export function createReferencePlayback(options: ReferencePlaybackOptions) {
     timer = scheduler.timer(sync, Math.max(10, Math.min(1000, (selected.end - audio.currentTime) / state.speed * 1000)));
   }
   async function play() {
-    if (disposed || !audio || !timeline || !["ready", "playing"].includes(state.status)) return;
+    if (disposed || !audio || !timeline || !ownsMedia() || !["ready", "playing"].includes(state.status)) return;
     const media = audio, mine = generation, intent = ++playGeneration, selected = range();
     if (!selected) return;
     wantsPlay = true;
@@ -152,12 +235,13 @@ export function createReferencePlayback(options: ReferencePlaybackOptions) {
     try {
       if (media.currentTime < selected.start || media.currentTime >= selected.end) media.currentTime = selected.start;
       const pending = media.play();
-      void pending.then(() => { if (disposed || media !== audio || !wantsPlay) media.pause(); }, () => {});
+      const mediaLease = lease;
+      void pending.then(() => { if ((!mediaLease || mediaLease.active()) && (disposed || media !== audio || !wantsPlay)) media.pause(); }, () => {});
       await Promise.race([pending, new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(unavailable()), REFERENCE_PLAYBACK_LIMITS.playMs); })]);
-      if (disposed || generation !== mine || playGeneration !== intent) return;
+      if (disposed || generation !== mine || playGeneration !== intent || !ownsMedia()) return;
       publish({ status: "playing", retryPlay: false }); sync();
     } catch {
-      if (disposed || generation !== mine || playGeneration !== intent) return;
+      if (disposed || generation !== mine || playGeneration !== intent || !ownsMedia()) return;
       pause(); publish({ status: "ready", retryPlay: true });
     } finally { if (timeout) clearTimeout(timeout); }
   }
@@ -190,20 +274,29 @@ export function createReferencePlayback(options: ReferencePlaybackOptions) {
       }
       const current = createReferenceTimeline(resolution.verse, { ref: options.ref, readingTextSha256: hash, wordCount: options.wordCount });
       if (!current || current.asset !== resolution.source.asset) { publish({ status: "unavailable" }); return; }
-      const reuse = options.assetReuse === undefined ? undefined : assetReuses.get(options.assetReuse);
-      if (options.assetReuse !== undefined && !reuse) throw unavailable();
-      const blob = await awaitLive(reuse ? reuse(resolution.source, signal, { fetch: options.fetch, digest: options.digest }) : downloadReferenceAudio(resolution.source, signal, { fetch: options.fetch, digest: options.digest }));
-      live();
-      timeline = current; url = (options.createUrl ?? URL.createObjectURL)(blob);
-      audio = (options.audio ?? (() => new Audio()))();
+      if (options.mediaReuse !== undefined) {
+        const acquire = mediaReuses.get(options.mediaReuse); if (!acquire) throw unavailable();
+        const pending = acquire(resolution.source, signal, options);
+        void pending.then(value => { if (disposed || generation !== mine || signal.aborted) value.release(); }, () => {});
+        lease = await awaitLive(pending); audio = lease.media;
+      } else {
+        const reuse = options.assetReuse === undefined ? undefined : assetReuses.get(options.assetReuse);
+        if (options.assetReuse !== undefined && !reuse) throw unavailable();
+        const blob = await awaitLive(reuse ? reuse(resolution.source, signal, { fetch: options.fetch, digest: options.digest }) : downloadReferenceAudio(resolution.source, signal, { fetch: options.fetch, digest: options.digest }));
+        live(); url = (options.createUrl ?? URL.createObjectURL)(blob); audio = (options.audio ?? (() => new Audio()))();
+      }
+      timeline = current;
       const media = audio;
-      const event = () => { if (!disposed && generation === mine && audio === media) sync(); };
-      const ended = () => { if (!disposed && generation === mine && audio === media) { sync(); if (wantsPlay && state.repeat) void play(); } };
-      const error = () => { if (!disposed && generation === mine && audio === media) { pause(); publish({ status: "error" }); } };
-      const playing = () => { if (disposed || generation !== mine || audio !== media || !wantsPlay) media.pause(); };
+      const boundLease = lease, ownsBoundMedia = () => !boundLease || boundLease.active();
+      const event = () => { if (!disposed && generation === mine && audio === media && ownsBoundMedia()) sync(); };
+      const ended = () => { if (!disposed && generation === mine && audio === media && ownsBoundMedia()) { sync(); if (wantsPlay && state.repeat) void play(); } };
+      const error = () => { if (!disposed && generation === mine && audio === media && ownsBoundMedia()) { pause(); publish({ status: "error" }); } };
+      const playing = () => { if (ownsBoundMedia() && (disposed || generation !== mine || audio !== media || !wantsPlay)) media.pause(); };
       const events = [["timeupdate", event], ["seeked", event], ["ratechange", event], ["ended", ended], ["error", error], ["playing", playing]] as const;
       for (const [name, listener] of events) media.addEventListener(name, listener);
       detach = () => { for (const [name, listener] of events) media.removeEventListener(name, listener); };
+      if (!lease) {
+      if (!url) throw unavailable();
       const metadata = new Promise<void>((resolve, reject) => {
         const done = () => { cleanup(); resolve(); }, failed = () => { cleanup(); reject(unavailable()); };
         const timer = setTimeout(failed, REFERENCE_PLAYBACK_LIMITS.metadataMs);
@@ -212,6 +305,7 @@ export function createReferencePlayback(options: ReferencePlaybackOptions) {
       });
       media.preload = "metadata"; media.src = url; media.load();
       await awaitLive(metadata);
+      }
       if (!Number.isFinite(media.duration) || media.duration + 0.01 < current.clip.end) throw unavailable();
       const speedSupported = typeof media.preservesPitch === "boolean";
       if (speedSupported) media.preservesPitch = true;
@@ -223,7 +317,7 @@ export function createReferencePlayback(options: ReferencePlaybackOptions) {
     } finally { if (timeout) clearTimeout(timeout); }
   }
   function select(selection: "verse" | number) {
-    if (disposed || !audio || !timeline) return;
+    if (disposed || !audio || !timeline || !ownsMedia()) return;
     const selected = selection === "verse" ? referenceVerseLoop(timeline) : referenceWordLoop(timeline, selection);
     if (!selected) return;
     publish({ selection }); audio.currentTime = selected.start; sync();
@@ -232,7 +326,7 @@ export function createReferencePlayback(options: ReferencePlaybackOptions) {
     get state() { return state; }, load, play, pause, select,
     setRepeat(repeat: boolean) { if (!disposed && typeof repeat === "boolean") publish({ repeat }); },
     setSpeed(speed: number) {
-      if (disposed || !audio || !state.speedSupported || !Number.isFinite(speed) || speed < 0.5 || speed > 1.25) return;
+      if (disposed || !audio || !ownsMedia() || !state.speedSupported || !Number.isFinite(speed) || speed < 0.5 || speed > 1.25) return;
       audio.preservesPitch = true; audio.playbackRate = speed; publish({ speed }); sync();
     },
     dispose() { if (disposed) return; disposed = true; generation++; abort?.abort(); clearMedia(); word(null); },

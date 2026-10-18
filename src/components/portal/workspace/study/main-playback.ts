@@ -1,4 +1,4 @@
-import { createReferenceAudioReuse, createReferencePlayback, type ReferencePlayback, type ReferencePlaybackOptions, type ReferencePlaybackState } from "../../../../lib/reference-audio/playback";
+import { createReferenceMediaReuse, createReferencePlayback, type ReferencePlayback, type ReferencePlaybackOptions, type ReferencePlaybackState } from "../../../../lib/reference-audio/playback";
 import type { ReferenceResolution } from "../../../../lib/reference-audio/source";
 export type ReadingSelection = "verse" | number;
 export type ReadingPlaybackState = Readonly<{ verse: number | null; selection: ReadingSelection; playback: ReferencePlaybackState; timingHeld: boolean; suspended: boolean }>;
@@ -12,7 +12,7 @@ export function createReadingPlayback(input: {
   onActiveWord(value: { verse: number; index: number } | null): void;
   platform?: Pick<ReferencePlaybackOptions, "audio" | "fetch" | "digest" | "createUrl" | "revokeUrl" | "scheduler">;
 }) {
-  const verses = input.verses.map(verse => Object.freeze({ ...verse })), assetReuse = createReferenceAudioReuse();
+  const verses = input.verses.map(verse => Object.freeze({ ...verse })), mediaReuse = createReferenceMediaReuse();
   let current: ReferencePlayback | undefined, currentVerse: number | null = null, loading: Promise<void> | undefined, closed = false, turn = 0, preferredSpeed = 1, preferredRepeat = false;
   let state: ReadingPlaybackState = Object.freeze({ verse: null, selection: "verse", playback: idle, timingHeld: false, suspended: false });
   const publish = (patch: Partial<ReadingPlaybackState>) => { if (!closed) { state = Object.freeze({ ...state, ...patch }); input.onState(state); } };
@@ -22,7 +22,7 @@ export function createReadingPlayback(input: {
     if (currentVerse !== index || !current) {
       current?.dispose(); current = undefined; loading = undefined; input.onActiveWord(null); currentVerse = index;
       publish({ verse: index, selection, playback: idle, timingHeld: false, suspended: false });
-      const owner = createReferencePlayback({ ...input.platform, ...verses[index], assetReuse,
+      const owner = createReferencePlayback({ ...input.platform, ...verses[index], mediaReuse,
         load: signal => input.load(index, signal),
         onState: playback => { if (!closed && current === owner) publish({ playback }); },
         onActiveWord: word => { if (!closed && current === owner) input.onActiveWord(word === null ? null : { verse: index, index: word }); },
@@ -44,7 +44,7 @@ export function createReadingPlayback(input: {
     await owner.play();
   }
   function suspend() {
-    if (closed) return; turn++; current?.dispose(); current = undefined; currentVerse = null; loading = undefined;
+    if (closed) return; turn++; current?.dispose(); mediaReuse.suspend(); current = undefined; currentVerse = null; loading = undefined;
     input.onActiveWord(null); publish({ playback: idle, timingHeld: false, suspended: true });
   }
   return Object.freeze({ get state() { return state; }, select,
@@ -52,6 +52,6 @@ export function createReadingPlayback(input: {
     pause() { if (!closed) { turn++; current?.pause(); } }, suspend,
     setRepeat(value: boolean) { if (!closed && !state.timingHeld && typeof value === "boolean") { preferredRepeat = value; current?.setRepeat(value); } },
     setSpeed(value: number) { if (!closed && current?.state.speedSupported && Number.isFinite(value) && value >= 0.5 && value <= 1.25) { preferredSpeed = value; current.setSpeed(value); } },
-    dispose() { if (closed) return; suspend(); closed = true; assetReuse.clear(); },
+    dispose() { if (closed) return; suspend(); closed = true; mediaReuse.clear(); },
   });
 }

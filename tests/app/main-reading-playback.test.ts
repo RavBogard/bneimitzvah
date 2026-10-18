@@ -41,9 +41,9 @@ it("plays a clicked word in one explicit request, reuses same-verse media and ad
   await f.owner.select(0, 1); expect(f.media).toHaveLength(1); expect(f.media[0].play).toHaveBeenCalledTimes(1); expect(f.media[0].currentTime).toBe(12);
   await f.owner.select(0, 2); expect(f.load).toHaveBeenCalledTimes(1); expect(f.fetcher).toHaveBeenCalledTimes(1); expect(f.media[0].currentTime).toBe(14);
   f.owner.setSpeed(0.5); f.owner.setRepeat(true);
-  await f.owner.select(1, 0); expect(f.media[1].playbackRate).toBe(0.5); expect(f.owner.state.playback.repeat).toBe(true); expect(f.load).toHaveBeenCalledTimes(2); expect(f.fetcher).toHaveBeenCalledTimes(1); expect(f.media).toHaveLength(2);
-  expect(f.media[0].src).toBe(""); expect(f.media[0].pause).toHaveBeenCalled(); expect(f.media[1].currentTime).toBe(20.5); expect(f.media[1].play).toHaveBeenCalledTimes(1);
-  f.owner.dispose(); expect(f.media[1].src).toBe(""); expect(f.revoked).toHaveLength(2);
+  await f.owner.select(1, 0); expect(f.media[0].playbackRate).toBe(0.5); expect(f.owner.state.playback.repeat).toBe(true); expect(f.load).toHaveBeenCalledTimes(2); expect(f.fetcher).toHaveBeenCalledTimes(1); expect(f.media).toHaveLength(1);
+  expect(f.media[0].src).not.toBe(""); expect(f.media[0].pause).toHaveBeenCalled(); expect(f.media[0].currentTime).toBe(20.5); expect(f.media[0].play).toHaveBeenCalledTimes(3);
+  f.owner.dispose(); expect(f.media[0].src).toBe(""); expect(f.revoked).toHaveLength(1);
 });
 it("latest intent wins both held cross-verse authority and shared same-verse download without late play", async () => {
   const gate = deferred<ReferenceResolution>(), f = fixture(vi.fn(index => index ? Promise.resolve(resolution(1)) : gate.promise));
@@ -107,7 +107,7 @@ it("keeps speed preference through an unsupported native capability without clai
   const f = fixture(); await f.owner.select(0, 0); f.owner.setSpeed(0.5); f.owner.setRepeat(true);
   const native = f.platform.audio; let count = 0;
   // Construct a separate owner with a capability that disappears on the second verse.
-  const owner = createReadingPlayback({ verses: [0,1].map(index => ({ ref: `Genesis 1:${index + 1}`, readingText: text, wordCount: 3 })), load: async index => resolution(index), onState() {}, onActiveWord() {},
+  const owner = createReadingPlayback({ verses: [0,1].map(index => ({ ref: `Genesis 1:${index + 1}`, readingText: text, wordCount: 3 })), load: async index => { const value = resolution(index); return index ? { ...value, source: { ...source, url: source.url.replace("main", "unsupported") } } : value; }, onState() {}, onActiveWord() {},
     platform: { ...f.platform, audio() { const media = native(); if (++count === 2) Object.defineProperty(media, "preservesPitch", { value: undefined }); return media; } } });
   await owner.select(0, 0); owner.setSpeed(0.75); owner.setRepeat(true); await owner.select(1, 0);
   expect(owner.state.playback).toMatchObject({ speed: 1, speedSupported: false, repeat: true });
