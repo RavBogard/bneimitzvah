@@ -35,3 +35,13 @@ Local isolated checks: **9/9** new PGlite adversarial cases pass (4.19s); the ex
 Ignored evidence: `.local-logs/mcp-delegation-{focused,types,protection}-v1-first.log`, corresponding v2/v3 logs and `mcp-delegation-checks-v*-result.json`. All test children use `isolatedEnv`; each result records home cleanup. No provider, production DB, private cache, M checkout, port or native helper was used. Root's working MCP spec and independent critique are preserved outside the commit.
 
 Final repository protection passes **3/3** (45.47s), and the whitespace diff check passes. Source is held for independent review; no push, production apply or deployment is included.
+
+### Independent review correction: exact IDs and public session lookup
+
+Review of checkpoint `4e02a0c093e594afeb62dcd0b2717918a798406f` found two genuine gaps: nonempty trimmed content still admitted surrounding spaces, and invoker-security `search_path=pg_catalog,public` did not prevent an implicitly searched temporary `session` relation from shadowing the real expiry lookup. The focused repair adds exact `id=btrim(id)` checks for both client and consent IDs in SQL/Drizzle and qualifies the guard's only relation lookup as `public.session`. No elevated privileges or broader grants are added.
+
+Existing tests now reject padded nonempty IDs. A tenth PGlite case uses the unchanged restricted-role access fixture: it shortens the real public session, creates a same-name TEMP relation with a later forged expiry, proves both lookup values and actual `portal_runtime` identity, then requires a direct valid-FK SQL INSERT beyond the real expiry to fail with23514. It verifies no row remains and a valid insertion still works after transaction rollback removes the temporary relation. The native suite retains four cases and extends its deadline case with the same restricted-role proof; **native remains unrun locally**, with no cluster or permission fixture changes.
+
+Repair focused checks pass **18/18** (ten delegation plus five Google provenance plus three browser-cookie cases), 9.59s; typecheck and whitespace checks pass. Original source/check logs remain preserved. New ignored evidence uses `mcp-delegation-*-repair-v1-first.log` and `mcp-delegation-repair-v1-result.json`. Root's dirty spec/critique and all earlier migrations remain untouched. No push, production operation or connector activation is included.
+
+Repair repository protection passes **3/3** (43.89s); the isolated check home was removed. Independent source review and native execution remain separate gates.

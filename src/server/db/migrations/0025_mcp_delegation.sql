@@ -16,8 +16,8 @@ CREATE TABLE mcp_delegation (
  CONSTRAINT mcp_delegation_grant_role_fk FOREIGN KEY(tenant_id,role_grant_id,role) REFERENCES role_grant(tenant_id,id,role),
  CONSTRAINT mcp_delegation_policy CHECK(role in ('admin','tutor') AND membership_revision>0 AND grant_revision>0 AND scope='portal:read' AND resource='https://beitmitzvah.centralreform.org/api/mcp'),
  CONSTRAINT mcp_delegation_hashes CHECK(pending_cookie_hash ~ '^[a-f0-9]{64}$' AND request_fingerprint ~ '^[a-f0-9]{64}$'),
- CONSTRAINT mcp_delegation_client CHECK(octet_length(client_id) BETWEEN 1 AND 255 AND length(trim(client_id))>0 AND client_id !~ '[\x01-\x1f\x7f]'),
- CONSTRAINT mcp_delegation_consent CHECK((authorized_at IS NULL)=(consent_id IS NULL) AND (consent_id IS NULL OR (octet_length(consent_id) BETWEEN 1 AND 255 AND length(trim(consent_id))>0 AND consent_id !~ '[\x01-\x1f\x7f]'))),
+ CONSTRAINT mcp_delegation_client CHECK(octet_length(client_id) BETWEEN 1 AND 255 AND length(trim(client_id))>0 AND client_id=btrim(client_id) AND client_id !~ '[\x01-\x1f\x7f]'),
+ CONSTRAINT mcp_delegation_consent CHECK((authorized_at IS NULL)=(consent_id IS NULL) AND (consent_id IS NULL OR (octet_length(consent_id) BETWEEN 1 AND 255 AND length(trim(consent_id))>0 AND consent_id=btrim(consent_id) AND consent_id !~ '[\x01-\x1f\x7f]'))),
  CONSTRAINT mcp_delegation_instants CHECK(isfinite(created_at) AND isfinite(selection_deadline) AND isfinite(hard_deadline) AND selection_deadline>created_at AND selection_deadline<=created_at+interval '10 minutes' AND selection_deadline<=hard_deadline AND (authorized_at IS NULL OR (isfinite(authorized_at) AND authorized_at>=created_at)) AND (revoked_at IS NULL OR (isfinite(revoked_at) AND revoked_at>=created_at)))
 );
 --> statement-breakpoint
@@ -38,7 +38,7 @@ BEGIN
   IF NEW.authorized_at IS NOT NULL OR NEW.consent_id IS NOT NULL OR NEW.revoked_at IS NOT NULL OR NEW.created_at>instant THEN
    RAISE EXCEPTION 'Invalid MCP delegation' USING ERRCODE='23514';
   END IF;
-  SELECT expires_at INTO origin_expiry FROM session WHERE id=NEW.session_id AND user_id=NEW.user_id;
+  SELECT expires_at INTO origin_expiry FROM public.session WHERE id=NEW.session_id AND user_id=NEW.user_id;
   IF NOT FOUND OR NOT isfinite(origin_expiry) OR origin_expiry AT TIME ZONE 'UTC'<=instant OR NEW.hard_deadline>origin_expiry AT TIME ZONE 'UTC' THEN
    RAISE EXCEPTION 'Invalid MCP delegation' USING ERRCODE='23514';
   END IF;

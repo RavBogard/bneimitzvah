@@ -52,7 +52,7 @@ test("composite keys reject mismatched user/session/member/grant/role and nonsta
 
 test("hashes and fixed policy cannot admit raw secrets, alternate resource, control IDs or duplicate capability hashes", async () => {
   for (const extra of [{ pendingCookieHash: "synthetic-not-a-hash" }, { requestFingerprint: "A".repeat(64) }, { scope: "portal:write" },
-    { resource: "https://example.test/api/mcp" }, { clientId: " " }, { clientId: "synthetic\nclient" }, { clientId: "x".repeat(256) }, { clientId: "é".repeat(128) }]) {
+    { resource: "https://example.test/api/mcp" }, { clientId: " " }, { clientId: " synthetic-client" }, { clientId: "synthetic-client " }, { clientId: "synthetic\nclient" }, { clientId: "x".repeat(256) }, { clientId: "é".repeat(128) }]) {
     expect(await refused(() => insert(extra), ["23514"])).toBe(true);
   }
   const row = await insert(); expect(await refused(() => insert({ pendingCookieHash: row.pendingCookieHash }), ["23505"])).toBe(true);
@@ -76,10 +76,33 @@ test("creation, ten minute selection and originating session expiry bound all in
   }
 });
 
+test("restricted TEMP session shadow cannot extend the real public session expiry", async () => {
+  const row=pending(),realExpiry=new Date(Date.now()+30_000),fakeExpiry=new Date(Date.now()+86400_000);
+  let shadowProved=false;
+  expect(await refused(()=>tenant(async tx=>{
+    await tx.execute(sql`update public.session set expires_at=${realExpiry}::timestamptz at time zone 'UTC' where id=${row.sessionId}`);
+    await tx.execute(sql`create temporary table session (id text,user_id text,expires_at timestamp) on commit drop`);
+    await tx.execute(sql`insert into pg_temp.session values (${row.sessionId},${row.userId},${fakeExpiry}::timestamptz at time zone 'UTC')`);
+    const proof=await tx.execute<{valid:boolean}>(sql`select current_user='portal_runtime'
+      and (select expires_at at time zone 'UTC' from session where id=${row.sessionId})>${row.hardDeadline}::timestamptz
+      and (select expires_at at time zone 'UTC' from public.session where id=${row.sessionId})<${row.hardDeadline}::timestamptz as valid`);
+    shadowProved=proof.rows[0].valid; expect(shadowProved).toBe(true);
+    // Direct SQL under the unchanged restricted role, with valid public FKs.
+    await tx.execute(sql`insert into public.mcp_delegation
+      (id,tenant_id,user_id,session_id,membership_id,role_grant_id,role,membership_revision,grant_revision,pending_cookie_hash,request_fingerprint,scope,resource,client_id,created_at,selection_deadline,hard_deadline)
+      values (${row.id},${row.tenantId},${row.userId},${row.sessionId},${row.membershipId},${row.roleGrantId},${row.role},${row.membershipRevision},${row.grantRevision},${row.pendingCookieHash},${row.requestFingerprint},${row.scope},${row.resource},${row.clientId},${row.createdAt},${row.selectionDeadline},${row.hardDeadline})`);
+  }),["23514"])).toBe(true);
+  expect(shadowProved).toBe(true);
+  expect((await tenant(tx=>tx.select().from(s.mcpDelegation).where(eq(s.mcpDelegation.id,row.id)))).length).toBe(0);
+  // The failed transaction drops its temporary table and restores public expiry.
+  await insert();
+});
+
 test("authorization is a one-time exact pair, with clock bounds and no simultaneous revocation", async () => {
   const row = await insert(), authorizedAt = new Date(), consentId = "Synthetic-Exact-Consent";
   for (const values of [{ authorizedAt }, { consentId }, { authorizedAt: new Date(Date.now()+60_000), consentId },
     { authorizedAt: new Date(row.createdAt.getTime()-1), consentId }, { authorizedAt, consentId: "\t" },
+    { authorizedAt, consentId: " synthetic-consent" }, { authorizedAt, consentId: "synthetic-consent " },
     { authorizedAt, consentId: "x".repeat(256) }, { authorizedAt, consentId, revokedAt: new Date() }]) {
     expect(await refused(() => update(row.id,values), ["23514"])).toBe(true);
   }

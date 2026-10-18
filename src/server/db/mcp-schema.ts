@@ -27,7 +27,7 @@ export const mcpDelegation = pgTable("mcp_delegation", {
   foreignKey({ name: "mcp_delegation_grant_role_fk", columns: [t.tenantId, t.roleGrantId, t.role], foreignColumns: [roleGrant.tenantId, roleGrant.id, roleGrant.role] }),
   check("mcp_delegation_policy", sql`${t.role} in ('admin','tutor') and ${t.membershipRevision}>0 and ${t.grantRevision}>0 and ${t.scope}='portal:read' and ${t.resource}='https://beitmitzvah.centralreform.org/api/mcp'`),
   check("mcp_delegation_hashes", sql`${t.pendingCookieHash} ~ '^[a-f0-9]{64}$' and ${t.requestFingerprint} ~ '^[a-f0-9]{64}$'`),
-  check("mcp_delegation_client", sql`octet_length(${t.clientId}) between 1 and 255 and length(trim(${t.clientId}))>0 and ${t.clientId} !~ '[\x01-\x1f\x7f]'`),
-  check("mcp_delegation_consent", sql`(${t.authorizedAt} is null) = (${t.consentId} is null) and (${t.consentId} is null or (octet_length(${t.consentId}) between 1 and 255 and length(trim(${t.consentId}))>0 and ${t.consentId} !~ '[\x01-\x1f\x7f]'))`),
+  check("mcp_delegation_client", sql`octet_length(${t.clientId}) between 1 and 255 and length(trim(${t.clientId}))>0 and ${t.clientId}=btrim(${t.clientId}) and ${t.clientId} !~ '[\x01-\x1f\x7f]'`),
+  check("mcp_delegation_consent", sql`(${t.authorizedAt} is null) = (${t.consentId} is null) and (${t.consentId} is null or (octet_length(${t.consentId}) between 1 and 255 and length(trim(${t.consentId}))>0 and ${t.consentId}=btrim(${t.consentId}) and ${t.consentId} !~ '[\x01-\x1f\x7f]'))`),
   check("mcp_delegation_instants", sql`isfinite(${t.createdAt}) and isfinite(${t.selectionDeadline}) and isfinite(${t.hardDeadline}) and ${t.selectionDeadline}>${t.createdAt} and ${t.selectionDeadline}<=${t.createdAt}+interval '10 minutes' and ${t.selectionDeadline}<=${t.hardDeadline} and (${t.authorizedAt} is null or (isfinite(${t.authorizedAt}) and ${t.authorizedAt}>=${t.createdAt})) and (${t.revokedAt} is null or (isfinite(${t.revokedAt}) and ${t.revokedAt}>=${t.createdAt}))`),
 ]);

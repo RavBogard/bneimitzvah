@@ -51,7 +51,7 @@ test("native finite deadlines, UTC origin expiry and pending-only insertion are 
   const f=await fixture(),now=Date.now();
   for(const change of [{createdAt:new Date(now+60_000)},{selectionDeadline:new Date(now+600_000),hardDeadline:new Date(now+700_000)},
     {hardDeadline:new Date(now+100*86400_000)},{authorizedAt:new Date(),consentId:"synthetic-consent"},{revokedAt:new Date()},
-    {clientId:"synthetic\nclient"},{scope:"portal:write"},{pendingCookieHash:"raw-synthetic-value"}]){
+    {clientId:"synthetic\nclient"},{clientId:" synthetic-client"},{clientId:"synthetic-client "},{scope:"portal:write"},{pendingCookieHash:"raw-synthetic-value"}]){
     expect(await refused(async()=>{const row=await pending(f,change);return tenant(f,tx=>tx.insert(s.mcpDelegation).values(row));},["23514"])).toBe(true);
   }
   // Non-UTC database session must not reinterpret Better Auth's UTC timestamp.
@@ -64,6 +64,25 @@ test("native finite deadlines, UTC origin expiry and pending-only insertion are 
   for(const column of ["created_at","selection_deadline","hard_deadline","authorized_at","revoked_at"]){
     expect(await refused(()=>query(f.owner,`UPDATE mcp_delegation SET ${column}='infinity' WHERE id=$1`,[row.id]),["23514"])).toBe(true);
   }
+  // Actual restricted LOGIN pool can create a shadow, but the trigger must
+  // read public.session even under pg_temp's implicit search-path precedence.
+  const shadow=await pending(f),realExpiry=new Date(Date.now()+30_000),fakeExpiry=new Date(Date.now()+86400_000);
+  let shadowProved=false;
+  expect(await refused(()=>tenant(f,async tx=>{
+    await tx.execute(sql`update public.session set expires_at=${realExpiry}::timestamptz at time zone 'UTC' where id=${shadow.sessionId}`);
+    await tx.execute(sql`create temporary table session (id text,user_id text,expires_at timestamp) on commit drop`);
+    await tx.execute(sql`insert into pg_temp.session values (${shadow.sessionId},${shadow.userId},${fakeExpiry}::timestamptz at time zone 'UTC')`);
+    const proof=await tx.execute<{valid:boolean}>(sql`select current_user='portal_runtime'
+      and (select expires_at at time zone 'UTC' from session where id=${shadow.sessionId})>${shadow.hardDeadline}::timestamptz
+      and (select expires_at at time zone 'UTC' from public.session where id=${shadow.sessionId})<${shadow.hardDeadline}::timestamptz as valid`);
+    shadowProved=proof.rows[0].valid;expect(shadowProved).toBe(true);
+    await tx.execute(sql`insert into public.mcp_delegation
+      (id,tenant_id,user_id,session_id,membership_id,role_grant_id,role,membership_revision,grant_revision,pending_cookie_hash,request_fingerprint,scope,resource,client_id,created_at,selection_deadline,hard_deadline)
+      values (${shadow.id},${shadow.tenantId},${shadow.userId},${shadow.sessionId},${shadow.membershipId},${shadow.roleGrantId},${shadow.role},${shadow.membershipRevision},${shadow.grantRevision},${shadow.pendingCookieHash},${shadow.requestFingerprint},${shadow.scope},${shadow.resource},${shadow.clientId},${shadow.createdAt},${shadow.selectionDeadline},${shadow.hardDeadline})`);
+  }),["23514"])).toBe(true);
+  expect(shadowProved).toBe(true);
+  expect((await tenant(f,tx=>tx.select().from(s.mcpDelegation).where(eq(s.mcpDelegation.id,shadow.id)))).length).toBe(0);
+  const valid=await pending(f);await tenant(f,tx=>tx.insert(s.mcpDelegation).values(valid));
 });
 
 test("native authorization/revocation are one-way exact transitions and immutable fields cannot change",async()=>{
@@ -71,7 +90,7 @@ test("native authorization/revocation are one-way exact transitions and immutabl
   const update=(values:Partial<typeof s.mcpDelegation.$inferInsert>)=>tenant(f,tx=>tx.update(s.mcpDelegation).set(values).where(eq(s.mcpDelegation.id,row.id)));
   const authorizedAt=new Date(),consentId="Synthetic-Consent";
   for(const values of [{authorizedAt},{consentId},{authorizedAt:new Date(Date.now()+60_000),consentId},{authorizedAt,consentId,revokedAt:new Date()},
-    {authorizedAt,consentId:"synthetic\nconsent"}])expect(await refused(()=>update(values),["23514"])).toBe(true);
+    {authorizedAt,consentId:"synthetic\nconsent"},{authorizedAt,consentId:" synthetic-consent"},{authorizedAt,consentId:"synthetic-consent "}])expect(await refused(()=>update(values),["23514"])).toBe(true);
   await update({authorizedAt,consentId});await update({authorizedAt,consentId});
   for(const values of [{consentId:"replacement"},{authorizedAt:null,consentId:null}])expect(await refused(()=>update(values),["23514"])).toBe(true);
   const revokedAt=new Date();await update({revokedAt});await update({revokedAt});
