@@ -29,7 +29,7 @@ export function LiftProgress({ store, kind, verseRef }: { store: ProgressStore; 
   const checking = store.loading(kind);
   if (store.unverified(kind, verseRef) || !verse && store.failed(kind)) return <div className="lift-progress">
     <p className="lift-progress-note" role="status">{notice || "Marks are unavailable right now."}</p>
-    <button type="button" className="button-secondary" disabled={checking} onClick={() => store.retry(kind, verseRef)}>{checking ? "Checking mark…" : "Check saved mark"}</button>
+    <button type="button" className="button-secondary" disabled={checking} onClick={() => store.retry(kind, verseRef)}>{checking ? "Checking mark…" : "Check what saved"}</button>
   </div>;
   if (!verse) return null;
   const self = verse.selfCheck.state, assessment = verse.assessment.state;

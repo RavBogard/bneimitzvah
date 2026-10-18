@@ -97,9 +97,9 @@ it("reading preserves an unsaved staff draft; local source absence keeps it whil
 it("read-only content actions cannot alter an uncertain save or its exact retry identity", async () => {
   const tab = await page(); await open(tab); await browse(tab); await sourceList(tab, "Related").getByRole("checkbox").nth(4).check(); const bodies: string[] = [];
   await tab.route("**/source-assignments", async route => { if (route.request().method() !== "POST") return route.continue(); bodies.push(route.request().postData()!); if (bodies.length === 1) await route.abort("failed"); else await route.continue(); });
-  await panel(tab).getByRole("button", { name: "Save sources", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Check save", exact: true })).toBeVisible(); await readCitation(tab); await readEdition(tab); expect(bodies).toHaveLength(1);
-  await panel(tab).getByRole("button", { name: "Check save", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Retry same save", exact: true })).toBeVisible(); expect(bodies).toHaveLength(1);
-  await panel(tab).getByRole("button", { name: "Retry same save", exact: true }).click(); await ui(panel(tab).getByText("Sources saved.", { exact: true })).toBeVisible(); expect(bodies).toHaveLength(2); expect(bodies[1]).toBe(bodies[0]); await ui(reader(tab)).toHaveCount(0);
+  await panel(tab).getByRole("button", { name: "Save sources", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Check what saved", exact: true })).toBeVisible(); await readCitation(tab); await readEdition(tab); expect(bodies).toHaveLength(1);
+  await panel(tab).getByRole("button", { name: "Check what saved", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Send the same save again", exact: true })).toBeVisible(); expect(bodies).toHaveLength(1);
+  await panel(tab).getByRole("button", { name: "Send the same save again", exact: true }).click(); await ui(panel(tab).getByText("Sources saved.", { exact: true })).toBeVisible(); expect(bodies).toHaveLength(2); expect(bodies[1]).toBe(bodies[0]); await ui(reader(tab)).toHaveCount(0);
 });
 
 it("actual guardian revocation during a held body clears old child text and cannot publish its late result", async () => {

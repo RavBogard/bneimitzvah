@@ -89,7 +89,7 @@ async function fakeStatus(tab: Page, child: Child, currentLink: typeof record | 
   const predicate = matches(child, "/status"), handler = async (route: Route) => route.request().method() === "POST" ? json(route, { ok: true, currentLink }) : route.fallback();
   await tab.route(predicate, handler); return () => tab.unroute(predicate, handler);
 }
-async function knownEmpty(tab: Page) { await button(tab, "Check link record").click(); await ui(group(tab).getByText("No current link record was found.", { exact: true }).first()).toBeVisible(); }
+async function knownEmpty(tab: Page) { await button(tab, "Check link").click(); await ui(group(tab).getByText("No link has been created for this aliyah.", { exact: true }).first()).toBeVisible(); }
 
 beforeAll(async () => {
   try {
@@ -117,7 +117,7 @@ it("guardian saved/dirty gates and actual absent-material404 preserve local hono
   // Explicit synthetic ambiguous status404 seam: prove local draft retention.
   const predicate = matches(child, "/status"), denied = async (route: Route) => route.request().method() === "POST" ? json(route, { ok: false, code: "not_found" }, 404) : route.fallback();
   await tab.route(predicate, denied);
-  try { await button(tab, "Check link record").click(); await ui(group(tab).getByRole("status")).toContainText("unavailable here"); await ui(name).toHaveValue("Synthetic Unsaved Group"); await ui(sheet(tab).getByRole("button", { name: "Save honors", exact: true })).toBeEnabled(); }
+  try { await button(tab, "Check link").click(); await ui(group(tab).getByRole("status")).toContainText("unavailable here"); await ui(name).toHaveValue("Synthetic Unsaved Group"); await ui(sheet(tab).getByRole("button", { name: "Save honors", exact: true })).toBeEnabled(); }
   finally { await tab.unroute(predicate, denied); }
   await save(tab, child); await knownEmpty(tab);
   // This response is actual restricted-runtime service output, not a stub.
@@ -128,7 +128,7 @@ it("guardian saved/dirty gates and actual absent-material404 preserve local hono
     catch { try { await route.abort("failed"); } catch {} resolve(); }
   };
   await tab.route(issue, unavailable);
-  try { await button(tab, "Create blessing link").click(); await observed; expect(actualStatus).toBe(404); await ui(group(tab).getByRole("status")).toContainText("original action is unconfirmed"); await ui(name).toHaveValue("Synthetic Unsaved Group"); await ui(sheet(tab)).toBeVisible(); await ui(button(tab, "Check original receipt")).toBeVisible(); }
+  try { await button(tab, "Create blessing link").click(); await observed; expect(actualStatus).toBe(404); await ui(group(tab).getByRole("status")).toContainText("original action is unconfirmed"); await ui(name).toHaveValue("Synthetic Unsaved Group"); await ui(sheet(tab)).toBeVisible(); await ui(button(tab, "Check what saved")).toBeVisible(); }
   finally { await tab.unroute(issue, unavailable); }
   expect(await counts(child)).toEqual({ forms: 2, links: 0, operations: 0, audits: 0 }); await ui(tab.locator("[data-honoree-secret]")).toHaveCount(0);
 });
@@ -138,7 +138,7 @@ it("admin original fake URL requires explicit copy and edits suppress a late cli
   const removeStatus = await fakeStatus(tab, child), issue = matches(child), handler = async (route: Route) => route.request().method() === "POST" ? json(route, committed(JSON.parse(route.request().postData()!).operation, true)) : route.fallback();
   await tab.route(issue, handler);
   try {
-    await knownEmpty(tab); await button(tab, "Create blessing link").click(); const secret = group(tab).getByLabel("New blessing link · copy now", { exact: true });
+    await knownEmpty(tab); await button(tab, "Create blessing link").click(); const secret = group(tab).getByLabel("New blessing link · copy it now", { exact: true });
     await ui(secret).toHaveValue(fakeURL); await ui(secret).toHaveAttribute("readonly", ""); await ui(sheet(tab).locator('a[href*="#token="]')).toHaveCount(0);
     expect(await tab.evaluate(() => (window as unknown as { honoreeClipboard: ClipboardProbe }).honoreeClipboard.writes)).toBe(0);
     await button(tab, "Copy link").click(); await ui(button(tab, "Copied")).toBeVisible();
@@ -162,24 +162,24 @@ it("unknown original action keeps exact UUID/body, receipts never recover URL, r
   const check = async (route: Route) => { if (route.request().method() !== "POST") return route.fallback(); receiptBodies.push(route.request().postData()!); return json(route, receiptBodies.length === 1 ? { ok: true, outcome: "unconfirmed" } : committed("issue")); };
   await tab.route(issue, mutate); await tab.route(receipt, check);
   try {
-    await knownEmpty(tab); await button(tab, "Create blessing link").click(); await ui(button(tab, "Check original receipt")).toBeVisible();
+    await knownEmpty(tab); await button(tab, "Create blessing link").click(); await ui(button(tab, "Check what saved")).toBeVisible();
     await ui(sheet(tab).getByRole("button", { name: "Save honors", exact: true })).toBeDisabled(); await ui(group(tab).getByLabel("English name", { exact: true })).toBeDisabled();
-    await button(tab, "Check original receipt").click(); await ui(group(tab).getByRole("status")).toContainText("No committed receipt was found");
-    expect(receiptBodies).toEqual([bodies[0]]); await button(tab, "Retry same action").click(); await ui(button(tab, "Check original receipt")).toBeVisible();
-    await button(tab, "Check original receipt").click(); await ui(button(tab, "Replace link…")).toBeVisible(); expect(receiptBodies).toEqual([bodies[0], bodies[0]]);
+    await button(tab, "Check what saved").click(); await ui(group(tab).getByRole("status")).toContainText("No committed receipt was found");
+    expect(receiptBodies).toEqual([bodies[0]]); await button(tab, "Send the same request again").click(); await ui(button(tab, "Check what saved")).toBeVisible();
+    await button(tab, "Check what saved").click(); await ui(button(tab, "Replace link…")).toBeVisible(); expect(receiptBodies).toEqual([bodies[0], bodies[0]]);
     expect(bodies).toHaveLength(2); expect(bodies[1]).toBe(bodies[0]); expect(JSON.parse(bodies[0]).mutationId).not.toBe(JSON.parse(saveBody).mutationId);
     expect(Object.keys(JSON.parse(bodies[0])).sort()).toEqual(["contextHash", "expectedVersion", "linkId", "mode", "mutationId", "operation", "startVerse"].sort());
     expect(JSON.parse(bodies[0])).toMatchObject({ mode: "parent", operation: "issue", expectedVersion: 1, contextHash: JSON.parse(saveBody).contextHash, startVerse, linkId: null });
     await ui(tab.locator("[data-honoree-secret]")).toHaveCount(0); await ui(group(tab).getByRole("status")).toContainText("full URL cannot be recovered");
     await button(tab, "Replace link…").click(); await ui(button(tab, "Replace recorded link")).toBeVisible(); expect(bodies).toHaveLength(2);
     await button(tab, "Keep current link").click(); expect(bodies).toHaveLength(2); await button(tab, "Replace link…").click(); await button(tab, "Replace recorded link").click();
-    await ui(group(tab).getByLabel("New blessing link · copy now", { exact: true })).toHaveValue(fakeURL); expect(bodies).toHaveLength(3); expect(JSON.parse(bodies[2])).toMatchObject({ operation: "reissue", linkId: fakeId }); expect(JSON.parse(bodies[2]).mutationId).not.toBe(JSON.parse(bodies[0]).mutationId);
+    await ui(group(tab).getByLabel("New blessing link · copy it now", { exact: true })).toHaveValue(fakeURL); expect(bodies).toHaveLength(3); expect(JSON.parse(bodies[2])).toMatchObject({ operation: "reissue", linkId: fakeId }); expect(JSON.parse(bodies[2]).mutationId).not.toBe(JSON.parse(bodies[0]).mutationId);
     await sheet(tab).getByRole("button", { name: "Close family honors", exact: true }).click(); await ui(sheet(tab)).toHaveCount(0);
     await fixture.ownerDb.update(s.assignment).set({ aliyahStarts: ["Genesis 1:3"], revision: 2 }).where(eq(s.assignment.id, child.assignmentId));
     await removeEmpty(); const removeRecorded = await fakeStatus(tab, child, record);
     try {
       await open(tab, child, "parent"); await ui(sheet(tab).getByRole("region", { name: "Review changed ceremony", exact: true })).toBeVisible();
-      await button(tab, "Check link record").click(); await ui(button(tab, "Revoke link…")).toBeEnabled(); await ui(button(tab, "Replace link…")).toBeDisabled();
+      await button(tab, "Check link").click(); await ui(button(tab, "Revoke link…")).toBeEnabled(); await ui(button(tab, "Replace link…")).toBeDisabled();
       await button(tab, "Revoke link…").click(); expect(bodies).toHaveLength(3); await button(tab, "Revoke recorded link").click(); await ui(group(tab).getByRole("status")).toHaveText("The recorded link was revoked.");
       expect(bodies).toHaveLength(4); expect(JSON.parse(bodies[3])).toMatchObject({ operation: "revoke", linkId: fakeId, startVerse }); expect(JSON.parse(bodies[3]).mutationId).not.toBe(JSON.parse(bodies[2]).mutationId);
       await ui(tab.locator("[data-honoree-secret]")).toHaveCount(0); expect(await counts(child)).toEqual({ forms: 1, links: 0, operations: 0, audits: 0 });
@@ -195,7 +195,7 @@ async function capturePacket() {
     if (images.length === 0) { await add(tab, "Synthetic Capture Group"); await save(tab, child); }
     const removeStatus = await fakeStatus(tab, child), issue = matches(child), handler = async (route: Route) => route.request().method() === "POST" ? json(route, committed("issue", true)) : route.fallback(); await tab.route(issue, handler);
     try {
-      await knownEmpty(tab); await button(tab, "Create blessing link").click(); await ui(group(tab).getByLabel("New blessing link · copy now", { exact: true })).toHaveValue(fakeURL);
+      await knownEmpty(tab); await button(tab, "Create blessing link").click(); await ui(group(tab).getByLabel("New blessing link · copy it now", { exact: true })).toHaveValue(fakeURL);
       await tab.evaluate(async () => { await document.fonts.ready; });
       const copy = button(tab, "Copy link");
       await copy.evaluate(node => node.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" }));

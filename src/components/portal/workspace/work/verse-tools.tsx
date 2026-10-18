@@ -44,7 +44,7 @@ function Editor({ coordinator, kind, verseRef, stream, cell }: { coordinator: Wo
       <h5>Current saved {stream === "draft" ? "translation" : "note"}</h5>
       <p className="work-text" dir="auto">{cell.head ? cell.head.text || "Translation cleared" : "No saved version"}</p>
       <p className="field-help">Your copy stays only in this tab. Check the saved work before choosing what to keep.</p>
-      {revision.outcome === "unknown" ? <button className="button-secondary" disabled={recovering} onClick={() => void recover(false)}>{recovering ? "Checking earlier save…" : "Check earlier save"}</button>
+      {revision.outcome === "unknown" ? <button className="button-secondary" disabled={recovering} onClick={() => void recover(false)}>{recovering ? "Checking earlier save…" : "Check what saved"}</button>
         : <div className="work-actions"><button className="button-secondary" disabled={!cell.verified || (revision.outcome === "committed" && cell.text === revision.committedText)} onClick={() => coordinator.resolveRevision(kind, verseRef, stream, false)}>Review and keep my text</button>
           <button className="button-text" disabled={!cell.verified} onClick={() => coordinator.resolveRevision(kind, verseRef, stream, true)}>{stream === "draft" ? "Use saved translation" : "Discard unsent note"}</button></div>}
     </section>}
@@ -53,7 +53,7 @@ function Editor({ coordinator, kind, verseRef, stream, cell }: { coordinator: Wo
       <p className="field-help">Your unsent text remains above. Review both versions before choosing.</p>
       <div className="work-actions"><button className="button-secondary" disabled={!cell.verified} onClick={() => coordinator.resolveConflict(kind, verseRef, stream, false)}>Keep my text for another save</button><button className="button-text" disabled={!cell.verified} onClick={() => coordinator.resolveConflict(kind, verseRef, stream, true)}>{stream === "draft" ? "Use saved translation" : "Discard unsent note"}</button></div>
     </section>}
-    {revision ? null : cell.pending && cell.phase === "unknown" ? <div className="work-actions"><button className="button-secondary" disabled={recovering} onClick={() => void recover(false)}>{recovering ? "Checking save…" : "Check save"}</button><button className="button-secondary" disabled={recovering} onClick={() => void recover(true)}>Retry the same save</button></div>
+    {revision ? null : cell.pending && cell.phase === "unknown" ? <div className="work-actions"><button className="button-secondary" disabled={recovering} onClick={() => void recover(false)}>{recovering ? "Checking save…" : "Check what saved"}</button><button className="button-text" disabled={recovering} onClick={() => void recover(true)}>Send the same save again</button></div>
       : <button className="button-secondary" disabled={!cell.verified || Boolean(cell.pending) || cell.composing || cell.phase === "conflict" || Boolean(cell.error) || (stream === "draft" ? cell.text === (cell.head?.text ?? "") : !cell.text.trim())} onClick={() => void coordinator.save(kind, verseRef, stream)}>{stream === "draft" ? "Save now" : "Add student-visible note"}</button>}
   </div>;
 }

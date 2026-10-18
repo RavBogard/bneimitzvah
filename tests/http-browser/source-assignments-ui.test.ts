@@ -91,7 +91,7 @@ async function capturePacket() {
   for (const theme of ["light", "dark"] as const) {
     const desktop = await page("admin", false, theme); await capture(desktop, `desktop-${theme}-closed`); await open(desktop); await browse(desktop); await panel(desktop).getByRole("list", { name: "Related sources", exact: true }).getByRole("checkbox").nth(7).check();
     if (theme === "light") { await capture(desktop, "desktop-light-selection"); await capture(desktop, "desktop-light-selection-detail", panel(desktop)); }
-    else { await desktop.route("**/source-assignments", route => route.request().method() === "POST" ? route.abort("failed") : route.continue()); await panel(desktop).getByRole("button", { name: "Save sources", exact: true }).click(); await ui(panel(desktop).getByRole("button", { name: "Check save", exact: true })).toBeVisible(); await panel(desktop).getByRole("button", { name: "Sources", exact: true }).click(); const dialog = desktop.getByRole("dialog", { name: "Leave sources?", exact: true }); await ui(dialog).toBeVisible(); await capture(desktop, "desktop-dark-uncertain-departure"); await capture(desktop, "desktop-dark-uncertain-departure-detail", dialog); }
+    else { await desktop.route("**/source-assignments", route => route.request().method() === "POST" ? route.abort("failed") : route.continue()); await panel(desktop).getByRole("button", { name: "Save sources", exact: true }).click(); await ui(panel(desktop).getByRole("button", { name: "Check what saved", exact: true })).toBeVisible(); await panel(desktop).getByRole("button", { name: "Sources", exact: true }).click(); const dialog = desktop.getByRole("dialog", { name: "Leave sources?", exact: true }); await ui(dialog).toBeVisible(); await capture(desktop, "desktop-dark-uncertain-departure"); await capture(desktop, "desktop-dark-uncertain-departure-detail", dialog); }
     const phone = await page("student", true, theme); await capture(phone, `phone-${theme}-closed`); await open(phone); await browse(phone); await capture(phone, `phone-${theme}-open`); await capture(phone, `phone-${theme}-open-detail`, panel(phone));
   }
   await writeFile(join(directory, "manifest.json"), JSON.stringify({ schema: "source-assignment-capture/v1", images: manifest }, null, 2) + "\n", { flag: "wx" });
@@ -169,11 +169,11 @@ it("keeps a genuinely committed save unknown when the final session probe fails,
   await tab.route("**/api/session", async route => { if (failFinalProbe) { failFinalProbe = false; await route.fulfill({ status: 503, contentType: "application/json", body: '{"ok":false}' }); } else await route.continue(); });
   const committedThenUnverified = async (route: Route) => { if (route.request().method() !== "POST") return route.continue(); captured = route.request().postDataJSON(); const response = await route.fetch(); expect(response.status()).toBe(200); failFinalProbe = true; await route.fulfill({ response }); };
   await tab.route("**/source-assignments", committedThenUnverified); await panel(tab, ref).getByRole("button", { name: "Save sources", exact: true }).click();
-  await ui(panel(tab, ref).getByRole("button", { name: "Check save", exact: true })).toBeEnabled(); await ui(panel(tab, ref)).toContainText("Save not confirmed. It may still complete."); expect(captured).toBeDefined();
+  await ui(panel(tab, ref).getByRole("button", { name: "Check what saved", exact: true })).toBeEnabled(); await ui(panel(tab, ref)).toContainText("Save not confirmed. It may have saved."); expect(captured).toBeDefined();
   const stored = await fixture.ownerDb.select().from(s.verseSourceAssignment).where(and(eq(s.verseSourceAssignment.studentId, fixture.student.id), eq(s.verseSourceAssignment.verseRef, ref))); expect(stored).toHaveLength(1);
   await tab.unroute("**/source-assignments", committedThenUnverified);
   const original = captured!, newer = await api(tab, `/api/students/${fixture.student.id}/source-assignments`, { ...original, expectedVersion: Number(original.expectedVersion) + 1, mutationId: await tab.evaluate(() => crypto.randomUUID()), sourceIds: ["source_000", "source_001"] }); expect(newer.status).toBe(200);
-  await panel(tab, ref).getByRole("button", { name: "Check save", exact: true }).click(); await ui(panel(tab, ref).getByRole("button", { name: "Load latest assigned sources", exact: true })).toBeVisible();
+  await panel(tab, ref).getByRole("button", { name: "Check what saved", exact: true }).click(); await ui(panel(tab, ref).getByRole("button", { name: "Load latest assigned sources", exact: true })).toBeVisible();
   await ui(panel(tab, ref).getByRole("list", { name: "Assigned sources", exact: true })).toHaveCount(0);
   await panel(tab, ref).getByRole("button", { name: "Load latest assigned sources", exact: true }).click(); await ui(panel(tab, ref).getByRole("list", { name: "Assigned sources", exact: true }).getByRole("listitem")).toHaveCount(2); await noAudio(tab);
 });
@@ -182,10 +182,10 @@ it("keeps a missing receipt unconfirmed and retries only the exact original UUID
   const tab = await page("admin"); await open(tab); await browse(tab); await panel(tab).getByRole("list", { name: "Related sources", exact: true }).getByRole("checkbox").nth(3).check();
   const sent: unknown[] = []; let drop = true;
   await tab.route("**/source-assignments", async route => { if (route.request().method() !== "POST") return route.continue(); sent.push(route.request().postDataJSON()); if (drop) { drop = false; await route.abort("failed"); } else await route.continue(); });
-  await panel(tab).getByRole("button", { name: "Save sources", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Check save", exact: true })).toBeEnabled(); expect(sent).toHaveLength(1);
-  const checked = await observeSourceResponse(tab, "source-assignments/receipt", () => panel(tab).getByRole("button", { name: "Check save", exact: true }).click()); expect(checked.outcome).toBe("unconfirmed");
-  await ui(panel(tab).getByRole("button", { name: "Retry same save", exact: true })).toBeEnabled(); expect(sent).toHaveLength(1);
-  await panel(tab).getByRole("button", { name: "Retry same save", exact: true }).click(); await ui(panel(tab).getByText("Sources saved.", { exact: true })).toBeVisible(); expect(sent).toHaveLength(2); expect(sent[1]).toEqual(sent[0]); await noAudio(tab);
+  await panel(tab).getByRole("button", { name: "Save sources", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Check what saved", exact: true })).toBeEnabled(); expect(sent).toHaveLength(1);
+  const checked = await observeSourceResponse(tab, "source-assignments/receipt", () => panel(tab).getByRole("button", { name: "Check what saved", exact: true }).click()); expect(checked.outcome).toBe("unconfirmed");
+  await ui(panel(tab).getByRole("button", { name: "Send the same save again", exact: true })).toBeEnabled(); expect(sent).toHaveLength(1);
+  await panel(tab).getByRole("button", { name: "Send the same save again", exact: true }).click(); await ui(panel(tab).getByText("Sources saved.", { exact: true })).toBeVisible(); expect(sent).toHaveLength(2); expect(sent[1]).toEqual(sent[0]); await noAudio(tab);
 });
 
 it("retains a dirty draft on quiet return and Keep working; explicit discard reloads, while delivered authority loss cancels an old departure review", async () => {
@@ -206,9 +206,9 @@ it("offers an honest unknown-save departure without automatic retry, then clears
   const tab = await page("tutor"); await open(tab); await browse(tab); await panel(tab).getByRole("list", { name: "Related sources", exact: true }).getByRole("checkbox").nth(4).check();
   const before = await fixture.ownerDb.select().from(s.verseSourceAssignment).where(and(eq(s.verseSourceAssignment.studentId, fixture.student.id), eq(s.verseSourceAssignment.verseRef, "Genesis 1:1"))); let posts = 0;
   await tab.route("**/source-assignments", async route => { if (route.request().method() === "POST") { posts++; await route.abort("failed"); } else await route.continue(); });
-  await panel(tab).getByRole("button", { name: "Save sources", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Check save", exact: true })).toBeVisible();
+  await panel(tab).getByRole("button", { name: "Save sources", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Check what saved", exact: true })).toBeVisible();
   const disclosure = panel(tab).getByRole("button", { name: "Sources", exact: true }), dialog = tab.getByRole("dialog", { name: "Leave sources?", exact: true });
-  await disclosure.click(); await ui(dialog).toContainText("It may still complete if you leave"); await dialog.getByRole("button", { name: "Keep working", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Check save", exact: true })).toBeVisible(); expect(posts).toBe(1);
+  await disclosure.click(); await ui(dialog).toContainText("It may still complete if you leave"); await dialog.getByRole("button", { name: "Keep working", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Check what saved", exact: true })).toBeVisible(); expect(posts).toBe(1);
   await disclosure.click(); await dialog.getByRole("button", { name: "Leave without confirming", exact: true }).click(); await ui(disclosure).toHaveAttribute("aria-expanded", "false"); expect(posts).toBe(1);
   const after = await fixture.ownerDb.select().from(s.verseSourceAssignment).where(and(eq(s.verseSourceAssignment.studentId, fixture.student.id), eq(s.verseSourceAssignment.verseRef, "Genesis 1:1"))); expect(after.length).toBe(before.length);
   await tab.getByRole("link", { name: "Parent", exact: true }).click(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(tab.locator(".study-verses")).toBeVisible(); await open(tab); await browse(tab);

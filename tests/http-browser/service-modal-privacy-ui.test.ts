@@ -124,7 +124,7 @@ it("serializes service and unknown-note guards, and canceling the later decision
   await ui(serviceGuard(tab)).toBeVisible(); expect(await modalCount(tab)).toBe(1); await ui(sheet(tab)).toBeHidden();
   await click(tab, "Discard service draft and continue"); await ui(serviceGuard(tab)).toBeHidden(); await ui(workGuard(tab)).toBeVisible();
   expect(await modalCount(tab)).toBe(1); await ui(sheet(tab)).toBeHidden();
-  await ui(tab.getByRole("button", { name: "Check save and continue", exact: true })).toBeVisible();
+  await ui(tab.getByRole("button", { name: "Check what saved and continue", exact: true })).toBeVisible();
   await click(tab, "Keep working"); await ui(workGuard(tab)).toBeHidden(); await ui(sheet(tab)).toBeVisible();
   expect(await modalCount(tab)).toBe(1); expect(await sheet(tab).evaluate(node => node.contains(document.activeElement))).toBe(true);
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");

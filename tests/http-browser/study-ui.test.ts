@@ -302,7 +302,7 @@ it("keeps unsent typing and an unknown save intact while phrase controls change"
     await ui(field).toHaveValue("Synthetic queued typing kept through phrase colors");
     await ui(panel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab."); expect(writes).toBe(1);
   } finally { release(); await tab.unroute("**/work/draft"); }
-  await safe(() => panel.getByRole("button", { name: "Check save", exact: true }).click());
+  await safe(() => panel.getByRole("button", { name: "Check what saved", exact: true }).click());
   await ui(field).toHaveValue("Synthetic queued typing kept through phrase colors"); await ui(panel.locator(".work-status")).toHaveText("Saved", { timeout: 18_000 });
 });
 

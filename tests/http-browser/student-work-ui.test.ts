@@ -78,12 +78,12 @@ async function capture(tab: Page, name: string) {
     if (state === "revision-review" || state === "revision-unknown") {
       await ui(panel.getByRole("textbox")).toHaveJSProperty("readOnly", true);
       await ui(panel.getByRole("region", { name: /Review unsent translation/ })).toBeVisible();
-      if (state === "revision-unknown") await ui(panel.getByRole("button", { name: "Check earlier save", exact: true })).toBeVisible();
+      if (state === "revision-unknown") await ui(panel.getByRole("button", { name: "Check what saved", exact: true })).toBeVisible();
       else await ui(panel.getByRole("button", { name: "Review and keep my text", exact: true })).toBeEnabled();
     } else if (state === "unknown") {
       await ui(panel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab.");
-      await ui(panel.getByRole("button", { name: "Check save", exact: true })).toBeVisible();
-      await ui(panel.getByRole("button", { name: "Retry the same save", exact: true })).toBeVisible();
+      await ui(panel.getByRole("button", { name: "Check what saved", exact: true })).toBeVisible();
+      await ui(panel.getByRole("button", { name: "Send the same save again", exact: true })).toBeVisible();
       await ui(panel.locator(".work-history > summary")).toBeVisible();
     } else if (state === "conflict") {
       await ui(panel.locator(".work-status")).toHaveText("An earlier save succeeded. A newer version is saved. Review before saving yours.");
@@ -188,15 +188,15 @@ it("holds one real committed POST acknowledgement, queues typing and recovers ex
   await singleRecovery(panel, "Save not confirmed. Your text is still in this tab.");
   expect(calls).toBe(1); const [row] = await fixture.ownerDb.select().from(s.translationDraft).where(eq(s.translationDraft.mutationId, mutationId)); expect(row.version === 1 && row.text === "Synthetic lost acknowledgement").toBe(true);
   expect((await fixture.ownerDb.select().from(s.auditEvent).where(eq(s.auditEvent.targetId, row.id))).length).toBe(1); await capture(tab, "unknown-desktop");
-  release(); await tab.unroute("**/work/draft"); await safe(() => panel.getByRole("button", { name: "Check save", exact: true }).click()); await ui(field).toHaveValue("Synthetic latest queued edit"); await ui(panel.locator(".work-status")).toHaveText("Saved", { timeout: 18_000 });
+  release(); await tab.unroute("**/work/draft"); await safe(() => panel.getByRole("button", { name: "Check what saved", exact: true }).click()); await ui(field).toHaveValue("Synthetic latest queued edit"); await ui(panel.locator(".work-status")).toHaveText("Saved", { timeout: 18_000 });
   const rows = await fixture.ownerDb.select().from(s.translationDraft).where(and(eq(s.translationDraft.verseRef, "Genesis 1:2"), eq(s.translationDraft.studentId, fixture.student.id))); expect(rows.length === 2 && rows.filter(row => row.mutationId === mutationId).length === 1).toBe(true);
   // A real missing receipt also permits only the original UUID/body retry.
   const retryPanel = await tools(tab, "Genesis 1:8"), bodies: string[] = [];
   await tab.route("**/work/draft", async route => { bodies.push(route.request().postData() ?? ""); if (bodies.length === 1) await route.abort(); else { const response = await route.fetch(); await route.fulfill({ response }); } });
   await safe(() => retryPanel.getByRole("textbox").fill("Synthetic identical retry")); await safe(() => retryPanel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(retryPanel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab.");
-  await safe(() => retryPanel.getByRole("button", { name: "Check save", exact: true }).click());
+  await safe(() => retryPanel.getByRole("button", { name: "Check what saved", exact: true }).click());
   await singleRecovery(retryPanel, "Save not confirmed. Your text is still in this tab. No receipt was found; the request may still have saved. You can retry the same save under this assignment.");
-  await safe(() => retryPanel.getByRole("button", { name: "Retry the same save", exact: true }).click()); await ui(retryPanel.locator(".work-status")).toHaveText("Saved"); expect(bodies.length === 2 && bodies[0] === bodies[1]).toBe(true); await tab.unroute("**/work/draft");
+  await safe(() => retryPanel.getByRole("button", { name: "Send the same save again", exact: true }).click()); await ui(retryPanel.locator(".work-status")).toHaveText("Saved"); expect(bodies.length === 2 && bodies[0] === bodies[1]).toBe(true); await tab.unroute("**/work/draft");
   const retryRows = await fixture.ownerDb.select().from(s.translationDraft).where(and(eq(s.translationDraft.verseRef, "Genesis 1:8"), eq(s.translationDraft.studentId, fixture.student.id))); expect(retryRows.length === 1 && (await fixture.ownerDb.select().from(s.auditEvent).where(eq(s.auditEvent.targetId, retryRows[0].id))).length === 1).toBe(true);
 });
 
@@ -206,7 +206,7 @@ it("compares newer real head after lost acknowledgement and two-tab CAS contenti
   await first.route("**/work/draft", async route => { const response = await route.fetch(); committed = response.status() === 200; await gate; await route.fulfill({ response }).catch(() => undefined); });
   await safe(() => a.getByRole("textbox").fill("Synthetic committed earlier")); await safe(() => a.getByRole("button", { name: "Save now", exact: true }).click()); await ui.poll(() => committed).toBe(true);
   expect((await append(second, "Genesis 1:3", "Synthetic newer saved head", 1)).status === 200).toBe(true); await safe(() => a.getByRole("textbox").fill("Synthetic retained queued comparison")); await ui(a.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab.", { timeout: 18_000 });
-  release(); await first.unroute("**/work/draft"); await safe(() => a.getByRole("button", { name: "Check save", exact: true }).click()); await singleRecovery(a, "An earlier save succeeded. A newer version is saved. Review before saving yours."); await ui(a.getByRole("textbox")).toHaveValue("Synthetic retained queued comparison"); await ui(a.locator(".work-comparison")).toContainText("Synthetic newer saved head"); await capture(first, "conflict-mobile");
+  release(); await first.unroute("**/work/draft"); await safe(() => a.getByRole("button", { name: "Check what saved", exact: true }).click()); await singleRecovery(a, "An earlier save succeeded. A newer version is saved. Review before saving yours."); await ui(a.getByRole("textbox")).toHaveValue("Synthetic retained queued comparison"); await ui(a.locator(".work-comparison")).toContainText("Synthetic newer saved head"); await capture(first, "conflict-mobile");
   await safe(() => b.getByRole("textbox").fill("Synthetic stale tab text")); await safe(() => b.getByRole("button", { name: "Save now", exact: true }).click()); await singleRecovery(b, "Another version was saved. Review before saving yours."); expect((await head(second, "Genesis 1:3"))?.version === 2).toBe(true);
 });
 
@@ -348,8 +348,8 @@ it("blocks an uncertain old save through recovery outages until explicit authori
   let panel = await tools(student, "Genesis 1:14"); await safe(() => panel.getByRole("textbox").fill("Synthetic unsaved old revision")); await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(panel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab.");
   await reviseSameVerses(admin); await focusRefresh(student); panel = await tools(student, "Genesis 1:14");
   await ui(panel.getByRole("textbox")).toHaveValue("Synthetic unsaved old revision"); await ui(panel.locator(".work-status")).toHaveText("We couldn’t confirm the earlier save. Your text stays here; check again before saving anything new.");
-  expect(await panel.getByRole("button", { name: "Retry the same save", exact: true }).count()).toBe(0); expect(await panel.getByRole("button", { name: "Review and keep my text", exact: true }).count()).toBe(0); await capture(student, "revision-unknown"); expect(bodies).toHaveLength(1);
-  await student.unroute("**/work/recovery"); await safe(() => panel.getByRole("button", { name: "Check earlier save", exact: true }).click());
+  expect(await panel.getByRole("button", { name: "Send the same save again", exact: true }).count()).toBe(0); expect(await panel.getByRole("button", { name: "Review and keep my text", exact: true }).count()).toBe(0); await capture(student, "revision-unknown"); expect(bodies).toHaveLength(1);
+  await student.unroute("**/work/recovery"); await safe(() => panel.getByRole("button", { name: "Check what saved", exact: true }).click());
   await ui(panel.locator(".work-status")).toHaveText("The earlier save did not complete. Review your unsent text before saving it again."); expect(bodies).toHaveLength(1);
   await student.unroute("**/work/draft"); await safe(() => panel.getByRole("button", { name: "Review and keep my text", exact: true }).click()); await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click()); await ui(panel.locator(".work-status")).toHaveText("Saved");
   expect(bodies).toHaveLength(2); expect(bodies[1].mutationId).not.toBe(bodies[0].mutationId); expect(bodies[1].assignmentRevision).toBeGreaterThan(bodies[0].assignmentRevision);
