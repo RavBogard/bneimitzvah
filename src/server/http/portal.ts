@@ -1,6 +1,7 @@
 import "server-only";
 import type { RelatedSourcePage } from "../study/sources/discovery";
 import { parseReferenceResolution, type ReferenceResolution } from "../../lib/reference-audio/source";
+import { parseReferenceShortResolution } from "../../lib/reference-audio/short-resolution";
 import type { StudyWordAids } from "../../lib/hebrew/word-aids";
 import { WORD_DETAILS_LIMITS, type StudyWordDetails } from "../../lib/hebrew/word-details";
 import type { HttpRuntime } from "../runtime/composition";
@@ -17,7 +18,7 @@ import { closedObject, uniqueQuery } from "./query";
 import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
-type Kind = "explore-prepare" | "explore-page" | "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "study-word-details" | "study-sources" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
+type Kind = "short-reference-page" | "explore-prepare" | "explore-page" | "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "study-word-details" | "study-sources" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
   | "admin-students" | "edit" | "disable" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "pending" | "accept"
   | "eligible-tutors" | "relationships" | "tutor-assign" | "tutor-unassign" | "guardian-revoke" | "identity-revoke" | "guardian-practice" | "grant-revoke" | "cantor";
 type Route = { kind: Kind; methods: readonly string[]; id?: string; linkId?: string };
@@ -39,6 +40,8 @@ function route(pathname: string): Route | null {
   const preview = /^\/api\/students\/([^/]+)\/reading\/preview\/(prepare|page)$/.exec(pathname);
   if(preview)return {kind:preview[2]==="prepare"?"preview-prepare":"preview-page",methods:["POST"],id:preview[1]};
   const reference = /^\/api\/students\/([^/]+)\/reference-audio$/.exec(pathname);
+  const shortReference = /^\/api\/students\/([^/]+)\/reference-audio\/short\/page$/.exec(pathname);
+  if (shortReference) return { kind: "short-reference-page", methods: ["GET"], id: shortReference[1] };
   if (reference) return { kind: "reference-audio", methods: ["GET"], id: reference[1] };
   const wordAids = /^\/api\/students\/([^/]+)\/study-word-aids$/.exec(pathname);
   if (wordAids) return { kind: "study-word-aids", methods: ["GET"], id: wordAids[1] };
@@ -166,7 +169,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", selected.methods.join(", ")); return response;
     }
     const practiceRoute = selected.kind.startsWith("practice-");
-    if (!practiceRoute && selected.kind !== "explore-prepare" && selected.kind !== "explore-page" && selected.kind !== "reading" && selected.kind !== "study-text" && selected.kind !== "study-word-aids" && selected.kind !== "study-word-details" && selected.kind !== "study-sources" && selected.kind !== "reference-audio" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
+    if (!practiceRoute && selected.kind !== "explore-prepare" && selected.kind !== "explore-page" && selected.kind !== "reading" && selected.kind !== "study-text" && selected.kind !== "study-word-aids" && selected.kind !== "study-word-details" && selected.kind !== "study-sources" && selected.kind !== "reference-audio" && selected.kind !== "short-reference-page" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
     // Dispatcher resolves the actual host before this adapter. Services still
     // independently reauthorize; no body/Origin/forwarded claim chooses tenant.
     if (request.method === "POST") requireCookieMutation(request, runtime.origin);
@@ -275,6 +278,29 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       case "student": {
         const query = uniqueQuery(request.url, ["mode"]);
         return privateJson({ student: studentView(await runtime.access.readStudent(request, { mode: baseMode(query.get("mode")), studentId: id! })) });
+      }
+      case "short-reference-page": {
+        if (request.body !== null || request.headers.has("transfer-encoding") || (request.headers.has("content-length") && request.headers.get("content-length") !== "0")) throw new HttpBoundaryError();
+        const query = uniqueQuery(request.url, ["mode", "kind", "assignmentId", "assignmentRevision", "translation", "offset"]);
+        const kind = query.get("kind"), translation = query.get("translation"), revision = query.get("assignmentRevision"), offset = query.get("offset");
+        if ((kind !== "torah" && kind !== "haftarah") || translation !== "jps2023" || !revision || !/^[1-9][0-9]{0,9}$/.test(revision)
+          || offset === null || !/^(?:0|[1-9][0-9]{0,2})$/.test(offset)) throw new HttpBoundaryError();
+        let value;
+        try { value = await runtime.shortReferenceAudio.readPage(request, { mode: mode(query.get("mode"), true), studentId: id!, kind,
+          assignmentId: identifier(query.get("assignmentId")), assignmentRevision: integer(Number(revision)), translation, offset: Number(offset) }); }
+        catch (error) { if (error instanceof StudyUnavailable && error.code === "invalid-request") throw new HttpBoundaryError(); throw error; }
+        if (!value.ok) return stale();
+        const page = value.page;
+        if (!Array.isArray(page.references) || !page.references.length || page.references.length > 100 || page.offset !== Number(offset)
+          || !Number.isSafeInteger(page.totalVerses) || page.totalVerses < 1 || page.totalVerses > 1000
+          || page.offset + page.references.length > page.totalVerses
+          || page.nextOffset !== (page.offset + page.references.length < page.totalVerses ? page.offset + page.references.length : null)) throw new Error("Reference page unavailable");
+        const references = page.references.map(raw => { const parsed = parseReferenceShortResolution(raw); if (!parsed) throw new Error("Reference page unavailable"); return parsed as unknown as JsonValue; });
+        const projected = { studentId: value.studentId, studentRevision: value.studentRevision, mode: value.mode, context: contextView(value.context),
+          assignment: { id: value.assignment.id, revision: value.assignment.revision, kind: value.assignment.kind, needsReview: value.assignment.needsReview },
+          page: { offset: page.offset, nextOffset: page.nextOffset, totalVerses: page.totalVerses, references } };
+        if (Buffer.byteLength(JSON.stringify(projected)) > 1024 * 1024) throw new Error("Reference page unavailable");
+        return privateJson(projected);
       }
       case "reference-audio": {
         const query = uniqueQuery(request.url, ["mode", "kind", "assignmentId", "assignmentRevision", "translation", "offset", "asset"]);

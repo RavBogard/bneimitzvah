@@ -1,4 +1,5 @@
 import { createHonoreeService } from "../../src/server/honoree/service";
+import { createShortReferenceAudioService } from "../../src/server/reference-audio/short-service";
 import { createSourceContentService } from "../../src/server/study/source-content-service";
 import { createHonorsService } from "../../src/server/honors/service";
 import { createSourceAssignmentsService } from "../../src/server/study/source-assignments-service";
@@ -57,6 +58,7 @@ export async function portalRoutesFixture() {
   const runtime: HttpRuntime = { origin: "http://localhost:3000", honoree: createHonoreeService({ db: f.db, access: f.service, origin: "http://localhost:3000", deployment: { environment: "test", deployment: "suite" }, signingSecret: randomBytes(48).toString("base64url") }), honors: createHonorsService({ access: f.service }), auth: f.auth, access: f.service, practice, invitations, students, readingPreview, studentWork: createStudentWorkService({ access: f.service, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
     readingExploration: createReadingExplorationService({ access: f.service, practice, signingSecret: randomBytes(48).toString("base64url"), loadReading: async () => { throw new StudyUnavailable("upstream"); }, loadText: async () => { throw new StudyUnavailable("upstream"); } }),
     referenceAudio: createReferenceAudioService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, loadCatalog: async () => { throw new ReferenceUnavailable(); } }),
+    shortReferenceAudio: createShortReferenceAudioService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, loadCatalog: async () => { throw new ReferenceUnavailable(); }, loadManifest: async () => { throw new ReferenceUnavailable(); } }),
     studyWordAids: createStudyWordAidsService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); } }),
     sourceContent: createSourceContentService({ access: f.service, practice, related: async () => { throw new Error("Source content unavailable"); }, editions: async () => { throw new Error("Source content unavailable"); }, content: async () => { throw new Error("Source content unavailable"); } }),
     sourceAssignments: createSourceAssignmentsService({ access: f.service, practice, related: async ref => parseRelatedMetadata([], ref) }),
