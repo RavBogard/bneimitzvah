@@ -27,6 +27,9 @@ import { fetchPracticeCalendar, type PracticeAck, type PracticeDates, type Pract
 import { reloadWorkspaceScopes, type ReloadRegistration } from "./reload-barrier";
 import { createQuietRefresh } from "./quiet-refresh";
 
+import { fetchShortExplorationPage, checkShortExplorationExpectation } from "./study/short-exploration-api";
+import { createShortExplorationOwner as composeShortExplorationOwner, type ShortExplorationOwner } from "./study/short-exploration-owner";
+
 export const rolePaths = { student: "/workspace/student", parent: "/workspace/parent", tutor: "/workspace/tutor", admin: "/workspace/admin/students" } as const;
 type WorkLifecycle = { pause(): void; clear(): void; settle(): Promise<void>; hasUnsaved(): boolean; reveal(): void };
 type Workspace = {
@@ -39,6 +42,7 @@ type Workspace = {
   readExplorationPage(baseline: Assigned, prepared: PreparedExploration, offset: number, signal: AbortSignal): Promise<StudyPage>;
   readReference(baseline: Assigned, kind: StudyKind, offset: number, signal: AbortSignal): Promise<ReferenceResolution>;
   createShortReferenceOwner(baseline: Assigned, kind: StudyKind, offset: number, viewLive: () => boolean): ShortReferenceOwner;
+  createShortExplorationOwner(baseline: Assigned, prepared: PreparedExploration, page: StudyPage, viewLive: () => boolean): ShortExplorationOwner;
   readWordAids(baseline: Assigned, kind: StudyKind, offset: number, verse: StudyVerse, signal: AbortSignal): Promise<StudyWordAids>;
   readWordDetails(baseline: Assigned, kind: StudyKind, offset: number, verse: StudyVerse, index: number, signal: AbortSignal): Promise<StudyWordDetails>;
   createSources(baseline: Assigned, kind: StudyKind, offset: number): SourceAssignmentClient;
@@ -376,6 +380,29 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       },
     });
   }, [practice, serviceRead]);
+  const createShortExplorationOwner = useCallback((baseline: Assigned, suppliedPrepared: PreparedExploration, suppliedPage: StudyPage, viewLive: () => boolean) => {
+    const base = structuredClone(baseline), baseKey = JSON.stringify(base), sessionBinding = binding.current, capturedEpoch = currentEpoch.current;
+    const path = currentPath.current, route = routeRevision.current, generation = practice.generation;
+    const selected = base.mode === "child-practice" && practice.selection ? structuredClone(practice.selection) : undefined;
+    const prepared = structuredClone(suppliedPrepared), page = structuredClone(suppliedPage), preparedKey = JSON.stringify(prepared), pageKey = JSON.stringify(page);
+    checkShortExplorationExpectation(base, prepared, page, selected);
+    const sameSelection = (value: typeof practice.selection | undefined) => JSON.stringify(value ?? undefined) === JSON.stringify(selected);
+    const live = () => Boolean(sessionBinding && binding.current === sessionBinding && !checkingRef.current && !practice.pending
+      && currentEpoch.current === capturedEpoch && currentPath.current === path && routeRevision.current === route && practice.generation === generation
+      && JSON.stringify(baseline) === baseKey && JSON.stringify(suppliedPrepared) === preparedKey && JSON.stringify(suppliedPage) === pageKey && prepared.expiresAt > Date.now() && (base.mode !== "child-practice" || sameSelection(practice.selection)));
+    const fetchScope = () => JSON.stringify([sequence.current, quietRevision.current, binding.current, currentPath.current, routeRevision.current, practice.generation]);
+    return composeShortExplorationOwner({ binding: { baseline: base, prepared, page, sessionBinding: sessionBinding ?? "", epoch: capturedEpoch, selection: selected }, live: () => live() && viewLive(),
+      read: async (value, currentPrepared, currentPage, signal) => {
+        const stamp = fetchScope(), check = () => { if (signal.aborted || !live() || !viewLive() || fetchScope() !== stamp) throw new PortalRequestError(409); };
+        check();
+        const page = await serviceRead(value.mode, value.student.id, signal, async actual => {
+          check(); if (!sameSelection(actual)) throw new PortalRequestError(409);
+          const result = await fetchShortExplorationPage(value, currentPrepared, currentPage, signal, actual ?? undefined); check(); return result;
+        });
+        check(); return page;
+      },
+    });
+  }, [practice, serviceRead]);
   const readWordAids = useCallback((baseline: Assigned, kind: StudyKind, offset: number, verse: StudyVerse, signal: AbortSignal) => {
     const selected = practice.selection;
     if (baseline.mode === "child-practice" && (!selected || selected.context.studentId !== baseline.student.id || selected.context.id !== baseline.context?.id
@@ -485,7 +512,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={refresh}>Check access again</button>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
-        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readExploration, readExplorationPage, readReference, createShortReferenceOwner, readWordAids, readWordDetails, createSources, createSourceContent, readWork, readProgress, readServiceMetadata, readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, registerQuiet, concealed: checking || failure !== null }}>
+        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readExploration, readExplorationPage, readReference, createShortReferenceOwner, createShortExplorationOwner, readWordAids, readWordDetails, createSources, createSourceContent, readWork, readProgress, readServiceMetadata, readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, registerQuiet, concealed: checking || failure !== null }}>
           {summary.roles.length > 1 && <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] || pathname.startsWith(`${rolePaths[role]}/`) ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>}
           {visibleNotice && <p className="workspace-notice" role="status">{visibleNotice}</p>}
           {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}
