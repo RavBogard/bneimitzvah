@@ -89,7 +89,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const shortView = useRef({ baseline, page: livePage, kind: state.kind, active, concealed, lift });
   shortView.current = { baseline, page: livePage, kind: state.kind, active, concealed, lift };
   useLayoutEffect(() => {
-    if (!baseline || !livePage || !state.kind || concealed) return;
+    if (!baseline || !livePage || !state.kind) return;
     const value = baseline, page = livePage, kind = state.kind, turn = generation.current;
     const live = () => { const now = shortView.current; return now.baseline === value && metadata.current === value && now.page === page && now.kind === kind
       && turn === generation.current && !now.concealed && now.active && !now.lift && document.visibilityState === "visible"; };
@@ -98,13 +98,12 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     shortMetadata.current = owned;
     if (live()) void owned.prepare().catch(() => undefined);
     return () => { owned.dispose(); if (shortMetadata.current === owned) shortMetadata.current = null; };
-  }, [baseline, livePage, state.kind, createShortReferenceOwner, epoch, key, concealed]);
+  }, [baseline, livePage, state.kind, createShortReferenceOwner, epoch, key]);
   useLayoutEffect(() => {
     if (concealed || !active || lift) shortMetadata.current?.suspend();
-    else if (document.visibilityState === "visible") void shortMetadata.current?.prepare().catch(() => undefined);
   }, [concealed, active, lift]);
   useLayoutEffect(() => {
-    const background = () => { if (document.visibilityState !== "visible") shortMetadata.current?.suspend(); else void shortMetadata.current?.prepare().catch(() => undefined); };
+    const background = () => { if (document.visibilityState !== "visible") shortMetadata.current?.suspend(); };
     const leave = () => shortMetadata.current?.suspend();
     document.addEventListener("visibilitychange", background); window.addEventListener("pagehide", leave);
     return () => { document.removeEventListener("visibilitychange", background); window.removeEventListener("pagehide", leave); };

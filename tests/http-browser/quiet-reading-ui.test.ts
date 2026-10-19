@@ -1,3 +1,4 @@
+import { observeInitialShortPage, privateRouteFetch } from "./audio-observation";
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
@@ -13,20 +14,21 @@ vi.mock("server-only", () => ({}));
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
 let isolated: Awaited<ReturnType<typeof isolatedEnv>> | undefined;
 const contexts: BrowserContext[] = [], cached = new Map<string, Awaited<ReturnType<BrowserContext["cookies"]>>>();
+const shortRequests = new WeakMap<Page, ReturnType<typeof observeInitialShortPage>>();
 const focus = (tab: Page) => tab.evaluate(() => { window.dispatchEvent(new Event("focus")); window.dispatchEvent(new Event("pageshow")); document.dispatchEvent(new Event("visibilitychange")); });
 const readPath = () => `/api/students/${fixture.student.id}/reading?mode=parent`;
 async function page(mode: "student" | "parent" = "student") {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: { width: 1200, height: 700 }, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
   const cookies = cached.get("tutor"); if (cookies) await context.addCookies(cookies);
-  const tab = await context.newPage(); await tab.goto("/", { waitUntil: "domcontentloaded" });
+  const tab = await context.newPage(), initialShort = observeInitialShortPage(tab); shortRequests.set(tab, initialShort); await tab.goto("/", { waitUntil: "domcontentloaded" });
   if (!cookies) {
     expect(await tab.evaluate(async () => (await fetch("/api/auth/sign-in/magic-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "pg-tutor@example.test" }) })).status)).toBe(200);
     await openAuthMail(tab, fixture.takeMail("pg-tutor@example.test")); cached.set("tutor", await context.cookies());
   }
   await tab.goto(`/workspace/${mode}`, { waitUntil: "domcontentloaded" });
   if (mode === "parent") await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click();
-  await ui(tab.locator(".study-verses")).toBeVisible(); await tab.waitForLoadState("networkidle"); return tab;
+  await ui(tab.locator(".study-verses")).toBeVisible(); await initialShort.settled(); return tab;
 }
 async function editor(tab: Page, ordinal = 0) {
   const tools = tab.locator(".verse-work").nth(ordinal);
@@ -50,17 +52,21 @@ afterAll(async () => { await Promise.all(contexts.map(context => context.close()
 afterEach(async () => { await Promise.all(contexts.splice(0).map(context => context.close().catch(() => undefined))); });
 
 it("coalesces tab-return checks while preserving actual reading DOM, scroll and unsent work without text reload", async () => {
-  const tab = await page(), { field, tools } = await editor(tab); await field.fill("Synthetic quiet unsent draft");
+  const tab = await page(), { field, tools } = await editor(tab), initialPageCount = shortRequests.get(tab)!.counts().seen; await field.fill("Synthetic quiet unsent draft");
   const node = await tab.locator(".study-verses").elementHandle(), scroll = await tab.evaluate(() => { window.scrollTo(0, 200); return window.scrollY; });
   let release!: () => void, entered = false, sessions = 0, text = 0, metadata = 0; const gate = new Promise<void>(yes => { release = yes; });
   tab.on("request", request => { const path = new URL(request.url()).pathname; if (path.endsWith("/study-text")) text++; if (path.endsWith("/reading")) metadata++; });
-  await tab.route("**/api/session", async route => { sessions++; const response = await route.fetch(); if (!entered) { entered = true; await gate; } await route.fulfill({ response }).catch(() => undefined); });
+  await tab.route("**/api/session", async route => { sessions++; const response = await privateRouteFetch(route, tab); if (!response) return; if (!entered) { entered = true; await gate; } await route.fulfill({ response }).catch(() => undefined); });
   try {
+    // A real hidden→visible lifecycle clears metadata/media but return alone
+    // must not prepare another private page; the quiet check stays coalesced.
+    await tab.evaluate(() => { Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" }); document.dispatchEvent(new Event("visibilitychange")); });
+    await tab.evaluate(() => { Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" }); });
     await focus(tab); await ui.poll(() => entered).toBe(true); await focus(tab);
     expect(sessions).toBe(1); await ui(tab.getByRole("heading", { name: "Checking your access", exact: true })).toBeHidden();
     await ui(field).toHaveValue("Synthetic quiet unsent draft"); expect(await node!.evaluate(value => value === document.querySelector(".study-verses"))).toBe(true); expect(await tab.evaluate(() => window.scrollY)).toBe(scroll);
   } finally { release(); }
-  await ui.poll(() => metadata).toBe(1); await ui.poll(() => sessions).toBe(4); expect(text).toBe(0); expect(await node!.evaluate(value => value === document.querySelector(".study-verses"))).toBe(true);
+  await ui.poll(() => metadata).toBe(1); await ui.poll(() => sessions).toBe(4); expect(shortRequests.get(tab)!.counts().seen).toBe(initialPageCount); expect(text).toBe(0); expect(await node!.evaluate(value => value === document.querySelector(".study-verses"))).toBe(true);
   await ui(field).toHaveValue("Synthetic quiet unsent draft"); await ui(tools.locator(".work-status")).toHaveText("Saved"); await tab.context().close();
 });
 
@@ -68,7 +74,7 @@ it("a committed draft acknowledgement remains authoritative while an independent
   const tab = await page(), { field, tools } = await editor(tab, 1); let release!: () => void, responded = false, status = 0, code: string | null = null, expectedVersion = -1; const gate = new Promise<void>(yes => { release = yes; });
   await tab.route("**/work/draft", async route => {
     expectedVersion = Number(route.request().postDataJSON().expectedVersion);
-    const response = await route.fetch(); status = response.status();
+    const response = await privateRouteFetch(route, tab); if (!response) return; status = response.status();
     if (status !== 200) { const value = await response.json(); code = ["conflict", "stale-revision", "invalid-request"].includes(value.code) ? value.code : "other"; }
     responded = true; if (status === 200) await gate;
     await route.fulfill({ response }).catch(() => undefined);

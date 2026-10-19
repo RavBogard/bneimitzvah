@@ -1,3 +1,4 @@
+import { observeSilentAudio, expectSilentAudio, privateRouteFetch } from "./audio-observation";
 import { beforeAll, beforeEach, afterAll, afterEach, onTestFailed, it, expect, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page, type Route } from "playwright";
@@ -25,7 +26,7 @@ const assigned = (tab: Page) => panel(tab).getByRole("list", { name: "Assigned s
 async function api(tab: Page, path: string, body?: unknown) { return tab.evaluate(async ({ path, body }) => { const result = await fetch(path, { method: body === undefined ? "GET" : "POST", headers: body === undefined ? {} : { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store" }); return { status: result.status, data: await result.json() }; }, { path, body }); }
 async function page(who: "admin" | "tutor" | "student" = "admin", mobile = false, colorScheme: "light" | "dark" = "light") {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 }, colorScheme, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
-  await context.addInitScript(() => { window.sourceUiAudioCount = 0; window.Audio = new Proxy(window.Audio, { construct(target, args) { window.sourceUiAudioCount++; return Reflect.construct(target, args); } }); });
+  await observeSilentAudio(context);
   await context.route("**/*", async route => { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); });
   if (cookies[who]) await context.addCookies(cookies[who]!);
   const tab = await context.newPage(); tab.on("console", message => { if (message.text().includes("Encountered two children with the same key")) duplicateKeyWarnings++; });
@@ -45,7 +46,7 @@ async function observeSourceResponse(tab: Page, endpoint: "source-assignments" |
     if (route.request().method() !== "POST") return route.fallback();
     try {
       // Read the real upstream response independently of Chromium's body cache.
-      const response = await route.fetch({ maxRedirects: 0, maxRetries: 0 });
+      const response = await privateRouteFetch(route, tab, { maxRedirects: 0, maxRetries: 0 }); if (!response) return;
       let parsed: { value: SourceResponseBody } | { error: unknown };
       try { expect(response.status()).toBe(200); parsed = { value: await response.json() }; } catch (error) { parsed = { error }; }
       await route.fulfill({ response });
@@ -61,7 +62,7 @@ async function save(tab: Page, ref = "Genesis 1:1") {
   await ui(panel(tab, ref).getByText("Sources saved.", { exact: true })).toBeVisible(); return value;
 }
 async function quiet(tab: Page) { let sessions = 0; const response = (value: import("playwright").Response) => { if (new URL(value.url()).pathname === "/api/session" && value.status() === 200) sessions++; }; tab.on("response", response); try { await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await ui.poll(() => sessions).toBeGreaterThanOrEqual(4); } finally { tab.off("response", response); } }
-async function noAudio(tab: Page) { expect(await tab.evaluate(() => window.sourceUiAudioCount)).toBe(0); }
+async function noAudio(tab: Page) { await expectSilentAudio(tab); }
 
 beforeAll(async () => {
   assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard();
@@ -167,7 +168,7 @@ it("keeps a genuinely committed save unknown when the final session probe fails,
   const ref = "Genesis 1:3", tab = await page("admin"); await open(tab, ref); await browse(tab, ref); await panel(tab, ref).getByRole("list", { name: "Related sources", exact: true }).getByRole("checkbox").nth(0).check();
   let failFinalProbe = false, captured: Record<string, unknown> | undefined;
   await tab.route("**/api/session", async route => { if (failFinalProbe) { failFinalProbe = false; await route.fulfill({ status: 503, contentType: "application/json", body: '{"ok":false}' }); } else await route.continue(); });
-  const committedThenUnverified = async (route: Route) => { if (route.request().method() !== "POST") return route.continue(); captured = route.request().postDataJSON(); const response = await route.fetch(); expect(response.status()).toBe(200); failFinalProbe = true; await route.fulfill({ response }); };
+  const committedThenUnverified = async (route: Route) => { if (route.request().method() !== "POST") return route.continue(); captured = route.request().postDataJSON(); const response = await privateRouteFetch(route, tab); if (!response) return; expect(response.status()).toBe(200); failFinalProbe = true; await route.fulfill({ response }); };
   await tab.route("**/source-assignments", committedThenUnverified); await panel(tab, ref).getByRole("button", { name: "Save sources", exact: true }).click();
   await ui(panel(tab, ref).getByRole("button", { name: "Check what saved", exact: true })).toBeEnabled(); await ui(panel(tab, ref)).toContainText("Save not confirmed. It may have saved."); expect(captured).toBeDefined();
   const stored = await fixture.ownerDb.select().from(s.verseSourceAssignment).where(and(eq(s.verseSourceAssignment.studentId, fixture.student.id), eq(s.verseSourceAssignment.verseRef, ref))); expect(stored).toHaveLength(1);

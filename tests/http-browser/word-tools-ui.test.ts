@@ -1,3 +1,6 @@
+import { shortSourceFFmpegMetadataArgs } from "../../src/lib/reference-audio/short-source-tags";
+import { syntheticFourSecondShort } from "./synthetic-short-reference";
+import { privateRouteFetch, observeSilentAudio, expectSilentAudio } from "./audio-observation";
 import { beforeAll, afterAll, it, expect, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
@@ -23,10 +26,10 @@ import { REFERENCE_ATTRIBUTION } from "../../src/lib/reference-audio/contract";
 import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
 
-declare global { interface Window { toolsAudios: HTMLAudioElement[]; toolsRevoked: string[] } }
+declare global { interface Window { toolsAudios: HTMLAudioElement[]; toolsRevoked: string[]; toolsBlobKinds: Record<string, "prime" | "word" | "verse"> } }
 type TrackedWindow = Window;
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
-let directory: string | undefined, audioBytes: Buffer, siblingId: string, duplicateKeyWarnings = 0;
+let directory: string | undefined, audioBytes: Buffer, shortBytes: Buffer, shortPath: string, siblingId: string, duplicateKeyWarnings = 0;
 const contexts: BrowserContext[] = [], archiveUrl = "https://archive.org/download/PockettorahAudioFiles/Synthetic-player.mp3";
 function mainStudyPage(request: StudyRequest) {
   const page = syntheticUiStudyPage(request);
@@ -39,21 +42,23 @@ async function api(tab: Page, path: string, body: unknown) {
 async function page(mobile = false, who: "admin" | "tutor" | "student" = "admin", authenticated?: BrowserContext) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 }, serviceWorkers: "block", acceptDownloads: false,
     ...(authenticated ? { storageState: await authenticated.storageState() } : {}) }); contexts.push(context);
-  const state = { requests: 0, corrupt: false, held: null as null | { release(): void; started: Promise<void> }, sawCookie: false, sawReferer: false };
+  const state = { requests: 0, shortRequests: 0, archiveRequests: 0, corrupt: false, held: null as null | { release(): void; started: Promise<void> }, sawCookie: false, sawReferer: false };
   await context.addInitScript(() => {
-    const target = window as TrackedWindow; target.toolsAudios = []; target.toolsRevoked = [];
+    const target = window as TrackedWindow; target.toolsAudios = []; target.toolsRevoked = []; target.toolsBlobKinds = {};
+    const create = URL.createObjectURL.bind(URL); URL.createObjectURL = blob => { const url = create(blob); target.toolsBlobKinds[url] = blob instanceof Blob && blob.type === "audio/wav" ? blob.size === 204 ? "prime" : "word" : "verse"; return url; };
     const AudioConstructor = window.Audio;
     window.Audio = new Proxy(AudioConstructor, { construct(original, args) { const audio = Reflect.construct(original, args) as HTMLAudioElement; target.toolsAudios.push(audio); return audio; } });
     const revoke = URL.revokeObjectURL.bind(URL); URL.revokeObjectURL = url => { target.toolsRevoked.push(url); revoke(url); };
   });
+  await observeSilentAudio(context);
   let release!: () => void, began!: () => void;
   const gate = new Promise<void>(yes => { release = yes; }), started = new Promise<void>(yes => { began = yes; });
   await context.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url());
-    if (url.href === archiveUrl) {
-      state.requests++; const headers = await request.allHeaders(); state.sawCookie ||= Boolean(headers.cookie); state.sawReferer ||= Boolean(headers.referer);
+    if (url.href === archiveUrl || url.origin === BROWSER_ORIGIN && url.pathname === shortPath) {
+      state.requests++; const source = url.href === archiveUrl ? audioBytes : shortBytes; if (url.href === archiveUrl) state.archiveRequests++; else state.shortRequests++; const headers = await request.allHeaders(); state.sawCookie ||= Boolean(headers.cookie); state.sawReferer ||= Boolean(headers.referer);
       if (state.held) { began(); await gate; }
-      const body = state.corrupt ? Buffer.from(audioBytes.map((value, index) => index === 200 ? value ^ 1 : value)) : audioBytes;
+      const body = state.corrupt ? Buffer.from(source.map((value, index) => index === 200 ? value ^ 1 : value)) : source;
       try { await route.fulfill({ status: 200, headers: { "content-type": "audio/mpeg", "access-control-allow-origin": BROWSER_ORIGIN, "content-length": String(body.length), "cache-control": "no-store" }, body }); } catch { /* Scope teardown may abort the routed request. */ }
     } else if (url.origin === BROWSER_ORIGIN) await route.continue(); else await route.abort();
   });
@@ -65,8 +70,8 @@ async function page(mobile = false, who: "admin" | "tutor" | "student" = "admin"
 }
 const player = (tab: Page) => tab.getByRole("region", { name: "Reading playback", exact: true });
 const word = (tab: Page, verse: number, index: number) => tab.locator(`.study-verses [data-verse-ref="Genesis 1:${verse}"] [data-word-index="${index}"]`).first();
-async function playing(tab: Page) { await expect.poll(async () => (await native(tab)).paused).toBe(false); }
-async function native(tab: Page) { return tab.evaluate(() => { const a = (window as TrackedWindow).toolsAudios.at(-1); return { count: (window as TrackedWindow).toolsAudios.length, paused: a?.paused, currentTime: a?.currentTime, rate: a?.playbackRate, preservesPitch: a?.preservesPitch, src: a?.getAttribute("src"), revoked: (window as TrackedWindow).toolsRevoked.length }; }); }
+async function playing(tab: Page) { await expect.poll(async () => { const current = await native(tab); return (current.kind === "verse" || current.kind === "word") && current.paused === false && (current.readyState ?? 0) >= 2; }).toBe(true); await ui(player(tab).getByRole("button", { name: "Pause", exact: true })).toBeVisible(); }
+async function native(tab: Page) { return tab.evaluate(() => { const a = (window as TrackedWindow).toolsAudios.at(-1); return { count: (window as TrackedWindow).toolsAudios.length, paused: a?.paused, kind: a?.src ? window.toolsBlobKinds[a.src] : undefined, readyState: a?.readyState, duration: a?.duration, currentTime: a?.currentTime, rate: a?.playbackRate, preservesPitch: a?.preservesPitch, src: a?.getAttribute("src"), revoked: (window as TrackedWindow).toolsRevoked.length }; }); }
 
 beforeAll(async () => {
   assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard();
@@ -76,6 +81,8 @@ beforeAll(async () => {
     if (!resolve(directory).startsWith(resolve(tmpdir()) + sep)) throw new Error("Synthetic audio path refused");
     await promisify(execFile)("ffmpeg", ["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=24000:duration=8", "-ac", "1", "-codec:a", "libmp3lame", "-b:a", "64k", join(directory, "synthetic.mp3")], { env: isolated.env, windowsHide: true, timeout: 15000, maxBuffer: 4096 });
     audioBytes = await readFile(join(directory, "synthetic.mp3"));
+    await promisify(execFile)("ffmpeg", ["-hide_banner", "-loglevel", "error", "-i", join(directory, "synthetic.mp3"), "-ss", "1", "-t", "4", "-map_metadata", "-1", "-codec:a", "libmp3lame", "-b:a", "64k", "-id3v2_version", "3", "-write_id3v1", "0", "-write_xing", "1", ...shortSourceFFmpegMetadataArgs(), join(directory, "synthetic-short.mp3")], { env: isolated.env, windowsHide: true, timeout: 15000, maxBuffer: 4096 });
+    shortBytes = await readFile(join(directory, "synthetic-short.mp3"));
   } catch { throw new Error("Runtime synthetic audio generation failed; details withheld"); } finally { await isolated.cleanup(); }
   const sample = mainStudyPage({ kind: "torah", ranges: ["Genesis 1:1-3"], verses: ["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"], offset: 0, translation: "jps2023" });
   const digest = createHash("sha256").update(audioBytes).digest("hex");
@@ -83,7 +90,8 @@ beforeAll(async () => {
     verses: sample.verses.map(verse => { const projection = projectStudyVerse(verse.ref, verse.hebrew); if (projection.status !== "ready" || projection.projection.words.length !== 2) throw new Error("Synthetic word projection refused");
       return { schema: "reference-verse/v1", ref: verse.ref, table: "torah", playback: { status: "ready", asset: sourceAsset, clip: { start: 1, end: 5 } }, words: { status: "ready", readingTextSha256: createHash("sha256").update(verse.hebrew.readingText.normalize("NFC")).digest("hex"), starts: [1.1, 3] }, attribution: REFERENCE_ATTRIBUTION }; }) }] });
   if (!catalog) throw new Error("Synthetic reference catalog refused");
-  fixture = await browserFixture({ studyLoad: async request => mainStudyPage(request), referenceCatalogLoad: async () => catalog, referenceStudentRelease: true,
+  const short = await syntheticFourSecondShort(catalog, shortBytes); shortPath = short.path;
+  fixture = await browserFixture({ referenceShortManifestLoad: async () => short.manifest, studyLoad: async request => mainStudyPage(request), referenceCatalogLoad: async () => catalog, referenceStudentRelease: true,
     wordDetailsSource: { book: async () => parseTahot([1,2,3].flatMap(n => [`Gen.1.${n}#1=L\tבָּג\tDISCARDED\tSynthetic occurrence first\t{H0001}\tHNcmsa\t`, `Gen.1.${n}#2=L\tדָּג\tDISCARDED\tSynthetic occurrence second\t{H0001}\tHNcmsa\t`]).join("\n"), "Gen"), lexicon: async () => parseTbesh("H0001#1\tH0001\tH0001\tבָּג\tDISCARDED\tHVqp3ms\tSynthetic dictionary sense\tDISCARDED") } });
   siblingId = (await fixture.practice()).sibling.id;
   const learner = await fixture.signIn("pg-student"), [learnerMembership] = await fixture.ownerDb.insert(s.membership).values({ tenantId: "crc", userId: learner.id }).returning();
@@ -109,7 +117,7 @@ it("keeps tools closed on primary word playback; explicit open remembers that wo
   tab.on("request", request => { if (/\/study-word-(aids|details)$/.test(new URL(request.url()).pathname)) requests++; });
   await ui(tools(tab).getByRole("button", { name: "Word tools" })).toHaveAttribute("aria-expanded", "false");
   await word(tab, 1, 1).click(); await playing(tab);
-  await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse"); expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(1); expect((await native(tab)).currentTime).toBeLessThan(2);
+  await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse"); expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(0); expect(Math.round((await native(tab)).duration! * 24000)).toBe(96000); expect((await native(tab)).kind).toBe("verse"); expect(state.shortRequests).toBe(1); expect(state.archiveRequests).toBe(0); expect((await native(tab)).currentTime).toBeLessThan(2);
   await player(tab).getByRole("button", { name: "Repeat", exact: true }).click(); expect(requests).toBe(0);
   await openTools(tab); await ui(tools(tab)).toContainText("Word 2 of 2"); await ui(tools(tab)).toContainText("Synthetic occurrence second");
   await tools(tab).getByRole("button", { name: "Next word", exact: true }).click(); await ui(tools(tab)).toContainText("Genesis 1:2"); await ui(tools(tab)).toContainText("Word 1 of 2");
@@ -119,17 +127,17 @@ it("keeps tools closed on primary word playback; explicit open remembers that wo
   await tab.evaluate(() => { const audio = window.toolsAudios.at(-1)!; audio.currentTime = 1.5; audio.dispatchEvent(new Event("timeupdate")); });
   await ui(tools(tab)).toContainText("Genesis 1:2"); expect(requests).toBe(settled); expect(state.requests).toBe(1);
   await tools(tab).getByRole("button", { name: "Hear this word", exact: true }).click(); await playing(tab); await ui(player(tab)).toContainText("Genesis 1:2");
-  await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("0"); expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(1.1); expect((await native(tab)).currentTime).toBeLessThan(2); expect(state.requests).toBe(1);
+  await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("0"); expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(0); expect(Math.round((await native(tab)).duration! * 24000)).toBe(45600); expect((await native(tab)).kind).toBe("word"); expect((await native(tab)).currentTime).toBeLessThan(2); expect(state.requests).toBe(1);
   expect(state.sawCookie || state.sawReferer).toBe(false);
 });
 it("supports phone keyboard study with no loaded audio; qere/maqaf, independent holds and stress remain in flow", async () => {
   const { tab, state } = await page(true, "student");
   const disclosure = tools(tab).getByRole("button", { name: "Word tools", exact: true }); await disclosure.focus(); await disclosure.press("Enter");
-  await ui(tools(tab).getByText("Synthetic dictionary sense", { exact: true })).toBeVisible(); expect((await native(tab)).count).toBe(0); expect(state.requests).toBe(0);
+  await ui(tools(tab).getByText("Synthetic dictionary sense", { exact: true })).toBeVisible(); await expectSilentAudio(tab); expect(state.requests).toBe(0);
   await ui(tools(tab).getByRole("heading", { name: "Meaning in this verse", exact: true })).toBeVisible();
   // The exact pure fixture proves first maqaf word has no tonic; do not invent one.
   await ui(tools(tab).getByRole("group", { name: "Hebrew syllables", exact: true })).toBeVisible(); await ui(tools(tab).locator('[data-stress="tonic"]')).toHaveCount(0);
-  const next = tools(tab).getByRole("button", { name: "Next word", exact: true }); await next.focus(); await next.press("Enter"); await ui(tools(tab)).toContainText("Word 2 of 2"); expect((await native(tab)).count).toBe(0);
+  const next = tools(tab).getByRole("button", { name: "Next word", exact: true }); await next.focus(); await next.press("Enter"); await ui(tools(tab)).toContainText("Word 2 of 2"); await expectSilentAudio(tab); expect(state.requests).toBe(0);
   const tonic = tools(tab).locator('[data-stress="tonic"]'); await ui(tonic).toHaveCount(1);
   const description = await tonic.getAttribute("aria-describedby"); expect(description).toBeTruthy(); await ui(tab.locator(`[id="${description}"]`)).toContainText("primary stress");
   await ui(tools(tab).getByRole("heading", { name: "דָּ֖ג", exact: true })).toBeVisible();
@@ -145,7 +153,7 @@ it("supports phone keyboard study with no loaded audio; qere/maqaf, independent 
 it("fences out-of-order held responses and dismissal; quiet unchanged return retains the same private selection without refetch", async () => {
   const { tab } = await page(false, "admin", contexts[0]); let release!: () => void, entered!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; }), started = new Promise<void>(resolve => { entered = resolve; });
-  await tab.route("**/study-word-details?**", async route => { const response = await route.fetch(); if (new URL(route.request().url()).searchParams.get("wordIndex") === "0") { entered(); await gate; } try { await route.fulfill({ response }); } catch {} });
+  await tab.route("**/study-word-details?**", async route => { const response = await privateRouteFetch(route, tab); if (!response) return; if (new URL(route.request().url()).searchParams.get("wordIndex") === "0") { entered(); await gate; } try { await route.fulfill({ response }); } catch {} });
   await tools(tab).getByRole("button", { name: "Word tools", exact: true }).click(); await started;
   await tools(tab).getByRole("button", { name: "Next word", exact: true }).click(); await ui(tools(tab).getByText("Synthetic occurrence second", { exact: true })).toBeVisible(); release();
   await ui(tools(tab)).toContainText("Word 2 of 2"); await ui(tools(tab).getByText("Synthetic occurrence first", { exact: true })).toHaveCount(0);

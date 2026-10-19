@@ -1,3 +1,4 @@
+import { privateRouteFetch, observeInitialShortPage } from "./audio-observation";
 import { openAuthMail } from "./auth-navigation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
@@ -20,6 +21,8 @@ let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop:
 let sibling: { id: string }, adminTab: Page, studentTab: Page, calls = 0, unavailable = false, longVerse = false;
 let english: "available" | "partial" | "unavailable" = "partial";
 const contexts: BrowserContext[] = [], modes = new Set<string>();
+const initialShortPages = new WeakMap<Page, ReturnType<typeof observeInitialShortPage>>();
+const metadataLoads: { kind: string; offset: number; refs: string[] }[] = [];
 const cookies = new Map<"admin" | "tutor" | "student", Awaited<ReturnType<BrowserContext["cookies"]>>>();
 async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Study UI browser operation failed; private details withheld"); } }
 async function navigate(tab: Page, path: string) { await safe(() => tab.goto(path, { waitUntil: "domcontentloaded", timeout: 30_000 })); }
@@ -38,7 +41,7 @@ async function page(who: "admin" | "tutor" | "student", mobile = false, fresh = 
   // Reuse only a known live role session from this disposable fixture. Extra
   // independent cases must not exhaust the real magic-link throttle.
   const signedIn = fresh ? undefined : cookies.get(who); if (signedIn) await context.addCookies(signedIn);
-  const tab = await context.newPage(); await navigate(tab, "/"); if (signedIn) return tab;
+  const tab = await context.newPage(); initialShortPages.set(tab, observeInitialShortPage(tab)); await navigate(tab, "/"); if (signedIn) return tab;
   const email = who === "student" ? "pg-study-student@example.test" : who === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
   expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); cookies.set(who, await context.cookies()); return tab;
 }
@@ -102,7 +105,8 @@ async function captureDark(tab: Page, name: string) {
 beforeAll(async () => {
   try {
     assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard();
-    fixture = await browserFixture({ studyLoad: async request => { calls++; if (unavailable) throw new StudyUnavailable("upstream"); return longVerse ? syntheticUiLongStudyPage(request) : syntheticUiStudyPage(request, english); } });
+    const material = (request: Parameters<typeof syntheticUiStudyPage>[0]) => { if (unavailable) throw new StudyUnavailable("upstream"); return longVerse ? syntheticUiLongStudyPage(request) : syntheticUiStudyPage(request, english); };
+    fixture = await browserFixture({ studyLoad: async request => { calls++; return material(request); }, shortReferenceStudyLoad: async request => { const page = material(request); metadataLoads.push({ kind: request.kind, offset: page.offset, refs: page.verses.map(verse => verse.ref) }); return page; } });
     sibling = (await fixture.practice()).sibling;
     const learner = await fixture.signIn("pg-study-student");
     const [member] = await fixture.ownerDb.insert(s.membership).values({ tenantId: "crc", userId: learner.id }).returning();
@@ -119,7 +123,11 @@ beforeAll(async () => {
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
 it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English credits in all base modes without duplicate initial loads", async () => {
-  adminTab = await page("admin"); const before = calls; await navigate(adminTab, `/workspace/admin/students/${fixture.student.id}/reading`); await loaded(adminTab, "Genesis 1:1"); expect(calls - before).toBe(1);
+  adminTab = await page("admin"); const before = calls, beforeMetadata = metadataLoads.length; await navigate(adminTab, `/workspace/admin/students/${fixture.student.id}/reading`); await loaded(adminTab, "Genesis 1:1"); await initialShortPages.get(adminTab)!.settled(); expect(calls - before).toBe(1);
+  // Visible text and authorized audio metadata are separate actual service purposes.
+  // StrictMode may retire one initial owner; each bounded metadata batch is exact.
+  const initialMetadata = metadataLoads.slice(beforeMetadata); expect(initialMetadata.length).toBeGreaterThanOrEqual(1); expect(initialMetadata.length).toBeLessThanOrEqual(2);
+  for (const batch of initialMetadata) expect(batch).toEqual({ kind: "torah", offset: 0, refs: ["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"] });
   await ui(adminTab.locator(".reading-review").first()).toContainText("Needs review");
   await ui(adminTab.locator(".assigned-study").getByText("Closed paragraph (setumah) after this verse.", { exact: true }).first()).toBeVisible();
   expect(await adminTab.locator(".study-hebrew").first().getAttribute("lang") === "he" && await adminTab.locator(".study-hebrew").first().getAttribute("dir") === "rtl").toBe(true);
@@ -275,7 +283,7 @@ it("retains optional close-up during a quiet unchanged access check without requ
   await ui(inline.getByText("The recording couldn’t be loaded. Try again.", { exact: true })).toBeVisible(); await ui(tab.getByRole("dialog")).toHaveCount(0);
   await click(tab, "View Genesis 1:1 up close"); const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
   let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
-  await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
+  await tab.route("**/api/session", async route => { const response = await privateRouteFetch(route, tab); if (!response) return; held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   try {
     await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
     await ui(tab.getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden(); await ui(dialog).toBeVisible();
@@ -290,7 +298,7 @@ it("keeps unsent typing and an unknown save intact while phrase controls change"
   const panel = tab.locator('.study-verse-detail[data-verse-ref="Genesis 1:1"] .verse-work'); await safe(() => panel.locator("summary").click());
   const field = panel.getByRole("textbox"); await ui(field).toBeVisible();
   let release!: () => void, committed = false, writes = 0; const gate = new Promise<void>(resolve => { release = resolve; });
-  await tab.route("**/work/draft", async route => { writes++; const response = await route.fetch(); committed = response.status() === 200; await gate; await route.fulfill({ response }).catch(() => undefined); });
+  await tab.route("**/work/draft", async route => { writes++; const response = await privateRouteFetch(route, tab); if (!response) return; committed = response.status() === 200; await gate; await route.fulfill({ response }).catch(() => undefined); });
   try {
     await safe(() => field.fill("Synthetic save held during phrase colors")); await safe(() => panel.getByRole("button", { name: "Save now", exact: true }).click());
     await ui.poll(() => committed).toBe(true);
@@ -311,7 +319,7 @@ it("discards held old-child text after a switch, keeps another tab independent, 
   const other = await tab.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => other.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await click(other, "Practice with Synthetic"); await loaded(other, "Genesis 1:1");
   await colorVerse(tab, "Genesis 1:1"); await setColors(tab, false); // Remembered for this child only.
   const pattern = new RegExp(`/api/students/${fixture.student.id}/study-text\\?`); let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
-  await tab.route(pattern, async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
+  await tab.route(pattern, async route => { const response = await privateRouteFetch(route, tab); if (!response) return; held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   await click(tab, "Refresh reading"); await ui.poll(() => held).toBe(true);
   try { await click(tab, "Switch practice to Synthetic Sibling"); await loaded(tab, "Genesis 2:1"); } finally { release(); }
   await tab.unroute(pattern); expect(await tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true }).count()).toBe(0);
@@ -352,7 +360,7 @@ it("preserves staff drafts, paging and quiet same-session reading while rejectin
   let textReloads = 0; const countText = (request: import("playwright").Request) => { if (new URL(request.url()).pathname.endsWith("/study-text")) textReloads++; }; tab.on("request", countText);
   const scroll = await tab.evaluate(() => { window.scrollTo(0, 240); return window.scrollY; });
   const countVerifiedSession = (response: import("playwright").Response) => { if (metadataReleased && new URL(response.url()).pathname === "/api/session" && response.status() === 200) verifiedSessions++; }; tab.on("response", countVerifiedSession);
-  await tab.route("**/reading?**", async route => { const response = await route.fetch(); held = true; await gate; metadataReleased = true; await route.fulfill({ response }).catch(() => undefined); });
+  await tab.route("**/reading?**", async route => { const response = await privateRouteFetch(route, tab); if (!response) return; held = true; await gate; metadataReleased = true; await route.fulfill({ response }).catch(() => undefined); });
   try {
     await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
     await ui(tab.locator("#workspace-main").getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden(); await ui(tab.locator(".study-verses")).toBeVisible();

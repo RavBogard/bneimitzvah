@@ -1,3 +1,4 @@
+import { observeSilentAudio, expectSilentAudio } from "./audio-observation";
 // Actual restricted SDK/HTTP services, synthetic metadata/scalars, loopback only.
 import { beforeAll, afterAll, afterEach, it, expect, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
@@ -33,7 +34,7 @@ const sourceList = (tab: Page, kind: "Assigned" | "Related" = "Assigned") => pan
 async function api(tab: Page, path: string, body?: unknown) { return tab.evaluate(async ({ path, body }) => { const response = await fetch(path, { method: body === undefined ? "GET" : "POST", cache: "no-store", headers: body === undefined ? {} : { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) }); return { status: response.status, value: await response.json() }; }, { path, body }); }
 async function page(who: "admin" | "tutor" | "student" = "admin", phone = false, colorScheme: "light" | "dark" = "light", capture = false) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: phone ? { width: 390, height: 844 } : { width: 1440, height: 1000 }, colorScheme, ...(capture ? { reducedMotion: "reduce" as const } : {}), serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
-  await context.addInitScript(() => { const prior = window.Audio; Object.defineProperty(window, "sourceReaderAudio", { value: { count: 0 } }); window.Audio = new Proxy(prior, { construct(target, args) { (window as unknown as { sourceReaderAudio: { count: number } }).sourceReaderAudio.count++; return Reflect.construct(target, args); } }); });
+  await observeSilentAudio(context);
   await context.route("**/*", async route => { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); });
   if (cookies[who]) await context.addCookies(cookies[who]!); const tab = await context.newPage(); tab.on("console", message => { if (message.text().includes("Encountered two children with the same key")) duplicateKeys++; });
   await tab.goto("/", { waitUntil: "domcontentloaded" });
@@ -46,7 +47,7 @@ async function browse(tab: Page) { await panel(tab).getByRole("button", { name: 
 async function readCitation(tab: Page, n = 0, lane: "Assigned" | "Related" = "Assigned") { await sourceList(tab, lane).getByRole("button", { name: `Read source: ${sourceRef(n)}`, exact: true }).click(); await ui(reader(tab, n).getByRole("list", { name: "Source editions", exact: true })).toBeVisible(); }
 async function readEdition(tab: Page, n = 0, language: "en" | "he" = "he") { const row = reader(tab, n).getByRole("listitem").filter({ hasText: `Invented edition ${language === "en" ? "000" : "001"}` }); await row.getByRole("button", { name: `Read ${language === "he" ? "Hebrew" : "English"} edition`, exact: true }).click(); const scalar = reader(tab, n).locator(`[lang="${language}"]`); await ui(scalar).toHaveText(bodyText(sourceRef(n), language)); expect(await scalar.textContent()).toBe(bodyText(sourceRef(n), language)); }
 async function quiet(tab: Page) { let sessions = 0; const response = (value: import("playwright").Response) => { if (new URL(value.url()).pathname === "/api/session" && value.status() === 200) sessions++; }; tab.on("response", response); try { await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await ui.poll(() => sessions).toBeGreaterThanOrEqual(4); } finally { tab.off("response", response); } }
-async function noAudio(tab: Page) { expect(await tab.evaluate(() => (window as unknown as { sourceReaderAudio: { count: number } }).sourceReaderAudio.count)).toBe(0); }
+async function noAudio(tab: Page) { await expectSilentAudio(tab); }
 
 beforeAll(async () => {
   assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard();

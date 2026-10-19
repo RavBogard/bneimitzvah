@@ -1,3 +1,4 @@
+import { observeSilentAudio, expectSilentAudio } from "./audio-observation";
 // Real restricted HTTP services with invented flat commentary; loopback only.
 import { beforeAll, afterAll, afterEach, it, expect, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
@@ -31,7 +32,7 @@ const list = (tab: Page, lane: "Assigned" | "Related") => panel(tab).getByRole("
 async function api(tab: Page, path: string, body: unknown) { return tab.evaluate(async ({ path, body }) => { const response = await fetch(path, { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }); return { status: response.status, value: await response.json() }; }, { path, body }); }
 async function page(who: "admin" | "student", phone = false, colorScheme: "light" | "dark" = "light", capture = false) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: phone ? { width: 390, height: 844 } : { width: 1440, height: 1000 }, colorScheme, ...(capture ? { reducedMotion: "reduce" as const } : {}), serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
-  await context.addInitScript(() => { const prior = window.Audio; Object.defineProperty(window, "extentAudio", { value: { count: 0 } }); window.Audio = new Proxy(prior, { construct(target, args) { (window as unknown as { extentAudio: { count: number } }).extentAudio.count++; return Reflect.construct(target, args); } }); });
+  await observeSilentAudio(context);
   await context.route("**/*", route => new URL(route.request().url()).origin === BROWSER_ORIGIN ? route.continue() : route.abort());
   if (cookies[who]) await context.addCookies(cookies[who]!); const tab = await context.newPage(); tab.on("console", message => { if (message.text().includes("Encountered two children with the same key")) duplicateKeys++; });
   await tab.goto("/", { waitUntil: "domcontentloaded" });
@@ -43,7 +44,7 @@ async function open(tab: Page) { await panel(tab).getByRole("button", { name: "S
 async function browse(tab: Page) { await panel(tab).getByRole("button", { name: "Browse related sources", exact: true }).click(); await ui(list(tab, "Related")).toBeVisible(); }
 async function citation(tab: Page, n: number, lane: "Assigned" | "Related") { await list(tab, lane).getByRole("button", { name: `Read source: ${refs[n]}`, exact: true }).click(); await ui(reader(tab, n).getByRole("list", { name: "Source editions", exact: true })).toBeVisible(); }
 async function choose(tab: Page, n: number, language: "he" | "en") { await reader(tab, n).getByRole("button", { name: `Read ${language === "he" ? "Hebrew" : "English"} edition`, exact: true }).click(); }
-async function noAudio(tab: Page) { expect(await tab.evaluate(() => (window as unknown as { extentAudio: { count: number } }).extentAudio.count)).toBe(0); }
+async function noAudio(tab: Page) { await expectSilentAudio(tab); }
 function mutationCount(tab: Page) { let count = 0; tab.on("request", request => { if (request.method() === "POST" && /source-assignments|practice-calendar/.test(new URL(request.url()).pathname)) count++; }); return () => count; }
 
 beforeAll(async () => {
