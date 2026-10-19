@@ -4,11 +4,11 @@ import { referenceRecord } from "./source";
 export const SHORT_SOURCE_SCHEMA = "reference-short-source/v1" as const;
 export const SHORT_SOURCE_LIMITS = Object.freeze({ bytes: 1024 * 1024, seconds: 75, parentSeconds: 14400 });
 export const SHORT_SOURCE_PREFIX = "/reference-audio/short-v1/";
-export const SHORT_SOURCE_RECIPE = "pockettorah-mp3-64k-gapless/v1" as const;
+export const SHORT_SOURCE_RECIPE = "pockettorah-mp3-64k-gapless/v2" as const;
 export const SHORT_SOURCE_ATTRIBUTION = Object.freeze({
-  version: "pockettorah-short-attribution/v1", title: "PocketTorah Audio Files", creator: "not-a-box media lab",
+  version: "pockettorah-short-attribution/v2", title: "PocketTorah Audio Files", creator: "not-a-box media lab",
   license: "CC-BY-SA-3.0", licenseUrl: "https://creativecommons.org/licenses/by-sa/3.0/",
-  changes: "Excerpted and re-encoded as a 64 kbps MP3 with gapless metadata.",
+  changes: "Excerpted and re-encoded as a 64 kbps MP3; encoder gapless endpoint and checksum metadata normalized.",
 });
 const rates = new Set([8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000]);
 const sha = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);

@@ -30,6 +30,11 @@ test("pure planning uses real pinned manifest acceptance and fixed public attrib
   expect(readShortSourceEntry(receipt).requiredBodyVerification).toBe(SHORT_BODY_VERIFICATION_REQUIRED);
 });
 
+test("planner v2 does not silently reuse old producer recipe facts", async () => {
+  const f = fact(); Object.assign(f.encoded, { recipe: "pockettorah-mp3-64k-gapless/v1" });
+  expect(await planShortSourceBuild(input([f]))).toEqual({ status: "hold", code: "profile" });
+});
+
 test("ordering and exact bytes are deterministic; input mutation cannot rewrite an already captured plan", async () => {
   const first = await planShortSourceBuild(input([fact(1), fact()])), second = await planShortSourceBuild(input([fact(), fact(1)]));
   expect(first).toEqual(second); if (first.status !== "planned") throw Error("Synthetic plan refused");

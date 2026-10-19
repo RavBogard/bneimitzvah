@@ -11,6 +11,9 @@ import { ReferenceUnavailable } from "../../src/server/reference-audio/catalog";
 const sha = (b: Uint8Array) => createHash("sha256").update(b).digest("hex"), json = (v: unknown) => new TextEncoder().encode(JSON.stringify(v));
 const asset = `ra_${"1".repeat(32)}`, parentSHA = "a".repeat(64);
 const set32 = (b: Uint8Array, p: number, v: number) => new DataView(b.buffer, b.byteOffset, b.byteLength).setUint32(p, v);
+// Independent table CRC fixture seals, not the production checksum helper.
+const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let i = 0; i < 8; i++) c = c & 1 ? (c >>> 1) ^ 0xa001 : c >>> 1; return c; });
+function crc(b: Uint8Array) { let c = 0; for (const v of b) c = (c >>> 8) ^ crcTable[(c ^ v) & 255]; return c; }
 function put(b: Uint8Array, p: number, text: string) { b.set(new TextEncoder().encode(text), p); }
 function fixture(rate = 24000, channels: 1 | 2 = 1) {
   const t = SHORT_SOURCE_FFMPEG_TAGS, fields = [["TIT2", t.title], ["TPE1", t.artist], ["TCOP", t.copyright], ["TXXX", `comment\0${t.comment}`], ["TENC", t.encoded_by], ["TXXX", `source\0${t.source}`], ["TSSE", "Lavf63.1.101"]];
@@ -29,7 +32,8 @@ function fixture(rate = 24000, channels: 1 | 2 = 1) {
   for (let i = 0; i < 100; i++) b[info + 16 + i] = i === 99 ? 255 : Math.floor(i * 256 / 100);
   put(b, encoder, "Lavc63.1."); b[encoder + 21] = 576 >>> 4; b[encoder + 22] = ((576 & 15) << 4) | (padding >>> 8); b[encoder + 23] = padding & 255;
   set32(b, encoder + 28, b.length - start);
-  return { b, rate, channels, presentation, start, frameLength, info, encoder };
+  const seal = () => { const view = new DataView(b.buffer); view.setUint16(encoder + 32, crc(b.subarray(start + frameLength))); view.setUint16(encoder + 34, crc(b.subarray(start, encoder + 34))); };
+  seal(); return { b, rate, channels, presentation, start, frameLength, info, encoder, seal };
 }
 async function entry(f: ReturnType<typeof fixture>, body: Uint8Array = f.b, presentation = f.presentation): Promise<ShortSourceEntry> {
   const parent = json({ schema: "reference-catalog/v1", source: "PockettorahAudioFiles", assets: [{ id: asset, archiveFile: "Synthetic-1.mp3", sha256: parentSHA, bytes: 7,
@@ -80,12 +84,12 @@ test("closed ID3 profile refuses missing/wrong credits, encoding/flags/version, 
     (f: ReturnType<typeof fixture>) => { f.b[f.start - 1] = 1; }, (f: ReturnType<typeof fixture>) => { const p = Buffer.from(f.b).indexOf("Lavf63"); f.b[p] = 88; },
     (f: ReturnType<typeof fixture>) => { const p = Buffer.from(f.b).indexOf("creativecommons"); f.b[p] ^= 1; },
     (f: ReturnType<typeof fixture>) => { const p = Buffer.from(f.b).indexOf("archive.org"); f.b[p] ^= 1; }];
-  for (const change of changes) { const f = fixture(); change(f); const sealed = await entry(f); expect(() => verifyShortSourceBody(sealed, f.b)).toThrow(ReferenceUnavailable); }
+  for (const change of changes) { const f = fixture(); change(f); f.seal(); const sealed = await entry(f); expect(() => verifyShortSourceBody(sealed, f.b)).toThrow(ReferenceUnavailable); }
 });
 
 test("every frame must retain exact LayerIII 64k rate/channel profile and complete EOF; trailing or truncated bytes refuse", async () => {
   for (const byte of [0, 1, 2, 3]) {
-    const f = fixture(); f.b[f.start + f.frameLength + byte] ^= byte === 3 ? 0x40 : 0x10;
+    const f = fixture(); f.b[f.start + f.frameLength + byte] ^= byte === 3 ? 0x40 : 0x10; f.seal();
     const sealed = await entry(f); expect(() => verifyShortSourceBody(sealed, f.b)).toThrow(ReferenceUnavailable);
   }
   for (const change of [(b: Uint8Array) => b.subarray(0, b.length - 1), (b: Uint8Array) => { const a = new Uint8Array(b.length + 1); a.set(b); return a; }]) {
@@ -95,9 +99,18 @@ test("every frame must retain exact LayerIII 64k rate/channel profile and comple
 });
 
 test("monotonic Info TOC may end below255; full hash and exact frame geometry still verify", async () => {
-  const f = fixture(); f.b[f.info + 115] = 254;
+  const f = fixture(); f.b[f.info + 115] = 254; f.seal();
   const verified = verifyShortSourceBody(await entry(f), f.b);
   expect(readVerifiedShortSourceBody(verified).bytes).toEqual(f.b);
+});
+
+test("genuine newly sealed metadata cannot turn corrupt tag/audio CRC or legacy fixed190 into a body receipt", async () => {
+  for (const change of [
+    (f: ReturnType<typeof fixture>) => { f.b[f.encoder + 34] ^= 1; },
+    (f: ReturnType<typeof fixture>) => { f.b[f.encoder + 32] ^= 1; new DataView(f.b.buffer).setUint16(f.encoder + 34, crc(f.b.subarray(f.start, f.encoder + 34))); },
+    (f: ReturnType<typeof fixture>) => { f.b[f.start + f.frameLength + 10] ^= 1; new DataView(f.b.buffer).setUint16(f.encoder + 34, crc(f.b.subarray(f.start, f.encoder + 34))); },
+    (f: ReturnType<typeof fixture>) => { const d = new DataView(f.b.buffer); d.setUint16(f.encoder + 34, 0); d.setUint16(f.encoder + 34, crc(f.b.subarray(f.start, f.start + 190))); },
+  ]) { const f = fixture(); change(f); const genuine = await entry(f); expect(() => verifyShortSourceBody(genuine, f.b)).toThrow(ReferenceUnavailable); }
 });
 
 test("Info flags/count/bytecount/TOC/Lavc delay/discard and presentation are exact, not guessed or clamped", async () => {
@@ -107,6 +120,6 @@ test("Info flags/count/bytecount/TOC/Lavc delay/discard and presentation are exa
     (f: ReturnType<typeof fixture>) => { f.b[f.encoder + 21] = 0; }, (f: ReturnType<typeof fixture>) => { f.b[f.encoder + 23] ^= 1; },
     (f: ReturnType<typeof fixture>) => { f.b[f.encoder + 10] = 1; }, (f: ReturnType<typeof fixture>) => { f.b[f.encoder + 31] ^= 1; },
     (f: ReturnType<typeof fixture>) => { f.b[f.encoder + 36] = 1; }];
-  for (const change of changes) { const f = fixture(); change(f); const sealed = await entry(f); expect(() => verifyShortSourceBody(sealed, f.b)).toThrow(ReferenceUnavailable); }
+  for (const change of changes) { const f = fixture(); change(f); f.seal(); const sealed = await entry(f); expect(() => verifyShortSourceBody(sealed, f.b)).toThrow(ReferenceUnavailable); }
   const f = fixture(); const sealed = await entry(f, f.b, f.presentation + 1); expect(() => verifyShortSourceBody(sealed, f.b)).toThrow(ReferenceUnavailable);
 });

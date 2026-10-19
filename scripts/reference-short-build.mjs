@@ -14,7 +14,7 @@ import { isolatedEnv } from "../tests/helpers/isolatedEnv.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), ".."), MiB = 1024 * 1024;
 const hash = value => createHash("sha256").update(value).digest("hex"), digest = value => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
-const ENTRIES = ["src/server/reference-audio/short-source-build.ts", "src/lib/reference-audio/short-source-tags.ts", "src/server/reference-audio/short-source-body.ts"];
+const ENTRIES = ["src/server/reference-audio/short-source-build.ts", "src/lib/reference-audio/short-source-tags.ts", "src/server/reference-audio/short-source-body.ts", "src/server/reference-audio/short-source-gapless.ts"];
 const REQUIRED = ["scripts/reference-short-build.mjs", "scripts/private-paths.mjs", "tests/helpers/isolatedEnv.mjs", ...ENTRIES];
 const fail = code => { throw Object.assign(new Error("Offline short build refused"), { code }); };
 const exact = (value, keys) => {
@@ -101,13 +101,15 @@ export async function prepareShortBuildOutputPath(path, audioRoot) {
 
 // Static trusted bridge: genuine compiled planner/manifest/body modules, real
 // server-only condition. No SDK context, alias or public schema reimplementation.
-const WORKER = String.raw`
-import {createRequire} from 'node:module';import{readFile,realpath,lstat}from'node:fs/promises';import{join,dirname,resolve}from'node:path';import{createHash}from'node:crypto';
+export const SHORT_BUILD_WORKER = String.raw`
+import {createRequire} from 'node:module';import{readFile,writeFile,open,realpath,lstat}from'node:fs/promises';import{join,dirname,resolve}from'node:path';import{createHash}from'node:crypto';
 const verifyShortBuildServerOnly=${verifyShortBuildServerOnly.toString()};
 const r=createRequire(import.meta.url),q=JSON.parse(await readFile(process.argv[1],'utf8')),at=p=>join(q.compiled,p),sha=b=>createHash('sha256').update(b).digest('hex');
-await verifyShortBuildServerOnly(['short-source-build','short-source-manifest','short-source-body','catalog'].map(n=>at('src/server/reference-audio/'+n+'.js')),q.serverOnly);
-const tags=r(at('src/lib/reference-audio/short-source-tags.js')),core=r(at('src/server/reference-audio/short-source-build.js')),manifest=r(at('src/server/reference-audio/short-source-manifest.js')),body=r(at('src/server/reference-audio/short-source-body.js')),catalog=r(at('src/server/reference-audio/catalog.js')),source=r(at('src/lib/reference-audio/short-source.js'));
+async function shortBytes(path){const f=await open(path,'r'),b=Buffer.alloc(1048577);let n=0;try{while(n<b.length){const v=await f.read(b,n,b.length-n,n);if(!v.bytesRead)break;n+=v.bytesRead;}if(n>1048576)throw Error('raw-budget');return b.subarray(0,n);}finally{await f.close();}}
+await verifyShortBuildServerOnly(['short-source-build','short-source-manifest','short-source-body','short-source-gapless','catalog'].map(n=>at('src/server/reference-audio/'+n+'.js')),q.serverOnly);
+const tags=r(at('src/lib/reference-audio/short-source-tags.js')),core=r(at('src/server/reference-audio/short-source-build.js')),manifest=r(at('src/server/reference-audio/short-source-manifest.js')),body=r(at('src/server/reference-audio/short-source-body.js')),gapless=r(at('src/server/reference-audio/short-source-gapless.js')),catalog=r(at('src/server/reference-audio/catalog.js')),source=r(at('src/lib/reference-audio/short-source.js'));
 if(q.mode==='policy'){console.log(JSON.stringify({tagArgs:tags.shortSourceFFmpegMetadataArgs(),recipe:source.SHORT_SOURCE_RECIPE}));}
+else if(q.mode==='normalize'){const b=await shortBytes(q.raw);if(b.length!==q.rawBytes||sha(b)!==q.rawSHA)throw Error('raw-pin');const n=gapless.normalizeShortSourceGapless(b,{sampleRate:q.sampleRate,channels:q.channels,physicalFrames:q.physicalFrames});await writeFile(q.normalized,n.bytes,{flag:'wx',mode:0o600});console.log(JSON.stringify({audit:n.audit}));}
 else{const parentBytes=await readFile(q.parent);if(sha(parentBytes)!==q.parentSHA)throw Error('pin');
 if(q.mode==='select'){const c=catalog.parseReferenceCatalog(JSON.parse(parentBytes));if(!c)throw Error('catalog');const selected=q.selections.map(s=>{const a=c.assets.find(a=>a.id===s.asset),v=a?.verses.find(v=>v.ref===s.ref);if(!a||!v||v.playback.status!=='ready')throw Error('selection');return{asset:a.id,parentSHA256:a.sha256,parentBytes:a.bytes,archiveFile:a.archiveFile,ref:v.ref,clip:v.playback.clip};});console.log(JSON.stringify({selected}));}
 else{const plan=await core.planShortSourceBuild({parentCatalogBytes:parentBytes,parentCatalogSHA256:q.parentSHA,facts:q.facts});if(plan.status!=='planned')throw Error('plan');const b=new TextEncoder().encode(plan.manifestJSON),m=await manifest.createShortSourceManifestLoader({sha256:plan.manifestSHA256,parentCatalogSHA256:q.parentSHA,parentCatalogBytes:parentBytes,get:async()=>new ReadableStream({start(c){c.enqueue(b);c.close();}})})();let verified=0;for(const file of q.bodies){const e=manifest.lookupShortSource(m,'rs_'+file.sha256);const proof=body.verifyShortSourceBody(e,new Uint8Array(await readFile(file.path)));body.readVerifiedShortSourceBody(proof);verified++;}console.log(JSON.stringify({manifestJSON:plan.manifestJSON,manifestSHA256:plan.manifestSHA256,verified}));}}
@@ -164,7 +166,7 @@ export async function buildReferenceShort(supplied) {
     const parentSnapshot = join(work, "parent-catalog.json"); await writeFile(parentSnapshot, await readBounded(parentInput.path, 8 * MiB), { flag: "wx", mode: 0o600 });
     const serverOnly = { emptyFile: await realpath(join(ROOT, "node_modules/server-only/empty.js")), packageFile: await realpath(join(ROOT, "node_modules/server-only/package.json")), emptySHA256: sourcePins.get("node_modules/server-only/empty.js"), packageSHA256: sourcePins.get("node_modules/server-only/package.json") };
     const worker = async request => { live(); const path = join(work, `request-${worker.calls++}.json`); await writeFile(path, JSON.stringify({ ...request, serverOnly, compiled: runtime, parent: parentSnapshot, parentSHA: parentInput.sha256 }), { flag: "wx", mode: 0o600 });
-      return JSON.parse((await run(tools.node.path, ["--conditions=react-server", "--input-type=module", "-e", WORKER, path], iso.env, { cap: 16 * MiB, timeout: 60000 })).toString()); }; worker.calls = 0;
+      return JSON.parse((await run(tools.node.path, ["--conditions=react-server", "--input-type=module", "-e", SHORT_BUILD_WORKER, path], iso.env, { cap: 16 * MiB, timeout: 60000 })).toString()); }; worker.calls = 0;
     phase = "selection"; policy = await worker({ mode: "policy" }); if (!Array.isArray(policy.tagArgs) || policy.tagArgs.length > 32) fail("metadata");
     selected = (await worker({ mode: "select", selections: input.selections })).selected;
     versions = { node: process.version, compiler: (await run(tools.compiler.path, ["--version"], iso.env)).toString().trim(), ffmpeg: (await run(tools.ffmpeg.path, ["-version"], iso.env)).toString().split(/\r?\n/)[0], ffprobe: (await run(tools.ffprobe.path, ["-version"], iso.env)).toString().split(/\r?\n/)[0] };
@@ -182,19 +184,26 @@ export async function buildReferenceShort(supplied) {
         if (!Number.isSafeInteger(firstFrame) || firstFrame < 0 || lastExclusive > parentFrames || frames < 1) fail("capacity"); if (frames > rate * 75) fail("profile");
         const cut = join(work, `cut-${cuts.length}.pcm`); await pipeline(createReadStream(pcm, { start: firstFrame * channels * 2, end: lastExclusive * channels * 2 - 1 }), createWriteStream(cut, { flags: "wx", mode: 0o600 }));
         const canonical = await fileHash(cut, 15 * MiB); if (canonical.bytes !== frames * channels * 2) fail("geometry");
-        phase = "encode"; const encoded = join(work, `cut-${cuts.length}.mp3`);
-        await run(tools.ffmpeg.path, ["-v", "error", "-n", "-f", "s16le", "-ar", String(rate), "-ac", String(channels), "-i", cut, "-map_metadata", "-1", "-codec:a", "libmp3lame", "-b:a", "64k", "-id3v2_version", "3", "-write_id3v1", "0", "-write_xing", "1", ...policy.tagArgs, encoded], iso.env);
-        const encodedFact = await fileHash(encoded, MiB); phase = "roundtrip";
+        phase = "encode"; const rawEncoded = join(work, `raw-${cuts.length}.mp3`), encoded = join(work, `cut-${cuts.length}.mp3`);
+        await run(tools.ffmpeg.path, ["-v", "error", "-n", "-f", "s16le", "-ar", String(rate), "-ac", String(channels), "-i", cut, "-map_metadata", "-1", "-codec:a", "libmp3lame", "-b:a", "64k", "-id3v2_version", "3", "-write_id3v1", "0", "-write_xing", "1", ...policy.tagArgs, rawEncoded], iso.env);
+        const rawFact = await fileHash(rawEncoded, MiB); phase = "normalize";
+        const normalized = await worker({ mode: "normalize", raw: rawEncoded, rawSHA: rawFact.sha256, rawBytes: rawFact.bytes, normalized: encoded, sampleRate: rate, channels, physicalFrames: frames });
+        const encodedFact = await fileHash(encoded, MiB), audit = normalized.audit;
+        if (audit.physicalFrames !== frames || audit.original.sha256 !== rawFact.sha256 || audit.original.bytes !== rawFact.bytes || audit.normalized.sha256 !== encodedFact.sha256 || audit.normalized.bytes !== encodedFact.bytes || audit.normalized.checksum !== "strict") fail("normalization");
+        const normalization = Object.freeze({ ...audit, schema: "reference-short-normalization/v1", normalizerSHA256: sourcePins.get("src/server/reference-audio/short-source-gapless.ts"),
+          original: Object.freeze({ ...audit.original }), normalized: Object.freeze({ ...audit.normalized }), changedOffsets: Object.freeze([...audit.changedOffsets]) });
+        phase = "roundtrip";
         const measured = JSON.parse((await run(tools.ffprobe.path, ["-v", "error", "-select_streams", "a:0", "-show_streams", "-show_format", "-show_packets", "-show_entries", "stream=codec_name,sample_rate,channels,bit_rate:format_tags:packet=side_data_list:packet_side_data=side_data_type,skip_samples,discard_padding", "-of", "json", encoded], iso.env)).toString());
         const stream = measured.streams[0], padding = measured.packets.flatMap(p => p.side_data_list ?? []).filter(p => p.side_data_type === "Skip Samples").map(p => ({ skipSamples: p.skip_samples, discardPadding: p.discard_padding }));
         if (stream.codec_name !== "mp3" || Number(stream.sample_rate) !== rate || stream.channels !== channels || Number(stream.bit_rate) !== 64000 || !padding.some(p => p.skipSamples > 0) || !padding.some(p => p.discardPadding >= 0)) fail("profile");
         const decoded = join(work, `roundtrip-${cuts.length}.f32`); await run(tools.ffmpeg.path, ["-v", "error", "-i", encoded, "-f", "f32le", "-c:a", "pcm_f32le", "-"], iso.env, { file: decoded, cap: 28800000 });
         if ((await stat(decoded)).size !== frames * channels * 4) fail("geometry");
         const destination = join(output, `${encodedFact.sha256}.mp3`); await pipeline(createReadStream(encoded, { end: encodedFact.bytes - 1 }), createWriteStream(destination, { flags: "wx", mode: 0o600 }));
-        cuts.push({ selection, firstFrame, lastExclusive, parentFrames, canonicalPCM16SHA256: canonical.sha256, padding, body: { path: destination, sha256: encodedFact.sha256 },
+        if ((await fileHash(rawEncoded, MiB)).sha256 !== rawFact.sha256) fail("changed-output");
+        cuts.push({ selection, firstFrame, lastExclusive, parentFrames, canonicalPCM16SHA256: canonical.sha256, normalization, padding, body: { path: destination, sha256: encodedFact.sha256 },
           fact: { parentAsset: s.asset, parentSHA256: s.parentSHA256, parentBytes: s.parentBytes, sampleRate: rate, channels, parentFrames, clip: selection.clip,
             encoded: { ...encodedFact, codec: "mp3", bitrate: 64000, sampleRate: rate, channels, presentationFrames: frames, recipe: policy.recipe } } });
-        await rm(cut); await rm(encoded); await rm(decoded);
+        await rm(cut); await rm(rawEncoded); await rm(encoded); await rm(decoded);
       }
       if ((await fileHash(parent, 32 * MiB)).sha256 !== s.parentSHA256) fail("changed-input"); await rm(parentCopy); await rm(pcm);
     }

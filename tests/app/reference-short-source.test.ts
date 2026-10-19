@@ -23,6 +23,14 @@ function fixture(raw: unknown = manifest(), parentBytes = bytes(parent())) {
 }
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
+test("normalization recipe and changed public attribution are v2 while descriptor and namespace remain v1", async () => {
+  expect(SHORT_SOURCE_RECIPE).toBe("pockettorah-mp3-64k-gapless/v2"); expect(SHORT_SOURCE_ATTRIBUTION.version).toBe("pockettorah-short-attribution/v2");
+  expect(SHORT_SOURCE_ATTRIBUTION.changes).toContain("endpoint and checksum metadata normalized");
+  expect(source().schema).toBe("reference-short-source/v1"); expect(source().path).toMatch(/^\/reference-audio\/short-v1\//);
+  await expect(fixture({ ...manifest(), recipe: "pockettorah-mp3-64k-gapless/v1" }).load()).rejects.toThrow(ReferenceUnavailable);
+  await expect(fixture({ ...manifest(), attribution: { ...SHORT_SOURCE_ATTRIBUTION, version: "pockettorah-short-attribution/v1" } }).load()).rejects.toThrow(ReferenceUnavailable);
+});
+
 test("closed short descriptor snapshots native frame grid and maps original coordinates without padding or clamping", () => {
   const raw = source(), parsed = parseShortReferenceSource(raw)!;
   expect(parsed).not.toBeNull(); expect(Object.isFrozen(parsed)).toBe(true); expect(Object.isFrozen(parsed.origin)).toBe(true); expect(Object.isFrozen(parsed.parent)).toBe(true);

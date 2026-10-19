@@ -6,6 +6,8 @@ import { SHORT_SOURCE_FFMPEG_TAGS } from "../../src/lib/reference-audio/short-so
 export const publicOrigin = "https://beitmitzvah.centralreform.org";
 export const sha = (b: Uint8Array) => createHash("sha256").update(b).digest("hex");
 const json = (v: unknown) => new TextEncoder().encode(JSON.stringify(v));
+const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let i = 0; i < 8; i++) c = c & 1 ? (c >>> 1) ^ 0xa001 : c >>> 1; return c; });
+function crc(b: Uint8Array) { let c = 0; for (const v of b) c = (c >>> 8) ^ crcTable[(c ^ v) & 255]; return c; }
 export function publicShortFixture(change?: (body: Uint8Array, info: number) => void) {
   // Synthetic frame structures only; no rendered/real source audio in Git.
   const t = SHORT_SOURCE_FFMPEG_TAGS, fields = [["TIT2", t.title], ["TPE1", t.artist], ["TCOP", t.copyright], ["TXXX", `comment\0${t.comment}`], ["TENC", t.encoded_by], ["TXXX", `source\0${t.source}`], ["TSSE", "Lavf63.1.101"]];
@@ -19,6 +21,8 @@ export function publicShortFixture(change?: (body: Uint8Array, info: number) => 
   const info = start + 13, encoder = info + 120; put(body, info, "Info"); set32(body, info + 4, 15); set32(body, info + 8, count); set32(body, info + 12, body.length - start);
   for (let i = 0; i < 100; i++) body[info + 16 + i] = Math.floor(i * 256 / 100);
   put(body, encoder, "Lavc63.1."); const padding = count * 576 - 576 - frames; body[encoder + 21] = 36; body[encoder + 22] = padding >>> 8; body[encoder + 23] = padding & 255; set32(body, encoder + 28, body.length - start);
+  new DataView(body.buffer).setUint16(encoder + 32, crc(body.subarray(start + 192)));
+  new DataView(body.buffer).setUint16(encoder + 34, crc(body.subarray(start, encoder + 34)));
   change?.(body, info);
   const asset = `ra_${"1".repeat(32)}`, parentSHA = "a".repeat(64), parent = json({ schema: "reference-catalog/v1", source: "PockettorahAudioFiles", assets: [{ id: asset, archiveFile: "Synthetic-1.mp3", sha256: parentSHA, bytes: 7,
     verses: [{ schema: "reference-verse/v1", ref: "Genesis 1:1", table: "torah", playback: { status: "ready", asset, clip: { start: 0, end: 0.8 } }, words: { status: "unavailable", reason: "no-words" }, attribution: REFERENCE_ATTRIBUTION }] }] });

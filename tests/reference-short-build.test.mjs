@@ -8,7 +8,7 @@ import { resolve, join, relative, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { isolatedEnv } from "./helpers/isolatedEnv.mjs";
 import { insideGitWorkingTree } from "../scripts/private-paths.mjs";
-import { buildReferenceShort, shortBuildCompilerArgs, parseShortBuildSelectionSnapshot, prepareShortBuildOutputPath } from "../scripts/reference-short-build.mjs";
+import { buildReferenceShort, shortBuildCompilerArgs, parseShortBuildSelectionSnapshot, prepareShortBuildOutputPath, SHORT_BUILD_WORKER } from "../scripts/reference-short-build.mjs";
 
 const ROOT = resolve("."), sha = value => createHash("sha256").update(value).digest("hex"), bytes = value => Buffer.from(JSON.stringify(value));
 async function command(path, args, env) {
@@ -30,7 +30,7 @@ if (process.argv.length > 2 && !syntheticToolsPath) throw new Error("Unsupported
 
 test("offline compiler arguments retain genuine closure, strict checks and no emit escape", () => {
   const args = shortBuildCompilerArgs("code-only-output");
-  for (const required of ["--strict", "--noEmitOnError", "--listFiles", "--listEmittedFiles", "node20", "node16", "src/server/reference-audio/short-source-build.ts", "src/lib/reference-audio/short-source-tags.ts", "src/server/reference-audio/short-source-body.ts"]) assert.equal(args.includes(required), true);
+  for (const required of ["--strict", "--noEmitOnError", "--listFiles", "--listEmittedFiles", "node20", "node16", "src/server/reference-audio/short-source-build.ts", "src/lib/reference-audio/short-source-tags.ts", "src/server/reference-audio/short-source-body.ts", "src/server/reference-audio/short-source-gapless.ts"]) assert.equal(args.includes(required), true);
   assert.equal(args.includes("--noCheck"), false); assert.equal(args.includes("--paths"), false);
   const list = shortBuildCompilerArgs("unused", true); assert.equal(list.includes("--listFilesOnly"), true); assert.equal(list.includes("--outDir"), false);
 });
@@ -39,7 +39,7 @@ test("exact empty source pins are accepted but empty executable tools remain ref
   const home = await realpath(await mkdtemp(join(tmpdir(), "short-build-empty-control-")));
   try {
     const empty = join(home, "empty-tool"); await writeFile(empty, "", { flag: "wx" });
-    const paths = ["scripts/reference-short-build.mjs", "scripts/private-paths.mjs", "tests/helpers/isolatedEnv.mjs", "src/server/reference-audio/short-source-build.ts", "src/lib/reference-audio/short-source-tags.ts", "src/server/reference-audio/short-source-body.ts", "node_modules/server-only/empty.js"];
+    const paths = ["scripts/reference-short-build.mjs", "scripts/private-paths.mjs", "tests/helpers/isolatedEnv.mjs", "src/server/reference-audio/short-source-build.ts", "src/lib/reference-audio/short-source-tags.ts", "src/server/reference-audio/short-source-body.ts", "src/server/reference-audio/short-source-gapless.ts", "node_modules/server-only/empty.js"];
     const sourcePins = await Promise.all(paths.map(async path => ({ path, sha256: sha(await readFile(join(ROOT, path))) })));
     const tool = { path: empty, sha256: sha(Buffer.alloc(0)) }, config = { sourceCommit: "0".repeat(40), sourcePins, tools: { node: tool, compiler: tool, ffmpeg: tool, ffprobe: tool }, parentCatalog: {}, input: {}, audioRoot: home, outputDir: join(home, "out") };
     const result = await buildReferenceShort(config); assert.equal(result.ok, false); assert.equal(result.phase, "tool-pins"); assert.equal(result.code, "path");
@@ -97,6 +97,37 @@ test("actual react-server importer resolution rejects a nearer server-only shado
     const wrong = { ...expected, packageSHA256: "0".repeat(64) }, mismatch = script.replace(JSON.stringify(expected), JSON.stringify(wrong));
     assert.equal((await command(process.execPath, ["--conditions=react-server", "--input-type=module", "-e", mismatch], iso.env)).toString().trim(), "refused");
   } finally { assert.equal(await realpath(home), resolve(home)); await rm(home, { recursive: true }); await iso.cleanup(); }
+});
+
+test("actual compiled producer worker normalizes copied structural bytes and refuses altered pins, physicalN and overwrite without codec", async () => {
+  const iso = await isolatedEnv({ CI: "1" }); let runtime;
+  try {
+    await mkdir(join(ROOT, ".local-logs"), { recursive: true }); runtime = await realpath(await mkdtemp(join(ROOT, ".local-logs/short-normalization-test-")));
+    await command(process.execPath, ["node_modules/typescript/bin/tsc", ...shortBuildCompilerArgs(runtime)], iso.env);
+    const home = await realpath(iso.home), raw = join(home, "raw.mp3"), normalized = join(home, "normalized.mp3"), fixturePath = join(home, "fixture.json");
+    await writeFile(fixturePath, bytes({ compiled: runtime, raw }), { flag: "wx" });
+    const fixtureScript = String.raw`
+import{createRequire}from'node:module';import{readFile,writeFile}from'node:fs/promises';import{join}from'node:path';import{createHash}from'node:crypto';
+const q=JSON.parse(await readFile(process.argv[1],'utf8')),r=createRequire(import.meta.url),t=r(join(q.compiled,'src/lib/reference-audio/short-source-tags.js')).SHORT_SOURCE_FFMPEG_TAGS;
+const fields=[['TIT2',t.title],['TPE1',t.artist],['TCOP',t.copyright],['TXXX','comment\0'+t.comment],['TENC',t.encoded_by],['TXXX','source\0'+t.source],['TSSE','Lavf63.1.101']];
+const tags=fields.map(([id,text])=>{const b=Buffer.alloc(text.length+12);b.write(id);b.writeUInt32BE(text.length+2,4);b.write(text,11);return b;});const size=tags.reduce((n,b)=>n+b.length,10),start=size+10,count=40,length=192,enc=start+133,b=Buffer.alloc(start+(count+1)*length);b.write('ID3');b[3]=3;b[6]=(size>>>21)&127;b[7]=(size>>>14)&127;b[8]=(size>>>7)&127;b[9]=size&127;let p=10;for(const tag of tags){b.set(tag,p);p+=tag.length;}for(let i=0;i<=count;i++)b.writeUInt32BE(0xfff384c0,start+i*length);b.write('Info',start+13);b.writeUInt32BE(15,start+17);b.writeUInt32BE(count,start+21);b.writeUInt32BE(b.length-start,start+25);for(let i=0;i<100;i++)b[start+29+i]=i*2;b.write('Lavc63.1.',enc);b[enc+21]=36;b[enc+22]=800>>>8;b[enc+23]=800&255;b.writeUInt32BE(b.length-start,enc+28);
+const table=Array.from({length:256},(_,n)=>{let c=n;for(let i=0;i<8;i++)c=c&1?(c>>>1)^0xa001:c>>>1;return c;}),crc=bytes=>{let c=0;for(const v of bytes)c=(c>>>8)^table[(c^v)&255];return c;};b.writeUInt16BE(crc(b.subarray(start+length)),enc+32);b.writeUInt16BE(crc(b.subarray(start,start+190)),enc+34);await writeFile(q.raw,b,{flag:'wx'});console.log(JSON.stringify({sha256:createHash('sha256').update(b).digest('hex'),bytes:b.length,physicalFrames:40*576-576-837,enc}));`;
+    const f = JSON.parse((await command(process.execPath, ["--input-type=module", "-e", fixtureScript, fixturePath], iso.env)).toString());
+    const serverOnly = { emptyFile: await realpath("node_modules/server-only/empty.js"), packageFile: await realpath("node_modules/server-only/package.json"), emptySHA256: sha(await readFile("node_modules/server-only/empty.js")), packageSHA256: sha(await readFile("node_modules/server-only/package.json")) };
+    const request = { mode: "normalize", compiled: runtime, serverOnly, raw, rawSHA: f.sha256, rawBytes: f.bytes, normalized, sampleRate: 24000, channels: 1, physicalFrames: f.physicalFrames };
+    let ordinal = 0; const run = async q => { const path = join(home, `request-${ordinal++}.json`); await writeFile(path, bytes(q), { flag: "wx" }); return command(process.execPath, ["--conditions=react-server", "--input-type=module", "-e", SHORT_BUILD_WORKER, path], iso.env); };
+    const positive = JSON.parse((await run(request)).toString());
+    assert.equal(positive.audit.original.checksum, "ffmpeg-fixed190"); assert.equal(positive.audit.normalized.checksum, "strict"); assert.equal(positive.audit.normalized.padding, 837);
+    assert.equal(positive.audit.physicalFrames, f.physicalFrames); assert.equal(positive.audit.surplusFrames, 37); assert.equal(positive.audit.original.sha256, f.sha256);
+    const output = await readFile(normalized), original = await readFile(raw); assert.equal(sha(output), positive.audit.normalized.sha256); assert.equal(sha(original), f.sha256);
+    assert.equal(positive.audit.original.audioSHA256, positive.audit.normalized.audioSHA256); assert.equal(positive.audit.original.musicCRC, positive.audit.normalized.musicCRC);
+    for (let i = 0; i < original.length; i++) if (![f.enc + 22, f.enc + 23, f.enc + 34, f.enc + 35].includes(i)) assert.equal(output[i], original[i]);
+    await assert.rejects(run(request)); assert.equal(sha(await readFile(normalized)), sha(output));
+    for (const patch of [{ rawSHA: "0".repeat(64) }, { physicalFrames: positive.audit.original.presentationFrames + 1 }, { rawBytes: f.bytes - 1 }]) {
+      const dest = join(home, `negative-${ordinal}.mp3`); await assert.rejects(run({ ...request, ...patch, normalized: dest })); assert.equal(await absent(dest), true);
+    }
+    assert.equal(sha(await readFile(raw)), f.sha256);
+  } finally { if (runtime) { assert.equal(await realpath(runtime), resolve(runtime)); assert.equal(runtime.startsWith(join(ROOT, ".local-logs") + (process.platform === "win32" ? "\\" : "/")), true); await rm(runtime, { recursive: true }); } await iso.cleanup(); }
 });
 
 test("finite synthetic offline batch proves reproducible tagged mono/stereo cuts, real body receipts and fail-closed paths/pins/capacity", { timeout: 240000, skip: syntheticToolsPath ? false : "explicit pinned synthetic tools required; no codec proof in ordinary npm test" }, async () => {
