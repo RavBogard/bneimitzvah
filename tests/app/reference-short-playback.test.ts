@@ -48,6 +48,75 @@ function fixture(extra: Partial<Parameters<typeof createShortReadingPlayback>[0]
 }
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
+test("false or throwing continuation refuses cached explicit work before any new primer or load", async () => {
+  for (const throwing of [false, true]) {
+    let valid = true;
+    const f = fixture({ canContinue: () => { if (!valid && throwing) throw Error("synthetic continuation refusal"); return valid; } });
+    await f.player.select(0); const attempts = f.media.play.mock.calls.length; valid = false;
+    await f.player.play(); await f.player.select(1); expect(f.media.play).toHaveBeenCalledTimes(attempts);
+    expect(f.load).toHaveBeenCalledOnce(); expect(f.fetcher).toHaveBeenCalledOnce(); expect(f.media.src).toBe(""); expect(f.player.state.suspended).toBe(true); f.player.dispose();
+  }
+  const refused = fixture({ canContinue: () => false }); await refused.player.select(0);
+  expect(refused.media.play).not.toHaveBeenCalled(); expect(refused.load).not.toHaveBeenCalled(); expect(refused.fetcher).not.toHaveBeenCalled(); refused.player.dispose();
+});
+
+test("a current continuation retains same-owner DTO/body/decode caching and native repeat", async () => {
+  const canContinue = vi.fn(() => true), f = fixture({ canContinue });
+  await f.player.select(0); f.player.pause(); await f.player.play(); await f.player.select(0, 1); await f.player.select(0, 0);
+  f.player.setRepeat(true); const attempts = f.media.play.mock.calls.length; f.media.finish();
+  await vi.waitFor(() => { expect(f.media.play.mock.calls.length).toBeGreaterThan(attempts); expect(f.player.state.playback.status).toBe("playing"); });
+  expect(f.load).toHaveBeenCalledOnce(); expect(f.fetcher).toHaveBeenCalledOnce(); expect(f.decode).toHaveBeenCalledOnce(); expect(f.audio).toHaveBeenCalledOnce();
+  expect(canContinue).toHaveBeenCalled(); expect(f.player.state.playback.status).toBe("playing"); f.player.dispose();
+});
+
+test("cached native repeat checks the wall clock even when its expiry timer is still queued", async () => {
+  let deadline = Infinity; const f = fixture({ canContinue: () => Date.now() < deadline }); await f.player.select(0); f.player.setRepeat(true);
+  vi.useFakeTimers(); const now = Date.now(); deadline = now + 1000; let timerFired = false;
+  const timer = setTimeout(() => { timerFired = true; f.player.suspend(); }, 1000), attempts = f.media.play.mock.calls.length;
+  vi.setSystemTime(deadline + 1); f.media.finish(); for (let n = 0; n < 32; n++) await Promise.resolve();
+  expect(timerFired).toBe(false); expect(f.media.play).toHaveBeenCalledTimes(attempts); expect(f.media.src).toBe(""); expect(f.player.state.suspended).toBe(true);
+  expect(f.load).toHaveBeenCalledOnce(); expect(f.fetcher).toHaveBeenCalledOnce(); clearTimeout(timer); f.player.dispose();
+});
+
+test("held private completion after the wall-clock ceiling cannot fetch or play verified media", async () => {
+  vi.useFakeTimers(); const deadline = Date.now() + 1000000, gate = deferred<ReferenceShortResolution>();
+  const f = fixture({ canContinue: () => Date.now() < deadline, load: () => gate.promise }); const pending = f.player.select(0);
+  const attempts = f.media.play.mock.calls.length; vi.setSystemTime(deadline + 1); gate.resolve(resolution()); await pending;
+  expect(f.media.play).toHaveBeenCalledTimes(attempts); expect(f.fetcher).not.toHaveBeenCalled(); expect(f.media.src).toBe(""); expect(f.player.state.suspended).toBe(true); f.player.dispose();
+});
+
+test("held actual play acknowledgement after the ceiling is suspended rather than published as playing", async () => {
+  let deadline = Infinity; const f = fixture({ canContinue: () => Date.now() < deadline }), gate = deferred<void>(), play = f.media.play;
+  let entered = false; f.media.play = vi.fn(() => { const pending = play(); if (f.media.src.includes("blob:verse")) { entered = true; return gate.promise; } return pending; });
+  const pending = f.player.select(0); await vi.waitFor(() => expect(entered).toBe(true)); vi.useFakeTimers(); deadline = Date.now() + 1000;
+  vi.setSystemTime(deadline + 1); gate.resolve(); await pending; expect(f.player.state.suspended).toBe(true); expect(f.media.src).toBe(""); f.player.dispose();
+});
+
+test("held nonabortable decode cannot create a Word segment after its continuation ceiling", async () => {
+  let deadline = Infinity; const gate = deferred<ShortDecodedAudio>(), f = fixture({ canContinue: () => Date.now() < deadline }, { decode: () => gate.promise });
+  await f.player.select(0); const pending = f.player.select(0, 1); await vi.waitFor(() => expect(f.player.state.selection).toBe(1));
+  vi.useFakeTimers(); deadline = Date.now() + 1000; vi.setSystemTime(deadline + 1); gate.resolve(decoded(resolution().source!)); await pending;
+  expect(f.createUrl.mock.calls.some(([blob]) => blob.type === "audio/wav" && blob.size > 204)).toBe(false); expect(f.player.state.suspended).toBe(true); expect(f.media.src).toBe(""); f.player.dispose();
+});
+
+test("playing and queued highlight callbacks refuse a lost continuation without restarting", async () => {
+  for (const event of ["playing", "frame"] as const) {
+    let valid = true; const f = fixture({ canContinue: () => valid }); await f.player.select(0); const frame = [...f.frames.values()][0], attempts = f.media.play.mock.calls.length;
+    valid = false; if (event === "playing") f.media.dispatchEvent(new Event("playing")); else frame(0);
+    expect(f.media.src).toBe(""); expect(f.player.state.suspended).toBe(true); expect(f.frames.size).toBe(0); expect(f.media.play).toHaveBeenCalledTimes(attempts); expect(f.active.at(-1)).toBeNull(); f.player.dispose();
+  }
+});
+
+test("state and highlight callbacks that revoke continuation are rechecked before further work", async () => {
+  let valid = true;
+  const early = fixture({ canContinue: () => valid, onState: state => { if (state.verse !== null && !state.suspended) valid = false; } }); await early.player.select(0);
+  expect(early.media.play).not.toHaveBeenCalled(); expect(early.load).not.toHaveBeenCalled(); early.player.dispose();
+  valid = true; const metadata = fixture({ canContinue: () => valid, onState: state => { if (state.playback.wordsReady) valid = false; } }); await metadata.player.select(0);
+  expect(metadata.fetcher).not.toHaveBeenCalled(); expect(metadata.media.src).toBe(""); metadata.player.dispose();
+  valid = true; const highlight = fixture({ canContinue: () => valid, onActiveWord: word => { if (word !== null) valid = false; } }); await highlight.player.select(0);
+  expect(highlight.frames.size).toBe(0); expect(highlight.media.src).toBe(""); expect(highlight.player.state.suspended).toBe(true); highlight.player.dispose();
+});
+
 test("whole same-origin public bytes require exact SHA/size/URL and omit credentials/redirects", async () => {
   const s = resolution().source!, get = vi.fn<typeof fetch>(async () => response());
   expect(await downloadShortReferenceAudio(s, new AbortController().signal, { origin, fetch: get })).toEqual(data());

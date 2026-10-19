@@ -10,13 +10,14 @@ import type { ReadingSelection } from "./main-playback";
 import { WordTools, type WordToolsHandle } from "./word-tools";
 import { SourcesPanel } from "./sources/panel";
 import { LiftedLine } from "./lift";
+import type { createReadingAudioCoordinator } from "./reading-audio-coordinator";
 import { useReadingPrefs } from "../reading-prefs";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
 import { PortalRequestError } from "../../api";
 import type { ShortReferenceOwner } from "./short-reference-bridge";
 
 export type StudyReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
-export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderWork, renderActiveWork, onPage, learner = false, liftHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, active = true }: {
+export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderWork, renderActiveWork, onPage, learner = false, liftHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, active = true, audio, stopAudio }: {
   baseline: Assigned | null; register(value: StudyReload): () => void; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; onKindChange(kind: StudyKind): void;
   guardDeparture?(): Promise<boolean>; serviceHref?: string; renderWork?(kind: StudyKind, verseRef: string): ReactNode; renderActiveWork?(): ReactNode; onPage?(kind: StudyKind, offset: number, signal: AbortSignal): Promise<void>;
   /** Students and child practice see the reading without status or provenance prose. */
@@ -29,6 +30,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   /** Called only when the reader explicitly opens a verse: tapping it, Start, or stepping to another verse. Never on a reload. */
   onVisit?(kind: StudyKind, verseRef: string): void;
   onHearReady?(ready: boolean): void; active?: boolean;
+  audio?: ReturnType<typeof createReadingAudioCoordinator>; stopAudio?(): void;
 }) {
   const { readStudy, readReference, createShortReferenceOwner, readWordAids, readWordDetails, summary, concealed, epoch } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
   const shortMetadata = useRef<ShortReferenceOwner | null>(null);
@@ -115,7 +117,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const shown = livePage && state.kind ? [state.kind, livePage.offset, livePage.verses.length] as const : null;
   useEffect(() => { if (shown) onShown?.(...shown); }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
   const hear = (page: StudyPage, index: number, word: ReadingSelection = "verse") => { playback.current?.select(index, word); if (word === "verse") tools.current?.selectVerse(index); else tools.current?.select(index, word); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
-  const open = (page: StudyPage, index: number) => { playback.current?.suspend(); shortMetadata.current?.suspend(); setLift({ page, index }); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
+  const open = (page: StudyPage, index: number) => { stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.suspend(); setLift({ page, index }); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
   if (liftHandle) {
     // Parent Start brings this tab forward and opens it in the same event.
     // Inactivity still unmounts media; it does not revoke this explicit opener.
@@ -143,7 +145,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
         sections={current.page.verses.flatMap((verse, index) => { const position = aliyahPosition(kind, assignment!.aliyahStarts, assignment!.verses, verse.ref); return position && (position.startsHere || index === 0) ? [{ index, label: `Aliyah ${position.number}${position.startsHere ? " starts here" : " · continued from the previous text page"}` }] : []; })}
         onVerse={index => hear(current.page!, index)} onWord={(index, word) => { playMainVerseForWord(playback.current, tools.current, index, word); onVisit?.(kind, current.page!.verses[index].ref); }} />
       {!concealed && <ReadingPlayer key={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current])}
-        scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current])} verses={current.page.verses} active={active && !lift}
+        scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current])} verses={current.page.verses} active={active && !lift} enabled={!concealed && !lift} expiresAt={baseline?.context ? Date.parse(baseline.context.expiresAt) : undefined} audio={audio ? { coordinator: audio, slot: "assigned" } : undefined}
         register={registerPlayback} onActiveWord={setPlayingWord} load={async (index, signal) => {
           const value = baseline, page = current.page!, turn = generation.current;
           if (signal.aborted || metadata.current !== value || page !== livePage || !page.verses[index]) throw new PortalRequestError(409);
@@ -188,7 +190,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
           if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
           return result;
         } }}
-        onIndex={index => open(lift.page, index)} onClose={() => setLift(null)} controls={renderLiftControls && (ref => renderLiftControls(kind, ref))} />}
+        onIndex={index => open(lift.page, index)} onClose={() => { stopAudio?.(); setLift(null); }} controls={renderLiftControls && (ref => renderLiftControls(kind, ref))} />}
     </>}
   </section>;
 }
