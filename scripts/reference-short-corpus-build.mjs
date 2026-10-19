@@ -92,6 +92,16 @@ function validateNormalization(c,expected){
  if(typeof a.changed!=='boolean'||a.changed!==(offsets.length>0)||(a.changed?before.sha256===after.sha256:before.sha256!==after.sha256)||(!a.changed&&(!same(before,after)||a.surplusFrames!==0)))reject();
 }
 export function validateCorpusBodySet(names,hashes){const wanted=new Set(hashes.map(h=>`${h}.mp3`));if(wanted.size!==hashes.length||names.length!==wanted.size+3||!['manifest.json','private-provenance.json','build-report.json'].every(n=>names.includes(n))||names.some(n=>!wanted.has(n)&&!['manifest.json','private-provenance.json','build-report.json'].includes(n)))fail('body-set');return true;}
+/** Final candidates have two metadata files. The driver report is outside the
+ * candidate; child directories retain their separate three-file contract. */
+export function validateCorpusCandidateBodySet(names, hashes) {
+ const reject = () => fail('candidate-set');
+ if (!Array.isArray(names) || !Array.isArray(hashes) || hashes.length !== CORPUS_CAPACITY.selectedCuts || !hashes.every(digest)) reject();
+ const bodies = new Set(hashes.map(h => `${h}.mp3`));
+ const metadata = ['manifest.json', 'private-provenance.json'];
+ if (bodies.size !== hashes.length || new Set(names).size !== names.length || names.length !== bodies.size + metadata.length || !metadata.every(n => names.includes(n)) || names.some(n => !bodies.has(n) && !metadata.includes(n))) reject();
+ return true;
+}
 async function noLinks(p){p=resolve(p);if(p.startsWith('\\\\'))fail('path');for(;;){if((await lstat(p)).isSymbolicLink())fail('path');const up=dirname(p);if(up===p)break;p=up;}}
 async function regular(p,cap,external=false,empty=false){p=resolve(p);await noLinks(p);const s=await lstat(p);if(!s.isFile()||s.size<(empty?0:1)||s.size>cap||await realpath(p)!==p||external&&await insideGitWorkingTree(p))fail('path');return p;}
 async function hashFile(p,cap){const before=await stat(p),h=createHash('sha256');let bytes=0;for await(const b of createReadStream(p)){bytes+=b.length;if(bytes>cap)fail('budget');h.update(b);}const after=await stat(p);if(before.size!==bytes||after.size!==bytes||before.ino!==after.ino||before.mtimeMs!==after.mtimeMs)fail('changed-file');return {sha256:h.digest('hex'),bytes};}
@@ -167,7 +177,7 @@ export async function buildReferenceShortCorpus(supplied){
   for(const c of allCuts)if(!same(await hashFile(await regular(c.body.path,MiB,true),MiB),{sha256:c.body.sha256,bytes:c.fact.encoded.bytes}))fail('changed-child');
   if((await hashFile(join(output,'selection.json'),8*MiB)).sha256!==selectionReportSHA256)fail('changed-selection');
   await writeFile(join(candidate,'manifest.json'),final.manifestJSON,{flag:'wx',mode:0o600});await writeFile(join(candidate,'private-provenance.json'),JSON.stringify({schema:'reference-short-corpus-provenance/v1',sourceCommit:config.sourceCommit,sourcePins,tools,parentCatalogSHA256:PARENT,nativeEvidenceSHA256:NATIVE,nativeEvidenceCommit:NATIVE_SOURCE,nativeCensusSHA256:CORPUS_CAPACITY.censusSHA256,originalSevenEvidenceSHA256:CORPUS_CAPACITY.originalSevenEvidenceSHA256,originalSevenSourceCommit:CORPUS_CAPACITY.originalSevenSourceCommit,selectionReportSHA256,cuts:copied,childArtifacts,manifestSHA256,bodyVerifiedCount:CORPUS_CAPACITY.selectedCuts,childCount:completed,originalsPreserved:true,publication:false})+'\n',{flag:'wx',mode:0o600});
-  if((await readdir(candidate)).length!==6988)fail('candidate-set');ok=true;
+  validateCorpusCandidateBodySet(await readdir(candidate),copied.map(c=>c.body.sha256));ok=true;
  }catch(e){code=typeof e?.code==='string'&&/^[a-z-]{1,32}$/.test(e.code)?e.code:phase;}
  finally{for(const [name,path,parent]of [['runtime',runtime,join(ROOT,'.local-logs')],['work',work,output]]){try{if(path){await noLinks(path);if(await realpath(path)!==resolve(path)||!within(await realpath(parent),await realpath(path)))fail('cleanup');await rm(path,{recursive:true});}}catch{cleanup[name]=false;}}try{if(iso){await iso.cleanup();try{await lstat(iso.home);cleanup.home=false;}catch(e){if(e.code!=='ENOENT')throw e;}}}catch{cleanup.home=false;}}
  if(Object.values(cleanup).some(v=>!v)){ok=false;code='cleanup';}

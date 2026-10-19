@@ -8,7 +8,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
 import {isolatedEnv} from './helpers/isolatedEnv.mjs';
-import {partitionCorpusSelection,runCorpusBatches,validateCorpusChild,validateCorpusBodySet,buildReferenceShortCorpus,CORPUS_CAPS,CORPUS_WORKER,CORPUS_BASELINE,parseCorpusBaselineSnapshot,CORPUS_CAPACITY,parseCorpusCapacitySnapshot,validateCorpusCapacityEvidence} from '../scripts/reference-short-corpus-build.mjs';
+import {partitionCorpusSelection,runCorpusBatches,validateCorpusChild,validateCorpusBodySet,validateCorpusCandidateBodySet,buildReferenceShortCorpus,CORPUS_CAPS,CORPUS_WORKER,CORPUS_BASELINE,parseCorpusBaselineSnapshot,CORPUS_CAPACITY,parseCorpusCapacitySnapshot,validateCorpusCapacityEvidence} from '../scripts/reference-short-corpus-build.mjs';
 const h='a'.repeat(64),id='b'.repeat(64),clone=structuredClone;
 function row(asset,ref='Synthetic 1:1',start=0,end=1){return {asset,parentSHA256:h,parentBytes:200,archiveFile:'Synthetic.mp3',ref,clip:{start,end}};}
 function hold(r){return {asset:r.asset,ref:r.ref,parentSHA256:r.parentSHA256,parentBytes:r.parentBytes,rate:1000,nativeFrames:Math.ceil(r.clip.end*1000)-1,firstFrame:Math.floor(r.clip.start*1000),lastExclusive:Math.ceil(r.clip.end*1000),marginFrames:-1,capacityFits:false};}
@@ -59,6 +59,31 @@ test('v2 child accepts explicit legacy-source diagnosis and true strict no-op on
  const q=clone(f.provenance),n=q.cuts[0].normalization;n.original=clone(n.normalized);n.changed=false;n.surplusFrames=0;n.changedOffsets=[];assert.equal(validateCorpusChild(f.report,q,f.expected),q.cuts);
 });
 test('bodyset has exact unique hashes plus three actual child artifacts, never extras or omissions',()=>{const names=[id+'.mp3','manifest.json','private-provenance.json','build-report.json'];assert.equal(validateCorpusBodySet(names,[id]),true);for(const bad of [names.slice(1),[...names,'extra'],[...names,h+'.mp3'],names.map(n=>n==='manifest.json'?'alternate.json':n)])assert.throws(()=>validateCorpusBodySet(bad,[id]));assert.throws(()=>validateCorpusBodySet(names,[id,id]));});
+test('final candidate accepts exactly the selected bodies and two metadata files', () => {
+ const hashes = Array.from({length: CORPUS_CAPACITY.selectedCuts}, (_, i) => (i + 1).toString(16).padStart(64, '0'));
+ const names = [...hashes.map(h => h + '.mp3'), 'manifest.json', 'private-provenance.json'];
+ assert.equal(names.length, 6986);
+ assert.equal(validateCorpusCandidateBodySet(names, hashes), true);
+ assert.equal(validateCorpusCandidateBodySet(names.toReversed(), hashes.toReversed()), true);
+ // A count-only check cannot distinguish any of these from a correct body set.
+ const replaced = [...names]; replaced[0] = 'f'.repeat(64) + '.mp3';
+ const duplicate = [...names]; duplicate[0] = duplicate[1];
+ const wrongMetadata = names.map(n => n === 'manifest.json' ? 'alternate.json' : n);
+ for (const bad of [names.slice(1), [...names, 'build-report.json'], [...names, 'build-report.json', 'extra'], replaced, duplicate, wrongMetadata]) {
+  assert.throws(() => validateCorpusCandidateBodySet(bad, hashes), e => e.code === 'candidate-set');
+ }
+ assert.equal(names.length + 2, 6988); // The historical stale literal must refuse.
+});
+test('candidate hash selection cannot duplicate, omit or masquerade as child metadata', () => {
+ const hashes = Array.from({length: CORPUS_CAPACITY.selectedCuts}, (_, i) => (i + 1).toString(16).padStart(64, '0'));
+ const names = [...hashes.map(h => h + '.mp3'), 'manifest.json', 'private-provenance.json'];
+ const duplicates = [...hashes]; duplicates[0] = duplicates[1];
+ const malformed = [...hashes]; malformed[0] = '../elsewhere';
+ for (const bad of [hashes.slice(1), [...hashes, h], duplicates, malformed]) assert.throws(() => validateCorpusCandidateBodySet(names, bad), e => e.code === 'candidate-set');
+ const childNames = [id + '.mp3', 'manifest.json', 'private-provenance.json', 'build-report.json'];
+ assert.equal(validateCorpusBodySet(childNames, [id]), true);
+ assert.throws(() => validateCorpusCandidateBodySet(childNames, [id]), e => e.code === 'candidate-set');
+});
 test('unsupported root configuration refuses before child/codec or output creation and reports new exact target',async()=>{const result=await buildReferenceShortCorpus({unexpected:'synthetic'});assert.equal(result.ok,false);assert.equal(result.code,'shape');assert.equal(result.completedChildren,0);assert.equal(result.targetCuts,6984);assert.equal(result.capacityHeld,9);assert.equal(result.publication,false);});
 test('import has no child/codec/output side effects under isolated environment',async()=>{const isolated=await isolatedEnv();try{const source=await readFile(new URL('../scripts/reference-short-corpus-build.mjs',import.meta.url),'utf8');assert.ok(source.includes('import.meta.url===pathToFileURL(resolve(process.argv[1])).href'));const output=await new Promise((yes,no)=>{const p=spawn(process.execPath,['--input-type=module','-e',`await import(${JSON.stringify(new URL('../scripts/reference-short-corpus-build.mjs',import.meta.url).href)});console.log('import-only')`],{cwd:resolve('.'),env:isolated.env,windowsHide:true,stdio:['ignore','pipe','pipe']});let out='',err='';p.stdout.on('data',b=>out+=b);p.stderr.on('data',b=>err+=b);p.once('error',no);p.once('close',c=>c===0&&!err?yes(out):no(Error('Synthetic import refused')));});assert.equal(output,'import-only\n');}finally{await isolated.cleanup();}});
 
