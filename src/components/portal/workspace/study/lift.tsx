@@ -1,14 +1,14 @@
 "use client";
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { useWorkspaceModal } from "../provider";
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 import type { AssignmentEnding } from "../../../../lib/hebrew/study-annotations";
 import { useReadingPrefs, useSetReadingPrefs } from "../reading-prefs";
 import type { StudyVerse } from "./api";
 import { Apparatus, phraseGroups, PhraseLegend, StudyHebrew, useVerseColors } from "./annotations";
-import { projectStudyVerse } from "../../../../lib/hebrew/study-tokens";
-import { ReferencePlayer } from "./reference-player";
-import type { ReferenceResolution } from "../../../../lib/reference-audio/source";
+import { ReadingPlayer, type ReadingPlayerHandle } from "./reading-player";
+import type { createReadingAudioCoordinator } from "./reading-audio-coordinator";
+import type { ReferenceShortResolution } from "../../../../lib/reference-audio/short-resolution";
 
 const icon = (d: string) => <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d={d} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 export const icons = {
@@ -28,18 +28,16 @@ export const icons = {
  */
 export function LiftedLine({ verses, assignment, index, total, offset, onIndex, onClose, learner = false, controls, reference }: {
   learner?: boolean; controls?(verseRef: string): ReactNode; verses: StudyVerse[]; assignment: AssignmentEnding; index: number; total: number; offset: number; onIndex(index: number): void; onClose(): void;
-  reference?: { scopeKey: string; load(signal: AbortSignal): Promise<ReferenceResolution> };
+  reference?: { scopeKey: string; audio: ReturnType<typeof createReadingAudioCoordinator>; active: boolean; expiresAt?: number; navigation: number; load(index: number, signal: AbortSignal): Promise<ReferenceShortResolution> };
 }) {
   const dialog = useRef<HTMLDialogElement>(null), id = useId(), prefs = useReadingPrefs(), setReadingPrefs = useSetReadingPrefs();
   const verse = verses[index], result = useVerseColors(verse, assignment, prefs.colors);
   const colors = result?.status === "ready" ? result : null, phrases = colors ? phraseGroups(colors) : [];
   const [phrase, setPhrase] = useState(0);
   const [playingWord, setPlayingWord] = useState<{ ref: string; index: number } | null>(null);
-  const selectWord = useRef<((index: number) => void) | null>(null), pauseAudio = useRef<(() => void) | null>(null);
-  const registerWordSelection = useCallback((select: ((index: number) => void) | null) => { selectWord.current = select; }, []);
-  const registerPause = useCallback((pause: (() => void) | null) => { pauseAudio.current = pause; }, []);
-  const onActiveWord = useCallback((active: number | null) => setPlayingWord(active === null ? null : { ref: verse.ref, index: active }), [verse.ref]);
-  const projection = useMemo(() => colors?.projection ?? (() => { const p = projectStudyVerse(verse.ref, verse.hebrew); return p.status === "ready" ? p.projection : null; })(), [colors, verse.ref, verse.hebrew]);
+  const playback = useRef<ReadingPlayerHandle | null>(null);
+  const registerPlayback = useCallback((value: ReadingPlayerHandle | null) => { playback.current = value; }, []);
+  const onActiveWord = useCallback((value: { verse: number; index: number } | null) => setPlayingWord(value === null ? null : { ref: verses[value.verse].ref, index: value.index }), [verses]);
   const activeWord = playingWord?.ref === verse.ref ? playingWord.index : null;
   const pointer = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => { setPhrase(0); }, [index, prefs.colors]);
@@ -60,12 +58,12 @@ export function LiftedLine({ verses, assignment, index, total, offset, onIndex, 
   }, [active, index]);
   const atStart = index === 0 && currentPhrase === 0, atEnd = index === verses.length - 1 && (phrases.length === 0 || currentPhrase === phrases.length - 1);
   function next() {
-    pauseAudio.current?.(); setPlayingWord(null);
+    playback.current?.suspend(); setPlayingWord(null);
     if (phrases.length && currentPhrase < phrases.length - 1) setPhrase(currentPhrase + 1);
     else if (index < verses.length - 1) onIndex(index + 1);
   }
   function previous() {
-    pauseAudio.current?.(); setPlayingWord(null);
+    playback.current?.suspend(); setPlayingWord(null);
     if (phrases.length && currentPhrase > 0) setPhrase(currentPhrase - 1);
     else if (index > 0) onIndex(index - 1);
   }
@@ -96,16 +94,18 @@ export function LiftedLine({ verses, assignment, index, total, offset, onIndex, 
     <div ref={stage} className="lift-stage" onPointerDown={down} onPointerUp={up} onPointerCancel={() => { pointer.current = null; }}>
       <h2 id={`${id}-title`} className="lift-ref"><bdi dir="ltr">{verse.ref}</bdi></h2>
       <StudyHebrew key={verse.ref} verse={verse} colors={colors} id={`${id}-v`} activeWord={activeWord} onWordSelect={reference ? word => {
-        selectWord.current?.(word);
+        playback.current?.select(index, "verse");
         const selectedPhrase = colors?.words[word]?.phrase, position = phrases.findIndex(row => row.phrase === selectedPhrase); if (position >= 0) setPhrase(position);
-      } : undefined} className={`lift-hebrew${active !== null ? " lift-phrasing" : ""}`} />
+      } : undefined} wordAction="verse" toolsAvailable={false} className={`lift-hebrew${active !== null ? " lift-phrasing" : ""}`} />
       {active !== null && <style>{`.lift-phrasing [data-phrase="${active}"]{opacity:1;animation:ink-pull 560ms var(--ease-settle) both;animation-delay:calc((var(--w) - ${phrases[currentPhrase].first - 1}) * 70ms)}`}</style>}
       {prefs.translation && <p className="lift-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
       <Apparatus verse={verse} learner={learner} />
       {prefs.colors && <PhraseLegend colors={result} id={`${id}-v`} verseRef={verse.ref} />}
     </div>
-    {reference && <ReferencePlayer key={`${reference.scopeKey}:${verse.ref}`} scopeKey={reference.scopeKey} verseRef={verse.ref} readingText={verse.hebrew.readingText} wordCount={projection?.words.length ?? 0}
-      wordLabels={projection?.words.map(word => word.text)} load={reference.load} onActiveWord={onActiveWord} registerWordSelection={registerWordSelection} registerPause={registerPause} />}
+    {reference && <ReadingPlayer scopeKey={reference.scopeKey} verses={verses} active={reference.active} enabled={reference.active}
+      expiresAt={reference.expiresAt} audio={{ coordinator: reference.audio, slot: "lifted" }} wordTools={false}
+      target={{ index, generation: reference.navigation }} load={reference.load} onActiveWord={onActiveWord} register={registerPlayback} />}
+
     {controls?.(verse.ref)}
     <div className="lift-nav">
       <button type="button" className="lift-step" onClick={previous} disabled={atStart}>{icons.up}<span>Back</span></button>

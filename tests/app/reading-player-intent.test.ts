@@ -106,3 +106,32 @@ test("cached explicit Play/select checks the actual clock before a queued expiry
     expect(readingAudioCurrent(NaN)).toBe(false); expect(readingAudioCurrent(Infinity)).toBe(false); expect(readingAudioCurrent()).toBe(true); f.intent.dispose();
   } finally { vi.useRealTimers(); }
 });
+
+
+test("controlled preview follows navigation without selecting, loading or retaining an old word", async () => {
+  const { readingPlayerPreview } = await import("../../src/components/portal/workspace/study/reading-player-intent");
+  const f = fixture();
+  const state = { verse: 0, selection: 2, playback: { status: "ready", selection: 2, repeat: false, speed: 1, speedSupported: true, wordsReady: true, wordCount: 3, retryPlay: false }, timingHeld: false, suspended: false } satisfies import("../../src/components/portal/workspace/study/main-playback").ReadingPlaybackState;
+  expect(readingPlayerPreview(state, 1, false)).toEqual({ index: 1, current: false, selection: "verse" });
+  expect(f.playback.select).not.toHaveBeenCalled(); expect(f.playback.play).not.toHaveBeenCalled();
+  f.intent.suspend(); f.intent.select(1, "verse");
+  expect(f.playback.select).toHaveBeenCalledExactlyOnceWith(1, "verse");
+  expect(readingPlayerPreview(state, 0, false).selection).toBe("verse");
+  expect(readingPlayerPreview(state, undefined, true)).toEqual({ index: 0, current: true, selection: 2 });
+  f.intent.dispose();
+});
+
+
+test("modal target snapshot fences held work and same-index return without reacquiring old intent", async () => {
+  const { createReadingPlayerTarget } = await import("../../src/components/portal/workspace/study/reading-player-intent");
+  const target = createReadingPlayerTarget(), f = fixture(), value = { index: 0, generation: 1 };
+  expect(target.current(value)).toBe(false); target.select(value); f.intent.select(value.index);
+  let resolve!: () => void;
+  const heard: number[] = [], late = new Promise<void>(yes => { resolve = yes; }).then(() => { if (f.intent.isCurrent() && target.current(value)) heard.push(value.index); });
+  f.intent.suspend(); value.index = 1; value.generation++;
+  expect(target.current(value)).toBe(false); resolve(); await late; expect(heard).toEqual([]);
+  target.select(value); f.intent.select(value.index); expect(target.current(value)).toBe(true);
+  value.index = 0; value.generation++; expect(target.current(value)).toBe(false);
+  target.clear(); expect(target.current(value)).toBe(false); expect(target.current()).toBe(true);
+  f.intent.dispose();
+});

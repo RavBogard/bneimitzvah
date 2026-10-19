@@ -14,6 +14,7 @@ import type { createReadingAudioCoordinator } from "./reading-audio-coordinator"
 import { useReadingPrefs } from "../reading-prefs";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
 import { PortalRequestError } from "../../api";
+import { watchReadingAudioDeadline } from "./reading-player-intent";
 import type { ShortReferenceOwner } from "./short-reference-bridge";
 
 export type StudyReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
@@ -32,19 +33,22 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   onHearReady?(ready: boolean): void; active?: boolean;
   audio?: ReturnType<typeof createReadingAudioCoordinator>; stopAudio?(): void;
 }) {
-  const { readStudy, readReference, createShortReferenceOwner, readWordAids, readWordDetails, summary, concealed, epoch } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
+  const { readStudy, createShortReferenceOwner, readWordAids, readWordDetails, summary, concealed, epoch } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
   const shortMetadata = useRef<ShortReferenceOwner | null>(null);
   const playback = useRef<ReadingPlayerHandle | null>(null), registerPlayback = useCallback((value: ReadingPlayerHandle | null) => { playback.current = value; }, []);
   const tools = useRef<WordToolsHandle | null>(null), registerTools = useCallback((value: WordToolsHandle | null) => { tools.current = value; }, []);
   const [playingWord, setPlayingWord] = useState<{ verse: number; index: number } | null>(null);
-  const [lift, setLift] = useState<{ page: StudyPage; index: number } | null>(null);
+  const [lift, setLift] = useState<{ page: StudyPage; index: number; opening: number; navigation: number } | null>(null);
+  const modalOwner = useRef<ShortReferenceOwner | null>(null), modalRequest = useRef<AbortController | null>(null), modalSequence = useRef(0);
+  const modalScope = useRef(lift); modalScope.current = lift;
   const metadata = useRef<Assigned | null>(null), controller = useRef<AbortController | null>(null), generation = useRef(0);
   const selection = useRef<{ kind: StudyKind; offset: number; assignmentKey: string } | null>(null);
   const [state, setState] = useState<{ binding: string; kind?: StudyKind; page?: StudyPage; error?: number; loading?: boolean }>({ binding: "" });
   const key = baseline ? studyBinding(baseline) : "";
-  const clear = useCallback(() => { playback.current?.suspend(); shortMetadata.current?.dispose(); shortMetadata.current = null; generation.current++; controller.current?.abort(); setLift(null); setState({ binding: "", loading: true }); }, []);
+  const clear = useCallback(() => { stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.dispose(); shortMetadata.current = null; modalRequest.current?.abort(); modalOwner.current?.dispose(); modalOwner.current = null; generation.current++; controller.current?.abort(); setLift(null); setState({ binding: "", loading: true }); }, [stopAudio]);
   const load = useCallback(async (value: Assigned, kind: StudyKind, offset: number, outer?: AbortSignal) => {
-    playback.current?.suspend(); shortMetadata.current?.dispose(); shortMetadata.current = null;
+    stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.dispose(); shortMetadata.current = null;
+    modalRequest.current?.abort(); modalOwner.current?.dispose(); modalOwner.current = null;
     controller.current?.abort(); const request = new AbortController(), turn = ++generation.current; controller.current = request;
     const abort = () => request.abort(); if (outer?.aborted) abort(); outer?.addEventListener("abort", abort, { once: true });
     const binding = studyBinding(value), assignment = value.readings.find(row => row.kind === kind)!;
@@ -62,7 +66,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       if ([401, 403, 404].includes(status)) { metadata.current = null; authorityFailed(status); throw error; }
       return false;
     } finally { outer?.removeEventListener("abort", abort); }
-  }, [readStudy, authorityFailed, onKindChange]);
+  }, [readStudy, authorityFailed, onKindChange, stopAudio]);
   const reload = useCallback(async (value: Assigned, signal: AbortSignal) => {
     metadata.current = value;
     if (!value.readings.length) { clear(); setState({ binding: studyBinding(value) }); selection.current = null; return; }
@@ -110,6 +114,25 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     document.addEventListener("visibilitychange", background); window.addEventListener("pagehide", leave);
     return () => { document.removeEventListener("visibilitychange", background); window.removeEventListener("pagehide", leave); };
   }, []);
+  // Separate modal ownership: main owner remains restricted by !lift. Navigation
+  // cancels only its subscriber; an authorized completed page can stay modal-local.
+  useLayoutEffect(() => {
+    if (!baseline || !livePage || !state.kind || !lift || !audio) return;
+    const value = baseline, page = livePage, kind = state.kind, opening = lift.opening, turn = generation.current;
+    const live = () => { const now = shortView.current; return now.baseline === value && metadata.current === value && now.page === page && now.kind === kind
+      && turn === generation.current && modalScope.current?.opening === opening && modalScope.current.page === page
+      && !now.concealed && now.active && document.visibilityState === "visible"; };
+    let owned: ShortReferenceOwner;
+    try { owned = createShortReferenceOwner(value, kind, page.offset, live); } catch { return; }
+    modalOwner.current = owned; // Deliberately no prepare on mount/navigation.
+    const stop = () => { modalRequest.current?.abort(); owned.suspend(); stopAudio?.(); };
+    const hidden = () => { if (document.visibilityState !== "visible") stop(); };
+    document.addEventListener("visibilitychange", hidden); window.addEventListener("pagehide", stop);
+    const deadline = value.context ? watchReadingAudioDeadline(Date.parse(value.context.expiresAt), () => modalOwner.current === owned, stop) : () => {};
+    return () => { deadline(); modalRequest.current?.abort(); owned.dispose(); if (modalOwner.current === owned) modalOwner.current = null;
+      document.removeEventListener("visibilitychange", hidden); window.removeEventListener("pagehide", stop); };
+  }, [baseline, livePage, state.kind, lift?.opening, createShortReferenceOwner, epoch, key, audio, stopAudio]);
+  useLayoutEffect(() => { if (concealed || !active) { modalRequest.current?.abort(); modalOwner.current?.suspend(); } }, [concealed, active]);
   const openerScope = useRef({ baseline, page: livePage, concealed, epoch });
   openerScope.current = { baseline, page: livePage, concealed, epoch };
   useLayoutEffect(() => { onHearReady?.(canHear); return () => onHearReady?.(false); }, [canHear, onHearReady]);
@@ -117,7 +140,9 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const shown = livePage && state.kind ? [state.kind, livePage.offset, livePage.verses.length] as const : null;
   useEffect(() => { if (shown) onShown?.(...shown); }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
   const hear = (page: StudyPage, index: number, word: ReadingSelection = "verse") => { playback.current?.select(index, word); if (word === "verse") tools.current?.selectVerse(index); else tools.current?.select(index, word); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
-  const open = (page: StudyPage, index: number) => { stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.suspend(); setLift({ page, index }); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
+  const open = (page: StudyPage, index: number) => { stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.suspend(); modalRequest.current?.abort();
+    const old = modalScope.current, next = { page, index, opening: old?.page === page ? old.opening : ++modalSequence.current, navigation: (old?.navigation ?? 0) + 1 };
+    modalScope.current = next; setLift(next); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
   if (liftHandle) {
     // Parent Start brings this tab forward and opens it in the same event.
     // Inactivity still unmounts media; it does not revoke this explicit opener.
@@ -183,14 +208,19 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {!single && <nav className="study-pages" aria-label="Text pages"><button className="button-secondary" disabled={previous === undefined} onClick={() => previous !== undefined && void explicitLoad(kind, previous)}>Previous text page</button><button className="button-secondary" disabled={current.page.nextOffset === null} onClick={() => current.page?.nextOffset !== null && void explicitLoad(kind, current.page!.nextOffset!)}>Next text page</button></nav>}
       <div className="study-more"><StudyCredits chapters={current.page.chapters} summary={learner ? "About this text" : undefined} />{learner && <WorkspaceLink href="/trope-chart">Trope chart</WorkspaceLink>}</div>
       {lift && canHear && lift.page === current.page && <LiftedLine learner={learner} verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} index={lift.index} total={current.page.totalVerses} offset={current.page.offset}
-        reference={{ scopeKey: JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current]), load: async signal => {
-          const value = baseline, page = current.page!, turn = generation.current;
-          if (signal.aborted || metadata.current !== value || lift.page !== page) throw new PortalRequestError(409);
-          const result = await readReference(value, kind, page.offset + lift.index, signal);
-          if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
-          return result;
-        } }}
-        onIndex={index => open(lift.page, index)} onClose={() => { stopAudio?.(); setLift(null); }} controls={renderLiftControls && (ref => renderLiftControls(kind, ref))} />}
+        reference={audio ? { audio, active: active && !concealed, expiresAt: baseline.context ? Date.parse(baseline.context.expiresAt) : undefined,
+          navigation: lift.navigation, scopeKey: JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current, lift.opening]),
+          load: async (index, signal) => {
+            const owner = modalOwner.current, selected = modalScope.current, turn = generation.current;
+            if (!owner || !selected || index !== selected.index || selected.page !== current.page || signal.aborted) throw new PortalRequestError(409);
+            modalRequest.current?.abort(); const request = new AbortController(); modalRequest.current = request;
+            const abort = () => request.abort(); signal.addEventListener("abort", abort, { once: true });
+            try { const result = await owner.load(index, request.signal);
+              if (request.signal.aborted || modalScope.current !== selected || turn !== generation.current || metadata.current !== baseline) throw new PortalRequestError(409);
+              return result;
+            } finally { signal.removeEventListener("abort", abort); if (modalRequest.current === request) modalRequest.current = null; }
+          } } : undefined}
+        onIndex={index => open(lift.page, index)} onClose={() => { stopAudio?.(); modalScope.current = null; modalRequest.current?.abort(); modalOwner.current?.dispose(); modalOwner.current = null; setLift(null); }} controls={renderLiftControls && (ref => renderLiftControls(kind, ref))} />}
     </>}
   </section>;
 }

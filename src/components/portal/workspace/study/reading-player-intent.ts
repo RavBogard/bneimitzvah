@@ -1,4 +1,4 @@
-import type { ReadingSelection } from "./main-playback";
+import type { ReadingPlaybackState, ReadingSelection } from "./main-playback";
 import type { ReadingAudioIntent, ReadingAudioSlot, createReadingAudioCoordinator } from "./reading-audio-coordinator";
 
 type Playback = { select(index: number, selection: ReadingSelection): Promise<void>; play(): Promise<void>; pause(): void; suspend(): void; setRepeat(value: boolean): void; setSpeed(value: number): void };
@@ -44,5 +44,23 @@ export function createReadingPlayerIntent(input: {
     setRepeat(value: boolean) { if (current(ticket) && input.active()) input.playback.setRepeat(value); },
     setSpeed(value: number) { if (current(ticket) && input.active()) input.playback.setSpeed(value); },
     dispose() { if (closed) return; closed = true; suspend(); registration.dispose(); },
+  });
+}
+
+/** Presentation only: a new controlled target never selects or primes audio. */
+export function readingPlayerPreview(state: ReadingPlaybackState | null, target: number | undefined, current: boolean) {
+  const index = target ?? state?.verse ?? null;
+  const selected = current && index !== null && state?.verse === index;
+  return Object.freeze({ index, current: selected, selection: selected ? state.selection : "verse" as const });
+}
+
+/** Local selection identity only, never a grant. Snapshot the requested target so
+ * a subsequent render/navigation cannot mutate old async work into the new one. */
+export function createReadingPlayerTarget() {
+  let selected: Readonly<{ index: number; generation: number }> | undefined;
+  return Object.freeze({
+    select(value?: { index: number; generation: number }) { selected = value ? Object.freeze({ index: value.index, generation: value.generation }) : undefined; },
+    clear() { selected = undefined; },
+    current(value?: { index: number; generation: number }) { return !value || selected?.index === value.index && selected?.generation === value.generation; },
   });
 }
