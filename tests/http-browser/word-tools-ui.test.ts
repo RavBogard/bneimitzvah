@@ -1,12 +1,10 @@
-import { shortSourceFFmpegMetadataArgs } from "../../src/lib/reference-audio/short-source-tags";
-import { syntheticFourSecondShort } from "./synthetic-short-reference";
+
+import { generateSyntheticShortAudio, syntheticFourSecondShort } from "./synthetic-short-reference";
 import { privateRouteFetch, observeSilentAudio, expectSilentAudio } from "./audio-observation";
 import { beforeAll, afterAll, it, expect, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { createHash } from "node:crypto";
@@ -75,22 +73,19 @@ async function native(tab: Page) { return tab.evaluate(() => { const a = (window
 
 beforeAll(async () => {
   assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard();
-  const isolated = await isolatedEnv();
+  let physicalFrames = 0;
   try {
-    directory = await mkdtemp(join(tmpdir(), "reference-player-audio-"));
-    if (!resolve(directory).startsWith(resolve(tmpdir()) + sep)) throw new Error("Synthetic audio path refused");
-    await promisify(execFile)("ffmpeg", ["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=24000:duration=8", "-ac", "1", "-codec:a", "libmp3lame", "-b:a", "64k", join(directory, "synthetic.mp3")], { env: isolated.env, windowsHide: true, timeout: 15000, maxBuffer: 4096 });
-    audioBytes = await readFile(join(directory, "synthetic.mp3"));
-    await promisify(execFile)("ffmpeg", ["-hide_banner", "-loglevel", "error", "-i", join(directory, "synthetic.mp3"), "-ss", "1", "-t", "4", "-map_metadata", "-1", "-codec:a", "libmp3lame", "-b:a", "64k", "-id3v2_version", "3", "-write_id3v1", "0", "-write_xing", "1", ...shortSourceFFmpegMetadataArgs(), join(directory, "synthetic-short.mp3")], { env: isolated.env, windowsHide: true, timeout: 15000, maxBuffer: 4096 });
-    shortBytes = await readFile(join(directory, "synthetic-short.mp3"));
-  } catch { throw new Error("Runtime synthetic audio generation failed; details withheld"); } finally { await isolated.cleanup(); }
+    directory = await realpath(await mkdtemp(join(tmpdir(), "reference-player-audio-")));
+    const generated = await generateSyntheticShortAudio(directory, "torah");
+    audioBytes = generated.parent; shortBytes = Buffer.from(generated.bytes); physicalFrames = generated.physicalFrames;
+  } catch { throw new Error("Runtime synthetic audio generation failed; details withheld"); }
   const sample = mainStudyPage({ kind: "torah", ranges: ["Genesis 1:1-3"], verses: ["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"], offset: 0, translation: "jps2023" });
   const digest = createHash("sha256").update(audioBytes).digest("hex");
   const catalog = parseReferenceCatalog({ schema: "reference-catalog/v1", source: "PockettorahAudioFiles", assets: [{ id: sourceAsset, archiveFile: "Synthetic-player.mp3", sha256: digest, bytes: audioBytes.length,
     verses: sample.verses.map(verse => { const projection = projectStudyVerse(verse.ref, verse.hebrew); if (projection.status !== "ready" || projection.projection.words.length !== 2) throw new Error("Synthetic word projection refused");
       return { schema: "reference-verse/v1", ref: verse.ref, table: "torah", playback: { status: "ready", asset: sourceAsset, clip: { start: 1, end: 5 } }, words: { status: "ready", readingTextSha256: createHash("sha256").update(verse.hebrew.readingText.normalize("NFC")).digest("hex"), starts: [1.1, 3] }, attribution: REFERENCE_ATTRIBUTION }; }) }] });
   if (!catalog) throw new Error("Synthetic reference catalog refused");
-  const short = await syntheticFourSecondShort(catalog, shortBytes); shortPath = short.path;
+  const short = await syntheticFourSecondShort(catalog, shortBytes, physicalFrames); shortPath = short.path; shortBytes = short.bytes;
   fixture = await browserFixture({ referenceShortManifestLoad: async () => short.manifest, studyLoad: async request => mainStudyPage(request), referenceCatalogLoad: async () => catalog, referenceStudentRelease: true,
     wordDetailsSource: { book: async () => parseTahot([1,2,3].flatMap(n => [`Gen.1.${n}#1=L\tבָּג\tDISCARDED\tSynthetic occurrence first\t{H0001}\tHNcmsa\t`, `Gen.1.${n}#2=L\tדָּג\tDISCARDED\tSynthetic occurrence second\t{H0001}\tHNcmsa\t`]).join("\n"), "Gen"), lexicon: async () => parseTbesh("H0001#1\tH0001\tH0001\tבָּג\tDISCARDED\tHVqp3ms\tSynthetic dictionary sense\tDISCARDED") } });
   siblingId = (await fixture.practice()).sibling.id;
@@ -106,7 +101,7 @@ beforeAll(async () => {
 }, 120_000);
 afterAll(async () => {
   await Promise.all(contexts.map(context => context.close().catch(() => {}))); await browser?.close().catch(() => {}); await stop?.().catch(() => {}); await fixture?.close().catch(() => {}); restore?.();
-  if (directory && resolve(directory).startsWith(resolve(tmpdir()) + sep)) await rm(directory, { recursive: true, force: true });
+  if (directory && resolve(directory).startsWith(await realpath(tmpdir()) + sep)) await rm(directory, { recursive: true, force: true });
   expect(duplicateKeyWarnings).toBe(0);
 }, 120_000);
 

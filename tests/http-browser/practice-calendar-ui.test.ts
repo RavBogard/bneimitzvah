@@ -84,7 +84,7 @@ it("shows the student's week, reports explicit inline verse visits on the server
     // Loading the page, its text and its calendar is not practice.
     expect(seen.posts).toHaveLength(0);
     const before = await rows();
-    await click(tab, "Practice up close"); await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toContainText("Genesis 1:1");
+    await click(tab, "Start reading"); await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toContainText("Genesis 1:1");
     expect(await tab.locator("dialog.lift").count()).toBe(0);
     await ui.poll(() => seen.posts.length).toBe(1);
     expect(seen.posts[0]).toEqual({ context: null, body: { mode: "student", eventId: expect.stringMatching(/^[0-9a-f-]{36}$/), expectedDay: day, action: "visit", target: { type: "verse", kind: "torah", assignmentId, assignmentRevision: 1, verseRef: "Genesis 1:1" } } });
@@ -157,7 +157,7 @@ it("shows dates only in an explicitly selected child practice, reports with that
   await ui(week(tab).getByRole("listitem")).toHaveCount(7); await todayMarked(tab, true);
   expect(seen.reads.every(url => new URL(url).searchParams.get("mode") === "child-practice")).toBe(true);
   expect(seen.posts).toHaveLength(0);
-  await click(tab, "Practice up close"); await ui.poll(() => seen.posts.length).toBe(1);
+  await click(tab, "Start reading"); await ui.poll(() => seen.posts.length).toBe(1);
   expect(seen.posts[0].context).toEqual(expect.any(String));
   expect(seen.posts[0].body).toMatchObject({ mode: "child-practice", expectedDay: day, action: "visit", target: { type: "verse", assignmentId, verseRef: "Genesis 1:1" } });
   await capture(tab, "practice-calendar-child");

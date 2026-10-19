@@ -546,7 +546,7 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .practice-scope { margin: 0 0 0.5rem; }
 @media (min-width: 1001px) {
   .reading-passage-layout:has(> .reading-toolbar) { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem; column-gap: 1.5rem; }
-  .reading-passage-layout > .assigned-study { grid-column: 1; grid-row: 1; min-width: 0; }
+  .reading-passage-layout > .assigned-study, .reading-passage-layout > header { grid-column: 1; min-width: 0; }
   .reading-toolbar { grid-column: 2; grid-row: 1; position: sticky; top: 1.5rem; left: auto; bottom: auto; transform: none; width: auto; align-self: start; grid-template-columns: minmax(0, 1fr); }
   .workspace-main:has(.reading-toolbar) { padding-bottom: 4rem; }
   .toolbar-menu { position: fixed; inset: auto; top: 50%; left: 50%; bottom: auto; transform: translate(-50%, -50%); }

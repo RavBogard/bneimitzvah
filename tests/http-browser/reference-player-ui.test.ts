@@ -1,9 +1,9 @@
+import { privateRouteFetch } from "./audio-observation";
+import { generateSyntheticShortAudio, syntheticFourSecondShort } from "./synthetic-short-reference";
 import { beforeAll, afterAll, it, expect, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { createHash } from "node:crypto";
@@ -19,9 +19,9 @@ import type { StudyRequest } from "../../src/server/study/types";
 import { projectStudyVerse } from "../../src/lib/hebrew/study-tokens";
 import { parseReferenceCatalog } from "../../src/server/reference-audio/catalog";
 import { REFERENCE_ATTRIBUTION } from "../../src/lib/reference-audio/contract";
-import { SHORT_SOURCE_ATTRIBUTION, SHORT_SOURCE_RECIPE } from "../../src/lib/reference-audio/short-source";
-import { shortSourceFFmpegMetadataArgs } from "../../src/lib/reference-audio/short-source-tags";
-import { createShortSourceManifestLoader } from "../../src/server/reference-audio/short-source-manifest";
+
+
+
 import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
 
@@ -101,28 +101,20 @@ async function sameOwner(tab: Page, owner: { count: number; ordinal: number }) {
 
 beforeAll(async () => {
   assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard();
-  const isolated = await isolatedEnv();
+  let physicalFrames = 0;
   try {
-    directory = await mkdtemp(join(tmpdir(), "reference-player-audio-"));
-    if (!resolve(directory).startsWith(resolve(tmpdir()) + sep)) throw new Error("Synthetic audio path refused");
-    await promisify(execFile)("ffmpeg", ["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=24000:duration=8", "-ac", "1", "-codec:a", "libmp3lame", "-b:a", "64k", join(directory, "synthetic.mp3")], { env: isolated.env, windowsHide: true, timeout: 15000, maxBuffer: 4096 });
-    audioBytes = await readFile(join(directory, "synthetic.mp3"));
-    await promisify(execFile)("ffmpeg", ["-hide_banner", "-loglevel", "error", "-i", join(directory, "synthetic.mp3"), "-ss", "1", "-t", "4", "-map_metadata", "-1", "-codec:a", "libmp3lame", "-b:a", "64k", "-id3v2_version", "3", "-write_id3v1", "0", "-write_xing", "1", ...shortSourceFFmpegMetadataArgs(), join(directory, "synthetic-short.mp3")], { env: isolated.env, windowsHide: true, timeout: 15000, maxBuffer: 4096 });
-    shortBytes = await readFile(join(directory, "synthetic-short.mp3"));
-  } catch { throw new Error("Runtime synthetic audio generation failed; details withheld"); } finally { await isolated.cleanup(); }
+    directory = await realpath(await mkdtemp(join(tmpdir(), "reference-player-audio-")));
+    const generated = await generateSyntheticShortAudio(directory, "torah");
+    audioBytes = generated.parent; shortBytes = Buffer.from(generated.bytes); physicalFrames = generated.physicalFrames;
+  } catch { throw new Error("Runtime synthetic audio generation failed; details withheld"); }
   const sample = mainStudyPage({ kind: "torah", ranges: ["Genesis 1:1-3"], verses: ["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"], offset: 0, translation: "jps2023" });
   const digest = createHash("sha256").update(audioBytes).digest("hex");
   const catalog = parseReferenceCatalog({ schema: "reference-catalog/v1", source: "PockettorahAudioFiles", assets: [{ id: sourceAsset, archiveFile: "Synthetic-player.mp3", sha256: digest, bytes: audioBytes.length,
     verses: sample.verses.map(verse => { const projection = projectStudyVerse(verse.ref, verse.hebrew); if (projection.status !== "ready" || projection.projection.words.length !== 2) throw new Error("Synthetic word projection refused");
       return { schema: "reference-verse/v1", ref: verse.ref, table: "torah", playback: { status: "ready", asset: sourceAsset, clip: { start: 1, end: 5 } }, words: { status: "ready", readingTextSha256: createHash("sha256").update(verse.hebrew.readingText.normalize("NFC")).digest("hex"), starts: [1.1, 3] }, attribution: REFERENCE_ATTRIBUTION }; }) }] });
   if (!catalog) throw new Error("Synthetic reference catalog refused");
-  const shortSHA = createHash("sha256").update(shortBytes).digest("hex"); shortPath = `/reference-audio/short-v1/${shortSHA}.mp3`;
-  const source = { schema: "reference-short-source/v1", id: `rs_${shortSHA}`, parent: { asset: sourceAsset, sha256: digest, bytes: audioBytes.length }, sha256: shortSHA, bytes: shortBytes.length, path: shortPath,
-    codec: "mp3", bitrate: 64000, sampleRate: 24000, channels: 1, presentationFrames: 96000, origin: { firstFrame: 24000, parentRate: 24000 }, attributionVersion: SHORT_SOURCE_ATTRIBUTION.version };
-  const parentBytes = new TextEncoder().encode(JSON.stringify(catalog)), parentSHA = createHash("sha256").update(parentBytes).digest("hex");
-  const manifestBytes = new TextEncoder().encode(JSON.stringify({ schema: "reference-short-manifest/v1", source: "PockettorahAudioFiles", parentCatalogSHA256: parentSHA, recipe: SHORT_SOURCE_RECIPE, attribution: SHORT_SOURCE_ATTRIBUTION, entries: [source] }));
-  const manifest = await createShortSourceManifestLoader({ sha256: createHash("sha256").update(manifestBytes).digest("hex"), parentCatalogSHA256: parentSHA, parentCatalogBytes: parentBytes,
-    get: async () => new ReadableStream({ start(c) { c.enqueue(manifestBytes); c.close(); } }) })();
+  const short = await syntheticFourSecondShort(catalog, shortBytes, physicalFrames); shortPath = short.path; shortBytes = short.bytes;
+  const manifest = short.manifest;
   fixture = await browserFixture({ studyLoad: async request => mainStudyPage(request), referenceCatalogLoad: async () => catalog, referenceShortManifestLoad: async () => manifest, referenceStudentRelease: true });
   siblingId = (await fixture.practice()).sibling.id;
   const [member] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.userId, fixture.admin.id));
@@ -134,7 +126,7 @@ beforeAll(async () => {
 }, 120_000);
 afterAll(async () => {
   await Promise.all(contexts.map(context => context.close().catch(() => {}))); await browser?.close().catch(() => {}); await stop?.().catch(() => {}); await fixture?.close().catch(() => {}); restore?.();
-  if (directory && resolve(directory).startsWith(resolve(tmpdir()) + sep)) await rm(directory, { recursive: true, force: true });
+  if (directory && resolve(directory).startsWith(await realpath(tmpdir()) + sep)) await rm(directory, { recursive: true, force: true });
 }, 120_000);
 
 
@@ -214,15 +206,15 @@ it("clears playback on real session denial while quiet unchanged checks retain t
 });
 it("Start and Hear play the main verse and never require or reopen the optional close-up", async () => {
   const { tab, state, owner } = await page(false, "admin", contexts[0]), tabs = tab.getByRole("tablist", { name: "Student page" }), service = tabs.getByRole("tab", { name: "Service parts", exact: true }), reading = tabs.getByRole("tab", { name: "Reading", exact: true });
-  await service.click(); await ui(service).toHaveAttribute("aria-selected", "true"); await tab.getByRole("button", { name: "Practice up close", exact: true }).click();
+  await service.click(); await ui(service).toHaveAttribute("aria-selected", "true"); await tab.getByRole("button", { name: "Start reading", exact: true }).click();
   await ui(reading).toHaveAttribute("aria-selected", "true"); await playing(tab); await ui(tab.getByRole("dialog")).toHaveCount(0); expect(state.requests).toBe(1); expect(state.shortRequests).toBe(1); expect(state.archiveRequests).toBe(0);
   await service.click(); await expect.poll(async () => (await native(tab)).revoked).toBe(1); expect((await native(tab)).paused).toBe(true);
   await reading.click(); expect(await native(tab)).toMatchObject({ ...owner, paused: true, src: null, retiredClean: true });
-  await tab.getByRole("button", { name: "Close-up", exact: true }).click(); await playing(tab); expect(state.shortRequests).toBe(2); expect(state.archiveRequests).toBe(0); expect(state.requests).toBe(2); await sameOwner(tab, owner); await ui(tab.getByRole("dialog")).toHaveCount(0);
+  await tab.getByRole("button", { name: "Hear verse", exact: true }).click(); await playing(tab); expect(state.shortRequests).toBe(2); expect(state.archiveRequests).toBe(0); expect(state.requests).toBe(2); await sameOwner(tab, owner); await ui(tab.getByRole("dialog")).toHaveCount(0);
 });
 it("plays main verses without word timing but refuses explicit untimed word drills", async () => {
   const { tab } = await page(false, "admin", contexts[0]);
-  await tab.route("**/reference-audio/short/page?**", async route => { const actual = await route.fetch(), body = await actual.json(); for (const reference of body.page.references) reference.verse.words = { status: "unavailable", reason: "no-words" }; await route.fulfill({ response: actual, json: body }); });
+  await tab.route("**/reference-audio/short/page?**", async route => { const actual = await privateRouteFetch(route, tab); if (!actual) return; const body = await actual.json(); for (const reference of body.page.references) reference.verse.words = { status: "unavailable", reason: "no-words" }; await route.fulfill({ response: actual, json: body }); });
   await tab.reload(); await ui(tab.locator(".study-verses")).toBeVisible(); const untimedOwner = await settledOwner(tab); // Install the control before the new owner's optional metadata preparation.
   await word(tab, 1, 1).click(); await playing(tab); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse");
   await ui(tab.locator('.study-verses [data-reference-active="true"]')).toHaveCount(0);
@@ -231,4 +223,29 @@ it("plays main verses without word timing but refuses explicit untimed word dril
   await player(tab).getByLabel("Practice", { exact: true }).selectOption("verse"); await playing(tab);
   await tab.getByRole("button", { name: "Word tools", exact: true }).click(); await tab.getByRole("button", { name: "Hear this word", exact: true }).click();
   await expect.poll(async () => (await native(tab)).paused).toBe(true); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("1"); await ui(player(tab).getByRole("button", { name: "Play", exact: true })).toBeDisabled(); await sameOwner(tab, untimedOwner);
+});
+
+
+it("true per-verse Lift is inert on navigation, uses current whole Verse and explicit Word without Archive", async () => {
+  const { tab, state } = await page();
+  await word(tab, 1, 0).click(); await playing(tab);
+  await tab.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }).click();
+  const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }), modalPlayer = dialog.getByRole("region", { name: "Reading playback", exact: true });
+  await ui(dialog).toBeVisible(); await ui(modalPlayer).toContainText("Genesis 1:1");
+  const modalOwner = await settledOwner(tab), before = state.shortRequests;
+  expect(await native(tab)).toMatchObject({ paused: true, src: null, retiredClean: true });
+  await modalPlayer.getByRole("button", { name: "Play", exact: true }).click(); await playing(tab); expect(state.shortRequests).toBe(before + 1);
+  await modalPlayer.getByRole("button", { name: "Pause", exact: true }).click();
+  const halfway = 0.5; await tab.evaluate(value => { window.referenceAudios.at(-1)!.currentTime = value; }, halfway);
+  await modalPlayer.getByRole("button", { name: "Play", exact: true }).click(); await playing(tab); expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(halfway);
+  await modalPlayer.getByLabel("Practice", { exact: true }).selectOption("1"); await playing(tab); expect(Math.round((await native(tab)).duration! * 24000)).toBe(48000);
+  // Visual teaching chunks are not audio phrases; each step only stops sound.
+  for (let step = 0; step < 2 && await dialog.getByRole("button", { name: "Next phrase", exact: true }).count(); step++) await dialog.getByRole("button", { name: "Next phrase", exact: true }).click();
+  await dialog.getByRole("button", { name: "Next verse", exact: true }).click();
+  const nextDialog = tab.getByRole("dialog", { name: "Genesis 1:2", exact: true }); await ui(nextDialog).toBeVisible();
+  const nextPlayer = nextDialog.getByRole("region", { name: "Reading playback", exact: true }); await ui(nextPlayer).toContainText("Genesis 1:2"); await ui(nextPlayer.getByLabel("Practice", { exact: true })).toHaveValue("verse");
+  await sameOwner(tab, modalOwner); expect(await native(tab)).toMatchObject({ paused: true, src: null });
+  await nextPlayer.getByRole("button", { name: "Play", exact: true }).click(); await playing(tab); await sameOwner(tab, modalOwner);
+  await nextDialog.getByRole("button", { name: "Close practice view", exact: true }).click();
+  await ui(tab.getByRole("dialog")).toHaveCount(0); expect(await native(tab)).toMatchObject({ allClean: true }); expect(state.archiveRequests).toBe(0);
 });

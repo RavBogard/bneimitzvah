@@ -152,7 +152,7 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   expect(await learner.locator(".student-aliyah").count()).toBe(0);
   for (const prose of ["Confirmed assignment", "Calendar source", "Selected English edition available.", "Unsent work stays only in this tab"]) expect(await learner.getByText(prose).count()).toBe(0);
   await ui(colorsControl(learner)).toHaveAttribute("aria-pressed", "true");
-  await ui(learner.getByRole("button", { name: "Close-up", exact: true })).toBeEnabled();
+  await ui(learner.getByRole("button", { name: "Hear verse", exact: true })).toBeEnabled();
   await firstHebrewInViewport(learner);
   await capture(learner, "study-student-partial-mobile");
   const assigned = await api(adminTab, `/api/students/${fixture.student.id}/reading?mode=admin`);
@@ -237,7 +237,7 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
       const readingText = await first.textContent();
       await safe(() => tab.screenshot({ path: join(directory, `${size.toLowerCase()}-reading.png`) }));
       await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).focus()); await safe(() => tab.keyboard.press("Tab"));
-      const start = tab.getByRole("button", { name: "Practice up close", exact: true }); await ui(start).toBeFocused();
+      const start = tab.getByRole("button", { name: "Start reading", exact: true }); await ui(start).toBeFocused();
       await safe(() => tab.keyboard.press("Enter"));
       const inline = tab.getByRole("region", { name: "Reading playback", exact: true }); await ui(inline).toBeVisible();
       await ui(inline).toContainText("Genesis 1:1"); await ui(inline.getByText("The recording couldn’t be loaded. Try again.", { exact: true })).toBeVisible(); await ui(tab.getByRole("dialog")).toHaveCount(0);
@@ -278,7 +278,7 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
 });
 
 it("retains optional close-up during a quiet unchanged access check without requiring it for Start", async () => {
-  const tab = await page("student", true); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1"); await click(tab, "Practice up close");
+  const tab = await page("student", true); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1"); await click(tab, "Start reading");
   const inline = tab.getByRole("region", { name: "Reading playback", exact: true }); await ui(inline).toContainText("Genesis 1:1");
   await ui(inline.getByText("The recording couldn’t be loaded. Try again.", { exact: true })).toBeVisible(); await ui(tab.getByRole("dialog")).toHaveCount(0);
   await click(tab, "View Genesis 1:1 up close"); const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
@@ -289,7 +289,7 @@ it("retains optional close-up during a quiet unchanged access check without requ
     await ui(tab.getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden(); await ui(dialog).toBeVisible();
   } finally { release(); await tab.unroute("**/api/session"); }
   await loaded(tab, "Genesis 1:1"); await ui(dialog).toBeVisible(); await safe(() => tab.keyboard.press("Escape")); await ui(dialog).toHaveCount(0);
-  const start = tab.getByRole("button", { name: "Practice up close", exact: true }); await safe(() => start.focus()); await safe(() => tab.keyboard.press("Enter"));
+  const start = tab.getByRole("button", { name: "Start reading", exact: true }); await safe(() => start.focus()); await safe(() => tab.keyboard.press("Enter"));
   await ui(inline).toContainText("Genesis 1:1"); await ui(tab.getByRole("dialog")).toHaveCount(0);
 });
 
