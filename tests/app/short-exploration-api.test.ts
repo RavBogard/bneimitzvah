@@ -9,6 +9,12 @@ function fixture(offset = 0) { const baseline = explorationBaseline(), prepared 
     page: { offset, nextOffset: page.nextOffset, totalVerses: page.totalVerses, references: page.verses.map(v => ({ schema: "reference-resolution/short-v1", source: null, verse: { schema: "reference-verse/v1", ref: v.ref, playback: { status: "unavailable", reason: "asset-not-approved" }, words: { status: "unavailable", reason: "no-playback" } } })) } };
   return { baseline, prepared, page, response }; }
 function response(value: unknown, path: string, status = 200) { const r = new Response(value instanceof Uint8Array ? new Uint8Array(value).buffer : typeof value === "string" ? value : JSON.stringify(value), { status, headers: { "content-type": "application/json" } }); Object.defineProperty(r, "url", { value: origin + path }); return r; }
+function observedReader(response: Response) {
+  const body = response.body!, reader = body.getReader(), read = reader.read.bind(reader), facts = { eof: false };
+  vi.spyOn(body, "getReader").mockReturnValue(reader);
+  vi.spyOn(reader, "read").mockImplementation(async () => { const part = await read(); if (part.done) facts.eof = true; return part; });
+  return { body, facts, cancel: vi.spyOn(reader, "cancel"), release: vi.spyOn(reader, "releaseLock") };
+}
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 test("actual unassigned full portion pages100+46 bind all ordered references without an assignment", () => {
@@ -35,6 +41,28 @@ test("POST uses exact private signed body/no query and detaches all caller input
   const fetcher = vi.fn(async (path: string, options: RequestInit) => { f.baseline.student.revision = 9; f.prepared.binding = "changed"; f.page.verses.reverse(); return response(expected, path); }); vi.stubGlobal("fetch", fetcher);
   expect((await fetchShortExplorationPage(f.baseline, f.prepared, f.page, new AbortController().signal)).references).toHaveLength(100);
   const [path, options] = fetcher.mock.calls[0]; expect(path).toBe(`/api/students/${expected.studentId}/reading/explore/reference/short/page`); expect(path).not.toContain(binding); expect(JSON.parse(String(options.body))).toEqual({ mode: "student", binding, offset: 0 }); expect(options).toMatchObject({ method: "POST", credentials: "same-origin", redirect: "error", cache: "no-store", mode: "same-origin", referrerPolicy: "no-referrer" });
+});
+
+test("validated EOF releases the real reader without aborting or cancelling the completed transport", async () => {
+  vi.stubGlobal("location", { origin }); const f = fixture(), caller = new AbortController(), r = response(f.response, `/api/students/${f.baseline.student.id}/reading/explore/reference/short/page`), observed = observedReader(r);
+  let transport: AbortSignal | null | undefined;
+  const fetcher = vi.fn(async (_path: string, options: RequestInit) => { transport = options.signal; return r; }); vi.stubGlobal("fetch", fetcher);
+  expect((await fetchShortExplorationPage(f.baseline, f.prepared, f.page, caller.signal)).references).toHaveLength(100);
+  expect(observed.facts.eof).toBe(true); expect(observed.release).toHaveBeenCalledOnce(); expect(observed.body.locked).toBe(false);
+  expect(transport).toBeInstanceOf(AbortSignal); expect(transport!.aborted).toBe(false); expect(observed.cancel).not.toHaveBeenCalled();
+  // The caller must no longer own a completed request's transport.
+  caller.abort(); expect(transport!.aborted).toBe(false); expect(observed.cancel).not.toHaveBeenCalled(); expect(fetcher).toHaveBeenCalledOnce();
+});
+
+test("invalid JSON or identity after actual EOF still aborts, cancels and releases the reader", async () => {
+  vi.stubGlobal("location", { origin }); const f = fixture();
+  for (const [value, status] of [["{", 503], [{ ...f.response, studentRevision: f.response.studentRevision + 1 }, 409]] as const) {
+    const r = response(value, `/api/students/${f.baseline.student.id}/reading/explore/reference/short/page`), observed = observedReader(r); let transport: AbortSignal | null | undefined;
+    const fetcher = vi.fn(async (_path: string, options: RequestInit) => { transport = options.signal; return r; }); vi.stubGlobal("fetch", fetcher);
+    await expect(fetchShortExplorationPage(f.baseline, f.prepared, f.page, new AbortController().signal)).rejects.toMatchObject({ status });
+    expect(observed.facts.eof).toBe(true); expect(transport!.aborted).toBe(true); expect(observed.cancel).toHaveBeenCalledOnce();
+    expect(observed.release).toHaveBeenCalledOnce(); expect(observed.body.locked).toBe(false); expect(fetcher).toHaveBeenCalledOnce();
+  }
 });
 test("one-MiB exact observed boundary works; overflow/UTF8/wrongURL/session denial refuse without retry", async () => {
   vi.stubGlobal("location", { origin }); const f = fixture(), json = JSON.stringify(f.response), exact = json + " ".repeat(1048576 - new TextEncoder().encode(json).length), fetcher = vi.fn(async (path: string) => response(exact, path)); vi.stubGlobal("fetch", fetcher);

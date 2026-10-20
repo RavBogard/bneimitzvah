@@ -17,6 +17,12 @@ function envelope(b = base(), offset = 0) {
       verse: { schema: "reference-verse/v1", ref, playback: { status: "unavailable", reason: "asset-not-approved" }, words: { status: "unavailable", reason: "no-playback" } } })) } };
 }
 function response(value: unknown, path: string, status = 200) { const r = new Response(value instanceof Uint8Array ? new Uint8Array(value).buffer : typeof value === "string" ? value : JSON.stringify(value), { status, headers: { "content-type": "application/json" } }); Object.defineProperty(r, "url", { value: origin + path }); return r; }
+function observedReader(response: Response) {
+  const body = response.body!, reader = body.getReader(), read = reader.read.bind(reader), facts = { eof: false };
+  vi.spyOn(body, "getReader").mockReturnValue(reader);
+  vi.spyOn(reader, "read").mockImplementation(async () => { const part = await read(); if (part.done) facts.eof = true; return part; });
+  return { body, facts, cancel: vi.spyOn(reader, "cancel"), release: vi.spyOn(reader, "releaseLock") };
+}
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 test("exact authority and every ordered page ref are required in all assigned modes", () => {
@@ -53,6 +59,27 @@ test("fetch uses only fixed same-origin private page query and captures inputs b
   expect(url.pathname).toBe(`/api/students/${id}/reference-audio/short/page`); expect([...url.searchParams.keys()].sort()).toEqual(["assignmentId", "assignmentRevision", "kind", "mode", "offset", "translation"]);
   expect(path).not.toContain(selection.handle); expect((options.headers as Headers).get("X-Practice-Context")).toBe(selection.handle);
   expect(options).toMatchObject({ credentials: "same-origin", mode: "same-origin", redirect: "error", cache: "no-store", referrerPolicy: "no-referrer" });
+});
+
+test("validated EOF releases the real assigned reader without aborting or cancelling its transport", async () => {
+  vi.stubGlobal("location", { origin }); const b = base(), caller = new AbortController();
+  let transport: AbortSignal | null | undefined, observed: ReturnType<typeof observedReader> | undefined;
+  const fetcher = vi.fn(async (path: string, options: RequestInit) => { transport = options.signal; const r = response(envelope(b), path); observed = observedReader(r); return r; }); vi.stubGlobal("fetch", fetcher);
+  expect((await fetchShortReferencePage(b, "torah", 0, caller.signal)).references).toHaveLength(3);
+  expect(observed!.facts.eof).toBe(true); expect(observed!.release).toHaveBeenCalledOnce(); expect(observed!.body.locked).toBe(false);
+  expect(transport).toBeInstanceOf(AbortSignal); expect(transport!.aborted).toBe(false); expect(observed!.cancel).not.toHaveBeenCalled();
+  caller.abort(); expect(transport!.aborted).toBe(false); expect(observed!.cancel).not.toHaveBeenCalled(); expect(fetcher).toHaveBeenCalledOnce();
+});
+
+test("invalid assigned JSON or identity after actual EOF still aborts, cancels and releases", async () => {
+  vi.stubGlobal("location", { origin }); const b = base(), valid = envelope(b);
+  for (const [value, status] of [["{", 503], [{ ...valid, studentRevision: valid.studentRevision + 1 }, 409]] as const) {
+    let transport: AbortSignal | null | undefined, observed: ReturnType<typeof observedReader> | undefined;
+    const fetcher = vi.fn(async (path: string, options: RequestInit) => { transport = options.signal; const r = response(value, path); observed = observedReader(r); return r; }); vi.stubGlobal("fetch", fetcher);
+    await expect(fetchShortReferencePage(b, "torah", 0, new AbortController().signal)).rejects.toMatchObject({ status });
+    expect(observed!.facts.eof).toBe(true); expect(transport!.aborted).toBe(true); expect(observed!.cancel).toHaveBeenCalledOnce();
+    expect(observed!.release).toHaveBeenCalledOnce(); expect(observed!.body.locked).toBe(false); expect(fetcher).toHaveBeenCalledOnce();
+  }
 });
 
 test("fixed one-MiB observed-byte reader allows exact boundary, refuses bad UTF8/overflow/status/URL and never retries", async () => {

@@ -42,7 +42,7 @@ export async function fetchShortExplorationPage(baseline: Assigned, suppliedPrep
   const path = `/api/students/${identifier(expected.student.id)}/reading/explore/reference/short/page`;
   const controller = new AbortController(), abort = () => controller.abort(), start = performance.now();
   if (signal.aborted) abort(); signal.addEventListener("abort", abort, { once: true });
-  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined, completed = false;
   const cancel = (body?: ReadableStream<Uint8Array> | null) => { try { void body?.cancel().catch(() => {}); } catch {} };
   const live = () => { if (signal.aborted || controller.signal.aborted) return stale(); if (performance.now() - start >= 15000) return bad(); checkShortReferenceSelection(expected, selected); if (prepared.expiresAt <= Date.now()) return stale(); };
   async function wait<T>(pending: Promise<T>, ms: number, late?: (value: T) => void): Promise<T> {
@@ -73,7 +73,7 @@ export async function fetchShortExplorationPage(baseline: Assigned, suppliedPrep
       if (length > bytes.length - size) return bad(); if (!length) { if (++empty > 64) return bad(); continue; }
       bytes.set(new Uint8Array(field("buffer", part.value) as ArrayBuffer, Number(field("byteOffset", part.value)), length), size); size += length; empty = 0; progress = performance.now();
     }
-    live(); const result = parseShortExplorationPage(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, size))), expected, prepared, page, selected); live(); return result;
+    live(); const result = parseShortExplorationPage(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, size))), expected, prepared, page, selected); live(); completed = true; return result;
   } catch (error) { controller.abort(); if (error instanceof PortalRequestError) throw error; return bad(); }
-  finally { controller.abort(); signal.removeEventListener("abort", abort); if (reader) { try { void reader.cancel().catch(() => {}); } catch {} try { reader.releaseLock(); } catch {} } }
+  finally { if (!completed) controller.abort(); signal.removeEventListener("abort", abort); if (reader) { if (!completed) try { void reader.cancel().catch(() => {}); } catch {} try { reader.releaseLock(); } catch {} } }
 }
