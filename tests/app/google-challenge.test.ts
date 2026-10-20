@@ -21,6 +21,17 @@ async function fixture(origin = "http://localhost:3000") {
 }
 const cookieOf = (issued: { cookie: string }) => issued.cookie.split(";")[0];
 
+test("fixed Account next stays bound and expires while arbitrary next refuses before storage", async () => {
+  const f = await fixture();
+  await expect(f.challenges.issue(f.request(), "https://foreign.example.test" as "/account")).rejects.toBeInstanceOf(AccessDenied);
+  expect(await f.db.select().from(schema.verification)).toHaveLength(0);
+  const valid = await f.challenges.issue(f.request(), "/account"), cookie = cookieOf(valid);
+  await expect(f.challenges.consume(f.request(cookie), valid.body.challengeId, randomBytes(32).toString("base64url"))).rejects.toBeInstanceOf(AccessDenied);
+  expect(await f.challenges.consume(f.request(cookie), valid.body.challengeId, valid.body.csrfToken)).toEqual({ nonce: valid.body.nonce, next: "/account" });
+  const late = await f.challenges.issue(f.request(cookie), "/account"); f.move(300000);
+  await expect(f.challenges.consume(f.request(cookie), late.body.challengeId, late.body.csrfToken)).rejects.toBeInstanceOf(AccessDenied);
+});
+
 test("challenge is browser/CSRF/origin bound, short lived and consumed once across repository instances", async () => {
   const f = await fixture(); const issued = await f.challenges.issue(f.request(), "/invitations/accept");
   const cookie = cookieOf(issued), { challengeId, csrfToken, nonce } = issued.body;

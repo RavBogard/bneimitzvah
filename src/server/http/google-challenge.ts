@@ -6,6 +6,7 @@ import type { AccessDatabase } from "../access/types";
 import { AccessDenied } from "../access/errors";
 import { verification, rateLimit } from "../db/auth-schema";
 import { closedObject } from "./query";
+import type { AuthDestination } from "../../components/portal/sign-in-boundary";
 
 const PREFIX = "portal-google:v1:";
 const BUDGET = "portal-google-budget:v1:";
@@ -41,7 +42,8 @@ export function createGoogleChallenges<Q extends PgQueryResultHKT>(input: { db: 
   }
   return Object.freeze({
     clear: () => cookie("", 0),
-    async issue(request: Request, next: "/" | "/invitations/accept") {
+    async issue(request: Request, next: AuthDestination) {
+      if (next !== "/" && next !== "/invitations/accept" && next !== "/account") throw new AccessDenied(403);
       const browser = binding(request) ?? random();
       const challengeId = random(), nonce = random(), csrfToken = random(), current = now();
       await input.db.transaction(async tx => {
@@ -61,7 +63,7 @@ export function createGoogleChallenges<Q extends PgQueryResultHKT>(input: { db: 
       });
       return { body: { challengeId, nonce, csrfToken, expiresAt: current + LIFETIME }, cookie: cookie(browser, 600) };
     },
-    async consume(request: Request, challengeId: unknown, csrfToken: unknown): Promise<{ nonce: string; next: "/" | "/invitations/accept" }> {
+    async consume(request: Request, challengeId: unknown, csrfToken: unknown): Promise<{ nonce: string; next: AuthDestination }> {
       if (!challengeSecretValid(challengeId) || !challengeSecretValid(csrfToken)) throw new AccessDenied(403);
       const browser = binding(request);
       if (!browser) throw new AccessDenied(403);
@@ -79,7 +81,7 @@ export function createGoogleChallenges<Q extends PgQueryResultHKT>(input: { db: 
         catch { throw new AccessDenied(403); }
         if (value.version !== 1 || value.origin !== input.origin || !challengeSecretValid(value.nonce) || typeof value.csrfHash !== "string" || !/^[a-f0-9]{64}$/.test(value.csrfHash)
           || !Number.isSafeInteger(value.issuedAt) || Number(value.issuedAt) > lockedAt || Number(value.issuedAt) < 0 || row.expiresAt.getTime() !== Number(value.issuedAt) + LIFETIME
-          || (value.next !== "/" && value.next !== "/invitations/accept") || !timingSafeEqual(Buffer.from(value.csrfHash, "hex"), hash(csrfToken))) throw new AccessDenied(403);
+          || (value.next !== "/" && value.next !== "/invitations/accept" && value.next !== "/account") || !timingSafeEqual(Buffer.from(value.csrfHash, "hex"), hash(csrfToken))) throw new AccessDenied(403);
         const consumed = await tx.delete(verification).where(where).returning({ id: verification.id });
         if (consumed.length !== 1) throw new AccessDenied(403);
         return { nonce: value.nonce, next: value.next };

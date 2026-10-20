@@ -1,3 +1,4 @@
+import type { AuthDestination } from "./sign-in-boundary";
 export const roleNames = { student: "Student", parent: "Parent", tutor: "Tutor", admin: "Rabbi / admin" } as const;
 export type Role = keyof typeof roleNames;
 export type SessionSummary = Readonly<{ membershipAvailable: boolean; roles: readonly Role[]; sessionBinding: string }>;
@@ -43,9 +44,9 @@ export function parseGoogleChallenge(value: unknown): GoogleChallenge {
     || Number(row.expiresAt) <= Date.now() || Number(row.expiresAt) > Date.now() + 300_000) return unavailable();
   return row as GoogleChallenge;
 }
-export function parseAuthResult(value: unknown): "/" | "/invitations/accept" {
+export function parseAuthResult(value: unknown): AuthDestination {
   const row = record(value, ["ok", "next"]);
-  if (row.ok !== true || (row.next !== "/" && row.next !== "/invitations/accept")) return unavailable();
+  if (row.ok !== true || (row.next !== "/" && row.next !== "/invitations/accept" && row.next !== "/account")) return unavailable();
   return row.next;
 }
 export function parseAcknowledgement(value: unknown, key: "requested" | "ok") {

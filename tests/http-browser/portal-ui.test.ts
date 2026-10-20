@@ -17,6 +17,9 @@ async function safe<T>(action: () => Promise<T>): Promise<T> {
   try { return await action(); } catch { throw new Error("Portal UI browser operation failed; private details withheld"); }
 }
 async function navigate(tab: Page, url: string) { return safe(() => tab.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 })); }
+async function referrerPolicy(tab: Page, value: "no-referrer" | "strict-origin-when-cross-origin") {
+  await ui.poll(() => tab.locator('head meta[name="referrer"]').evaluateAll(nodes => nodes.map(node => (node as HTMLMetaElement).content))).toEqual([value]);
+}
 async function page(mobile = false) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 },
     serviceWorkers: "block", acceptDownloads: false });
@@ -107,6 +110,33 @@ async function callback(tab: Page, old = false) {
   }, { credential: syntheticGoogleCredential, old }));
 }
 
+it("restricts inline Google metadata to public safe queries and preserves private handoff policy", async () => {
+  const tab = await page(); await installGoogleBoundary(tab); let libraries = 0;
+  tab.on("request", request => { if (request.url() === "https://accounts.google.com/gsi/client") libraries++; });
+  await navigate(tab, "/account"); await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible(); await referrerPolicy(tab, "no-referrer");
+  const handoff = tab.getByRole("link", { name: "Continue to Google sign-in", exact: true }); expect(await handoff.getAttribute("href")).toBe("/sign-in?intent=account"); expect(libraries).toBe(0);
+  let release!: () => void; const held = new Promise<void>(resolve => { release = resolve; });
+  try {
+    await tab.route("**/api/auth/sign-in/magic-link", async route => { await held; await route.fulfill({ contentType: "application/json", body: '{"requested":true}' }); });
+    await tab.getByLabel("Email address").fill("synthetic-account@example.test"); await tab.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
+    await ui(handoff).toHaveAttribute("aria-disabled", "true"); await handoff.evaluate(node => (node as HTMLAnchorElement).click()); expect(new URL(tab.url()).pathname).toBe("/account");
+  } finally { release(); }
+  await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
+  await navigate(tab, "/sign-in?intent=foreign&token=synthetic"); await referrerPolicy(tab, "no-referrer"); await ui(tab.getByRole("link", { name: "Continue to Google sign-in", exact: true })).toHaveAttribute("href", "/sign-in"); expect(libraries).toBe(0);
+  await tab.getByRole("link", { name: "Continue to Google sign-in", exact: true }).click(); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible(); await referrerPolicy(tab, "strict-origin-when-cross-origin");
+  expect(await tab.locator('script[src="https://accounts.google.com/gsi/client"]').getAttribute("referrerpolicy")).toBe("strict-origin-when-cross-origin"); expect(new URL(tab.url()).search).toBe("");
+});
+
+it("passes only fixed Account intent to the challenge and follows a synthetic verified Account destination", async () => {
+  const tab = await page(); await installGoogleBoundary(tab); let accountIntent = false;
+  await tab.route("**/api/auth/google/challenge", async route => { const body = route.request().postDataJSON(); accountIntent = Object.keys(body).join() === "intent" && body.intent === "account"; await route.continue(); });
+  // This is client destination wiring only; real signed cryptography and nonce binding are tested in auth-http.
+  await tab.route("**/api/auth/sign-in/social", route => route.fulfill({ contentType: "application/json", body: '{"ok":true,"next":"/account"}' }));
+  await navigate(tab, "/sign-in?intent=account"); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible(); await referrerPolicy(tab, "strict-origin-when-cross-origin");
+  await tab.getByRole("button", { name: "Continue with Google", exact: true }).click(); await callback(tab);
+  await ui.poll(() => new URL(tab.url()).pathname).toBe("/account"); await referrerPolicy(tab, "no-referrer"); await ui(tab.getByRole("link", { name: "Continue to Google sign-in", exact: true })).toBeVisible(); expect(accountIntent).toBe(true);
+});
+
 it("prepares the real browser challenge and submits GIS credentials only in a bounded body", async () => {
   const tab = await page(); await installGoogleBoundary(tab);
   let posts = 0, valid = false;
@@ -169,6 +199,21 @@ it("single-submits a real magic link, shows separate genuine roles without fake 
   expect(await roles.getByRole("link", { name: "Parent", exact: true }).getAttribute("href") === "/workspace/parent").toBe(true);
   expect(await roles.getByRole("link", { name: "Tutor", exact: true }).getAttribute("href") === "/workspace/tutor").toBe(true);
   await clean(tab, [token, "pg-tutor@example.test"]);
+  await referrerPolicy(tab, "strict-origin-when-cross-origin");
+  await tab.evaluate(() => { (window as Window & { __r01HardNavigation?: boolean }).__r01HardNavigation = true; });
+  await roles.getByRole("link", { name: "Parent", exact: true }).click(); await ui.poll(() => new URL(tab.url()).pathname).toBe("/workspace/parent"); await referrerPolicy(tab, "no-referrer");
+  // Existing production role links hard-navigate. This proves a real private head, not SPA restoration.
+  expect(await tab.evaluate(() => (window as Window & { __r01HardNavigation?: boolean }).__r01HardNavigation)).toBeUndefined();
+  // The existing workspace brand is an actual controlled Next router link.
+  await ui(tab.locator("header.app-bar")).toBeVisible();
+  await tab.evaluate(() => { (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument = true; });
+  await tab.getByRole("link", { name: "CRC Beit Mitzvah", exact: true }).click();
+  await ui.poll(() => new URL(tab.url()).pathname).toBe("/"); await referrerPolicy(tab, "strict-origin-when-cross-origin");
+  expect(await tab.evaluate(() => (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument)).toBe(true);
+  await tab.goBack({ waitUntil: "domcontentloaded" }); await ui.poll(() => new URL(tab.url()).pathname).toBe("/workspace/parent"); await referrerPolicy(tab, "no-referrer");
+  expect(await tab.evaluate(() => (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument)).toBe(true);
+  await tab.getByRole("link", { name: "CRC Beit Mitzvah", exact: true }).click();
+  await ui.poll(() => new URL(tab.url()).pathname).toBe("/"); await ui(tab.getByRole("list", { name: "Available roles", exact: true })).toBeVisible();
   await safe(() => tab.getByRole("button", { name: "Sign out", exact: true }).click());
   await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   expect((await api(tab, "/api/session")).status).toBe(401);
@@ -216,6 +261,7 @@ it("keeps invitation landing nonaccepting and accepts one reviewed binding only,
   await clean(recipient, [token]);
   await safe(() => recipient.getByRole("button", { name: "Review invitation", exact: true }).click());
   await ui(recipient.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+  await referrerPolicy(recipient, "no-referrer"); await ui(recipient.getByRole("link", { name: "Continue to Google sign-in", exact: true })).toHaveAttribute("href", "/sign-in");
   expect(accepts).toBe(0);
   expect(await recipient.getByRole("button", { name: "Accept invitation", exact: true }).count()).toBe(0);
   await signIn(recipient, email, true);

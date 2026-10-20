@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseAcceptance, parseAcknowledgement, parseAuthResult, parseGoogleChallenge, parseInvitation, parseSession, PortalRequestError, requestPortal } from "../../src/components/portal/api";
+import { publicSignInBoundary, createGoogleAttemptScope, type GoogleIntent } from "../../src/components/portal/sign-in-boundary";
+import Home, { generateMetadata as homeMetadata } from "../../src/app/page";
+import SignInPage, { generateMetadata as signInMetadata } from "../../src/app/sign-in/page";
 
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 const response = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
@@ -7,6 +10,29 @@ const review = () => ({ role: "parent", student: { firstName: "Synthetic", lastN
   expiresAt: new Date(Date.now() + 60_000).toISOString(), reviewBinding: `${Date.now() + 60_000}.${"x".repeat(43)}` });
 
 describe("portal entry client trust and transport contracts", () => {
+  it("retires actual GIS attempt delivery immediately on changed intent and aborts held old work", async () => {
+    let intent: GoogleIntent, epoch = 1, delivered = 0, release!: () => void;
+    const old = createGoogleAttemptScope(() => epoch === 1 && intent === undefined);
+    const held = new Promise<void>(resolve => { release = resolve; }).then(() => old.accept(() => delivered++));
+    old.accept(() => delivered++); expect(delivered).toBe(1);
+    intent = "account"; old.accept(() => delivered++); expect(delivered).toBe(1); expect(old.live()).toBe(false);
+    epoch++; old.abort(); expect(old.signal.aborted).toBe(true);
+    const current = createGoogleAttemptScope(() => epoch === 2 && intent === "account"); current.accept(() => delivered++);
+    release(); await held; expect(delivered).toBe(2);
+    intent = undefined; epoch++; old.accept(() => delivered++); current.accept(() => delivered++); expect(delivered).toBe(2); current.abort();
+    expect(current.signal.aborted).toBe(true);
+  });
+  it("uses the same closed query decision for public head and GIS props", async () => {
+    for (const query of [{}, { intent: "account" }, { error: "authentication" }, { intent: "account", error: "authentication" }, { intent: ["account"] }, { intent: "https://foreign.example.test" }, { token: "synthetic" }, { error: ["authentication", "authentication"] }]) {
+      const boundary = publicSignInBoundary(query, "sign-in"), props = { searchParams: Promise.resolve(query) };
+      expect(await signInMetadata(props)).toEqual({ referrer: boundary.referrer });
+      const page = await SignInPage(props); expect(page.props).toMatchObject({ inlineGoogle: boundary.inlineGoogle, googleIntent: boundary.intent, authenticationError: boundary.authenticationError });
+      const home = await Home(props), head = await homeMetadata(props); expect(home.props.inlineGoogle).toBe(Object.keys(query).length === 0); expect(head.referrer).toBe(home.props.inlineGoogle ? "strict-origin-when-cross-origin" : "no-referrer");
+    }
+    const getter = Object.defineProperty({}, "intent", { enumerable: true, get() { throw Error("must not read query accessor"); } });
+    expect(publicSignInBoundary(getter, "sign-in").inlineGoogle).toBe(false);
+    expect(publicSignInBoundary({ intent: "account", next: "/account" }, "sign-in").inlineGoogle).toBe(false);
+  });
   it("loads only a minimal session role summary and rejects unexpected identity/provider fields", () => {
     const sessionBinding = "a".repeat(43);
     expect(parseSession({ membershipAvailable: false, roles: [], sessionBinding })).toEqual({ membershipAvailable: false, roles: [], sessionBinding });
@@ -65,6 +91,7 @@ describe("portal entry client trust and transport contracts", () => {
     for (const change of [{ nonce: "" }, { expiresAt: Date.now() - 1 }, { clientId: "javascript:invalid" }, { token: "private" }]) expect(() => parseGoogleChallenge({ ...challenge, ...change })).toThrow(PortalRequestError);
     expect(parseAuthResult({ ok: true, next: "/" })).toBe("/");
     expect(parseAuthResult({ ok: true, next: "/invitations/accept" })).toBe("/invitations/accept");
+    expect(parseAuthResult({ ok: true, next: "/account" })).toBe("/account");
     for (const next of ["javascript:alert(1)", "https://foreign.example.test", "/?token=private", "/sign-in"]) expect(() => parseAuthResult({ ok: true, next })).toThrow(PortalRequestError);
   });
 

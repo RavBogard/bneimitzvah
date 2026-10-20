@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { parseAcceptance, parseAcknowledgement, parseInvitation, parseSession, PortalRequestError, requestPortal, roleNames,
   type InvitationReview, type SessionSummary } from "./api";
 import { GoogleSignIn } from "./google-sign-in";
+import type { GoogleIntent } from "./sign-in-boundary";
 
 type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "accepted" | "uncertain" }
   | { kind: "signed-in"; summary: SessionSummary } | { kind: "invitation"; review: InvitationReview };
@@ -12,7 +13,7 @@ const rolePath = (role: SessionSummary["roles"][number]) => role === "admin" ? "
 const roleTasks: Record<SessionSummary["roles"][number], string> = { student: "your assigned reading", parent: "your child’s preparation and practice", tutor: "the students you teach", admin: "students, people and setup" };
 const failure = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
 
-export function PortalEntry({ invitation = false, authenticationError = false, autoEnterStudent = true }: { invitation?: boolean; authenticationError?: boolean; autoEnterStudent?: boolean }) {
+export function PortalEntry({ invitation = false, authenticationError = false, autoEnterStudent = true, inlineGoogle = false, googleIntent }: { invitation?: boolean; authenticationError?: boolean; autoEnterStudent?: boolean; inlineGoogle?: boolean; googleIntent?: GoogleIntent }) {
   const [view, setView] = useState<View>({ kind: "loading" });
   const [pending, setPending] = useState<Action | null>(null), [message, setMessage] = useState("");
   const [email, setEmail] = useState(""), [linkRequested, setLinkRequested] = useState(false);
@@ -107,14 +108,14 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         {view.kind === "unavailable" && <><p>The portal isn’t ready to sign you in right now. Your reading remains private.</p><p>Please try again shortly. If this continues, ask your tutor or the congregation for help.</p><button type="button" className="button-primary" onClick={retry}>Try again</button></>}
         {view.kind === "sign-in" && (linkRequested ? <><p role="status">If this address can sign in, an email link will arrive shortly. Open the link on this device to continue.</p><p>Don’t see it? Check your spam folder, or wait a minute before requesting another link.</p><button type="button" className="button-secondary" onClick={() => { focusNext.current = true; setLinkRequested(false); setMessage(""); }}>Use a different email</button></>
           : <><p>{invitation ? "Sign in with the email address that received this invitation." : "Use Google, or get a sign-in link by email. No password needed."}</p>
-            <GoogleSignIn key={authGeneration} disabled={pending !== null} onBegin={() => {
+            {inlineGoogle ? <GoogleSignIn key={authGeneration} intent={googleIntent} disabled={pending !== null} onBegin={() => {
               if (gate.current) return false;
               gate.current = "google"; setPending("google"); setMessage(""); setAttemptedSignIn(true); return true;
             }} onFinish={next => {
               if (gate.current !== "google") return;
               gate.current = null; setPending(null);
               if (next) window.location.replace(next);
-            }} />
+            }} /> : <a className="button-secondary" href={!invitation && !autoEnterStudent ? "/sign-in?intent=account" : "/sign-in"} referrerPolicy="no-referrer" aria-disabled={pending !== null} tabIndex={pending !== null ? -1 : undefined} onClick={event => { if (pending !== null) event.preventDefault(); }}>Continue to Google sign-in</a>}
             <div className="form-divider"><span>or use email</span></div>
             <form onSubmit={submit}>
               <label htmlFor="entry-email">Email address</label>

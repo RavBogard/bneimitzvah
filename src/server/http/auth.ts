@@ -17,7 +17,7 @@ const methods: Record<string, readonly string[]> = {
 export function authRouteMethods(pathname: string): readonly string[] | null {
   return Object.hasOwn(methods, pathname) ? methods[pathname] : null;
 }
-const successPaths = new Set(["/", "/invitations/accept"]);
+const successPaths = new Set(["/", "/invitations/accept", "/account"]);
 function sdkHeaders(request: Request, origin: string): Headers {
   // Closed reconstruction: no caller IP/bucket/forwarded fields reach the SDK.
   const headers = new Headers();
@@ -109,11 +109,12 @@ export async function handleAuthRequest(request: Request, runtime: HttpRuntime):
     return magicResponse(await runtime.auth.handler(new Request(internal, { headers: sdkHeaders(request, runtime.origin), signal: request.signal })), runtime);
   }
   if (path === "/api/auth/google/challenge") {
-    closedObject(raw, []);
+    const body = closedObject(raw, [], ["intent"]);
+    if (Object.hasOwn(body, "intent") && body.intent !== "account") throw new HttpBoundaryError();
     const clientId = runtime.auth.options.socialProviders?.google?.clientId;
     if (typeof clientId !== "string" || !clientId) return errorResponse(undefined);
     try {
-      const issued = await runtime.googleChallenges.issue(request, callback);
+      const issued = await runtime.googleChallenges.issue(request, callback === "/invitations/accept" ? callback : body.intent === "account" ? "/account" : "/");
       const response = privateJson({ ...issued.body, clientId });
       response.headers.append("set-cookie", issued.cookie);
       return response;

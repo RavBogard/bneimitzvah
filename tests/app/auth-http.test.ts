@@ -124,6 +124,27 @@ test("pinned Google cryptography uses server nonce and projects session JSON; re
   expect((await f.dispatch(f.request("/api/auth/sign-in/social", { credential: token(late.nonce), challengeId: late.challengeId, csrfToken: late.csrfToken }))).status).toBe(403);
 });
 
+test("Google Account intent is closed and nonce-bound; invitation priority and default destinations remain fixed", async () => {
+  const f = await fixture(), token = googleTokens();
+  for (const body of [{ intent: "/account" }, { intent: "https://foreign.example.test" }, { intent: ["account"] }, { intent: null }, { next: "/account" }, { intent: "account", next: "/account" }]) expect((await f.dispatch(f.request("/api/auth/google/challenge", body))).status).toBe(400);
+  expect(await f.db.select().from(schema.verification)).toHaveLength(0); expect(f.sdk).not.toHaveBeenCalled();
+  const issued = await f.dispatch(f.request("/api/auth/google/challenge", { intent: "account" })); expect(issued.status).toBe(200);
+  const value = await issued.json(), cookie = cookieOf(issued), body = { credential: token(value.nonce), challengeId: value.challengeId, csrfToken: value.csrfToken };
+  const reply = await f.dispatch(f.request("/api/auth/sign-in/social", body, { cookie })); expect(reply.status).toBe(200); expect(await reply.json()).toEqual({ ok: true, next: "/account" });
+  expect(await f.db.select().from(schema.membership)).toHaveLength(0);
+  expect((await f.dispatch(f.request("/api/auth/sign-in/social", body, { cookie }))).status).toBe(403);
+  const staged = await f.dispatch(f.request("/api/invitations/open", { token: randomBytes(32).toString("base64url") })), pending = cookieOf(staged);
+  const prepared = await f.dispatch(f.request("/api/auth/google/challenge", { intent: "account" }, { cookie: pending })), selected = await prepared.json();
+  const response = await f.dispatch(f.request("/api/auth/sign-in/social", { credential: token(selected.nonce), challengeId: selected.challengeId, csrfToken: selected.csrfToken }, { cookie: `${pending}; ${cookieOf(prepared)}` }));
+  expect(await response.json()).toEqual({ ok: true, next: "/invitations/accept" }); expect(await f.db.select().from(schema.membership)).toHaveLength(0);
+  // An expired pending cookie cannot override a fresh fixed Account challenge.
+  const oldPending = createPendingInvitations({ secret: f.config.authSecret, origin: f.origin, environment: "local", now: () => Date.now() - 600001 });
+  const oldCookie = cookieOf(oldPending.exchange(f.request("/api/invitations/open", {}), randomBytes(32).toString("base64url")));
+  const expired = await f.dispatch(f.request("/api/auth/google/challenge", { intent: "account" }, { cookie: oldCookie })), renewed = await expired.json(); expect(expired.status).toBe(200);
+  const resolved = await f.dispatch(f.request("/api/auth/sign-in/social", { credential: token(renewed.nonce), challengeId: renewed.challengeId, csrfToken: renewed.csrfToken }, { cookie: cookieOf(expired) }));
+  expect(await resolved.json()).toEqual({ ok: true, next: "/account" }); expect(await f.db.select().from(schema.membership)).toHaveLength(0);
+});
+
 test("discarded hostile Forwarded cannot bypass real Google nonce/body verification, Origin or CSRF or reach SDK headers", async () => {
   const f = await fixture(), token = googleTokens();
   const forwarded = 'for="[2001:db8::1]:4711";host="foreign.example.test";proto=https, for=unknown;extension=synthetic-private';
