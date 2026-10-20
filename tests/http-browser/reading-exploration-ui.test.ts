@@ -354,7 +354,7 @@ async function shortMetadata(tab: Page, offset = 0, expected = 100) {
       let snapshotTimer: ReturnType<typeof setTimeout> | undefined;
       try { browserFacts = await Promise.race([tab.evaluate(() => Reflect.get(window, "__explorationMetadataObservation") ?? { unavailable: true }), new Promise(resolve => { snapshotTimer = setTimeout(() => resolve({ unavailable: true, budgetEnded: true }), 250); })]); } catch { /* Closed page retains unknown browser consumption. */ }
       finally { clearTimeout(snapshotTimer); }
-      console.info("exploration-metadata-consumption", { schedulingSensitiveObservation: true, observation: browserFacts });
+      console.info("exploration-metadata-consumption", JSON.stringify({ schedulingSensitiveObservation: true, observation: browserFacts }));
     }
   };
 }

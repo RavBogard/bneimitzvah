@@ -531,6 +531,9 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
   .button-start { flex: 1 1 100%; }
   .reading-workspace .hero-actions:has(.reading-practice-action) .button-start { flex: 1 1 auto; min-width: 0; padding-inline: 1rem; }
   .reading-workspace .reading-hero { margin-bottom: 1rem; }
+  .reading-workspace .hero-reading-summaries { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+  .reading-workspace .hero-reading-summary h3 bdi { display: inline; }
+  .reading-workspace .reading-summary-current { margin-inline-start: 0.25rem; }
   .reading-workspace .hero-actions { margin-top: 0.75rem; }
   .reading-workspace .reading-toolbar { margin-bottom: 0.5rem; }
   .reading-workspace .reading-passage-layout > .field-help { margin-top: 0; }
