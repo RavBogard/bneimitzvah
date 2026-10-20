@@ -7,6 +7,7 @@ import { REFERENCE_CATALOG_LIMITS, ReferenceUnavailable } from "./catalog";
 import { createShortSourceManifestLoader, lookupShortSource, readShortSourceEntry, shortSourceManifestMatches, type ShortSourceManifest } from "./short-source-manifest";
 import { verifyShortSourceBody, readVerifiedShortSourceBody } from "./short-source-body";
 import type { ReferenceCatalogGet } from "./storage";
+import { reportShortDiagnostic } from "./short-diagnostic";
 
 export type PublicShortHandler = (request: Request) => Promise<Response>;
 const digest = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
@@ -15,19 +16,29 @@ const failure = (status: number) => new Response(null, { status, headers: { "cac
 
 function selectedFile(request: Request, origin: string): string | null {
   try {
-    if (request.url.length > 2048) return null;
+    if (request.url.length > 2048) { reportShortDiagnostic("request-length"); return null; }
     const url = new URL(request.url), expected = new URL(origin);
-    if (url.origin !== origin || url.username || url.password || url.hash || url.search || request.url !== origin + url.pathname) return null;
+    if (url.origin !== origin || url.username || url.password || url.hash || url.search || request.url !== origin + url.pathname) {
+      reportShortDiagnostic("request-origin", () => ({ originMatches: url.origin === origin, canonicalURL: request.url === origin + url.pathname,
+        userinfoAbsent: !url.username && !url.password, queryAbsent: !url.search, fragmentAbsent: !url.hash })); return null;
+    }
     const file = new RegExp(`^${SHORT_SOURCE_PREFIX}([a-f0-9]{64})\\.mp3$`).exec(url.pathname)?.[1];
-    if (!file) return null;
+    if (!file) { reportShortDiagnostic("request-path"); return null; }
     for (const key of ["host", "x-forwarded-host"]) {
-      const host = request.headers.get(key); if (host !== null && host !== expected.host) return null;
+      const host = request.headers.get(key); if (host !== null && host !== expected.host) {
+        reportShortDiagnostic("request-host", () => ({ hostMatches: request.headers.get("host") === null || request.headers.get("host") === expected.host,
+          forwardedHostMatches: request.headers.get("x-forwarded-host") === null || request.headers.get("x-forwarded-host") === expected.host })); return null;
+      }
     }
     const proto = request.headers.get("x-forwarded-proto"), port = request.headers.get("x-forwarded-port");
-    if (proto !== null && proto !== "https" || port !== null && port !== "443" || request.headers.has("forwarded")) return null;
-    if (request.headers.has("transfer-encoding") || request.headers.has("content-length") && request.headers.get("content-length") !== "0") return null;
+    if (proto !== null && proto !== "https" || port !== null && port !== "443" || request.headers.has("forwarded")) {
+      reportShortDiagnostic("request-forwarding", () => ({ protocolMatches: proto === null || proto === "https", portMatches: port === null || port === "443", forwardedAbsent: !request.headers.has("forwarded") })); return null;
+    }
+    if (request.headers.has("transfer-encoding") || request.headers.has("content-length") && request.headers.get("content-length") !== "0") {
+      reportShortDiagnostic("request-framing", () => ({ transferEncodingAbsent: !request.headers.has("transfer-encoding"), contentLengthAbsentOrZero: !request.headers.has("content-length") || request.headers.get("content-length") === "0" })); return null;
+    }
     return file;
-  } catch { return null; }
+  } catch { reportShortDiagnostic("request-invalid"); return null; }
 }
 
 /** Anonymous reference bytes only. Configuration is server-owned; construction
@@ -39,7 +50,7 @@ export function createPublicShortHandler(input?: Readonly<{
   if (!input || !PRODUCTION_ORIGINS.includes(input.origin) || !digest(input.parentCatalogSHA256) || !digest(input.manifestSHA256)) return async () => failure(404);
   const { origin, parentCatalogSHA256, manifestSHA256, get, loadManifest } = input, configured = input.live ?? (() => true);
   return async request => {
-    if (!configured()) return failure(404);
+    if (!configured()) { reportShortDiagnostic("config-drift"); return failure(404); }
     const hash = selectedFile(request, origin); if (!hash) return failure(404);
     if (request.method !== "GET" && request.method !== "HEAD") return failure(405);
     if (request.headers.has("range") || request.headers.has("if-range")) return failure(416);
