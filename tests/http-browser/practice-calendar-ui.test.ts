@@ -13,10 +13,11 @@ import { openAuthMail } from "./auth-navigation";
 import { expandReadingRanges } from "../../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
+import { dayOrdinal, parsePracticeDates } from "../../src/components/portal/workspace/practice-calendar/api";
 import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
 
-// The quiet practice calendar: dates only, in the student's own view and an explicitly selected child practice.
+// Quiet dates: the student's calendar, a selected parent's summary, and explicitly selected child practice.
 // Reading it never reports practice; an explicit open of an assigned verse reports one visit on the server's day.
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
 let isolation: Awaited<ReturnType<typeof isolatedEnv>> | undefined, assignmentId = "";
@@ -163,18 +164,29 @@ it("re-reads after a stale day without resending, and the next explicit open use
   await safe(() => tab.context().close());
 });
 
-it("shows dates only in an explicitly selected child practice, reports with that context, and clears when practice ends", async () => {
-  const tab = await page("tutor"), seen = traffic(tab);
+it("shows read-only parent dates, then the selected child practice week with context-bound visits that clear on exit", async () => {
+  const tab = await page("tutor"), seen = traffic(tab), beforeParent = await rows();
   await safe(() => tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }));
+  await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); expect(seen.reads).toHaveLength(0); expect(seen.posts).toHaveLength(0);
+  const parentResponse = tab.waitForResponse(response => isCalendar(response.request()) && response.status() === 200);
   await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.locator("#reading-heading")).toBeVisible();
-  // The read-only parent view has no calendar here, and asks for none.
+  // A chosen parent gets only its authorized dates summary, without the student's week or visit capability.
+  const response = await safe(() => parentResponse), request = response.request(), url = new URL(request.url());
+  expect({ method: request.method(), path: url.pathname, mode: url.searchParams.get("mode"), context: request.headers()["x-practice-context"] ?? null }).toEqual({ method: "GET", path: `/api/students/${fixture.student.id}/practice-calendar`, mode: "parent", context: null });
+  expect([...url.searchParams.keys()].sort()).toEqual(["fromDate", "mode", "throughDate"]);
+  const dates = parsePracticeDates(await safe(() => response.json()), "parent", fixture.student.id, url.searchParams.get("fromDate") ?? "", url.searchParams.get("throughDate") ?? "");
+  expect(dayOrdinal(dates.throughDate) - dayOrdinal(dates.fromDate)).toBeLessThanOrEqual(8);
+  expect(dayOrdinal(dates.fromDate)).toBeLessThanOrEqual(dayOrdinal(dates.serverDay) - 6); expect(dayOrdinal(dates.throughDate)).toBeGreaterThanOrEqual(dayOrdinal(dates.serverDay));
+  expect(dates.dates).toEqual([dates.serverDay]);
+  const summary = tab.getByRole("region", { name: "Preparation summary", exact: true });
+  await ui(summary.locator(".parent-summary-dates time")).toHaveCount(1); await ui(summary.locator(".parent-summary-dates time")).toHaveAttribute("datetime", dates.serverDay);
   await ui(tab.getByRole("button", { name: "Practice with Synthetic", exact: true })).toBeVisible();
-  expect(await week(tab).count()).toBe(0); expect(seen.reads).toHaveLength(0);
+  expect(await week(tab).count()).toBe(0); expect(seen.reads).toEqual([request.url()]); expect(seen.posts).toHaveLength(0); expect(await rows()).toEqual(beforeParent);
   const day = await serverDay(tab, () => click(tab, "Practice with Synthetic"));
   await ui(tab.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
   await ui(week(tab).getByRole("listitem")).toHaveCount(7); await todayMarked(tab, true);
-  expect(seen.reads.every(url => new URL(url).searchParams.get("mode") === "child-practice")).toBe(true);
+  expect(seen.reads.slice(1).every(url => new URL(url).searchParams.get("mode") === "child-practice")).toBe(true);
   expect(seen.posts).toHaveLength(0);
   await click(tab, "Start reading"); await ui.poll(() => seen.posts.length).toBe(1);
   expect(seen.posts[0].context).toEqual(expect.any(String));
