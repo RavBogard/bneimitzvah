@@ -4,10 +4,10 @@ const native = vi.hoisted(() => ({ context: vi.fn(), get: vi.fn() }));
 vi.mock("@vercel/oidc", () => ({ getContext: native.context }));
 vi.mock("@vercel/blob", () => ({ get: native.get }));
 import { createShortDiagnosticReporter } from "../../src/server/reference-audio/short-diagnostic";
-import { createRuntimePublicShort } from "../../src/server/reference-audio/runtime-short";
+import { createRuntimePublicShort, publicShortRequest } from "../../src/server/reference-audio/runtime-short";
 import { publicOrigin } from "./reference-public-short-fixture";
 
-afterEach(() => { vi.restoreAllMocks(); native.context.mockReset(); native.get.mockReset(); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); native.context.mockReset(); native.get.mockReset(); });
 
 test("private records project only fixed stages and boolean predicates, with a finite per-module budget", () => {
   const records: Readonly<Record<string, unknown>>[] = [];
@@ -49,22 +49,30 @@ test("throwing diagnostic facts or sinks never escape or repeatedly invoke a fai
 });
 
 test("actual runtime config and request denials retain no-store statuses and zero native work even when logging throws", async () => {
-  vi.spyOn(console, "warn").mockImplementation(() => { throw Error("synthetic-private-canary"); });
+  const emitted: Record<string, unknown>[] = [];
+  vi.spyOn(console, "warn").mockImplementation(record => { emitted.push(JSON.parse(String(record))); throw Error("synthetic-private-canary"); });
   const source = publicOrigin + "/reference-audio/short-v1/" + "a".repeat(64) + ".mp3";
   const config = { REFERENCE_AUDIO_SHORT_PUBLIC_RELEASE: "true", PORTAL_ENVIRONMENT: "production", PORTAL_DEPLOYMENT: "production", VERCEL: "1", VERCEL_ENV: "production", NODE_ENV: "production",
     BETTER_AUTH_URL: publicOrigin, REFERENCE_AUDIO_CATALOG_SHA256: "b".repeat(64), REFERENCE_AUDIO_SHORT_MANIFEST_SHA256: "c".repeat(64), BLOB_STORE_ID: "store_synthetic123" };
-  const invalid = await createRuntimePublicShort({ ...config, PORTAL_ENVIRONMENT: "synthetic-private-canary" })(new Request(source));
+  for (const [key, value] of Object.entries(config)) vi.stubEnv(key, value);
+  vi.stubEnv("PORTAL_ENVIRONMENT", "synthetic-private-canary");
+  const invalid = await publicShortRequest(new Request(source));
   expect(invalid.status).toBe(404);
   expect(invalid.headers.get("cache-control")).toBe("no-store");
+  expect(emitted.map(record => record.stage)).toEqual(["config-rejected"]);
+  vi.stubEnv("PORTAL_ENVIRONMENT", "production");
   const handler = createRuntimePublicShort(config);
   const deniedHeaders: HeadersInit[] = [{ host: "synthetic-private-canary" }, { forwarded: "synthetic-private-canary" }, { "content-length": "1" }];
   for (const headers of deniedHeaders) {
-    const response = await handler(new Request(source, { headers }));
+    const response = await publicShortRequest(new Request(source, { headers }));
     expect(response.status).toBe(404); expect(await response.text()).toBe("");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("vercel-cdn-cache-control")).toBe("no-store");
   }
   expect((await handler(new Request(source, { method: "POST" }))).status).toBe(405);
   expect((await handler(new Request(source, { headers: { range: "bytes=0-15" } }))).status).toBe(416);
+  expect(emitted.map(record => record.stage)).toEqual(["config-rejected", "request-host", "request-forwarding", "request-framing"]);
+  expect(emitted[1]).toMatchObject({ hostMatches: false, forwardedHostMatches: true });
+  expect(JSON.stringify(emitted)).not.toContain("synthetic-private-canary");
   expect(native.context).not.toHaveBeenCalled(); expect(native.get).not.toHaveBeenCalled();
 });

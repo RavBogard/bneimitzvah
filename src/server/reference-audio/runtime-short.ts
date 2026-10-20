@@ -32,7 +32,6 @@ export function createRuntimePublicShort(env: Environment): PublicShortHandler {
     }));
     return createPublicShortHandler();
   }
-  reportShortDiagnostic("config-selected");
   const current = () => { const now = select(env); return now !== null && JSON.stringify(now) === JSON.stringify(config); };
   const metadata = createRuntimeShortMetadata({ origin: config.origin, deployment: { environment: "production", deployment: "production" },
     referenceAudio: { storeId: config.storeId, catalogSha256: config.parentCatalogSHA256, studentRelease: false } }, env);
@@ -59,6 +58,5 @@ export function createRuntimePublicShort(env: Environment): PublicShortHandler {
 }
 
 export const publicShortRequest = (request: Request) => {
-  reportShortDiagnostic("function-reached");
   return createRuntimePublicShort(process.env)(request);
 };
