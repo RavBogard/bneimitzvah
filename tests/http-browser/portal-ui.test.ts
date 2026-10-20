@@ -205,13 +205,13 @@ it("single-submits a real magic link, shows separate genuine roles without fake 
   // Existing production role links hard-navigate. This proves a real private head, not SPA restoration.
   expect(await tab.evaluate(() => (window as Window & { __r01HardNavigation?: boolean }).__r01HardNavigation)).toBeUndefined();
   // The existing workspace brand is an actual controlled Next router link.
-  await ui(tab.locator("header.app-bar")).toBeVisible();
+  await ui(tab.getByRole("navigation", { name: "Workspace roles", exact: true })).toBeVisible();
   await tab.evaluate(() => { (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument = true; });
   await tab.getByRole("link", { name: "CRC Beit Mitzvah", exact: true }).click();
   await ui.poll(() => new URL(tab.url()).pathname).toBe("/"); await referrerPolicy(tab, "strict-origin-when-cross-origin");
-  expect(await tab.evaluate(() => (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument)).toBe(true);
+  expect(await tab.evaluate(() => (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument), "Workspace brand must preserve the hydrated document").toBe(true);
   await tab.goBack({ waitUntil: "domcontentloaded" }); await ui.poll(() => new URL(tab.url()).pathname).toBe("/workspace/parent"); await referrerPolicy(tab, "no-referrer");
-  expect(await tab.evaluate(() => (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument)).toBe(true);
+  expect(await tab.evaluate(() => (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument), "History back must preserve the same document").toBe(true);
   await tab.getByRole("link", { name: "CRC Beit Mitzvah", exact: true }).click();
   await ui.poll(() => new URL(tab.url()).pathname).toBe("/"); await ui(tab.getByRole("list", { name: "Available roles", exact: true })).toBeVisible();
   await safe(() => tab.getByRole("button", { name: "Sign out", exact: true }).click());
