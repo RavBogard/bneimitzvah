@@ -4,7 +4,7 @@ import { EventEmitter } from "node:events";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { isolatedEnv } from "./helpers/isolatedEnv.mjs";
-import { ADULT_HONORS_BASE, ADULT_HONORS_FILES, ADULT_HONORS_REFERENCE, ADULT_HONORS_REFERENCE_SHA, ADULT_HONORS_CATALOG_SHA, adultHonorsSourceDelta, adultHonorsReferenceSource, adultHonorsSourceContract, expectedAdultHonorsCatalog, validateAdultHonorsDelta, validateAdultHonorsReference, parseAdultHonorsTarget, checkAdultHonorsLedger } from "../scripts/release-migrate-adult-honors-support.mjs";
+import { ADULT_HONORS_BASE, ADULT_HONORS_FILES, ADULT_HONORS_REFERENCE, ADULT_HONORS_CAPTURE_COMMIT, ADULT_HONORS_REFERENCE_SHA, ADULT_HONORS_CATALOG_SHA, adultHonorsSourceDelta, adultHonorsReferenceSource, adultHonorsSourceContract, expectedAdultHonorsCatalog, validateAdultHonorsDelta, validateAdultHonorsReference, parseAdultHonorsTarget, checkAdultHonorsLedger } from "../scripts/release-migrate-adult-honors-support.mjs";
 import { executeAdultHonorsRelease, runAdultHonorsRelease, captureAdultHonorsData } from "../scripts/release-migrate-adult-honors.mjs";
 import { canonical, sha } from "../scripts/release-migrate-support.mjs";
 const isolation=await isolatedEnv(),cache=new Map();
@@ -31,9 +31,19 @@ function harness(o={}){
  const migrate=async value=>{assert.equal(value,client);calls++;if(o.rollback)throw 0;length=25;if(o.lost)throw 0;};
  return{s,t,events,client,checks,migrate,get calls(){return calls;},get nullReads(){return nullReads;},get ends(){return ends;},run(apply=true){return executeAdultHonorsRelease(s,t,{apply,checks,connect:()=>client,migrate});}};
 }
-test("uninstalled/model reference refuses before target read or connect with no bypass",async()=>{
- for(const pin of [ADULT_HONORS_REFERENCE_SHA,ADULT_HONORS_CATALOG_SHA])assert.ok(pin===null||/^[a-f0-9]{64}$/.test(pin));
- for(const value of [Buffer.from(JSON.stringify({version:1,evidence:"MODEL ONLY - structural fixture"})),Buffer.from(JSON.stringify({...native,sourceCommit:candidate})),Buffer.from("null")]){
+test("installed independently accepted native reference has exact byte/catalog/capture pins and complete source proof",()=>{
+ const bytes=readFileSync(ADULT_HONORS_REFERENCE),reference=JSON.parse(bytes),before=JSON.stringify(reference);
+ assert.match(ADULT_HONORS_CAPTURE_COMMIT,/^[a-f0-9]{40}$/);assert.match(ADULT_HONORS_REFERENCE_SHA,/^[a-f0-9]{64}$/);assert.match(ADULT_HONORS_CATALOG_SHA,/^[a-f0-9]{64}$/);
+ assert.equal(reference.evidence,"owned-native-capture");assert.equal(reference.sourceCommit,ADULT_HONORS_CAPTURE_COMMIT);assert.equal(reference.migrationSHA256,sha(sql));
+ assert.equal(sha(bytes),ADULT_HONORS_REFERENCE_SHA);assert.equal(bytes.includes(13),false);assert.equal(sha(JSON.stringify(canonical(reference.after))),ADULT_HONORS_CATALOG_SHA);
+ assert.ok(blob(ADULT_HONORS_CAPTURE_COMMIT,folder+"/0024_adult_self_honors.sql").equals(Buffer.from(sql)));
+ const fixture=sourceFixture(),s=adultHonorsSourceContract(candidate,fixture);assert.deepEqual(validateAdultHonorsReference(bytes,s),s.adultHonorsAfter);assert.deepEqual(s.adultHonorsBefore,reference.before);s.recheck();
+ assert.equal(reference.before.tables.length,39);assert.equal(reference.after.tables.length,39);assert.equal(JSON.stringify(reference),before);
+});
+test("model/corrupt native references refuse before target read or connect with no bypass",async()=>{
+ const installed=readFileSync(ADULT_HONORS_REFERENCE),crlf=Buffer.from(installed.toString("utf8").replace(/\n/g,"\r\n"));
+ assert.deepEqual(JSON.parse(crlf),JSON.parse(installed));assert.notEqual(sha(crlf),ADULT_HONORS_REFERENCE_SHA);
+ for(const value of [Buffer.from(JSON.stringify({version:1,evidence:"MODEL ONLY - structural fixture"})),Buffer.from(JSON.stringify({...native,sourceCommit:candidate})),Buffer.from("null"),crlf,Buffer.concat([installed,Buffer.from(" ")])]){
   const f=sourceFixture();f.files.set(ADULT_HONORS_REFERENCE,value);f.committed.set(ADULT_HONORS_REFERENCE,value);let reads=0,connects=0;
   assert.throws(()=>validateAdultHonorsReference(value,source()));
   const result=await runAdultHonorsRelease(["--expected-commit",candidate,"--target","synthetic.json"],{source:commit=>adultHonorsSourceContract(commit,f),readTarget(){reads++;},execution:{connect(){connects++;}}});

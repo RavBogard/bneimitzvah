@@ -1,0 +1,33 @@
+# Product-owner reconciliation of Claude's independent review
+
+2026-10-20. Review input: Daniel's local `C:/Users/dsbog/bneimitzvah-review-output/`, README, REVIEW, FINDINGS, RECOMMENDATIONS, FEATURE-GAP-ANALYSIS, RESOURCE-INTEGRATION-PLAN and EVIDENCE-AND-LIMITS. Baseline ec29de9. The original report/evidence stays outside the public repository; do not publish licensed reading screenshots, private resource metadata or raw logs. This records integration decisions, not new human acceptance or completed implementation.
+
+## Keep the useful diagnosis and existing strengths
+
+The strongest findings concern task visibility, unavailable-audio promises, parent/tutor progress summaries, Torah/haftarah prominence and absent CRC resource links. Keep the established visual system, flowing Hebrew, assignment review, explicit sibling/practice context, private data clearing and uncertain-save recovery. This is a workflow correction, not another visual-world exercise. Administrative assignment/access work from the earlier Claude implementation is integrated and should not be rebuilt.
+
+## Reconciled priorities
+
+| Priority | Action | Boundary |
+| --- | --- | --- |
+| Immediate | Independently verify R-01 Google origin error using supplied evidence and signed-out production only. | A console error is a serious lead, not proof the full sign-in journey fails. Earlier Daniel sign-in succeeded. No OAuth settings/credentials change without a reproduced cause. |
+| First UX slice | Fix R-02 unavailable audio promises and make focused practice easy to reach. | Preserve Daniel's binding direct-to-reading, continuous main-text listening. Do not replace the reading with a mandatory verse modal or a new student overview. The primary reading action must navigate/read when audio is held; available listening remains direct in the text. |
+| Reading slice | Equal Torah/haftarah visibility; optional English near its Hebrew verse; clear verse tools and desktop room for Zoom teaching. | Preserve Hebrew reading flow, exact text/qere/indices, scroll and active audio ownership. English remains licensed server-delivered content, never committed. |
+| Family/teaching slice | Parent selected-child summary, latest lesson/tutor/progress and days-only practice summary; useful tutor/admin roster status and ceremony-date sorting. | No raw activity exposure or invented completion percentages. Student self-check and tutor assessment remain distinct. No task inbox/notification expansion. |
+| Setup/honors slice | Actionable service-slot prerequisite, recipient reset on invite role change, actual aliyah-change explanation and clearer link prerequisites. | Preserve exact intent UUIDs/receipts. A failed write or404 does not prove no COMMIT; do not claim an uncertain save failed. Initial status lookup may be automated after reviewed ownership/cancellation behavior. |
+| Resources/office slice | Contextual CRC timeline/help, public portion-sheet references, digital siddur, CRC Music and date-matched haftarah sheets; complete already scoped owned Sheet/rehearsal inputs and fallback CSV. | Verify canonical/public editions and matching rules. Hebrew-name storage/import already exists; inspect missing manual surfaces before adding schema. No private Drive publication, legacy tracker import or assumed customary verse ranges. |
+
+## Specific corrections to the recommendations
+
+- Student default: Daniel chose direct reading and later explicitly rejected mandatory close-up playback. The review's proposed default practice modal/student home is an alternative requiring a changed ruling, not automatic implementation authority. Promote an optional practice action while keeping the continuous reader primary.
+- Auth: simplify unnecessary interstitials and prefill/reset safely, but one-email invitation-as-session is a distinct auth design. Preserve the current invitation-versus-identity distinction until a separately reviewed design settles replay, wrong-account/forwarded links, explicit acceptance and session creation. Do not weaken server authorization to shorten a walkthrough.
+- Honors404: distinguish a known unavailable read/precondition from an uncertain mutation result. Receipt-based recovery and one-time URL handling survive. Never automatically retry a write under a new intent or recover a plaintext URL from its receipt.
+- Resource freshness: do not hide a valid resource merely because one automated HEAD returns non200, and do not fetch arbitrary admin-supplied URLs during rendering. Prefer curated public sources, reviewed dates and explicit status. Any future automated checking needs bounded host/redirect/network rules and honest transient-failure handling.
+- Evidence limits: no real reference audio, licensed service catalog, honoree journey, physical Safari or dark mode was tested by this review. Its source-only/modified-sandbox observations do not establish those capabilities absent or broken in production. Root's later adult UI light/dark/native-reference checks supplement this baseline; they do not replace Daniel's listening/phone acceptance.
+- Already scoped work: Hebrew name exists in the student schema/import. Rehearsal dates, owned Sheet, congregation defaults, tikkun/print and integrations remain implementation gaps; do not silently classify them as new optional scope. Keep d'var drafting, mitzvah-project management, generated voices, recordings, offline and notification extras outside1.0 as previously ruled. Guidance links can point to external workflows.
+
+## Execution order and current checkpoint
+
+Finish the independently reviewed adult honors release milestone first; its backend/UI work survives all proposed layout changes. Current adult source is isolated from main, the UI is accepted locally and the native migration reference is accepted for installation. Manual operator checks and exact hosted checks still precede production migration-before-app rollout. No real links, mail or imports accompany this work.
+
+In parallel, Sol investigates R-01 read-only. Next implementation assignment is the bounded unavailable-audio/practice-entry correction, followed by contextual reading/progress and resource/office slices. Use the report's findings as hypotheses with explicit acceptance, preserving the no-other-human-testing rule. Do not initialize another project-wide audit or replace the visual world.

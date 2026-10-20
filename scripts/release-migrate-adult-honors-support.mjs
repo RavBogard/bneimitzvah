@@ -12,11 +12,11 @@ import { referenceCatalog } from "./release-migrate-catalog.mjs";
 export const ADULT_HONORS_BASE="19012047bf1c5df91906a7b756d91f6cf185b96c";
 export const ADULT_HONORS_REFERENCE="tests/fixtures/portal/release-adult-honors-reference.json";
 export const ADULT_HONORS_FILES=["scripts/release-migrate-adult-honors.mjs","scripts/release-migrate-adult-honors-support.mjs",ADULT_HONORS_REFERENCE,"tests/release-adult-honors.test.mjs","tests/helpers/release-adult-honors-fixture.mjs","tests/postgres/release-adult-honors.acceptance.mjs"];
-// Intentionally uninstalled. Only root's independent actual owned-native capture
-// may replace these pins. No CLI flag, environment switch or model bypass exists.
-export const ADULT_HONORS_CAPTURE_COMMIT=null;
-export const ADULT_HONORS_REFERENCE_SHA=null;
-export const ADULT_HONORS_CATALOG_SHA=null;
+// Root independently accepted the owned native capture at this exact committed
+// preparation revision. No CLI flag, environment switch or model bypass exists.
+export const ADULT_HONORS_CAPTURE_COMMIT="94ebeef8e24248d1cb792652c77c00110396e806";
+export const ADULT_HONORS_REFERENCE_SHA="abb82e96e697e30933087317c8326d042b94b24af7bd3ea5accecf496b47781b";
+export const ADULT_HONORS_CATALOG_SHA="c1a3f7e5631ad9b41d45c10d355d30aa650d9f9dda170bb3d5a99ed6f0760d87";
 export const ADULT_HONORS_SQL_SHA="eafcb94d7825d00f061c008abef43154f6ff4dc8579c993fc66f8a9749f57906";
 export const ADULT_HONORS_TABLES=["honors_version","honoree_link","honoree_operation"];
 const folder="src/server/db/migrations",equal=(a,b)=>same(canonical(a),canonical(b));
