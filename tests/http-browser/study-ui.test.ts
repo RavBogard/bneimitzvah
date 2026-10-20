@@ -74,7 +74,7 @@ async function firstHebrewInViewport(tab: Page) {
   const geometry = await tab.locator(".study-hebrew > span").first().evaluate(span => {
     const range = document.createRange(); range.selectNodeContents(span); const bounds = range.getBoundingClientRect();
     const marker = span.closest("p")?.parentElement?.querySelector(":scope > .student-aliyah")?.getBoundingClientRect();
-    const reference = span.closest("[data-verse-ref]")?.querySelector("button")?.getBoundingClientRect();
+    const reference = span.closest("[data-verse-ref]")?.querySelector(":scope > button[title], :scope > sup[title]")?.getBoundingClientRect();
     return { scrollY, top: bounds.top, bottom: bounds.bottom, viewportWidth: innerWidth, viewportHeight: innerHeight, markerBottom: marker?.bottom ?? null,
       referenceTop: reference?.top ?? null, referenceBottom: reference?.bottom ?? null,
       bodyFont: getComputedStyle(document.body).fontFamily, hebrewFont: getComputedStyle(span).fontFamily, fontsStatus: document.fonts.status };
