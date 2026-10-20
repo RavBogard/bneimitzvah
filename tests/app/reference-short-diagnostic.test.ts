@@ -24,12 +24,12 @@ test("private records project only fixed stages and boolean predicates, with a f
   expect(JSON.stringify(records)).not.toContain(canary);
   report("request-origin", () => ({ originMatches: true, canonicalURL: false, userinfoAbsent: true, queryAbsent: true, fragmentAbsent: true, url: canary }));
   report("request-host", () => ({ hostMatches: true, forwardedHostMatches: false, host: canary }));
-  report("request-forwarding", () => ({ protocolMatches: true, portMatches: false, forwardedAbsent: true, forwarded: canary }));
+  report("request-forwarding", () => ({ protocolMatches: true, portMatches: false, forwarded: canary }));
   report("request-framing", () => ({ transferEncodingAbsent: false, contentLengthAbsentOrZero: true, contentLength: canary }));
   expect(records.slice(2)).toEqual([
     { event: "reference-short-diagnostic/v1", stage: "request-origin", originMatches: true, canonicalURL: false, userinfoAbsent: true, queryAbsent: true, fragmentAbsent: true },
     { event: "reference-short-diagnostic/v1", stage: "request-host", hostMatches: true, forwardedHostMatches: false },
-    { event: "reference-short-diagnostic/v1", stage: "request-forwarding", protocolMatches: true, portMatches: false, forwardedAbsent: true },
+    { event: "reference-short-diagnostic/v1", stage: "request-forwarding", protocolMatches: true, portMatches: false },
     { event: "reference-short-diagnostic/v1", stage: "request-framing", transferEncodingAbsent: false, contentLengthAbsentOrZero: true },
   ]);
   expect(JSON.stringify(records)).not.toContain(canary);
@@ -62,7 +62,7 @@ test("actual runtime config and request denials retain no-store statuses and zer
   expect(emitted.map(record => record.stage)).toEqual(["config-rejected"]);
   vi.stubEnv("PORTAL_ENVIRONMENT", "production");
   const handler = createRuntimePublicShort(config);
-  const deniedHeaders: HeadersInit[] = [{ host: "synthetic-private-canary" }, { forwarded: "synthetic-private-canary" }, { "content-length": "1" }];
+  const deniedHeaders: HeadersInit[] = [{ host: "synthetic-private-canary" }, { "x-forwarded-proto": "http" }, { "content-length": "1" }];
   for (const headers of deniedHeaders) {
     const response = await publicShortRequest(new Request(source, { headers }));
     expect(response.status).toBe(404); expect(await response.text()).toBe("");
@@ -70,7 +70,7 @@ test("actual runtime config and request denials retain no-store statuses and zer
     expect(response.headers.get("vercel-cdn-cache-control")).toBe("no-store");
   }
   expect((await handler(new Request(source, { method: "POST" }))).status).toBe(405);
-  expect((await handler(new Request(source, { headers: { range: "bytes=0-15" } }))).status).toBe(416);
+  expect((await handler(new Request(source, { headers: { range: "bytes=0-15", forwarded: "synthetic-private-canary" } }))).status).toBe(416);
   expect(emitted.map(record => record.stage)).toEqual(["config-rejected", "request-host", "request-forwarding", "request-framing"]);
   expect(emitted[1]).toMatchObject({ hostMatches: false, forwardedHostMatches: true });
   expect(JSON.stringify(emitted)).not.toContain("synthetic-private-canary");

@@ -21,7 +21,7 @@ test("closed default/invalid configuration is I/O-free", async () => {
 test("exact anonymous GET and HEAD fully verify genuine metadata/body and return only public immutable credit headers", async () => {
   const { f, get, handler } = setup();
   for (const method of ["GET", "HEAD"]) {
-    const response = await handler(request(f.source.path, { method, headers: { host: new URL(publicOrigin).host, "x-forwarded-host": new URL(publicOrigin).host, "x-forwarded-proto": "https", "x-forwarded-port": "443", cookie: "ignored=synthetic", authorization: "Bearer ignored", "if-none-match": `"sha256-${f.hash}"` } }));
+    const response = await handler(request(f.source.path, { method, headers: { host: new URL(publicOrigin).host, "x-forwarded-host": new URL(publicOrigin).host, "x-forwarded-proto": "https", "x-forwarded-port": "443", forwarded: 'host="unterminated;proto=http', cookie: "ignored=synthetic", authorization: "Bearer ignored", "if-none-match": `"sha256-${f.hash}"` } }));
     expect(response.status).toBe(200); expect(response.headers.get("content-type")).toBe("audio/mpeg"); expect(response.headers.get("content-length")).toBe(String(f.body.length));
     expect(response.headers.get("cache-control")).toBe("public, max-age=31536000, immutable"); expect(response.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=31536000, immutable"); expect(response.headers.get("etag")).toBe(`"sha256-${f.hash}"`);
     for (const key of ["set-cookie", "vary", "www-authenticate", "access-control-allow-credentials"]) expect(response.headers.has(key)).toBe(false);
@@ -34,9 +34,12 @@ test("exact anonymous GET and HEAD fully verify genuine metadata/body and return
 test("path, host, query and forwarding confusion are refused before metadata or body work", async () => {
   const { f, get, handler } = setup();
   for (const path of [f.source.path + "?x=1", f.source.path + "?", f.source.path + "#x", f.source.path.toUpperCase(), f.source.path.replace(".mp3", ".json"), "/reference-audio/short-v1/", f.source.path.replace(".mp3", "%2Emp3"), "/booklet/" + f.hash]) await failed(await handler(request(path)), 404);
-  const conflicts: HeadersInit[] = [{ host: "example.test" }, { "x-forwarded-host": "example.test" }, { "x-forwarded-host": new URL(publicOrigin).host + ",example.test" }, { "x-forwarded-proto": "http" }, { "x-forwarded-port": "80" }, { forwarded: "host=example.test" }];
-  for (const headers of conflicts) await failed(await handler(request(f.source.path, { headers })), 404);
-  await failed(await handler(new Request("https://example.test" + f.source.path)), 404); expect(get).not.toHaveBeenCalled();
+  const conflicts: HeadersInit[] = [{ host: "example.test" }, { "x-forwarded-host": "example.test" }, { "x-forwarded-host": new URL(publicOrigin).host + ",example.test" }, { "x-forwarded-proto": "http" }, { "x-forwarded-port": "80" }];
+  for (const conflict of conflicts) {
+    const headers = new Headers(conflict); headers.set("forwarded", `host=${new URL(publicOrigin).host};proto=https`);
+    await failed(await handler(request(f.source.path, { headers })), 404);
+  }
+  await failed(await handler(new Request("https://example.test" + f.source.path, { headers: { forwarded: `host=${new URL(publicOrigin).host};proto=https` } })), 404); expect(get).not.toHaveBeenCalled();
 });
 test("non-GET/HEAD and Range refuse early and unknown content identities never read a media key", async () => {
   const { f, get, handler } = setup();
@@ -44,6 +47,18 @@ test("non-GET/HEAD and Range refuse early and unknown content identities never r
   await failed(await handler(request(f.source.path, { headers: { range: "bytes=0-1" } })), 416); expect(get).not.toHaveBeenCalled();
   await failed(await handler(request(`/reference-audio/short-v1/${"f".repeat(64)}.mp3`)), 404);
   expect(get.mock.calls.map(c => c[0])).toEqual([f.parentKey, f.manifestKey]);
+});
+
+test("canonical Range discards RFC Forwarded without reading or logging it", async () => {
+  const { f, get, handler } = setup(), sink = vi.spyOn(console, "warn").mockImplementation(() => {});
+  for (const forwarded of ["", "synthetic-private-canary", "host=foreign.example.test;proto=http", 'host="unterminated', "host=a;host=b", "x".repeat(4096)])
+    await failed(await handler(request(f.source.path, { headers: { range: "bytes=0-15", forwarded } })), 416);
+  const unread = request(f.source.path, { headers: { range: "bytes=0-15", forwarded: "synthetic-private-canary" } });
+  const originalGet = unread.headers.get.bind(unread.headers), originalHas = unread.headers.has.bind(unread.headers); let forbiddenReads = 0;
+  vi.spyOn(unread.headers, "get").mockImplementation(key => { if (key.toLowerCase() === "forwarded") { forbiddenReads++; throw Error("RFC metadata must remain unread"); } return originalGet(key); });
+  vi.spyOn(unread.headers, "has").mockImplementation(key => { if (key.toLowerCase() === "forwarded") { forbiddenReads++; throw Error("RFC metadata must remain unread"); } return originalHas(key); });
+  await failed(await handler(unread), 416);
+  expect(forbiddenReads).toBe(0); expect(get).not.toHaveBeenCalled(); expect(sink).not.toHaveBeenCalled();
 });
 test("parent and manifest bytes must match their exact pins before any media read", async () => {
   for (const part of ["parent", "manifest"] as const) {

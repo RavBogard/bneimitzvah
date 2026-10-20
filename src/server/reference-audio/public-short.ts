@@ -31,8 +31,9 @@ function selectedFile(request: Request, origin: string): string | null {
       }
     }
     const proto = request.headers.get("x-forwarded-proto"), port = request.headers.get("x-forwarded-port");
-    if (proto !== null && proto !== "https" || port !== null && port !== "443" || request.headers.has("forwarded")) {
-      reportShortDiagnostic("request-forwarding", () => ({ protocolMatches: proto === null || proto === "https", portMatches: port === null || port === "443", forwardedAbsent: !request.headers.has("forwarded") })); return null;
+    // RFC Forwarded is unused, untrusted metadata: do not read or parse it.
+    if (proto !== null && proto !== "https" || port !== null && port !== "443") {
+      reportShortDiagnostic("request-forwarding", () => ({ protocolMatches: proto === null || proto === "https", portMatches: port === null || port === "443" })); return null;
     }
     if (request.headers.has("transfer-encoding") || request.headers.has("content-length") && request.headers.get("content-length") !== "0") {
       reportShortDiagnostic("request-framing", () => ({ transferEncodingAbsent: !request.headers.has("transfer-encoding"), contentLengthAbsentOrZero: !request.headers.has("content-length") || request.headers.get("content-length") === "0" })); return null;

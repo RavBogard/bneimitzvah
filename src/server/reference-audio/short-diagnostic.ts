@@ -7,7 +7,7 @@ const fields: Partial<Record<Stage, readonly string[]>> = {
   "config-rejected": predicates,
   "request-origin": ["originMatches", "canonicalURL", "userinfoAbsent", "queryAbsent", "fragmentAbsent"],
   "request-host": ["hostMatches", "forwardedHostMatches"],
-  "request-forwarding": ["protocolMatches", "portMatches", "forwardedAbsent"],
+  "request-forwarding": ["protocolMatches", "portMatches"],
   "request-framing": ["transferEncodingAbsent", "contentLengthAbsentOrZero"],
 };
 
