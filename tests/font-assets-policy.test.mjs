@@ -191,7 +191,16 @@ test("real official pair keeps staged tampering and candidate tampering independ
 test("exact-path byte attributes preserve real font and OFL through autocrlf checkout", async () => {
   const pair = await officialPair(), attributes = await readFile(new URL("../.gitattributes", import.meta.url), "utf8");
   const rules = attributes.split(/\r?\n/).filter(line => line && !line.startsWith("#"));
-  assert.deepEqual(rules, [`/${fontPath} -text`, `/${licensePath} -text`, `/${brandFontPath} -text`, `/${brandLicensePath} -text`]);
+  assert.deepEqual(rules, [
+    `/${fontPath} -text`, `/${licensePath} -text`, `/${brandFontPath} -text`, `/${brandLicensePath} -text`,
+    "/src/server/db/migrations/** text eol=lf",
+    "/scripts/db-migrate.mjs text eol=lf",
+    "/scripts/release-migrate*.mjs text eol=lf",
+    "/tests/fixtures/portal/release-*-reference.json text eol=lf",
+    "/tests/release-*.test.mjs text eol=lf",
+    "/tests/helpers/release-*-fixture.mjs text eol=lf",
+    "/tests/postgres/release-*.acceptance.mjs text eol=lf",
+  ]);
   await fixture(async ({ root, env, git, put }) => {
     git("config", "core.autocrlf", "true"); await put(".gitattributes", attributes);
     for (const [path, bytes] of pair) await put(path, bytes); git("add", ".gitattributes", fontPath, licensePath);
