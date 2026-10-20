@@ -7,7 +7,8 @@ import { icons } from "../study/lift";
 import type { LessonLogEntry } from "../../../../lib/lesson-log/types";
 import { LessonError, summaryBytes, summaryLimit, type LessonOperation, type LessonPage } from "./api";
 
-export type LessonReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
+export type LessonSummarySnapshot = { scope: string; baseline: Assigned | null; generation: number; lesson: { status: "loading" } | { status: "unavailable" } | { status: "ready"; latest: Pick<LessonLogEntry, "lessonDate" | "displayName" | "summary"> | null } };
+export type LessonReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void>; snapshot?(publish: (value: LessonSummarySnapshot) => void): void };
 /** An open note: a new lesson (no base) or an edit of the saved version it started from. */
 type Draft = { entryId: string; base: LessonLogEntry | null; lessonDate: string; summary: string; changedElsewhere?: boolean; uncertain?: boolean };
 type List = { scope: string; page?: LessonPage; loading?: boolean; more?: boolean; error?: number };
@@ -27,6 +28,8 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
   const staff = mode === "tutor" || mode === "admin", id = useId();
   const scope = JSON.stringify([summary.sessionBinding, epoch, mode, studentId]), scopeRef = useRef(scope); scopeRef.current = scope;
   const [list, setList] = useState<List>({ scope });
+  const snapshotTarget = useRef<((value: LessonSummarySnapshot) => void) | null>(null), savedSnapshot = useRef<LessonSummarySnapshot | null>(null);
+  const snapshotBaseline = useRef<Assigned | null>(null);
   const [draft, setDraftState] = useState<Draft | null>(null), draftRef = useRef(draft);
   const setDraft = (next: Draft | null) => { draftRef.current = next; setDraftState(next); };
   const [pending, setPending] = useState<"save" | "delete" | null>(null), [confirmDelete, setConfirmDelete] = useState(false);
@@ -37,16 +40,26 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
   const sheet = useRef<HTMLDialogElement>(null), prompt = useRef<HTMLDialogElement>(null), origin = useRef<HTMLElement | null>(null);
   const field = useRef<HTMLTextAreaElement>(null), keepIt = useRef<HTMLButtonElement>(null), deleteButton = useRef<HTMLButtonElement>(null), confirmWasOpen = useRef(false);
 
+  const publish = useCallback((lesson: LessonSummarySnapshot["lesson"], turn = listGeneration.current) => {
+    if (turn !== listGeneration.current) return;
+    const value = { scope: scopeRef.current, baseline: snapshotBaseline.current, generation: turn, lesson };
+    savedSnapshot.current = value; snapshotTarget.current?.(value);
+  }, []);
+  const observe = useCallback((receiver: (value: LessonSummarySnapshot) => void) => {
+    snapshotTarget.current = receiver;
+    const value = savedSnapshot.current;
+    if (value && value.scope === scopeRef.current && value.generation === listGeneration.current) receiver(value);
+  }, []);
   // The list follows the reading's reloads. A reload clears the list only: a note being written survives an access check.
-  const clearList = useCallback(() => { listGeneration.current++; listRequest.current?.abort(); listRequest.current = null; setList({ scope: scopeRef.current, loading: true }); }, []);
+  const clearList = useCallback(() => { listGeneration.current++; listRequest.current?.abort(); listRequest.current = null; publish({ status: "loading" }); setList({ scope: scopeRef.current, loading: true }); }, [publish]);
   const fetchFirst = useCallback(async (signal: AbortSignal) => {
     const turn = listGeneration.current, selectedScope = scopeRef.current;
     const page = await read.current(mode, studentId, { type: "page" }, signal) as LessonPage;
     if (signal.aborted || turn !== listGeneration.current || selectedScope !== scopeRef.current) return null;
     setList({ scope: selectedScope, page }); return page;
   }, [mode, studentId]);
-  const reload = useCallback(async (_: Assigned, signal: AbortSignal) => {
-    clearList(); const turn = listGeneration.current, selectedScope = scopeRef.current;
+  const reload = useCallback(async (baseline: Assigned, signal: AbortSignal) => {
+    clearList(); snapshotBaseline.current = baseline; publish({ status: "loading" }); const turn = listGeneration.current, selectedScope = scopeRef.current;
     try { await fetchFirst(signal); }
     catch (error) {
       if (signal.aborted || turn !== listGeneration.current || selectedScope !== scopeRef.current) return;
@@ -54,7 +67,7 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
       // Other failures stay inside this panel. An authority failure must not leave old notes on screen.
       if (authority(statusOf(error))) throw error;
     }
-  }, [clearList, fetchFirst]);
+  }, [clearList, fetchFirst, publish]);
   /** Re-reads the newest page after a write, its outcome or a conflict. */
   const refresh = useCallback(async () => {
     listGeneration.current++; listRequest.current?.abort(); const controller = new AbortController(); listRequest.current = controller;
@@ -66,14 +79,14 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
     // Cleanup cannot grant the navigation that was waiting for a user decision.
     departure.current?.(false); departure.current = null; setLeaving(false); clearList();
   }, [clearList]);
-  useLayoutEffect(() => register({ clear: clearList, reload }), [register, clearList, reload]);
+  useLayoutEffect(() => register({ clear: clearList, reload, snapshot: observe }), [register, clearList, reload, observe]);
   useLayoutEffect(() => registerWork({
-    pause() { listRequest.current?.abort(); setPaused(true); },
+    pause() { listRequest.current?.abort(); publish({ status: "loading" }); setPaused(true); },
     clear: discardAll,
     async settle() { await task.current?.catch(() => undefined); },
     hasUnsaved: () => dirtyDraft(draftRef.current),
     reveal() { setPaused(false); },
-  }), [registerWork, discardAll]);
+  }), [registerWork, discardAll, publish]);
   useLayoutEffect(() => registerDeparture(async () => {
     if (!dirtyDraft(draftRef.current)) return true;
     if (departure.current) return false;
@@ -209,6 +222,13 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
   async function retry() { clearList(); const controller = new AbortController(); listRequest.current = controller; try { await fetchFirst(controller.signal); } catch (error) { if (!controller.signal.aborted && !authority(statusOf(error))) setList({ scope: scopeRef.current, error: statusOf(error) }); } }
 
   const current = list.scope === scope ? list : null, entries = current?.page?.entries ?? [], busy = Boolean(pending) || paused;
+  const projectionTurn = listGeneration.current;
+  useLayoutEffect(() => {
+    if (scope !== scopeRef.current) return;
+    const latest = current?.page?.entries[0];
+    publish(paused || !current || current.loading ? { status: "loading" } : current.error ? { status: "unavailable" }
+      : { status: "ready", latest: latest ? { lessonDate: latest.lessonDate, displayName: latest.displayName, summary: latest.summary } : null }, projectionTurn);
+  }, [current, paused, scope, publish, projectionTurn]);
   const bytes = draft ? summaryBytes(draft.summary) : 0, title = staff ? "Lessons" : "Lesson notes";
   return <section className={`lesson-log${tabbed ? " lesson-log-tabbed" : ""}`} aria-labelledby={`${id}-heading`} aria-busy={current?.loading || undefined}>
     <div className="lesson-log-head"><h2 id={`${id}-heading`}>{title}</h2>

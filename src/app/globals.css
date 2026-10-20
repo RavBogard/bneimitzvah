@@ -888,3 +888,12 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .csv-workspace .csv-duplicate-choice input { width: 20px; min-height: 0; height: 20px; }
 .roster-discard { margin-block: 0 1.5rem; padding: 1rem 1.125rem; border-radius: var(--radius-control); background: color-mix(in srgb, var(--marigold) 14%, var(--color-surface)); }
 .roster-discard p { margin: 0 0 0.75rem; }
+
+/* A selected parent's saved teaching note and dates stay beside the existing reading. */
+.parent-study-summary { display: grid; gap: 1rem; margin-block: 0 1.5rem; max-width: 52rem; }
+.parent-study-summary h3 { font-size: 1rem; line-height: 1.5; }
+.parent-study-summary p, .parent-study-summary summary { overflow-wrap: anywhere; }
+.parent-study-summary details { margin-top: 0.25rem; }
+.parent-study-summary summary { min-height: 44px; padding-block: 0.5rem; cursor: pointer; }
+.parent-study-summary .parent-summary-note { white-space: pre-wrap; margin-block: 0.5rem; }
+.parent-summary-dates { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; margin-block: 0.5rem 0; padding-inline-start: 1.25rem; }

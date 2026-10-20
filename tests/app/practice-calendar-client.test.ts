@@ -1,3 +1,6 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { ParentStudySummary, ParentSummaryStore } from "../../src/components/portal/workspace/parent-summary";
 import { afterEach, expect, test, vi } from "vitest";
 import type { Assigned, Selection } from "../../src/components/portal/workspace/api";
 import type { ServicePlan } from "../../src/components/portal/workspace/service-learning/api";
@@ -200,4 +203,65 @@ test("a server day outside the browser's window gets one more read around the se
   calendar.configure(baseline()); await calendar.load();
   expect(operations.slice(1)).toEqual([{ type: "calendar", fromDate: dayString(dayOrdinal("2027-03-01") - 365), throughDate: "2027-03-01" }]);
   expect(calendar.snapshot()).toMatchObject({ status: "ready", serverDay: "2027-03-01" });
+});
+
+function parentProjection(serverDays = ["2026-10-17"]) {
+  const value = baseline("parent"), scope = "synthetic-parent-scope", denied = vi.fn(); let live = scope;
+  const read = vi.fn<ConstructorParameters<typeof ParentSummaryStore>[0]>().mockImplementation(async (mode, id, operation) => ({ studentId: id, mode, serverDay: serverDays.shift() ?? "2026-10-17", fromDate: operation.fromDate, throughDate: operation.throughDate, dates: [] }));
+  const store = new ParentSummaryStore(read, scope => scope === live, denied, () => dayOrdinal("2026-10-17"));
+  return { value, scope, denied, read, store, live: (scope: string) => { live = scope; } };
+}
+const savedLesson = { status: "ready" as const, latest: { lessonDate: "2026-10-17", displayName: "Synthetic author", summary: "Synthetic saved note <img src=x>\nNo inferred next step." } };
+test("parent summary reads only calendar dates after parent authorization and covers the final seven server days", async () => {
+  const f = parentProjection(); await f.store.loadDates();
+  for (const mode of ["student", "child-practice", "tutor", "admin"] as const) { f.store.configure(baseline(mode), f.scope); await f.store.loadDates(); }
+  expect(f.read).not.toHaveBeenCalled();
+  f.store.configure(f.value, f.scope);
+  f.read.mockImplementationOnce(async (mode, id, operation) => ({ studentId: id, mode, ...operation, serverDay: "2026-10-17", dates: ["2026-10-10", "2026-10-11", "2026-10-17"] }));
+  await f.store.loadDates(); expect(f.read).toHaveBeenCalledTimes(1);
+  expect(f.read.mock.calls[0].slice(0, 3)).toEqual(["parent", studentId, { type: "calendar", fromDate: "2026-10-10", throughDate: "2026-10-18" }]);
+  expect(f.store.snapshot().dates).toEqual({ status: "ready", serverDay: "2026-10-17", dates: ["2026-10-11", "2026-10-17"] });
+});
+test("parent week corrects a bad clock once and refuses an uncovered second server-day shift", async () => {
+  const good = parentProjection(["2027-03-01", "2027-03-01"]); good.store.configure(good.value, good.scope); await good.store.loadDates();
+  expect(good.read).toHaveBeenCalledTimes(2); expect(good.read.mock.calls[1][2]).toEqual({ type: "calendar", fromDate: "2027-02-23", throughDate: "2027-03-01" });
+  expect(good.store.snapshot().dates).toEqual({ status: "ready", serverDay: "2027-03-01", dates: [] });
+  const moved = parentProjection(["2027-03-01", "2027-03-02"]); moved.store.configure(moved.value, moved.scope); await moved.store.loadDates();
+  expect(moved.read).toHaveBeenCalledTimes(2); expect(moved.store.snapshot().dates).toEqual({ status: "unavailable" });
+});
+test.each([401, 403, 404])("current parent calendar denial %s clears the summary and escalates", async status => {
+  const f = parentProjection(); f.store.configure(f.value, f.scope); f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 1, lesson: savedLesson });
+  f.read.mockRejectedValueOnce(new PortalRequestError(status)); await f.store.loadDates();
+  expect(f.denied).toHaveBeenCalledExactlyOnceWith(status); expect(f.store.matches(f.value, f.scope)).toBe(false); expect(f.store.snapshot().lesson).toEqual({ status: "loading" });
+});
+test("old-child dates and denials cannot publish or deauthorize the newly selected child", async () => {
+  for (const fail of [false, true]) {
+    const f = parentProjection(), gate = deferred<PracticeDates>(); f.store.configure(f.value, f.scope); f.read.mockImplementationOnce(() => gate.promise);
+    const old = f.store.loadDates(), signal = f.read.mock.calls[0][3], next = { ...f.value, student: { ...f.value.student, id: assignmentId } };
+    f.live("next-scope"); f.store.configure(next, "next-scope"); expect(signal.aborted).toBe(true);
+    if (fail) gate.reject(new PortalRequestError(403)); else gate.resolve({ studentId, mode: "parent", serverDay: "2026-10-17", fromDate: "2026-10-10", throughDate: "2026-10-18", dates: ["2026-10-17"] });
+    await old; expect(f.denied).not.toHaveBeenCalled(); expect(f.store.matches(next, "next-scope")).toBe(true); expect(f.store.snapshot().dates).toEqual({ status: "loading" });
+  }
+});
+test("parent lesson receivers reject old saved pages and clears across pause, identical-baseline reload and session/scope changes", () => {
+  const f = parentProjection(); f.store.configure(f.value, f.scope); const old = f.store.receiver();
+  old({ baseline: f.value, scope: f.scope, generation: 5, lesson: savedLesson });
+  old({ baseline: f.value, scope: f.scope, generation: 4, lesson: { status: "loading" } }); expect(f.store.snapshot().lesson).toEqual(savedLesson);
+  f.store.pause(); old({ baseline: f.value, scope: f.scope, generation: 99, lesson: savedLesson }); expect(f.store.snapshot().lesson).toEqual({ status: "loading" });
+  const quiet = f.store.receiver(); quiet({ baseline: f.value, scope: f.scope, generation: 5, lesson: savedLesson }); expect(f.store.snapshot().lesson).toEqual(savedLesson);
+  f.store.configure(f.value, f.scope); quiet({ baseline: f.value, scope: f.scope, generation: 100, lesson: savedLesson }); expect(f.store.snapshot().lesson).toEqual({ status: "loading" });
+  const current = f.store.receiver(); current({ baseline: f.value, scope: f.scope, generation: 6, lesson: savedLesson });
+  old({ baseline: f.value, scope: f.scope, generation: 999, lesson: { status: "loading" } }); expect(f.store.snapshot().lesson).toEqual(savedLesson);
+  f.live("new-session"); expect(f.store.matches(f.value, f.scope)).toBe(false); current({ baseline: f.value, scope: f.scope, generation: 7, lesson: { status: "unavailable" } }); expect(f.store.snapshot().lesson).toEqual(savedLesson);
+  f.store.clear(); current({ baseline: f.value, scope: f.scope, generation: 8, lesson: savedLesson }); expect(f.store.matches(f.value, f.scope)).toBe(false);
+});
+test("parent summary renders honest states, closed escaped saved note, and conceals synchronously without percentages or inferred roles", async () => {
+  const f = parentProjection(); f.store.configure(f.value, f.scope);
+  const render = (concealed = false, scope = f.scope) => renderToStaticMarkup(createElement(ParentStudySummary, { store: f.store, baseline: f.value, scope, concealed }));
+  expect(render()).toContain("Loading the latest lesson"); expect(render()).toContain("Loading practice dates");
+  f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 1, lesson: { status: "ready", latest: null } }); await f.store.loadDates(); expect(render()).toContain("No saved lesson yet."); expect(render()).toContain("No practice dates recorded");
+  f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 2, lesson: savedLesson });
+  const markup = render(); expect(markup).toContain("Lesson author:"); expect(markup).toContain("&lt;img src=x&gt;"); expect(markup).not.toMatch(/<details[^>]*open|<img|assigned tutor|%/); expect(render(true)).toBe(""); expect(render(false, "different-child-or-epoch")).toBe("");
+  f.read.mockRejectedValueOnce(new PortalRequestError(503)); await f.store.loadDates(); expect(render()).toContain("Practice dates couldn’t be loaded."); expect(render()).toContain("Synthetic author"); expect(f.denied).not.toHaveBeenCalled();
+  f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 3, lesson: { status: "unavailable" } }); expect(render()).toContain("The latest lesson couldn’t be loaded.");
 });

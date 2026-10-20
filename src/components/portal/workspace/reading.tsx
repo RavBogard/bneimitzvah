@@ -23,6 +23,8 @@ import { LiftProgress, useProgressSummary, VerseMark } from "./progress/marks";
 import { LessonLog, type LessonReload } from "./lessons/panel";
 import { PracticeCalendar } from "./practice-calendar/store";
 import { PracticeDays } from "./practice-calendar/view";
+import { ParentStudySummary, ParentSummaryStore } from "./parent-summary";
+import type { PracticeDates } from "./practice-calendar/api";
 
 const dayMs = 86_400_000;
 /** "Sat, Jan 2, 2027" and whole days until it, computed on the calendar date only. */
@@ -58,8 +60,9 @@ type PageTab = "reading" | "service" | "lessons";
 const pageTabs: [PageTab, string][] = [["reading", "Reading"], ["service", "Service parts"], ["lessons", "Lessons"]];
 
 export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: ReadingMode; studentId: string; onStudentReload?(student: Student): void }) {
-  const { readVerified: read, readWork, readProgress, readPracticeCalendar, epoch, busy, concealed, selectChild, registerReload, registerQuiet, registerWork, completeWork, registerDeparture, guardDeparture } = useWorkspace();
+  const { readVerified: read, readWork, readProgress, readPracticeCalendar, summary, epoch, busy, concealed, selectChild, registerReload, registerQuiet, registerWork, completeWork, registerDeparture, guardDeparture, serviceAuthorityFailed } = useWorkspace();
   const key = `${mode}:${studentId}:${epoch}`;
+  const parentScope = JSON.stringify([summary.sessionBinding, epoch, mode, studentId]);
   const serviceId = useId();
   const audioRef = useRef<ReturnType<typeof createReadingAudioCoordinator> | null>(null);
   if (!audioRef.current) audioRef.current = createReadingAudioCoordinator();
@@ -93,6 +96,12 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const calendarRef = useRef<PracticeCalendar | null>(null);
   if (!calendarRef.current) calendarRef.current = new PracticeCalendar((...args) => environment.current.readPracticeCalendar(...args), () => environment.current.reload());
   const calendar = calendarRef.current;
+  const parentEnvironment = useRef({ scope: parentScope, concealed, readPracticeCalendar, denied: (status: number) => { studyDenied(status); serviceAuthorityFailed(status); } }); parentEnvironment.current = { scope: parentScope, concealed, readPracticeCalendar, denied: (status: number) => { studyDenied(status); serviceAuthorityFailed(status); } };
+  const parentRef = useRef<ParentSummaryStore | null>(null);
+  if (!parentRef.current) parentRef.current = new ParentSummaryStore((...args) => parentEnvironment.current.readPracticeCalendar(...args) as Promise<PracticeDates>, scope => parentEnvironment.current.scope === scope && !parentEnvironment.current.concealed, status => parentEnvironment.current.denied(status));
+  const parentSummary = parentRef.current;
+  useLayoutEffect(() => { if (mode !== "parent") return; const unregister = registerWork({ pause: parentSummary.pause, clear: parentSummary.clear, settle: async () => {}, hasUnsaved: () => false, reveal() {} });
+    return () => { unregister(); parentSummary.clear(); }; }, [mode, key, parentSummary, registerWork]);
   useLayoutEffect(() => { const unregister = registerWork({ pause: () => calendar.clear(), clear: () => calendar.configure(null), settle: async () => {}, hasUnsaved: () => false, reveal: () => {} }); return () => { unregister(); calendar.configure(null); }; }, [registerWork, calendar, key]);
   useSyncExternalStore(work.subscribe, work.snapshot, work.snapshot);
   const needsUnload = work.hasUnsaved();
@@ -104,7 +113,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   }, [work, needsUnload]);
   const load = useCallback(async () => {
     abort.current?.abort(); const request = new AbortController(), turn = ++sequence.current; abort.current = request;
-    audio.stopAll(); work.pause(); study.current?.clear(); service.current?.clear(); lessons.current?.clear(); calendar.clear();
+    audio.stopAll(); work.pause(); study.current?.clear(); service.current?.clear(); lessons.current?.clear(); calendar.clear(); parentSummary.pause();
     let lifecycle = work.lifecycle;
     setResult(previous => previous.key === key ? { ...previous, loading: true } : { key, loading: true });
     try {
@@ -113,6 +122,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       const value = await read(mode, studentId, request.signal);
       if (request.signal.aborted || turn !== sequence.current || lifecycle !== work.lifecycle) throw new Error("Reading request replaced");
       onStudentReload?.(value.student); work.configure(value, true); progress.configure(value); calendar.configure(value);
+      parentSummary.configure(value, parentScope);
       // The calendar loads beside the reading and never holds it back.
       void calendar.load(request.signal); lifecycle = work.lifecycle; setResult({ key, value, loading: true });
       const kind = value.readings.some(row => row.kind === selectedKindRef.current) ? selectedKindRef.current : value.readings[0]?.kind;
@@ -122,11 +132,16 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       setResult({ key, value });
       return value;
     }
-    catch (error) { if (!request.signal.aborted && turn === sequence.current) { if ([401, 403, 404].includes(statusOf(error))) { work.clear(); progress.configure(null); calendar.configure(null); } setResult({ key, error: statusOf(error) }); } throw error; }
-  }, [read, mode, studentId, key, onStudentReload, work, progress, calendar, completeWork, audio]);
+    catch (error) { if (!request.signal.aborted && turn === sequence.current) { if ([401, 403, 404].includes(statusOf(error))) { work.clear(); progress.configure(null); calendar.configure(null); parentSummary.clear(); } setResult({ key, error: statusOf(error) }); } throw error; }
+  }, [read, mode, studentId, key, onStudentReload, work, progress, calendar, completeWork, audio, parentSummary, parentScope]);
   const selectedKindRef = useRef(selectedKind); selectedKindRef.current = selectedKind;
   useEffect(() => registerReload(async () => { await load(); }), [registerReload, load]);
   const authorizedReading = result.key === key && !result.loading ? result.value : undefined;
+  useLayoutEffect(() => {
+    if (mode !== "parent" || concealed || !authorizedReading || !parentSummary.matches(authorizedReading, parentScope)) return;
+    // Provider reveal precedes its visible render; start only after that render is authorized.
+    lessons.current?.snapshot?.(parentSummary.receiver()); void parentSummary.loadDates();
+  }, [mode, concealed, authorizedReading, parentSummary, parentScope]);
   useLayoutEffect(() => {
     if (!authorizedReading) return;
     // Capture the complete closed metadata without changing UI/work state.
@@ -263,6 +278,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
           </div></>}
         <PracticeDays calendar={calendar} />
       </header>
+      {mode === "parent" && <ParentStudySummary store={parentSummary} baseline={authorizedReading ?? null} scope={parentScope} concealed={concealed} />}
       {!learner && readings.length > 0 && <AssignmentContext row={selectedReading} current />}
       {tabbed && <div role="tablist" aria-label="Student page" className="page-tabs" onKeyDown={tabKeys}>{pageTabs.map(([value, label]) => <button key={value} type="button" role="tab" id={tabId(value)} aria-controls={panelId(value)} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1} className="page-tab" onClick={() => setTab(value)}>{label}</button>)}</div>}</> : <>
       <h2 id="reading-heading"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
