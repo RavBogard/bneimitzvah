@@ -155,6 +155,90 @@ it("plays whole verses from main-text words, verifies explicit word offsets/loop
   await ui(word(tab, 2, 0)).toHaveAttribute("data-reference-active", "true");
   await player(tab).getByRole("button", { name: "Pause", exact: true }).click(); expect((await native(tab)).paused).toBe(true);
 });
+// Synthetic text/cues with real normalized native media. This is not real-corpus,
+// acoustic, Safari/phone or click-to-sound evidence.
+it("advances synthetic main-text highlights on the native verse clock and repeats whole verses after native EOF", async () => {
+  const { tab, state, owner } = await page();
+  await word(tab, 1, 1).click(); await playing(tab); await sameOwner(tab, owner);
+  await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse");
+  await ui(player(tab).getByRole("button", { name: "Repeat", exact: true })).toHaveAttribute("aria-pressed", "false");
+  const prepared = await native(tab), preparedRequests = state.pageRequests;
+  expect(prepared.kind).toBe("verse"); expect(Math.round(prepared.duration! * 24000)).toBe(96000);
+  expect(state.shortRequests).toBe(1); expect(state.archiveRequests).toBe(0);
+  const first = await tab.evaluate(async () => {
+    const media = window.referenceAudios.at(-1)!;
+    const proof = { ended: 0, playing: 0, source: media.src, initial: media.currentTime };
+    Reflect.set(window, "referenceMainClockProof", proof);
+    media.addEventListener("ended", () => { proof.ended++; });
+    media.addEventListener("playing", () => { proof.playing++; });
+    const active = () => [...new Set(Array.from(document.querySelectorAll('.study-verses [data-verse-ref="Genesis 1:1"] [data-reference-active="true"]')).map(el => Number(el.getAttribute("data-word-index"))))];
+    // Independent fixture oracle: source onsets [1.1, 3], source clip [1, 5].
+    // Interior quarters avoid racing the exact onset boundary; clock is never assigned.
+    const starts = [1.1, 3], clipStart = 1, clipEnd = 5, seen = new Set<number>();
+    let samples = 0, mismatches = 0;
+    const highlighted = await new Promise<boolean>(done => {
+      let settled = false; const finish = (ok: boolean) => { if (!settled) { settled = true; clearTimeout(timer); done(ok); } };
+      const timer = setTimeout(() => finish(false), 10000);
+      const sample = () => {
+        if (settled) return; samples++;
+        const sourceTime = clipStart + media.currentTime;
+        for (let i = 0; i < starts.length; i++) {
+          const left = starts[i], right = starts[i + 1] ?? clipEnd;
+          if (!media.paused && !media.ended && media.src === proof.source && sourceTime > left + (right - left) / 4 && sourceTime < right - (right - left) / 4) {
+            const indices = active(); if (indices.length === 1 && indices[0] === i) seen.add(i); else mismatches++;
+          }
+        }
+        if (seen.size === 2) finish(true); else if (media.ended || media.src !== proof.source) finish(false); else requestAnimationFrame(sample);
+      }; requestAnimationFrame(sample);
+    });
+    const afterHighlights = media.currentTime;
+    const nearEnd = highlighted && await new Promise<boolean>(done => {
+      let settled = false; const finish = (ok: boolean) => { if (!settled) { settled = true; clearTimeout(timer); done(ok); } };
+      const timer = setTimeout(() => finish(false), 6000);
+      const sample = () => { if (settled) return; if (media.ended || media.paused || media.src !== proof.source) finish(false);
+        else if (media.currentTime >= media.duration - 0.35) finish(true); else requestAnimationFrame(sample); }; requestAnimationFrame(sample);
+    });
+    if (nearEnd) { const start = performance.now(); while (performance.now() - start < 950) { /* Deliberately stall UI across native EOF. */ } }
+    // Observe only after the event loop resumes; native ended event must actually fire.
+    await new Promise<void>(done => setTimeout(done, 0));
+    return { highlighted, distinct: seen.size, samples, mismatches, initial: proof.initial, afterHighlights, nearEnd,
+      endedEvents: proof.ended, ended: media.ended, paused: media.paused, finalClock: media.currentTime, activeIndices: active(), sameSource: media.src === proof.source };
+  });
+  console.log("Synthetic main native-clock EOF: " + JSON.stringify(first));
+  expect(first.highlighted).toBe(true); expect(first.distinct).toBe(2); expect(first.mismatches).toBe(0);
+  expect(first.afterHighlights).toBeGreaterThan(first.initial); expect(first.nearEnd).toBe(true);
+  await expect.poll(async () => tab.evaluate(() => Reflect.get(window, "referenceMainClockProof").ended)).toBe(1);
+  expect(first.ended).toBe(true); expect(first.paused).toBe(true); expect(first.sameSource).toBe(true);
+  await ui(word(tab, 1, 0)).not.toHaveAttribute("data-reference-active", "true");
+  await ui(word(tab, 1, 1)).not.toHaveAttribute("data-reference-active", "true");
+  await player(tab).getByRole("button", { name: "Play", exact: true }).click(); await playing(tab);
+  await player(tab).getByRole("button", { name: "Repeat", exact: true }).click();
+  await ui(player(tab).getByRole("button", { name: "Repeat", exact: true })).toHaveAttribute("aria-pressed", "true");
+  const repeated = await tab.evaluate(async () => {
+    const media = window.referenceAudios.at(-1)!, proof = Reflect.get(window, "referenceMainClockProof") as { ended: number; playing: number; source: string };
+    let previous = media.currentTime, reset = false, samples = 0;
+    const baseline = proof.ended;
+    return new Promise<{ ok: boolean; reset: boolean; samples: number; endedEvents: number; playingEvents: number; currentTime: number; sameSource: boolean; activeIndex: number | null }>(done => {
+      let settled = false; const finish = (ok: boolean, activeIndex: number | null = null) => { if (!settled) { settled = true; clearTimeout(timer); done({ ok, reset, samples, endedEvents: proof.ended, playingEvents: proof.playing, currentTime: media.currentTime, sameSource: media.src === proof.source, activeIndex }); } };
+      const timer = setTimeout(() => finish(false), 10000);
+      const sample = () => {
+        if (settled) return; samples++; const clock = media.currentTime;
+        if (proof.ended > baseline && clock < previous) reset = true; previous = clock;
+        const indices = [...new Set(Array.from(document.querySelectorAll('.study-verses [data-verse-ref="Genesis 1:1"] [data-reference-active="true"]')).map(el => Number(el.getAttribute("data-word-index"))))];
+        if (reset && proof.ended === baseline + 1 && proof.playing >= 2 && !media.paused && !media.ended && media.src === proof.source && clock > 0.575 && clock < 1.525 && indices.length === 1 && indices[0] === 0) finish(true, 0);
+        else if (media.src !== proof.source) finish(false); else requestAnimationFrame(sample);
+      }; requestAnimationFrame(sample);
+    });
+  });
+  console.log("Synthetic main native Verse repeat: " + JSON.stringify(repeated));
+  expect(repeated.ok).toBe(true); expect(repeated.reset).toBe(true); expect(repeated.endedEvents).toBe(2); expect(repeated.activeIndex).toBe(0); expect(repeated.sameSource).toBe(true);
+  await sameOwner(tab, owner); expect((await native(tab)).src).toBe(prepared.src);
+  expect(state.shortRequests).toBe(1); expect(state.archiveRequests).toBe(0); expect(state.pageRequests).toBe(preparedRequests);
+  expect(await native(tab)).toMatchObject({ pageIssued: prepared.pageIssued, pageSuccessful: prepared.pageSuccessful, kind: "verse" });
+  await player(tab).getByRole("button", { name: "Pause", exact: true }).click(); expect((await native(tab)).paused).toBe(true);
+  await ui(word(tab, 1, 0)).not.toHaveAttribute("data-reference-active", "true");
+});
+
 it("supports colors-off qere/maqaf and keyboard whole-verse playback in the phone main text", async () => {
   const { tab, state, owner } = await page(true, "admin", contexts[0]);
   const clearance = await tab.evaluate(() => {
