@@ -380,6 +380,12 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .hero-icon:hover { background: var(--color-hover); color: var(--color-ink); }
 .reading-hero .hero-reference { margin-top: 0.75rem; font-size: clamp(2.5rem, 7.5vw, 4.25rem); font-weight: 800; line-height: 1; letter-spacing: -0.035em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; max-width: 16ch; }
 .hero-meta { margin-top: 0.625rem; color: var(--color-muted); font-size: 1.0625rem; }
+.hero-reading-summaries { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; margin-block: 0.75rem; }
+.hero-reading-summary { flex: 1 1 16rem; min-width: 0; }
+.hero-reading-summary h3 { margin: 0; font-size: 1rem; line-height: 1.5; font-weight: 600; overflow-wrap: anywhere; }
+.hero-reading-summary h3 bdi { display: block; font-variant-numeric: tabular-nums; }
+.hero-reading-summary p { margin-top: 0.125rem; color: var(--color-muted); font-size: 0.9375rem; }
+.reading-summary-current { margin-inline-start: 0.75rem; color: var(--color-ink); font-weight: 600; }
 .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 1.25rem; }
 .button-start { min-height: 56px; min-width: 9rem; padding: 0 2.25rem; border: 0; border-radius: 999px; background: var(--color-action-fill); color: #fff; font-size: 1.125rem; font-weight: 750; letter-spacing: -0.01em; transition: background-color 160ms var(--ease-settle), transform 160ms var(--ease-settle); }
 .button-start:hover { background: var(--lake-deep); }

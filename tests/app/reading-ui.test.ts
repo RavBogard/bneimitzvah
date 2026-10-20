@@ -1,8 +1,25 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { AssignedReadingSummaries } from "../../src/components/portal/workspace/reading";
 import { parseReadingProposal, customReadingRanges, readingBaseline } from "../../src/components/portal/workspace/reading-proposal";
 import { workspaceApi, type Assigned } from "../../src/components/portal/workspace/api";
 import { PortalRequestError } from "../../src/components/portal/api";
 import { reconcileSelectedStudent } from "../../src/components/portal/workspace/student-label";
+
+it("keeps both assigned reading summaries equally present and changes only the current indication", () => {
+  const value = { id: "synthetic", basis: "custom" as const, revision: 1, needsReview: false, aliyahStarts: null, confirmationDate: null, source: { status: "unknown" as const, fetchedAt: null, date: null, calendar: null, attribution: null } };
+  const readings = [{ ...value, kind: "torah" as const, ranges: ["Genesis 1:1-3"], verses: ["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"] }, { ...value, id: "other", kind: "haftarah" as const, ranges: ["Isaiah 1:1-2"], verses: ["Isaiah 1:1", "Isaiah 1:2"] }];
+  for (const selectedKind of ["torah", "haftarah"] as const) {
+    const markup = renderToStaticMarkup(createElement(AssignedReadingSummaries, { readings, selectedKind }));
+    expect(markup).toContain("Torah"); expect(markup).toContain("Haftarah");
+    expect(markup).toContain("Genesis 1:1–3"); expect(markup).toContain("Isaiah 1:1–2");
+    expect(markup.match(/class="hero-reading-summary"/g)).toHaveLength(2);
+    expect(markup.match(/aria-current="true"/g)).toHaveLength(1);
+    expect(markup).toMatch(new RegExp(`aria-current="true"><h3>${selectedKind === "torah" ? "Torah" : "Haftarah"}`));
+    expect(markup.match(/Current reading/g)).toHaveLength(1); expect(markup).not.toMatch(/<button|<a /);
+  }
+});
 
 it("reading metadata cannot grant or resurrect the latest list honors affordance", () => {
   const listed = { id: "synthetic", firstName: "Synthetic", lastName: "Student", ceremonyDate: "2027-01-02", revision: 1 };
