@@ -56,7 +56,7 @@ test("adult0024 already-applied accepts legitimate later student attribution wit
   const member=(await query(f.owner,"INSERT INTO public.membership(tenant_id,user_id) VALUES('crc',$1) RETURNING id",[user])).rows[0].id;
   const grant=(await query(f.owner,"INSERT INTO public.role_grant(tenant_id,membership_id,role) VALUES('crc',$1,'student') RETURNING id",[member])).rows[0].id;
   const identity=(await query(f.owner,"INSERT INTO public.student_identity(tenant_id,student_id,role_grant_id) VALUES('crc',$1,$2) RETURNING id",[f.studentId,grant])).rows[0].id;
-  await query(f.owner,"UPDATE public.student SET student_kind='adult' WHERE id=$1",[f.studentId]);
+  await query(f.owner,"UPDATE public.student SET student_kind='adult',own_email=$2 WHERE id=$1",[f.studentId,user+"@example.test"]);
   await query(f.owner,`INSERT INTO public.honors_version(tenant_id,student_id,assignment_id,version,base_version,previous_version,form,reviewed_context,context_hash,actor_user_id,actor_membership_id,role_grant_id,guardian_id,role,mode,mutation_id,request_digest,student_identity_id)
    SELECT tenant_id,student_id,assignment_id,version+1,version,version,form,reviewed_context,context_hash,$2,$3,$4,NULL,'student','student',$5,request_digest,$6 FROM public.honors_version WHERE student_id=$1 ORDER BY version DESC LIMIT 1`,[f.studentId,user,member,grant,randomUUID(),identity]);
   assert.equal(await captureAdultHonorsNullTransition(f.owner),false);
