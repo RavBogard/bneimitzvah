@@ -65,9 +65,9 @@ async function commit(value: unknown, studentId: string, intent: HonorsIntent, r
     || saved.reviewedContext.snapshot.tenantId !== currentContext.snapshot.tenantId || v.needsReview !== (saved.reviewedContext.hash !== currentContext.hash)) return fail();
   return Object.freeze({ ok: true, outcome: "committed", replayed: bool(v.replayed), committedVersion, currentLatestVersion, committed: saved, currentContext, needsReview: bool(v.needsReview) });
 }
-export function createHonorsClient(input: { studentId: string; mode: "parent" | "admin"; verify(signal: AbortSignal): Promise<void>; denied(status: number): void }) {
+export function createHonorsClient(input: { studentId: string; mode: "parent" | "admin" | "student"; verify(signal: AbortSignal): Promise<void>; denied(status: number): void }) {
   const studentId = uuid(input.studentId), mode = input.mode;
-  if (mode !== "parent" && mode !== "admin") throw new HonorsClientError(403);
+  if (mode !== "parent" && mode !== "admin" && mode !== "student") throw new HonorsClientError(403);
   const endpoint = `/api/students/${studentId}/honors`;
   async function request<T>(path: string, signal: AbortSignal, parse: (v: unknown) => Promise<T>, body?: unknown): Promise<T> {
     const controller = new AbortController(), abort = () => controller.abort(), total = setTimeout(abort, 15000); let idle: ReturnType<typeof setTimeout> | undefined, reader: ReadableStreamDefaultReader<Uint8Array> | undefined;

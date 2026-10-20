@@ -18,7 +18,7 @@ export async function lockVisibleStudentCandidates<Q extends PgQueryResultHKT>(t
   if (actor.mode === "student") relationship = exists(tx.select({ id: s.studentIdentity.id }).from(s.studentIdentity).where(and(
     eq(s.studentIdentity.tenantId, actor.tenantId), eq(s.studentIdentity.studentId, s.student.id), eq(s.studentIdentity.roleGrantId, actor.roleGrantId), isNull(s.studentIdentity.revokedAt),
   )));
-  return tx.select({ id: s.student.id, firstName: s.student.firstName, lastName: s.student.lastName, ceremonyDate: s.student.ceremonyDate, revision: s.student.revision })
+  return tx.select({ id: s.student.id, firstName: s.student.firstName, lastName: s.student.lastName, ceremonyDate: s.student.ceremonyDate, revision: s.student.revision, studentKind: s.student.studentKind })
     .from(s.student).where(and(eq(s.student.tenantId, actor.tenantId), isNull(s.student.disabledAt), relationship,
       page.afterId ? gt(s.student.id, page.afterId) : undefined))
     .orderBy(asc(s.student.id)).limit(page.limit ?? 100).for("share");

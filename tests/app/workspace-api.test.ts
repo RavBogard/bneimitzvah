@@ -19,6 +19,12 @@ it("assigned-reading metadata validates canonical cut membership and preserves n
 });
 
 describe("workspace DTO and private transport boundaries", () => {
+  it("accepts only a closed boolean own-adult list affordance, never reading metadata authority", () => {
+    for (const ownAdultHonors of [true, false]) expect(parseStudents({ students: [{ ...student(), ownAdultHonors }] })).toEqual([{ ...student(), ownAdultHonors }]);
+    expect(parseStudents({ students: [student()] })[0].ownAdultHonors).toBeUndefined();
+    for (const ownAdultHonors of [null, "true", 1, {}]) expect(() => parseStudents({ students: [{ ...student(), ownAdultHonors }] })).toThrow(PortalRequestError);
+    expect(() => parseAssigned({ student: { ...student(), ownAdultHonors: true }, mode: "student", context: null, readings: [] }, "student", a)).toThrow(PortalRequestError);
+  });
   it("keeps contact fields confined to the admin roster and rejects partial or malformed lists", () => {
     expect(parseStudents({ students: [student()] })).toHaveLength(1);
     const row = { ...student(), studentKind: "child" as const, serviceSlot: "unknown" as const, parentEmail: "synthetic-parent@example.test", ownEmail: null, disabledAt: null };

@@ -5,5 +5,9 @@ export function reconcileSelectedStudent(rows: Student[], selectedId: string | n
   const existing = rows.find(row => row.id === selectedId);
   if (!existing || current.revision < existing.revision) return rows;
   if (current.revision === existing.revision && current.firstName === existing.firstName && current.lastName === existing.lastName && current.ceremonyDate === existing.ceremonyDate) return rows;
-  return rows.map(row => row.id === selectedId ? current : row);
+  // Reading metadata never supplies list capability. Keep the latest list verdict,
+  // including a false/missing verdict after quiet revalidation.
+  const { ownAdultHonors: _ignored, ...metadata } = current;
+  const updated = !Object.hasOwn(existing, "ownAdultHonors") && !Object.hasOwn(current, "ownAdultHonors") ? current : { ...metadata, ...(Object.hasOwn(existing, "ownAdultHonors") ? { ownAdultHonors: existing.ownAdultHonors } : {}) };
+  return rows.map(row => row.id === selectedId ? updated : row);
 }

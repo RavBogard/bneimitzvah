@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect, it, onTestFailed, v
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page, type Route } from "playwright";
 import { and, eq } from "drizzle-orm";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { browserFixture } from "./fixture";
@@ -98,12 +98,15 @@ beforeAll(async () => {
     const learner = await fixture.signIn("pg-student"), [membership] = await fixture.ownerDb.insert(s.membership).values({ tenantId: "crc", userId: learner.id }).returning(), [grant] = await fixture.ownerDb.insert(s.roleGrant).values({ tenantId: "crc", membershipId: membership.id, role: "student" }).returning();
     await fixture.ownerDb.insert(s.studentIdentity).values({ tenantId: "crc", studentId: fixture.student.id, roleGrantId: grant.id });
     await fixture.ownerDb.update(s.student).set({ studentKind: "adult", ownEmail: "synthetic-student@example.test" }).where(eq(s.student.id, fixture.student.id));
+    const [adultReading] = await fixture.ownerDb.insert(s.assignment).values({ tenantId: "crc", studentId: fixture.student.id, kind: "torah", basis: "custom", ref: "Genesis 1:1-3", status: "confirmed", aliyahStarts: ["Genesis 1:2"], setByMembershipId: admin.id, proposalSnapshot: { confirmationDate: fixture.student.ceremonyDate, serviceSlot: "morning", slotProvenance: 1, needsReview: false } }).returning();
+    await fixture.ownerDb.update(s.student).set({ serviceSlot: "morning" }).where(eq(s.student.id, fixture.student.id));
+    await fixture.ownerDb.insert(s.assignmentVerse).values([1, 2, 3].map(ordinal => ({ tenantId: "crc", studentId: fixture.student.id, assignmentId: adultReading.id, ordinal, verseRef: `Genesis 1:${ordinal}` })));
     stop = await startBrowserServer(fixture.withRuntime); isolated = await isolatedEnv(); browser = await chromium.launch({ headless: true, env: isolated.env });
   } catch { await browser?.close().catch(() => {}); await stop?.().catch(() => {}); await fixture?.close().catch(() => {}); restore?.(); await isolated?.cleanup(); throw Error("Synthetic honors UI setup failed; private details withheld"); }
 }, 120000);
 beforeEach(() => { onTestFailed(() => { failed = true; }); });
 afterEach(async () => { await Promise.all(contexts.splice(0).map(c => c.close())); });
-afterAll(async () => { try { if (!failed && process.env.HONORS_UI_CAPTURE === "1") await capturePacket(); } finally { await Promise.all(contexts.map(c => c.close().catch(() => {}))); await browser?.close().catch(() => {}); await stop?.().catch(() => {}); await fixture?.close().catch(() => {}); restore?.(); await isolated?.cleanup(); } }, 120000);
+afterAll(async () => { try { if (!failed && process.env.HONORS_UI_CAPTURE === "1") await capturePacket(); if (!failed && process.env.ADULT_HONORS_UI_CAPTURE === "1") await captureAdultPacket(); } finally { await Promise.all(contexts.map(c => c.close().catch(() => {}))); await browser?.close().catch(() => {}); await stop?.().catch(() => {}); await fixture?.close().catch(() => {}); restore?.(); await isolated?.cleanup(); } }, 120000);
 
 it("base guardian saves flexible ordered groups, actual aliyot, Hebrew names and blessing logistics exactly once", async () => {
   const tab = await page("parent"), child = children[0]; await open(tab, child, "parent");
@@ -173,12 +176,49 @@ it("admin printing verifies only the saved copy; real guardian denial clears pri
   finally { parent.off("response", refusal); }
   expect(await rows(child.id)).toHaveLength(1);
 });
-it("adult student and child-practice views expose no honors controls or family form", async () => {
-  const student = await page("student"); await student.goto("/workspace/student", { waitUntil: "domcontentloaded" }); await ui(student.locator(".role-workspace")).toBeVisible(); await ui(student.getByRole("button", { name: "Family honors", exact: true })).toHaveCount(0); expect((await api(student, `/api/students/${fixture.student.id}/honors?mode=student`)).status).toBe(403);
+it("own adult uses the existing honors sheet and link controls while child practice tutor and foreign targets stay denied", async () => {
+  const student = await page("student"); await openAdult(student);
+  await add(student, "Opening the ark", "Synthetic Adult Honoree"); await add(student, "Aliyah 2 · Genesis 1:2 – Genesis 1:3", "Synthetic Adult Aliyah");
+  const result = await save(student, fixture.student.id); expect(result.ok).toBe(true);
+  const [identity] = await fixture.ownerDb.select().from(s.studentIdentity).where(eq(s.studentIdentity.studentId, fixture.student.id));
+  const saved = await rows(fixture.student.id); expect(saved).toHaveLength(1); expect(saved[0]).toMatchObject({ mode: "student", role: "student", guardianId: null, studentIdentityId: identity.id });
+  await group(student, "Aliyah 2 · Genesis 1:2 – Genesis 1:3").getByRole("button", { name: "Check link", exact: true }).click();
+  await ui(group(student, "Aliyah 2 · Genesis 1:2 – Genesis 1:3").getByRole("status").filter({ hasText: /^No current link record was found\.$/ })).toBeVisible();
+  expect(await student.locator("input[data-honoree-secret]").count()).toBe(0);
+  const receiptIntent = { mode: "student", operation: "issue", mutationId: randomUUID(), expectedVersion: result.committedVersion, contextHash: result.currentContext.hash, startVerse: "Genesis 1:2", linkId: null };
+  const unconfirmed = await api(student, `/api/students/${fixture.student.id}/honoree-links/receipt`, receiptIntent); expect(unconfirmed.status).toBe(200); expect(unconfirmed.data).toEqual({ ok: true, outcome: "unconfirmed" });
+  expect((await api(student, `/api/students/${children[0].id}/honors?mode=student`)).status).toBe(404);
+  await fixture.ownerDb.update(s.student).set({ studentKind: "child" }).where(eq(s.student.id, fixture.student.id));
+  try {
+    const denied = student.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/honors` && response.status() === 403);
+    await student.evaluate(() => window.dispatchEvent(new Event("focus"))); await denied;
+    await ui(sheet(student)).toHaveCount(0); await ui(student.getByRole("button", { name: "Family honors", exact: true })).toHaveCount(0);
+    await ui(student.locator('input[value="Synthetic Adult Honoree"]')).toHaveCount(0); expect((await api(student, `/api/students/${fixture.student.id}/honors?mode=student`)).status).toBe(403);
+    expect((await api(student, `/api/students/${fixture.student.id}/honoree-links/status`, { mode: "student", startVerse: "Genesis 1:2" })).status).toBe(403);
+    expect((await api(student, `/api/students/${fixture.student.id}/honoree-links/receipt`, receiptIntent)).status).toBe(403);
+    await student.goto("/workspace/student", { waitUntil: "domcontentloaded" });
+    await ui(student.getByRole("region", { name: "Family honors", exact: true })).toBeVisible(); await ui(student.getByRole("button", { name: "Family honors", exact: true })).toHaveCount(0);
+  } finally { await fixture.ownerDb.update(s.student).set({ studentKind: "adult" }).where(eq(s.student.id, fixture.student.id)); }
   const parent = await page("parent"), entered = await api(parent, "/api/practice/enter", { studentId: children[0].id }); expect(entered.status).toBe(201); const denied = await parent.evaluate(async ({ id, handle }) => { const r = await fetch(`/api/students/${id}/honors?mode=parent`, { headers: { "X-Practice-Context": handle }, cache: "no-store" }); return r.status; }, { id: children[0].id, handle: entered.data.handle }); expect(denied).toBe(403);
   await parent.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await parent.locator(`button.student-card[data-student-id="${children[0].id}"]`).click(); await parent.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(parent.getByRole("button", { name: "Return to parent view", exact: true })).toBeVisible(); await ui(parent.getByRole("button", { name: "Family honors", exact: true })).toHaveCount(0);
   await parent.goto("/workspace/tutor", { waitUntil: "domcontentloaded" }); await ui(parent.locator(".role-workspace")).toBeVisible(); await ui(parent.getByRole("button", { name: "Family honors", exact: true })).toHaveCount(0);
 });
+
+async function openAdult(tab: Page) {
+  await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" }); await tab.getByRole("button", { name: "Family honors", exact: true }).click();
+  await ui(sheet(tab).getByRole("heading", { name: "Opening the ark", exact: true })).toBeVisible();
+}
+async function captureAdultPacket() {
+  const directory = join(process.cwd(), ".impeccable", "review", "adult-family-honors-v1"); await mkdir(directory, { recursive: true }); const images: { name: string; width: number; height: number; sha256: string }[] = [];
+  for (const mobile of [false, true]) for (const theme of ["light", "dark"] as const) {
+    const tab = await page("student", mobile, theme); await openAdult(tab);
+    const checkLink = group(tab, "Aliyah 2 · Genesis 1:2 – Genesis 1:3").getByRole("button", { name: "Check link", exact: true }); await checkLink.scrollIntoViewIfNeeded(); await ui(checkLink).toBeInViewport();
+    expect(await tab.locator("input[data-honoree-secret]").count()).toBe(0);
+    await tab.evaluate(async () => { await document.fonts.ready; await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); }); expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const name = `${mobile ? "phone" : "desktop"}-${theme}`, bytes = await tab.screenshot({ style: "nextjs-portal { display:none !important; }" }); await writeFile(join(directory, `${name}.png`), bytes, { flag: "wx" }); images.push({ name, width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20), sha256: createHash("sha256").update(bytes).digest("hex") }); await tab.context().close();
+  }
+  await writeFile(join(directory, "manifest.json"), JSON.stringify({ schema: "adult-family-honors-capture/v1", synthetic: true, images }, null, 2) + "\n", { flag: "wx" });
+}
 
 async function capturePacket() {
   const directory = join(process.cwd(), ".impeccable", "review", "family-honors"); await mkdir(directory, { recursive: true }); const images: { name: string; width: number; height: number; sha256: string }[] = [];

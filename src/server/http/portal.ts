@@ -294,7 +294,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         const query = uniqueQuery(request.url, ["mode", "afterId", "limit"]), limit = query.get("limit");
         if (limit !== null && (!/^[1-9][0-9]{0,2}$/.test(limit) || Number(limit) > 100)) throw new HttpBoundaryError();
         const rows = await runtime.access.listStudents(request, { mode: baseMode(query.get("mode")), afterId: query.has("afterId") ? identifier(query.get("afterId")) : undefined, limit: limit === null ? undefined : Number(limit) });
-        return privateJson({ students: rows.map(studentView) });
+        return privateJson({ students: rows.map(row => ({ ...studentView(row), ownAdultHonors: row.ownAdultHonors })) });
       }
       case "student": {
         const query = uniqueQuery(request.url, ["mode"]);

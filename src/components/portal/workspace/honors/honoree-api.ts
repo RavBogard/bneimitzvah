@@ -15,9 +15,9 @@ export function captureLinkIntent(input: unknown): LinkIntent {
   if (v.operation === "issue" ? v.linkId !== null : v.linkId === null) return fail();
   return Object.freeze({ operation: v.operation as LinkIntent["operation"], mutationId: uuid(v.mutationId), expectedVersion: Number(v.expectedVersion), contextHash: v.contextHash, startVerse: start(v.startVerse), linkId: v.linkId === null ? null : linkId(v.linkId) });
 }
-export function createHonoreeClient(input: { studentId: string; mode: "parent" | "admin"; origin: string; verify(signal: AbortSignal): Promise<void>; denied(status: number): void }) {
+export function createHonoreeClient(input: { studentId: string; mode: "parent" | "admin" | "student"; origin: string; verify(signal: AbortSignal): Promise<void>; denied(status: number): void }) {
   const studentId = uuid(input.studentId), endpoint = `/api/students/${studentId}/honoree-links`, mode = input.mode, origin = input.origin;
-  if (!["parent", "admin"].includes(mode) || new URL(origin).origin !== origin) throw new HonoreeClientError(403);
+  if (!["parent", "admin", "student"].includes(mode) || new URL(origin).origin !== origin) throw new HonoreeClientError(403);
   async function request<T>(suffix: string, body: unknown, signal: AbortSignal, parse: (value: unknown) => T): Promise<T> {
     const controller = new AbortController(), abort = () => controller.abort(), timeout = setTimeout(abort, 15000);
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined, idle: ReturnType<typeof setTimeout> | undefined;

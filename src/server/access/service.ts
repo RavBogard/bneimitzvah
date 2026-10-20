@@ -105,9 +105,9 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
       // Recheck each live link after acquiring the student locks; a revoked link
       // disappears instead of surviving from an earlier candidate query.
       const candidates = await lockVisibleStudentCandidates(tx, actor, selection);
-      const visible: StudentView[] = [];
+      const visible: (StudentView & { ownAdultHonors: boolean })[] = [];
       for (const student of candidates) {
-        if (await lockStudentRelationship(tx, actor.tenantId, student.id, actor.roleGrantId, actor.mode, "read")) visible.push(studentView(student));
+        if (await lockStudentRelationship(tx, actor.tenantId, student.id, actor.roleGrantId, actor.mode, "read")) visible.push(Object.freeze({ ...studentView(student), ownAdultHonors: actor.mode === "student" && student.studentKind === "adult" }));
       }
       return visible;
     }),

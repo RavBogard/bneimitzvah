@@ -7,7 +7,7 @@ related_targets: ["src/components/portal/workspace/students.tsx","src/components
 
 # Private family honors sheet
 
-Mode: Operate. A local extension of the existing parent/admin workspace, based on the blank October2026 CRC binder and the accepted private honors contract. Full family fields belong only to the selected base guardian or administrator. Existing Song session world and code-first workflow remain fixed. No honoree, practice, recording, source-text or navigation redesign belongs here.
+Mode: Operate. A local extension of the existing workspace, based on the blank October2026 CRC binder and the accepted private honors contract. Full family fields belong to the selected base guardian, administrator, or the student's own live adult identity (Daniel, 2026-10-20). The server-projected list affordance never replaces authoritative operation checks. Existing Song session world and code-first workflow remain fixed. No honoree, practice, recording, source-text or navigation redesign belongs here.
 
 ## Direction contract
 
@@ -25,7 +25,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
 ## Behavior and acceptance
 
-- Base parent selected-child and enabled admin roster entries only. No new main navigation or family fields in child practice/tutor/student views.
+- Base parent selected-child, enabled admin roster, and server-eligible own-adult base student entries only. Child students, delegated child practice and tutors gain no honors controls. Reuse the existing sheet and private-link ownership/clearing; no new main navigation.
 - Ordered flexible groups; actual aliyot, multiple people, English and Hebrew names. Keep each aliyah person's English/Hebrew name visible; additional parent Hebrew names/relationship may use an explicit disclosure. Unknown names remain optional. No transliteration, contact information or blessing prose.
 - Quiet same-owner tab return preserves unsaved fields, focus and scroll. Real denial/identity/scope changes clear private state. In-flight saves block edits and accidental dismissal. Dirty and uncertain departures use existing reviewed ownership/guard patterns, never localStorage or autosave.
 - A changed date with identical actual spans can use one explicit review acknowledgement. Changed/missing spans require explicit mapping choices or removal; do not remap by ordinal, discard unmatched groups or pretend an old span is current.

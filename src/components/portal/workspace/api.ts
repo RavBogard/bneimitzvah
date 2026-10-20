@@ -6,11 +6,11 @@ import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 
 export type BaseMode = "student" | "parent" | "tutor" | "admin";
 export type ReadingMode = BaseMode | "child-practice";
-export type Student = { id: string; firstName: string; lastName: string; ceremonyDate: string; revision: number };
+export type Student = { id: string; firstName: string; lastName: string; ceremonyDate: string; revision: number; ownAdultHonors?: boolean };
 export type ImportMetadata={version:1;parent1Name:string|null;householdPhone:string|null;parent2Name:string|null;parashahLabel:string|null;tutorName:string|null;
   tutorMatch:{status:"matched";grantId:string}|{status:"unmatched"|"ambiguous"}|null;adminNotes:string|null};
 export type RosterStudent = Student & { studentKind: "child" | "adult"; serviceSlot: "morning" | "havdalah" | "unknown"; parentEmail: string | null; ownEmail: string | null; disabledAt: string | null;hebrewName?:string|null;secondParentEmail?:string|null;importMetadata?:ImportMetadata|null };
-export type StudentInput = Omit<RosterStudent, "id" | "revision" | "disabledAt" | "importMetadata">;
+export type StudentInput = Omit<RosterStudent, "id" | "revision" | "disabledAt" | "importMetadata" | "ownAdultHonors">;
 export type Context = { id: string; authorityRevision: number; studentId: string; studentRevision: number; expiresAt: string };
 export type Selection = { handle: string; context: Context };
 export type Reading = { id: string; kind: "torah" | "haftarah"; revision: number; ranges: string[]; verses: string[]; needsReview: boolean; aliyahStarts:string[]|null;
@@ -51,8 +51,12 @@ export function parseStudents(value: unknown, roster = false): Student[] | Roste
   if (!Array.isArray(rows) || rows.length > (roster ? 5000 : 100)) return bad();
   const result = rows.map(value => {
     const rich=roster && !!value && typeof value==="object" && Object.hasOwn(value,"importMetadata");
-    const row = object(value, roster ? [...studentKeys, "studentKind", "serviceSlot", "parentEmail", "ownEmail", "disabledAt",...(rich?["hebrewName","secondParentEmail","importMetadata"]:[])] : studentKeys), student = studentFields(row);
-    if (!roster) return student;
+    const eligibility = !roster && !!value && typeof value === "object" && Object.hasOwn(value, "ownAdultHonors");
+    const row = object(value, roster ? [...studentKeys, "studentKind", "serviceSlot", "parentEmail", "ownEmail", "disabledAt",...(rich?["hebrewName","secondParentEmail","importMetadata"]:[])] : [...studentKeys, ...(eligibility ? ["ownAdultHonors"] : [])]), student = studentFields(row);
+    if (!roster) {
+      if (eligibility && typeof row.ownAdultHonors !== "boolean") return bad();
+      return eligibility ? { ...student, ownAdultHonors: row.ownAdultHonors as boolean } : student;
+    }
     if (row.studentKind !== "child" && row.studentKind !== "adult") return bad();
     const studentKind = row.studentKind;
     if(row.serviceSlot!=="morning" && row.serviceSlot!=="havdalah" && row.serviceSlot!=="unknown")return bad();

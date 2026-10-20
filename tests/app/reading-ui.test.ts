@@ -4,6 +4,17 @@ import { workspaceApi, type Assigned } from "../../src/components/portal/workspa
 import { PortalRequestError } from "../../src/components/portal/api";
 import { reconcileSelectedStudent } from "../../src/components/portal/workspace/student-label";
 
+it("reading metadata cannot grant or resurrect the latest list honors affordance", () => {
+  const listed = { id: "synthetic", firstName: "Synthetic", lastName: "Student", ceremonyDate: "2027-01-02", revision: 1 };
+  for (const ownAdultHonors of [undefined, false, true]) {
+    const rows = [{ ...listed, ...(ownAdultHonors === undefined ? {} : { ownAdultHonors }) }];
+    const current = { ...listed, revision: 2, firstName: "Updated", ownAdultHonors: true };
+    expect(reconcileSelectedStudent(rows, listed.id, current)[0].ownAdultHonors).toBe(ownAdultHonors);
+    // Quiet list refresh is newer authority even when its display revision lags.
+    expect(reconcileSelectedStudent([{ ...listed, ownAdultHonors: false }], listed.id, { ...current, ownAdultHonors: true })[0].ownAdultHonors).toBe(false);
+  }
+});
+
 const id = "10000000-0000-4000-8000-000000000001";
 const student = { id, firstName: "Synthetic", lastName: "Learner", ceremonyDate: "2027-01-02", revision: 1 };
 const source = { ceremonyDate:student.ceremonyDate, serviceSlot:"morning", readingDate:student.ceremonyDate, manualFallback:null, sourceStatus: "available", sourceFetchedAt: 1792100000000, warning: null, toConfirm: ["torah", "entryCap", "nusach"], requiresConfirmation: true };

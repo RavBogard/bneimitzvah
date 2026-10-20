@@ -21,12 +21,15 @@ const response = (value: unknown, status = 200) => new Response(JSON.stringify(v
 const held = <T,>() => { let resolve!: (value: T) => void; const promise = new Promise<T>(yes => { resolve = yes; }); return { promise, resolve }; };
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
-it("uses only base guardian/admin authority and fresh session proof around the closed response", async () => {
+it("uses base guardian/admin/own-adult student selectors and fresh session proof around the closed response", async () => {
   const verify = vi.fn(async () => {}), denied = vi.fn(), fetcher = vi.fn(async () => response(read())); vi.stubGlobal("fetch", fetcher);
   const client = createHonorsClient({ studentId, mode: "parent", verify, denied }); expect(fetcher).not.toHaveBeenCalled();
   expect(await client.read(new AbortController().signal)).toEqual(read()); expect(verify).toHaveBeenCalledTimes(2);
   const [url, options] = fetcher.mock.calls[0] as unknown as [string, RequestInit]; expect(url).toBe(`/api/students/${studentId}/honors?mode=parent`); expect(options).toMatchObject({ method: "GET", credentials: "same-origin", redirect: "error", cache: "no-store", referrerPolicy: "no-referrer" }); expect(new Headers(options.headers).has("X-Practice-Context")).toBe(false);
-  expect(() => createHonorsClient({ studentId, mode: "student" as "parent", verify, denied })).toThrow();
+  await createHonorsClient({ studentId, mode: "student", verify, denied }).read(new AbortController().signal);
+  expect((fetcher.mock.calls[1] as unknown as [string, RequestInit])[0]).toBe(`/api/students/${studentId}/honors?mode=student`);
+  expect(verify).toHaveBeenCalledTimes(4);
+  for (const mode of ["tutor", "child-practice"]) expect(() => createHonorsClient({ studentId, mode: mode as "parent", verify, denied })).toThrow();
 });
 it("rejects forged context hashes/spans/tenant mixing and malformed or oversized private bodies", async () => {
   const baseline = read(context(), context(), form()); expect(await parseHonorsRead(baseline, studentId)).toEqual(baseline);

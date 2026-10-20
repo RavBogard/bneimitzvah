@@ -12,6 +12,20 @@ const record = () => ({ id, startVerse, issuedAt: instant, expiresAt: instant })
 const signal = () => new AbortController().signal;
 const deferred = <T,>() => { let resolve!: (v: T) => void; const promise = new Promise<T>(done => { resolve = done; }); return { promise, resolve }; };
 afterEach(() => vi.unstubAllGlobals());
+it("own-adult student link requests retain base mode, session fences and replay secret refusal", async () => {
+  const verify = vi.fn(async () => {}), denied = vi.fn(), seen: { path: string; body: Record<string, unknown>; headers: Headers }[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (path: string, options: RequestInit) => {
+    seen.push({ path, body: JSON.parse(String(options.body)), headers: new Headers(options.headers) });
+    return new Response(JSON.stringify(committed(intent(), true)), { headers: { "content-type": "application/json" } });
+  }));
+  const client = createHonoreeClient({ studentId, mode: "student", origin, verify, denied });
+  expect(await client.receipt(intent(), signal())).toEqual(committed(intent(), true));
+  expect(seen[0].path).toBe(`/api/students/${studentId}/honoree-links/receipt`); expect(seen[0].body.mode).toBe("student");
+  expect(seen[0].headers.has("X-Practice-Context")).toBe(false); expect(verify).toHaveBeenCalledTimes(2); expect(denied).not.toHaveBeenCalled();
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ...committed(intent(), true), url }), { headers: { "content-type": "application/json" } })));
+  await expect(client.receipt(intent(), signal())).rejects.toBeInstanceOf(HonoreeClientError);
+  for (const mode of ["tutor", "child-practice"]) expect(() => createHonoreeClient({ studentId, mode: mode as "parent", origin, verify, denied })).toThrow();
+});
 function saved(): HonorsState {
   const snapshot = { schemaVersion: 1 as const, tenantId: "crc", studentId, ceremonyDate: "2027-01-02", serviceSlot: "morning" as const, torah: { id: studentId, revision: 1, ref: "Genesis 1:1", basis: "custom" as const, confirmation: { confirmationDate: "2027-01-02", serviceSlot: "morning" as const, slotProvenance: 1, needsReview: false }, verses: [startVerse], cuts: [] } };
   const context = { hash: "a".repeat(64), snapshot, spans: [{ startVerse, endVerse: startVerse }], status: "assigned" as const, unknownSlot: false, readingNeedsReview: false };

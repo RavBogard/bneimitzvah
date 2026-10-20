@@ -83,9 +83,9 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
               : <button type="button" className="student-card" data-student-id={row.id} aria-pressed={selected === row.id} onClick={() => { void guardDeparture().then(leave => { if (leave) setSelected(row.id); }); }}><StudentCardBody row={row} /></button>}
           </li>)}</ul>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
           {focused && !selected && <div className="workspace-state"><h2>Student not found</h2><p>This student isn’t in your list. Choose one of your students above.</p></div>}
-          {selected && mode === "parent" && !context && <HonorsEntry key={selected} studentId={selected} name={`${rows.find(row => row.id === selected)?.firstName ?? ""} ${rows.find(row => row.id === selected)?.lastName ?? ""}`} />}
+          {selected && !context && (mode === "parent" || mode === "student" && rows.find(row => row.id === selected)?.ownAdultHonors === true) && <HonorsEntry key={`${mode}:${selected}`} mode={mode === "student" ? "student" : "parent"} studentId={selected} name={`${rows.find(row => row.id === selected)?.firstName ?? ""} ${rows.find(row => row.id === selected)?.lastName ?? ""}`} />}
           {selected && <ReadingPanel mode={mode} studentId={selected} onStudentReload={reconcileStudent} />}
-          {selected && mode === "student" && <HonorsNote />}</>}
+          {selected && mode === "student" && rows.find(row => row.id === selected)?.ownAdultHonors !== true && <HonorsNote />}</>}
   </section>;
 }
 

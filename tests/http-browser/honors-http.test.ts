@@ -54,7 +54,7 @@ it("actual SDK guardian saves draft groups and two tutor-derived aliyot; receipt
   expect(await json(await call(path, parentCookie, { ...savedIntent, mutationId: randomUUID(), expectedVersion: 1 }), 409)).toEqual({ ok: false, code: "stale-context" });
 });
 
-it("actual parent exception rejects delegated practice/tutor/student/foreign access and follows live guardian/session revocation", async () => {
+it("actual parent and own-adult exceptions reject child delegated tutor and foreign access and follow live revocation", async () => {
   const path = `/api/students/${fixture.student.id}/honors`;
   const entered = await json(await call("/api/practice/enter", parentCookie, { studentId: fixture.student.id }), 201);
   await json(await call(path + "?mode=parent", parentCookie, undefined, { "X-Practice-Context": entered.handle }), 403);
@@ -63,7 +63,11 @@ it("actual parent exception rejects delegated practice/tutor/student/foreign acc
   expect((await json(await call(path + "?mode=parent"))).currentVersion).toBe(1);
   await json(await call(path + "?mode=tutor"), 403); await json(await call(path + "?mode=student", studentCookie), 403);
   await fixture.ownerDb.update(s.student).set({ studentKind: "adult", ownEmail: "synthetic@example.test" }).where(eq(s.student.id, fixture.student.id));
-  await json(await call(path + "?mode=student", studentCookie), 403);
+  expect((await json(await call(path + "?mode=student", studentCookie))).currentVersion).toBe(1);
+  const list = await json(await call("/api/students?mode=student", studentCookie));
+  expect(list.students).toHaveLength(1); expect(list.students[0]).toMatchObject({ id: fixture.student.id, ownAdultHonors: true });
+  await json(await call(`/api/students/${fixture.otherStudent.id}/honors?mode=student`, studentCookie), 404);
+  await json(await call(path + "?mode=student", studentCookie, undefined, { "X-Practice-Context": entered.handle }), 403);
   await json(await call(`/api/students/${fixture.otherStudent.id}/honors?mode=admin`, adminCookie), 404);
   await json(await call(path, parentCookie, savedIntent, { origin: "https://foreign.invalid" }), 403);
   await json(await call(path + "?mode=parent&mode=admin"), 400); await json(await call(path, parentCookie, undefined, {}, "DELETE"), 405);

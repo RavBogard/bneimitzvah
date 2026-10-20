@@ -27,16 +27,16 @@ function ContextReview({ previous, current, state, owner, blocked, canReview }: 
 const slotName = (slot: string) => slot === "morning" ? "Morning service" : slot === "havdalah" ? "Havdalah service" : "Service time not confirmed";
 const longDate = (value: string) => new Intl.DateTimeFormat("en-US", { weekday: "short", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
 const when = (date: string, slot: string) => `${longDate(date)}, ${slot === "unknown" ? "service time not confirmed" : slotName(slot).toLowerCase()}`;
-// Students don't edit honors (adult self-editing is held). This says who does and how to send names.
+// Child students remain read-only; own-adult eligibility is projected by the live list.
 export function HonorsNote() {
   return <section className={styles.entry} aria-label="Family honors"><div><h2>Family honors</h2><p>Your family or the congregation office arranges who takes part in your ceremony, such as opening the ark and the aliyot. If you’re arranging your own ceremony, send the names to the congregation office and they’ll enter them for you.</p></div></section>;
 }
-export function HonorsEntry({ studentId, name }: { studentId: string; name: string }) {
+export function HonorsEntry({ studentId, name, mode = "parent" }: { studentId: string; name: string; mode?: "parent" | "student" }) {
   const [open, setOpen] = useState(false), { busy, context } = useWorkspace(), origin = useRef<HTMLButtonElement>(null);
   return <><section className={styles.entry} aria-label="Family honors"><div><h2>Family honors</h2><p>Choose the people who will take part in the ceremony.</p></div><button ref={origin} type="button" className="button-secondary" disabled={busy || !!context} onClick={() => setOpen(true)}>Family honors</button></section>
-    {open && <HonorsSheet studentId={studentId} name={name} mode="parent" onClose={() => { setOpen(false); origin.current?.focus(); }} />}</>;
+    {open && <HonorsSheet studentId={studentId} name={name} mode={mode} onClose={() => { setOpen(false); origin.current?.focus(); }} />}</>;
 }
-export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: string; name: string; mode: "parent" | "admin"; onClose(): void }) {
+export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: string; name: string; mode: "parent" | "admin" | "student"; onClose(): void }) {
   const { summary, context, verifyServiceSession, serviceAuthorityFailed, registerDeparture, registerWork, registerReload, registerQuiet } = useWorkspace();
   const dialog = useRef<HTMLDialogElement>(null), heading = useRef<HTMLHeadingElement>(null), lastFocus = useRef<HTMLElement | null>(null), settled = useRef(false), id = useId();
   const [state, setState] = useState<HonorsState | null>(null), [departure, setDeparture] = useState(false), [discardReview, setDiscardReview] = useState(false), [printing, setPrinting] = useState(false), [printError, setPrintError] = useState("");

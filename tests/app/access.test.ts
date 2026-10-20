@@ -14,6 +14,17 @@ import * as s from "../../src/server/db/index";
 const fixtures: Awaited<ReturnType<typeof accessFixture>>[] = [];
 async function fixture() { const f = await accessFixture(); fixtures.push(f); return f; }
 afterEach(async () => { await Promise.all(fixtures.splice(0).map((f) => f.client.close())); });
+it("projects own-adult honors only after the live student identity and locked kind check", async () => {
+  const f = await fixture(), list = () => f.service.listStudents(f.request("learner"), { mode: "student" });
+  expect((await list())[0].ownAdultHonors).toBe(false);
+  await f.owner(() => f.db.update(s.student).set({ studentKind: "adult", ownEmail: "synthetic-adult@example.test" }).where(eq(s.student.id, f.students[0].id)));
+  const own = await list(); expect(own).toHaveLength(1); expect(own[0]).toMatchObject({ id: f.students[0].id, ownAdultHonors: true });
+  expect(Object.keys(own[0]).sort()).toEqual(["id", "firstName", "lastName", "ceremonyDate", "revision", "ownAdultHonors"].sort());
+  for (const [who, mode] of [["multi", "parent"], ["multi", "tutor"], ["admin", "admin"]] as const) expect((await f.service.listStudents(f.request(who), { mode })).every(row => row.ownAdultHonors === false)).toBe(true);
+  const delegated = f.request("learner"); delegated.headers.set("X-Practice-Context", "synthetic"); expect(await denied(() => f.service.listStudents(delegated, { mode: "student" }), 403)).toBe(true);
+  await f.owner(() => f.db.update(s.student).set({ studentKind: "child" }).where(eq(s.student.id, f.students[0].id))); expect((await list())[0].ownAdultHonors).toBe(false);
+  await f.owner(() => f.db.update(s.studentIdentity).set({ revokedAt: new Date() }).where(eq(s.studentIdentity.id, f.learnerLink.id))); expect(await list()).toEqual([]);
+});
 async function denied(action: () => Promise<unknown>, status: number) {
   try { await action(); return false; } catch (error) { return error instanceof AccessDenied && error.status === status; }
 }
