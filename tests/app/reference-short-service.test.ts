@@ -79,6 +79,11 @@ test("page resolves all authorized verses with one text/catalog/manifest load an
 
 test("default release and actual authority deny before provider work", async () => {
   const f = await fixture(), service = f.service();
+  for (const mode of ["student", "child-practice", "parent", "tutor"] as const) expect(service.listeningEnabled(mode)).toBe(false);
+  expect(service.listeningEnabled("admin")).toBe(true);
+  const enabled = f.service({ studentRelease: true });
+  for (const mode of ["student", "child-practice", "parent", "tutor", "admin"] as const) expect(enabled.listeningEnabled(mode)).toBe(true);
+  expect(f.text).not.toHaveBeenCalled(); expect(f.loadCatalog).not.toHaveBeenCalled(); expect(f.loadManifest).not.toHaveBeenCalled();
   await expect(service.readPage(f.request({ who: "anonymous" }), f.selection)).rejects.toMatchObject({ status: 401 });
   await expect(service.readPage(f.request({ who: "multi" }), f.selection)).rejects.toMatchObject({ status: 403 });
   expect(await service.readPage(f.request(), { ...f.selection, assignmentRevision: 2 })).toEqual({ ok: false, code: "stale-revision" }); expect(f.text).not.toHaveBeenCalled();

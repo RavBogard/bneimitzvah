@@ -93,10 +93,10 @@ export function LiftedLine({ verses, assignment, index, total, offset, onIndex, 
     <ol className="lift-rail" aria-hidden="true">{verses.map((row, position) => <li key={row.ref} data-state={position < index ? "past" : position === index ? "current" : undefined} />)}</ol>
     <div ref={stage} className="lift-stage" onPointerDown={down} onPointerUp={up} onPointerCancel={() => { pointer.current = null; }}>
       <h2 id={`${id}-title`} className="lift-ref"><bdi dir="ltr">{verse.ref}</bdi></h2>
-      <StudyHebrew key={verse.ref} verse={verse} colors={colors} id={`${id}-v`} activeWord={activeWord} onWordSelect={reference ? word => {
-        playback.current?.select(index, "verse");
+      <StudyHebrew key={verse.ref} verse={verse} colors={colors} id={`${id}-v`} activeWord={activeWord} onWordSelect={reference || colors ? word => {
+        if (reference) playback.current?.select(index, "verse");
         const selectedPhrase = colors?.words[word]?.phrase, position = phrases.findIndex(row => row.phrase === selectedPhrase); if (position >= 0) setPhrase(position);
-      } : undefined} wordAction="verse" toolsAvailable={false} className={`lift-hebrew${active !== null ? " lift-phrasing" : ""}`} />
+      } : undefined} wordAction={reference ? "verse" : "phrase"} toolsAvailable={false} className={`lift-hebrew${active !== null ? " lift-phrasing" : ""}`} />
       {active !== null && <style>{`.lift-phrasing [data-phrase="${active}"]{opacity:1;animation:ink-pull 560ms var(--ease-settle) both;animation-delay:calc((var(--w) - ${phrases[currentPhrase].first - 1}) * 70ms)}`}</style>}
       {prefs.translation && <p className="lift-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
       <Apparatus verse={verse} learner={learner} />

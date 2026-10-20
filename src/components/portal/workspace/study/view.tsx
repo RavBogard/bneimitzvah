@@ -18,11 +18,12 @@ import { watchReadingAudioDeadline } from "./reading-player-intent";
 import type { ShortReferenceOwner } from "./short-reference-bridge";
 
 export type StudyReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
-export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderWork, renderActiveWork, onPage, learner = false, liftHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, active = true, audio, stopAudio }: {
+export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderWork, renderActiveWork, onPage, learner = false, liftHandle, practiceHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, active = true, audio, stopAudio }: {
   baseline: Assigned | null; register(value: StudyReload): () => void; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; onKindChange(kind: StudyKind): void;
   guardDeparture?(): Promise<boolean>; serviceHref?: string; renderWork?(kind: StudyKind, verseRef: string): ReactNode; renderActiveWork?(): ReactNode; onPage?(kind: StudyKind, offset: number, signal: AbortSignal): Promise<void>;
   /** Students and child practice see the reading without status or provenance prose. */
   learner?: boolean; liftHandle?: MutableRefObject<((index: number) => void) | null>;
+  practiceHandle?: MutableRefObject<((index: number) => void) | null>;
   /** The Song session reading: English follows the remembered toolbar preference. */
   songSession?: boolean;
   /** Called once a text page is on screen, so verse marks can load for it. */
@@ -30,7 +31,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   renderMark?(kind: StudyKind, verseRef: string): ReactNode; renderLiftControls?(kind: StudyKind, verseRef: string): ReactNode;
   /** Called only when the reader explicitly opens a verse: tapping it, Start, or stepping to another verse. Never on a reload. */
   onVisit?(kind: StudyKind, verseRef: string): void;
-  onHearReady?(ready: boolean): void; active?: boolean;
+  onHearReady?(ready: boolean): void; onPracticeReady?(ready: boolean): void; active?: boolean;
   audio?: ReturnType<typeof createReadingAudioCoordinator>; stopAudio?(): void;
 }) {
   const { readStudy, createShortReferenceOwner, readWordAids, readWordDetails, summary, concealed, epoch } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
@@ -91,11 +92,12 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     } catch { /* Authority state has already cleared text and metadata. */ }
   }
   const livePage = key && state.binding === key && !state.loading ? state.page : undefined;
-  const canHear = Boolean(livePage && !concealed && active);
+  const listeningEnabled = baseline?.referenceListeningEnabled === true;
+  const textReady = Boolean(livePage && !concealed), canHear = textReady && active && listeningEnabled;
   const shortView = useRef({ baseline, page: livePage, kind: state.kind, active, concealed, lift });
   shortView.current = { baseline, page: livePage, kind: state.kind, active, concealed, lift };
   useLayoutEffect(() => {
-    if (!baseline || !livePage || !state.kind) return;
+    if (!baseline || !livePage || !state.kind || !listeningEnabled) return;
     const value = baseline, page = livePage, kind = state.kind, turn = generation.current;
     const live = () => { const now = shortView.current; return now.baseline === value && metadata.current === value && now.page === page && now.kind === kind
       && turn === generation.current && !now.concealed && now.active && !now.lift && document.visibilityState === "visible"; };
@@ -104,7 +106,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     shortMetadata.current = owned;
     if (live()) void owned.prepare().catch(() => undefined);
     return () => { owned.dispose(); if (shortMetadata.current === owned) shortMetadata.current = null; };
-  }, [baseline, livePage, state.kind, createShortReferenceOwner, epoch, key]);
+  }, [baseline, livePage, state.kind, createShortReferenceOwner, epoch, key, listeningEnabled]);
   useLayoutEffect(() => {
     if (concealed || !active || lift) shortMetadata.current?.suspend();
   }, [concealed, active, lift]);
@@ -117,7 +119,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   // Separate modal ownership: main owner remains restricted by !lift. Navigation
   // cancels only its subscriber; an authorized completed page can stay modal-local.
   useLayoutEffect(() => {
-    if (!baseline || !livePage || !state.kind || !lift || !audio) return;
+    if (!baseline || !livePage || !state.kind || !lift || !audio || !listeningEnabled) return;
     const value = baseline, page = livePage, kind = state.kind, opening = lift.opening, turn = generation.current;
     const live = () => { const now = shortView.current; return now.baseline === value && metadata.current === value && now.page === page && now.kind === kind
       && turn === generation.current && modalScope.current?.opening === opening && modalScope.current.page === page
@@ -131,11 +133,12 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     const deadline = value.context ? watchReadingAudioDeadline(Date.parse(value.context.expiresAt), () => modalOwner.current === owned, stop) : () => {};
     return () => { deadline(); modalRequest.current?.abort(); owned.dispose(); if (modalOwner.current === owned) modalOwner.current = null;
       document.removeEventListener("visibilitychange", hidden); window.removeEventListener("pagehide", stop); };
-  }, [baseline, livePage, state.kind, lift?.opening, createShortReferenceOwner, epoch, key, audio, stopAudio]);
+  }, [baseline, livePage, state.kind, lift?.opening, createShortReferenceOwner, epoch, key, audio, stopAudio, listeningEnabled]);
   useLayoutEffect(() => { if (concealed || !active) { modalRequest.current?.abort(); modalOwner.current?.suspend(); } }, [concealed, active]);
   const openerScope = useRef({ baseline, page: livePage, concealed, epoch });
   openerScope.current = { baseline, page: livePage, concealed, epoch };
   useLayoutEffect(() => { onHearReady?.(canHear); return () => onHearReady?.(false); }, [canHear, onHearReady]);
+  useLayoutEffect(() => { onPracticeReady?.(textReady); return () => onPracticeReady?.(false); }, [textReady, onPracticeReady]);
   useLayoutEffect(() => { if (concealed || !active) setLift(null); }, [concealed, active, epoch]);
   const shown = livePage && state.kind ? [state.kind, livePage.offset, livePage.verses.length] as const : null;
   useEffect(() => { if (shown) onShown?.(...shown); }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -143,15 +146,18 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const open = (page: StudyPage, index: number) => { stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.suspend(); modalRequest.current?.abort();
     const old = modalScope.current, next = { page, index, opening: old?.page === page ? old.opening : ++modalSequence.current, navigation: (old?.navigation ?? 0) + 1 };
     modalScope.current = next; setLift(next); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
-  if (liftHandle) {
-    // Parent Start brings this tab forward and opens it in the same event.
+  if (liftHandle || practiceHandle) {
+    // Parent actions bring this tab forward in the same event.
     // Inactivity still unmounts media; it does not revoke this explicit opener.
     const scope = openerScope.current, turn = generation.current;
-    liftHandle.current = livePage && !concealed ? (index: number) => {
+    const act = (practice: boolean) => livePage && !concealed ? (index: number) => {
       if (openerScope.current !== scope || scope.concealed || metadata.current !== baseline
         || generation.current !== turn || controller.current?.signal.aborted) return;
-      hear(livePage, Math.min(Math.max(index, 0), livePage.verses.length - 1));
+      const selected = Math.min(Math.max(index, 0), livePage.verses.length - 1);
+      if (practice) open(livePage, selected); else if (listeningEnabled) hear(livePage, selected);
     } : null;
+    if (liftHandle) liftHandle.current = act(false);
+    if (practiceHandle) practiceHandle.current = act(true);
   }
   if (!baseline) return <section className="assigned-study" aria-label="Assigned text"><p role="status">Text is hidden while the assignment is checked.</p></section>;
   if (!baseline.readings.length) return null;
@@ -166,10 +172,10 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       <button className="button-secondary" onClick={() => { if (current.error === 409) void reloadMetadata().catch(() => undefined); else void explicitLoad(kind, selection.current?.offset ?? 0); }}>{current.error === 409 ? "Refresh reading and text" : "Reload assigned text"}</button>
       {renderActiveWork?.()}
     </div> : current.page && <>
-      <FlowingStudyText verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord}
+      <FlowingStudyText verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled}
         sections={current.page.verses.flatMap((verse, index) => { const position = aliyahPosition(kind, assignment!.aliyahStarts, assignment!.verses, verse.ref); return position && (position.startsHere || index === 0) ? [{ index, label: `Aliyah ${position.number}${position.startsHere ? " starts here" : " · continued from the previous text page"}` }] : []; })}
-        onVerse={index => hear(current.page!, index)} onWord={(index, word) => { playMainVerseForWord(playback.current, tools.current, index, word); onVisit?.(kind, current.page!.verses[index].ref); }} />
-      {!concealed && <ReadingPlayer key={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current])}
+        onVerse={listeningEnabled ? index => hear(current.page!, index) : undefined} onWord={(index, word) => { if (listeningEnabled) playMainVerseForWord(playback.current, tools.current, index, word); else tools.current?.select(index, word); onVisit?.(kind, current.page!.verses[index].ref); }} />
+      {!concealed && listeningEnabled && <ReadingPlayer key={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current])}
         scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current])} verses={current.page.verses} active={active && !lift} enabled={!concealed && !lift} expiresAt={baseline?.context ? Date.parse(baseline.context.expiresAt) : undefined} audio={audio ? { coordinator: audio, slot: "assigned" } : undefined}
         register={registerPlayback} onActiveWord={setPlayingWord} load={async (index, signal) => {
           const value = baseline, page = current.page!, turn = generation.current;
@@ -193,7 +199,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
           const result = await readWordDetails(value, kind, page.offset + index, page.verses[index], word, signal);
           if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
           return result;
-        }} onHear={(index, word) => hear(current.page!, index, word)} />}
+        }} onHear={listeningEnabled ? (index, word) => hear(current.page!, index, word) : undefined} />}
       <div className="study-verse-details">{current.page.verses.map((verse, index) => <div key={verse.ref} className="study-verse-detail" data-verse-ref={verse.ref}>
         <div className="verse-card-head"><h4>Verse tools · <bdi dir="ltr">{verse.ref}</bdi></h4>{renderMark?.(kind, verse.ref)}<button type="button" className="button-text" onClick={() => open(current.page!, index)}>View {verse.ref} up close</button></div>
         {(songSession ? prefs.translation : true) && <p className="study-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
@@ -207,8 +213,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {!learner && <p className="field-help">Hebrew: Miqra according to the Masorah. English reference: JPS2023. No alternate edition is substituted.</p>}
       {!single && <nav className="study-pages" aria-label="Text pages"><button className="button-secondary" disabled={previous === undefined} onClick={() => previous !== undefined && void explicitLoad(kind, previous)}>Previous text page</button><button className="button-secondary" disabled={current.page.nextOffset === null} onClick={() => current.page?.nextOffset !== null && void explicitLoad(kind, current.page!.nextOffset!)}>Next text page</button></nav>}
       <div className="study-more"><StudyCredits chapters={current.page.chapters} summary={learner ? "About this text" : undefined} />{learner && <WorkspaceLink href="/trope-chart">Trope chart</WorkspaceLink>}</div>
-      {lift && canHear && lift.page === current.page && <LiftedLine learner={learner} verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} index={lift.index} total={current.page.totalVerses} offset={current.page.offset}
-        reference={audio ? { audio, active: active && !concealed, expiresAt: baseline.context ? Date.parse(baseline.context.expiresAt) : undefined,
+      {lift && textReady && lift.page === current.page && <LiftedLine learner={learner} verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} index={lift.index} total={current.page.totalVerses} offset={current.page.offset}
+        reference={audio && listeningEnabled ? { audio, active: active && !concealed, expiresAt: baseline.context ? Date.parse(baseline.context.expiresAt) : undefined,
           navigation: lift.navigation, scopeKey: JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current, lift.opening]),
           load: async (index, signal) => {
             const owner = modalOwner.current, selected = modalScope.current, turn = generation.current;

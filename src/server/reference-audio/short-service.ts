@@ -23,6 +23,9 @@ export function createShortReferenceAudioService<Q extends PgQueryResultHKT>(inp
   studentRelease?: boolean;
 }) {
   const released = input.studentRelease === true;
+  // Presentation hint and reference masking share the same release rule. The
+  // caller supplies an already authorized effective mode, including practice.
+  const listeningEnabled = (mode: StudySelection["mode"]) => released || mode === "admin";
   const execute = async (request: AccessRequest & { signal?: AbortSignal }, selection: StudySelection, pageMode: boolean, asset?: string) => {
     if (asset !== undefined && (typeof asset !== "string" || !/^ra_[a-f0-9]{32}$/.test(asset))) throw new ReferenceUnavailable();
     const study = createStudyService<Q, StudyPage & { references: readonly ReferenceShortResolution[] }>({ access: input.access, practice: input.practice,
@@ -48,7 +51,7 @@ export function createShortReferenceAudioService<Q extends PgQueryResultHKT>(inp
       } });
     const result = await study.read(request, selection);
     if (!result.ok) return result;
-    const references = released || result.mode === "admin" ? result.page.references : Object.freeze(result.page.references.map(reference => {
+    const references = listeningEnabled(result.mode) ? result.page.references : Object.freeze(result.page.references.map(reference => {
       const hidden = parseReferenceShortResolution({ schema: REFERENCE_SHORT_RESOLUTION_SCHEMA, verse: unavailableReference(reference.verse.ref).verse, source: null });
       if (!hidden) throw new ReferenceUnavailable(); return hidden;
     }));
@@ -60,6 +63,7 @@ export function createShortReferenceAudioService<Q extends PgQueryResultHKT>(inp
     return response;
   };
   return Object.freeze({
+    listeningEnabled,
     read: async (request: AccessRequest & { signal?: AbortSignal }, selection: StudySelection & { asset?: string }) => {
       const result = await execute(request, selection, false, selection.asset); if (!result.ok) return result;
       return Object.freeze({ ok: true as const, studentId: result.studentId, studentRevision: result.studentRevision, mode: result.mode,

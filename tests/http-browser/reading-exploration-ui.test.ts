@@ -10,6 +10,7 @@ import { generateSyntheticShortAudio, syntheticShortReferences } from "./synthet
 import { parseReferenceCatalog } from "../../src/server/reference-audio/catalog";
 import { REFERENCE_ATTRIBUTION } from "../../src/lib/reference-audio/contract";
 import { parseReferenceShortResolution } from "../../src/lib/reference-audio/short-resolution";
+import { createShortReferenceAudioService } from "../../src/server/reference-audio/short-service";
 import { projectStudyVerse } from "../../src/lib/hebrew/study-tokens";
 import { expandReadingRanges } from "../../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
@@ -53,6 +54,7 @@ function sourceRoute(scope: SourceRouteScope, action: "fulfill" | "abort", perfo
 let audioDirectory: string | undefined;
 const shortBodies = new Map<string, Buffer>();
 let signedIn: Awaited<ReturnType<BrowserContext["cookies"]>> | undefined;
+let setListeningRelease: (value: boolean) => void;
 const portion = (tab: Page) => tab.getByRole("region", { name: "Proposed Torah portion", exact: true });
 async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Exploration UI browser operation failed; private details withheld"); } }
 beforeAll(async () => {
@@ -72,6 +74,7 @@ beforeAll(async () => {
     const shorts = await syntheticShortReferences(catalog, [torah, haft].map((body, i) => ({ asset: assets[i].id, bytes: body.bytes, physicalFrames: body.physicalFrames })));
     for (const row of shorts.sources) shortBodies.set(row.path, row.bytes);
     fixture = await browserFixture({ referenceCatalogLoad: async () => catalog, referenceShortManifestLoad: async () => shorts.manifest, referenceStudentRelease: true, studyLoad: async request => { if (hold && request.offset === 100) { hold.entered.resolve(undefined); await hold.release.promise; } return syntheticUiStudyPage(request); } });
+    setListeningRelease = studentRelease => { Object.assign(fixture.runtime, { shortReferenceAudio: createShortReferenceAudioService({ access: fixture.runtime.access, practice: fixture.runtime.practice, loadText: async request => syntheticUiStudyPage(request), loadCatalog: async () => catalog, loadManifest: async () => shorts.manifest, studentRelease }) }); };
     stop = await startBrowserServer(fixture.withRuntime); browserEnv = await isolatedEnv(); browser = await chromium.launch({ headless: true, env: browserEnv.env });
   } catch { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await browserEnv?.cleanup(); if (audioDirectory) await rm(audioDirectory, { recursive: true, force: true }); throw new Error("Exploration UI setup failed; private details withheld"); }
 }, 120000);
@@ -182,6 +185,23 @@ it("preserves confirmed Haftarah and honest unknown-slot state without borrowing
   await tab.getByRole("button", { name: "Refresh reading", exact: true }).click();
   await ui(portion(tab).getByText("Your rabbi needs to choose a service time before the Torah portion can be shown.", { exact: true })).toBeVisible();
   await ui(tab.getByRole("button", { name: "Hear Isaiah 1:1", exact: true })).toBeVisible(); expect(assignedTorah).toBe(0);
+});
+
+it("held proposed reading remains readable without reference metadata and optional practice names the assigned Haftarah", async () => {
+  setListeningRelease(false);
+  try {
+    const tab = await page(); let metadata = 0, bodies = 0;
+    tab.on("request", request => { const path = new URL(request.url()).pathname; if (path.endsWith("/reading/explore/reference/short/page") || path.endsWith("/reference-audio/short/page")) metadata++; if (shortBodies.has(path)) bodies++; });
+    await tutor(tab); await ui(portion(tab).getByText("Verses 1–100 of 146", { exact: true })).toBeVisible();
+    await ui(tab.getByRole("button", { name: /^Hear/ })).toHaveCount(0); await ui(tab.getByRole("button", { name: "Practice up close", exact: true })).toHaveCount(0);
+    await tab.getByRole("button", { name: "Start reading", exact: true }).click(); await ui(portion(tab).locator(".study-verses")).toBeFocused();
+    await ui(tab.getByRole("dialog")).toHaveCount(0); expect(metadata).toBe(0); expect(bodies).toBe(0); expect(await tab.evaluate(() => window.explorationAudios.length)).toBe(0);
+    await assign("haftarah"); await tab.getByRole("button", { name: "Refresh reading", exact: true }).click();
+    const practice = tab.getByRole("button", { name: "Practice assigned Haftarah up close", exact: true }); await ui(practice).toBeEnabled(); await practice.click();
+    await ui(tab.getByRole("dialog", { name: "Isaiah 1:1", exact: true })).toBeVisible(); await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
+    expect(metadata).toBe(0); expect(bodies).toBe(0); expect(await tab.evaluate(() => window.explorationAudios.length)).toBe(0);
+    await tab.getByRole("dialog").getByRole("button", { name: "Close practice view", exact: true }).click();
+  } finally { setListeningRelease(true); }
 });
 
 

@@ -15,7 +15,7 @@ function Grammar({ value }: { value: WordGrammar }) {
 export function WordTools({ scopeKey, verses, register, readAids, readDetails, onHear }: {
   scopeKey: string; verses: readonly StudyVerse[]; register(value: WordToolsHandle | null): void;
   readAids(verse: number, signal: AbortSignal): Promise<StudyWordAids>; readDetails(verse: number, index: number, signal: AbortSignal): Promise<StudyWordDetails>;
-  onHear(verse: number, index: number): void;
+  onHear?(verse: number, index: number): void;
 }) {
   const id = useId(), callbacks = useRef({ readAids, readDetails }); callbacks.current = { readAids, readDetails };
   const owner = useRef<ReturnType<typeof createWordToolsSelection> | null>(null), [state, setState] = useState<WordToolsState>(idle);
@@ -36,7 +36,7 @@ export function WordTools({ scopeKey, verses, register, readAids, readDetails, o
     {state.open && <div id={`${id}-panel`} className={styles.panel}>
       {!word || !verse || !selected ? <p>Word tools aren’t available for this passage.</p> : <>
         <div className={styles.heading}><h4 lang="he" dir="rtl">{word.text}</h4><p><bdi>{verse.ref}</bdi> · Word {selected.index + 1} of {words.length}</p></div>
-        <div className={styles.actions}><button type="button" disabled={!previous} onClick={() => owner.current?.navigate(-1)}>Previous word</button><button type="button" disabled={!next} onClick={() => owner.current?.navigate(1)}>Next word</button><button type="button" onClick={() => onHear(selected.verse, selected.index)}>Hear this word</button></div>
+        <div className={styles.actions}><button type="button" disabled={!previous} onClick={() => owner.current?.navigate(-1)}>Previous word</button><button type="button" disabled={!next} onClick={() => owner.current?.navigate(1)}>Next word</button>{onHear && <button type="button" onClick={() => onHear(selected.verse, selected.index)}>Hear this word</button>}</div>
         <div className={styles.sections}>
           <section aria-label="Syllables and stress"><h5>Syllables and stress</h5>{state.aids.status === "loading" ? <p role="status">Loading word guide…</p> : aid?.status === "ready" ? <><div className={styles.syllables} lang="he" dir="rtl" role="group" aria-label="Hebrew syllables">{aid.syllables.map(part => <span key={part.start} data-stress={part.stress ?? "none"} role="group" aria-describedby={part.stress ? `${id}-${part.stress}` : undefined}>{word.text.slice(part.start, part.end)}</span>)}</div><p className={styles.note}><span id={`${id}-tonic`}>Solid underline: primary stress.</span> <span id={`${id}-secondary`}>Dotted underline: secondary stress.</span></p></> : <p>Syllables and stress aren’t available for this word.</p>}</section>
           <section aria-label="Meaning and grammar"><h5>Meaning in this verse</h5>{state.details.status === "loading" ? <p role="status">Loading word details…</p> : <><p>{details?.occurrence.gloss || "An occurrence meaning isn’t available for this word."}</p><h5>Grammar</h5>{details ? <Grammar value={details.occurrence.grammar} /> : <p>Grammar isn’t available for this word.</p>}</>}</section>

@@ -3,7 +3,7 @@ import { generateSyntheticShortAudio, syntheticFourSecondShort } from "./synthet
 import { beforeAll, afterAll, it, expect, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
-import { mkdtemp, realpath, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { createHash } from "node:crypto";
@@ -19,6 +19,7 @@ import type { StudyRequest } from "../../src/server/study/types";
 import { projectStudyVerse } from "../../src/lib/hebrew/study-tokens";
 import { parseReferenceCatalog } from "../../src/server/reference-audio/catalog";
 import { REFERENCE_ATTRIBUTION } from "../../src/lib/reference-audio/contract";
+import { createShortReferenceAudioService } from "../../src/server/reference-audio/short-service";
 
 
 
@@ -30,6 +31,9 @@ type TrackedWindow = Window;
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
 let directory: string | undefined, audioBytes: Buffer, shortBytes: Buffer, shortPath: string, siblingId: string;
 const contexts: BrowserContext[] = [], archiveUrl = "https://archive.org/download/PockettorahAudioFiles/Synthetic-player.mp3";
+// Reuse a verified session per actor; never copy later role/child-practice state.
+const authenticatedStates = new Map<"admin" | "tutor", Awaited<ReturnType<BrowserContext["storageState"]>>>();
+let setListeningRelease: (value: boolean) => void;
 function mainStudyPage(request: StudyRequest) {
   const page = syntheticUiStudyPage(request);
   return { ...page, verses: page.verses.map(verse => ({ ...verse, hebrew: normalizeHebrew('אָ֑ב־<span class="mam-kq"><span class="mam-kq-k">זָ</span><span class="mam-kq-q">[גַּ]</span></span><span class="mam-spi-samekh">{ס}</span>') })) };
@@ -38,9 +42,10 @@ const sourceAsset = "ra_" + "7".repeat(32);
 async function api(tab: Page, path: string, body: unknown) {
   return tab.evaluate(async ({ path, body }) => { const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }); return r.status; }, { path, body });
 }
-async function page(mobile = false, who: "admin" | "tutor" = "admin", authenticated?: BrowserContext) {
+async function page(mobile = false, who: "admin" | "tutor" = "admin", authenticated?: BrowserContext, options: { held?: boolean; colorScheme?: "light" | "dark"; destination?: string } = {}) {
+  const storageState = authenticated ? await authenticated.storageState() : authenticatedStates.get(who);
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 }, serviceWorkers: "block", acceptDownloads: false,
-    ...(authenticated ? { storageState: await authenticated.storageState() } : {}) }); contexts.push(context);
+    ...(storageState ? { storageState } : {}), colorScheme: options.colorScheme }); contexts.push(context);
   const state = { requests: 0, shortRequests: 0, archiveRequests: 0, pageRequests: 0, corrupt: false, held: null as null | { release(): void; started: Promise<void> }, sawCookie: false, sawReferer: false };
   await context.addInitScript(() => {
     const target = window as TrackedWindow; target.referenceAudios = []; target.referenceRevoked = []; target.referenceBlobKinds = {}; target.referencePageFetches = [];
@@ -70,10 +75,10 @@ async function page(mobile = false, who: "admin" | "tutor" = "admin", authentica
     } else if (url.origin === BROWSER_ORIGIN) await route.continue(); else await route.abort();
   });
   const tab = await context.newPage(); await tab.goto("/", { waitUntil: "domcontentloaded" });
-  if (!authenticated) { const email = `pg-${who}@example.test`; expect(await api(tab, "/api/auth/sign-in/magic-link", { email })).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); }
-  await tab.goto(`/workspace/${who === "admin" ? "admin/students" : "tutor"}/${fixture.student.id}${who === "admin" ? "/reading" : ""}`, { waitUntil: "domcontentloaded" });
+  if (!storageState) { const email = `pg-${who}@example.test`; expect(await api(tab, "/api/auth/sign-in/magic-link", { email })).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); authenticatedStates.set(who, await context.storageState()); }
+  await tab.goto(options.destination ?? `/workspace/${who === "admin" ? "admin/students" : "tutor"}/${fixture.student.id}${who === "admin" ? "/reading" : ""}`, { waitUntil: "domcontentloaded" });
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
-  const owner = await settledOwner(tab);
+  const owner = options.held ? { count: 0, ordinal: 0 } : await settledOwner(tab);
   return { tab, state, owner, hold() { state.held = { release, started }; return state.held; } };
 }
 const player = (tab: Page) => tab.getByRole("region", { name: "Reading playback", exact: true });
@@ -116,6 +121,7 @@ beforeAll(async () => {
   const short = await syntheticFourSecondShort(catalog, shortBytes, physicalFrames); shortPath = short.path; shortBytes = short.bytes;
   const manifest = short.manifest;
   fixture = await browserFixture({ studyLoad: async request => mainStudyPage(request), referenceCatalogLoad: async () => catalog, referenceShortManifestLoad: async () => manifest, referenceStudentRelease: true });
+  setListeningRelease = studentRelease => { Object.assign(fixture.runtime, { shortReferenceAudio: createShortReferenceAudioService({ access: fixture.runtime.access, practice: fixture.runtime.practice, loadText: async request => mainStudyPage(request), loadCatalog: async () => catalog, loadManifest: async () => manifest, studentRelease }) }); };
   siblingId = (await fixture.practice()).sibling.id;
   const [member] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.userId, fixture.admin.id));
   for (const studentId of [fixture.student.id, siblingId]) {
@@ -154,6 +160,61 @@ it("plays whole verses from main-text words, verifies explicit word offsets/loop
   expect((await native(tab)).src !== firstNativeSrc).toBe(true); // Physical Word WAV replaced the first MP3 lease; the same Audio/body remain.
   await ui(word(tab, 2, 0)).toHaveAttribute("data-reference-active", "true");
   await player(tab).getByRole("button", { name: "Pause", exact: true }).click(); expect((await native(tab)).paused).toBe(true);
+});
+
+it("held student and child practice read directly, keep word tools and open optional practice without media", async () => {
+  const [member] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.userId, fixture.tutor.id));
+  const [grant] = await fixture.ownerDb.insert(s.roleGrant).values({ tenantId: "crc", membershipId: member.id, role: "student" }).returning();
+  await fixture.ownerDb.insert(s.studentIdentity).values({ tenantId: "crc", studentId: fixture.student.id, roleGrantId: grant.id });
+  setListeningRelease(false);
+  const captures: { name: string; width: number; height: number; sha256: string }[] = []; let authenticated: BrowserContext | undefined;
+  try {
+    for (const [mobile, scheme] of [[false, "light"], [false, "dark"], [true, "light"], [true, "dark"]] as const) {
+      const { tab, state } = await page(mobile, "tutor", authenticated, { held: true, colorScheme: scheme, destination: "/workspace/student" }); authenticated ??= tab.context();
+      const reading = tab.locator(".study-verses"); await ui(player(tab)).toHaveCount(0); await ui(tab.getByRole("dialog")).toHaveCount(0);
+      await ui(tab.getByRole("button", { name: /^Hear/ })).toHaveCount(0); await ui(word(tab, 1, 1)).toHaveAttribute("aria-label", "Select word 2 of Genesis 1:1 for tools");
+      const start = tab.getByRole("button", { name: "Start reading", exact: true }); await start.focus(); await tab.keyboard.press("Enter");
+      await ui(reading).toBeFocused(); await ui(tab.getByRole("dialog")).toHaveCount(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
+      expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0);
+      await word(tab, 1, 1).click(); const tools = tab.getByRole("button", { name: "Word tools", exact: true }); await ui(tools).toHaveAttribute("aria-expanded", "false");
+      await tools.click(); await ui(tools).toHaveAttribute("aria-expanded", "true");
+      await ui(tab.getByRole("region", { name: "Word tools", exact: true })).toBeVisible(); await ui(tab.getByText("· Word 2 of 2", { exact: false })).toBeVisible(); await ui(tab.getByRole("button", { name: "Hear this word", exact: true })).toHaveCount(0);
+      await tab.getByRole("button", { name: "Word tools", exact: true }).click();
+      await tab.getByRole("button", { name: "Practice up close", exact: true }).click();
+      const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
+      await ui(dialog.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
+      const working = dialog.getByRole("button", { name: "Still working", exact: true }); if (await working.getAttribute("aria-pressed") !== "true") await working.click(); await ui(working).toHaveAttribute("aria-pressed", "true");
+      expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
+      await dialog.getByRole("button", { name: "Close practice view", exact: true }).click(); await ui(tab.getByRole("button", { name: "Practice up close", exact: true })).toBeFocused();
+      const directory = process.env.HELD_LISTENING_UI_CAPTURE_DIR;
+      if (directory) {
+        const target = resolve(directory); if (!target.startsWith(resolve(".local-logs") + sep)) throw Error("Held listening capture directory refused");
+        await mkdir(target, { recursive: true }); const name = `${mobile ? "phone" : "desktop"}-${scheme}`;
+        await tab.evaluate(() => window.scrollTo(0, 0)); const image = join(target, name + ".png"); await tab.screenshot({ path: image });
+        captures.push({ name, width: mobile ? 390 : 1440, height: mobile ? 844 : 1000, sha256: createHash("sha256").update(await readFile(image)).digest("hex") });
+      }
+      await tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click();
+      await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(reading).toBeVisible();
+      await tab.getByRole("button", { name: "Start reading", exact: true }).click(); await ui(reading).toBeFocused();
+      await tab.getByRole("button", { name: "Practice up close", exact: true }).click(); await ui(tab.getByRole("dialog", { name: "Genesis 1:1", exact: true })).toBeVisible();
+      expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
+      await tab.getByRole("dialog").getByRole("button", { name: "Close practice view", exact: true }).click();
+      expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    }
+    const directory = process.env.HELD_LISTENING_UI_CAPTURE_DIR; if (directory) await writeFile(join(resolve(directory), "manifest.json"), JSON.stringify({ synthetic: true, images: captures }, null, 2) + "\n", { flag: "wx" });
+  } finally { setListeningRelease(true); }
+});
+
+it("held tutor Start returns from another tab to focused continuous text and practice stays optional", async () => {
+  setListeningRelease(false);
+  try {
+    const { tab, state } = await page(false, "tutor", undefined, { held: true });
+    await tab.getByRole("tab", { name: "Service parts", exact: true }).click(); await tab.getByRole("button", { name: "Start reading", exact: true }).click();
+    await ui(tab.getByRole("tab", { name: "Reading", exact: true })).toHaveAttribute("aria-selected", "true"); await ui(tab.locator(".study-verses")).toBeFocused();
+    await ui(tab.getByRole("dialog")).toHaveCount(0); expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
+    await tab.getByRole("button", { name: "Practice up close", exact: true }).click(); await ui(tab.getByRole("dialog", { name: "Genesis 1:1", exact: true })).toBeVisible();
+    expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
+  } finally { setListeningRelease(true); }
 });
 // Synthetic text/cues with real normalized native media. This is not real-corpus,
 // acoustic, Safari/phone or click-to-sound evidence.
@@ -311,8 +372,24 @@ it("plays main verses without word timing but refuses explicit untimed word dril
 
 
 it("true per-verse Lift is inert on navigation, uses current whole Verse and explicit Word without Archive", async () => {
-  const { tab, state } = await page();
-  await word(tab, 1, 0).click(); await playing(tab);
+  const { tab, state, owner: mainOwner } = await page();
+  await tab.getByRole("button", { name: "Practice up close", exact: true }).click();
+  const optional = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(optional).toBeVisible();
+  const optionalOwner = await settledOwner(tab);
+  expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ paused: true, src: null, mediaBlobs: 0 });
+  await optional.getByRole("button", { name: "Close practice view", exact: true }).click();
+  expect(await native(tab)).toMatchObject({ count: optionalOwner.count, allClean: true }); expect(state.requests).toBe(0);
+  await word(tab, 1, 0).click();
+  // Closing Lift disposes its later Audio; the retained main controller owns the
+  // original ordinal. Probe it explicitly without relaxing the latest-owner oracle.
+  await expect.poll(() => tab.evaluate(ordinal => {
+    const w = window as TrackedWindow, audio = w.referenceAudios[ordinal - 1];
+    return { count: w.referenceAudios.length, ordinal: audio ? w.referenceAudios.indexOf(audio) + 1 : 0,
+      kind: audio?.src ? w.referenceBlobKinds[audio.src] : undefined, ready: (audio?.readyState ?? 0) >= 2, paused: audio?.paused,
+      active: w.referenceAudios.filter(media => !media.paused && Boolean(media.getAttribute("src"))).length,
+      othersClean: w.referenceAudios.every(media => media === audio || media.paused && !media.getAttribute("src")) };
+  }, mainOwner.ordinal)).toEqual({ count: optionalOwner.count, ordinal: mainOwner.ordinal, kind: "verse", ready: true, paused: false, active: 1, othersClean: true });
+  await ui(player(tab).getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   await tab.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }).click();
   const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }), modalPlayer = dialog.getByRole("region", { name: "Reading playback", exact: true });
   await ui(dialog).toBeVisible(); await ui(modalPlayer).toContainText("Genesis 1:1");

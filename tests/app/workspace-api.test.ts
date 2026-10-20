@@ -19,6 +19,14 @@ it("assigned-reading metadata validates canonical cut membership and preserves n
 });
 
 describe("workspace DTO and private transport boundaries", () => {
+  it("keeps the listening hint a closed boolean and missing hints silent without losing reading metadata", () => {
+    const value = { student: student(), mode: "student", context: null, readings: [reading()] };
+    expect(parseAssigned(value, "student", a).referenceListeningEnabled).toBe(false);
+    expect(parseAssigned(value, "student", a).readings).toHaveLength(1);
+    for (const referenceListeningEnabled of [true, false]) expect(parseAssigned({ ...value, referenceListeningEnabled }, "student", a).referenceListeningEnabled).toBe(referenceListeningEnabled);
+    for (const referenceListeningEnabled of [undefined, null, "true", 1, {}]) expect(() => parseAssigned({ ...value, referenceListeningEnabled }, "student", a)).toThrow(PortalRequestError);
+    expect(() => parseAssigned({ ...value, referenceListeningEnabled: true, studentRelease: true }, "student", a)).toThrow(PortalRequestError);
+  });
   it("accepts only a closed boolean own-adult list affordance, never reading metadata authority", () => {
     for (const ownAdultHonors of [true, false]) expect(parseStudents({ students: [{ ...student(), ownAdultHonors }] })).toEqual([{ ...student(), ownAdultHonors }]);
     expect(parseStudents({ students: [student()] })[0].ownAdultHonors).toBeUndefined();

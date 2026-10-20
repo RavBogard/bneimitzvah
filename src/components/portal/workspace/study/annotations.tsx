@@ -27,7 +27,7 @@ export function useVerseColors(verse: StudyVerse, assignment: AssignmentEnding, 
   return useMemo(() => enabled ? colorStudyVerse(verse.ref, verse.hebrew, { kind, confirmed, verses: verses ? verses.split("\n") : [] }) : null, [enabled, verse, kind, confirmed, verses]);
 }
 
-export function StudyHebrew({ verse, colors, id, className = "", activeWord = null, onWordSelect, inline = false, wordAction = "word", toolsAvailable = true }: { verse: StudyVerse; inline?: boolean; colors: Ready | null; id: string; className?: string; activeWord?: number | null; onWordSelect?(index: number): void; wordAction?: "word" | "verse"; toolsAvailable?: boolean }) {
+export function StudyHebrew({ verse, colors, id, className = "", activeWord = null, onWordSelect, inline = false, wordAction = "word", toolsAvailable = true }: { verse: StudyVerse; inline?: boolean; colors: Ready | null; id: string; className?: string; activeWord?: number | null; onWordSelect?(index: number): void; wordAction?: "word" | "verse" | "tools" | "phrase"; toolsAvailable?: boolean }) {
   const projection = useMemo(() => {
     if (colors) return colors.projection;
     const result = projectStudyVerse(verse.ref, verse.hebrew);
@@ -42,7 +42,7 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
     const firstPart = part.wordIndex !== null && !focusableWords.has(part.wordIndex);
     if (part.wordIndex !== null) focusableWords.add(part.wordIndex);
     return <span key={index} role={onWordSelect && firstPart ? "button" : undefined} tabIndex={onWordSelect && firstPart ? 0 : undefined}
-      aria-label={onWordSelect && firstPart ? wordAction === "verse" ? toolsAvailable ? `Hear whole verse ${verse.ref}; select word ${part.wordIndex! + 1} for tools` : `Hear whole verse ${verse.ref}` : `Hear word ${part.wordIndex! + 1} of ${verse.ref}` : undefined} data-word-index={part.wordIndex ?? undefined} data-family={family?.id} data-phrase={word?.phrase ?? undefined}
+      aria-label={onWordSelect && firstPart ? wordAction === "tools" ? `Select word ${part.wordIndex! + 1} of ${verse.ref} for tools` : wordAction === "phrase" ? `Focus phrase at word ${part.wordIndex! + 1} of ${verse.ref}` : wordAction === "verse" ? toolsAvailable ? `Hear whole verse ${verse.ref}; select word ${part.wordIndex! + 1} for tools` : `Hear whole verse ${verse.ref}` : `Hear word ${part.wordIndex! + 1} of ${verse.ref}` : undefined} data-word-index={part.wordIndex ?? undefined} data-family={family?.id} data-phrase={word?.phrase ?? undefined}
       data-reference-active={active ? "true" : undefined} className={[family ? styles.word : "", active ? referenceStyles.activeWord : ""].filter(Boolean).join(" ") || undefined} style={family ? { "--phrase-color": family.color, "--w": part.wordIndex } as CSSProperties : undefined}
       aria-describedby={!family || word?.phrase === null || word?.phrase === undefined ? undefined : `${id}-phrase-${word.phrase}`}>{part.text}</span>;
   });
@@ -127,8 +127,8 @@ export function studyFlowGroups(verses: readonly StudyVerse[], sectionStarts: re
   }
   return groups;
 }
-function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAvailable }: {
-  verse: StudyVerse; assignment: AssignmentEnding; id: string; onVerse?(): void; onWord?(index: number): void; activeWord: number | null; toolsAvailable: boolean;
+function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAvailable, listening }: {
+  verse: StudyVerse; assignment: AssignmentEnding; id: string; onVerse?(): void; onWord?(index: number): void; activeWord: number | null; toolsAvailable: boolean; listening: boolean;
 }) {
   const prefs = useReadingPrefs(), result = useVerseColors(verse, assignment, prefs.colors), colors = result?.status === "ready" ? result : null;
   const number = /:([1-9]\d*)$/.exec(verse.ref)?.[1];
@@ -136,19 +136,19 @@ function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAv
     <span className="sr-only" role="heading" aria-level={4} dir="ltr">{verse.ref}</span>
     {onVerse ? <button type="button" className={styles.verseNumber} onClick={onVerse} aria-label={`Hear ${verse.ref}`} title={verse.ref}>{number ?? verse.ref}</button>
       : <sup title={verse.ref}>{number ?? verse.ref}</sup>}{" "}
-    <StudyHebrew verse={verse} colors={colors} id={id} inline activeWord={activeWord} onWordSelect={onWord} wordAction="verse" toolsAvailable={toolsAvailable} />{" "}
+    <StudyHebrew verse={verse} colors={colors} id={id} inline activeWord={activeWord} onWordSelect={onWord} wordAction={listening ? "verse" : "tools"} toolsAvailable={toolsAvailable} />{" "}
     {verse.hebrew.paragraphAfter === "setumah" && <span className={styles.closedGap} role="img" aria-label="Closed paragraph" />}
     {colors && <span className="sr-only">{phraseGroups(colors).map(row => <span key={row.phrase} id={`${id}-phrase-${row.phrase}`}>{row.family.label}, {range(row.first, row.last)}. </span>)}</span>}
   </span>;
 }
-export function FlowingStudyText({ verses, assignment, group, sections = [], onVerse, onWord, activeWord, toolsAvailable = true }: {
+export function FlowingStudyText({ verses, assignment, group, sections = [], onVerse, onWord, activeWord, toolsAvailable = true, listening = true }: {
   verses: StudyVerse[]; assignment: AssignmentEnding; group: string; sections?: readonly { index: number; label: string }[];
-  onVerse?(index: number): void; onWord?(verse: number, word: number): void; activeWord: { verse: number; index: number } | null; toolsAvailable?: boolean;
+  onVerse?(index: number): void; onWord?(verse: number, word: number): void; activeWord: { verse: number; index: number } | null; toolsAvailable?: boolean; listening?: boolean;
 }) {
-  return <div className={`study-verses ${styles.flow}`} aria-label="Hebrew reading">
+  return <div className={`study-verses ${styles.flow}`} aria-label="Hebrew reading" tabIndex={-1}>
     {studyFlowGroups(verses, sections.map(section => section.index)).map(indices => <div key={verses[indices[0]].ref}>
       {sections.find(section => section.index === indices[0]) && <p className="student-aliyah">{sections.find(section => section.index === indices[0])!.label}</p>}
-      <p className={styles.flowParagraph} lang="he" dir="rtl">{indices.map(index => <FlowVerse key={verses[index].ref} verse={verses[index]} assignment={assignment} id={`${group}-flow-${index}`} onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined} activeWord={activeWord?.verse === index ? activeWord.index : null} toolsAvailable={toolsAvailable} />)}</p>
+      <p className={styles.flowParagraph} lang="he" dir="rtl">{indices.map(index => <FlowVerse key={verses[index].ref} verse={verses[index]} assignment={assignment} id={`${group}-flow-${index}`} onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined} activeWord={activeWord?.verse === index ? activeWord.index : null} toolsAvailable={toolsAvailable} listening={listening} />)}</p>
     </div>)}
   </div>;
 }

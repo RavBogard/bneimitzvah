@@ -6,6 +6,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { createReadingPlayback } from "../../src/components/portal/workspace/study/main-playback";
 import { FlowingStudyText, StudyHebrew, studyFlowGroups } from "../../src/components/portal/workspace/study/annotations";
 import { ReadingPlayer, playMainVerseForWord } from "../../src/components/portal/workspace/study/reading-player";
+import { ReadingToolbar } from "../../src/components/portal/workspace/reading-toolbar";
 import { createReferencePlayback, createReferenceAudioReuse, type ReferenceAudioElement } from "../../src/lib/reference-audio/playback";
 import type { ReferenceResolution } from "../../src/lib/reference-audio/source";
 import { REFERENCE_ATTRIBUTION } from "../../src/lib/reference-audio/contract";
@@ -70,6 +71,22 @@ it("flowing keyboard affordances name whole verse while lifted/explicit word lab
   expect(lifted).toContain('Hear word 2 of Genesis 1:1'); expect(lifted).not.toContain("Hear whole verse");
   const initial = renderToStaticMarkup(createElement(ReadingPlayer, { scopeKey: "main", verses: [verse], active: true, load: vi.fn(), register() {}, onActiveWord() {} }));
   expect(initial).toContain("hear the whole verse"); expect(initial).not.toContain("Click a word to hear it");
+});
+
+it("held listening preserves the exact flowing text and word-tool affordances without Hear promises", () => {
+  const hebrew = normalizeHebrew('אָ֑ב <span class="mam-kq"><span class="mam-kq-k">זָ</span><span class="mam-kq-q">[גַּ]</span></span>');
+  const verse: StudyVerse = { ref: "Genesis 1:1", english: null, hebrew: { ...hebrew, segments: [...hebrew.segments] } };
+  const common = { verses: [verse], assignment: { kind: "torah" as const, confirmed: true, verses: [verse.ref] }, group: "main", activeWord: null, onWord() {} };
+  const held = renderToStaticMarkup(createElement(FlowingStudyText, { ...common, listening: false }));
+  expect(held).toContain("Select word 2 of Genesis 1:1 for tools"); expect(held).toContain("study-read-alternative"); expect(held).toContain('tabindex="-1"'); expect(held).not.toContain("Hear");
+  const enabled = renderToStaticMarkup(createElement(FlowingStudyText, { ...common, onVerse() {} }));
+  const textOnly = (html: string) => html.replace(/<[^>]*>/g, "");
+  const heldText = textOnly(held);
+  expect(heldText.trim()).not.toBe(""); expect(heldText).toContain("אָ֑ב"); expect(heldText).toContain("גַּ");
+  expect(heldText).toBe(textOnly(enabled));
+  type ToolbarProps = NonNullable<Parameters<typeof ReadingToolbar>[0]>;
+  const toolbar = renderToStaticMarkup(createElement<ToolbarProps>(ReadingToolbar, { onHear() {} })); expect(toolbar).not.toContain("Hear verse");
+  expect(renderToStaticMarkup(createElement<ToolbarProps>(ReadingToolbar, { onHear() {}, listeningEnabled: true }))).toContain("Hear verse");
 });
 
 it("plays a clicked word in one explicit request, reuses same-verse media and adjacent verified bytes but refreshes authority", async () => {

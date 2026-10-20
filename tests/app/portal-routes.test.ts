@@ -14,6 +14,22 @@ function privateResponse(response: Response) {
 }
 const contact = { firstName: "Synthetic", lastName: "Created", ceremonyDate: "2027-01-02", parentEmail: "contact@example.test" };
 
+it("projects listening permission only after reading authorization and uses the effective child-practice mode", async () => {
+  const f = await fixture(), real = f.runtime.shortReferenceAudio, hint = vi.fn(real.listeningEnabled), read = vi.fn(real.read), readPage = vi.fn(real.readPage);
+  Object.assign(f.runtime, { shortReferenceAudio: { ...real, listeningEnabled: hint, read, readPage } });
+  const path = `/api/students/${f.students[0].id}/reading`;
+  expect((await f.call(`${path}?mode=admin`, { who: "anonymous" })).status).toBe(401); expect(hint).not.toHaveBeenCalled();
+  expect((await f.call(`${path}?mode=admin`, { who: "learner" })).status).toBe(403); expect(hint).not.toHaveBeenCalled();
+  const admin = await f.call(`${path}?mode=admin`, { who: "admin" }); expect(admin.status).toBe(200); expect((await json(admin)).referenceListeningEnabled).toBe(true);
+  expect((await json(await f.call(`${path}?mode=student`, { who: "learner" }))).referenceListeningEnabled).toBe(false);
+  await f.owner(() => f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: f.multiMember.id, role: "admin" }));
+  expect((await json(await f.call(`${path}?mode=admin`, { who: "multi" }))).referenceListeningEnabled).toBe(true);
+  const entered = await json(await f.call("/api/practice/enter", { body: { studentId: f.students[0].id } }));
+  const practice = await f.call(`${path}?mode=child-practice`, { handle: entered.handle }); expect(practice.status).toBe(200);
+  expect(await json(practice)).toMatchObject({ mode: "child-practice", referenceListeningEnabled: false }); expect(hint).toHaveBeenLastCalledWith("child-practice");
+  expect(read).not.toHaveBeenCalled(); expect(readPage).not.toHaveBeenCalled(); expect(privateResponse(practice)).toBe(true);
+});
+
 it("reading cut contracts stay closed/body-only, retain strict assigned metadata, and expose preserved review truthfully",async()=>{
  const f=await fixture(),id=f.students[0].id,path=`/api/students/${id}/reading`,call=(body:unknown,headers?:Record<string,string>)=>handlePortalRequest(f.request(`${path}/prepare`,{who:"admin",body,headers}),f.runtime);
  for(const bad of [{mode:"admin",kind:"haftarah",ranges:["Isaiah 1:1-3"],aliyahStarts:[]},{mode:"admin",ranges:["Genesis 1:1-3"],aliyahStarts:null},{mode:"admin",preparationMode:"current-assignment",expectedAssignmentRevision:1,ranges:["Genesis 1:1-3"]},{mode:"admin",ranges:["Genesis 1:1-3"],source:{snapshot:"untrusted"}}])expect((await call(bad))!.status).toBe(400);
