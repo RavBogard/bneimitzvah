@@ -3,7 +3,8 @@ import { openAuthMail } from "./auth-navigation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { browserFixture } from "./fixture";
@@ -122,6 +123,49 @@ beforeAll(async () => {
 }, 120_000);
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
+
+it("keeps compact equal reading summaries and verse-bound English without changing continuous Hebrew or fetching again", async () => {
+  const captures: { file: string; sha256: string; width: number; height: number }[] = [], captureRoot = join(process.cwd(), ".local-logs", "reading-companion-captures-v1");
+  if (process.env.READING_COMPANION_CAPTURE === "1") await mkdir(captureRoot);
+  for (const mobile of [false, true]) {
+    const tab = await page("student", mobile); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
+    // Held students intentionally do not prepare reference metadata; real text/colors are ready.
+    await colorVerse(tab, "Genesis 1:1");
+    const summaries = tab.getByRole("group", { name: "Assigned readings", exact: true });
+    await ui(summaries.getByRole("heading", { name: /^Torah / })).toBeVisible();
+    await ui(summaries.getByRole("heading", { name: /^Haftarah / })).toBeVisible();
+    await ui(summaries.locator('[aria-current="true"]')).toContainText("Torah");
+    const toggle = tab.getByRole("navigation", { name: "Reading tools", exact: true }).getByRole("button", { name: "English", exact: true });
+    if (await toggle.getAttribute("aria-pressed") === "true") await toggle.click();
+    const flow = tab.locator('.assigned-study .study-verses'), before = await flow.innerHTML(), beforeCalls = calls, beforeMetadata = metadataLoads.length;
+    for (const enabled of [false, true]) {
+      if (enabled) await toggle.click();
+      await ui(toggle).toHaveAttribute("aria-pressed", String(enabled));
+      await ui(flow.locator('[data-english-ref]')).toHaveCount(enabled ? 3 : 0);
+      if (enabled) {
+        for (const ref of ["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"]) await ui(flow.locator('[data-verse-ref="'+ref+'"] > [data-english-ref="'+ref+'"]')).toHaveAttribute("dir", "ltr");
+        await ui(flow.locator('[data-english-ref="Genesis 1:2"]')).toHaveText("English reference unavailable for this verse.");
+        expect(await tab.locator('.study-verse-details .study-english').count()).toBe(0);
+        expect(await flow.locator('[data-english-ref] [data-word-index], [data-english-ref] button, [data-english-ref] img').count()).toBe(0);
+      }
+      expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      if (process.env.READING_COMPANION_CAPTURE === "1") {
+        await tab.locator('.reading-hero').scrollIntoViewIfNeeded();
+        const file = (mobile ? "390" : "1440") + (enabled ? "-english-on.png" : "-english-off.png");
+        await tab.screenshot({ path: join(captureRoot, file), fullPage: true });
+        const bytes = await readFile(join(captureRoot, file));
+        captures.push({ file, sha256: createHash("sha256").update(bytes).digest("hex"), width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) });
+      }
+    }
+    await toggle.click(); await ui(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(await flow.innerHTML()).toBe(before); expect(calls).toBe(beforeCalls); expect(metadataLoads.length).toBe(beforeMetadata);
+    await click(tab, "Haftarah text"); await loaded(tab, "Isaiah 1:1");
+    await ui(summaries.locator('[aria-current="true"]')).toContainText("Haftarah");
+    await ui(summaries.getByRole("heading", { name: /^Torah / })).toBeVisible();
+  }
+  if (process.env.READING_COMPANION_CAPTURE === "1") await writeFile(join(captureRoot, "manifest.json"), JSON.stringify({ synthetic: true, captures }, null, 2)+"\n", { flag: "wx" });
+});
+
 it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English credits in all base modes without duplicate initial loads", async () => {
   adminTab = await page("admin"); const before = calls, beforeMetadata = metadataLoads.length; await navigate(adminTab, `/workspace/admin/students/${fixture.student.id}/reading`); await loaded(adminTab, "Genesis 1:1"); await initialShortPages.get(adminTab)!.settled(); expect(calls - before).toBe(1);
   // Visible text and authorized audio metadata are separate actual service purposes.
@@ -196,8 +240,9 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await safe(() => learner.getByRole("button", { name: "Close practice view", exact: true }).click()); await ui(learner.getByRole("dialog")).toHaveCount(0);
   expect(calls).toBe(beforeColors);
   await click(learner, "Haftarah text"); await loaded(learner, "Isaiah 1:1"); expect(await learner.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true }).count()).toBe(0);
-  await ui(learner.locator(".reading-hero").getByRole("heading", { name: "Isaiah 1:1\u20132", level: 3, exact: true })).toBeVisible();
-  await ui(learner.locator(".reading-hero").getByText("Haftarah \u00b7 2 verses", { exact: true })).toBeVisible();
+  const summaries = learner.getByRole("group", { name: "Assigned readings", exact: true });
+  await ui(summaries.locator('[aria-current="true"]')).toContainText("Haftarah Isaiah 1:1\u20132");
+  await ui(summaries.locator('[aria-current="true"]')).toContainText("2 verses");
   const middle = await colorVerse(learner, "Isaiah 1:1"), final = await colorVerse(learner, "Isaiah 1:2");
   expect(await middle.locator('[data-family="sof-pasuk"]').count()).toBeGreaterThan(0);
   expect(await final.locator('[data-family="sof-haftarah"]').count()).toBeGreaterThan(0);

@@ -136,6 +136,32 @@ afterAll(async () => {
 }, 120_000);
 
 
+
+it("toggles adjacent English during main playback without replacing its owner or fetching another source", async () => {
+  const { tab, state, owner } = await page();
+  await word(tab, 1, 1).click(); await playing(tab); await sameOwner(tab, owner);
+  // Natural EOF may occur while assertions run; keep the same whole verse looping.
+  await player(tab).getByRole("button", { name: "Repeat", exact: true }).click();
+  await ui(player(tab).getByRole("button", { name: "Repeat", exact: true })).toHaveAttribute("aria-pressed", "true");
+  const current = await native(tab), counts = { body: state.shortRequests, archive: state.archiveRequests, pages: state.pageRequests };
+  const stillSelected = async () => {
+    await sameOwner(tab, owner); await playing(tab);
+    expect((await native(tab)).src).toBe(current.src);
+    await ui(player(tab)).toContainText("Genesis 1:1");
+    await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse");
+    // The native clock/index may advance or wrap. Highlighting must remain on this verse's actual words.
+    await ui.poll(() => tab.locator('.study-verses [data-reference-active="true"]').evaluateAll(nodes => nodes.length > 0 && nodes.every(node => node.closest('[data-verse-ref]')?.getAttribute('data-verse-ref') === 'Genesis 1:1' && ['0', '1'].includes(node.getAttribute('data-word-index') ?? '')))).toBe(true);
+  };
+  const toggle = tab.getByRole("navigation", { name: "Reading tools", exact: true }).getByRole("button", { name: "English", exact: true });
+  const initial = await toggle.getAttribute("aria-pressed");
+  await toggle.click(); await ui(toggle).toHaveAttribute("aria-pressed", initial === "true" ? "false" : "true");
+  await stillSelected();
+  await toggle.click(); await ui(toggle).toHaveAttribute("aria-pressed", initial!);
+  await stillSelected();
+  expect({ body: state.shortRequests, archive: state.archiveRequests, pages: state.pageRequests }).toEqual(counts);
+  await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse");
+});
+
 it("plays whole verses from main-text words, verifies explicit word offsets/loops/pitch and reuses one adjacent-verse asset", async () => {
   const { tab, state, owner } = await page();
   await sameOwner(tab, owner); expect(state.requests).toBe(0); expect(await native(tab)).toMatchObject({ paused: true, src: null, mediaBlobs: 0, retiredClean: true }); await ui(tab.locator(".study-verses .verse-card")).toHaveCount(0);

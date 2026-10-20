@@ -9,6 +9,22 @@ import { ReadingPlayer } from "../../src/components/portal/workspace/study/readi
 import { createReadingAudioCoordinator } from "../../src/components/portal/workspace/study/reading-audio-coordinator";
 const actions = { group: "synthetic-proposal", retry() {}, page() {}, refresh() {} };
 
+test("optional verse-bound English preserves the exact continuous flow, qere and active indices when removed", () => {
+  const verses = explorationPage().verses.slice(0, 3).map((verse, index) => ({ ...verse, english: index === 1 ? null : `Synthetic English ${index + 1}: <script>not markup</script>` }));
+  const props = { verses, assignment: { kind: "torah" as const, confirmed: false, verses: [] }, group: "companion", activeWord: { verse: 0, index: 1 }, onWord() {}, onVerse() {} };
+  const render = (showEnglish?: boolean) => renderToStaticMarkup(createElement(FlowingStudyText, { ...props, ...(showEnglish === undefined ? {} : { showEnglish }) }));
+  const off = render(false), on = render(true);
+  expect(render()).toBe(off);
+  expect(on.replace(/<span class="study-english [^"]+" lang="en" dir="ltr" data-english-ref="[^"]+">[^]*?<\/span>/g, "")).toBe(off);
+  expect(on.match(/data-english-ref=/g)).toHaveLength(3);
+  for (const verse of verses) expect(on).toContain(`data-english-ref="${verse.ref}"`);
+  expect(on).toContain("English reference unavailable for this verse.");
+  expect(on).toContain("&lt;script&gt;not markup&lt;/script&gt;"); expect(on).not.toContain("<script>");
+  expect(off).toContain("read / qere:"); expect(off).toContain('data-reference-active="true"');
+  expect(on.match(/data-word-index="\d+"/g)).toEqual(off.match(/data-word-index="\d+"/g));
+  expect(render(false)).toBe(off);
+});
+
 test("reviewed proposed audio adds main verse controls and highlight without assigned tools or work", () => {
   const current = explorationPage(), load = vi.fn(), coordinator = createReadingAudioCoordinator();
   const player = createElement(ReadingPlayer, { scopeKey: "synthetic-proposal", verses: current.verses, active: true, wordTools: false,
