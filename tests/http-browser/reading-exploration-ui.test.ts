@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
+import { privateRouteFetch } from "./audio-observation";
 import { expect as ui } from "@playwright/test";
-import { chromium, type Browser, type BrowserContext, type Page, type Response } from "playwright";
+import { chromium, type Browser, type BrowserContext, type Page, type Request as BrowserRequest } from "playwright";
 import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -202,38 +203,73 @@ async function heard(tab: Page, scope: ReturnType<Page["getByRole"]>) {
     console.info("exploration-heard", { ...await audioState(tab), state, pauseVisible: await scope.getByRole("button", { name: "Pause", exact: true }).isVisible().catch(() => false) });
   }
 }
-/** Observe before navigation; an HTTP 200 alone is not a usable short page. */
-function shortMetadata(tab: Page, offset = 0, expected = 100) {
+/** Capture the actual authenticated upstream bytes before navigation. Chromium's
+ * duplicate response-body lookup is not the application consumption barrier. */
+async function shortMetadata(tab: Page, offset = 0, expected = 100) {
   let sequence = 0, ready = false;
-  let facts = { status: 0, responses: 0, references: 0, ready: 0, unavailable: 0, invalid: 0, unreadable: false };
+  type Failure = "none" | "request-shape" | "upstream-fetch" | "body-bound" | "body-read" | "json" | "reference-shape" | "fulfill" | "browser-failed" | "dispose";
+  type Terminal = "pending" | "finished" | "failed" | "closing";
+  type Facts = { status: number; responses: number; references: number; ready: number; unavailable: number; invalid: number; failure: Failure; terminal: Terminal; fulfilled: boolean };
+  const initial = (responses: number): Facts => ({ status: 0, responses, references: 0, ready: 0, unavailable: 0, invalid: 0, failure: "none", terminal: "pending", fulfilled: false });
+  let facts = initial(0);
   const scope = contexts.find(scope => scope.context === tab.context()); if (!scope) throw new Error("Exploration metadata ownership missing");
-  const observe = (response: Response) => {
-    if (!new URL(response.url()).pathname.endsWith("/reading/explore/reference/short/page")) return;
-    let selected: unknown; try { selected = response.request().postDataJSON()?.offset; } catch { return; }
-    if (selected !== offset) return;
-    const current = ++sequence;
-    const task = (async () => {
-      const next = { status: response.status(), responses: current, references: 0, ready: 0, unavailable: 0, invalid: 0, unreadable: false };
+  const requests = new Map<BrowserRequest, Facts>(), path = `/api/students/${fixture.student.id}/reading/explore/reference/short/page`;
+  const publish = (next: Facts) => {
+    if (scope.closing || next.responses !== sequence) return;
+    facts = next; ready = next.status === 200 && next.references === expected && next.ready === expected && !next.unavailable && !next.invalid
+      && next.failure === "none" && next.fulfilled && next.terminal === "finished";
+  };
+  const fail = (next: Facts, failure: Failure) => {
+    next.failure = failure; ready = false;
+    if (!scope.closing) scope.failures.add(`Exploration metadata ${failure} failed; private details withheld`);
+    publish(next);
+  };
+  const finish = (request: BrowserRequest) => { const next = requests.get(request); if (next) { next.terminal = "finished"; publish(next); } };
+  const failed = (request: BrowserRequest) => { const next = requests.get(request); if (next) { next.terminal = scope.closing ? "closing" : "failed"; if (!scope.closing) fail(next, "browser-failed"); } };
+  tab.on("requestfinished", finish); tab.on("requestfailed", failed);
+  scope.release.add(() => { tab.off("requestfinished", finish); tab.off("requestfailed", failed); for (const next of requests.values()) if (next.terminal === "pending") next.terminal = "closing"; });
+  await tab.route(url => url.origin === BROWSER_ORIGIN && url.pathname === path, route => sourceRoute(scope, "fulfill", async () => {
+    const request = route.request(), url = new URL(request.url());
+    let selected: unknown; try { selected = request.postDataJSON()?.offset; } catch { /* Refused below without copying request data. */ }
+    if (request.method() !== "POST" || url.origin !== BROWSER_ORIGIN || url.pathname !== path || url.search || !Number.isSafeInteger(selected) || Number(selected) < 0 || Number(selected) > 999) {
+      const next = initial(++sequence); requests.set(request, next); fail(next, "request-shape"); await route.abort("failed"); return;
+    }
+    if (selected !== offset) { await route.fallback(); return; }
+    const next = initial(++sequence); requests.set(request, next); ready = false; publish(next);
+    let response: Awaited<ReturnType<typeof privateRouteFetch>>;
+    let stage: Failure = "upstream-fetch", settled = false;
+    try {
+      response = await privateRouteFetch(route, tab, { maxRedirects: 0, maxRetries: 0, timeout: 15000 }); if (!response) return;
       try {
-        const body: unknown = await response.json();
+        next.status = response.status(); stage = "body-bound";
+        const declared = response.headers()["content-length"];
+        if (declared !== undefined && (!/^(?:0|[1-9][0-9]*)$/.test(declared) || Number(declared) > 1024 * 1024)) throw Error("Bounded metadata body refused");
+        stage = "body-read"; const bytes = await response.body();
+        stage = "body-bound"; if (bytes.length > 1024 * 1024) throw Error("Bounded metadata body refused");
+        stage = "json"; let body: unknown;
+        try { body = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)); } catch { fail(next, "json"); }
         const page = body && typeof body === "object" && "page" in body ? body.page : undefined;
         const references = page && typeof page === "object" && "references" in page ? page.references : undefined;
-        if (!Array.isArray(references)) next.invalid++;
+        if (!page || typeof page !== "object" || !("offset" in page) || page.offset !== offset || !Array.isArray(references)) next.invalid++;
         else {
           next.references = references.length;
           for (const raw of references) { const parsed = parseReferenceShortResolution(raw); if (!parsed) next.invalid++; else if (parsed.source) next.ready++; else next.unavailable++; }
         }
-      } catch { next.unreadable = true; }
-      if (current !== sequence || scope.closing) return;
-      facts = next; ready = next.status === 200 && next.references === expected && next.ready === expected && !next.unavailable && !next.invalid && !next.unreadable;
-      console.info("exploration-metadata", { offset, ...facts });
-    })();
-    scope.pending.add(task); void task.then(() => scope.pending.delete(task), () => scope.pending.delete(task));
-  };
-  tab.on("response", observe);
+        if (next.failure === "none" && (next.status !== 200 || next.references !== expected || next.ready !== expected || next.unavailable || next.invalid)) fail(next, "reference-shape");
+        // Preserve the original status, headers and body even on invalid data.
+        stage = "fulfill"; await route.fulfill({ response, body: bytes }); settled = true; next.fulfilled = true; publish(next);
+      } finally { try { await response.dispose(); } catch (error) { stage = "dispose"; throw error; } }
+    } catch (error) {
+      fail(next, stage);
+      if (!settled && !tab.isClosed()) await route.abort("failed");
+      throw error; // sourceRoute retains failures, allowing only its exact close case.
+    } finally { console.info("exploration-metadata", { offset, ...next }); }
+  }));
   return async () => {
     try { await ui.poll(() => ready, { timeout: 15000 }).toBe(true); }
-    finally { tab.off("response", observe); console.info("exploration-metadata-barrier", { offset, ...facts }); }
+    // Keep observing through context teardown: later invalid responses cannot
+    // hide behind an earlier successful100-reference readiness barrier.
+    finally { console.info("exploration-metadata-barrier", { offset, ...facts }); }
   };
 }
 it("keeps proposed Torah, assigned Haftarah and true Lift exclusive in all six directed hearing transitions", async () => {
@@ -241,7 +277,7 @@ it("keeps proposed Torah, assigned Haftarah and true Lift exclusive in all six d
   tab.on("request", request => { const url = new URL(request.url()); if (url.hostname === "archive.org") archiveRequests++;
     if (shortBodies.has(url.pathname)) bodies.add(url.pathname);
     if (/\/(study-text|study-word-aids|study-word-details|reference-audio(?:\/short\/page)?)$/.test(url.pathname) && url.searchParams.get("kind") === "torah") assignedTorah++; });
-  const metadataReady = shortMetadata(tab); await tutor(tab); await metadataReady();
+  const metadataReady = await shortMetadata(tab); await tutor(tab); await metadataReady();
   const proposed = portion(tab).getByRole("region", { name: "Reading playback", exact: true });
   const proposedBox = await portion(tab).boundingBox(), headingBox = await tab.getByRole("heading", { name: "Assigned Haftarah", exact: true }).boundingBox(), assignedBox = await tab.getByRole("region", { name: "Assigned text", exact: true }).boundingBox();
   expect(Boolean(proposedBox && headingBox && assignedBox)).toBe(true);
@@ -268,7 +304,7 @@ it("keeps proposed Torah, assigned Haftarah and true Lift exclusive in all six d
 });
 
 it("cancels held proposed audio on page navigation and quiet return never starts or refetches audio", async () => {
-  const tab = await page(); const metadataReady = shortMetadata(tab); await tutor(tab); await metadataReady(); let release!: () => void;
+  const tab = await page(); const metadataReady = await shortMetadata(tab); await tutor(tab); await metadataReady(); let release!: () => void;
   let finished!: () => void; const terminal = new Promise<void>(yes => { finished = yes; });
   const gate = new Promise<void>(yes => { release = yes; }); let bodyStarted = false, sourceRequests = 0, metadataRequests = 0;
   tab.on("request", request => { const url = new URL(request.url()); if (shortBodies.has(url.pathname)) sourceRequests++; if (url.pathname.endsWith("/reading/explore/reference/short/page")) metadataRequests++; });
@@ -299,7 +335,7 @@ it("cancels held proposed audio on page navigation and quiet return never starts
 
 it("an actual signed proposal deadline stops cached playback even before queued timer processing", async () => {
   const tab = await page(); await tab.clock.install();
-  const metadataReady = shortMetadata(tab);
+  const metadataReady = await shortMetadata(tab);
   const preparation = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/explore/prepare") && response.status() === 200);
   await tutor(tab); await metadataReady(); const selected: unknown = await (await preparation).json();
   const deadline = selected && typeof selected === "object" && "expiresAt" in selected ? selected.expiresAt : undefined;
