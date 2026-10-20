@@ -18,12 +18,13 @@ import { watchReadingAudioDeadline } from "./reading-player-intent";
 import type { ShortReferenceOwner } from "./short-reference-bridge";
 
 export type StudyReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
-export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderWork, renderActiveWork, onPage, learner = false, liftHandle, practiceHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, active = true, audio, stopAudio }: {
+export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderWork, renderActiveWork, onPage, learner = false, liftHandle, practiceHandle, textStartHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, active = true, audio, stopAudio }: {
   baseline: Assigned | null; register(value: StudyReload): () => void; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; onKindChange(kind: StudyKind): void;
   guardDeparture?(): Promise<boolean>; serviceHref?: string; renderWork?(kind: StudyKind, verseRef: string): ReactNode; renderActiveWork?(): ReactNode; onPage?(kind: StudyKind, offset: number, signal: AbortSignal): Promise<void>;
   /** Students and child practice see the reading without status or provenance prose. */
   learner?: boolean; liftHandle?: MutableRefObject<((index: number) => void) | null>;
   practiceHandle?: MutableRefObject<((index: number) => void) | null>;
+  textStartHandle?: MutableRefObject<(() => void) | null>;
   /** The Song session reading: English follows the remembered toolbar preference. */
   songSession?: boolean;
   /** Called once a text page is on screen, so verse marks can load for it. */
@@ -146,6 +147,16 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const open = (page: StudyPage, index: number) => { stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.suspend(); modalRequest.current?.abort();
     const old = modalScope.current, next = { page, index, opening: old?.page === page ? old.opening : ++modalSequence.current, navigation: (old?.navigation ?? 0) + 1 };
     modalScope.current = next; setLift(next); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
+  // Explicit held Start reports the first verse of this live page; focus/reload do not.
+  if (textStartHandle) {
+    const scope = openerScope.current, turn = generation.current, kind = state.kind;
+    textStartHandle.current = livePage && !concealed && !listeningEnabled && kind ? () => {
+      if (openerScope.current !== scope || scope.concealed || metadata.current !== baseline
+        || generation.current !== turn || controller.current?.signal.aborted) return;
+      const first = livePage.verses[0];
+      if (first) onVisit?.(kind, first.ref);
+    } : null;
+  }
   if (liftHandle || practiceHandle) {
     // Parent actions bring this tab forward in the same event.
     // Inactivity still unmounts media; it does not revoke this explicit opener.

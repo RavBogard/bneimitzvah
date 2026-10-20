@@ -141,6 +141,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   // Tutors and admins teach from the same Song session reading, and keep the staff assignment details.
   const staff = mode === "tutor" || mode === "admin", song = learner || staff, editorId = `${serviceId}-editor`;
   const lift = useRef<((index: number) => void) | null>(null);
+  const textStart = useRef<(() => void) | null>(null);
   const practice = useRef<((index: number) => void) | null>(null), readingPanel = useRef<HTMLDivElement | null>(null);
   const [hearReady, setHearReady] = useState(false), [practiceReady, setPracticeReady] = useState(false), [proposedReady, setProposedReady] = useState(false), [proposedHearReady, setProposedHearReady] = useState(false);
   const listeningEnabled = authorizedReading?.referenceListeningEnabled === true;
@@ -205,7 +206,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const startReading = () => {
     setTab("reading");
     const target = exploring ? proposedHear.current : lift.current;
-    if (listeningEnabled && target) target(0);
+    if (listeningEnabled) { target?.(0); return; }
+    if (!exploring) textStart.current?.();
     // Wait a frame so the reading panel is displayed before scrolling to it.
     const expected = authorizedReading;
     requestAnimationFrame(() => {
@@ -217,7 +219,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
     });
   };
   const openPractice = () => { setTab("reading"); practice.current?.(0); };
-  const practiceAction = mode !== "parent" && readings.length > 0 && <button type="button" className="button-hero-secondary" disabled={!practiceReady || concealed || current?.loading} onClick={openPractice}>{exploring ? "Practice assigned Haftarah up close" : "Practice up close"}</button>;
+  const practiceAction = mode !== "parent" && readings.length > 0 && <button type="button" className="button-hero-secondary reading-practice-action" disabled={!practiceReady || concealed || current?.loading} onClick={openPractice}>{exploring ? "Practice assigned Haftarah up close" : "Practice up close"}</button>;
   const tabKeys = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     const index = pageTabs.findIndex(([value]) => value === tab);
     const next = event.key === "ArrowRight" ? (index + 1) % pageTabs.length : event.key === "ArrowLeft" ? (index + pageTabs.length - 1) % pageTabs.length : event.key === "Home" ? 0 : event.key === "End" ? pageTabs.length - 1 : -1;
@@ -270,7 +272,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
           {listeningEnabled && <button type="button" className="button-secondary" disabled={!hearReady || concealed || current?.loading} onClick={() => lift.current?.(0)}>Hear Haftarah</button>}</header>}
         <AssignedStudyText audio={audio} stopAudio={audio.stopAll} baseline={current?.value ?? null} register={registerStudy} reloadMetadata={load} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} onKindChange={setSelectedKind}
         guardDeparture={guardReading} serviceHref={tabbed ? undefined : `#${serviceId}`} renderWork={(kind, verseRef) => <VerseTools coordinator={work} kind={kind} verseRef={verseRef} />} renderActiveWork={() => work.active && <VerseTools coordinator={work} kind={work.active.kind} verseRef={work.active.ref} />}
-        onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} learner={learner} songSession={song} liftHandle={lift} practiceHandle={practice} onPracticeReady={setPracticeReady} onHearReady={setHearReady} active={!tabbed || tab === "reading"}
+        onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} learner={learner} songSession={song} liftHandle={lift} practiceHandle={practice} textStartHandle={textStart} onPracticeReady={setPracticeReady} onHearReady={setHearReady} active={!tabbed || tab === "reading"}
         onShown={(kind, offset, length) => progress.ensure(kind, offset, length)} renderMark={(kind, verseRef) => <VerseMark store={progress} kind={kind} verseRef={verseRef} />} renderLiftControls={(kind, verseRef) => <LiftProgress store={progress} kind={kind} verseRef={verseRef} />} onVisit={(kind, verseRef) => calendar.visitVerse(kind, verseRef)} /></div>
       {work.notice && <p className="field-help" role="status">{work.notice}</p>}
       {!learner && otherReadings.length > 0 && <details className="reading-other-assignments"><summary>Other confirmed reading details</summary>{otherReadings.map(row => <AssignmentContext key={row.id} row={row} />)}</details>}</>)}

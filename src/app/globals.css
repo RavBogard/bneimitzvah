@@ -523,6 +523,11 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
   .workspace-main { padding-top: 1.25rem; }
   .verse-card { padding-inline: 1rem; }
   .button-start { flex: 1 1 100%; }
+  .reading-workspace .hero-actions:has(.reading-practice-action) .button-start { flex: 1 1 auto; min-width: 0; padding-inline: 1rem; }
+  .reading-workspace .reading-hero { margin-bottom: 1rem; }
+  .reading-workspace .hero-actions { margin-top: 0.75rem; }
+  .reading-workspace .reading-toolbar { margin-bottom: 0.5rem; }
+  .reading-workspace .reading-passage-layout > .field-help { margin-top: 0; }
   .hero-actions .button-hero-secondary { flex: 1 1 auto; justify-content: center; }
   .reading-hero .hero-reference { font-size: clamp(2.5rem, 12vw, 3.25rem); }
 }

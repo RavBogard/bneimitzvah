@@ -1,3 +1,4 @@
+import { observeSilentAudio, expectSilentAudio, observeInitialShortPage } from "./audio-observation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
@@ -18,6 +19,7 @@ vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
 let isolation: Awaited<ReturnType<typeof isolatedEnv>> | undefined, sibling: { id: string }, content: ReturnType<typeof syntheticServiceCatalog>, catalogId: string, scriptureUnavailable = false;
+const heldShortPages = new WeakMap<Page, ReturnType<typeof observeInitialShortPage>>();
 const contexts: BrowserContext[] = [], cookies = new Map<string, Awaited<ReturnType<BrowserContext["cookies"]>>>();
 const safe = async <T>(action: () => Promise<T>): Promise<T> => { try { return await action(); } catch { throw new Error("Service UI browser operation failed; private details withheld"); } };
 const panel = (tab: Page) => tab.locator(".service-learning-panel");
@@ -25,11 +27,23 @@ async function click(tab: Page, name: string) { await safe(() => tab.getByRole("
 async function api(tab: Page, studentId: string, action = "", body?: unknown) {
   return safe(() => tab.evaluate(async ({ path, body }) => { const response = await fetch(path, { method: body === undefined ? "GET" : "POST", cache: "no-store", headers: body === undefined ? {} : { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) }); return { status: response.status, data: await response.json() }; }, { path: `/api/students/${studentId}/service-plan${action}`, body }));
 }
+const heldMetadata = new WeakMap<Page, { count: number }>();
+function observeHeldMetadata(tab: Page) {
+  const seen = { count: 0 }; heldMetadata.set(tab, seen);
+  tab.on("request", request => { if (/\/(?:reference-audio|reading\/explore\/reference)\//.test(new URL(request.url()).pathname)) seen.count++; });
+}
+async function heldReading(tab: Page) {
+  expect(heldMetadata.get(tab)!.count).toBe(0);
+  expect(heldShortPages.get(tab)!.counts()).toEqual({ seen: 0, terminals: 0, pending: 0 });
+  await expectSilentAudio(tab);
+  expect(await tab.evaluate(() => (window as unknown as { silentAudioProbe: { elements: HTMLAudioElement[] } }).silentAudioProbe.elements.length)).toBe(0);
+}
 async function page(role: "admin" | "tutor" | "student", mobile = false) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 } }); contexts.push(context);
+  await observeSilentAudio(context);
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
   const saved = cookies.get(role); if (saved) await context.addCookies(saved);
-  const tab = await context.newPage(); await safe(() => tab.goto("/", { waitUntil: "domcontentloaded" }));
+  const tab = await context.newPage(); observeHeldMetadata(tab); heldShortPages.set(tab, observeInitialShortPage(tab)); await safe(() => tab.goto("/", { waitUntil: "domcontentloaded" }));
   if (!saved) {
     const email = role === "admin" ? "pg-admin@example.test" : role === "tutor" ? "pg-tutor@example.test" : "pg-service-student@example.test";
     await safe(() => tab.evaluate(async email => { const response = await fetch("/api/auth/sign-in/magic-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }) }); if (response.status !== 200) throw new Error("Synthetic sign-in unavailable"); }, email));
@@ -71,7 +85,7 @@ async function captures(tab: Page, stage: "review" | "selected" | "service-only"
 beforeAll(async () => {
   try {
     assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard();
-    fixture = await browserFixture({ studyLoad: async request => { if (scriptureUnavailable) throw new StudyUnavailable("upstream"); return syntheticUiStudyPage(request); } });
+    fixture = await browserFixture({ referenceStudentRelease: false, studyLoad: async request => { if (scriptureUnavailable) throw new StudyUnavailable("upstream"); return syntheticUiStudyPage(request); } });
     sibling = (await fixture.practice()).sibling;
     const learner = await fixture.signIn("pg-service-student"), [member] = await fixture.ownerDb.insert(s.membership).values({ tenantId: "crc", userId: learner.id }).returning();
     const [grant] = await fixture.ownerDb.insert(s.roleGrant).values({ tenantId: "crc", membershipId: member.id, role: "student" }).returning();
@@ -230,12 +244,11 @@ it("puts a tutor's service parts in a tab beside the reading, keeping open mater
   await ui(panel(tab).getByText("Checking assigned service parts…", { exact: true })).toBeHidden();
   await click(tab, "Synthetic part 0"); await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
   await capture(tab, "tutor-service-tab");
-  // Start brings the main reading forward and explicitly requests verse playback.
+  // Held Start brings the main text forward without requesting listening.
   await click(tab, "Start reading");
   await ui(readingTab).toHaveAttribute("aria-selected", "true"); await ui(tab.locator("dialog.lift")).toHaveCount(0);
-  const inline = tab.getByRole("region", { name: "Reading playback", exact: true }); await ui(inline).toContainText("Genesis 1:1");
-  await ui(inline.getByText("The recording couldn’t be loaded. Try again.", { exact: true })).toBeVisible();
-  await ui(tab.getByRole("button", { name: "Start reading", exact: true })).toBeFocused();
+  await ui(tab.locator(".study-verses")).toBeFocused(); await heldReading(tab);
+  await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
   await safe(() => serviceTab.click()); await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
   await safe(() => tab.keyboard.press("Home")); await ui(readingTab).toHaveAttribute("aria-selected", "true"); await ui(readingTab).toBeFocused();
   // Left from the first tab wraps to the last (Lessons), then steps back to Service parts.

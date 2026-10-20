@@ -1,3 +1,4 @@
+import { observeSilentAudio, expectSilentAudio, observeInitialShortPage } from "./audio-observation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page, type Request, type Route } from "playwright";
@@ -9,6 +10,8 @@ import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
 import { openAuthMail } from "./auth-navigation";
+import { expandReadingRanges } from "../../src/lib/readings/ranges";
+import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
@@ -17,15 +20,28 @@ vi.mock("server-only", () => ({}));
 // Reading it never reports practice; an explicit open of an assigned verse reports one visit on the server's day.
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
 let isolation: Awaited<ReturnType<typeof isolatedEnv>> | undefined, assignmentId = "";
+const heldShortPages = new WeakMap<Page, ReturnType<typeof observeInitialShortPage>>();
 const contexts: BrowserContext[] = [];
 const safe = async <T>(action: () => Promise<T>): Promise<T> => { try { return await action(); } catch { throw new Error("Practice calendar browser operation failed; private details withheld"); } };
 async function api(tab: Page, path: string, body?: unknown) {
   return safe(() => tab.evaluate(async ({ path, body }) => { const r = await fetch(path, { method: body === undefined ? "GET" : "POST", cache: "no-store", headers: body === undefined ? {} : { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) }); return { status: r.status }; }, { path, body }));
 }
+const heldMetadata = new WeakMap<Page, { count: number }>();
+function observeHeldMetadata(tab: Page) {
+  const seen = { count: 0 }; heldMetadata.set(tab, seen);
+  tab.on("request", request => { if (/\/(?:reference-audio|reading\/explore\/reference)\//.test(new URL(request.url()).pathname)) seen.count++; });
+}
+async function heldReading(tab: Page) {
+  expect(heldMetadata.get(tab)!.count).toBe(0);
+  expect(heldShortPages.get(tab)!.counts()).toEqual({ seen: 0, terminals: 0, pending: 0 });
+  await expectSilentAudio(tab);
+  expect(await tab.evaluate(() => (window as unknown as { silentAudioProbe: { elements: HTMLAudioElement[] } }).silentAudioProbe.elements.length)).toBe(0);
+}
 async function page(role: "student" | "tutor", mobile = false) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 }, reducedMotion: "reduce" }); contexts.push(context);
+  await observeSilentAudio(context);
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
-  const tab = await context.newPage(); await safe(() => tab.goto("/", { waitUntil: "domcontentloaded" }));
+  const tab = await context.newPage(); observeHeldMetadata(tab); heldShortPages.set(tab, observeInitialShortPage(tab)); await safe(() => tab.goto("/", { waitUntil: "domcontentloaded" }));
   const email = role === "student" ? "pg-calendar-student@example.test" : "pg-tutor@example.test";
   expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await openAuthMail(tab, fixture.takeMail(email));
   return tab;
@@ -63,7 +79,7 @@ async function rows() {
 
 beforeAll(async () => {
   try {
-    assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard(); fixture = await browserFixture({ studyLoad: async request => syntheticUiStudyPage(request) }); await fixture.practice();
+    assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard(); fixture = await browserFixture({ referenceStudentRelease: false, studyLoad: async request => syntheticUiStudyPage(request) }); await fixture.practice();
     const learner = await fixture.signIn("pg-calendar-student"), [member] = await fixture.ownerDb.insert(s.membership).values({ tenantId: "crc", userId: learner.id }).returning();
     const [grant] = await fixture.ownerDb.insert(s.roleGrant).values({ tenantId: "crc", membershipId: member.id, role: "student" }).returning(); await fixture.ownerDb.insert(s.studentIdentity).values({ tenantId: "crc", studentId: fixture.student.id, roleGrantId: grant.id });
     const [admin] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.userId, fixture.admin.id));
@@ -84,16 +100,17 @@ it("shows the student's week, reports explicit inline verse visits on the server
     // Loading the page, its text and its calendar is not practice.
     expect(seen.posts).toHaveLength(0);
     const before = await rows();
-    await click(tab, "Start reading"); await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toContainText("Genesis 1:1");
+    await click(tab, "Start reading"); await ui(tab.locator(".study-verses")).toBeFocused();
+    await heldReading(tab); await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
     expect(await tab.locator("dialog.lift").count()).toBe(0);
     await ui.poll(() => seen.posts.length).toBe(1);
     expect(seen.posts[0]).toEqual({ context: null, body: { mode: "student", eventId: expect.stringMatching(/^[0-9a-f-]{36}$/), expectedDay: day, action: "visit", target: { type: "verse", kind: "torah", assignmentId, assignmentRevision: 1, verseRef: "Genesis 1:1" } } });
     await todayMarked(tab, true);
     await ui(week(tab).locator(".practice-day-today .sr-only")).toContainText("today: practiced");
     // Opening another verse is a new visit; opening the same one again adds nothing.
-    await click(tab, "Hear Genesis 1:2"); await ui.poll(() => seen.posts.length).toBe(2);
+    await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:2"] [data-word-index="0"]').first().click()); await ui.poll(() => seen.posts.length).toBe(2);
     expect(seen.posts[1].body).toMatchObject({ expectedDay: day, target: { verseRef: "Genesis 1:2" } }); expect(seen.posts[1].body.eventId).not.toBe(seen.posts[0].body.eventId);
-    await click(tab, "Hear Genesis 1:2");
+    await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:2"] [data-word-index="0"]').first().click());
     expect(seen.posts).toHaveLength(2);
     const after = await rows(); expect(after.days).toBe(1); expect(after.events - before.events).toBe(2);
     // Same-authority quiet verification retains the calendar and sends no visit.
@@ -124,6 +141,7 @@ it("shows the student's week, reports explicit inline verse visits on the server
     await ui(tab.getByRole("button", { name: "Next month", exact: true })).toBeEnabled();
     await safe(() => tab.getByRole("button", { name: "Next month", exact: true }).click());
     await capture(tab, "practice-calendar-student");
+    await heldReading(tab);
     // No raw practice detail is ever requested by this page.
     expect(seen.reads.every(url => new URL(url).pathname.endsWith("/practice-calendar"))).toBe(true);
     await safe(() => tab.context().close());
@@ -137,9 +155,10 @@ it("re-reads after a stale day without resending, and the next explicit open use
   let stale = true;
   await safe(() => tab.route("**/practice-events", async route => { if (!stale) return route.fallback(); stale = false; await route.fulfill({ status: 409, contentType: "application/json", body: '{"ok":false,"code":"stale-day"}' }); }));
   const reread = tab.waitForRequest(request => isCalendar(request));
-  await click(tab, "Hear Genesis 1:3"); await safe(() => reread);
+  await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:3"] [data-word-index="0"]').first().click()); await safe(() => reread);
   await ui(week(tab).getByRole("listitem")).toHaveCount(7); expect(seen.posts).toHaveLength(1);
-  await click(tab, "Hear Genesis 1:3"); await ui.poll(() => seen.posts.length).toBe(2);
+  await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:3"] [data-word-index="0"]').first().click()); await ui.poll(() => seen.posts.length).toBe(2);
+  await heldReading(tab);
   expect(seen.posts[1].body).toMatchObject({ expectedDay: day, target: { verseRef: "Genesis 1:3" } }); expect(seen.posts[1].body.eventId).not.toBe(seen.posts[0].body.eventId);
   await safe(() => tab.context().close());
 });
@@ -160,9 +179,32 @@ it("shows dates only in an explicitly selected child practice, reports with that
   await click(tab, "Start reading"); await ui.poll(() => seen.posts.length).toBe(1);
   expect(seen.posts[0].context).toEqual(expect.any(String));
   expect(seen.posts[0].body).toMatchObject({ mode: "child-practice", expectedDay: day, action: "visit", target: { type: "verse", assignmentId, verseRef: "Genesis 1:1" } });
+  await ui(tab.locator(".study-verses")).toBeFocused(); await heldReading(tab);
   await capture(tab, "practice-calendar-child");
   await click(tab, "Return to parent view");
   await ui(tab.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeHidden();
   expect(await tab.locator(".practice-week, .practice-day").count()).toBe(0); expect(seen.posts).toHaveLength(1);
   await safe(() => tab.context().close());
+});
+
+it("held Start visits the first verse of the current text page without listening or a modal", async () => {
+  const ranges = ["Genesis 1:1-5:10"], refs = expandReadingRanges(ranges, "torah", TANAKH_VERSE_COUNTS);
+  expect(refs.length).toBeGreaterThan(100); expect(refs[100]).toBe("Genesis 4:21");
+  await fixture.ownerDb.update(s.assignment).set({ ref: ranges[0], revision: 2, proposalSnapshot: { ranges, confirmationDate: "2027-01-02", needsReview: false } }).where(eq(s.assignment.id, assignmentId));
+  await fixture.ownerDb.delete(s.assignmentVerse).where(eq(s.assignmentVerse.assignmentId, assignmentId));
+  await fixture.ownerDb.insert(s.assignmentVerse).values(refs.map((verseRef, index) => ({ tenantId: "crc", studentId: fixture.student.id, assignmentId, ordinal: index + 1, verseRef })));
+  const tab = await page("student"), seen = traffic(tab);
+  const day = await serverDay(tab, () => safe(() => tab.goto("/workspace/student", { waitUntil: "domcontentloaded" })));
+  await ui(tab.locator(".study-verses").getByRole("heading", { name: refs[0], exact: true })).toBeVisible();
+  await click(tab, "Next text page");
+  await ui(tab.locator(".study-verses").getByRole("heading", { name: refs[100], exact: true })).toBeVisible();
+  expect(seen.posts).toHaveLength(0); // Loading either page is passive.
+  await heldReading(tab);
+  await click(tab, "Start reading"); await ui(tab.locator(".study-verses")).toBeFocused();
+  await ui.poll(() => seen.posts.length).toBe(1);
+  expect(seen.posts[0]).toEqual({ context: null, body: { mode: "student", eventId: expect.stringMatching(/^[0-9a-f-]{36}$/), expectedDay: day, action: "visit", target: { type: "verse", kind: "torah", assignmentId, assignmentRevision: 2, verseRef: refs[100] } } });
+  expect(refs[100]).not.toBe(refs[0]);
+  await ui(tab.getByRole("dialog")).toHaveCount(0); await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
+  await click(tab, "Start reading"); expect(seen.posts).toHaveLength(1);
+  await heldReading(tab); await safe(() => tab.context().close());
 });

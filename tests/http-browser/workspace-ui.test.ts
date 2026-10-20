@@ -1,3 +1,4 @@
+import { observeSilentAudio, expectSilentAudio, observeInitialShortPage } from "./audio-observation";
 import { openAuthMail } from "./auth-navigation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
@@ -14,13 +15,26 @@ vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
 let sibling: { id: string };
+const heldShortPages = new WeakMap<Page, ReturnType<typeof observeInitialShortPage>>();
 const contexts: BrowserContext[] = [];
 async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Workspace browser operation failed; private details withheld"); } }
 async function navigate(tab: Page, path: string) { await safe(() => tab.goto(path, { waitUntil: "domcontentloaded", timeout: 30_000 })); }
+const heldMetadata = new WeakMap<Page, { count: number }>();
+function observeHeldMetadata(tab: Page) {
+  const seen = { count: 0 }; heldMetadata.set(tab, seen);
+  tab.on("request", request => { if (/\/(?:reference-audio|reading\/explore\/reference)\//.test(new URL(request.url()).pathname)) seen.count++; });
+}
+async function heldReading(tab: Page) {
+  expect(heldMetadata.get(tab)!.count).toBe(0);
+  expect(heldShortPages.get(tab)!.counts()).toEqual({ seen: 0, terminals: 0, pending: 0 });
+  await expectSilentAudio(tab);
+  expect(await tab.evaluate(() => (window as unknown as { silentAudioProbe: { elements: HTMLAudioElement[] } }).silentAudioProbe.elements.length)).toBe(0);
+}
 async function page(mobile = false) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 } }); contexts.push(context);
+  await observeSilentAudio(context);
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
-  return context.newPage();
+  const tab = await context.newPage(); observeHeldMetadata(tab); heldShortPages.set(tab, observeInitialShortPage(tab)); return tab;
 }
 async function api(tab: Page, path: string, body?: unknown, handle?: string) {
   return safe(() => tab.evaluate(async ({ path, body, handle }) => {
@@ -59,7 +73,7 @@ async function checkedRefresh(tab: Page, trigger: () => Promise<unknown>) {
 }
 beforeAll(async () => {
   try {
-    assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard(); fixture = await browserFixture({ studyLoad: async request => syntheticUiStudyPage(request) }); sibling = (await fixture.practice()).sibling;
+    assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard(); fixture = await browserFixture({ referenceStudentRelease: false, studyLoad: async request => syntheticUiStudyPage(request) }); sibling = (await fixture.practice()).sibling;
     stop = await startBrowserServer(fixture.withRuntime); browser = await chromium.launch({ headless: true });
   } catch { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); throw new Error("Workspace browser setup failed; private details withheld"); }
 }, 120_000);
@@ -167,14 +181,12 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await ui(tab.getByRole("button", { name: "Start reading", exact: true }), "First Tab after Refresh reaches Start").toBeFocused();
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
   await safe(() => tab.keyboard.press("Enter"));
-  const playback = tab.getByRole("region", { name: "Reading playback", exact: true });
-  await ui(playback, "Enter activates the inline first verse from the focused Start button").toContainText("Genesis 1:1");
-  await ui(playback.getByRole("status")).toHaveText("The recording couldn’t be loaded. Try again.");
-  await ui(playback.getByRole("button", { name: "Try again", exact: true })).toBeEnabled();
+  await ui(tab.locator(".study-verses"), "Held Start focuses the current flowing text").toBeFocused();
+  await heldReading(tab); await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
   await ui(tab.getByRole("dialog")).toHaveCount(0);
   await safe(() => tab.keyboard.press("Escape"));
   await ui(tab.getByRole("dialog")).toHaveCount(0);
-  await ui(tab.getByRole("button", { name: "Start reading", exact: true }), "Inline Start keeps its keyboard focus without requiring a dialog").toBeFocused();
+  await ui(tab.locator(".study-verses"), "Held Start keeps the flowing text focused without requiring a dialog").toBeFocused(); await heldReading(tab);
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await capture(tab, "workspace-child-confirmed-reading");
   await tab.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
