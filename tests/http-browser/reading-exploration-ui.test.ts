@@ -279,8 +279,8 @@ async function shortMetadata(tab: Page, offset = 0, expected = 100) {
   type Terminal = "pending" | "finished" | "failed" | "closing";
   type BrowserFailure = "none" | "unobserved" | "aborted" | "timed-out" | "connection-reset" | "connection-closed" | "invalid-response" | "length-mismatch" | "decoding-failed" | "failed" | "other";
   type Stage = "route" | "browser-request" | "browser-response" | "upstream" | "body" | "fulfill-start" | "fulfill-resolved" | "disposed" | "browser-finished" | "browser-failed" | "closing";
-  type Facts = { status: number; responses: number; references: number; ready: number; unavailable: number; invalid: number; failure: Failure; terminal: Terminal; fulfilled: boolean; ordinal: number; currentSequence: boolean; scopeClosing: boolean; pageClosed: boolean; elapsed: number; stages: { stage: Stage; ms: number }[]; stageOverflow: boolean; browserFailure: BrowserFailure; contentEncoding: "unobserved" | "identity" | "gzip" | "br" | "deflate" | "other"; lengthMatchesBytes: boolean | null; transferEncoding: "unobserved" | "absent" | "chunked" | "other" };
-  const initial = (responses: number): Facts => ({ status: 0, responses, references: 0, ready: 0, unavailable: 0, invalid: 0, failure: "none", terminal: "pending", fulfilled: false, ordinal: 0, currentSequence: false, scopeClosing: false, pageClosed: false, elapsed: 0, stages: [], stageOverflow: false, browserFailure: "none", contentEncoding: "unobserved", lengthMatchesBytes: null, transferEncoding: "unobserved" });
+  type Facts = { status: number; responses: number; references: number; ready: number; unavailable: number; invalid: number; failure: Failure; terminal: Terminal; fulfilled: boolean; ordinal: number; currentSequence: boolean; scopeClosing: boolean; pageClosed: boolean; elapsed: number; stages: { stage: Stage; ms: number }[]; stageOverflow: boolean; browserFailure: BrowserFailure; contentEncoding: "unobserved" | "identity" | "gzip" | "br" | "deflate" | "other"; lengthMatchesBytes: boolean | null; transferEncoding: "unobserved" | "absent" | "chunked" | "other"; forwardedTransferEncoding: "unobserved" | "absent" | "chunked" | "other"; forwardedLengthMatchesBytes: boolean | null; forwardedBodyDigestMatches: boolean | null };
+  const initial = (responses: number): Facts => ({ status: 0, responses, references: 0, ready: 0, unavailable: 0, invalid: 0, failure: "none", terminal: "pending", fulfilled: false, ordinal: 0, currentSequence: false, scopeClosing: false, pageClosed: false, elapsed: 0, stages: [], stageOverflow: false, browserFailure: "none", contentEncoding: "unobserved", lengthMatchesBytes: null, transferEncoding: "unobserved", forwardedTransferEncoding: "unobserved", forwardedLengthMatchesBytes: null, forwardedBodyDigestMatches: null });
   let facts = initial(0);
   const scope = contexts.find(scope => scope.context === tab.context()); if (!scope) throw new Error("Exploration metadata ownership missing");
   const requests = new Map<BrowserRequest, Facts>(), path = `/api/students/${fixture.student.id}/reading/explore/reference/short/page`;
@@ -335,8 +335,19 @@ async function shortMetadata(tab: Page, offset = 0, expected = 100) {
           for (const raw of references) { const parsed = parseReferenceShortResolution(raw); if (!parsed) next.invalid++; else if (parsed.source) next.ready++; else next.unavailable++; }
         }
         if (next.failure === "none" && (next.status !== 200 || next.references !== expected || next.ready !== expected || next.unavailable || next.invalid)) fail(next, "reference-shape");
-        // Preserve the original status, headers and body even on invalid data.
-        stage = "fulfill"; stamp(request, next, "fulfill-start"); await route.fulfill({ response, body: bytes }); settled = true; next.fulfilled = true; stamp(request, next, "fulfill-resolved"); publish(next);
+        // Preserve status, semantic headers and the exact buffered body, even on invalid data.
+        // The buffer is already dechunked: do not forward upstream chunk framing alongside Playwright's length.
+        stage = "fulfill";
+        const forwardedHeaders: Record<string, string> = { ...response.headers(), "content-length": String(bytes.length) }, digest = createHash("sha256").update(bytes).digest("hex");
+        delete forwardedHeaders["transfer-encoding"];
+        const forwardedTransfer = forwardedHeaders["transfer-encoding"];
+        next.forwardedTransferEncoding = forwardedTransfer === undefined ? "absent" : forwardedTransfer === "chunked" ? "chunked" : "other";
+        next.forwardedLengthMatchesBytes = forwardedHeaders["content-length"] === String(bytes.length);
+        if (next.forwardedTransferEncoding !== "absent" || !next.forwardedLengthMatchesBytes) throw Error("Buffered metadata framing refused");
+        stamp(request, next, "fulfill-start"); await route.fulfill({ status: next.status, headers: forwardedHeaders, body: bytes }); settled = true; next.fulfilled = true;
+        next.forwardedBodyDigestMatches = createHash("sha256").update(bytes).digest("hex") === digest;
+        if (!next.forwardedBodyDigestMatches) throw Error("Buffered metadata body changed");
+        stamp(request, next, "fulfill-resolved"); publish(next);
       } finally { try { await response.dispose(); stamp(request, next, "disposed"); } catch (error) { stage = "dispose"; throw error; } }
     } catch (error) {
       fail(next, stage);
