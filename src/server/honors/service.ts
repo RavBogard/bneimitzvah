@@ -19,7 +19,8 @@ export function createHonorsService<Q extends PgQueryResultHKT>(input: { access:
   }
   function compatible(row: data.HonorsRow, actor: StudentActor, digest: string) {
     return row.requestDigest === digest && row.actorUserId === actor.userId && row.actorMembershipId === actor.membershipId && row.roleGrantId === actor.roleGrantId
-      && row.mode === actor.mode && row.guardianId === (actor.mode === "parent" ? actor.relationshipId : null);
+      && row.mode === actor.mode && row.guardianId === (actor.mode === "parent" ? actor.relationshipId : null)
+      && row.studentIdentityId === (actor.mode === "student" ? actor.relationshipId : null);
   }
   async function committed<Q2 extends PgQueryResultHKT>(tx: AccessTransaction<Q2>, actor: StudentActor, row: data.HonorsRow, current: HonorsContextView, replayed: boolean, live: () => void): Promise<HonorsCommit> {
     const head = await data.latest(tx, actor); live(); if (!head) throw new Error("Honors unavailable");

@@ -54,8 +54,13 @@ export function createHonoreeService<Q extends PgQueryResultHKT>(input: { db: Ac
     const group = row.form.aliyot.find(a => a.startVerse === start), span = context.spans.find(a => a.startVerse === start);
     if (!group?.participants.length || !span) return unavailable(); return span;
   }
+  function managementRole(actor: StudentActor): "parent" | "admin" | "student" {
+    if (actor.mode !== "parent" && actor.mode !== "admin" && actor.mode !== "student") return unavailable();
+    return actor.mode;
+  }
   function compatible(row: data.Operation, actor: StudentActor, digest: string) {
-    return row.requestDigest === digest && row.actorUserId === actor.userId && row.actorMembershipId === actor.membershipId && row.roleGrantId === actor.roleGrantId && row.role === actor.mode && row.guardianId === actor.relationshipId;
+    return row.requestDigest === digest && row.actorUserId === actor.userId && row.actorMembershipId === actor.membershipId && row.roleGrantId === actor.roleGrantId && row.role === actor.mode && row.guardianId === (actor.mode === "parent" ? actor.relationshipId : null)
+      && row.studentIdentityId === (actor.mode === "student" ? actor.relationshipId : null);
   }
   function mutate(original: Request, supplied: Selection, suppliedIntent: unknown, receiptOnly: boolean, transport: true): Promise<ManagementTransport<MutationDto>>;
   function mutate(original: Request, supplied: Selection, suppliedIntent: unknown, receiptOnly: boolean, transport?: false): Promise<MutationDto>;
@@ -93,12 +98,12 @@ export function createHonoreeService<Q extends PgQueryResultHKT>(input: { db: Ac
         if (existing) await data.revoke(tx, existing, instant);
         await tx.insert(s.honoreeLink).values({ id: issued.id, tenantId: actor.tenantId, studentId: actor.studentId, startVerse: write.startVerse, readingEpoch: epochs.reading, groupEpoch: epochs.group,
           honorsVersion: head!.version, contextHash: current.hash, materialReleaseId: release.id, actorUserId: actor.userId, actorMembershipId: actor.membershipId, roleGrantId: actor.roleGrantId,
-          guardianId: actor.relationshipId, role: actor.mode as "parent" | "admin", tokenHash: issued.hash, keyId: issued.keyId, issuedAt: new Date(instant), expiresAt: new Date(hardExpiry(instant, student.ceremonyDate)) });
+          guardianId: actor.mode === "parent" ? actor.relationshipId : null, studentIdentityId: actor.mode === "student" ? actor.relationshipId : null, role: managementRole(actor), tokenHash: issued.hash, keyId: issued.keyId, issuedAt: new Date(instant), expiresAt: new Date(hardExpiry(instant, student.ceremonyDate)) });
       } else { await data.revoke(tx, existing!, instant); }
       live();
       await tx.insert(s.honoreeOperation).values({ tenantId: actor.tenantId, studentId: actor.studentId, mutationId: write.mutationId, requestDigest: digest, operation: write.operation, linkId: issued?.id ?? existing!.id,
-        actorUserId: actor.userId, actorMembershipId: actor.membershipId, roleGrantId: actor.roleGrantId, guardianId: actor.relationshipId, role: actor.mode as "parent" | "admin" });
-      await tx.insert(s.auditEvent).values({ tenantId: actor.tenantId, actorUserId: actor.userId, actorMembershipId: actor.membershipId, roleGrantId: actor.roleGrantId, guardianId: actor.relationshipId,
+        actorUserId: actor.userId, actorMembershipId: actor.membershipId, roleGrantId: actor.roleGrantId, guardianId: actor.mode === "parent" ? actor.relationshipId : null, studentIdentityId: actor.mode === "student" ? actor.relationshipId : null, role: managementRole(actor) });
+      await tx.insert(s.auditEvent).values({ tenantId: actor.tenantId, actorUserId: actor.userId, actorMembershipId: actor.membershipId, roleGrantId: actor.roleGrantId, guardianId: actor.mode === "parent" ? actor.relationshipId : null,
         mode: actor.mode, actingStudentId: actor.studentId, action: `honoree.${write.operation}`, targetType: "honoree_link", targetId: issued?.id ?? existing!.id, requestId: randomUUID() });
       const monotonicStart = performance.now(), finalNow = await data.now(tx); live();
       if (issued) {

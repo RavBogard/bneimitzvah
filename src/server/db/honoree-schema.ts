@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { bigint, check, foreignKey, integer, jsonb, pgTable, text, timestamp, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import { guardian, membership, role, roleGrant, student, tenant } from "./tenant-schema";
+import { guardian, membership, role, roleGrant, student, studentIdentity, tenant } from "./tenant-schema";
 import { honorsVersion } from "./honors-schema";
 import { serviceCatalog } from "./service-learning-schema";
 const tenantId = () => text("tenant_id").notNull().references(() => tenant.id);
@@ -26,7 +26,7 @@ export const honoreeMaterialRelease = pgTable("honoree_material_release", {
   check("honoree_material_shape", sql`${t.state} in ('active','withdrawn') and ${t.slot} in ('morning','havdalah') and ${t.projectionDigest} ~ '^[a-f0-9]{64}$' and ${t.catalogIdentity} ~ '^[a-f0-9]{64}$' and length(${t.materialVersion}) between 1 and 128 and octet_length(${t.approvalBasis}) between 1 and 4096 and isfinite(${t.createdAt})`),
   check("honoree_material_units", sql`${t.beforeId}='torah.blessing-before-the-torah-reading@'||case when ${t.slot}='morning' then 'bm-shacharit' else 'bm-maariv' end and ${t.afterId}='torah.blessing-following-the-torah-reading@'||case when ${t.slot}='morning' then 'bm-shacharit' else 'bm-maariv' end`),
   check("honoree_material_notices", sql`public.portal_honoree_notices_valid(${t.notices})`)]);
-const attribution = () => ({ actorUserId: text("actor_user_id").notNull(), actorMembershipId: uuid("actor_membership_id").notNull(), roleGrantId: uuid("role_grant_id").notNull(), guardianId: uuid("guardian_id"), role: role("role").$type<"parent" | "admin">().notNull() });
+const attribution = () => ({ actorUserId: text("actor_user_id").notNull(), actorMembershipId: uuid("actor_membership_id").notNull(), roleGrantId: uuid("role_grant_id").notNull(), guardianId: uuid("guardian_id"), studentIdentityId: uuid("student_identity_id"), role: role("role").$type<"parent" | "admin" | "student">().notNull() });
 export const honoreeLink = pgTable("honoree_link", {
   id: text("id").primaryKey(), tenantId: tenantId(), studentId: uuid("student_id").notNull(), startVerse: text("start_verse").notNull(),
   readingEpoch: bigint("reading_epoch", { mode: "bigint" }).notNull(), groupEpoch: bigint("group_epoch", { mode: "bigint" }).notNull(), honorsVersion: integer("honors_version").notNull(), contextHash: text("context_hash").notNull(),
@@ -42,7 +42,8 @@ export const honoreeLink = pgTable("honoree_link", {
   foreignKey({ name: "honoree_link_grant_fk", columns: [t.tenantId, t.roleGrantId, t.actorMembershipId], foreignColumns: [roleGrant.tenantId, roleGrant.id, roleGrant.membershipId] }),
   foreignKey({ name: "honoree_link_role_fk", columns: [t.tenantId, t.roleGrantId, t.role], foreignColumns: [roleGrant.tenantId, roleGrant.id, roleGrant.role] }),
   foreignKey({ name: "honoree_link_guardian_fk", columns: [t.tenantId, t.guardianId, t.studentId, t.roleGrantId], foreignColumns: [guardian.tenantId, guardian.id, guardian.studentId, guardian.parentGrantId] }),
-  check("honoree_link_shape", sql`${t.id} ~ '^[A-Za-z0-9_-]{22}$' and ${t.contextHash} ~ '^[a-f0-9]{64}$' and ${t.tokenHash} ~ '^[a-f0-9]{64}$' and ${t.keyId}='k1' and ${t.readingEpoch}>=0 and ${t.groupEpoch}>=0 and ${t.honorsVersion}>0 and ((${t.role}='parent' and ${t.guardianId} is not null) or (${t.role}='admin' and ${t.guardianId} is null))`),
+  foreignKey({ name: "honoree_link_student_identity_fk", columns: [t.tenantId, t.studentIdentityId, t.studentId, t.roleGrantId], foreignColumns: [studentIdentity.tenantId, studentIdentity.id, studentIdentity.studentId, studentIdentity.roleGrantId] }),
+  check("honoree_link_shape", sql`${t.id} ~ '^[A-Za-z0-9_-]{22}$' and ${t.contextHash} ~ '^[a-f0-9]{64}$' and ${t.tokenHash} ~ '^[a-f0-9]{64}$' and ${t.keyId}='k1' and ${t.readingEpoch}>=0 and ${t.groupEpoch}>=0 and ${t.honorsVersion}>0 and ((${t.role}='parent' and ${t.guardianId} is not null and ${t.studentIdentityId} is null) or (${t.role}='admin' and ${t.guardianId} is null and ${t.studentIdentityId} is null) or (${t.role}='student' and ${t.guardianId} is null and ${t.studentIdentityId} is not null))`),
   check("honoree_link_instants", sql`isfinite(${t.issuedAt}) and isfinite(${t.expiresAt}) and ${t.expiresAt}>${t.issuedAt} and ${t.expiresAt}<=${t.issuedAt}+interval '2160 hours' and (${t.revokedAt} is null or isfinite(${t.revokedAt}) and ${t.revokedAt}>=${t.issuedAt})`)]);
 export const honoreeOperation = pgTable("honoree_operation", {
   id: uuid("id").defaultRandom().primaryKey(), tenantId: tenantId(), studentId: uuid("student_id").notNull(), mutationId: uuid("mutation_id").notNull(), requestDigest: text("request_digest").notNull(),
@@ -53,4 +54,5 @@ export const honoreeOperation = pgTable("honoree_operation", {
   foreignKey({ name: "honoree_operation_grant_fk", columns: [t.tenantId, t.roleGrantId, t.actorMembershipId], foreignColumns: [roleGrant.tenantId, roleGrant.id, roleGrant.membershipId] }),
   foreignKey({ name: "honoree_operation_role_fk", columns: [t.tenantId, t.roleGrantId, t.role], foreignColumns: [roleGrant.tenantId, roleGrant.id, roleGrant.role] }),
   foreignKey({ name: "honoree_operation_guardian_fk", columns: [t.tenantId, t.guardianId, t.studentId, t.roleGrantId], foreignColumns: [guardian.tenantId, guardian.id, guardian.studentId, guardian.parentGrantId] }),
-  check("honoree_operation_shape", sql`${t.requestDigest} ~ '^[a-f0-9]{64}$' and ${t.operation} in ('issue','revoke','reissue') and ((${t.role}='parent' and ${t.guardianId} is not null) or (${t.role}='admin' and ${t.guardianId} is null)) and isfinite(${t.createdAt})`)]);
+  foreignKey({ name: "honoree_operation_student_identity_fk", columns: [t.tenantId, t.studentIdentityId, t.studentId, t.roleGrantId], foreignColumns: [studentIdentity.tenantId, studentIdentity.id, studentIdentity.studentId, studentIdentity.roleGrantId] }),
+  check("honoree_operation_shape", sql`${t.requestDigest} ~ '^[a-f0-9]{64}$' and ${t.operation} in ('issue','revoke','reissue') and ((${t.role}='parent' and ${t.guardianId} is not null and ${t.studentIdentityId} is null) or (${t.role}='admin' and ${t.guardianId} is null and ${t.studentIdentityId} is null) or (${t.role}='student' and ${t.guardianId} is null and ${t.studentIdentityId} is not null)) and isfinite(${t.createdAt})`)]);

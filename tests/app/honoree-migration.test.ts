@@ -28,11 +28,13 @@ test("0023 backfills current committed nonempty groups, preserves existing data/
       await db.insert(s.guardian).values(await source.db.select().from(s.guardian));
       await db.insert(s.assignment).values(await source.db.select().from(s.assignment));
       await db.insert(s.assignmentVerse).values(await source.db.select().from(s.assignmentVerse));
-      await db.insert(s.honorsVersion).values(await source.db.select().from(s.honorsVersion));
+      // The baseline is0022: do not use a newer Drizzle insert projection that
+      // names the0024 identity column before that migration has run.
+      for (const row of await source.db.select().from(s.honorsVersion)) await client.query("insert into honors_version(id,tenant_id,student_id,assignment_id,version,base_version,previous_version,form,reviewed_context,context_hash,actor_user_id,actor_membership_id,role_grant_id,guardian_id,role,mode,mutation_id,request_digest,created_at) values($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)", [row.id,row.tenantId,row.studentId,row.assignmentId,row.version,row.baseVersion,row.previousVersion,JSON.stringify(row.form),JSON.stringify(row.reviewedContext),row.contextHash,row.actorUserId,row.actorMembershipId,row.roleGrantId,row.guardianId,row.role,row.mode,row.mutationId,row.requestDigest,row.createdAt]);
     });
-    const beforeStudents=await db.select().from(s.student), beforeHonors=await db.select().from(s.honorsVersion);
+    const beforeStudents=await db.select().from(s.student), beforeHonors=(await client.query("select to_jsonb(h)-'student_identity_id' row from honors_version h order by version")).rows;
     await migrate(db,{migrationsFolder:folder}); await migrate(db,{migrationsFolder:folder});
-    expect(await db.select().from(s.student)).toEqual(beforeStudents); expect(await db.select().from(s.honorsVersion)).toEqual(beforeHonors);
+    expect(await db.select().from(s.student)).toEqual(beforeStudents); expect((await client.query("select to_jsonb(h)-'student_identity_id' row from honors_version h order by version")).rows).toEqual(beforeHonors);
     expect(await db.select().from(s.honoreeReadingEpoch)).toHaveLength(beforeStudents.length);
     expect(await db.select().from(s.honoreeGroupEpoch)).toEqual(["Genesis 1:3"].map(startVerse=>({tenantId:"crc",studentId:source.selected.studentId,startVerse,epoch:0n})));
     expect(await db.select().from(s.honoreeMaterialRelease)).toHaveLength(0); expect(await db.select().from(s.honoreeLink)).toHaveLength(0);

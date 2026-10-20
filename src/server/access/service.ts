@@ -63,7 +63,7 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
       // unavailable target. Foreign/missing/unrelated IDs share the same denial.
       if (selection.capability === "set-reading" && actor.mode !== "admin" && actor.mode !== "tutor") throw new AccessDenied(403);
       if (selection.capability === "honors-read" || selection.capability === "honors-write" || selection.capability === "honoree-link-write") {
-        if (actor.mode !== "parent" && actor.mode !== "admin") throw new AccessDenied(403);
+        if (actor.mode !== "parent" && actor.mode !== "admin" && !(actor.mode === "student" && student.studentKind === "adult")) throw new AccessDenied(403);
         if (selection.capability !== "honors-read") requireCookieMutation(request, actor.origin);
       }
       if (selection.capability === "set-service-plan") {

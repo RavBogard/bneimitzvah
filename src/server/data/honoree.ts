@@ -23,7 +23,10 @@ export async function lockIssuer<Q extends PgQueryResultHKT>(tx: AccessTransacti
   const student = await lockStudent(tx, row.tenantId, row.studentId, "read");
   if (!student || student.disabledAt) return null;
   const relationship = await lockStudentRelationship(tx, row.tenantId, row.studentId, row.roleGrantId, row.role, "read");
-  if (!relationship || relationship.id !== row.guardianId) return null;
+  if (!relationship) return null;
+  if (row.role === "student") {
+    if (student.studentKind !== "adult" || !row.studentIdentityId || relationship.id !== row.studentIdentityId || row.guardianId !== null) return null;
+  } else if (row.studentIdentityId !== null || relationship.id !== row.guardianId) return null;
   // Bearer authority is independent of any login session. These placeholder
   // actor fields are internal context-capture inputs, never session authority.
   const actor: StudentActor = { tenantId: row.tenantId, origin, userId: row.actorUserId, membershipId: membership.id, roleGrantId: grant.id, roleGrantRevision: grant.revision,

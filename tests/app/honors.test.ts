@@ -38,7 +38,7 @@ test("unassigned/null-cut drafts retain non-aliyah fields; [] is one actual aliy
   expect(await f.service.replace(f.req(), f.selected, await f.intent(bad, 1))).toMatchObject({ ok: true, committedVersion: 2 });
 });
 
-test("live base guardian/admin only; practice-disabled retains form; authority and attributed UUID changes cannot replay", async () => {
+test("live guardian/admin and own adult; practice-disabled retains form; authority and attributed UUID changes cannot replay", async () => {
   const f = await fixture(), write = await f.intent();
   await f.owner(async () => { await f.db.update(s.guardian).set({ practiceEnabled: false }).where(eq(s.guardian.id, f.guardians[0].id)); });
   expect(await f.service.replace(f.req(), f.selected, write)).toMatchObject({ ok: true });
@@ -46,7 +46,7 @@ test("live base guardian/admin only; practice-disabled retains form; authority a
   const delegated = f.req(); delegated.headers.set("X-Practice-Context", "synthetic"); await expect(f.service.read(delegated, f.selected)).rejects.toMatchObject({ status: 403 });
   await expect(f.service.read(f.req("admin"), { ...f.selected, studentId: f.students[3].id, mode: "admin" })).rejects.toMatchObject({ status: 404 });
   await f.owner(async () => { await f.db.update(s.student).set({ studentKind: "adult", ownEmail: "synthetic-adult@example.test" }).where(eq(s.student.id, f.selected.studentId)); });
-  await expect(f.service.read(f.req("learner"), { ...f.selected, mode: "student" })).rejects.toMatchObject({ status: 403 });
+  expect((await f.service.read(f.req("learner"), { ...f.selected, mode: "student" })).currentVersion).toBe(1);
   await f.owner(async () => { await f.db.update(s.guardian).set({ revokedAt: new Date() }).where(eq(s.guardian.id, f.guardians[0].id)); });
   await expect(f.service.receipt(f.req(), f.selected, write)).rejects.toMatchObject({ status: 404 });
   await f.owner(async () => { await f.db.insert(s.guardian).values({ tenantId: "crc", studentId: f.selected.studentId, parentGrantId: f.parentGrant.id, linkProvenance: "synthetic replacement" }); });

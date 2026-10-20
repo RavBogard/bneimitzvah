@@ -18,11 +18,11 @@ export function view(row: HonorsRow): HonorsVersion {
   return Object.freeze({ version: row.version, form: form(row.form), reviewedContext: storedView(row.reviewedContext, row.contextHash), createdAt: row.createdAt.toISOString() });
 }
 export async function append<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: StudentActor, write: HonorsIntent, requestDigest: string, context: HonorsContextView, live: () => void) {
-  if (actor.mode !== "parent" && actor.mode !== "admin") throw new Error("Honors unavailable");
+  if (actor.mode !== "parent" && actor.mode !== "admin" && actor.mode !== "student") throw new Error("Honors unavailable");
   const [row] = await tx.insert(s.honorsVersion).values({ tenantId: actor.tenantId, studentId: actor.studentId, assignmentId: context.snapshot.torah?.id ?? null,
     version: write.expectedVersion + 1, baseVersion: write.expectedVersion, previousVersion: write.expectedVersion || null,
     form: write.form, reviewedContext: context.snapshot, contextHash: context.hash, actorUserId: actor.userId, actorMembershipId: actor.membershipId,
-    roleGrantId: actor.roleGrantId, guardianId: actor.mode === "parent" ? actor.relationshipId : null, role: actor.mode, mode: actor.mode,
+    roleGrantId: actor.roleGrantId, guardianId: actor.mode === "parent" ? actor.relationshipId : null, studentIdentityId: actor.mode === "student" ? actor.relationshipId : null, role: actor.mode, mode: actor.mode,
     mutationId: write.mutationId, requestDigest }).onConflictDoNothing().returning();
   live();
   if (row) await tx.insert(s.auditEvent).values({ tenantId: actor.tenantId, actorUserId: actor.userId, actorMembershipId: actor.membershipId,

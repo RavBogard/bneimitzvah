@@ -46,7 +46,7 @@ export async function settleRace(operations:Promise<unknown>[]) {
   } finally { if(timer)clearTimeout(timer); }
 }
 
-export async function postgresAccessFixture() {
+export async function postgresAccessFixture(options: { migrationsFolder?: string } = {}) {
   const config=disposableConfig();
   const suffix=randomBytes(8).toString("hex");
   const database=`portal_access_${suffix}`;
@@ -81,7 +81,7 @@ export async function postgresAccessFixture() {
     await query(anchor,`CREATE DATABASE "${database}"`);createdDatabase=true;
     await owner.connect();
     const ownerDb=drizzle(owner,{schema:s,logger:false});
-    await migrate(ownerDb,{migrationsFolder:"src/server/db/migrations"});
+    await migrate(ownerDb,{migrationsFolder:options.migrationsFolder ?? "src/server/db/migrations"});
     await query(owner,`CREATE ROLE "${login}" LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);createdRole=true;
     await query(owner,`GRANT portal_runtime TO "${login}"`);
     const aDb=drizzle(aPool,{schema:s,logger:false});

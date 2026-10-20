@@ -11,6 +11,7 @@ import { createHonorsService } from "../../src/server/honors/service";
 import { createHonoreeService } from "../../src/server/honoree/service";
 import { material, unitPair } from "../../src/server/honoree/recipient-material";
 import { digest } from "../../src/server/honoree/validation";
+import { AccessDenied } from "../../src/server/access/errors";
 import type { HonorsForm } from "../../src/lib/honors/types";
 const { Client } = createRequire(import.meta.url)("pg");
 const fixtures: { close: () => Promise<void> }[] = [];
@@ -98,4 +99,50 @@ for (const mutation of ["verse", "grant", "material"] as const) test(`native rea
     await f.lockEdge(f.ownerPid, f.pidA); release.resolve(); expect(await reading).toMatchObject({ ok: true }); await updating;
     await expect(f.bLinks.read(f.guest(), issued.token)).rejects.toMatchObject({ status: 404 });
   } finally { release.resolve(); await settleRace([reading, ...(updating ? [updating] : [])]); restore(); }
+});
+
+// Native adult-authority races: source only until the separately selected PG lane.
+async function adultFixture() {
+  const f = await fixture(), adult = await f.signIn("pg-adult-self");
+  const [member] = await f.ownerDb.insert(s.membership).values({ tenantId: "crc", userId: adult.id }).returning();
+  const [grant] = await f.ownerDb.insert(s.roleGrant).values({ tenantId: "crc", membershipId: member.id, role: "student" }).returning();
+  const [identity] = await f.ownerDb.insert(s.studentIdentity).values({ tenantId: "crc", studentId: f.student.id, roleGrantId: grant.id }).returning();
+  await f.ownerDb.update(s.student).set({ studentKind: "adult", ownEmail: "synthetic-native-adult@example.test" }).where(eq(s.student.id, f.student.id));
+  const selected = { mode: "student" as const, studentId: f.student.id };
+  const request = () => ({ ...f.request(), headers: new Headers({ cookie: adult.cookie, origin: "http://localhost:3000" }) });
+  return { ...f, adult, adultGrant: grant, adultIdentity: identity, adultSelection: selected, adultRequest: request };
+}
+
+test("native adult issue holding student excludes kind transition then permanent epoch denies former credential", async () => {
+  const f = await adultFixture(), entered = deferred(), release = deferred();
+  const restore = await f.intercept("a", text => text.includes('from "student"') && text.endsWith("for update"), async go => { const value = await go(); entered.resolve(); await release.promise; return value; });
+  const issuing = f.aLinks.mutate(f.adultRequest(), f.adultSelection, f.write); let changing: Promise<unknown> | undefined;
+  try {
+    await waitForEntry(entered.promise, issuing);
+    changing = f.owner.query("update student set student_kind='child' where id=$1", [f.student.id]);
+    await f.lockEdge(f.ownerPid, f.pidA); release.resolve();
+    const result = await issuing; if (!result.ok || !("url" in result) || !result.url) throw Error("Synthetic native adult issue refused");
+    await changing;
+    const token = new URLSearchParams(new URL(result.url).hash.slice(1)).get("token")!;
+    await expect(f.bLinks.read(f.guest(), token)).rejects.toMatchObject({ status: 404 });
+    await expect(f.bLinks.receipt(f.adultRequest(), f.adultSelection, f.write)).rejects.toMatchObject({ status: 403 });
+    await f.owner.query("update student set student_kind='adult' where id=$1", [f.student.id]);
+    await expect(f.bLinks.read(f.guest(), token)).rejects.toMatchObject({ status: 404 });
+    const rows = await f.ownerDb.select().from(s.honoreeLink); expect(rows[0].studentIdentityId).toBe(f.adultIdentity.id); expect(rows[0].guardianId).toBeNull();
+  } finally { release.resolve(); await settleRace([issuing, ...(changing ? [changing] : [])]); restore(); }
+});
+
+test.each(["kind", "grant", "identity"] as const)("native adult %s revocation wins before locked guard and blocks all new link work", async change => {
+  const f = await adultFixture(); await f.owner.query("begin"); let transaction = true, pending: Promise<unknown> | undefined;
+  try {
+    if (change === "kind") await f.owner.query("update student set student_kind='child' where id=$1", [f.student.id]);
+    if (change === "grant") await f.owner.query("update role_grant set revoked_at=now() where id=$1", [f.adultGrant.id]);
+    if (change === "identity") await f.owner.query("update student_identity set revoked_at=now() where id=$1", [f.adultIdentity.id]);
+    const issuing = f.aLinks.mutate(f.adultRequest(), f.adultSelection, f.write);
+    const observed = issuing.then(() => false, error => error instanceof AccessDenied && error.status === (change === "identity" ? 404 : 403)); pending = observed;
+    await f.lockEdge(f.pidA, f.ownerPid); await f.owner.query("commit"); transaction = false;
+    expect(await observed).toBe(true);
+    expect((await f.ownerDb.select().from(s.honoreeOperation)).length).toBe(0);
+    expect((await f.ownerDb.select().from(s.honoreeLink)).length).toBe(0);
+  } finally { if (transaction) await f.owner.query("rollback"); if (pending) await settleRace([pending]); }
 });
