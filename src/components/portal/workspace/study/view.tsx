@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import { type Assigned } from "../api";
 import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
-import { studyBinding, studyPlan, type StudyKind, type StudyPage } from "./api";
+import { studyBinding, studyPlan, type StudyKind, type StudyPage, type StudyVerse } from "./api";
 import { StudyCredits } from "./credits";
 import { Apparatus, FlowingStudyText } from "./annotations";
 import { ReadingPlayer, playMainVerseForWord, type ReadingPlayerHandle } from "./reading-player";
@@ -18,13 +18,15 @@ import { watchReadingAudioDeadline } from "./reading-player-intent";
 import type { ShortReferenceOwner } from "./short-reference-bridge";
 
 export type StudyReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
-export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderGuide, renderWork, renderActiveWork, onPage, learner = false, liftHandle, practiceHandle, textStartHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, active = true, audio, stopAudio }: {
+export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderGuide, renderWork, renderActiveWork, onPage, learner = false, liftHandle, practiceHandle, textStartHandle, verseLookupHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, active = true, audio, stopAudio }: {
   baseline: Assigned | null; register(value: StudyReload): () => void; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; onKindChange(kind: StudyKind): void;
   guardDeparture?(): Promise<boolean>; serviceHref?: string; renderGuide?(kind: StudyKind, verseRef: string): ReactNode; renderWork?(kind: StudyKind, verseRef: string): ReactNode; renderActiveWork?(): ReactNode; onPage?(kind: StudyKind, offset: number, signal: AbortSignal): Promise<void>;
   /** Students and child practice see the reading without status or provenance prose. */
   learner?: boolean; liftHandle?: MutableRefObject<((index: number) => void) | null>;
   practiceHandle?: MutableRefObject<((index: number) => void) | null>;
   textStartHandle?: MutableRefObject<(() => void) | null>;
+  /** Looks up a verse on the live page, for the Study walk; null while concealed or loading. */
+  verseLookupHandle?: MutableRefObject<((ref: string) => StudyVerse | null) | null>;
   /** The Song session reading: English follows the remembered toolbar preference. */
   songSession?: boolean;
   /** Called once a text page is on screen, so verse marks can load for it. */
@@ -147,6 +149,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const open = (page: StudyPage, index: number) => { stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.suspend(); modalRequest.current?.abort();
     const old = modalScope.current, next = { page, index, opening: old?.page === page ? old.opening : ++modalSequence.current, navigation: (old?.navigation ?? 0) + 1 };
     modalScope.current = next; setLift(next); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
+  if (verseLookupHandle) verseLookupHandle.current = livePage && !concealed ? ref => livePage.verses.find(row => row.ref === ref) ?? null : null;
   // Explicit held Start reports the first verse of this live page; focus/reload do not.
   if (textStartHandle) {
     const scope = openerScope.current, turn = generation.current, kind = state.kind;

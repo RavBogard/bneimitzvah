@@ -60,7 +60,7 @@ export function GuideCard({ store, kind, firstName, learner, onStudy }: { store:
       <ThemeRows store={store} kind={kind} themes={view.additions.themes} tickable={view.tickable} />
       <p className={styles.label}>{guideLabelText(view.additions.label)}</p>
     </div>}
-    {onStudy && themes.length > 0 && <div className={styles.actions}><button type="button" className={styles.study} onClick={onStudy}>Study the themes</button></div>}
+    {onStudy && themes.length > 0 && <div className={styles.actions}><button type="button" className={styles.study} data-guide-study onClick={onStudy}>Study the themes</button></div>}
   </section>;
 }
 
@@ -76,7 +76,7 @@ export function GuideVerseNotes({ store, kind, verseRef }: { store: GuideStore; 
   const view = useGuide(store, kind), notes = notesFor(view, verseRef);
   if (!notes.length) return null;
   const labels = [...new Set(notes.map(n => guideLabelText(n.label)))];
-  return <section className={styles.notes} aria-label={`Study notes for ${verseRef}`} data-guide-notes={verseRef}>
+  return <section className={styles.notes} aria-label={`Study notes for ${verseRef}`} data-guide-notes={verseRef} tabIndex={-1}>
     {notes.map(({ theme, note }, i) => <article key={`${theme.id}-${i}`} className={styles.note}>
       <p className={styles.noteTheme} dir="auto">{theme.title}</p>
       <MarkdownLite text={note.body} className={styles.prose} heClass={styles.he} />

@@ -100,12 +100,38 @@ it("tick toggles and persists across reload", async () => {
   expect(rows.map(r => [r.themeId, r.state, r.version])).toEqual([["light", "read", 1]]);
 });
 
+it("walk opens on the first theme, Next advances through its verses then the next theme, and close returns to the last verse", async () => {
+  const tab = await page("student");
+  await card(tab).getByRole("button", { name: "Study the themes", exact: true }).click();
+  const walk = tab.locator("dialog.guide-walk"), heading = walk.locator(".lift-ref");
+  await ui(walk).toBeVisible(); await ui(heading).toHaveText("Light first");
+  await walk.getByRole("button", { name: "Next", exact: true }).click();
+  await ui(heading).toHaveText("Genesis 1:3");
+  await ui(walk.locator(".lift-hebrew")).toBeVisible();
+  await ui(walk.getByText("Invented note on the first spoken word.", { exact: true })).toBeVisible();
+  await walk.getByRole("button", { name: "Next", exact: true }).click();
+  await ui(heading).toHaveText("How beginnings work");
+  await walk.getByRole("button", { name: "Next", exact: true }).click();
+  await ui(heading).toHaveText("Genesis 1:1");
+  await ui(walk.getByRole("button", { name: "Next", exact: true })).toHaveCount(0);
+  await walk.getByRole("button", { name: "Done", exact: true }).click();
+  await ui(walk).toHaveCount(0);
+  await ui(tab.locator('[data-guide-notes="Genesis 1:1"]')).toBeFocused();
+});
+
 it("parent sees the card and the tick state but no tick button", async () => {
   const tab = await page("parent");
   await ui(card(tab)).toBeVisible();
   await ui(card(tab).getByRole("button", { name: /I read this|Read:/ })).toHaveCount(0);
   await ui(card(tab).locator("li").filter({ hasText: "Light first" })).toContainText("Read");
   await ui(card(tab).locator("li").filter({ hasText: "How beginnings work" })).toContainText("Not read yet");
+});
+
+it("walk is absent when the guide has no themes", async () => {
+  await seed(guide({ overview: "An invented overview with no themes yet.", themes: [] }));
+  const tab = await page("student");
+  await ui(card(tab).getByText("An invented overview with no themes yet.", { exact: true })).toBeVisible();
+  await ui(card(tab).getByRole("button", { name: "Study the themes", exact: true })).toHaveCount(0);
 });
 
 it("reviewed guide shows Reviewed by Rabbi Daniel when the tenant name is set, and fits a phone", async () => {
