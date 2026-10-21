@@ -118,7 +118,7 @@ The proposal shows the whole parashah with Hebcal's aliyah boundaries as orienta
 Keep the built page and the "Annotated score" direction. Add:
 
 - **Haftarah as an equal**: the Torah/haftarah switch becomes two tabs with the same tools; the haftarah trope table is already in the engine.
-- **Tikkun view**: a toggle that shows the Hebrew without vowels or trope in a Torah-script face. The font choice is a licence question for Daniel (candidates: the Culmus "Stam Ashkenaz CLM" / "Stam Sefarad CLM" faces, GPL with font exception); its licence text goes with the app's existing font licence texts, not the engine's PROVENANCE. Side-by-side with the vowelled text on wide screens; a toggle on phones.
+- **Tikkun view**: a toggle that shows the Hebrew without vowels or trope in a Torah-script face. The font choice was a licence question for Daniel (candidates: the Culmus "Stam Ashkenaz CLM" / "Stam Sefarad CLM" faces, GPL with font exception). **Settled 2026-10-21:** Daniel chose Stam Ashkenaz CLM. Its licence text, source and provenance sit with the app's existing font licence texts (`public/fonts/`), not the engine's PROVENANCE. Side-by-side with the vowelled text on wide screens; a toggle on phones.
 - **Printable practice sheet**: large print, verse per line, vowels and trope, optional tikkun column, aliyah markers, the student's name and date, "Beit Mitzvah" header. This is the "booklet of their portion" families get in 5th grade. Print CSS in 1.0; no server-side PDF renderer (a headless browser on Vercel is a cost and an approval).
 - **Syllable help**: tap a word to see it broken into syllables with the stressed syllable marked, in Hebrew letters only, using the vendored havarotjs. Replaces transliteration everywhere for students. Remove the paused transliteration sources from the plan.
 - **Reading aids** becomes a segmented control (Plain | Color phrases | Tikkun) rather than a fold-out checkbox.
@@ -240,7 +240,7 @@ Shape, not schedule. Sizes are relative effort for the implementation team.
 ## 8. Open items that wait on Daniel
 
 - Does centralreform.live expose audio per song, or charts only? (Decides the prayer-audio and honoree-audio path.)
-- The tikkun font licence (a licence question under MISSION's authority rules).
+- ~~The tikkun font licence~~ Settled 2026-10-21: Daniel chose Culmus Stam Ashkenaz CLM (GPL v2 with font exception).
 - May honoree pages show transliteration, given ruling 38 applies to students?
 - The Beit Mitzvah siddur volume in shirei-tfilah: is Marian's "Siddur for All" (morning and afternoon drafts, June–July 2026) the source text for it?
 - The Blob store spend notice, when Phase 4 starts.
