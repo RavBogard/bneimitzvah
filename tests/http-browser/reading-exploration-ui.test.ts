@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { privateRouteFetch } from "./audio-observation";
+import { startFirefoxAudioOutput, type AudioOutput } from "./firefox-audio-output";
 import { expect as ui } from "@playwright/test";
 import { firefox, type Browser, type BrowserContext, type Page, type Request as BrowserRequest } from "playwright";
 import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
@@ -52,12 +53,14 @@ function sourceRoute(scope: SourceRouteScope, action: "fulfill" | "abort", perfo
   return task;
 }
 let audioDirectory: string | undefined;
+let audioOutput: AudioOutput | undefined;
 const shortBodies = new Map<string, Buffer>();
 let signedIn: Awaited<ReturnType<BrowserContext["cookies"]>> | undefined;
 let setListeningRelease: (value: boolean) => void;
 const portion = (tab: Page) => tab.getByRole("region", { name: "Proposed Torah portion", exact: true });
 async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Exploration UI browser operation failed; private details withheld"); } }
 beforeAll(async () => {
+  let setupStage: "synthetic-source" | "catalog" | "fixture" | "server" | "audio-output" | "browser" = "synthetic-source";
   try {
     assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard();
     audioDirectory = await realpath(await mkdtemp(join(tmpdir(), "exploration-short-audio-")));
@@ -70,16 +73,23 @@ beforeAll(async () => {
         verses: refs.map(ref => ({ schema: "reference-verse/v1", ref, table: kind, playback: { status: "ready", asset: "ra_" + String(i + 3).repeat(32), clip: { start: 1, end: 5 } },
           words: { status: "ready", readingTextSha256: createHash("sha256").update(text.readingText.normalize("NFC")).digest("hex"), starts: [1.1, 3] }, attribution: REFERENCE_ATTRIBUTION })) };
     });
+    setupStage = "catalog";
     const catalog = parseReferenceCatalog({ schema: "reference-catalog/v1", source: "PockettorahAudioFiles", assets }); if (!catalog) throw Error("Synthetic catalog refused");
     const shorts = await syntheticShortReferences(catalog, [torah, haft].map((body, i) => ({ asset: assets[i].id, bytes: body.bytes, physicalFrames: body.physicalFrames })));
     for (const row of shorts.sources) shortBodies.set(row.path, row.bytes);
+    setupStage = "fixture";
     fixture = await browserFixture({ referenceCatalogLoad: async () => catalog, referenceShortManifestLoad: async () => shorts.manifest, referenceStudentRelease: true, studyLoad: async request => { if (hold && request.offset === 100) { hold.entered.resolve(undefined); await hold.release.promise; } return syntheticUiStudyPage(request); } });
     setListeningRelease = studentRelease => { Object.assign(fixture.runtime, { shortReferenceAudio: createShortReferenceAudioService({ access: fixture.runtime.access, practice: fixture.runtime.practice, loadText: async request => syntheticUiStudyPage(request), loadCatalog: async () => catalog, loadManifest: async () => shorts.manifest, studentRelease }) }); };
     // Chromium issue 568852319 misreports fully consumed no-store streams as
     // cancelled. Keep every terminal assertion using the pinned Firefox build.
-    stop = await startBrowserServer(fixture.withRuntime); browserEnv = await isolatedEnv(); browser = await firefox.launch({ headless: true, env: browserEnv.env });
+    setupStage = "server";
+    stop = await startBrowserServer(fixture.withRuntime); browserEnv = await isolatedEnv();
+    setupStage = "audio-output";
+    audioOutput = await startFirefoxAudioOutput(process.env.FIREFOX_AUDIO_TEST_TOOLCHAIN);
+    setupStage = "browser";
+    browser = await firefox.launch({ headless: true, env: { ...browserEnv.env, ...audioOutput.environment } });
     console.info("exploration-contract-browser", { engine: "firefox", version: browser.version() });
-  } catch { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await browserEnv?.cleanup(); if (audioDirectory) await rm(audioDirectory, { recursive: true, force: true }); throw new Error("Exploration UI setup failed; private details withheld"); }
+  } catch { await browser?.close().catch(() => undefined); let outputCleanupFailed = false; await audioOutput?.close().catch(() => { outputCleanupFailed = true; }); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await browserEnv?.cleanup(); if (audioDirectory) await rm(audioDirectory, { recursive: true, force: true }); throw new Error("Exploration UI setup failed (" + setupStage + "); " + (outputCleanupFailed ? "owned audio cleanup failed; " : "") + "private details withheld"); }
 }, 120000);
 beforeEach(async () => {
   hold = undefined;
@@ -99,7 +109,7 @@ afterEach(async () => { hold?.release.resolve(undefined); hold = undefined;
 });
 afterAll(async () => {
   const failures: string[] = [];
-  for (const [label, action] of [["browser", () => browser?.close()], ["server", () => stop?.()], ["fixture", () => fixture?.close()], ["home", () => browserEnv?.cleanup()]] as const) {
+  for (const [label, action] of [["browser", () => browser?.close()], ["audio output", () => audioOutput?.close()], ["server", () => stop?.()], ["fixture", () => fixture?.close()], ["home", () => browserEnv?.cleanup()]] as const) {
     try { await action(); } catch { failures.push(label); }
   }
   restore?.();
