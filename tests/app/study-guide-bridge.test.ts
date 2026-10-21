@@ -71,3 +71,15 @@ test("refuses when membership is not admin", async () => {
   await expect(f.run({ apply: true, membershipId: f.learnerMember.id })).rejects.toMatchObject({ status: 403 });
   expect(await f.counts()).toEqual({ guides: 0, audits: 0 });
 });
+
+test("a Cowork draft may name sources by Sefaria ref alone; an unlisted ref refuses the whole guide", async () => {
+  const f = await fixture();
+  const byRef = (refs: string[]) => guide({ themes: [theme("cloud", { notes: [note("Exodus 40:34", { sources: refs.map(ref => ({ ref })) as never })] })] });
+  expect(await f.run({ body: byRef(["Invented Commentary on Exodus 40:34:1"]) })).toMatchObject({ mode: "dry-run", outcome: "valid", sources: 1, readableSources: 1 });
+  const refused = await f.run({ apply: true, body: byRef(["Invented Commentary on Exodus 40:34:1", "Made-up Commentary 1:1"]) });
+  expect(refused).toMatchObject({ outcome: "refused", code: "invalid", problems: ["Made-up Commentary 1:1 is not a Sefaria source for Exodus 40:34"] });
+  expect(await f.counts()).toEqual({ guides: 0, audits: 0 });
+  expect(await f.run({ apply: true, body: byRef(["Invented Essays, Clouds"]) })).toMatchObject({ outcome: "committed", version: 1, sources: 1, readableSources: 0 });
+  const [row] = await f.owner(async () => f.db.select().from(s.studyGuide));
+  expect(row.body.themes[0].notes[0].sources[0]).toMatchObject({ id: "bbbb2222", ref: "Invented Essays, Clouds" });
+});

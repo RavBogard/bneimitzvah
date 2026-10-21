@@ -8,6 +8,8 @@
 
 **How a guide gets written today:** the operator bridge (`scripts/apply-study-guide.mjs`, HANDOFF §5a), dry run first, as origin claude, unreviewed. The portal MCP (plan Tasks 7–9) is the next milestone; its activation gates remain open.
 
+**Daniel, 2026-10-21 evening:** (1) every page carries his standard credit, "A project of Rabbi Daniel Bogard" linking to danielbogard.com, the wording his CRC Music app already uses; (2) a draft he wrote himself is labelled "Written by {rabbi} · draft", not as Claude's; (3) the study voice is being written in Cowork from the handoff doc https://claude.ai/artifact/PsLbN1Rm2yhLWQmeEtmWF4 (research, then 25 questions); (4) the first guide is Bamidbar, for the first student on that parashah (no student detail belongs in this repo). The bridge now accepts sources named by Sefaria ref alone, as that doc specifies.
+
 **Waiting on Daniel:** see "Open for Daniel (study slice)" below — rabbi display name, label wording for rabbi-written drafts, the study voice, and the first parashah.
 
 - GATE: applied production migration 0027 with a guarded scratch operator (owner connection obtained through the signed-in Neon CLI, never printed; verified TLS; ledger, catalog and grants checked before and after) — proceeded because the migration was unchanged since CI-green 967c433 and two adversarial passes, is additive, and migration-before-app is the house order.
