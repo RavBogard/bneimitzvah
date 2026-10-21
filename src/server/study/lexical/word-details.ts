@@ -7,6 +7,7 @@ import { wordAidRef } from "../../../lib/hebrew/word-aids";
 import { alignStepVerse } from "./step";
 import type { Morphology } from "./morphology";
 import type { StepSourceLoader } from "./source-loader";
+import { findWordElsewhere, type WordReading } from "./word-elsewhere";
 import { StudyUnavailable, type StudyVerse } from "../types";
 
 const codes: Readonly<Record<string, string>> = Object.freeze({ Genesis: "Gen", Exodus: "Exo", Leviticus: "Lev", Numbers: "Num", Deuteronomy: "Deu", Joshua: "Jos", Judges: "Jdg",
@@ -23,7 +24,7 @@ function occurrenceGrammar(value: Morphology): WordGrammar {
 }
 
 /** Exactly one selected occurrence; this public work conveys no permission. */
-export async function createSelectedWordDetails(verse: StudyVerse, suppliedIndex: number, source: StepSourceLoader, signal?: AbortSignal): Promise<StudyWordDetails | null> {
+export async function createSelectedWordDetails(verse: StudyVerse, suppliedIndex: number, source: StepSourceLoader, signal?: AbortSignal, reading?: WordReading): Promise<StudyWordDetails | null> {
   const wordIndex = suppliedIndex;
   if (!Number.isSafeInteger(wordIndex) || wordIndex < 0 || wordIndex >= WORD_DETAILS_LIMITS.words) throw new StudyUnavailable("invalid-request");
   const connected = () => { if (signal?.aborted) throw new StudyUnavailable("upstream"); }; connected();
@@ -59,7 +60,11 @@ export async function createSelectedWordDetails(verse: StudyVerse, suppliedIndex
     else dictionary.push(Object.freeze({ lemma: lemma.id, status: "ready", headword: entry.hebrew, dictionaryGloss: entry.dictionaryGloss }));
   }
   connected();
-  const result = parseStudyWordDetails({ ...identity, status: "ready", occurrence: { gloss: wordDetailsPlainText(selected.sourceGloss, WORD_DETAILS_LIMITS.glossBytes) && selected.sourceGloss ? selected.sourceGloss : null,
-    grammar: occurrenceGrammar(selected.morphology) }, dictionary }, binding);
+  // Elsewhere is optional enrichment: an unusable result drops it, never the selected-word facts.
+  const elsewhere = reading ? await findWordElsewhere({ book, lemma: selected.lemmas.find(lemma => lemma.lexical)?.id ?? null, ref, wordIndex, reading, connected, signal }) : undefined;
+  connected();
+  const ready = { ...identity, status: "ready", occurrence: { gloss: wordDetailsPlainText(selected.sourceGloss, WORD_DETAILS_LIMITS.glossBytes) && selected.sourceGloss ? selected.sourceGloss : null,
+    grammar: occurrenceGrammar(selected.morphology) }, dictionary };
+  const result = (elsewhere && parseStudyWordDetails({ ...ready, elsewhere }, binding)) || parseStudyWordDetails(ready, binding);
   return result ?? held("source-unavailable");
 }

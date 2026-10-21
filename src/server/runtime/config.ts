@@ -11,6 +11,8 @@ export type RuntimeConfig = Readonly<{
   referenceReview?: Readonly<{ reviewer: ReviewerConfig; storeId: string }>;
   serviceMusic?: Readonly<{ url: string; token: string }>;
   serviceCronSecret?:string;
+  // The portal MCP answers only when explicitly enabled (after its adversarial review).
+  mcpEnabled: boolean;
   // The owned roster Sheet: the service-account key Daniel set himself and the Sheet it writes.
   rosterSheet?: Readonly<{ serviceAccount: string; sheetId: string }>;
 }>;
@@ -72,6 +74,7 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
       if(endpoint.protocol!=="https:" || endpoint.username || endpoint.password || endpoint.search || endpoint.hash || endpoint.pathname!=="/api/integrations/beit-mitzvah/v1")throw 0;
       serviceMusic=Object.freeze({url:endpoint.href,token:env.BEIT_MITZVAH_SERVICE_TOKEN});
     }
+    if (env.PORTAL_MCP_ENABLED !== undefined && env.PORTAL_MCP_ENABLED !== "true" && env.PORTAL_MCP_ENABLED !== "false") throw 0;
     let rosterSheet: RuntimeConfig["rosterSheet"];
     // Both or neither; a malformed key is refused where it is parsed, without taking the app down.
     if (env.GOOGLE_SHEETS_SERVICE_ACCOUNT || env.GOOGLE_ROSTER_SHEET_ID) {
@@ -80,7 +83,7 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
     }
     if(env.CRON_SECRET!==undefined && (!clean(env.CRON_SECRET) || env.CRON_SECRET.length<32 || env.CRON_SECRET.length>512 || env.CRON_SECRET===serviceMusic?.token || env.CRON_SECRET===env.BETTER_AUTH_SECRET))throw 0;
     return Object.freeze({ deployment: Object.freeze({ environment, deployment: env.PORTAL_DEPLOYMENT }), origin: origin.origin,
-      databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, referenceReview, serviceMusic, serviceCronSecret:env.CRON_SECRET, rosterSheet,
+      databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, referenceReview, serviceMusic, serviceCronSecret:env.CRON_SECRET, mcpEnabled: env.PORTAL_MCP_ENABLED === "true", rosterSheet,
       mail: Object.freeze({ apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM }) });
   } catch { throw new RuntimeUnavailable(); }
 }

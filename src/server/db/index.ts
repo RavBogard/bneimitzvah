@@ -14,3 +14,4 @@ export * from "./honoree-schema";
 export * from "./service-ecosystem-schema";
 export * from "./reference-review-schema";
 export * from "./study-guides-schema";
+export * from "./mcp-schema";

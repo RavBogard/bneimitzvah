@@ -55,6 +55,7 @@ It is the second product carved out of the haftarah repo (`RavBogard/haftarah`).
 ### Translation tools
 
 12. The word panel (STEP grammar, BDB, "this word elsewhere"), the translation picker across editions, and a guided "build your own translation": the student writes a translation verse by verse, saves drafts, and the tutor sees them. JPS 2023 is the reference translation.
+    **Amended 2026-10-21 (Daniel):** no translation picker in 1.0; the main text stays JPS 2023 only. Commentary editions remain available in the source reader.
 13. **Amended 2026-10-16, ruling 38:** no visible transliteration. Tapping a word offers syllables and marked stress in Hebrew letters. Internal synthesis phonemes are unaffected.
 
 Historical note: the earlier 2026-10-16 pause/reconsideration of the original Latin-letter toggle is closed by ruling 38; it is no longer an open choice.

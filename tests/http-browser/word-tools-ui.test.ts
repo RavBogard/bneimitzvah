@@ -131,7 +131,7 @@ it("supports phone keyboard study with no loaded audio; qere/maqaf, independent 
   await ui(tools(tab).getByText("Synthetic dictionary sense", { exact: true })).toBeVisible(); await expectSilentAudio(tab); expect(state.requests).toBe(0);
   await ui(tools(tab).getByRole("heading", { name: "Meaning in this verse", exact: true })).toBeVisible();
   // Meaning first, pronunciation one row below (S23).
-  expect(await tools(tab).locator("h5").allTextContents()).toEqual(["Meaning in this verse", "Syllables and stress", "Grammar", "Dictionary senses"]);
+  expect(await tools(tab).locator("h5").allTextContents()).toEqual(["Meaning in this verse", "Syllables and stress", "Grammar", "This word elsewhere", "Dictionary senses"]);
   // The exact pure fixture proves first maqaf word has no tonic; do not invent one.
   await ui(tools(tab).getByRole("group", { name: "Hebrew syllables", exact: true })).toBeVisible(); await ui(tools(tab).locator('[data-stress="tonic"]')).toHaveCount(0);
   const next = tools(tab).getByRole("button", { name: "Next word", exact: true }); await next.focus(); await next.press("Enter"); await ui(tools(tab)).toContainText("Word 2 of 2"); await expectSilentAudio(tab); expect(state.requests).toBe(0);

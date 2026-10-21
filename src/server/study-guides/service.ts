@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessRequest, AccessTransaction } from "../access/types";
 import { AccessDenied } from "../access/errors";
@@ -340,7 +340,55 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       return Object.freeze(head ? { version: head.version, template: false, updatedAt: head.createdAt.toISOString() } : { version: 0, template: true, updatedAt: null });
     });
   }
-  return Object.freeze({ getVoice, setVoice, getBaseGuide, setBaseGuide, publishBaseGuide, setStudentGuide, studentGuide, readingDate, setThemeRead, staffGuide, staffVoice });
+  // Rabbi reads for the MCP --------------------------------------------------------------------
+  /** Every current student's confirmed readings grouped by guide key: the "what needs a guide" list. */
+  async function guideWork(authority: RabbiAuthority<Q>) {
+    return authority.run(async (tx, writer) => {
+      const students = await tx.select({ id: s.student.id, firstName: s.student.firstName, lastName: s.student.lastName, ceremonyDate: s.student.ceremonyDate })
+        .from(s.student).where(and(eq(s.student.tenantId, writer.tenantId), isNull(s.student.disabledAt))).orderBy(asc(s.student.ceremonyDate), asc(s.student.id)).limit(500);
+      const groups = new Map<string, { kind: GuideKind; readingKey: string; students: { id: string; name: string; ceremonyDate: string; hasAdditions: boolean }[] }>();
+      const unkeyed: { studentId: string; name: string; kind: GuideKind; ceremonyDate: string; hasAdditions: boolean }[] = [];
+      for (const student of students) {
+        for (const row of await confirmedReadings(tx, writer.tenantId, student.id)) {
+          let reading; try { reading = readingView(row, student.ceremonyDate); } catch { continue; }
+          const hasAdditions = !!(await data.studentGuideHead(tx, writer.tenantId, student.id, reading.id, reading.revision, reading.kind));
+          const name = `${student.firstName} ${student.lastName}`;
+          if (!reading.readingKey) { unkeyed.push({ studentId: student.id, name, kind: reading.kind, ceremonyDate: student.ceremonyDate, hasAdditions }); continue; }
+          const id = `${reading.kind}:${reading.readingKey}`;
+          const group = groups.get(id) ?? { kind: reading.kind, readingKey: reading.readingKey, students: [] };
+          group.students.push({ id: student.id, name, ceremonyDate: student.ceremonyDate, hasAdditions }); groups.set(id, group);
+        }
+      }
+      const work = [];
+      for (const group of groups.values()) {
+        const heads = await data.guideHeads(tx, writer.tenantId, group.kind, group.readingKey);
+        work.push(Object.freeze({ kind: group.kind, readingKey: group.readingKey, studentCount: group.students.length,
+          base: heads.head ? Object.freeze({ currentVersion: heads.head.version, visibleVersion: heads.visible?.version ?? null, reviewed: heads.visible?.reviewed ?? false, heldDraft: heads.head.hold }) : null,
+          students: Object.freeze(group.students.map(x => Object.freeze(x))) }));
+      }
+      return Object.freeze({ work: Object.freeze(work), customReadings: Object.freeze(unkeyed.map(x => Object.freeze(x))) });
+    });
+  }
+  /** The verses a base guide for this reading may annotate, in reading order. */
+  async function guidePassage(authority: RabbiAuthority<Q>, supplied: { kind: unknown; readingKey: unknown }) {
+    const kind = kindOf(supplied.kind), readingKey = keyOf(supplied.readingKey);
+    return authority.run(async (tx, writer) => Object.freeze({ kind, readingKey, verses: Object.freeze([...(await passage(tx, writer.tenantId, kind, readingKey))]) }));
+  }
+  /** One student's guide exactly as that student sees it (ticks included), plus the assignment it binds to. */
+  async function rabbiStudentGuide(authority: RabbiAuthority<Q>, supplied: { studentId: unknown; kind: unknown }) {
+    const kind = kindOf(supplied.kind);
+    if (typeof supplied.studentId !== "string" || !UUID.test(supplied.studentId)) throw new AccessDenied(404);
+    const studentId = supplied.studentId;
+    return authority.run(async (tx, writer) => {
+      const [student] = await tx.select({ ceremonyDate: s.student.ceremonyDate }).from(s.student).where(and(eq(s.student.tenantId, writer.tenantId), eq(s.student.id, studentId), isNull(s.student.disabledAt))).limit(1);
+      if (!student) throw new AccessDenied(404);
+      const row = (await confirmedReadings(tx, writer.tenantId, studentId)).find(r => r.kind === kind);
+      const reading = row ? readingView(row, student.ceremonyDate) : null;
+      const view = reading ? await viewFor(tx, { tenantId: writer.tenantId, studentId, mode: "admin" } as unknown as ProgressActor, kind) : null;
+      return Object.freeze({ studentId, kind, assignment: reading ? Object.freeze({ assignmentId: reading.id, assignmentRevision: reading.revision, readingKey: reading.readingKey, verses: reading.verses }) : null, view });
+    });
+  }
+  return Object.freeze({ getVoice, setVoice, getBaseGuide, setBaseGuide, publishBaseGuide, setStudentGuide, studentGuide, readingDate, setThemeRead, staffGuide, staffVoice, guideWork, guidePassage, rabbiStudentGuide });
 }
 
 /** The only part the web HTTP runtime receives: reads, theme ticks and staff status. No guide or voice writes (S10). */

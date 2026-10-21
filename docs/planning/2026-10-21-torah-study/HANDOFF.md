@@ -72,6 +72,8 @@ If the MCP read foundation turns out larger than the plan assumes, stop at Task 
 
 ### 5a. Interim bridge (built 2026-10-21; delete when the MCP is enabled)
 
+**Removed 2026-10-21 with the MCP's enabling change.** Guides are written through the portal MCP from Cowork (§6). The text below is kept as history.
+
 Until the portal MCP exists, a Claude session drafts a guide as a JSON file (`{ overview, themes: [{ id, title, intro, notes: [{ verseRef, body, sources: [{ id, ref, indexTitle, category, labels, readable }] }] }] }`; only `id` of each source matters, the server replaces the rest with Sefaria's own metadata) and the operator runs:
 
 ```
