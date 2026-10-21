@@ -13,9 +13,9 @@ export const textSizes = [
   { id: "huge", label: "Huge" },
 ] as const;
 export type TextSize = typeof textSizes[number]["id"];
-export type ReadingPrefs = { colors: boolean; translation: boolean; size: TextSize };
+export type ReadingPrefs = { colors: boolean; translation: boolean; size: TextSize; tikkun: boolean };
 const PREFIX = "crc-bm-reading-prefs-v2:";
-const defaults: ReadingPrefs = { colors: true, translation: false, size: "standard" };
+const defaults: ReadingPrefs = { colors: true, translation: false, size: "standard", tikkun: false };
 const cache = new Map<string, ReadingPrefs>();
 const wideDefault = () => typeof matchMedia === "function" ? matchMedia("(min-width: 1001px)").matches : defaults.translation;
 const listeners = new Set<() => void>();
@@ -35,6 +35,8 @@ function parse(raw: string | null, englishOnWide = false): ReadingPrefs {
       // English starts on in the wide two-column layout and off on phones, until the reader chooses (spec §5).
       translation: typeof value.translation === "boolean" ? value.translation : englishOnWide && wideDefault(),
       size: textSizes.some(size => size.id === value.size) ? value.size as TextSize : defaults.size,
+      // The tikkun (scroll lettering) is off until the reader turns it on; it applies to Torah text only.
+      tikkun: typeof value.tikkun === "boolean" ? value.tikkun : defaults.tikkun,
     };
   } catch { return defaults; }
 }

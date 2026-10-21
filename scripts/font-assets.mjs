@@ -13,6 +13,10 @@ export const FONT_ASSETS = Object.freeze([
     sha256: "413e7357809ddd12fd80a96a8a396de0e401638d4acd3cb3e37532f0472ac682" }),
   Object.freeze({ path: "public/fonts/bricolage-grotesque/OFL.txt", family: "bricolage-grotesque", kind: "license", size: 4403,
     sha256: "4b5a7d8f37f5602621c8a8d7358a6a2e71317e6c231c661e15aef0275d3e07ba" }),
+  Object.freeze({ path: "public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.ttf", family: "stam-ashkenaz-clm", kind: "font", size: 14968,
+    sha256: "18aec29cd0f3e2f31049224712e740468fc893344289ceb1c86b02b619854ca6" }),
+  Object.freeze({ path: "public/fonts/stam-ashkenaz-clm/LICENSE.txt", family: "stam-ashkenaz-clm", kind: "license", size: 18092,
+    sha256: "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643" }),
 ]);
 
 // Deliberately no path normalization or case folding at the trust boundary.
