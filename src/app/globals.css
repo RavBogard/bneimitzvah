@@ -905,3 +905,18 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .site-credit a { color: inherit; text-decoration: underline; text-underline-offset: 0.2em; text-decoration-color: var(--color-rule); }
 .site-credit a:hover { color: var(--color-ink); }
 .site-credit a:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+
+/* Congregation settings: one card per group, one save for the page. */
+.settings-workspace form { max-width: 46rem; }
+.settings-workspace .roster-field + .roster-field { margin-top: 1rem; }
+.settings-workspace .people-card-head { margin-bottom: 1rem; }
+.settings-workspace input, .settings-workspace textarea { width: 100%; border: 0; border-radius: 12px; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-control-rule); color: var(--color-ink); }
+.settings-workspace textarea { display: block; min-height: 6rem; padding: 0.75rem 0.875rem; resize: vertical; line-height: 1.5; caret-color: var(--color-action); }
+.settings-workspace input:focus-visible, .settings-workspace textarea:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--lake); }
+.settings-workspace [aria-invalid="true"] { box-shadow: inset 0 0 0 2px var(--color-danger); }
+.settings-workspace .settings-grid { max-width: none; gap: 1rem 1.25rem; }
+.settings-workspace .settings-grid .roster-field + .roster-field { margin-top: 0; }
+.settings-workspace .field-error { margin: 0.5rem 0 0; color: var(--color-danger); font-size: 0.875rem; font-weight: 600; }
+.settings-workspace .settings-actions { margin-top: 0.5rem; }
+.settings-workspace .settings-actions .button-primary { width: auto; min-width: min(100%, 12rem); }
+@media (max-width: 640px) { .settings-workspace .settings-grid { grid-template-columns: minmax(0, 1fr); } }

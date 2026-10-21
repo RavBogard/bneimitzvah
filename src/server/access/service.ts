@@ -11,7 +11,7 @@ import type { AccessDatabase, AccessRequest, AccessTransaction, ActiveMode, Acto
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 type StudentCapability = "read" | "set-reading" | "set-service-plan" | "practice-write" | "note-write" | "source-write" | "honors-read" | "honors-write" | "honoree-link-write";
-type AdminCapability = "read-relationships" | "read-invites" | "manage-students" | "manage-invites" | "manage-relationships" | "manage-defaults" | "read-guides";
+type AdminCapability = "read-relationships" | "read-invites" | "manage-students" | "manage-invites" | "manage-relationships" | "manage-defaults" | "read-defaults" | "read-guides";
 const adminRules: Record<AdminCapability, { fresh: boolean; intent: LockIntent }> = {
   "read-relationships": { fresh: false, intent: "read" },
   "read-invites": { fresh: false, intent: "read" },
@@ -19,6 +19,8 @@ const adminRules: Record<AdminCapability, { fresh: boolean; intent: LockIntent }
   "manage-invites": { fresh: true, intent: "authority-write" },
   "manage-relationships": { fresh: true, intent: "authority-write" },
   "manage-defaults": { fresh: false, intent: "authority-write" },
+  // The congregation settings page reads what manage-defaults writes.
+  "read-defaults": { fresh: false, intent: "read" },
   // Study-guide status and held drafts for the rabbi's web preview (S10: no web writes).
   "read-guides": { fresh: false, intent: "read" },
 };

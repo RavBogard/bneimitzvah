@@ -33,9 +33,11 @@ function equal(a: Binding, b: Binding) {
     && a.context.authorityRevision === b.context.authorityRevision && a.context.studentId === b.context.studentId
     && a.context.studentRevision === b.context.studentRevision && a.context.expiresAt === b.context.expiresAt;
 }
-export function createStudyService<Q extends PgQueryResultHKT, P extends StudyPage = StudyPage>(input: {
+export function createStudyService<Q extends PgQueryResultHKT, P extends StudyPage = StudyPage, W = undefined>(input: {
   access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>;
-  load: (request: StudyRequest) => Promise<P>;
+  load: (request: StudyRequest, prepared: W) => Promise<P>;
+  // Tenant facts the public work needs (for example congregation settings), read inside the first authorized pass.
+  prepare?: (tx: AccessTransaction<Q>, tenantId: string) => Promise<W>;
 }) {
   return Object.freeze({ async read(original: AccessRequest & { signal?: AbortSignal }, supplied: StudySelection) {
     // Keep the same request binding across both passes; no mutable caller header
@@ -76,14 +78,19 @@ export function createStudyService<Q extends PgQueryResultHKT, P extends StudyPa
       selection.mode === "child-practice"
         ? input.practice.withPracticeCapability(request, { mode: "child-practice", studentId: selection.studentId, capability: "read" }, action)
         : input.access.withStudentCapability(request, { mode: selection.mode, studentId: selection.studentId, capability: "read" }, action);
-    const first = await authorize(capture);
+    let prepared = undefined as W;
+    const first = await authorize(async (tx, actor, student) => {
+      const captured = await capture(tx, actor, student);
+      if (captured.ok && input.prepare) prepared = await input.prepare(tx, actor.tenantId);
+      return captured;
+    });
     if (!first.ok) return stale;
     const publicRequest: StudyRequest = Object.freeze({ kind: first.binding.kind, ranges: first.binding.ranges, verses: first.binding.verses,
       offset: selection.offset, translation: selection.translation, signal });
     planStudyPage(publicRequest, TANAKH_VERSE_COUNTS);
     // Both capability transactions end before any cache/network work.
     connected();
-    const page = await input.load(publicRequest);
+    const page = await input.load(publicRequest, prepared);
     connected();
     return authorize(async (tx, actor, student) => {
       const final = await capture(tx, actor, student);
