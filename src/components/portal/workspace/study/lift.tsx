@@ -19,6 +19,8 @@ export const icons = {
   translate: icon("M4 6h9M8.5 4v2c0 4-2 7-4.5 8.5M6 10c1.5 2 3.5 3.5 6 4.5M13 20l4-9 4 9M14.5 17h5"),
   size: icon("M3 19l5-13 5 13M4.8 14h6.4M15 19l3-8 3 8M15.9 16.5h4.2"),
   hear: icon("M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"),
+  scroll: icon("M6 3v18M18 3v18M6 6h12M6 18h12M9.5 10h5M9.5 14h5"),
+  print: icon("M7 9V3h10v6M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v7H7z"),
 };
 
 /**

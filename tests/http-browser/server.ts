@@ -40,10 +40,10 @@ async function isolatedNextProject() {
   if (!resolve(dir).startsWith(`${logRoot}${sep}`)) throw new Error("Isolated Next directory escaped workspace");
   try {
     await cp(join(source, "src"), join(dir, "src"), { recursive: true });
-    for (const [family, font] of [["noto-serif-hebrew", "NotoSerifHebrew.ttf"], ["bricolage-grotesque", "BricolageGrotesque.ttf"]]) {
+    for (const [family, font, license] of [["noto-serif-hebrew", "NotoSerifHebrew.ttf", "OFL.txt"], ["bricolage-grotesque", "BricolageGrotesque.ttf", "OFL.txt"], ["stam-ashkenaz-clm", "StamAshkenazCLM.ttf", "LICENSE.txt"]]) {
       const fontDirectory = join("public", "fonts", family);
       await mkdir(join(dir, fontDirectory), { recursive: true });
-      for (const file of [font, "OFL.txt"]) await cp(join(source, fontDirectory, file), join(dir, fontDirectory, file));
+      for (const file of [font, license]) await cp(join(source, fontDirectory, file), join(dir, fontDirectory, file));
     }
     for (const file of ["package.json", "next.config.ts", "tsconfig.json"]) await cp(join(source, file), join(dir, file));
     return { dir };
