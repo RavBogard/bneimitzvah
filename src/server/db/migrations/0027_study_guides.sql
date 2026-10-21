@@ -4,7 +4,7 @@
 CREATE FUNCTION public.portal_study_markdown(v text, bound integer) RETURNS boolean
 LANGUAGE sql IMMUTABLE SECURITY INVOKER SET search_path=pg_catalog,public AS $$
  SELECT coalesce(v IS NOT NULL AND octet_length(v) BETWEEN 1 AND bound AND v ~ '[^[:space:]]' AND normalize(v,NFC)=v
-  AND v !~ '[<>]' AND translate(v,chr(10),'') !~ '[[:cntrl:]]' AND translate(v,chr(1564)||chr(8203)||chr(8204)||chr(8205)||chr(8206)||chr(8207)||chr(8232)||chr(8233)||chr(8234)||chr(8235)||chr(8236)||chr(8237)||chr(8238)||chr(8288)||chr(8294)||chr(8295)||chr(8296)||chr(8297)||chr(65279),'')=v,false)
+  AND v !~ '[<>]' AND translate(v,chr(10),'') !~ '[[:cntrl:]]' AND v !~ '[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u200B-\u200F\u2028-\u202E\u2060-\u2064\u2066-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\uFFF9-\uFFFB\U000E0001\U000E0020-\U000E007F\U000E0100-\U000E01EF]',false)
 $$;
 --> statement-breakpoint
 -- Structure and per-field limits of a guide body. The whole-body bound is a backstop on jsonb's
@@ -136,7 +136,7 @@ CREATE TABLE "study_theme_read" (
 	CONSTRAINT "study_theme_read_version_positive" CHECK ("study_theme_read"."version" > 0),
 	CONSTRAINT "study_theme_read_kind" CHECK ("study_theme_read"."kind" in ('torah','haftarah')),
 	CONSTRAINT "study_theme_read_reading_key" CHECK (octet_length("study_theme_read"."reading_key") <= 160 and "study_theme_read"."reading_key" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
-	CONSTRAINT "study_theme_read_theme" CHECK (octet_length("study_theme_read"."theme_id") <= 64 and "study_theme_read"."theme_id" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
+	CONSTRAINT "study_theme_read_theme" CHECK (octet_length("study_theme_read"."theme_id") <= 73 and "study_theme_read"."theme_id" ~ '^(student--)?[a-z0-9]+(-[a-z0-9]+)*$'),
 	CONSTRAINT "study_theme_read_state" CHECK ("study_theme_read"."state" in ('read','unread')),
 	CONSTRAINT "study_theme_read_instant" CHECK (isfinite("study_theme_read"."updated_at"))
 );

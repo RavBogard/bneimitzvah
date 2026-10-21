@@ -33,14 +33,16 @@ async function fixture(options: { snapshot?: unknown } = {}) {
     await f.db.insert(s.assignmentVerse).values([34, 35, 36, 37, 38].map((v, i) => ({ tenantId: "crc", studentId, assignmentId: row.id, ordinal: i + 1, verseRef: `Exodus 40:${v}` })));
     return row;
   });
-  const rabbi = (mayReview = true) => membershipRabbiAuthority({ db: f.db, tenantId: "crc", membershipId: f.adminMember.id, channel: "mcp", mayReview });
+  const bind = (grant: { id: string; revision: number }, member: { authorityRevision: number }) => ({ roleGrantId: grant.id, roleGrantRevision: grant.revision, authorityRevision: member.authorityRevision });
+  const mcp = (membershipId: string, bound: ReturnType<typeof bind>, mayReview = true, tenantId = "crc") => membershipRabbiAuthority({ db: f.db, tenantId, membershipId, channel: "mcp", mayReview, bound });
+  const rabbi = (mayReview = true) => mcp(f.adminMember.id, bind(f.adminGrant, f.adminMember), mayReview);
   const save = (extra: Record<string, unknown> = {}, authority = rabbi()) => guides.setBaseGuide(authority, {
     kind: "torah", readingKey: "pekudei", expectedVersion: 0, body: guide(), origin: "claude", reviewed: false, hold: false, mutationId: randomUUID(), ...extra });
   const read = (who: "learner" | "multi" | "admin", mode: "student" | "parent" | "tutor" | "admin") => guides.studentGuide(f.request(who), { mode, studentId, kind: "torah" });
   const audits = () => f.owner(async () => (await f.db.select().from(s.auditEvent)).filter(a => a.action.startsWith("study-")).map(a => a.action));
   const rows = () => f.owner(async () => f.db.select().from(s.studyGuide));
   const post = (who: "learner" | "multi") => ({ ...f.request(who, "http://localhost:3000", { origin: "http://localhost:3000" }), method: "POST" });
-  return { ...f, guides, practice, check, studentId, assignment, rabbi, save, read, audits, rows, post };
+  return { ...f, guides, practice, check, studentId, assignment, rabbi, mcp, bind, save, read, audits, rows, post };
 }
 const denied = async (action: () => Promise<unknown>, status = 403) => { try { await action(); return false; } catch (e) { return e instanceof AccessDenied && e.status === status; } };
 
@@ -55,9 +57,10 @@ test("admin saves base guide, head advances, audit row written", async () => {
 
 test("tutor cannot save base guide (403)", async () => {
   const f = await fixture();
-  const tutor = membershipRabbiAuthority({ db: f.db, tenantId: "crc", membershipId: f.multiMember.id, channel: "mcp", mayReview: true });
-  expect(await denied(() => f.save({}, tutor))).toBe(true);
-  expect(await denied(() => f.save({}, membershipRabbiAuthority({ db: f.db, tenantId: "other", membershipId: f.adminMember.id, channel: "mcp", mayReview: true })))).toBe(true);
+  expect(await denied(() => f.save({}, f.mcp(f.multiMember.id, f.bind(f.tutorGrant, f.multiMember))))).toBe(true);
+  expect(await denied(() => f.save({}, f.mcp(f.adminMember.id, f.bind(f.adminGrant, f.adminMember), true, "other")))).toBe(true);
+  // An MCP authority without its consented grant binding is refused outright.
+  expect(() => membershipRabbiAuthority({ db: f.db, tenantId: "crc", membershipId: f.adminMember.id, channel: "mcp", mayReview: true })).toThrow();
   await f.owner(async () => { await f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, f.adminGrant.id)); });
   expect(await denied(() => f.save())).toBe(true);
   expect(await f.rows()).toHaveLength(0);
@@ -151,7 +154,7 @@ test("student guide drops additions after revision bump", async () => {
   const add = (extra: Record<string, unknown> = {}) => f.guides.setStudentGuide(f.rabbi(), { studentId: f.studentId, kind: "torah", assignmentId: f.assignment.id, assignmentRevision: 1,
     expectedVersion: 0, body: additions([theme("for-you", { notes: [note("Exodus 40:35")] })]), origin: "claude", reviewed: false, mutationId: randomUUID(), ...extra });
   expect(await add()).toMatchObject({ ok: true, version: 1 });
-  expect((await f.read("learner", "student"))?.additions?.themes.map(t => t.id)).toEqual(["for-you"]);
+  expect((await f.read("learner", "student"))?.additions?.themes.map(t => t.id)).toEqual(["student--for-you"]);
   await f.owner(async () => { await markReadingsForReview(f.db as never, "crc", f.studentId); });
   const after = await f.read("learner", "student");
   expect(after?.base?.version).toBe(1); expect(after?.additions).toBeNull();
@@ -192,7 +195,7 @@ test("voice: template when empty, versioned saves, conflict on stale version", a
   expect(await f.guides.setVoice(f.rabbi(), { expectedVersion: 0, body: "Our voice.", mutationId: randomUUID() })).toMatchObject({ ok: true, version: 1 });
   expect(await f.guides.setVoice(f.rabbi(), { expectedVersion: 0, body: "Stale.", mutationId: randomUUID() })).toMatchObject({ ok: false, code: "conflict" });
   expect(await f.guides.getVoice(f.rabbi())).toEqual({ version: 1, body: "Our voice.", template: false });
-  expect(await denied(() => f.guides.setVoice(membershipRabbiAuthority({ db: f.db, tenantId: "crc", membershipId: f.learnerMember.id, channel: "mcp", mayReview: true }), { expectedVersion: 1, body: "x", mutationId: randomUUID() }))).toBe(true);
+  expect(await denied(() => f.guides.setVoice(f.mcp(f.learnerMember.id, f.bind(f.learnerGrant, f.learnerMember)), { expectedVersion: 1, body: "x", mutationId: randomUUID() }))).toBe(true);
 });
 
 const addition = (f: Awaited<ReturnType<typeof fixture>>, authority: ReturnType<Awaited<ReturnType<typeof fixture>>["rabbi"]>, extra: Record<string, unknown> = {}) =>
@@ -220,17 +223,15 @@ test("the operator bridge writes only Claude-drafted base guides", async () => {
 
 test("a delegation bound to one admin grant ends when that grant is reissued", async () => {
   const f = await fixture();
-  const [membership] = await f.owner(async () => f.db.select().from(s.membership).where(eq(s.membership.id, f.adminMember.id)));
-  const bound = membershipRabbiAuthority({ db: f.db, tenantId: "crc", membershipId: f.adminMember.id, channel: "mcp", mayReview: true,
-    bound: { roleGrantId: f.adminGrant.id, roleGrantRevision: f.adminGrant.revision, authorityRevision: membership.authorityRevision } });
+  const bound = f.rabbi();
   expect(await f.save({}, bound)).toMatchObject({ ok: true, version: 1 });
   await f.owner(async () => {
     await f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, f.adminGrant.id));
     await f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: f.adminMember.id, role: "admin" });
   });
   expect(await denied(() => f.save({ expectedVersion: 1, body: guide({ overview: "After reissue." }) }, bound))).toBe(true);
-  // An unbound authority (the operator, named on the command line) follows the live grant.
-  expect(await f.save({ expectedVersion: 1, body: guide({ overview: "After reissue." }) })).toMatchObject({ ok: true, version: 2 });
+  // The operator bridge, named on the command line, follows the live grant.
+  expect(await f.save({ expectedVersion: 1, body: guide({ overview: "After reissue." }) }, operatorRabbiAuthority({ db: f.db, tenantId: "crc", membershipId: f.adminMember.id }))).toMatchObject({ ok: true, version: 2 });
 });
 
 test("disabled membership or tenant denies every write", async () => {
@@ -242,10 +243,16 @@ test("disabled membership or tenant denies every write", async () => {
   expect(await f.rows()).toHaveLength(0);
 });
 
-test("additions cannot reuse a base theme id, and a reading no student has gets no base guide", async () => {
+test("a base theme and an addition with the same id stay separate, and a reading no student has gets no base guide", async () => {
   const f = await fixture();
   await f.save({ body: guide({ themes: [theme("for-you", { notes: [note("Exodus 40:34")] })] }) });
-  expect(await addition(f, f.rabbi())).toMatchObject({ ok: false, code: "invalid", problems: ["theme id for-you is already used by the reading's guide"] });
+  expect(await addition(f, f.rabbi())).toMatchObject({ ok: true, version: 1 });
+  const seen = await f.read("learner", "student");
+  expect([seen?.base?.themes[0].id, seen?.additions?.themes[0].id]).toEqual(["for-you", "student--for-you"]);
+  const tick = (themeId: string, expectedVersion = 0) => f.guides.setThemeRead(f.post("learner"), { mode: "student", studentId: f.studentId, kind: "torah", readingKey: "pekudei", themeId, read: true, expectedVersion });
+  expect(await tick("student--for-you")).toMatchObject({ ok: true, version: 1 });
+  const after = await f.read("learner", "student");
+  expect([after?.base?.themes[0].read, after?.additions?.themes[0].read]).toEqual([false, true]);
   expect(await f.save({ readingKey: "bereshit" })).toMatchObject({ ok: false, code: "no-reading" });
   // A haftarah key names its own passage, so it needs no student.
   expect(await f.save({ kind: "haftarah", readingKey: "i-kings-7-51-8-21", body: guide({ themes: [theme("t", { notes: [note("I Kings 8:10")] })] }) })).toMatchObject({ ok: true, version: 1 });

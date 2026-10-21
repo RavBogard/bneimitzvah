@@ -40,6 +40,8 @@ export function membershipRabbiAuthority<Q extends PgQueryResultHKT>(input: {
   db: AccessDatabase<Q>; tenantId: string; membershipId: string; channel: "mcp" | "operator"; mayReview: boolean; live?: () => void; bound?: RabbiBinding;
 }): RabbiAuthority<Q> {
   if (input.channel === "operator" && input.mayReview) throw new AccessDenied(403);
+  // An MCP delegation is always pinned to the grant it was consented under.
+  if (input.channel === "mcp" && !input.bound) throw new AccessDenied(403);
   return {
     run: (action) => withTenantTransaction(input.db, { tenantId: input.tenantId }, async tx => {
       input.live?.();

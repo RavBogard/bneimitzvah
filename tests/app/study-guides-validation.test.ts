@@ -80,3 +80,11 @@ test("rejects every link form a markdown renderer could honour, and disguising c
   // Ordinary prose with a colon, brackets and Hebrew still passes.
   for (const text of ["Look at the data: the cloud stays.", "The cloud [ענן] rests on the tent.", "Rashi asks: why now?"]) expect(ok(guide({ overview: text })), text).toBe(true);
 });
+
+test("rejects every Unicode format character and blank look-alike; keeps ordinary glosses and paths of prose", () => {
+  for (const code of [0x00ad, 0x034f, 0x0600, 0x115f, 0x180e, 0x2061, 0x2064, 0x206a, 0x3164, 0xfe0f, 0xffa0, 0xfff9, 0xe0041, 0xe0100])
+    expect(ok(guide({ overview: `hidden${String.fromCodePoint(code)}mark` })), code.toString(16)).toBe(false);
+  for (const text of ["Read more at evil.example/phish", "rabbi@例.example", "write@me"]) expect(ok(guide({ overview: text })), text).toBe(false);
+  for (const text of ["The Mishkan [tabernacle] (from the root for dwelling).", "covered [it]: the tent", "[tabernacle] [lit. dwelling]", "the word [sic] (as written)", "Rashi [2]: he says", "a 1//2 split", "Tel Aviv: a city"])
+    expect(ok(guide({ overview: text })), text).toBe(true);
+});

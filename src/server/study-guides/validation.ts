@@ -21,10 +21,10 @@ const exactKeys = (value: Record<string, unknown>, keys: readonly string[]) => O
 // Bidi controls, zero-width marks and line/paragraph separators can disguise what a reader sees
 // (and PostgreSQL may class the separators as controls under the server's locale). The SQL
 // function portal_study_markdown rejects the same set.
-const HIDDEN = /[\u061c\u200b-\u200f\u2028-\u202e\u2060\u2066-\u2069\ufeff]/;
+const HIDDEN = /[\p{Cf}\u034F\u115F\u1160\u17B4\u17B5\u2028\u2029\u3164\uFFA0\uFE00-\uFE0F\u{E0100}-\u{E01EF}]/u;
 // Every way markdown or a renderer could turn text into a link: inline, reference and definition
 // links, autolinks (already blocked by the angle-bracket rule), URL schemes, bare domains, emails.
-const LINKISH = /\]\s*[([:]|^\s*\[[^\]\n]*\]\s*:|[a-z][a-z0-9+.-]*:\/\/|\/\/[a-z0-9]|\b(?:mailto|javascript|data|vbscript|file|ftp|tel):\S|www\.|[^\s@]+@[^\s@]+\.[a-z]{2,}/im;
+const LINKISH = /\][([]|^\s*\[[^\]\n]*\]\s*:|[a-z][a-z0-9+.-]*:\/\/|(?:^|[\s(])\/\/[a-z0-9]|\b(?:mailto|javascript|data|vbscript|file|ftp|tel):\S|www\.|\S@\S|\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\/\S/im;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const VERSE_REF = /^[A-Za-z ]+ [1-9]\d*:[1-9]\d*$/;
 

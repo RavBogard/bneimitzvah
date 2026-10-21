@@ -45,9 +45,14 @@ export type StudentGuideView = Readonly<{
 }>;
 type FailureCode = "conflict" | "no-change" | "invalid" | "review-not-permitted" | "channel-not-permitted" | "stale-assignment" | "not-held" | "no-reading";
 type Failure = Readonly<{ ok: false; code: FailureCode; problems?: readonly string[] }>;
+export type GuideSaveResult = Failure | Readonly<{ ok: true; replayed: boolean; version: number; held: boolean; heldBecauseReviewed?: boolean }>;
+export type VersionSaveResult = Failure | Readonly<{ ok: true; replayed: boolean; version: number }>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+/** A per-student addition's theme is shown and ticked as student--<id>; a base theme id can never contain "--". */
+export const ADDITION_PREFIX = "student--";
+const THEME_TICK = /^(?:student--)?[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const fail = (code: FailureCode, problems?: readonly string[]): Failure => Object.freeze({ ok: false, code, ...(problems ? { problems: Object.freeze([...problems]) } : {}) });
 const invalid = (problems: readonly string[]) => fail("invalid", problems);
 /** Key-sorted JSON so a body compares equal after jsonb has reordered its keys. */
@@ -69,6 +74,9 @@ export function guideVersion(row: data.GuideRow | data.StudentGuideRow): GuideVe
   if (!checked.ok || (row.origin !== "claude" && row.origin !== "rabbi")) throw new Error("Study guide unavailable");
   return Object.freeze({ version: row.version, origin: row.origin, reviewed: row.reviewed, hold: "hold" in row ? row.hold : false, body: checked.value, createdAt: row.createdAt.toISOString() });
 }
+/** The service's own backstop: whatever a checker returns, no note may sit outside the allowed verses. */
+const versesOutside = (body: GuideBody, verses: ReadonlySet<string>) =>
+  body.themes.flatMap(t => t.notes.filter(n => !verses.has(n.verseRef)).map(n => `${n.verseRef} is not in this reading`));
 /** A stored version that no longer passes today's rules is withheld, not served and not an error. */
 const servable = (row: data.GuideRow | data.StudentGuideRow | null) => { if (!row) return null; try { return guideVersion(row); } catch { return null; } };
 export function rabbiName(customs: unknown): string {
@@ -77,8 +85,9 @@ export function rabbiName(customs: unknown): string {
   return plain(name, 320) && [...name].length <= 80 ? name : "the rabbi";
 }
 /** Notes outside the student's verses are hidden; a theme whose every note is hidden disappears. */
-export function themesFor(themes: readonly GuideTheme[], verses: ReadonlySet<string>, reads: ReadonlyMap<string, { state: string; version: number }>): StudentTheme[] {
-  return themes.flatMap(theme => {
+export function themesFor(themes: readonly GuideTheme[], verses: ReadonlySet<string>, reads: ReadonlyMap<string, { state: string; version: number }>, prefix = ""): StudentTheme[] {
+  return themes.flatMap(source => {
+    const theme = { ...source, id: prefix + source.id };
     const notes = theme.notes.filter(note => verses.has(note.verseRef));
     if (theme.notes.length > 0 && notes.length === 0) return [];
     const tick = reads.get(theme.id);
@@ -109,7 +118,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       return Object.freeze(head ? { version: head.version, body: head.body, template: false } : { version: 0, body: STARTER_VOICE, template: true });
     });
   }
-  async function setVoice(authority: RabbiAuthority<Q>, supplied: { expectedVersion: unknown; body: unknown; mutationId: unknown }) {
+  async function setVoice(authority: RabbiAuthority<Q>, supplied: { expectedVersion: unknown; body: unknown; mutationId: unknown }): Promise<VersionSaveResult> {
     const expected = versionOf(supplied.expectedVersion), mutationId = mutationOf(supplied.mutationId), checked = validateVoice(supplied.body);
     if (!checked.ok) return invalid(checked.problems);
     const body = checked.value, requestDigest = digest(["study-voice/v1", expected, body]);
@@ -136,7 +145,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       return Object.freeze({ kind, readingKey, currentVersion: heads.head?.version ?? 0, visible, held: head?.hold ? head : null });
     });
   }
-  async function setBaseGuide(authority: RabbiAuthority<Q>, supplied: { kind: unknown; readingKey: unknown; expectedVersion: unknown; body: unknown; origin: unknown; reviewed: unknown; hold: unknown; mutationId: unknown }) {
+  async function setBaseGuide(authority: RabbiAuthority<Q>, supplied: { kind: unknown; readingKey: unknown; expectedVersion: unknown; body: unknown; origin: unknown; reviewed: unknown; hold: unknown; mutationId: unknown }): Promise<GuideSaveResult> {
     const kind = kindOf(supplied.kind), readingKey = keyOf(supplied.readingKey), expected = versionOf(supplied.expectedVersion), mutationId = mutationOf(supplied.mutationId);
     const origin = originOf(supplied.origin), reviewed = bool(supplied.reviewed), hold = bool(supplied.hold);
     const shape = validateGuideBody(supplied.body, { allowOverview: true });
@@ -149,20 +158,21 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     // Phase 1: authority, receipt and version, before any network work.
     const first = await authority.run(async (tx, writer) => {
       const refused = permitted(writer); if (refused) return refused;
-      const prior = await data.guideReceipt(tx, writer, mutationId); if (prior) return { done: replay(prior) };
+      const prior = await data.guideReceipt(tx, writer, mutationId); if (prior) return { step: "done" as const, result: replay(prior) };
       const heads = await data.guideHeads(tx, writer.tenantId, kind, readingKey);
       if ((heads.head?.version ?? 0) !== expected) return fail("conflict");
       const verses = await passage(tx, writer.tenantId, kind, readingKey);
-      return verses.size ? { verses } : fail("no-reading");
+      return verses.size ? { step: "check" as const, verses } : fail("no-reading");
     });
     if ("ok" in first) return first;
-    if ("done" in first) return first.done;
+    if (first.step === "done") return first.result;
     // Phase 2: citations and verses are resolved by the server, outside the transaction.
     const resolved = await input.check({ kind, readingKey, studentId: null, verses: first.verses, body: shape.value });
     if (!resolved.ok) return invalid(resolved.problems);
     const recheck = validateGuideBody(resolved.body, { allowOverview: true });
     if (!recheck.ok) return invalid(recheck.problems);
-    const body = recheck.value;
+    const body = recheck.value, outside = versesOutside(body, first.verses);
+    if (outside.length) return invalid(outside);
     // Phase 3: re-establish authority and recheck everything before appending.
     return authority.run(async (tx, writer, live) => {
       const refused = permitted(writer); if (refused) return refused;
@@ -179,7 +189,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       return Object.freeze({ ok: true as const, replayed: false, version: row.version, held: row.hold, heldBecauseReviewed: effectiveHold && !hold });
     });
   }
-  async function publishBaseGuide(authority: RabbiAuthority<Q>, supplied: { kind: unknown; readingKey: unknown; version: unknown; mutationId: unknown }) {
+  async function publishBaseGuide(authority: RabbiAuthority<Q>, supplied: { kind: unknown; readingKey: unknown; version: unknown; mutationId: unknown }): Promise<GuideSaveResult> {
     const kind = kindOf(supplied.kind), readingKey = keyOf(supplied.readingKey), version = versionOf(supplied.version), mutationId = mutationOf(supplied.mutationId);
     const requestDigest = digest(["study-guide-publish/v1", kind, readingKey, version]);
     const replay = (row: data.GuideRow) => row.requestDigest === requestDigest ? Object.freeze({ ok: true as const, replayed: true, version: row.version, held: false }) : fail("conflict");
@@ -190,7 +200,8 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       const heads = await data.guideHeads(tx, writer.tenantId, kind, readingKey);
       if (!heads.head || heads.head.version !== version) return fail("conflict");
       if (!heads.head.hold) return fail("not-held");
-      const held = guideVersion(heads.head);
+      const held = servable(heads.head);
+      if (!held) return invalid(["The held version no longer meets the guide rules; save a corrected version instead."]);
       live();
       const row = await data.appendGuide(tx, writer, { kind, readingKey, expected: version, origin: held.origin, reviewed: held.reviewed, hold: false, body: held.body, mutationId, digest: requestDigest, publish: true });
       live();
@@ -200,7 +211,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
   }
 
   // Per-student additions ------------------------------------------------------------------------
-  async function setStudentGuide(authority: RabbiAuthority<Q>, supplied: { studentId: unknown; kind: unknown; assignmentId: unknown; assignmentRevision: unknown; expectedVersion: unknown; body: unknown; origin: unknown; reviewed: unknown; mutationId: unknown }) {
+  async function setStudentGuide(authority: RabbiAuthority<Q>, supplied: { studentId: unknown; kind: unknown; assignmentId: unknown; assignmentRevision: unknown; expectedVersion: unknown; body: unknown; origin: unknown; reviewed: unknown; mutationId: unknown }): Promise<VersionSaveResult> {
     if (typeof supplied.studentId !== "string" || !UUID.test(supplied.studentId) || typeof supplied.assignmentId !== "string" || !UUID.test(supplied.assignmentId)) throw new AccessDenied(404);
     const studentId = supplied.studentId.toLowerCase(), assignmentId = supplied.assignmentId.toLowerCase(), kind = kindOf(supplied.kind);
     const assignmentRevision = versionOf(supplied.assignmentRevision), expected = versionOf(supplied.expectedVersion), mutationId = mutationOf(supplied.mutationId);
@@ -222,29 +233,27 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     const guard = async (tx: AccessTransaction<Q>, writer: RabbiWriter) => {
       if (writer.channel !== "mcp") return fail("channel-not-permitted");
       if (reviewed && !writer.mayReview) return fail("review-not-permitted");
-      const prior = await data.studentGuideReceipt(tx, writer, mutationId); if (prior) return { done: replay(prior) };
+      const prior = await data.studentGuideReceipt(tx, writer, mutationId); if (prior) return { step: "done" as const, result: replay(prior) };
       const reading = await current(tx, writer); if (!reading) return fail("stale-assignment");
       const head = await data.studentGuideHead(tx, writer.tenantId, studentId, assignmentId, assignmentRevision, kind);
       if ((head?.version ?? 0) !== expected) return fail("conflict");
       // S25 for additions: there is no held state here, so a routine cannot write over reviewed additions at all.
       if (!reviewed && !writer.mayReview && await data.studentGuideAnyReviewed(tx, writer.tenantId, studentId, assignmentId, assignmentRevision, kind)) return fail("review-not-permitted");
-      // Ticks are keyed by theme id within a reading; additions may not reuse a base theme's id.
-      const base = reading.readingKey ? servable((await data.guideHeads(tx, writer.tenantId, kind, reading.readingKey)).visible) : null;
-      const taken = new Set(base?.body.themes.map(t => t.id) ?? []), clash = shape.value.themes.filter(t => taken.has(t.id)).map(t => `theme id ${t.id} is already used by the reading's guide`);
-      if (clash.length) return invalid(clash);
-      return { head, verses: new Set(reading.verses) };
+      return { step: "check" as const, head, verses: new Set(reading.verses) };
     };
     const first = await authority.run(guard);
     if ("ok" in first) return first;
-    if ("done" in first) return first.done;
+    if (first.step === "done") return first.result;
     const resolved = await input.check({ kind, readingKey: null, studentId, verses: first.verses, body: shape.value });
     if (!resolved.ok) return invalid(resolved.problems);
     const recheck = validateGuideBody(resolved.body, { allowOverview: false });
     if (!recheck.ok) return invalid(recheck.problems);
+    const outside = versesOutside(recheck.value, first.verses);
+    if (outside.length) return invalid(outside);
     return authority.run(async (tx, writer, live) => {
       const checked = await guard(tx, writer);
       if ("ok" in checked) return checked;
-      if ("done" in checked) return checked.done;
+      if (checked.step === "done") return checked.result;
       const head = checked.head;
       if (head && canonical(head.body) === canonical(recheck.value) && head.origin === origin && head.reviewed === reviewed) return fail("no-change");
       live();
@@ -279,7 +288,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       base: base ? Object.freeze({ version: base.version, label: Object.freeze({ origin: base.origin, reviewed: base.reviewed, rabbiName: name }), overview: base.body.overview ?? "",
         themes: Object.freeze(themesFor(base.body.themes, verses, reads)), updatedAt: base.createdAt }) : null,
       additions: additions ? Object.freeze({ version: additions.version, label: Object.freeze({ origin: additions.origin, reviewed: additions.reviewed, rabbiName: name }),
-        themes: Object.freeze(themesFor(additions.body.themes, verses, reads)), updatedAt: additions.createdAt }) : null,
+        themes: Object.freeze(themesFor(additions.body.themes, verses, reads, ADDITION_PREFIX)), updatedAt: additions.createdAt }) : null,
     });
   }
   async function studentGuide(request: AccessRequest, selection: { mode: Mode; studentId: string; kind: unknown }) {
@@ -288,7 +297,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
   }
   async function setThemeRead(request: AccessRequest, selection: { mode: Mode; studentId: string; kind: unknown; readingKey: unknown; themeId: unknown; read: unknown; expectedVersion: unknown }) {
     const kind = kindOf(selection.kind), readingKey = keyOf(selection.readingKey), read = bool(selection.read), expected = versionOf(selection.expectedVersion);
-    if (typeof selection.themeId !== "string" || selection.themeId.length > 64 || !SLUG.test(selection.themeId)) throw new AccessDenied(403);
+    if (typeof selection.themeId !== "string" || selection.themeId.length > 73 || !THEME_TICK.test(selection.themeId)) throw new AccessDenied(403);
     const themeId = selection.themeId;
     // Only the learner ticks, alone or in a parent's child-practice session (never parent overview or staff).
     if (selection.mode !== "student" && selection.mode !== "child-practice") throw new AccessDenied(403);

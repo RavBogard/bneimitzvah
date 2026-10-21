@@ -98,7 +98,8 @@ export const studyThemeRead = pgTable("study_theme_read", {
   check("study_theme_read_version_positive", sql`${t.version} > 0`),
   check("study_theme_read_kind", sql`${t.kind} in ('torah','haftarah')`),
   check("study_theme_read_reading_key", readingKeyCheck(t.readingKey)),
-  check("study_theme_read_theme", sql`octet_length(${t.themeId}) <= 64 and ${t.themeId} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
+  // Base theme ids are plain slugs; a per-student addition's theme is stored as student--<slug>, which no slug can spell.
+  check("study_theme_read_theme", sql`octet_length(${t.themeId}) <= 73 and ${t.themeId} ~ '^(student--)?[a-z0-9]+(-[a-z0-9]+)*$'`),
   check("study_theme_read_state", sql`${t.state} in ('read','unread')`),
   check("study_theme_read_instant", sql`isfinite(${t.updatedAt})`),
 ]);

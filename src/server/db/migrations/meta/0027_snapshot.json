@@ -1,5 +1,5 @@
 {
-  "id": "d7d8803a-469e-4a4a-80bc-c7cd3c4ccc1b",
+  "id": "cc22351c-ca1b-45a9-af6a-c32162585c41",
   "prevId": "972670a1-febe-469e-8dc0-c5de1aefdeff",
   "version": "7",
   "dialect": "postgresql",
@@ -5784,7 +5784,7 @@
         },
         "study_theme_read_theme": {
           "name": "study_theme_read_theme",
-          "value": "octet_length(\"study_theme_read\".\"theme_id\") <= 64 and \"study_theme_read\".\"theme_id\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'"
+          "value": "octet_length(\"study_theme_read\".\"theme_id\") <= 73 and \"study_theme_read\".\"theme_id\" ~ '^(student--)?[a-z0-9]+(-[a-z0-9]+)*$'"
         },
         "study_theme_read_state": {
           "name": "study_theme_read_state",

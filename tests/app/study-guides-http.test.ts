@@ -24,7 +24,8 @@ async function fixture() {
     await f.db.insert(s.assignmentVerse).values([34, 35].map((v, i) => ({ tenantId: "crc", studentId, assignmentId: row.id, ordinal: i + 1, verseRef: `Exodus 40:${v}` })));
   });
   const writer = createStudyGuideService({ access: f.service, practice: createPracticeService({ access: f.service }), check: async ({ body }) => ({ ok: true as const, body }) });
-  const rabbi = membershipRabbiAuthority({ db: f.db, tenantId: "crc", membershipId: f.adminMember.id, channel: "mcp", mayReview: true });
+  const rabbi = membershipRabbiAuthority({ db: f.db, tenantId: "crc", membershipId: f.adminMember.id, channel: "mcp", mayReview: true,
+    bound: { roleGrantId: f.adminGrant.id, roleGrantRevision: f.adminGrant.revision, authorityRevision: f.adminMember.authorityRevision } });
   await writer.setBaseGuide(rabbi, { kind: "torah", readingKey: "pekudei", expectedVersion: 0, body: guide({ themes: [theme("cloud", { notes: [note("Exodus 40:34")] })] }),
     origin: "claude", reviewed: false, hold: false, mutationId: randomUUID() });
   const send = async (path: string, options: Parameters<typeof f.request>[1] = {}) => {

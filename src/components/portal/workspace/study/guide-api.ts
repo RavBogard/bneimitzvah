@@ -45,7 +45,8 @@ function note(value: unknown, verses: ReadonlySet<string>): GuideNote {
 }
 function theme(value: unknown, verses: ReadonlySet<string>): GuideTheme {
   const row = object(value, ["id", "title", "intro", "notes", "read", "readVersion"]);
-  return { id: slug(row.id, 64), title: line(row.title, 480), intro: text(row.intro, 4096), notes: list(row.notes, 12, item => note(item, verses)), read: bool(row.read), readVersion: version(row.readVersion) };
+  if (typeof row.id !== "string" || row.id.length > 73 || !/^(?:student--)?[a-z0-9]+(?:-[a-z0-9]+)*$/.test(row.id)) return bad();
+  return { id: row.id, title: line(row.title, 480), intro: text(row.intro, 4096), notes: list(row.notes, 12, item => note(item, verses)), read: bool(row.read), readVersion: version(row.readVersion) };
 }
 function label(value: unknown): GuideLabel {
   const row = object(value, ["origin", "reviewed", "rabbiName"]);
