@@ -436,8 +436,11 @@ it("an actual signed proposal deadline stops cached playback even before queued 
   // browser parsed and cached its metadata; this deadline test needs no
   // intercept-and-fulfill transport or CDP request-completion surrogate.
   const metadata = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/explore/reference/short/page") && response.status() === 200);
-  const preparation = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/explore/prepare") && response.status() === 200);
-  await tutor(tab); await metadata; const selected: unknown = await (await preparation).json();
+  // Consume the genuine body as soon as its response arrives. Delaying CDP's
+  // body lookup until after DOM/metadata readiness can lose its resource handle.
+  // Promise.all observes every failure while navigation and body consumption run.
+  const preparation = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/explore/prepare") && response.status() === 200).then(response => response.json() as Promise<unknown>);
+  const [, , selected] = await Promise.all([tutor(tab), metadata, preparation]);
   const deadline = selected && typeof selected === "object" && "expiresAt" in selected ? selected.expiresAt : undefined;
   expect(typeof deadline === "number" && Number.isSafeInteger(deadline) && deadline > Date.now()).toBe(true);
   await portion(tab).getByRole("button", { name: "Hear Genesis 1:1", exact: true }).click();
