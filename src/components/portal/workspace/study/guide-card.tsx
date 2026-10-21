@@ -9,7 +9,9 @@ import styles from "./guide.module.css";
 
 /** Exactly the label the spec fixes: what is Claude's and whether the rabbi has reviewed it. */
 export function guideLabelText(label: GuideLabel) {
-  return label.reviewed ? `Reviewed by ${label.rabbiName}` : `Written by Claude for CRC · not yet reviewed by ${label.rabbiName}`;
+  if (label.reviewed) return `Reviewed by ${label.rabbiName}`;
+  // Daniel, 2026-10-21: a draft the rabbi wrote himself is not labelled as Claude's.
+  return label.origin === "rabbi" ? `Written by ${label.rabbiName} · draft` : `Written by Claude for CRC · not yet reviewed by ${label.rabbiName}`;
 }
 export function useGuide(store: GuideStore, kind: StudyKind) {
   useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);

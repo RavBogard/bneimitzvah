@@ -54,12 +54,12 @@ test("the SQL body check accepts every body the TypeScript validator accepts and
       [guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { sources: ["a", "b", "c", "d"].map(id => source(id)) })] })] }), true],
       [guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { sources: [source("a"), source("a")] })] })] }), true],
       [guide({ themes: [theme("same"), theme("same")] }), true], [guide({ themes: [theme("Bad")] }), true],
-      [guide({ overview: "<b>" }), true], [guide({ overview: "hidden‮mark" }), true], [guide({ overview: "line\nbreak" }), true],
+      [guide({ overview: "<b>" }), true], [guide({ overview: "hidden\u202emark" }), true], [guide({ overview: "line\nbreak" }), true],
       [guide({ overview: "carriage\r\nreturn" }), true], [guide({ overview: "c1\u0085control" }), true], [guide({ overview: "   \n " }), true],
       [guide({ themes: [theme("t", { notes: [note("Exodus 40")] })] }), true], [{ ...guide(), extra: 1 }, true],
       [guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { sources: [{ ...source(), readable: "yes" } as never] })] })] }), true],
-      [guide({ overview: "arabic؜mark" }), true], [guide({ overview: "line sep" }), true], [guide({ overview: "zero​width" }), true],
-      [guide({ overview: "​​" }), true],
+      [guide({ overview: "arabic\u061cmark" }), true], [guide({ overview: "line\u2028sep" }), true], [guide({ overview: "zero\u200bwidth" }), true],
+      [guide({ overview: "\u200b\u200b" }), true],
     ];
     for (const [body, allowOverview] of corpus) {
       const ts = validateGuideBody(body, { allowOverview }).ok, db = await sql(body, allowOverview);
@@ -72,7 +72,7 @@ test("the SQL body check accepts every body the TypeScript validator accepts and
     expect(validateGuideBody(guide({ overview: "see [a][b]" }), { allowOverview: true }).ok).toBe(false);
     expect(await sql(guide({ overview: "see [a][b]" }), true)).toBe(true);
     // The database rejects the disguising characters on its own, whatever the locale's class.
-    for (const text of ["arabic؜mark", "line sep", "zero​width"]) expect(await sql(guide({ overview: text }), true), text).toBe(false);
+    for (const text of ["arabic\u061cmark", "line\u2028sep", "zero\u200bwidth"]) expect(await sql(guide({ overview: text }), true), text).toBe(false);
     const audit = await client.query<{ ok: boolean }>("select pg_get_constraintdef(oid) like '%study-guide.set%' as ok from pg_constraint where conname='audit_action_known'");
     expect(audit.rows[0].ok).toBe(true);
   } finally { await client.close(); }
