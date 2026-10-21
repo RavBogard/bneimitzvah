@@ -1,0 +1,41 @@
+.card { margin-block: 1.5rem; padding: 1.25rem 1.25rem 1rem; border-radius: var(--radius-object); background: var(--color-surface); color: var(--color-ink); box-shadow: 0 1px 0 var(--color-rule); max-width: 72ch; min-width: 0; }
+.card h3 { margin: 0 0 0.75rem; font-size: 1.375rem; line-height: 1.25; }
+.card h4 { margin: 1.25rem 0 0.5rem; font-size: 1rem; line-height: 1.4; color: var(--color-muted); font-weight: 600; }
+.prose p, .prose li { line-height: 1.65; font-size: 1.0625rem; overflow-wrap: anywhere; }
+.prose p { margin-block: 0 0.75rem; }
+.prose ul, .prose ol { margin-block: 0 0.75rem; padding-inline-start: 1.25rem; }
+.he { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 1.15em; }
+.themes { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.theme { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 0.875rem; border-radius: var(--radius-control); background: var(--lake-tint); min-width: 0; }
+.theme[data-read="true"] { box-shadow: inset 4px 0 0 var(--marigold); }
+.themeText { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.themeTitle { font-weight: 600; overflow-wrap: anywhere; }
+.themeIntro { color: var(--color-muted); font-size: 0.9375rem; line-height: 1.5; overflow-wrap: anywhere; }
+.tick { flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.4rem; min-height: 44px; padding: 0.5rem 0.9rem; border: 1px solid var(--color-action); border-radius: 999px; background: var(--color-surface); color: var(--color-action); font: inherit; cursor: pointer; }
+.tick[aria-pressed="true"] { background: var(--marigold); border-color: transparent; color: var(--color-ink); }
+.tick:disabled { opacity: 0.6; cursor: default; }
+.tick:focus-visible, .study:focus-visible, .sourceLink:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.state { flex-shrink: 0; color: var(--color-muted); font-size: 0.9375rem; }
+.state[data-read="true"] { color: var(--color-ink); font-weight: 600; }
+.notice { margin: 0.25rem 0 0; color: var(--color-muted); font-size: 0.875rem; }
+.label { margin: 1rem 0 0; color: var(--color-muted); font-size: 0.875rem; line-height: 1.5; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-block-start: 1rem; }
+.study { min-height: 44px; padding: 0.5rem 1.1rem; border: 0; border-radius: 999px; background: var(--color-action-fill); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.additions { margin-block-start: 1.25rem; padding-block-start: 1rem; border-block-start: 1px solid var(--color-rule); }
+.retry { min-height: 44px; padding: 0.5rem 0.9rem; border: 1px solid var(--color-rule); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-action); font: inherit; cursor: pointer; }
+
+.notes { margin-block: 1rem 0.5rem; display: grid; gap: 0.75rem; max-width: 65ch; min-width: 0; }
+.note { padding: 0.875rem 1rem; border-radius: var(--radius-control); background: var(--lake-tint); min-width: 0; }
+.noteTheme { margin: 0 0 0.35rem; font-size: 0.875rem; font-weight: 600; color: var(--color-muted); overflow-wrap: anywhere; }
+.sources { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.35rem; }
+.source { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; min-width: 0; overflow-wrap: anywhere; font-size: 0.9375rem; }
+.sourceName { font-weight: 600; }
+.sourceRef { color: var(--color-muted); }
+.sourceLink { display: inline-flex; align-items: center; min-height: 44px; color: var(--color-action); text-underline-offset: 0.2em; }
+.noteLabel { margin: 0; color: var(--color-muted); font-size: 0.8125rem; }
+
+@media (max-width: 36rem) {
+  .card { padding: 1rem; margin-inline: -0.25rem; }
+  .theme { flex-direction: column; align-items: stretch; }
+  .tick { justify-content: center; }
+}

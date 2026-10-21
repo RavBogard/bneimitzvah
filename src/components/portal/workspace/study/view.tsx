@@ -18,9 +18,9 @@ import { watchReadingAudioDeadline } from "./reading-player-intent";
 import type { ShortReferenceOwner } from "./short-reference-bridge";
 
 export type StudyReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
-export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderWork, renderActiveWork, onPage, learner = false, liftHandle, practiceHandle, textStartHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, active = true, audio, stopAudio }: {
+export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderGuide, renderWork, renderActiveWork, onPage, learner = false, liftHandle, practiceHandle, textStartHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, active = true, audio, stopAudio }: {
   baseline: Assigned | null; register(value: StudyReload): () => void; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; onKindChange(kind: StudyKind): void;
-  guardDeparture?(): Promise<boolean>; serviceHref?: string; renderWork?(kind: StudyKind, verseRef: string): ReactNode; renderActiveWork?(): ReactNode; onPage?(kind: StudyKind, offset: number, signal: AbortSignal): Promise<void>;
+  guardDeparture?(): Promise<boolean>; serviceHref?: string; renderGuide?(kind: StudyKind, verseRef: string): ReactNode; renderWork?(kind: StudyKind, verseRef: string): ReactNode; renderActiveWork?(): ReactNode; onPage?(kind: StudyKind, offset: number, signal: AbortSignal): Promise<void>;
   /** Students and child practice see the reading without status or provenance prose. */
   learner?: boolean; liftHandle?: MutableRefObject<((index: number) => void) | null>;
   practiceHandle?: MutableRefObject<((index: number) => void) | null>;
@@ -214,9 +214,10 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       <div className="study-verse-details">{current.page.verses.map((verse, index) => <div key={verse.ref} className="study-verse-detail" data-verse-ref={verse.ref}>
         <div className="verse-card-head"><h4>Verse tools · <bdi dir="ltr">{verse.ref}</bdi></h4>{renderMark?.(kind, verse.ref)}<button type="button" className="button-text" onClick={() => open(current.page!, index)}>View {verse.ref} up close</button></div>
         {!songSession && <p className="study-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
-        <Apparatus verse={verse} learner={learner} />{renderWork?.(kind, verse.ref)}
+        <Apparatus verse={verse} learner={learner} />{renderGuide?.(kind, verse.ref)}
         {!concealed && <SourcesPanel key={`sources:${JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page!.offset, generation.current, verse.ref])}`}
           scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page!.offset, generation.current, verse.ref])} baseline={baseline} kind={kind} offset={current.page!.offset + index} onRefreshReading={reloadMetadata} />}
+        {renderWork?.(kind, verse.ref)}
       </div>)}</div>
       {!learner && kind==="torah" && assignment!.aliyahStarts===null && <p className="field-help">Aliyah boundaries have not been recorded for this assignment.</p>}
       {learner ? !single && <p className="study-page-position">Verses {current.page.offset + 1}–{current.page.offset + current.page.verses.length} of {current.page.totalVerses}</p>

@@ -405,7 +405,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         const query = uniqueQuery(request.url, ["mode"]), value = await runtime.portal.assignedReading(request, { mode: mode(query.get("mode"), true), studentId: id! });
         return privateJson({ student: studentView(value.student), mode: value.mode, context: contextView(value.context),
           referenceListeningEnabled: runtime.shortReferenceAudio.listeningEnabled(value.mode), readings: value.readings.map(row => ({ id: row.id, status: row.status,
-          kind: row.kind, basis: row.basis, revision: row.revision, ranges: [...row.ranges], verses: [...row.verses], confirmationDate: row.confirmationDate, needsReview: row.needsReview, aliyahStarts:row.aliyahStarts,
+          kind: row.kind, basis: row.basis, revision: row.revision, ranges: [...row.ranges], verses: [...row.verses], confirmationDate: row.confirmationDate, needsReview: row.needsReview, aliyahStarts:row.aliyahStarts, readingKey: row.readingKey,
           source: { status: row.source.status, fetchedAt: row.source.fetchedAt, date: row.source.date, calendar: row.source.calendar,
             attribution: row.source.attribution ? { name: row.source.attribution.name, url: row.source.attribution.url } : null } })) });
       }
