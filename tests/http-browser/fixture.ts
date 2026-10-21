@@ -84,6 +84,8 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       studyWordDetails: createStudyWordDetailsService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), source: options.wordDetailsSource ?? { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) } }),
       study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }), studentWork: createStudentWorkService({ access, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
     serviceLearning: createServiceLearningService({ access: access, practice, signingSecret: secret() }),
+    serviceEcosystem: createServiceEcosystemService({ access, broker: createMusicBroker(undefined) }),
+    serviceScheduler: createServiceScheduler({ db, broker:createMusicBroker(undefined) }),
       googleChallenges: createGoogleChallenges({ db, origin: BROWSER_ORIGIN, secret: secret() }),
       resolveHost: async request => {
         const host = await resolveTenantHost(db, request, deployment);
@@ -106,3 +108,6 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     throw new Error("Browser fixture setup failed; details withheld");
   }
 }
+import { createServiceEcosystemService } from "../../src/server/service-ecosystem/service";
+import { createMusicBroker } from "../../src/server/service-ecosystem/broker";
+import { createServiceScheduler } from "../../src/server/service-ecosystem/scheduler";

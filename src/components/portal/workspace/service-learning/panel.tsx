@@ -7,6 +7,7 @@ import { ServiceUnitView } from "../../service-learning/unit-view";
 import type { ServiceUnitMaterial } from "../../../../lib/service-learning/types";
 import type { ServiceMetadata, ServicePlan } from "./api";
 import { ServicePlanEditor } from "./editor";
+import { MyServicePanel } from "./my-service";
 
 export type ServiceReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
 export function ServiceLearningPanel({ id, mode, studentId, baseline, register, reloadReading, onDepartureActive, onVisit }: {
@@ -61,6 +62,7 @@ export function ServiceLearningPanel({ id, mode, studentId, baseline, register, 
   async function confirmed() { await reloadReading(); if (!metadata.current) throw new Error("Service plan reload unavailable"); return metadata.current; }
   return <section id={id} className="service-learning-panel" aria-labelledby={`${id}-heading`}>
     <h2 id={`${id}-heading`} tabIndex={-1}>Service parts</h2>
+    {mode !== "child-practice" && <MyServicePanel mode={mode} studentId={studentId} baseline={baseline} />}
     {!current || current.loading ? <p role="status">Checking assigned service parts…</p> : current.error ? <div role="status"><p>{current.error === 409 ? "The service plan changed. Reload it before choosing a part." : [401, 403, 404].includes(current.error) ? "Service parts are no longer available in this view." : "Service parts are unavailable. Your scripture reading is separate."}</p><button className="button-secondary" onClick={() => void reloadReading().catch(() => undefined)}>Reload service parts</button></div> : assigned && <>
       {assigned.state === "no-plan" && <p>No service parts have been assigned yet.</p>}
       {assigned.state === "cleared" && <p>The service plan was explicitly cleared. No service parts are assigned.</p>}

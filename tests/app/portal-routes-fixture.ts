@@ -70,6 +70,8 @@ export async function portalRoutesFixture() {
     study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }), progress: createProgressService({ access: f.service, practice }), lessonLog: createLessonLogService({ access: f.service, practice }), practiceCalendar: createPracticeCalendarService({ access: f.service, practice }), recordings: createStudentRecordingService({ access: f.service, practice }),
     portal: createPortalService({ access: f.service, practice, sessionBindingSecret: randomBytes(48).toString("base64url") }), relationships: createRelationshipService({ access: f.service }), pendingInvitations,
     serviceLearning: createServiceLearningService({ access: f.service, practice, signingSecret: randomBytes(48).toString("base64url") }),
+    serviceEcosystem: createServiceEcosystemService({ access: f.service, broker: createMusicBroker(undefined) }),
+    serviceScheduler: createServiceScheduler({ db:f.db, broker:createMusicBroker(undefined) }),
     googleChallenges: createGoogleChallenges({ db: f.db, origin: "http://localhost:3000", secret: randomBytes(48).toString("base64url") }),
     resolveHost: request => resolveTenantHost(f.db, request, { environment: "test", deployment: "suite" }) };
   function request(path: string, options: { who?: keyof typeof identities | "anonymous"; method?: string; body?: unknown; handle?: string; pending?: string;
@@ -97,3 +99,6 @@ export async function portalRoutesFixture() {
   }
   return { ...f, identities, runtime, request, call, pending, deliveries, failSend: (value: boolean) => { sendFails = value; } };
 }
+import { createServiceEcosystemService } from "../../src/server/service-ecosystem/service";
+import { createMusicBroker } from "../../src/server/service-ecosystem/broker";
+import { createServiceScheduler } from "../../src/server/service-ecosystem/scheduler";

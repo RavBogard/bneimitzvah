@@ -1,0 +1,21 @@
+.service { margin-block: 1.25rem 2rem; max-width: 68rem; }
+.service h3 { margin-block: 1.75rem 0.5rem; }
+.ceremony { font-size: 1.125rem; color: var(--color-ink); }
+.parts { list-style: none; margin: 0; padding: 0; }
+.part { padding-block: 1.25rem; border-bottom: 1px solid var(--color-control-rule); overflow-wrap: anywhere; }
+.partHeading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1rem; }
+.partHeading h4 { margin: 0; font-size: 1.125rem; }
+.partHeading span, .note { color: var(--color-muted); font-size: 0.9375rem; }
+.directions { white-space: pre-wrap; max-width: 70ch; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem 0.875rem; align-items: center; margin-block: 0.75rem; }
+.service summary { min-height: 44px; padding-block: 0.625rem; cursor: pointer; font-weight: 600; }
+.service label { display: grid; gap: 0.375rem; margin-block: 0.875rem; }
+.service textarea { min-height: 6rem; resize: vertical; }
+.service form { max-width: 46rem; padding-bottom: 0.5rem; }
+.service select, .service textarea { width: 100%; box-sizing: border-box; }
+.service .checkbox { display: flex; align-items: center; gap: 0.625rem; min-height: 44px; }
+.checkbox input { width: 20px; height: 20px; min-height: 0; }
+.progress { max-width: 18rem; }
+.order { margin-top: 1rem; }
+.staff { margin-top: 1.5rem; border-top: 1px solid var(--color-control-rule); padding-top: 0.75rem; }
+@media (max-width: 640px) { .actions > button { max-width: 100%; white-space: normal; text-align: start; } .service { margin-block: 0.75rem 1.5rem; } }

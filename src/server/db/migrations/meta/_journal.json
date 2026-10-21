@@ -176,6 +176,13 @@
       "when": 1792514730359,
       "tag": "0024_adult_self_honors",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792554893237,
+      "tag": "0025_service_ecosystem",
+      "breakpoints": true
     }
   ]
 }
