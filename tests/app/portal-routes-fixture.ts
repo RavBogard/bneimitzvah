@@ -35,6 +35,8 @@ import { createServiceLearningService } from "../../src/server/service-learning/
 import { createStudentWorkService } from "../../src/server/student-work/service";
 import { createStudentRecordingService } from "../../src/server/recordings/service";
 import { StudyUnavailable } from "../../src/server/study/types";
+import { createReferenceReviewService } from "../../src/server/reference-review/service";
+import { ReviewUnavailable } from "../../src/server/reference-review/batch-contract";
 
 export async function portalRoutesFixture() {
   const f = await accessFixture();
@@ -70,6 +72,7 @@ export async function portalRoutesFixture() {
     study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }), progress: createProgressService({ access: f.service, practice }), lessonLog: createLessonLogService({ access: f.service, practice }), practiceCalendar: createPracticeCalendarService({ access: f.service, practice }), recordings: createStudentRecordingService({ access: f.service, practice }),
     portal: createPortalService({ access: f.service, practice, sessionBindingSecret: randomBytes(48).toString("base64url") }), relationships: createRelationshipService({ access: f.service }), pendingInvitations,
     serviceLearning: createServiceLearningService({ access: f.service, practice, signingSecret: randomBytes(48).toString("base64url") }),
+    referenceReview: createReferenceReviewService({ access: f.service, reviewer: undefined, get: async () => { throw new ReviewUnavailable(); } }),
     serviceEcosystem: createServiceEcosystemService({ access:f.service,practice,broker:createMusicBroker(undefined) }),
     serviceScheduler: createServiceScheduler({ db:f.db, broker:createMusicBroker(undefined) }),
     googleChallenges: createGoogleChallenges({ db: f.db, origin: "http://localhost:3000", secret: randomBytes(48).toString("base64url") }),

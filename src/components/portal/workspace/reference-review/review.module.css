@@ -1,0 +1,46 @@
+.page { max-width: 76rem; }
+.intro { max-width: 65ch; color: var(--color-muted); margin-block: 0.5rem 1.75rem; }
+.batch { display: flex; justify-content: space-between; align-items: start; gap: 1.5rem; padding-block: 1rem 1.5rem; border-bottom: 1px solid var(--color-rule); }
+.batch > label { display: grid; gap: 0.5rem; font-weight: 650; min-width: 0; max-width: 100%; }
+.batch select { max-width: 100%; min-height: 48px; padding: 0.5rem; background: var(--color-surface); color: var(--color-ink); border: 1px solid var(--color-control-rule); border-radius: var(--radius-control); font: inherit; }
+.revoke { max-width: 28rem; }
+.revoke summary { cursor: pointer; min-height: 44px; padding-block: 0.6rem; text-underline-offset: 0.2em; }
+.revoke p { max-width: 40ch; color: var(--color-muted); }
+.layout { display: grid; grid-template-columns: minmax(12rem, 17rem) minmax(0, 1fr); gap: 2.5rem; padding-top: 1.5rem; }
+.queue { display: flex; flex-direction: column; align-items: stretch; }
+.queue button { display: grid; gap: 0.35rem; text-align: start; min-height: 100px; padding: 1rem; border: 0; border-bottom: 1px solid var(--color-rule); border-radius: 0; background: transparent; color: var(--color-ink); font: inherit; cursor: pointer; }
+.queue button span { color: var(--color-muted); font-size: 0.9375rem; }
+.queue button:hover { background: var(--color-hover); }
+.queue button[aria-current] { background: var(--lake-tint); }
+.queue button:disabled { cursor: default; opacity: 0.6; }
+.recording { min-width: 0; }
+.recording h2 { margin: 0 0 0.5rem; font-size: 1.75rem; line-height: 1.25; }
+.recording header > p { margin: 0; color: var(--color-muted); }
+.passage { margin-block: 1.5rem; padding-block: 1rem; border-block: 1px solid var(--color-rule); }
+.passage p { font-size: 2.25rem; line-height: 1.9; margin: 0.5rem 0 1.25rem; overflow-wrap: anywhere; }
+.verseRef { display: block; font-family: "Bricolage Grotesque", system-ui, sans-serif; color: var(--color-muted); font-size: 0.875rem; line-height: 1.5; margin-bottom: 0.5rem; text-align: right; }
+.listening { display: grid; gap: 0.75rem; }
+.listening > button { justify-self: start; }
+.listening audio { width: 100%; max-width: 35rem; }
+.listening > p { max-width: 65ch; margin: 0; color: var(--color-muted); font-size: 0.9375rem; }
+.form { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--color-rule); }
+.form h3 { font-size: 1.25rem; margin: 0 0 0.75rem; }
+.form fieldset { margin: 1rem 0; padding: 0; border: 0; border-bottom: 1px solid var(--color-rule); }
+.form legend { font-weight: 700; padding: 0; }
+.form fieldset p { max-width: 65ch; color: var(--color-muted); margin: 0.25rem 0; }
+.choices { display: flex; gap: 1.5rem; }
+.switchPrompt { padding-block: 1rem; margin-block: 1rem; border-block: 1px solid var(--color-rule); }
+.switchPrompt h2 { font-size: 1.25rem; margin: 0 0 0.5rem; }
+.switchPrompt .choices { flex-wrap: wrap; gap: 0.75rem; }
+.choices label { min-height: 48px; display: inline-flex; gap: 0.5rem; align-items: center; cursor: pointer; }
+.choices input { width: 1.1rem; height: 1.1rem; accent-color: var(--color-action); }
+.saved { color: var(--color-muted); font-size: 0.9375rem; }
+.page :focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+@media (max-width: 760px) {
+  .batch { flex-direction: column; gap: 0.75rem; }
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 1.75rem; }
+  .queue { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+  .queue button { padding: 0.75rem; }
+  .passage p { font-size: 2rem; }
+  .listening > button, .form > button { width: 100%; }
+}
