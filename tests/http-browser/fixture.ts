@@ -40,6 +40,9 @@ import { resolveTenantHost } from "../../src/server/tenancy/resolve";
 import { parseCeremonyDate } from "../../src/lib/readings/ranges";
 import { withTenantTransaction } from "../../src/server/db/runtime";
 import type { HttpRuntime } from "../../src/server/runtime/composition";
+import { createReferenceReviewService } from "../../src/server/reference-review/service";
+import { ReviewUnavailable } from "../../src/server/reference-review/batch-contract";
+import type { ReferenceCatalogGet } from "../../src/server/reference-audio/storage";
 import * as s from "../../src/server/db/index";
 import { postgresAccessFixture } from "../postgres/access-fixture";
 import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
@@ -47,7 +50,7 @@ import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
 const secret = () => randomBytes(48).toString("base64url");
 type Mail = { email: string; url: string };
 
-export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; shortReferenceStudyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceShortManifestLoad?: (signal?: AbortSignal) => Promise<ShortSourceManifest>; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown>;musicBroker?:MusicBroker } = {}) {
+export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; shortReferenceStudyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceShortManifestLoad?: (signal?: AbortSignal) => Promise<ShortSourceManifest>; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown>;musicBroker?:MusicBroker;referenceReviewGet?:ReferenceCatalogGet } = {}) {
   const base = await postgresAccessFixture();
   try {
     // The shared disposable fixture creates the DB, migrations and restricted
@@ -85,6 +88,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       studyWordDetails: createStudyWordDetailsService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), source: options.wordDetailsSource ?? { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) } }),
       study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }), studentWork: createStudentWorkService({ access, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
     serviceLearning: createServiceLearningService({ access: access, practice, signingSecret: secret(),resolveCeremonyUnit:serviceEcosystem.materialMapping }),
+    referenceReview: createReferenceReviewService({ access, reviewer: options.referenceReviewGet ? { tenantId: "crc", userId: base.admin.id } : undefined, get: options.referenceReviewGet ?? (async () => { throw new ReviewUnavailable(); }) }),
     serviceEcosystem,
     serviceScheduler: createServiceScheduler({ db, broker:createMusicBroker(undefined) }),
       googleChallenges: createGoogleChallenges({ db, origin: BROWSER_ORIGIN, secret: secret() }),
