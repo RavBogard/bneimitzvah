@@ -1,0 +1,22 @@
+# Portal MCP — decided here (2026-10-21)
+
+Daniel, 2026-10-21: "There's already google oauth. This should be easy." The MCP therefore reuses the portal's existing Google sign-in and the OAuth pattern of the haftarah connector he already uses from Claude, instead of the Better Auth `mcp()` plugin composition the 2026-10-18 read-foundation design chose. That design's binding rulings (Google-authenticated, staff only, live roles and relationships authoritative, no tokens in logs or results, closed projections, JSON only) all hold; its library choice and its five activation gates are replaced by the contracts below.
+
+## What Daniel does once
+
+In Claude (claude.ai or the desktop app): Settings → Connectors → Add custom connector → URL `https://beitmitzvah.centralreform.org/api/mcp`. Claude registers itself, opens the portal's "Connect Claude" page, he confirms with Google and chooses Allow. A scheduled routine gets its own connection with "scheduled routine" ticked, so it can never mark a guide reviewed.
+
+## Contracts
+
+- **Clients.** Dynamic registration of public clients only (`token_endpoint_auth_method: none`), redirects held to `https://claude.ai/api/mcp/auth_callback`, `https://claude.com/api/mcp/auth_callback` or an http loopback. The client id is an HMAC-signed record; nothing is stored at registration.
+- **Consent.** `/api/oauth/authorize` validates the request and hands a signed, 10-minute pending request to `/connect` in the URL fragment (never in a log, a Referer or a request line). The page shows the client, the return host and what the connection may do. Allow is a same-origin, cookie-authenticated POST that requires a session Better Auth created from a verified Google ID token (`session.google_authenticated_at`, set only by the session-create hook, immutable). A magic-link session, a linked Google account or an older session is not enough.
+- **Who.** Staff only: an admin grant (all students; the study tools) or a tutor grant (own students; read tools). Parents and students cannot consent. Only an admin grant carries `portal:study` (S21).
+- **Tokens.** Authorization code (5 minutes, single use, PKCE S256), access token (1 hour), rotating refresh token, all random and stored only as SHA-256 hashes in `mcp_token`. A connection (`mcp_connection`) lasts at most 30 days from consent; no token outlives it. Replaying a used code or refresh token revokes the whole connection. RFC 7009 revocation of any token ends the connection.
+- **Live authority.** Every MCP request and every tool call re-locks, inside its tenant transaction: tenant enabled, connection not revoked or expired, user verified, membership enabled with the same authority revision, and the same role grant (id and revision) unrevoked. A revoked grant or a reissued one ends the connection at once. Study writes additionally re-lock the rabbi's admin grant bound to the consented revision (`lockRabbi`). `mayReview` is false for an unattended routine or a read-only connection (S25).
+- **Transport.** Stateless JSON-RPC over POST, one request per POST, JSON responses only: no SSE, no batch, no server-initiated messages. Protocol versions 2025-11-25, 2025-06-18, 2025-03-26. A missing or bad bearer gets 401 with `WWW-Authenticate: Bearer resource_metadata=…`. Tools appear only for the connection's role and scopes. Results are capped at 200,000 characters and withheld if they would contain an e-mail address, a bearer-shaped secret or a connection string.
+- **Off by default.** The routes do not exist unless `PORTAL_MCP_ENABLED=true`. Enabling follows the second-agent adversarial review (plan Task 9) and deletes the operator bridge in the same change (HANDOFF §5a).
+- **Tools.** `list_students`, `get_student` (admin and tutor); `get_study_voice`, `save_study_voice`, `list_guide_work`, `get_reading_for_guide`, `get_guide`, `save_guide`, `publish_guide`, `get_student_guide`, `save_student_guide` (rabbi only; writes need `portal:study`). Roster tools for the Maven-through-Cowork intake (Daniel, 2026-10-21) follow as a separate reviewed slice.
+
+## Not done here
+
+No consent memory (every connection asks), no per-connection list in the portal yet (Claude's own connector settings disconnect; connections end after 30 days), no Claude Code-specific metadata document.

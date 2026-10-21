@@ -1,7 +1,7 @@
 import "server-only";
 import { HttpBoundaryError } from "./responses";
 
-const limits = { ordinary: 16 * 1024, work: 32 * 1024, binding: 64 * 1024, honors: 66 * 1024, honoree: 1024, csv: 2 * 1024 * 1024 } as const;
+const limits = { ordinary: 16 * 1024, work: 32 * 1024, binding: 64 * 1024, honors: 66 * 1024, honoree: 1024, csv: 2 * 1024 * 1024, mcp: 512 * 1024 } as const;
 export async function readJsonBody(request: Request, profile: keyof typeof limits = "ordinary", deadlineMs = 5000): Promise<unknown> {
   if (!Object.hasOwn(limits, profile) || !Number.isInteger(deadlineMs) || deadlineMs < 1 || deadlineMs > 5000) throw new HttpBoundaryError();
   const limit = limits[profile];
@@ -52,4 +52,20 @@ export async function readJsonBody(request: Request, profile: keyof typeof limit
     void reader.cancel().catch(() => {});
     try { reader.releaseLock(); } catch { /* Pending read being cancelled. */ }
   }
+}
+
+/** An OAuth form body (application/x-www-form-urlencoded), 16 KiB at most. */
+export async function readFormBody(request: Request): Promise<URLSearchParams> {
+  if (!/^application\/x-www-form-urlencoded(?:\s*;\s*charset=utf-8)?$/i.test(request.headers.get("content-type") ?? "")
+    || ![null, "identity"].includes(request.headers.get("content-encoding"))) throw new HttpBoundaryError(415);
+  const size = request.headers.get("content-length");
+  if (size !== null && (!/^\d+$/.test(size) || Number(size) > 16 * 1024)) throw new HttpBoundaryError(413);
+  let text: string;
+  try {
+    const buffer = await Promise.race([request.arrayBuffer(), new Promise<never>((_, reject) => setTimeout(() => reject(new HttpBoundaryError(408)), 5000))]);
+    if (buffer.byteLength > 16 * 1024) throw new HttpBoundaryError(413);
+    text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+  } catch (error) { if (error instanceof HttpBoundaryError) throw new HttpBoundaryError(error.status); throw new HttpBoundaryError(); }
+  if (/[\u0000-\u001f\u007f]/.test(text)) throw new HttpBoundaryError();
+  return new URLSearchParams(text);
 }
