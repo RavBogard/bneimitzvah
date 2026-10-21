@@ -26,7 +26,7 @@ const adminRules: Record<AdminCapability, { fresh: boolean; intent: LockIntent }
 };
 
 const studentView = (row: StudentView): StudentView => Object.freeze({
-  id: row.id, firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate, revision: row.revision,
+  id: row.id, firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate, rehearsal1: row.rehearsal1, rehearsal2: row.rehearsal2, revision: row.revision,
 });
 
 export function createAccessService<Q extends PgQueryResultHKT>(input: {

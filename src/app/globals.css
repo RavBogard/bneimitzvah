@@ -375,6 +375,7 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .hero-who { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
 .hero-name { font-size: 1.0625rem; font-weight: 700; overflow-wrap: anywhere; }
 .hero-date { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; color: var(--color-muted); font-variant-numeric: tabular-nums; }
+.hero-rehearsals { margin: 0.125rem 0 0; color: var(--color-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
 .hero-days { background: var(--marigold); color: var(--on-ink); font-weight: 650; font-size: 0.875rem; padding: 0.125rem 0.625rem; border-radius: 999px; }
 .hero-icon { margin-inline-start: auto; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 999px; background: transparent; color: var(--color-muted); }
 .hero-icon:hover { background: var(--color-hover); color: var(--color-ink); }

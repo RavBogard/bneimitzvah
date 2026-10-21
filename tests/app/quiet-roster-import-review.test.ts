@@ -108,7 +108,7 @@ test("stored intake remains admin-only even after independent explicit learner, 
   });
   for (const [who, mode] of [["multi", "parent"], ["multi", "tutor"], ["learner", "student"]] as const) {
     const row = await f.service.readStudent(f.request(who), { mode, studentId: id });
-    expect(Object.keys(row).sort()).toEqual(["id", "firstName", "lastName", "ceremonyDate", "revision"].sort());
+    expect(Object.keys(row).sort()).toEqual(["id", "firstName", "lastName", "ceremonyDate", "rehearsal1", "rehearsal2", "revision"].sort());
     expect(JSON.stringify(await f.service.listStudents(f.request(who), { mode }))).not.toContain("Synthetic admin-only intake detail");
   }
   const [row] = (await f.studentsService.listRoster(f.mutation(), { mode: "admin" })).filter(row => row.id === id);

@@ -126,8 +126,8 @@ function CongregationSettingsPage() {
           {field("siddurUrl", "Siddur link", textInput("siddurUrl", { type: "url", inputMode: "url", placeholder: view.defaults.siddurUrl }), <>Left blank, the link stays {view.defaults.siddurUrl}</>)}
           {field("musicUrl", "Music link", textInput("musicUrl", { type: "url", inputMode: "url" }), "Left blank, no music link is shown.")}
         </section>
-        <section className="people-card" aria-labelledby="settings-records"><div className="people-card-head"><h2 id="settings-records">Roster and families</h2><p>Saved for your records. Nothing is sent to the sheet or shown to families yet.</p></div>
-          {field("rosterSheetId", "Roster sheet ID", textInput("rosterSheetId", { maxLength: 100 }))}
+        <section className="people-card" aria-labelledby="settings-records"><div className="people-card-head"><h2 id="settings-records">Roster and families</h2><p>Saved for your records. The consent notice isn’t shown to families yet.</p></div>
+          {field("rosterSheetId", "Roster sheet ID", textInput("rosterSheetId", { maxLength: 100 }), "Kept for a future congregation’s roster sheet. The CRC roster sheet is set by the portal’s operator, not here.")}
           {field("consentNotice", "Consent notice", textArea("consentNotice", 4, SETTINGS_LIMITS.consentNotice))}
         </section>
         {message && <p className={message.tone === "alert" ? "request-error roster-message" : "workspace-notice roster-message"} role={message.tone}>{message.text}</p>}

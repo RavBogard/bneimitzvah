@@ -11,12 +11,12 @@ import { accessFixture } from "./access-fixture";
 import * as s from "../../src/server/db/index";
 import { validateSettings } from "../../src/server/settings/validation";
 
-const TAG = "0029_congregation_settings";
+const TAG = "0030_congregation_settings";
 const sheet = "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789_-abcd";
 // Invisible and control characters are built from code points so none sits raw in this file.
 const ch = (code: number) => String.fromCharCode(code);
 
-test("0029 additive migration upgrades and replays, with the generated snapshot limited to tenant_settings and the audit action list", async () => {
+test("0030 additive migration upgrades and replays, with the generated snapshot limited to tenant_settings and the audit action list", async () => {
   const isolation = await isolatedEnv(), client = new PGlite();
   try {
     const folder = "src/server/db/migrations", journal = JSON.parse(await readFile(join(folder, "meta/_journal.json"), "utf8"));
@@ -29,7 +29,7 @@ test("0029 additive migration upgrades and replays, with the generated snapshot 
     // Customs are neither migrated nor rewritten; no settings version is invented for CRC.
     expect((await client.query("select id, customs from tenant order by id")).rows).toEqual(before);
     expect((await client.query("select count(*)::int as n from tenant_settings")).rows).toEqual([{ n: 0 }]);
-    // Compared with whichever migration precedes it, so a renumbering beside a parallel 0028 keeps this check honest.
+    // Compared with whichever migration precedes it, so a renumbering beside parallel migrations keeps this check honest.
     const own = journal.entries.findIndex((e: { tag: string }) => e.tag === TAG), snapshot = (tag: string) => join(folder, `meta/${tag.slice(0, 4)}_snapshot.json`);
     expect(own).toBeGreaterThan(0);
     const previous = JSON.parse(await readFile(snapshot(journal.entries[own - 1].tag), "utf8")), current = JSON.parse(await readFile(snapshot(TAG), "utf8"));

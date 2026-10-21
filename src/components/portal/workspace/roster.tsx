@@ -1,5 +1,6 @@
 "use client";
 
+import { UpdateStaffSheet } from "./roster-sheet/update-button";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { workspaceApi, type RosterStudent, type StudentInput } from "./api";
 import { RequireRole, statusOf, useWorkspace, useWorkspaceModal, WorkspaceLink } from "./provider";
@@ -8,8 +9,13 @@ import { ceremonyCountdown } from "./reading";
 import { icons } from "./study/lift";
 import { HonorsSheet } from "./honors/sheet";
 
-const empty: StudentInput = { firstName: "", lastName: "", ceremonyDate: "", studentKind: "child", serviceSlot: "unknown", parentEmail: "", ownEmail: null };
-function draft(row: RosterStudent): StudentInput { return { firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate, studentKind: row.studentKind, serviceSlot: row.serviceSlot, parentEmail: row.parentEmail, ownEmail: row.ownEmail }; }
+const empty: StudentInput = { firstName: "", lastName: "", ceremonyDate: "", rehearsal1: null, rehearsal2: null, studentKind: "child", serviceSlot: "unknown", parentEmail: "", ownEmail: null };
+function draft(row: RosterStudent): StudentInput { return { firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate, rehearsal1: row.rehearsal1 ?? null, rehearsal2: row.rehearsal2 ?? null, studentKind: row.studentKind, serviceSlot: row.serviceSlot, parentEmail: row.parentEmail, ownEmail: row.ownEmail }; }
+/** Same rule as the server and database: in order, and on or before the ceremony. */
+function rehearsalsFit(form: Pick<StudentInput, "ceremonyDate" | "rehearsal1" | "rehearsal2">) {
+  const first = form.rehearsal1 || null, second = form.rehearsal2 || null, ceremony = form.ceremonyDate;
+  return (!first || !ceremony || first <= ceremony) && (!second || !ceremony || second <= ceremony) && (!first || !second || first <= second);
+}
 const slotNames = { morning: "Morning", havdalah: "Havdalah", unknown: null } as const;
 const fullName = (row: { firstName: string; lastName: string }) => `${row.firstName} ${row.lastName}`;
 const searchable = (value: string) => value.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
@@ -99,6 +105,7 @@ function Roster() {
   async function mutate(disable: boolean) {
     if (gate.current || conflict) return;
     if (!disable && form.ownEmail?.trim() && form.parentEmail?.trim() && form.ownEmail.trim().toLowerCase() === form.parentEmail.trim().toLowerCase()) { setMessage("The student’s own email must be different from their parent’s email."); return; }
+    if (!disable && !rehearsalsFit(form)) { setMessage("Rehearsal dates need to be in order and on or before the ceremony date."); return; }
     gate.current = true; setPending(true); setMessage(""); const generation = lifetime.current;
     try {
       const result = disable && current ? await workspaceApi.disable(current) : await workspaceApi.save(form, current ?? undefined);
@@ -126,11 +133,18 @@ function Roster() {
     <input id={`roster-${name}`} name={name} type={name === "ceremonyDate" ? "date" : name.endsWith("Email") ? "email" : "text"} maxLength={name.endsWith("Email") ? 254 : 100} required={name === "parentEmail" ? form.studentKind === "child" : name === "ownEmail" ? form.studentKind === "adult" : true} disabled={pending || conflict}
       value={form[name] ?? ""} onChange={event => setForm(previous => ({ ...previous, [name]: event.target.value }))} autoComplete="off" />
   </div>;
+  // Optional; clearing the field clears the saved date. Usually about three weeks and one week before the ceremony.
+  const rehearsal = (name: "rehearsal1" | "rehearsal2") => <div key={name} className="roster-field">
+    <label htmlFor={`roster-${name}`}>{name === "rehearsal1" ? "First rehearsal (optional)" : "Second rehearsal (optional)"}</label>
+    <input id={`roster-${name}`} name={name} type="date" disabled={pending || conflict} value={form[name] ?? ""} autoComplete="off"
+      min={name === "rehearsal2" ? form.rehearsal1 || undefined : undefined} max={(name === "rehearsal1" ? form.rehearsal2 || form.ceremonyDate : form.ceremonyDate) || undefined}
+      onChange={event => { const value = event.target.value || null; setForm(previous => ({ ...previous, [name]: value })); }} />
+  </div>;
   const notice = message && <p className={conflict ? "request-error roster-message" : "workspace-notice roster-message"} role={conflict ? "alert" : "status"}>{message}</p>;
   const reloadIcon = <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
   return <section className="role-workspace admin-workspace">
     <AdminNav />
-    <div className="admin-head"><h1>Students</h1><div className="admin-head-actions"><WorkspaceLink className="button-secondary admin-pill" href="/workspace/admin/students/import">Import</WorkspaceLink><button ref={addButton} className="button-primary admin-pill" disabled={pending || loading || unavailable || conflict} onClick={event => choose(null, event)}>Add student</button></div></div>
+    <div className="admin-head"><h1>Students</h1><div className="admin-head-actions"><UpdateStaffSheet /><WorkspaceLink className="button-secondary admin-pill" href="/workspace/admin/students/import">Import</WorkspaceLink><button ref={addButton} className="button-primary admin-pill" disabled={pending || loading || unavailable || conflict} onClick={event => choose(null, event)}>Add student</button></div></div>
     {!sheetOpen && notice}{!sheetOpen && conflict && <button type="button" className="button-secondary admin-pill roster-reload-inline" onClick={() => void load().catch(() => undefined)}>Reload roster</button>}
     {loading ? <p role="status">Loading students…</p> : unavailable ? <div className="admin-state" role="alert"><h2>Students unavailable</h2><p>The full list couldn’t be loaded, so none of it is shown. Access may have changed, or the list may be too large to load at once.</p><button className="button-secondary admin-pill" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
       : <>
@@ -164,6 +178,7 @@ function Roster() {
             <div className="roster-form-grid">{input("firstName")}{input("lastName")}</div>
             <fieldset className="roster-choice" disabled={pending || conflict}><legend>Student kind</legend>{(["child", "adult"] as const).map(kind => <label key={kind}><input type="radio" name="studentKind" value={kind} checked={form.studentKind === kind} onChange={() => setForm(previous => ({ ...previous, studentKind: kind }))} />{kind === "child" ? "Child" : "Adult"}</label>)}</fieldset>
             <div className="roster-form-grid">{input("ceremonyDate")}<div className="roster-field"><label htmlFor="roster-serviceSlot">Service slot</label><select id="roster-serviceSlot" value={form.serviceSlot} disabled={pending || conflict} onChange={event => setForm(previous => ({ ...previous, serviceSlot: event.target.value as StudentInput["serviceSlot"] }))}><option value="unknown">Not set yet</option><option value="morning">Morning (10:00)</option><option value="havdalah">Havdalah / afternoon (4:00)</option></select></div></div>
+            <div className="roster-form-grid">{rehearsal("rehearsal1")}{rehearsal("rehearsal2")}</div>
             <div className="roster-form-grid">{form.studentKind === "child" ? <>{input("parentEmail")}{input("ownEmail")}</> : <>{input("ownEmail")}{input("parentEmail")}</>}</div>
             <p className="field-help">{form.studentKind === "child" ? "Children need a parent email." : "Adults need their own email."} Saving doesn’t send an invitation or change who can sign in; use People for that.{current ? " Changing the date or service keeps the verses and marks both readings for review." : ""}</p>
             <div className="form-actions"><button className="button-primary admin-pill" disabled={pending || conflict}>{pending ? "Saving…" : "Save student"}</button><button type="button" className="button-secondary admin-pill" disabled={pending} onClick={requestClose}>Cancel</button></div>

@@ -13,7 +13,7 @@ import type { PracticeActor, PracticeCapability, PracticeContextView, PracticeMo
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const studentView = (student: StudentView): StudentView => Object.freeze({ id: student.id, firstName: student.firstName,
-  lastName: student.lastName, ceremonyDate: student.ceremonyDate, revision: student.revision });
+  lastName: student.lastName, ceremonyDate: student.ceremonyDate, rehearsal1: student.rehearsal1, rehearsal2: student.rehearsal2, revision: student.revision });
 const contextView = (row: data.StoredPracticeContext, student: StudentView): PracticeContextView => Object.freeze({ id: row.id,
   authorityRevision: row.authorityRevision, studentId: student.id, studentRevision: student.revision, expiresAt: row.expiresAt.toISOString() });
 

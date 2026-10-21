@@ -3,6 +3,7 @@ vi.mock("server-only", () => ({}));
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { sql } from "drizzle-orm";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
+import { priorColumns } from "../helpers/prior-columns";
 import { adultUpgradePrefix, seedLegacyAdultUpgrade, legacyAdultUpgradeSnapshot } from "../helpers/adult-honors-upgrade.mjs";
 import { postgresAccessFixture } from "./access-fixture";
 
@@ -13,7 +14,8 @@ test("native0023 to0024 preserves populated parent/admin history receipts links 
     await seedLegacyAdultUpgrade(f.owner); const before = await legacyAdultUpgradeSnapshot(f.owner);
     expect(before.honors_version.length).toBe(2); expect(before.honoree_link.length).toBe(2); expect(before.honoree_operation.length).toBe(2);
     await migrate(f.ownerDb, { migrationsFolder: "src/server/db/migrations" }); await migrate(f.ownerDb, { migrationsFolder: "src/server/db/migrations" });
-    expect(await legacyAdultUpgradeSnapshot(f.owner)).toEqual(before);
+    const after = await legacyAdultUpgradeSnapshot(f.owner);
+    expect(Object.fromEntries(Object.entries(after).map(([table, rows]) => [table, priorColumns(rows, before[table])]))).toEqual(before);
     await seedLegacyAdultUpgrade(f.owner);
     expect((await legacyAdultUpgradeSnapshot(f.owner)).honors_version.length).toBe(4);
     for (const table of ["honors_version", "honoree_link", "honoree_operation"]) {

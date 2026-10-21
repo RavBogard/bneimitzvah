@@ -84,6 +84,8 @@ export async function postgresAccessFixture(options: { migrationsFolder?: string
     await migrate(ownerDb,{migrationsFolder:options.migrationsFolder ?? "src/server/db/migrations"});
     await query(owner,`CREATE ROLE "${login}" LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);createdRole=true;
     await query(owner,`GRANT portal_runtime TO "${login}"`);
+    // A pre-0028 prefix still signs in with today's auth schema; 0028 adds the column IF NOT EXISTS.
+    if(options.migrationsFolder)await query(owner,`ALTER TABLE "session" ADD COLUMN IF NOT EXISTS "google_authenticated_at" timestamp`);
     const aDb=drizzle(aPool,{schema:s,logger:false});
     const bDb=drizzle(bPool,{schema:s,logger:false});
     const authInput={origin:"http://localhost:3000",secret,sendMagicLink:async()=>{}};
@@ -114,10 +116,11 @@ export async function postgresAccessFixture(options: { migrationsFolder?: string
     await ownerDb.insert(s.roleGrant).values({tenantId:"crc",membershipId:adminMember.id,role:"admin"});
     const [tutorGrant]=await ownerDb.insert(s.roleGrant).values({tenantId:"crc",membershipId:tutorMember.id,role:"tutor"}).returning();
     const [parentGrant]=await ownerDb.insert(s.roleGrant).values({tenantId:"crc",membershipId:tutorMember.id,role:"parent"}).returning();
-    const [student,otherStudent]=await ownerDb.insert(s.student).values([
-      {tenantId:"crc",firstName:"Synthetic",lastName:"Learner",ceremonyDate:"2027-01-02",parentEmail:"fixture@example.test"},
-      {tenantId:"other",firstName:"Synthetic",lastName:"Other",ceremonyDate:"2027-01-02",parentEmail:"fixture@example.test"},
-    ]).returning();
+    // Named columns only: a migration-prefix fixture (the 0023-to-0024 upgrade) predates later student
+    // columns, and a Drizzle insert would name every current column.
+    const [student,otherStudent]=(await query<{id:string;tenantId:string;firstName:string;lastName:string;ceremonyDate:string;revision:number}>(owner,
+      `INSERT INTO student(tenant_id,first_name,last_name,ceremony_date,parent_email) VALUES ('crc','Synthetic','Learner','2027-01-02','fixture@example.test'),('other','Synthetic','Other','2027-01-02','fixture@example.test')
+       RETURNING id,tenant_id AS "tenantId",first_name AS "firstName",last_name AS "lastName",ceremony_date::text AS "ceremonyDate",revision`)).rows;
     const [link]=await ownerDb.insert(s.tutorStudent).values({tenantId:"crc",studentId:student.id,tutorGrantId:tutorGrant.id}).returning();
     await ownerDb.insert(s.guardian).values({tenantId:"crc",studentId:student.id,parentGrantId:parentGrant.id,linkProvenance:"synthetic"});
     const deployment={environment:"test" as const,deployment:"postgres"};

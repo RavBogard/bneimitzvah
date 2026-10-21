@@ -61,6 +61,7 @@ export const student = pgTable("student", {
   serviceSlot: text("service_slot").$type<"morning" | "havdalah" | "unknown">().default("unknown").notNull(),
   ceremonyDate: date("ceremony_date").notNull(), parentEmail: text("parent_email"), ownEmail: text("own_email"),
   hebrewName: text("hebrew_name"), secondParentEmail: text("second_parent_email"), importMetadata: jsonb("import_metadata").$type<StudentImportMetadata>(),
+  rehearsal1: date("rehearsal_1"), rehearsal2: date("rehearsal_2"),
   disabledAt: timestamp("disabled_at", { withTimezone: true }), revision: integer("revision").default(1).notNull(), createdAt: createdAt(),
 }, (t) => [
   unique("student_tenant_id_key").on(t.tenantId, t.id),
@@ -70,6 +71,8 @@ export const student = pgTable("student", {
   check("student_names_required", sql`length(trim(${t.firstName})) > 0 and length(trim(${t.lastName})) > 0`),
   check("student_revision_positive", sql`${t.revision} > 0`),
   check("student_hebrew_name_bounded", sql`${t.hebrewName} is null or (length(trim(${t.hebrewName})) > 0 and octet_length(${t.hebrewName}) <= 400)`),
+  // Two optional rehearsals, in order, on or before the ceremony (ceremony_date is required).
+  check("student_rehearsals_ordered", sql`(${t.rehearsal1} is null or ${t.rehearsal1} <= ${t.ceremonyDate}) and (${t.rehearsal2} is null or ${t.rehearsal2} <= ${t.ceremonyDate}) and (${t.rehearsal1} is null or ${t.rehearsal2} is null or ${t.rehearsal1} <= ${t.rehearsal2})`),
   check("student_second_parent_bounded", sql`${t.secondParentEmail} is null or (length(trim(${t.secondParentEmail})) > 0 and octet_length(${t.secondParentEmail}) <= 254)`),
   check("student_import_metadata_closed", sql`${t.importMetadata} is null or coalesce(
     jsonb_typeof(${t.importMetadata}) = 'object' and ${t.importMetadata}->'version' = '1'::jsonb

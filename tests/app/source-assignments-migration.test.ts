@@ -7,6 +7,7 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import { expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
+import { priorColumns } from "../helpers/prior-columns";
 import { portalRoutesFixture } from "./portal-routes-fixture";
 import * as s from "../../src/server/db/index";
 const citation = { id: "a", ref: "Invented 1", indexTitle: "Invented", category: "Commentary", labels: { en: null, he: null } };
@@ -18,7 +19,7 @@ test("0021 additive migration upgrades and replays, with generated snapshot limi
     for(const e of entries) await copyFile(join(folder,e.tag+".sql"),join(prior,e.tag+".sql"));
     const db=drizzle(client);await migrate(db,{migrationsFolder:prior});
     await client.query("insert into student(id,tenant_id,first_name,last_name,ceremony_date,parent_email) values($1,'crc','Synthetic','Source','2027-01-02','source@example.test')",[randomUUID()]);const before=(await client.query("select * from student")).rows;
-    await migrate(db,{migrationsFolder:folder});await migrate(db,{migrationsFolder:folder});expect((await client.query("select * from student")).rows).toEqual(before);
+    await migrate(db,{migrationsFolder:folder});await migrate(db,{migrationsFolder:folder});expect(priorColumns((await client.query("select * from student")).rows,before)).toEqual(before);
     expect((await client.query("select count(*)::int as n from verse_source_assignment")).rows).toEqual([{n:0}]);
     const previous=JSON.parse(await readFile(join(folder,"meta/0020_snapshot.json"),"utf8")),current=JSON.parse(await readFile(join(folder,"meta/0021_snapshot.json"),"utf8")), expected=structuredClone(previous.tables);
     expected["public.verse_source_assignment"]=current.tables["public.verse_source_assignment"];expected["public.audit_event"].checkConstraints.audit_action_known=current.tables["public.audit_event"].checkConstraints.audit_action_known;expect(current.prevId).toBe(previous.id);expect(current.tables).toEqual(expected);
