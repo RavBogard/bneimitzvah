@@ -84,6 +84,8 @@ export async function postgresAccessFixture(options: { migrationsFolder?: string
     await migrate(ownerDb,{migrationsFolder:options.migrationsFolder ?? "src/server/db/migrations"});
     await query(owner,`CREATE ROLE "${login}" LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);createdRole=true;
     await query(owner,`GRANT portal_runtime TO "${login}"`);
+    // A pre-0028 prefix still signs in with today's auth schema; 0028 adds the column IF NOT EXISTS.
+    if(options.migrationsFolder)await query(owner,`ALTER TABLE "session" ADD COLUMN IF NOT EXISTS "google_authenticated_at" timestamp`);
     const aDb=drizzle(aPool,{schema:s,logger:false});
     const bDb=drizzle(bPool,{schema:s,logger:false});
     const authInput={origin:"http://localhost:3000",secret,sendMagicLink:async()=>{}};

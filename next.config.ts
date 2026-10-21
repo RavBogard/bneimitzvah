@@ -11,7 +11,10 @@ const nextConfig: NextConfig = {
   logging: { incomingRequests: false },
   // No portal page is ever framed (an overlaid click on the Claude consent page, among others).
   async headers() {
-    return [{ source: "/:path*", headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'none'" }, { key: "X-Frame-Options", value: "DENY" }] }];
+    // Pages only: API, discovery and the reviewed landing handlers (honoree, e-mail and invitation
+    // links) set their own exact CSP and frame headers.
+    return [{ source: "/((?!api/|\\.well-known/|honoree|auth/email|invitations/open).*)", headers: [{ key: "X-Frame-Options", value: "DENY" }] },
+      { source: "/connect{/}?", headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'none'" }] }];
   },
 };
 

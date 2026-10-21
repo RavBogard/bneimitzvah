@@ -39,7 +39,7 @@ CREATE TABLE "mcp_token" (
 	CONSTRAINT "mcp_token_lifetime" CHECK (isfinite("mcp_token"."created_at") and "mcp_token"."expires_at" > "mcp_token"."created_at" and "mcp_token"."expires_at" <= "mcp_token"."created_at" + interval '31 days' and ("mcp_token"."used_at" is null or isfinite("mcp_token"."used_at")))
 );
 --> statement-breakpoint
-ALTER TABLE "session" ADD COLUMN "google_authenticated_at" timestamp;--> statement-breakpoint
+ALTER TABLE "session" ADD COLUMN IF NOT EXISTS "google_authenticated_at" timestamp;--> statement-breakpoint
 ALTER TABLE "mcp_connection" ADD CONSTRAINT "mcp_connection_tenant_id_tenant_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenant"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "mcp_connection" ADD CONSTRAINT "mcp_connection_member_fk" FOREIGN KEY ("tenant_id","membership_id","user_id") REFERENCES "public"."membership"("tenant_id","id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "mcp_connection" ADD CONSTRAINT "mcp_connection_grant_fk" FOREIGN KEY ("tenant_id","role_grant_id","membership_id") REFERENCES "public"."role_grant"("tenant_id","id","membership_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
