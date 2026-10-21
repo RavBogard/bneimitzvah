@@ -33,8 +33,10 @@ export async function handleStudyGuidesRequest(request: Request, runtime: HttpRu
     if (!methods.includes(request.method)) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", methods.join(", ")); return response; }
     let result: unknown;
     if (found.route === "student") {
-      const query = uniqueQuery(request.url, ["mode", "kind"]);
-      result = { ok: true, view: await runtime.studyGuides.studentGuide(request, { mode: mode(query.get("mode")), studentId: found.studentId, kind: query.get("kind") }) };
+      const query = uniqueQuery(request.url, ["mode", "kind"]), selection = { mode: mode(query.get("mode")), studentId: found.studentId, kind: query.get("kind") };
+      const view = await runtime.studyGuides.studentGuide(request, selection);
+      // The haftarah card also links that week's public study sheet; the lookup runs after the authorized read, outside it.
+      result = selection.kind === "haftarah" ? { ok: true, view, sheet: await runtime.haftarahSheets.sheetFor(await runtime.studyGuides.readingDate(request, selection)) } : { ok: true, view };
     } else if (found.route === "theme-read") {
       uniqueQuery(request.url, []);
       requireCookieMutation(request, runtime.origin);

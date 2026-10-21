@@ -295,6 +295,15 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     const kind = kindOf(selection.kind);
     return readAs(request, selection, (tx, actor) => viewFor(tx, actor, kind));
   }
+  /** The Shabbat this reading is for, as the signed calendar snapshot recorded it; for the haftarah sheet link. */
+  async function readingDate(request: AccessRequest, selection: { mode: Mode; studentId: string; kind: unknown }) {
+    const kind = kindOf(selection.kind);
+    return readAs(request, selection, async (tx, actor) => {
+      const [student] = await tx.select({ ceremonyDate: s.student.ceremonyDate }).from(s.student).where(and(eq(s.student.tenantId, actor.tenantId), eq(s.student.id, actor.studentId))).limit(1);
+      const row = student ? (await confirmedReadings(tx, actor.tenantId, actor.studentId)).find(r => r.kind === kind) : undefined;
+      return row ? readingView(row, student!.ceremonyDate).source.date : null;
+    });
+  }
   async function setThemeRead(request: AccessRequest, selection: { mode: Mode; studentId: string; kind: unknown; readingKey: unknown; themeId: unknown; read: unknown; expectedVersion: unknown }) {
     const kind = kindOf(selection.kind), readingKey = keyOf(selection.readingKey), read = bool(selection.read), expected = versionOf(selection.expectedVersion);
     if (typeof selection.themeId !== "string" || selection.themeId.length > 73 || !THEME_TICK.test(selection.themeId)) throw new AccessDenied(403);
@@ -331,10 +340,10 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       return Object.freeze(head ? { version: head.version, template: false, updatedAt: head.createdAt.toISOString() } : { version: 0, template: true, updatedAt: null });
     });
   }
-  return Object.freeze({ getVoice, setVoice, getBaseGuide, setBaseGuide, publishBaseGuide, setStudentGuide, studentGuide, setThemeRead, staffGuide, staffVoice });
+  return Object.freeze({ getVoice, setVoice, getBaseGuide, setBaseGuide, publishBaseGuide, setStudentGuide, studentGuide, readingDate, setThemeRead, staffGuide, staffVoice });
 }
 
 /** The only part the web HTTP runtime receives: reads, theme ticks and staff status. No guide or voice writes (S10). */
 export function studyGuideWebSurface<Q extends PgQueryResultHKT>(service: ReturnType<typeof createStudyGuideService<Q>>) {
-  return Object.freeze({ studentGuide: service.studentGuide, setThemeRead: service.setThemeRead, staffGuide: service.staffGuide, staffVoice: service.staffVoice });
+  return Object.freeze({ studentGuide: service.studentGuide, readingDate: service.readingDate, setThemeRead: service.setThemeRead, staffGuide: service.staffGuide, staffVoice: service.staffVoice });
 }

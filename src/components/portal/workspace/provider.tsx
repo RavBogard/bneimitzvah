@@ -21,7 +21,7 @@ import type { StudyWordDetails } from "../../../lib/hebrew/word-details";
 import type { ReferenceResolution } from "../../../lib/reference-audio/source";
 import { fetchWork, type WorkOperation, type WorkPage, type WorkHistory, type WorkReceipt, type WorkRecovery } from "./work/api";
 import { fetchProgress, type ProgressOperation, type ProgressRows, type ProgressSaved } from "./progress/api";
-import { fetchGuide, type GuideOperation, type StudentGuideView, type ThemeReadResult } from "./study/guide-api";
+import { fetchGuide, type GuideFetch, type GuideOperation, type ThemeReadResult } from "./study/guide-api";
 import { serviceApi, type ServiceMetadata, type ServicePlan, type ServiceUnitResponse } from "./service-learning/api";
 import {readMyService as readMyServiceApi,readServiceMaterial as readMyServiceMaterialApi,serviceRequest,type MyService}from "./service-learning/ecosystem-api";
 import type{ServiceUnitMaterial}from "../../../lib/service-learning/types";
@@ -52,7 +52,7 @@ type Workspace = {
   createSourceContent(baseline: Assigned, kind: StudyKind, offset: number, target: SourceContentTarget): SourceContentClient;
   readWork(baseline: Assigned, kind: StudyKind, operation: WorkOperation, signal: AbortSignal): Promise<WorkPage | WorkHistory | WorkReceipt | WorkRecovery>;
   readProgress(baseline: Assigned, kind: StudyKind, operation: ProgressOperation, signal: AbortSignal): Promise<ProgressRows | ProgressSaved>;
-  readGuide(baseline: Assigned, kind: StudyKind, operation: GuideOperation, signal: AbortSignal): Promise<StudentGuideView | null | ThemeReadResult>;
+  readGuide(baseline: Assigned, kind: StudyKind, operation: GuideOperation, signal: AbortSignal): Promise<GuideFetch | ThemeReadResult>;
   readServiceMetadata(mode: ReadingMode, id: string, signal: AbortSignal): Promise<ServiceMetadata>;
   readMyService(mode:ReadingMode,id:string,signal:AbortSignal):Promise<MyService>;
   readMyServiceMaterial(mode:ReadingMode,id:string,rowId:string,signal:AbortSignal):Promise<ServiceUnitMaterial>;

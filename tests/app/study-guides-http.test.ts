@@ -8,6 +8,7 @@ import { createStudyGuideService } from "../../src/server/study-guides/service";
 import { membershipRabbiAuthority } from "../../src/server/study-guides/authority";
 import * as s from "../../src/server/db/index";
 import { guide, note, theme } from "../helpers/study-guide-fixture";
+import { createHaftarahSheets } from "../../src/server/study-guides/haftarah-sheets";
 
 const open: Awaited<ReturnType<typeof portalRoutesFixture>>[] = [];
 afterEach(async () => { await Promise.all(open.splice(0).map(f => f.client.close())); });
@@ -86,4 +87,19 @@ test("admin guide GET returns held; tutor and student cannot read staff status",
   expect((await f.send("/api/admin/study-voice", { who: "admin" })).body).toEqual({ ok: true, voice: { version: 0, template: true, updatedAt: null } });
   expect((await f.send("/api/admin/study-voice", { who: "admin", method: "POST", body: {} })).status).toBe(405);
   expect((await f.send("/api/admin/study-guides/torah/Pekudei", { who: "admin" })).status).toBe(404);
+});
+
+test("a haftarah reading carries that week's public study sheet when the library has one; Torah never does", async () => {
+  const f = await fixture();
+  await f.owner(async () => {
+    const [row] = await f.db.insert(s.assignment).values({ tenantId: "crc", studentId: f.studentId, kind: "haftarah", basis: "selection", ref: "I Kings 7:51-8:2", status: "confirmed",
+      setByMembershipId: f.adminMember.id, proposalSnapshot: { slotProvenance: 1, readingDate: "2026-10-17", needsReview: false, source: pekudei } }).returning();
+    await f.db.insert(s.assignmentVerse).values(["I Kings 7:51", "I Kings 8:1", "I Kings 8:2"].map((verseRef, i) => ({ tenantId: "crc", studentId: f.studentId, assignmentId: row.id, ordinal: i + 1, verseRef })));
+  });
+  const index = { schema: 2, weeks: [{ slug: "2026-10-17-noach", civil: "2026-10-17" }] };
+  Object.assign(f.runtime, { haftarahSheets: createHaftarahSheets({ fetch: async () => new Response(JSON.stringify(index), { headers: { "content-type": "application/json" } }) }) });
+  const haftarah = await f.send(`/api/students/${f.studentId}/study-guide?mode=student&kind=haftarah`, { who: "learner" });
+  expect(haftarah).toMatchObject({ status: 200, body: { ok: true, view: null, sheet: "https://haftarah.centralreform.org/2026-10-17-noach" } });
+  const torah = await f.send(view(f.studentId, "student"), { who: "learner" });
+  expect(Object.keys(torah.body)).toEqual(["ok", "view"]);
 });

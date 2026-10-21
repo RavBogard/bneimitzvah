@@ -1,9 +1,9 @@
 import type { Assigned, Selection } from "../api";
 import type { StudyKind } from "./api";
-import { GuideError, type GuideOperation, type GuideTheme, type StudentGuideView, type ThemeReadResult } from "./guide-api";
+import { GuideError, type GuideFetch, type GuideOperation, type GuideTheme, type StudentGuideView, type ThemeReadResult } from "./guide-api";
 
-type Request = (baseline: Assigned, kind: StudyKind, operation: GuideOperation, signal: AbortSignal, selection?: Selection) => Promise<StudentGuideView | null | ThemeReadResult>;
-type KindState = { token: number; loading: boolean; failed: boolean; loaded: boolean; view: StudentGuideView | null; pending: Set<string>; notices: Map<string, string> };
+type Request = (baseline: Assigned, kind: StudyKind, operation: GuideOperation, signal: AbortSignal, selection?: Selection) => Promise<GuideFetch | ThemeReadResult>;
+type KindState = { token: number; loading: boolean; failed: boolean; loaded: boolean; view: StudentGuideView | null; sheet: string | null; pending: Set<string>; notices: Map<string, string> };
 const scopeOf = (value: Assigned) => JSON.stringify([value.mode, value.student.id, value.context?.id ?? null, value.context?.authorityRevision ?? null,
   value.readings.map(row => [row.kind, row.id, row.revision, row.readingKey ?? null])]);
 
@@ -28,10 +28,11 @@ export class GuideStore {
   dispose() { this.generation++; this.controller.abort(); this.listeners.clear(); }
   private state(kind: StudyKind) {
     let state = this.kinds.get(kind);
-    if (!state) { state = { token: 0, loading: false, failed: false, loaded: false, view: null, pending: new Set(), notices: new Map() }; this.kinds.set(kind, state); }
+    if (!state) { state = { token: 0, loading: false, failed: false, loaded: false, view: null, sheet: null, pending: new Set(), notices: new Map() }; this.kinds.set(kind, state); }
     return state;
   }
   view(kind: StudyKind) { return this.kinds.get(kind)?.view ?? null; }
+  sheet(kind: StudyKind) { return this.kinds.get(kind)?.sheet ?? null; }
   loaded(kind: StudyKind) { return Boolean(this.kinds.get(kind)?.loaded); }
   failed(kind: StudyKind) { return Boolean(this.kinds.get(kind)?.failed); }
   pending(kind: StudyKind, themeId: string) { return Boolean(this.kinds.get(kind)?.pending.has(themeId)); }
@@ -42,9 +43,9 @@ export class GuideStore {
     const baseline = this.baseline; if (!baseline || !baseline.readings.some(row => row.kind === kind)) return;
     const generation = this.generation, state = this.state(kind), token = ++state.token; state.loading = true; state.failed = false; this.emit();
     try {
-      const view = await this.request(baseline, kind, { type: "view" }, this.controller.signal, this.selection) as StudentGuideView | null;
+      const result = await this.request(baseline, kind, { type: "view" }, this.controller.signal, this.selection) as GuideFetch;
       if (generation !== this.generation || token !== state.token) return;
-      state.view = view; state.loaded = true;
+      state.view = result.view; state.sheet = result.sheet; state.loaded = true;
     } catch (error) {
       if (generation !== this.generation || token !== state.token) return;
       state.failed = true;

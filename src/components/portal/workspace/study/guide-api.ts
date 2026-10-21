@@ -12,6 +12,8 @@ export type StudentGuideView = {
   additions: { version: number; label: GuideLabel; themes: GuideTheme[]; updatedAt: string } | null;
 };
 export type ThemeReadResult = { themeId: string; read: boolean; version: number };
+/** A reading's guide view plus, for the haftarah, that week's public study sheet when the library has one. */
+export type GuideFetch = { view: StudentGuideView | null; sheet: string | null };
 export type GuideOperation = { type: "view" } | { type: "theme-read"; readingKey: string; themeId: string; read: boolean; expectedVersion: number };
 export class GuideError extends PortalRequestError {
   constructor(status: number, public readonly code?: "conflict" | "stale-assignment") { super(status); }
@@ -53,8 +55,14 @@ function label(value: unknown): GuideLabel {
   if (row.origin !== "claude" && row.origin !== "rabbi") return bad();
   return { origin: row.origin, reviewed: bool(row.reviewed), rabbiName: line(row.rabbiName, 320) };
 }
+export function parseSheet(value: unknown, kind: StudyKind): string | null {
+  const sheet = value && typeof value === "object" && Object.hasOwn(value, "sheet") ? (value as { sheet: unknown }).sheet : null;
+  if (sheet === null) return null;
+  if (kind !== "haftarah" || typeof sheet !== "string" || sheet.length > 200 || !/^https:\/\/haftarah\.centralreform\.org\/\d{4}-\d{2}-\d{2}-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(sheet)) return bad();
+  return sheet;
+}
 export function parseGuideView(value: unknown, baseline: Assigned, kind: StudyKind): StudentGuideView | null {
-  const row = object(value, ["ok", "view"]);
+  const row = object(value, ["ok", "view", ...(value && typeof value === "object" && Object.hasOwn(value, "sheet") ? ["sheet"] : [])]);
   if (row.ok !== true) return bad();
   if (row.view === null) return null;
   const view = object(row.view, ["kind", "readingKey", "tickable", "base", "additions"]), reading = baseline.readings.find(r => r.kind === kind) ?? bad();
@@ -83,7 +91,7 @@ export function parseThemeRead(value: unknown, operation: Extract<GuideOperation
   return { themeId: operation.themeId, read: operation.read, version: saved };
 }
 
-export async function fetchGuide(baseline: Assigned, kind: StudyKind, operation: GuideOperation, signal: AbortSignal, selection?: Selection): Promise<StudentGuideView | null | ThemeReadResult> {
+export async function fetchGuide(baseline: Assigned, kind: StudyKind, operation: GuideOperation, signal: AbortSignal, selection?: Selection): Promise<GuideFetch | ThemeReadResult> {
   if ((baseline.mode === "child-practice") !== Boolean(selection)) return bad();
   if (selection && (selection.context.studentId !== baseline.student.id || selection.context.id !== baseline.context?.id)) return bad();
   const controller = new AbortController(), abort = () => controller.abort();
@@ -102,7 +110,7 @@ export async function fetchGuide(baseline: Assigned, kind: StudyKind, operation:
     const value: unknown = JSON.parse(raw); if (controller.signal.aborted) return bad();
     if (response.status === 409) { const failure = object(value, ["ok", "code"]); if (failure.ok !== false || (failure.code !== "conflict" && failure.code !== "stale-assignment")) return bad(); throw new GuideError(409, failure.code); }
     if (!response.ok) throw new GuideError([401, 403, 404, 429].includes(response.status) ? response.status : 503);
-    return write ? parseThemeRead(value, operation) : parseGuideView(value, baseline, kind);
+    return write ? parseThemeRead(value, operation) : { view: parseGuideView(value, baseline, kind), sheet: parseSheet(value, kind) };
   } catch (error) { if (error instanceof PortalRequestError) throw error; return bad(); }
   finally { clearTimeout(timer); signal.removeEventListener("abort", abort); }
 }

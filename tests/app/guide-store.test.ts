@@ -14,7 +14,7 @@ const view = (themes = [theme("cloud")], tickable = true): StudentGuideView => (
   base: { version: 1, label: { origin: "claude", reviewed: false, rabbiName: "the rabbi" }, overview: "Invented overview.", themes, updatedAt: "2026-10-21T00:00:00.000Z" }, additions: null });
 
 test("loads view for kind", async () => {
-  const request = vi.fn(async () => view());
+  const request = vi.fn(async () => ({ view: view(), sheet: null }));
   const store = new GuideStore(request); store.configure(baseline());
   await store.load("torah");
   expect(request).toHaveBeenCalledWith(baseline(), "torah", { type: "view" }, expect.any(AbortSignal), undefined);
@@ -23,7 +23,7 @@ test("loads view for kind", async () => {
 
 test("tick sends expectedVersion and applies result", async () => {
   const calls: GuideOperation[] = [];
-  const store = new GuideStore(async (_b, _k, op) => { calls.push(op); return op.type === "view" ? view([theme("cloud", false, 4)]) : { themeId: "cloud", read: true, version: 5 }; });
+  const store = new GuideStore(async (_b, _k, op) => { calls.push(op); return op.type === "view" ? { view: view([theme("cloud", false, 4)]), sheet: null } : { themeId: "cloud", read: true, version: 5 }; });
   store.configure(baseline()); await store.load("torah");
   const pending = store.tick("torah", "cloud", true);
   expect(store.view("torah")?.base?.themes[0].read).toBe(true); expect(store.pending("torah", "cloud")).toBe(true);
@@ -35,7 +35,7 @@ test("tick sends expectedVersion and applies result", async () => {
 test("conflict refetches", async () => {
   let views = 0;
   const store = new GuideStore(async (_b, _k, op) => {
-    if (op.type === "view") { views++; return view([theme("cloud", views > 1, views > 1 ? 1 : 0)]); }
+    if (op.type === "view") { views++; return { view: view([theme("cloud", views > 1, views > 1 ? 1 : 0)]), sheet: null }; }
     throw new GuideError(409, "conflict");
   });
   store.configure(baseline()); await store.load("torah");
@@ -46,18 +46,18 @@ test("conflict refetches", async () => {
 });
 
 test("a failed tick reverts and never retries; a view that is not tickable offers nothing", async () => {
-  const request = vi.fn(async (_b: Assigned, _k: string, op: GuideOperation) => { if (op.type === "view") return view(); throw new GuideError(503); });
+  const request = vi.fn(async (_b: Assigned, _k: string, op: GuideOperation) => { if (op.type === "view") return { view: view(), sheet: null }; throw new GuideError(503); });
   const store = new GuideStore(request); store.configure(baseline()); await store.load("torah");
   await store.tick("torah", "cloud", true);
   expect(store.view("torah")?.base?.themes[0].read).toBe(false); expect(store.notice("torah", "cloud")).toContain("Couldn't save");
   expect(request).toHaveBeenCalledTimes(2);
-  const parent = new GuideStore(vi.fn(async () => view(undefined, false))); parent.configure(baseline("parent")); await parent.load("torah");
+  const parent = new GuideStore(vi.fn(async () => ({ view: view(undefined, false), sheet: null }))); parent.configure(baseline("parent")); await parent.load("torah");
   await parent.tick("torah", "cloud", true);
   expect(parent.view("torah")?.base?.themes[0].read).toBe(false);
 });
 
 test("a new student or assignment scope drops the old guide", async () => {
-  const store = new GuideStore(async () => view()); store.configure(baseline()); await store.load("torah");
+  const store = new GuideStore(async () => ({ view: view(), sheet: null })); store.configure(baseline()); await store.load("torah");
   store.configure({ ...baseline(), readings: [{ ...baseline().readings[0], revision: 2 }] });
   expect(store.view("torah")).toBeNull();
 });
@@ -72,4 +72,13 @@ test("parser rejects a note outside the student's verses, a mismatched reading k
   expect(() => parseGuideView(ok, baseline("parent"), "torah")).toThrow();
   expect(() => parseGuideView({ ...ok, extra: 1 }, baseline(), "torah")).toThrow();
   expect(() => parseGuideView({ ok: true, view: { ...view(), base: null } }, baseline(), "torah")).toThrow();
+});
+
+test("sheet links are haftarah-only and must be a library week page", async () => {
+  const { parseSheet } = await import("../../src/components/portal/workspace/study/guide-api");
+  expect(parseSheet({ ok: true, view: null }, "haftarah")).toBeNull();
+  expect(parseSheet({ ok: true, view: null, sheet: null }, "haftarah")).toBeNull();
+  expect(parseSheet({ ok: true, view: null, sheet: "https://haftarah.centralreform.org/2026-10-17-noach" }, "haftarah")).toBe("https://haftarah.centralreform.org/2026-10-17-noach");
+  for (const sheet of ["https://haftarah.centralreform.org/2026-10-17-noach", "https://evil.example/2026-10-17-noach", "https://haftarah.centralreform.org/../x", "javascript:alert(1)", 7])
+    expect(() => parseSheet({ ok: true, view: null, sheet }, sheet === "https://haftarah.centralreform.org/2026-10-17-noach" ? "torah" : "haftarah")).toThrow();
 });

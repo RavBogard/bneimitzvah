@@ -23,22 +23,24 @@ const body = guide({ overview: "An invented overview: the world begins with *wor
   theme("beginnings", { title: "How beginnings work", intro: "Invented: what it means to start.", notes: [note("Genesis 1:1"), note("Genesis 2:1")] }),
 ] });
 
-async function seed(next: GuideBody, extra: { reviewed?: boolean; origin?: "claude" | "rabbi" } = {}) {
+async function seed(next: GuideBody, extra: { reviewed?: boolean; origin?: "claude" | "rabbi"; hold?: boolean } = {}) {
   version++;
   await fixture.ownerDb.insert(s.studyGuide).values({ tenantId: "crc", kind: "torah", readingKey: "bereshit", version, baseVersion: version - 1, previousVersion: version === 1 ? null : version - 1,
-    origin: extra.origin ?? "claude", reviewed: extra.reviewed ?? false, hold: false, body: next, ...actor, role: "admin", mode: "admin", channel: "mcp", mutationId: randomUUID(), requestDigest: "a".repeat(64) });
+    origin: extra.origin ?? "claude", reviewed: extra.reviewed ?? false, hold: extra.hold ?? false, body: next, ...actor, role: "admin", mode: "admin", channel: "mcp", mutationId: randomUUID(), requestDigest: "a".repeat(64) });
 }
-async function page(who: "student" | "parent", mobile = false) {
+async function page(who: "student" | "parent" | "tutor" | "admin", mobile = false) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 } }); contexts.push(context);
   await context.route("**/*", async (route: Route) => { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue().catch(() => undefined); else await route.abort(); });
-  const saved = cookies.get(who); if (saved) await context.addCookies(saved);
+  const account = who === "tutor" ? "parent" : who, saved = cookies.get(account); if (saved) await context.addCookies(saved);
   const tab = await context.newPage(); await tab.goto("/", { waitUntil: "domcontentloaded" });
   if (!saved) {
-    const email = who === "student" ? "pg-guide-student@example.test" : "pg-tutor@example.test";
+    const email = who === "student" ? "pg-guide-student@example.test" : who === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
     expect(await tab.evaluate(async email => (await fetch("/api/auth/sign-in/magic-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }) })).status, email)).toBe(200);
-    await openAuthMail(tab, fixture.takeMail(email)); cookies.set(who, await context.cookies());
+    await openAuthMail(tab, fixture.takeMail(email)); cookies.set(account, await context.cookies());
   }
   if (who === "student") await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" });
+  else if (who === "tutor") await tab.goto(`/workspace/tutor/${fixture.student.id}`, { waitUntil: "domcontentloaded" });
+  else if (who === "admin") await tab.goto(`/workspace/admin/students/${fixture.student.id}/reading`, { waitUntil: "domcontentloaded" });
   else { await tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); }
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();
   return tab;
@@ -138,8 +140,66 @@ it("reviewed guide shows Reviewed by Rabbi Daniel when the tenant name is set, a
   await fixture.ownerDb.update(s.tenant).set({ customs: { credits: { rabbiDisplayName: "Rabbi Daniel" } } }).where(eq(s.tenant.id, "crc"));
   await seed(body, { reviewed: true, origin: "rabbi" });
   const tab = await page("student", true);
+  // On a phone the guide starts closed so the Hebrew stays in the first screen.
+  await ui(card(tab).getByText("Reviewed by Rabbi Daniel", { exact: true })).toBeHidden();
+  const hebrewTop = await tab.locator(".assigned-study .study-hebrew").first().evaluate(node => { scrollTo(0, 0); return node.getBoundingClientRect().top; });
+  expect(hebrewTop).toBeLessThan(844 - 48);
+  await card(tab).getByText("About this portion", { exact: true }).click();
   await ui(card(tab).getByText("Reviewed by Rabbi Daniel", { exact: true })).toBeVisible();
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+const englishToggle = (tab: Page) => tab.getByRole("navigation", { name: "Reading tools", exact: true }).getByRole("button", { name: "English", exact: true });
+const boxes = (tab: Page, ref: string) => tab.locator(`.assigned-study .study-verses [data-verse-ref="${ref}"]`).evaluate(node => {
+  const he = node.querySelector("[data-hebrew-ref]")!.getBoundingClientRect(), en = node.querySelector("[data-english-ref]")!.getBoundingClientRect();
+  return { he: { left: he.left, right: he.right, top: he.top, bottom: he.bottom }, en: { left: en.left, right: en.right, top: en.top } };
+});
+
+it("at 1440 a learner sees English beside each verse by default, aligned with that verse", async () => {
+  const tab = await page("student");
+  await ui(englishToggle(tab)).toHaveAttribute("aria-pressed", "true");
+  for (const ref of ["Genesis 1:1", "Genesis 1:3"]) {
+    const box = await boxes(tab, ref);
+    expect(box.en.left).toBeGreaterThanOrEqual(box.he.right - 1);
+    expect(Math.abs(box.en.top - box.he.top)).toBeLessThan(48);
+  }
+});
+
+it("at 390 English is off by default and interleaves under its verse when turned on", async () => {
+  const tab = await page("student", true);
+  await ui(englishToggle(tab)).toHaveAttribute("aria-pressed", "false");
+  await englishToggle(tab).click();
+  const box = await boxes(tab, "Genesis 1:1");
+  expect(box.en.top).toBeGreaterThanOrEqual(box.he.bottom - 2);
+  expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+it("the English preference persists across reload", async () => {
+  const tab = await page("student");
+  await englishToggle(tab).click();
+  await ui(englishToggle(tab)).toHaveAttribute("aria-pressed", "false");
+  await tab.reload({ waitUntil: "domcontentloaded" });
+  await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();
+  await ui(englishToggle(tab)).toHaveAttribute("aria-pressed", "false");
+  await ui(tab.locator(".assigned-study .study-verses [data-english-ref]")).toHaveCount(0);
+});
+
+it("tutor sees which themes the student has read, without a tick button", async () => {
+  const tab = await page("tutor");
+  await ui(card(tab).locator("li").filter({ hasText: "Light first" })).toContainText("Read");
+  await ui(card(tab).getByRole("button", { name: /I read this|Read:/ })).toHaveCount(0);
+});
+
+it("admin sees the status line and a newer draft waiting, while students keep the reviewed version", async () => {
+  await seed(guide({ overview: "A held invented revision.", themes: [] }), { hold: true });
+  const tab = await page("admin");
+  const status = tab.locator("[data-guide-status]");
+  await ui(status).toContainText("Study guide: Reviewed · 2 themes · updated");
+  await ui(status).toContainText("newer draft waiting");
+  await ui(status).toContainText("edit in Cowork");
+  // The card below the status line is the student preview: the reviewed version, not the held one.
+  await ui(card(tab).getByText("Reviewed by Rabbi Daniel", { exact: true })).toBeVisible();
+  await ui(card(tab).getByText("A held invented revision.", { exact: true })).toHaveCount(0);
 });
 
 it("no guide chrome when readingKey is null", async () => {
