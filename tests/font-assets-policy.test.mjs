@@ -14,6 +14,7 @@ const brandFontPath = "public/fonts/bricolage-grotesque/BricolageGrotesque.ttf";
 const brandLicensePath = "public/fonts/bricolage-grotesque/OFL.txt";
 const stamFontPath = "public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.ttf";
 const stamLicensePath = "public/fonts/stam-ashkenaz-clm/LICENSE.txt";
+const stamSourcePath = "public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.sfd";
 const familyAssets = family => FONT_ASSETS.filter(asset => asset.family === family);
 async function officialPair(family = "noto-serif-hebrew") {
   const result = new Map();
@@ -34,8 +35,8 @@ async function fixture(action) {
 }
 
 test("font manifest is a fixed immutable pair and byte comparison has no repository override", () => {
-  assert.equal(FONT_ASSETS.length, 6);
-  assert.deepEqual(FONT_ASSETS.map(asset => [asset.family, asset.kind]), [["noto-serif-hebrew", "font"], ["noto-serif-hebrew", "license"], ["bricolage-grotesque", "font"], ["bricolage-grotesque", "license"], ["stam-ashkenaz-clm", "font"], ["stam-ashkenaz-clm", "license"]]);
+  assert.equal(FONT_ASSETS.length, 7);
+  assert.deepEqual(FONT_ASSETS.map(asset => [asset.family, asset.kind]), [["noto-serif-hebrew", "font"], ["noto-serif-hebrew", "license"], ["bricolage-grotesque", "font"], ["bricolage-grotesque", "license"], ["stam-ashkenaz-clm", "font"], ["stam-ashkenaz-clm", "license"], ["stam-ashkenaz-clm", "source"]]);
   assert.equal(reviewedFontAsset("public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.ttf").sha256, "18aec29cd0f3e2f31049224712e740468fc893344289ceb1c86b02b619854ca6");
   assert.equal(reviewedFontAsset("public/fonts/stam-ashkenaz-clm/LICENSE.txt").sha256, "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643");
   assert.equal(reviewedFontAsset(brandFontPath).sha256, "413e7357809ddd12fd80a96a8a396de0e401638d4acd3cb3e37532f0472ac682");
@@ -196,7 +197,7 @@ test("exact-path byte attributes preserve real font and OFL through autocrlf che
   const pair = await officialPair(), attributes = await readFile(new URL("../.gitattributes", import.meta.url), "utf8");
   const rules = attributes.split(/\r?\n/).filter(line => line && !line.startsWith("#"));
   assert.deepEqual(rules, [
-    `/${fontPath} -text`, `/${licensePath} -text`, `/${brandFontPath} -text`, `/${brandLicensePath} -text`, `/${stamFontPath} -text`, `/${stamLicensePath} -text`,
+    `/${fontPath} -text`, `/${licensePath} -text`, `/${brandFontPath} -text`, `/${brandLicensePath} -text`, `/${stamFontPath} -text`, `/${stamLicensePath} -text`, `/${stamSourcePath} -text`,
     "/src/server/db/migrations/** text eol=lf",
     "/scripts/db-migrate.mjs text eol=lf",
     "/scripts/release-migrate*.mjs text eol=lf",
@@ -268,9 +269,9 @@ test("the Stam Ashkenaz CLM pair passes the whole policy alone and survives auto
     git("config", "core.autocrlf", "true"); await put(".gitattributes", attributes);
     for (const [path, bytes] of pair) await put(path, bytes);
     assert.deepEqual((await inspectRepository(root, env)).findings, []);
-    git("add", ".gitattributes", stamFontPath, stamLicensePath);
+    git("add", ".gitattributes", stamFontPath, stamLicensePath, stamSourcePath);
     for (const path of pair.keys()) await rm(join(root, path));
-    git("checkout-index", "--force", "--", stamFontPath, stamLicensePath);
+    git("checkout-index", "--force", "--", stamFontPath, stamLicensePath, stamSourcePath);
     for (const asset of familyAssets("stam-ashkenaz-clm")) {
       assert.ok(matchesAssetPin(await readFile(join(root, asset.path)), asset), "checked-out bytes must match the original official pin");
       assert.ok(matchesAssetPin(git("show", `:${asset.path}`), asset), "indexed bytes must match the original official pin");
@@ -280,5 +281,22 @@ test("the Stam Ashkenaz CLM pair passes the whole policy alone and survives auto
     const result = await inspectRepository(root, env);
     assert.ok(result.findings.includes(`${stamLicensePath}: required paired font asset missing`));
     assert.ok(result.findings.includes(`${stamLicensePath} (index): required paired font asset missing`));
+  });
+});
+
+test("the pinned Stam Ashkenaz source is accepted only byte for byte, and is required beside its font", async () => {
+  const pair = await officialPair("stam-ashkenaz-clm");
+  assert.equal(reviewedFontAsset(stamSourcePath).sha256, "ff23748b1b9df2bb1f5e26b8928342eee87ead160bdff535a505aed0f7294c45");
+  // Unpinned, the same upstream text is refused like any file carrying an author address.
+  assert.ok(entryProblems("public/fonts/stam-ashkenaz-clm/Other.sfd", pair.get(stamSourcePath).toString("utf8")).includes("non-synthetic email address"));
+  await fixture(async ({ root, env, put }) => {
+    for (const [path, bytes] of pair) await put(path, bytes);
+    assert.deepEqual((await inspectRepository(root, env)).findings, []);
+    const altered = Buffer.from(pair.get(stamSourcePath)); altered[0] ^= 1; await put(stamSourcePath, altered);
+    let result = await inspectRepository(root, env);
+    assert.ok(result.findings.includes(`${stamSourcePath}: reviewed font asset integrity mismatch`));
+    assert.ok(result.findings.includes(`${stamSourcePath}: non-synthetic email address`), "an unverified source loses the exception");
+    await rm(join(root, stamSourcePath)); result = await inspectRepository(root, env);
+    assert.ok(result.findings.includes(`${stamSourcePath}: required paired font asset missing`));
   });
 });

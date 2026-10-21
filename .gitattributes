@@ -4,6 +4,7 @@
 /public/fonts/bricolage-grotesque/OFL.txt -text
 /public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.ttf -text
 /public/fonts/stam-ashkenaz-clm/LICENSE.txt -text
+/public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.sfd -text
 
 # Release contracts compare exact committed bytes on every platform.
 /src/server/db/migrations/** text eol=lf

@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 
 // Approval boundary: exact unchanged upstream bytes and their adjacent notice,
-// paired per family: a font never ships without its own notice.
+// paired per family: a font never ships without its own notice. A GPL family
+// also ships its unchanged upstream source ("source"), which like the font is
+// accepted only byte for byte; its embedded author notice is not re-scanned.
 // Changing this list is a repository-protection change requiring independent
 // review. No environment, option, alternate manifest or extension enables it.
 export const FONT_ASSETS = Object.freeze([
@@ -17,6 +19,8 @@ export const FONT_ASSETS = Object.freeze([
     sha256: "18aec29cd0f3e2f31049224712e740468fc893344289ceb1c86b02b619854ca6" }),
   Object.freeze({ path: "public/fonts/stam-ashkenaz-clm/LICENSE.txt", family: "stam-ashkenaz-clm", kind: "license", size: 18092,
     sha256: "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643" }),
+  Object.freeze({ path: "public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.sfd", family: "stam-ashkenaz-clm", kind: "source", size: 59723,
+    sha256: "ff23748b1b9df2bb1f5e26b8928342eee87ead160bdff535a505aed0f7294c45" }),
 ]);
 
 // Deliberately no path normalization or case folding at the trust boundary.
