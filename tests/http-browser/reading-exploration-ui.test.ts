@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { privateRouteFetch } from "./audio-observation";
 import { expect as ui } from "@playwright/test";
-import { chromium, type Browser, type BrowserContext, type Page, type Request as BrowserRequest } from "playwright";
+import { firefox, type Browser, type BrowserContext, type Page, type Request as BrowserRequest } from "playwright";
 import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -75,7 +75,10 @@ beforeAll(async () => {
     for (const row of shorts.sources) shortBodies.set(row.path, row.bytes);
     fixture = await browserFixture({ referenceCatalogLoad: async () => catalog, referenceShortManifestLoad: async () => shorts.manifest, referenceStudentRelease: true, studyLoad: async request => { if (hold && request.offset === 100) { hold.entered.resolve(undefined); await hold.release.promise; } return syntheticUiStudyPage(request); } });
     setListeningRelease = studentRelease => { Object.assign(fixture.runtime, { shortReferenceAudio: createShortReferenceAudioService({ access: fixture.runtime.access, practice: fixture.runtime.practice, loadText: async request => syntheticUiStudyPage(request), loadCatalog: async () => catalog, loadManifest: async () => shorts.manifest, studentRelease }) }); };
-    stop = await startBrowserServer(fixture.withRuntime); browserEnv = await isolatedEnv(); browser = await chromium.launch({ headless: true, env: browserEnv.env });
+    // Chromium issue 568852319 misreports fully consumed no-store streams as
+    // cancelled. Keep every terminal assertion using the pinned Firefox build.
+    stop = await startBrowserServer(fixture.withRuntime); browserEnv = await isolatedEnv(); browser = await firefox.launch({ headless: true, env: browserEnv.env });
+    console.info("exploration-contract-browser", { engine: "firefox", version: browser.version() });
   } catch { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await browserEnv?.cleanup(); if (audioDirectory) await rm(audioDirectory, { recursive: true, force: true }); throw new Error("Exploration UI setup failed; private details withheld"); }
 }, 120000);
 beforeEach(async () => {

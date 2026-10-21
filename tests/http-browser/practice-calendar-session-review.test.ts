@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
-import { chromium, type Browser, type BrowserContext, type Page, type Route, type Request as BrowserRequest } from "playwright";
+import { firefox, type Browser, type BrowserContext, type Page, type Route, type Request as BrowserRequest } from "playwright";
 import { eq } from "drizzle-orm";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import { browserFixture } from "./fixture";
@@ -55,7 +55,7 @@ async function page() {
   tab.on("request",request=>{const url=new URL(request.url()),match=/^\/api\/students\/([^/]+)\/my-service$/.exec(url.pathname);if(match){const read:ServiceRead={studentId:match[1],mode:url.searchParams.get("mode")??"",started:performance.now(),terminal:"pending"};reads.push(read);requests.set(request,read);}});
   tab.on("response",response=>{const read=requests.get(response.request());if(read){read.status=response.status();read.responseMs=Math.round(performance.now()-read.started);}});
   tab.on("requestfinished",request=>{const read=requests.get(request);if(read){read.terminal="finished";read.terminalMs=Math.round(performance.now()-read.started);}});
-  tab.on("requestfailed",request=>{const read=requests.get(request);if(read){read.terminal=request.failure()?.errorText==="net::ERR_ABORTED"?"aborted":"failed";read.terminalMs=Math.round(performance.now()-read.started);}});
+  tab.on("requestfailed",request=>{const read=requests.get(request);if(read){read.terminal=["net::ERR_ABORTED","NS_BINDING_ABORTED"].includes(request.failure()?.errorText??"")?"aborted":"failed";read.terminalMs=Math.round(performance.now()-read.started);}});
   await safe(() => tab.goto("/", { waitUntil: "domcontentloaded" }));
   expect(await tab.evaluate(async () => (await fetch("/api/auth/sign-in/magic-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "pg-tutor@example.test" }) })).status)).toBe(200);
   await openAuthMail(tab, fixture.takeMail("pg-tutor@example.test")); await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" });
@@ -78,7 +78,10 @@ beforeAll(async () => {
       const [assignment] = await fixture.ownerDb.insert(s.assignment).values({ tenantId: "crc", studentId, kind: "torah", basis: "custom", ref: `Genesis ${chapter}:1-${length}`, status: "confirmed", setByMembershipId: admin.id, proposalSnapshot: { ranges: [`Genesis ${chapter}:1-${length}`], confirmationDate: "2027-01-02", needsReview: false } }).returning();
       await fixture.ownerDb.insert(s.assignmentVerse).values(Array.from({ length }, (_, index) => ({ tenantId: "crc", studentId, assignmentId: assignment.id, ordinal: index + 1, verseRef: `Genesis ${chapter}:${index + 1}` })));
     }
-    stop = await startBrowserServer(fixture.withRuntime); isolation = await isolatedEnv(); browser = await chromium.launch({ headless: true, env: isolation.env });
+    // Chromium issue 568852319 also affects this bounded no-store reader.
+    // A current read must still finish successfully; cancellation never passes ready().
+    stop = await startBrowserServer(fixture.withRuntime); isolation = await isolatedEnv(); browser = await firefox.launch({ headless: true, env: isolation.env });
+    console.info("calendar-contract-browser", { engine: "firefox", version: browser.version() });
   } catch { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await isolation?.cleanup(); throw new Error("Synthetic calendar session setup failed; details withheld"); }
 }, 120_000);
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await isolation?.cleanup(); }, 120_000);

@@ -36,11 +36,11 @@ test("real child tuple must match and remain unexpired; parent overview cannot a
   expect(() => checkShortExplorationExpectation(baseline, prepared, f.page, selection)).not.toThrow();
   for (const selected of [undefined, { ...selection, context: { ...selection.context, authorityRevision: 4 } }, { ...selection, context: { ...selection.context, expiresAt: new Date(Date.now() - 1).toISOString() } }]) expect(() => checkShortExplorationExpectation(baseline, prepared, f.page, selected)).toThrow();
 });
-test("POST uses exact private signed body/no query and detaches all caller input before awaits", async () => {
+test("POST keeps its Origin policy on the fixed same-origin path, private signed body/no query and detached inputs", async () => {
   vi.stubGlobal("location", { origin }); const f = fixture(), expected = structuredClone(f.response), binding = f.prepared.binding;
   const fetcher = vi.fn(async (path: string, options: RequestInit) => { f.baseline.student.revision = 9; f.prepared.binding = "changed"; f.page.verses.reverse(); return response(expected, path); }); vi.stubGlobal("fetch", fetcher);
   expect((await fetchShortExplorationPage(f.baseline, f.prepared, f.page, new AbortController().signal)).references).toHaveLength(100);
-  const [path, options] = fetcher.mock.calls[0]; expect(path).toBe(`/api/students/${expected.studentId}/reading/explore/reference/short/page`); expect(path).not.toContain(binding); expect(JSON.parse(String(options.body))).toEqual({ mode: "student", binding, offset: 0 }); expect(options).toMatchObject({ method: "POST", credentials: "same-origin", redirect: "error", cache: "no-store", mode: "same-origin", referrerPolicy: "no-referrer" });
+  const [path, options] = fetcher.mock.calls[0]; expect(path).toBe(`/api/students/${expected.studentId}/reading/explore/reference/short/page`); expect(new URL(path, origin)).toMatchObject({ origin, search: "" }); expect(path).not.toContain(binding); expect(JSON.parse(String(options.body))).toEqual({ mode: "student", binding, offset: 0 }); expect(options).toMatchObject({ method: "POST", credentials: "same-origin", redirect: "error", cache: "no-store", mode: "same-origin", referrerPolicy: "same-origin" });
 });
 
 test("validated EOF releases the real reader without aborting or cancelling the completed transport", async () => {
