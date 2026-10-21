@@ -33,6 +33,22 @@ export function readingKeyFor(input: ReadingKeyInput): string | null {
   return book ? `${book}-${c1}-${v1}-${c2}-${v2}` : null;
 }
 
+/** The haftarah passage a haftarah key names, in Hebcal's spelling ("I Kings 8:1-21"), or null. */
+export function haftarahRefForKey(key: string, counts: VerseCounts): string | null {
+  if (typeof key !== "string" || key.length > MAX_INPUT) return null;
+  for (const book of Object.keys(counts).sort((a, b) => b.length - a.length)) {
+    const prefix = slug(book) + "-";
+    if (!key.startsWith(prefix)) continue;
+    const m = /^([1-9]\d*)-([1-9]\d*)-([1-9]\d*)-([1-9]\d*)$/.exec(key.slice(prefix.length));
+    if (!m) return null;
+    const [c1, v1, c2, v2] = m.slice(1).map(Number);
+    const ref = c1 === c2 ? (v1 === v2 ? `${book} ${c1}:${v1}` : `${book} ${c1}:${v1}-${v2}`) : `${book} ${c1}:${v1}-${c2}:${v2}`;
+    try { expandReadingRanges([ref], "haftarah", counts); } catch { return null; }
+    return readingKeyFor({ kind: "haftarah", haftarahRef: ref }) === key ? ref : null;
+  }
+  return null;
+}
+
 /** True when every assigned verse lies inside the passage's ranges. Never throws. */
 export function versesInside(assigned: readonly string[], passageRanges: readonly string[], kind: "torah" | "haftarah", counts: VerseCounts): boolean {
   if (!Array.isArray(assigned) || assigned.length === 0 || !Array.isArray(passageRanges) || passageRanges.length === 0) return false;

@@ -1,5 +1,5 @@
 {
-  "id": "ab3ab4c3-5692-4952-bf73-1ea4063018df",
+  "id": "d7d8803a-469e-4a4a-80bc-c7cd3c4ccc1b",
   "prevId": "972670a1-febe-469e-8dc0-c5de1aefdeff",
   "version": "7",
   "dialect": "postgresql",
@@ -5315,6 +5315,10 @@
           "name": "study_guide_body",
           "value": "public.portal_study_guide_body_valid(\"study_guide\".\"body\", true)"
         },
+        "study_guide_operator_draft": {
+          "name": "study_guide_operator_draft",
+          "value": "\"study_guide\".\"channel\" = 'mcp' or (\"study_guide\".\"origin\" = 'claude' and not \"study_guide\".\"reviewed\")"
+        },
         "study_guide_rabbi": {
           "name": "study_guide_rabbi",
           "value": "\"study_guide\".\"role\"='admin' and \"study_guide\".\"mode\"='admin'"
@@ -5633,6 +5637,10 @@
         "study_guide_student_body": {
           "name": "study_guide_student_body",
           "value": "public.portal_study_guide_body_valid(\"study_guide_student\".\"body\", false)"
+        },
+        "study_guide_student_mcp_only": {
+          "name": "study_guide_student_mcp_only",
+          "value": "\"study_guide_student\".\"channel\" = 'mcp'"
         },
         "study_guide_student_rabbi": {
           "name": "study_guide_student_rabbi",
@@ -5999,6 +6007,10 @@
         "study_voice_body": {
           "name": "study_voice_body",
           "value": "public.portal_study_markdown(\"study_voice\".\"body\", 32768)"
+        },
+        "study_voice_mcp_only": {
+          "name": "study_voice_mcp_only",
+          "value": "\"study_voice\".\"channel\" = 'mcp'"
         },
         "study_voice_rabbi": {
           "name": "study_voice_rabbi",

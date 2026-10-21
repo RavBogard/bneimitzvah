@@ -4,7 +4,7 @@
 CREATE FUNCTION public.portal_study_markdown(v text, bound integer) RETURNS boolean
 LANGUAGE sql IMMUTABLE SECURITY INVOKER SET search_path=pg_catalog,public AS $$
  SELECT coalesce(v IS NOT NULL AND octet_length(v) BETWEEN 1 AND bound AND v ~ '[^[:space:]]' AND normalize(v,NFC)=v
-  AND v !~ '[<>]' AND translate(v,chr(10),'') !~ '[[:cntrl:]]' AND translate(v,chr(8206)||chr(8207)||chr(8234)||chr(8235)||chr(8236)||chr(8237)||chr(8238)||chr(8294)||chr(8295)||chr(8296)||chr(8297)||chr(65279),'')=v,false)
+  AND v !~ '[<>]' AND translate(v,chr(10),'') !~ '[[:cntrl:]]' AND translate(v,chr(1564)||chr(8203)||chr(8204)||chr(8205)||chr(8206)||chr(8207)||chr(8232)||chr(8233)||chr(8234)||chr(8235)||chr(8236)||chr(8237)||chr(8238)||chr(8288)||chr(8294)||chr(8295)||chr(8296)||chr(8297)||chr(65279),'')=v,false)
 $$;
 --> statement-breakpoint
 -- Structure and per-field limits of a guide body. The whole-body bound is a backstop on jsonb's
@@ -80,6 +80,7 @@ CREATE TABLE "study_guide" (
 	CONSTRAINT "study_guide_reading_key" CHECK (octet_length("study_guide"."reading_key") <= 160 and "study_guide"."reading_key" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
 	CONSTRAINT "study_guide_origin" CHECK ("study_guide"."origin" in ('claude','rabbi')),
 	CONSTRAINT "study_guide_body" CHECK (public.portal_study_guide_body_valid("study_guide"."body", true)),
+	CONSTRAINT "study_guide_operator_draft" CHECK ("study_guide"."channel" = 'mcp' or ("study_guide"."origin" = 'claude' and not "study_guide"."reviewed")),
 	CONSTRAINT "study_guide_rabbi" CHECK ("study_guide"."role"='admin' and "study_guide"."mode"='admin'),
 	CONSTRAINT "study_guide_channel" CHECK ("study_guide"."channel" in ('mcp','operator')),
 	CONSTRAINT "study_guide_digest" CHECK ("study_guide"."request_digest" ~ '^[a-f0-9]{64}$'),
@@ -114,6 +115,7 @@ CREATE TABLE "study_guide_student" (
 	CONSTRAINT "study_guide_student_kind" CHECK ("study_guide_student"."kind" in ('torah','haftarah')),
 	CONSTRAINT "study_guide_student_origin" CHECK ("study_guide_student"."origin" in ('claude','rabbi')),
 	CONSTRAINT "study_guide_student_body" CHECK (public.portal_study_guide_body_valid("study_guide_student"."body", false)),
+	CONSTRAINT "study_guide_student_mcp_only" CHECK ("study_guide_student"."channel" = 'mcp'),
 	CONSTRAINT "study_guide_student_rabbi" CHECK ("study_guide_student"."role"='admin' and "study_guide_student"."mode"='admin'),
 	CONSTRAINT "study_guide_student_channel" CHECK ("study_guide_student"."channel" in ('mcp','operator')),
 	CONSTRAINT "study_guide_student_digest" CHECK ("study_guide_student"."request_digest" ~ '^[a-f0-9]{64}$'),
@@ -159,6 +161,7 @@ CREATE TABLE "study_voice" (
 	CONSTRAINT "study_voice_receipt_key" UNIQUE("tenant_id","actor_user_id","mutation_id"),
 	CONSTRAINT "study_voice_versions" CHECK ("study_voice"."version" > 0 and "study_voice"."base_version" >= 0 and "study_voice"."version"::bigint = "study_voice"."base_version"::bigint + 1 and (("study_voice"."base_version"=0 and "study_voice"."previous_version" is null) or ("study_voice"."base_version">0 and "study_voice"."previous_version" is not null and "study_voice"."previous_version"="study_voice"."base_version"))),
 	CONSTRAINT "study_voice_body" CHECK (public.portal_study_markdown("study_voice"."body", 32768)),
+	CONSTRAINT "study_voice_mcp_only" CHECK ("study_voice"."channel" = 'mcp'),
 	CONSTRAINT "study_voice_rabbi" CHECK ("study_voice"."role"='admin' and "study_voice"."mode"='admin'),
 	CONSTRAINT "study_voice_channel" CHECK ("study_voice"."channel" in ('mcp','operator')),
 	CONSTRAINT "study_voice_digest" CHECK ("study_voice"."request_digest" ~ '^[a-f0-9]{64}$'),
@@ -219,6 +222,16 @@ CREATE POLICY tenant_isolation ON study_theme_read TO portal_runtime
 CREATE TRIGGER immutable_theme_read_identity BEFORE UPDATE ON study_theme_read FOR EACH ROW EXECUTE FUNCTION portal_immutable_columns('tenant_id','id','student_id','kind','reading_key','theme_id');
 --> statement-breakpoint
 CREATE TRIGGER theme_read_version BEFORE UPDATE ON study_theme_read FOR EACH ROW EXECUTE FUNCTION portal_progress_version();
+--> statement-breakpoint
+CREATE FUNCTION portal_first_version() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.version <> 1 THEN
+    RAISE EXCEPTION 'First version required' USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER theme_read_first_version BEFORE INSERT ON study_theme_read FOR EACH ROW EXECUTE FUNCTION portal_first_version();
 --> statement-breakpoint
 REVOKE ALL ON FUNCTION public.portal_study_markdown(text,integer),public.portal_study_guide_body_valid(jsonb,boolean) FROM PUBLIC;
 --> statement-breakpoint

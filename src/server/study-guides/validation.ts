@@ -18,8 +18,13 @@ type Result<T> = { ok: true; value: T } | { ok: false; problems: string[] };
 const bytes = (text: string) => new TextEncoder().encode(text).length;
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
 const exactKeys = (value: Record<string, unknown>, keys: readonly string[]) => Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
-// Bidi controls and zero-width marks can disguise what a reader sees; the sources table rejects them too.
-const HIDDEN = /[‎‏‪-‮⁦-⁩﻿]/;
+// Bidi controls, zero-width marks and line/paragraph separators can disguise what a reader sees
+// (and PostgreSQL may class the separators as controls under the server's locale). The SQL
+// function portal_study_markdown rejects the same set.
+const HIDDEN = /[\u061c\u200b-\u200f\u2028-\u202e\u2060\u2066-\u2069\ufeff]/;
+// Every way markdown or a renderer could turn text into a link: inline, reference and definition
+// links, autolinks (already blocked by the angle-bracket rule), URL schemes, bare domains, emails.
+const LINKISH = /\]\s*[([:]|^\s*\[[^\]\n]*\]\s*:|[a-z][a-z0-9+.-]*:\/\/|\/\/[a-z0-9]|\b(?:mailto|javascript|data|vbscript|file|ftp|tel):\S|www\.|[^\s@]+@[^\s@]+\.[a-z]{2,}/im;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const VERSE_REF = /^[A-Za-z ]+ [1-9]\d*:[1-9]\d*$/;
 
@@ -34,11 +39,11 @@ export function plain(value: unknown, maxBytes: number): value is string {
  * the app makes Sefaria references into links itself.
  */
 export function markdown(value: unknown, maxBytes: number, problems: string[], where: string): value is string {
-  if (typeof value !== "string" || value.trim().length === 0) { problems.push(`${where}: text required`); return false; }
+  if (typeof value !== "string" || value.replace(/[\s\u200b-\u200d\u2060\ufeff]/g, "").length === 0) { problems.push(`${where}: text required`); return false; }
   if (bytes(value) > maxBytes) { problems.push(`${where}: over ${maxBytes} bytes`); return false; }
   if (value.normalize("NFC") !== value || /[\x00-\x09\x0b-\x1f\x7f-\x9f]/.test(value) || HIDDEN.test(value)) { problems.push(`${where}: control or hidden characters`); return false; }
   if (/[<>]/.test(value)) { problems.push(`${where}: raw HTML is not allowed`); return false; }
-  if (/\]\(|https?:\/\/|www\./i.test(value)) { problems.push(`${where}: links are not allowed; cite sources instead`); return false; }
+  if (LINKISH.test(value)) { problems.push(`${where}: links are not allowed; cite sources instead`); return false; }
   return true;
 }
 

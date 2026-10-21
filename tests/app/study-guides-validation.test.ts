@@ -71,3 +71,12 @@ test("voice is bounded markdown text", () => {
   expect(validateVoice("<script>").ok).toBe(false);
   expect(validateVoice(7).ok).toBe(false);
 });
+
+test("rejects every link form a markdown renderer could honour, and disguising characters", () => {
+  for (const text of [
+    "[site][1]\n\n[1]: //evil.example", "[here]\n\n[here]: javascript:alert(1)", "write to someone@example.test", "mailto:a", "ftp://x", "see //evil.example",
+    "![img][a]", "[a]: x", "tel:+15550100", "data:text/html,x", "arabic\u061cmark", "zero\u200bwidth", "line\u2028separator", "para\u2029separator", "\u200b", "word\u2060joiner",
+  ]) expect(ok(guide({ overview: text })), JSON.stringify(text)).toBe(false);
+  // Ordinary prose with a colon, brackets and Hebrew still passes.
+  for (const text of ["Look at the data: the cloud stays.", "The cloud [ענן] rests on the tent.", "Rashi asks: why now?"]) expect(ok(guide({ overview: text })), text).toBe(true);
+});

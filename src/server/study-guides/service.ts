@@ -11,6 +11,9 @@ import { readingView } from "../portal/service";
 import * as data from "../data/study-guides";
 import type { ProgressActor } from "../data/progress";
 import * as s from "../db/index";
+import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
+import { expandReadingRanges } from "../../lib/readings/ranges";
+import { haftarahRefForKey } from "../../lib/readings/reading-key";
 import { plain, validateGuideBody, validateVoice, type GuideBody, type GuideNote, type GuideTheme } from "./validation";
 import { STARTER_VOICE } from "./starter-voice";
 
@@ -25,10 +28,11 @@ export type RabbiAuthority<Q extends PgQueryResultHKT> = {
 };
 /**
  * Checks what only the outside world can: every source id is a Sefaria link the server resolves
- * for that verse, every verse is inside the reading. Runs outside any transaction. Returns the
+ * for that verse, and every note's verse is one of `verses` (the reading's passage for a base
+ * guide, the student's assigned verses for additions). Runs outside any transaction. Returns the
  * body with server-resolved source metadata, never the caller's.
  */
-export type GuideChecker = (input: { kind: GuideKind; readingKey: string | null; studentId: string | null; body: GuideBody }) =>
+export type GuideChecker = (input: { kind: GuideKind; readingKey: string | null; studentId: string | null; verses: ReadonlySet<string>; body: GuideBody }) =>
   Promise<{ ok: true; body: GuideBody } | { ok: false; problems: string[] }>;
 
 export type GuideVersion = Readonly<{ version: number; origin: "claude" | "rabbi"; reviewed: boolean; hold: boolean; body: GuideBody; createdAt: string }>;
@@ -39,12 +43,12 @@ export type StudentGuideView = Readonly<{
   base: Readonly<{ version: number; label: GuideLabel; overview: string; themes: readonly StudentTheme[]; updatedAt: string }> | null;
   additions: Readonly<{ version: number; label: GuideLabel; themes: readonly StudentTheme[]; updatedAt: string }> | null;
 }>;
-type Failure = Readonly<{ ok: false; code: "conflict" | "no-change" | "invalid" | "review-not-permitted" | "stale-assignment" | "not-held"; problems?: readonly string[] }>;
-type Committed<T> = Readonly<{ ok: true; replayed: boolean; held?: boolean } & T>;
+type FailureCode = "conflict" | "no-change" | "invalid" | "review-not-permitted" | "channel-not-permitted" | "stale-assignment" | "not-held" | "no-reading";
+type Failure = Readonly<{ ok: false; code: FailureCode; problems?: readonly string[] }>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const fail = (code: Failure["code"], problems?: readonly string[]): Failure => Object.freeze({ ok: false, code, ...(problems ? { problems: Object.freeze([...problems]) } : {}) });
+const fail = (code: FailureCode, problems?: readonly string[]): Failure => Object.freeze({ ok: false, code, ...(problems ? { problems: Object.freeze([...problems]) } : {}) });
 const invalid = (problems: readonly string[]) => fail("invalid", problems);
 /** Key-sorted JSON so a body compares equal after jsonb has reordered its keys. */
 export function canonical(value: unknown): string {
@@ -65,6 +69,8 @@ export function guideVersion(row: data.GuideRow | data.StudentGuideRow): GuideVe
   if (!checked.ok || (row.origin !== "claude" && row.origin !== "rabbi")) throw new Error("Study guide unavailable");
   return Object.freeze({ version: row.version, origin: row.origin, reviewed: row.reviewed, hold: "hold" in row ? row.hold : false, body: checked.value, createdAt: row.createdAt.toISOString() });
 }
+/** A stored version that no longer passes today's rules is withheld, not served and not an error. */
+const servable = (row: data.GuideRow | data.StudentGuideRow | null) => { if (!row) return null; try { return guideVersion(row); } catch { return null; } };
 export function rabbiName(customs: unknown): string {
   const credits = customs && typeof customs === "object" ? (customs as Record<string, unknown>).credits : undefined;
   const name = credits && typeof credits === "object" ? (credits as Record<string, unknown>).rabbiDisplayName : undefined;
@@ -87,6 +93,14 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     const [row] = await tx.select({ customs: s.tenant.customs }).from(s.tenant).where(eq(s.tenant.id, tenantId)).limit(1);
     return row?.customs;
   }
+  /** The verses a base guide for this reading may annotate. */
+  async function passage(tx: AccessTransaction<Q>, tenantId: string, kind: GuideKind, readingKey: string): Promise<Set<string>> {
+    if (kind === "haftarah") {
+      const ref = haftarahRefForKey(readingKey, TANAKH_VERSE_COUNTS);
+      return new Set(ref ? expandReadingRanges([ref], "haftarah", TANAKH_VERSE_COUNTS) : []);
+    }
+    return data.torahPassageVerses(tx, tenantId, readingKey, TANAKH_VERSE_COUNTS);
+  }
 
   // Voice ----------------------------------------------------------------------------------------
   async function getVoice(authority: RabbiAuthority<Q>) {
@@ -99,14 +113,17 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     const expected = versionOf(supplied.expectedVersion), mutationId = mutationOf(supplied.mutationId), checked = validateVoice(supplied.body);
     if (!checked.ok) return invalid(checked.problems);
     const body = checked.value, requestDigest = digest(["study-voice/v1", expected, body]);
+    const replay = (row: data.VoiceRow) => row.requestDigest === requestDigest ? Object.freeze({ ok: true as const, replayed: true, version: row.version }) : fail("conflict");
     return authority.run(async (tx, writer, live) => {
-      const prior = await data.voiceReceipt(tx, writer, mutationId);
-      if (prior) return prior.requestDigest === requestDigest ? Object.freeze({ ok: true as const, replayed: true, version: prior.version }) : fail("conflict");
+      // Only the rabbi in Cowork shapes the voice; the operator bridge writes Claude drafts only.
+      if (writer.channel !== "mcp") return fail("channel-not-permitted");
+      const prior = await data.voiceReceipt(tx, writer, mutationId); if (prior) return replay(prior);
       const head = await data.voiceHead(tx, writer.tenantId);
       if ((head?.version ?? 0) !== expected) return fail("conflict");
       if (head && head.body === body) return fail("no-change");
       live(); const row = await data.appendVoice(tx, writer, expected, body, mutationId, requestDigest); live();
-      return row ? Object.freeze({ ok: true as const, replayed: false, version: row.version }) : fail("conflict");
+      if (row) return Object.freeze({ ok: true as const, replayed: false, version: row.version });
+      const raced = await data.voiceReceipt(tx, writer, mutationId); return raced ? replay(raced) : fail("conflict");
     });
   }
 
@@ -115,8 +132,8 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     const kind = kindOf(supplied.kind), readingKey = keyOf(supplied.readingKey);
     return authority.run(async (tx, writer) => {
       const heads = await data.guideHeads(tx, writer.tenantId, kind, readingKey);
-      const visible = heads.visible ? guideVersion(heads.visible) : null, head = heads.head ? guideVersion(heads.head) : null;
-      return Object.freeze({ kind, readingKey, currentVersion: head?.version ?? 0, visible, held: head?.hold ? head : null });
+      const visible = servable(heads.visible), head = servable(heads.head);
+      return Object.freeze({ kind, readingKey, currentVersion: heads.head?.version ?? 0, visible, held: head?.hold ? head : null });
     });
   }
   async function setBaseGuide(authority: RabbiAuthority<Q>, supplied: { kind: unknown; readingKey: unknown; expectedVersion: unknown; body: unknown; origin: unknown; reviewed: unknown; hold: unknown; mutationId: unknown }) {
@@ -127,23 +144,28 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     const requestDigest = digest(["study-guide/v1", kind, readingKey, expected, origin, reviewed, hold, shape.value]);
     const replay = (row: data.GuideRow) => row.requestDigest === requestDigest && row.kind === kind && row.readingKey === readingKey
       ? Object.freeze({ ok: true as const, replayed: true, version: row.version, held: row.hold }) : fail("conflict");
+    const permitted = (writer: RabbiWriter) => reviewed && !writer.mayReview ? fail("review-not-permitted")
+      : writer.channel === "operator" && origin !== "claude" ? fail("channel-not-permitted") : null;
     // Phase 1: authority, receipt and version, before any network work.
     const first = await authority.run(async (tx, writer) => {
-      if (reviewed && !writer.mayReview) return fail("review-not-permitted");
-      const prior = await data.guideReceipt(tx, writer, mutationId); if (prior) return replay(prior);
+      const refused = permitted(writer); if (refused) return refused;
+      const prior = await data.guideReceipt(tx, writer, mutationId); if (prior) return { done: replay(prior) };
       const heads = await data.guideHeads(tx, writer.tenantId, kind, readingKey);
       if ((heads.head?.version ?? 0) !== expected) return fail("conflict");
-      return null;
+      const verses = await passage(tx, writer.tenantId, kind, readingKey);
+      return verses.size ? { verses } : fail("no-reading");
     });
-    if (first) return first;
+    if ("ok" in first) return first;
+    if ("done" in first) return first.done;
     // Phase 2: citations and verses are resolved by the server, outside the transaction.
-    const resolved = await input.check({ kind, readingKey, studentId: null, body: shape.value });
+    const resolved = await input.check({ kind, readingKey, studentId: null, verses: first.verses, body: shape.value });
     if (!resolved.ok) return invalid(resolved.problems);
-    const body = resolved.body, recheck = validateGuideBody(body, { allowOverview: true });
+    const recheck = validateGuideBody(resolved.body, { allowOverview: true });
     if (!recheck.ok) return invalid(recheck.problems);
+    const body = recheck.value;
     // Phase 3: re-establish authority and recheck everything before appending.
     return authority.run(async (tx, writer, live) => {
-      if (reviewed && !writer.mayReview) return fail("review-not-permitted");
+      const refused = permitted(writer); if (refused) return refused;
       const prior = await data.guideReceipt(tx, writer, mutationId); if (prior) return replay(prior);
       const heads = await data.guideHeads(tx, writer.tenantId, kind, readingKey);
       if ((heads.head?.version ?? 0) !== expected) return fail("conflict");
@@ -160,11 +182,11 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
   async function publishBaseGuide(authority: RabbiAuthority<Q>, supplied: { kind: unknown; readingKey: unknown; version: unknown; mutationId: unknown }) {
     const kind = kindOf(supplied.kind), readingKey = keyOf(supplied.readingKey), version = versionOf(supplied.version), mutationId = mutationOf(supplied.mutationId);
     const requestDigest = digest(["study-guide-publish/v1", kind, readingKey, version]);
+    const replay = (row: data.GuideRow) => row.requestDigest === requestDigest ? Object.freeze({ ok: true as const, replayed: true, version: row.version, held: false }) : fail("conflict");
     return authority.run(async (tx, writer, live) => {
       // Publishing is a review act: it can put a draft in front of reviewed work.
-      if (!writer.mayReview) return fail("review-not-permitted");
-      const prior = await data.guideReceipt(tx, writer, mutationId);
-      if (prior) return prior.requestDigest === requestDigest ? Object.freeze({ ok: true as const, replayed: true, version: prior.version, held: false }) : fail("conflict");
+      if (!writer.mayReview || writer.channel !== "mcp") return fail("review-not-permitted");
+      const prior = await data.guideReceipt(tx, writer, mutationId); if (prior) return replay(prior);
       const heads = await data.guideHeads(tx, writer.tenantId, kind, readingKey);
       if (!heads.head || heads.head.version !== version) return fail("conflict");
       if (!heads.head.hold) return fail("not-held");
@@ -172,7 +194,8 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       live();
       const row = await data.appendGuide(tx, writer, { kind, readingKey, expected: version, origin: held.origin, reviewed: held.reviewed, hold: false, body: held.body, mutationId, digest: requestDigest, publish: true });
       live();
-      return row ? Object.freeze({ ok: true as const, replayed: false, version: row.version, held: false }) : fail("conflict");
+      if (row) return Object.freeze({ ok: true as const, replayed: false, version: row.version, held: false });
+      const raced = await data.guideReceipt(tx, writer, mutationId); return raced ? replay(raced) : fail("conflict");
     });
   }
 
@@ -187,37 +210,48 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     if (!shape.ok) return invalid(shape.problems);
     const requestDigest = digest(["study-guide-student/v1", studentId, kind, assignmentId, assignmentRevision, expected, origin, reviewed, shape.value]);
     const replay = (row: data.StudentGuideRow) => row.requestDigest === requestDigest ? Object.freeze({ ok: true as const, replayed: true, version: row.version }) : fail("conflict");
+    /** The student's current confirmed reading of this kind, if it is still the bound revision. */
     const current = async (tx: AccessTransaction<Q>, writer: RabbiWriter) => {
-      const [student] = await tx.select({ id: s.student.id, disabledAt: s.student.disabledAt }).from(s.student)
+      const [student] = await tx.select({ id: s.student.id, disabledAt: s.student.disabledAt, ceremonyDate: s.student.ceremonyDate }).from(s.student)
         .where(and(eq(s.student.tenantId, writer.tenantId), eq(s.student.id, studentId))).for("share");
       if (!student || student.disabledAt) throw new AccessDenied(404);
-      const [reading] = await tx.select({ id: s.assignment.id, revision: s.assignment.revision, status: s.assignment.status }).from(s.assignment)
-        .where(and(eq(s.assignment.tenantId, writer.tenantId), eq(s.assignment.studentId, studentId), eq(s.assignment.kind, kind))).for("share");
-      return !!reading && reading.status === "confirmed" && reading.id === assignmentId && reading.revision === assignmentRevision;
+      const row = (await confirmedReadings(tx, writer.tenantId, studentId)).find(r => r.kind === kind);
+      if (!row || row.id !== assignmentId || row.revision !== assignmentRevision) return null;
+      return readingView(row, student.ceremonyDate);
     };
-    const first = await authority.run(async (tx, writer) => {
+    const guard = async (tx: AccessTransaction<Q>, writer: RabbiWriter) => {
+      if (writer.channel !== "mcp") return fail("channel-not-permitted");
       if (reviewed && !writer.mayReview) return fail("review-not-permitted");
-      const prior = await data.studentGuideReceipt(tx, writer, mutationId); if (prior) return replay(prior);
-      if (!await current(tx, writer)) return fail("stale-assignment");
+      const prior = await data.studentGuideReceipt(tx, writer, mutationId); if (prior) return { done: replay(prior) };
+      const reading = await current(tx, writer); if (!reading) return fail("stale-assignment");
       const head = await data.studentGuideHead(tx, writer.tenantId, studentId, assignmentId, assignmentRevision, kind);
-      return (head?.version ?? 0) !== expected ? fail("conflict") : null;
-    });
-    if (first) return first;
-    const resolved = await input.check({ kind, readingKey: null, studentId, body: shape.value });
+      if ((head?.version ?? 0) !== expected) return fail("conflict");
+      // S25 for additions: there is no held state here, so a routine cannot write over reviewed additions at all.
+      if (!reviewed && !writer.mayReview && await data.studentGuideAnyReviewed(tx, writer.tenantId, studentId, assignmentId, assignmentRevision, kind)) return fail("review-not-permitted");
+      // Ticks are keyed by theme id within a reading; additions may not reuse a base theme's id.
+      const base = reading.readingKey ? servable((await data.guideHeads(tx, writer.tenantId, kind, reading.readingKey)).visible) : null;
+      const taken = new Set(base?.body.themes.map(t => t.id) ?? []), clash = shape.value.themes.filter(t => taken.has(t.id)).map(t => `theme id ${t.id} is already used by the reading's guide`);
+      if (clash.length) return invalid(clash);
+      return { head, verses: new Set(reading.verses) };
+    };
+    const first = await authority.run(guard);
+    if ("ok" in first) return first;
+    if ("done" in first) return first.done;
+    const resolved = await input.check({ kind, readingKey: null, studentId, verses: first.verses, body: shape.value });
     if (!resolved.ok) return invalid(resolved.problems);
     const recheck = validateGuideBody(resolved.body, { allowOverview: false });
     if (!recheck.ok) return invalid(recheck.problems);
     return authority.run(async (tx, writer, live) => {
-      if (reviewed && !writer.mayReview) return fail("review-not-permitted");
-      const prior = await data.studentGuideReceipt(tx, writer, mutationId); if (prior) return replay(prior);
-      if (!await current(tx, writer)) return fail("stale-assignment");
-      const head = await data.studentGuideHead(tx, writer.tenantId, studentId, assignmentId, assignmentRevision, kind);
-      if ((head?.version ?? 0) !== expected) return fail("conflict");
+      const checked = await guard(tx, writer);
+      if ("ok" in checked) return checked;
+      if ("done" in checked) return checked.done;
+      const head = checked.head;
       if (head && canonical(head.body) === canonical(recheck.value) && head.origin === origin && head.reviewed === reviewed) return fail("no-change");
       live();
       const row = await data.appendStudentGuide(tx, writer, { studentId, assignmentId, assignmentRevision, kind, expected, origin, reviewed, body: recheck.value, mutationId, digest: requestDigest });
       live();
-      return row ? Object.freeze({ ok: true as const, replayed: false, version: row.version }) : fail("conflict");
+      if (row) return Object.freeze({ ok: true as const, replayed: false, version: row.version });
+      const raced = await data.studentGuideReceipt(tx, writer, mutationId); return raced ? replay(raced) : fail("conflict");
     });
   }
 
@@ -236,11 +270,10 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     if (!row) return null;
     const reading = readingView(row, student.ceremonyDate), verses = new Set(reading.verses), name = rabbiName(await customsOf(tx, actor.tenantId));
     const tickable = actor.mode === "student" || actor.mode === "child-practice";
-    const visible = reading.readingKey ? (await data.guideHeads(tx, actor.tenantId, kind, reading.readingKey)).visible : null;
-    const extra = await data.studentGuideHead(tx, actor.tenantId, actor.studentId, reading.id, reading.revision, kind);
-    if (!visible && !extra) return null;
+    const base = reading.readingKey ? servable((await data.guideHeads(tx, actor.tenantId, kind, reading.readingKey)).visible) : null;
+    const additions = servable(await data.studentGuideHead(tx, actor.tenantId, actor.studentId, reading.id, reading.revision, kind));
+    if (!base && !additions) return null;
     const reads = new Map((reading.readingKey ? await data.themeReads(tx, actor.tenantId, actor.studentId, kind, reading.readingKey) : []).map(r => [r.themeId, r]));
-    const base = visible ? guideVersion(visible) : null, additions = extra ? guideVersion(extra) : null;
     return Object.freeze({
       kind, readingKey: reading.readingKey, tickable: tickable && !!reading.readingKey,
       base: base ? Object.freeze({ version: base.version, label: Object.freeze({ origin: base.origin, reviewed: base.reviewed, rabbiName: name }), overview: base.body.overview ?? "",
@@ -272,13 +305,14 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       return changed ? Object.freeze({ ok: true as const, themeId, read, version: changed.version }) : fail("conflict");
     });
   }
+
   // Rabbi's web status and preview (cookie, admin mode, read only; S10) --------------------------
   async function staffGuide(request: AccessRequest, supplied: { kind: unknown; readingKey: unknown }) {
     const kind = kindOf(supplied.kind), readingKey = keyOf(supplied.readingKey);
     return input.access.withAdminCapability(request, { mode: "admin", capability: "read-guides" }, async (tx, actor) => {
       const heads = await data.guideHeads(tx, actor.tenantId, kind, readingKey);
-      const summary = (row: data.GuideRow | null) => row ? Object.freeze({ version: row.version, origin: guideVersion(row).origin, reviewed: row.reviewed, hold: row.hold,
-        themes: guideVersion(row).body.themes.length, updatedAt: row.createdAt.toISOString() }) : null;
+      const summary = (row: data.GuideRow | null) => { const v = servable(row);
+        return v && row ? Object.freeze({ version: v.version, origin: v.origin, reviewed: v.reviewed, hold: v.hold, themes: v.body.themes.length, updatedAt: v.createdAt }) : null; };
       return Object.freeze({ kind, readingKey, rabbiName: rabbiName(await customsOf(tx, actor.tenantId)), visible: summary(heads.visible), held: heads.head?.hold ? summary(heads.head) : null });
     });
   }

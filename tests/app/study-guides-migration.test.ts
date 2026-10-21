@@ -58,6 +58,8 @@ test("the SQL body check accepts every body the TypeScript validator accepts and
       [guide({ overview: "carriage\r\nreturn" }), true], [guide({ overview: "c1\u0085control" }), true], [guide({ overview: "   \n " }), true],
       [guide({ themes: [theme("t", { notes: [note("Exodus 40")] })] }), true], [{ ...guide(), extra: 1 }, true],
       [guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { sources: [{ ...source(), readable: "yes" } as never] })] })] }), true],
+      [guide({ overview: "arabic؜mark" }), true], [guide({ overview: "line sep" }), true], [guide({ overview: "zero​width" }), true],
+      [guide({ overview: "​​" }), true],
     ];
     for (const [body, allowOverview] of corpus) {
       const ts = validateGuideBody(body, { allowOverview }).ok, db = await sql(body, allowOverview);
@@ -66,6 +68,11 @@ test("the SQL body check accepts every body the TypeScript validator accepts and
       else expect(db, JSON.stringify(body).slice(0, 120)).toBe(false);
     }
     expect(await sql(guide({ themes: Array.from({ length: 9 }, (_, i) => theme(`t-${i}`)) }), true)).toBe(false);
+    // Link detection is a service rule only; the database is the looser side, never the stricter.
+    expect(validateGuideBody(guide({ overview: "see [a][b]" }), { allowOverview: true }).ok).toBe(false);
+    expect(await sql(guide({ overview: "see [a][b]" }), true)).toBe(true);
+    // The database rejects the disguising characters on its own, whatever the locale's class.
+    for (const text of ["arabic؜mark", "line sep", "zero​width"]) expect(await sql(guide({ overview: text }), true), text).toBe(false);
     const audit = await client.query<{ ok: boolean }>("select pg_get_constraintdef(oid) like '%study-guide.set%' as ok from pg_constraint where conname='audit_action_known'");
     expect(audit.rows[0].ok).toBe(true);
   } finally { await client.close(); }
@@ -84,6 +91,9 @@ test("study tables are tenant-isolated, rabbi-only, insert-only, and ticks updat
       { ...row, version: 2, baseVersion: 1, previousVersion: 1, channel: "cookie" }, { ...row, version: 2, baseVersion: 1, previousVersion: 1, origin: "tutor" },
       { ...row, version: 2, baseVersion: 1, previousVersion: 1, readingKey: "Pekudei" }, { ...row, version: 2, baseVersion: 1, previousVersion: 1, kind: "blessing-before" as const },
       { ...row, version: 2, baseVersion: 1, previousVersion: 1, body: guide({ overview: "<b>" }) },
+      // The operator bridge may write only Claude-drafted, unreviewed base guides.
+      { ...row, version: 2, baseVersion: 1, previousVersion: 1, channel: "operator", origin: "rabbi" },
+      { ...row, version: 2, baseVersion: 1, previousVersion: 1, channel: "operator", reviewed: true },
     ]) await expect(f.owner(async () => { await f.db.insert(s.studyGuide).values({ ...bad, mutationId: randomUUID() }); }), JSON.stringify(Object.keys(bad))).rejects.toBeDefined();
     // Triggers refuse even the owner; the runtime role has no UPDATE or DELETE at all.
     await expect(f.owner(() => f.client.exec("update study_guide set hold=true"))).rejects.toBeDefined();
@@ -111,6 +121,9 @@ test("study tables are tenant-isolated, rabbi-only, insert-only, and ticks updat
     await f.owner(async () => { const r = await f.client.query("update study_theme_read set state='unread', version=2 returning version"); expect(r.rows).toEqual([{ version: 2 }]); });
     await expect(f.owner(() => f.client.exec("update study_theme_read set theme_id='other', version=3"))).rejects.toBeDefined();
     await expect(f.owner(async () => { await f.db.insert(s.studyThemeRead).values({ ...tick, themeId: "x", state: "maybe" }); })).rejects.toBeDefined();
+    await expect(f.owner(async () => { await f.db.insert(s.studyThemeRead).values({ ...tick, themeId: "y", version: 7 }); })).rejects.toBeDefined();
+    await expect(f.owner(async () => { await f.db.insert(s.studyVoice).values({ tenantId: "crc", version: 1, baseVersion: 0, previousVersion: null, body: "v", ...actor, channel: "operator", mutationId: randomUUID() }); })).rejects.toBeDefined();
+    await f.owner(async () => { await f.db.insert(s.studyGuide).values({ ...row, version: 2, baseVersion: 1, previousVersion: 1, channel: "operator", mutationId: randomUUID() }); });
     const policies = await f.client.query<{ n: number }>(`select count(*)::int n from pg_policies where tablename = any($1) and policyname='tenant_isolation'`, [NEW_TABLES]);
     expect(policies.rows[0].n).toBe(4);
   } finally { await f.client.close(); }

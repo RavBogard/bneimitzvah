@@ -6,6 +6,8 @@ import type { AccessTransaction } from "../access/types";
 import type { ProgressActor } from "./progress";
 import type { GuideBody } from "../study-guides/validation";
 import * as s from "../db/index";
+import { readingKeyFor } from "../../lib/readings/reading-key";
+import { expandReadingRanges, type VerseCounts } from "../../lib/readings/ranges";
 
 /**
  * The rabbi, as established by a rabbi authority (portal MCP delegation or the operator bridge),
@@ -74,7 +76,34 @@ export async function guideStreams<Q extends PgQueryResultHKT>(tx: AccessTransac
     .from(t).where(eq(t.tenantId, tenantId)).orderBy(t.kind, t.readingKey, desc(t.version)).limit(1000);
 }
 
+/**
+ * The Torah passage behind a reading key, taken from the signed Hebcal snapshots of this tenant's
+ * confirmed assignments that carry it (every aliyah including maftir). Empty when no current
+ * student has that reading: a base guide is drafted for readings students actually have.
+ */
+export async function torahPassageVerses<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, readingKey: string, counts: VerseCounts): Promise<Set<string>> {
+  const rows = await tx.select({ snapshot: s.assignment.proposalSnapshot }).from(s.assignment)
+    .where(and(eq(s.assignment.tenantId, tenantId), eq(s.assignment.kind, "torah"), eq(s.assignment.status, "confirmed"))).limit(5000);
+  const verses = new Set<string>();
+  for (const row of rows) {
+    const source = (row.snapshot as { source?: { reading?: { parashah?: unknown; aliyot?: unknown } } } | null)?.source, reading = source?.reading;
+    if (!reading || typeof reading.parashah !== "string" || readingKeyFor({ kind: "torah", parashah: reading.parashah }) !== readingKey || !Array.isArray(reading.aliyot)) continue;
+    for (const aliyah of reading.aliyot) {
+      const ref = (aliyah as { ref?: unknown })?.ref;
+      if (typeof ref !== "string") continue;
+      try { for (const verse of expandReadingRanges([ref], "torah", counts)) verses.add(verse); } catch { /* A malformed stored aliyah adds nothing. */ }
+    }
+  }
+  return verses;
+}
+
 // Per-student additions --------------------------------------------------------------------------
+export async function studentGuideAnyReviewed<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string, assignmentId: string, assignmentRevision: number, kind: GuideKind) {
+  const t = s.studyGuideStudent;
+  const [row] = await tx.select({ version: t.version }).from(t).where(and(eq(t.tenantId, tenantId), eq(t.studentId, studentId), eq(t.assignmentId, assignmentId),
+    eq(t.assignmentRevision, assignmentRevision), eq(t.kind, kind), eq(t.reviewed, true))).limit(1);
+  return !!row;
+}
 export async function studentGuideHead<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string, assignmentId: string, assignmentRevision: number, kind: GuideKind) {
   const t = s.studyGuideStudent;
   const [row] = await tx.select().from(t).where(and(eq(t.tenantId, tenantId), eq(t.studentId, studentId), eq(t.assignmentId, assignmentId),

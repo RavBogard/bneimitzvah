@@ -40,6 +40,8 @@ export const studyVoice = pgTable("study_voice", {
   foreignKey({ name: "study_voice_previous_fk", columns: [t.tenantId, t.previousVersion], foreignColumns: [t.tenantId, t.version] }),
   check("study_voice_versions", versions(t)),
   check("study_voice_body", sql`public.portal_study_markdown(${t.body}, 32768)`),
+  // The operator bridge writes Claude-drafted base guides only (spec §3a).
+  check("study_voice_mcp_only", sql`${t.channel} = 'mcp'`),
   ...actorConstraints("study_voice", t),
 ]);
 
@@ -59,6 +61,7 @@ export const studyGuide = pgTable("study_guide", {
   check("study_guide_reading_key", readingKeyCheck(t.readingKey)),
   check("study_guide_origin", sql`${t.origin} in ('claude','rabbi')`),
   check("study_guide_body", sql`public.portal_study_guide_body_valid(${t.body}, true)`),
+  check("study_guide_operator_draft", sql`${t.channel} = 'mcp' or (${t.origin} = 'claude' and not ${t.reviewed})`),
   ...actorConstraints("study_guide", t),
 ]);
 
@@ -79,6 +82,7 @@ export const studyGuideStudent = pgTable("study_guide_student", {
   check("study_guide_student_kind", sql`${t.kind} in ('torah','haftarah')`),
   check("study_guide_student_origin", sql`${t.origin} in ('claude','rabbi')`),
   check("study_guide_student_body", sql`public.portal_study_guide_body_valid(${t.body}, false)`),
+  check("study_guide_student_mcp_only", sql`${t.channel} = 'mcp'`),
   ...actorConstraints("study_guide_student", t),
 ]);
 

@@ -40,7 +40,7 @@ async function fixture(options: { snapshot?: unknown } = {}) {
   const audits = () => f.owner(async () => (await f.db.select().from(s.auditEvent)).filter(a => a.action.startsWith("study-")).map(a => a.action));
   const rows = () => f.owner(async () => f.db.select().from(s.studyGuide));
   const post = (who: "learner" | "multi") => ({ ...f.request(who, "http://localhost:3000", { origin: "http://localhost:3000" }), method: "POST" });
-  return { ...f, guides, check, studentId, assignment, rabbi, save, read, audits, rows, post };
+  return { ...f, guides, practice, check, studentId, assignment, rabbi, save, read, audits, rows, post };
 }
 const denied = async (action: () => Promise<unknown>, status = 403) => { try { await action(); return false; } catch (e) { return e instanceof AccessDenied && e.status === status; } };
 
@@ -193,4 +193,76 @@ test("voice: template when empty, versioned saves, conflict on stale version", a
   expect(await f.guides.setVoice(f.rabbi(), { expectedVersion: 0, body: "Stale.", mutationId: randomUUID() })).toMatchObject({ ok: false, code: "conflict" });
   expect(await f.guides.getVoice(f.rabbi())).toEqual({ version: 1, body: "Our voice.", template: false });
   expect(await denied(() => f.guides.setVoice(membershipRabbiAuthority({ db: f.db, tenantId: "crc", membershipId: f.learnerMember.id, channel: "mcp", mayReview: true }), { expectedVersion: 1, body: "x", mutationId: randomUUID() }))).toBe(true);
+});
+
+const addition = (f: Awaited<ReturnType<typeof fixture>>, authority: ReturnType<Awaited<ReturnType<typeof fixture>>["rabbi"]>, extra: Record<string, unknown> = {}) =>
+  f.guides.setStudentGuide(authority, { studentId: f.studentId, kind: "torah", assignmentId: f.assignment.id, assignmentRevision: 1, expectedVersion: 0,
+    body: additions([theme("for-you", { notes: [note("Exodus 40:35")] })]), origin: "claude", reviewed: false, mutationId: randomUUID(), ...extra });
+
+test("a routine never replaces the rabbi's reviewed additions; the rabbi present can", async () => {
+  const f = await fixture();
+  expect(await addition(f, f.rabbi(), { reviewed: true, origin: "rabbi" })).toMatchObject({ ok: true, version: 1 });
+  const body = additions([theme("for-you", { intro: "A routine's rewrite.", notes: [note("Exodus 40:35")] })]);
+  expect(await addition(f, f.rabbi(false), { expectedVersion: 1, body })).toMatchObject({ ok: false, code: "review-not-permitted" });
+  expect((await f.read("learner", "student"))?.additions?.label).toMatchObject({ origin: "rabbi", reviewed: true });
+  expect(await addition(f, f.rabbi(), { expectedVersion: 1, body })).toMatchObject({ ok: true, version: 2 });
+});
+
+test("the operator bridge writes only Claude-drafted base guides", async () => {
+  const f = await fixture(), operator = operatorRabbiAuthority({ db: f.db, tenantId: "crc", membershipId: f.adminMember.id });
+  expect(await f.save({ origin: "rabbi" }, operator)).toMatchObject({ ok: false, code: "channel-not-permitted" });
+  expect(await f.guides.setVoice(operator, { expectedVersion: 0, body: "Voice.", mutationId: randomUUID() })).toMatchObject({ ok: false, code: "channel-not-permitted" });
+  expect(await addition(f, operator)).toMatchObject({ ok: false, code: "channel-not-permitted" });
+  await f.save({ hold: true });
+  expect(await f.guides.publishBaseGuide(operator, { kind: "torah", readingKey: "pekudei", version: 1, mutationId: randomUUID() })).toMatchObject({ ok: false, code: "review-not-permitted" });
+  expect(() => membershipRabbiAuthority({ db: f.db, tenantId: "crc", membershipId: f.adminMember.id, channel: "operator", mayReview: true })).toThrow();
+});
+
+test("a delegation bound to one admin grant ends when that grant is reissued", async () => {
+  const f = await fixture();
+  const [membership] = await f.owner(async () => f.db.select().from(s.membership).where(eq(s.membership.id, f.adminMember.id)));
+  const bound = membershipRabbiAuthority({ db: f.db, tenantId: "crc", membershipId: f.adminMember.id, channel: "mcp", mayReview: true,
+    bound: { roleGrantId: f.adminGrant.id, roleGrantRevision: f.adminGrant.revision, authorityRevision: membership.authorityRevision } });
+  expect(await f.save({}, bound)).toMatchObject({ ok: true, version: 1 });
+  await f.owner(async () => {
+    await f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, f.adminGrant.id));
+    await f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: f.adminMember.id, role: "admin" });
+  });
+  expect(await denied(() => f.save({ expectedVersion: 1, body: guide({ overview: "After reissue." }) }, bound))).toBe(true);
+  // An unbound authority (the operator, named on the command line) follows the live grant.
+  expect(await f.save({ expectedVersion: 1, body: guide({ overview: "After reissue." }) })).toMatchObject({ ok: true, version: 2 });
+});
+
+test("disabled membership or tenant denies every write", async () => {
+  const f = await fixture();
+  await f.owner(async () => { await f.db.update(s.membership).set({ disabledAt: new Date() }).where(eq(s.membership.id, f.adminMember.id)); });
+  expect(await denied(() => f.save())).toBe(true);
+  await f.owner(async () => { await f.db.update(s.membership).set({ disabledAt: null }).where(eq(s.membership.id, f.adminMember.id)); await f.db.update(s.tenant).set({ enabled: false }).where(eq(s.tenant.id, "crc")); });
+  expect(await denied(() => f.save())).toBe(true);
+  expect(await f.rows()).toHaveLength(0);
+});
+
+test("additions cannot reuse a base theme id, and a reading no student has gets no base guide", async () => {
+  const f = await fixture();
+  await f.save({ body: guide({ themes: [theme("for-you", { notes: [note("Exodus 40:34")] })] }) });
+  expect(await addition(f, f.rabbi())).toMatchObject({ ok: false, code: "invalid", problems: ["theme id for-you is already used by the reading's guide"] });
+  expect(await f.save({ readingKey: "bereshit" })).toMatchObject({ ok: false, code: "no-reading" });
+  // A haftarah key names its own passage, so it needs no student.
+  expect(await f.save({ kind: "haftarah", readingKey: "i-kings-7-51-8-21", body: guide({ themes: [theme("t", { notes: [note("I Kings 8:10")] })] }) })).toMatchObject({ ok: true, version: 1 });
+  expect(f.check).toHaveBeenLastCalledWith(expect.objectContaining({ verses: expect.any(Set) }));
+  const verses = f.check.mock.lastCall![0].verses; expect(verses.has("I Kings 8:21") && verses.has("I Kings 7:51") && !verses.has("I Kings 8:22")).toBe(true);
+});
+
+test("a parent's child-practice session ticks; admin and parent overview cannot", async () => {
+  const f = await fixture();
+  await f.save({ body: guide({ themes: [theme("cloud", { notes: [note("Exodus 40:34")] })] }) });
+  const entered = await f.practice.enter(f.post("multi"), { studentId: f.studentId });
+  const child = { ...f.request("multi", "http://localhost:3000", { origin: "http://localhost:3000", "X-Practice-Context": entered.handle }), method: "POST" };
+  const body = { studentId: f.studentId, kind: "torah", readingKey: "pekudei", themeId: "cloud", read: true, expectedVersion: 0 };
+  expect(await f.guides.setThemeRead(child, { mode: "child-practice", ...body })).toMatchObject({ ok: true, version: 1 });
+  const admin = { ...f.request("admin", "http://localhost:3000", { origin: "http://localhost:3000" }), method: "POST" };
+  expect(await denied(() => f.guides.setThemeRead(admin, { mode: "admin" as never, ...body, expectedVersion: 1 }))).toBe(true);
+  expect((await f.guides.studentGuide(child, { mode: "child-practice", studentId: f.studentId, kind: "torah" }))?.tickable).toBe(true);
+  const audits = await f.owner(async () => (await f.db.select().from(s.auditEvent)).filter(a => a.action === "study-theme.read"));
+  expect(audits).toHaveLength(1); expect(audits[0].mode).toBe("child-practice"); expect(audits[0].guardianId).not.toBeNull();
 });
