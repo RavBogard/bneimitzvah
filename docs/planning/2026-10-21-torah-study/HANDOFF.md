@@ -70,6 +70,17 @@ You own everything: Tasks 1–16, tests at every layer, the docs, MISSION amendm
 
 If the MCP read foundation turns out larger than the plan assumes, stop at Task 6 (schema, HTTP, client), ship the bridge script (Task 8b) so Daniel can draft guides, and report; do not let the auth work swallow the slice.
 
+### 5a. Interim bridge (built 2026-10-21; delete when the MCP is enabled)
+
+Until the portal MCP exists, a Claude session drafts a guide as a JSON file (`{ overview, themes: [{ id, title, intro, notes: [{ verseRef, body, sources: [{ id, ref, indexTitle, category, labels, readable }] }] }] }`; only `id` of each source matters, the server replaces the rest with Sefaria's own metadata) and the operator runs:
+
+```
+node scripts/apply-study-guide.mjs --kind torah --reading-key <slug> --file guide.json --admin-membership <rabbi membership uuid>          # dry run
+node scripts/apply-study-guide.mjs --kind torah --reading-key <slug> --file guide.json --admin-membership <rabbi membership uuid> --apply  # write
+```
+
+`DATABASE_URL` must be the app's restricted runtime connection, never the owner. The bridge stores origin `claude`, reviewed `false`; it can never review, publish, write the voice or per-student additions. **Delete `scripts/apply-study-guide.mjs`, `src/server/study-guides/bridge*.ts` and their tests in the same commit that enables the MCP endpoint.**
+
 ## 6. Operator recipe for drafting guides (documentation; not code)
 
 When the MCP is live and Daniel has connected Cowork:
