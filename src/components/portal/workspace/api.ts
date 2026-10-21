@@ -13,7 +13,7 @@ export type RosterStudent = Student & { studentKind: "child" | "adult"; serviceS
 export type StudentInput = Omit<RosterStudent, "id" | "revision" | "disabledAt" | "importMetadata" | "ownAdultHonors">;
 export type Context = { id: string; authorityRevision: number; studentId: string; studentRevision: number; expiresAt: string };
 export type Selection = { handle: string; context: Context };
-export type Reading = { id: string; kind: "torah" | "haftarah"; revision: number; ranges: string[]; verses: string[]; needsReview: boolean; aliyahStarts:string[]|null;
+export type Reading = { id: string; kind: "torah" | "haftarah"; revision: number; ranges: string[]; verses: string[]; needsReview: boolean; aliyahStarts:string[]|null; readingKey?: string | null;
   source: { status: "available" | "unavailable" | "unknown"; fetchedAt: number | null; date: string | null; calendar: "diaspora" | "israel" | null; attribution: { name: "Hebcal"; url: "https://www.hebcal.com/" } | null }; confirmationDate: string | null; basis: string };
 export type Assigned = { student: Student; mode: ReadingMode; context: Context | null; readings: Reading[]; referenceListeningEnabled?: boolean };
 const bad = (): never => { throw new PortalRequestError(503); };
@@ -91,7 +91,9 @@ export function parseAssigned(value: unknown, mode: ReadingMode, studentId: stri
   // context ID, membership authority revision, target and expiry.
   if (context ? !selection || context.id !== selection.context.id || context.authorityRevision !== selection.context.authorityRevision || context.studentRevision !== student.revision || context.expiresAt !== selection.context.expiresAt : row.context !== null) return bad();
   const readings: Reading[] = row.readings.map(value => {
-    const r = object(value, ["id", "status", "kind", "basis", "revision", "ranges", "verses", "confirmationDate", "needsReview", "source", "aliyahStarts"]);
+    const r = object(value, ["id", "status", "kind", "basis", "revision", "ranges", "verses", "confirmationDate", "needsReview", "source", "aliyahStarts", ...(value && typeof value === "object" && Object.hasOwn(value, "readingKey") ? ["readingKey"] : [])]);
+    const readingKey = Object.hasOwn(r, "readingKey") ? r.readingKey : null;
+    if (readingKey !== null && (typeof readingKey !== "string" || readingKey.length > 160 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(readingKey))) return bad();
     if (r.status !== "confirmed" || (r.kind !== "torah" && r.kind !== "haftarah") || !["triennial", "selection", "full", "custom"].includes(String(r.basis)) || typeof r.needsReview !== "boolean"
       || !Array.isArray(r.ranges) || r.ranges.length < 1 || r.ranges.length > 32 || !Array.isArray(r.verses) || r.verses.length < 1 || r.verses.length > 1000) return bad();
     const s = object(r.source, ["status", "fetchedAt", "date", "calendar", "attribution"]);
@@ -101,7 +103,7 @@ export function parseAssigned(value: unknown, mode: ReadingMode, studentId: stri
     if (s.attribution !== null) { const a = object(s.attribution, ["name", "url"]); if (a.name !== "Hebcal" || a.url !== "https://www.hebcal.com/") return bad(); attribution = { name: "Hebcal" as const, url: "https://www.hebcal.com/" as const }; }
     const ranges=r.ranges.map(v=>text(v)),verses=r.verses.map(v=>text(v));let cuts:string[]|null;
     try{const expanded=expandReadingRanges(ranges,r.kind as ReadingKind,TANAKH_VERSE_COUNTS);if(expanded.length!==verses.length || expanded.some((ref,i)=>ref!==verses[i]))return bad();cuts=aliyahStarts(r.kind as ReadingKind,r.aliyahStarts,verses);}catch{return bad();}
-    return { id: identifier(r.id), kind: r.kind as "torah" | "haftarah", basis: r.basis as string, revision: positive(r.revision), ranges, verses, needsReview: r.needsReview, aliyahStarts:cuts,
+    return { id: identifier(r.id), kind: r.kind as "torah" | "haftarah", basis: r.basis as string, revision: positive(r.revision), ranges, verses, needsReview: r.needsReview, aliyahStarts:cuts, readingKey: readingKey as string | null,
       confirmationDate: r.confirmationDate === null ? null : date(r.confirmationDate), source: { status: s.status as Reading["source"]["status"], fetchedAt: s.fetchedAt as number | null,
         date: s.date === null ? null : date(s.date), calendar: s.calendar as "diaspora" | "israel" | null, attribution } };
   });

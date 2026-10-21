@@ -12,6 +12,8 @@ import { expandReadingRanges, parseCeremonyDate } from "../../lib/readings/range
 import { assignmentNeedsReview } from "../../lib/readings/review";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { aliyahStarts } from "../../lib/readings/aliyah-starts";
+import { assignmentReadingKey } from "../../lib/readings/reading-key";
+import type { Snapshot } from "../../lib/readings/proposals";
 
 const object = (input: unknown): Record<string, unknown> => input !== null && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
 function date(input: unknown) { try { return parseCeremonyDate(input); } catch { return null; } }
@@ -28,6 +30,8 @@ export function readingView(row: Awaited<ReturnType<typeof confirmedReadings>>[n
   const sourceFetchedAt = typeof snapshot.sourceFetchedAt === "number" && Number.isFinite(snapshot.sourceFetchedAt) && snapshot.sourceFetchedAt >= 0 ? snapshot.sourceFetchedAt : null;
   return Object.freeze({ id: row.id, status: "confirmed" as const, kind: row.kind, basis: row.basis, revision: row.revision, ranges: Object.freeze(ranges), verses: Object.freeze(row.verses),
     confirmationDate, needsReview: assignmentNeedsReview(snapshot, ceremonyDate), aliyahStarts:aliyahStarts(row.kind,row.aliyahStarts,expected),
+    // Derived, never stored: the signed Hebcal snapshot and the verses decide which study guide applies.
+    readingKey: assignmentReadingKey(source as unknown as Snapshot, row.kind, expected, TANAKH_VERSE_COUNTS),
     source: Object.freeze({ status: sourceStatus, fetchedAt: sourceFetchedAt, date: snapshot.slotProvenance===1 ? date(snapshot.readingDate) : date(source.date),
       calendar: source.calendar === "diaspora" || source.calendar === "israel" ? source.calendar : null,
       attribution: leyning.source === "Hebcal" ? Object.freeze({ name: "Hebcal", url: "https://www.hebcal.com/" }) : null }) });
