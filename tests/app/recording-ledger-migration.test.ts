@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { expect, test } from "vitest";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
+import { priorColumns } from "../helpers/prior-columns";
 
 test("0020 upgrades/replays without altering old rows; ceremony trigger stages all recordings irreversibly under old-or-new deadline and rolls back atomically", async () => {
   const isolation = await isolatedEnv(), client = new PGlite();
@@ -19,7 +20,7 @@ test("0020 upgrades/replays without altering old rows; ceremony trigger stages a
     await client.query("insert into student(id,tenant_id,first_name,last_name,ceremony_date,parent_email) values ($1,'crc','Synthetic','Recording','2000-01-02','parent@example.test')", [studentId]);
     const before = (await client.query("select * from student")).rows;
     await migrate(db, { migrationsFolder: folder }); await migrate(db, { migrationsFolder: folder });
-    expect((await client.query("select * from student")).rows).toEqual(before);
+    expect(priorColumns((await client.query("select * from student")).rows, before)).toEqual(before);
     expect((await client.query("select * from student_recording")).rows).toEqual([]);
     const submittedId = randomUUID(), privateId = randomUUID();
     for (const id of [submittedId, privateId]) await client.query("insert into student_recording(id,tenant_id,student_id,asset_id,content_sha256,media_type,byte_length,duration_ms,state,revision,created_at) values ($1,'crc',$2,$3,$4,'audio/webm;codecs=opus',100,100,'private',1,clock_timestamp())", [id, studentId, randomUUID(), "a".repeat(64)]);

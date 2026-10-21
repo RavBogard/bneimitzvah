@@ -197,6 +197,13 @@
       "when": 1792603649203,
       "tag": "0027_study_guides",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1792616456362,
+      "tag": "0028_rehearsal_dates",
+      "breakpoints": true
     }
   ]
 }

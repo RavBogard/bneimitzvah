@@ -93,14 +93,18 @@ function staffMode(value: unknown): "admin" | "tutor" { const result = baseMode(
 const objectBody = async (request: Request, required: string[], optional: string[] = [], profile: "ordinary" | "binding" | "csv" | "work" = "ordinary") =>
   closedObject(await readJsonBody(request, profile), required, optional);
 function studentInput(value: unknown) {
-  const row = closedObject(value, ["firstName", "lastName", "ceremonyDate"], ["studentKind", "serviceSlot", "parentEmail", "ownEmail", "hebrewName", "secondParentEmail"]);
+  const row = closedObject(value, ["firstName", "lastName", "ceremonyDate"], ["studentKind", "serviceSlot", "parentEmail", "ownEmail", "hebrewName", "secondParentEmail", "rehearsal1", "rehearsal2"]);
   return { firstName: text(row.firstName, 100), lastName: text(row.lastName, 100), ceremonyDate: text(row.ceremonyDate, 10), studentKind: row.studentKind, serviceSlot: row.serviceSlot,
     parentEmail: row.parentEmail === undefined || row.parentEmail === null ? null : text(row.parentEmail, 254, 0),
     ownEmail: row.ownEmail === undefined || row.ownEmail === null ? null : text(row.ownEmail, 254, 0),
     ...(row.hebrewName === undefined ? {} : { hebrewName: row.hebrewName === null ? null : text(row.hebrewName, 400, 0) }),
-    ...(row.secondParentEmail === undefined ? {} : { secondParentEmail: row.secondParentEmail === null ? null : text(row.secondParentEmail, 254, 0) }) };
+    ...(row.secondParentEmail === undefined ? {} : { secondParentEmail: row.secondParentEmail === null ? null : text(row.secondParentEmail, 254, 0) }),
+    ...(row.rehearsal1 === undefined ? {} : { rehearsal1: row.rehearsal1 === null ? null : text(row.rehearsal1, 10) }),
+    ...(row.rehearsal2 === undefined ? {} : { rehearsal2: row.rehearsal2 === null ? null : text(row.rehearsal2, 10) }) };
 }
-const studentView = (s: StudentView) => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, ceremonyDate: s.ceremonyDate, revision: s.revision });
+const studentCore = (s: Omit<StudentView, "rehearsal1" | "rehearsal2">) => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, ceremonyDate: s.ceremonyDate, revision: s.revision });
+// Rehearsal dates travel with the ceremony date to every role that already sees it.
+const studentView = (s: StudentView) => ({ ...studentCore(s), rehearsal1: s.rehearsal1, rehearsal2: s.rehearsal2 });
 const contextView = (c: PracticeContextView | null) => c ? { id: c.id, authorityRevision: c.authorityRevision, studentId: c.studentId, studentRevision: c.studentRevision, expiresAt: c.expiresAt } : null;
 function wordAidsView(value: StudyWordAids): JsonValue {
   if (value.status === "unavailable") return { schema: value.schema, ref: value.ref, status: value.status, reason: value.reason };
@@ -252,7 +256,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       case "relationships": {
         uniqueQuery(request.url, []);
         const value = await runtime.relationships.inspectStudent(request, { mode: "admin", studentId: id! });
-        return privateJson({ student: { ...studentView(value.student), disabled: value.student.disabled },
+        return privateJson({ student: { ...studentCore(value.student), disabled: value.student.disabled },
           guardians: value.guardians.map(row => ({ id: row.id, revision: row.revision, parentGrantId: row.parentGrantId, parentGrantRevision: row.parentGrantRevision,
             displayName: row.displayName, practiceEnabled: row.practiceEnabled, effectiveRead: row.effectiveRead, effectivePractice: row.effectivePractice })),
           identities: value.identities.map(row => ({ id: row.id, studentGrantId: row.studentGrantId, studentGrantRevision: row.studentGrantRevision, displayName: row.displayName, effectivePractice: row.effectivePractice })),
@@ -429,7 +433,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
         if (request.method === "GET") {
           const rows = await runtime.students.listRoster(request, { mode: "admin" });
           return privateJson({ students: rows.map(row => ({ id: row.id, firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate,
-            studentKind: row.studentKind, serviceSlot: row.serviceSlot, parentEmail: row.parentEmail, ownEmail: row.ownEmail,
+            rehearsal1: row.rehearsal1, rehearsal2: row.rehearsal2, studentKind: row.studentKind, serviceSlot: row.serviceSlot, parentEmail: row.parentEmail, ownEmail: row.ownEmail,
             hebrewName: row.hebrewName, secondParentEmail: row.secondParentEmail, importMetadata: row.importMetadata,
             disabledAt: row.disabledAt?.toISOString() ?? null, revision: row.revision })) });
         }

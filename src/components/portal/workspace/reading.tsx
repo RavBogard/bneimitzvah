@@ -39,6 +39,12 @@ export function ceremonyCountdown(date: string, now = new Date()) {
   const label = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(ceremony);
   return { label, days, phrase: days > 1 ? `${days} days to go` : days === 1 ? "Tomorrow" : days === 0 ? "Today" : null };
 }
+/** The saved rehearsals in order, labelled like the ceremony date. Nothing when none is set. */
+export function RehearsalDates({ student }: { student: Pick<Student, "rehearsal1" | "rehearsal2"> }) {
+  const dates = [student.rehearsal1, student.rehearsal2].filter((value): value is string => !!value);
+  if (!dates.length) return null;
+  return <p className="hero-rehearsals">{dates.length === 1 ? "Rehearsal" : "Rehearsals"}: {dates.map((value, index) => <span key={index}>{index > 0 && " and "}<time dateTime={value}>{ceremonyCountdown(value).label}</time></span>)}</p>;
+}
 const displayRange = (ranges: string[]) => ranges.join("; ").replace(/(\d)-(\d)/g, "$1\u2013$2");
 const refreshIcon = <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 
@@ -283,6 +289,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
             void guardReading("sources").then(leave => { if (leave && environment.current.studyDenied === target && sequence.current === turn && !abort.current?.signal.aborted) setRetry(value => value + 1); });
           }}>{refreshIcon}</button>
         </div>
+        <RehearsalDates student={student} />
         {mode === "parent" && <p className="hero-meta">Read-only overview. Choose Practice with <bdi dir="auto">{student.firstName}</bdi> to mark verses together.</p>}
         {exploring || readings.length === 0 ? <div className="reading-empty"><h3 className="hero-reference hero-reference-empty">{exploring ? "Explore the full Torah portion" : "No reading has been assigned yet"}</h3><p className="hero-meta">{exploring ? "Read the portion while you and your tutor choose your verses." : staff ? "Choose the verses this student will read." : "Your tutor or rabbi will add your verses here."}</p>
           <div className="hero-actions">{mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : `Practice with ${student.firstName}`}</button>}{staff && <button type="button" className="button-hero-secondary" onClick={openSheet}>Assign verses</button>}{exploring && <button type="button" className="button-start" disabled={!proposedReady || concealed || current?.loading} onClick={startReading}>Start reading</button>}{practiceAction}{!tabbed && <a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a>}</div></div> : <>

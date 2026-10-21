@@ -7,6 +7,7 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import { expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
+import { priorColumns } from "../helpers/prior-columns";
 import { portalRoutesFixture } from "./portal-routes-fixture";
 import * as s from "../../src/server/db/index";
 import { validateGuideBody } from "../../src/server/study-guides/validation";
@@ -25,7 +26,7 @@ test("0027 additive migration upgrades and replays, with the generated snapshot 
     await client.query("insert into student(id,tenant_id,first_name,last_name,ceremony_date,parent_email) values($1,'crc','Synthetic','Study','2027-01-02','study@example.test')", [randomUUID()]);
     const before = (await client.query("select * from student")).rows;
     await migrate(db, { migrationsFolder: folder }); await migrate(db, { migrationsFolder: folder });
-    expect((await client.query("select * from student")).rows).toEqual(before);
+    expect(priorColumns((await client.query("select * from student")).rows, before)).toEqual(before);
     for (const table of NEW_TABLES) expect((await client.query(`select count(*)::int as n from ${table}`)).rows).toEqual([{ n: 0 }]);
     const previous = JSON.parse(await readFile(join(folder, "meta/0026_snapshot.json"), "utf8")), current = JSON.parse(await readFile(join(folder, "meta/0027_snapshot.json"), "utf8"));
     const expected = structuredClone(previous.tables);

@@ -10,7 +10,7 @@ import { parsePick,type Pick } from "../../lib/readings/leyning.mjs";
 import { expandReadingRanges,type CeremonyDate,type VerseCounts } from "../../lib/readings/ranges";
 import { proposeReading,ReadingUnavailable,type Calendar,type Snapshot } from "../../lib/readings/proposals";
 import { createBindings,digest } from "./bindings";
-import { identifier,parseStudentCsv,revision,studentInput,type StudentInput,type CsvParse } from "./validation";
+import { identifier,parseStudentCsv,rehearsalsFit,revision,studentInput,type StudentInput,type CsvParse } from "./validation";
 import { readingDate } from "../../lib/readings/reading-date";
 import { validatedSnapshot } from "./preparation";
 import { aliyahStarts } from "../../lib/readings/aliyah-starts";
@@ -84,7 +84,7 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
     return input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
       const rows=await data.roster(tx,actor.tenantId);
       if(rows.length>5000)throw new AccessDenied(403);
-      return rows.map(({id,firstName,lastName,ceremonyDate,serviceSlot,studentKind,parentEmail,ownEmail,hebrewName,secondParentEmail,importMetadata,disabledAt,revision})=>({id,firstName,lastName,ceremonyDate,serviceSlot,studentKind,parentEmail,ownEmail,hebrewName,secondParentEmail,importMetadata,disabledAt,revision}));
+      return rows.map(({id,firstName,lastName,ceremonyDate,rehearsal1,rehearsal2,serviceSlot,studentKind,parentEmail,ownEmail,hebrewName,secondParentEmail,importMetadata,disabledAt,revision})=>({id,firstName,lastName,ceremonyDate,rehearsal1,rehearsal2,serviceSlot,studentKind,parentEmail,ownEmail,hebrewName,secondParentEmail,importMetadata,disabledAt,revision}));
     });
   }
   async function create(request:CookieMutationRequest,selection:Mode&{student:unknown}){
@@ -106,6 +106,8 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       if(!current || current.disabledAt)throw new AccessDenied(404);
       if(current.revision!==expected)return conflict();
       if(values.ownEmail!==null && values.ownEmail===(values.secondParentEmail===undefined?current.secondParentEmail:values.secondParentEmail))throw new AccessDenied(403);
+      // An omitted rehearsal keeps its saved date, which must still fit the new ceremony date.
+      if(!rehearsalsFit(values.ceremonyDate,values.rehearsal1===undefined?current.rehearsal1:values.rehearsal1,values.rehearsal2===undefined?current.rehearsal2:values.rehearsal2))throw new AccessDenied(403);
       const updated=await data.updateStudent(tx,actor.tenantId,id,expected,values);
       if(!updated)return conflict();
       const readingNeedsReview=current.ceremonyDate!==values.ceremonyDate || current.serviceSlot!==values.serviceSlot;

@@ -6,7 +6,7 @@ import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 
 export type BaseMode = "student" | "parent" | "tutor" | "admin";
 export type ReadingMode = BaseMode | "child-practice";
-export type Student = { id: string; firstName: string; lastName: string; ceremonyDate: string; revision: number; ownAdultHonors?: boolean };
+export type Student = { id: string; firstName: string; lastName: string; ceremonyDate: string; revision: number; ownAdultHonors?: boolean; rehearsal1?: string | null; rehearsal2?: string | null };
 export type ImportMetadata={version:1;parent1Name:string|null;householdPhone:string|null;parent2Name:string|null;parashahLabel:string|null;tutorName:string|null;
   tutorMatch:{status:"matched";grantId:string}|{status:"unmatched"|"ambiguous"}|null;adminNotes:string|null};
 export type RosterStudent = Student & { studentKind: "child" | "adult"; serviceSlot: "morning" | "havdalah" | "unknown"; parentEmail: string | null; ownEmail: string | null; disabledAt: string | null;hebrewName?:string|null;secondParentEmail?:string|null;importMetadata?:ImportMetadata|null };
@@ -27,8 +27,16 @@ function text(value: unknown, max = 100): string { if (typeof value !== "string"
 function positive(value: unknown): number { if (!Number.isSafeInteger(value) || Number(value) < 1) return bad(); return Number(value); }
 function instant(value: unknown): string { if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) return bad(); return value; }
 function date(value: unknown): string { const s = text(value, 10), parsed = new Date(s + "T00:00:00Z"); if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== s) return bad(); return s; }
-const studentKeys = ["id", "firstName", "lastName", "ceremonyDate", "revision"];
-function studentFields(row: Record<string, unknown>): Student { return { id: identifier(row.id), firstName: text(row.firstName), lastName: text(row.lastName), ceremonyDate: date(row.ceremonyDate), revision: positive(row.revision) }; }
+const baseStudentKeys = ["id", "firstName", "lastName", "ceremonyDate", "revision"];
+// Rehearsal dates arrive together or not at all; when present they must be in order and on or before the ceremony.
+const studentKeysOf = (value: unknown) => [...baseStudentKeys, ...(!!value && typeof value === "object" && Object.hasOwn(value, "rehearsal1") ? ["rehearsal1", "rehearsal2"] : [])];
+function studentFields(row: Record<string, unknown>): Student {
+  const student: Student = { id: identifier(row.id), firstName: text(row.firstName), lastName: text(row.lastName), ceremonyDate: date(row.ceremonyDate), revision: positive(row.revision) };
+  if (!Object.hasOwn(row, "rehearsal1")) return student;
+  const rehearsal1 = row.rehearsal1 === null ? null : date(row.rehearsal1), rehearsal2 = row.rehearsal2 === null ? null : date(row.rehearsal2);
+  if ((rehearsal1 !== null && rehearsal1 > student.ceremonyDate) || (rehearsal2 !== null && rehearsal2 > student.ceremonyDate) || (rehearsal1 !== null && rehearsal2 !== null && rehearsal1 > rehearsal2)) return bad();
+  return { ...student, rehearsal1, rehearsal2 };
+}
 function intakeText(value:unknown,max:number,multiline=false):string|null {
   if(value===null)return null;
   if(typeof value!=="string" || !value.trim() || value!==value.trim() || new TextEncoder().encode(value).length>max || (multiline?/[\x00-\x09\x0b-\x1f\x7f-\x9f]/:/[\x00-\x1f\x7f-\x9f]/).test(value) || /[<>]/.test(value))return bad();
@@ -52,6 +60,7 @@ export function parseStudents(value: unknown, roster = false): Student[] | Roste
   const result = rows.map(value => {
     const rich=roster && !!value && typeof value==="object" && Object.hasOwn(value,"importMetadata");
     const eligibility = !roster && !!value && typeof value === "object" && Object.hasOwn(value, "ownAdultHonors");
+    const studentKeys = studentKeysOf(value);
     const row = object(value, roster ? [...studentKeys, "studentKind", "serviceSlot", "parentEmail", "ownEmail", "disabledAt",...(rich?["hebrewName","secondParentEmail","importMetadata"]:[])] : [...studentKeys, ...(eligibility ? ["ownAdultHonors"] : [])]), student = studentFields(row);
     if (!roster) {
       if (eligibility && typeof row.ownAdultHonors !== "boolean") return bad();
@@ -83,7 +92,7 @@ export function parseSelection(value: unknown, studentId: string): Selection {
 }
 export function parseAssigned(value: unknown, mode: ReadingMode, studentId: string, selection?: Selection): Assigned {
   const hasListeningHint = !!value && typeof value === "object" && Object.hasOwn(value, "referenceListeningEnabled");
-  const row = object(value, ["student", "mode", "context", "readings", ...(hasListeningHint ? ["referenceListeningEnabled"] : [])]), student = studentFields(object(row.student, studentKeys));
+  const row = object(value, ["student", "mode", "context", "readings", ...(hasListeningHint ? ["referenceListeningEnabled"] : [])]), student = studentFields(object(row.student, studentKeysOf(row.student)));
   if (hasListeningHint && typeof row.referenceListeningEnabled !== "boolean") return bad();
   if (student.id !== studentId || row.mode !== mode || !Array.isArray(row.readings) || row.readings.length > 2) return bad();
   const context = mode === "child-practice" ? parseContext(row.context, studentId) : null;

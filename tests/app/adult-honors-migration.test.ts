@@ -4,6 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
+import { priorColumns } from "../helpers/prior-columns";
 import { adultUpgradePrefix, seedLegacyAdultUpgrade, legacyAdultUpgradeSnapshot } from "../helpers/adult-honors-upgrade.mjs";
 
 test("0024 upgrades populated parent/admin honors receipts links and epochs without rewriting or backfill", async () => {
@@ -16,7 +17,8 @@ test("0024 upgrades populated parent/admin honors receipts links and epochs with
     expect(before.student.find(row => row.id === seeded.studentId)?.ceremony_date).toBe(new Date(future + 365 * 86400000).toISOString().slice(0, 10));
     expect(before.honors_version.length).toBe(2); expect(before.honoree_link.length).toBe(2); expect(before.honoree_operation.length).toBe(2);
     await migrate(db, { migrationsFolder: "src/server/db/migrations" }); await migrate(db, { migrationsFolder: "src/server/db/migrations" });
-    expect(await legacyAdultUpgradeSnapshot(client)).toEqual(before);
+    const after = await legacyAdultUpgradeSnapshot(client);
+    expect(Object.fromEntries(Object.entries(after).map(([table, rows]) => [table, priorColumns(rows, before[table])]))).toEqual(before);
     // Incumbent old-column parent/admin inserts still work after0024.
     await seedLegacyAdultUpgrade(client);
     expect((await legacyAdultUpgradeSnapshot(client)).honors_version.length).toBe(4);

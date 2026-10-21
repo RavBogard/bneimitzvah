@@ -1,0 +1,3 @@
+ALTER TABLE "student" ADD COLUMN "rehearsal_1" date;--> statement-breakpoint
+ALTER TABLE "student" ADD COLUMN "rehearsal_2" date;--> statement-breakpoint
+ALTER TABLE "student" ADD CONSTRAINT "student_rehearsals_ordered" CHECK (("student"."rehearsal_1" is null or "student"."rehearsal_1" <= "student"."ceremony_date") and ("student"."rehearsal_2" is null or "student"."rehearsal_2" <= "student"."ceremony_date") and ("student"."rehearsal_1" is null or "student"."rehearsal_2" is null or "student"."rehearsal_1" <= "student"."rehearsal_2"));

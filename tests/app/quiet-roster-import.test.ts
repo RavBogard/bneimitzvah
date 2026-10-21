@@ -82,7 +82,7 @@ test("actual HTTP import preserves rich pending intake and queues its ceremony w
   const retained=await (await f.call("/api/admin/students",{who:"admin"})).json();expect(retained.students.find((row:{id:string})=>row.id===imported.id)).toMatchObject({hebrewName:imported.hebrewName,secondParentEmail:imported.secondParentEmail,importMetadata:imported.importMetadata});
   await f.owner(async()=>{await f.db.update(s.student).set({importMetadata:imported.importMetadata,secondParentEmail:imported.secondParentEmail,hebrewName:imported.hebrewName}).where(eq(s.student.id,f.students[0].id));});
   for(const [who,mode] of [["multi","tutor"],["multi","parent"],["learner","student"]] as const){
-    const view=await (await f.call(`/api/students/${f.students[0].id}?mode=${mode}`,{who})).json();expect(Object.keys(view.student??view).sort()).toEqual(["ceremonyDate","firstName","id","lastName","revision"]);
+    const view=await (await f.call(`/api/students/${f.students[0].id}?mode=${mode}`,{who})).json();expect(Object.keys(view.student??view).sort()).toEqual(["ceremonyDate","firstName","id","lastName","rehearsal1","rehearsal2","revision"]);
     expect((await f.call("/api/admin/students",{who})).status).toBe(403);
   }
 });
