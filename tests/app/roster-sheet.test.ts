@@ -25,8 +25,8 @@ afterEach(async () => { await Promise.all(opened.splice(0).map(f => f.client.clo
 function baseEnv() {
   const database = new URL("postgresql://ep-synthetic.us-east-2.aws.neon.tech/synthetic");
   database.username = "synthetic_login"; database.password = randomBytes(24).toString("hex"); database.searchParams.set("sslmode", "require");
-  return { PORTAL_ENVIRONMENT: "local", PORTAL_DEPLOYMENT: "synthetic-sheet", BETTER_AUTH_URL: "http://localhost:3000", DATABASE_URL: database.href,
-    BETTER_AUTH_SECRET: randomBytes(48).toString("base64url"), RESEND_API_KEY: `re_${randomBytes(24).toString("hex")}`, RESEND_FROM: "synthetic@example.test" } as Record<string, string>;
+  return { PORTAL_ENVIRONMENT: "local", PORTAL_DEPLOYMENT: "synthetic-sheet", BETTER_AUTH_URL: "http://localhost:3000", "DATABASE_URL": database.href,
+    "BETTER_AUTH_SECRET": randomBytes(48).toString("base64url"), "RESEND_API_KEY": `re_${randomBytes(24).toString("hex")}`, RESEND_FROM: "synthetic@example.test" } as Record<string, string>;
 }
 
 type Call = { url: string; init: RequestInit };
