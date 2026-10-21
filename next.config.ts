@@ -9,9 +9,9 @@ const nextConfig: NextConfig = {
   // Auth/invitation query strings must not enter framework request logs.
   // Fetch URL logging remains disabled (no fetches logging configuration).
   logging: { incomingRequests: false },
-  // The Claude consent page must never be framed (an overlaid Allow click).
+  // No portal page is ever framed (an overlaid click on the Claude consent page, among others).
   async headers() {
-    return [{ source: "/connect", headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'none'" }, { key: "X-Frame-Options", value: "DENY" }] }];
+    return [{ source: "/:path*", headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'none'" }, { key: "X-Frame-Options", value: "DENY" }] }];
   },
 };
 

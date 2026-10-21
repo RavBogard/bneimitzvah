@@ -143,7 +143,12 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
       name: "save_study_voice", roles: ["admin"], scope: SCOPES.study, annotations: write,
       description: "Save a new version of the study voice (markdown, up to 32 KB). Only when the rabbi asks for it.",
       inputSchema: closed({ expectedVersion, body: str("The whole voice document in markdown.", { maxLength: 40000 }), mutationId }, ["expectedVersion", "body", "mutationId"]),
-      handler: async (input, ctx) => { requireStudy(ctx); return outcome(await ctx.guides.setVoice(rabbiAuthority(ctx), input as never)); },
+      handler: async (input, ctx) => {
+        requireStudy(ctx);
+        // The voice shapes every future guide: only the rabbi, never an unattended routine.
+        if (ctx.actor.unattended) return { ok: false, code: "channel-not-permitted", hint: "A scheduled routine cannot change the study voice." };
+        return outcome(await ctx.guides.setVoice(rabbiAuthority(ctx), input as never));
+      },
     },
     {
       name: "list_guide_work", roles: ["admin"], scope: SCOPES.read, annotations: readOnly,

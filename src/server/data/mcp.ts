@@ -30,6 +30,11 @@ export async function lockConnection<Q extends PgQueryResultHKT>(tx: AccessTrans
   const [row] = await tx.select().from(s.mcpConnection).where(and(eq(s.mcpConnection.tenantId, tenantId), eq(s.mcpConnection.id, connectionId))).for(lockStrength(intent));
   return row;
 }
+/** The connection's client hash, read without a lock (a replay check before a plain revoking UPDATE). */
+export async function connectionClient<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, connectionId: string) {
+  const [row] = await tx.select({ clientHash: s.mcpConnection.clientHash }).from(s.mcpConnection).where(and(eq(s.mcpConnection.tenantId, tenantId), eq(s.mcpConnection.id, connectionId)));
+  return row?.clientHash ?? null;
+}
 export async function revokeConnection<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, connectionId: string, at: Date) {
   await tx.update(s.mcpConnection).set({ revokedAt: at }).where(and(eq(s.mcpConnection.tenantId, tenantId), eq(s.mcpConnection.id, connectionId), isNull(s.mcpConnection.revokedAt)));
 }

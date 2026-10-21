@@ -4,3 +4,6 @@ import { dispatchRequest } from "@/server/http/dispatch";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const GET = dispatchRequest;
+export const POST = dispatchRequest;
+export const HEAD = dispatchRequest;
+export const OPTIONS = dispatchRequest;

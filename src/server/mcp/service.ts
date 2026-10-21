@@ -209,11 +209,14 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
           const t = tx as AccessTransaction<Q>;
           const row = await data.lockToken(t, resolved.tenantId, hash, grantType === "authorization_code" ? "code" : "refresh");
           if (!row) return { error: "invalid_grant" as const };
-          // An update lock: a replay below revokes the row, and two replays must not deadlock.
-          const connection = await data.lockConnection(t, resolved.tenantId, row.connectionId, "authority-write");
+          // A replayed code or refresh token from its own client means one leaked: end the whole
+          // connection with a plain UPDATE (no share-then-update upgrade, no wait on running tools).
+          if (row.usedAt) {
+            if (await data.connectionClient(t, resolved.tenantId, row.connectionId) === client.hash) await data.revokeConnection(t, resolved.tenantId, row.connectionId, new Date(at));
+            return { error: "invalid_grant" as const };
+          }
+          const connection = await data.lockConnection(t, resolved.tenantId, row.connectionId, "data-write");
           if (!connection || connection.clientHash !== client.hash) return { error: "invalid_grant" as const };
-          // A replayed code or refresh token means one leaked: end the whole connection.
-          if (row.usedAt) { await data.revokeConnection(t, resolved.tenantId, connection.id, new Date(at)); return { error: "invalid_grant" as const }; }
           if (row.expiresAt.getTime() <= at) return { error: "invalid_grant" as const };
           if (grantType === "authorization_code") {
             const verifier = form.get("code_verifier") ?? "";
