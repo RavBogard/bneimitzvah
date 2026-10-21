@@ -1,5 +1,7 @@
 # Product-owner reconciliation of Claude's independent review
 
+Latest checkpoint, 2026-10-20: parent saved-lesson/practice-date summary and the official CRC preparation guide are deployed at exact 3316605, verified READY on both aliases after all four hosted jobs 39520128249 and signed-out Google 2 pass. Independent release review confirmed no reference-playback dependency; the known reference metadata failure remains isolated and listening acceptance is not claimed. A separate reviewed test-only diagnostic preserves actual Request completion/failure, validation and deadlines; its first passive run failed with 7 pass/1 fail, while the later Network-observed run passed 8 without capturing the failure. Neither result establishes a cause or fix. Student listening remains held, reference app/admin behavior is unchanged, and no schema, outreach or actual-account action accompanied this release. Daniel's phone test can wait.
+
 2026-10-20. Review input: Daniel's local `C:/Users/dsbog/bneimitzvah-review-output/`, README, REVIEW, FINDINGS, RECOMMENDATIONS, FEATURE-GAP-ANALYSIS, RESOURCE-INTEGRATION-PLAN and EVIDENCE-AND-LIMITS. Baseline ec29de9. The original report/evidence stays outside the public repository; do not publish licensed reading screenshots, private resource metadata or raw logs. This records integration decisions, not new human acceptance or completed implementation.
 
 ## Keep the useful diagnosis and existing strengths

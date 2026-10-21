@@ -275,56 +275,94 @@ async function observeMetadataConsumption(tab: Page, path: string) {
  * duplicate response-body lookup is not the application consumption barrier. */
 async function shortMetadata(tab: Page, offset = 0, expected = 100) {
   let sequence = 0, ready = false;
-  type Failure = "none" | "request-shape" | "upstream-fetch" | "body-bound" | "body-read" | "json" | "reference-shape" | "fulfill" | "browser-failed" | "dispose";
+  type Failure = "none" | "request-shape" | "body-bound" | "body-read" | "json" | "reference-shape" | "deadline" | "browser-failed";
   type Terminal = "pending" | "finished" | "failed" | "closing";
   type BrowserFailure = "none" | "unobserved" | "aborted" | "timed-out" | "connection-reset" | "connection-closed" | "invalid-response" | "length-mismatch" | "decoding-failed" | "failed" | "other";
-  type Stage = "route" | "browser-request" | "browser-response" | "upstream" | "body" | "fulfill-start" | "fulfill-resolved" | "disposed" | "browser-finished" | "browser-failed" | "closing";
-  type Facts = { status: number; responses: number; references: number; ready: number; unavailable: number; invalid: number; failure: Failure; terminal: Terminal; fulfilled: boolean; ordinal: number; currentSequence: boolean; scopeClosing: boolean; pageClosed: boolean; elapsed: number; stages: { stage: Stage; ms: number }[]; stageOverflow: boolean; browserFailure: BrowserFailure; contentEncoding: "unobserved" | "identity" | "gzip" | "br" | "deflate" | "other"; lengthMatchesBytes: boolean | null; transferEncoding: "unobserved" | "absent" | "chunked" | "other"; forwardedTransferEncoding: "unobserved" | "absent" | "chunked" | "other"; forwardedLengthMatchesBytes: boolean | null; forwardedBodyDigestMatches: boolean | null };
-  const initial = (responses: number): Facts => ({ status: 0, responses, references: 0, ready: 0, unavailable: 0, invalid: 0, failure: "none", terminal: "pending", fulfilled: false, ordinal: 0, currentSequence: false, scopeClosing: false, pageClosed: false, elapsed: 0, stages: [], stageOverflow: false, browserFailure: "none", contentEncoding: "unobserved", lengthMatchesBytes: null, transferEncoding: "unobserved", forwardedTransferEncoding: "unobserved", forwardedLengthMatchesBytes: null, forwardedBodyDigestMatches: null });
+  type Stage = "browser-request" | "browser-response" | "body" | "validated" | "browser-finished" | "browser-failed" | "closing";
+  type Facts = { status: number; responses: number; references: number; ready: number; unavailable: number; invalid: number; failure: Failure; terminal: Terminal; responseObserved: boolean; bodyValidated: boolean; bodyBytes: number; ordinal: number; currentSequence: boolean; scopeClosing: boolean; pageClosed: boolean; elapsed: number; stages: { stage: Stage; ms: number }[]; stageOverflow: boolean; browserFailure: BrowserFailure; contentEncoding: "unobserved" | "identity" | "gzip" | "br" | "deflate" | "other"; lengthMatchesBytes: boolean | null; transferEncoding: "unobserved" | "absent" | "chunked" | "other" };
+  const initial = (responses: number): Facts => ({ status: 0, responses, references: 0, ready: 0, unavailable: 0, invalid: 0, failure: "none", terminal: "pending", responseObserved: false, bodyValidated: false, bodyBytes: 0, ordinal: 0, currentSequence: false, scopeClosing: false, pageClosed: false, elapsed: 0, stages: [], stageOverflow: false, browserFailure: "none", contentEncoding: "unobserved", lengthMatchesBytes: null, transferEncoding: "unobserved" });
   let facts = initial(0);
   const scope = contexts.find(scope => scope.context === tab.context()); if (!scope) throw new Error("Exploration metadata ownership missing");
   const requests = new Map<BrowserRequest, Facts>(), path = `/api/students/${fixture.student.id}/reading/explore/reference/short/page`;
   await observeMetadataConsumption(tab, path);
+  // Scheduling-sensitive diagnostic only. Private CDP IDs never enter output;
+  // unique cardinality, not timestamps or guessed ordinals, establishes a join.
+  const browserSelected = new Set<BrowserRequest>();
+  const network = { requests: 0, unmatchedTerminals: 0, invalidSelected: 0, ambiguity: 0, overflow: 0, errors: 0, listenersRemoved: false };
+  const countNetwork = (key: "requests" | "unmatchedTerminals" | "invalidSelected" | "ambiguity" | "overflow" | "errors") => { network[key] = Math.min(999, network[key] + 1); };
+  type NetworkRecord = { ordinal: number; type: string; finished: boolean; failed: boolean; terminals: number; error: string; canceled: boolean | null; blocked: string; cors: string };
+  const networkRecords = new Map<string, NetworkRecord>();
+  const resourceTypes = new Set(["Document", "Stylesheet", "Image", "Media", "Font", "Script", "TextTrack", "XHR", "Fetch", "Prefetch", "EventSource", "WebSocket", "Manifest", "SignedExchange", "Ping", "CSPViolationReport", "Preflight", "Other"]);
+  const blockedReasons = new Set(["other", "csp", "mixed-content", "origin", "inspector", "subresource-filter", "content-type", "coep-frame-resource-needs-coep-header", "corp-not-same-origin", "corp-not-same-site"]);
+  const corsErrors = new Set(["DisallowedByMode", "InvalidResponse", "WildcardOriginNotAllowed", "MissingAllowOriginHeader", "AllowOriginMismatch", "InvalidAllowCredentials", "MethodDisallowedByPreflightResponse", "HeaderDisallowedByPreflightResponse", "PreflightInvalidStatus", "InsecurePrivateNetwork", "InvalidPrivateNetworkAccess", "UnexpectedPrivateNetworkAccess"]);
+  const networkFailure: Record<string, string> = { "net::ERR_ABORTED": "aborted", "net::ERR_TIMED_OUT": "timed-out", "net::ERR_CONNECTION_RESET": "connection-reset", "net::ERR_CONNECTION_CLOSED": "connection-closed", "net::ERR_INVALID_RESPONSE": "invalid-response", "net::ERR_CONTENT_LENGTH_MISMATCH": "length-mismatch", "net::ERR_CONTENT_DECODING_FAILED": "decoding-failed", "net::ERR_FAILED": "failed" };
+  const observed = (read: () => void) => { try { read(); } catch { countNetwork("errors"); scope.failures.add("Exploration metadata Network observation failed; private details withheld"); } };
+  const session = await tab.context().newCDPSession(tab);
+  const networkStarted = (event: { requestId: string; type?: string; request: { url: string; method: string; postData?: string } }) => observed(() => {
+    const url = new URL(event.request.url); if (url.origin !== BROWSER_ORIGIN || url.pathname !== path) return;
+    let selected: unknown; try { if (typeof event.request.postData === "string" && event.request.postData.length <= 16384) selected = JSON.parse(event.request.postData)?.offset; } catch { /* Closed invalid counter only. */ }
+    if (event.request.method !== "POST" || url.search || !Number.isSafeInteger(selected) || Number(selected) < 0 || Number(selected) > 999) { countNetwork("invalidSelected"); return; }
+    if (selected !== offset) return;
+    countNetwork("requests");
+    if (networkRecords.has(event.requestId)) { countNetwork("ambiguity"); return; }
+    if (networkRecords.size === 4) { countNetwork("overflow"); return; }
+    networkRecords.set(event.requestId, { ordinal: network.requests, type: event.type === undefined ? "unobserved" : resourceTypes.has(event.type) ? event.type : "other", finished: false, failed: false, terminals: 0, error: "none", canceled: null, blocked: "none", cors: "none" });
+  });
+  const networkFinished = (event: { requestId: string }) => observed(() => { const record = networkRecords.get(event.requestId); if (!record) { countNetwork("unmatchedTerminals"); return; } record.finished = true; record.terminals = Math.min(999, record.terminals + 1); if (record.terminals > 1) countNetwork("ambiguity"); });
+  const networkFailed = (event: { requestId: string; errorText?: string; canceled?: boolean; blockedReason?: string; corsErrorStatus?: { corsError: string } }) => observed(() => {
+    const record = networkRecords.get(event.requestId); if (!record) { countNetwork("unmatchedTerminals"); return; }
+    record.failed = true; record.terminals = Math.min(999, record.terminals + 1); if (record.terminals > 1) countNetwork("ambiguity");
+    record.error = event.errorText === undefined ? "unobserved" : Object.hasOwn(networkFailure, event.errorText) ? networkFailure[event.errorText] : "other";
+    record.canceled = typeof event.canceled === "boolean" ? event.canceled : null;
+    record.blocked = event.blockedReason === undefined ? "none" : blockedReasons.has(event.blockedReason) ? event.blockedReason : "other";
+    record.cors = event.corsErrorStatus === undefined ? "none" : corsErrors.has(event.corsErrorStatus.corsError) ? event.corsErrorStatus.corsError : "other";
+  });
+  session.on("Network.requestWillBeSent", networkStarted); session.on("Network.loadingFinished", networkFinished); session.on("Network.loadingFailed", networkFailed);
+  scope.release.add(() => {
+    session.off("Network.requestWillBeSent", networkStarted); session.off("Network.loadingFinished", networkFinished); session.off("Network.loadingFailed", networkFailed);
+    network.listenersRemoved = true;
+    const mapping = network.requests === 1 && networkRecords.size === 1 && browserSelected.size === 1 && !network.invalidSelected && !network.ambiguity && !network.overflow && !network.errors ? "unique-single-request" : !network.requests && !browserSelected.size ? "unobserved" : "ambiguous";
+    // The existing owned context close disposes the target/session after release.
+    // This snapshot claims listener removal and ownership, not observed disposal.
+    console.info("exploration-metadata-network", JSON.stringify({ schedulingSensitiveDiagnostic: true, mapping, browserSelected: browserSelected.size, sessionCleanupOwner: "context", sessionDisposalObserved: false, ...network, records: [...networkRecords.values()] }));
+  });
+  try { await session.send("Network.enable"); } catch { countNetwork("errors"); throw Error("Exploration metadata Network setup failed; private details withheld"); }
   const ownership = new WeakMap<BrowserRequest, { ordinal: number; start: number }>(); let ordinal = 0;
   const identify = (request: BrowserRequest) => { let owned = ownership.get(request); if (!owned) { owned = { ordinal: ++ordinal, start: performance.now() }; ownership.set(request, owned); } return owned; };
   const stamp = (request: BrowserRequest, next: Facts, stage: Stage) => { const owned = identify(request); next.ordinal = owned.ordinal; next.elapsed = Math.min(120000, Math.max(0, Math.round(performance.now() - owned.start))); next.currentSequence = next.responses === sequence; next.scopeClosing = scope.closing; next.pageClosed = tab.isClosed(); if (next.stages.length < 12) next.stages.push({ stage, ms: next.elapsed }); else next.stageOverflow = true; };
   const publish = (next: Facts) => {
     if (scope.closing || next.responses !== sequence) return;
     facts = next; ready = next.status === 200 && next.references === expected && next.ready === expected && !next.unavailable && !next.invalid
-      && next.failure === "none" && next.fulfilled && next.terminal === "finished";
+      && next.failure === "none" && next.responseObserved && next.bodyValidated && next.terminal === "finished";
   };
   const fail = (next: Facts, failure: Failure) => {
     next.failure = failure; ready = false;
-    if (!scope.closing) scope.failures.add(`Exploration metadata ${failure} failed; private details withheld`);
+    scope.failures.add(`Exploration metadata ${failure} failed; private details withheld`);
     publish(next);
   };
-  const started = (request: BrowserRequest) => { const url = new URL(request.url()); if (url.origin === BROWSER_ORIGIN && url.pathname === path) { identify(request); const next = requests.get(request); if (next) stamp(request, next, "browser-request"); } };
-  const responded = (response: import("playwright").Response) => { const request = response.request(), next = requests.get(request); if (next) stamp(request, next, "browser-response"); };
-  const finish = (request: BrowserRequest) => { const next = requests.get(request); if (next) { next.terminal = "finished"; stamp(request, next, "browser-finished"); publish(next); } };
-  const failed = (request: BrowserRequest) => { const next = requests.get(request); if (next) { const code = request.failure()?.errorText; const known: { [key: string]: BrowserFailure } = { "net::ERR_ABORTED": "aborted", "net::ERR_TIMED_OUT": "timed-out", "net::ERR_CONNECTION_RESET": "connection-reset", "net::ERR_CONNECTION_CLOSED": "connection-closed", "net::ERR_INVALID_RESPONSE": "invalid-response", "net::ERR_CONTENT_LENGTH_MISMATCH": "length-mismatch", "net::ERR_CONTENT_DECODING_FAILED": "decoding-failed", "net::ERR_FAILED": "failed" }; next.browserFailure = code === undefined ? "unobserved" : Object.hasOwn(known, code) ? known[code] : "other"; next.terminal = scope.closing ? "closing" : "failed"; stamp(request, next, "browser-failed"); if (!scope.closing) fail(next, "browser-failed"); } };
-  tab.on("request", started); tab.on("response", responded); tab.on("requestfinished", finish); tab.on("requestfailed", failed);
-  scope.release.add(() => { tab.off("request", started); tab.off("response", responded); tab.off("requestfinished", finish); tab.off("requestfailed", failed); for (const [request, next] of requests) if (next.terminal === "pending") { next.terminal = "closing"; stamp(request, next, "closing"); } });
-  await tab.route(url => url.origin === BROWSER_ORIGIN && url.pathname === path, route => sourceRoute(scope, "fulfill", async () => {
-    const request = route.request(), url = new URL(request.url());
+  const started = (request: BrowserRequest) => {
+    const url = new URL(request.url()); if (url.origin !== BROWSER_ORIGIN || url.pathname !== path) return;
     let selected: unknown; try { selected = request.postDataJSON()?.offset; } catch { /* Refused below without copying request data. */ }
-    if (request.method() !== "POST" || url.origin !== BROWSER_ORIGIN || url.pathname !== path || url.search || !Number.isSafeInteger(selected) || Number(selected) < 0 || Number(selected) > 999) {
-      const next = initial(++sequence); requests.set(request, next); stamp(request, next, "route"); fail(next, "request-shape"); await route.abort("failed"); return;
-    }
-    if (selected !== offset) { await route.fallback(); return; }
-    const next = initial(++sequence); requests.set(request, next); stamp(request, next, "route"); ready = false; publish(next);
-    let response: Awaited<ReturnType<typeof privateRouteFetch>>;
-    let stage: Failure = "upstream-fetch", settled = false;
-    try {
-      response = await privateRouteFetch(route, tab, { maxRedirects: 0, maxRetries: 0, timeout: 15000 }); if (!response) return; stamp(request, next, "upstream");
+    const valid = request.method() === "POST" && !url.search && Number.isSafeInteger(selected) && Number(selected) >= 0 && Number(selected) <= 999;
+    if (valid && selected !== offset) return;
+    if (valid) { if (browserSelected.size < 4 || browserSelected.has(request)) browserSelected.add(request); else countNetwork("overflow"); }
+    const next = initial(++sequence); requests.set(request, next); stamp(request, next, "browser-request"); ready = false; publish(next);
+    if (!valid) fail(next, "request-shape");
+  };
+  const responded = (response: import("playwright").Response) => {
+    const request = response.request(), next = requests.get(request); if (!next) return;
+    next.responseObserved = true; stamp(request, next, "browser-response");
+    const task = (async () => {
+      let stage: Failure = "body-bound";
       try {
-        next.status = response.status(); stage = "body-bound";
-        const declared = response.headers()["content-length"];
-        const encoding = response.headers()["content-encoding"]?.toLowerCase(), transfer = response.headers()["transfer-encoding"]?.toLowerCase();
+        next.status = response.status();
+        const declared = response.headers()["content-length"], encoding = response.headers()["content-encoding"]?.toLowerCase(), transfer = response.headers()["transfer-encoding"]?.toLowerCase();
         next.contentEncoding = encoding === undefined || encoding === "identity" ? "identity" : encoding === "gzip" || encoding === "br" || encoding === "deflate" ? encoding : "other";
         next.transferEncoding = transfer === undefined ? "absent" : transfer === "chunked" ? "chunked" : "other";
         if (declared !== undefined && (!/^(?:0|[1-9][0-9]*)$/.test(declared) || Number(declared) > 1024 * 1024)) throw Error("Bounded metadata body refused");
-        stage = "body-read"; const bytes = await response.body(); stamp(request, next, "body"); next.lengthMatchesBytes = declared === undefined ? null : Number(declared) === bytes.length;
+        stage = "body-read"; const bytes = await response.body(); next.bodyBytes = Math.min(1024 * 1024 + 1, bytes.length); stamp(request, next, "body"); next.lengthMatchesBytes = declared === undefined ? null : Number(declared) === bytes.length;
         stage = "body-bound"; if (bytes.length > 1024 * 1024) throw Error("Bounded metadata body refused");
+        stage = "deadline"; if (performance.now() - identify(request).start >= 15000) throw Error("Metadata observation deadline exceeded");
         stage = "json"; let body: unknown;
         try { body = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)); } catch { fail(next, "json"); }
         const page = body && typeof body === "object" && "page" in body ? body.page : undefined;
@@ -335,26 +373,20 @@ async function shortMetadata(tab: Page, offset = 0, expected = 100) {
           for (const raw of references) { const parsed = parseReferenceShortResolution(raw); if (!parsed) next.invalid++; else if (parsed.source) next.ready++; else next.unavailable++; }
         }
         if (next.failure === "none" && (next.status !== 200 || next.references !== expected || next.ready !== expected || next.unavailable || next.invalid)) fail(next, "reference-shape");
-        // Preserve status, semantic headers and the exact buffered body, even on invalid data.
-        // The buffer is already dechunked: do not forward upstream chunk framing alongside Playwright's length.
-        stage = "fulfill";
-        const forwardedHeaders: Record<string, string> = { ...response.headers(), "content-length": String(bytes.length) }, digest = createHash("sha256").update(bytes).digest("hex");
-        delete forwardedHeaders["transfer-encoding"];
-        const forwardedTransfer = forwardedHeaders["transfer-encoding"];
-        next.forwardedTransferEncoding = forwardedTransfer === undefined ? "absent" : forwardedTransfer === "chunked" ? "chunked" : "other";
-        next.forwardedLengthMatchesBytes = forwardedHeaders["content-length"] === String(bytes.length);
-        if (next.forwardedTransferEncoding !== "absent" || !next.forwardedLengthMatchesBytes) throw Error("Buffered metadata framing refused");
-        stamp(request, next, "fulfill-start"); await route.fulfill({ status: next.status, headers: forwardedHeaders, body: bytes }); settled = true; next.fulfilled = true;
-        next.forwardedBodyDigestMatches = createHash("sha256").update(bytes).digest("hex") === digest;
-        if (!next.forwardedBodyDigestMatches) throw Error("Buffered metadata body changed");
-        stamp(request, next, "fulfill-resolved"); publish(next);
-      } finally { try { await response.dispose(); stamp(request, next, "disposed"); } catch (error) { stage = "dispose"; throw error; } }
-    } catch (error) {
-      fail(next, stage);
-      if (!settled && !tab.isClosed()) await route.abort("failed");
-      throw error; // sourceRoute retains failures, allowing only its exact close case.
-    } finally { console.info("exploration-metadata", { offset, ...next }); }
-  }));
+        stage = "deadline"; if (performance.now() - identify(request).start >= 15000) throw Error("Metadata observation deadline exceeded");
+        next.bodyValidated = next.failure === "none"; stamp(request, next, "validated"); publish(next);
+      } catch (error) {
+        const closed = "Target page, context or browser has been closed", knownClose = error instanceof Error && (error.message === closed || error.message === "response.body: " + closed);
+        if (scope.closing && tab.isClosed() && knownClose) { next.terminal = "closing"; stamp(request, next, "closing"); }
+        else { fail(next, stage); scope.failures.add(`Exploration metadata ${stage} failed; private details withheld`); }
+      } finally { console.info("exploration-metadata", { offset, ...next }); }
+    })();
+    scope.pending.add(task); void task.then(() => scope.pending.delete(task), () => { scope.pending.delete(task); scope.failures.add("Exploration metadata observer failed; private details withheld"); });
+  };
+  const finish = (request: BrowserRequest) => { const next = requests.get(request); if (next) { next.terminal = "finished"; stamp(request, next, "browser-finished"); publish(next); } };
+  const failed = (request: BrowserRequest) => { const next = requests.get(request); if (next) { const code = request.failure()?.errorText; const known: { [key: string]: BrowserFailure } = { "net::ERR_ABORTED": "aborted", "net::ERR_TIMED_OUT": "timed-out", "net::ERR_CONNECTION_RESET": "connection-reset", "net::ERR_CONNECTION_CLOSED": "connection-closed", "net::ERR_INVALID_RESPONSE": "invalid-response", "net::ERR_CONTENT_LENGTH_MISMATCH": "length-mismatch", "net::ERR_CONTENT_DECODING_FAILED": "decoding-failed", "net::ERR_FAILED": "failed" }; next.browserFailure = code === undefined ? "unobserved" : Object.hasOwn(known, code) ? known[code] : "other"; next.terminal = scope.closing ? "closing" : "failed"; stamp(request, next, "browser-failed"); if (!scope.closing) fail(next, "browser-failed"); } };
+  tab.on("request", started); tab.on("response", responded); tab.on("requestfinished", finish); tab.on("requestfailed", failed);
+  scope.release.add(() => { tab.off("request", started); tab.off("response", responded); tab.off("requestfinished", finish); tab.off("requestfailed", failed); for (const [request, next] of requests) if (next.terminal === "pending") { next.terminal = "closing"; stamp(request, next, "closing"); } });
   return async () => {
     try { await ui.poll(() => ready, { timeout: 15000 }).toBe(true); }
     // Keep observing through context teardown: later invalid responses cannot
