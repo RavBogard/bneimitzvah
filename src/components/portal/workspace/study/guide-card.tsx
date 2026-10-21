@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useSyncExternalStore } from "react";
+import { useEffect, useId, useState, useSyncExternalStore } from "react";
 import type { StudyKind } from "./api";
 import type { GuideLabel, GuideNote, GuideTheme, StudentGuideView } from "./guide-api";
 import type { GuideStore } from "./guide-store";
@@ -45,11 +45,17 @@ function ThemeRows({ store, kind, themes, tickable }: { store: GuideStore; kind:
  */
 export function GuideCard({ store, kind, firstName, learner, onStudy }: { store: GuideStore; kind: StudyKind; firstName: string; learner: boolean; onStudy?(): void }) {
   const view = useGuide(store, kind), id = useId();
+  // Hebrew stays first on a phone: the guide opens by default only in the wide layout.
+  const [open, setOpen] = useState(() => typeof matchMedia === "function" && matchMedia("(min-width: 1001px)").matches);
   useEffect(() => { store.ensure(kind); }, [store, kind]);
-  if (!view) return store.failed(kind) ? <p className={styles.notice} role="status">The study guide didn’t load. <button type="button" className={styles.retry} onClick={() => void store.load(kind)}>Try again</button></p> : null;
-  const themes = [...(view.base?.themes ?? []), ...(view.additions?.themes ?? [])];
+  const sheet = store.sheet(kind), sheetLink = sheet && <p className={styles.sheet}><a className={styles.sourceLink} href={sheet} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">This week’s haftarah study sheet<span aria-hidden="true"> ↗</span><span className="sr-only"> (opens in a new tab)</span></a></p>;
+  if (!view) return store.failed(kind) ? <p className={styles.notice} role="status">The study guide didn’t load. <button type="button" className={styles.retry} onClick={() => void store.load(kind)}>Try again</button></p>
+    : sheetLink ? <section className={styles.card} aria-label="Haftarah study sheet" data-guide-kind={kind}>{sheetLink}</section> : null;
+  const themes = [...(view.base?.themes ?? []), ...(view.additions?.themes ?? [])], read = themes.filter(t => t.read).length;
   return <section className={styles.card} aria-labelledby={`${id}-title`} data-guide-kind={kind}>
-    <h3 id={`${id}-title`}>{kind === "torah" ? "About this portion" : "About this haftarah"}</h3>
+    <details className={styles.fold} open={open} onToggle={event => setOpen(event.currentTarget.open)}>
+    <summary className={styles.foldSummary}><h3 id={`${id}-title`}>{kind === "torah" ? "About this portion" : "About this haftarah"}</h3>
+      {themes.length > 0 && <span className={styles.foldMeta}>{themes.length} {themes.length === 1 ? "theme" : "themes"}{view.tickable && read > 0 ? ` · ${read} read` : ""}</span>}</summary>
     {view.base && <>
       <MarkdownLite text={view.base.overview} className={styles.prose} heClass={styles.he} />
       {view.base.themes.length > 0 && <><h4>Themes</h4><ThemeRows store={store} kind={kind} themes={view.base.themes} tickable={view.tickable} /></>}
@@ -60,7 +66,9 @@ export function GuideCard({ store, kind, firstName, learner, onStudy }: { store:
       <ThemeRows store={store} kind={kind} themes={view.additions.themes} tickable={view.tickable} />
       <p className={styles.label}>{guideLabelText(view.additions.label)}</p>
     </div>}
+    {sheetLink}
     {onStudy && themes.length > 0 && <div className={styles.actions}><button type="button" className={styles.study} data-guide-study onClick={onStudy}>Study the themes</button></div>}
+    </details>
   </section>;
 }
 

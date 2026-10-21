@@ -39,3 +39,14 @@
   .theme { flex-direction: column; align-items: stretch; }
   .tick { justify-content: center; }
 }
+.status { margin: 1rem 0 0; color: var(--color-muted); font-size: 0.9375rem; line-height: 1.5; max-width: 72ch; }
+.sheet { margin: 0.75rem 0 0; }
+.fold > summary { list-style: none; cursor: pointer; }
+.fold > summary::-webkit-details-marker { display: none; }
+.foldSummary { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1rem; min-height: 44px; }
+.foldSummary h3 { margin: 0; }
+.foldSummary::after { content: ""; inline-size: 0.6rem; block-size: 0.6rem; border-inline-end: 2px solid currentColor; border-block-end: 2px solid currentColor; transform: rotate(45deg); margin-inline-start: auto; align-self: center; }
+.fold[open] > .foldSummary { margin-block-end: 0.75rem; }
+.fold[open] > .foldSummary::after { transform: rotate(-135deg); }
+.foldMeta { color: var(--color-muted); font-size: 0.9375rem; }
+.foldSummary:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; border-radius: var(--radius-control); }

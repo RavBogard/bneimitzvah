@@ -897,3 +897,6 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .parent-study-summary summary { min-height: 44px; padding-block: 0.5rem; cursor: pointer; }
 .parent-study-summary .parent-summary-note { white-space: pre-wrap; margin-block: 0.5rem; }
 .parent-summary-dates { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; margin-block: 0.5rem 0; padding-inline-start: 1.25rem; }
+/* Study guide placement: under the hero on wide screens, after the Hebrew on phones so Hebrew stays first. */
+.guide-place-wide { display: none; }
+@media (min-width: 1001px) { .guide-place-wide { display: block; } .guide-place-narrow { display: none; } }
