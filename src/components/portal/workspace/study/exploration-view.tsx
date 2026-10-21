@@ -30,7 +30,7 @@ export function ExplorationContent({ state, group, retry, page, refresh, audio }
       <button className="button-secondary" onClick={state.error === 409 ? refresh : retry}>{state.error === 409 ? "Refresh reading" : "Try again"}</button></div>
       : unresolved ? <div role="status"><p>{explorationReasons[unresolved.reason]}</p><button className="button-secondary" onClick={retry}>Try again</button></div>
       : !current || !prepared ? <p role="status">Loading the Torah portion…</p> : <>
-        <FlowingStudyText verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false} activeWord={audio?.activeWord ?? null} onWord={audio?.onWord} onVerse={audio?.onVerse} showEnglish={prefs.translation} />
+        <FlowingStudyText verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false} activeWord={audio?.activeWord ?? null} onWord={audio?.onWord} onVerse={audio?.onVerse} showEnglish={prefs.translation} tikkun={prefs.tikkun} />
         {audio?.player}
         <div className="study-verse-details">{current.verses.map(verse => <div key={verse.ref} className="study-verse-detail" data-verse-ref={verse.ref}>
           <Apparatus verse={verse} learner />
