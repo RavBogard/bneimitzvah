@@ -22,11 +22,18 @@ import { readableInApp } from "./citations";
 export async function resolveSourceRefs(body: unknown, related: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>, signal: AbortSignal): Promise<{ body: unknown; unlisted: string[] }> {
   const themes = body && typeof body === "object" ? (body as { themes?: unknown }).themes : null, unlisted: string[] = [];
   if (!Array.isArray(themes)) return { body, unlisted };
-  const catalogs = new Map<string, Promise<ReadonlyMap<string, ReturnType<typeof projectRelatedCatalog>["entries"][number]>>>();
-  const lookup = (verse: string) => {
+  type Entry = ReturnType<typeof projectRelatedCatalog>["entries"][number];
+  // People write "The Torah: A Women's Commentary on Numbers 1:2:1"; Sefaria lists "The Torah; A Women's
+  // Commentary, Numbers 1:2:1". Match exactly first, then by letters and numbers alone, never ambiguously.
+  const loose = (ref: string) => ref.toLowerCase().replace(/['\u2019]/g, "").replace(/[^a-z0-9\u0590-\u05ff]+/g, " ").replace(/\bon\b/g, " ").replace(/\s+/g, " ").trim();
+  const catalogs = new Map<string, Promise<readonly Entry[]>>();
+  const lookup = async (verse: string, ref: string): Promise<Entry | null> => {
     let found = catalogs.get(verse);
-    if (!found) { found = related(verse, signal).then(catalog => new Map(projectRelatedCatalog(catalog, verse).entries.map(entry => [entry.ref, entry]))); catalogs.set(verse, found); }
-    return found;
+    if (!found) { found = related(verse, signal).then(catalog => projectRelatedCatalog(catalog, verse).entries); catalogs.set(verse, found); }
+    const entries = await found, exact = entries.filter(entry => entry.ref === ref);
+    if (exact.length === 1) return exact[0];
+    const close = entries.filter(entry => loose(entry.ref) === loose(ref));
+    return close.length === 1 ? close[0] : null;
   };
   const out = [];
   for (const theme of themes) {
@@ -40,7 +47,7 @@ export async function resolveSourceRefs(body: unknown, related: (ref: string, si
       for (const source of n.sources) {
         const onlyRef = source && typeof source === "object" && Object.keys(source).length === 1 && typeof (source as { ref?: unknown }).ref === "string";
         if (!onlyRef) { sources.push(source); continue; }
-        const entry = (await lookup(n.verseRef)).get((source as { ref: string }).ref);
+        const entry = await lookup(n.verseRef, (source as { ref: string }).ref);
         if (!entry) { unlisted.push(`${(source as { ref: string }).ref.slice(0, 200)} is not a Sefaria source for ${n.verseRef}`); continue; }
         sources.push({ id: entry.id, ref: entry.ref, indexTitle: entry.indexTitle, category: entry.category, labels: { en: entry.labels.en, he: entry.labels.he }, readable: readableInApp(entry) });
       }
