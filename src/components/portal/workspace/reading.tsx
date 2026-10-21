@@ -99,7 +99,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const progress = progressRef.current;
   // The study guide for the shown reading; ticks are the learner's own. Parents and staff only read it.
   const guideRef = useRef<GuideStore | null>(null);
-  if (!guideRef.current) guideRef.current = new GuideStore((baseline, kind, operation, signal) => environment.current.readGuide(baseline, kind, operation, signal));
+  if (!guideRef.current) guideRef.current = new GuideStore((baseline, kind, operation, signal) => environment.current.readGuide(baseline, kind, operation, signal), status => { guideRef.current?.configure(null); environment.current.studyDenied(status); });
   const guide = guideRef.current;
   const verseLookup = useRef<((ref: string) => StudyVerse | null) | null>(null), [walking, setWalking] = useState(false);
   // Closing the walk returns to the verse last shown, or to the button that opened it.

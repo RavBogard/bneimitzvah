@@ -35,7 +35,10 @@
 - Translation drafts stay one disclosure, retitled "More · Your translation & notes", after Sources.
 - English: on by default in the wide two-column layout for learners and parents, off on phones; staff keep it off (an earlier, tested decision). Remembered per student.
 - On phones the guide card sits after the Hebrew and starts closed, so Hebrew stays first (spec anti-goal); on wide screens it is under the hero and open.
-- The haftarah library index is cached in process for 24 hours (15 minutes after a failure) rather than in study_cache, whose rows are typed for Sefaria chapters.
+- The haftarah library index is cached once per server instance for 24 hours (15 minutes after a failure) rather than in study_cache, whose rows are typed for Sefaria chapters.
+- No server-side transliteration heuristic: an English-contraction-safe rule could not be made reliable, so ruling 38 is held by the study voice and the MCP instructions, and by the rabbi's review. Revisit if a draft ever shows transliteration.
+
+Open for Daniel (study slice): confirm the rabbi display name (tenant customs credits.rabbiDisplayName; currently "the rabbi"); whether an unreviewed version written by the rabbi should read differently from "Written by Claude for CRC · not yet reviewed by …" (today the label keys off reviewed only, as the spec's label rule says); connect Cowork once the MCP milestone lands; write the study voice; draft the first parashah (bridge available now).
 
 ## Current return point — adult honors, sign-in and reading/practice release candidate, 2026-10-20
 

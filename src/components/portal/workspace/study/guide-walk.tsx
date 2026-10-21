@@ -36,7 +36,7 @@ export function GuideWalk({ view, lookup, onClose }: { view: StudentGuideView; l
   const verse = step.kind === "verse" ? lookup(step.note.verseRef) : null;
   const themeNumber = steps.slice(0, index + 1).filter(s => s.kind === "theme").length, themeCount = steps.filter(s => s.kind === "theme").length;
   return <dialog ref={dialog} className="lift guide-walk" aria-labelledby={`${id}-title`} onCancel={event => { event.preventDefault(); close(); }}
-    onKeyDown={event => { if (event.target instanceof HTMLElement && event.target.closest("a, button")) return;
+    onKeyDown={event => { if (event.target instanceof HTMLElement && event.target.closest("a")) return;
       if (event.key === "ArrowRight" || event.key === "ArrowDown") { event.preventDefault(); setIndex(i => Math.min(i + 1, steps.length - 1)); }
       if (event.key === "ArrowLeft" || event.key === "ArrowUp") { event.preventDefault(); setIndex(i => Math.max(i - 1, 0)); } }}>
     <div className="lift-bar">

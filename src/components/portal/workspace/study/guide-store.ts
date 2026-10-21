@@ -1,4 +1,5 @@
 import type { Assigned, Selection } from "../api";
+import { PortalRequestError } from "../../api";
 import type { StudyKind } from "./api";
 import { GuideError, type GuideFetch, type GuideOperation, type GuideTheme, type StudentGuideView, type ThemeReadResult } from "./guide-api";
 
@@ -72,7 +73,7 @@ export class GuideStore {
     } catch (error) {
       if (generation !== this.generation) return;
       apply(before);
-      if (error instanceof GuideError && error.status === 409) { state.notices.set(themeId, "This changed somewhere else. Showing the latest."); state.pending.delete(themeId); await this.load(kind); return; }
+      if (error instanceof PortalRequestError && error.status === 409) { state.notices.set(themeId, "This changed somewhere else. Showing the latest."); state.pending.delete(themeId); await this.load(kind); return; }
       state.notices.set(themeId, "Couldn't save that. Try again.");
       if (error instanceof GuideError && [401, 403, 404].includes(error.status)) this.onDenied(error.status);
     } finally { if (generation === this.generation) { state.pending.delete(themeId); this.emit(); } }

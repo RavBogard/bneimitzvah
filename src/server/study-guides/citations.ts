@@ -29,16 +29,18 @@ export function createGuideChecker(input: { related: (ref: string, signal: Abort
     try {
       let next = 0;
       const worker = async () => {
-        while (next < wanted.length) {
+        while (next < wanted.length && !controller.signal.aborted) {
           const verse = wanted[next++];
           const entries = projectRelatedCatalog(await input.related(verse, controller.signal), verse).entries;
           catalogs.set(verse, new Map(entries.map(entry => [entry.id, entry])));
         }
       };
-      await Promise.all(Array.from({ length: Math.min(concurrency, wanted.length) }, worker));
+      await Promise.all(Array.from({ length: Math.min(concurrency, wanted.length) }, () => worker().catch(error => { controller.abort(); throw error; })));
+      // A timed-out run is incomplete: never let a missing catalog read as an invented citation.
+      if (controller.signal.aborted || wanted.some(verse => !catalogs.has(verse))) throw new Error("Related sources incomplete");
     } catch {
       return { ok: false, problems: ["Sefaria's related sources could not be checked just now; nothing was saved. Try again."] };
-    } finally { clearTimeout(timer); }
+    } finally { clearTimeout(timer); controller.abort(); }
     const resolved: GuideBody = {
       ...(body.overview !== undefined ? { overview: body.overview } : {}),
       themes: body.themes.map((theme, i) => ({ ...theme, notes: theme.notes.map((note, j) => ({ ...note, sources: note.sources.flatMap((source, k): GuideSource[] => {

@@ -48,6 +48,8 @@ import { createProgressService } from "../progress/service";
 import { createStudyGuideService, studyGuideWebSurface } from "../study-guides/service";
 import { createGuideChecker } from "../study-guides/citations";
 import { createHaftarahSheets } from "../study-guides/haftarah-sheets";
+// The runtime is composed per request; the public haftarah index cache must outlive it.
+const haftarahSheets = createHaftarahSheets({ fetch: (...args) => fetch(...args) });
 import { createLessonLogService } from "../lesson-log/service";
 import { createPracticeCalendarService } from "../practice-calendar/service";
 import { createStudentRecordingService } from "../recordings/service";
@@ -143,7 +145,6 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const studentWork = createStudentWorkService({ access, practice, authorityBindingSecret: purposeSecret(config, "student-work-authority") });
   const progress = createProgressService({ access, practice });
   // The web runtime gets reads, ticks and staff status only; guide writes need the MCP or the operator bridge.
-  const haftarahSheets = createHaftarahSheets({ fetch });
   const studyGuides = studyGuideWebSurface(createStudyGuideService({ access, practice, check: createGuideChecker({ related: createSefariaMetadataReader({ fetch }).related }) }));
   const lessonLog = createLessonLogService({ access, practice });
   const practiceCalendar = createPracticeCalendarService({ access, practice });

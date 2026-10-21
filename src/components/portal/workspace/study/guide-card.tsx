@@ -32,7 +32,7 @@ function ThemeRows({ store, kind, themes, tickable }: { store: GuideStore; kind:
         <span className={styles.themeIntro} dir="auto">{firstLine(theme.intro)}</span>
         {notice && <span className={styles.notice} role="status">{notice}</span>}</div>
       {tickable
-        ? <button type="button" className={styles.tick} aria-pressed={theme.read} disabled={pending} aria-label={`${theme.read ? "Read" : "I read this"}: ${theme.title}`}
+        ? <button type="button" className={styles.tick} aria-pressed={theme.read} disabled={pending} aria-label={`I read this: ${theme.title}`}
             onClick={() => void store.tick(kind, theme.id, !theme.read)}>{theme.read ? <>{check}Read</> : "I read this"}</button>
         : <span className={styles.state} data-read={theme.read}>{theme.read ? "Read" : "Not read yet"}</span>}
     </li>;
@@ -52,6 +52,7 @@ export function GuideCard({ store, kind, firstName, learner, onStudy }: { store:
   if (!view) return store.failed(kind) ? <p className={styles.notice} role="status">The study guide didn’t load. <button type="button" className={styles.retry} onClick={() => void store.load(kind)}>Try again</button></p>
     : sheetLink ? <section className={styles.card} aria-label="Haftarah study sheet" data-guide-kind={kind}>{sheetLink}</section> : null;
   const themes = [...(view.base?.themes ?? []), ...(view.additions?.themes ?? [])], read = themes.filter(t => t.read).length;
+  if (!view.base && themes.length === 0) return sheetLink ? <section className={styles.card} aria-label="Haftarah study sheet" data-guide-kind={kind}>{sheetLink}</section> : null;
   return <section className={styles.card} aria-labelledby={`${id}-title`} data-guide-kind={kind}>
     <details className={styles.fold} open={open} onToggle={event => setOpen(event.currentTarget.open)}>
     <summary className={styles.foldSummary}><h3 id={`${id}-title`}>{kind === "torah" ? "About this portion" : "About this haftarah"}</h3>

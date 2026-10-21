@@ -95,9 +95,9 @@ it("tick toggles and persists across reload", async () => {
   const tab = await page("student");
   const button = card(tab).getByRole("button", { name: "I read this: Light first", exact: true });
   await button.click();
-  await ui(card(tab).getByRole("button", { name: "Read: Light first", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await ui(card(tab).getByRole("button", { name: "I read this: Light first", exact: true })).toHaveAttribute("aria-pressed", "true");
   await tab.reload({ waitUntil: "domcontentloaded" });
-  await ui(card(tab).getByRole("button", { name: "Read: Light first", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await ui(card(tab).getByRole("button", { name: "I read this: Light first", exact: true })).toHaveAttribute("aria-pressed", "true");
   const rows = await fixture.ownerDb.select().from(s.studyThemeRead).where(eq(s.studyThemeRead.studentId, fixture.student.id));
   expect(rows.map(r => [r.themeId, r.state, r.version])).toEqual([["light", "read", 1]]);
 });
@@ -124,7 +124,7 @@ it("walk opens on the first theme, Next advances through its verses then the nex
 it("parent sees the card and the tick state but no tick button", async () => {
   const tab = await page("parent");
   await ui(card(tab)).toBeVisible();
-  await ui(card(tab).getByRole("button", { name: /I read this|Read:/ })).toHaveCount(0);
+  await ui(card(tab).getByRole("button", { name: /I read this/ })).toHaveCount(0);
   await ui(card(tab).locator("li").filter({ hasText: "Light first" })).toContainText("Read");
   await ui(card(tab).locator("li").filter({ hasText: "How beginnings work" })).toContainText("Not read yet");
 });
@@ -187,7 +187,7 @@ it("the English preference persists across reload", async () => {
 it("tutor sees which themes the student has read, without a tick button", async () => {
   const tab = await page("tutor");
   await ui(card(tab).locator("li").filter({ hasText: "Light first" })).toContainText("Read");
-  await ui(card(tab).getByRole("button", { name: /I read this|Read:/ })).toHaveCount(0);
+  await ui(card(tab).getByRole("button", { name: /I read this/ })).toHaveCount(0);
 });
 
 it("admin sees the status line and a newer draft waiting, while students keep the reviewed version", async () => {

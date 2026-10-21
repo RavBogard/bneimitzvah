@@ -45,11 +45,14 @@ function read(key: string, englishOnWide = false): ReadingPrefs {
   let value = defaults; try { value = parse(window.localStorage.getItem(key), englishOnWide); } catch { /* Private mode: defaults. */ }
   cache.set(cacheKey(key, englishOnWide), value); return value;
 }
+function stored(key: string): Partial<ReadingPrefs> {
+  try { const raw = window.localStorage.getItem(key), value = raw ? JSON.parse(raw) : {}; return value && typeof value === "object" ? value : {}; } catch { return {}; }
+}
 function write(key: string, change: Partial<ReadingPrefs>, englishOnWide = false) {
-  const value = { ...read(key, englishOnWide), ...change };
+  const chosen = { ...stored(key), ...change }, value = { ...read(key, englishOnWide), ...change };
   for (const flag of [true, false]) cache.delete(cacheKey(key, flag));
   cache.set(cacheKey(key, englishOnWide), value);
-  try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* Preference still applies in this tab. */ }
+  try { window.localStorage.setItem(key, JSON.stringify(chosen)); } catch { /* Preference still applies in this tab. */ }
   listeners.forEach(listener => listener());
 }
 function subscribe(listener: () => void) {
