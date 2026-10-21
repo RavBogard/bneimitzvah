@@ -432,15 +432,33 @@ it("cancels held proposed audio on page navigation and quiet return never starts
 
 it("an actual signed proposal deadline stops cached playback even before queued timer processing", async () => {
   const tab = await page();
-  // Use the genuine endpoint directly here. Successful Hear below proves the
-  // browser parsed and cached its metadata; this deadline test needs no
-  // intercept-and-fulfill transport or CDP request-completion surrogate.
+  // Successful Hear below proves actual browser consumption and caching.
+  // Capture the genuine preparation bytes at its exact endpoint: a duplicate
+  // CDP body lookup can lose Chromium's resource even when the app read it.
   const metadata = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/explore/reference/short/page") && response.status() === 200);
-  // Consume the genuine body as soon as its response arrives. Delaying CDP's
-  // body lookup until after DOM/metadata readiness can lose its resource handle.
-  // Promise.all observes every failure while navigation and body consumption run.
-  const preparation = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/explore/prepare") && response.status() === 200).then(response => response.json() as Promise<unknown>);
-  const [, , selected] = await Promise.all([tutor(tab), metadata, preparation]);
+  const scope = contexts.find(scope => scope.context === tab.context()); if (!scope) throw Error("Exploration preparation ownership missing");
+  const path = `/api/students/${fixture.student.id}/reading/explore/prepare`;
+  let selected: unknown, captured = false;
+  await tab.route(url => url.origin === BROWSER_ORIGIN && url.pathname === path, route => sourceRoute(scope, "fulfill", async () => {
+    const request = route.request(), url = new URL(request.url());
+    if (request.method() !== "POST" || url.search || request.postDataJSON()?.mode !== "tutor") throw Error("Exploration preparation request refused");
+    const response = await privateRouteFetch(route, tab, { maxRedirects: 0, maxRetries: 0, timeout: 15000 });
+    if (!response) throw Error("Exploration preparation response missing");
+    try {
+      const headers = response.headers(), declared = headers["content-length"];
+      if (response.status() !== 200 || headers["content-type"]?.split(";", 1)[0].trim().toLowerCase() !== "application/json"
+        || declared !== undefined && (!/^(?:0|[1-9][0-9]*)$/.test(declared) || Number(declared) > 256 * 1024)) throw Error("Exploration preparation response refused");
+      const bytes = await response.body(); if (!bytes.length || bytes.length > 256 * 1024) throw Error("Exploration preparation body refused");
+      const digest = createHash("sha256").update(bytes).digest("hex");
+      selected = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+      // Buffered bytes are dechunked; preserve status, semantic headers and body.
+      const forwarded: Record<string, string> = { ...headers, "content-length": String(bytes.length) }; delete forwarded["transfer-encoding"];
+      await route.fulfill({ status: response.status(), headers: forwarded, body: bytes });
+      expect(createHash("sha256").update(bytes).digest("hex")).toBe(digest);
+    } finally { await response.dispose(); }
+    captured = true;
+  }));
+  await Promise.all([tutor(tab), metadata, ui.poll(() => captured, { timeout: 15000 }).toBe(true)]);
   const deadline = selected && typeof selected === "object" && "expiresAt" in selected ? selected.expiresAt : undefined;
   expect(typeof deadline === "number" && Number.isSafeInteger(deadline) && deadline > Date.now()).toBe(true);
   await portion(tab).getByRole("button", { name: "Hear Genesis 1:1", exact: true }).click();

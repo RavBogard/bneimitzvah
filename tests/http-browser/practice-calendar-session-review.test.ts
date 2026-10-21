@@ -14,19 +14,27 @@ vi.mock("server-only", () => ({}));
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, sibling: { id: string };
 let stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined, isolation: Awaited<ReturnType<typeof isolatedEnv>> | undefined;
 const contexts: BrowserContext[] = [];
-type ServiceRead = { studentId: string; mode: string; status?: number; terminal: "pending" | "finished" | "aborted" | "failed" };
+type ServiceRead = { studentId: string; mode: string; started: number; responseMs?: number; terminalMs?: number; status?: number; terminal: "pending" | "finished" | "aborted" | "failed" };
 const serviceReads = new WeakMap<Page,ServiceRead[]>();
 const selectedReads = (tab: Page, studentId=fixture.student.id, mode="student") => serviceReads.get(tab)?.filter(read=>read.studentId===studentId&&read.mode===mode)??[];
 const safe = async <T>(action: () => Promise<T>): Promise<T> => { try { return await action(); } catch { throw new Error("Synthetic calendar session review failed; details withheld"); } };
 const week = (tab: Page) => tab.getByRole("list", { name: "Practice this week", exact: true });
 const click = (tab: Page, name: string) => safe(() => tab.getByRole("button", { name, exact: true }).click());
 async function ready(tab: Page, expectedServiceReads=1, studentId=fixture.student.id, mode="student") {
+  const initialUi = await tab.evaluate(() => ({ visible: document.visibilityState === "visible", reading: Boolean(document.querySelector(".study-verses")), service: Boolean(document.querySelector("[data-my-service]")), signIn: [...document.querySelectorAll("h1")].some(node => node.textContent === "Sign in to continue") }));
   await ui(week(tab).getByRole("listitem")).toHaveCount(7);
   // This fixture has no connected ceremony. A completed successful read and
   // the resulting absent panel prove its post-authority probe settled too.
   // Navigation can legitimately abort the previous role's read. Only a finished
   // successful read for the current student/role establishes this barrier.
-  await ui.poll(()=>{const reads=selectedReads(tab,studentId,mode),latest=reads.at(-1);return reads.length>=expectedServiceReads&&latest?.terminal==="finished"&&latest.status===200;}).toBe(true);
+  try {
+    await ui.poll(()=>{const reads=selectedReads(tab,studentId,mode),latest=reads.at(-1);return reads.length>=expectedServiceReads&&latest?.terminal==="finished"&&latest.status===200;}).toBe(true);
+  } catch (error) {
+    const reads=selectedReads(tab,studentId,mode), now=performance.now();
+    // Closed lifecycle facts only: no IDs, URLs, bodies, session bindings or error text.
+    console.info("calendar-service-readiness", { expectedServiceReads, count: reads.length, omitted: Math.max(0, reads.length - 8), initialUi, pageClosed: tab.isClosed(), reads: reads.slice(-8).map(read => ({ status: read.status ?? null, terminal: read.terminal, responseMs: read.responseMs ?? null, terminalMs: read.terminalMs ?? null, elapsedMs: Math.min(120000, Math.max(0, Math.round(now-read.started))) })) });
+    throw error;
+  }
   const reads=selectedReads(tab,studentId,mode);
   expect(reads.filter(read=>read.status!==undefined).map(read=>read.status)).toEqual(reads.filter(read=>read.status!==undefined).map(()=>200));
   expect(reads.some(read=>read.terminal==="failed")).toBe(false);
@@ -44,10 +52,10 @@ async function page() {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
   const tab = await context.newPage(), reads:ServiceRead[]=[],requests=new WeakMap<BrowserRequest,ServiceRead>();serviceReads.set(tab,reads);
-  tab.on("request",request=>{const url=new URL(request.url()),match=/^\/api\/students\/([^/]+)\/my-service$/.exec(url.pathname);if(match){const read:ServiceRead={studentId:match[1],mode:url.searchParams.get("mode")??"",terminal:"pending"};reads.push(read);requests.set(request,read);}});
-  tab.on("response",response=>{const read=requests.get(response.request());if(read)read.status=response.status();});
-  tab.on("requestfinished",request=>{const read=requests.get(request);if(read)read.terminal="finished";});
-  tab.on("requestfailed",request=>{const read=requests.get(request);if(read)read.terminal=request.failure()?.errorText==="net::ERR_ABORTED"?"aborted":"failed";});
+  tab.on("request",request=>{const url=new URL(request.url()),match=/^\/api\/students\/([^/]+)\/my-service$/.exec(url.pathname);if(match){const read:ServiceRead={studentId:match[1],mode:url.searchParams.get("mode")??"",started:performance.now(),terminal:"pending"};reads.push(read);requests.set(request,read);}});
+  tab.on("response",response=>{const read=requests.get(response.request());if(read){read.status=response.status();read.responseMs=Math.round(performance.now()-read.started);}});
+  tab.on("requestfinished",request=>{const read=requests.get(request);if(read){read.terminal="finished";read.terminalMs=Math.round(performance.now()-read.started);}});
+  tab.on("requestfailed",request=>{const read=requests.get(request);if(read){read.terminal=request.failure()?.errorText==="net::ERR_ABORTED"?"aborted":"failed";read.terminalMs=Math.round(performance.now()-read.started);}});
   await safe(() => tab.goto("/", { waitUntil: "domcontentloaded" }));
   expect(await tab.evaluate(async () => (await fetch("/api/auth/sign-in/magic-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "pg-tutor@example.test" }) })).status)).toBe(200);
   await openAuthMail(tab, fixture.takeMail("pg-tutor@example.test")); await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" });
