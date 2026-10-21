@@ -50,6 +50,7 @@ It is the second product carved out of the haftarah repo (`RavBogard/haftarah`).
 9. The rabbi sets the congregation's defaults: which sources show by default.
 10. A tutor or rabbi can assign particular sources to a student so they show up when that student is studying. Commentary is keyed to the student's own verses, folded under the verse, never a wall.
 11. Claude-written historical-critical summaries are generated through the portal's MCP and approved by the rabbi before a student sees them. No student-facing chatbot in 1.0.
+    *Amended 2026-10-21 (Daniel, Torah study guides spec S13):* the Claude-written default guide is student-visible immediately, clearly labelled with its review state ("Written by Claude for CRC · not yet reviewed by {rabbi}"); rabbi review changes the label, it does not gate visibility. Approval is an MCP write by the rabbi from Cowork (S10). An unattended routine never replaces reviewed work (S25).
 
 ### Translation tools
 

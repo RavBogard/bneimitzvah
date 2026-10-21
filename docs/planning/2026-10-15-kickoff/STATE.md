@@ -1,5 +1,25 @@
 # State — CRC B'nei Mitzvah portal
 
+## Current return point — 2026-10-21 handoff (Claude Code owns the whole product)
+
+**Ownership:** Codex stopped on 2026-10-21 at Daniel's request (usage exhausted) and will not resume; no Codex worker is running. The Claude Code session owns integration, migrations, deploy, review dispatch and this file. Handoff: [HANDOFF](../2026-10-21-torah-study/HANDOFF.md). Second-agent adversarial review replaces Codex's review role.
+
+**Baseline verified 2026-10-21:** `origin/main` is `16bfb4d` (PR2 merge). Canonical Production `dpl_9BPVukERqTaEnRn4AnFvnte94ja3` is READY at that SHA on all aliases. Schema through `0026_finkel_private_review.sql` is applied (27 ledger rows); the private Finkel review feature is disabled by default. Next free migration numbers are `0027` and `0028`, reserved for the study slice.
+
+**Main CI is red:** run 39605739789 at `16bfb4d` failed three PostgreSQL HTTP-browser tests. The cause is Playwright 1.64.1 / Chromium 156 dropping a `no-store` streamed body at EOF (Playwright issue 42742). PR3 (`codex/finkel-browser-observation`, head `3c546be`) moves the two affected contract files to the pinned Firefox 157 and changes one client referrer policy to `same-origin`. Its CI 39624599627 passed calendar and metadata but failed two exploration playback assertions on Linux because the runner has no audio output. Codex's uncommitted PulseAudio null-sink helper sits in worktree `C:/Users/dsbog/.codex/worktrees/finkel-browser-stability/bneimitzvah`; its setup fails an `ownedDirectory` check. Claude takes PR3 over first, time-boxed to one bounded attempt.
+
+**Parked, do not resume without Daniel — Finkel private listening review:** the private batch (2 readings, 4 clips, off-repo) was never published; one native Blob attempt errored and all five planned keys are confirmed absent. A partial read-only mirror guard sits ignored in worktree `C:/Users/dsbog/.codex/worktrees/finkel-integration/bneimitzvah` (`finkel-readonly-mirror-*.mjs`). Frozen operator modules and migration receipts are in `C:/Users/dsbog/.codex/worktrees/finkel-canonical-text/bneimitzvah`. Remaining gates: fresh create-only publication of exactly five objects after a clean read-only proof and independent review, admission within five minutes with a trusted admin binding and six-day expiry, then two encrypted env vars and a Git-source deploy. G3 holds.
+
+**Other parked branches (no action):** `codex/passive-reference-observation`, `codex/family-honors` (own 0024–0027 migrations that must never be applied over the installed schema), `codex/beit-service-ecosystem` (merged as PR1), `codex/recording-single-read-diagnosis`.
+
+**Study slice starting:** branch `claude/study-guides` in worktree `C:/Users/dsbog/bneimitzvah-study`, from `origin/main`. Spec `docs/superpowers/specs/2026-10-21-torah-study-guides-design.md`, plan `docs/superpowers/plans/2026-10-21-torah-study-guides.md`. MISSION ruling 11 and PLAN-CODE note 7 carry dated 2026-10-21 amendments (S13, S10).
+
+**Standing constraints:** no roster import, mail, invitations or guest activation; no new scopes or spend; no generated voice or student recordings released; student reference listening held; no second tenant. Daniel cannot phone-test now.
+
+### Gate log (2026-10-21)
+
+- GATE: amended MISSION ruling 11 and PLAN-CODE note 7 on the study branch — proceeded because Daniel's spec rulings S13 and S10 are binding and the handoff directs recording them.
+
 ## Current return point — adult honors, sign-in and reading/practice release candidate, 2026-10-20
 
 **Next bounded resource candidate:** add one general CRC digital siddur collection link after the existing service-preparation panel, inside the existing service surface and gated by authorized reading plus non-concealment. Root and independent Sol review accept the one-file source change; reading UI 12, normal types, syntax and protection 3 pass. Existing service callbacks, assignments and lifecycle stay unchanged. No new screen, navigation, provider fetch, edition/unit mapping or parked-feature activation is included. The performer-facing CRC Music collection is not presented as student practice tracks. Exact hosted checks and a separate rollout remain required; the R reference diagnostic is excluded.
