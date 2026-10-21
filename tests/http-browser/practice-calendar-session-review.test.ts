@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
-import { chromium, type Browser, type BrowserContext, type Page, type Route } from "playwright";
+import { chromium, type Browser, type BrowserContext, type Page, type Route, type Request as BrowserRequest } from "playwright";
 import { eq } from "drizzle-orm";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import { browserFixture } from "./fixture";
@@ -14,16 +14,22 @@ vi.mock("server-only", () => ({}));
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, sibling: { id: string };
 let stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined, isolation: Awaited<ReturnType<typeof isolatedEnv>> | undefined;
 const contexts: BrowserContext[] = [];
-const serviceReads = new WeakMap<Page,{started:number;completed:number;statuses:number[]}>();
+type ServiceRead = { studentId: string; mode: string; status?: number; terminal: "pending" | "finished" | "aborted" | "failed" };
+const serviceReads = new WeakMap<Page,ServiceRead[]>();
+const selectedReads = (tab: Page, studentId=fixture.student.id, mode="student") => serviceReads.get(tab)?.filter(read=>read.studentId===studentId&&read.mode===mode)??[];
 const safe = async <T>(action: () => Promise<T>): Promise<T> => { try { return await action(); } catch { throw new Error("Synthetic calendar session review failed; details withheld"); } };
 const week = (tab: Page) => tab.getByRole("list", { name: "Practice this week", exact: true });
 const click = (tab: Page, name: string) => safe(() => tab.getByRole("button", { name, exact: true }).click());
-async function ready(tab: Page, expectedServiceReads=1) {
+async function ready(tab: Page, expectedServiceReads=1, studentId=fixture.student.id, mode="student") {
   await ui(week(tab).getByRole("listitem")).toHaveCount(7);
   // This fixture has no connected ceremony. A completed successful read and
   // the resulting absent panel prove its post-authority probe settled too.
-  await ui.poll(()=>{const reads=serviceReads.get(tab);return Boolean(reads&&reads.completed>=expectedServiceReads&&reads.completed===reads.started);}).toBe(true);
-  expect(serviceReads.get(tab)?.statuses).toEqual(Array(serviceReads.get(tab)?.started??0).fill(200));
+  // Navigation can legitimately abort the previous role's read. Only a finished
+  // successful read for the current student/role establishes this barrier.
+  await ui.poll(()=>{const reads=selectedReads(tab,studentId,mode),latest=reads.at(-1);return reads.length>=expectedServiceReads&&latest?.terminal==="finished"&&latest.status===200;}).toBe(true);
+  const reads=selectedReads(tab,studentId,mode);
+  expect(reads.filter(read=>read.status!==undefined).map(read=>read.status)).toEqual(reads.filter(read=>read.status!==undefined).map(()=>200));
+  expect(reads.some(read=>read.terminal==="failed")).toBe(false);
   await ui(tab.locator("[data-my-service]")).toHaveCount(0);
 }
 const expired = () => fixture.ownerDb.update(s.session).set({ expiresAt: new Date(0) }).where(eq(s.session.userId, fixture.tutor.id));
@@ -37,10 +43,11 @@ function traffic(tab: Page) {
 async function page() {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
-  const tab = await context.newPage(), reads={started:0,completed:0,statuses:[]as number[]};serviceReads.set(tab,reads);
-  tab.on("request",request=>{if(new URL(request.url()).pathname.endsWith("/my-service"))reads.started++;});
-  tab.on("response",response=>{if(new URL(response.url()).pathname.endsWith("/my-service"))reads.statuses.push(response.status());});
-  tab.on("requestfinished",request=>{if(new URL(request.url()).pathname.endsWith("/my-service"))reads.completed++;});
+  const tab = await context.newPage(), reads:ServiceRead[]=[],requests=new WeakMap<BrowserRequest,ServiceRead>();serviceReads.set(tab,reads);
+  tab.on("request",request=>{const url=new URL(request.url()),match=/^\/api\/students\/([^/]+)\/my-service$/.exec(url.pathname);if(match){const read:ServiceRead={studentId:match[1],mode:url.searchParams.get("mode")??"",terminal:"pending"};reads.push(read);requests.set(request,read);}});
+  tab.on("response",response=>{const read=requests.get(response.request());if(read)read.status=response.status();});
+  tab.on("requestfinished",request=>{const read=requests.get(request);if(read)read.terminal="finished";});
+  tab.on("requestfailed",request=>{const read=requests.get(request);if(read)read.terminal=request.failure()?.errorText==="net::ERR_ABORTED"?"aborted":"failed";});
   await safe(() => tab.goto("/", { waitUntil: "domcontentloaded" }));
   expect(await tab.evaluate(async () => (await fetch("/api/auth/sign-in/magic-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "pg-tutor@example.test" }) })).status)).toBe(200);
   await openAuthMail(tab, fixture.takeMail("pg-tutor@example.test")); await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" });
@@ -93,7 +100,7 @@ it("keeps calendar 403 and 404 local but makes a direct POST 401 globally termin
     await click(tab, "View Genesis 1:1 up close"); await ui(week(tab)).toHaveCount(0); await ui(tab.locator(".study-verses")).toBeVisible();
     expect(await tab.getByRole("heading", { name: "Sign in to continue", exact: true }).count()).toBe(0);
     await click(tab, "Close practice view"); await tab.waitForLoadState("networkidle"); expect(seen.sessions).toEqual([200]);
-    await tab.unroute(eventPath(tab));const expectedServiceReads=serviceReads.get(tab)!.started+1;
+    await tab.unroute(eventPath(tab));const expectedServiceReads=selectedReads(tab).length+1;
     await click(tab, "Refresh reading"); await ready(tab,expectedServiceReads); await tab.waitForLoadState("networkidle"); seen.sessions.length = 0;
   }
   await tab.route(eventPath(tab), async route => { await expired(); await route.fulfill({ status: 401, contentType: "application/json", body: "{}" }); });
@@ -108,9 +115,9 @@ it("ignores a held old calendar 401 after a real role and child-context replacem
   try {
     await click(tab, "View Genesis 1:1 up close"); await ui.poll(() => held).toBe(true); await click(tab, "Close practice view");
     await tab.getByRole("link", { name: "Parent", exact: true }).click(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click();
-    await click(tab, "Practice with Synthetic"); await ready(tab); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();
+    await click(tab, "Practice with Synthetic"); await ready(tab,1,sibling.id,"child-practice"); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();
   } finally { release(); }
-  await completed; await tab.waitForLoadState("networkidle"); await ready(tab);
+  await completed; await tab.waitForLoadState("networkidle"); await ready(tab,1,sibling.id,"child-practice");
   await ui(tab.getByRole("heading", { name: "Child practice", exact: true, level: 1 })).toBeVisible(); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();
   expect(await tab.getByRole("heading", { name: "Sign in to continue", exact: true }).count()).toBe(0); expect(seen.events).toEqual(["POST"]);
   // A stale refusal cannot clear this rightful selection, but a real revoked
