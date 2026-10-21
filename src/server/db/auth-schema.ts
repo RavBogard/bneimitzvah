@@ -38,6 +38,8 @@ export const session = pgTable(
       .notNull(),
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
+    // Set only when Better Auth created the session from a verified Google ID token.
+    googleAuthenticatedAt: timestamp("google_authenticated_at"),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),

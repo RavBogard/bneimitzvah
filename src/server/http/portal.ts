@@ -123,7 +123,10 @@ function wordDetailsView(value: StudyWordDetails): JsonValue {
       ...(part.stem === undefined ? {} : { stem: part.stem }), ...(part.form === undefined ? {} : { form: part.form }), ...(part.person === undefined ? {} : { person: part.person }),
       ...(part.gender === undefined ? {} : { gender: part.gender }), ...(part.number === undefined ? {} : { number: part.number }), ...(part.state === undefined ? {} : { state: part.state }), ...(part.definite === undefined ? {} : { definite: part.definite }) })) } },
     dictionary: value.dictionary.map((entry): JsonValue => entry.status === "unavailable" ? { lemma: entry.lemma, status: entry.status, reason: entry.reason }
-      : { lemma: entry.lemma, status: entry.status, headword: entry.headword, dictionaryGloss: entry.dictionaryGloss }) };
+      : { lemma: entry.lemma, status: entry.status, headword: entry.headword, dictionaryGloss: entry.dictionaryGloss }),
+    ...(value.elsewhere === undefined ? {} : { elsewhere: value.elsewhere.status === "unavailable" ? { status: value.elsewhere.status, reason: value.elsewhere.reason }
+      : { status: value.elsewhere.status, lemma: value.elsewhere.lemma, total: value.elsewhere.total,
+        places: value.elsewhere.places.map(place => ({ ref: place.ref, wordIndex: place.wordIndex, words: [...place.words], mark: place.mark })) } }) };
 }
 function studyPageView(page: StudyPage): { [key: string]: JsonValue } {
   return { offset: page.offset, nextOffset: page.nextOffset, totalVerses: page.totalVerses,

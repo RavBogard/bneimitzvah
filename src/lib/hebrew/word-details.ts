@@ -1,7 +1,8 @@
 import { wordAidRef } from "./word-aids";
 
 export const WORD_DETAILS_SCHEMA = "study-word-details/v1" as const;
-export const WORD_DETAILS_LIMITS = Object.freeze({ words: 512, entries: 16, morphemes: 16, glossBytes: 512, headwordBytes: 128, sourceBytes: 8192, bytes: 32 * 1024 });
+export const WORD_DETAILS_LIMITS = Object.freeze({ words: 512, entries: 16, morphemes: 16, glossBytes: 512, headwordBytes: 128, sourceBytes: 8192, bytes: 32 * 1024,
+  places: 12, placeWords: 5, placeBytes: 512, placeTotal: 1000 * 512 });
 export const WORD_DETAILS_ATTRIBUTION = Object.freeze({ name: "STEPBible / Tyndale House Cambridge", source: "STEPBible-Data", commit: "bd09545c7a44b39ace20f16c0359915f2aa23a62",
   license: "CC-BY-4.0", licenseUrl: "https://creativecommons.org/licenses/by/4.0/", changes: "Normalized into selected-word facts; source-format and correspondence holds retained." });
 export type WordGrammarFeature = Readonly<{ partOfSpeech: "verb" | "noun" | "adjective" | "pronoun" | "suffix" | "particle" | "preposition" | "conjunction" | "adverb";
@@ -9,10 +10,14 @@ export type WordGrammarFeature = Readonly<{ partOfSpeech: "verb" | "noun" | "adj
 export type WordGrammar = Readonly<{ status: "unavailable"; reason: "unrecognized-code" }> | Readonly<{ status: "ready"; language: "hebrew" | "aramaic"; morphemes: readonly WordGrammarFeature[] }>;
 export type WordDictionaryEntry = Readonly<{ lemma: string; status: "ready"; headword: string; dictionaryGloss: string }>
   | Readonly<{ lemma: string; status: "unavailable"; reason: "missing" | "source-format" | "bounded" }>;
+/** Other occurrences of the same STEP lexical id inside the student's own assigned verses. */
+export type WordPlace = Readonly<{ ref: string; wordIndex: number; words: readonly string[]; mark: number }>;
+export type WordElsewhere = Readonly<{ status: "ready"; lemma: string; total: number; places: readonly WordPlace[] }>
+  | Readonly<{ status: "unavailable"; reason: "no-lexeme" | "text-unavailable" }>;
 type Identity = Readonly<{ schema: typeof WORD_DETAILS_SCHEMA; ref: string; readingTextSha256: string; wordCount: number; wordIndex: number; attribution: typeof WORD_DETAILS_ATTRIBUTION }>;
 export type StudyWordDetails = Readonly<{ schema: typeof WORD_DETAILS_SCHEMA; ref: string; wordIndex: number; status: "unavailable"; reason: "reconstruction" }>
   | (Identity & Readonly<{ status: "unavailable"; reason: "unsupported-book" | "source-unavailable" | "correspondence" }>)
-  | (Identity & Readonly<{ status: "ready"; occurrence: Readonly<{ gloss: string | null; grammar: WordGrammar }>; dictionary: readonly WordDictionaryEntry[] }>);
+  | (Identity & Readonly<{ status: "ready"; occurrence: Readonly<{ gloss: string | null; grammar: WordGrammar }>; dictionary: readonly WordDictionaryEntry[]; elsewhere?: WordElsewhere }>);
 /** Hash actual rendered NFC readingText independently, never echo a DTO hash. */
 export type WordDetailsBinding = Readonly<{ ref: string; wordIndex: number; readingTextSha256?: string; words?: readonly string[] }>;
 const encoded = (text: string) => new TextEncoder().encode(text).length;
@@ -57,11 +62,35 @@ export function parseWordGrammar(value: unknown): WordGrammar | null {
   }
   return Object.freeze({ status: "ready", language: outer.language as "hebrew" | "aramaic", morphemes: Object.freeze(result) });
 }
+/** Same canonical rendered-word alphabet as the binding vector: no maqaf, sof pasuq or markup. */
+export function wordDetailsWord(value: unknown): value is string {
+  return typeof value === "string" && value.length <= WORD_DETAILS_LIMITS.sourceBytes && value.isWellFormed() && value === value.normalize("NFC") && /^[א-ת]/u.test(value)
+    && !/[^א-ת\u0591-\u05bd\u05bf\u05c1\u05c2\u05c4\u05c5\u05c7\u034f\u200c\u200d]/u.test(value);
+}
+export function parseWordElsewhere(value: unknown, selected: Readonly<{ ref: string; wordIndex: number }>, lemmas: ReadonlySet<string>): WordElsewhere | null {
+  const outer = row(value, ["status", "reason", "lemma", "total", "places"], true); if (!outer) return null;
+  if (outer.status === "unavailable") return row(value, ["status", "reason"]) && ["no-lexeme", "text-unavailable"].includes(outer.reason as string)
+    ? Object.freeze({ status: "unavailable", reason: outer.reason as "no-lexeme" | "text-unavailable" }) : null;
+  const places = list(outer.places, WORD_DETAILS_LIMITS.places), total = outer.total;
+  if (outer.status !== "ready" || !row(value, ["status", "lemma", "total", "places"]) || typeof outer.lemma !== "string" || !lemmas.has(outer.lemma) || !places
+    || typeof total !== "number" || !Number.isSafeInteger(total) || total < 0 || total > WORD_DETAILS_LIMITS.placeTotal || places.length !== Math.min(total, WORD_DETAILS_LIMITS.places)) return null;
+  const result: WordPlace[] = [], seen = new Set<string>();
+  for (const item of places) {
+    const place = row(item, ["ref", "wordIndex", "words", "mark"]), words = place && list(place.words, WORD_DETAILS_LIMITS.placeWords);
+    if (!place || !words?.length || !wordAidRef(place.ref) || !Number.isSafeInteger(place.wordIndex) || (place.wordIndex as number) < 0 || (place.wordIndex as number) >= WORD_DETAILS_LIMITS.words
+      || !Number.isSafeInteger(place.mark) || (place.mark as number) < 0 || (place.mark as number) >= words.length || (place.mark as number) > (place.wordIndex as number)
+      || place.ref === selected.ref && place.wordIndex === selected.wordIndex || seen.has(`${place.ref}#${place.wordIndex}`)
+      || !words.every(wordDetailsWord) || encoded((words as string[]).join(" ")) > WORD_DETAILS_LIMITS.placeBytes) return null;
+    seen.add(`${place.ref}#${place.wordIndex}`);
+    result.push(Object.freeze({ ref: place.ref, wordIndex: place.wordIndex as number, words: Object.freeze([...(words as string[])]), mark: place.mark as number }));
+  }
+  return Object.freeze({ status: "ready", lemma: outer.lemma, total, places: Object.freeze(result) });
+}
 export function parseStudyWordDetails(value: unknown, expected: WordDetailsBinding): StudyWordDetails | null {
   try {
     const binding = row(expected, ["ref", "wordIndex", "readingTextSha256", "words"], true);
     if (!binding || !wordAidRef(binding.ref) || !Number.isSafeInteger(binding.wordIndex) || (binding.wordIndex as number) < 0 || (binding.wordIndex as number) >= WORD_DETAILS_LIMITS.words) return null;
-    const outer = row(value, ["schema", "ref", "wordIndex", "status", "reason", "readingTextSha256", "wordCount", "attribution", "occurrence", "dictionary"], true);
+    const outer = row(value, ["schema", "ref", "wordIndex", "status", "reason", "readingTextSha256", "wordCount", "attribution", "occurrence", "dictionary", "elsewhere"], true);
     if (!outer || outer.schema !== WORD_DETAILS_SCHEMA || outer.ref !== binding.ref || outer.wordIndex !== binding.wordIndex) return null;
     if (outer.status === "unavailable" && outer.reason === "reconstruction") {
       return row(value, ["schema", "ref", "wordIndex", "status", "reason"]) ? Object.freeze({ schema: WORD_DETAILS_SCHEMA, ref: binding.ref, wordIndex: binding.wordIndex as number, status: "unavailable", reason: "reconstruction" }) : null;
@@ -78,7 +107,8 @@ export function parseStudyWordDetails(value: unknown, expected: WordDetailsBindi
       if (!row(value, ["schema", "ref", "wordIndex", "status", "reason", "readingTextSha256", "wordCount", "attribution"]) || !["unsupported-book", "source-unavailable", "correspondence"].includes(outer.reason as string)) return null;
       return Object.freeze({ ...identity, status: "unavailable", reason: outer.reason as "unsupported-book" | "source-unavailable" | "correspondence" });
     }
-    if (outer.status !== "ready" || !row(value, ["schema", "ref", "wordIndex", "status", "readingTextSha256", "wordCount", "attribution", "occurrence", "dictionary"])) return null;
+    if (outer.status !== "ready" || !row(value, ["schema", "ref", "wordIndex", "status", "readingTextSha256", "wordCount", "attribution", "occurrence", "dictionary", "elsewhere"], true)
+      || !["schema", "ref", "wordIndex", "status", "readingTextSha256", "wordCount", "attribution", "occurrence", "dictionary"].every(key => Object.hasOwn(value as object, key))) return null;
     const occurrence = row(outer.occurrence, ["gloss", "grammar"]), dictionary = list(outer.dictionary, WORD_DETAILS_LIMITS.entries);
     const grammar = occurrence && parseWordGrammar(occurrence.grammar);
     if (!occurrence || !grammar || (occurrence.gloss !== null && !wordDetailsPlainText(occurrence.gloss, WORD_DETAILS_LIMITS.glossBytes)) || !dictionary) return null;
@@ -94,7 +124,9 @@ export function parseStudyWordDetails(value: unknown, expected: WordDetailsBindi
         entries.push(Object.freeze({ lemma: entry.lemma, status: "ready", headword: entry.headword, dictionaryGloss: entry.dictionaryGloss }));
       }
     }
-    const result: StudyWordDetails = Object.freeze({ ...identity, status: "ready", occurrence: Object.freeze({ gloss: occurrence.gloss as string | null, grammar }), dictionary: Object.freeze(entries) });
+    let elsewhere: WordElsewhere | null | undefined;
+    if (Object.hasOwn(value as object, "elsewhere")) { elsewhere = parseWordElsewhere(outer.elsewhere, identity, identities); if (!elsewhere) return null; }
+    const result: StudyWordDetails = Object.freeze({ ...identity, status: "ready", occurrence: Object.freeze({ gloss: occurrence.gloss as string | null, grammar }), dictionary: Object.freeze(entries), ...(elsewhere ? { elsewhere } : {}) });
     return encoded(JSON.stringify(result)) <= WORD_DETAILS_LIMITS.bytes ? result : null;
   } catch { return null; }
 }

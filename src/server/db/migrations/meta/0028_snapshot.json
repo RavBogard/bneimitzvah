@@ -1,5 +1,5 @@
 {
-  "id": "e1aaeef8-5159-4bde-b626-dca6368243ae",
+  "id": "039ccc37-e0a5-4409-96d4-3f870ddfc526",
   "prevId": "cc22351c-ca1b-45a9-af6a-c32162585c41",
   "version": "7",
   "dialect": "postgresql",
@@ -224,6 +224,12 @@
         "user_agent": {
           "name": "user_agent",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "google_authenticated_at": {
+          "name": "google_authenticated_at",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
@@ -1939,6 +1945,361 @@
         "lesson_log_summary": {
           "name": "lesson_log_summary",
           "value": "(\"lesson_log\".\"deleted\" and \"lesson_log\".\"summary\" = '') or (not \"lesson_log\".\"deleted\" and length(trim(\"lesson_log\".\"summary\")) > 0 and octet_length(\"lesson_log\".\"summary\") <= 4096)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.mcp_connection": {
+      "name": "mcp_connection",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "membership_id": {
+          "name": "membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_grant_id": {
+          "name": "role_grant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "portal_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_grant_revision": {
+          "name": "role_grant_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "authority_revision": {
+          "name": "authority_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unattended": {
+          "name": "unattended",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client_name": {
+          "name": "client_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client_hash": {
+          "name": "client_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "redirect_uri": {
+          "name": "redirect_uri",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "mcp_connection_member_idx": {
+          "name": "mcp_connection_member_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "membership_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "mcp_connection_tenant_id_tenant_id_fk": {
+          "name": "mcp_connection_tenant_id_tenant_id_fk",
+          "tableFrom": "mcp_connection",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "mcp_connection_member_fk": {
+          "name": "mcp_connection_member_fk",
+          "tableFrom": "mcp_connection",
+          "tableTo": "membership",
+          "columnsFrom": [
+            "tenant_id",
+            "membership_id",
+            "user_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "mcp_connection_grant_fk": {
+          "name": "mcp_connection_grant_fk",
+          "tableFrom": "mcp_connection",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "role_grant_id",
+            "membership_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "membership_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "mcp_connection_role_fk": {
+          "name": "mcp_connection_role_fk",
+          "tableFrom": "mcp_connection",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "role_grant_id",
+            "role"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "role"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "mcp_connection_tenant_key": {
+          "name": "mcp_connection_tenant_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "mcp_connection_scope": {
+          "name": "mcp_connection_scope",
+          "value": "(\"mcp_connection\".\"role\"='admin' and \"mcp_connection\".\"scope\" in ('portal:read','portal:read portal:study')) or (\"mcp_connection\".\"role\"='tutor' and \"mcp_connection\".\"scope\"='portal:read')"
+        },
+        "mcp_connection_revisions": {
+          "name": "mcp_connection_revisions",
+          "value": "\"mcp_connection\".\"role_grant_revision\" > 0 and \"mcp_connection\".\"authority_revision\" > 0"
+        },
+        "mcp_connection_client": {
+          "name": "mcp_connection_client",
+          "value": "char_length(\"mcp_connection\".\"client_name\") between 1 and 120 and \"mcp_connection\".\"client_name\" !~ '[[:cntrl:]<>]' and \"mcp_connection\".\"client_hash\" ~ '^[a-f0-9]{64}$' and octet_length(\"mcp_connection\".\"redirect_uri\") between 1 and 2048"
+        },
+        "mcp_connection_lifetime": {
+          "name": "mcp_connection_lifetime",
+          "value": "isfinite(\"mcp_connection\".\"created_at\") and \"mcp_connection\".\"expires_at\" > \"mcp_connection\".\"created_at\" and \"mcp_connection\".\"expires_at\" <= \"mcp_connection\".\"created_at\" + interval '31 days' and (\"mcp_connection\".\"revoked_at\" is null or (isfinite(\"mcp_connection\".\"revoked_at\") and \"mcp_connection\".\"revoked_at\" >= \"mcp_connection\".\"created_at\"))"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.mcp_token": {
+      "name": "mcp_token",
+      "schema": "",
+      "columns": {
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "connection_id": {
+          "name": "connection_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code_challenge": {
+          "name": "code_challenge",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "mcp_token_connection_idx": {
+          "name": "mcp_token_connection_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "connection_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "mcp_token_tenant_id_tenant_id_fk": {
+          "name": "mcp_token_tenant_id_tenant_id_fk",
+          "tableFrom": "mcp_token",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "mcp_token_connection_fk": {
+          "name": "mcp_token_connection_fk",
+          "tableFrom": "mcp_token",
+          "tableTo": "mcp_connection",
+          "columnsFrom": [
+            "tenant_id",
+            "connection_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "mcp_token_hash": {
+          "name": "mcp_token_hash",
+          "value": "\"mcp_token\".\"token_hash\" ~ '^[a-f0-9]{64}$'"
+        },
+        "mcp_token_kind": {
+          "name": "mcp_token_kind",
+          "value": "\"mcp_token\".\"kind\" in ('code','access','refresh')"
+        },
+        "mcp_token_shape": {
+          "name": "mcp_token_shape",
+          "value": "(\"mcp_token\".\"kind\"='code') = (\"mcp_token\".\"code_challenge\" is not null) and (\"mcp_token\".\"code_challenge\" is null or \"mcp_token\".\"code_challenge\" ~ '^[A-Za-z0-9_-]{43}$') and (\"mcp_token\".\"kind\"<>'access' or \"mcp_token\".\"used_at\" is null)"
+        },
+        "mcp_token_lifetime": {
+          "name": "mcp_token_lifetime",
+          "value": "isfinite(\"mcp_token\".\"created_at\") and \"mcp_token\".\"expires_at\" > \"mcp_token\".\"created_at\" and \"mcp_token\".\"expires_at\" <= \"mcp_token\".\"created_at\" + interval '31 days' and (\"mcp_token\".\"used_at\" is null or isfinite(\"mcp_token\".\"used_at\"))"
         }
       },
       "isRLSEnabled": false
@@ -7640,18 +8001,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "rehearsal_1": {
-          "name": "rehearsal_1",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "rehearsal_2": {
-          "name": "rehearsal_2",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
         "disabled_at": {
           "name": "disabled_at",
           "type": "timestamp with time zone",
@@ -7725,10 +8074,6 @@
         "student_hebrew_name_bounded": {
           "name": "student_hebrew_name_bounded",
           "value": "\"student\".\"hebrew_name\" is null or (length(trim(\"student\".\"hebrew_name\")) > 0 and octet_length(\"student\".\"hebrew_name\") <= 400)"
-        },
-        "student_rehearsals_ordered": {
-          "name": "student_rehearsals_ordered",
-          "value": "(\"student\".\"rehearsal_1\" is null or \"student\".\"rehearsal_1\" <= \"student\".\"ceremony_date\") and (\"student\".\"rehearsal_2\" is null or \"student\".\"rehearsal_2\" <= \"student\".\"ceremony_date\") and (\"student\".\"rehearsal_1\" is null or \"student\".\"rehearsal_2\" is null or \"student\".\"rehearsal_1\" <= \"student\".\"rehearsal_2\")"
         },
         "student_second_parent_bounded": {
           "name": "student_second_parent_bounded",

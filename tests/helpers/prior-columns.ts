@@ -1,6 +1,6 @@
 /**
  * Rows read after the full migration chain, limited to the columns the rows had before the migration
- * under test. Later additive migrations (0028's rehearsal dates, for example) add nullable columns;
+ * under test. Later additive migrations (0029's rehearsal dates, for example) add nullable columns;
  * an older migration's upgrade test still proves it left every existing value untouched.
  */
 export function priorColumns(after: readonly unknown[], before: readonly unknown[]) {

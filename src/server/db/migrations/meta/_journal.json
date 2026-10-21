@@ -201,8 +201,15 @@
     {
       "idx": 28,
       "version": "7",
-      "when": 1792616456362,
-      "tag": "0028_rehearsal_dates",
+      "when": 1792616515867,
+      "tag": "0028_portal_mcp",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792621738415,
+      "tag": "0029_rehearsal_dates",
       "breakpoints": true
     }
   ]

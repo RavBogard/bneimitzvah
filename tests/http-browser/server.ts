@@ -20,7 +20,9 @@ import { practiceCalendarRouteMethods } from "../../src/server/http/practice-cal
 import { studyGuidesRouteMethods } from "../../src/server/http/study-guides";
 import { closeNextDevelopment } from "./next-lifecycle";
 
-export const BROWSER_PORT = 3187;
+// Parallel local worktrees may choose their own loopback port; CI keeps the default.
+const configuredPort = process.env.HTTP_BROWSER_PORT;
+export const BROWSER_PORT = configuredPort && /^[1-9][0-9]{3,4}$/.test(configuredPort) && Number(configuredPort) >= 1024 && Number(configuredPort) <= 65535 ? Number(configuredPort) : 3187;
 export const BROWSER_ORIGIN = `http://127.0.0.1:${BROWSER_PORT}`;
 const critical = new Set(["host", "cookie", "origin", "content-type", "content-length", "transfer-encoding", "authorization",
   "x-practice-context", "forwarded", "x-forwarded-host", "x-forwarded-proto", "x-forwarded-for", "sec-fetch-site"]);

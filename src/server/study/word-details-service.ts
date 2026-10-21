@@ -21,7 +21,10 @@ export function createStudyWordDetailsService<Q extends PgQueryResultHKT>(input:
       load: async publicRequest => {
         const page = await input.loadText(publicRequest), target = page.verses[0];
         if (!target || target.ref !== publicRequest.verses[publicRequest.offset] || publicRequest.signal?.aborted) throw new StudyUnavailable("upstream");
-        const wordDetails = await createSelectedWordDetails(target, wordIndex, input.source, publicRequest.signal);
+        // Further pages of the same authorized reading, only to place this word's other occurrences.
+        const reading = Object.freeze({ verses: publicRequest.verses, loaded: page.verses,
+          load: async (offset: number, signal: AbortSignal) => (await input.loadText(Object.freeze({ ...publicRequest, offset, signal }))).verses });
+        const wordDetails = await createSelectedWordDetails(target, wordIndex, input.source, publicRequest.signal, reading);
         if (!wordDetails || publicRequest.signal?.aborted) throw new StudyUnavailable("upstream");
         return { ...page, wordDetails };
       } });

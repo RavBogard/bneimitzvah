@@ -46,6 +46,7 @@ import { createServiceScheduler } from "../service-ecosystem/scheduler";
 import { createStudentWorkService } from "../student-work/service";
 import { createProgressService } from "../progress/service";
 import { createStudyGuideService, studyGuideWebSurface } from "../study-guides/service";
+import { createMcpEndpoint, type McpEndpoint } from "../mcp/endpoint";
 import { createGuideChecker } from "../study-guides/citations";
 import { createHaftarahSheets } from "../study-guides/haftarah-sheets";
 // The runtime is composed per request; the public haftarah index cache must outlive it.
@@ -157,6 +158,9 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const sourceContent = createSourceContentService({ access, practice, related: sourceMetadata.related, editions: sourceMetadata.editions, content: createSefariaContentReader({ fetch }).text });
   const sourceAssignments = createSourceAssignmentsService({ access, practice, related: createSefariaMetadataReader({ fetch }).related });
   const honors = createHonorsService({ access });
+  // Portal MCP: the full study service (writes too) behind live, grant-bound connection authority.
+  // Null until enabled by configuration; then its routes exist at all.
+  const mcp: McpEndpoint | null = config.mcpEnabled ? createMcpEndpoint({ db, access, practice, secret: purposeSecret(config, "portal-mcp"), loadText, related: sourceMetadata.related }) : null;
   // Approved material is loaded within the existing RLS transaction.
   const honoree = createHonoreeService({ db, access, deployment: config.deployment, origin: config.origin, signingSecret: config.authSecret, projectMaterial: loadHonoreeMaterial });
   const studySources = createStudySourceDiscoveryService({ access, practice, loadText, related: createSefariaMetadataReader({ fetch }).related });
@@ -177,7 +181,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost, mcp });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

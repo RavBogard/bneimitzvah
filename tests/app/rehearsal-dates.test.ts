@@ -33,12 +33,12 @@ const corpus: [string | null, string | null, string, boolean][] = [
 async function denied(action: () => Promise<unknown>, status = 403) { try { await action(); return false; } catch (error) { return error instanceof AccessDenied && error.status === status; } }
 async function sqlCode(action: () => Promise<unknown>) { try { await action(); return ""; } catch (error) { return String((error as { code?: string }).code); } }
 
-test("0028 adds only the two nullable rehearsal dates and their order check, leaves existing students unchanged and replays", async () => {
+test("0029 adds only the two nullable rehearsal dates and their order check, leaves existing students unchanged and replays", async () => {
   const isolation = await isolatedEnv(), client = new PGlite();
   try {
     const folder = "src/server/db/migrations", journal = JSON.parse(await readFile(join(folder, "meta/_journal.json"), "utf8"));
-    expect(journal.entries.at(-1)).toMatchObject({ idx: 28, tag: "0028_rehearsal_dates" });
-    const entries = journal.entries.filter((e: { idx: number }) => e.idx < 28), prior = join(isolation.home, "prior");
+    expect(journal.entries.at(-1)).toMatchObject({ idx: 29, tag: "0029_rehearsal_dates" });
+    const entries = journal.entries.filter((e: { idx: number }) => e.idx < 29), prior = join(isolation.home, "prior");
     await mkdir(join(prior, "meta"), { recursive: true }); await writeFile(join(prior, "meta/_journal.json"), JSON.stringify({ ...journal, entries }));
     for (const e of entries) await copyFile(join(folder, e.tag + ".sql"), join(prior, e.tag + ".sql"));
     const db = drizzle(client); await migrate(db, { migrationsFolder: prior });
@@ -46,7 +46,7 @@ test("0028 adds only the two nullable rehearsal dates and their order check, lea
     const before = (await client.query("select * from student")).rows;
     await migrate(db, { migrationsFolder: folder }); await migrate(db, { migrationsFolder: folder });
     expect((await client.query("select * from student")).rows).toEqual(before.map(row => ({ ...(row as Record<string, unknown>), rehearsal_1: null, rehearsal_2: null })));
-    const previous = JSON.parse(await readFile(join(folder, "meta/0027_snapshot.json"), "utf8")), current = JSON.parse(await readFile(join(folder, "meta/0028_snapshot.json"), "utf8"));
+    const previous = JSON.parse(await readFile(join(folder, "meta/0028_snapshot.json"), "utf8")), current = JSON.parse(await readFile(join(folder, "meta/0029_snapshot.json"), "utf8"));
     const expected = structuredClone(previous.tables), student = current.tables["public.student"];
     expected["public.student"].columns.rehearsal_1 = student.columns.rehearsal_1; expected["public.student"].columns.rehearsal_2 = student.columns.rehearsal_2;
     expected["public.student"].checkConstraints.student_rehearsals_ordered = student.checkConstraints.student_rehearsals_ordered;
