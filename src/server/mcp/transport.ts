@@ -51,6 +51,9 @@ export async function answerRpc<Q extends PgQueryResultHKT>(body: unknown, input
   tools: readonly Tool<Q>[]; instructions: string; serverInfo: Readonly<{ name: string; version: string }>; ctx: Omit<ToolContext<Q>, "signal">; signal: AbortSignal;
 }): Promise<Rpc | null> {
   if (Array.isArray(body)) return rpcError(null, -32600, "Batches are not accepted; send one request at a time.");
+  // A client's response to a server request (this server sends none): accepted, nothing to answer.
+  if (body && typeof body === "object" && (body as Record<string, unknown>).jsonrpc === "2.0" && !Object.hasOwn(body, "method")
+    && (Object.hasOwn(body, "result") || Object.hasOwn(body, "error"))) return null;
   if (!body || typeof body !== "object" || (body as Record<string, unknown>).jsonrpc !== "2.0" || typeof (body as Record<string, unknown>).method !== "string") return rpcError((body as Record<string, unknown> | null)?.id, -32600, "Invalid Request");
   const msg = body as Record<string, unknown>;
   if (!Object.hasOwn(msg, "id")) return null; // A notification: nothing to answer.

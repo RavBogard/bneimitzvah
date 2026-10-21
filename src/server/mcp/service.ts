@@ -1,4 +1,5 @@
 import "server-only";
+import { createHmac } from "node:crypto";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { withTenantTransaction } from "../db/runtime";
 import { lockRoleGrant } from "../data/authority";
@@ -16,7 +17,7 @@ export type McpActor = Readonly<{
 export type OAuthAnswer = Readonly<{ status: number; body: Record<string, unknown> }> | Readonly<{ redirect: string }>;
 export type ConsentView = Readonly<{
   clientName: string; destination: string;
-  account: null | Readonly<{ name: string; google: boolean; role: "admin" | "tutor" | null; scopes: readonly string[] }>;
+  account: null | Readonly<{ name: string; google: boolean; role: "admin" | "tutor" | null; scopes: readonly string[]; viewer: string }>;
 }>;
 type Resolved = Readonly<{ tenantId: string; origin: string }>;
 
@@ -31,6 +32,8 @@ const withQuery = (url: string, values: Record<string, string | undefined>) => {
 };
 const VERIFIER = /^[A-Za-z0-9._~-]{43,128}$/;
 const CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
+/** A Google sign-in counts for consent only while it is this recent; an older session asks again. */
+export const GOOGLE_CONSENT_WINDOW_MS = 15 * 60_000;
 const plainName = (value: unknown) => typeof value === "string" && value.trim() && !/[\u0000-\u001f\u007f<>]/.test(value) ? value.trim().slice(0, 120) : "Claude";
 
 /** Scopes a grant may hold. Only an admin grant can carry the study write scope (S21). */
@@ -43,6 +46,9 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
   db: AccessDatabase<Q>; access: Pick<ReturnType<typeof createAccessService<Q>>, "withVerifiedIdentity">; secret: string; now?: () => number;
 }) {
   const now = input.now ?? Date.now;
+  const recentGoogle = (at: Date | null) => !!at && now() - at.getTime() < GOOGLE_CONSENT_WINDOW_MS && at.getTime() <= now() + 60_000;
+  const viewerOf = (identity: { userId: string; authSessionId: string; tenantId: string }) =>
+    createHmac("sha256", input.secret).update(JSON.stringify(["mcp-consent-viewer/v1", identity.tenantId, identity.userId, identity.authSessionId])).digest("base64url");
   const clientRecord = (clientId: unknown) => {
     const record = verify(input.secret, "mc", clientId, now());
     if (!record || !Array.isArray(record.redirect_uris) || !record.redirect_uris.every(redirectPermitted)) return null;
@@ -99,6 +105,8 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
         if (!Array.isArray(grants) || !grants.includes("authorization_code") || grants.some(g => g !== "authorization_code" && g !== "refresh_token")
           || !Array.isArray(responses) || responses.length !== 1 || responses[0] !== "code") throw new OAuthError("invalid_client_metadata");
         const redirectUris = [...new Set(redirects as string[])], clientName = plainName(b.client_name);
+        // The client id travels in the authorize URL; keep it well inside the dispatcher's URL bound.
+        if (JSON.stringify(redirectUris).length > 700) throw new OAuthError("invalid_redirect_uri");
         const clientId = sign(input.secret, "mc", { redirect_uris: redirectUris, client_name: clientName }, TTL.client, now());
         return Object.freeze({ status: 201, body: { client_id: clientId, client_id_issued_at: Math.floor(now() / 1000), client_name: clientName, redirect_uris: redirectUris,
           grant_types: ["authorization_code", "refresh_token"], response_types: ["code"], token_endpoint_auth_method: "none" } });
@@ -143,23 +151,25 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
       try {
         account = await input.access.withVerifiedIdentity(request, { intent: "read" }, async (tx, identity) => {
           const user = await data.lockUser(tx, identity.userId, "read");
-          const google = !!(await data.sessionGoogleMarker(tx, identity.authSessionId, identity.userId));
+          const google = recentGoogle(await data.sessionGoogleMarker(tx, identity.authSessionId, identity.userId));
           let role: "admin" | "tutor" | null = null;
           if (identity.membership) {
             if (await lockRoleGrant(tx, identity.tenantId, identity.membership.id, "admin", "read")) role = "admin";
             else if (await lockRoleGrant(tx, identity.tenantId, identity.membership.id, "tutor", "read")) role = "tutor";
           }
-          return Object.freeze({ name: plainName(user?.name), google, role, scopes: role ? grantedScope(role, record.asked).split(" ") : [] });
+          return Object.freeze({ name: plainName(user?.name), google, role, scopes: role ? grantedScope(role, record.asked).split(" ") : [], viewer: viewerOf(identity) });
         });
       } catch (error) { if (!(error instanceof AccessDenied)) throw error; }
       return Object.freeze({ clientName: record.clientName, destination, account });
     },
     /** POST /api/oauth/consent: the signed-in staff member allows the connection. */
-    async approve(request: AccessRequest & { method?: string }, pending: unknown, unattended: boolean): Promise<{ ok: true; redirect: string } | { ok: false; reason: "expired" | "google" | "staff" }> {
+    async approve(request: AccessRequest & { method?: string }, pending: unknown, unattended: boolean, viewer: unknown): Promise<{ ok: true; redirect: string } | { ok: false; reason: "expired" | "google" | "staff" | "account" }> {
       const record = pendingRecord(pending);
       if (!record) return { ok: false, reason: "expired" };
       return input.access.withVerifiedIdentity(request, { intent: "data-write", mutation: true }, async (tx, identity) => {
-        if (!(await data.sessionGoogleMarker(tx, identity.authSessionId, identity.userId))) return { ok: false as const, reason: "google" as const };
+        // Allow acts only for the account the page showed, confirmed with Google moments ago.
+        if (viewer !== viewerOf(identity)) return { ok: false as const, reason: "account" as const };
+        if (!recentGoogle(await data.sessionGoogleMarker(tx, identity.authSessionId, identity.userId))) return { ok: false as const, reason: "google" as const };
         if (!identity.membership) return { ok: false as const, reason: "staff" as const };
         const admin = await lockRoleGrant(tx, identity.tenantId, identity.membership.id, "admin", "data-write");
         const grant = admin ?? await lockRoleGrant(tx, identity.tenantId, identity.membership.id, "tutor", "data-write");
@@ -199,7 +209,8 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
           const t = tx as AccessTransaction<Q>;
           const row = await data.lockToken(t, resolved.tenantId, hash, grantType === "authorization_code" ? "code" : "refresh");
           if (!row) return { error: "invalid_grant" as const };
-          const connection = await data.lockConnection(t, resolved.tenantId, row.connectionId, "data-write");
+          // An update lock: a replay below revokes the row, and two replays must not deadlock.
+          const connection = await data.lockConnection(t, resolved.tenantId, row.connectionId, "authority-write");
           if (!connection || connection.clientHash !== client.hash) return { error: "invalid_grant" as const };
           // A replayed code or refresh token means one leaked: end the whole connection.
           if (row.usedAt) { await data.revokeConnection(t, resolved.tenantId, connection.id, new Date(at)); return { error: "invalid_grant" as const }; }

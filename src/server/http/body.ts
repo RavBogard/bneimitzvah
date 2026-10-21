@@ -54,18 +54,42 @@ export async function readJsonBody(request: Request, profile: keyof typeof limit
   }
 }
 
-/** An OAuth form body (application/x-www-form-urlencoded), 16 KiB at most. */
-export async function readFormBody(request: Request): Promise<URLSearchParams> {
+/** An OAuth form body (application/x-www-form-urlencoded), read as a stream and capped at 16 KiB. */
+export async function readFormBody(request: Request, deadlineMs = 5000): Promise<URLSearchParams> {
   if (!/^application\/x-www-form-urlencoded(?:\s*;\s*charset=utf-8)?$/i.test(request.headers.get("content-type") ?? "")
     || ![null, "identity"].includes(request.headers.get("content-encoding"))) throw new HttpBoundaryError(415);
-  const size = request.headers.get("content-length");
-  if (size !== null && (!/^\d+$/.test(size) || Number(size) > 16 * 1024)) throw new HttpBoundaryError(413);
-  let text: string;
+  const limit = 16 * 1024, size = request.headers.get("content-length");
+  if (size !== null && (!/^\d+$/.test(size) || !Number.isSafeInteger(Number(size)))) throw new HttpBoundaryError();
+  if (size !== null && Number(size) > limit) throw new HttpBoundaryError(413);
+  if (!request.body) return new URLSearchParams();
+  const reader = request.body.getReader();
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const buffer = await Promise.race([request.arrayBuffer(), new Promise<never>((_, reject) => setTimeout(() => reject(new HttpBoundaryError(408)), 5000))]);
-    if (buffer.byteLength > 16 * 1024) throw new HttpBoundaryError(413);
-    text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
-  } catch (error) { if (error instanceof HttpBoundaryError) throw new HttpBoundaryError(error.status); throw new HttpBoundaryError(); }
-  if (/[\u0000-\u001f\u007f]/.test(text)) throw new HttpBoundaryError();
-  return new URLSearchParams(text);
+    const text = await Promise.race([
+      (async () => {
+        const decoder = new TextDecoder("utf-8", { fatal: true });
+        let bytes = 0, out = "";
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          bytes += value.byteLength;
+          if (bytes > limit) throw new HttpBoundaryError(413);
+          out += decoder.decode(value, { stream: true });
+        }
+        return out + decoder.decode();
+      })(),
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new HttpBoundaryError(408)), deadlineMs); }),
+    ]);
+    if (/[\u0000-\u001f\u007f]/.test(text)) throw new HttpBoundaryError();
+    return new URLSearchParams(text);
+  } catch (error) {
+    let status: unknown;
+    try { if (error instanceof HttpBoundaryError) status = error.status; } catch { /* Hostile diagnostic. */ }
+    if (status === 408 || status === 413) throw new HttpBoundaryError(status);
+    throw new HttpBoundaryError();
+  } finally {
+    if (timer) clearTimeout(timer);
+    void reader.cancel().catch(() => {});
+    try { reader.releaseLock(); } catch { /* Pending read being cancelled. */ }
+  }
 }

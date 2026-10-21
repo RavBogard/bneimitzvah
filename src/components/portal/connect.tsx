@@ -5,7 +5,7 @@ import { GoogleSignIn } from "./google-sign-in";
 
 // The portal MCP consent page (Decided here, 2026-10-21). Claude sends the staff member here with
 // a signed request in the URL fragment; Google sign-in proves who they are; Allow returns Claude a code.
-type Account = { name: string; google: boolean; role: "admin" | "tutor" | null; scopes: string[] };
+type Account = { name: string; google: boolean; role: "admin" | "tutor" | null; scopes: string[]; viewer: string };
 type View = { kind: "loading" } | { kind: "expired" } | { kind: "unavailable" }
   | { kind: "ready"; clientName: string; destination: string; account: Account | null };
 type Endpoint = "/api/oauth/consent/view" | "/api/oauth/consent/approve" | "/api/oauth/consent/deny";
@@ -51,16 +51,18 @@ export function ConnectClaude() {
   }, [load]);
 
   async function decide(allow: boolean) {
+    const account = view.kind === "ready" ? view.account : null;
     if (!request.current || busy) return;
     setBusy(true); setMessage("");
     try {
-      const value = allow ? await post("/api/oauth/consent/approve", { request: request.current, unattended })
+      const value = allow ? await post("/api/oauth/consent/approve", { request: request.current, unattended, viewer: account?.viewer ?? "" })
         : await post("/api/oauth/consent/deny", { request: request.current });
       const target = safeRedirect(value.redirect);
       if (target) { window.location.assign(target); return; }
       if (value.error === "google") setMessage("Sign in with Google first; Claude connects only from a Google sign-in.");
       else if (value.error === "staff") setMessage("Only CRC clergy, staff and tutors can connect Claude.");
       else if (value.error === "expired") setView({ kind: "expired" });
+      else if (value.error === "account") { setMessage("You switched accounts in another window. Check the account below and try again."); void load(); }
       else setMessage("That didn’t go through. Try again.");
     } catch { setMessage("That didn’t go through. Try again."); }
     setBusy(false);
@@ -81,7 +83,8 @@ export function ConnectClaude() {
         {view.kind === "expired" && <><h2 id="connect-title">This request has expired</h2><p className="field-help">Start again from Claude: open the connector and choose Connect.</p></>}
         {view.kind === "unavailable" && <><h2 id="connect-title">The portal isn’t answering</h2><button type="button" className="button-secondary" onClick={() => void load()}>Try again</button></>}
         {ready && <>
-          <h2 id="connect-title">{ready.clientName} wants to connect</h2>
+          <h2 id="connect-title">Claude wants to connect</h2>
+          <p className="field-help">Continue only if you just chose Connect in Claude yourself.</p>
           {message && <p className="request-error" role="alert">{message}</p>}
           {!signedInWithGoogle && <>
             <p className="field-help">{account ? "Confirm it’s you with Google to continue." : "Sign in with your CRC Google account to continue."}</p>

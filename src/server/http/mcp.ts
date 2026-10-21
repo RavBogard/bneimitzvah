@@ -7,6 +7,9 @@ import { requireCookieMutation } from "./mutations";
 import { AccessDenied } from "../access/errors";
 import { authorizationMetadata, resourceMetadata, MCP_PATH, SCOPES } from "../mcp/oauth";
 
+// Every method reaches the handler, which answers 404 while the MCP is disabled and 405 otherwise,
+// so a disabled deployment does not even reveal which methods the routes take.
+const ANY = Object.freeze(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]);
 const methods: Record<string, readonly string[]> = {
   [MCP_PATH]: ["POST"],
   "/.well-known/oauth-protected-resource": ["GET"], "/.well-known/oauth-protected-resource/api/mcp": ["GET"],
@@ -15,7 +18,7 @@ const methods: Record<string, readonly string[]> = {
   "/api/oauth/consent/view": ["POST"], "/api/oauth/consent/approve": ["POST"], "/api/oauth/consent/deny": ["POST"],
 };
 export function mcpRouteMethods(pathname: string): readonly string[] | null {
-  return Object.hasOwn(methods, pathname) ? methods[pathname] : null;
+  return Object.hasOwn(methods, pathname) ? ANY : null;
 }
 
 /** OAuth and MCP answers: JSON, never cached, never carrying a cookie. */
@@ -30,15 +33,16 @@ function redirect(location: string): Response {
 }
 const publicMetadata = (body: unknown) => json(body, 200, { "cache-control": "public, max-age=300", "access-control-allow-origin": "*" });
 function challenge(origin: string): Response {
-  return json({ error: "invalid_token" }, 401, { "www-authenticate": `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource${MCP_PATH}", scope="${SCOPES.read}"` });
+  // Both scopes: the server grants each staff member only what their role allows (a tutor, read).
+  return json({ error: "invalid_token" }, 401, { "www-authenticate": `Bearer error="invalid_token", resource_metadata="${origin}/.well-known/oauth-protected-resource${MCP_PATH}", scope="${SCOPES.read} ${SCOPES.study}"` });
 }
 const answer = (a: { status: number; body: Record<string, unknown> } | { redirect: string }) => "redirect" in a ? redirect(a.redirect) : json(a.body, a.status);
 
 // Only called after dispatcher resolves the actual exact incoming host.
 export async function handleMcpRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const url = new URL(request.url), path = url.pathname;
-  const allowed = mcpRouteMethods(path);
-  if (!allowed) return null;
+  if (!Object.hasOwn(methods, path)) return null;
+  const allowed = methods[path];
   // Until its review is accepted the endpoint is disabled by configuration and does not exist.
   const mcp = runtime.mcp;
   if (!mcp) throw new HttpBoundaryError(404);
@@ -88,8 +92,8 @@ export async function handleMcpRequest(request: Request, runtime: HttpRuntime): 
     const location = mcp.deny(body.request, resolved);
     return location ? privateJson({ redirect: location }) : privateJson({ error: "expired" }, 400);
   }
-  const body = closedObject(raw, ["request", "unattended"]);
+  const body = closedObject(raw, ["request", "unattended", "viewer"]);
   if (typeof body.unattended !== "boolean") throw new HttpBoundaryError();
-  const result = await mcp.approve(request, body.request, body.unattended);
+  const result = await mcp.approve(request, body.request, body.unattended, body.viewer);
   return result.ok ? privateJson({ redirect: result.redirect }) : privateJson({ error: result.reason }, 400);
 }

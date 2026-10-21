@@ -22,10 +22,10 @@ async function fixture(enabled = true) {
   const runtime = { origin: ORIGIN, mcp, resolveHost: (request: Request) => resolveTenantHost(f.db, request, deployment) } as unknown as HttpRuntime;
   const dispatch = createHttpDispatcher(async action => action(runtime));
   /** Mark a fixture session as created by Google sign-in (the hook's job in production). */
-  async function google(who: "admin" | "multi" | "learner") {
+  async function google(who: "admin" | "multi" | "learner", at = new Date()) {
     await f.owner(async () => {
       await f.client.exec("ALTER TABLE session DISABLE TRIGGER immutable_session_google_authenticated_at");
-      await f.db.update(s.session).set({ googleAuthenticatedAt: new Date() }).where(eq(s.session.id, f.identities[who].sessionId));
+      await f.db.update(s.session).set({ googleAuthenticatedAt: at }).where(eq(s.session.id, f.identities[who].sessionId));
       await f.client.exec("ALTER TABLE session ENABLE TRIGGER immutable_session_google_authenticated_at");
     });
   }
@@ -33,13 +33,19 @@ async function fixture(enabled = true) {
   const postJson = (path: string, body: unknown, headers: Record<string, string> = {}) => dispatch(new Request(`${ORIGIN}${path}`, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) }));
   const postForm = (path: string, body: Record<string, string>) => dispatch(new Request(`${ORIGIN}${path}`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(body).toString() }));
   const consent = (who: "admin" | "multi" | "learner", path: string, body: unknown) => postJson(path, body, { cookie: f.identities[who].cookie, origin: ORIGIN, "sec-fetch-site": "same-origin" });
+  /** What the consent page does: read the view (its viewer binding), then Allow. */
+  async function allow(who: "admin" | "multi" | "learner", pending: string, unattended = false) {
+    const view = await (await consent(who, "/api/oauth/consent/view", { request: pending })).json();
+    return consent(who, "/api/oauth/consent/approve", { request: pending, unattended, viewer: view.account?.viewer ?? "" });
+  }
   async function register() {
     const response = await postJson("/api/oauth/register", { client_name: "Claude", redirect_uris: [CALLBACK], token_endpoint_auth_method: "none" });
     expect(response.status).toBe(201);
     return (await response.json()).client_id as string;
   }
   /** Run authorize → consent → token, returning the tokens. */
-  async function connect(who: "admin" | "multi", options: { unattended?: boolean; scope?: string } = {}) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function connect(who: "admin" | "multi", options: { unattended?: boolean; scope?: string } = {}): Promise<Record<string, any>> {
     const clientId = await register(), verifier = randomBytes(32).toString("base64url");
     const challenge = createHash("sha256").update(verifier).digest("base64url");
     const query = new URLSearchParams({ response_type: "code", client_id: clientId, redirect_uri: CALLBACK, code_challenge: challenge, code_challenge_method: "S256", state: "s1", resource: `${ORIGIN}/api/mcp`, ...(options.scope ? { scope: options.scope } : {}) });
@@ -48,7 +54,7 @@ async function fixture(enabled = true) {
     const location = authorized.headers.get("location")!;
     expect(location.startsWith(`${ORIGIN}/connect#request=`)).toBe(true);
     const pending = location.split("#request=")[1];
-    const approved = await consent(who, "/api/oauth/consent/approve", { request: pending, unattended: options.unattended ?? false });
+    const approved = await allow(who, pending, options.unattended ?? false);
     const body = await approved.json();
     if (!body.redirect) return { error: body.error as string, clientId, verifier, pending };
     const back = new URL(body.redirect);
@@ -71,7 +77,7 @@ async function fixture(enabled = true) {
     const result = body.result as { content: { text: string }[]; isError?: boolean };
     return { isError: !!result.isError, text: result.content[0].text, json: () => JSON.parse(result.content[0].text) };
   };
-  return { f, dispatch, google, get, postJson, postForm, consent, register, connect, rpc, call };
+  return { f, dispatch, google, get, postJson, postForm, consent, allow, register, connect, rpc, call };
 }
 
 describe("portal MCP", () => {
@@ -79,6 +85,9 @@ describe("portal MCP", () => {
     const t = await fixture(false);
     expect((await t.get("/.well-known/oauth-protected-resource/api/mcp")).status).toBe(404);
     expect((await t.postJson("/api/mcp", { jsonrpc: "2.0", id: 1, method: "initialize" })).status).toBe(404);
+    // Not even the methods leak: a wrong method is a 404 too.
+    expect((await t.get("/api/mcp")).status).toBe(404);
+    expect((await t.get("/api/oauth/token")).status).toBe(404);
   });
 
   it("publishes discovery metadata and challenges a missing bearer", async () => {
@@ -90,6 +99,8 @@ describe("portal MCP", () => {
     const denied = await t.postJson("/api/mcp", { jsonrpc: "2.0", id: 1, method: "initialize" });
     expect(denied.status).toBe(401);
     expect(denied.headers.get("www-authenticate")).toContain(`resource_metadata="${ORIGIN}/.well-known/oauth-protected-resource/api/mcp"`);
+    expect(denied.headers.get("www-authenticate")).toContain('scope="portal:read portal:study"');
+    expect((await t.get("/api/mcp")).status).toBe(405);
   });
 
   it("registers only Claude's callbacks or a loopback", async () => {
@@ -97,6 +108,8 @@ describe("portal MCP", () => {
     expect((await t.postJson("/api/oauth/register", { redirect_uris: ["https://evil.example/cb"] })).status).toBe(400);
     expect((await t.postJson("/api/oauth/register", { redirect_uris: ["http://127.0.0.1:5555/callback"] })).status).toBe(201);
     expect((await t.postJson("/api/oauth/register", { redirect_uris: [CALLBACK], token_endpoint_auth_method: "client_secret_post" })).status).toBe(400);
+    // A client id too large to fit an authorize URL is refused at registration.
+    expect((await t.postJson("/api/oauth/register", { redirect_uris: Array.from({ length: 10 }, (_, i) => `http://127.0.0.1:${5000 + i}/${"c".repeat(150)}`) })).status).toBe(400);
   });
 
   it("returns authorize errors to a verified redirect and refuses an unverified one", async () => {
@@ -111,13 +124,18 @@ describe("portal MCP", () => {
   it("consents only from a Google-created staff session", async () => {
     const t = await fixture();
     expect((await t.connect("admin")).error).toBe("google");
+    // A Google sign-in from twenty minutes ago is not fresh enough to consent.
+    await t.google("admin", new Date(Date.now() - 20 * 60_000));
+    expect((await t.connect("admin")).error).toBe("google");
     await t.google("learner");
     const clientId = await t.register();
     const pending = new URL((await t.get(`/api/oauth/authorize?${new URLSearchParams({ response_type: "code", client_id: clientId, redirect_uri: CALLBACK, code_challenge: "a".repeat(43), code_challenge_method: "S256" })}`)).headers.get("location")!).hash.slice("#request=".length);
     const view = await (await t.consent("learner", "/api/oauth/consent/view", { request: pending })).json();
     expect(view.account).toMatchObject({ google: true, role: null });
     expect(JSON.stringify(view)).not.toContain("@");
-    expect((await (await t.consent("learner", "/api/oauth/consent/approve", { request: pending, unattended: false })).json()).error).toBe("staff");
+    expect((await (await t.allow("learner", pending)).json()).error).toBe("staff");
+    // Allow acts only for the account the page showed.
+    expect((await (await t.consent("learner", "/api/oauth/consent/approve", { request: pending, unattended: false, viewer: "forged" })).json()).error).toBe("account");
     // A cross-site POST to the consent endpoint is refused before anything happens.
     expect((await t.postJson("/api/oauth/consent/approve", { request: pending, unattended: false }, { cookie: t.f.identities.learner.cookie, origin: "https://evil.example" })).status).toBe(403);
   });
@@ -154,6 +172,9 @@ describe("portal MCP", () => {
     const tokens = await t.connect("admin", { unattended: true });
     const result = (await t.call(tokens.access_token, "save_guide", { kind: "torah", readingKey: "bamidbar", expectedVersion: 0, body: { overview: "An overview.", themes: [] }, origin: "claude", reviewed: true, hold: false, mutationId: randomUUID() })).json();
     expect(result).toMatchObject({ ok: false, code: "review-not-permitted" });
+    // Nor write words as the rabbi's own.
+    const asRabbi = (await t.call(tokens.access_token, "save_guide", { kind: "torah", readingKey: "bamidbar", expectedVersion: 0, body: { overview: "An overview.", themes: [] }, origin: "rabbi", reviewed: false, hold: false, mutationId: randomUUID() })).json();
+    expect(asRabbi).toMatchObject({ ok: false, code: "channel-not-permitted" });
   });
 
   it("limits a tutor to read tools and their own students", async () => {
@@ -206,7 +227,7 @@ describe("portal MCP", () => {
     const clientId = await t.register(), verifier = randomBytes(32).toString("base64url");
     const challenge = createHash("sha256").update(verifier).digest("base64url");
     const location = (await t.get(`/api/oauth/authorize?${new URLSearchParams({ response_type: "code", client_id: clientId, redirect_uri: CALLBACK, code_challenge: challenge, code_challenge_method: "S256" })}`)).headers.get("location")!;
-    const approved = await (await t.consent("admin", "/api/oauth/consent/approve", { request: location.split("#request=")[1], unattended: false })).json();
+    const approved = await (await t.allow("admin", location.split("#request=")[1])).json();
     const code = new URL(approved.redirect).searchParams.get("code")!;
     expect((await t.postForm("/api/oauth/token", { grant_type: "authorization_code", code, redirect_uri: CALLBACK, client_id: clientId, code_verifier: randomBytes(32).toString("base64url") })).status).toBe(400);
     expect((await t.postForm("/api/oauth/token", { grant_type: "authorization_code", code, redirect_uri: CALLBACK, client_id: clientId, code_verifier: verifier })).status).toBe(200);

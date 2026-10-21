@@ -88,6 +88,9 @@ function rabbiAuthority<Q extends PgQueryResultHKT>(ctx: ToolContext<Q>): RabbiA
   };
 }
 const requireStudy = (ctx: { actor: McpActor }) => { if (!ctx.actor.scopes.has(SCOPES.study) || ctx.actor.role !== "admin") throw new AccessDenied(403); };
+/** An unattended routine writes only as Claude: it can never put words in the rabbi's mouth. */
+const routineOrigin = (ctx: { actor: McpActor }, input: Record<string, unknown>) => ctx.actor.unattended && input.origin !== "claude"
+  ? { ok: false, code: "channel-not-permitted", hint: "A scheduled routine saves only origin claude." } : null;
 const outcome = (result: { ok: boolean; code?: string; problems?: readonly string[] } & Record<string, unknown>) => result.ok ? result
   : { ...result, hint: ({ conflict: "Someone saved first or expectedVersion is stale: read again, then resend with the current version.", "no-change": "Nothing changed; nothing was saved.",
     "review-not-permitted": "This connection cannot mark work reviewed (a scheduled routine, or a read-only connection). Save with reviewed:false.",
@@ -181,7 +184,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
       description: "Save a new version of a reading's base guide. reviewed:false goes live at once only when no reviewed version exists; otherwise it is held for the rabbi (S25). hold:true keeps it from students until publish_guide. Refused whole if any source is not one Sefaria lists for that verse, a verse is outside the reading, or a limit is exceeded.",
       inputSchema: closed({ kind, readingKey, expectedVersion, body: guideBody, origin, reviewed, hold: { type: "boolean", description: "Keep this version from students until publish_guide." }, mutationId },
         ["kind", "readingKey", "expectedVersion", "body", "origin", "reviewed", "hold", "mutationId"]),
-      handler: async (input, ctx) => { requireStudy(ctx); return outcome(await ctx.guides.setBaseGuide(rabbiAuthority(ctx), input as never)); },
+      handler: async (input, ctx) => { requireStudy(ctx); return routineOrigin(ctx, input) ?? outcome(await ctx.guides.setBaseGuide(rabbiAuthority(ctx), input as never)); },
     },
     {
       name: "publish_guide", roles: ["admin"], scope: SCOPES.study, annotations: write,
@@ -200,7 +203,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
       description: "Save a new version of one student's own additions, bound to their current assignment (from get_student_guide). Notes only on that student's verses.",
       inputSchema: closed({ studentId, kind, assignmentId: str("From get_student_guide.", { pattern: UUID_PATTERN }), assignmentRevision: { type: "integer", minimum: 1, maximum: 1000000, description: "From get_student_guide." },
         expectedVersion, body: additionsBody, origin, reviewed, mutationId }, ["studentId", "kind", "assignmentId", "assignmentRevision", "expectedVersion", "body", "origin", "reviewed", "mutationId"]),
-      handler: async (input, ctx) => { requireStudy(ctx); return outcome(await ctx.guides.setStudentGuide(rabbiAuthority(ctx), input as never)); },
+      handler: async (input, ctx) => { requireStudy(ctx); return routineOrigin(ctx, input) ?? outcome(await ctx.guides.setStudentGuide(rabbiAuthority(ctx), input as never)); },
     },
   ] satisfies Tool<Q>[]);
 }
