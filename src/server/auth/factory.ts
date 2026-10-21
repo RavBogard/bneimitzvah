@@ -37,7 +37,22 @@ export function createAuthStack(
       encryptOAuthTokens: true,
       accountLinking: { enabled: true, trustedProviders: [], allowDifferentEmails: false },
     },
-    session: { expiresIn: 7 * 24 * 60 * 60, freshAge: 15 * 60, cookieCache: { enabled: false } },
+    session: {
+      expiresIn: 7 * 24 * 60 * 60, freshAge: 15 * 60, cookieCache: { enabled: false },
+      additionalFields: { googleAuthenticatedAt: { type: "date", required: false, input: false, returned: false } },
+    },
+    databaseHooks: { session: { create: { before: async (_session, context) => {
+      // In the pinned SDK this INSERT is reached only after the configured provider verified the
+      // idToken and resolved its user. A magic link, a linked account or an older session never
+      // inherits the marker; the portal MCP consents only from a Google-created session.
+      const googleAuthenticated = Boolean(input.google && context?.path === "/sign-in/social"
+        && context.method === "POST" && context.body?.provider === "google"
+        && typeof context.body.idToken?.token === "string" && context.body.idToken.token.length > 0
+        && context.context.socialProviders.some(provider => provider.id === "google"));
+      // Always replace any supplied marker. Undefined (column omitted, so NULL) for every other
+      // creation path, which also keeps magic-link sign-in working on a schema before 0028.
+      return { data: { googleAuthenticatedAt: googleAuthenticated ? new Date() : undefined } };
+    } } } },
     rateLimit: { enabled: true, storage: "database", window: 60, max: 60 },
     advanced: { ipAddress: { ipAddressHeaders: [AUTH_RATE_LIMIT_HEADER], ipv6Subnet: 128 }, crossSubDomainCookies: { enabled: false }, useSecureCookies: origin.protocol === "https:" },
     // Provider/adapter diagnostics can contain identities or credentials. The app's

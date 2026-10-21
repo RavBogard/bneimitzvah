@@ -1,5 +1,17 @@
 # State — CRC B'nei Mitzvah portal
 
+## Current return point — 2026-10-21 night: toward 1.0
+
+**Daniel, 2026-10-21 night:** "continue until we are feature complete and 1.0 released." Rulings the same evening: (1) the Bamidbar guide goes live now, labelled unreviewed until the MCP can record his review; (2) rewrite history to remove a student's details that a STATE line had exposed; (3) the tikkun uses the Culmus "Stam Ashkenaz CLM" face; (4) Maven reaches the portal through Cowork (Claude reads Maven with Daniel's existing connector and proposes roster changes through the portal MCP; the portal stores no Maven credential); (5) the roster Sheet is written by a free Google service account; (6) no translation picker in 1.0: the main text stays JPS 2023 (amends ruling 12's "translation picker across editions").
+
+**Portal MCP:** built on branch `claude/mcp` per [MCP-DECIDED](../2026-10-21-torah-study/MCP-DECIDED.md): the portal's own Google sign-in plus the haftarah connector's OAuth pattern, replacing the 2026-10-18 design's Better Auth `mcp()` choice. Migration `0028_portal_mcp` (session Google marker, `mcp_connection`, `mcp_token`). Disabled until `PORTAL_MCP_ENABLED=true` after the second-agent review.
+
+**Remaining 1.0 engineering (gap audit 2026-10-21):** MCP; tikkun view and printable practice sheet; rehearsal dates; "this word elsewhere"; congregation settings, the rabbi's default sources and minimal onboarding; roster tools for the Maven-through-Cowork intake; the owned roster Sheet. Daniel's own gates: listening acceptance before the student reference-audio flip, phone acceptance, connecting Cowork, creating and sharing the roster Sheet, the real roster import and invitations, and the pilot.
+
+- GATE: applied the Bamidbar base guide in production through the operator bridge (version 1, 4 themes, 32 notes, 66 sources, all resolved by Sefaria) — proceeded because Daniel chose "go live now" and the dry run was valid.
+- GATE: rewrote three pushed commits on main (PR #5) to drop one STATE line naming a student, and force-pushed with a lease — proceeded because Daniel explicitly approved this exception to the no-rewrite rule; only that line changed (verified by tree diff). GitHub keeps the old commits reachable through the closed PR refs until GitHub support purges them; that request is Daniel's.
+- GATE: replaced the 2026-10-18 MCP library choice with the haftarah-pattern OAuth on the portal's Google sign-in — proceeded because the binding rulings are unchanged, Daniel asked for the simple path, and the pattern already works with his Claude connectors.
+
 ## Current return point — 2026-10-21 study guides released
 
 **Live:** main `80fd87b` (PR #4) is READY in Production as `dpl_5NWtscgTuBJTHHfARLWYgRAkeRFn` on all aliases. PR #4's exact CI 39657590677 passed all four jobs. Migration `0027_study_guides` was applied first (ledger 28 rows): four tables with RLS forced, runtime SELECT/INSERT only, study audit actions present, existing data unchanged. Anonymous probes of the new routes on the canonical host return 401 with private no-store; home 200.
