@@ -59,7 +59,8 @@ export async function fetchShortExplorationPage(baseline: Assigned, suppliedPrep
   try {
     live(); const headers = new Headers({ accept: "application/json" }); if (selected) headers.set("X-Practice-Context", selected.handle);
     headers.set("content-type", "application/json");
-    const response = await wait(fetch(path, { method: "POST", body: JSON.stringify({ mode: expected.mode, binding: prepared.binding, offset: page.offset }), headers, signal: controller.signal, credentials: "same-origin", mode: "same-origin", redirect: "error", cache: "no-store", referrerPolicy: "no-referrer" }), 15000, r => cancel(r.body));
+    // Preserve the exact Origin on Firefox's same-origin POST; redirects remain refused.
+    const response = await wait(fetch(path, { method: "POST", body: JSON.stringify({ mode: expected.mode, binding: prepared.binding, offset: page.offset }), headers, signal: controller.signal, credentials: "same-origin", mode: "same-origin", redirect: "error", cache: "no-store", referrerPolicy: "same-origin" }), 15000, r => cancel(r.body));
     try {
       if (!response.ok) throw new PortalRequestError([400, 401, 403, 404, 409, 429, 503].includes(response.status) ? response.status : 503);
       if (response.redirected || response.url !== origin + path || response.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json" || !response.body) return bad();
