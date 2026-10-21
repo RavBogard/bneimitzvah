@@ -271,6 +271,20 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
         return action(t, fresh, alive);
       });
     },
+    /**
+     * Sign a roster plan (Maven intake) for this connection alone: tenant and connection are bound into
+     * the HMAC, so the token is refused on any other connection, tenant or after TTL.rosterPlan.
+     */
+    sealRosterPlan(actor: McpActor, plan: Record<string, unknown>): { token: string; expiresAt: number } {
+      const at = now();
+      return { token: sign(input.secret, "rp", { ...plan, tenant: actor.tenantId, connection: actor.connectionId }, TTL.rosterPlan, at), expiresAt: at + TTL.rosterPlan };
+    },
+    /** The signed plan when its mac, expiry, tenant and connection all hold; null otherwise. */
+    openRosterPlan(actor: McpActor, token: unknown): Record<string, unknown> | null {
+      const plan = verify(input.secret, "rp", token, now());
+      return plan && plan.tenant === actor.tenantId && plan.connection === actor.connectionId ? plan : null;
+    },
+    now,
     /** The portal Actor shape existing student-access helpers take, for an MCP connection. */
     portalActor(actor: McpActor): Actor {
       return Object.freeze({ tenantId: actor.tenantId, origin: actor.origin, userId: actor.userId, authSessionId: "", membershipId: actor.membershipId,

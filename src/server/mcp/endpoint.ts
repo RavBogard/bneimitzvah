@@ -19,8 +19,10 @@ import { answerRpc } from "./transport";
 export function createMcpEndpoint<Q extends PgQueryResultHKT>(input: {
   db: AccessDatabase<Q>; access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>; secret: string;
   loadText: (request: StudyRequest) => Promise<StudyPage>; related: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>;
+  /** The clock, for tests; Date.now otherwise. */
+  now?: () => number;
 }) {
-  const mcp = createMcpAuthService({ db: input.db, access: input.access, secret: input.secret });
+  const mcp = createMcpAuthService({ db: input.db, access: input.access, secret: input.secret, now: input.now });
   const guides = createStudyGuideService({ access: input.access, practice: input.practice, check: createGuideChecker({ related: input.related }) });
   const tools = createTools<Q>();
   return Object.freeze({

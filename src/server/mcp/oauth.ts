@@ -8,7 +8,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypt
 // random and stored only as SHA-256 hashes (mcp_token), so a connection can be revoked.
 export const SCOPES = { read: "portal:read", study: "portal:study" } as const;
 export const MCP_PATH = "/api/mcp";
-export const TTL = { client: 10 * 365 * 24 * 3600_000, request: 10 * 60_000, code: 5 * 60_000, access: 3600_000, connection: 30 * 24 * 3600_000 } as const;
+export const TTL = { client: 10 * 365 * 24 * 3600_000, request: 10 * 60_000, code: 5 * 60_000, access: 3600_000, connection: 30 * 24 * 3600_000, rosterPlan: 30 * 60_000 } as const;
 export const CLAUDE_CALLBACKS: readonly string[] = Object.freeze(["https://claude.ai/api/mcp/auth_callback", "https://claude.com/api/mcp/auth_callback"]);
 
 const b64 = (s: string) => Buffer.from(s, "utf8").toString("base64url");
@@ -17,7 +17,8 @@ export const hashOpaque = (s: string) => createHash("sha256").update(s, "utf8").
 export const pkceChallenge = (verifier: string) => createHash("sha256").update(verifier, "ascii").digest("base64url");
 export const randomToken = () => randomBytes(32).toString("base64url");
 
-type Kind = "mc" | "mr";
+/** mc: a registered client; mr: a pending consent request; rp: a reviewed roster plan (Maven intake). */
+type Kind = "mc" | "mr" | "rp";
 /** `<kind>.<payload>.<mac>`, the payload JSON with `iat`/`exp` in milliseconds. */
 export function sign(secret: string, kind: Kind, payload: Record<string, unknown>, ttlMs: number, now: number): string {
   const body = b64(JSON.stringify({ ...payload, iat: now, exp: now + ttlMs }));
