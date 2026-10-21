@@ -5,6 +5,7 @@ import { RequireRole, statusOf, useWorkspace } from "../provider";
 import { REVIEW_CHECKS, reviewApi, type Batch, type Check, type Checks, type Detail, type Entry } from "./api";
 import styles from "./review.module.css";
 import hebrew from "../../../../styles/hebrew-font.module.css";
+import { studyEditions } from "../study/credits";
 
 const labels: Record<Check, [string, string]> = {
   privacy: ["Privacy", "No personal names, lesson conversation or other private material is audible."],
@@ -17,6 +18,13 @@ type Draft = Record<Check, "pass" | "hold" | "">;
 const emptyChecks = (): Draft => ({ privacy: "", listening: "", exactText: "", musicalAccuracy: "", rights: "" });
 const displayDate = (value: string) => new Date(value).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 const title = (entry: Entry) => entry.verses.length === 1 ? entry.verses[0] : `${entry.verses.length} verses · ${entry.verses[0]}`;
+export function ReferenceReviewCredits() {
+  const edition = studyEditions.mam;
+  return <aside aria-label="Recording and Hebrew text credits"><p>Teaching collection shared by Cantor Josh Finkel.</p>
+    <details className="study-credits"><summary>Hebrew text source, license and changes</summary><h4>{edition.versionTitle}</h4><p>{edition.creator}</p>
+      <p><a href={edition.sourceUrl} target="_blank" rel="noopener noreferrer">Edition source</a> · <a href={edition.licenseUrl} target="_blank" rel="noopener noreferrer">{edition.license}</a></p><p>{edition.changes}</p>
+    </details></aside>;
+}
 export function ReferenceReviewWorkspace() { return <RequireRole role="admin"><Review /></RequireRole>; }
 function Review() {
   const { concealed, registerReload, registerQuiet, registerDeparture } = useWorkspace();
@@ -133,6 +141,7 @@ function Review() {
           <section className={styles.listening} aria-label="Private listening"><button type="button" className="button-primary" disabled={pending || blocked || audioPending || audioReady} onClick={() => void listen()}>{audioPending ? "Preparing recording…" : audioReady ? "Recording ready" : "Prepare recording"}</button>
             <audio ref={node => { media.current = node; node?.setAttribute("disableremoteplayback", ""); }} controls controlsList="nodownload noremoteplayback" preload="none" aria-label="Review recording" onPlay={liveMedia} onTimeUpdate={liveMedia} onError={() => { if (objectUrl.current) { stopAudio(); setFailed(true); setMessage("This recording couldn’t play. Prepare it again to retry."); } }} />
             <p>Compare the complete recording with every verse above. Phrase timing has not been reviewed.</p></section>
+          <ReferenceReviewCredits />
           <form className={styles.form} onSubmit={event => { event.preventDefault(); void save(); }}><h3>Review checks</h3>
             {entry.decision && <p className={styles.saved}>Saved {displayDate(entry.decision.createdAt)} · {entry.decision.wholeClipAccepted ? "All checks passed" : "On hold"}</p>}
             {REVIEW_CHECKS.map(key => <fieldset key={key} disabled={pending || blocked}><legend>{labels[key][0]}</legend><p>{labels[key][1]}</p><div className={styles.choices}>{(["pass", "hold"] as const).map(value => <label key={value}><input type="radio" name={`review-${key}`} value={value} checked={checks[key] === value} onChange={() => { setChecks(previous => ({ ...previous, [key]: value })); setDirty(true); }} />{value === "pass" ? "Pass" : "Hold"}</label>)}</div></fieldset>)}

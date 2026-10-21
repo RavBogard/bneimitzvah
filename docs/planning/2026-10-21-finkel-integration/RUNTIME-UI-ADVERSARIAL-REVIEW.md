@@ -40,3 +40,20 @@ Runtime source/CI/deployment/provider and real-batch admission are separate gate
 | tests/http-browser/fixture.ts | ed28dc24bdb3838f41aaed831e831d8be43fe424c44a675f163121fff3f7e047 |
 | tests/http-browser/server.ts | ee25a465a85d76da8a279df87e7f7cf1e2e4c388ea645941f58ec157b8e3188d |
 | tests/app/portal-routes-fixture.ts | 5ae0033041f74e19aa7d1bc4816bb4d24a8752f72895d48598f601977b886f9a |
+
+## 2026-10-21 canonical-text and credit amendment
+
+A second independent pass found that the private review UI displayed canonical MAM Hebrew without its edition/source/license/change attribution. The original GO missed this admission-readiness issue. Actual canonical text had not been admitted. The implementation worker added a static MAM-only credit using the existing studyEditions.mam constant, plus the truthful collection-level credit “Teaching collection shared by Cantor Josh Finkel.” It makes no performer claim, displays no JPS translation/credit, retains safe HTTPS/new-window links and does not consume any private provenance strings. I independently reviewed this correction and its DOM/SSR test: GO.
+
+PhaseA also exposed a real canonical-reader blocker: one English verse outside the selected haftarah excerpt used Sefaria’s inert poetry/indentAllDouble wrapper. The unchanged reader correctly rejected the whole chapter under its previous closed class contract. The worker added only the literal indentAllDouble token to the existing English inert class allowlist. No tags, attributes, Hebrew semantics or text interpretation changed. Synthetic tests preserve nested text and ordinary line breaks, reject unknown/prefix classes and title/style/onclick, and retain Hebrew refusal. I independently reviewed the exact four-file source/test diff: GO.
+
+Independently ran normalization, Hebrew trivial-markup, review-client and credit suites in the isolated canonical-text checkout: 86/86 passed. Evidence: .local-logs/canonical-text-and-credit-independent-review-v1.log. No licensed source text or real media was added to the repository. Existing integration/CI/provider gates still apply; phaseA must rerun against the final integrated reader source rather than bypassing its validation.
+
+These hashes supersede the earlier workspace.tsx hash for this amendment and add the three other reviewed files. Other previously accepted runtime/UI sources remain unchanged.
+
+| File | SHA-256 of amended working bytes |
+| --- | --- |
+| src/server/study/normalize.ts | 53744ac8d6cfd6872f6a29fea423067458913714cc49ed9871f8b08c48e5a8cb |
+| tests/app/study-normalize.test.ts | a85eecb01149e22e5d344b5d2b765409acb819ce8e8e63368dbcd1358596b663 |
+| src/components/portal/workspace/reference-review/workspace.tsx | d565e2ed11af94576e58447e3d91570d881d7376b88e8b2738217ffbd87f4a38 |
+| tests/app/reference-review-credits.test.ts | b41d6ac85e73cbf50d4a636c4b4a1e8027febe6d3d45d6de0b54250095c3eccd |

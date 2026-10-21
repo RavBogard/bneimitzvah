@@ -39,7 +39,7 @@ function basic(node: Node, hebrew: boolean): string {
   if (note(el)) return ""; // Entire subtree omitted; never render or follow links.
   const cls = classes(el);
   if (!["b", "i", "small", "big", "span", "br"].includes(el.tagName)
-    || cls.some(c => hebrew || !["poetry", "indentAll"].includes(c))) invalid();
+    || cls.some(c => hebrew || !["poetry", "indentAll", "indentAllDouble"].includes(c))) invalid();
   if (el.tagName === "br") return hebrew ? " " : "\n";
   return el.childNodes.map(child => basic(child, hebrew)).join("");
 }

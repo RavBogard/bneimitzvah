@@ -120,6 +120,23 @@ describe("synthetic study plaintext normalization", () => {
     expect(normalizeEnglish(" &nbsp; ")).toBeNull();
     expect(normalizeEnglish("&lt;img&gt;")).toBe("<img>"); // Plain text, never trusted HTML.
   });
+  it("retains translation text and ordinary line breaks through the inert double-indent poetry wrapper", () => {
+    expect(normalizeEnglish('Synthetic first<br><span class="poetry indentAllDouble"><small>second &amp; third</small><br><span class="indentAll">fourth</span></span>'))
+      .toBe("Synthetic first\nsecond & third\nfourth");
+    expect(normalizeEnglish('<span class="indentAllDouble">Synthetic only</span>')).toBe("Synthetic only");
+  });
+  it.each([
+    '<span class="poetry indentAllDouble unknown">Synthetic</span>',
+    '<span class="poetry indentAllDoubleExtra">Synthetic</span>',
+    '<span class="poetry indentAllDouble" title="synthetic">Synthetic</span>',
+    '<span class="poetry indentAllDouble" style="display:none">Synthetic</span>',
+    '<span class="poetry indentAllDouble" onclick="throw()">Synthetic</span>',
+  ])("does not permit unknown translation classes or attributes alongside double indentation (%#)", input => {
+    expect(() => normalizeEnglish(input)).toThrow("Unsupported study markup");
+  });
+  it.each(['<span class="indentAllDouble">אָב</span>', '<span class="poetry indentAllDouble">אָב</span>'])("keeps double indentation outside the Hebrew markup contract (%#)", input => {
+    expect(() => normalizeHebrew(input)).toThrow("Unsupported study markup");
+  });
   it.each([
     '<script>throw()</script>אָב', '<img src="https://example.test">אָב', '<svg><text>אָב</text></svg>',
     '<span onclick="throw()">אָב</span>', '<span style="display:none">אָב</span>',
