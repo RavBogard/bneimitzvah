@@ -1,6 +1,7 @@
 import "server-only";
 import { AccessUnavailable } from "../access/errors";
 import type { MusicBroker, MusicProjection, MusicResult, MusicRow } from "./contract";
+export class MusicIntentSuperseded extends AccessUnavailable{}
 
 const object = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new AccessUnavailable();
@@ -11,6 +12,8 @@ const string = (value: unknown, max = 256): string => {
   return value;
 };
 const optional = (value: unknown, max?: number) => value === undefined ? undefined : string(value, max);
+const display=(value:unknown,max:number)=>{if(typeof value!=="string" || value.length>max || /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(value))throw new AccessUnavailable();return value;};
+const optionalDisplay=(value:unknown,max:number)=>value===undefined?undefined:display(value,max);
 function safeUrl(value: unknown, origin: string) {
   const url = new URL(string(value, 2048));
   if (url.protocol !== "https:" || url.origin !== origin || url.username || url.password) throw new AccessUnavailable();
@@ -35,12 +38,12 @@ export function parseMusicResult(value: unknown, origin: string): MusicResult {
     const arrangement = row.arrangement === undefined ? undefined : object(row.arrangement);
     const liturgy = row.liturgyRef === undefined ? undefined : object(row.liturgyRef);
     if (liturgy && (!Number.isSafeInteger(liturgy.folio) || Number(liturgy.folio) < 1)) throw new AccessUnavailable();
-    return { rowId, order: Number(row.order), title: string(row.title), prayerId: optional(row.prayerId, 200),momentId:optional(row.momentId,200),
-      catalogUnitId: optional(row.catalogUnitId, 200), biblicalRef: optional(row.biblicalRef), edition: optional(row.edition), textIdentity: optional(row.textIdentity),
-      sharedDirections: optional(row.sharedDirections, 2000),
+    return { rowId, order: Number(row.order), title: display(row.title,200), prayerId: optionalDisplay(row.prayerId,200),momentId:optionalDisplay(row.momentId,200),
+      catalogUnitId: optionalDisplay(row.catalogUnitId,200), biblicalRef: optionalDisplay(row.biblicalRef,200), edition: optionalDisplay(row.edition,200), textIdentity: optionalDisplay(row.textIdentity,200),
+      sharedDirections: optionalDisplay(row.sharedDirections,2000),
       ...(liturgy ? { liturgyRef: { book: string(liturgy.book), folio: Number(liturgy.folio), unitId: optional(liturgy.unitId, 200), serviceViewId: optional(liturgy.serviceViewId, 200) } } : {}),
       ...(arrangement ? { arrangement: { songId: optional(arrangement.songId, 128), fileId: optional(arrangement.fileId, 128), key: optional(arrangement.key, 64) } } : {}),
-      resources: row.resources.map(value => { const r = object(value); if (r.kind !== "score" && r.kind !== "audio") throw new AccessUnavailable(); return { resourceId: string(r.resourceId, 128), kind: r.kind, label: string(r.label) }; }),
+      resources: row.resources.map(value => { const r = object(value); if (r.kind !== "score" && r.kind !== "audio") throw new AccessUnavailable(); return { resourceId: string(r.resourceId,128), kind:r.kind,label:display(r.label,100) }; }),
     };
   });
   const projection: MusicProjection = { setlistId: string(p.setlistId, 128), sourceRevision: string(p.sourceRevision), localDate: p.localDate as string,
@@ -56,11 +59,13 @@ export function createMusicBroker(config: { url: string; token: string } | undef
     if (endpoint.protocol !== "https:" || endpoint.username || endpoint.password || endpoint.search || endpoint.hash || endpoint.pathname !== "/api/integrations/beit-mitzvah/v1") throw new AccessUnavailable();
     const response = await fetcher(endpoint.href, { method: "POST", headers: { authorization: `Bearer ${config.token}`, "x-org-id":"crc", "content-type": "application/json" },
       body: JSON.stringify({ version: 1, orgId: "crc", ...body }), cache: "no-store", redirect: "error", signal: signal ? AbortSignal.any([signal,AbortSignal.timeout(12_000)]) : AbortSignal.timeout(12_000) });
-    if (!response.ok || !response.body) throw new AccessUnavailable();
+    if (!response.body) throw new AccessUnavailable();
     const reader = response.body.getReader(), chunks: Uint8Array[] = []; let length = 0;
     try { for (;;) { const chunk = await reader.read(); if (chunk.done) break; length += chunk.value.length; if (length > 160_000) throw new AccessUnavailable(); chunks.push(chunk.value); } }
     finally { await reader.cancel().catch(() => undefined); }
-    return { result: JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown, origin: endpoint.origin };
+    const decoded=JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+    if(!response.ok){if(response.status===409 && object(decoded).error==="stale_schedule_revision")throw new MusicIntentSuperseded();throw new AccessUnavailable();}
+    return { result:decoded, origin: endpoint.origin };
   }
   async function result(body: Record<string, unknown>,signal?:AbortSignal) { const value = await post(body,signal); return parseMusicResult(value.result, value.origin); }
   return {

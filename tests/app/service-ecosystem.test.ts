@@ -6,11 +6,12 @@ import { accessFixture } from "./access-fixture";
 import * as s from "../../src/server/db/index";
 import { createStudentService } from "../../src/server/students/service";
 import { createServiceEcosystemService } from "../../src/server/service-ecosystem/service";
-import { scheduleCeremony } from "../../src/server/service-ecosystem/scheduling";
+import { scheduleCeremony,ceremonyLocalDate } from "../../src/server/service-ecosystem/scheduling";
 import type { MusicBroker, MusicProjection, MusicResult } from "../../src/server/service-ecosystem/contract";
 import { AccessDenied, AccessUnavailable } from "../../src/server/access/errors";
 import { createServiceScheduler } from "../../src/server/service-ecosystem/scheduler";
 import { syntheticServiceCatalog } from "../helpers/service-learning";
+import {createPracticeService}from "../../src/server/practice/service";
 
 const open: Awaited<ReturnType<typeof accessFixture>>[] = [];
 afterEach(async () => { await Promise.all(open.splice(0).map(f => f.client.close())); });
@@ -22,7 +23,7 @@ async function fixture() {
   const linked = (): MusicResult => { if (!available) throw new AccessUnavailable(); return { version: 1, status: "linked", setlistId: projection.setlistId, sourceRevision: projection.sourceRevision, projection: structuredClone(projection) }; };
   const broker: MusicBroker = { ensure: vi.fn(async (input): Promise<MusicResult> => { if (!available) throw new AccessUnavailable(); if (ambiguous && !input.explicitSetlistId) return { version: 1, status: "ambiguous", candidates: [{ setlistId: "synthetic-set" }, { setlistId: "synthetic-other" }] }; return linked(); }),
     projection: vi.fn(async () => linked()), resource: vi.fn(async (_ceremony, _row, resourceId) => { if (!available) throw new AccessUnavailable(); return { resourceId, kind: "score" as const, url: "https://music.example.test/api/scoped/synthetic", expiresAt: new Date(Date.now() + 60000).toISOString() }; }) };
-  const service = createServiceEcosystemService({ access: f.service, broker });
+  const practice=createPracticeService({access:f.service}),service=createServiceEcosystemService({access:f.service,practice,broker});
   const students = createStudentService({ access: f.service, signingSecret: randomBytes(48).toString("base64url"), loadReading: async () => { throw new Error("Synthetic calendar unused"); }, afterSchedule: service.synchronize });
   const mutation = (who: "admin" | "multi" | "learner" = "admin", origin = "http://localhost:3000") => ({ ...f.request(who, "http://localhost:3000", { origin }), method: "POST" });
   const selection = { studentId: f.students[0].id, mode: "admin" as const };
@@ -31,7 +32,7 @@ async function fixture() {
     await scheduleCeremony(tx, actor.tenantId, { id: f.students[index].id, ceremonyDate: "2027-01-02", serviceSlot: "morning" });
   }); }
   const assign = () => service.assign(mutation(), { ...selection, rowId: "stable-part", expectedRevision: 0, expectedStudentRevision:1,sourceRevision:projection.sourceRevision,leads: true, directions: "Synthetic student directions", privateFeedback: "Synthetic private feedback" });
-  return { ...f, broker, ecosystem: service, studentsService: students, mutation, selection, scheduled, assign,
+  return { ...f,practice,broker,ecosystem:service,studentsService:students,mutation,selection,scheduled,assign,
     unavailable: () => { available = false; }, restore: () => { available = true; }, ambiguous: () => { ambiguous = true; }, change: (next: Partial<MusicProjection>) => { projection = { ...projection, ...next }; }, projection: () => structuredClone(projection) };
 }
 async function denied(action: () => Promise<unknown>, status: number) { try { await action(); return false; } catch (error) { return error instanceof AccessDenied && error.status === status; } }
@@ -187,4 +188,107 @@ test("a score grant reapproved as audio between projection and ticket issuance c
   const f=await fixture();await f.scheduled();await f.ecosystem.synchronize(f.mutation(),f.selection);
   vi.mocked(f.broker.resource).mockResolvedValue({resourceId:"synthetic-resource",kind:"audio",url:"https://music.example.test/api/scoped/synthetic",expiresAt:new Date(Date.now()+60000).toISOString()});
   for(const [who,mode]of [["learner","student"],["multi","parent"]]as const)await expect(f.ecosystem.resource(f.mutation(who),{...f.selection,mode,rowId:"stable-part",resourceId:"synthetic-resource"})).rejects.toBeInstanceOf(AccessUnavailable);
+});
+
+test("a retained ceremony submits ordered reschedule intents with new keys and the same explicit source setlist",async()=>{
+  const f=await fixture();await f.scheduled();await f.ecosystem.synchronize(f.mutation(),f.selection);
+  const original=vi.mocked(f.broker.ensure).mock.calls[0][0];
+  const student=(await f.owner(()=>f.db.select().from(s.student).where(eq(s.student.id,f.selection.studentId))))[0];
+  await f.studentsService.edit(f.mutation(),{mode:"admin",studentId:student.id,expectedRevision:student.revision,student:{firstName:student.firstName,lastName:student.lastName,ceremonyDate:"2027-09-04",serviceSlot:"havdalah",studentKind:"child",parentEmail:"synthetic@example.test"}});
+  const rescheduled=vi.mocked(f.broker.ensure).mock.calls.at(-1)![0];
+  expect(rescheduled).toMatchObject({ceremonyId:original.ceremonyId,localDate:"2027-09-04",ceremonyType:"havdalah",scheduleRevision:2,explicitSetlistId:"synthetic-set"});expect(rescheduled.idempotencyKey).not.toBe(original.idempotencyKey);
+  f.change({localDate:"2027-09-04",ceremonyType:"havdalah",sourceRevision:"confirmed-schedule-2"});
+  const view=await f.ecosystem.view(f.request("learner"),{...f.selection,mode:"student"});if(!("ceremony"in view))throw new Error("Synthetic ceremony missing");expect(view.ceremony.needsReconciliation).toBe(false);expect(view.ceremony.date).toBe("2027-09-04");
+});
+
+test("explicit joint separation moves only the selected student, preserves previous progress and leaves the shared source intact",async()=>{
+  const f=await fixture();await f.scheduled();await f.scheduled(1);await f.ecosystem.synchronize(f.mutation(),f.selection);await f.assign();
+  await f.ecosystem.progress(f.mutation("learner"),{...f.selection,mode:"student",rowId:"stable-part",expectedRevision:1,progress:"ready"});
+  const old=(await f.owner(()=>f.db.select().from(s.studentCeremony).where(eq(s.studentCeremony.studentId,f.selection.studentId))))[0];
+  const student=(await f.owner(()=>f.db.select().from(s.student).where(eq(s.student.id,f.selection.studentId))))[0];
+  await f.studentsService.edit(f.mutation(),{mode:"admin",studentId:student.id,expectedRevision:student.revision,student:{firstName:student.firstName,lastName:student.lastName,ceremonyDate:"2027-10-02",serviceSlot:"havdalah",studentKind:"child",parentEmail:"synthetic@example.test"}});
+  const conflict=await f.ecosystem.view(f.request("admin"),f.selection);if(!("ceremony"in conflict))throw new Error("Synthetic ceremony missing");expect(conflict.ceremony.scheduleConflict).toBe(true);
+  expect(await denied(()=>f.ecosystem.separate(f.mutation("multi"),{...f.selection,mode:"parent",expectedCeremonyRevision:conflict.ceremony.revision}),403)).toBe(true);
+  expect(await f.ecosystem.separate(f.mutation(),{...f.selection,expectedCeremonyRevision:conflict.ceremony.revision})).toEqual({ok:true});
+  const links=await f.owner(()=>f.db.select().from(s.studentCeremony));expect(links.find(l=>l.studentId===f.students[1].id)?.ceremonyId).toBe(old.ceremonyId);expect(links.find(l=>l.studentId===student.id)?.ceremonyId).not.toBe(old.ceremonyId);
+  expect((await f.owner(()=>f.db.select().from(s.studentServicePart)))[0]).toMatchObject({ceremonyId:old.ceremonyId,progress:"ready"});
+  const original=(await f.owner(()=>f.db.select().from(s.serviceCeremony).where(eq(s.serviceCeremony.id,old.ceremonyId))))[0];expect(original.setlistId).toBe("synthetic-set");expect(original.scheduleConflict).toBe(false);
+  const history=await f.ecosystem.view(f.request("multi"),{...f.selection,mode:"parent"});if(!("previousWork"in history))throw new Error("Synthetic history missing");expect(history.previousWork[0]).toMatchObject({progress:"ready",directions:"Synthetic student directions"});expect(JSON.stringify(history.previousWork)).not.toContain("private feedback");
+});
+
+test("Chicago's future local day is scheduled during the UTC-date crossover",async()=>{
+  const f=await fixture(),time=Date.parse("2026-10-21T00:30:00Z");expect(ceremonyLocalDate(time)).toBe("2026-10-20");
+  const students=createStudentService({access:f.service,signingSecret:randomBytes(48).toString("base64url"),now:()=>time,loadReading:async()=>{throw new Error("Synthetic unused");}});
+  const created=await students.create(f.mutation(),{mode:"admin",student:{firstName:"Synthetic",lastName:"Local tomorrow",ceremonyDate:"2026-10-21",serviceSlot:"morning",parentEmail:"synthetic@example.test"}});
+  expect(await f.owner(()=>f.db.select().from(s.studentCeremony).where(eq(s.studentCeremony.studentId,created.id)))).toHaveLength(1);
+});
+
+test("an explicit ambiguous choice is pending and independently drainable immediately after its durable commit",async()=>{
+  const f=await fixture();await f.scheduled();f.ambiguous();await f.ecosystem.synchronize(f.mutation(),f.selection);
+  let entered!:()=>void,release!:()=>void;const entry=new Promise<void>(resolve=>{entered=resolve;}),barrier=new Promise<void>(resolve=>{release=resolve;});
+  vi.mocked(f.broker.ensure).mockImplementationOnce(async()=>{entered();await barrier;return {version:1,status:"linked",setlistId:f.projection().setlistId,sourceRevision:f.projection().sourceRevision,projection:f.projection()};});
+  const manual=f.ecosystem.synchronize(f.mutation(),{...f.selection,explicitSetlistId:"synthetic-set"});await entry;
+  const [job]=await f.owner(()=>f.db.select().from(s.serviceCeremony));expect(job).toMatchObject({state:"pending",selectedSetlistId:"synthetic-set",scheduleRevision:2});
+  const scheduler=createServiceScheduler({db:f.db,broker:f.broker});expect(await scheduler.run({maxJobs:1})).toEqual({attempted:1,completed:1});release();expect(await manual).toEqual({ok:false,code:"stale-revision"});
+  expect(vi.mocked(f.broker.ensure).mock.calls.at(-1)![0]).toMatchObject({explicitSetlistId:"synthetic-set",scheduleRevision:2});
+});
+
+test("split intent excludes the retained source even if date matching would return it, and keeps that exclusion on retries",async()=>{
+  const f=await fixture();await f.scheduled();await f.scheduled(1);await f.ecosystem.synchronize(f.mutation(),f.selection);
+  const [student]=await f.owner(()=>f.db.select().from(s.student).where(eq(s.student.id,f.selection.studentId)));
+  await f.studentsService.edit(f.mutation(),{mode:"admin",studentId:student.id,expectedRevision:student.revision,student:{firstName:student.firstName,lastName:student.lastName,ceremonyDate:"2027-11-06",serviceSlot:"morning",studentKind:"child",parentEmail:"synthetic@example.test"}});
+  const view=await f.ecosystem.view(f.request("admin"),f.selection);if(!("ceremony"in view))throw new Error("Synthetic ceremony missing");
+  await f.ecosystem.separate(f.mutation(),{...f.selection,expectedCeremonyRevision:view.ceremony.revision});
+  // A source edit could put the retained service on the target date; the protocol still must exclude it.
+  await expect(f.ecosystem.synchronize(f.mutation(),f.selection)).rejects.toBeInstanceOf(AccessUnavailable);
+  const excluded=vi.mocked(f.broker.ensure).mock.calls.at(-1)![0];expect(excluded.excludedSetlistId).toBe("synthetic-set");expect(excluded.explicitSetlistId).toBeUndefined();
+  vi.mocked(f.broker.ensure).mockImplementation(async input=>{if(input.excludedSetlistId!=="synthetic-set")throw new Error("Synthetic exclusion missing");const projection={...f.projection(),setlistId:"synthetic-distinct",localDate:input.localDate,ceremonyType:input.ceremonyType};return{version:1,status:"linked",setlistId:projection.setlistId,sourceRevision:projection.sourceRevision,projection};});
+  expect(await f.ecosystem.synchronize(f.mutation(),f.selection)).toEqual({ok:true,state:"linked"});
+  expect(vi.mocked(f.broker.ensure).mock.calls.at(-1)![0].excludedSetlistId).toBe(excluded.excludedSetlistId);
+  const ceremonies=await f.owner(()=>f.db.select().from(s.serviceCeremony));expect(ceremonies.map(c=>c.setlistId).sort()).toEqual(["synthetic-distinct","synthetic-set"]);
+});
+
+test("a never-linked joint conflict can explicitly finish its original connection before a distinct split",async()=>{
+  const f=await fixture();await f.scheduled();await f.scheduled(1);
+  const [student]=await f.owner(()=>f.db.select().from(s.student).where(eq(s.student.id,f.selection.studentId)));
+  // Avoid the fixture's optional inline connector so this captures an interrupted first dispatch.
+  await f.service.withStudentCapability(f.mutation(),{...f.selection,capability:"set-service-plan"},async(tx,actor)=>{await tx.update(s.student).set({ceremonyDate:"2027-12-04",revision:2}).where(eq(s.student.id,student.id));await scheduleCeremony(tx,actor.tenantId,{id:student.id,ceremonyDate:"2027-12-04",serviceSlot:"morning"});});
+  const view=await f.ecosystem.view(f.request("admin"),f.selection);if(!("ceremony"in view))throw new Error("Synthetic ceremony missing");
+  await expect(f.ecosystem.separate(f.mutation(),{...f.selection,expectedCeremonyRevision:view.ceremony.revision})).rejects.toBeInstanceOf(AccessUnavailable);
+  expect(await f.ecosystem.resolveOriginal(f.mutation(),{...f.selection,expectedCeremonyRevision:view.ceremony.revision})).toEqual({ok:true});
+  const [job]=await f.owner(()=>f.db.select().from(s.serviceCeremony));expect(job).toMatchObject({scheduleConflict:true,originalConnectionPending:true,state:"pending",requestedDate:"2027-01-02",requestedType:"morning"});
+  expect(await createServiceScheduler({db:f.db,broker:f.broker}).run({maxJobs:1})).toEqual({attempted:1,completed:1});
+  const intent=vi.mocked(f.broker.ensure).mock.calls.at(-1)![0];expect(intent.localDate).toBe("2027-01-02");
+  const [known]=await f.owner(()=>f.db.select().from(s.serviceCeremony));expect(known.setlistId).toBe("synthetic-set");expect(known.originalConnectionPending).toBe(false);
+});
+
+test("selected child practice permits linked guardian viewing and requests, with no private feedback, progress/staff authority or sibling leakage",async()=>{
+  const f=await fixture();await f.scheduled();await f.ecosystem.synchronize(f.mutation(),f.selection);await f.assign();
+  await f.owner(()=>f.db.update(s.guardian).set({practiceEnabled:true,revision:2}));
+  const selected=await f.practice.enter(f.mutation("multi"),{studentId:f.selection.studentId});
+  const request={...f.mutation("multi"),headers:new Headers({...Object.fromEntries(f.mutation("multi").headers),"X-Practice-Context":selected.handle})};
+  const child={...f.selection,mode:"child-practice"as const},view=await f.ecosystem.view(request,child);
+  expect(view.state).toBe("linked");expect(JSON.stringify(view)).not.toContain("private feedback");expect(JSON.stringify(view)).not.toContain("operatorLinks");
+  expect((await f.ecosystem.requestChange(request,{...child,rowId:"stable-part",message:"Synthetic parent practice request"})).ok).toBe(true);
+  expect(await denied(()=>f.ecosystem.progress(request,{...child,rowId:"stable-part",expectedRevision:1,progress:"ready"}),403)).toBe(true);
+  expect(await denied(()=>f.ecosystem.synchronize(request,child),403)).toBe(true);
+  expect(await denied(()=>f.ecosystem.view(request,{...child,studentId:f.students[1].id}),404)).toBe(true);
+  await f.practice.switch(request,{studentId:f.students[1].id});expect(await denied(()=>f.ecosystem.view(request,child),404)).toBe(true);
+});
+
+test("an in-flight scheduler result cannot overwrite a newer durable roster schedule intent",async()=>{
+  const f=await fixture();await f.scheduled();
+  let enter!:()=>void,release!:()=>void;
+  const entered=new Promise<void>(resolve=>{enter=resolve;}),gate=new Promise<void>(resolve=>{release=resolve;});
+  vi.mocked(f.broker.ensure).mockImplementationOnce(async()=>{enter();await gate;return{version:1,status:"linked",setlistId:"synthetic-set",sourceRevision:f.projection().sourceRevision,projection:f.projection()};});
+  const running=createServiceScheduler({db:f.db,broker:f.broker}).run({maxJobs:1});await entered;
+  await f.service.withStudentCapability(f.mutation(),{...f.selection,capability:"set-service-plan"},async(tx,actor)=>{
+    await tx.update(s.student).set({ceremonyDate:"2027-02-06",revision:2}).where(eq(s.student.id,f.selection.studentId));
+    await scheduleCeremony(tx,actor.tenantId,{id:f.selection.studentId,ceremonyDate:"2027-02-06",serviceSlot:"morning"});
+  });
+  release();expect(await running).toEqual({attempted:1,completed:0});
+  const [job]=await f.owner(()=>f.db.select().from(s.serviceCeremony));
+  expect(job).toMatchObject({requestedDate:"2027-02-06",scheduleRevision:2,state:"pending",setlistId:null,projection:null,leaseToken:null,leaseUntil:null});
+  expect(await createServiceScheduler({db:f.db,broker:f.broker}).run({maxJobs:1})).toEqual({attempted:1,completed:1});
+  expect(vi.mocked(f.broker.ensure).mock.calls.at(-1)![0]).toMatchObject({localDate:"2027-02-06",scheduleRevision:2});
 });

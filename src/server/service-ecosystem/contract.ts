@@ -8,7 +8,7 @@ export type MusicRow = {
   resources: { resourceId: string; kind: "score" | "audio"; label: string }[];
 };
 export type MusicProjection = { setlistId: string; sourceRevision: string; localDate: string; ceremonyType: "morning" | "havdalah"; rows: MusicRow[]; operatorLinks: { music: string; review?: string } };
-export type EnsureInput = { ceremonyId: string; localDate: string; ceremonyType: "morning" | "havdalah"; scheduleRevision?:number;idempotencyKey: string; explicitSetlistId?: string };
+export type EnsureInput = { ceremonyId: string; localDate: string; ceremonyType: "morning" | "havdalah"; scheduleRevision?:number;idempotencyKey: string; explicitSetlistId?: string;excludedSetlistId?:string };
 export type MusicResult = { version: 1; status: "linked"; setlistId: string; sourceRevision: string; projection: MusicProjection }
   | { version: 1; status: "ambiguous"; candidates: { setlistId: string }[] }
   | { version: 1; status: "review_required"; setlistId?: string; sourceRevision?: string; projection?: MusicProjection };

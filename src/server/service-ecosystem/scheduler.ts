@@ -8,6 +8,7 @@ import { withTenantTransaction } from "../db/runtime";
 import * as s from "../db/index";
 import type { MusicBroker, MusicResult } from "./contract";
 import { ensureIntent } from "./intent";
+import { MusicIntentSuperseded } from "./broker";
 
 /** Fixed-CRC outbox worker. Only already authorized scheduling intent is executable. */
 export function createServiceScheduler<Q extends PgQueryResultHKT>(input: { db: AccessDatabase<Q>; broker: MusicBroker; cronSecret?: string; now?: () => number }) {
@@ -15,7 +16,7 @@ export function createServiceScheduler<Q extends PgQueryResultHKT>(input: { db: 
   const transaction = <T>(action: Parameters<typeof withTenantTransaction<Q, T>>[2]) => withTenantTransaction(input.db, { tenantId: "crc" }, action);
   async function claim() {
     return transaction(async tx => {
-      const [job] = await tx.select().from(s.serviceCeremony).where(and(eq(s.serviceCeremony.tenantId, "crc"),eq(s.serviceCeremony.scheduleConflict,false),
+      const [job] = await tx.select().from(s.serviceCeremony).where(and(eq(s.serviceCeremony.tenantId,"crc"),or(eq(s.serviceCeremony.scheduleConflict,false),eq(s.serviceCeremony.originalConnectionPending,true)),
         or(eq(s.serviceCeremony.state, "pending"), eq(s.serviceCeremony.state, "unavailable")), lte(s.serviceCeremony.nextAttemptAt, new Date(now())),
         or(isNull(s.serviceCeremony.leaseUntil), lte(s.serviceCeremony.leaseUntil, new Date(now()))),
         sql`exists (select 1 from student_ceremony link join student learner on learner.tenant_id=link.tenant_id and learner.id=link.student_id where link.tenant_id='crc' and link.ceremony_id=${s.serviceCeremony.id} and learner.disabled_at is null)`))
@@ -28,13 +29,16 @@ export function createServiceScheduler<Q extends PgQueryResultHKT>(input: { db: 
   }
   async function process(job: NonNullable<Awaited<ReturnType<typeof claim>>>, signal: AbortSignal) {
     let result: MusicResult | null = null;
+    let superseded=false;
     try {
       result = await input.broker.ensure(ensureIntent(job), signal);
       if (result.status !== "ambiguous" && result.setlistId && job.setlistId && result.setlistId !== job.setlistId) result = null;
-    } catch { /* Source errors are retryable, with no roster rollback or diagnostic retention. */ }
+      if(result && result.status!=="ambiguous" && result.setlistId && result.setlistId===job.excludedSetlistId)result=null;
+    } catch(error) {superseded=error instanceof MusicIntentSuperseded;/* Source errors retain no diagnostics. */}
     return transaction(async tx => {
-      const attempts = job.attempts + 1, state = result?.status ?? "unavailable";
+      const attempts = job.attempts + 1, state = superseded?"review_required":result?.status ?? "unavailable";
       const [saved] = await tx.update(s.serviceCeremony).set({ state, attempts,
+        ...(result&&result.status!=="ambiguous"&&result.setlistId?{originalConnectionPending:false}:{}),
         nextAttemptAt: new Date(now() + Math.min(86_400_000, 60_000 * 2 ** Math.min(attempts - 1, 10))), leaseToken: null, leaseUntil: null,
         candidates: result?.status === "ambiguous" ? result.candidates.map(c => c.setlistId) : [],
         ...(result && result.status !== "ambiguous" && result.setlistId ? { setlistId: result.setlistId, projection: result.projection ?? null } : { projection: null }),

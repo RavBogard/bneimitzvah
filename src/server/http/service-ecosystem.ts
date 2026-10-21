@@ -7,7 +7,7 @@ import { requireCookieMutation } from "./mutations";
 import { material } from "./service-learning";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
-const route = (path: string) => /^\/api\/students\/([^/]+)\/my-service(?:\/(synchronize|assign|progress|request|respond|resource|material|separate))?$/.exec(path);
+const route = (path: string) => /^\/api\/students\/([^/]+)\/my-service(?:\/(synchronize|assign|progress|request|respond|resource|material|separate|resolve-original))?$/.exec(path);
 export function serviceEcosystemRouteMethods(path: string): readonly string[] | null { if(path==="/api/internal/service-ecosystem/drain")return ["GET"];const match = route(path); return match ? [match[2] ? "POST" : "GET"] : null; }
 const text = (value: unknown, max = 4000) => { if (typeof value !== "string" || value.length > max) throw new HttpBoundaryError(); return value; };
 const number = (value: unknown) => { if (!Number.isSafeInteger(value) || Number(value) < 0 || Number(value) > 2_147_483_646) throw new HttpBoundaryError(); return Number(value); };
@@ -19,18 +19,19 @@ export async function handleServiceEcosystemRequest(request: Request, runtime: H
   try {
     const operation = match[2], expectedMethod = operation ? "POST" : "GET";
     if (request.method !== expectedMethod) { const response = errorResponse(new HttpBoundaryError(405)); response.headers.set("allow", expectedMethod); return response; }
-    if (request.headers.has("X-Practice-Context")) throw new HttpBoundaryError();
     const query = uniqueQuery(request.url, operation ? [] : ["mode"]);
     if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(match[1])) throw new HttpBoundaryError();
     const keys = operation === "assign" ? ["rowId", "expectedRevision", "expectedStudentRevision", "sourceRevision", "leads", "directions", "privateFeedback"] : operation === "progress" ? ["rowId", "expectedRevision", "progress"]
-      : operation === "request" ? ["rowId", "message"] : operation === "respond" ? ["requestId", "expectedRevision", "state", "response"] : operation === "resource" ? ["rowId", "resourceId"] : operation === "material" ? ["rowId"] : operation === "separate" ? ["expectedCeremonyRevision"] : [];
+      : operation === "request" ? ["rowId", "message"] : operation === "respond" ? ["requestId", "expectedRevision", "state", "response"] : operation === "resource" ? ["rowId", "resourceId"] : operation === "material" ? ["rowId"] : operation === "separate"||operation==="resolve-original" ? ["expectedCeremonyRevision"] : [];
     if (operation) requireCookieMutation(request, runtime.origin);
     const body = operation ? closedObject(await readJsonBody(request, "work"), ["mode", ...keys], operation === "synchronize" ? ["explicitSetlistId"] : operation === "assign" ? ["material"] : []) : { mode: query.get("mode") };
-    if (!["student", "parent", "tutor", "admin"].includes(String(body.mode))) throw new HttpBoundaryError();
-    const selection = { studentId: match[1], mode: body.mode as ActiveMode }, service = runtime.serviceEcosystem;
+    if (!["student","parent","tutor","admin","child-practice"].includes(String(body.mode))) throw new HttpBoundaryError();
+    if(body.mode!=="child-practice" && request.headers.has("X-Practice-Context"))throw new HttpBoundaryError();
+    const selection = { studentId: match[1], mode: body.mode as ActiveMode|"child-practice" }, service = runtime.serviceEcosystem;
     let result;
     if (!operation) result = await service.view(request, selection);
     else if(operation === "separate")result=await service.separate(request,{...selection,expectedCeremonyRevision:number(body.expectedCeremonyRevision)});
+    else if(operation === "resolve-original")result=await service.resolveOriginal(request,{...selection,expectedCeremonyRevision:number(body.expectedCeremonyRevision)});
     else if(operation === "material")return privateJson({material:material(await runtime.serviceLearning.ceremonyUnit(request,{...selection,rowId:text(body.rowId,128)}))});
     else if (operation === "synchronize") result = await service.synchronize(request, { ...selection, ...(body.explicitSetlistId === undefined ? {} : { explicitSetlistId: text(body.explicitSetlistId, 128) }) });
     else if (operation === "assign") {

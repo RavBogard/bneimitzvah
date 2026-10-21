@@ -1,7 +1,7 @@
 import { expect, test, vi } from "vitest";
 vi.mock("server-only",()=>({}));
 import { randomBytes } from "node:crypto";
-import { createMusicBroker,parseMusicResult } from "../../src/server/service-ecosystem/broker";
+import { createMusicBroker,parseMusicResult,MusicIntentSuperseded } from "../../src/server/service-ecosystem/broker";
 import { AccessUnavailable } from "../../src/server/access/errors";
 const origin="https://music.example.test",url=`${origin}/api/integrations/beit-mitzvah/v1`;
 const linked=()=>({version:1,status:"linked",setlistId:"synthetic-set",sourceRevision:"synthetic-revision",projection:{setlistId:"synthetic-set",sourceRevision:"synthetic-revision",localDate:"2027-01-02",ceremonyType:"morning",operatorLinks:{music:`${origin}/setlists/synthetic-set`,review:`${origin}/beit-mitzvah/synthetic`},rows:[{rowId:"synthetic-row",order:0,title:"Synthetic part",momentId:"music-namespace",catalogUnitId:"sample.first@bm-shacharit",liturgyRef:{book:"synthetic-book",folio:2,unitId:"reader-namespace",serviceViewId:"synthetic-view"},resources:[{resourceId:"synthetic-score",kind:"score",label:"Synthetic score"}]}]}});
@@ -31,4 +31,12 @@ test("resource tickets require exact ID, a short expiry and same-source HTTPS pr
     {resourceId:"synthetic-score",kind:"score",url:"https://storage.example.test/public",expiresAt:new Date(Date.now()+60000).toISOString()},
     {resourceId:"synthetic-score",kind:"score",url:`${origin}/api/proxy`,expiresAt:new Date(Date.now()+3600000).toISOString()},
   ])await expect(createMusicBroker({url,token},async()=>Response.json({version:1,resource})).resource("synthetic","synthetic-row","synthetic-score")).rejects.toBeInstanceOf(AccessUnavailable);
+});
+test("source-shaped approved multiline directions preserve ordinary whitespace and exact source namespaces",()=>{
+  const value=linked();Object.assign(value.projection.rows[0],{sharedDirections:"First synthetic line.\n\tSecond synthetic line.\r\nThird line.",prayerId:"p".repeat(200),momentId:"m".repeat(200),catalogUnitId:"c".repeat(200)});
+  const result=parseMusicResult(value,origin);if(result.status!=="linked")throw new Error("Synthetic response missing");expect(result.projection.rows[0].sharedDirections).toContain("\n\tSecond");expect(result.projection.rows[0].momentId).toHaveLength(200);
+});
+test("source monotonic fencing is distinguishable from retryable unavailability",async()=>{
+  const token=randomBytes(48).toString("base64url");
+  await expect(createMusicBroker({url,token},async()=>Response.json({version:1,error:"stale_schedule_revision"},{status:409})).projection("synthetic")).rejects.toBeInstanceOf(MusicIntentSuperseded);
 });

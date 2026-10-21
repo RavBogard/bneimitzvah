@@ -9,6 +9,16 @@ const run = promisify(execFile);
 const DATA = new Set([".json", ".csv", ".tsv", ".txt", ".jsonl", ".ndjson"]);
 const CONFIGS = new Set(["package.json", "package-lock.json", "tsconfig.json", ".impeccable/config.json", ".impeccable/design.json"]);
 const DRIZZLE_METADATA = /^src\/server\/db\/migrations\/meta\/(?:_journal|[0-9]{4}_snapshot)\.json$/;
+function reviewedServiceCron(text) {
+  try {
+    if (Buffer.byteLength(text) > 2048) return false;
+    const value = JSON.parse(text), keys = text.match(/"(?:[^"\\]|\\.)*"\s*:/g) ?? [];
+    // Exactly three keys also refuses hidden duplicate JSON members.
+    if (!value || Array.isArray(value) || Object.keys(value).length !== 1 || !Array.isArray(value.crons) || value.crons.length !== 1 || keys.length !== 3) return false;
+    const cron = value.crons[0];
+    return cron && !Array.isArray(cron) && Object.keys(cron).length === 2 && cron.path === "/api/internal/service-ecosystem/drain" && cron.schedule === "17 10 * * *";
+  } catch { return false; }
+}
 const MEDIA = /\.(?:mp3|wav|webm|m4a|ogg|flac|aac|mp4|mov|aiff|aif|opus|ckpt|pt|pth|safetensors|onnx|h5|bin)$/i;
 const KEYS = /(?:\.(?:pem|key|p12|pfx|jks|keystore)$|(?:^|\/)(?:id_rsa|id_ed25519|credentials(?:\.json)?|service-account[^/]*\.json)$)/i;
 const REMOTE_ATTACHMENTS = /(?:^|\/)\.codex-remote-attachments(?:\/|$)/i;
@@ -69,7 +79,8 @@ export function entryProblems(path, content = "") {
   if (KEYS.test(file) || /\.local\.json$/i.test(file)) problems.push("credential/config file");
   if (/(?:^|\/)\.env[^/]*$/i.test(file) && file !== ".env.example") problems.push("environment file");
   if (file === ".env.example" && text.split(/\r?\n/).some(line => !/^\s*(?:#|$)/.test(line) && !/^[A-Z][A-Z0-9_]*=\s*$/.test(line))) problems.push("environment example must contain names only");
-  if (data && !CONFIGS.has(file) && !migrationMetadata && !/^(?:trope\/|tests\/fixtures\/(?:trope|portal)\/)/.test(file) && !/(?:^|\/)(?:LICENSE|OFL|PROVENANCE)(?:\.txt)?$/i.test(file)) problems.push("data file outside reviewed allow-list");
+  if (data && !CONFIGS.has(file) && file !== "vercel.json" && !migrationMetadata && !/^(?:trope\/|tests\/fixtures\/(?:trope|portal)\/)/.test(file) && !/(?:^|\/)(?:LICENSE|OFL|PROVENANCE)(?:\.txt)?$/i.test(file)) problems.push("data file outside reviewed allow-list");
+  if (file === "vercel.json" && !reviewedServiceCron(text)) problems.push("deployment config must contain only the reviewed daily service drain cron");
   if (migrationMetadata) {
     try {
       const metadata = JSON.parse(text);

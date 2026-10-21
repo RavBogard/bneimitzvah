@@ -70,12 +70,12 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
   loadReading:(date:string,calendar:Calendar)=>Promise<{snapshot:Snapshot;fetchedAt:number}>;
   verseCounts?:VerseCounts; now?:()=>number;
   afterSchedule?:(request:CookieMutationRequest,selection:{mode:ActiveMode;studentId:string})=>Promise<unknown>;
-  dispatchScheduled?:()=>void;
+  dispatchScheduled?:()=>void|Promise<void>;
 }){
   const now=input.now??Date.now,counts=input.verseCounts??TANAKH_VERSE_COUNTS;
   const bindings=createBindings(input.signingSecret,now);
   const afterSchedule=async(request:CookieMutationRequest,mode:ActiveMode,ids:string[])=>{
-    if(input.dispatchScheduled){try{input.dispatchScheduled();}catch{/* The durable queue survives an unavailable dispatcher. */}return;}
+    if(input.dispatchScheduled){try{await input.dispatchScheduled();}catch{/* The durable queue survives an unavailable dispatcher. */}return;}
     // Intake is already committed. Remote failure cannot undo roster work.
     for(const studentId of ids)try{await input.afterSchedule?.(request,{mode,studentId});}catch{/* Durable pending work remains retryable. */}
   };

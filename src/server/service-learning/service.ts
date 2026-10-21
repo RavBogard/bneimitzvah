@@ -96,7 +96,7 @@ export async function verifyCeremonyMaterialMapping<Q extends PgQueryResultHKT>(
 export function createServiceLearningService<Q extends PgQueryResultHKT>(input: {
   access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>;
   signingSecret: string; now?: () => number; data?: typeof stored;
-  resolveCeremonyUnit?:(request:AccessRequest,selection:{mode:ActiveMode;studentId:string;rowId:string})=>Promise<{unitId:string;ceremonyType:"morning"|"havdalah";catalogId:string;catalogIdentity:string}>;
+  resolveCeremonyUnit?:(request:AccessRequest,selection:ReadSelection&{rowId:string})=>Promise<{unitId:string;ceremonyType:"morning"|"havdalah";catalogId:string;catalogIdentity:string}>;
 }) {
   const data = input.data ?? stored, bindings = createBindings(input.signingSecret, input.now ?? Date.now);
   const feed = (tx: AccessTransaction<Q>, tenantId: string, catalogId: string) => readStoredFeed(data, tx, tenantId, catalogId, () => undefined);
@@ -204,7 +204,7 @@ export function createServiceLearningService<Q extends PgQueryResultHKT>(input: 
       return { ok: true as const, planId: result.id, revision: result.revision, cleared: !selected.length };
     });
   }
-  async function ceremonyUnit(request:AccessRequest,selection:{mode:ActiveMode;studentId:string;rowId:string}) {
+  async function ceremonyUnit(request:AccessRequest,selection:ReadSelection&{rowId:string}) {
     if(!input.resolveCeremonyUnit)throw new AccessUnavailable();
     // Resolve source approval before opening the material authority transaction.
     const mapping=await input.resolveCeremonyUnit(request,selection);

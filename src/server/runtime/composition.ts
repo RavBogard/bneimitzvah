@@ -1,5 +1,4 @@
 import "server-only";
-import { after } from "next/server";
 import { createHonorsService } from "../honors/service";
 import { loadHonoreeMaterial } from "../honoree/material-loader";
 import { createHonoreeService } from "../honoree/service";
@@ -127,11 +126,11 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const invitations = createInvitationService({ db, access, transport: (message) => send("invitation", message), throttleSecret: purposeSecret(config, "invitation-throttle") });
   const loadReading = createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS });
   const musicBroker = createMusicBroker(config.serviceMusic, fetch);
-  const dispatchScheduled=()=>{after(async()=>{await dispatchServiceJobs(config,fetch);});};
-  const serviceEcosystem = createServiceEcosystemService({ access, broker: musicBroker, studentAudioRelease: config.referenceAudio?.studentRelease,dispatchScheduled });
+  const practice = createPracticeService({ access });
+  const dispatchScheduled=async()=>{const {after}=await import("next/server");after(async()=>{await dispatchServiceJobs(config,fetch);});};
+  const serviceEcosystem = createServiceEcosystemService({ access,practice,broker: musicBroker, studentAudioRelease: config.referenceAudio?.studentRelease,dispatchScheduled });
   const serviceScheduler = createServiceScheduler({ db, broker: musicBroker, cronSecret: config.serviceCronSecret });
   const students = createStudentService({ access, loadReading, signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS, dispatchScheduled });
-  const practice = createPracticeService({ access });
   const serviceLearning = createServiceLearningService({ access, practice, signingSecret: purposeSecret(config, "service-plan-preparations"), resolveCeremonyUnit: serviceEcosystem.materialMapping });
   const studentWork = createStudentWorkService({ access, practice, authorityBindingSecret: purposeSecret(config, "student-work-authority") });
   const progress = createProgressService({ access, practice });

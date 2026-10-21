@@ -20,6 +20,8 @@ export function ServiceLearningPanel({ id, mode, studentId, baseline, register, 
   const scope = JSON.stringify([summary.sessionBinding, epoch, mode, studentId]), scopeRef = useRef(scope); scopeRef.current = scope;
   const [state, setState] = useState<{ scope: string; metadata?: ServiceMetadata; material?: ServiceUnitMaterial; selected?: string; loading?: boolean; unitLoading?: boolean; error?: number }>({ scope });
   const metadata = useRef<ServiceMetadata | null>(null), choice = useRef<string | null>(null), generation = useRef(0), request = useRef<AbortController | null>(null);
+  const [connectedScope,setConnectedScope]=useState<string|null>(null);
+  const connected=connectedScope===scope,connectionChanged=useCallback((value:boolean)=>setConnectedScope(value?scope:null),[scope]);
   const clear = useCallback(() => { generation.current++; request.current?.abort(); request.current = null; metadata.current = null; setState({ scope: scopeRef.current, loading: true }); }, []);
   const read = useRef({ readServiceMetadata, readServiceUnit }); read.current = { readServiceMetadata, readServiceUnit };
   const reload = useCallback(async (value: Assigned, signal: AbortSignal) => {
@@ -62,7 +64,8 @@ export function ServiceLearningPanel({ id, mode, studentId, baseline, register, 
   async function confirmed() { await reloadReading(); if (!metadata.current) throw new Error("Service plan reload unavailable"); return metadata.current; }
   return <section id={id} className="service-learning-panel" aria-labelledby={`${id}-heading`}>
     <h2 id={`${id}-heading`} tabIndex={-1}>Service parts</h2>
-    {mode !== "child-practice" && <MyServicePanel mode={mode} studentId={studentId} baseline={baseline} />}
+    <MyServicePanel mode={mode} studentId={studentId} baseline={baseline} onConnected={connectionChanged} />
+    <details className="service-additional-practice" open={!connected}><summary>{connected?"Additional practice":"Assigned service material"}</summary>
     {!current || current.loading ? <p role="status">Checking assigned service parts…</p> : current.error ? <div role="status"><p>{current.error === 409 ? "The service plan changed. Reload it before choosing a part." : [401, 403, 404].includes(current.error) ? "Service parts are no longer available in this view." : "Service parts are unavailable. Your scripture reading is separate."}</p><button className="button-secondary" onClick={() => void reloadReading().catch(() => undefined)}>Reload service parts</button></div> : assigned && <>
       {assigned.state === "no-plan" && <p>No service parts have been assigned yet.</p>}
       {assigned.state === "cleared" && <p>The service plan was explicitly cleared. No service parts are assigned.</p>}
@@ -76,5 +79,6 @@ export function ServiceLearningPanel({ id, mode, studentId, baseline, register, 
       </>}
     </>}
     {(mode === "admin" || mode === "tutor") && <ServicePlanEditor key={scope} mode={mode} studentId={studentId} baseline={baseline} metadata={assigned ?? null} onConfirmed={confirmed} reloadReading={reloadReading} onDepartureActive={onDepartureActive} />}
+    </details>
   </section>;
 }

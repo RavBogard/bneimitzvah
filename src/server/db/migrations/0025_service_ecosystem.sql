@@ -92,7 +92,7 @@ ALTER TABLE "service_ceremony" ADD COLUMN "lease_token" uuid;--> statement-break
 ALTER TABLE "service_ceremony" ADD COLUMN "lease_until" timestamp with time zone;--> statement-breakpoint
 ALTER TABLE "service_ceremony" ADD CONSTRAINT "service_ceremony_job_shape" CHECK ("service_ceremony"."attempts" >= 0 and (("service_ceremony"."lease_token" is null) = ("service_ceremony"."lease_until" is null)));
 --> statement-breakpoint
-CREATE TRIGGER immutable_ceremony_identity BEFORE UPDATE ON service_ceremony FOR EACH ROW EXECUTE FUNCTION portal_immutable_columns('tenant_id','id','local_date','ceremony_type');
+CREATE TRIGGER immutable_ceremony_identity BEFORE UPDATE ON service_ceremony FOR EACH ROW EXECUTE FUNCTION portal_immutable_columns('tenant_id','id','local_date','ceremony_type','excluded_setlist_id');
 --> statement-breakpoint
 CREATE TRIGGER immutable_student_ceremony_identity BEFORE UPDATE ON student_ceremony FOR EACH ROW EXECUTE FUNCTION portal_immutable_columns('tenant_id','id','student_id');
 --> statement-breakpoint
@@ -127,3 +127,9 @@ ALTER TABLE "service_ceremony" ADD CONSTRAINT "service_ceremony_schedule_shape" 
 ALTER TABLE "service_ceremony" DROP CONSTRAINT "service_ceremony_schedule_key";--> statement-breakpoint
 ALTER TABLE "service_ceremony" ADD COLUMN "schedule_key" text NOT NULL;--> statement-breakpoint
 ALTER TABLE "service_ceremony" ADD CONSTRAINT "service_ceremony_schedule_key" UNIQUE("tenant_id","schedule_key");
+--> statement-breakpoint
+ALTER TABLE "service_ceremony" ADD COLUMN "selected_setlist_id" text;
+--> statement-breakpoint
+ALTER TABLE "service_ceremony" ADD COLUMN "excluded_setlist_id" text;
+--> statement-breakpoint
+ALTER TABLE "service_ceremony" ADD COLUMN "original_connection_pending" boolean DEFAULT false NOT NULL;

@@ -61,7 +61,7 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
       if(endpoint.protocol!=="https:" || endpoint.username || endpoint.password || endpoint.search || endpoint.hash || endpoint.pathname!=="/api/integrations/beit-mitzvah/v1")throw 0;
       serviceMusic=Object.freeze({url:endpoint.href,token:env.BEIT_MITZVAH_SERVICE_TOKEN});
     }
-    if(env.CRON_SECRET!==undefined && (!clean(env.CRON_SECRET) || env.CRON_SECRET.length<32 || env.CRON_SECRET.length>512))throw 0;
+    if(env.CRON_SECRET!==undefined && (!clean(env.CRON_SECRET) || env.CRON_SECRET.length<32 || env.CRON_SECRET.length>512 || env.CRON_SECRET===serviceMusic?.token || env.CRON_SECRET===env.BETTER_AUTH_SECRET))throw 0;
     return Object.freeze({ deployment: Object.freeze({ environment, deployment: env.PORTAL_DEPLOYMENT }), origin: origin.origin,
       databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, serviceMusic, serviceCronSecret:env.CRON_SECRET,
       mail: Object.freeze({ apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM }) });
