@@ -83,3 +83,13 @@ test("a Cowork draft may name sources by Sefaria ref alone; an unlisted ref refu
   const [row] = await f.owner(async () => f.db.select().from(s.studyGuide));
   expect(row.body.themes[0].notes[0].sources[0]).toMatchObject({ id: "bbbb2222", ref: "Invented Essays, Clouds" });
 });
+
+test("a ref written the way people write it still finds Sefaria's record, but never ambiguously", async () => {
+  const f = await fixture();
+  const byRef = (refs: string[]) => guide({ themes: [theme("cloud", { notes: [note("Exodus 40:34", { sources: refs.map(ref => ({ ref })) as never })] })] });
+  expect(await f.run({ body: byRef(["invented essays: clouds"]) })).toMatchObject({ outcome: "valid", sources: 1 });
+  expect(await f.run({ body: byRef(["Invented Commentary on Exodus, 40:34:1"]) })).toMatchObject({ outcome: "valid", sources: 1, readableSources: 1 });
+  expect(await f.run({ body: byRef(["Invented Commentary Exodus 40:35:1"]) })).toMatchObject({ outcome: "refused" });
+  // "on" and punctuation differences, as in the Women's Commentary's Sefaria spelling.
+  expect(await f.run({ body: byRef(["Invented Commentary Exodus 40:34:1"]) })).toMatchObject({ outcome: "valid", sources: 1 });
+});
