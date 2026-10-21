@@ -310,7 +310,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   </div>{current?.loading && <p role="status">Checking the current assignment, text and saved work…</p>}{editor && (staff ? <dialog ref={sheet} id={editorId} className="editor-sheet" aria-labelledby="reading-editor-title" closedby={editorBusy ? "none" : "closerequest"} onCancel={event => { event.preventDefault(); closeSheet(); }}>
       <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close verse editor" disabled={editorBusy} onClick={closeSheet}>{icons.close}</button></div>{editor}
     </dialog> : <div id={editorId} className="reading-editor-anchor">{editor}</div>)}
-    {tabPanel("service", <ServiceLearningPanel id={serviceId} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} onDepartureActive={setServiceDepartureActive} onVisit={(plan, unitId) => calendar.visitUnit(plan, unitId)} />)}
+    {tabPanel("service", <><ServiceLearningPanel id={serviceId} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} onDepartureActive={setServiceDepartureActive} onVisit={(plan, unitId) => calendar.visitUnit(plan, unitId)} />
+      {authorizedReading && !concealed && <p className="field-help"><a href="https://siddur.centralreform.org/" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC digital siddur collection</a></p>}</>)}
     {tabPanel("lessons", <LessonLog mode={mode} studentId={studentId} register={registerLessons} tabbed={tabbed} />)}
   </ReadingPrefsScope>;
 }

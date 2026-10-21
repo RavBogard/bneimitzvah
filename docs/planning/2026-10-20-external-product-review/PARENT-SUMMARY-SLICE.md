@@ -1,5 +1,7 @@
 # Selected-child preparation summary
 
+Production checkpoint, 2026-10-20: exact 3316605 is main and READY on both portal aliases. All four hosted jobs 39520128249 passed (native 169; HTTP 204 pass/3 skip), and actual signed-out Google home/sign-in checks passed 2. The parent summary and static CRC preparation guide are released. Independent review accepted their isolation from the unresolved reference-metadata investigation: neither feature requires listening. Reference app bytes/admin exception are unchanged, and student listening remains held. No migration or outreach occurred. Physical-phone, real-account and actual listening acceptance remain open; Daniel cannot test now. Later diagnostic code is separate from this release.
+
 Settled decisions (Daniel, binding): parent dashboards are read-only except honors; child practice is a separate explicit selection. Parents may see lesson notes and a days-only practice summary. Student self-check and tutor assessment remain distinct. Continuous reading stays the student default. The existing Annotated score/code-first direction and quiet authorization behavior remain.
 
 ## Bounded product decision
