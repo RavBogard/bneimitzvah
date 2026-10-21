@@ -15,6 +15,21 @@ vi.mock("server-only", () => ({}));
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined, isolated: Awaited<ReturnType<typeof isolatedEnv>> | undefined;
 let failed = false;
 const contexts: BrowserContext[] = [], children: { id: string; name: string; assignmentId: string }[] = [];
+const egress = new WeakMap<BrowserContext, { pending: Set<Promise<void>>; failed: boolean }>();
+type PostRegistration = { matches(url: URL): boolean; handler(route: Route): Promise<void> };
+const postRegistrations = new WeakMap<Page, PostRegistration>();
+function registerPost(tab: Page, matches: PostRegistration["matches"], handler: PostRegistration["handler"]) {
+  if (postRegistrations.has(tab)) throw Error("Overlapping honors POST registration");
+  const registration = { matches, handler }; postRegistrations.set(tab, registration);
+  return () => { if (postRegistrations.get(tab) !== registration) throw Error("Honors POST registration ownership changed"); postRegistrations.delete(tab); };
+}
+async function closeContext(context: BrowserContext) {
+  const owned = egress.get(context); let cleanupFailed = false;
+  // Keep the single physical router until close synchronously fences dispatch.
+  if (owned) while (owned.pending.size) await Promise.all([...owned.pending]);
+  try { await context.close(); } catch { cleanupFailed = true; }
+  if (cleanupFailed || owned?.failed) throw Error("Owned honors route cleanup failed");
+}
 const cookies: Partial<Record<"parent" | "admin" | "student", Awaited<ReturnType<BrowserContext["cookies"]>>>> = {};
 type QuietWitness = { complete: boolean; failed: boolean; eof: number; expected: number; dispose(): void };
 const sheet = (page: Page) => page.getByRole("dialog", { name: "Family honors", exact: true });
@@ -22,7 +37,16 @@ const group = (page: Page, name: string) => sheet(page).getByRole("region", { na
 async function api(page: Page, path: string, body?: unknown) { return page.evaluate(async ({ path, body }) => { const response = await fetch(path, { method: body === undefined ? "GET" : "POST", cache: "no-store", headers: body === undefined ? {} : { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) }); return { status: response.status, data: await response.json() }; }, { path, body }); }
 async function page(who: "parent" | "admin" | "student", mobile = false, colorScheme: "light" | "dark" = "light") {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 }, colorScheme, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
-  await context.route("**/*", route => new URL(route.request().url()).origin === BROWSER_ORIGIN ? route.continue() : route.abort());
+  const owned = { pending: new Set<Promise<void>>(), failed: false }; egress.set(context, owned);
+  await context.route("**/*", route => {
+    const request = route.request(), url = new URL(request.url()), canonical = url.origin === BROWSER_ORIGIN;
+    const registration = canonical && request.method() === "POST" ? postRegistrations.get(request.frame().page()) : undefined;
+    const selected = registration?.matches(url) ? registration : undefined;
+    const operation = Promise.resolve().then(() => !canonical ? route.abort() : selected ? selected.handler(route) : route.continue());
+    const settled = operation.then(() => { owned.pending.delete(settled); }, () => { owned.failed = true; owned.pending.delete(settled); });
+    owned.pending.add(settled);
+    return operation;
+  });
   if (cookies[who]) await context.addCookies(cookies[who]!); const tab = await context.newPage(); await tab.goto("/", { waitUntil: "domcontentloaded" });
   if (!cookies[who]) { const email = who === "parent" ? "pg-tutor@example.test" : `pg-${who}@example.test`; expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); cookies[who] = await context.cookies(); }
   return tab;
@@ -38,13 +62,12 @@ async function observe(tab: Page, id: string, receipt: boolean, action: () => Pr
   const matches = (url: URL) => url.origin === BROWSER_ORIGIN && url.pathname === `/api/students/${id}/honors${receipt ? "/receipt" : ""}`;
   let resolve!: (value: Record<string, any>) => void, reject!: (error: unknown) => void;
   const captured = new Promise<Record<string, any>>((yes, no) => { resolve = yes; reject = no; });
-  const handler = async (route: Route) => { if (route.request().method() !== "POST") return route.fallback();
-    try { const response = await route.fetch({ maxRedirects: 0, maxRetries: 0 }); let parsed: { value: Record<string, any> } | { error: unknown };
+  const handler = async (route: Route) => { try { const response = await route.fetch({ maxRedirects: 0, maxRetries: 0 }); let parsed: { value: Record<string, any> } | { error: unknown };
       try { expect(response.status()).toBe(200); parsed = { value: await response.json() }; } catch (error) { parsed = { error }; }
       await route.fulfill({ response }); if ("error" in parsed) reject(parsed.error); else resolve(parsed.value);
     } catch (error) { try { await route.abort("failed"); } catch {} reject(error); }
   };
-  await tab.route(matches, handler); try { const [value] = await Promise.all([captured, action()]); return value; } finally { await tab.unroute(matches, handler); }
+  const remove = registerPost(tab, matches, handler); try { const [value] = await Promise.all([captured, action()]); return value; } finally { remove(); }
 }
 async function save(tab: Page, id: string) { const result = await observe(tab, id, false, () => sheet(tab).getByRole("button", { name: "Save honors", exact: true }).click()); await ui(sheet(tab).getByRole("status").filter({ hasText: "Honors saved." })).toBeVisible(); return result; }
 async function focus(tab: Page) {
@@ -105,8 +128,8 @@ beforeAll(async () => {
   } catch { await browser?.close().catch(() => {}); await stop?.().catch(() => {}); await fixture?.close().catch(() => {}); restore?.(); await isolated?.cleanup(); throw Error("Synthetic honors UI setup failed; private details withheld"); }
 }, 120000);
 beforeEach(() => { onTestFailed(() => { failed = true; }); });
-afterEach(async () => { await Promise.all(contexts.splice(0).map(c => c.close())); });
-afterAll(async () => { try { if (!failed && process.env.HONORS_UI_CAPTURE === "1") await capturePacket(); if (!failed && process.env.ADULT_HONORS_UI_CAPTURE === "1") await captureAdultPacket(); } finally { await Promise.all(contexts.map(c => c.close().catch(() => {}))); await browser?.close().catch(() => {}); await stop?.().catch(() => {}); await fixture?.close().catch(() => {}); restore?.(); await isolated?.cleanup(); } }, 120000);
+afterEach(async () => { const results = await Promise.allSettled(contexts.splice(0).map(closeContext)); if (results.some(result => result.status === "rejected")) throw Error("Owned honors route cleanup failed"); });
+afterAll(async () => { try { if (!failed && process.env.HONORS_UI_CAPTURE === "1") await capturePacket(); if (!failed && process.env.ADULT_HONORS_UI_CAPTURE === "1") await captureAdultPacket(); } finally { const results = await Promise.allSettled(contexts.splice(0).map(closeContext)); await browser?.close().catch(() => {}); await stop?.().catch(() => {}); await fixture?.close().catch(() => {}); restore?.(); await isolated?.cleanup(); if (results.some(result => result.status === "rejected")) throw Error("Owned honors route cleanup failed"); } }, 120000);
 
 it("base guardian saves flexible ordered groups, actual aliyot, Hebrew names and blessing logistics exactly once", async () => {
   const tab = await page("parent"), child = children[0]; await open(tab, child, "parent");
@@ -131,9 +154,9 @@ it("quiet return preserves a dirty field/focus/scroll; date-only review and chan
 });
 it("lost committed response and unconfirmed receipt keep exact original UUID/body without duplicate delivery", async () => {
   const tab = await page("parent"), child = children[2]; await open(tab, child, "parent"); await add(tab, "Opening the ark", "Synthetic Receipt"); const path = `/api/students/${child.id}/honors`, bodies: string[] = [];
-  const lost = async (route: Route) => { if (route.request().method() !== "POST") return route.fallback(); bodies.push(route.request().postData()!); const result = await route.fetch({ maxRedirects: 0, maxRetries: 0 }); expect(result.status()).toBe(200); await result.body(); await route.abort("failed"); };
+  const lost = async (route: Route) => { bodies.push(route.request().postData()!); const result = await route.fetch({ maxRedirects: 0, maxRetries: 0 }); expect(result.status()).toBe(200); await result.body(); await route.abort("failed"); };
   const exact = (url: URL) => url.origin === BROWSER_ORIGIN && url.pathname === path;
-  await tab.route(exact, lost); await sheet(tab).getByRole("button", { name: "Save honors", exact: true }).click(); await ui(sheet(tab).getByRole("button", { name: "Check what saved", exact: true })).toBeVisible(); await tab.unroute(exact, lost);
+  const removeLost = registerPost(tab, exact, lost); await sheet(tab).getByRole("button", { name: "Save honors", exact: true }).click(); await ui(sheet(tab).getByRole("button", { name: "Check what saved", exact: true })).toBeVisible(); removeLost();
   await sheet(tab).getByRole("button", { name: "Close family honors", exact: true }).click(); await ui(sheet(tab).getByRole("heading", { name: "Leave with the save unconfirmed?", exact: true })).toBeVisible();
   const check = sheet(tab).getByRole("button", { name: "Check what saved", exact: true }), retryButton = sheet(tab).getByRole("button", { name: "Send the same save again", exact: true });
   await ui(check).toBeDisabled(); await ui(retryButton).toBeDisabled();
@@ -143,21 +166,21 @@ it("lost committed response and unconfirmed receipt keep exact original UUID/bod
   let receiptBody = ""; const record = (request: import("playwright").Request) => { if (new URL(request.url()).pathname === path + "/receipt") receiptBody = request.postData()!; }; tab.on("request", record);
   const recovered = await observe(tab, child.id, true, () => sheet(tab).getByRole("button", { name: "Check what saved", exact: true }).click()); tab.off("request", record); expect(recovered.committedVersion).toBe(1); expect(receiptBody).toBe(bodies[0]); await ui(sheet(tab).getByRole("status").filter({ hasText: "Honors saved." })).toBeVisible(); expect(await rows(child.id)).toHaveLength(1);
   await group(tab, "Opening the ark").getByLabel("English name", { exact: true }).fill("Synthetic Exact Retry");
-  const matches = (url: URL) => url.pathname === path, before = async (route: Route) => { if (route.request().method() !== "POST") return route.fallback(); bodies.push(route.request().postData()!); await route.abort("failed"); };
-  await tab.route(matches, before); await sheet(tab).getByRole("button", { name: "Save honors", exact: true }).click(); await ui(sheet(tab).getByRole("button", { name: "Check what saved", exact: true })).toBeVisible(); await tab.unroute(matches, before);
+  const matches = (url: URL) => url.pathname === path, before = async (route: Route) => { bodies.push(route.request().postData()!); await route.abort("failed"); };
+  const removeBefore = registerPost(tab, matches, before); await sheet(tab).getByRole("button", { name: "Save honors", exact: true }).click(); await ui(sheet(tab).getByRole("button", { name: "Check what saved", exact: true })).toBeVisible(); removeBefore();
   expect((await observe(tab, child.id, true, () => sheet(tab).getByRole("button", { name: "Check what saved", exact: true }).click())).outcome).toBe("unconfirmed");
   let retry = "", retryBegan = false, release!: () => void, delivered!: () => void, rejectDelivery!: (error: unknown) => void;
   const held = new Promise<void>(resolve => { release = resolve; }), completed = new Promise<void>((resolve, reject) => { delivered = resolve; rejectDelivery = reject; });
-  const holdRetry = async (route: Route) => { if (route.request().method() !== "POST") return route.fallback(); retryBegan = true; retry = route.request().postData()!;
+  const holdRetry = async (route: Route) => { retryBegan = true; retry = route.request().postData()!;
     try { await held; const response = await route.fetch({ maxRedirects: 0, maxRetries: 0 }); expect(response.status()).toBe(200); const value = await response.json(); expect(value.committedVersion).toBe(2); await route.fulfill({ response }); delivered(); }
     catch (error) { try { await route.abort("failed"); } catch {} rejectDelivery(error); }
   };
-  await tab.route(exact, holdRetry);
+  const removeRetry = registerPost(tab, exact, holdRetry);
   try {
     await retryButton.click(); await ui.poll(() => retry).toBe(bodies[1]);
     await ui(sheet(tab).getByRole("status").filter({ hasText: "Saving honors…" })).toBeVisible(); await ui(sheet(tab).getByRole("button", { name: "Close family honors", exact: true })).toBeDisabled(); await ui(group(tab, "Opening the ark").getByLabel("English name", { exact: true })).toBeDisabled();
     await sheet(tab).press("Escape"); await sheet(tab).evaluate(node => (node as HTMLDialogElement).close()); await ui(sheet(tab)).toBeVisible(); await ui(sheet(tab).getByRole("button", { name: "Leave without confirmation", exact: true })).toHaveCount(0); await ui(sheet(tab).getByRole("status").filter({ hasText: "Saving honors…" })).toBeVisible();
-  } finally { release(); try { if (retryBegan) await completed; } finally { await tab.unroute(exact, holdRetry); } }
+  } finally { release(); try { if (retryBegan) await completed; } finally { removeRetry(); } }
   await ui(sheet(tab).getByRole("status").filter({ hasText: "Honors saved." })).toBeVisible(); expect(retry).toBe(bodies[1]); expect(JSON.parse(bodies[0]).mutationId).not.toBe(JSON.parse(bodies[1]).mutationId); expect(await rows(child.id)).toHaveLength(2); expect(await audits(child.id)).toHaveLength(2);
 });
 it("admin printing verifies only the saved copy; real guardian denial clears private fields", async () => {
