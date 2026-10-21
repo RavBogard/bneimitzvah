@@ -26,8 +26,10 @@ export function parseServiceAccount(raw: unknown): ServiceAccount {
 
 const b64 = (value: string | Buffer) => Buffer.from(value).toString("base64url");
 async function bounded(fetcher: typeof fetch, url: string, init: RequestInit, code: "auth" | "write"): Promise<Record<string, unknown>> {
-  const response = await fetcher(url, { ...init, redirect: "error", signal: AbortSignal.timeout(15_000) });
-  const text = await response.text();
+  let response: Response, text: string;
+  // A network failure or timeout is reported like a refusal: Google was not reached.
+  try { response = await fetcher(url, { ...init, redirect: "error", signal: AbortSignal.timeout(15_000) }); text = await response.text(); }
+  catch { throw new SheetUnavailable(code); }
   if (!response.ok || text.length > 1_000_000) throw new SheetUnavailable(code);
   try { const value: unknown = text ? JSON.parse(text) : {}; return value && typeof value === "object" ? value as Record<string, unknown> : {}; }
   catch { throw new SheetUnavailable(code); }
@@ -44,13 +46,25 @@ export async function accessToken(account: ServiceAccount, fetcher: typeof fetch
   return result.access_token;
 }
 
-/** Replace the first tab's contents with `rows` (header first): clear, then write from A1. */
+export const ROSTER_COLUMNS = "J";
+/**
+ * Replace the roster tab's contents with `rows` (header first, at most ten columns). The roster tab
+ * is the Sheet's original tab (sheet id 0) wherever staff have moved or renamed it, else the first.
+ * The new rows are written first and only the old rows below them are cleared after, so a failed
+ * write never leaves staff a blank Sheet; columns past J (staff notes) are never touched.
+ */
 export async function replaceSheet(sheetId: string, rows: readonly (readonly string[])[], token: string, fetcher: typeof fetch): Promise<void> {
-  if (!SHEET_ID.test(sheetId)) throw new SheetUnavailable("config");
-  const base = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values`;
+  if (!SHEET_ID.test(sheetId) || rows.length < 1 || rows.length > 1999 || rows.some(row => row.length > 10)) throw new SheetUnavailable("config");
+  const root = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}`;
   const headers = { authorization: `Bearer ${token}`, "content-type": "application/json" };
-  // A range without a tab name is the first visible tab, whatever staff have named it.
-  await bounded(fetcher, `${base}/${encodeURIComponent("A1:Z2000")}:clear`, { method: "POST", headers, body: "{}" }, "write");
-  await bounded(fetcher, `${base}/${encodeURIComponent("A1")}?valueInputOption=RAW`, { method: "PUT", headers,
-    body: JSON.stringify({ range: "A1", majorDimension: "ROWS", values: rows }) }, "write");
+  const meta = await bounded(fetcher, `${root}?fields=${encodeURIComponent("sheets.properties(sheetId,title)")}`, { method: "GET", headers: { authorization: headers.authorization } }, "write");
+  const tabs = (Array.isArray(meta.sheets) ? meta.sheets : []).map(tab => (tab as { properties?: { sheetId?: unknown; title?: unknown } }).properties ?? {});
+  const tab = tabs.find(p => p.sheetId === 0) ?? tabs[0];
+  if (typeof tab?.title !== "string" || !tab.title) throw new SheetUnavailable("write");
+  const quoted = `'${tab.title.replaceAll("'", "''")}'`;
+  const range = (a1: string) => `${root}/values/${encodeURIComponent(`${quoted}!${a1}`)}`;
+  const width = Math.max(...rows.map(row => row.length));
+  const padded = rows.map(row => [...row, ...Array(width - row.length).fill("")]);
+  await bounded(fetcher, `${range("A1")}?valueInputOption=RAW`, { method: "PUT", headers, body: JSON.stringify({ range: `${quoted}!A1`, majorDimension: "ROWS", values: padded }) }, "write");
+  await bounded(fetcher, `${range(`A${rows.length + 1}:${ROSTER_COLUMNS}2000`)}:clear`, { method: "POST", headers, body: "{}" }, "write");
 }

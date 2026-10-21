@@ -76,11 +76,10 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
     }
     if (env.PORTAL_MCP_ENABLED !== undefined && env.PORTAL_MCP_ENABLED !== "true" && env.PORTAL_MCP_ENABLED !== "false") throw 0;
     let rosterSheet: RuntimeConfig["rosterSheet"];
-    // Both or neither; a malformed key is refused where it is parsed, without taking the app down.
-    if (env.GOOGLE_SHEETS_SERVICE_ACCOUNT || env.GOOGLE_ROSTER_SHEET_ID) {
-      if (typeof env.GOOGLE_SHEETS_SERVICE_ACCOUNT !== "string" || env.GOOGLE_SHEETS_SERVICE_ACCOUNT.length > 8192 || !clean(env.GOOGLE_ROSTER_SHEET_ID) || !/^[A-Za-z0-9_-]{25,100}$/.test(env.GOOGLE_ROSTER_SHEET_ID)) throw 0;
+    // Both or neither. Anything else switches only the Sheet off, never the portal: the key is
+    // checked where it is parsed, and a partial or malformed setting simply leaves it unconfigured.
+    if (typeof env.GOOGLE_SHEETS_SERVICE_ACCOUNT === "string" && env.GOOGLE_SHEETS_SERVICE_ACCOUNT.length <= 8192 && clean(env.GOOGLE_ROSTER_SHEET_ID) && /^[A-Za-z0-9_-]{25,100}$/.test(env.GOOGLE_ROSTER_SHEET_ID))
       rosterSheet = Object.freeze({ serviceAccount: env.GOOGLE_SHEETS_SERVICE_ACCOUNT, sheetId: env.GOOGLE_ROSTER_SHEET_ID });
-    }
     if(env.CRON_SECRET!==undefined && (!clean(env.CRON_SECRET) || env.CRON_SECRET.length<32 || env.CRON_SECRET.length>512 || env.CRON_SECRET===serviceMusic?.token || env.CRON_SECRET===env.BETTER_AUTH_SECRET))throw 0;
     return Object.freeze({ deployment: Object.freeze({ environment, deployment: env.PORTAL_DEPLOYMENT }), origin: origin.origin,
       databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, referenceReview, serviceMusic, serviceCronSecret:env.CRON_SECRET, mcpEnabled: env.PORTAL_MCP_ENABLED === "true", rosterSheet,

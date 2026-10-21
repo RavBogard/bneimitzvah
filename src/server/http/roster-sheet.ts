@@ -1,5 +1,6 @@
 import "server-only";
 import type { HttpRuntime } from "../runtime/composition";
+import { AccessUnavailable } from "../access/errors";
 import { requireCookieMutation } from "./mutations";
 import { uniqueQuery } from "./query";
 import { HttpBoundaryError, privateJson } from "./responses";
@@ -15,7 +16,12 @@ export async function handleRosterSheetRequest(request: Request, runtime: HttpRu
   if (!methods[path].includes(request.method)) throw new HttpBoundaryError(405);
   uniqueQuery(request.url, []);
   const resolved = await runtime.resolveHost(request);
-  if (path === "/api/internal/roster-sheet/sync") return privateJson(await runtime.rosterSheet.cron(request, resolved));
+  if (path === "/api/internal/roster-sheet/sync") {
+    const result = await runtime.rosterSheet.cron(request, resolved);
+    // A failed nightly write must show as a failed cron run, not a quiet 200.
+    if (!result.ok) { console.error(`roster sheet sync failed: ${result.reason}`); throw new AccessUnavailable(); }
+    return privateJson(result);
+  }
   requireCookieMutation(request, resolved.origin);
   return privateJson(await runtime.rosterSheet.now(request));
 }

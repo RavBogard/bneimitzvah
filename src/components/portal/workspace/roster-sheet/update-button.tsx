@@ -10,6 +10,7 @@ export function UpdateStaffSheet() {
     try {
       const response = await fetch("/api/admin/roster-sheet/sync", { method: "POST", credentials: "same-origin", cache: "no-store", redirect: "error",
         referrerPolicy: "same-origin", headers: { accept: "application/json", "content-type": "application/json" }, body: "{}" });
+      if (response.status === 401 || response.status === 403) { setState({ kind: "done", text: "Only an admin who manages students can update the staff Sheet." }); return; }
       const value = await response.json() as { ok?: boolean; students?: number; reason?: string };
       setState({ kind: "done", text: value.ok ? `Staff Sheet updated with ${value.students} ${value.students === 1 ? "student" : "students"}.`
         : value.reason === "not-configured" ? "The staff Sheet isn’t connected yet." : "Google didn’t accept the update. Try again in a minute." });

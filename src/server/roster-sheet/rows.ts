@@ -11,6 +11,8 @@ const SLOT: Record<string, string> = { morning: "Morning", havdalah: "Havdalah",
 const object = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 /** Plain text only; the writer sends RAW values, so nothing is ever read as a formula. */
 const cell = (value: unknown) => typeof value === "string" ? value.trim().slice(0, 500) : "";
+// The Sheet is shared with staff; an account name that is an address (or carries control characters) is shown as "Tutor".
+const tutorName = (value: string) => { const label = value.trim(); return label && label.length <= 160 && !/[<>@\x00-\x1f\x7f]/.test(label) ? label : "Tutor"; };
 
 /** The staff roster, one row per current student in ceremony order: names, dates, readings, tutors. No contact data. */
 export async function rosterRows<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string): Promise<string[][]> {
@@ -33,7 +35,7 @@ export async function rosterRows<Q extends PgQueryResultHKT>(tx: AccessTransacti
     }
     const extra = student as unknown as Record<string, unknown>;
     rows.push([`${student.firstName} ${student.lastName}`, student.hebrewName ?? "", student.ceremonyDate, SLOT[student.serviceSlot] ?? "", parashah, torah, haftarah,
-      tutors.map(t => t.name).join(", "), typeof extra.rehearsal1 === "string" ? extra.rehearsal1 : "", typeof extra.rehearsal2 === "string" ? extra.rehearsal2 : ""].map(cell));
+      tutors.map(t => tutorName(t.name)).join(", "), typeof extra.rehearsal1 === "string" ? extra.rehearsal1 : "", typeof extra.rehearsal2 === "string" ? extra.rehearsal2 : ""].map(cell));
   }
   return rows;
 }
