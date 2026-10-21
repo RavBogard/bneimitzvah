@@ -45,6 +45,7 @@ import { createMusicBroker } from "../service-ecosystem/broker";
 import { createServiceScheduler } from "../service-ecosystem/scheduler";
 import { createStudentWorkService } from "../student-work/service";
 import { createProgressService } from "../progress/service";
+import { createStudyGuideService, studyGuideWebSurface } from "../study-guides/service";
 import { createLessonLogService } from "../lesson-log/service";
 import { createPracticeCalendarService } from "../practice-calendar/service";
 import { createStudentRecordingService } from "../recordings/service";
@@ -139,6 +140,8 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const serviceLearning = createServiceLearningService({ access, practice, signingSecret: purposeSecret(config, "service-plan-preparations"), resolveCeremonyUnit: serviceEcosystem.materialMapping });
   const studentWork = createStudentWorkService({ access, practice, authorityBindingSecret: purposeSecret(config, "student-work-authority") });
   const progress = createProgressService({ access, practice });
+  // Guide writes resolve citations through the checker; until the MCP study tools supply one, every write is refused.
+  const studyGuides = studyGuideWebSurface(createStudyGuideService({ access, practice, check: async () => ({ ok: false as const, problems: ["Guide checking is not configured"] }) }));
   const lessonLog = createLessonLogService({ access, practice });
   const practiceCalendar = createPracticeCalendarService({ access, practice });
   const recordings = createStudentRecordingService({ access, practice });
@@ -170,7 +173,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

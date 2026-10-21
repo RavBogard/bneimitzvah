@@ -272,5 +272,26 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       return changed ? Object.freeze({ ok: true as const, themeId, read, version: changed.version }) : fail("conflict");
     });
   }
-  return Object.freeze({ getVoice, setVoice, getBaseGuide, setBaseGuide, publishBaseGuide, setStudentGuide, studentGuide, setThemeRead });
+  // Rabbi's web status and preview (cookie, admin mode, read only; S10) --------------------------
+  async function staffGuide(request: AccessRequest, supplied: { kind: unknown; readingKey: unknown }) {
+    const kind = kindOf(supplied.kind), readingKey = keyOf(supplied.readingKey);
+    return input.access.withAdminCapability(request, { mode: "admin", capability: "read-guides" }, async (tx, actor) => {
+      const heads = await data.guideHeads(tx, actor.tenantId, kind, readingKey);
+      const summary = (row: data.GuideRow | null) => row ? Object.freeze({ version: row.version, origin: guideVersion(row).origin, reviewed: row.reviewed, hold: row.hold,
+        themes: guideVersion(row).body.themes.length, updatedAt: row.createdAt.toISOString() }) : null;
+      return Object.freeze({ kind, readingKey, rabbiName: rabbiName(await customsOf(tx, actor.tenantId)), visible: summary(heads.visible), held: heads.head?.hold ? summary(heads.head) : null });
+    });
+  }
+  async function staffVoice(request: AccessRequest) {
+    return input.access.withAdminCapability(request, { mode: "admin", capability: "read-guides" }, async (tx, actor) => {
+      const head = await data.voiceHead(tx, actor.tenantId);
+      return Object.freeze(head ? { version: head.version, template: false, updatedAt: head.createdAt.toISOString() } : { version: 0, template: true, updatedAt: null });
+    });
+  }
+  return Object.freeze({ getVoice, setVoice, getBaseGuide, setBaseGuide, publishBaseGuide, setStudentGuide, studentGuide, setThemeRead, staffGuide, staffVoice });
+}
+
+/** The only part the web HTTP runtime receives: reads, theme ticks and staff status. No guide or voice writes (S10). */
+export function studyGuideWebSurface<Q extends PgQueryResultHKT>(service: ReturnType<typeof createStudyGuideService<Q>>) {
+  return Object.freeze({ studentGuide: service.studentGuide, setThemeRead: service.setThemeRead, staffGuide: service.staffGuide, staffVoice: service.staffVoice });
 }
