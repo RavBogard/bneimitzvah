@@ -1,5 +1,18 @@
 # State — CRC B'nei Mitzvah portal
 
+## Current return point — 2026-10-21 study guides released
+
+**Live:** main `80fd87b` (PR #4) is READY in Production as `dpl_5NWtscgTuBJTHHfARLWYgRAkeRFn` on all aliases. PR #4's exact CI 39657590677 passed all four jobs. Migration `0027_study_guides` was applied first (ledger 28 rows): four tables with RLS forced, runtime SELECT/INSERT only, study audit actions present, existing data unchanged. Anonymous probes of the new routes on the canonical host return 401 with private no-store; home 200.
+
+**Shipped:** the labelled study-guide card (under the hero on wide screens, after the Hebrew on phones), verse notes with Sefaria links, learner theme ticks (parents and tutors see state only), the Study walk, side-by-side English on wide screens, the meaning-first word sheet, translation drafts under "More", the rabbi's status line with held drafts, and the haftarah study-sheet link. There is no guide in production yet, so students see no change until one is written.
+
+**How a guide gets written today:** the operator bridge (`scripts/apply-study-guide.mjs`, HANDOFF §5a), dry run first, as origin claude, unreviewed. The portal MCP (plan Tasks 7–9) is the next milestone; its activation gates remain open.
+
+**Waiting on Daniel:** see "Open for Daniel (study slice)" below — rabbi display name, label wording for rabbi-written drafts, the study voice, and the first parashah.
+
+- GATE: applied production migration 0027 with a guarded scratch operator (owner connection obtained through the signed-in Neon CLI, never printed; verified TLS; ledger, catalog and grants checked before and after) — proceeded because the migration was unchanged since CI-green 967c433 and two adversarial passes, is additive, and migration-before-app is the house order.
+- GATE: merged PR #4 and deployed — proceeded because exact CI passed all four jobs, the end-of-slice adversarial review found no blockers and its should-fix items were fixed and re-tested.
+
 ## Current return point — 2026-10-21 handoff (Claude Code owns the whole product)
 
 **Ownership:** Codex stopped on 2026-10-21 at Daniel's request (usage exhausted) and will not resume; no Codex worker is running. The Claude Code session owns integration, migrations, deploy, review dispatch and this file. Handoff: [HANDOFF](../2026-10-21-torah-study/HANDOFF.md). Second-agent adversarial review replaces Codex's review role.
