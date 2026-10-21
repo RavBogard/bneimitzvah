@@ -1,5 +1,6 @@
 "use client";
 
+import { UpdateStaffSheet } from "./roster-sheet/update-button";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { workspaceApi, type RosterStudent, type StudentInput } from "./api";
 import { RequireRole, statusOf, useWorkspace, useWorkspaceModal, WorkspaceLink } from "./provider";
@@ -130,7 +131,7 @@ function Roster() {
   const reloadIcon = <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
   return <section className="role-workspace admin-workspace">
     <AdminNav />
-    <div className="admin-head"><h1>Students</h1><div className="admin-head-actions"><WorkspaceLink className="button-secondary admin-pill" href="/workspace/admin/students/import">Import</WorkspaceLink><button ref={addButton} className="button-primary admin-pill" disabled={pending || loading || unavailable || conflict} onClick={event => choose(null, event)}>Add student</button></div></div>
+    <div className="admin-head"><h1>Students</h1><div className="admin-head-actions"><UpdateStaffSheet /><WorkspaceLink className="button-secondary admin-pill" href="/workspace/admin/students/import">Import</WorkspaceLink><button ref={addButton} className="button-primary admin-pill" disabled={pending || loading || unavailable || conflict} onClick={event => choose(null, event)}>Add student</button></div></div>
     {!sheetOpen && notice}{!sheetOpen && conflict && <button type="button" className="button-secondary admin-pill roster-reload-inline" onClick={() => void load().catch(() => undefined)}>Reload roster</button>}
     {loading ? <p role="status">Loading students…</p> : unavailable ? <div className="admin-state" role="alert"><h2>Students unavailable</h2><p>The full list couldn’t be loaded, so none of it is shown. Access may have changed, or the list may be too large to load at once.</p><button className="button-secondary admin-pill" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
       : <>

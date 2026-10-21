@@ -13,10 +13,10 @@ function reviewedServiceCron(text) {
   try {
     if (Buffer.byteLength(text) > 2048) return false;
     const value = JSON.parse(text), keys = text.match(/"(?:[^"\\]|\\.)*"\s*:/g) ?? [];
-    // Exactly three keys also refuses hidden duplicate JSON members.
-    if (!value || Array.isArray(value) || Object.keys(value).length !== 1 || !Array.isArray(value.crons) || value.crons.length !== 1 || keys.length !== 3) return false;
-    const cron = value.crons[0];
-    return cron && !Array.isArray(cron) && Object.keys(cron).length === 2 && cron.path === "/api/internal/service-ecosystem/drain" && cron.schedule === "17 10 * * *";
+    // Exactly these reviewed jobs, in order; the key count also refuses hidden duplicate JSON members.
+    const reviewed = [["/api/internal/service-ecosystem/drain", "17 10 * * *"], ["/api/internal/roster-sheet/sync", "40 9 * * *"]];
+    if (!value || Array.isArray(value) || Object.keys(value).length !== 1 || !Array.isArray(value.crons) || value.crons.length !== reviewed.length || keys.length !== 1 + 2 * reviewed.length) return false;
+    return value.crons.every((cron, i) => cron && !Array.isArray(cron) && Object.keys(cron).length === 2 && cron.path === reviewed[i][0] && cron.schedule === reviewed[i][1]);
   } catch { return false; }
 }
 const MEDIA = /\.(?:mp3|wav|webm|m4a|ogg|flac|aac|mp4|mov|aiff|aif|opus|ckpt|pt|pth|safetensors|onnx|h5|bin)$/i;
