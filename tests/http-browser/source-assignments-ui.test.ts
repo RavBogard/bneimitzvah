@@ -77,7 +77,7 @@ beforeAll(async () => {
 }, 120_000);
 
 beforeEach(() => { onTestFailed(() => { nativeFailed = true; }); });
-afterEach(async () => { for (const value of contexts.splice(0)) await value.close(); relatedFailure = false; catalogRevision = 0; });
+afterEach(async () => { for (const value of contexts.splice(0)) { await value.unrouteAll({ behavior: "wait" }); await value.close(); } relatedFailure = false; catalogRevision = 0; });
 afterAll(async () => { try { if (!nativeFailed && duplicateKeyWarnings === 0 && process.env.SOURCE_ASSIGNMENTS_CAPTURE === "1") await capturePacket(); } finally { await Promise.all(contexts.map(context => context.close().catch(() => {}))); await browser?.close().catch(() => {}); await stop?.().catch(() => {}); await fixture?.close().catch(() => {}); restore?.(); } expect(duplicateKeyWarnings).toBe(0); }, 120_000);
 
 async function capturePacket() {

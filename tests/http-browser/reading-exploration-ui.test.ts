@@ -431,12 +431,15 @@ it("cancels held proposed audio on page navigation and quiet return never starts
 
 
 it("an actual signed proposal deadline stops cached playback even before queued timer processing", async () => {
-  const tab = await page(); await tab.clock.install();
+  const tab = await page();
   const metadataReady = await shortMetadata(tab);
   const preparation = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/explore/prepare") && response.status() === 200);
   await tutor(tab); await metadataReady(); const selected: unknown = await (await preparation).json();
   const deadline = selected && typeof selected === "object" && "expiresAt" in selected ? selected.expiresAt : undefined;
   expect(typeof deadline === "number" && Number.isSafeInteger(deadline) && deadline > Date.now()).toBe(true);
+  // Acquire and fully verify the genuine metadata before installing fake time;
+  // the deadline check, rather than the network transport, is under test here.
+  await tab.clock.install();
   await portion(tab).getByRole("button", { name: "Hear Genesis 1:1", exact: true }).click();
   await heard(tab, portion(tab).getByRole("region", { name: "Reading playback", exact: true }));
   // Uses the genuine returned claim deadline, not a rewritten response or signature.

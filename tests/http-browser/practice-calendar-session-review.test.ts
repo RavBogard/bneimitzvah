@@ -14,10 +14,18 @@ vi.mock("server-only", () => ({}));
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, sibling: { id: string };
 let stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined, isolation: Awaited<ReturnType<typeof isolatedEnv>> | undefined;
 const contexts: BrowserContext[] = [];
+const serviceReads = new WeakMap<Page,{started:number;completed:number;statuses:number[]}>();
 const safe = async <T>(action: () => Promise<T>): Promise<T> => { try { return await action(); } catch { throw new Error("Synthetic calendar session review failed; details withheld"); } };
 const week = (tab: Page) => tab.getByRole("list", { name: "Practice this week", exact: true });
 const click = (tab: Page, name: string) => safe(() => tab.getByRole("button", { name, exact: true }).click());
-const ready = (tab: Page) => ui(week(tab).getByRole("listitem")).toHaveCount(7);
+async function ready(tab: Page, expectedServiceReads=1) {
+  await ui(week(tab).getByRole("listitem")).toHaveCount(7);
+  // This fixture has no connected ceremony. A completed successful read and
+  // the resulting absent panel prove its post-authority probe settled too.
+  await ui.poll(()=>{const reads=serviceReads.get(tab);return Boolean(reads&&reads.completed>=expectedServiceReads&&reads.completed===reads.started);}).toBe(true);
+  expect(serviceReads.get(tab)?.statuses).toEqual(Array(serviceReads.get(tab)?.started??0).fill(200));
+  await ui(tab.locator("[data-my-service]")).toHaveCount(0);
+}
 const expired = () => fixture.ownerDb.update(s.session).set({ expiresAt: new Date(0) }).where(eq(s.session.userId, fixture.tutor.id));
 const eventPath = (tab: Page) => `**/api/students/${fixture.student.id}/practice-events`;
 function traffic(tab: Page) {
@@ -29,7 +37,11 @@ function traffic(tab: Page) {
 async function page() {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
-  const tab = await context.newPage(); await safe(() => tab.goto("/", { waitUntil: "domcontentloaded" }));
+  const tab = await context.newPage(), reads={started:0,completed:0,statuses:[]as number[]};serviceReads.set(tab,reads);
+  tab.on("request",request=>{if(new URL(request.url()).pathname.endsWith("/my-service"))reads.started++;});
+  tab.on("response",response=>{if(new URL(response.url()).pathname.endsWith("/my-service"))reads.statuses.push(response.status());});
+  tab.on("requestfinished",request=>{if(new URL(request.url()).pathname.endsWith("/my-service"))reads.completed++;});
+  await safe(() => tab.goto("/", { waitUntil: "domcontentloaded" }));
   expect(await tab.evaluate(async () => (await fetch("/api/auth/sign-in/magic-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "pg-tutor@example.test" }) })).status)).toBe(200);
   await openAuthMail(tab, fixture.takeMail("pg-tutor@example.test")); await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" });
   await ready(tab); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 1:1"]')).toBeVisible(); await tab.waitForLoadState("networkidle"); return tab;
@@ -81,7 +93,8 @@ it("keeps calendar 403 and 404 local but makes a direct POST 401 globally termin
     await click(tab, "View Genesis 1:1 up close"); await ui(week(tab)).toHaveCount(0); await ui(tab.locator(".study-verses")).toBeVisible();
     expect(await tab.getByRole("heading", { name: "Sign in to continue", exact: true }).count()).toBe(0);
     await click(tab, "Close practice view"); await tab.waitForLoadState("networkidle"); expect(seen.sessions).toEqual([200]);
-    await tab.unroute(eventPath(tab)); await click(tab, "Refresh reading"); await ready(tab); await tab.waitForLoadState("networkidle"); seen.sessions.length = 0;
+    await tab.unroute(eventPath(tab));const expectedServiceReads=serviceReads.get(tab)!.started+1;
+    await click(tab, "Refresh reading"); await ready(tab,expectedServiceReads); await tab.waitForLoadState("networkidle"); seen.sessions.length = 0;
   }
   await tab.route(eventPath(tab), async route => { await expired(); await route.fulfill({ status: 401, contentType: "application/json", body: "{}" }); });
   await click(tab, "View Genesis 1:1 up close"); await globallyGone(tab); expect(seen.sessions).toEqual([200, 401]); expect(seen.events).toEqual(["POST", "POST", "POST"]); await tab.context().close();
