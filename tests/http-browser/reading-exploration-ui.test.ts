@@ -1,7 +1,8 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { privateRouteFetch } from "./audio-observation";
+import { startFirefoxAudioOutput, type AudioOutput } from "./firefox-audio-output";
 import { expect as ui } from "@playwright/test";
-import { chromium, type Browser, type BrowserContext, type Page, type Request as BrowserRequest } from "playwright";
+import { firefox, type Browser, type BrowserContext, type Page, type Request as BrowserRequest } from "playwright";
 import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -52,12 +53,14 @@ function sourceRoute(scope: SourceRouteScope, action: "fulfill" | "abort", perfo
   return task;
 }
 let audioDirectory: string | undefined;
+let audioOutput: AudioOutput | undefined;
 const shortBodies = new Map<string, Buffer>();
 let signedIn: Awaited<ReturnType<BrowserContext["cookies"]>> | undefined;
 let setListeningRelease: (value: boolean) => void;
 const portion = (tab: Page) => tab.getByRole("region", { name: "Proposed Torah portion", exact: true });
 async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Exploration UI browser operation failed; private details withheld"); } }
 beforeAll(async () => {
+  let setupStage: "synthetic-source" | "catalog" | "fixture" | "server" | "audio-output" | "browser" = "synthetic-source";
   try {
     assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard();
     audioDirectory = await realpath(await mkdtemp(join(tmpdir(), "exploration-short-audio-")));
@@ -70,13 +73,23 @@ beforeAll(async () => {
         verses: refs.map(ref => ({ schema: "reference-verse/v1", ref, table: kind, playback: { status: "ready", asset: "ra_" + String(i + 3).repeat(32), clip: { start: 1, end: 5 } },
           words: { status: "ready", readingTextSha256: createHash("sha256").update(text.readingText.normalize("NFC")).digest("hex"), starts: [1.1, 3] }, attribution: REFERENCE_ATTRIBUTION })) };
     });
+    setupStage = "catalog";
     const catalog = parseReferenceCatalog({ schema: "reference-catalog/v1", source: "PockettorahAudioFiles", assets }); if (!catalog) throw Error("Synthetic catalog refused");
     const shorts = await syntheticShortReferences(catalog, [torah, haft].map((body, i) => ({ asset: assets[i].id, bytes: body.bytes, physicalFrames: body.physicalFrames })));
     for (const row of shorts.sources) shortBodies.set(row.path, row.bytes);
+    setupStage = "fixture";
     fixture = await browserFixture({ referenceCatalogLoad: async () => catalog, referenceShortManifestLoad: async () => shorts.manifest, referenceStudentRelease: true, studyLoad: async request => { if (hold && request.offset === 100) { hold.entered.resolve(undefined); await hold.release.promise; } return syntheticUiStudyPage(request); } });
     setListeningRelease = studentRelease => { Object.assign(fixture.runtime, { shortReferenceAudio: createShortReferenceAudioService({ access: fixture.runtime.access, practice: fixture.runtime.practice, loadText: async request => syntheticUiStudyPage(request), loadCatalog: async () => catalog, loadManifest: async () => shorts.manifest, studentRelease }) }); };
-    stop = await startBrowserServer(fixture.withRuntime); browserEnv = await isolatedEnv(); browser = await chromium.launch({ headless: true, env: browserEnv.env });
-  } catch { await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await browserEnv?.cleanup(); if (audioDirectory) await rm(audioDirectory, { recursive: true, force: true }); throw new Error("Exploration UI setup failed; private details withheld"); }
+    // Chromium issue 568852319 misreports fully consumed no-store streams as
+    // cancelled. Keep every terminal assertion using the pinned Firefox build.
+    setupStage = "server";
+    stop = await startBrowserServer(fixture.withRuntime); browserEnv = await isolatedEnv();
+    setupStage = "audio-output";
+    audioOutput = await startFirefoxAudioOutput(process.env.FIREFOX_AUDIO_TEST_TOOLCHAIN);
+    setupStage = "browser";
+    browser = await firefox.launch({ headless: true, env: { ...browserEnv.env, ...audioOutput.environment } });
+    console.info("exploration-contract-browser", { engine: "firefox", version: browser.version() });
+  } catch { await browser?.close().catch(() => undefined); let outputCleanupFailed = false; await audioOutput?.close().catch(() => { outputCleanupFailed = true; }); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); await browserEnv?.cleanup(); if (audioDirectory) await rm(audioDirectory, { recursive: true, force: true }); throw new Error("Exploration UI setup failed (" + setupStage + "); " + (outputCleanupFailed ? "owned audio cleanup failed; " : "") + "private details withheld"); }
 }, 120000);
 beforeEach(async () => {
   hold = undefined;
@@ -96,7 +109,7 @@ afterEach(async () => { hold?.release.resolve(undefined); hold = undefined;
 });
 afterAll(async () => {
   const failures: string[] = [];
-  for (const [label, action] of [["browser", () => browser?.close()], ["server", () => stop?.()], ["fixture", () => fixture?.close()], ["home", () => browserEnv?.cleanup()]] as const) {
+  for (const [label, action] of [["browser", () => browser?.close()], ["audio output", () => audioOutput?.close()], ["server", () => stop?.()], ["fixture", () => fixture?.close()], ["home", () => browserEnv?.cleanup()]] as const) {
     try { await action(); } catch { failures.push(label); }
   }
   restore?.();
@@ -432,15 +445,33 @@ it("cancels held proposed audio on page navigation and quiet return never starts
 
 it("an actual signed proposal deadline stops cached playback even before queued timer processing", async () => {
   const tab = await page();
-  // Use the genuine endpoint directly here. Successful Hear below proves the
-  // browser parsed and cached its metadata; this deadline test needs no
-  // intercept-and-fulfill transport or CDP request-completion surrogate.
+  // Successful Hear below proves actual browser consumption and caching.
+  // Capture the genuine preparation bytes at its exact endpoint: a duplicate
+  // CDP body lookup can lose Chromium's resource even when the app read it.
   const metadata = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/explore/reference/short/page") && response.status() === 200);
-  // Consume the genuine body as soon as its response arrives. Delaying CDP's
-  // body lookup until after DOM/metadata readiness can lose its resource handle.
-  // Promise.all observes every failure while navigation and body consumption run.
-  const preparation = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/explore/prepare") && response.status() === 200).then(response => response.json() as Promise<unknown>);
-  const [, , selected] = await Promise.all([tutor(tab), metadata, preparation]);
+  const scope = contexts.find(scope => scope.context === tab.context()); if (!scope) throw Error("Exploration preparation ownership missing");
+  const path = `/api/students/${fixture.student.id}/reading/explore/prepare`;
+  let selected: unknown, captured = false;
+  await tab.route(url => url.origin === BROWSER_ORIGIN && url.pathname === path, route => sourceRoute(scope, "fulfill", async () => {
+    const request = route.request(), url = new URL(request.url());
+    if (request.method() !== "POST" || url.search || request.postDataJSON()?.mode !== "tutor") throw Error("Exploration preparation request refused");
+    const response = await privateRouteFetch(route, tab, { maxRedirects: 0, maxRetries: 0, timeout: 15000 });
+    if (!response) throw Error("Exploration preparation response missing");
+    try {
+      const headers = response.headers(), declared = headers["content-length"];
+      if (response.status() !== 200 || headers["content-type"]?.split(";", 1)[0].trim().toLowerCase() !== "application/json"
+        || declared !== undefined && (!/^(?:0|[1-9][0-9]*)$/.test(declared) || Number(declared) > 256 * 1024)) throw Error("Exploration preparation response refused");
+      const bytes = await response.body(); if (!bytes.length || bytes.length > 256 * 1024) throw Error("Exploration preparation body refused");
+      const digest = createHash("sha256").update(bytes).digest("hex");
+      selected = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+      // Buffered bytes are dechunked; preserve status, semantic headers and body.
+      const forwarded: Record<string, string> = { ...headers, "content-length": String(bytes.length) }; delete forwarded["transfer-encoding"];
+      await route.fulfill({ status: response.status(), headers: forwarded, body: bytes });
+      expect(createHash("sha256").update(bytes).digest("hex")).toBe(digest);
+    } finally { await response.dispose(); }
+    captured = true;
+  }));
+  await Promise.all([tutor(tab), metadata, ui.poll(() => captured, { timeout: 15000 }).toBe(true)]);
   const deadline = selected && typeof selected === "object" && "expiresAt" in selected ? selected.expiresAt : undefined;
   expect(typeof deadline === "number" && Number.isSafeInteger(deadline) && deadline > Date.now()).toBe(true);
   await portion(tab).getByRole("button", { name: "Hear Genesis 1:1", exact: true }).click();

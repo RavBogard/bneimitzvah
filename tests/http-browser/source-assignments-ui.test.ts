@@ -24,10 +24,14 @@ const detail = (tab: Page, ref = "Genesis 1:1") => tab.locator(`.study-verse-det
 const panel = (tab: Page, ref = "Genesis 1:1") => detail(tab, ref).getByRole("region", { name: `Sources for ${ref}`, exact: true });
 const assigned = (tab: Page) => panel(tab).getByRole("list", { name: "Assigned sources", exact: true });
 async function api(tab: Page, path: string, body?: unknown) { return tab.evaluate(async ({ path, body }) => { const result = await fetch(path, { method: body === undefined ? "GET" : "POST", headers: body === undefined ? {} : { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store" }); return { status: result.status, data: await result.json() }; }, { path, body }); }
+// Pinned Playwright 1.64.1 auto-continues an in-flight request when a page route that fell back
+// here is removed, so this route's own continue can find it already continued. Letting same-origin
+// requests through is this route's only job; every other failure still throws.
+const continueSameOrigin = (route: Route) => route.continue().catch((error: unknown) => { if (!/Route is already handled/.test(String(error))) throw error; });
 async function page(who: "admin" | "tutor" | "student" = "admin", mobile = false, colorScheme: "light" | "dark" = "light") {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 }, colorScheme, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
   await observeSilentAudio(context);
-  await context.route("**/*", async route => { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); });
+  await context.route("**/*", async route => { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await continueSameOrigin(route); else await route.abort(); });
   if (cookies[who]) await context.addCookies(cookies[who]!);
   const tab = await context.newPage(); tab.on("console", message => { if (message.text().includes("Encountered two children with the same key")) duplicateKeyWarnings++; });
   await tab.goto("/", { waitUntil: "domcontentloaded" });
