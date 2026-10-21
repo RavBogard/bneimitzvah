@@ -86,10 +86,17 @@ export async function verifyPracticeServiceUnit<Q extends PgQueryResultHKT>(tx: 
   if (loaded.identity !== value.plan.catalogIdentity || digest(selected) !== digest(value.selected)) throw new AccessUnavailable();
   return selected.includes(target.unitId);
 }
+export async function verifyCeremonyMaterialMapping<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,tenantId:string,slot:"morning"|"havdalah",mapping:{catalogId:string;catalogIdentity:string;unitId:string}){
+  const lifecycle=await stored.lifecycle(tx,tenantId,mapping.catalogId);
+  if(!lifecycle || lifecycle.state==="withdrawn")throw new AccessUnavailable();
+  const loaded=await readStoredFeed(stored,tx,tenantId,mapping.catalogId,()=>undefined);
+  if(loaded.identity!==mapping.catalogIdentity || !serviceUnitsForSlot(loaded,slot).some(unit=>unit.id===mapping.unitId))throw new AccessUnavailable();
+}
 
 export function createServiceLearningService<Q extends PgQueryResultHKT>(input: {
   access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>;
   signingSecret: string; now?: () => number; data?: typeof stored;
+  resolveCeremonyUnit?:(request:AccessRequest,selection:ReadSelection&{rowId:string})=>Promise<{unitId:string;ceremonyType:"morning"|"havdalah";catalogId:string;catalogIdentity:string}>;
 }) {
   const data = input.data ?? stored, bindings = createBindings(input.signingSecret, input.now ?? Date.now);
   const feed = (tx: AccessTransaction<Q>, tenantId: string, catalogId: string) => readStoredFeed(data, tx, tenantId, catalogId, () => undefined);
@@ -197,5 +204,18 @@ export function createServiceLearningService<Q extends PgQueryResultHKT>(input: 
       return { ok: true as const, planId: result.id, revision: result.revision, cleared: !selected.length };
     });
   }
-  return Object.freeze({ catalog, prepare, confirm, metadata, unit });
+  async function ceremonyUnit(request:AccessRequest,selection:ReadSelection&{rowId:string}) {
+    if(!input.resolveCeremonyUnit)throw new AccessUnavailable();
+    // Resolve source approval before opening the material authority transaction.
+    const mapping=await input.resolveCeremonyUnit(request,selection);
+    return withRead(request,selection,async(tx,actor)=>{
+      const lifecycle=await data.lifecycle(tx,actor.tenantId,mapping.catalogId);if(!lifecycle || lifecycle.state==="withdrawn")throw new AccessUnavailable();
+      const loaded=await feed(tx,actor.tenantId,lifecycle.catalogId);
+      if(loaded.identity!==mapping.catalogIdentity)throw new AccessUnavailable();
+      const found=serviceUnitsForSlot(loaded,mapping.ceremonyType).find(unit=>unit.id===mapping.unitId);
+      if(!found)throw new AccessUnavailable();
+      live(actor);return bounded(material(loaded,found));
+    });
+  }
+  return Object.freeze({ catalog, prepare, confirm, metadata, unit, ceremonyUnit });
 }

@@ -24,7 +24,7 @@ function values(patch:Partial<Record<string,string>>={}){
 const csv=(...rows:string[][])=>full+"\n"+rows.map(cells).join("\n");
 async function databaseSnapshot(f:Awaited<ReturnType<typeof fixture>>){
   return f.owner(async()=>{
-    const names=(await f.client.query<{tablename:string}>("select tablename from pg_tables where schemaname='public' order by tablename")).rows.map(row=>row.tablename).filter(name=>name!=="student" && name!=="audit_event");
+    const names=(await f.client.query<{tablename:string}>("select tablename from pg_tables where schemaname='public' order by tablename")).rows.map(row=>row.tablename).filter(name=>!["student","audit_event","service_ceremony","student_ceremony"].includes(name));
     const result:Record<string,unknown>={};
     for(const name of names){if(!/^[a-z_]+$/.test(name))throw new Error("Unexpected synthetic table");result[name]=(await f.client.query(`select coalesce(jsonb_agg(to_jsonb(t) order by to_jsonb(t)::text),'[]'::jsonb) as rows from public."${name}" t`)).rows;}
     return result;
@@ -57,7 +57,7 @@ test("exact legacy, explicit-kind and full headers retain values while malformed
   expect(parseStudentCsv(full+"\n"+cells([...values(),"extra"])).issues).toEqual([{row:2,code:"invalid-columns"}]);
 });
 
-test("actual HTTP import preserves rich pending intake and changes only student and audit rows without mail or reading work",async()=>{
+test("actual HTTP import preserves rich pending intake and queues its ceremony without mail or reading work",async()=>{
   const f=await fixture();
   await f.owner(async()=>{await f.db.update(s.user).set({name:"  SYNTHETIC   Tutor  "}).where(eq(s.user.id,f.identities.multi.id));});
   const before=await databaseSnapshot(f),magicLinks=f.delivered.length,deliveries=f.deliveries.length;
@@ -71,6 +71,7 @@ test("actual HTTP import preserves rich pending intake and changes only student 
   const response=await f.call("/api/admin/students/import/confirm",{who:"admin",body:{csv:source,allowDuplicates:false,binding:preview.binding}});
   expect(response.status).toBe(201);const created=await response.json();expect(created.ids).toHaveLength(2);
   expect(await databaseSnapshot(f)).toEqual(before);expect(f.deliveries).toHaveLength(deliveries);expect(f.delivered).toHaveLength(magicLinks);expect(forbiddenMail).not.toHaveBeenCalled();
+  await f.owner(async()=>{const ceremonies=await f.db.select().from(s.serviceCeremony),links=await f.db.select().from(s.studentCeremony);expect(ceremonies).toHaveLength(1);expect(ceremonies[0]).toMatchObject({state:"pending",ceremonyType:"havdalah"});expect(links).toHaveLength(2);expect(links.map(link=>link.studentId).sort()).toEqual([...created.ids].sort());});
   const roster=await (await f.call("/api/admin/students",{who:"admin"})).json();
   expect(parseStudents(roster,true)).toEqual(roster.students);
   const imported=roster.students.find((row:{id:string})=>row.id===created.ids[0]);

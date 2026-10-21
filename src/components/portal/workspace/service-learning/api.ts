@@ -65,7 +65,7 @@ export function parsePreparation(value: unknown, catalog: AvailableCatalog, sele
   return { ok: true, binding: row.binding, selectedIds: received, clearsPlan: row.clearsPlan as boolean, review: review as PreparedServicePlan["review"], expiresAt: Number(row.expiresAt) };
 }
 const blockKinds = ["stanza", "trope", "english", "rubric", "chatimah", "seasonal", "display"];
-function material(value: unknown): ServiceUnitMaterial {
+export function material(value: unknown): ServiceUnitMaterial {
   const row = closed(value, ["unit", "section", "license", "source"], ["blockGranularity"]), u = closed(row.unit, ["id", "family", "name", "section", "blocks"], ["caption", "standalone", "render", "group", "shortName", "renderStructure", "renderSegments", "sourceBoundaries"]);
   let nodes = 0;
   function spans(value: unknown, depth = 0): ServiceSpan[] {

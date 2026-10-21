@@ -47,7 +47,7 @@ import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
 const secret = () => randomBytes(48).toString("base64url");
 type Mail = { email: string; url: string };
 
-export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; shortReferenceStudyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceShortManifestLoad?: (signal?: AbortSignal) => Promise<ShortSourceManifest>; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown> } = {}) {
+export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; shortReferenceStudyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceShortManifestLoad?: (signal?: AbortSignal) => Promise<ShortSourceManifest>; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown>;musicBroker?:MusicBroker } = {}) {
   const base = await postgresAccessFixture();
   try {
     // The shared disposable fixture creates the DB, migrations and restricted
@@ -60,13 +60,14 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       sendMagicLink: async ({ email, url, token }) => { deliveries.push({ email, url: projectMagicLink(url, token, BROWSER_ORIGIN) }); } });
     const deployment = { environment: "local" as const, deployment: "http-browser" };
     const access = createAccessService({ db, auth, deployment });
+    const practice = createPracticeService({ access });
+    const musicBroker=options.musicBroker??createMusicBroker(undefined),serviceEcosystem=createServiceEcosystemService({access,practice,broker:musicBroker,studentAudioRelease:options.referenceStudentRelease});
     const invitations = createInvitationService({ db, access, transport: async ({ email, url }) => {
       deliveries.push({ email, url });
       if (options.failInvitationDelivery?.()) throw new Error("Synthetic invitation delivery failure");
     }, throttleSecret: secret() });
     const students = createStudentService({ access, signingSecret: secret(), loadReading: async (date, calendar) => ({ fetchedAt: Date.now(),
       snapshot: { date: parseCeremonyDate(date), calendar, classification: date===options.emptyReadingDate ? "missing" : "regular", reading: date === options.emptyReadingDate ? null : { parashah: "Synthetic", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:31-2:2" }], triennial: null }, haftarah: date === options.emptyReadingDate ? null : "Isaiah 1:1-2" } }) });
-    const practice = createPracticeService({ access });
     const explorationSecret = secret();
     const explorationReading: Parameters<typeof createReadingExplorationService>[0]["loadReading"] = async (date, calendar) => ({ fetchedAt: Date.now(), snapshot: { date: parseCeremonyDate(date), calendar, classification: "regular", reading: { parashah: "Synthetic", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:1-6:8" }], triennial: null }, haftarah: null } });
     const pendingInvitations = createPendingInvitations({ secret: secret(), origin: BROWSER_ORIGIN, environment: "local" });
@@ -83,7 +84,9 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       studySources: createStudySourceDiscoveryService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), related: options.relatedReader ?? (async ref => parseRelatedMetadata([], ref)) }),
       studyWordDetails: createStudyWordDetailsService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), source: options.wordDetailsSource ?? { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) } }),
       study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }), studentWork: createStudentWorkService({ access, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
-    serviceLearning: createServiceLearningService({ access: access, practice, signingSecret: secret() }),
+    serviceLearning: createServiceLearningService({ access: access, practice, signingSecret: secret(),resolveCeremonyUnit:serviceEcosystem.materialMapping }),
+    serviceEcosystem,
+    serviceScheduler: createServiceScheduler({ db, broker:createMusicBroker(undefined) }),
       googleChallenges: createGoogleChallenges({ db, origin: BROWSER_ORIGIN, secret: secret() }),
       resolveHost: async request => {
         const host = await resolveTenantHost(db, request, deployment);
@@ -106,3 +109,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     throw new Error("Browser fixture setup failed; details withheld");
   }
 }
+import { createServiceEcosystemService } from "../../src/server/service-ecosystem/service";
+import { createMusicBroker } from "../../src/server/service-ecosystem/broker";
+import { createServiceScheduler } from "../../src/server/service-ecosystem/scheduler";
+import type { MusicBroker } from "../../src/server/service-ecosystem/contract";

@@ -53,7 +53,7 @@ function spans(value: readonly ServiceSpan[]): JsonValue[] {
   return value.map((span): JsonValue => "t" in span ? { t: span.t } : "em" in span ? { em: spans(span.em) } : "strong" in span ? { strong: spans(span.strong) } : { footnote: spans(span.footnote) });
 }
 const section = (value: ServiceSectionHeading) => pick(value, ["idx", "en", "he", "opener"]);
-function material(value: ServiceUnitMaterial): JsonValue {
+export function material(value: ServiceUnitMaterial): JsonValue {
   const unit = pick(value.unit, ["id", "family", "name", "section", "caption", "standalone", "render", "group", "shortName"]);
   unit.blocks = value.unit.blocks.map(block => {
     const out = pick(block, ["type", "he", "role", "label", "verse", "cue", "occasion", "gold"]);

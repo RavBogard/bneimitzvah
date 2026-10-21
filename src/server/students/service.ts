@@ -16,6 +16,7 @@ import { validatedSnapshot } from "./preparation";
 import { aliyahStarts } from "../../lib/readings/aliyah-starts";
 import { readingView } from "../portal/service";
 import { markForReview as markServicePlanForReview } from "../service-learning/data";
+import { scheduleCeremony } from "../service-ecosystem/scheduling";
 
 type Mode={mode:ActiveMode};
 type Kind="torah"|"haftarah";
@@ -68,9 +69,16 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
   access:ReturnType<typeof createAccessService<Q>>; signingSecret:string;
   loadReading:(date:string,calendar:Calendar)=>Promise<{snapshot:Snapshot;fetchedAt:number}>;
   verseCounts?:VerseCounts; now?:()=>number;
+  afterSchedule?:(request:CookieMutationRequest,selection:{mode:ActiveMode;studentId:string})=>Promise<unknown>;
+  dispatchScheduled?:()=>void|Promise<void>;
 }){
   const now=input.now??Date.now,counts=input.verseCounts??TANAKH_VERSE_COUNTS;
   const bindings=createBindings(input.signingSecret,now);
+  const afterSchedule=async(request:CookieMutationRequest,mode:ActiveMode,ids:string[])=>{
+    if(input.dispatchScheduled){try{await input.dispatchScheduled();}catch{/* The durable queue survives an unavailable dispatcher. */}return;}
+    // Intake is already committed. Remote failure cannot undo roster work.
+    for(const studentId of ids)try{await input.afterSchedule?.(request,{mode,studentId});}catch{/* Durable pending work remains retryable. */}
+  };
 
   async function listRoster(request:CookieMutationRequest,selection:Mode){
     return input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
@@ -81,16 +89,18 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
   }
   async function create(request:CookieMutationRequest,selection:Mode&{student:unknown}){
     const values=studentInput(selection.student);
-    return input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
+    const result=await input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
       requireCookieMutation(request,actor.origin);
       const student=await data.insertStudent(tx,actor.tenantId,values);
+      await scheduleCeremony(tx,actor.tenantId,student,now());
       await data.audit(tx,actor,"student.create",student.id);
       return {id:student.id,revision:student.revision};
     });
+    await afterSchedule(request,selection.mode,[result.id]);return result;
   }
   async function edit(request:CookieMutationRequest,selection:Mode&{studentId:string;expectedRevision:number;student:unknown}){
     const id=identifier(selection.studentId),expected=revision(selection.expectedRevision),values=studentInput(selection.student);
-    return input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
+    const result=await input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
       requireCookieMutation(request,actor.origin);
       const current=await data.editableStudent(tx,actor.tenantId,id);
       if(!current || current.disabledAt)throw new AccessDenied(404);
@@ -99,10 +109,11 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       const updated=await data.updateStudent(tx,actor.tenantId,id,expected,values);
       if(!updated)return conflict();
       const readingNeedsReview=current.ceremonyDate!==values.ceremonyDate || current.serviceSlot!==values.serviceSlot;
-      if(readingNeedsReview){await data.markReadingsForReview(tx,actor.tenantId,id);await markServicePlanForReview(tx,actor.tenantId,id);}
+      if(readingNeedsReview){await data.markReadingsForReview(tx,actor.tenantId,id);await markServicePlanForReview(tx,actor.tenantId,id);await scheduleCeremony(tx,actor.tenantId,updated,now());}
       await data.audit(tx,actor,"student.update",id);
       return {ok:true as const,id,revision:updated.revision,readingNeedsReview};
     });
+    if(result.ok)await afterSchedule(request,selection.mode,[id]);return result;
   }
   async function disable(request:CookieMutationRequest,selection:Mode&{studentId:string;expectedRevision:number}){
     const id=identifier(selection.studentId),expected=revision(selection.expectedRevision);
@@ -137,7 +148,7 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
   async function confirmImport(request:CookieMutationRequest,selection:Mode&{csv:string;allowDuplicates:boolean;binding:string}){
     const parsed=parseStudentCsv(selection.csv),claim=bindings.verify(selection.binding,"student-import");
     if(parsed.issues.length || typeof selection.allowDuplicates!=="boolean")throw new AccessDenied(403);
-    return input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
+    const result=await input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
       requireCookieMutation(request,actor.origin);
       if(!sameActor(claim,actor) || claim.input!==digest(selection.csv) || claim.allowDuplicates!==selection.allowDuplicates)throw new AccessDenied(403);
       const existing=await data.roster(tx,actor.tenantId);if(existing.length>5000)throw new AccessDenied(403);
@@ -149,10 +160,11 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       if(claim.tutors!==matched.tutorSnapshot)return conflict();
       if(duplicates(parsed.rows,existing,parsed.rowNumbers).length && !selection.allowDuplicates)throw new AccessDenied(403);
       const ids:string[]=[];
-      for(const values of matched.rows){assertSessionLive(actor.authSessionExpiresAt);const student=await data.insertStudent(tx,actor.tenantId,values);await data.audit(tx,actor,"student.import",student.id);ids.push(student.id);}
+      for(const values of matched.rows){assertSessionLive(actor.authSessionExpiresAt);const student=await data.insertStudent(tx,actor.tenantId,values);await scheduleCeremony(tx,actor.tenantId,student,now());await data.audit(tx,actor,"student.import",student.id);ids.push(student.id);}
       assertSessionLive(actor.authSessionExpiresAt);
       return {ok:true as const,ids};
     });
+    if(result.ok)await afterSchedule(request,selection.mode,result.ids);return result;
   }
   async function prepareReading(request:CookieMutationRequest,selection:Mode&{studentId:string;kind?:Kind;pick?:string;ranges?:string[];aliyahStarts?:string[];preparationMode?:"current-assignment";expectedAssignmentRevision?:number}){
     const id=identifier(selection.studentId),kind=selection.kind??"torah";

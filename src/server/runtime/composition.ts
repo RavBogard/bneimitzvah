@@ -40,6 +40,9 @@ import { createStudyWordDetailsService } from "../study/word-details-service";
 import { createStepSource } from "../study/lexical/source";
 import type { StepSourceLoader } from "../study/lexical/source-loader";
 import { createServiceLearningService } from "../service-learning/service";
+import { createServiceEcosystemService } from "../service-ecosystem/service";
+import { createMusicBroker } from "../service-ecosystem/broker";
+import { createServiceScheduler } from "../service-ecosystem/scheduler";
 import { createStudentWorkService } from "../student-work/service";
 import { createProgressService } from "../progress/service";
 import { createLessonLogService } from "../lesson-log/service";
@@ -107,6 +110,13 @@ export function createRuntimeReferenceLoader(config: RuntimeConfig["referenceAud
     return catalog;
   };
 }
+async function dispatchServiceJobs(config:RuntimeConfig,fetch:typeof globalThis.fetch){
+  // after() runs after the request's pool is closed; own this background connection.
+  const pool=new Pool({connectionString:config.databaseUrl,max:4,connectionTimeoutMillis:5000,idleTimeoutMillis:1000,statement_timeout:10000,query_timeout:12000});
+  pool.on("error",()=>undefined);
+  try{const db=drizzle(pool,{schema,logger:false});await createServiceScheduler({db,broker:createMusicBroker(config.serviceMusic,fetch)}).run();}
+  finally{await pool.end().catch(()=>undefined);}
+}
 export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch,
   studyTasks: PublicStudyCoalescer = sharedStudyTasks(fetch), stepSource: StepSourceLoader = publicStepSource) {
   const send = createMailTransport({ ...config.mail, origin: config.origin, fetch });
@@ -115,9 +125,13 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const access = createAccessService({ db, auth, deployment: config.deployment });
   const invitations = createInvitationService({ db, access, transport: (message) => send("invitation", message), throttleSecret: purposeSecret(config, "invitation-throttle") });
   const loadReading = createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS });
-  const students = createStudentService({ access, loadReading, signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS });
+  const musicBroker = createMusicBroker(config.serviceMusic, fetch);
   const practice = createPracticeService({ access });
-  const serviceLearning = createServiceLearningService({ access, practice, signingSecret: purposeSecret(config, "service-plan-preparations") });
+  const dispatchScheduled=async()=>{const {after}=await import("next/server");after(async()=>{await dispatchServiceJobs(config,fetch);});};
+  const serviceEcosystem = createServiceEcosystemService({ access,practice,broker: musicBroker, studentAudioRelease: config.referenceAudio?.studentRelease,dispatchScheduled });
+  const serviceScheduler = createServiceScheduler({ db, broker: musicBroker, cronSecret: config.serviceCronSecret });
+  const students = createStudentService({ access, loadReading, signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS, dispatchScheduled });
+  const serviceLearning = createServiceLearningService({ access, practice, signingSecret: purposeSecret(config, "service-plan-preparations"), resolveCeremonyUnit: serviceEcosystem.materialMapping });
   const studentWork = createStudentWorkService({ access, practice, authorityBindingSecret: purposeSecret(config, "student-work-authority") });
   const progress = createProgressService({ access, practice });
   const lessonLog = createLessonLogService({ access, practice });
@@ -151,7 +165,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, lessonLog, practiceCalendar, recordings, serviceLearning, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
+  return Object.freeze({ origin: config.origin, auth, access, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

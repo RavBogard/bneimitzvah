@@ -431,14 +431,18 @@ it("cancels held proposed audio on page navigation and quiet return never starts
 
 
 it("an actual signed proposal deadline stops cached playback even before queued timer processing", async () => {
-  const tab = await page(); await tab.clock.install();
-  const metadataReady = await shortMetadata(tab);
+  const tab = await page();
+  // Use the genuine endpoint directly here. Successful Hear below proves the
+  // browser parsed and cached its metadata; this deadline test needs no
+  // intercept-and-fulfill transport or CDP request-completion surrogate.
+  const metadata = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/explore/reference/short/page") && response.status() === 200);
   const preparation = tab.waitForResponse(response => new URL(response.url()).pathname.endsWith("/reading/explore/prepare") && response.status() === 200);
-  await tutor(tab); await metadataReady(); const selected: unknown = await (await preparation).json();
+  await tutor(tab); await metadata; const selected: unknown = await (await preparation).json();
   const deadline = selected && typeof selected === "object" && "expiresAt" in selected ? selected.expiresAt : undefined;
   expect(typeof deadline === "number" && Number.isSafeInteger(deadline) && deadline > Date.now()).toBe(true);
   await portion(tab).getByRole("button", { name: "Hear Genesis 1:1", exact: true }).click();
   await heard(tab, portion(tab).getByRole("region", { name: "Reading playback", exact: true }));
+  await tab.clock.install();
   // Uses the genuine returned claim deadline, not a rewritten response or signature.
   // Server-clock expiration remains separately covered by actual service tests.
   await tab.clock.setSystemTime(Number(deadline) + 1);
