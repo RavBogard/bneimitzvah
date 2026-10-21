@@ -17,6 +17,7 @@ export type ReadingPrefs = { colors: boolean; translation: boolean; size: TextSi
 const PREFIX = "crc-bm-reading-prefs-v2:";
 const defaults: ReadingPrefs = { colors: true, translation: false, size: "standard" };
 const cache = new Map<string, ReadingPrefs>();
+const wideDefault = () => typeof matchMedia === "function" ? matchMedia("(min-width: 1001px)").matches : defaults.translation;
 const listeners = new Set<() => void>();
 
 /** FNV-1a 64-bit, hex. Not a security boundary; it only keeps raw ids out of storage keys. */
@@ -26,43 +27,51 @@ export function scopeKey(studentId: string | null) {
   for (const char of studentId) { hash ^= BigInt(char.codePointAt(0)!); hash = (hash * 0x100000001b3n) & 0xffffffffffffffffn; }
   return PREFIX + hash.toString(16).padStart(16, "0");
 }
-function parse(raw: string | null): ReadingPrefs {
+function parse(raw: string | null, englishOnWide = false): ReadingPrefs {
   try {
     const value = raw ? JSON.parse(raw) as Partial<ReadingPrefs> : {};
     return {
       colors: typeof value.colors === "boolean" ? value.colors : defaults.colors,
-      translation: typeof value.translation === "boolean" ? value.translation : defaults.translation,
+      // English starts on in the wide two-column layout and off on phones, until the reader chooses (spec §5).
+      translation: typeof value.translation === "boolean" ? value.translation : englishOnWide && wideDefault(),
       size: textSizes.some(size => size.id === value.size) ? value.size as TextSize : defaults.size,
     };
   } catch { return defaults; }
 }
-function read(key: string): ReadingPrefs {
-  const known = cache.get(key); if (known) return known;
-  let value = defaults; try { value = parse(window.localStorage.getItem(key)); } catch { /* Private mode: defaults. */ }
-  cache.set(key, value); return value;
+// Learners and parents start with English on in the wide layout; staff keep it off until they choose.
+const cacheKey = (key: string, englishOnWide: boolean) => `${key}|${englishOnWide ? "wide" : "plain"}`;
+function read(key: string, englishOnWide = false): ReadingPrefs {
+  const known = cache.get(cacheKey(key, englishOnWide)); if (known) return known;
+  let value = defaults; try { value = parse(window.localStorage.getItem(key), englishOnWide); } catch { /* Private mode: defaults. */ }
+  cache.set(cacheKey(key, englishOnWide), value); return value;
 }
-function write(key: string, change: Partial<ReadingPrefs>) {
-  const value = { ...read(key), ...change }; cache.set(key, value);
-  try { window.localStorage.setItem(key, JSON.stringify(value)); } catch { /* Preference still applies in this tab. */ }
+function stored(key: string): Partial<ReadingPrefs> {
+  try { const raw = window.localStorage.getItem(key), value = raw ? JSON.parse(raw) : {}; return value && typeof value === "object" ? value : {}; } catch { return {}; }
+}
+function write(key: string, change: Partial<ReadingPrefs>, englishOnWide = false) {
+  const chosen = { ...stored(key), ...change }, value = { ...read(key, englishOnWide), ...change };
+  for (const flag of [true, false]) cache.delete(cacheKey(key, flag));
+  cache.set(cacheKey(key, englishOnWide), value);
+  try { window.localStorage.setItem(key, JSON.stringify(chosen)); } catch { /* Preference still applies in this tab. */ }
   listeners.forEach(listener => listener());
 }
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  const storage = (event: StorageEvent) => { if (event.key?.startsWith(PREFIX)) { cache.delete(event.key); listener(); } };
+  const storage = (event: StorageEvent) => { if (event.key?.startsWith(PREFIX)) { for (const flag of [true, false]) cache.delete(cacheKey(event.key, flag)); listener(); } };
   window.addEventListener("storage", storage);
   return () => { listeners.delete(listener); window.removeEventListener("storage", storage); };
 }
 
-const Scope = createContext<string>(scopeKey(null));
-/** Scopes every reading preference below it to one student. */
-export function ReadingPrefsScope({ studentId, children }: { studentId: string; children: ReactNode }) {
-  return createElement(Scope.Provider, { value: scopeKey(studentId) }, children);
+const Scope = createContext<{ key: string; englishOnWide: boolean }>({ key: scopeKey(null), englishOnWide: false });
+/** Scopes every reading preference below it to one student; englishOnWide sets the unset English default. */
+export function ReadingPrefsScope({ studentId, englishOnWide = false, children }: { studentId: string; englishOnWide?: boolean; children: ReactNode }) {
+  return createElement(Scope.Provider, { value: { key: scopeKey(studentId), englishOnWide } }, children);
 }
 export function useReadingPrefs(): ReadingPrefs {
-  const key = useContext(Scope);
-  return useSyncExternalStore(subscribe, () => read(key), () => defaults);
+  const { key, englishOnWide } = useContext(Scope);
+  return useSyncExternalStore(subscribe, () => read(key, englishOnWide), () => defaults);
 }
 export function useSetReadingPrefs() {
-  const key = useContext(Scope);
-  return useCallback((change: Partial<ReadingPrefs>) => write(key, change), [key]);
+  const { key, englishOnWide } = useContext(Scope);
+  return useCallback((change: Partial<ReadingPrefs>) => write(key, change, englishOnWide), [key, englishOnWide]);
 }

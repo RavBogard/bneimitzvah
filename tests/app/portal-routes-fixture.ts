@@ -14,6 +14,8 @@ import { createPortalService } from "../../src/server/portal/service";
 import { createRelationshipService } from "../../src/server/relationships/service";
 import { createPracticeService } from "../../src/server/practice/service";
 import { createProgressService } from "../../src/server/progress/service";
+import { createStudyGuideService, studyGuideWebSurface } from "../../src/server/study-guides/service";
+import { createHaftarahSheets } from "../../src/server/study-guides/haftarah-sheets";
 import { createLessonLogService } from "../../src/server/lesson-log/service";
 import { createPracticeCalendarService } from "../../src/server/practice-calendar/service";
 import { createInvitationService } from "../../src/server/invitations/service";
@@ -69,7 +71,7 @@ export async function portalRoutesFixture() {
     sourceAssignments: createSourceAssignmentsService({ access: f.service, practice, related: async ref => parseRelatedMetadata([], ref) }),
     studySources: createStudySourceDiscoveryService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, related: async ref => parseRelatedMetadata([], ref) }),
     studyWordDetails: createStudyWordDetailsService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, source: { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) } }),
-    study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }), progress: createProgressService({ access: f.service, practice }), lessonLog: createLessonLogService({ access: f.service, practice }), practiceCalendar: createPracticeCalendarService({ access: f.service, practice }), recordings: createStudentRecordingService({ access: f.service, practice }),
+    study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }), progress: createProgressService({ access: f.service, practice }), haftarahSheets: createHaftarahSheets({ fetch: async () => { throw new Error("No haftarah library in tests"); } }), studyGuides: studyGuideWebSurface(createStudyGuideService({ access: f.service, practice, check: async ({ body }) => ({ ok: true as const, body }) })), lessonLog: createLessonLogService({ access: f.service, practice }), practiceCalendar: createPracticeCalendarService({ access: f.service, practice }), recordings: createStudentRecordingService({ access: f.service, practice }),
     portal: createPortalService({ access: f.service, practice, sessionBindingSecret: randomBytes(48).toString("base64url") }), relationships: createRelationshipService({ access: f.service }), pendingInvitations,
     serviceLearning: createServiceLearningService({ access: f.service, practice, signingSecret: randomBytes(48).toString("base64url") }),
     referenceReview: createReferenceReviewService({ access: f.service, reviewer: undefined, get: async () => { throw new ReviewUnavailable(); } }),

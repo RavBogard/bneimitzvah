@@ -190,6 +190,13 @@
       "when": 1792584040232,
       "tag": "0026_finkel_private_review",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1792603649203,
+      "tag": "0027_study_guides",
+      "breakpoints": true
     }
   ]
 }

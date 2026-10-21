@@ -18,6 +18,13 @@ it("assigned-reading metadata validates canonical cut membership and preserves n
  expect(()=>parseAssigned(dto({...row,verses:["Genesis 1:1","Genesis 1:3"]}),"student",a)).toThrow();
 });
 
+it("reading key is an optional closed slug, null when absent", () => {
+  const dto = (extra: object) => ({ student: student(), mode: "student", context: null, readings: [{ ...reading(), ...extra }] });
+  expect(parseAssigned(dto({}), "student", a).readings[0].readingKey).toBeNull();
+  for (const readingKey of [null, "pekudei", "ii-kings-12-1-12-17"]) expect(parseAssigned(dto({ readingKey }), "student", a).readings[0].readingKey).toBe(readingKey);
+  for (const readingKey of [undefined, "", "Pekudei", "a--b", "-a", "a b", 7, {}, "x".repeat(161)]) expect(() => parseAssigned(dto({ readingKey }), "student", a)).toThrow(PortalRequestError);
+});
+
 describe("workspace DTO and private transport boundaries", () => {
   it("keeps the listening hint a closed boolean and missing hints silent without losing reading metadata", () => {
     const value = { student: student(), mode: "student", context: null, readings: [reading()] };

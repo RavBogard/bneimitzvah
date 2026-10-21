@@ -1,5 +1,45 @@
 # State — CRC B'nei Mitzvah portal
 
+## Current return point — 2026-10-21 handoff (Claude Code owns the whole product)
+
+**Ownership:** Codex stopped on 2026-10-21 at Daniel's request (usage exhausted) and will not resume; no Codex worker is running. The Claude Code session owns integration, migrations, deploy, review dispatch and this file. Handoff: [HANDOFF](../2026-10-21-torah-study/HANDOFF.md). Second-agent adversarial review replaces Codex's review role.
+
+**Baseline verified 2026-10-21:** `origin/main` is `16bfb4d` (PR2 merge). Canonical Production `dpl_9BPVukERqTaEnRn4AnFvnte94ja3` is READY at that SHA on all aliases. Schema through `0026_finkel_private_review.sql` is applied (27 ledger rows); the private Finkel review feature is disabled by default. Next free migration numbers are `0027` and `0028`, reserved for the study slice.
+
+**Main CI is red:** run 39605739789 at `16bfb4d` failed three PostgreSQL HTTP-browser tests. The cause is Playwright 1.64.1 / Chromium 156 dropping a `no-store` streamed body at EOF (Playwright issue 42742). PR3 (`codex/finkel-browser-observation`, head `3c546be`) moves the two affected contract files to the pinned Firefox 157 and changes one client referrer policy to `same-origin`. Its CI 39624599627 passed calendar and metadata but failed two exploration playback assertions on Linux because the runner has no audio output. Codex's uncommitted PulseAudio null-sink helper sits in worktree `C:/Users/dsbog/.codex/worktrees/finkel-browser-stability/bneimitzvah`; its setup fails an `ownedDirectory` check. Claude takes PR3 over first, time-boxed to one bounded attempt.
+
+**Parked, do not resume without Daniel — Finkel private listening review:** the private batch (2 readings, 4 clips, off-repo) was never published; one native Blob attempt errored and all five planned keys are confirmed absent. A partial read-only mirror guard sits ignored in worktree `C:/Users/dsbog/.codex/worktrees/finkel-integration/bneimitzvah` (`finkel-readonly-mirror-*.mjs`). Frozen operator modules and migration receipts are in `C:/Users/dsbog/.codex/worktrees/finkel-canonical-text/bneimitzvah`. Remaining gates: fresh create-only publication of exactly five objects after a clean read-only proof and independent review, admission within five minutes with a trusted admin binding and six-day expiry, then two encrypted env vars and a Git-source deploy. G3 holds.
+
+**Other parked branches (no action):** `codex/passive-reference-observation`, `codex/family-honors` (own 0024–0027 migrations that must never be applied over the installed schema), `codex/beit-service-ecosystem` (merged as PR1), `codex/recording-single-read-diagnosis`.
+
+**Study slice starting:** branch `claude/study-guides` in worktree `C:/Users/dsbog/bneimitzvah-study`, from `origin/main`. Spec `docs/superpowers/specs/2026-10-21-torah-study-guides-design.md`, plan `docs/superpowers/plans/2026-10-21-torah-study-guides.md`. MISSION ruling 11 and PLAN-CODE note 7 carry dated 2026-10-21 amendments (S13, S10).
+
+**Standing constraints:** no roster import, mail, invitations or guest activation; no new scopes or spend; no generated voice or student recordings released; student reference listening held; no second tenant. Daniel cannot phone-test now.
+
+### Gate log (2026-10-21)
+
+- GATE: amended MISSION ruling 11 and PLAN-CODE note 7 on the study branch — proceeded because Daniel's spec rulings S13 and S10 are binding and the handoff directs recording them.
+- GATE: took PR3 over and merged it (main 2a578a0) — proceeded because both CI runs at 511357f passed all four jobs, the exploration playback file ran 8/8 on Linux with the owned PulseAudio null sink, and the only extra change was a test-only tolerance for Playwright's already-continued route race. No assertion, deadline or runtime code was waived.
+- GATE: deferred the portal MCP (plan Tasks 7–9) — proceeded because a sizing pass found no MCP/OAuth code or packages on main, about 25–30 files across 10–12 subsystems, and five open auth gates; HANDOFF §5 directs shipping the operator bridge instead and reporting. The study tools' service, citation checker and grant-bound rabbi authority are ready for the MCP to call.
+- GATE: Task 2 derives the reading key in the projection instead of a stored column and backfill — proceeded because the plan pins the result, not the method, and production has no real roster to backfill. Migration 0027 is therefore the study tables (0028 stays free).
+- GATE: second-agent adversarial review of the schema, RLS, rabbi authority and service ran twice; every blocker and should-fix finding was fixed (commits 6ccd0e9 and the second-pass fix commit) before the UI work.
+
+### Decided here (study slice, 2026-10-21; Daniel may overrule any of these)
+
+- Reading key: Torah uses the haftarah library's own keyOf slug of Hebcal's English name; haftarah keys spell the passage's two endpoints. Computed from the signed snapshot and assigned verses; never stored.
+- Publishing a held guide appends a copy with hold cleared, so every study table stays insert-only.
+- Writes come only through a rabbi authority that re-locks the rabbi's own live admin grant; an MCP authority must carry the exact consented grant binding. The operator bridge may write only origin claude, unreviewed base guides (also enforced by CHECKs).
+- S25 for per-student additions (no held state there): an unattended save over reviewed additions is refused; the rabbi present in Cowork may replace them.
+- Addition themes are shown and ticked as student--<id>, so base and addition ticks never collide.
+- Guide sources link to Sefaria; the Sources disclosure below each verse keeps the in-app reader.
+- Translation drafts stay one disclosure, retitled "More · Your translation & notes", after Sources.
+- English: on by default in the wide two-column layout for learners and parents, off on phones; staff keep it off (an earlier, tested decision). Remembered per student.
+- On phones the guide card sits after the Hebrew and starts closed, so Hebrew stays first (spec anti-goal); on wide screens it is under the hero and open.
+- The haftarah library index is cached once per server instance for 24 hours (15 minutes after a failure) rather than in study_cache, whose rows are typed for Sefaria chapters.
+- No server-side transliteration heuristic: an English-contraction-safe rule could not be made reliable, so ruling 38 is held by the study voice and the MCP instructions, and by the rabbi's review. Revisit if a draft ever shows transliteration.
+
+Open for Daniel (study slice): confirm the rabbi display name (tenant customs credits.rabbiDisplayName; currently "the rabbi"); whether an unreviewed version written by the rabbi should read differently from "Written by Claude for CRC · not yet reviewed by …" (today the label keys off reviewed only, as the spec's label rule says); connect Cowork once the MCP milestone lands; write the study voice; draft the first parashah (bridge available now).
+
 ## Current return point — adult honors, sign-in and reading/practice release candidate, 2026-10-20
 
 **Next bounded resource candidate:** add one general CRC digital siddur collection link after the existing service-preparation panel, inside the existing service surface and gated by authorized reading plus non-concealment. Root and independent Sol review accept the one-file source change; reading UI 12, normal types, syntax and protection 3 pass. Existing service callbacks, assignments and lifecycle stay unchanged. No new screen, navigation, provider fetch, edition/unit mapping or parked-feature activation is included. The performer-facing CRC Music collection is not presented as student practice tracks. Exact hosted checks and a separate rollout remain required; the R reference diagnostic is excluded.
