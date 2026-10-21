@@ -47,6 +47,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const modalScope = useRef(lift); modalScope.current = lift;
   const metadata = useRef<Assigned | null>(null), controller = useRef<AbortController | null>(null), generation = useRef(0);
   const selection = useRef<{ kind: StudyKind; offset: number; assignmentKey: string } | null>(null);
+  // A word place chosen on another text page; bound to the load turn that shows it.
+  const pendingPlace = useRef<{ kind: StudyKind; offset: number; turn: number; ref: string; wordIndex: number } | null>(null);
   const [state, setState] = useState<{ binding: string; kind?: StudyKind; page?: StudyPage; error?: number; loading?: boolean }>({ binding: "" });
   const key = baseline ? studyBinding(baseline) : "";
   const clear = useCallback(() => { stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.dispose(); shortMetadata.current = null; modalRequest.current?.abort(); modalOwner.current?.dispose(); modalOwner.current = null; generation.current++; controller.current?.abort(); setLift(null); setState({ binding: "", loading: true }); }, [stopAudio]);
@@ -83,14 +85,16 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   useLayoutEffect(() => register({ clear, reload }), [register, clear, reload]);
   useLayoutEffect(() => () => { generation.current++; controller.current?.abort(); metadata.current = null; }, []);
   const current = key && state.binding === key ? state : null;
-  async function explicitLoad(kind: StudyKind, offset: number) {
+  async function explicitLoad(kind: StudyKind, offset: number, place?: { ref: string; wordIndex: number }) {
     const value = metadata.current;
     if (!value || studyBinding(value) !== key) return;
     if (guardDeparture && !await guardDeparture()) return;
     if (metadata.current !== value || studyBinding(value) !== key) return;
     try {
       const pending = load(value, kind, offset), request = controller.current, turn = generation.current;
+      pendingPlace.current = place ? { kind, offset, turn, ref: place.ref, wordIndex: place.wordIndex } : null;
       const loaded = await pending;
+      if (loaded && place && controller.current === request && turn === generation.current) onVisit?.(kind, place.ref);
       if (loaded && onPage && request && controller.current === request && turn === generation.current && !request.signal.aborted && metadata.current === value) await onPage(kind, offset, request.signal);
     } catch { /* Authority state has already cleared text and metadata. */ }
   }
@@ -213,7 +217,16 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
           const result = await readWordDetails(value, kind, page.offset + index, page.verses[index], word, signal);
           if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
           return result;
-        }} onHear={listeningEnabled ? (index, word) => hear(current.page!, index, word) : undefined} />}
+        }} onHear={listeningEnabled ? (index, word) => hear(current.page!, index, word) : undefined}
+        onPlace={(ref, wordIndex) => {
+          const page = current.page!, here = page.verses.findIndex(row => row.ref === ref), position = assignment!.verses.indexOf(ref);
+          if (position < 0) return;
+          if (here >= 0) { tools.current?.select(here, wordIndex); onVisit?.(kind, ref); return; }
+          const target = offsets.filter(offset => offset <= position).at(-1);
+          if (target !== undefined && target !== page.offset) void explicitLoad(kind, target, { ref, wordIndex });
+        }}
+        takePlace={() => { const place = pendingPlace.current, page = current.page!; pendingPlace.current = null;
+          return place && place.kind === kind && place.offset === page.offset && place.turn === generation.current ? { ref: place.ref, wordIndex: place.wordIndex } : null; }} />}
       <div className="study-verse-details">{current.page.verses.map((verse, index) => <div key={verse.ref} className="study-verse-detail" data-verse-ref={verse.ref}>
         <div className="verse-card-head"><h4>Verse tools · <bdi dir="ltr">{verse.ref}</bdi></h4>{renderMark?.(kind, verse.ref)}<button type="button" className="button-text" onClick={() => open(current.page!, index)}>View {verse.ref} up close</button></div>
         {!songSession && <p className="study-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
