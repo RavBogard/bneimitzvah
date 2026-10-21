@@ -15,3 +15,11 @@
 .playable [data-word-index] { cursor: pointer; border-radius: 0.18em; }
 .playable [data-word-index]:hover { text-decoration: underline; text-underline-offset: 0.15em; }
 .closedGap { display: inline-block; inline-size: 4.5em; }
+.flowHebrew { display: inline; }
+/* S16: on wide screens each verse becomes a row, Hebrew on the left and its English beside it. */
+@media (min-width: 1001px) {
+  .flowParagraph:has(.flowEnglish) { display: grid; row-gap: 1rem; }
+  .flowParagraph:has(.flowEnglish) .flowVerse { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); column-gap: 2rem; align-items: start; direction: ltr; }
+  .flowParagraph:has(.flowEnglish) .flowHebrew { display: block; direction: rtl; text-align: start; }
+  .flowParagraph:has(.flowEnglish) .flowEnglish { margin-block: 0.6rem 0; padding-inline-start: 1rem; border-inline-start: 2px solid var(--color-rule); }
+}

@@ -133,12 +133,14 @@ function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAv
   const prefs = useReadingPrefs(), result = useVerseColors(verse, assignment, prefs.colors), colors = result?.status === "ready" ? result : null;
   const number = /:([1-9]\d*)$/.exec(verse.ref)?.[1];
   return <span data-verse-ref={verse.ref} className={styles.flowVerse}>
+    <span className={styles.flowHebrew} data-hebrew-ref={verse.ref}>
     <span className="sr-only" role="heading" aria-level={4} dir="ltr">{verse.ref}</span>
     {onVerse ? <button type="button" className={styles.verseNumber} onClick={onVerse} aria-label={`Hear ${verse.ref}`} title={verse.ref}>{number ?? verse.ref}</button>
       : <sup title={verse.ref}>{number ?? verse.ref}</sup>}{" "}
     <StudyHebrew verse={verse} colors={colors} id={id} inline activeWord={activeWord} onWordSelect={onWord} wordAction={listening ? "verse" : "tools"} toolsAvailable={toolsAvailable} />{" "}
     {verse.hebrew.paragraphAfter === "setumah" && <span className={styles.closedGap} role="img" aria-label="Closed paragraph" />}
     {colors && <span className="sr-only">{phraseGroups(colors).map(row => <span key={row.phrase} id={`${id}-phrase-${row.phrase}`}>{row.family.label}, {range(row.first, row.last)}. </span>)}</span>}
+    </span>
     {showEnglish && <span className={`study-english ${styles.flowEnglish}`} lang="en" dir="ltr" data-english-ref={verse.ref}>{verse.english ?? "English reference unavailable for this verse."}</span>}
   </span>;
 }
