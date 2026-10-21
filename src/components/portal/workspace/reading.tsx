@@ -298,6 +298,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
         onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} learner={learner} songSession={song} liftHandle={lift} practiceHandle={practice} textStartHandle={textStart} onPracticeReady={setPracticeReady} onHearReady={setHearReady} active={!tabbed || tab === "reading"}
         onShown={(kind, offset, length) => progress.ensure(kind, offset, length)} renderMark={(kind, verseRef) => <VerseMark store={progress} kind={kind} verseRef={verseRef} />} renderLiftControls={(kind, verseRef) => <LiftProgress store={progress} kind={kind} verseRef={verseRef} />} onVisit={(kind, verseRef) => calendar.visitVerse(kind, verseRef)} /></div>
       {work.notice && <p className="field-help" role="status">{work.notice}</p>}
+      {authorizedReading && !concealed && <p className="field-help"><a href="https://www.centralreform.org/beit-mitzvah/" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC preparation guide</a></p>}
       {!learner && otherReadings.length > 0 && <details className="reading-other-assignments"><summary>Other confirmed reading details</summary>{otherReadings.map(row => <AssignmentContext key={row.id} row={row} />)}</details>}</>)}
     </section>
     {student && !song && <aside className="reading-tools" aria-labelledby="tools-heading"><h2 id="tools-heading">Practice tools</h2>
