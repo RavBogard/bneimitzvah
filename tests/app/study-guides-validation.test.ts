@@ -1,0 +1,73 @@
+import { expect, test } from "vitest";
+import { LIMITS, validateGuideBody, validateVoice } from "../../src/server/study-guides/validation";
+import { additions, guide, note, source, theme } from "../helpers/study-guide-fixture";
+
+const ok = (body: unknown, allowOverview = true) => validateGuideBody(body, { allowOverview }).ok;
+const exactBytes = (n: number, unit = "a") => unit.repeat(n);
+
+test("accepts a body at every limit", () => {
+  expect(ok(guide())).toBe(true);
+  expect(ok(guide({ overview: exactBytes(LIMITS.overview) }))).toBe(true);
+  expect(ok(guide({ themes: Array.from({ length: LIMITS.themes }, (_, i) => theme(`t-${i}`)) }))).toBe(true);
+  expect(ok(guide({ themes: [theme("t", { title: "ש".repeat(LIMITS.title) })] }))).toBe(true);
+  expect(ok(guide({ themes: [theme("t", { intro: exactBytes(LIMITS.intro) })] }))).toBe(true);
+  expect(ok(guide({ themes: [theme("t", { notes: Array.from({ length: LIMITS.notes }, () => note()) })] }))).toBe(true);
+  expect(ok(guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { body: exactBytes(LIMITS.note), sources: [source("a"), source("b"), source("c")] })] })] }))).toBe(true);
+  expect(ok(guide({ themes: [] }))).toBe(true);
+  // Hebrew quotation and lists are part of the allowed subset.
+  expect(ok(guide({ overview: "The cloud, *ענן*, fills the tent.\n\n- one\n- two" }))).toBe(true);
+});
+
+test("rejects every limit plus one", () => {
+  expect(ok(guide({ overview: exactBytes(LIMITS.overview + 1) }))).toBe(false);
+  expect(ok(guide({ themes: Array.from({ length: LIMITS.themes + 1 }, (_, i) => theme(`t-${i}`)) }))).toBe(false);
+  expect(ok(guide({ themes: [theme("t", { title: "x".repeat(LIMITS.title + 1) })] }))).toBe(false);
+  expect(ok(guide({ themes: [theme("t", { intro: exactBytes(LIMITS.intro + 1) })] }))).toBe(false);
+  expect(ok(guide({ themes: [theme("t", { notes: Array.from({ length: LIMITS.notes + 1 }, () => note()) })] }))).toBe(false);
+  // Size is counted in bytes: 2049 Hebrew letters are 4098 bytes.
+  expect(ok(guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { body: "ש".repeat(2049) })] })] }))).toBe(false);
+});
+
+test("rejects 9 themes", () => expect(ok(guide({ themes: Array.from({ length: 9 }, (_, i) => theme(`t-${i}`)) }))).toBe(false));
+test("rejects a 4097-byte note", () => expect(ok(guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { body: exactBytes(4097) })] })] }))).toBe(false));
+test("rejects 4 sources on a note", () => expect(ok(guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { sources: ["a", "b", "c", "d"].map(id => source(id)) })] })] }))).toBe(false));
+test("rejects raw HTML in a note", () => {
+  expect(ok(guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { body: "a <b>bold</b> claim" })] })] }))).toBe(false);
+  expect(ok(guide({ overview: "x > y" }))).toBe(false);
+});
+test("rejects links and URLs; sources are the only references", () => {
+  for (const text of ["see [this](https://example.test)", "https://example.test", "visit www.example.test"]) expect(ok(guide({ overview: text }))).toBe(false);
+});
+test("rejects a verseRef not matching /^[A-Za-z ]+ \\d+:\\d+$/", () => {
+  for (const ref of ["Exodus 40", "Exodus 40:0", "Exodus 40:34-35", "<b> 1:1", "1 Kings 8:1", ""]) expect(ok(guide({ themes: [theme("t", { notes: [note(ref)] })] })), ref).toBe(false);
+  expect(ok(guide({ themes: [theme("t", { notes: [note("I Kings 8:1")] })] }))).toBe(true);
+});
+test("student body rejects an overview", () => {
+  expect(ok(additions(), false)).toBe(true);
+  expect(ok(guide(), false)).toBe(false);
+  expect(ok(additions([]), false)).toBe(false);
+});
+test("rejects duplicate theme ids, duplicate sources, unknown keys and hidden characters", () => {
+  expect(ok(guide({ themes: [theme("same"), theme("same")] }))).toBe(false);
+  expect(ok(guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { sources: [source("a"), source("a")] })] })] }))).toBe(false);
+  expect(ok({ ...guide(), extra: 1 })).toBe(false);
+  expect(ok(guide({ themes: [{ ...theme(), color: "red" } as never] }))).toBe(false);
+  expect(ok(guide({ overview: "hidden‮mark" }))).toBe(false);
+  expect(ok(guide({ overview: "carriage\r\nreturn" }))).toBe(false);
+  expect(ok(guide({ themes: [theme("Bad Id")] }))).toBe(false);
+  expect(ok(guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { sources: [{ ...source(), readable: "yes" } as never] })] })] }))).toBe(false);
+});
+test("rejects a body over 131072 bytes even when every field is in bounds", () => {
+  const big = Array.from({ length: 8 }, (_, i) => theme(`t-${i}`, { notes: Array.from({ length: 12 }, () => note("Exodus 40:34", { body: exactBytes(4000) })) }));
+  const result = validateGuideBody(guide({ themes: big }), { allowOverview: true });
+  expect(result.ok).toBe(false);
+  if (!result.ok) expect(result.problems.join(" ")).toContain("131072");
+});
+test("voice is bounded markdown text", () => {
+  expect(validateVoice("Write for a twelve-year-old and an adult together.").ok).toBe(true);
+  expect(validateVoice(exactBytes(LIMITS.voice)).ok).toBe(true);
+  expect(validateVoice(exactBytes(LIMITS.voice + 1)).ok).toBe(false);
+  expect(validateVoice("").ok).toBe(false);
+  expect(validateVoice("<script>").ok).toBe(false);
+  expect(validateVoice(7).ok).toBe(false);
+});
