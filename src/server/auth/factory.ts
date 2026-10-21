@@ -49,8 +49,9 @@ export function createAuthStack(
         && context.method === "POST" && context.body?.provider === "google"
         && typeof context.body.idToken?.token === "string" && context.body.idToken.token.length > 0
         && context.context.socialProviders.some(provider => provider.id === "google"));
-      // Always replace any supplied marker, including on non-Google creation.
-      return { data: { googleAuthenticatedAt: googleAuthenticated ? new Date() : null } };
+      // Always replace any supplied marker. Undefined (column omitted, so NULL) for every other
+      // creation path, which also keeps magic-link sign-in working on a schema before 0028.
+      return { data: { googleAuthenticatedAt: googleAuthenticated ? new Date() : undefined } };
     } } } },
     rateLimit: { enabled: true, storage: "database", window: 60, max: 60 },
     advanced: { ipAddress: { ipAddressHeaders: [AUTH_RATE_LIMIT_HEADER], ipv6Subnet: 128 }, crossSubDomainCookies: { enabled: false }, useSecureCookies: origin.protocol === "https:" },
