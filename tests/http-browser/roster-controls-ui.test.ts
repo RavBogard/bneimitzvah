@@ -196,3 +196,27 @@ it("reviews congregation-wide parent/tutor grant consequences and denies tutor a
   const current = (await api(admin, `/api/admin/students/${sibling.id}/relationships`)).data; expect(current.guardians[0].effectiveRead === false).toBe(true);
   await navigate(admin, "/workspace/admin/tutors"); await accessLoaded(admin); await safe(() => action(admin, "Tutors", "Remove as a tutor").click()); await ui(admin.locator(".access-review")).toContainText("every student they teach"); await confirm(admin); await ui(admin.getByText("No tutors yet", { exact: true })).toBeVisible();
 });
+
+it("sets rehearsal dates in order on or before the ceremony, shows them in the reading header and clears them", async () => {
+  const tab = await page(); await navigate(tab, "/workspace/admin/students");
+  const name = `${fixture.student.firstName} ${fixture.student.lastName}`, first = () => tab.getByLabel("First rehearsal (optional)", { exact: true }), second = () => tab.getByLabel("Second rehearsal (optional)", { exact: true });
+  const stored = async () => (await api(tab, "/api/admin/students")).data.students.find((row: { id: string }) => row.id === fixture.student.id) as { rehearsal1: string | null; rehearsal2: string | null; revision: number };
+  const before = await stored(); expect(before.rehearsal1 === null && before.rehearsal2 === null).toBe(true);
+  await click(tab, `Edit details for ${name}`); await ui(first()).toHaveValue(""); await ui(second()).toHaveValue("");
+  await ui(first()).toHaveAttribute("max", fixture.student.ceremonyDate); await ui(second()).toHaveAttribute("max", fixture.student.ceremonyDate);
+  await safe(() => first().fill("2026-12-26")); await safe(() => second().fill("2026-12-12"));
+  await click(tab, "Save student");
+  expect(await second().evaluate(element => (element as HTMLInputElement).validity.rangeUnderflow)).toBe(true);
+  expect((await stored()).revision).toBe(before.revision);
+  await safe(() => first().fill("2026-12-12")); await safe(() => second().fill("2026-12-26")); await capture(tab, "roster-rehearsals-desktop");
+  await click(tab, "Save student"); await ui(tab.getByText(`Saved ${name}.`, { exact: true })).toBeVisible();
+  expect(await stored()).toMatchObject({ rehearsal1: "2026-12-12", rehearsal2: "2026-12-26", revision: before.revision + 1 });
+  await navigate(tab, `/workspace/admin/students/${fixture.student.id}/reading`);
+  await ui(tab.locator(".hero-rehearsals")).toHaveText("Rehearsals: Sat, Dec 12, 2026 and Sat, Dec 26, 2026");
+  await navigate(tab, "/workspace/admin/students"); await click(tab, `Edit details for ${name}`);
+  await ui(first()).toHaveValue("2026-12-12"); await safe(() => first().fill("")); await safe(() => second().fill(""));
+  await click(tab, "Save student"); await ui(tab.getByText(`Saved ${name}.`, { exact: true })).toBeVisible();
+  expect(await stored()).toMatchObject({ rehearsal1: null, rehearsal2: null, revision: before.revision + 2 });
+  await navigate(tab, `/workspace/admin/students/${fixture.student.id}/reading`);
+  await ui(tab.locator(".hero-date")).toBeVisible(); await ui(tab.locator(".hero-rehearsals")).toHaveCount(0);
+});

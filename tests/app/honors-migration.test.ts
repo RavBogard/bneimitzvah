@@ -7,6 +7,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
+import { priorColumns } from "../helpers/prior-columns";
 import { honorsFixture, emptyForm, person } from "./honors-fixture";
 import * as s from "../../src/server/db/index";
 
@@ -21,7 +22,7 @@ test("0022 upgrades existing data, replays and changes only honors stream and au
     const db = drizzle(client); await migrate(db, { migrationsFolder: prior });
     await client.query("insert into student(id,tenant_id,first_name,last_name,ceremony_date,parent_email) values($1,'crc','Synthetic','Honors','2027-01-02','synthetic@example.test')", [randomUUID()]);
     const before = (await client.query("select * from student")).rows;
-    await migrate(db, { migrationsFolder: folder }); await migrate(db, { migrationsFolder: folder }); expect((await client.query("select * from student")).rows).toEqual(before);
+    await migrate(db, { migrationsFolder: folder }); await migrate(db, { migrationsFolder: folder }); expect(priorColumns((await client.query("select * from student")).rows, before)).toEqual(before);
     expect((await client.query("select count(*)::int n from honors_version")).rows).toEqual([{ n: 0 }]);
     const prev = JSON.parse(await readFile(join(folder, "meta/0021_snapshot.json"), "utf8")), current = JSON.parse(await readFile(join(folder, "meta/0022_snapshot.json"), "utf8")), expected = structuredClone(prev.tables);
     expected["public.honors_version"] = current.tables["public.honors_version"]; expected["public.audit_event"].checkConstraints.audit_action_known = current.tables["public.audit_event"].checkConstraints.audit_action_known;

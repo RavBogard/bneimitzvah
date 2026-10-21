@@ -3,7 +3,7 @@ import { serviceSlot, type ServiceSlot } from "../../lib/readings/reading-date";
 import { AccessDenied } from "../access/errors";
 import type { StudentImportMetadata } from "../db/tenant-schema";
 
-export type StudentInput={firstName:string;lastName:string;ceremonyDate:string;serviceSlot:ServiceSlot;studentKind:"child"|"adult";parentEmail:string|null;ownEmail:string|null;hebrewName?:string|null;secondParentEmail?:string|null};
+export type StudentInput={firstName:string;lastName:string;ceremonyDate:string;serviceSlot:ServiceSlot;studentKind:"child"|"adult";parentEmail:string|null;ownEmail:string|null;hebrewName?:string|null;secondParentEmail?:string|null;rehearsal1?:string|null;rehearsal2?:string|null};
 export type ImportedStudentInput=StudentInput&{importMetadata?:StudentImportMetadata};
 const email=(value:unknown)=>{
   if(typeof value!=="string" || value.length>254 || /[\x00-\x1f\x7f-\x9f]/.test(value) || !/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(value.trim()))throw new AccessDenied(403);
@@ -20,6 +20,15 @@ function optionalText(value:unknown,max:number,multiline=false):string|null {
   if(Buffer.byteLength(text,"utf8")>max || (multiline?/[\x00-\x09\x0b-\x1f\x7f-\x9f]/:/[\x00-\x1f\x7f-\x9f]/).test(normalized) || /[<>]/.test(text))throw new AccessDenied(403);
   return text || null;
 }
+// Omitted means unchanged; null clears. Dates are calendar dates like the ceremony date.
+function optionalDate(value:unknown):string|null|undefined{
+  if(value===undefined || value===null)return value;
+  try{return parseCeremonyDate(value);}catch{throw new AccessDenied(403);}
+}
+/** Rehearsals are in order and on or before the ceremony; the database checks the same. */
+export function rehearsalsFit(ceremonyDate:string,rehearsal1:string|null,rehearsal2:string|null){
+  return (rehearsal1===null || rehearsal1<=ceremonyDate) && (rehearsal2===null || rehearsal2<=ceremonyDate) && (rehearsal1===null || rehearsal2===null || rehearsal1<=rehearsal2);
+}
 export function studentInput(value:unknown):StudentInput{
   if(!value || typeof value!=="object" || Array.isArray(value))throw new AccessDenied(403);
   const row=value as Record<string,unknown>;
@@ -33,8 +42,11 @@ export function studentInput(value:unknown):StudentInput{
   let slot:ServiceSlot;try{slot=serviceSlot(row.serviceSlot===undefined?"unknown":row.serviceSlot);}catch{throw new AccessDenied(403);}
   let ceremonyDate:string;
   try{ceremonyDate=parseCeremonyDate(row.ceremonyDate);}catch{throw new AccessDenied(403);}
+  const rehearsal1=optionalDate(row.rehearsal1),rehearsal2=optionalDate(row.rehearsal2);
+  if(!rehearsalsFit(ceremonyDate,rehearsal1??null,rehearsal2??null))throw new AccessDenied(403);
   return {firstName:name(row.firstName),lastName:name(row.lastName),ceremonyDate,serviceSlot:slot,studentKind,parentEmail,ownEmail,
-    ...(row.hebrewName===undefined?{}:{hebrewName:optionalText(row.hebrewName,400)}),...(secondParentEmail===undefined?{}:{secondParentEmail})};
+    ...(row.hebrewName===undefined?{}:{hebrewName:optionalText(row.hebrewName,400)}),...(secondParentEmail===undefined?{}:{secondParentEmail}),
+    ...(rehearsal1===undefined?{}:{rehearsal1}),...(rehearsal2===undefined?{}:{rehearsal2})};
 }
 export function revision(value:unknown):number{
   if(!Number.isSafeInteger(value) || Number(value)<1)throw new AccessDenied(403);
