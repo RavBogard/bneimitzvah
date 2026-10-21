@@ -46,6 +46,7 @@ import { createServiceScheduler } from "../service-ecosystem/scheduler";
 import { createStudentWorkService } from "../student-work/service";
 import { createProgressService } from "../progress/service";
 import { createStudyGuideService, studyGuideWebSurface } from "../study-guides/service";
+import { createGuideChecker } from "../study-guides/citations";
 import { createLessonLogService } from "../lesson-log/service";
 import { createPracticeCalendarService } from "../practice-calendar/service";
 import { createStudentRecordingService } from "../recordings/service";
@@ -140,8 +141,8 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const serviceLearning = createServiceLearningService({ access, practice, signingSecret: purposeSecret(config, "service-plan-preparations"), resolveCeremonyUnit: serviceEcosystem.materialMapping });
   const studentWork = createStudentWorkService({ access, practice, authorityBindingSecret: purposeSecret(config, "student-work-authority") });
   const progress = createProgressService({ access, practice });
-  // Guide writes resolve citations through the checker; until the MCP study tools supply one, every write is refused.
-  const studyGuides = studyGuideWebSurface(createStudyGuideService({ access, practice, check: async () => ({ ok: false as const, problems: ["Guide checking is not configured"] }) }));
+  // The web runtime gets reads, ticks and staff status only; guide writes need the MCP or the operator bridge.
+  const studyGuides = studyGuideWebSurface(createStudyGuideService({ access, practice, check: createGuideChecker({ related: createSefariaMetadataReader({ fetch }).related }) }));
   const lessonLog = createLessonLogService({ access, practice });
   const practiceCalendar = createPracticeCalendarService({ access, practice });
   const recordings = createStudentRecordingService({ access, practice });
