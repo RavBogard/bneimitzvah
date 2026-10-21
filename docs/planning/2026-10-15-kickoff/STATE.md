@@ -19,6 +19,23 @@
 ### Gate log (2026-10-21)
 
 - GATE: amended MISSION ruling 11 and PLAN-CODE note 7 on the study branch — proceeded because Daniel's spec rulings S13 and S10 are binding and the handoff directs recording them.
+- GATE: took PR3 over and merged it (main 2a578a0) — proceeded because both CI runs at 511357f passed all four jobs, the exploration playback file ran 8/8 on Linux with the owned PulseAudio null sink, and the only extra change was a test-only tolerance for Playwright's already-continued route race. No assertion, deadline or runtime code was waived.
+- GATE: deferred the portal MCP (plan Tasks 7–9) — proceeded because a sizing pass found no MCP/OAuth code or packages on main, about 25–30 files across 10–12 subsystems, and five open auth gates; HANDOFF §5 directs shipping the operator bridge instead and reporting. The study tools' service, citation checker and grant-bound rabbi authority are ready for the MCP to call.
+- GATE: Task 2 derives the reading key in the projection instead of a stored column and backfill — proceeded because the plan pins the result, not the method, and production has no real roster to backfill. Migration 0027 is therefore the study tables (0028 stays free).
+- GATE: second-agent adversarial review of the schema, RLS, rabbi authority and service ran twice; every blocker and should-fix finding was fixed (commits 6ccd0e9 and the second-pass fix commit) before the UI work.
+
+### Decided here (study slice, 2026-10-21; Daniel may overrule any of these)
+
+- Reading key: Torah uses the haftarah library's own keyOf slug of Hebcal's English name; haftarah keys spell the passage's two endpoints. Computed from the signed snapshot and assigned verses; never stored.
+- Publishing a held guide appends a copy with hold cleared, so every study table stays insert-only.
+- Writes come only through a rabbi authority that re-locks the rabbi's own live admin grant; an MCP authority must carry the exact consented grant binding. The operator bridge may write only origin claude, unreviewed base guides (also enforced by CHECKs).
+- S25 for per-student additions (no held state there): an unattended save over reviewed additions is refused; the rabbi present in Cowork may replace them.
+- Addition themes are shown and ticked as student--<id>, so base and addition ticks never collide.
+- Guide sources link to Sefaria; the Sources disclosure below each verse keeps the in-app reader.
+- Translation drafts stay one disclosure, retitled "More · Your translation & notes", after Sources.
+- English: on by default in the wide two-column layout for learners and parents, off on phones; staff keep it off (an earlier, tested decision). Remembered per student.
+- On phones the guide card sits after the Hebrew and starts closed, so Hebrew stays first (spec anti-goal); on wide screens it is under the hero and open.
+- The haftarah library index is cached in process for 24 hours (15 minutes after a failure) rather than in study_cache, whose rows are typed for Sefaria chapters.
 
 ## Current return point — adult honors, sign-in and reading/practice release candidate, 2026-10-20
 
