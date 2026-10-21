@@ -71,6 +71,9 @@ it("student sees the overview card with the Claude label, and each note only und
   const tab = await page("student");
   await ui(card(tab)).toBeVisible();
   await ui(card(tab).getByText("Written by Claude for CRC · not yet reviewed by the rabbi", { exact: true })).toBeVisible();
+  const credit = tab.locator("footer.site-credit");
+  await ui(credit).toHaveText("A project of Rabbi Daniel Bogard");
+  await ui(credit.getByRole("link", { name: "Rabbi Daniel Bogard", exact: true })).toHaveAttribute("href", "https://danielbogard.com");
   await ui(card(tab).locator("bdi[lang=he]")).toHaveText("אור");
   // "Genesis 2:1" is outside the assigned verses; its theme still shows because Genesis 1:1 remains.
   await ui(card(tab).locator("li")).toHaveCount(2);

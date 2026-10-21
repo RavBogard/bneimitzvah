@@ -52,7 +52,7 @@ test("rejects duplicate theme ids, duplicate sources, unknown keys and hidden ch
   expect(ok(guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { sources: [source("a"), source("a")] })] })] }))).toBe(false);
   expect(ok({ ...guide(), extra: 1 })).toBe(false);
   expect(ok(guide({ themes: [{ ...theme(), color: "red" } as never] }))).toBe(false);
-  expect(ok(guide({ overview: "hidden‮mark" }))).toBe(false);
+  expect(ok(guide({ overview: "hidden\u202emark" }))).toBe(false);
   expect(ok(guide({ overview: "carriage\r\nreturn" }))).toBe(false);
   expect(ok(guide({ themes: [theme("Bad Id")] }))).toBe(false);
   expect(ok(guide({ themes: [theme("t", { notes: [note("Exodus 40:34", { sources: [{ ...source(), readable: "yes" } as never] })] })] }))).toBe(false);
