@@ -355,8 +355,9 @@ async function setTutors<Q extends PgQueryResultHKT>(input: Record<string, unkno
     const [probe] = await tx.select({ disabledAt: s.student.disabledAt }).from(s.student).where(and(eq(s.student.tenantId, live.tenantId), eq(s.student.id, id))).limit(1);
     if (!probe || probe.disabledAt) throw new AccessDenied(404);
     // The portal's fresh sign-in rule for tutor changes (manage-relationships: a session under 15 minutes old). The
-    // connection's approval needed a Google sign-in that recent, so its stored approval time stands in for the
-    // session's. Only adding a tutor gives anyone new access; removing one stays allowed on an older connection.
+    // connection's approval needed a Google sign-in within 15 minutes, and its stored approval time stands in for the
+    // session's, so an addition is at most about 30 minutes after that sign-in. Only adding a tutor gives anyone new
+    // access; removing one stays allowed on an older connection (the portal asks for a fresh sign-in for both).
     if (wanted.some(g => !expected.includes(g)) && ctx.mcp.now() - live.approvedAt >= GOOGLE_CONSENT_WINDOW_MS) throw new Refusal(stale);
     const links = async () => (await relationships.inspectLinks(tx, live.tenantId, id)).tutors.map(t => ({ grantId: t.link.tutorGrantId, linkId: t.link.id }));
     if (!sameSet((await links()).map(l => l.grantId), expected)) throw new Refusal(conflict);

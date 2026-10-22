@@ -150,6 +150,11 @@ describe("student setup through the portal MCP", () => {
     clock += 15 * 60_000;
     expect(await json("set_student_tutor", add)).toEqual({ ok: false, code: "fresh-sign-in-required", hint: "Adding a tutor needs a fresh sign-in. Reconnect Claude to the portal, then add the tutor within 15 minutes." });
     expect(await active(unrelated.id)).toHaveLength(0);
+    // Swapping one tutor for another adds one, so it is refused whole: the removal half is not applied.
+    const second = await owner(async () => (await t.f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: t.f.adminMember.id, role: "tutor" }).returning())[0].id);
+    expect(await json("set_student_tutor", { studentId: crc.id, expectedTutorIds: [tutor], tutorIds: [second] })).toMatchObject({ ok: false, code: "fresh-sign-in-required" });
+    expect((await active(crc.id)).map(l => l.tutorGrantId)).toEqual([tutor]);
+    expect(await audits(["tutor.revoke"])).toHaveLength(0);
     // Removing a tutor gives no one new access, so it stays allowed on the same old connection.
     expect(await json("set_student_tutor", { studentId: crc.id, expectedTutorIds: [tutor], tutorIds: [] })).toMatchObject({ ok: true, removed: [tutor] });
     expect(await active(crc.id)).toHaveLength(0);
