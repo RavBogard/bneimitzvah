@@ -184,11 +184,22 @@ export function createNotificationDelivery<Q extends PgQueryResultHKT>(input: {
     return true;
   }
 
+  /**
+   * One item of a run. A thrown error stops only this item: the run carries on. Its claim and row
+   * are rolled back with its transaction when nothing was handed over yet (counted as failed); a
+   * row already handed to the provider has been counted and stays where it is ("sending" is never
+   * picked again), so a claimed row is never sent twice. Nothing about the error is logged here.
+   */
+  async function guarded(counts: RunCounts, item: () => Promise<boolean>) {
+    const before = counts.sent + counts.failed + counts.unknown;
+    try { return await item(); }
+    catch { if (counts.sent + counts.failed + counts.unknown === before) counts.failed++; return false; }
+  }
   async function deliverPending(tenantId: string, limit: number, counts: RunCounts = { sent: 0, failed: 0, unknown: 0, skipped: 0 }, budget: () => boolean = () => true) {
     const ids = await withTenantTransaction(input.db, { tenantId }, tx => data.deliveryIds(tx as Tx<Q>, tenantId, "pending", new Date(now() - TUTOR_NOTICE_WINDOW), limit));
     for (const id of ids) {
       if (!budget()) break;
-      if (await resend(tenantId, id, "pending", counts)) await pause(spacingMs);
+      if (await guarded(counts, () => resend(tenantId, id, "pending", counts))) await pause(spacingMs);
     }
     return counts;
   }
@@ -199,8 +210,8 @@ export function createNotificationDelivery<Q extends PgQueryResultHKT>(input: {
     const started = now(), handed = () => counts.sent + counts.failed + counts.unknown;
     const budget = () => handed() < perRun && now() - started < deadlineMs;
     await deliverPending(tenantId, perRun, counts, budget);
-    const failed = await withTenantTransaction(input.db, { tenantId }, tx => data.deliveryIds(tx as Tx<Q>, tenantId, "failed", new Date(now() - (CATCH_UP_DAYS + 1) * DAY), perRun));
-    for (const id of failed) { if (!budget()) break; if (await resend(tenantId, id, "failed", counts)) await pause(spacingMs); }
+    const failed = await withTenantTransaction(input.db, { tenantId }, tx => data.deliveryIds(tx as Tx<Q>, tenantId, "failed", new Date(now() - (CATCH_UP_DAYS + 1) * DAY), perRun, MAX_ATTEMPTS));
+    for (const id of failed) { if (!budget()) break; if (await guarded(counts, () => resend(tenantId, id, "failed", counts))) await pause(spacingMs); }
     const plan = await withTenantTransaction(input.db, { tenantId }, async tx => {
       const t = tx as Tx<Q>, n = await notificationSettings(t, tenantId);
       const day = today(), recent = addDays(day, -6), weekday = validWeekday(n.digestWeekday) ? n.digestWeekday : DEFAULT_DIGEST_WEEKDAY;
@@ -213,7 +224,7 @@ export function createNotificationDelivery<Q extends PgQueryResultHKT>(input: {
     for (const item of due) {
       if (!budget()) break;
       reached++;
-      if (await scheduled(tenantId, item.membershipId, item.kind, plan.weekday, counts)) await pause(spacingMs);
+      if (await guarded(counts, () => scheduled(tenantId, item.membershipId, item.kind, plan.weekday, counts))) await pause(spacingMs);
     }
     const deferred = due.length - reached;
     // Counts only: no address, name or token. A run with refusals, unanswered sends or deferrals shows in the logs.
@@ -303,9 +314,11 @@ export function createNotificationPreferences<Q extends PgQueryResultHKT>(input:
     const offered = (kind: NotificationKind) => input.enabled && switchOn(n, kind), options: PreferenceOption[] = [];
     if (live.tutor) options.push({ kind: "tutor-draft", enabled: rows.get("tutor-draft")?.enabled ?? true, offered: offered("tutor-draft"), weekday: null });
     if (live.parent || (live.student && live.adult)) {
-      const row = rows.get("weekly-digest");
-      options.push({ kind: "weekly-digest", enabled: row ? row.enabled : !!live.parent, offered: offered("weekly-digest"),
-        weekday: validWeekday(n.digestWeekday) ? n.digestWeekday : DEFAULT_DIGEST_WEEKDAY, audience: live.parent && live.student && live.adult ? "both" : live.parent ? "parent" : "self" });
+      const row = rows.get("weekly-digest"), audience = live.parent && live.student && live.adult ? "both" : live.parent ? "parent" : "self";
+      // As composeDigest sends it: a parent's update is on until they turn it off; an adult's own part
+      // (alone, or beside their children's) needs a saved choice that is on, so with none it shows off.
+      options.push({ kind: "weekly-digest", enabled: row ? row.enabled : audience === "parent", offered: offered("weekly-digest"),
+        weekday: validWeekday(n.digestWeekday) ? n.digestWeekday : DEFAULT_DIGEST_WEEKDAY, audience });
     }
     if (live.student) { const row = rows.get("practice-reminder"); options.push({ kind: "practice-reminder", enabled: row?.enabled ?? false, offered: offered("practice-reminder"), weekday: row?.weekday ?? null }); }
     return Object.freeze({ options: Object.freeze(options) });

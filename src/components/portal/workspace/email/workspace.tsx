@@ -2,21 +2,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
 import { emailApi, type EmailKind, type EmailOption } from "./api";
+import { describeEmailOption as describe, WEEKDAYS } from "./describe";
 
-const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 const copy: Record<EmailKind, { title: string; choice: string }> = {
   "tutor-draft": { title: "Draft notices", choice: "Email me when a student I teach saves a translation draft" },
   "weekly-digest": { title: "Weekly update", choice: "Send me the weekly update" },
   "practice-reminder": { title: "Practice reminder", choice: "Remind me to practice every week" },
 };
-function describe(option: EmailOption) {
-  if (option.kind === "tutor-draft") return "One short email with a link to sign in. At most one a day for each student.";
-  const day = WEEKDAYS[option.weekday ?? 0];
-  if (option.kind === "weekly-digest") return option.audience === "self" ? `Each ${day} morning: your days practiced, new lesson notes and upcoming dates.`
-    : `Each ${day} morning: your child’s days practiced, new lesson notes and upcoming dates.${option.audience === "both" ? " Turn it on to include your own as well." : ""}`;
-  return "A short reminder on the day you choose. Only you get it, at the email you sign in with.";
-}
-
 export function EmailSettingsWorkspace() {
   const { registerReload } = useWorkspace();
   const [options, setOptions] = useState<EmailOption[] | null>(null), [failure, setFailure] = useState(false), [pending, setPending] = useState<EmailKind | null>(null);

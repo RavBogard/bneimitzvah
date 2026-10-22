@@ -34,11 +34,15 @@ export const emailApi = {
   save: (choice: { kind: EmailKind; enabled: boolean; weekday?: number }) => request(choice),
 };
 
+/** The body the unsubscribe page posts: the token rides in the body, never the URL, so it stays out of request logs. */
+export function unsubscribeBody(token: string) {
+  return new URLSearchParams([["List-Unsubscribe", "One-Click"], ["t", token]]).toString();
+}
 /** The unsubscribe page posts the token from its own fragment; the answer says only which kind stopped. */
 export async function unsubscribe(token: string): Promise<EmailKind> {
   if (!/^[tdr]\.[0-9a-f-]{36}\.[A-Za-z0-9_-]{43}$/.test(token)) throw new PortalRequestError(404);
-  const response = await fetch(`/api/notifications/unsubscribe?t=${encodeURIComponent(token)}`, { method: "POST", credentials: "omit", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer",
-    headers: { accept: "application/json", "content-type": "application/x-www-form-urlencoded" }, body: "List-Unsubscribe=One-Click" });
+  const response = await fetch("/api/notifications/unsubscribe", { method: "POST", credentials: "omit", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer",
+    headers: { accept: "application/json", "content-type": "application/x-www-form-urlencoded" }, body: unsubscribeBody(token) });
   if (!response.ok) throw new PortalRequestError(response.status === 404 ? 404 : 503);
   const value = await response.json().catch(() => null) as { ok?: unknown; kind?: unknown } | null;
   if (!value || value.ok !== true || !KINDS.includes(value.kind as EmailKind)) throw new PortalRequestError(503);

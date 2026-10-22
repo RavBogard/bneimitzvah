@@ -1,6 +1,6 @@
 import "server-only";
 import type { HttpRuntime } from "../runtime/composition";
-import { readJsonBody } from "./body";
+import { readFormBody, readJsonBody } from "./body";
 import { requireCookieMutation } from "./mutations";
 import { closedObject, uniqueQuery } from "./query";
 import { errorResponse, HttpBoundaryError, privateHeaders, privateJson, type JsonValue } from "./responses";
@@ -21,18 +21,28 @@ export async function handleNotificationsRequest(request: Request, runtime: Http
       return privateJson(await runtime.notifications.cron(request, resolved));
     }
     if (pathname === "/api/notifications/unsubscribe") {
-      const token = uniqueQuery(request.url, ["t"]).get("t");
-      if (!runtime.notifications.validToken(token)) throw new HttpBoundaryError(404);
+      const query = uniqueQuery(request.url, ["t"]);
       if (request.method === "GET") {
+        const token = query.get("t");
+        if (!runtime.notifications.validToken(token)) throw new HttpBoundaryError(404);
         // A mail client that opens the header link gets the confirmation page; the capability moves
         // into the fragment there, and nothing changes until that page posts.
         const headers = privateHeaders(); headers.set("location", `/unsubscribe#t=${token}`);
         return new Response(null, { status: 303, headers });
       }
       // RFC 8058 one-click: the provider's POST carries no cookie or origin; the signed token is the
-      // only authority, and it can only turn one kind off for one member. The body is not needed.
+      // only authority, and it can only turn one kind off for one member.
       const size = request.headers.get("content-length");
       if (size !== null && (!/^\d{1,4}$/.test(size) || Number(size) > 1024)) throw new HttpBoundaryError(413);
+      let token: string | null;
+      if (query.has("t")) token = query.get("t"); // The List-Unsubscribe header link, which RFC 8058 fixes as a URL; its body is not needed.
+      else {
+        // The unsubscribe page sends the token in the body, so it never reaches a request log.
+        const form = await readFormBody(request), keys = [...form.keys()];
+        if (keys.length !== 2 || form.getAll("t").length !== 1 || form.getAll("List-Unsubscribe").length !== 1 || form.get("List-Unsubscribe") !== "One-Click") throw new HttpBoundaryError(400);
+        token = form.get("t");
+      }
+      if (!runtime.notifications.validToken(token)) throw new HttpBoundaryError(404);
       const resolved = await runtime.resolveHost(request);
       return privateJson(await runtime.notifications.unsubscribe(resolved, token));
     }

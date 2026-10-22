@@ -72,8 +72,9 @@ export async function finishDelivery<Q extends PgQueryResultHKT>(tx: Tx<Q>, tena
   const [row] = await tx.update(d).set({ status, finishedAt: at }).where(and(eq(d.tenantId, tenantId), eq(d.id, id), eq(d.status, from))).returning({ id: d.id });
   return !!row;
 }
-export async function deliveryIds<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, status: "pending" | "failed", after: Date, limit: number) {
-  return (await tx.select({ id: d.id }).from(d).where(and(eq(d.tenantId, tenantId), eq(d.status, status), gt(d.createdAt, after)))
+/** Rows in `status` created after `after`; with `maxAttempts`, only rows that still have an attempt left, so spent rows never crowd out retryable ones. */
+export async function deliveryIds<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, status: "pending" | "failed", after: Date, limit: number, maxAttempts?: number) {
+  return (await tx.select({ id: d.id }).from(d).where(and(eq(d.tenantId, tenantId), eq(d.status, status), gt(d.createdAt, after), maxAttempts === undefined ? undefined : lt(d.attempts, maxAttempts)))
     .orderBy(asc(d.createdAt), asc(d.id)).limit(limit)).map(row => row.id);
 }
 export async function delivery<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, id: string) {
