@@ -82,7 +82,7 @@ function normalizePayload(payload: unknown, date: CeremonyDate, calendar: Calend
   }
   // Hebcal gives `haft` as one range, or as an ordered array when the haftarah has several
   // (Shemot, Mishpatim, Shabbat Shuva...). The haftarah is kept as its segments joined by "; ".
-  // A haftarah that cannot be read is dropped on its own: it never takes the Torah reading with it.
+  // A haftarah Hebcal sends that cannot be read is dropped on its own: it never takes the Torah reading with it.
   let haftarah: string | null=null;
   if (item.haft !== undefined) {
     try {
@@ -92,7 +92,12 @@ function normalizePayload(payload: unknown, date: CeremonyDate, calendar: Calend
       const refs=kept.map(row=>hebcalRef(row));
       expandReadingRanges(refs,"haftarah",counts);
       safe.haft=Array.isArray(item.haft)?kept:kept[0]; haftarah=refs.join("; ");
-    } catch { haftarah=null; }
+    } catch (error) {
+      // Only upstream data is forgiven. A cached payload was written by this code, which never stores a
+      // haftarah it could not read, so a bad cached `haft` is tampering and the cache entry is refused.
+      if (fromCache) throw error;
+      haftarah=null;
+    }
   }
   return { snapshot:{date,calendar,reading:leyningOf(safe),haftarah,classification}, payload:{binding,items:[safe]} };
 }

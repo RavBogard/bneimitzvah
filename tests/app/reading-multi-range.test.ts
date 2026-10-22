@@ -119,6 +119,6 @@ test("an assignment inside a multi-range haftarah carries the passage key; one o
 test("a stored or injected snapshot with a multi-range haftarah validates; a malformed one is refused", async () => {
   const payload = fixture("shabbat-shuva"), date = dateOf(payload), { snapshot } = await reader(payload).load(date);
   expect(validatedSnapshot(JSON.parse(JSON.stringify(snapshot)), date, "diaspora", counts).haftarah).toBe("Hosea 14:2-10; Joel 2:15-27");
-  for (const haftarah of ["Hosea 14:2-10; Hosea 14:2", "Hosea 14:2-10;", "Hosea 14:10-2", 7])
+  for (const haftarah of ["Hosea 14:2-10; Hosea 14:2", "Hosea 14:2-10;", "Hosea 14:10-2", "Hosea 14:2-10;Joel 2:15-27", "Hosea 14:2-10;  Joel 2:15-27", 7])
     expect(() => validatedSnapshot({ ...snapshot, haftarah }, date, "diaspora", counts)).toThrow();
 });

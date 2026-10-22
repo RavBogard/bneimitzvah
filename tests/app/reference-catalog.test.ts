@@ -42,6 +42,10 @@ test("current text and projected word count bind timings; held and duplicate ref
   expect(resolveReference(duplicate, study).source?.asset).toBe(second.id);
   expect(resolveReference(parseReferenceCatalog({ ...both, assets: [...both.assets].reverse() })!, study).source?.asset).toBe(second.id);
   expect(resolveReference(duplicate, study, id).source?.asset).toBe(id);
+  // The name-preferred cut whose timings no longer match the current text gives way to the cut that still matches.
+  const stale = structuredClone(both); stale.assets[1].verses[0].words.readingTextSha256 = sha("other text");
+  expect(resolveReference(parseReferenceCatalog(stale)!, study).source?.asset).toBe(id);
+  expect(resolveReference(parseReferenceCatalog(stale)!, study, second.id)).toMatchObject({ source: null, verse: { playback: { status: "needs-review", review: "text-mismatch" } } });
   expect(resolveReference(catalog, { ...study, ref: "Genesis 1:2" }).source).toBeNull();
 });
 

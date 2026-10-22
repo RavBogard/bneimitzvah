@@ -74,8 +74,9 @@ test("haftarah on a special Shabbat keys by its passage", async () => {
 });
 
 test("a multi-range calendar haftarah is confirmed whole, in Hebcal's order, and keyed by its segments", async () => {
-  const mishpatim: Week = { parashah: "Pekudei", maftir: { n: "M", ref: "Exodus 40:34-38" }, haftarah: "Jeremiah 34:8-22; Jeremiah 33:25-26" };
-  const f = await fixture(mishpatim);
+  // A synthetic week (Pekudei's aliyot) carrying Mishpatim's two-range haftarah, read backwards in Jeremiah.
+  const backwards: Week = { parashah: "Pekudei", maftir: { n: "M", ref: "Exodus 40:34-38" }, haftarah: "Jeremiah 34:8-22; Jeremiah 33:25-26" };
+  const f = await fixture(backwards);
   await f.confirm({ kind: "haftarah", pick: "calendar-haftarah" });
   expect(await f.keys()).toEqual({ haftarah: "jeremiah-34-8-34-22-jeremiah-33-25-33-26" });
 });

@@ -36,7 +36,7 @@ export function validatedSnapshot(value:unknown,date:string,calendar:Calendar,co
   }
   if(value.haftarah!==null){
     if(typeof value.haftarah!=="string")throw new AccessDenied(403);
-    if(value.haftarah.length>400)throw new AccessDenied(403);
+    if(value.haftarah.length>400 || readingSegments(value.haftarah).join("; ")!==value.haftarah)throw new AccessDenied(403);
     try{expandReadingRanges(readingSegments(value.haftarah),"haftarah",counts);}catch{throw new AccessDenied(403);}
   }
   const classification=["regular","holiday","multiple","nonregular","missing"].includes(String(value.classification))?value.classification as NonNullable<Snapshot["classification"]>:"nonregular";
