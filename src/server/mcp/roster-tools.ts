@@ -3,7 +3,7 @@ import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { AccessDenied } from "../access/errors";
 import type { AccessTransaction } from "../access/types";
 import * as data from "../data/roster";
-import { insertSourceIdentity, lockRosterIntake, MAVEN_NAMESPACE, sourceIdentities } from "../data/roster-source";
+import { insertSourceIdentity, lockRosterIntake, MAVEN_NAMESPACE, sourceIdentities, unlinkSourceIdentity } from "../data/roster-source";
 import { lockRabbi } from "../study-guides/authority";
 import { decodeMavenRosterContacts, mavenRosterQuery, type MavenContactFacts, type MavenRosterIssue } from "../students/maven-roster";
 import {
@@ -156,6 +156,26 @@ export function createRosterTools<Q extends PgQueryResultHKT>(): readonly Tool<Q
       ["start", "end", "mavenResult", "planToken", "choices"]),
       handler: async (input, ctx) => applyRosterChanges(input, ctx),
     },
+    {
+      name: "unlink_maven_record", roles: ["admin"], scope: SCOPES.roster, annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+      description: "Undo a wrong Maven link, only when the rabbi asks for it in this conversation. Pass the portal studentId and the 18-character Maven Contact Id it is linked to now (both from the proposal and the Maven result); if that pair is not the student's current link, nothing changes and currentRecordId says what the student is linked to (or null). The student and their portal record stay exactly as they are; only the link ends. The next propose_roster_changes then offers that Maven row again (to link to the right student, or create one) and the student can be linked to the right record. The old link is kept as history and never comes back by itself. A scheduled routine cannot unlink.",
+      inputSchema: closed({ studentId: { type: "string", pattern: UUID.source, description: "The portal student whose Maven link is wrong." },
+        mavenContactId: { type: "string", pattern: "^[A-Za-z0-9]{18}$", description: "The Maven Contact Id (18 characters) the student is linked to now." } }, ["studentId", "mavenContactId"]),
+      handler: async (input, ctx) => {
+        requireAdmin(ctx.actor);
+        if (ctx.actor.unattended) return { ok: false, code: "channel-not-permitted", hint: "A scheduled routine cannot change the roster; the rabbi unlinks a record in a conversation." };
+        return ctx.mcp.withLive(ctx.actor, "data-write", async (tx, live, alive) => {
+          requireAdmin(live); if (live.unattended) throw new AccessDenied(403);
+          await lockRabbi(tx, live.tenantId, live.membershipId, { roleGrantId: live.roleGrantId, roleGrantRevision: live.roleGrantRevision, authorityRevision: live.authorityRevision });
+          const result = await unlinkSourceIdentity(tx, { tenantId: live.tenantId, userId: live.userId, membershipId: live.membershipId, roleGrantId: live.roleGrantId, channel: "mcp", mcpConnectionId: live.connectionId },
+            { namespace: MAVEN_NAMESPACE, studentId: input.studentId as string, sourceRecordId: input.mavenContactId as string }, new Date(ctx.mcp.now()));
+          alive(); if (ctx.signal.aborted) throw new AccessDenied(401);
+          if (!result.ok) return { ok: false, code: "not-linked", currentRecordId: result.currentRecordId, hint: "That student is not linked to that Maven Contact now; nothing changed. Check the ids with the rabbi." };
+          return { ok: true, studentId: result.studentId, mavenContactId: result.sourceRecordId, unlinkedAt: result.unlinkedAt,
+            next: "The link has ended; the student's record is unchanged. Run get_maven_roster_query and propose_roster_changes again to link the Maven row to the right student or create one, as the rabbi decides." };
+        });
+      },
+    },
   ] satisfies Tool<Q>[]);
 }
 
@@ -187,7 +207,7 @@ async function applyRosterChanges<Q extends PgQueryResultHKT>(input: Record<stri
         const row = plan.rows[choice.row - 1], fact = facts[choice.row - 1], outcome: Outcome = { row: choice.row, name: nameOf(fact), outcome: "not-applied" };
         outcomes.push(outcome);
         if (row.digest !== proposed.slice((choice.row - 1) * ROW_DIGEST_LENGTH, choice.row * ROW_DIGEST_LENGTH)) {
-          // Identities are insert-only: a row now unchanged and linked as chosen (a student created for it, the chosen student, or any for an update) was applied before.
+          // Current identities only ever gain a revocation: a row now unchanged and linked as chosen (a student created for it, the chosen student, or any for an update) was applied before.
           const done = row.kind === "unchanged" && (choice.action === "update" || (choice.action === "create" ? linkKind.get(row.sourceRecordId) === "created" : choice.studentId === row.studentId));
           if (done && row.kind === "unchanged") Object.assign(outcome, { outcome: "already-applied", studentId: row.studentId, revision: row.expectedRevision });
           else Object.assign(outcome, { outcome: "conflict", reason: "changed-since-proposal" });

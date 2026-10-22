@@ -46,4 +46,4 @@ Daniel could not connect from the Claude Android app. Its Custom Tab would not o
 
 ## Not done here
 
-No consent memory (every connection asks), no per-connection list in the portal yet (Claude's own connector settings disconnect; connections end after 30 days), no Claude Code-specific metadata document.
+No consent memory (every connection asks), no Claude Code-specific metadata document. (The per-connection list followed in release 1.1: staff see and end their Claude connections at `/workspace/claude`, an admin every staff member's; see [Claude connections and Maven unlink](../2026-10-22-connections-unlink/DECIDED.md).)
