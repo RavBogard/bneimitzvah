@@ -1,5 +1,5 @@
 {
-  "id": "08ee8e91-3e85-4ead-bbd6-15b9dcacdd2b",
+  "id": "e03fa646-534a-49b0-be00-c0073992d1d9",
   "prevId": "9f1a20e4-4389-43e3-815e-23442ff9fa39",
   "version": "7",
   "dialect": "postgresql",
@@ -3375,6 +3375,12 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "link_kind": {
+          "name": "link_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},
@@ -3504,6 +3510,10 @@
         "student_source_identity_admin": {
           "name": "student_source_identity_admin",
           "value": "\"student_source_identity\".\"role\" = 'admin'"
+        },
+        "student_source_identity_link_kind": {
+          "name": "student_source_identity_link_kind",
+          "value": "\"student_source_identity\".\"link_kind\" in ('created', 'linked')"
         },
         "student_source_identity_created": {
           "name": "student_source_identity_created",

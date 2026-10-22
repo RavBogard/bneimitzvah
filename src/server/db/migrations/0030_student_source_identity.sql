@@ -12,10 +12,12 @@ CREATE TABLE "student_source_identity" (
 	"role_grant_id" uuid NOT NULL,
 	"role" "portal_role" NOT NULL,
 	"mcp_connection_id" uuid NOT NULL,
+	"link_kind" text NOT NULL,
 	CONSTRAINT "student_source_identity_record_key" UNIQUE("tenant_id","source_namespace","source_record_id"),
 	CONSTRAINT "student_source_identity_student_key" UNIQUE("tenant_id","source_namespace","student_id"),
 	CONSTRAINT "student_source_identity_source" CHECK ("student_source_identity"."source_namespace" = 'maven' and "student_source_identity"."source_record_id" ~ '^[A-Za-z0-9]{18}$'),
 	CONSTRAINT "student_source_identity_admin" CHECK ("student_source_identity"."role" = 'admin'),
+	CONSTRAINT "student_source_identity_link_kind" CHECK ("student_source_identity"."link_kind" in ('created', 'linked')),
 	CONSTRAINT "student_source_identity_created" CHECK (isfinite("student_source_identity"."created_at"))
 );
 --> statement-breakpoint

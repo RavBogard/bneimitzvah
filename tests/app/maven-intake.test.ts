@@ -109,6 +109,7 @@ describe("Maven roster intake through the portal MCP", () => {
       ["Newcomer", "child", "morning", mail("family2"), null], ["Adult", "adult", "havdalah", null, mail("own3")]]);
     const links = await identities();
     expect(links.map(l => [l.sourceRecordId, l.studentId])).toEqual([[sfid(1), t.f.students[2].id], [sfid(2), created[0].id], [sfid(3), created[1].id]]);
+    expect(links.map(l => l.linkKind)).toEqual(["linked", "created", "created"]);
     expect(links.every(l => l.sourceNamespace === "maven" && l.createdByMembershipId === t.f.adminMember.id && l.roleGrantId === t.f.adminGrant.id && l.role === "admin")).toBe(true);
     const audits = await owner(() => t.f.db.select().from(s.auditEvent).where(eq(s.auditEvent.action, "student.import")));
     expect(audits.map(a => a.targetId).sort()).toEqual(created.map(st => st.id).sort());
@@ -208,11 +209,34 @@ describe("Maven roster intake through the portal MCP", () => {
     expect(JSON.stringify(outside)).not.toContain("@");
   });
 
+  it("never reports a create as done when the row was linked instead, never clears a Hebrew name from a blank and withholds only a name with an @", async () => {
+    const { t, admin, texts, call, propose, apply, students } = await setup();
+    const rows = [unrelated(1), contact(2, { LastName: "Hebrew", Hebrew_Name__c: "שם קיים" })];
+    const plan = await propose(rows);
+    await apply(rows, plan.planToken, [{ row: 1, action: "link", studentId: t.f.students[2].id }, { row: 2, action: "create", studentKind: "child", serviceSlot: "unknown" }]);
+    // The rabbi changes his mind about row 1: the same plan cannot now report a new student that was never created.
+    const before = (await students()).length;
+    expect((await apply(rows, plan.planToken, [{ row: 1, action: "create", studentKind: "child", serviceSlot: "morning" }])).rows).toEqual([{ row: 1, name: "Synthetic Unrelated", outcome: "conflict", reason: "changed-since-proposal" }]);
+    expect((await apply(rows, plan.planToken, [{ row: 2, action: "create", studentKind: "child", serviceSlot: "unknown" }])).rows[0]).toMatchObject({ outcome: "already-applied" });
+    expect((await students()).length).toBe(before);
+    // Maven's blank Hebrew name is no Hebrew name: nothing to change.
+    const blank = await propose([unrelated(1), contact(2, { LastName: "Hebrew", Hebrew_Name__c: "   " })]);
+    expect(blank).toMatchObject({ ok: true, unchangedRows: [1, 2], rows: [] });
+    // A field the portal refuses is named as such, not as a missing address.
+    const refused = await propose([contact(3, { LastName: "x".repeat(101) }), contact(4, { Email: null, Account: null, AccountId: null })]);
+    expect(refused.rows.map((r: { reason: string }) => r.reason)).toEqual(["invalid-field", "no-email-on-file"]);
+    // An "@" in one name withholds that name, not the whole proposal.
+    const odd = await call(admin, "propose_roster_changes", { ...WINDOW, mavenResult: envelope([contact(5, { LastName: mail("odd") })]) });
+    expect(odd.isError).toBe(false);
+    expect(odd.json().rows[0].name).toContain("withheld");
+    for (const text of texts) expect(text).not.toContain("@");
+  });
+
   it("keeps student_source_identity tenant-isolated, insert-only for the runtime and one-to-one", async () => {
     const { t, owner } = await setup();
     const row = (patch: Partial<typeof s.studentSourceIdentity.$inferInsert> = {}) => ({ tenantId: "crc", sourceNamespace: "maven", sourceRecordId: sfid(1), studentId: t.f.students[0].id,
       createdByUserId: t.f.identities.admin.id, createdByMembershipId: t.f.adminMember.id, roleGrantId: t.f.adminGrant.id, role: "admin" as const,
-      mcpConnectionId: "", ...patch });
+      mcpConnectionId: "", linkKind: "linked" as const, ...patch });
     const [connection] = await owner(() => t.f.db.select({ id: s.mcpConnection.id }).from(s.mcpConnection).limit(1));
     await owner(async () => { await t.f.db.insert(s.studentSourceIdentity).values(row({ mcpConnectionId: connection.id })); });
     const code = async (action: () => Promise<unknown>) => { try { await action(); return ""; } catch (error) { return String((error as { cause?: { code?: string }; code?: string }).cause?.code ?? (error as { code?: string }).code); } };
@@ -222,6 +246,7 @@ describe("Maven roster intake through the portal MCP", () => {
     expect(await code(() => insert({ sourceRecordId: "short", studentId: t.f.students[1].id }))).toBe("23514");
     expect(await code(() => insert({ sourceNamespace: "csv", sourceRecordId: sfid(3), studentId: t.f.students[1].id }))).toBe("23514");
     expect(await code(() => insert({ sourceRecordId: sfid(4), studentId: t.f.students[3].id }))).toBe("23503");
+    expect(await code(() => insert({ sourceRecordId: sfid(6), studentId: t.f.students[1].id, linkKind: "moved" as never }))).toBe("23514");
     expect(await code(() => insert({ sourceRecordId: sfid(5), studentId: t.f.students[1].id, role: "tutor", roleGrantId: t.f.tutorGrant.id, createdByMembershipId: t.f.multiMember.id, createdByUserId: t.f.identities.multi.id }))).toBe("23514");
     const rights = await t.f.client.query<{ sel: boolean; ins: boolean; upd: boolean; del: boolean; rls: boolean; force: boolean }>(
       `select has_table_privilege('portal_runtime','student_source_identity','SELECT') sel, has_table_privilege('portal_runtime','student_source_identity','INSERT') ins,
@@ -234,8 +259,8 @@ describe("Maven roster intake through the portal MCP", () => {
     await expect(t.f.client.exec("delete from student_source_identity")).rejects.toThrow(/permission denied/);
     await t.f.client.exec("select set_config('app.tenant_id','other',false)");
     expect((await t.f.client.query("select count(*)::int n from student_source_identity")).rows).toEqual([{ n: 0 }]);
-    await expect(t.f.client.query(`insert into student_source_identity(tenant_id,source_namespace,source_record_id,student_id,created_by_user_id,created_by_membership_id,role_grant_id,role,mcp_connection_id)
-      values('crc','maven','SYN000000000000007',$1,$2,$3,$4,'admin',$5)`, [t.f.students[1].id, t.f.identities.admin.id, t.f.adminMember.id, t.f.adminGrant.id, connection.id])).rejects.toThrow(/row-level security/);
+    await expect(t.f.client.query(`insert into student_source_identity(tenant_id,source_namespace,source_record_id,student_id,created_by_user_id,created_by_membership_id,role_grant_id,role,mcp_connection_id,link_kind)
+      values('crc','maven','SYN000000000000007',$1,$2,$3,$4,'admin',$5,'linked')`, [t.f.students[1].id, t.f.identities.admin.id, t.f.adminMember.id, t.f.adminGrant.id, connection.id])).rejects.toThrow(/row-level security/);
     await t.f.client.exec("select set_config('app.tenant_id','',false)");
     expect((await t.f.client.query("select count(*)::int n from student_source_identity")).rows).toEqual([{ n: 0 }]);
     expect(await owner(() => t.f.db.select({ n: s.studentSourceIdentity.id }).from(s.studentSourceIdentity).where(and(eq(s.studentSourceIdentity.tenantId, "crc"))))).toHaveLength(1);

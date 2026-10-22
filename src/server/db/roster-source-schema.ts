@@ -15,6 +15,8 @@ export const studentSourceIdentity = pgTable("student_source_identity", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   createdByUserId: text("created_by_user_id").notNull(), createdByMembershipId: uuid("created_by_membership_id").notNull(),
   roleGrantId: uuid("role_grant_id").notNull(), role: role("role").notNull(), mcpConnectionId: uuid("mcp_connection_id").notNull(),
+  /** created: the intake created this student for the record; linked: the rabbi linked an existing student. */
+  linkKind: text("link_kind").$type<"created" | "linked">().notNull(),
 }, t => [
   unique("student_source_identity_record_key").on(t.tenantId, t.sourceNamespace, t.sourceRecordId),
   unique("student_source_identity_student_key").on(t.tenantId, t.sourceNamespace, t.studentId),
@@ -26,5 +28,6 @@ export const studentSourceIdentity = pgTable("student_source_identity", {
   // One closed source today: a Salesforce Contact id from Maven (18 characters, case-sensitive).
   check("student_source_identity_source", sql`${t.sourceNamespace} = 'maven' and ${t.sourceRecordId} ~ '^[A-Za-z0-9]{18}$'`),
   check("student_source_identity_admin", sql`${t.role} = 'admin'`),
+  check("student_source_identity_link_kind", sql`${t.linkKind} in ('created', 'linked')`),
   check("student_source_identity_created", sql`isfinite(${t.createdAt})`),
 ]);

@@ -40,7 +40,9 @@ const MAVEN_HINTS: Record<string, string> = {
 };
 const refusedMaven = (issues: readonly MavenRosterIssue[]) => ({ ok: false, code: "maven-result-refused", issues: issues.slice(0, 50),
   hint: [...new Set(issues.map(i => MAVEN_HINTS[i.code]).filter(Boolean))].join(" ") || "The Maven result was refused." });
-const nameOf = (fact: MavenContactFacts) => [fact.firstName?.trim(), fact.lastName?.trim()].filter(Boolean).join(" ") || "(no name in Maven)";
+/** A name with an "@" would make the transport withhold the whole result; show that one row's name as withheld instead. */
+const shown = (name: string) => name.includes("@") ? "(name withheld: it contains an at sign; check this record in Maven or the portal)" : name;
+const nameOf = (fact: MavenContactFacts) => shown([fact.firstName?.trim(), fact.lastName?.trim()].filter(Boolean).join(" ") || "(no name in Maven)");
 const notesOf = (fact: MavenContactFacts) => fact.notHavingBeitMitzvah ? ["maven-records-no-ceremony"] : [];
 
 async function snapshot<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string) {
@@ -54,7 +56,7 @@ const requireAdmin = (actor: McpActor) => { if (actor.role !== "admin") throw ne
 
 /** The reviewable row: names, dates, the kind of change and field names. Contacts only as presence, never an address. */
 function reviewRow(row: IntakeRow, fact: MavenContactFacts, byId: ReadonlyMap<string, IntakeStudent>) {
-  const portal = (id: string) => { const st = byId.get(id); return st ? { name: `${st.firstName} ${st.lastName}`, ceremonyDate: st.ceremonyDate } : null; };
+  const portal = (id: string) => { const st = byId.get(id); return st ? { name: shown(`${st.firstName} ${st.lastName}`), ceremonyDate: st.ceremonyDate } : null; };
   const base = { row: row.row, name: nameOf(fact), ceremonyDate: fact.ceremonyDate, change: row.kind };
   const extra = row.kind === "update" ? { studentId: row.studentId, expectedRevision: row.expectedRevision, changedFields: row.changedFields, portal: portal(row.studentId), ...(row.rehearsalsFit ? {} : { blocked: "rehearsal-after-new-ceremony-date" }) }
     : row.kind === "new" ? { canCreateAs: row.canCreateAs }
@@ -145,7 +147,7 @@ export function createRosterTools<Q extends PgQueryResultHKT>(): readonly Tool<Q
       },
     },
     {
-      name: "apply_roster_changes", roles: ["admin"], scope: SCOPES.study, annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }, deadlineMs: 55_000,
+      name: "apply_roster_changes", roles: ["admin"], scope: SCOPES.study, annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false }, deadlineMs: 55_000,
       description: "Step 3 of the Maven roster intake, only after the rabbi has said which rows to apply. Pass the same start, end and Maven result, the planToken, and one choice per row: {row, action:\"update\"} for an update; {row, action:\"create\", studentKind:\"child\"|\"adult\", serviceSlot:\"morning\"|\"havdalah\"|\"unknown\"} for a new student (or a reconcile row the rabbi says is new); {row, action:\"link\", studentId} to link a reconcile row to a suggested student. Everything is rechecked live and applied in one transaction: if any chosen row changed since the proposal, nothing is written and each row says why. Re-applying is safe: rows already applied are reported, not written twice. Sends NO invitations or e-mail; the rabbi invites families separately in the portal. A scheduled routine cannot apply.",
       inputSchema: closed({ start, end, mavenResult, planToken: { type: "string", maxLength: 8192, description: "planToken from propose_roster_changes, unchanged." },
         choices: { type: "array", maxItems: 500, description: "The rows the rabbi chose, one entry per row.", items: closed({ row: { type: "integer", minimum: 1, maximum: 500 }, action: { type: "string", enum: ["update", "create", "link"] },
@@ -175,7 +177,7 @@ async function applyRosterChanges<Q extends PgQueryResultHKT>(input: Record<stri
       await lockRabbi(tx, live.tenantId, live.membershipId, { roleGrantId: live.roleGrantId, roleGrantRevision: live.roleGrantRevision, authorityRevision: live.authorityRevision });
       await lockRosterIntake(tx, live.tenantId, MAVEN_NAMESPACE);
       const { students, identities } = await snapshot(tx, live.tenantId);
-      const plan = planMavenIntake({ tenantId: live.tenantId, facts, students, identities });
+      const plan = planMavenIntake({ tenantId: live.tenantId, facts, students, identities }), linkKind = new Map(identities.map(i => [i.sourceRecordId, i.linkKind]));
       if (!plan.ok) return { ok: false, code: "roster-unreadable", hint: "A portal student record does not pass the roster's validation; fix it in the portal, then propose again." };
       type Outcome = { row: number; name: string; outcome: string; studentId?: string; revision?: number; reason?: string; readingsSentToReview?: boolean };
       const outcomes: Outcome[] = [], work: { choice: Choice; row: IntakeRow; outcome: Outcome; target?: { studentId: string; expectedRevision: number; changed: boolean } }[] = [];
@@ -184,8 +186,9 @@ async function applyRosterChanges<Q extends PgQueryResultHKT>(input: Record<stri
         const row = plan.rows[choice.row - 1], fact = facts[choice.row - 1], outcome: Outcome = { row: choice.row, name: nameOf(fact), outcome: "not-applied" };
         outcomes.push(outcome);
         if (row.digest !== proposed.slice((choice.row - 1) * ROW_DIGEST_LENGTH, choice.row * ROW_DIGEST_LENGTH)) {
-          // Identities are insert-only: a row now unchanged and linked as chosen was applied before.
-          if (row.kind === "unchanged" && (choice.action !== "link" || choice.studentId === row.studentId)) Object.assign(outcome, { outcome: "already-applied", studentId: row.studentId, revision: row.expectedRevision });
+          // Identities are insert-only: a row now unchanged and linked as chosen (a student created for it, the chosen student, or any for an update) was applied before.
+          const done = row.kind === "unchanged" && (choice.action === "update" || (choice.action === "create" ? linkKind.get(row.sourceRecordId) === "created" : choice.studentId === row.studentId));
+          if (done && row.kind === "unchanged") Object.assign(outcome, { outcome: "already-applied", studentId: row.studentId, revision: row.expectedRevision });
           else Object.assign(outcome, { outcome: "conflict", reason: "changed-since-proposal" });
           continue;
         }
@@ -211,7 +214,7 @@ async function applyRosterChanges<Q extends PgQueryResultHKT>(input: Record<stri
       if (outcomes.some(o => o.outcome === "conflict")) return refuse("conflict");
       const portal = ctx.mcp.portalActor(live), at = ctx.mcp.now();
       const live_ = () => { alive(); if (ctx.signal.aborted) throw new AccessDenied(401); };
-      const identity = (sourceRecordId: string, studentId: string) => insertSourceIdentity(tx, { tenantId: live.tenantId, sourceNamespace: MAVEN_NAMESPACE, sourceRecordId, studentId,
+      const identity = (sourceRecordId: string, studentId: string, linkKind: "created" | "linked") => insertSourceIdentity(tx, { tenantId: live.tenantId, sourceNamespace: MAVEN_NAMESPACE, sourceRecordId, studentId, linkKind,
         createdAt: new Date(at), createdByUserId: live.userId, createdByMembershipId: live.membershipId, roleGrantId: live.roleGrantId, role: "admin", mcpConnectionId: live.connectionId });
       for (const { choice, row, outcome, target } of work) {
         live_();
@@ -220,14 +223,18 @@ async function applyRosterChanges<Q extends PgQueryResultHKT>(input: Record<stri
           let revision = target.expectedRevision, readingsSentToReview = false;
           if (target.changed) {
             const updated = await writeStudentEdit(tx, portal, target.studentId, target.expectedRevision, updatedStudentValues(fact, current.get(target.studentId)!), at);
-            if (!updated) throw new Rollback(refuse("conflict"));
+            if (!updated) {
+              for (const o of outcomes) if (o.outcome !== "already-applied") Object.assign(o, { outcome: "not-applied", studentId: undefined, revision: undefined, readingsSentToReview: undefined });
+              Object.assign(outcome, { outcome: "conflict", reason: "changed-since-proposal" });
+              throw new Rollback(refuse("conflict"));
+            }
             revision = updated.revision; readingsSentToReview = updated.readingNeedsReview;
           }
-          if (choice.action === "link") await identity(row.sourceRecordId, target.studentId);
+          if (choice.action === "link") await identity(row.sourceRecordId, target.studentId, "linked");
           Object.assign(outcome, { outcome: choice.action === "link" ? "linked" : "updated", studentId: target.studentId, revision, readingsSentToReview });
         } else if (choice.action === "create") {
           const student = await writeNewStudent(tx, portal, newStudentValues(fact, choice.studentKind, choice.serviceSlot), "student.import", at);
-          await identity(row.sourceRecordId, student.id);
+          await identity(row.sourceRecordId, student.id, "created");
           Object.assign(outcome, { outcome: "created", studentId: student.id, revision: student.revision });
         } else throw new AccessDenied(403);
       }

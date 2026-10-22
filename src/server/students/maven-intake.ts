@@ -45,9 +45,9 @@ export function defaultMavenWindow(now: number): MavenRosterWindow {
 /** A digest of the decoded facts: what the plan token binds, never the facts themselves. */
 export const factsDigest = (facts: readonly MavenContactFacts[]) => sha(["maven-intake-facts/v1", facts]);
 
-/** Only what Maven may write to a student: names, date, and a Hebrew name when Maven has one. */
+/** Only what Maven may write to a student: names, date, and a Hebrew name when Maven has one (blank counts as none, so it never clears the portal's). */
 const sourceFields = (fact: MavenContactFacts) => ({ firstName: fact.firstName ?? "", lastName: fact.lastName ?? "", ceremonyDate: fact.ceremonyDate,
-  ...(fact.hebrewName !== null ? { hebrewName: fact.hebrewName } : {}) });
+  ...(fact.hebrewName?.trim() ? { hebrewName: fact.hebrewName } : {}) });
 /**
  * A new student's contacts by the kind the rabbi chose. A child's parent address is the household's
  * primary contact (only when that is someone other than the student); an adult is their own contact.
@@ -120,10 +120,12 @@ export function planMavenIntake(input: { tenantId: string; facts: readonly Maven
       // The planner validates a whole StudentInput; any creatable kind serves, since a new row's plan depends only on name and date.
       batch.push({ sourceRecordId, fields: { ...sourceFields(fact), studentKind: kinds[0], ...contactsFor(fact, kinds[0]) } }); batchRows.push(index); return;
     }
-    // No address for either kind: it can still be linked to a student already in the portal.
+    // Not creatable as either kind (no usable address, or a field the portal refuses): it can still be linked to a student already in the portal.
     const suggestions = (byName.get(rosterNameKey(fact.firstName, fact.lastName, fact.ceremonyDate)) ?? []).map(st => suggestion(fact, st.id)).filter(s => s !== null)
       .sort((a, b) => a.studentId < b.studentId ? -1 : 1);
-    rows[index] = digestRow(suggestions.length ? { row, sourceRecordId, kind: "reconcile", suggestions, canCreateAs: [] } : { row, sourceRecordId, kind: "not-importable", reason: "no-email-on-file" });
+    const presence = contactPresence(fact);
+    rows[index] = digestRow(suggestions.length ? { row, sourceRecordId, kind: "reconcile", suggestions, canCreateAs: [] }
+      : { row, sourceRecordId, kind: "not-importable", reason: presence.contactEmailOnFile || presence.householdPrimaryEmailOnFile ? "invalid-field" : "no-email-on-file" });
   });
   if (batch.length) {
     const plan = planExternalRoster({ version: 1, tenantId: input.tenantId, sourceNamespace: "maven", rows: batch }, {
