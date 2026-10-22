@@ -8,7 +8,7 @@ import { HIDDEN as HIDDEN_MARKS } from "../study-guides/validation";
 export type Message = Readonly<{ subject: string; text: string }>;
 export type Links = Readonly<{ portal: string; settings: string; unsubscribe: string }>;
 export type DigestStudent = Readonly<{
-  firstName: string; practicedDays: number | null; ceremonyDate: string | null; serviceSlot: "morning" | "havdalah" | "unknown";
+  firstName: string; practicedDays: number | null; ceremonyDate: string | null; serviceLine: string | null;
   rehearsals: readonly string[]; lessons: readonly Readonly<{ lessonDate: string; author: string; summary: string }>[]; verseNotes: number;
 }>;
 
@@ -31,7 +31,6 @@ function paragraph(value: string, max: number) {
 const longDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 const shortDate = (date: string) => new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
 const days = (n: number) => n === 1 ? "1 day" : `${n} days`;
-const slotName = (slot: DigestStudent["serviceSlot"]) => slot === "morning" ? "Morning service" : slot === "havdalah" ? "Havdalah service" : null;
 function footer(why: string, stop: string, links: Links) {
   return ["--", why, `${stop}: ${links.unsubscribe}`, `Email settings: ${links.settings}`].join("\n");
 }
@@ -53,8 +52,7 @@ function digestBlock(student: DigestStudent): string[] {
   const lines = [student.firstName];
   if (student.practicedDays !== null) lines.push(student.practicedDays === 0 ? "- No practice was recorded in the last 7 days." : `- Practiced on ${days(student.practicedDays)} of the last 7.`);
   if (student.ceremonyDate) {
-    const slot = slotName(student.serviceSlot);
-    lines.push(`- Ceremony: ${longDate(student.ceremonyDate)}${slot ? ` · ${slot}` : ""}`);
+    lines.push(`- Ceremony: ${longDate(student.ceremonyDate)}${student.serviceLine ? ` · ${student.serviceLine}` : ""}`);
   }
   if (student.rehearsals.length) lines.push(`- Rehearsal${student.rehearsals.length === 1 ? "" : "s"}: ${student.rehearsals.map(longDate).join("; ")}`);
   if (student.lessons.length) {

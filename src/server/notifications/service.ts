@@ -14,6 +14,7 @@ import { withTenantTransaction } from "../db/runtime";
 import * as s from "../db/index";
 import type { NotificationMessage, NotificationOutcome } from "../mail/transport";
 import type { NotificationSettings } from "../settings/validation";
+import { serviceSlotLine } from "../../components/portal/workspace/service-slot";
 import { greetingName, plainName, practiceReminderMessage, tutorDraftMessage, weeklyDigestMessage, type DigestStudent, type Links, type Message } from "./copy";
 import { addDays, chicagoDay, DEFAULT_DIGEST_WEEKDAY, dueOccurrence, KINDS, validWeekday, CATCH_UP_DAYS, type NotificationKind } from "./schedule";
 import { openUnsubscribe, signUnsubscribe, UNSUBSCRIBE_TOKEN } from "./tokens";
@@ -75,12 +76,14 @@ export function createNotificationDelivery<Q extends PgQueryResultHKT>(input: {
   async function digestStudent(tx: Tx<Q>, tenantId: string, student: { id: string; firstName: string; ceremonyDate: string; rehearsal1: string | null; rehearsal2: string | null },
     day: string, since: Date): Promise<DigestStudent | null> {
     if (student.ceremonyDate < day) return null;
+    const slot = await data.serviceSlot(tx, tenantId, student.id), services = (await currentSettings(tx, tenantId))?.services;
     // Days only (ruling 14): the same day rows the practice calendar shows; never raw events.
     const practiced = (await calendar(tx, { tenantId, studentId: student.id } as never, { fromDate: addDays(day, -7), throughDate: addDays(day, -1) } as never)).length;
     const from = chicagoDay(since.getTime()).date, through = addDays(day, -1);
     const lessons = from <= through ? await data.lessonsBetween(tx, tenantId, student.id, from, through, 3) : [];
     return Object.freeze({ firstName: plainName(student.firstName) ?? "Your student", practicedDays: practiced, ceremonyDate: student.ceremonyDate,
-      serviceSlot: await data.serviceSlot(tx, tenantId, student.id), rehearsals: [student.rehearsal1, student.rehearsal2].filter((r): r is string => !!r && r >= day),
+      // The congregation's own service name and time, exactly as the portal shows them to families.
+      serviceLine: (() => { const line = serviceSlotLine(slot, services); return line ? plainName(line, 80) : null; })(), rehearsals: [student.rehearsal1, student.rehearsal2].filter((r): r is string => !!r && r >= day),
       lessons: lessons.map(l => ({ lessonDate: l.lessonDate, author: plainName(l.name) ?? "Tutor", summary: l.summary })), verseNotes: await data.verseNotesSince(tx, tenantId, student.id, since) });
   }
   async function composeDigest(tx: Tx<Q>, tenantId: string, membershipId: string, excluding: string | null) {

@@ -40,10 +40,10 @@ async function setup() {
   const runtime = (): HttpRuntime => ({ ...f.runtime, studentWork: work, notifications: delivery(), notificationPreferences: createNotificationPreferences({ access: f.service, enabled: env.enabled }) });
   const dispatch = (request: Request) => createHttpDispatcher(async action => action(runtime()))(request);
   let version = 0;
-  async function switches(n: NotificationSettings | null) {
+  async function switches(n: NotificationSettings | null, extra: Record<string, unknown> = {}) {
     await f.owner(async () => {
       version++;
-      await f.db.insert(s.tenantSettings).values({ tenantId: "crc", version, baseVersion: version - 1, previousVersion: version === 1 ? null : version - 1, body: n ? { notifications: n } : {},
+      await f.db.insert(s.tenantSettings).values({ tenantId: "crc", version, baseVersion: version - 1, previousVersion: version === 1 ? null : version - 1, body: { ...extra, ...(n ? { notifications: n } : {}) },
         actorUserId: f.identities.admin.id, actorMembershipId: f.adminMember.id, roleGrantId: f.adminGrant.id, role: "admin", mode: "admin", channel: "web", mutationId: randomUUID(), requestDigest: "a".repeat(64) });
     });
   }
@@ -213,7 +213,7 @@ describe("weekly digests", () => {
     expect(multi.text).toContain("Ada\n- Practiced on 3 days of the last 7.");
     expect(multi.text).toContain("Ben\n- No practice was recorded in the last 7 days.");
     expect(multi.text).toContain("Synthetic Ada lesson: first aliyah blessings."); expect(multi.text).not.toContain("Synthetic old lesson");
-    expect(multi.text).toContain("· Morning service"); expect(multi.text).toMatch(/- Rehearsal: \w+day, /);
+    expect(multi.text).toContain("· Morning service\n"); expect(multi.text).toMatch(/- Rehearsal: \w+day, /);
     expect(multi.text).toContain("because you're a parent of a student");
     noOtherData(multi, "Cy", "Synthetic Cy private lesson");
     expect(cy.text).toContain("Cy\n- Practiced on 1 day of the last 7."); expect(cy.text).toContain("Synthetic Cy private lesson.");
@@ -257,6 +257,13 @@ describe("weekly digests", () => {
     await h.owner(() => h.db.update(s.guardian).set({ revokedAt: new Date() }).where(and(eq(s.guardian.studentId, h.students[2].id))));
     expect((await h.dispatch(h.asRequest("multi", "/api/notifications/preferences", { kind: "weekly-digest", enabled: false }))).status).toBe(200);
     expect(await h.delivery().run("crc")).toMatchObject({ sent: 0 }); expect(h.sent).toEqual([]);
+  });
+
+  it("name the service as the congregation does, with its start time", async () => {
+    const f = await digestDay();
+    await f.switches({ weeklyDigest: true, digestWeekday: 0 }, { services: { morning: { label: "Shabbat morning", start: "10:30" } } });
+    await f.delivery().run("crc");
+    expect(f.sent.find(m => m.email === "multi@example.test")!.text).toContain("· Shabbat morning · 10:30 AM\n");
   });
 
   it("leave past classes out of the candidates and carry what one run cannot reach to the next morning", async () => {
