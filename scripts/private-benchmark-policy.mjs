@@ -2,8 +2,9 @@
 const LITERAL_SCHEMA = /"schema"\s*:\s*"chant-(?:benchmark-(?:input|pack|identity|run)|human-[a-z0-9-]+|listening-[a-z0-9-]+)\//;
 const DECODED_SCHEMA = /^chant-(?:benchmark-(?:input|pack|identity|run)|human-[a-z0-9-]+|listening-[a-z0-9-]+)\//;
 // Index v2 (refined word boundaries) carries the same source text as v1, so it is equally private.
-const REFERENCE_LITERAL_SCHEMA = /"schema"\s*:\s*"(?:pockettorah-verse-index\/v[12]|reference-catalog\/v1)"/;
-const REFERENCE_SCHEMAS = new Set(["pockettorah-verse-index/v1", "pockettorah-verse-index/v2", "reference-catalog/v1"]);
+// Cantor Finkel's private package catalog, its playback manifest and upload plan are private too.
+const REFERENCE_LITERAL_SCHEMA = /"schema"\s*:\s*"(?:pockettorah-verse-index\/v[12]|(?:reference-catalog|finkel-prepared-catalog|finkel-reference-manifest|finkel-reference-upload-plan)\/v1)"/;
+const REFERENCE_SCHEMAS = new Set(["pockettorah-verse-index/v1", "pockettorah-verse-index/v2", "reference-catalog/v1", "finkel-prepared-catalog/v1", "finkel-reference-manifest/v1", "finkel-reference-upload-plan/v1"]);
 export const PRIVATE_BENCHMARK_REASON = "private chant-benchmark record";
 export const PRIVATE_REFERENCE_INDEX_REASON = "private reference-audio index";
 export const PRIVATE_BENCHMARK_BUDGET_REASON = "private benchmark inspection budget exceeded";

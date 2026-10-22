@@ -1,6 +1,6 @@
 import { expect, test, vi } from "vitest";
 import { createReadingAudioCoordinator, type ReadingAudioSlot } from "../../src/components/portal/workspace/study/reading-audio-coordinator";
-const slots: ReadingAudioSlot[] = ["proposed", "assigned", "lifted"];
+const slots: ReadingAudioSlot[] = ["proposed", "assigned", "lifted", "finkel-proposed", "finkel-assigned"];
 for (const from of slots) for (const to of slots.filter(slot => slot !== from)) test(`synchronously excludes ${from} before ${to} may prime`, () => {
   const coordinator = createReadingAudioCoordinator(), events: string[] = [];
   const registrations = Object.fromEntries(slots.map(slot => [slot, coordinator.register(slot, () => events.push("stop:" + slot))]));
