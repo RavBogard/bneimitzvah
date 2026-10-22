@@ -18,7 +18,7 @@ export type PublicWeek = Readonly<{ date: string; parashah: string | null; torah
 export type PublicShortPage = Readonly<{ offset: number; nextOffset: number | null; totalVerses: number; references: readonly ReferenceShortResolution[] }>;
 const bad = (): never => { throw new PortalRequestError(503); };
 
-async function getJson(path: string, cap: number, signal: AbortSignal): Promise<unknown> {
+export async function getJson(path: string, cap: number, signal: AbortSignal): Promise<unknown> {
   const origin = location.origin;
   if (!["http:", "https:"].includes(new URL(origin).protocol) || new URL(origin).origin !== origin) return bad();
   const controller = new AbortController(), abort = () => controller.abort(), timer = setTimeout(abort, 15_000);

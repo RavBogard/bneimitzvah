@@ -75,7 +75,7 @@ export function PracticeSheet({ baseline, initialKind, onClose, authorityFailed 
   const { readStudy, concealed } = useWorkspace(), heading = useId(), prefs = useReadingPrefs();
   const kinds = baseline.readings.map(row => row.kind), [kind, setKind] = useState<StudyKind>(kinds.includes(initialKind) ? initialKind : kinds[0]);
   const reading = baseline.readings.find(row => row.kind === kind)!;
-  const [tikkun, setTikkun] = useState(prefs.tikkun), [aliyahBreaks, setAliyahBreaks] = useState(false), [retry, setRetry] = useState(0);
+  const [tikkun, setTikkun] = useState(prefs.tikkunView !== "off"), [aliyahBreaks, setAliyahBreaks] = useState(false), [retry, setRetry] = useState(0);
   const [load, setLoad] = useState<Load>({ status: "loading" }), [printState, setPrintState] = useState<"idle" | "preparing" | "error">("idle");
   const [host, setHost] = useState<HTMLElement | null>(null), panel = useRef<HTMLDivElement>(null), gate = useRef(false), alive = useRef(true);
   const failed = useRef(authorityFailed); failed.current = authorityFailed;

@@ -10,6 +10,7 @@ import { createHttpDispatcher } from "../../src/server/http/dispatch";
 import { AccessDenied } from "../../src/server/access/errors";
 import { thisShabbat } from "../../src/lib/readings/public-shabbat";
 import { syntheticResponse } from "../helpers/study";
+import { syntheticCommentaryFetch } from "../helpers/commentary";
 
 // Synthetic configuration, calendar fragment and chapter text only.
 const env = () => {
@@ -26,6 +27,7 @@ function upstream() {
     const url = new URL(input instanceof Request ? input.url : String(input));
     if (url.hostname === "www.hebcal.com") return new Response(JSON.stringify({ items: [{ date: url.searchParams.get("date"), name: { en: "Synthetic portion" }, type: "shabbat", parshaNum: 1,
       fullkriyah: { "1": { k: "Genesis", b: "1:1", e: "1:3", v: 3 } }, haft: { k: "Isaiah", b: "1:1", e: "1:3", v: 3 } }] }), { headers: { "content-type": "application/json" } });
+    if (url.hostname === "www.sefaria.org" && decodeURIComponent(url.pathname).includes("/Rashi on ")) return syntheticCommentaryFetch()(url);
     if (url.hostname === "www.sefaria.org") return syntheticResponse(decodeURIComponent(url.pathname.split("/").at(-1)!));
     throw new Error("Unexpected synthetic upstream");
   });
@@ -44,6 +46,9 @@ test("as the restricted runtime role, the public runtime reads only the host map
   expect(first.verses.map(verse => verse.ref)).toEqual(["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"]);
   await runtime.reading.text("torah", date, 0); await runtime.reading.week(date);
   expect(fetch.mock.calls.length).toBe(calls); // the second visitor is served from the shared caches
+  const before = statements.length, rashi = await runtime.commentary("rashi", "Genesis 1");
+  expect(Object.keys(rashi.verses)).toEqual(["1", "3"]);
+  expect(statements.length).toBe(before); // commentary never touches the database; the CDN keeps it
   const tables = new Set(statements.flatMap(sql => [...sql.matchAll(/\b(?:from|into|update|join)\s+"?([a-z_]+)"?/gi)].map(match => match[1].toLowerCase())
     .filter(name => name !== "set"))); // "on conflict do update set" is a cache refill, not a table
   expect([...tables].sort()).toEqual(["hebcal_cache", "sefaria_text_cache", "tenant_host"]);
