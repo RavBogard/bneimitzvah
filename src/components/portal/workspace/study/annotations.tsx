@@ -1,12 +1,12 @@
 "use client";
-import { useMemo, useSyncExternalStore, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { useMemo, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { colorStudyVerse, type AssignmentEnding, type ColorResult } from "../../../../lib/hebrew/study-annotations";
-import { projectStudyVerse, type DisplayPart } from "../../../../lib/hebrew/study-tokens";
+import { projectStudyVerse, type DisplayPart, type StudyProjection } from "../../../../lib/hebrew/study-tokens";
 import { PHRASE_FAMILIES } from "../../../../lib/trope/chart-catalog";
-import { tikkunText } from "../../../../lib/hebrew/tikkun";
+import { tikkunPieces, tikkunText } from "../../../../lib/hebrew/tikkun";
 import hebrewStyles from "../../../../styles/hebrew-font.module.css";
 import stamStyles from "../../../../styles/stam-font.module.css";
-import { useReadingPrefs } from "../reading-prefs";
+import { useReadingPrefs, type TikkunView } from "../reading-prefs";
 import type { StudyVerse } from "./api";
 import styles from "./annotations.module.css";
 import referenceStyles from "./reference-player.module.css";
@@ -129,56 +129,64 @@ export function studyFlowGroups(verses: readonly StudyVerse[], sectionStarts: re
   }
   return groups;
 }
-// The same breakpoint as the two-column reading layout in this module's CSS.
-const WIDE = "(min-width: 1001px)";
-function subscribeWide(listener: () => void) {
-  if (typeof matchMedia !== "function") return () => {};
-  const query = matchMedia(WIDE); query.addEventListener("change", listener); return () => query.removeEventListener("change", listener);
-}
-/** Wide screens show the tikkun beside the pointed text; phones show it instead of the pointed text. */
-export function useWideReading() {
-  return useSyncExternalStore(subscribeWide, () => typeof matchMedia === "function" && matchMedia(WIDE).matches, () => false);
-}
-
-/** Scroll lettering for one verse: consonants only, in the STaM face, never interactive. */
-export function TikkunVerse({ verse, className = "", ...rest }: { verse: StudyVerse; className?: string; "aria-hidden"?: boolean }) {
-  const text = useMemo(() => tikkunText(verse.hebrew.text), [verse.hebrew.text]), segments = verse.hebrew.segments;
+/** Scroll lettering for one verse: consonants only, in the STaM face, never interactive.
+ *  Given the verse's projection, each written word carries its pointed word's phrase color (when colors
+ *  are on) and the playing-word highlight; the letters are the same either way (tikkunPieces). */
+export function TikkunVerse({ verse, className = "", projection = null, colors = null, activeWord = null, ...rest }: {
+  verse: StudyVerse; className?: string; projection?: StudyProjection | null; colors?: Ready | null; activeWord?: number | null; "aria-hidden"?: boolean;
+}) {
+  const text = useMemo(() => projection ? null : tikkunText(verse.hebrew.text), [projection, verse.hebrew.text]), segments = verse.hebrew.segments;
+  const pieces = useMemo(() => projection ? tikkunPieces(projection.runs) : null, [projection]);
   // The scroll writes the inverted nuns (Numbers 10:35-36), so they stay; every other mark is gone.
   const sign = <span role="img" aria-label="Inverted nun, Masoretic sign">{"\u05c6"}</span>;
+  const words = pieces?.map((piece, index) => {
+    if (piece.wordIndex === null) return piece.text;
+    const word = colors?.words[piece.wordIndex], family = word?.family ? families.get(word.family) : null, active = piece.wordIndex === activeWord;
+    return <span key={index} data-tikkun-word={piece.wordIndex} data-family={family?.id} data-reference-active={active ? "true" : undefined}
+      className={[family ? styles.word : "", active ? referenceStyles.activeWord : ""].filter(Boolean).join(" ") || undefined}
+      style={family ? { "--phrase-color": family.color } as CSSProperties : undefined}>{piece.text}</span>;
+  });
   return <span className={`${stamStyles.stam} ${className}`.trim()} lang="he" dir="rtl" data-tikkun-ref={verse.ref} {...rest}>
-    {segments[0]?.kind === "inverted-nun" && <>{sign} </>}{text}{segments.length > 1 && segments.at(-1)?.kind === "inverted-nun" && <> {sign}</>}
+    {segments[0]?.kind === "inverted-nun" && <>{sign} </>}{words ?? text}{segments.length > 1 && segments.at(-1)?.kind === "inverted-nun" && <> {sign}</>}
   </span>;
 }
 
-function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAvailable, listening, showEnglish, tikkun, wide }: {
-  verse: StudyVerse; assignment: AssignmentEnding; id: string; onVerse?(): void; onWord?(index: number): void; activeWord: number | null; toolsAvailable: boolean; listening: boolean; showEnglish: boolean; tikkun: boolean; wide: boolean;
+function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAvailable, listening, showEnglish, tikkun }: {
+  verse: StudyVerse; assignment: AssignmentEnding; id: string; onVerse?(): void; onWord?(index: number): void; activeWord: number | null; toolsAvailable: boolean; listening: boolean; showEnglish: boolean; tikkun: TikkunView;
 }) {
-  const prefs = useReadingPrefs(), replaced = tikkun && !wide, result = useVerseColors(verse, assignment, prefs.colors && !replaced), colors = result?.status === "ready" ? result : null;
+  // Daniel (2026-10-22): trope colors show on both texts whenever Colors is on, in every tikkun view.
+  const prefs = useReadingPrefs(), replaced = tikkun === "only", result = useVerseColors(verse, assignment, prefs.colors), colors = result?.status === "ready" ? result : null;
+  const projection = useMemo(() => {
+    if (tikkun === "off") return null;
+    if (colors) return colors.projection;
+    const value = projectStudyVerse(verse.ref, verse.hebrew);
+    return value.status === "ready" ? value.projection : null;
+  }, [tikkun, colors, verse.ref, verse.hebrew]);
   const number = /:([1-9]\d*)$/.exec(verse.ref)?.[1];
   return <span data-verse-ref={verse.ref} className={styles.flowVerse}>
     <span className={styles.flowHebrew} data-hebrew-ref={verse.ref}>
     <span className="sr-only" role="heading" aria-level={4} dir="ltr">{verse.ref}</span>
     {onVerse ? <button type="button" className={styles.verseNumber} onClick={onVerse} aria-label={`Hear ${verse.ref}`} title={verse.ref}>{number ?? verse.ref}</button>
       : <sup title={verse.ref}>{number ?? verse.ref}</sup>}{" "}
-    {replaced ? <TikkunVerse verse={verse} className={styles.flowTikkunInline} /> : <StudyHebrew verse={verse} colors={colors} id={id} inline activeWord={activeWord} onWordSelect={onWord} wordAction={listening ? "verse" : "tools"} toolsAvailable={toolsAvailable} />}{" "}
+    {replaced ? <TikkunVerse verse={verse} className={styles.flowTikkunInline} projection={projection} colors={colors} activeWord={activeWord} /> : <StudyHebrew verse={verse} colors={colors} id={id} inline activeWord={activeWord} onWordSelect={onWord} wordAction={listening ? "verse" : "tools"} toolsAvailable={toolsAvailable} />}{" "}
     {verse.hebrew.paragraphAfter === "setumah" && <span className={styles.closedGap} role="img" aria-label="Closed paragraph" />}
     {colors && <span className="sr-only">{phraseGroups(colors).map(row => <span key={row.phrase} id={`${id}-phrase-${row.phrase}`}>{row.family.label}, {range(row.first, row.last)}. </span>)}</span>}
     </span>
-    {tikkun && wide && <TikkunVerse verse={verse} className={styles.flowTikkun} aria-hidden />}
+    {tikkun === "beside" && <TikkunVerse verse={verse} className={styles.flowTikkun} projection={projection} colors={colors} activeWord={activeWord} aria-hidden />}
     {showEnglish && <span className={`study-english ${styles.flowEnglish}`} lang="en" dir="ltr" data-english-ref={verse.ref}>{verse.english ?? "English reference unavailable for this verse."}</span>}
   </span>;
 }
-export function FlowingStudyText({ verses, assignment, group, sections = [], onVerse, onWord, activeWord, toolsAvailable = true, listening = true, showEnglish = false, tikkun = false }: {
+/** "beside" sets the tikkun in a column next to the pointed text on every screen width; "only" shows it instead. */
+export function FlowingStudyText({ verses, assignment, group, sections = [], onVerse, onWord, activeWord, toolsAvailable = true, listening = true, showEnglish = false, tikkun = "off" }: {
   verses: StudyVerse[]; assignment: AssignmentEnding; group: string; sections?: readonly { index: number; label: string }[];
   onVerse?(index: number): void; onWord?(verse: number, word: number): void; activeWord: { verse: number; index: number } | null; toolsAvailable?: boolean; listening?: boolean; showEnglish?: boolean;
   /** Torah only: the caller decides, so a haftarah never shows scroll lettering. */
-  tikkun?: boolean;
+  tikkun?: TikkunView;
 }) {
-  const wide = useWideReading();
-  return <div className={`study-verses ${styles.flow}`} aria-label="Hebrew reading" tabIndex={-1} data-tikkun={tikkun ? wide ? "beside" : "instead" : undefined}>
+  return <div className={`study-verses ${styles.flow}`} aria-label="Hebrew reading" tabIndex={-1} data-tikkun={tikkun === "off" ? undefined : tikkun}>
     {studyFlowGroups(verses, sections.map(section => section.index)).map(indices => <div key={verses[indices[0]].ref}>
       {sections.find(section => section.index === indices[0]) && <p className="student-aliyah">{sections.find(section => section.index === indices[0])!.label}</p>}
-      <p className={styles.flowParagraph} lang="he" dir="rtl">{indices.map(index => <FlowVerse key={verses[index].ref} verse={verses[index]} assignment={assignment} id={`${group}-flow-${index}`} onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined} activeWord={activeWord?.verse === index ? activeWord.index : null} toolsAvailable={toolsAvailable} listening={listening} showEnglish={showEnglish} tikkun={tikkun} wide={wide} />)}</p>
+      <p className={styles.flowParagraph} lang="he" dir="rtl">{indices.map(index => <FlowVerse key={verses[index].ref} verse={verses[index]} assignment={assignment} id={`${group}-flow-${index}`} onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined} activeWord={activeWord?.verse === index ? activeWord.index : null} toolsAvailable={toolsAvailable} listening={listening} showEnglish={showEnglish} tikkun={tikkun} />)}</p>
     </div>)}
   </div>;
 }

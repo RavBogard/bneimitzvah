@@ -38,7 +38,20 @@ async function page(who: "admin" | "student", mobile = false) {
 }
 async function loaded(tab: Page, ref: string) { await ui(tab.locator(".study-verses").getByRole("heading", { name: ref, level: 4, exact: true })).toBeVisible({ timeout: 30_000 }); }
 const toolbar = (tab: Page) => tab.getByRole("navigation", { name: "Reading tools", exact: true });
-const tikkunControl = (tab: Page) => toolbar(tab).getByRole("button", { name: "Tikkun", exact: true });
+// The Tikkun control opens a three-way menu; its accessible name carries the current view.
+const tikkunControl = (tab: Page) => toolbar(tab).getByRole("button", { name: /^Tikkun: / });
+async function chooseTikkun(tab: Page, view: "Pointed text" | "Side by side" | "Tikkun only") {
+  await safe(() => tikkunControl(tab).click());
+  await safe(() => toolbar(tab).getByRole("group", { name: "Tikkun view", exact: true }).getByRole("button", { name: view, exact: true }).click());
+  await ui(tikkunControl(tab)).toHaveAccessibleName(`Tikkun: ${view}`);
+}
+/** Each verse row: the tikkun column sits left of the pointed text, top-aligned, both visible. */
+async function besideGeometry(tab: Page, ref: string) {
+  return tab.locator(`.assigned-study .study-verses [data-verse-ref="${ref}"]`).evaluate(row => {
+    const pointed = row.querySelector("[data-hebrew-ref]")!.getBoundingClientRect(), tikkun = row.querySelector("[data-tikkun-ref]")!.getBoundingClientRect();
+    return { pointedLeft: pointed.left, tikkunRight: tikkun.right, tikkunLeft: tikkun.left, pointedRight: pointed.right, top: Math.abs(pointed.top - tikkun.top), widths: [pointed.width, tikkun.width] };
+  });
+}
 // Marks are counted by code point inside the page; nothing here writes a raw mark.
 const markCount = (nodes: Element[]) => nodes.reduce((total, node) => total + [...(node.textContent ?? "")].filter(char => { const point = char.codePointAt(0)!; return point >= 0x0591 && point <= 0x05c7; }).length, 0);
 async function stamGlyphs(tab: Page, selector: string) {
@@ -80,8 +93,9 @@ it("shows a remembered consonant-only tikkun column in the STaM face beside Tora
   const flow = tab.locator(".assigned-study .study-verses");
   await ui(tikkunControl(tab)).toHaveAttribute("aria-pressed", "false");
   expect(await flow.locator("[data-tikkun-ref]").count()).toBe(0);
+  await ui(tikkunControl(tab)).toHaveAccessibleName("Tikkun: Pointed text");
   const before = calls;
-  await safe(() => tikkunControl(tab).click()); await ui(tikkunControl(tab)).toHaveAttribute("aria-pressed", "true");
+  await chooseTikkun(tab, "Side by side"); await ui(tikkunControl(tab)).toHaveAttribute("aria-pressed", "true");
   await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
   expect(calls).toBe(before); // A display preference: no text is fetched again.
   await safe(() => tab.evaluate(async () => { await document.fonts.ready; }));
@@ -95,16 +109,23 @@ it("shows a remembered consonant-only tikkun column in the STaM face beside Tora
   // Wide screens keep the pointed, playable text and put the tikkun on its left, verse by verse.
   await ui(flow.locator('[data-verse-ref="Genesis 1:1"] .study-hebrew')).toBeVisible();
   expect(await flow.locator(".study-hebrew").evaluateAll(markCount)).toBeGreaterThan(0);
-  const geometry = await flow.locator('[data-verse-ref="Genesis 1:2"]').evaluate(row => {
-    const pointed = row.querySelector("[data-hebrew-ref]")!.getBoundingClientRect(), tikkun = row.querySelector("[data-tikkun-ref]")!.getBoundingClientRect();
-    return { pointedLeft: pointed.left, tikkunRight: tikkun.right, top: Math.abs(pointed.top - tikkun.top) };
-  });
+  const geometry = await besideGeometry(tab, "Genesis 1:2");
   expect(geometry.tikkunRight).toBeLessThanOrEqual(geometry.pointedLeft); expect(geometry.top).toBeLessThan(4);
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  // Colors are on by default: each colored pointed word has its colored tikkun word, and Colors off clears both.
+  const colored = async () => [await flow.locator(".study-hebrew [data-word-index][data-family]").count(), await flow.locator("[data-tikkun-ref] [data-tikkun-word][data-family]").count()];
+  const [pointedColored, tikkunColored] = await colored();
+  if (pointedColored > 0) expect(tikkunColored).toBeGreaterThan(0);
+  const colorsButton = toolbar(tab).getByRole("button", { name: "Colors", exact: true });
+  await safe(() => colorsButton.click()); await ui(colorsButton).toHaveAttribute("aria-pressed", "false");
+  await ui(flow.locator("[data-family]")).toHaveCount(0);
+  await safe(() => colorsButton.click()); await ui(colorsButton).toHaveAttribute("aria-pressed", "true");
+  expect(await colored()).toEqual([pointedColored, tikkunColored]);
   await capture(tab, "tikkun-desktop");
   // Remembered like the other reading choices.
   await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
-  await ui(tikkunControl(tab)).toHaveAttribute("aria-pressed", "true"); await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
+  await ui(tikkunControl(tab)).toHaveAttribute("aria-pressed", "true"); await ui(tikkunControl(tab)).toHaveAccessibleName("Tikkun: Side by side");
+  await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
   // A haftarah is read from a book: no control and no scroll lettering.
   await safe(() => tab.getByRole("button", { name: "Haftarah text", exact: true }).click()); await loaded(tab, "Isaiah 1:1");
   await ui(tikkunControl(tab)).toHaveCount(0); expect(await tab.locator("[data-tikkun-ref]").count()).toBe(0);
@@ -112,18 +133,37 @@ it("shows a remembered consonant-only tikkun column in the STaM face beside Tora
   await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
 });
 
-it("on a phone shows the tikkun in place of the pointed text, keeping verse numbers", async () => {
+it("on a phone keeps both columns side by side, or shows the tikkun in place of the pointed text, keeping verse numbers", async () => {
   const tab = await page("student", true); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
   const flow = tab.locator(".assigned-study .study-verses");
-  if (await tikkunControl(tab).getAttribute("aria-pressed") !== "true") await safe(() => tikkunControl(tab).click());
+  // Side by side is two columns on a phone too, with no sideways page scroll at 390 or 360 pixels.
+  await chooseTikkun(tab, "Side by side");
+  await ui(flow).toHaveAttribute("data-tikkun", "beside"); await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
+  await ui(flow.locator(".study-hebrew")).toHaveCount(3);
+  for (const width of [390, 360]) {
+    await safe(() => tab.setViewportSize({ width, height: 844 }));
+    for (const ref of ["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"]) {
+      const geometry = await besideGeometry(tab, ref);
+      expect(geometry.tikkunRight).toBeLessThanOrEqual(geometry.pointedLeft); expect(geometry.top).toBeLessThan(4);
+      expect(geometry.tikkunLeft).toBeGreaterThanOrEqual(0); expect(geometry.pointedRight).toBeLessThanOrEqual(width);
+      for (const size of geometry.widths) expect(size).toBeGreaterThan(width / 4);
+    }
+    expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  await safe(() => tab.setViewportSize({ width: 390, height: 844 }));
+  await capture(tab, "tikkun-phone-beside");
+  await chooseTikkun(tab, "Tikkun only");
   await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
-  await ui(flow).toHaveAttribute("data-tikkun", "instead");
+  await ui(flow).toHaveAttribute("data-tikkun", "only");
   expect(await flow.locator(".study-hebrew").count()).toBe(0);
+  // The verse number stays (a play button when listening is on, otherwise a plain number).
+  await ui(flow.locator('[data-hebrew-ref="Genesis 1:1"] > :is(button, sup)')).toHaveText("1");
   for (const cell of await flow.locator("[data-tikkun-ref]").all()) { await ui(cell).toBeVisible(); expect(await cell.getAttribute("aria-hidden")).toBeNull(); }
   expect(await flow.locator("[data-tikkun-ref]").evaluateAll(markCount)).toBe(0);
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await capture(tab, "tikkun-phone");
-  await safe(() => tikkunControl(tab).click()); await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(0);
+  await chooseTikkun(tab, "Pointed text"); await ui(tikkunControl(tab)).toHaveAttribute("aria-pressed", "false");
+  await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(0);
   await ui(flow.locator(".study-hebrew").first()).toBeVisible();
   // On a phone the print action sits under the reading, so the first verse stays above the fold.
   const print = tab.getByRole("button", { name: "Print practice sheet", exact: true });
@@ -138,7 +178,7 @@ it("on a phone shows the tikkun in place of the pointed text, keeping verse numb
 
 it("previews a print-only practice sheet with an optional tikkun column and no English, for the student and staff", async () => {
   const tab = await page("student"); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
-  await safe(() => tikkunControl(tab).click()); await ui(tikkunControl(tab)).toHaveAttribute("aria-pressed", "true");
+  await chooseTikkun(tab, "Side by side"); await ui(tikkunControl(tab)).toHaveAttribute("aria-pressed", "true");
   const opener = tab.getByRole("button", { name: "Print practice sheet", exact: true });
   await safe(() => opener.click());
   const dialog = tab.getByRole("dialog", { name: "Practice sheet", exact: true }); await ui(dialog).toBeVisible();
