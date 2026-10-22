@@ -83,7 +83,7 @@ const publicStudyTasks = new WeakMap<typeof globalThis.fetch, PublicStudyCoalesc
 // Public immutable source facts only; construction performs no I/O. Never
 // create one cache per authenticated request or store an actor in this instance.
 const publicStepSource = createStepSource();
-function sharedStudyTasks(fetch: typeof globalThis.fetch) {
+export function sharedStudyTasks(fetch: typeof globalThis.fetch) {
   let tasks = publicStudyTasks.get(fetch);
   if (!tasks) { tasks = createPublicStudyCoalescer(); publicStudyTasks.set(fetch, tasks); }
   return tasks;

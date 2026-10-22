@@ -19,6 +19,7 @@ import { lessonLogRouteMethods } from "../../src/server/http/lesson-log";
 import { practiceCalendarRouteMethods } from "../../src/server/http/practice-calendar";
 import { studyGuidesRouteMethods } from "../../src/server/http/study-guides";
 import { congregationSettingsRouteMethods } from "../../src/server/http/congregation-settings";
+import { isPublicReadingPath, publicReadingRouteMethods, type PublicRuntimeScope } from "../../src/server/http/public-reading";
 import { claudeConnectionsRouteMethods } from "../../src/server/http/claude-connections";
 import { notificationsRouteMethods } from "../../src/server/http/notifications";
 import { closeNextDevelopment } from "./next-lifecycle";
@@ -87,7 +88,8 @@ async function send(res: ServerResponse, response: Response) {
   res.end();
 }
 
-export async function startBrowserServer(withRuntime: HttpRuntimeScope) {
+/** `withPublic` serves the signed-out reading allowlist; without one those routes answer 503. */
+export async function startBrowserServer(withRuntime: HttpRuntimeScope, withPublic: PublicRuntimeScope = async () => new Response(null, { status: 503 })) {
   // This bootstrap never belongs to the Next production import graph.
   assertBrowserStartupAllowed();
   // Pinned Next's custom-server prepare() drops `conf`; a private project
@@ -97,13 +99,15 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope) {
   try { await app.prepare(); }
   catch { await closeNextDevelopment(() => app.close()); throw new Error("Isolated Next preparation failed"); }
   const nextHandler = app.getRequestHandler();
-  const dispatch = createHttpDispatcher(withRuntime);
+  const dispatch = createHttpDispatcher(withRuntime, withPublic);
   const server = createServer(async (req, res) => {
     try {
       const request = safeRequest(req);
       if (!request) { await send(res, new Response(null, { status: 400 })); return; }
       const pathname = new URL(request.url).pathname;
-      if (referenceReviewRouteMethods(pathname)) { await send(res, await dispatch(request)); return; }
+      if (referenceReviewRouteMethods(pathname)
+        // Signed-out reading: the dispatcher's exact allowlist serves its routes and refuses every other /api/public path.
+        || publicReadingRouteMethods(pathname) || isPublicReadingPath(pathname)) { await send(res, await dispatch(request)); return; }
       if (!serviceEcosystemRouteMethods(pathname) && !honoreeManagementRouteMethods(pathname) && !honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname) && !studyGuidesRouteMethods(pathname) && !congregationSettingsRouteMethods(pathname) && !claudeConnectionsRouteMethods(pathname) && !notificationsRouteMethods(pathname)) { await nextHandler(req, res); return; }
       await send(res, await dispatch(request));
     } catch { if (!res.headersSent) await send(res, new Response(null, { status: 503 })); else res.destroy(); }

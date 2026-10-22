@@ -101,6 +101,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         <h1>{invitation ? "Join your congregation’s practice" : "Open your reading"}</h1>
         <p>{invitation ? "Review the access you’ve been invited to use. You choose whether to accept it." : "Your assigned passage is the starting point. Sign in with the account on your invitation."}</p>
         <div className="entry-notes"><p>For students, parents and the people who teach them.</p><p>Parents use their own account to reach a linked child’s practice.</p></div>
+        {!invitation && <div className="hero-actions"><a className="button-hero-secondary" href="/read">Read this week’s Torah and haftarah</a><span className="field-help">Open to everyone, no sign-in needed.</span></div>}
       </div>
       <section className="entry-task" aria-labelledby="entry-title" aria-busy={view.kind === "loading" || pending !== null}>
         <h2 id="entry-title" ref={heading} tabIndex={-1} aria-live="polite" aria-atomic="true">{title}</h2>
