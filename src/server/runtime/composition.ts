@@ -63,7 +63,8 @@ import { createPublicStudyCoalescer, type PublicStudyCoalescer } from "../study/
 import { resolveTenantHost } from "../tenancy/resolve";
 import { createHebcalReader } from "../../lib/readings/proposals";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
-import { createMailTransport, projectMagicLink } from "../mail/transport";
+import { createMailTransport, createNotificationTransport, projectMagicLink } from "../mail/transport";
+import { createNotificationDelivery, createNotificationPreferences } from "../notifications/service";
 import { createLogger } from "../logging/logger";
 import type { HostFrame } from "../logging/logger";
 import { loadRuntimeConfig, type RuntimeConfig } from "./config";
@@ -131,6 +132,18 @@ async function dispatchServiceJobs(config:RuntimeConfig,fetch:typeof globalThis.
   try{const db=drizzle(pool,{schema,logger:false});await createServiceScheduler({db,broker:createMusicBroker(config.serviceMusic,fetch)}).run();}
   finally{await pool.end().catch(()=>undefined);}
 }
+function notificationDelivery<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch) {
+  return createNotificationDelivery({ db, origin: config.origin, secret: purposeSecret(config, "notification-unsubscribe"), enabled: config.notificationsEnabled,
+    cronSecret: config.serviceCronSecret, send: createNotificationTransport({ ...config.mail, origin: config.origin, fetch }) });
+}
+async function dispatchNotificationJobs(config: RuntimeConfig, fetch: typeof globalThis.fetch, tenantId: string) {
+  // after() runs after the request's pool is closed; own this background connection, like the service drain.
+  const pool = new Pool({ connectionString: config.databaseUrl, max: 2, connectionTimeoutMillis: 5000, idleTimeoutMillis: 1000, statement_timeout: 10000, query_timeout: 12000 });
+  pool.on("error", () => undefined);
+  try { await notificationDelivery(config, drizzle(pool, { schema, logger: false }), fetch).deliverPending(tenantId); }
+  catch { /* The morning run sends anything still pending. */ }
+  finally { await pool.end().catch(() => undefined); }
+}
 export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch,
   studyTasks: PublicStudyCoalescer = sharedStudyTasks(fetch), stepSource: StepSourceLoader = publicStepSource) {
   const send = createMailTransport({ ...config.mail, origin: config.origin, fetch });
@@ -148,7 +161,11 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const serviceScheduler = createServiceScheduler({ db, broker: musicBroker, cronSecret: config.serviceCronSecret });
   const students = createStudentService({ access, loadReading, signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS, dispatchScheduled });
   const serviceLearning = createServiceLearningService({ access, practice, signingSecret: purposeSecret(config, "service-plan-preparations"), resolveCeremonyUnit: serviceEcosystem.materialMapping });
-  const studentWork = createStudentWorkService({ access, practice, authorityBindingSecret: purposeSecret(config, "student-work-authority") });
+  const notifications = notificationDelivery(config, db, fetch);
+  const notificationPreferences = createNotificationPreferences({ access, enabled: config.notificationsEnabled });
+  // A student's draft queues the tutors' notice in the same write; it is sent once the reply has gone.
+  const studentWork = createStudentWorkService({ access, practice, authorityBindingSecret: purposeSecret(config, "student-work-authority"),
+    notify: { queue: notifications.queueTutorDraft, dispatch: async tenantId => { const { after } = await import("next/server"); after(async () => { await dispatchNotificationJobs(config, fetch, tenantId); }); } } });
   const progress = createProgressService({ access, practice });
   // The web runtime gets reads, ticks and staff status only; guide writes need the MCP or the operator bridge.
   const studyGuides = studyGuideWebSurface(createStudyGuideService({ access, practice, check: createGuideChecker({ related: createSefariaMetadataReader({ fetch }).related }) }));
@@ -158,7 +175,8 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const claudeConnections = createClaudeConnectionsService({ access });
   const mavenLinks = createMavenLinkService({ access });
   const practiceCalendar = createPracticeCalendarService({ access, practice });
-  const recordings = createStudentRecordingService({ access, practice });
+  // Parked (MISSION): null unless PORTAL_RECORDINGS_ENABLED=true; while null, every recordings route is a 404.
+  const recordings = config.recordingsEnabled ? createStudentRecordingService({ access, practice }) : null;
   const loadText = createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS, cache: createPersistentStudyCache(db), coalescer: studyTasks });
   const study = createStudyService({ access, practice, load: loadText });
   const readingExploration = createReadingExplorationService({ access, practice, loadReading, loadText, signingSecret: purposeSecret(config, "reading-exploration") });
@@ -194,7 +212,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost, mcp, rosterSheet });
+  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost, mcp, rosterSheet, notifications, notificationPreferences });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

@@ -38,13 +38,18 @@ async function heldReading(tab: Page) {
   await expectSilentAudio(tab);
   expect(await tab.evaluate(() => (window as unknown as { silentAudioProbe: { elements: HTMLAudioElement[] } }).silentAudioProbe.elements.length)).toBe(0);
 }
-async function page(role: "student" | "tutor", mobile = false) {
+// A test that only reads may reuse the tutor's earlier session, so it adds no magic-link sign-in to the rate window.
+let tutorCookies: Awaited<ReturnType<BrowserContext["cookies"]>> | null = null;
+async function page(role: "student" | "tutor", mobile = false, reuse = false) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 }, reducedMotion: "reduce" }); contexts.push(context);
   await observeSilentAudio(context);
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
+  if (reuse && role === "tutor" && tutorCookies) await context.addCookies(tutorCookies);
   const tab = await context.newPage(); observeHeldMetadata(tab); heldShortPages.set(tab, observeInitialShortPage(tab)); await safe(() => tab.goto("/", { waitUntil: "domcontentloaded" }));
+  if (reuse && role === "tutor" && tutorCookies) return tab;
   const email = role === "student" ? "pg-calendar-student@example.test" : "pg-tutor@example.test";
   expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await openAuthMail(tab, fixture.takeMail(email));
+  if (role === "tutor") tutorCookies = await context.cookies();
   return tab;
 }
 const click = (tab: Page, name: string) => safe(() => tab.getByRole("button", { name, exact: true }).click());
@@ -219,4 +224,29 @@ it("held Start visits the first verse of the current text page without listening
   await ui(tab.getByRole("dialog")).toHaveCount(0); await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0);
   await click(tab, "Start reading"); expect(seen.posts).toHaveLength(1);
   await heldReading(tab); await safe(() => tab.context().close());
+});
+
+it("shows an assigned tutor the student's practice days on the Lessons tab, dates only, and opening the reading reports nothing", async () => {
+  {
+    const tab = await page("tutor", false, true), seen = traffic(tab), before = await rows();
+    const read = tab.waitForResponse(response => isCalendar(response.request()) && response.status() === 200);
+    await safe(() => tab.goto(`/workspace/tutor/${fixture.student.id}`, { waitUntil: "domcontentloaded" }));
+    await ui(tab.locator("#reading-heading")).toBeVisible();
+    const response = await safe(() => read), request = response.request(), url = new URL(request.url());
+    expect({ method: request.method(), path: url.pathname, mode: url.searchParams.get("mode"), context: request.headers()["x-practice-context"] ?? null }).toEqual({ method: "GET", path: `/api/students/${fixture.student.id}/practice-calendar`, mode: "tutor", context: null });
+    const dates = parsePracticeDates(await safe(() => response.json()), "tutor", fixture.student.id, url.searchParams.get("fromDate") ?? "", url.searchParams.get("throughDate") ?? "");
+    // The header keeps no practice week for staff; the dates sit with the lessons.
+    expect(await tab.locator(".reading-hero .practice-week").count()).toBe(0);
+    await safe(() => tab.getByRole("tab", { name: "Lessons", exact: true }).click());
+    const section = tab.getByRole("region", { name: "Practice days", exact: true });
+    await ui(section.getByText("Dates only.", { exact: false })).toBeVisible();
+    await ui(week(tab).getByRole("listitem")).toHaveCount(7); await todayMarked(tab, dates.dates.includes(dates.serverDay));
+    await capture(tab, "practice-calendar-tutor");
+    await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click());
+    await click(tab, "Start reading"); await ui(tab.locator(".study-verses").first()).toBeVisible();
+    await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:1"] [data-word-index="0"]').first().click());
+    await safe(() => tab.waitForTimeout(300));
+    expect(seen.posts).toHaveLength(0); expect(seen.reads.every(value => new URL(value).searchParams.get("mode") === "tutor")).toBe(true); expect(await rows()).toEqual(before);
+    await safe(() => tab.context().close());
+  }
 });

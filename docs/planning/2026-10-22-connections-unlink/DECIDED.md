@@ -24,7 +24,7 @@ Two follow-ups left open by the 1.0 release: [MCP decided](../2026-10-21-torah-s
 
 ## Migration 0033_source_identity_unlink
 
-Numbered 0033 beside the notifications branch's 0032 (journal idx 32 and `meta/0032_snapshot.json` on this branch; renumber at merge). The Drizzle migrator applies only migrations stamped later than the last applied one, so **whichever branch merges second must be restamped** (`when` later than the first's) and its snapshot rechained; otherwise production silently skips it. This branch's `when` (1792652103327) is already later than 0032_notifications' (1792645128741), so merging notifications first needs only the renumbering. A new test checks that every journal `when` is strictly increasing. The audit list keeps every earlier action and also carries 0032's `notification-preference.set` and `notification.unsubscribe`, so the list is right if 0033 runs after 0032; if they run the other way round, 0032's list must gain this migration's two actions.
+Journal idx 33, after `0032_notifications` (merged first, 2026-10-22), with a later `when` and its snapshot (`meta/0033_snapshot.json`) chained from 0032's. The audit list keeps every earlier action, including 0032's `notification-preference.set` and `notification.unsubscribe`, and adds `mcp-connection.revoke` and `source-identity.revoke`. A test checks that every journal `when` is strictly increasing, since the Drizzle migrator skips a migration stamped earlier than the last one applied.
 
 ## Open items that wait on Daniel
 

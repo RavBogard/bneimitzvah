@@ -1,5 +1,5 @@
 {
-  "id": "f271524a-ae6f-473f-9948-2ba36843bd57",
+  "id": "d72f0e73-407b-47bf-887d-b195b989ad54",
   "prevId": "7ce0f100-3daf-441b-86dd-eb6045a61b96",
   "version": "7",
   "dialect": "postgresql",
@@ -2304,6 +2304,353 @@
       },
       "isRLSEnabled": false
     },
+    "public.notification_delivery": {
+      "name": "notification_delivery",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "membership_id": {
+          "name": "membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_grant_id": {
+          "name": "role_grant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "portal_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_key": {
+          "name": "period_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "student_id": {
+          "name": "student_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "attempted_at": {
+          "name": "attempted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "notification_delivery_tenant_id_tenant_id_fk": {
+          "name": "notification_delivery_tenant_id_tenant_id_fk",
+          "tableFrom": "notification_delivery",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "notification_delivery_member_fk": {
+          "name": "notification_delivery_member_fk",
+          "tableFrom": "notification_delivery",
+          "tableTo": "membership",
+          "columnsFrom": [
+            "tenant_id",
+            "membership_id",
+            "user_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "notification_delivery_grant_fk": {
+          "name": "notification_delivery_grant_fk",
+          "tableFrom": "notification_delivery",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "role_grant_id",
+            "membership_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "membership_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "notification_delivery_role_fk": {
+          "name": "notification_delivery_role_fk",
+          "tableFrom": "notification_delivery",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "role_grant_id",
+            "role"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "role"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "notification_delivery_student_fk": {
+          "name": "notification_delivery_student_fk",
+          "tableFrom": "notification_delivery",
+          "tableTo": "student",
+          "columnsFrom": [
+            "tenant_id",
+            "student_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "notification_delivery_tenant_id_key": {
+          "name": "notification_delivery_tenant_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "id"
+          ]
+        },
+        "notification_delivery_period_key": {
+          "name": "notification_delivery_period_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "membership_id",
+            "kind",
+            "period_key"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "notification_delivery_kind": {
+          "name": "notification_delivery_kind",
+          "value": "(\"notification_delivery\".\"kind\" = 'tutor-draft' and \"notification_delivery\".\"role\" = 'tutor' and \"notification_delivery\".\"student_id\" is not null and \"notification_delivery\".\"period_key\" ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:[0-9]{4}-[0-9]{2}-[0-9]{2}$')\n    or (\"notification_delivery\".\"kind\" = 'weekly-digest' and \"notification_delivery\".\"role\" in ('parent','student') and \"notification_delivery\".\"student_id\" is null and \"notification_delivery\".\"period_key\" ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')\n    or (\"notification_delivery\".\"kind\" = 'practice-reminder' and \"notification_delivery\".\"role\" = 'student' and \"notification_delivery\".\"student_id\" is null and \"notification_delivery\".\"period_key\" ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')"
+        },
+        "notification_delivery_status": {
+          "name": "notification_delivery_status",
+          "value": "\"notification_delivery\".\"status\" in ('pending','sending','sent','failed','unknown','skipped')"
+        },
+        "notification_delivery_attempts": {
+          "name": "notification_delivery_attempts",
+          "value": "\"notification_delivery\".\"attempts\" between 0 and 10"
+        },
+        "notification_delivery_instants": {
+          "name": "notification_delivery_instants",
+          "value": "isfinite(\"notification_delivery\".\"created_at\") and (\"notification_delivery\".\"attempted_at\" is null or isfinite(\"notification_delivery\".\"attempted_at\")) and (\"notification_delivery\".\"finished_at\" is null or isfinite(\"notification_delivery\".\"finished_at\"))"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.notification_preference": {
+      "name": "notification_preference",
+      "schema": "",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "membership_id": {
+          "name": "membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "weekday": {
+          "name": "weekday",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "updated_via": {
+          "name": "updated_via",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "notification_preference_tenant_id_tenant_id_fk": {
+          "name": "notification_preference_tenant_id_tenant_id_fk",
+          "tableFrom": "notification_preference",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "notification_preference_member_fk": {
+          "name": "notification_preference_member_fk",
+          "tableFrom": "notification_preference",
+          "tableTo": "membership",
+          "columnsFrom": [
+            "tenant_id",
+            "membership_id",
+            "user_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "notification_preference_key": {
+          "name": "notification_preference_key",
+          "columns": [
+            "tenant_id",
+            "membership_id",
+            "kind"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "notification_preference_kind": {
+          "name": "notification_preference_kind",
+          "value": "\"notification_preference\".\"kind\" in ('tutor-draft','weekly-digest','practice-reminder')"
+        },
+        "notification_preference_weekday": {
+          "name": "notification_preference_weekday",
+          "value": "(\"notification_preference\".\"kind\" = 'practice-reminder' and (\"notification_preference\".\"weekday\" is null or \"notification_preference\".\"weekday\" between 0 and 6)) or (\"notification_preference\".\"kind\" <> 'practice-reminder' and \"notification_preference\".\"weekday\" is null)"
+        },
+        "notification_preference_revision": {
+          "name": "notification_preference_revision",
+          "value": "\"notification_preference\".\"revision\" > 0"
+        },
+        "notification_preference_via": {
+          "name": "notification_preference_via",
+          "value": "\"notification_preference\".\"updated_via\" in ('web','unsubscribe')"
+        },
+        "notification_preference_instant": {
+          "name": "notification_preference_instant",
+          "value": "isfinite(\"notification_preference\".\"updated_at\")"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.practice_day": {
       "name": "practice_day",
       "schema": "",
@@ -3381,109 +3728,9 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "revoked_at": {
-          "name": "revoked_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "revoked_by_user_id": {
-          "name": "revoked_by_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "revoked_by_membership_id": {
-          "name": "revoked_by_membership_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "revoked_role_grant_id": {
-          "name": "revoked_role_grant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "revoked_role": {
-          "name": "revoked_role",
-          "type": "portal_role",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "revoked_channel": {
-          "name": "revoked_channel",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "revoked_mcp_connection_id": {
-          "name": "revoked_mcp_connection_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
         }
       },
-      "indexes": {
-        "student_source_identity_record_current": {
-          "name": "student_source_identity_record_current",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "source_namespace",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "source_record_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"student_source_identity\".\"revoked_at\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "student_source_identity_student_current": {
-          "name": "student_source_identity_student_current",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "source_namespace",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "student_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"student_source_identity\".\"revoked_at\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "student_source_identity_tenant_id_tenant_id_fk": {
           "name": "student_source_identity_tenant_id_tenant_id_fk",
@@ -3578,76 +3825,29 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "student_source_identity_revoker_fk": {
-          "name": "student_source_identity_revoker_fk",
-          "tableFrom": "student_source_identity",
-          "tableTo": "membership",
-          "columnsFrom": [
-            "tenant_id",
-            "revoked_by_membership_id",
-            "revoked_by_user_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id",
-            "user_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "student_source_identity_revoker_grant_fk": {
-          "name": "student_source_identity_revoker_grant_fk",
-          "tableFrom": "student_source_identity",
-          "tableTo": "role_grant",
-          "columnsFrom": [
-            "tenant_id",
-            "revoked_role_grant_id",
-            "revoked_by_membership_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id",
-            "membership_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "student_source_identity_revoker_role_fk": {
-          "name": "student_source_identity_revoker_role_fk",
-          "tableFrom": "student_source_identity",
-          "tableTo": "role_grant",
-          "columnsFrom": [
-            "tenant_id",
-            "revoked_role_grant_id",
-            "revoked_role"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id",
-            "role"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "student_source_identity_revoker_connection_fk": {
-          "name": "student_source_identity_revoker_connection_fk",
-          "tableFrom": "student_source_identity",
-          "tableTo": "mcp_connection",
-          "columnsFrom": [
-            "tenant_id",
-            "revoked_mcp_connection_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "student_source_identity_record_key": {
+          "name": "student_source_identity_record_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "source_namespace",
+            "source_record_id"
+          ]
+        },
+        "student_source_identity_student_key": {
+          "name": "student_source_identity_student_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "source_namespace",
+            "student_id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {
         "student_source_identity_source": {
@@ -3665,10 +3865,6 @@
         "student_source_identity_created": {
           "name": "student_source_identity_created",
           "value": "isfinite(\"student_source_identity\".\"created_at\")"
-        },
-        "student_source_identity_revoked": {
-          "name": "student_source_identity_revoked",
-          "value": "(\"student_source_identity\".\"revoked_at\" is null and \"student_source_identity\".\"revoked_by_user_id\" is null and \"student_source_identity\".\"revoked_by_membership_id\" is null and \"student_source_identity\".\"revoked_role_grant_id\" is null and \"student_source_identity\".\"revoked_role\" is null and \"student_source_identity\".\"revoked_channel\" is null and \"student_source_identity\".\"revoked_mcp_connection_id\" is null)\n    or (\"student_source_identity\".\"revoked_at\" is not null and isfinite(\"student_source_identity\".\"revoked_at\") and \"student_source_identity\".\"revoked_at\" >= \"student_source_identity\".\"created_at\" and \"student_source_identity\".\"revoked_by_user_id\" is not null and \"student_source_identity\".\"revoked_by_membership_id\" is not null and \"student_source_identity\".\"revoked_role_grant_id\" is not null\n      and \"student_source_identity\".\"revoked_role\" = 'admin' and ((\"student_source_identity\".\"revoked_channel\" = 'web' and \"student_source_identity\".\"revoked_mcp_connection_id\" is null) or (\"student_source_identity\".\"revoked_channel\" = 'mcp' and \"student_source_identity\".\"revoked_mcp_connection_id\" is not null)))"
         }
       },
       "isRLSEnabled": false
@@ -7286,7 +7482,7 @@
       "checkConstraints": {
         "audit_action_known": {
           "name": "audit_action_known",
-          "value": "\"audit_event\".\"action\" in ('student.create','student.update','student.import','grant.issue','grant.revoke','guardian.link','guardian.revoke','guardian.practice-set','tutor.cantor-set','tutor.assign','tutor.revoke','invite.issue','invite.accept','invite.revoke','invite.delivery-sent','invite.delivery-failed','context.enter','context.exit','reading.set','identity.link','identity.revoke','draft.append','note.append','service-plan.set','progress.self-check.set','progress.assessment.set','lesson-log.create','lesson-log.edit','lesson-log.delete','recording.create','recording.submit','recording.delete-request','source-assignment.set','honors.set','honoree.issue','honoree.revoke','honoree.reissue','study-voice.set','study-guide.set','study-guide.publish','study-guide-student.set','study-theme.read','tenant-settings.set','notification-preference.set','notification.unsubscribe','mcp-connection.revoke','source-identity.revoke')"
+          "value": "\"audit_event\".\"action\" in ('student.create','student.update','student.import','grant.issue','grant.revoke','guardian.link','guardian.revoke','guardian.practice-set','tutor.cantor-set','tutor.assign','tutor.revoke','invite.issue','invite.accept','invite.revoke','invite.delivery-sent','invite.delivery-failed','context.enter','context.exit','reading.set','identity.link','identity.revoke','draft.append','note.append','service-plan.set','progress.self-check.set','progress.assessment.set','lesson-log.create','lesson-log.edit','lesson-log.delete','recording.create','recording.submit','recording.delete-request','source-assignment.set','honors.set','honoree.issue','honoree.revoke','honoree.reissue','study-voice.set','study-guide.set','study-guide.publish','study-guide-student.set','study-theme.read','tenant-settings.set','notification-preference.set','notification.unsubscribe')"
         }
       },
       "isRLSEnabled": false

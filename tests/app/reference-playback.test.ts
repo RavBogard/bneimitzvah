@@ -236,3 +236,12 @@ it("renders explicit keyboard controls without effects, media URLs, autoplay or 
   expect(html).toContain("Load recording"); expect(html).toContain("Whole verse"); expect(html).toContain("Speed"); expect(html).toContain("Repeat");
   expect(html).not.toContain("Word 1"); expect(html).not.toContain("archive.org/download/"); expect(html).toContain("https://archive.org/details/PockettorahAudioFiles"); expect(html).not.toContain("<audio"); expect(html).not.toContain("autoplay");
 });
+
+it("a selected word with a measured end stops there, not at the next onset", async () => {
+  const measured = (): ReferenceResolution => { const r = resolution(); return { ...r, verse: { ...r.verse, words: { status: "ready", readingTextSha256: hash(text.normalize("NFC")), starts: [10.5, 12, 14], ends: [11.6, 13.5, 14.8] } } as ReferenceResolution["verse"] }; };
+  const f = fixture({ load: vi.fn(async () => measured()) }); await f.player.load();
+  f.player.select(1); expect(f.media.currentTime).toBe(12); await f.player.play();
+  f.media.currentTime = 13.5; f.timer();
+  expect(f.player.state.status).toBe("ready"); expect(f.media.currentTime).toBe(13.5);
+  f.player.dispose();
+});

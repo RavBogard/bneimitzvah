@@ -1,4 +1,29 @@
-import type { BrowserContext, Route } from "playwright";
+import type { BrowserContext, Page, Route } from "playwright";
+
+// A page-level interception for one step of a test, switched off by falling back
+// to the context guard instead of page.unroute/unrouteAll. Unrouting tells the
+// Playwright server to drop the page interceptor; a request it had already
+// dispatched to this client (but that had not reached a page handler yet) is
+// then continued by the server itself while the client still passes it on to
+// the context guard, whose own continue fails as "Route is already handled!"
+// (and a foreign request the guard would abort could reach the network). Keeping
+// the page interceptor registered until the context closes leaves every request
+// exactly one terminal action, taken by the page step or by the guard.
+export async function routePageStep(tab: Pick<Page, "route">, pattern: string, handler: (route: Route) => Promise<void>) {
+  let active = true;
+  const running = new Set<Promise<void>>();
+  await tab.route(pattern, route => {
+    if (!active) return route.fallback();
+    const task = handler(route);
+    running.add(task);
+    void task.then(() => running.delete(task), () => running.delete(task));
+    return task;
+  });
+  return {
+    /** Stop handling new requests and wait for the step's in-flight handlers, as unrouteAll({ behavior: "wait" }) did. */
+    async remove() { active = false; while (running.size) await Promise.allSettled([...running]); },
+  };
+}
 
 const failureLabels = new Set([
   "Reading UI route handler failed",

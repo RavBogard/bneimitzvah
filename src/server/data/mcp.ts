@@ -8,9 +8,19 @@ import * as s from "../db/index";
 export type McpConnectionRow = typeof s.mcpConnection.$inferSelect;
 export type TokenKind = "code" | "access" | "refresh";
 
-export async function insertConnection<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, row: typeof s.mcpConnection.$inferInsert) {
-  const [created] = await tx.insert(s.mcpConnection).values(row).returning();
+/**
+ * Inserts the connection under its caller-chosen id, or nothing when that id already exists: the
+ * consent service derives the id from the signed pending request, so one request makes one connection.
+ * A concurrent insert of the same id waits for the other transaction and then inserts nothing.
+ */
+export async function insertConnectionOnce<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, row: typeof s.mcpConnection.$inferInsert & { id: string }) {
+  const [created] = await tx.insert(s.mcpConnection).values(row).onConflictDoNothing({ target: s.mcpConnection.id }).returning();
   return created;
+}
+/** Whether a connection with this id exists in the tenant (revoked or expired ones included). */
+export async function connectionExists<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, connectionId: string) {
+  const [row] = await tx.select({ id: s.mcpConnection.id }).from(s.mcpConnection).where(and(eq(s.mcpConnection.tenantId, tenantId), eq(s.mcpConnection.id, connectionId)));
+  return !!row;
 }
 export async function insertToken<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, row: { tokenHash: string; tenantId: string; connectionId: string; kind: TokenKind; codeChallenge?: string | null; createdAt: Date; expiresAt: Date }) {
   await tx.insert(s.mcpToken).values({ ...row, codeChallenge: row.codeChallenge ?? null });

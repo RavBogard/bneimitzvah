@@ -61,7 +61,8 @@ export class ParentSummaryStore {
   }
 }
 const label = (date: string) => new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
-export function ParentStudySummary({ store, baseline, scope, concealed }: { store: ParentSummaryStore; baseline: Assigned | null; scope: string; concealed: boolean }) {
+/** notice: the congregation's consent notice from its settings (what is stored, who hears it, when it is deleted); nothing when unset. */
+export function ParentStudySummary({ store, baseline, scope, concealed, notice = null }: { store: ParentSummaryStore; baseline: Assigned | null; scope: string; concealed: boolean; notice?: string | null }) {
   const state = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
   if (!baseline || baseline.mode !== "parent" || concealed || !store.matches(baseline, scope)) return null;
   const lesson = state.lesson, dates = state.dates;
@@ -78,5 +79,6 @@ export function ParentStudySummary({ store, baseline, scope, concealed }: { stor
         {dates.dates.length ? <ul className="parent-summary-dates">{dates.dates.map(date => <li key={date}><time dateTime={date}>{label(date)}</time></li>)}</ul> : <p>No practice dates recorded in these seven days.</p>}
       </>}
     </div>
+    {notice && <p className="parent-consent-notice" dir="auto">{notice}</p>}
   </section>;
 }

@@ -414,7 +414,8 @@ describe("Connect Claude consent page on a phone", () => {
     await heading(tab, "Claude wants to connect");
     expect(seen.every(entry => entry.path === "view" && entry.request === pending)).toBe(true);
     await safe(() => tab.getByRole("button", { name: "Cancel", exact: true }).click());
-    await ui(tab.getByRole("alert")).toBeVisible();
+    // Scoped to the page: after the reload, Next's route announcer is also a role="alert" element.
+    await ui(tab.locator("main").getByRole("alert")).toBeVisible();
     expect(seen.at(-1)).toEqual({ path: "deny", request: pending });
     const asked = seen.length;
     await navigate(tab, "/connect"); await heading(tab, "This request has expired");
@@ -437,6 +438,21 @@ describe("Connect Claude consent page on a phone", () => {
     await navigate(tab, "/connect?google=failed"); await heading(tab, "Claude wants to connect");
     await ui(tab.getByText("Google sign-in didn’t finish. Try again.", { exact: true })).toBeVisible();
     expect(new URL(tab.url()).search).toBe(""); expect(views(seen).at(-1)).toBe(pending);
+  });
+
+  it("says a request already allowed was used, from Allow or from the view, and forgets it", async () => {
+    const tab = await page(true); let used = false;
+    const seen = await consentRoutes(tab, { view: () => used ? { error: "used" } : { clientName: "Claude", destination: "claude.ai", account: staff }, approve: { error: "used" } });
+    await navigate(tab, `/connect#request=${pending}`); await heading(tab, "Claude wants to connect");
+    await safe(() => tab.getByRole("button", { name: "Allow", exact: true }).click());
+    await heading(tab, "This request was already allowed");
+    await ui(tab.getByRole("button", { name: "Allow", exact: true })).toHaveCount(0);
+    // Forgotten: a later visit without a fragment asks the server nothing.
+    const asked = views(seen).length;
+    await navigate(tab, "/connect"); await heading(tab, "This request has expired");
+    expect(views(seen).length).toBe(asked);
+    used = true; await navigate(tab, "about:blank"); await navigate(tab, `/connect#request=${pending}`);
+    await heading(tab, "This request was already allowed");
   });
 
   it("forgets the stored request after Allow and after an expired answer, and a fresh fragment wins", async () => {

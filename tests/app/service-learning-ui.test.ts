@@ -7,7 +7,7 @@ const first = "synthetic.first@bm-shacharit", second = "synthetic.second@bm-shac
 const section = { idx: 0, en: "Synthetic morning" };
 const units = [{ id: first, name: "Synthetic first", section }, { id: second, name: "Synthetic second", section }];
 const plan: ServicePlan = { id: planId, revision: 4, needsReview: true, catalogId, catalogIdentity: identity, catalogState: "active" };
-const catalog = { state: "available" as const, studentRevision: 2, ceremonyDate: "2027-01-02", serviceSlot: "morning" as const, expectedPlanRevision: 4, catalogId, catalogIdentity: identity, lifecycleRevision: 3, units };
+const catalog = { state: "available" as const, studentRevision: 2, ceremonyDate: "2027-01-02", serviceSlot: "morning" as const, expectedPlanRevision: 4, catalogId, catalogIdentity: identity, lifecycleRevision: 3, units, defaults: [] as string[] };
 const prepared = () => ({ ok: true, binding: "v1.synthetic", selectedIds: [first, second], clearsPlan: false, expiresAt: Date.now() + 60_000,
   review: { studentRevision: 2, ceremonyDate: "2027-01-02", serviceSlot: "morning", expectedPlanRevision: 4, catalogId, catalogIdentity: identity, lifecycleRevision: 3 } });
 const material = () => ({ unit: { id: first, family: "bm-shacharit", name: "Synthetic first", section: 0, blocks: [{ type: "stanza", he: "אָ֑ב", en: [{ t: "Synthetic meaning" }, { footnote: [{ t: "Synthetic author" }] }] }, { type: "english", role: "original", en: "Synthetic original prose" }] },
@@ -35,6 +35,10 @@ it("requires explicit known-slot catalog families, unique IDs and a closed autho
   expect(parseCatalog(catalog)).toEqual(catalog);
   expect(parseCatalog({ state: "unknown-slot" })).toEqual({ state: "unknown-slot" });
   for (const changed of [{ ...catalog, serviceSlot: "unknown" }, { ...catalog, units: [units[0], units[0]] }, { ...catalog, serviceSlot: "havdalah" }, { ...catalog, sourceText: "Unselected text" }]) expect(() => parseCatalog(changed)).toThrow();
+  // Standard parts are offered only before any plan exists, only from this catalog, and come back in catalog order.
+  const fresh = { ...catalog, expectedPlanRevision: 0 };
+  expect((parseCatalog({ ...fresh, defaults: [units[1].id, units[0].id] }) as typeof fresh).defaults).toEqual([units[0].id, units[1].id]);
+  for (const changed of [{ ...catalog, defaults: [units[0].id] }, { ...fresh, defaults: ["torah.blessing-before-the-torah-reading@bm-shacharit"] }, { ...fresh, defaults: [units[0].id, units[0].id] }, (({ defaults: _, ...rest }) => rest)(fresh)]) expect(() => parseCatalog(changed)).toThrow();
 });
 
 it("accepts only the server's exact canonical selection and bound review context/expiry", () => {

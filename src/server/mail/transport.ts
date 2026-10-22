@@ -67,3 +67,57 @@ export function createMailTransport(input: { origin: string; apiKey: string; fro
     finally { if (timer) clearTimeout(timer); controller.abort(); }
   };
 }
+
+export type NotificationMessage = Readonly<{ email: string; subject: string; text: string; unsubscribeUrl: string; idempotencyKey: string }>;
+/** sent: the provider accepted it. rejected: definitely not sent (refused, or never handed over). unknown: no answer. */
+export type NotificationOutcome = "sent" | "rejected" | "unknown";
+const NOTIFICATION_TOKEN = /^[tdr]\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.[A-Za-z0-9_-]{43}$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/**
+ * Release 1.1 notification mail: plain text, the portal's own one-click unsubscribe (RFC 8058) in
+ * the headers, and the ledger row's id as Resend's Idempotency-Key so a retried send of the same
+ * row is delivered once. Never a bearer link to content: the only links are the portal's address
+ * and the unsubscribe capability for this one recipient and kind.
+ */
+export function createNotificationTransport(input: { origin: string; apiKey: string; from: string; fetch: typeof globalThis.fetch; timeoutMs?: number }) {
+  const timeout = input.timeoutMs ?? 5000;
+  try {
+    const origin = new URL(input.origin);
+    if (origin.origin !== input.origin || origin.username || origin.password || !["http:", "https:"].includes(origin.protocol)
+      || !mailbox(input.from) || !/^re_[A-Za-z0-9_-]{8,256}$/.test(input.apiKey)
+      || !Number.isInteger(timeout) || timeout < 1 || timeout > 10000) throw 0;
+  } catch { throw new RuntimeUnavailable(); }
+  const unsubscribePrefix = `${input.origin}/api/notifications/unsubscribe?t=`;
+  return async (message: NotificationMessage): Promise<NotificationOutcome> => {
+    try {
+      if (!mailbox(message.email) || typeof message.subject !== "string" || message.subject.length < 1 || message.subject.length > 120 || /[\x00-\x1f\x7f-\x9f]/.test(message.subject)
+        || typeof message.text !== "string" || message.text.length < 1 || message.text.length > 12000 || /[\x00-\x09\x0b-\x1f\x7f-\x9f]/.test(message.text)
+        || typeof message.unsubscribeUrl !== "string" || !message.unsubscribeUrl.startsWith(unsubscribePrefix) || !NOTIFICATION_TOKEN.test(message.unsubscribeUrl.slice(unsubscribePrefix.length))
+        || typeof message.idempotencyKey !== "string" || !UUID.test(message.idempotencyKey)) return "rejected";
+    } catch { return "rejected"; }
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined, refused = false, accepted = false;
+    try {
+      await Promise.race([
+        (async () => {
+          const response = await input.fetch("https://api.resend.com/emails", {
+            method: "POST", redirect: "error", credentials: "omit", signal: controller.signal,
+            headers: { authorization: `Bearer ${input.apiKey}`, "content-type": "application/json", "idempotency-key": message.idempotencyKey },
+            body: JSON.stringify({ from: input.from, to: [message.email], subject: message.subject, text: message.text,
+              headers: { "List-Unsubscribe": `<${message.unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } }),
+          });
+          // A 4xx (including 429) is a definite refusal; a 5xx or an odd answer may have been accepted.
+          accepted = response.ok && !response.redirected && (!response.url || response.url === "https://api.resend.com/emails");
+          refused = !accepted && response.status >= 400 && response.status < 500 && !response.redirected;
+          // No provider body/header/ID escapes, even on errors; do not buffer it.
+          await response.body?.cancel().catch(() => {});
+          if (!accepted) throw 0;
+        })(),
+        new Promise<never>((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new RuntimeUnavailable()); }, timeout); }),
+      ]);
+      return "sent";
+    } catch { return accepted ? "sent" : refused ? "rejected" : "unknown"; }
+    finally { if (timer) clearTimeout(timer); controller.abort(); }
+  };
+}

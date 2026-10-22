@@ -52,3 +52,20 @@ test("bad audio yields no output; Git lexical/resolved inputs and output refuse;
     await mkdir(join(f.root, ".git")); await assert.rejects(compileReferenceCatalogFiles(f.args));
   } finally { await isolated.cleanup(); await rm(f.root, { recursive: true, force: true }); }
 });
+test("the compile CLI requires every core flag; --v1-index never stands in for one", async () => {
+  const { parseCompileArgs } = await import("../scripts/reference-catalog-compile.mjs");
+  assert.throws(() => parseCompileArgs(["--index", "a", "--portal-words", "b", "--archive-metadata", "c", "--audio", "d", "--v1-index", "e"]), /failed/);
+  assert.equal(Object.keys(parseCompileArgs(["--index", "a", "--portal-words", "b", "--archive-metadata", "c", "--audio", "d", "--out", "f", "--v1-index", "e"])).length, 6);
+});
+test("a v2 index compiles only beside the v1 index it was refined from; ends reach the DTO", () => {
+  const v2 = inputs(), v1 = inputs().index;
+  v2.index = { ...v1, schema: "pockettorah-verse-index/v2", recordings: v1.recordings.map(r => ({ ...r, verses: r.verses.map(v => ({ ...v, words: [{ he: "אב", start: 1, end: 1.9, ctcStart: 1 }, { he: "ג׃", start: 1.98, end: 3, ctcStart: 2 }] })) })) };
+  assert.throws(() => compileReferenceCatalog(v2), /^Error: Reference catalog compilation failed$/);
+  const result = compileReferenceCatalog({ ...v2, v1Index: v1 });
+  assert.deepEqual(result.catalog.assets[0].verses[0].words.starts, [1, 1.98]);
+  assert.deepEqual(result.catalog.assets[0].verses[0].words.ends, [1.9, 3]);
+  assert.deepEqual(result.catalog.assets[0].verses[0].playback, compileReferenceCatalog(inputs()).catalog.assets[0].verses[0].playback);
+  const shifted = JSON.parse(JSON.stringify(v2.index)); shifted.recordings[0].verses[0].words[1].ctcStart = 2.05;
+  assert.throws(() => compileReferenceCatalog({ ...v2, index: shifted, v1Index: v1 }), /^Error: Reference catalog compilation failed$/);
+  assert.throws(() => compileReferenceCatalog({ ...inputs(), v1Index: v1 }), /^Error: Reference catalog compilation failed$/);
+});

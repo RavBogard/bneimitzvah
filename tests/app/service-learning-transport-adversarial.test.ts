@@ -79,9 +79,10 @@ test("independent response cap rejects oversized selected projection without ref
 test("independent output allowlists cover catalog, prepare and confirm and preserve exact expiry", async () => {
   const f = fixture(), hidden = { internal: "synthetic-private" };
   const context = { studentRevision: 1, ceremonyDate: "2027-01-02", serviceSlot: "morning", expectedPlanRevision: 0, catalogId: id, catalogIdentity: identity, lifecycleRevision: 1 };
-  f.methods.catalog.mockResolvedValue({ state: "available", ...context, ...hidden, units: [{ id: "synthetic@bm-shacharit", name: "Synthetic", ...hidden, section: { idx: 0, he: "", en: null, ...hidden } }] });
+  f.methods.catalog.mockResolvedValue({ state: "available", ...context, ...hidden, units: [{ id: "synthetic@bm-shacharit", name: "Synthetic", ...hidden, section: { idx: 0, he: "", en: null, ...hidden } }], defaults: ["synthetic@bm-shacharit"] });
   const catalog = await response(await f.dispatch(f.request("/catalog", bodies.catalog)), 200);
   expect(catalog.units).toEqual([{ id: "synthetic@bm-shacharit", name: "Synthetic", section: { idx: 0, he: "", en: null } }]);
+  expect(catalog.defaults).toEqual(["synthetic@bm-shacharit"]); expect(Object.keys(catalog).sort()).toEqual(["catalogId", "catalogIdentity", "ceremonyDate", "defaults", "expectedPlanRevision", "lifecycleRevision", "serviceSlot", "state", "studentRevision", "units"]);
   f.methods.prepare.mockResolvedValue({ ok: true, binding: "v1.synthetic", expiresAt: 1_999_999_999_123, selectedIds: [], clearsPlan: true, review: { ...context, ...hidden }, ...hidden });
   const review = await response(await f.dispatch(f.request("/prepare", bodies.prepare)), 200);
   expect(review.expiresAt).toBe(1_999_999_999_123); expect(review.review).toEqual(context);

@@ -85,7 +85,10 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
       const value = latest.current;
       if (!value.baseline || next.state === "available" && (next.studentRevision !== value.baseline.student.revision || next.ceremonyDate !== value.baseline.student.ceremonyDate || value.metadata && next.expectedPlanRevision !== (value.metadata.state === "no-plan" ? 0 : value.metadata.plan.revision))) throw Object.assign(new Error("Stale service catalog"), { stale: true });
       setCatalog(next); setBlocked(false); setClearIntent(false); dirty.current = false;
-      const chosen = next.state === "available" && value.metadata?.state === "assigned" && value.metadata.plan.catalogIdentity === next.catalogIdentity ? value.metadata.units.map(unit => unit.id) : [];
+      // A saved plan is shown as saved. A student with no plan yet starts from the standard parts the
+      // catalog offers (MISSION 28-30: blessings, Sh'ma and V'ahavta); nothing is saved until staff save.
+      const chosen = next.state !== "available" ? [] : value.metadata?.state === "assigned" ? value.metadata.plan.catalogIdentity === next.catalogIdentity ? value.metadata.units.map(unit => unit.id) : []
+        : value.metadata?.state === "no-plan" && next.expectedPlanRevision === 0 ? [...next.defaults] : [];
       seed.current = chosen; seedContext.current = context.current; setSelected(chosen);
     } catch (error) { if (alive.current && !controller.signal.aborted && turn === generation.current) { if ([401, 403, 404].includes(statusOf(error))) serviceAuthorityFailed(statusOf(error)); else { setCatalog(null); setBlocked(true); setMessage("The catalog or student context could not be verified. Reload the current service plan before choosing parts."); } } }
     finally { gate.current = false; pendingRef.current = null; if (alive.current) setPending(null); }
@@ -136,6 +139,7 @@ export function ServicePlanEditor({ mode, studentId, baseline, metadata, onConfi
     {catalog?.state === "unavailable" && <p>The list of service parts couldn’t be loaded. The saved service parts haven’t changed.</p>}
     {active && <>
       <p>Service: {active.serviceSlot === "morning" ? "Morning" : "Havdalah / afternoon"} · Ceremony: {active.ceremonyDate}.</p>
+      {metadata?.state === "no-plan" && active.defaults.length > 0 && <p className="field-help">The parts every student leads, the blessings and the Sh’ma and V’ahavta, are checked to start with. Change them if this student’s service differs.</p>}
       {metadata?.state === "assigned" && metadata.plan.catalogIdentity !== active.catalogIdentity && <p className="field-help">The saved service parts come from an earlier list. Choose from the current list; nothing saved is replaced until you save.</p>}
       <fieldset disabled={disabled || blocked || stale}><legend>Parts to assign</legend><ul className="service-catalog-choices">{active.units.map(unit => <li key={unit.id}><label><input type="checkbox" checked={selected.includes(unit.id)} onChange={event => edit(active.units.filter(row => row.id === unit.id ? event.target.checked : selected.includes(row.id)).map(row => row.id))} /><span>{unit.name}{unit.caption && <span className="field-help service-choice-caption">{unit.caption}</span>}</span></label></li>)}</ul></fieldset>
       <div className="form-actions"><button className="button-secondary" disabled={disabled || blocked || stale || !selected.length && !clearIntent} onClick={() => void prepare()}>{pending === "prepare" ? "Checking your choices…" : "Review service parts"}</button>

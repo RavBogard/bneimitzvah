@@ -32,6 +32,13 @@ test("private reference-index JSON is rejected through allow-lists, escaped keys
   }
   assert.ok(entryProblems("tests/fixtures/portal/synthetic.jsonl", 'not JSON\n' + JSON.stringify(record)).includes("private reference-audio index"));
   assert.ok(entryProblems("tests/fixtures/portal/synthetic.json", '{"schema":"pockettorah-verse-index/v1",').includes("private reference-audio index"));
+  // v2 (refined word boundaries) carries the same source text and is equally private.
+  const v2 = { schema: "pockettorah-verse-index/v2", recordings: [] };
+  for (const file of ["trope/synthetic.json", "tests/fixtures/portal/synthetic.json", "src/synthetic.ts"]) {
+    for (const content of [JSON.stringify(v2), JSON.stringify({ nested: [v2] }), '﻿' + JSON.stringify(v2)]) assert.ok(entryProblems(file, content).includes("private reference-audio index"), `${file} v2`);
+  }
+  assert.ok(entryProblems("tests/fixtures/portal/synthetic.json", '{"schema":"pockettorah-verse-index/v2",').includes("private reference-audio index"));
+  assert.deepEqual(entryProblems("scripts/reference-synthetic.mjs", 'export const INDEX_SCHEMA_V2 = "pockettorah-verse-index/v2";'), []);
 });
 
 test("public source strings naming the reference-index schema are code rather than private records", () => {

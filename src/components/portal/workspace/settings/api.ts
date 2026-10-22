@@ -1,9 +1,12 @@
 import { PortalRequestError } from "../../api";
-import { DEFAULT_SIDDUR_URL, settingsUrl, validateSettings, type CongregationSettings } from "../../../../server/settings/validation";
+import { DEFAULT_SIDDUR_URL, SETTINGS_LIMITS, settingsParagraph, settingsUrl, validateSettings, type CongregationSettings, type ServiceSetting, type ServiceSlot } from "../../../../server/settings/validation";
 
 export type SettingsView = { version: number; settings: CongregationSettings; updatedAt: string | null; defaults: { rabbiDisplayName: string; siddurUrl: string } };
 export type SaveOutcome = { ok: true; version: number } | { ok: false; code: "conflict" | "no-change" | "invalid"; problems: string[] };
 export type Links = { siddurUrl: string; musicUrl: string | null };
+export type ServiceSettings = Partial<Record<ServiceSlot, ServiceSetting>>;
+/** What every member's pages show from the congregation settings. */
+export type Congregation = { links: Links; services: ServiceSettings; consentNotice: string | null };
 const bad = (): never => { throw new PortalRequestError(503); };
 function object(value: unknown, keys: readonly string[], optional: readonly string[] = []): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value) || keys.some(key => !Object.hasOwn(value, key)) || Object.keys(value).some(key => !keys.includes(key) && !optional.includes(key))) return bad();
@@ -47,10 +50,15 @@ export function parseSaveOutcome(status: number, value: unknown): SaveOutcome {
   const problems = row.problems === undefined ? [] : Array.isArray(row.problems) && row.problems.length <= 32 && row.problems.every(p => typeof p === "string" && p.length <= 40) ? row.problems as string[] : bad();
   return { ok: false, code: row.code as "conflict" | "no-change" | "invalid", problems };
 }
-export function parseLinks(value: unknown): Links {
-  const links = object(object(value, ["ok", "links"]).links, ["siddurUrl", "musicUrl"]);
-  if (!settingsUrl(links.siddurUrl) || (links.musicUrl !== null && !settingsUrl(links.musicUrl))) return bad();
-  return { siddurUrl: links.siddurUrl, musicUrl: links.musicUrl as string | null };
+export function parseCongregation(value: unknown): Congregation {
+  const row = object(value, ["ok", "links", "services", "consentNotice"]);
+  const links = object(row.links, ["siddurUrl", "musicUrl"]);
+  if (row.ok !== true || !settingsUrl(links.siddurUrl) || (links.musicUrl !== null && !settingsUrl(links.musicUrl))) return bad();
+  // The same rules the settings page saves with: a slot is present only when it has a name or a time.
+  const services = object(row.services, [], ["morning", "havdalah"]);
+  if (Object.keys(services).length && !validateSettings({ services }).ok) return bad();
+  if (row.consentNotice !== null && !settingsParagraph(row.consentNotice, SETTINGS_LIMITS.consentNotice)) return bad();
+  return { links: { siddurUrl: links.siddurUrl, musicUrl: links.musicUrl as string | null }, services: services as ServiceSettings, consentNotice: row.consentNotice as string | null };
 }
 
 export const settingsApi = {
@@ -59,6 +67,8 @@ export const settingsApi = {
     const result = await request("/api/admin/congregation-settings", input);
     return parseSaveOutcome(result.status, result.value);
   },
-  async links(signal?: AbortSignal) { return parseLinks((await request("/api/congregation/links", undefined, signal)).value); },
+  async congregation(signal?: AbortSignal) { return parseCongregation((await request("/api/congregation/links", undefined, signal)).value); },
 };
 export const DEFAULT_LINKS: Links = Object.freeze({ siddurUrl: DEFAULT_SIDDUR_URL, musicUrl: null });
+/** What pages show until the settings read settles, or when it fails: the portal's standard wording and links. */
+export const DEFAULT_CONGREGATION: Congregation = Object.freeze({ links: DEFAULT_LINKS, services: Object.freeze({}), consentNotice: null });

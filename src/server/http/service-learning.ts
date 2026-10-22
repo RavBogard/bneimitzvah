@@ -98,7 +98,7 @@ export async function handleServiceLearningRequest(request: Request, runtime: Ht
       if (operation === "catalog") {
         const result = await runtime.serviceLearning.catalog(request, { ...selection, mode: selection.mode as ActiveMode });
         output = result.state !== "available" ? { state: result.state } : { state: result.state,
-          ...pick(result, ["studentRevision", "ceremonyDate", "serviceSlot", "expectedPlanRevision", "catalogId", "catalogIdentity", "lifecycleRevision"]), units: result.units.map(summary) };
+          ...pick(result, ["studentRevision", "ceremonyDate", "serviceSlot", "expectedPlanRevision", "catalogId", "catalogIdentity", "lifecycleRevision"]), units: result.units.map(summary), defaults: [...result.defaults] };
       } else if (operation === "prepare") {
         const result = await runtime.serviceLearning.prepare(request, { ...selection, mode: selection.mode as ActiveMode, expectedStudentRevision: integer(body.expectedStudentRevision), expectedPlanRevision: integer(body.expectedPlanRevision, true), catalogId: uuid(body.catalogId), catalogIdentity: identity(body.catalogIdentity), selectedIds: selectedIds(body.selectedIds) });
         if (!result.ok) return privateJson({ ok: false, code: "stale-revision" }, 409);

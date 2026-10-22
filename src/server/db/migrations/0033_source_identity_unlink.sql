@@ -3,7 +3,7 @@
 -- admin grant, the channel and (through the MCP) the connection; it is never deleted or revived. Linking again
 -- inserts a new row, so uniqueness now holds among current links only. Staff may also end a Claude connection
 -- from the portal (mcp_connection.revoked_at, already granted in 0028). Both are audited. The audit list keeps
--- every earlier action and also carries 0032_notifications' two, so this list is right whichever lands first.
+-- every earlier action, including 0032_notifications' two, and adds this migration's two.
 ALTER TABLE "student_source_identity" DROP CONSTRAINT "student_source_identity_record_key";--> statement-breakpoint
 ALTER TABLE "student_source_identity" DROP CONSTRAINT "student_source_identity_student_key";--> statement-breakpoint
 ALTER TABLE "audit_event" DROP CONSTRAINT "audit_action_known";--> statement-breakpoint

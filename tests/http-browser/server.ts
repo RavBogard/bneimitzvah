@@ -20,6 +20,7 @@ import { practiceCalendarRouteMethods } from "../../src/server/http/practice-cal
 import { studyGuidesRouteMethods } from "../../src/server/http/study-guides";
 import { congregationSettingsRouteMethods } from "../../src/server/http/congregation-settings";
 import { claudeConnectionsRouteMethods } from "../../src/server/http/claude-connections";
+import { notificationsRouteMethods } from "../../src/server/http/notifications";
 import { closeNextDevelopment } from "./next-lifecycle";
 
 // Parallel local worktrees may choose their own loopback port; CI keeps the default.
@@ -103,7 +104,7 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope) {
       if (!request) { await send(res, new Response(null, { status: 400 })); return; }
       const pathname = new URL(request.url).pathname;
       if (referenceReviewRouteMethods(pathname)) { await send(res, await dispatch(request)); return; }
-      if (!serviceEcosystemRouteMethods(pathname) && !honoreeManagementRouteMethods(pathname) && !honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname) && !studyGuidesRouteMethods(pathname) && !congregationSettingsRouteMethods(pathname) && !claudeConnectionsRouteMethods(pathname)) { await nextHandler(req, res); return; }
+      if (!serviceEcosystemRouteMethods(pathname) && !honoreeManagementRouteMethods(pathname) && !honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname) && !studyGuidesRouteMethods(pathname) && !congregationSettingsRouteMethods(pathname) && !claudeConnectionsRouteMethods(pathname) && !notificationsRouteMethods(pathname)) { await nextHandler(req, res); return; }
       await send(res, await dispatch(request));
     } catch { if (!res.headersSent) await send(res, new Response(null, { status: 503 })); else res.destroy(); }
   });
