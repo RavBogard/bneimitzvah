@@ -12,9 +12,13 @@ import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { ReadingPassageSelect } from "./reading-passage-select";
 import { ReadingDivisions } from "./reading-divisions";
 import styles from "./reading-selection.module.css";
+import { serviceSlotName, serviceSlotTime } from "./service-slot";
+import { useCongregation } from "./settings/links";
+import type { ServiceSettings } from "./settings/api";
 
 export function ReadingEditor({ mode, baseline, reload, onBusy, active: open }: { mode: StaffMode; baseline: Assigned | null; reload(): Promise<Assigned>; onBusy?(busy: boolean): void; active: boolean }) {
   const { guardDeparture, summary, epoch, concealed } = useWorkspace(), active = open && !concealed;
+  const congregation = useCongregation(active);
   const [kind, setKind] = useState<ReadingKind>("torah"), [drafts,setDrafts]=useState<Record<ReadingKind,ReadingDraft>>(()=>({torah:emptyReadingDraft(),haftarah:emptyReadingDraft()}));
   const draft=drafts[kind],{method,custom}=draft,currentAssignment=baseline?.readings.find(row=>row.kind===kind);
   const currentDraftStale = method === "custom" && draft.current !== null && (draft.current.id !== currentAssignment?.id || draft.current.revision !== currentAssignment?.revision);
@@ -142,7 +146,7 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open }: 
     <h2 id="reading-editor-title">Set the assigned reading</h2>
     <p>Choose the verses, review them, then save the assignment.</p>
     <div className={styles.context} aria-live="polite">
-      <p><strong>Ceremony: {ceremony ? longDate(ceremony) : "Checking date…"}</strong>{suggestions && <> · {slotLabel(suggestions.serviceSlot)}</>}</p>
+      <p><strong>Ceremony: {ceremony ? longDate(ceremony) : "Checking date…"}</strong>{suggestions && <> · {slotLabel(suggestions.serviceSlot, congregation.services)}</>}</p>
       {active && calendar.key === key && calendar.loading && <p role="status" className="field-help">Looking up the reading for this date…</p>}
       {suggestions && <>
         {suggestions.parashah && !suggestions.manualFallback ? <p>Suggested for this service: <strong>{suggestions.parashah}</strong>{kind === "haftarah" && suggestions.haftarah && <> · haftarah {suggestions.haftarah}</>}. <span className="field-help">Based on the saved ceremony date{suggestions.readingDate && suggestions.readingDate !== ceremony ? <> and the reading for {longDate(suggestions.readingDate)}</> : null}.</span></p>
@@ -194,7 +198,7 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open }: 
       <h3 id="reading-review-title" tabIndex={-1} ref={heading}>{`Review ${label} assignment`}</h3>
       {proposal.manualFallback && <p className="field-help">{fallbackLabels[proposal.manualFallback]}</p>}
       <dl>
-        <dt>Ceremony</dt><dd>{longDate(proposal.ceremonyDate)} · {slotLabel(proposal.serviceSlot)}</dd>
+        <dt>Ceremony</dt><dd>{longDate(proposal.ceremonyDate)} · {slotLabel(proposal.serviceSlot, congregation.services)}</dd>
         <dt>Verses</dt><dd><span className="reading-reference">{proposal.ranges.join("; ")}</span><br />{proposal.verseCount} verses · {basisLabels[proposal.basis]}</dd>
         {proposal.kind === "torah" && <><dt>Aliyot</dt><dd>{proposal.aliyahStarts === null ? "Not divided into aliyot yet." : proposal.aliyahStarts.length === 0 ? "One aliyah." : <>{proposal.aliyahStarts.length + 1} aliyot. Aliyah 1 starts at <bdi dir="ltr">{draftVerses[0] ?? proposal.ranges[0].split("-")[0]}</bdi>.<ol start={2}>{proposal.aliyahStarts.map(ref => <li key={ref}>Starts at <bdi dir="ltr">{ref}</bdi></li>)}</ol></>}</dd></>}
         <dt>{proposal.preparationMode === "current-assignment" ? "Changes" : "Replaces"}</dt><dd>{proposal.preparationMode === "current-assignment" ? "Only the aliyah divisions. The verses and calendar source stay the same." : currentAssignment ? `The current ${label} reading, ${currentAssignment.ranges.join("; ")}.` : `Nothing. No ${label} reading is assigned yet.`}</dd>
@@ -207,7 +211,7 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open }: 
       <button className="button-primary" disabled={pending !== null || blocked || !baseline || Date.now() >= review!.expiresAt} onClick={() => void confirm()}>{pending === "confirm" ? "Saving assignment…" : "Save assignment"}</button>
       <details className={styles.disclosure}><summary>Calendar source details</summary>
       <p className="field-help">Calendar source: <a href="https://www.hebcal.com/" target="_blank" rel="noopener noreferrer">Hebcal</a>. {proposal.sourceStatus === "preserved" ? "Stored provenance preserved; no calendar source was queried for this cut-only review." : proposal.sourceStatus === "available" ? `Fetched ${new Date(proposal.sourceFetchedAt!).toLocaleString()}.` : proposal.sourceStatus === "not-requested" ? "Not queried: no reading date has been derived." : "Unavailable. Verify custom references independently."}</p>
-      <p>Ceremony: {proposal.ceremonyDate} · {slotLabel(proposal.serviceSlot)}. Reading date: {proposal.readingDate ?? "not determined"}.</p>
+      <p>Ceremony: {proposal.ceremonyDate} · {slotLabel(proposal.serviceSlot, congregation.services)}. Reading date: {proposal.readingDate ?? "not determined"}.</p>
         {proposal.preserved && <>
           <p className="field-help">Preserved calendar source: {proposal.preserved.source.status === "available" ? "available in the saved assignment" : proposal.preserved.source.status === "unavailable" ? "unavailable when the assignment was saved" : "not recorded"}.
             {proposal.preserved.source.date && <> Source date: {proposal.preserved.source.date}.</>}
@@ -221,7 +225,12 @@ export function ReadingEditor({ mode, baseline, reload, onBusy, active: open }: 
 }
 
 const basisLabels = { full: "Full calendar portion", triennial: "Triennial portion", selection: "Calendar selection", custom: "Verses you chose" } as const;
-const slotLabel = (slot: "morning" | "havdalah" | "unknown") => slot === "morning" ? "Morning service (10:00)" : slot === "havdalah" ? "Havdalah / afternoon service (4:00)" : "Service not set";
+// The congregation's own name and start time when its settings give either; otherwise the standard labels.
+const slotLabel = (slot: "morning" | "havdalah" | "unknown", services: ServiceSettings = {}) => {
+  if (slot === "unknown") return "Service not set";
+  if (!services[slot]) return slot === "morning" ? "Morning service (10:00)" : "Havdalah / afternoon service (4:00)";
+  const time = serviceSlotTime(slot, services); return `${serviceSlotName(slot, services)}${time ? ` (${time})` : ""}`;
+};
 /** "Saturday, January 2, 2027" from a calendar date, without shifting it through the local time zone. */
 function longDate(date: string) {
   const [year, month, day] = date.split("-").map(Number);

@@ -19,6 +19,8 @@ function browserToday() { const now = new Date(); return dayOrdinal(`${String(no
  * The quiet practice calendar for the student or an explicitly selected child practice: dates only.
  * A visit is reported only for an explicit open of a confirmed verse or a chosen service part, against
  * the day the server last said it was. Nothing is queued or retried; a stale day or reading re-reads first.
+ * An assigned tutor or an admin reads the same dates for one student (MISSION ruling 14: days practiced
+ * only) and never reports a visit. A parent's dashboard keeps its own seven-day summary.
  */
 export class PracticeCalendar {
   private listeners = new Set<() => void>(); private current: PracticeCalendarState = { status: "off" };
@@ -30,9 +32,9 @@ export class PracticeCalendar {
   private set(next: PracticeCalendarState) { this.current = next; for (const listener of this.listeners) listener(); }
   /** Forget everything: on every reload, access check, session, student or context change. */
   clear() { this.generation++; this.controller.abort(); this.controller = new AbortController(); this.sent.clear(); this.set({ status: this.baseline ? "loading" : "off" }); }
-  /** Only the student's own view and an explicitly selected child practice show the calendar. */
+  /** The student's own view and an explicitly selected child practice show and record; tutor and admin views only read. */
   configure(baseline: Assigned | null) {
-    const on = baseline && (baseline.mode === "student" || baseline.mode === "child-practice") ? baseline : null, scope = on ? scopeOf(on) : "";
+    const on = baseline && (baseline.mode === "student" || baseline.mode === "child-practice" || baseline.mode === "tutor" || baseline.mode === "admin") ? baseline : null, scope = on ? scopeOf(on) : "";
     if (scope !== this.scope) this.staleReloaded.clear();
     this.baseline = on; this.scope = scope; this.clear();
   }
@@ -64,6 +66,8 @@ export class PracticeCalendar {
   }
   private async visit(target: PracticeTarget) {
     const baseline = this.baseline, state = this.current; if (!baseline || state.status !== "ready") return;
+    // Staff views read the dates only; only the learner's own opens count as practice.
+    if (baseline.mode !== "student" && baseline.mode !== "child-practice") return;
     // Opening the same thing again on the same day adds nothing to a dates-only calendar.
     const key = JSON.stringify([state.serverDay, target]); if (this.sent.has(key)) return;
     const turn = this.generation, controller = this.controller; this.sent.add(key);

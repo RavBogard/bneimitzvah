@@ -74,7 +74,7 @@ test("adult create and kind edits remain tenant-scoped CAS contact changes with 
   expect(await denied(()=>f.studentsService.edit(f.mutation(),{mode:"admin",studentId:f.students[3].id,expectedRevision:1,student:adult}),404)).toBe(true);
   for(const [who,mode] of [["multi","parent"],["multi","tutor"],["learner","student"]] as const){
     const view=await f.service.readStudent(f.mutation(who),{mode,studentId:f.students[0].id});
-    expect(Object.keys(view).sort()).toEqual(["ceremonyDate","firstName","id","lastName","rehearsal1","rehearsal2","revision"]);
+    expect(Object.keys(view).sort()).toEqual(["ceremonyDate","firstName","id","lastName","rehearsal1","rehearsal2","revision","serviceSlot"]);
   }
   expect((await f.studentsService.edit(f.mutation(),{mode:"admin",studentId:f.students[0].id,expectedRevision:2,student})).ok).toBe(true);
   expect(await authority()).toEqual(before);

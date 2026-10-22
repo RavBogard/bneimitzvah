@@ -185,7 +185,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     config: sheetAccount && config.rosterSheet ? { account: sheetAccount, sheetId: config.rosterSheet.sheetId } : null });
   // Portal MCP: the full study service (writes too) behind live, grant-bound connection authority.
   // Null until enabled by configuration; then its routes exist at all.
-  const mcp: McpEndpoint | null = config.mcpEnabled ? createMcpEndpoint({ db, access, practice, secret: purposeSecret(config, "portal-mcp"), loadText, related: sourceMetadata.related }) : null;
+  const mcp: McpEndpoint | null = config.mcpEnabled ? createMcpEndpoint({ db, access, practice, secret: purposeSecret(config, "portal-mcp"), loadText, related: sourceMetadata.related, loadReading }) : null;
   // Approved material is loaded within the existing RLS transaction.
   const honoree = createHonoreeService({ db, access, deployment: config.deployment, origin: config.origin, signingSecret: config.authSecret, projectMaterial: loadHonoreeMaterial });
   const studySources = createStudySourceDiscoveryService({ access, practice, loadText, related: createSefariaMetadataReader({ fetch }).related });

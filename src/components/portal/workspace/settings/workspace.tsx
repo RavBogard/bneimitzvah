@@ -4,6 +4,7 @@ import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "../provider"
 import { AdminNav } from "../admin-nav";
 import { validateSettings, SETTINGS_LIMITS, type CongregationSettings, type NotificationSettings, type ServiceSetting } from "../../../../server/settings/validation";
 import { settingsApi, type SettingsView } from "./api";
+import { resetCongregationRead } from "./links";
 
 type Draft = { rabbiDisplayName: string; preferredSources: string; morningLabel: string; morningStart: string; havdalahLabel: string; havdalahStart: string;
   siddurUrl: string; musicUrl: string; rosterSheetId: string; consentNotice: string; digestWeekday: string };
@@ -91,7 +92,7 @@ function CongregationSettingsPage() {
     try {
       const outcome = await settingsApi.save({ expectedVersion: view.version, settings, mutationId: mutation.current.id });
       if (!alive.current) return;
-      if (outcome.ok) { mutation.current = null; setMessage({ text: "Settings saved.", tone: "status" }); await load(); return; }
+      if (outcome.ok) { mutation.current = null; resetCongregationRead(); setMessage({ text: "Settings saved.", tone: "status" }); await load(); return; }
       mutation.current = null;
       if (outcome.code === "no-change") setMessage({ text: "Nothing changed, so nothing was saved.", tone: "status" });
       else if (outcome.code === "invalid") { setProblems(outcome.problems); setMessage({ text: "Some settings need a change before they can be saved.", tone: "alert" }); }
@@ -131,11 +132,11 @@ function CongregationSettingsPage() {
           {field("preferredSources", "Works to show first", textArea("preferredSources", 5, 2400),
             "One per line, in order, such as Rashi or Ramban on Genesis. When a student looks up sources for a verse, these come first.")}
         </section>
-        <section className="people-card" aria-labelledby="settings-services"><div className="people-card-head"><h2 id="settings-services">Services</h2><p>Saved for your records. Pages still show the standard names and times for now.</p></div>
+        <section className="people-card" aria-labelledby="settings-services"><div className="people-card-head"><h2 id="settings-services">Services</h2><p>Families, students and staff see these names wherever a student’s service is named, such as the reading page and the honors form, with the start time when you set one. Left blank, pages say “Morning service” or “Havdalah service” and show no time.</p></div>
           <div className="roster-form-grid settings-grid">
-            {field("morningLabel", "Morning service name", textInput("morningLabel", { maxLength: SETTINGS_LIMITS.serviceLabel, placeholder: "Morning" }))}
+            {field("morningLabel", "Morning service name", textInput("morningLabel", { maxLength: SETTINGS_LIMITS.serviceLabel, placeholder: "Morning service" }))}
             {field("morningStart", "Morning start time", textInput("morningStart", { type: "time" }))}
-            {field("havdalahLabel", "Havdalah service name", textInput("havdalahLabel", { maxLength: SETTINGS_LIMITS.serviceLabel, placeholder: "Havdalah / afternoon" }))}
+            {field("havdalahLabel", "Havdalah service name", textInput("havdalahLabel", { maxLength: SETTINGS_LIMITS.serviceLabel, placeholder: "Havdalah service" }))}
             {field("havdalahStart", "Havdalah start time", textInput("havdalahStart", { type: "time" }))}
           </div>
         </section>
@@ -143,9 +144,10 @@ function CongregationSettingsPage() {
           {field("siddurUrl", "Siddur link", textInput("siddurUrl", { type: "url", inputMode: "url", placeholder: view.defaults.siddurUrl }), <>Left blank, the link stays {view.defaults.siddurUrl}</>)}
           {field("musicUrl", "Music link", textInput("musicUrl", { type: "url", inputMode: "url" }), "Left blank, no music link is shown.")}
         </section>
-        <section className="people-card" aria-labelledby="settings-records"><div className="people-card-head"><h2 id="settings-records">Roster and families</h2><p>Saved for your records. The consent notice isn’t shown to families yet.</p></div>
+        <section className="people-card" aria-labelledby="settings-records"><div className="people-card-head"><h2 id="settings-records">Roster and families</h2></div>
           {field("rosterSheetId", "Roster sheet ID", textInput("rosterSheetId", { maxLength: 100 }), "Kept for a future congregation’s roster sheet. The CRC roster sheet is set by the portal’s operator, not here.")}
-          {field("consentNotice", "Consent notice", textArea("consentNotice", 4, SETTINGS_LIMITS.consentNotice))}
+          {field("consentNotice", "Consent notice", textArea("consentNotice", 4, SETTINGS_LIMITS.consentNotice),
+            "Parents see it in their child’s preparation summary. Say what is stored, who hears it and when it is deleted. Left blank, no notice is shown.")}
         </section>
         <section className="people-card" aria-labelledby="settings-email"><div className="people-card-head"><h2 id="settings-email">Email</h2><p>Each kind is off until you turn it on here. Nothing is sent until the portal’s operator has turned email on as well. Every email has a one-click unsubscribe, and people can turn each kind off in their own email settings.</p></div>
           {([["tutorDraft", "Draft notices for tutors", "When a student saves a translation draft, their tutor gets one short email with a link to sign in. At most one a day for each student."],

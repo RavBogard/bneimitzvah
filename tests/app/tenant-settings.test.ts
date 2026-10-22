@@ -74,14 +74,18 @@ test("only the admin grant in admin mode reads or writes settings; tutors, paren
 
 test("member links default to the current siddur, follow settings, and never cross congregations", async () => {
   const f = await fixture();
-  for (const who of ["learner", "multi", "admin"] as const) expect(await f.send(LINKS, { who })).toEqual({ status: 200, body: { ok: true, links: { siddurUrl: "https://siddur.centralreform.org/", musicUrl: null } } });
+  for (const who of ["learner", "multi", "admin"] as const) expect(await f.send(LINKS, { who })).toEqual({ status: 200, body: { ok: true, links: { siddurUrl: "https://siddur.centralreform.org/", musicUrl: null }, services: {}, consentNotice: null } });
   expect((await f.send(LINKS, { who: "anonymous" })).status).toBe(401);
   // The links are identity-level; a practice-context header is refused rather than ignored.
   expect((await f.send(LINKS, { who: "multi", handle: "synthetic-handle" })).status).toBe(403);
   expect((await f.save({ settings: { siddurUrl: "https://siddur.centralreform.org/crc/", musicUrl: "https://centralreform.live/" } })).status).toBe(200);
   expect((await f.send(LINKS, { who: "learner" })).body.links).toEqual({ siddurUrl: "https://siddur.centralreform.org/crc/", musicUrl: "https://centralreform.live/" });
+  // Service names and times and the consent notice reach every member; the admin-only fields do not.
+  expect((await f.save({ expectedVersion: 1, settings: { siddurUrl: "https://siddur.centralreform.org/crc/", services: { morning: { label: "Shabbat morning", start: "09:30" }, havdalah: { start: "16:15" } }, consentNotice: "Synthetic notice.\nSecond line.", rosterSheetId: "a".repeat(30), rabbiDisplayName: "Rabbi Synthetic", preferredSources: ["Rashi"] } })).status).toBe(200);
+  for (const who of ["learner", "multi"] as const) expect((await f.send(LINKS, { who })).body).toEqual({ ok: true, links: { siddurUrl: "https://siddur.centralreform.org/crc/", musicUrl: null },
+    services: { morning: { label: "Shabbat morning", start: "09:30" }, havdalah: { start: "16:15" } }, consentNotice: "Synthetic notice.\nSecond line." });
   // The same person in the other congregation sees that congregation's (default) links.
-  expect((await f.send(LINKS, { who: "multi", origin: "http://localhost:3101" })).body.links).toEqual({ siddurUrl: "https://siddur.centralreform.org/", musicUrl: null });
+  expect((await f.send(LINKS, { who: "multi", origin: "http://localhost:3101" })).body).toEqual({ ok: true, links: { siddurUrl: "https://siddur.centralreform.org/", musicUrl: null }, services: {}, consentNotice: null });
   expect((await f.send(PATH, { who: "multi", origin: "http://localhost:3101" })).status).toBe(403);
   expect((await f.send(LINKS, { who: "learner", method: "POST", body: {} })).status).toBe(405);
 });

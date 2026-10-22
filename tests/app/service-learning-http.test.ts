@@ -1,3 +1,4 @@
+import { parseCatalog } from "../../src/components/portal/workspace/service-learning/api";
 import { afterEach, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { randomUUID } from "node:crypto";
@@ -42,6 +43,8 @@ test("actual SDK staff review signs exact expiry and confirms independent select
   const catalog = await json(await f.call("/catalog", { body: { mode: "admin" } }));
   expect(catalog).toMatchObject({ state: "available", studentRevision: 1, expectedPlanRevision: 0, ceremonyDate: "2027-01-02", serviceSlot: "morning", catalogId: f.catalogId, catalogIdentity: f.content.identity });
   expect(catalog.units.map((u: { id: string }) => u.id)).toEqual([f.content.first, f.content.hidden, f.content.second]);
+  // The wire shape is the one the staff editor parses, standard-part defaults included (none in this synthetic feed).
+  expect(catalog.defaults).toEqual([]); expect(parseCatalog(catalog)).toMatchObject({ state: "available", defaults: [] });
   const review = await json(await f.call("/prepare", { body: f.selection }));
   expect(Object.keys(review).sort()).toEqual(["ok", "binding", "expiresAt", "selectedIds", "clearsPlan", "review"].sort());
   expect(review.expiresAt).toBe(createBindings(secret, Date.now).verify(review.binding, "service-plan").expiresAt);

@@ -11,22 +11,27 @@ import { createHonoreeClient } from "./honoree-api";
 import { createHonoreeOwner, type HonoreeOwner, type HonoreeState } from "./honoree-owner";
 import { HonoreeControls } from "./honoree-controls";
 import { printSavedHonors } from "./print";
+import { serviceSlotLine, standardSlotName } from "../service-slot";
+import { useCongregation } from "../settings/links";
+import type { ServiceSettings } from "../settings/api";
 import styles from "./honors.module.css";
 
-function ContextReview({ previous, current, state, owner, blocked, canReview }: { previous: HonorsContextView; current: HonorsContextView; state: HonorsState; owner: HonorsOwner; blocked: boolean; canReview(): boolean }) {
+function ContextReview({ previous, current, state, owner, blocked, canReview, services }: { services: ServiceSettings; previous: HonorsContextView; current: HonorsContextView; state: HonorsState; owner: HonorsOwner; blocked: boolean; canReview(): boolean }) {
   const [mapping, setMapping] = useState<Record<string, string | null>>({});
   const changed = state.draft.aliyot.filter(group => { const old = previous.spans.find(s => s.startVerse === group.startVerse); return !current.spans.some(s => s.startVerse === old?.startVerse && s.endVerse === old.endVerse); });
   return <section className={styles.review} aria-label="Review changed ceremony"><h3>Review the ceremony details</h3>
-    <p>The saved form was for {when(previous.snapshot.ceremonyDate, previous.snapshot.serviceSlot)}. The ceremony is now {when(current.snapshot.ceremonyDate, current.snapshot.serviceSlot)}.</p>
+    <p>The saved form was for {when(previous.snapshot.ceremonyDate, previous.snapshot.serviceSlot, services)}. The ceremony is now {when(current.snapshot.ceremonyDate, current.snapshot.serviceSlot, services)}.</p>
     <p>{previous.snapshot.torah?.ref ?? "No previous Torah reading"} → {current.snapshot.torah?.ref ?? "No current Torah reading"}</p>
     {changed.length ? <><p>These groups still belong to their previous spans. Choose a current span for each group or explicitly remove it. People stay in their original order.</p><ol>{changed.map(group => { const old = previous.spans.find(s => s.startVerse === group.startVerse); return <li key={group.startVerse}><label><span>Previous span: {old ? spanLabel(old) : group.startVerse}</span><span>{group.participants.map(p => p.englishName || "Unnamed person").join(", ") || "Empty group"}</span><select aria-label={`Current span for ${group.startVerse}`} value={Object.hasOwn(mapping, group.startVerse) ? mapping[group.startVerse] ?? "remove" : ""} onChange={e => setMapping(m => ({ ...m, [group.startVerse]: e.target.value === "remove" ? null : e.target.value }))}><option value="">Choose a current span…</option>{current.spans.map(span => <option key={span.startVerse} value={span.startVerse}>{spanLabel(span)}</option>)}<option value="remove">Remove this group from the form</option></select></label></li>; })}</ol></> : <p>The entered groups still match their actual spans. Confirm that you have reviewed the current date, service time and reading.</p>}
     <button type="button" className="button-secondary" disabled={state.phase !== "ready" || blocked} onClick={() => { if (!blocked && canReview()) owner.review(mapping); }}>I reviewed the current ceremony</button>
     <p className={styles.help}>This updates your draft. Use Save honors to record the review.</p>
   </section>;
 }
-const slotName = (slot: string) => slot === "morning" ? "Morning service" : slot === "havdalah" ? "Havdalah service" : "Service time not confirmed";
+// The congregation's service name and start time when its settings give them, otherwise the standard name.
+const slotName = (slot: string, services: ServiceSettings) => serviceSlotLine(slot, services) ?? "Service time not confirmed";
 const longDate = (value: string) => new Intl.DateTimeFormat("en-US", { weekday: "short", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
-const when = (date: string, slot: string) => `${longDate(date)}, ${slot === "unknown" ? "service time not confirmed" : slotName(slot).toLowerCase()}`;
+// Mid-sentence, the standard name is lower-cased; a congregation's own name is kept as written.
+const when = (date: string, slot: string, services: ServiceSettings) => { const line = slotName(slot, services); return `${longDate(date)}, ${slot === "unknown" ? "service time not confirmed" : standardSlotName(slot, services) ? line.charAt(0).toLowerCase() + line.slice(1) : line}`; };
 // Child students remain read-only; own-adult eligibility is projected by the live list.
 export function HonorsNote() {
   return <section className={styles.entry} aria-label="Family honors"><div><h2>Family honors</h2><p>Your family or the congregation office arranges who takes part in your ceremony, such as opening the ark and the aliyot. If you’re arranging your own ceremony, send the names to the congregation office and they’ll enter them for you.</p></div></section>;
@@ -38,6 +43,7 @@ export function HonorsEntry({ studentId, name, mode = "parent" }: { studentId: s
 }
 export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: string; name: string; mode: "parent" | "admin" | "student"; onClose(): void }) {
   const { summary, context, verifyServiceSession, serviceAuthorityFailed, registerDeparture, registerWork, registerReload, registerQuiet } = useWorkspace();
+  const congregation = useCongregation(true), congregationRef = useRef(congregation); congregationRef.current = congregation;
   const dialog = useRef<HTMLDialogElement>(null), heading = useRef<HTMLHeadingElement>(null), lastFocus = useRef<HTMLElement | null>(null), settled = useRef(false), id = useId();
   const [state, setState] = useState<HonorsState | null>(null), [departure, setDeparture] = useState(false), [discardReview, setDiscardReview] = useState(false), [printing, setPrinting] = useState(false), [printError, setPrintError] = useState("");
   const [linkState, setLinkState] = useState<HonoreeState | null>(null);
@@ -82,7 +88,7 @@ export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: str
     const life = lifetime.current; if (!life?.active || mode !== "admin" || life.owner.busy() || life.owner.uncertain() || life.links.busy() || life.links.uncertain() || printingRef.current) return;
     life.links.hideSecret();
     printingRef.current = true; setPrinting(true); setPrintError(""); printAbort.current?.abort(); const controller = new AbortController(); printAbort.current = controller;
-    try { const saved = await life.api.read(controller.signal); if (!life.active || lifetime.current !== life || controller.signal.aborted) return; printCleanup.current?.(); printCleanup.current = printSavedHonors(saved, name); }
+    try { const saved = await life.api.read(controller.signal); if (!life.active || lifetime.current !== life || controller.signal.aborted) return; printCleanup.current?.(); printCleanup.current = printSavedHonors(saved, name, congregationRef.current.services); }
     catch { if (life.active && !controller.signal.aborted) setPrintError("The saved form couldn’t be verified for printing. No draft was printed."); }
     finally { printingRef.current = false; if (life.active) setPrinting(false); }
   }
@@ -93,7 +99,7 @@ export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: str
     <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close family honors" disabled={busy} onClick={() => void close()}>{icons.close}</button></div>
     <div className={styles.body}><h2 id={`${id}-title`} className={styles.title} ref={heading} tabIndex={-1}>Family honors</h2>
       {privateReady && <p className={styles.student}><bdi dir="auto">{name}</bdi></p>}
-      {current && <><p className={styles.meta}><time dateTime={current.currentContext.snapshot.ceremonyDate}>{longDate(current.currentContext.snapshot.ceremonyDate)}</time> · {slotName(current.currentContext.snapshot.serviceSlot)}</p><p className={styles.intro}>Choose who will take part, in ceremony order. You don’t need everything at once: save what you have and come back later. Changes stay in this tab until you save. Unknown Hebrew names can be left blank.</p></>}
+      {current && <><p className={styles.meta}><time dateTime={current.currentContext.snapshot.ceremonyDate}>{longDate(current.currentContext.snapshot.ceremonyDate)}</time> · {slotName(current.currentContext.snapshot.serviceSlot, congregation.services)}</p><p className={styles.intro}>Choose who will take part, in ceremony order. You don’t need everything at once: save what you have and come back later. Changes stay in this tab until you save. Unknown Hebrew names can be left blank.</p></>}
       {(!state || state.phase === "loading") && <p role="status">Loading private family honors…</p>}
       {state?.phase === "disposed" && <p role="status">This family’s honors are no longer available in this session.</p>}
       {departure && <section className={styles.departure} aria-labelledby={`${id}-departure`}><h3 id={`${id}-departure`} tabIndex={-1} ref={departureHeading}>{owner?.uncertain() ? "Leave with the save unconfirmed?" : linkUncertain ? "Leave with the link action unconfirmed?" : "Leave your unsaved changes?"}</h3><p>{owner?.uncertain() ? "The original save may still complete. Leaving removes this tab’s receipt and retry controls and cannot cancel or undo the save." : linkUncertain ? "The original link action may still complete. Leaving removes this tab’s receipt and retry controls and cannot cancel or undo that action." : "Your changes are only in this tab. Leaving discards them."}</p><div className={styles.actions}><button type="button" className="button-primary" disabled={busy} onClick={keepEditing}>Keep editing</button><button type="button" className="button-secondary" disabled={busy} onClick={leave}>{owner?.uncertain() || linkUncertain ? "Leave without confirmation" : "Discard changes and leave"}</button></div></section>}
@@ -103,7 +109,7 @@ export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: str
       {current && state && owner && <>
         {current.currentContext.unknownSlot && <p className={styles.contextNotice}>The service time is not confirmed. Ask the congregation to confirm it.</p>}
         {current.currentContext.readingNeedsReview && <p className={styles.contextNotice}>The assigned reading needs staff review. Saving honors does not confirm the reading.</p>}
-        {review && <ContextReview key={current.currentContext.hash} previous={state.draftContext!} current={current.currentContext} state={state} owner={owner} blocked={busy || linkUncertain || departure} canReview={() => { if (links?.busy() || links?.uncertain() || pendingDeparture.current || printingRef.current) return false; links?.hideSecret(); return true; }} />}
+        {review && <ContextReview key={current.currentContext.hash} services={congregation.services} previous={state.draftContext!} current={current.currentContext} state={state} owner={owner} blocked={busy || linkUncertain || departure} canReview={() => { if (links?.busy() || links?.uncertain() || pendingDeparture.current || printingRef.current) return false; links?.hideSecret(); return true; }} />}
         <HonorsFields draft={state.draft} context={state.draftContext ?? current.currentContext} disabled={state.phase !== "ready" || busy || linkUncertain || departure || review} onChange={draft => { if (!links?.busy() && !links?.uncertain() && !pendingDeparture.current && !printingRef.current) { links?.hideSecret(); owner.edit(draft); } }} honoree={startVerse => links && linkState && <HonoreeControls startVerse={startVerse} owner={links} state={linkState} blocked={departure || printing || !!state.pending || owner.busy() || state.phase === "unavailable" || state.phase === "disposed"} />} retainedHonoree={links && linkState && retainedLinkStarts.map(startVerse => <div key={startVerse}><p className={styles.help}>Previous aliyah link record · <bdi>{startVerse}</bdi></p><HonoreeControls startVerse={startVerse} owner={links} state={linkState} blocked={departure || printing || !!state.pending || owner.busy() || state.phase === "unavailable" || state.phase === "disposed"} /></div>)} />
       </>}
       {state?.phase === "unknown" && <div className={styles.notice}><p>We couldn’t confirm whether your honors saved. It may have saved. Check what saved before changing anything; editing is paused until then, and nothing is sent twice automatically.</p><div className={styles.actions}><button type="button" className="button-primary" disabled={departure || busy} onClick={() => recover(true)}>Check what saved</button><button type="button" className="button-text" disabled={departure || busy} onClick={() => recover(false)}>Send the same save again</button></div></div>}

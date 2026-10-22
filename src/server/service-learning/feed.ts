@@ -306,3 +306,15 @@ export function serviceUnitsForSlot(feed: ServiceFeed, slot: "morning" | "havdal
   const family = slot === "morning" ? "bm-shacharit" : "bm-maariv";
   return Object.freeze(feed.units.filter(unit => unit.family === family));
 }
+
+// MISSION rulings 28-30: every CRC student leads the Torah and haftarah blessings and the Sh'ma and
+// V'ahavta; the rest of the service is a per-student menu. These are the feed's stable unit ids for
+// those parts, without the service family suffix ("@bm-shacharit" / "@bm-maariv").
+export const DEFAULT_SERVICE_PARTS = Object.freeze(["torah.blessing-before-the-torah-reading", "torah.blessing-following-the-torah-reading",
+  "torah.blessing-before-the-haftarah-reading", "torah.blessing-following-the-haftarah-reading", "shma.the-shma", "shma.vahavta"]);
+/** The default parts this feed actually provides for the slot, in service order. A part the feed lacks is simply not offered. */
+export function defaultServiceUnitIds(feed: ServiceFeed, slot: "morning" | "havdalah" | "unknown"): readonly string[] {
+  if (slot === "unknown") return Object.freeze([]);
+  const family = slot === "morning" ? "bm-shacharit" : "bm-maariv", wanted = new Set(DEFAULT_SERVICE_PARTS.map(base => `${base}@${family}`));
+  return Object.freeze(serviceUnitsForSlot(feed, slot).filter(unit => wanted.has(unit.id)).map(unit => unit.id));
+}
