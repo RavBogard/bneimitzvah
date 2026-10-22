@@ -20,23 +20,24 @@ Each release is merged, deployed, probed and tagged, and gets a STATE GATE line.
 
 **Daniel, 2026-10-22: "Those all come before the voice generator work."** He briefly put voice before the offline app, then confirmed "Voice goes last". The voice track waits until 1.2 to 1.5 are released, the offline app and sign-in code included. M0 is paused at a clean point on `claude/voice-m0` (worktree C:/Users/dsbog/bneimitzvah-chant, still at c15fc45, nothing written in the repo). Done off-repo: uv 0.13.5 installed; DiffSinger v2.5.1 plus cherry-picks 920ba91 and 8a07f76 (tree 2bd40c4, to be pinned by tree hash), MakeDiffSinger 1edcd66 and SingingVocoders 4d0889c cloned to C:/private/voice-pilot/src with licences recorded; two patches with author emails withheld in C:/private/voice-pilot/patches. Resume at M0 Part A step 1: verify the patches reproduce tree 2bd40c4, then the `voice/` files, guards, exit tests and engine timing files. Run DiffSinger from a `git archive` copy at C:/private/voice-pilot/DiffSinger, because a clone is itself a Git tree. Afterwards, if it hasn't passed G3 when the rest of 1.5 is ready, 1.5 ships without generated chant; M7's code still merges but stays inert. If the Finkel-voice test falls short, there is no studio session: whatever passes Daniel's blind review ships, and otherwise generated chant waits for 2.0.
 
-## Canonical cutover (torah.centralreform.org), outline
+## Canonical cutover and the 1.5 installable slices
 
-The switch can't be made by changing `BETTER_AUTH_URL` alone. `canonicalNavigationEnabled` requires it to equal the hard-coded `CANONICAL_ORIGIN`, and the MCP issuer and resource come from the origin. So one PR changes these together:
-- `CANONICAL_ORIGIN` becomes the torah origin;
-- the alias list gains beitmitzvah.centralreform.org, which then redirects;
-- the origin check in `scripts/release-migrate-support.mjs`;
-- the production host row, which 0034 already added.
+The full design is in [2026-10-22-installable-sign-in-code-cutover](../../superpowers/plans/2026-10-22-installable-sign-in-code-cutover.md). It supersedes the earlier outline here in two ways:
+- **Two hard-coded origins chosen by the env var.** A code PR, inert when merged, lets `BETTER_AUTH_URL` select beitmitzvah or torah. The switch is then Daniel setting the env var and a redeploy, and rollback is the reverse. This removes the 503 window.
+- **`scripts/release-migrate-support.mjs` stays unchanged.** It is pinned to its release base and checks the beitmitzvah host row, which stays.
 
-Then, in the same deploy window:
-1. Daniel sets `BETTER_AUTH_URL` in Vercel.
-2. Probes confirm sign-in, alias redirects, MCP discovery and email links.
-3. Daniel reconnects Claude once.
+**Order within 1.5:**
+1. The typed sign-in code (Better Auth `emailOTP`, no migration, auth review).
+2. The two-origin code PR.
+3. The switch window, after FORWARD-STEPS is done, with the runbook's preflight probes.
+4. A1, the installed app: worker, manifest, This week offline, purge on sign-out. Registration is gated to the torah origin, so it must not reach devices before the switch.
+5. A2: assigned and saved readings offline. Depends on 1.3's ref routes and 1.4.
 
-Preconditions:
-- The CNAME resolves.
-- Vercel reports TLS valid.
-- Google lists the new JavaScript origin and redirect, checked by a live sign-in challenge.
+**Wording for Daniel before A1 and B ship** (one popup when those slices are ready):
+- the sign-in email's code lines;
+- the install and offline copy;
+- the app icon;
+- whether parents' child-practice view goes offline (recommended: not in 1.5).
 
 ## Order
 
