@@ -30,6 +30,20 @@ export function PracticeDays({ calendar }: { calendar: PracticeCalendar }) {
   </div>;
 }
 
+/**
+ * The same dates for an assigned tutor or an admin, on one student's page: no events, counts, times or
+ * other students (MISSION ruling 14). Nothing renders until the calendar is configured for a staff view.
+ */
+export function StaffPracticeDays({ calendar, firstName }: { calendar: PracticeCalendar; firstName: string }) {
+  const state = useSyncExternalStore(calendar.subscribe, calendar.snapshot, calendar.snapshot);
+  if (state.status === "off" || state.status === "ended") return null;
+  return <section className="staff-practice-days" aria-labelledby="staff-practice-days-heading">
+    <h3 id="staff-practice-days-heading">Practice days</h3>
+    <p className="field-help">Days <bdi dir="auto">{firstName}</bdi> practiced here, alone or with a parent. Dates only.</p>
+    <PracticeDays calendar={calendar} />
+  </section>;
+}
+
 function PracticeMonths({ today, first, practiced }: { today: number; first: number; practiced(ordinal: number): boolean }) {
   const now = parts(today), earliest = parts(first), index = (year: number, month: number) => year * 12 + month - 1;
   const [shown, setShown] = useState(index(now.year, now.month));

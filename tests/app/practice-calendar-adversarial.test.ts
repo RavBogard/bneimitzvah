@@ -39,6 +39,47 @@ async function fixture() {
   return { ...f, assignment, practice, calendar, maintenance, selection, target, mutation, event, seed, setTime: (value: number) => { time = value; } };
 }
 
+test("a tutor reads practice days only for an assigned, live student; revoked links, revoked grants, disabled members or students, and raw reports are refused", async () => {
+  const f = await fixture(), window = { fromDate: "2026-10-01", throughDate: "2026-10-31" };
+  expect(await f.calendar.record(f.mutation(), f.selection, f.event())).toEqual({ ok: true, practiceDay: "2026-10-16" });
+  await f.owner(async () => { await f.db.insert(s.practiceDay).values({ tenantId: "crc", studentId: f.students[1].id, practiceDay: "2026-10-15" }); });
+  const tutor = { ...f.selection, mode: "tutor" as const }, before = await f.owner(() => f.db.select().from(s.auditEvent));
+  const days = await f.calendar.calendar(f.mutation("multi"), tutor, window);
+  expect(days).toEqual({ ok: true, studentId: f.selection.studentId, mode: "tutor", serverDay: "2026-10-16", dates: ["2026-10-16"] });
+  // Dates only: no event, count, time, target or actor in the tutor's page.
+  expect(Object.keys(days).sort()).toEqual(["dates", "mode", "ok", "serverDay", "studentId"]);
+  expect(JSON.stringify(days)).not.toMatch(/eventId|receivedAt|target|action|count|sourceMode|membership|identity/);
+  // The same person is a parent of the sibling but not its tutor: the tutor mode cannot reach it, and another student's dates never mix in.
+  await expect(f.calendar.calendar(f.mutation("multi"), { mode: "tutor", studentId: f.students[1].id }, window)).rejects.toMatchObject({ status: 404 });
+  await expect(f.calendar.calendar(f.mutation("multi"), { mode: "tutor", studentId: f.students[2].id }, window)).rejects.toMatchObject({ status: 404 });
+  await expect(f.calendar.calendar(f.mutation("multi"), { mode: "tutor", studentId: f.students[3].id }, window)).rejects.toMatchObject({ status: 404 });
+  await expect(f.calendar.events(f.mutation("multi"), tutor)).rejects.toMatchObject({ status: 403 });
+  await expect(f.calendar.record(f.mutation("multi"), tutor, f.event())).rejects.toMatchObject({ status: 403 });
+  // An admin reads any student in the congregation, still dates only.
+  expect(await f.calendar.calendar(f.mutation("admin"), { mode: "admin", studentId: f.students[1].id }, window)).toEqual({ ok: true, studentId: f.students[1].id, mode: "admin", serverDay: "2026-10-16", dates: ["2026-10-15"] });
+  // A disabled student is unavailable to the tutor.
+  await f.owner(async () => { await f.db.update(s.student).set({ disabledAt: new Date() }).where(eq(s.student.id, f.selection.studentId)); });
+  await expect(f.calendar.calendar(f.mutation("multi"), tutor, window)).rejects.toMatchObject({ status: 404 });
+  await f.owner(async () => { await f.db.update(s.student).set({ disabledAt: null }).where(eq(s.student.id, f.selection.studentId)); });
+  expect(await f.calendar.calendar(f.mutation("multi"), tutor, window)).toMatchObject({ dates: ["2026-10-16"] });
+  // A revoked tutor assignment ends access at once.
+  await f.owner(async () => { await f.db.update(s.tutorStudent).set({ revokedAt: new Date() }).where(eq(s.tutorStudent.id, f.tutorLink.id)); });
+  await expect(f.calendar.calendar(f.mutation("multi"), tutor, window)).rejects.toMatchObject({ status: 404 });
+  expect(await f.owner(() => f.db.select().from(s.auditEvent))).toEqual(before);
+});
+
+test("a revoked tutor grant or a disabled membership cannot read practice days", async () => {
+  for (const change of ["grant", "member"] as const) {
+    const f = await fixture(), window = { fromDate: "2026-10-01", throughDate: "2026-10-31" }, tutor = { ...f.selection, mode: "tutor" as const };
+    await f.calendar.record(f.mutation(), f.selection, f.event());
+    await f.owner(async () => {
+      if (change === "grant") await f.db.update(s.roleGrant).set({ revokedAt: new Date(), revision: 2 }).where(eq(s.roleGrant.id, f.tutorGrant.id));
+      else await f.db.update(s.membership).set({ disabledAt: new Date() }).where(eq(s.membership.id, f.multiMember.id));
+    });
+    await expect(f.calendar.calendar(f.mutation("multi"), tutor, window)).rejects.toMatchObject({ status: 403 });
+  }
+});
+
 test("only own student mode reads raw reports; overlapping staff/parent and exact child practice see dates and receive no actor/count/audit receipt", async () => {
   const f = await fixture(), child = await f.practice.enter(f.mutation("multi"), { studentId: f.selection.studentId }), before = await f.owner(() => f.db.select().from(s.auditEvent));
   expect(await f.calendar.record(f.mutation(), f.selection, f.event())).toEqual({ ok: true, practiceDay: "2026-10-16" });

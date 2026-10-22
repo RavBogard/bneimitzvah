@@ -28,11 +28,12 @@ import type { StudyVerse } from "./study/api";
 import { LiftProgress, useProgressSummary, VerseMark } from "./progress/marks";
 import { LessonLog, type LessonReload } from "./lessons/panel";
 import { PracticeCalendar } from "./practice-calendar/store";
-import { PracticeDays } from "./practice-calendar/view";
-import { useCongregationLinks } from "./settings/links";
+import { PracticeDays, StaffPracticeDays } from "./practice-calendar/view";
+import { useCongregation } from "./settings/links";
+import type { ServiceSettings } from "./settings/api";
 import { ParentStudySummary, ParentSummaryStore } from "./parent-summary";
 import type { PracticeDates } from "./practice-calendar/api";
-import { serviceSlotName } from "./service-slot";
+import { serviceSlotName, serviceSlotTime } from "./service-slot";
 
 const dayMs = 86_400_000;
 /** "Sat, Jan 2, 2027" and whole days until it, computed on the calendar date only. */
@@ -48,10 +49,14 @@ export function RehearsalDates({ student }: { student: Pick<Student, "rehearsal1
   if (!dates.length) return null;
   return <p className="hero-rehearsals">{dates.length === 1 ? "Rehearsal" : "Rehearsals"}: {dates.map((value, index) => <span key={index}>{index > 0 && " and "}<time dateTime={value}>{ceremonyCountdown(value).label}</time></span>)}</p>;
 }
-/** The confirmed service, named as the honors sheet names it. It sits on the name line, which has room on a phone, so the date line never wraps. Nothing when the slot is unknown. */
-export function ServiceSlotName({ student }: { student: Pick<Student, "serviceSlot"> }) {
-  const name = serviceSlotName(student.serviceSlot);
-  return name ? <span className="hero-slot"><span aria-hidden="true">· </span>{name}</span> : null;
+/**
+ * The confirmed service, named as the honors sheet names it: the congregation's name for it when set.
+ * It sits on the name line, which has room on a phone, so the date line never wraps; the start time
+ * shows beside it on wider screens only, so the phone header keeps its height. Nothing when the slot is unknown.
+ */
+export function ServiceSlotName({ student, services }: { student: Pick<Student, "serviceSlot">; services?: ServiceSettings }) {
+  const name = serviceSlotName(student.serviceSlot, services), time = serviceSlotTime(student.serviceSlot, services);
+  return name ? <span className="hero-slot"><span aria-hidden="true">· </span>{name}{time && <span className="hero-slot-time"> · {time}</span>}</span> : null;
 }
 const displayRange = (ranges: string[]) => ranges.join("; ").replace(/(\d)-(\d)/g, "$1\u2013$2");
 const refreshIcon = <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
@@ -170,7 +175,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const selectedKindRef = useRef(selectedKind); selectedKindRef.current = selectedKind;
   useEffect(() => registerReload(async () => { await load(); }), [registerReload, load]);
   const authorizedReading = result.key === key && !result.loading ? result.value : undefined;
-  const links = useCongregationLinks(Boolean(authorizedReading && !concealed));
+  const congregation = useCongregation(Boolean(authorizedReading && !concealed)), links = congregation.links;
   useLayoutEffect(() => {
     if (mode !== "parent" || concealed || !authorizedReading || !parentSummary.matches(authorizedReading, parentScope)) return;
     // Provider reveal precedes its visible render; start only after that render is authorized.
@@ -297,7 +302,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       {song ? <><header className={`reading-hero${learner ? " reading-current-assignment" : ""}`} aria-labelledby="reading-heading">
         <div className="hero-who">
           <h2 id="reading-heading" className="hero-name"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
-          <ServiceSlotName student={student} />
+          {congregation.ready && <ServiceSlotName student={student} services={congregation.services} />}
           <p className="hero-date"><time dateTime={student.ceremonyDate}>{countdown!.label}</time>{countdown!.phrase && <span className="hero-days">{countdown!.phrase}</span>}</p>
           <button type="button" className="hero-icon" aria-label="Refresh reading" onClick={() => {
             const target = studyDenied, turn = sequence.current;
@@ -319,9 +324,9 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
             {staff && <><button type="button" className="button-hero-secondary" onClick={openSheet}>Change verses</button><WorkspaceLink className="button-hero-secondary" href="/trope-chart">Trope chart</WorkspaceLink></>}
             {readings.length < 2 && !tabbed && <a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a>}
           </div></>}
-        <PracticeDays calendar={calendar} />
+        {!staff && <PracticeDays calendar={calendar} />}
       </header>
-      {mode === "parent" && <ParentStudySummary store={parentSummary} baseline={authorizedReading ?? null} scope={parentScope} concealed={concealed} />}
+      {mode === "parent" && <ParentStudySummary store={parentSummary} baseline={authorizedReading ?? null} scope={parentScope} concealed={concealed} notice={congregation.consentNotice} />}
       {!learner && readings.length > 0 && <AssignmentContext row={selectedReading} current />}
       {tabbed && <div role="tablist" aria-label="Student page" className="page-tabs" onKeyDown={tabKeys}>{pageTabs.map(([value, label]) => <button key={value} type="button" role="tab" id={tabId(value)} aria-controls={panelId(value)} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1} className="page-tab" onClick={() => setTab(value)}>{label}</button>)}</div>}</> : <>
       <h2 id="reading-heading"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
@@ -356,7 +361,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
     </dialog> : <div id={editorId} className="reading-editor-anchor">{editor}</div>)}
     {tabPanel("service", <><ServiceLearningPanel id={serviceId} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} onDepartureActive={setServiceDepartureActive} onVisit={(plan, unitId) => calendar.visitUnit(plan, unitId)} />
       {authorizedReading && !concealed && <p className="field-help"><a href={links.siddurUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC digital siddur collection</a>{links.musicUrl && <> · <a href={links.musicUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Service music</a></>}</p>}</>)}
-    {tabPanel("lessons", <LessonLog mode={mode} studentId={studentId} register={registerLessons} tabbed={tabbed} />)}
+    {tabPanel("lessons", <>{staff && student && authorizedReading && !concealed && <StaffPracticeDays calendar={calendar} firstName={student.firstName} />}<LessonLog mode={mode} studentId={studentId} register={registerLessons} tabbed={tabbed} /></>)}
     {printing && authorizedReading && !concealed && selectedReading && <PracticeSheet baseline={authorizedReading} initialKind={selectedReading.kind} onClose={() => setPrinting(false)}
       authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} />}
   </ReadingPrefsScope>;

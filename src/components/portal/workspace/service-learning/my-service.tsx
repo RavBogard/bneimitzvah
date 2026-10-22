@@ -9,6 +9,8 @@ import { type ConnectedService, type MyService } from "./ecosystem-api";
 import styles from "./my-service.module.css";
 import { serviceApi, type Catalog } from "./api";
 import { PortalRequestError } from "../../api";
+import { serviceSlotLine } from "../service-slot";
+import { useCongregation } from "../settings/links";
 
 type Draft = Record<string, string>;
 export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode:ReadingMode; studentId: string; baseline: Assigned | null;onConnected?(connected:boolean):void }) {
@@ -18,6 +20,7 @@ export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode
   const [drafts, setDrafts] = useState<Record<string, Draft>>({}), dirty = useRef(false), generation = useRef(0), controller = useRef<AbortController | null>(null), region = useRef<HTMLDivElement>(null);
   const [catalog,setCatalog]=useState<Catalog|null>(null);
   const staff = mode === "admin" || mode === "tutor";
+  const congregation = useCongregation(Boolean(baseline));
   const clear = useCallback(() => { generation.current++; controller.current?.abort(); setState({ scope: scopeRef.current });setCatalog(null); }, []);
   const reload = useCallback(async () => {
     controller.current?.abort(); const abort = new AbortController(), turn = ++generation.current, currentScope = scopeRef.current; controller.current = abort;
@@ -95,7 +98,7 @@ export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode
   if (view?.state === "unscheduled") return null;
   return <div className={styles.service} ref={region} aria-labelledby={`${id}-heading`} data-my-service="">
     <h3 id={`${id}-heading`}>My service</h3>
-    {view && "ceremony" in view && <p className={styles.ceremony}>{new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${view.ceremony.date}T12:00:00Z`))} · {view.ceremony.type === "morning" ? "Morning service" : view.ceremony.type === "havdalah" ? "Havdalah service" : "Service time to be confirmed"}</p>}
+    {view && "ceremony" in view && <p className={styles.ceremony}>{new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${view.ceremony.date}T12:00:00Z`))} · {serviceSlotLine(view.ceremony.type, congregation.services) ?? "Service time to be confirmed"}</p>}
     {view && "ceremony" in view && view.ceremony.needsReconciliation && <p className="reading-review">Your ceremony schedule changed. Your tutor will reconcile the connected service; your practice progress is saved.</p>}
     {view && "ceremony" in view && view.ceremony.scheduleConflict && <p className="reading-review">Students sharing this ceremony have different schedules. Staff need to reconcile the joint ceremony before its setlist schedule can change.</p>}
     {current?.error && <p role="alert">{current.error}</p>}

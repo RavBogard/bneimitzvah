@@ -8,6 +8,8 @@ import { join } from "node:path";
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
+import { eq } from "drizzle-orm";
+import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -96,4 +98,25 @@ it("fits a phone without sideways scrolling, and a tutor can neither open nor wr
   expect(await tutor.getByLabel("Name on study guides", { exact: true }).count()).toBe(0);
   expect((await api(tutor, "/api/admin/congregation-settings")).status).toBe(403);
   expect((await api(tutor, "/api/admin/congregation-settings", { expectedVersion: 0, settings: { rabbiDisplayName: "Not allowed" }, mutationId: randomUUID() })).status).toBe(403);
+});
+
+it("a parent sees the congregation's service name in the reading header, its time only on a wide screen, and the consent notice in the summary", async () => {
+  const admin = await page("admin"), current = (await api(admin, "/api/admin/congregation-settings")).data.view;
+  const [{ serviceSlot }] = await fixture.ownerDb.select({ serviceSlot: s.student.serviceSlot }).from(s.student).where(eq(s.student.id, fixture.student.id));
+  expect(serviceSlot === "morning" || serviceSlot === "havdalah").toBe(true);
+  const settings = { ...current.settings, services: { [serviceSlot]: { label: "Synthetic gathering", start: "09:30" } }, consentNotice: "Synthetic consent notice for families." };
+  expect((await api(admin, "/api/admin/congregation-settings", { expectedVersion: current.version, settings, mutationId: randomUUID() })).status).toBe(200);
+  // The settings page no longer calls these fields unused.
+  await navigate(admin, "/workspace/admin/settings"); await ui(admin.getByLabel("Consent notice", { exact: true })).toHaveValue("Synthetic consent notice for families.");
+  expect(await main(admin).getByText(/Saved for your records|isn’t shown to families/).count()).toBe(0);
+  for (const mobile of [false, true]) {
+    const parent = await page("tutor", mobile); await navigate(parent, "/workspace/parent");
+    await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+    const slot = parent.locator(".hero-who .hero-slot");
+    await ui(slot).toHaveText(mobile ? "· Synthetic gathering" : "· Synthetic gathering · 9:30 AM", { useInnerText: true });
+    // On a phone the service stays on the name line, so the header does not grow.
+    if (mobile) { const [name, line] = await Promise.all([parent.locator(".hero-who .hero-name").boundingBox(), slot.boundingBox()]); expect(Math.abs((name?.y ?? 0) - (line?.y ?? 99))).toBeLessThan(4); }
+    await ui(parent.getByRole("region", { name: "Preparation summary", exact: true }).getByText("Synthetic consent notice for families.", { exact: true })).toBeVisible();
+    await capture(parent, mobile ? "settings-parent-mobile" : "settings-parent-desktop");
+  }
 });

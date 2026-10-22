@@ -10,7 +10,7 @@ import { requireCookieMutation, type CookieMutationRequest } from "../http/mutat
 import { actorBinding } from "../students/service";
 import { createBindings, digest } from "../students/bindings";
 import { identifier } from "../students/validation";
-import { parseServiceFeed, serviceUnitsForSlot, SERVICE_FEED_LIMITS, type ServiceFeed, type ServiceUnit as FeedUnit } from "./feed";
+import { defaultServiceUnitIds, parseServiceFeed, serviceUnitsForSlot, SERVICE_FEED_LIMITS, type ServiceFeed, type ServiceUnit as FeedUnit } from "./feed";
 import type { ServiceUnit, ServiceUnitMaterial, ServiceSectionHeading } from "../../lib/service-learning/types";
 import * as stored from "./data";
 import type { PracticeTarget } from "../../lib/practice-calendar/types";
@@ -148,7 +148,9 @@ export function createServiceLearningService<Q extends PgQueryResultHKT>(input: 
       const loaded = await feed(tx, actor.tenantId, lifecycle.catalogId), plan = await data.currentPlan(tx, actor.tenantId, studentId, "share");
       const result = bounded({ state: "available" as const, studentRevision: student.revision, ceremonyDate: student.ceremonyDate, serviceSlot: context.serviceSlot,
         expectedPlanRevision: plan?.revision ?? 0, catalogId: lifecycle.catalogId, catalogIdentity: loaded.identity, lifecycleRevision: lifecycle.revision,
-        units: serviceUnitsForSlot(loaded, context.serviceSlot).map(unit => summary(loaded, unit)) });
+        units: serviceUnitsForSlot(loaded, context.serviceSlot).map(unit => summary(loaded, unit)),
+        // A student with no plan yet starts from the standard parts; any plan a staff member saved (even a cleared one) is never preselected over.
+        defaults: plan ? [] : [...defaultServiceUnitIds(loaded, context.serviceSlot)] });
       live(actor); return result;
     });
   }

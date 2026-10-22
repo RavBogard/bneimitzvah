@@ -199,6 +199,31 @@ it("shows read-only parent dates, then the selected child practice week with con
   await safe(() => tab.context().close());
 });
 
+it("shows an assigned tutor the student's practice days on the Lessons tab, dates only, and opening the reading reports nothing", async () => {
+  for (const mobile of [false, true]) {
+    const tab = await page("tutor", mobile), seen = traffic(tab), before = await rows();
+    const read = tab.waitForResponse(response => isCalendar(response.request()) && response.status() === 200);
+    await safe(() => tab.goto(`/workspace/tutor/${fixture.student.id}`, { waitUntil: "domcontentloaded" }));
+    await ui(tab.locator("#reading-heading")).toBeVisible();
+    const response = await safe(() => read), request = response.request(), url = new URL(request.url());
+    expect({ method: request.method(), path: url.pathname, mode: url.searchParams.get("mode"), context: request.headers()["x-practice-context"] ?? null }).toEqual({ method: "GET", path: `/api/students/${fixture.student.id}/practice-calendar`, mode: "tutor", context: null });
+    const dates = parsePracticeDates(await safe(() => response.json()), "tutor", fixture.student.id, url.searchParams.get("fromDate") ?? "", url.searchParams.get("throughDate") ?? "");
+    // The header keeps no practice week for staff; the dates sit with the lessons.
+    expect(await tab.locator(".reading-hero .practice-week").count()).toBe(0);
+    await safe(() => tab.getByRole("tab", { name: "Lessons", exact: true }).click());
+    const section = tab.getByRole("region", { name: "Practice days", exact: true });
+    await ui(section.getByText("Dates only.", { exact: false })).toBeVisible();
+    await ui(week(tab).getByRole("listitem")).toHaveCount(7); await todayMarked(tab, dates.dates.includes(dates.serverDay));
+    await capture(tab, "practice-calendar-tutor");
+    await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click());
+    await click(tab, "Start reading"); await ui(tab.locator(".study-verses").first()).toBeVisible();
+    await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:1"] [data-word-index="0"]').first().click());
+    await safe(() => tab.waitForTimeout(300));
+    expect(seen.posts).toHaveLength(0); expect(seen.reads.every(value => new URL(value).searchParams.get("mode") === "tutor")).toBe(true); expect(await rows()).toEqual(before);
+    await safe(() => tab.context().close());
+  }
+});
+
 it("held Start visits the first verse of the current text page without listening or a modal", async () => {
   const ranges = ["Genesis 1:1-5:10"], refs = expandReadingRanges(ranges, "torah", TANAKH_VERSE_COUNTS);
   expect(refs.length).toBeGreaterThan(100); expect(refs[100]).toBe("Genesis 4:21");
