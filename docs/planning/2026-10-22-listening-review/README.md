@@ -1,6 +1,6 @@
 # Reference-audio listening review (2026-10-22)
 
-Daniel ruled on 2026-10-22 that he will do the reference-audio listening review this week, on his phone ([1.5 research, rulings](../../superpowers/research/2026-10-22-release-1-5-research.md#daniels-rulings-on-this-document-2026-10-22-binding)). On the same day he ruled that Cantor Finkel's recordings are licensed without restriction and belong in this review (MISSION, "Amended 2026-10-22 (Daniel, Cantor Finkel's recordings)"). This folder records what gates student reference playback today, what is still unfixed, and what this slice adds.
+Daniel ruled on 2026-10-22 that he will do the reference-audio listening review this week, on his phone ([1.5 research, rulings](../../superpowers/research/2026-10-22-release-1-5-research.md#daniels-rulings-on-this-document-2026-10-22-binding)). On the same day he ruled that Cantor Finkel's recordings are licensed without restriction and belong in this review (MISSION, "Amended 2026-10-22 (Daniel, Cantor Finkel's recordings)"). **Later on 2026-10-22 Daniel ruled that the review waits for the boundary repair** (refined word starts from the audio, real word ends, 5 ms fades; branch `claude/boundary-repair`) and that Finkel's clips join the same pass (STATE, 1.0.1 log). This page is ready for that pass; the sample must be regenerated (and its version bumped) if the repair changes the published manifest. This folder records what gates student reference playback today, what is still unfixed, and what this slice adds.
 
 ## 1. Findings (read before Daniel listens)
 
