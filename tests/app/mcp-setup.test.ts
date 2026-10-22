@@ -37,6 +37,28 @@ async function confirmedTorah(f: Awaited<ReturnType<typeof setup>>, studentId: s
 }
 
 describe("student setup through the portal MCP", () => {
+  it("treats a disabled student as not found for every setup tool, writing nothing", async () => {
+    const f = await setup();
+    const { call, crc, owner, audits, t } = f;
+    const a = await confirmedTorah(f, crc.id);
+    await owner(async () => { await t.f.db.update(s.student).set({ disabledAt: new Date() }).where(eq(s.student.id, crc.id)); });
+    const at = { studentId: crc.id, kind: "torah", assignmentId: a.id, assignmentRevision: 1, verseRef: "Genesis 1:1" };
+    const calls: [string, Record<string, unknown>][] = [
+      ["get_student_setup", { studentId: crc.id }],
+      ["find_sources", at],
+      ["assign_sources", { ...at, expectedVersion: 0, sourceIds: ["source_01"], catalogHash: "0".repeat(64), mutationId: randomUUID() }],
+      ["remove_source_assignment", { ...at, expectedVersion: 0, sourceIds: ["source_01"], mutationId: randomUUID() }],
+      ["preview_student_reading", { studentId: crc.id, kind: "torah", expectedReadingRevision: 1, ranges: ["Genesis 1:1-2"] }],
+      ["set_student_reading", { studentId: crc.id, kind: "torah", expectedReadingRevision: 1, ranges: ["Genesis 1:1-2"] }],
+      ["set_student_tutor", { studentId: crc.id, expectedTutorIds: [t.f.tutorGrant.id], tutorIds: [] }],
+      ["set_student_tutor", { studentId: crc.id, expectedTutorIds: [], tutorIds: [] }],
+      ["set_student_service", { studentId: crc.id, expectedRevision: 2, serviceSlot: "morning" }],
+    ];
+    for (const [name, args] of calls) expect((await call(name, args)).text, name).toMatch(/Not found/);
+    expect(await audits(["student.update", "reading.set", "tutor.assign", "tutor.revoke", "source-assignment.set"])).toHaveLength(0);
+  });
+
+
   it("exists only for an attended admin with the roster consent: study, read-only, tutor and routine connections see and reach none of it", async () => {
     const { t, admin } = await setup();
     const names = async (token: string) => (await t.rpc(token, "tools/list")).body.result.tools.map((x: { name: string }) => x.name);
@@ -114,6 +136,9 @@ describe("student setup through the portal MCP", () => {
     expect(await json("set_student_tutor", { studentId: unrelated.id, expectedTutorIds: [tutor], tutorIds: [] })).toMatchObject({ ok: true, removed: [tutor], tutors: [] });
     expect((await links()).filter(l => !l.revokedAt)).toHaveLength(0);
     expect(await audits(["tutor.revoke"])).toHaveLength(1);
+    // Only a tutor grant can be assigned: the rabbi's own admin grant is not found.
+    expect((await call("set_student_tutor", { studentId: unrelated.id, expectedTutorIds: [], tutorIds: [t.f.adminGrant.id] })).text).toMatch(/Not found/);
+    expect(await audits(["tutor.assign"])).toHaveLength(1);
   });
 
   it("previews and sets readings through the portal's reading work: calendar picks, custom ranges and cut points, with conflicts on a stale revision", async () => {
@@ -177,6 +202,8 @@ describe("student setup through the portal MCP", () => {
     expect((await call("find_sources", { ...at, studentId: other.id })).text).toMatch(/Not found/);
     expect((await call("assign_sources", { ...write, studentId: other.id, mutationId: randomUUID() })).text).toMatch(/Not found/);
     expect(await audits(["source-assignment.set"])).toHaveLength(3);
+    // A version the verse has not reached is a conflict, so the merge can never drop another write's sources.
+    expect(await json("assign_sources", { ...write, expectedVersion: 9, sourceIds: ["source_07"], mutationId: randomUUID() })).toMatchObject({ ok: false, code: "conflict" });
     expect(related).toHaveBeenCalled();
   });
 });

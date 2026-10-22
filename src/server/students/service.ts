@@ -226,7 +226,7 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
   afterSchedule?:(request:CookieMutationRequest,selection:{mode:ActiveMode;studentId:string})=>Promise<unknown>;
   dispatchScheduled?:()=>void|Promise<void>;
 }){
-  const now=input.now??Date.now,counts=input.verseCounts??TANAKH_VERSE_COUNTS;
+  const now=input.now??Date.now;
   const bindings=createBindings(input.signingSecret,now);
   const afterSchedule=async(request:CookieMutationRequest,mode:ActiveMode,ids:string[])=>{
     if(input.dispatchScheduled){try{await input.dispatchScheduled();}catch{/* The durable queue survives an unavailable dispatcher. */}return;}

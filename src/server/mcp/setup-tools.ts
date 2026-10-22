@@ -75,7 +75,10 @@ function asAdmin<Q extends PgQueryResultHKT, T>(ctx: ToolContext<Q>, intent: Loc
     }
     const check = () => { alive(); if (ctx.signal.aborted) throw new AccessDenied(401); };
     check();
-    return action(tx, live, ctx.mcp.portalActor(live), check);
+    const result = await action(tx, live, ctx.mcp.portalActor(live), check);
+    // A call the transport has already answered as timed out commits nothing.
+    check();
+    return result;
   });
 }
 /**
@@ -84,18 +87,26 @@ function asAdmin<Q extends PgQueryResultHKT, T>(ctx: ToolContext<Q>, intent: Loc
  * in the same transaction before the shared service's own work.
  */
 function studentAuthority<Q extends PgQueryResultHKT>(ctx: ToolContext<Q>, intent: LockIntent,
-  guard?: (tx: AccessTransaction<Q>, live: McpActor, studentId: string) => Promise<void>): StudentAuthority<Q> {
-  return (id, action) => asAdmin(ctx, intent, async (tx, live, portal) => {
+  guard?: (tx: AccessTransaction<Q>, live: McpActor, studentId: string) => Promise<void>, phase?: Phase): StudentAuthority<Q> {
+  return (id, action) => { if (phase) phase.called = true; return asAdmin(ctx, intent, async (tx, live, portal) => {
     if (!UUID.test(id)) throw new AccessDenied(404);
     const student = await lockStudent(tx, live.tenantId, id, intent);
     if (!student || student.disabledAt) throw new AccessDenied(404);
     const relationship = await lockStudentRelationship(tx, live.tenantId, student.id, live.roleGrantId, "admin", intent);
     if (!relationship) throw new AccessDenied(404);
     await guard?.(tx, live, student.id);
+    if (phase) phase.entered = true;
     return action(tx, Object.freeze({ ...portal, studentId: student.id, relationshipId: relationship.id, relationshipRevision: relationship.revision }),
       Object.freeze({ id: student.id, firstName: student.firstName, lastName: student.lastName, ceremonyDate: student.ceremonyDate, rehearsal1: student.rehearsal1, rehearsal2: student.rehearsal2, revision: student.revision }));
-  });
+  }); };
 }
+/**
+ * Where a reading call stopped: a 403 raised before the authority ran (the service's input checks) or inside
+ * the service's own work is the service refusing the choice; one raised while the authority itself was being
+ * established (the connection, the admin grant, the student) is an authority failure and is never relabelled.
+ */
+type Phase = { called: boolean; entered: boolean };
+const serviceRefusal = (error: unknown, phase: Phase) => error instanceof AccessDenied && error.status === 403 && (!phase.called || phase.entered);
 
 const sourceView = (c: RelatedSourceMetadata) => ({ id: c.id, title: c.labels.en ?? c.indexTitle, hebrewTitle: c.labels.he, work: c.indexTitle, ref: c.ref, category: c.category });
 const ids = (value: unknown): string[] | null => Array.isArray(value) && value.length >= 1 && value.length <= 32 && value.every(v => typeof v === "string" && SOURCE_ID.test(v)) && new Set(value).size === value.length ? value as string[] : null;
@@ -153,14 +164,15 @@ async function prepared<Q extends PgQueryResultHKT>(input: Record<string, unknow
   const k = input.kind as "torah" | "haftarah", expected = input.expectedReadingRevision as number;
   const conflict = { ok: false, code: "conflict", hint: READING_HINTS.conflict };
   // The caller's view of the reading is checked in the same transaction the preparation reads it in.
+  const phase: Phase = { called: false, entered: false };
   const guarded = studentAuthority(ctx, "data-write", async (tx, live, id) => {
     if (((await roster.currentAssignment(tx, live.tenantId, id, k, false))?.revision ?? 0) !== expected) throw new Refusal(conflict);
-  });
+  }, phase);
   let value;
   try { value = await ctx.readings.prepareReadingAs(guarded, choice); }
   catch (error) {
     if (error instanceof Refusal) return { result: error.result };
-    if (error instanceof AccessDenied && error.status === 403) return { result: { ok: false, code: "invalid-reading", hint: READING_HINTS["invalid-reading"] } };
+    if (serviceRefusal(error, phase)) return { result: { ok: false, code: "invalid-reading", hint: READING_HINTS["invalid-reading"] } };
     throw error;
   }
   if (value.status === "stale") return { result: conflict };
@@ -205,7 +217,7 @@ export function createSetupTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
           const view = readingView(held, student.ceremonyDate), order = new Map(view.verses.map((ref, i) => [ref, i]));
           const sources = (await sourceData.latestForAssignment(tx, live.tenantId, student.id, view.id, view.revision))
             .sort((a, b) => (order.get(a.verseRef) ?? 0) - (order.get(b.verseRef) ?? 0))
-            .map(r => ({ verseRef: r.verseRef, version: r.version, sources: sourceData.citations(r).map(sourceView) }));
+            .map(r => ({ verseRef: r.verseRef, version: r.version, sources: sourceData.citations(r).map(c => ({ id: c.id, title: c.labels.en ?? c.indexTitle })) }));
           readings[k] = { readingRevision: view.revision, confirmed: true, assignmentId: view.id, basis: view.basis, ranges: view.ranges, verseCount: view.verses.length,
             aliyahStarts: view.aliyahStarts, needsReview: view.needsReview, readingKey: view.readingKey, readingDate: view.source.date, sources };
         }
@@ -271,8 +283,10 @@ export function createSetupTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
         const ready = await prepared(input, ctx);
         if ("result" in ready) return ready.result;
         let saved;
-        try { saved = await ctx.readings.confirmReadingAs(studentAuthority(ctx, "data-write"), { studentId: input.studentId as string, binding: ready.value.binding }); }
-        catch (error) { if (error instanceof AccessDenied && error.status === 403) return { ok: false, code: "conflict", hint: READING_HINTS.conflict }; throw error; }
+        const phase: Phase = { called: false, entered: false };
+        // The preparation is checked again at confirm; a refusal there means it expired or no longer matches.
+        try { saved = await ctx.readings.confirmReadingAs(studentAuthority(ctx, "data-write", undefined, phase), { studentId: input.studentId as string, binding: ready.value.binding }); }
+        catch (error) { if (serviceRefusal(error, phase)) return { ok: false, code: "conflict", hint: READING_HINTS.conflict }; throw error; }
         if (!saved.ok) return { ok: false, code: "conflict", hint: READING_HINTS.conflict };
         return { ok: true, assignmentId: saved.assignmentId, readingRevision: saved.revision, set: ready.summary,
           next: "Nothing was sent to anyone. Sources chosen for the old reading stay with it; choose this reading's sources with find_sources and assign_sources." };
@@ -317,6 +331,8 @@ async function replaceSources<Q extends PgQueryResultHKT>(input: Record<string, 
   // The verse's current sources, read in the portal's verse context; the replace below re-checks the version.
   const head = await studentAuthority(ctx, "read")(selection.studentId, currentVerseCapture({ signal: ctx.signal }, selection, verse, async (tx, actor) => sourceData.latest(tx, actor, selection, verse)));
   if (head && "ok" in head) return { ok: false, code: head.code, hint: SOURCE_HINTS[head.code] };
+  // A version the verse has not reached is stale (a newer one may be a replay, which the replace recognises).
+  if ((head?.version ?? 0) < (input.expectedVersion as number)) return { ok: false, code: "conflict", hint: SOURCE_HINTS.conflict };
   const current = head ? sourceData.citations(head).map(c => c.id) : [];
   const full = mode === "add" ? [...new Set([...current, ...chosen])] : current.filter(id => !chosen.includes(id));
   if (full.length > 32) return { ok: false, code: "too-many-sources", hint: "A verse holds at most 32 sources; remove some first." };
@@ -334,6 +350,9 @@ async function setTutors<Q extends PgQueryResultHKT>(input: Record<string, unkno
   const id = input.studentId as string;
   const conflict = { ok: false, code: "conflict", hint: "The student's tutors changed since get_student_setup: read it again, show the rabbi, and resend with the current list." };
   return refusal(() => asAdmin(ctx, "authority-write", async (tx, live, portal, alive) => {
+    // Unlocked here (the portal locks tutor grants before the student); the locked read below decides.
+    const [probe] = await tx.select({ disabledAt: s.student.disabledAt }).from(s.student).where(and(eq(s.student.tenantId, live.tenantId), eq(s.student.id, id))).limit(1);
+    if (!probe || probe.disabledAt) throw new AccessDenied(404);
     const links = async () => (await relationships.inspectLinks(tx, live.tenantId, id)).tutors.map(t => ({ grantId: t.link.tutorGrantId, linkId: t.link.id }));
     if (!sameSet((await links()).map(l => l.grantId), expected)) throw new Refusal(conflict);
     // The portal's lock order for tutor changes: each tutor's grant, then the student; then recheck under those locks.
