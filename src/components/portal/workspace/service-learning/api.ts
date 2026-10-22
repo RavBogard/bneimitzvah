@@ -6,7 +6,8 @@ export type ServicePlan = { id: string; revision: number; needsReview: boolean; 
 export type UnitSummary = { id: string; name: string; caption?: string; section: ServiceSectionHeading };
 export type ServiceMetadata = { state: "no-plan" } | { state: "cleared" | "withdrawn"; plan: ServicePlan } | { state: "assigned"; plan: ServicePlan; units: UnitSummary[] };
 export type ServiceUnitResponse = { state: "withdrawn"; plan: ServicePlan } | { state: "assigned"; plan: ServicePlan; material: ServiceUnitMaterial };
-export type Catalog = { state: "unknown-slot" | "unavailable" } | { state: "available"; studentRevision: number; ceremonyDate: string; serviceSlot: "morning" | "havdalah"; expectedPlanRevision: number; catalogId: string; catalogIdentity: string; lifecycleRevision: number; units: UnitSummary[] };
+export type Catalog = { state: "unknown-slot" | "unavailable" } | { state: "available"; studentRevision: number; ceremonyDate: string; serviceSlot: "morning" | "havdalah"; expectedPlanRevision: number; catalogId: string; catalogIdentity: string; lifecycleRevision: number; units: UnitSummary[];
+  /** The standard parts (blessings, Sh'ma and V'ahavta) to start from, only while the student has no plan. */ defaults: string[] };
 export type AvailableCatalog = Extract<Catalog, { state: "available" }>;
 export type PreparedServicePlan = { ok: true; binding: string; selectedIds: string[]; clearsPlan: boolean; review: Omit<AvailableCatalog, "state" | "units" | "studentRevision"> & { studentRevision: number }; expiresAt: number };
 const bad = (): never => { throw new PortalRequestError(503); };
@@ -49,12 +50,16 @@ export function parseServiceMetadata(value: unknown): ServiceMetadata {
   if (!result.units.length || result.plan.catalogState === "withdrawn") return bad(); return result;
 }
 export function parseCatalog(value: unknown): Catalog {
-  const state = closed(value, ["state"], ["studentRevision", "ceremonyDate", "serviceSlot", "expectedPlanRevision", "catalogId", "catalogIdentity", "lifecycleRevision", "units"]).state;
+  const state = closed(value, ["state"], ["studentRevision", "ceremonyDate", "serviceSlot", "expectedPlanRevision", "catalogId", "catalogIdentity", "lifecycleRevision", "units", "defaults"]).state;
   if (state === "unknown-slot" || state === "unavailable") { closed(value, ["state"]); return { state }; }
   if (state !== "available") return bad();
-  const row = closed(value, ["state", "studentRevision", "ceremonyDate", "serviceSlot", "expectedPlanRevision", "catalogId", "catalogIdentity", "lifecycleRevision", "units"]), serviceSlot = slot(row.serviceSlot), units = summaries(row.units);
+  const row = closed(value, ["state", "studentRevision", "ceremonyDate", "serviceSlot", "expectedPlanRevision", "catalogId", "catalogIdentity", "lifecycleRevision", "units", "defaults"]), serviceSlot = slot(row.serviceSlot), units = summaries(row.units);
   if (units.some(unit => !unit.id.endsWith(serviceSlot === "morning" ? "@bm-shacharit" : "@bm-maariv"))) return bad();
-  return { state, studentRevision: integer(row.studentRevision), ceremonyDate: date(row.ceremonyDate), serviceSlot, expectedPlanRevision: integer(row.expectedPlanRevision, 0), catalogId: identifier(row.catalogId), catalogIdentity: digest(row.catalogIdentity), lifecycleRevision: integer(row.lifecycleRevision), units };
+  // Defaults are offered only before any plan exists, and only from this catalog's own parts.
+  const expectedPlanRevision = integer(row.expectedPlanRevision, 0), defaults = ids(row.defaults);
+  if (defaults.length && expectedPlanRevision !== 0 || defaults.some(id => !units.some(unit => unit.id === id))) return bad();
+  return { state, studentRevision: integer(row.studentRevision), ceremonyDate: date(row.ceremonyDate), serviceSlot, expectedPlanRevision, catalogId: identifier(row.catalogId), catalogIdentity: digest(row.catalogIdentity), lifecycleRevision: integer(row.lifecycleRevision), units,
+    defaults: units.filter(unit => defaults.includes(unit.id)).map(unit => unit.id) };
 }
 export function parsePreparation(value: unknown, catalog: AvailableCatalog, selected: readonly string[]): PreparedServicePlan {
   const row = closed(value, ["ok", "binding", "selectedIds", "clearsPlan", "review", "expiresAt"]), review = closed(row.review, ["studentRevision", "ceremonyDate", "serviceSlot", "catalogId", "catalogIdentity", "lifecycleRevision", "expectedPlanRevision"]);

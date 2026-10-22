@@ -105,10 +105,19 @@ test("reading the calendar never reports a visit; only an explicit open of an as
   const state = calendar.snapshot(); expect(state.status === "ready" && [...state.dates].sort()).toEqual(["2026-10-15", "2026-10-17"]);
 });
 
-test("parent, tutor and admin views have no calendar here and send nothing", async () => {
-  for (const mode of ["parent", "tutor", "admin"] as const) {
-    const { calendar, operations } = harness(); calendar.configure(baseline(mode)); await calendar.load(); calendar.visitVerse("torah", "Genesis 1:1"); await flush();
-    expect(calendar.snapshot().status).toBe("off"); expect(operations).toHaveLength(0);
+test("a parent's dashboard has no calendar here and sends nothing", async () => {
+  const { calendar, operations } = harness(); calendar.configure(baseline("parent")); await calendar.load(); calendar.visitVerse("torah", "Genesis 1:1"); await flush();
+  expect(calendar.snapshot().status).toBe("off"); expect(operations).toHaveLength(0);
+});
+
+test("tutor and admin views read the student's practice dates only and never report a visit", async () => {
+  for (const mode of ["tutor", "admin"] as const) {
+    const { calendar, operations, respond } = harness(); calendar.configure(baseline(mode)); await calendar.load();
+    expect(calendar.snapshot()).toMatchObject({ status: "ready", serverDay: "2026-10-17" });
+    const state = calendar.snapshot(); expect(state.status === "ready" && [...state.dates]).toEqual(["2026-10-15"]);
+    expect(respond.mock.calls.every(([sent]) => sent === mode)).toBe(true);
+    calendar.visitVerse("torah", "Genesis 1:1"); calendar.visitUnit(plan, "synthetic-unit"); await flush();
+    expect(operations.map(value => value.type)).toEqual(["calendar"]);
   }
 });
 

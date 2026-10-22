@@ -8,10 +8,12 @@ import { join } from "node:path";
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
+import { eq } from "drizzle-orm";
+import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
-const contexts: BrowserContext[] = [];
+const contexts: BrowserContext[] = [], signedIn = new Map<string, Awaited<ReturnType<BrowserContext["cookies"]>>>();
 async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Congregation settings browser operation failed; private details withheld"); } }
 async function navigate(tab: Page, path: string) { await safe(() => tab.goto(path, { waitUntil: "domcontentloaded", timeout: 30_000 })); }
 async function api(tab: Page, path: string, body?: unknown) {
@@ -23,8 +25,11 @@ async function api(tab: Page, path: string, body?: unknown) {
 async function page(role: "admin" | "tutor", mobile = false) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false, viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 } }); contexts.push(context);
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
-  const tab = await context.newPage(); await navigate(tab, "/"); const email = role === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
-  expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status === 200).toBe(true); await openAuthMail(tab, fixture.takeMail(email)); return tab;
+  // One sign-in per role for the file, so magic-link rate limits are never the thing under test.
+  const saved = signedIn.get(role); if (saved) await context.addCookies(saved);
+  const tab = await context.newPage(); await navigate(tab, "/"); if (saved) return tab;
+  const email = role === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
+  expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status === 200).toBe(true); await openAuthMail(tab, fixture.takeMail(email)); signedIn.set(role, await context.cookies()); return tab;
 }
 const main = (tab: Page) => tab.locator("#workspace-main");
 async function capture(tab: Page, name: string) {
@@ -96,4 +101,25 @@ it("fits a phone without sideways scrolling, and a tutor can neither open nor wr
   expect(await tutor.getByLabel("Name on study guides", { exact: true }).count()).toBe(0);
   expect((await api(tutor, "/api/admin/congregation-settings")).status).toBe(403);
   expect((await api(tutor, "/api/admin/congregation-settings", { expectedVersion: 0, settings: { rabbiDisplayName: "Not allowed" }, mutationId: randomUUID() })).status).toBe(403);
+});
+
+it("a parent sees the congregation's service name in the reading header, its time only on a wide screen, and the consent notice in the summary", async () => {
+  const admin = await page("admin"), current = (await api(admin, "/api/admin/congregation-settings")).data.view;
+  const [student] = await fixture.ownerDb.select().from(s.student).where(eq(s.student.id, fixture.student.id)), serviceSlot = "havdalah";
+  await fixture.ownerDb.update(s.student).set({ serviceSlot, revision: student.revision + 1 }).where(eq(s.student.id, student.id));
+  const settings = { ...current.settings, services: { [serviceSlot]: { label: "Synthetic gathering", start: "09:30" } }, consentNotice: "Synthetic consent notice for families." };
+  expect((await api(admin, "/api/admin/congregation-settings", { expectedVersion: current.version, settings, mutationId: randomUUID() })).status).toBe(200);
+  // The settings page no longer calls these fields unused.
+  await navigate(admin, "/workspace/admin/settings"); await ui(admin.getByLabel("Consent notice", { exact: true })).toHaveValue("Synthetic consent notice for families.");
+  expect(await main(admin).getByText(/Saved for your records|isn’t shown to families/).count()).toBe(0);
+  for (const mobile of [false, true]) {
+    const parent = await page("tutor", mobile); await navigate(parent, "/workspace/parent");
+    await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
+    const slot = parent.locator(".hero-who .hero-slot");
+    await ui(slot).toHaveText(mobile ? "· Synthetic gathering" : "· Synthetic gathering · 9:30 AM", { useInnerText: true });
+    // On a phone the service stays on the name line, so the header does not grow.
+    if (mobile) { const [name, line] = await Promise.all([parent.locator(".hero-who .hero-name").boundingBox(), slot.boundingBox()]); expect(Math.abs((name?.y ?? 0) - (line?.y ?? 99))).toBeLessThan(4); }
+    await ui(parent.getByRole("region", { name: "Preparation summary", exact: true }).getByText("Synthetic consent notice for families.", { exact: true })).toBeVisible();
+    await capture(parent, mobile ? "settings-parent-mobile" : "settings-parent-desktop");
+  }
 });

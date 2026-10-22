@@ -376,6 +376,8 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .hero-name { font-size: 1.0625rem; font-weight: 700; overflow-wrap: anywhere; }
 /* The service slot shares the name line at the name's line height, so the hero keeps its phone height. */
 .hero-slot { color: var(--color-muted); line-height: 1.4; }
+/* The start time would wrap the name line on a phone; it shows on wider screens only. */
+@media (max-width: 640px) { .hero-slot-time { display: none; } }
 .hero-date { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; color: var(--color-muted); font-variant-numeric: tabular-nums; }
 .hero-rehearsals { margin: 0.125rem 0 0; color: var(--color-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
 .hero-days { background: var(--marigold); color: var(--on-ink); font-weight: 650; font-size: 0.875rem; padding: 0.125rem 0.625rem; border-radius: 999px; }
@@ -398,6 +400,10 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .reading-hero .reading-empty { margin: 0; padding: 0; border: 0; }
 /* Practice days: this week as quiet dots, the month behind a disclosure. Dates only. */
 .practice-days { margin-top: 1.5rem; min-height: 3.25rem; }
+/* A tutor's or admin's read-only view of the same dates, above the lesson log. */
+.staff-practice-days { margin-block: 0 2rem; max-width: 52rem; }
+.staff-practice-days h3 { font-size: 1rem; line-height: 1.5; }
+.staff-practice-days .practice-days { margin-top: 0.75rem; }
 .practice-days-note { color: var(--color-muted); font-size: 0.875rem; }
 .practice-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.375rem; max-width: 17.5rem; list-style: none; margin: 0; padding: 0; }
 .practice-day { display: grid; justify-items: center; gap: 0.25rem; min-width: 0; }
@@ -904,6 +910,7 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .parent-study-summary details { margin-top: 0.25rem; }
 .parent-study-summary summary { min-height: 44px; padding-block: 0.5rem; cursor: pointer; }
 .parent-study-summary .parent-summary-note { white-space: pre-wrap; margin-block: 0.5rem; }
+.parent-consent-notice { margin: 0; color: var(--color-muted); font-size: 0.9375rem; white-space: pre-line; }
 .parent-summary-dates { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; margin-block: 0.5rem 0; padding-inline-start: 1.25rem; }
 /* Study guide placement: under the hero on wide screens, after the Hebrew on phones so Hebrew stays first. */
 .guide-place-wide { display: none; }
