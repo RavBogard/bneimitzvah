@@ -102,9 +102,9 @@ function studentInput(value: unknown) {
     ...(row.rehearsal1 === undefined ? {} : { rehearsal1: row.rehearsal1 === null ? null : text(row.rehearsal1, 10) }),
     ...(row.rehearsal2 === undefined ? {} : { rehearsal2: row.rehearsal2 === null ? null : text(row.rehearsal2, 10) }) };
 }
-const studentCore = (s: Omit<StudentView, "rehearsal1" | "rehearsal2">) => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, ceremonyDate: s.ceremonyDate, revision: s.revision });
-// Rehearsal dates travel with the ceremony date to every role that already sees it.
-const studentView = (s: StudentView) => ({ ...studentCore(s), rehearsal1: s.rehearsal1, rehearsal2: s.rehearsal2 });
+const studentCore = (s: Omit<StudentView, "rehearsal1" | "rehearsal2" | "serviceSlot">) => ({ id: s.id, firstName: s.firstName, lastName: s.lastName, ceremonyDate: s.ceremonyDate, revision: s.revision });
+// Rehearsal dates and the service slot travel with the ceremony date to every role that already sees it.
+const studentView = (s: StudentView) => ({ ...studentCore(s), rehearsal1: s.rehearsal1, rehearsal2: s.rehearsal2, serviceSlot: s.serviceSlot });
 const contextView = (c: PracticeContextView | null) => c ? { id: c.id, authorityRevision: c.authorityRevision, studentId: c.studentId, studentRevision: c.studentRevision, expiresAt: c.expiresAt } : null;
 function wordAidsView(value: StudyWordAids): JsonValue {
   if (value.status === "unavailable") return { schema: value.schema, ref: value.ref, status: value.status, reason: value.reason };

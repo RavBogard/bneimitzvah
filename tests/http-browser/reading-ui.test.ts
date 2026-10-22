@@ -241,7 +241,7 @@ it("handles an empty calendar without invention and exposes no editor in parent 
   const tab = await page("admin");
   const created = await api(tab, "/api/admin/students", { student: { firstName: "Synthetic", lastName: "Empty Calendar", ceremonyDate: "2027-01-09", parentEmail: "empty-calendar@example.test" } });
   expect(created.status === 201 || created.status === 200).toBe(true);
-  await navigate(tab, `/workspace/admin/students/${created.data.id}/reading`); await openEditor(tab);
+  await navigate(tab, `/workspace/admin/students/${created.data.id}/reading`); await ui(tab.locator(".hero-date")).toBeVisible(); await ui(tab.locator(".hero-slot")).toHaveCount(0); await openEditor(tab);
   await ui(tab.getByLabel("Passage",{exact:true})).toHaveValue("custom");
   await ui(tab.getByText(/^The service slot is not yet set\./)).toBeVisible();
   await ui(tab.getByText("No calendar selections are available. Choose your own verses.", { exact: true })).toBeVisible();
@@ -255,7 +255,9 @@ it("handles an empty calendar without invention and exposes no editor in parent 
   await ui(tab.locator(".confirmed-reading").getByText("Isaiah 1:1-2", { exact: true })).toBeVisible();
   const parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(parent.getByRole("heading", { name: "Synthetic Learner", level: 2, exact: true })).toBeVisible(); expect(await parent.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0);
+  const [{ serviceSlot }] = await fixture.ownerDb.select({ serviceSlot: s.student.serviceSlot }).from(s.student).where(eq(s.student.id, fixture.student.id)), service = serviceSlot === "morning" ? "Morning service" : "Havdalah service";
+  expect(serviceSlot === "morning" || serviceSlot === "havdalah").toBe(true); await ui(parent.locator(".hero-who .hero-slot")).toHaveText(`· ${service}`);
   expect((await api(parent, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "parent", ranges: ["Genesis 1:1"] })).status === 400).toBe(true);
   await click(parent, "Practice with Synthetic"); await ui(parent.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
-  expect(await parent.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0);
+  expect(await parent.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0); await ui(parent.locator(".hero-who .hero-slot")).toHaveText(`· ${service}`);
 });

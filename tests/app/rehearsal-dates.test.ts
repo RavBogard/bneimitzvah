@@ -15,9 +15,9 @@ import { portalRoutesFixture } from "./portal-routes-fixture";
 import { createStudentService } from "../../src/server/students/service";
 import { rehearsalsFit, studentInput } from "../../src/server/students/validation";
 import { AccessDenied } from "../../src/server/access/errors";
-import { parseStudents } from "../../src/components/portal/workspace/api";
+import { parseAssigned, parseStudents } from "../../src/components/portal/workspace/api";
 import { PortalRequestError } from "../../src/components/portal/api";
-import { RehearsalDates } from "../../src/components/portal/workspace/reading";
+import { RehearsalDates, ServiceSlotName } from "../../src/components/portal/workspace/reading";
 import * as s from "../../src/server/db/index";
 
 const open: { client: { close(): Promise<void> } }[] = [];
@@ -107,9 +107,9 @@ test("only admins set or clear rehearsal dates, with revisioned writes and stude
   expect(audits).toHaveLength(1); expect(audits[0]).toMatchObject({ mode: "admin", targetType: "student", actingStudentId: target });
   for (const [who, mode] of [["multi", "parent"], ["multi", "tutor"], ["learner", "student"], ["admin", "admin"]] as const) {
     const view = await f.service.readStudent(f.mutation(who), { mode, studentId: target });
-    expect(Object.keys(view).sort()).toEqual(["ceremonyDate", "firstName", "id", "lastName", "rehearsal1", "rehearsal2", "revision"]);
-    expect(view).toMatchObject({ rehearsal1: "2027-01-09", rehearsal2: "2027-01-23" });
-    expect((await f.service.listStudents(f.mutation(who), { mode })).find(row => row.id === target)).toMatchObject({ rehearsal1: "2027-01-09", rehearsal2: "2027-01-23" });
+    expect(Object.keys(view).sort()).toEqual(["ceremonyDate", "firstName", "id", "lastName", "rehearsal1", "rehearsal2", "revision", "serviceSlot"]);
+    expect(view).toMatchObject({ rehearsal1: "2027-01-09", rehearsal2: "2027-01-23", serviceSlot: "morning" });
+    expect((await f.service.listStudents(f.mutation(who), { mode })).find(row => row.id === target)).toMatchObject({ rehearsal1: "2027-01-09", rehearsal2: "2027-01-23", serviceSlot: "morning" });
   }
   // A stale revision writes nothing; an omitted date keeps the saved one; an out-of-order pair is refused.
   expect(await f.studentsService.edit(f.mutation(), { mode: "admin", studentId: target, expectedRevision: 1, student: { ...dated, rehearsal1: null } })).toEqual({ ok: false, code: "stale-revision" });
@@ -142,7 +142,7 @@ test("the admin HTTP routes carry rehearsal dates in closed contracts, and every
   expect(parseStudents(roster, true).find(row => row.id === id)).toMatchObject({ rehearsal1: "2027-01-09", rehearsal2: "2027-01-23" });
   for (const [who, mode] of [["multi", "parent"], ["multi", "tutor"], ["learner", "student"]] as const) {
     const one = await json(await f.call(`/api/students/${id}?mode=${mode}`, { who }));
-    expect(Object.keys(one.student).sort()).toEqual(["ceremonyDate", "firstName", "id", "lastName", "rehearsal1", "rehearsal2", "revision"]);
+    expect(Object.keys(one.student).sort()).toEqual(["ceremonyDate", "firstName", "id", "lastName", "rehearsal1", "rehearsal2", "revision", "serviceSlot"]);
     expect(one.student).toMatchObject({ ceremonyDate: "2027-01-30", rehearsal1: "2027-01-09", rehearsal2: "2027-01-23" });
     const list = await json(await f.call(`/api/students?mode=${mode}`, { who }));
     expect(parseStudents(list).find(row => row.id === id)).toMatchObject({ rehearsal1: "2027-01-09", rehearsal2: "2027-01-23" });
@@ -172,4 +172,35 @@ test("the reading header shows saved rehearsals in the ceremony date's format an
   expect(render(undefined, undefined)).toBe(""); expect(render(null, null)).toBe("");
   expect(render("2027-01-09", "2027-01-23")).toBe('<p class="hero-rehearsals">Rehearsals: <span><time dateTime="2027-01-09">Sat, Jan 9, 2027</time></span><span> and <time dateTime="2027-01-23">Sat, Jan 23, 2027</time></span></p>');
   expect(render(null, "2027-01-23")).toBe('<p class="hero-rehearsals">Rehearsal: <span><time dateTime="2027-01-23">Sat, Jan 23, 2027</time></span></p>');
+});
+
+test("every role that sees the ceremony date also receives the service slot, and the client parser accepts only the three known slots", async () => {
+  const f = await portalRoutesFixture(); open.push(f);
+  const json = async (response: Response) => await response.json() as Record<string, any>, id = f.students[0].id;
+  const student = { firstName: "Synthetic", lastName: "Slotted", ceremonyDate: "2027-01-30", parentEmail: "contact@example.test", serviceSlot: "havdalah" };
+  expect((await f.call(`/api/admin/students/${id}/edit`, { who: "admin", body: { expectedRevision: 1, student } })).status).toBe(200);
+  for (const [who, mode] of [["multi", "parent"], ["multi", "tutor"], ["learner", "student"], ["admin", "admin"]] as const) {
+    expect((await json(await f.call(`/api/students/${id}?mode=${mode}`, { who }))).student).toMatchObject({ ceremonyDate: "2027-01-30", serviceSlot: "havdalah" });
+    expect(parseStudents(await json(await f.call(`/api/students?mode=${mode}`, { who }))).find(row => row.id === id)).toMatchObject({ serviceSlot: "havdalah" });
+    const reading = await json(await f.call(`/api/students/${id}/reading?mode=${mode}`, { who }));
+    expect(parseAssigned(reading, mode, id).student).toMatchObject({ ceremonyDate: "2027-01-30", serviceSlot: "havdalah" });
+  }
+  // A parent practising with the child reads the same slot through the practice context.
+  const entered = await json(await f.call("/api/practice/enter", { body: { studentId: id } }));
+  expect((await json(await f.call(`/api/students/${id}/reading?mode=child-practice`, { handle: entered.handle }))).student).toMatchObject({ serviceSlot: "havdalah" });
+  // The admin roster keeps one serviceSlot key and still parses.
+  const roster = await json(await f.call("/api/admin/students", { who: "admin" }));
+  expect(parseStudents(roster, true).find(row => row.id === id)).toMatchObject({ serviceSlot: "havdalah" });
+  // An unrelated student stays invisible to the tutor, slot and all.
+  expect((await f.call(`/api/students/${f.students[1].id}?mode=tutor`, { who: "multi" })).status).toBe(404);
+  const row = { id: randomUUID(), firstName: "Synthetic", lastName: "Parsed", ceremonyDate: "2027-01-30", revision: 1 };
+  for (const slot of ["morning", "havdalah", "unknown"]) expect(parseStudents({ students: [{ ...row, serviceSlot: slot }] })).toEqual([{ ...row, serviceSlot: slot }]);
+  for (const bad of [null, "", "Morning", "evening", 1]) expect(() => parseStudents({ students: [{ ...row, serviceSlot: bad }] })).toThrow(PortalRequestError);
+});
+
+test("the reading header names a confirmed service as the honors sheet does and adds nothing when the slot is unknown", () => {
+  const render = (serviceSlot: "morning" | "havdalah" | "unknown" | undefined) => renderToStaticMarkup(createElement(ServiceSlotName, { student: { serviceSlot } }));
+  expect(render("morning")).toBe('<span class="hero-slot"><span aria-hidden="true">· </span>Morning service</span>');
+  expect(render("havdalah")).toBe('<span class="hero-slot"><span aria-hidden="true">· </span>Havdalah service</span>');
+  expect(render("unknown")).toBe(""); expect(render(undefined)).toBe("");
 });
