@@ -8,14 +8,14 @@ import { expect, test } from "vitest";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import { priorColumns } from "../helpers/prior-columns";
 
-const TAG = "0030_student_source_identity";
+const TAG = "0031_student_source_identity";
 
-test("0030 adds only student_source_identity, leaves existing students unchanged and replays", async () => {
+test("0031 adds only student_source_identity, leaves existing students unchanged and replays", async () => {
   const isolation = await isolatedEnv(), client = new PGlite();
   try {
     const folder = "src/server/db/migrations", journal = JSON.parse(await readFile(join(folder, "meta/_journal.json"), "utf8"));
     const entry = journal.entries.find((e: { tag: string }) => e.tag === TAG);
-    expect(entry).toMatchObject({ idx: 30 });
+    expect(entry).toMatchObject({ idx: 31 });
     const entries = journal.entries.filter((e: { idx: number }) => e.idx < entry.idx), prior = join(isolation.home, "prior");
     await mkdir(join(prior, "meta"), { recursive: true }); await writeFile(join(prior, "meta/_journal.json"), JSON.stringify({ ...journal, entries }));
     for (const e of entries) await copyFile(join(folder, e.tag + ".sql"), join(prior, e.tag + ".sql"));

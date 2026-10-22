@@ -1,5 +1,5 @@
 {
-  "id": "e03fa646-534a-49b0-be00-c0073992d1d9",
+  "id": "692ca2a7-5a9d-4df0-ba3f-fba355877dbf",
   "prevId": "9f1a20e4-4389-43e3-815e-23442ff9fa39",
   "version": "7",
   "dialect": "postgresql",
@@ -3299,225 +3299,6 @@
         "reference_review_decision_checks": {
           "name": "reference_review_decision_checks",
           "value": "(jsonb_typeof(\"reference_review_decision\".\"checks\") = 'object' and \"reference_review_decision\".\"checks\" ?& array['privacy','listening','exactText','musicalAccuracy','rights'] and \"reference_review_decision\".\"checks\" - array['privacy','listening','exactText','musicalAccuracy','rights'] = '{}'::jsonb and \"reference_review_decision\".\"checks\"->>'privacy' in ('pass','hold') and \"reference_review_decision\".\"checks\"->>'listening' in ('pass','hold') and \"reference_review_decision\".\"checks\"->>'exactText' in ('pass','hold') and \"reference_review_decision\".\"checks\"->>'musicalAccuracy' in ('pass','hold') and \"reference_review_decision\".\"checks\"->>'rights' in ('pass','hold')) is true"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.student_source_identity": {
-      "name": "student_source_identity",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "source_namespace": {
-          "name": "source_namespace",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "source_record_id": {
-          "name": "source_record_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "student_id": {
-          "name": "student_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_by_user_id": {
-          "name": "created_by_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_by_membership_id": {
-          "name": "created_by_membership_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "role_grant_id": {
-          "name": "role_grant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "role": {
-          "name": "role",
-          "type": "portal_role",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "mcp_connection_id": {
-          "name": "mcp_connection_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "link_kind": {
-          "name": "link_kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "student_source_identity_tenant_id_tenant_id_fk": {
-          "name": "student_source_identity_tenant_id_tenant_id_fk",
-          "tableFrom": "student_source_identity",
-          "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "student_source_identity_student_fk": {
-          "name": "student_source_identity_student_fk",
-          "tableFrom": "student_source_identity",
-          "tableTo": "student",
-          "columnsFrom": [
-            "tenant_id",
-            "student_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "student_source_identity_member_fk": {
-          "name": "student_source_identity_member_fk",
-          "tableFrom": "student_source_identity",
-          "tableTo": "membership",
-          "columnsFrom": [
-            "tenant_id",
-            "created_by_membership_id",
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id",
-            "user_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "student_source_identity_grant_fk": {
-          "name": "student_source_identity_grant_fk",
-          "tableFrom": "student_source_identity",
-          "tableTo": "role_grant",
-          "columnsFrom": [
-            "tenant_id",
-            "role_grant_id",
-            "created_by_membership_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id",
-            "membership_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "student_source_identity_role_fk": {
-          "name": "student_source_identity_role_fk",
-          "tableFrom": "student_source_identity",
-          "tableTo": "role_grant",
-          "columnsFrom": [
-            "tenant_id",
-            "role_grant_id",
-            "role"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id",
-            "role"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "student_source_identity_connection_fk": {
-          "name": "student_source_identity_connection_fk",
-          "tableFrom": "student_source_identity",
-          "tableTo": "mcp_connection",
-          "columnsFrom": [
-            "tenant_id",
-            "mcp_connection_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "student_source_identity_record_key": {
-          "name": "student_source_identity_record_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "source_namespace",
-            "source_record_id"
-          ]
-        },
-        "student_source_identity_student_key": {
-          "name": "student_source_identity_student_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "source_namespace",
-            "student_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "student_source_identity_source": {
-          "name": "student_source_identity_source",
-          "value": "\"student_source_identity\".\"source_namespace\" = 'maven' and \"student_source_identity\".\"source_record_id\" ~ '^[A-Za-z0-9]{18}$'"
-        },
-        "student_source_identity_admin": {
-          "name": "student_source_identity_admin",
-          "value": "\"student_source_identity\".\"role\" = 'admin'"
-        },
-        "student_source_identity_link_kind": {
-          "name": "student_source_identity_link_kind",
-          "value": "\"student_source_identity\".\"link_kind\" in ('created', 'linked')"
-        },
-        "student_source_identity_created": {
-          "name": "student_source_identity_created",
-          "value": "isfinite(\"student_source_identity\".\"created_at\")"
         }
       },
       "isRLSEnabled": false
@@ -7135,7 +6916,7 @@
       "checkConstraints": {
         "audit_action_known": {
           "name": "audit_action_known",
-          "value": "\"audit_event\".\"action\" in ('student.create','student.update','student.import','grant.issue','grant.revoke','guardian.link','guardian.revoke','guardian.practice-set','tutor.cantor-set','tutor.assign','tutor.revoke','invite.issue','invite.accept','invite.revoke','invite.delivery-sent','invite.delivery-failed','context.enter','context.exit','reading.set','identity.link','identity.revoke','draft.append','note.append','service-plan.set','progress.self-check.set','progress.assessment.set','lesson-log.create','lesson-log.edit','lesson-log.delete','recording.create','recording.submit','recording.delete-request','source-assignment.set','honors.set','honoree.issue','honoree.revoke','honoree.reissue','study-voice.set','study-guide.set','study-guide.publish','study-guide-student.set','study-theme.read')"
+          "value": "\"audit_event\".\"action\" in ('student.create','student.update','student.import','grant.issue','grant.revoke','guardian.link','guardian.revoke','guardian.practice-set','tutor.cantor-set','tutor.assign','tutor.revoke','invite.issue','invite.accept','invite.revoke','invite.delivery-sent','invite.delivery-failed','context.enter','context.exit','reading.set','identity.link','identity.revoke','draft.append','note.append','service-plan.set','progress.self-check.set','progress.assessment.set','lesson-log.create','lesson-log.edit','lesson-log.delete','recording.create','recording.submit','recording.delete-request','source-assignment.set','honors.set','honoree.issue','honoree.revoke','honoree.reissue','study-voice.set','study-guide.set','study-guide.publish','study-guide-student.set','study-theme.read','tenant-settings.set')"
         }
       },
       "isRLSEnabled": false
@@ -8759,6 +8540,236 @@
         "tutor_student_role": {
           "name": "tutor_student_role",
           "value": "\"tutor_student\".\"role\" = 'tutor'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.tenant_settings": {
+      "name": "tenant_settings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "base_version": {
+          "name": "base_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "previous_version": {
+          "name": "previous_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "body": {
+          "name": "body",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_membership_id": {
+          "name": "actor_membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "role_grant_id": {
+          "name": "role_grant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "role": {
+          "name": "role",
+          "type": "portal_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mode": {
+          "name": "mode",
+          "type": "context_mode",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "channel": {
+          "name": "channel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mutation_id": {
+          "name": "mutation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_digest": {
+          "name": "request_digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tenant_settings_tenant_id_tenant_id_fk": {
+          "name": "tenant_settings_tenant_id_tenant_id_fk",
+          "tableFrom": "tenant_settings",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tenant_settings_previous_fk": {
+          "name": "tenant_settings_previous_fk",
+          "tableFrom": "tenant_settings",
+          "tableTo": "tenant_settings",
+          "columnsFrom": [
+            "tenant_id",
+            "previous_version"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "version"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tenant_settings_actor_fk": {
+          "name": "tenant_settings_actor_fk",
+          "tableFrom": "tenant_settings",
+          "tableTo": "membership",
+          "columnsFrom": [
+            "tenant_id",
+            "actor_membership_id",
+            "actor_user_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tenant_settings_grant_fk": {
+          "name": "tenant_settings_grant_fk",
+          "tableFrom": "tenant_settings",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "role_grant_id",
+            "actor_membership_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "membership_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tenant_settings_role_fk": {
+          "name": "tenant_settings_role_fk",
+          "tableFrom": "tenant_settings",
+          "tableTo": "role_grant",
+          "columnsFrom": [
+            "tenant_id",
+            "role_grant_id",
+            "role"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "role"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "tenant_settings_stream_key": {
+          "name": "tenant_settings_stream_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "version"
+          ]
+        },
+        "tenant_settings_receipt_key": {
+          "name": "tenant_settings_receipt_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tenant_id",
+            "actor_user_id",
+            "mutation_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "tenant_settings_versions": {
+          "name": "tenant_settings_versions",
+          "value": "\"tenant_settings\".\"version\" > 0 and \"tenant_settings\".\"base_version\" >= 0 and \"tenant_settings\".\"version\"::bigint = \"tenant_settings\".\"base_version\"::bigint + 1 and ((\"tenant_settings\".\"base_version\"=0 and \"tenant_settings\".\"previous_version\" is null) or (\"tenant_settings\".\"base_version\">0 and \"tenant_settings\".\"previous_version\" is not null and \"tenant_settings\".\"previous_version\"=\"tenant_settings\".\"base_version\"))"
+        },
+        "tenant_settings_body": {
+          "name": "tenant_settings_body",
+          "value": "public.portal_tenant_settings_valid(\"tenant_settings\".\"body\")"
+        },
+        "tenant_settings_channel": {
+          "name": "tenant_settings_channel",
+          "value": "\"tenant_settings\".\"channel\" in ('web','operator')"
+        },
+        "tenant_settings_actor": {
+          "name": "tenant_settings_actor",
+          "value": "(\"tenant_settings\".\"channel\"='web' and \"tenant_settings\".\"actor_user_id\" is not null and \"tenant_settings\".\"actor_membership_id\" is not null and \"tenant_settings\".\"role_grant_id\" is not null and \"tenant_settings\".\"role\"='admin' and \"tenant_settings\".\"mode\"='admin')\n    or (\"tenant_settings\".\"channel\"='operator' and \"tenant_settings\".\"version\"=1 and \"tenant_settings\".\"body\"='{}'::jsonb and \"tenant_settings\".\"actor_user_id\" is null and \"tenant_settings\".\"actor_membership_id\" is null and \"tenant_settings\".\"role_grant_id\" is null and \"tenant_settings\".\"role\" is null and \"tenant_settings\".\"mode\" is null)"
+        },
+        "tenant_settings_digest": {
+          "name": "tenant_settings_digest",
+          "value": "\"tenant_settings\".\"request_digest\" ~ '^[a-f0-9]{64}$'"
+        },
+        "tenant_settings_instant": {
+          "name": "tenant_settings_instant",
+          "value": "isfinite(\"tenant_settings\".\"created_at\")"
         }
       },
       "isRLSEnabled": false

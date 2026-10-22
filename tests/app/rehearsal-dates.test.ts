@@ -37,7 +37,7 @@ test("0029 adds only the two nullable rehearsal dates and their order check, lea
   const isolation = await isolatedEnv(), client = new PGlite();
   try {
     const folder = "src/server/db/migrations", journal = JSON.parse(await readFile(join(folder, "meta/_journal.json"), "utf8"));
-    expect(journal.entries.find((e: { idx: number }) => e.idx === 29)).toMatchObject({ idx: 29, tag: "0029_rehearsal_dates" });
+    expect(journal.entries.find((e: { tag: string }) => e.tag === "0029_rehearsal_dates")).toMatchObject({ idx: 29 });
     const entries = journal.entries.filter((e: { idx: number }) => e.idx < 29), prior = join(isolation.home, "prior");
     await mkdir(join(prior, "meta"), { recursive: true }); await writeFile(join(prior, "meta/_journal.json"), JSON.stringify({ ...journal, entries }));
     for (const e of entries) await copyFile(join(folder, e.tag + ".sql"), join(prior, e.tag + ".sql"));

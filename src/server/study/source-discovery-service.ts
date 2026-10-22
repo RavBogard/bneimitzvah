@@ -6,6 +6,7 @@ import type { AccessRequest } from "../access/types";
 import type { RelatedSourceCatalog } from "./sources/metadata";
 import { discoverRelatedPage, sourcePageSelection, type SourcePageSelection } from "./sources/discovery";
 import { createStudyService, type StudySelection } from "./service";
+import { currentSettings } from "../data/tenant-settings";
 import { StudyUnavailable, type StudyPage, type StudyRequest } from "./types";
 
 export function createStudySourceDiscoveryService<Q extends PgQueryResultHKT>(input: {
@@ -17,13 +18,15 @@ export function createStudySourceDiscoveryService<Q extends PgQueryResultHKT>(in
     let paging: SourcePageSelection;
     try { paging = sourcePageSelection(supplied); } catch { throw new StudyUnavailable("invalid-request"); }
     type Outcome = ReturnType<typeof discoverRelatedPage> | Readonly<{ status: "unavailable" }>;
-    const study = createStudyService<Q, StudyPage & { sourceOutcome: Outcome }>({ access: input.access, practice: input.practice,
-      load: async publicRequest => {
+    const study = createStudyService<Q, StudyPage & { sourceOutcome: Outcome }, readonly string[]>({ access: input.access, practice: input.practice,
+      // The congregation's preferred works come first; everything else keeps the catalog order.
+      prepare: async (tx, tenantId) => (await currentSettings(tx, tenantId))?.preferredSources ?? [],
+      load: async (publicRequest, preferred) => {
         const targetRef = publicRequest.verses[publicRequest.offset];
         const page = await input.loadText(publicRequest), target = page.verses[0];
         if (!target || target.ref !== targetRef || publicRequest.signal?.aborted) throw new StudyUnavailable("upstream");
         let sourceOutcome: Outcome;
-        try { sourceOutcome = discoverRelatedPage(await input.related(targetRef, publicRequest.signal ?? new AbortController().signal), targetRef, paging); }
+        try { sourceOutcome = discoverRelatedPage(await input.related(targetRef, publicRequest.signal ?? new AbortController().signal), targetRef, paging, preferred); }
         catch { sourceOutcome = Object.freeze({ status: "unavailable" }); }
         // Enum-only staged outcomes must pass the original final authorization.
         return { ...page, sourceOutcome };

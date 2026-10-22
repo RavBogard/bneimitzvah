@@ -14,8 +14,10 @@ import * as s from "../db/index";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { expandReadingRanges } from "../../lib/readings/ranges";
 import { haftarahRefForKey } from "../../lib/readings/reading-key";
-import { plain, validateGuideBody, validateVoice, type GuideBody, type GuideNote, type GuideTheme } from "./validation";
+import { validateGuideBody, validateVoice, type GuideBody, type GuideNote, type GuideTheme } from "./validation";
 import { STARTER_VOICE } from "./starter-voice";
+import { effectiveRabbiName, type CongregationSettings } from "../settings/validation";
+import { currentSettings } from "../data/tenant-settings";
 
 export type GuideKind = data.GuideKind;
 export type RabbiWriter = data.RabbiWriter;
@@ -79,10 +81,9 @@ const versesOutside = (body: GuideBody, verses: ReadonlySet<string>) =>
   body.themes.flatMap(t => t.notes.filter(n => !verses.has(n.verseRef)).map(n => `${n.verseRef} is not in this reading`));
 /** A stored version that no longer passes today's rules is withheld, not served and not an error. */
 const servable = (row: data.GuideRow | data.StudentGuideRow | null) => { if (!row) return null; try { return guideVersion(row); } catch { return null; } };
-export function rabbiName(customs: unknown): string {
-  const credits = customs && typeof customs === "object" ? (customs as Record<string, unknown>).credits : undefined;
-  const name = credits && typeof credits === "object" ? (credits as Record<string, unknown>).rabbiDisplayName : undefined;
-  return plain(name, 320) && [...name].length <= 80 ? name : "the rabbi";
+/** The congregation settings' rabbi name first, then the legacy tenant.customs.credits key, then "the rabbi". */
+export function rabbiName(customs: unknown, settings: CongregationSettings | null = null): string {
+  return effectiveRabbiName(settings, customs);
 }
 /** Notes outside the student's verses are hidden; a theme whose every note is hidden disappears. */
 export function themesFor(themes: readonly GuideTheme[], verses: ReadonlySet<string>, reads: ReadonlyMap<string, { state: string; version: number }>, prefix = ""): StudentTheme[] {
@@ -98,9 +99,9 @@ export function themesFor(themes: readonly GuideTheme[], verses: ReadonlySet<str
 export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
   access: ReturnType<typeof createAccessService<Q>>; practice: ReturnType<typeof createPracticeService<Q>>; check: GuideChecker;
 }) {
-  async function customsOf(tx: AccessTransaction<Q>, tenantId: string) {
+  async function nameOf(tx: AccessTransaction<Q>, tenantId: string) {
     const [row] = await tx.select({ customs: s.tenant.customs }).from(s.tenant).where(eq(s.tenant.id, tenantId)).limit(1);
-    return row?.customs;
+    return rabbiName(row?.customs, await currentSettings(tx, tenantId));
   }
   /** The verses a base guide for this reading may annotate. */
   async function passage(tx: AccessTransaction<Q>, tenantId: string, kind: GuideKind, readingKey: string): Promise<Set<string>> {
@@ -277,7 +278,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
     if (!student) throw new AccessDenied(404);
     const row = (await confirmedReadings(tx, actor.tenantId, actor.studentId)).find(r => r.kind === kind);
     if (!row) return null;
-    const reading = readingView(row, student.ceremonyDate), verses = new Set(reading.verses), name = rabbiName(await customsOf(tx, actor.tenantId));
+    const reading = readingView(row, student.ceremonyDate), verses = new Set(reading.verses), name = await nameOf(tx, actor.tenantId);
     const tickable = actor.mode === "student" || actor.mode === "child-practice";
     const base = reading.readingKey ? servable((await data.guideHeads(tx, actor.tenantId, kind, reading.readingKey)).visible) : null;
     const additions = servable(await data.studentGuideHead(tx, actor.tenantId, actor.studentId, reading.id, reading.revision, kind));
@@ -331,7 +332,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
       const heads = await data.guideHeads(tx, actor.tenantId, kind, readingKey);
       const summary = (row: data.GuideRow | null) => { const v = servable(row);
         return v && row ? Object.freeze({ version: v.version, origin: v.origin, reviewed: v.reviewed, hold: v.hold, themes: v.body.themes.length, updatedAt: v.createdAt }) : null; };
-      return Object.freeze({ kind, readingKey, rabbiName: rabbiName(await customsOf(tx, actor.tenantId)), visible: summary(heads.visible), held: heads.head?.hold ? summary(heads.head) : null });
+      return Object.freeze({ kind, readingKey, rabbiName: await nameOf(tx, actor.tenantId), visible: summary(heads.visible), held: heads.head?.hold ? summary(heads.head) : null });
     });
   }
   async function staffVoice(request: AccessRequest) {

@@ -1,0 +1,14 @@
+@font-face {
+  font-family: "CRC Stam Ashkenaz";
+  src: url("/fonts/stam-ashkenaz-clm/StamAshkenazCLM.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* Consonant-only tikkun text in the Torah-scroll face. Callers strip every mark first. */
+.stam[lang="he"] {
+  font-family: "CRC Stam Ashkenaz", "Stam Ashkenaz CLM", "CRC Noto Serif Hebrew", serif;
+  font-weight: 400;
+  font-synthesis: none;
+}
