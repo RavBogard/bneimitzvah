@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 
-export const metadata: Metadata = { title: "CRC Beit Mitzvah", referrer: "no-referrer", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "CRC Torah", referrer: "no-referrer", robots: { index: false, follow: false } };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   // Daniel's standard credit, on every page, as in his other apps ("A project of Rabbi Daniel Bogard").

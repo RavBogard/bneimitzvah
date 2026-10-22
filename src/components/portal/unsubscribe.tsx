@@ -27,7 +27,7 @@ export function UnsubscribePage() {
   }
   const title = view.kind === "done" ? "You’re unsubscribed" : view.kind === "missing" || view.kind === "invalid" ? "This link doesn’t work" : view.kind === "unavailable" ? "Something went wrong" : "Stop these emails?";
   return <div className="portal-shell">
-    <header className="portal-header"><a className="portal-brand" href="/">CRC Beit Mitzvah</a><span>Central Reform Congregation</span></header>
+    <header className="portal-header"><a className="portal-brand" href="/">CRC Torah</a><span>Central Reform Congregation</span></header>
     <main id="portal-main" className="entry-layout">
       <section className="entry-task" aria-labelledby="unsubscribe-title" aria-busy={view.kind === "pending"}>
         <h2 id="unsubscribe-title" ref={heading} tabIndex={-1}>{title}</h2>

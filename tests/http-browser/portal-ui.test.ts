@@ -51,7 +51,7 @@ async function clean(tab: Page, secrets: string[] = []) {
   }, secrets)).toBe(true);
 }
 async function signIn(tab: Page, email: string, invitation = false) {
-  await ui(tab.getByRole("heading", { level: 2, name: "Sign in", exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   if (!invitation) await capture(tab, "sign-in");
   await safe(() => tab.getByLabel("Email address", { exact: true }).fill(email));
   await safe(() => tab.getByRole("button", { name: "Email me a sign-in link", exact: true }).click());
@@ -174,7 +174,7 @@ it("cancellation and acknowledged logout discard late GIS callbacks without post
   signedIn = true; await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
   await ui(tab.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
   signedIn = false; await safe(() => tab.getByRole("button", { name: "Sign out", exact: true }).click());
-  await ui(tab.getByRole("heading", { level: 2, name: "Sign in", exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   await callback(tab, true); expect(posts).toBe(0);
   await ui(tab.getByLabel("Email address")).toBeEnabled();
 });
@@ -207,12 +207,12 @@ it("single-submits a real magic link, shows separate genuine roles without fake 
   // The existing workspace brand is an actual controlled Next router link.
   await ui(tab.getByRole("navigation", { name: "Workspace roles", exact: true })).toBeVisible();
   await tab.evaluate(() => { (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument = true; });
-  await tab.getByRole("link", { name: "CRC Beit Mitzvah", exact: true }).click();
+  await tab.getByRole("link", { name: "CRC Torah", exact: true }).click();
   await ui.poll(() => new URL(tab.url()).pathname).toBe("/"); await referrerPolicy(tab, "strict-origin-when-cross-origin");
   expect(await tab.evaluate(() => (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument), "Workspace brand must preserve the hydrated document").toBe(true);
   await tab.goBack({ waitUntil: "domcontentloaded" }); await ui.poll(() => new URL(tab.url()).pathname).toBe("/workspace/parent"); await referrerPolicy(tab, "no-referrer");
   expect(await tab.evaluate(() => (window as Window & { __r01SpaDocument?: boolean }).__r01SpaDocument), "History back must preserve the same document").toBe(true);
-  await tab.getByRole("link", { name: "CRC Beit Mitzvah", exact: true }).click();
+  await tab.getByRole("link", { name: "CRC Torah", exact: true }).click();
   await ui.poll(() => new URL(tab.url()).pathname).toBe("/"); await ui(tab.getByRole("list", { name: "Available roles", exact: true })).toBeVisible();
   await safe(() => tab.getByRole("button", { name: "Sign out", exact: true }).click());
   await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
