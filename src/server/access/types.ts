@@ -2,6 +2,7 @@ import "server-only";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT, PgTransaction } from "drizzle-orm/pg-core";
 import type * as schema from "../db/index";
+import type { StudentView } from "../data/students";
 
 export type AccessDatabase<Q extends PgQueryResultHKT> = PgDatabase<Q, typeof schema>;
 export type AccessTransaction<Q extends PgQueryResultHKT> = PgTransaction<Q, typeof schema, ExtractTablesWithRelations<typeof schema>>;
@@ -18,6 +19,14 @@ export type VerifiedIdentity = Readonly<{
   membership: Readonly<{ id: string; authorityRevision: number }> | null;
 }>;
 export type StudentActor = Actor & Readonly<{ studentId: string; relationshipId: string | null; relationshipRevision: number | null }>;
+/**
+ * Establishes a staff actor and one live student inside a tenant transaction, as
+ * withStudentCapability does for a cookie session. The portal's own routes build it from the
+ * cookie session; the portal MCP builds it from a live admin connection. The shared services
+ * (reading confirmation, verse sources) do everything after that themselves.
+ */
+export type StudentAuthority<Q extends PgQueryResultHKT> = <T>(studentId: string,
+  action: (tx: AccessTransaction<Q>, actor: StudentActor, student: StudentView) => Promise<T>) => Promise<T>;
 
 // Mutation/revocation composition must choose authority-write before locking,
 // then lock tenant -> user -> session -> membership -> grant -> student -> link.

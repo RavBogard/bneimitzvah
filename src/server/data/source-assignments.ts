@@ -15,6 +15,11 @@ export async function latest<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q
   const [row] = await tx.select().from(t).where(and(eq(t.tenantId, actor.tenantId), eq(t.studentId, actor.studentId), eq(t.assignmentId, selection.assignmentId),
     eq(t.assignmentRevision, selection.assignmentRevision), eq(t.verseRef, verse))).orderBy(desc(t.version)).limit(1); return row ?? null;
 }
+/** The newest version of every verse's sources for one assignment revision (the staff setup view). */
+export async function latestForAssignment<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, studentId: string, assignmentId: string, assignmentRevision: number) {
+  return tx.selectDistinctOn([t.verseRef]).from(t).where(and(eq(t.tenantId, tenantId), eq(t.studentId, studentId), eq(t.assignmentId, assignmentId),
+    eq(t.assignmentRevision, assignmentRevision))).orderBy(t.verseRef, desc(t.version)).limit(1001);
+}
 export async function receipt<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: SourceAssignmentActor, mutationId: string) {
   const [row] = await tx.select().from(t).where(and(eq(t.tenantId, actor.tenantId), eq(t.studentId, actor.studentId), eq(t.actorUserId, actor.userId), eq(t.mutationId, mutationId))).limit(1); return row ?? null;
 }

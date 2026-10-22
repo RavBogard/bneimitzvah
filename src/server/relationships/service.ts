@@ -11,11 +11,37 @@ import type { AdminSelection, EligibleTutor, FlagSelection, LinkSelection } from
 const conflict = () => Object.freeze({ ok: false as const, code: "stale-state" as const });
 function active(value: unknown) { if (value !== "active") throw new AccessDenied(403); }
 function boolean(value: unknown): boolean { if (typeof value !== "boolean") throw new AccessDenied(403); return value; }
-function displayName(value: string, fallback: "Parent" | "Student" | "Tutor" = "Tutor") {
+export function displayName(value: string, fallback: "Parent" | "Student" | "Tutor" = "Tutor") {
   const label = value.trim();
   // This is only the label of an already tenant-authorized tutor, never an
   // arbitrary global-user search. Do not turn email-shaped names into contacts.
   return label.length > 0 && label.length <= 160 && !/[<>@\x00-\x1f\x7f]/.test(label) ? label : fallback;
+}
+
+/**
+ * The one tutor-assignment write, shared by the portal's relationship controls and the portal MCP; the
+ * caller has already established admin authority in this transaction (manage-relationships, or a live
+ * admin MCP connection with the roster consent).
+ */
+export async function writeTutorAssignment<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: Actor, studentId: string, grantId: string) {
+  const subject = await data.subjectGrant(tx, actor.tenantId, grantId, "authority-write");
+  if (subject.grant.role !== "tutor" || subject.grant.revokedAt || subject.membership.disabledAt || !subject.verified) throw new AccessDenied(404);
+  const student = await data.student(tx, actor.tenantId, studentId, "authority-write");
+  if (student.disabledAt) throw new AccessDenied(404);
+  if (await data.activeTutorLink(tx, actor.tenantId, studentId, grantId)) return conflict();
+  const link = await data.insertTutor(tx, actor.tenantId, studentId, grantId);
+  await data.audit(tx, actor, "tutor.assign", link.id, studentId);
+  return Object.freeze({ ok: true as const, id: link.id, studentId, tutorGrantId: grantId });
+}
+/** The one tutor-revocation write, shared like writeTutorAssignment. */
+export async function writeTutorRevocation<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: Actor, studentId: string, linkId: string) {
+  const probe = await data.tutorProbe(tx, actor.tenantId, studentId, linkId);
+  await data.subjectGrant(tx, actor.tenantId, probe.grantId, "authority-write");
+  await data.student(tx, actor.tenantId, studentId, "authority-write");
+  const link = await data.tutorLink(tx, actor.tenantId, studentId, linkId);
+  if (link.revokedAt || !await data.revokeTutor(tx, actor.tenantId, link.id, new Date())) return conflict();
+  await data.audit(tx, actor, "tutor.revoke", link.id, studentId);
+  return Object.freeze({ ok: true as const, id: link.id });
 }
 
 export function createRelationshipService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>> }) {
@@ -53,29 +79,12 @@ export function createRelationshipService<Q extends PgQueryResultHKT>(input: { a
   async function assignTutor(request: CookieMutationRequest, selection: AdminSelection & { studentId: string; tutorGrantId: string; expectedState: "unassigned" }) {
     const studentId = identifier(selection.studentId), grantId = identifier(selection.tutorGrantId);
     if (selection.expectedState !== "unassigned") throw new AccessDenied(403);
-    return write(request, selection, async (tx, actor) => {
-      const subject = await data.subjectGrant(tx, actor.tenantId, grantId, "authority-write");
-      if (subject.grant.role !== "tutor" || subject.grant.revokedAt || subject.membership.disabledAt || !subject.verified) throw new AccessDenied(404);
-      const student = await data.student(tx, actor.tenantId, studentId, "authority-write");
-      if (student.disabledAt) throw new AccessDenied(404);
-      if (await data.activeTutorLink(tx, actor.tenantId, studentId, grantId)) return conflict();
-      const link = await data.insertTutor(tx, actor.tenantId, studentId, grantId);
-      await data.audit(tx, actor, "tutor.assign", link.id, studentId);
-      return Object.freeze({ ok: true as const, id: link.id, studentId, tutorGrantId: grantId });
-    });
+    return write(request, selection, (tx, actor) => writeTutorAssignment(tx, actor, studentId, grantId));
   }
 
   async function revokeTutor(request: CookieMutationRequest, selection: LinkSelection) {
     active(selection.expectedState); const studentId = identifier(selection.studentId), linkId = identifier(selection.linkId);
-    return write(request, selection, async (tx, actor) => {
-      const probe = await data.tutorProbe(tx, actor.tenantId, studentId, linkId);
-      await data.subjectGrant(tx, actor.tenantId, probe.grantId, "authority-write");
-      await data.student(tx, actor.tenantId, studentId, "authority-write");
-      const link = await data.tutorLink(tx, actor.tenantId, studentId, linkId);
-      if (link.revokedAt || !await data.revokeTutor(tx, actor.tenantId, link.id, new Date())) return conflict();
-      await data.audit(tx, actor, "tutor.revoke", link.id, studentId);
-      return Object.freeze({ ok: true as const, id: link.id });
-    });
+    return write(request, selection, (tx, actor) => writeTutorRevocation(tx, actor, studentId, linkId));
   }
 
   async function revokeGuardian(request: CookieMutationRequest, selection: LinkSelection) {

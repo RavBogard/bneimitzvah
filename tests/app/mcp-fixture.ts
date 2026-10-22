@@ -8,6 +8,9 @@ import { createMcpEndpoint } from "../../src/server/mcp/endpoint";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
 import { resolveTenantHost } from "../../src/server/tenancy/resolve";
 import type { HttpRuntime } from "../../src/server/runtime/composition";
+import type { RelatedSourceCatalog } from "../../src/server/study/sources/metadata";
+import type { Calendar, Snapshot } from "../../src/lib/readings/proposals";
+import { parseCeremonyDate } from "../../src/lib/readings/ranges";
 
 // The portal MCP driven end to end through the HTTP dispatcher: register, Google-confirmed consent,
 // token exchange and JSON-RPC tool calls. Callers mock server-only and close fixtures after each test.
@@ -16,12 +19,17 @@ export const ORIGIN = "http://localhost:3000", CALLBACK = "https://claude.ai/api
 const opened: { client: { close(): Promise<void> } }[] = [];
 export const closeMcpFixtures = async () => { await Promise.all(opened.splice(0).map(f => f.client.close())); };
 
-/** `now` is the MCP clock (Date.now when omitted), for plan-token expiry. */
-export async function mcpFixture(enabled = true, now?: () => number) {
+/** A synthetic Hebcal calendar: one regular Shabbat whatever the date (no network). */
+export const syntheticReading = async (date: string, calendar: Calendar): Promise<{ snapshot: Snapshot; fetchedAt: number }> => ({ fetchedAt: Date.now(), snapshot: { date: parseCeremonyDate(date), calendar, classification: "regular",
+  reading: { parashah: "Synthetic", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:1-3" }, { n: 2, ref: "Genesis 1:4-6" }, { n: "M", ref: "Genesis 1:5-6" }],
+    triennial: { year: 1, aliyot: [{ n: 1, ref: "Genesis 1:1-3" }] } }, haftarah: "Isaiah 1:1-3" } });
+
+/** `now` is the MCP clock (Date.now when omitted), for plan-token expiry; `related` and `loadReading` stand in for Sefaria and Hebcal. */
+export async function mcpFixture(enabled = true, now?: () => number, outside: { related?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; loadReading?: typeof syntheticReading } = {}) {
   const f = await accessFixture(); opened.push(f);
   const deployment = { environment: "test" as const, deployment: "suite" };
   const mcp = enabled ? createMcpEndpoint({ db: f.db, access: f.service, practice: createPracticeService({ access: f.service }), secret: randomBytes(48).toString("base64url"),
-    loadText: async () => { throw new Error("no network"); }, related: async () => { throw new Error("no network"); }, now }) : null;
+    loadText: async () => { throw new Error("no network"); }, related: outside.related ?? (async () => { throw new Error("no network"); }), loadReading: outside.loadReading ?? syntheticReading, now }) : null;
   const runtime = { origin: ORIGIN, mcp, resolveHost: (request: Request) => resolveTenantHost(f.db, request, deployment) } as unknown as HttpRuntime;
   const dispatch = createHttpDispatcher(async action => action(runtime));
   /** Mark a fixture session as created by Google sign-in (the hook's job in production). */

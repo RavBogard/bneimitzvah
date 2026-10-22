@@ -20,7 +20,7 @@ export type CurrentVerseCapture = Readonly<{ binding: string; envelope: Readonly
   studentId: string; studentRevision: number; mode: data.SourceAssignmentActor["mode"]; context: import("../practice/types").PracticeContextView | null;
   assignment: Readonly<{ id: string; revision: number; kind: "torah"|"haftarah"; needsReview: boolean }>; verseRef: string }>; live: () => void }>;
 /** Builds the internal transaction callback only; does not select or grant a capability. */
-export function currentVerseCapture<Q extends PgQueryResultHKT,T>(request: Request, selection: validate.SourceAssignmentSelection, verse: string,
+export function currentVerseCapture<Q extends PgQueryResultHKT,T>(request: Readonly<{ signal?: AbortSignal }>, selection: validate.SourceAssignmentSelection, verse: string,
   action:(tx:AccessTransaction<Q>,actor:data.SourceAssignmentActor,capture:CurrentVerseCapture)=>Promise<T>) {
   return async (tx: AccessTransaction<Q>, actor: data.SourceAssignmentActor, student: StudentView) => {
       const live = () => { if (actor.authSessionExpiresAt <= Date.now()) throw new AccessDenied(401);

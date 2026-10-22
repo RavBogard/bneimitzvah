@@ -6,7 +6,8 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypt
 // redirects held to Claude's own callbacks or a loopback. Registration and the pending consent
 // request are HMAC-signed records carrying their own expiry; codes, access and refresh tokens are
 // random and stored only as SHA-256 hashes (mcp_token), so a connection can be revoked.
-// portal:roster (Daniel, 2026-10-21): the Maven roster intake, a consent of its own, admin only and never for a scheduled routine.
+// portal:roster (Daniel, 2026-10-21): the Maven roster intake and student setup (readings, tutors, service slot,
+// rehearsals, verse sources), a consent of its own, admin only and never for a scheduled routine.
 export const SCOPES = { read: "portal:read", study: "portal:study", roster: "portal:roster" } as const;
 export const MCP_PATH = "/api/mcp";
 export const TTL = { client: 10 * 365 * 24 * 3600_000, request: 10 * 60_000, code: 5 * 60_000, access: 3600_000, connection: 30 * 24 * 3600_000, rosterPlan: 30 * 60_000 } as const;

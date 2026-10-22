@@ -292,7 +292,8 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
     now,
     /** The portal Actor shape existing student-access helpers take, for an MCP connection. */
     portalActor(actor: McpActor): Actor {
-      return Object.freeze({ tenantId: actor.tenantId, origin: actor.origin, userId: actor.userId, authSessionId: "", membershipId: actor.membershipId,
+      // The connection stands in for the session, so a binding signed under one connection is refused on any other.
+      return Object.freeze({ tenantId: actor.tenantId, origin: actor.origin, userId: actor.userId, authSessionId: `mcp:${actor.connectionId}`, membershipId: actor.membershipId,
         authSessionExpiresAt: actor.expiresAt, roleGrantId: actor.roleGrantId, roleGrantRevision: actor.roleGrantRevision, mode: actor.role, authorityRevision: actor.authorityRevision });
     },
   });

@@ -15,5 +15,12 @@ Roster intake from Maven (an admin connection with the separate roster permissio
 2. Pass that tool's structured result, unchanged, to propose_roster_changes with the same start and end. It writes nothing.
 3. Show the rabbi the proposed rows as a table: name, ceremony date, the change and the changed fields. A matching name only suggests a student; never decide a reconcile row yourself.
 4. Call apply_roster_changes only after the rabbi says which rows to apply, and for each new student whether a child or an adult and the service slot. Report each row's outcome.
-5. Applying sends no invitations and no e-mail. Inviting families is a separate step the rabbi takes in the portal.`;
+5. Applying sends no invitations and no e-mail. Inviting families is a separate step the rabbi takes in the portal.
+
+Student setup (the same roster permission; never a scheduled routine). Each change only when the rabbi asks for it in this conversation:
+1. Read get_student_setup first; every write takes the revision or version it showed, and a conflict means read again and show the rabbi.
+2. Readings: preview_student_reading, show the rabbi, then set_student_reading with the same arguments (a calendar pick, custom ranges, or keepVerses with new aliyahStarts).
+3. Tutors: list_tutors, then set_student_tutor with the whole new list. Service: set_student_service for the slot and rehearsal dates.
+4. Sources: find_sources for a verse of the confirmed reading, then assign_sources with its ids and catalogHash, or remove_source_assignment.
+5. None of these sends an invitation or an e-mail.`;
 export const SERVER_INFO = Object.freeze({ name: "crc-bnei-mitzvah", version: "1.0.0" });

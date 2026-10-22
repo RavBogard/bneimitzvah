@@ -11,12 +11,15 @@ import { lockRabbi } from "../study-guides/authority";
 import { readableInApp } from "../study-guides/citations";
 import type { createStudyGuideService, RabbiAuthority } from "../study-guides/service";
 import type { RelatedSourceCatalog } from "../study/sources/metadata";
+import type { createDelegatedSourceAssignments } from "../study/source-assignments-service";
+import type { createReadingWork } from "../students/service";
 import type { StudyPage, StudyRequest } from "../study/types";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import * as s from "../db/index";
 import type { createMcpAuthService, McpActor } from "./service";
 import { SCOPES } from "./oauth";
 import { createRosterTools } from "./roster-tools";
+import { createSetupTools } from "./setup-tools";
 
 type JsonSchema = Readonly<Record<string, unknown>>;
 export type ToolResult = Readonly<{ content: readonly Readonly<{ type: "text"; text: string }>[]; isError?: boolean }>;
@@ -25,6 +28,8 @@ export type ToolContext<Q extends PgQueryResultHKT> = Readonly<{
   mcp: ReturnType<typeof createMcpAuthService<Q>>; guides: ReturnType<typeof createStudyGuideService<Q>>;
   loadText: (request: StudyRequest) => Promise<StudyPage>; related: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>;
   db: AccessDatabase<Q>;
+  /** The portal's own reading and verse-source writes, run under a delegated (MCP) authority. */
+  readings: ReturnType<typeof createReadingWork<Q>>; sources: ReturnType<typeof createDelegatedSourceAssignments<Q>>;
 }>;
 export type Tool<Q extends PgQueryResultHKT> = Readonly<{
   name: string; description: string; inputSchema: JsonSchema; annotations: Readonly<Record<string, unknown>>;
@@ -212,6 +217,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
       handler: async (input, ctx) => { requireStudy(ctx); return routineOrigin(ctx, input) ?? outcome(await ctx.guides.setStudentGuide(rabbiAuthority(ctx), input as never)); },
     },
     ...createRosterTools<Q>(),
+    ...createSetupTools<Q>(),
   ] satisfies Tool<Q>[]);
 }
 
