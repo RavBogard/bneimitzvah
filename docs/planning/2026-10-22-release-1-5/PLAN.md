@@ -18,7 +18,7 @@ Each release is merged, deployed, probed and tagged, and gets a STATE GATE line.
 | **1.5 beta** | `claude/learn-to-lein`, `claude/installable`, `claude/sign-in-code`, cutover | <ul><li>Learn to lein: families, this week's occurrences, and hear-and-name. Claude writes the lessons, and they go live at once.</li><li>Recall drills.</li><li>The installable app, with 14-day offline reading and reference audio. PocketTorah clips are never encrypted (CC BY-SA).</li><li>The typed sign-in code.</li><li>The canonical switch to torah.centralreform.org, once the [forwarded steps](../2026-10-22-crc-torah-cutover/FORWARD-STEPS.md) are done.</li></ul> | Auth review for the code; cutover plan below |
 | **Voice** (to 1.5 beta) | `claude/voice-m0`, then off-repo work in C:/private/voice-pilot | <ul><li>M0: guards, the `voice/` folder and the engine timing files.</li><li>M1: Experiment 1. A kill means stop for good.</li><li>M2–M6.</li><li>M7 portal integration: the generated source, live key shift, the label, and report-a-mistake for signed-in people. Everyone hears it after G3.</li><li>M8 operations.</li></ul> | G3: Daniel's blind sample. Production refuses generated audio until the approved release-identity hash is in env. |
 
-The voice track runs in parallel with the portal releases. If it hasn't passed G3 when the rest of 1.5 is ready, 1.5 ships without generated chant; M7's code still merges but stays inert. If the Finkel-voice test falls short, there is no studio session: whatever passes Daniel's blind review ships, and otherwise generated chant waits for 2.0.
+**Daniel, 2026-10-22: "Those all come before the voice generator work."** The voice track waits until 1.2 to 1.5 are released. M0 is paused at a clean point on `claude/voice-m0`. Afterwards, if it hasn't passed G3 when the rest of 1.5 is ready, 1.5 ships without generated chant; M7's code still merges but stays inert. If the Finkel-voice test falls short, there is no studio session: whatever passes Daniel's blind review ships, and otherwise generated chant waits for 2.0.
 
 ## Canonical cutover (torah.centralreform.org), outline
 
@@ -41,11 +41,10 @@ Preconditions:
 ## Order
 
 1. Merge the landing track and apply migrations 0034 and 0035.
-2. Build 1.2 and voice M0 in parallel.
+2. Build 1.2.
 3. Merge 1.2 and tag v1.2.0.
 4. Build 1.3, then tag it.
 5. Build 1.4 with its review, then tag it.
 6. Build the 1.5 slices. Make the cutover when the steps are done.
 7. Tag v1.5.0 (beta).
-
-The voice milestones proceed alongside throughout.
+8. Then the voice track resumes from M0.
