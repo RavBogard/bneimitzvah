@@ -146,7 +146,7 @@ function referenceView(value: ReferenceResolution): JsonValue {
   const verse: JsonValue = v.playback.status === "unavailable" ? { schema: v.schema, ref: v.ref, playback: { status: "unavailable", reason: "asset-not-approved" }, words: { status: "unavailable", reason: "no-playback" } }
     : { schema: v.schema, ref: v.ref, table: "table" in v ? v.table : null,
       playback: { status: v.playback.status, asset: v.playback.asset, clip: { start: v.playback.clip.start, end: v.playback.clip.end }, ...(v.playback.status === "needs-review" ? { review: v.playback.review } : {}) },
-      words: v.words.status === "ready" ? { status: "ready", readingTextSha256: v.words.readingTextSha256, starts: [...v.words.starts] } : { status: "unavailable", reason: v.words.reason },
+      words: v.words.status === "ready" ? { status: "ready", readingTextSha256: v.words.readingTextSha256, starts: [...v.words.starts], ...(v.words.ends ? { ends: [...v.words.ends] } : {}) } : { status: "unavailable", reason: v.words.reason },
       attribution: { ...("attribution" in v ? v.attribution : {}) } };
   return { verse, source: source ? { schema: source.schema, asset: source.asset, url: source.url, sha256: source.sha256, bytes: source.bytes } : null };
 }
@@ -411,7 +411,8 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       case "reading": {
         const query = uniqueQuery(request.url, ["mode"]), value = await runtime.portal.assignedReading(request, { mode: mode(query.get("mode"), true), studentId: id! });
         return privateJson({ student: studentView(value.student), mode: value.mode, context: contextView(value.context),
-          referenceListeningEnabled: runtime.shortReferenceAudio.listeningEnabled(value.mode), readings: value.readings.map(row => ({ id: row.id, status: row.status,
+          referenceListeningEnabled: runtime.shortReferenceAudio.listeningEnabled(value.mode),
+          ...(runtime.shortReferenceAudio.listeningEnabled(value.mode) && runtime.finkelReference?.listeningEnabled(value.mode) ? { finkelListeningEnabled: true } : {}), readings: value.readings.map(row => ({ id: row.id, status: row.status,
           kind: row.kind, basis: row.basis, revision: row.revision, ranges: [...row.ranges], verses: [...row.verses], confirmationDate: row.confirmationDate, needsReview: row.needsReview, aliyahStarts:row.aliyahStarts, readingKey: row.readingKey,
           source: { status: row.source.status, fetchedAt: row.source.fetchedAt, date: row.source.date, calendar: row.source.calendar,
             attribution: row.source.attribution ? { name: row.source.attribution.name, url: row.source.attribution.url } : null } })) });

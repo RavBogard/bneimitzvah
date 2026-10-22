@@ -17,6 +17,7 @@ import { congregationSettingsRouteMethods, handleCongregationSettingsRequest } f
 import { handleLessonLogRequest, lessonLogRouteMethods } from "./lesson-log";
 import { handlePracticeCalendarRequest, practiceCalendarRouteMethods } from "./practice-calendar";
 import { handleRecordingsRequest, recordingsRouteMethods } from "./recordings";
+import { finkelReferenceRouteMethods, handleFinkelReferenceRequest } from "./finkel-reference";
 import { finishReferenceReviewResponse, handleReferenceReviewRequest, referenceReviewRouteMethods } from "./reference-review";
 import { errorResponse, HttpBoundaryError } from "./responses";
 import { finishHonoreeGuestResponse, finishHonoreeManagementResponse, handleHonoreeRequest, honoreeManagementRouteMethods } from "./honoree";
@@ -60,7 +61,7 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
         } catch { return denied(); }
       }
       const managementMethods = honoreeManagementRouteMethods(url.pathname);
-      const methods = managementMethods ?? referenceReviewRouteMethods(url.pathname) ?? serviceEcosystemRouteMethods(url.pathname) ?? honorsRouteMethods(url.pathname) ?? sourceContentRouteMethods(url.pathname) ?? sourceAssignmentsRouteMethods(url.pathname) ?? authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname) ?? serviceLearningRouteMethods(url.pathname) ?? progressRouteMethods(url.pathname) ?? studyGuidesRouteMethods(url.pathname) ?? congregationSettingsRouteMethods(url.pathname) ?? rosterSheetRouteMethods(url.pathname) ?? notificationsRouteMethods(url.pathname) ?? mcpRouteMethods(url.pathname) ?? lessonLogRouteMethods(url.pathname) ?? practiceCalendarRouteMethods(url.pathname) ?? recordingsRouteMethods(url.pathname);
+      const methods = managementMethods ?? referenceReviewRouteMethods(url.pathname) ?? finkelReferenceRouteMethods(url.pathname) ?? serviceEcosystemRouteMethods(url.pathname) ?? honorsRouteMethods(url.pathname) ?? sourceContentRouteMethods(url.pathname) ?? sourceAssignmentsRouteMethods(url.pathname) ?? authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname) ?? serviceLearningRouteMethods(url.pathname) ?? progressRouteMethods(url.pathname) ?? studyGuidesRouteMethods(url.pathname) ?? congregationSettingsRouteMethods(url.pathname) ?? rosterSheetRouteMethods(url.pathname) ?? notificationsRouteMethods(url.pathname) ?? mcpRouteMethods(url.pathname) ?? lessonLogRouteMethods(url.pathname) ?? practiceCalendarRouteMethods(url.pathname) ?? recordingsRouteMethods(url.pathname);
       // No provider configuration or connection required to refuse unowned
       // endpoints (including private SDK session/profile/password APIs).
       if (!methods) throw new HttpBoundaryError(404);
@@ -87,6 +88,8 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
           await runtime.resolveHost(request);
           const referenceReviewResponse = await handleReferenceReviewRequest(request, runtime.referenceReview);
           if (referenceReviewResponse) return referenceReviewResponse;
+          const finkelResponse = await handleFinkelReferenceRequest(request, runtime.finkelReference);
+          if (finkelResponse) return finkelResponse;
           return await handleServiceEcosystemRequest(request, runtime) ?? await handleHonorsRequest(request, runtime) ?? await handleSourceContentRequest(request, runtime) ?? await handleSourceAssignmentsRequest(request, runtime) ?? await handleAuthRequest(request, runtime) ?? await handleStudentWorkRequest(request, runtime) ?? await handleServiceLearningRequest(request, runtime) ?? await handleProgressRequest(request, runtime) ?? await handleStudyGuidesRequest(request, runtime) ?? await handleCongregationSettingsRequest(request, runtime) ?? await handleRosterSheetRequest(request, runtime) ?? await handleNotificationsRequest(request, runtime) ?? await handleMcpRequest(request, runtime) ?? await handleLessonLogRequest(request, runtime) ?? await handlePracticeCalendarRequest(request, runtime) ?? await handleRecordingsRequest(request, runtime) ?? await handlePortalRequest(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
         } catch (error) {
           // Expected HTTP400/413/etc stay inside the scoped runtime callback;

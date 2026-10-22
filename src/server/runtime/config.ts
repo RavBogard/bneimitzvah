@@ -9,6 +9,9 @@ export type RuntimeConfig = Readonly<{
   mail: Readonly<{ apiKey: string; from: string }>;
   referenceAudio?: Readonly<{ catalogSha256: string; storeId: string; studentRelease: boolean }>;
   referenceReview?: Readonly<{ reviewer: ReviewerConfig; storeId: string }>;
+  // Cantor Finkel's recordings: the pinned private manifest in the existing private store.
+  // Its own release switch is required IN ADDITION to the shared reference release (stricter, never looser).
+  referenceFinkel?: Readonly<{ manifestSha256: string; storeId: string; studentRelease: boolean }>;
   serviceMusic?: Readonly<{ url: string; token: string }>;
   serviceCronSecret?:string;
   // The portal MCP answers only when explicitly enabled (after its adversarial review).
@@ -72,6 +75,15 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
         || env.VERCEL_BLOB_API_URL !== undefined || env.NEXT_PUBLIC_VERCEL_BLOB_API_URL !== undefined) throw 0;
       referenceReview = Object.freeze({ reviewer, storeId: env.BLOB_STORE_ID });
     }
+    let referenceFinkel: RuntimeConfig["referenceFinkel"];
+    const finkelRelease = env.REFERENCE_AUDIO_FINKEL_STUDENT_RELEASE;
+    if (finkelRelease !== undefined && finkelRelease !== "true" && finkelRelease !== "false") throw 0;
+    if (env.REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256 === undefined && finkelRelease === "true") throw 0;
+    if (env.REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256 !== undefined) {
+      if (!/^[a-f0-9]{64}$/.test(env.REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256) || typeof env.BLOB_STORE_ID !== "string" || !/^store_[A-Za-z0-9]{8,64}$/.test(env.BLOB_STORE_ID)
+        || env.VERCEL_BLOB_API_URL !== undefined || env.NEXT_PUBLIC_VERCEL_BLOB_API_URL !== undefined) throw 0;
+      referenceFinkel = Object.freeze({ manifestSha256: env.REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256, storeId: env.BLOB_STORE_ID, studentRelease: finkelRelease === "true" });
+    }
     let serviceMusic: RuntimeConfig["serviceMusic"];
     if(env.BEIT_MITZVAH_MUSIC_URL || env.BEIT_MITZVAH_SERVICE_TOKEN){
       if(!clean(env.BEIT_MITZVAH_SERVICE_TOKEN) || env.BEIT_MITZVAH_SERVICE_TOKEN.length<32 || env.BEIT_MITZVAH_SERVICE_TOKEN.length>512 || !clean(env.BEIT_MITZVAH_MUSIC_URL))throw 0;
@@ -88,7 +100,7 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
       rosterSheet = Object.freeze({ serviceAccount: env.GOOGLE_SHEETS_SERVICE_ACCOUNT, sheetId: env.GOOGLE_ROSTER_SHEET_ID });
     if(env.CRON_SECRET!==undefined && (!clean(env.CRON_SECRET) || env.CRON_SECRET.length<32 || env.CRON_SECRET.length>512 || env.CRON_SECRET===serviceMusic?.token || env.CRON_SECRET===env.BETTER_AUTH_SECRET))throw 0;
     return Object.freeze({ deployment: Object.freeze({ environment, deployment: env.PORTAL_DEPLOYMENT }), origin: origin.origin,
-      databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, referenceReview, serviceMusic, serviceCronSecret:env.CRON_SECRET, mcpEnabled: env.PORTAL_MCP_ENABLED === "true", recordingsEnabled: env.PORTAL_RECORDINGS_ENABLED === "true", rosterSheet,
+      databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, referenceReview, referenceFinkel, serviceMusic, serviceCronSecret:env.CRON_SECRET, mcpEnabled: env.PORTAL_MCP_ENABLED === "true", recordingsEnabled: env.PORTAL_RECORDINGS_ENABLED === "true", rosterSheet,
       notificationsEnabled: env.PORTAL_NOTIFICATIONS_ENABLED === "true",
       mail: Object.freeze({ apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM }) });
   } catch { throw new RuntimeUnavailable(); }

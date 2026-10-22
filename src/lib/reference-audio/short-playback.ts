@@ -68,17 +68,22 @@ function waveBuffer(frames: number, channels: number, rate: number): ArrayBuffer
 }
 /** 10ms of zeros only. Explicit gesture preparation, never source audio. */
 export function shortSilentPrime(): Blob { return new Blob([waveBuffer(80, 1, 8000)], { type: "audio/wav" }); }
-/** Physical onset interval, not a measured phonetic word end. No resampling or
- * geometry clamp. PCM16 uses ordinary saturating sample quantization only. */
+/** Raised-cosine fade at each end of a word cut, so a cut inside sound does not click. */
+export const SHORT_WORD_FADE_SECONDS = 0.005;
+/** The word interval the timeline gives (measured end, or the next onset). No resampling or geometry
+ * clamp. PCM16 uses ordinary saturating sample quantization; each end gets a 5 ms raised-cosine fade
+ * (shorter for a cut under 10 ms: half its length). */
 export function shortWordWav(decoded: ShortDecodedAudio, source: ShortReferenceSource, first: number, end: number): Blob {
   validateShortDecodedAudio(decoded, source);
   if (!Number.isSafeInteger(first) || !Number.isSafeInteger(end) || first < 0 || end > decoded.length || end <= first || end - first > source.sampleRate * SHORT_SOURCE_LIMITS.seconds) throw unavailable();
   const bytes = waveBuffer(end - first, source.channels, source.sampleRate), view = new DataView(bytes);
   const channels = Array.from({ length: source.channels }, (_, i) => decoded.getChannelData(i));
   if (channels.some(data => !(data instanceof Float32Array) || data.length !== source.presentationFrames)) throw unavailable();
+  const fade = Math.min(Math.round(source.sampleRate * SHORT_WORD_FADE_SECONDS), Math.floor((end - first) / 2));
+  const gain = (k: number) => k < fade ? 0.5 - 0.5 * Math.cos(Math.PI * k / fade) : 1;
   for (let frame = first; frame < end; frame++) for (let channel = 0; channel < source.channels; channel++) {
     const value = channels[channel][frame]; if (!Number.isFinite(value)) throw unavailable();
-    const sample = Math.max(-1, Math.min(1, value)); view.setInt16(44 + ((frame - first) * source.channels + channel) * 2, Math.round(sample * (sample < 0 ? 32768 : 32767)), true);
+    const sample = Math.max(-1, Math.min(1, value * gain(frame - first) * gain(end - 1 - frame))); view.setInt16(44 + ((frame - first) * source.channels + channel) * 2, Math.round(sample * (sample < 0 ? 32768 : 32767)), true);
   }
   return new Blob([bytes], { type: "audio/wav" });
 }
