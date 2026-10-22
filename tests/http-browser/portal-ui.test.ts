@@ -346,7 +346,34 @@ it("Try Google again starts a fresh GIS attempt in place without reloading the s
   await safe(() => tab.getByRole("button", { name: "Try Google again", exact: true }).click());
   await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
   expect(await tab.evaluate(() => (window as Window & { __sameDocument?: boolean }).__sameDocument === true)).toBe(true);
-  expect(challenges).toBe(before + 1);
+  // A focus/visibility refresh may remount the button too; at least the retry's own challenge was asked.
+  expect(challenges).toBeGreaterThanOrEqual(before + 1);
+});
+
+it("a retried attempt never posts the previous attempt's late GIS credential", async () => {
+  const tab = await page(); await installGoogleBoundary(tab); let posts = 0;
+  await tab.route("**/api/auth/sign-in/social", async route => { posts++; await route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"authentication"}' }); });
+  await navigate(tab, "/sign-in"); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
+  await safe(() => tab.getByRole("button", { name: "Continue with Google", exact: true }).click());
+  await safe(() => tab.getByRole("button", { name: "Cancel Google sign-in", exact: true }).click());
+  await safe(() => tab.evaluate(() => {
+    const state = window as Window & { __syntheticGoogleCallback?: unknown; __oldSyntheticGoogleCallback?: unknown };
+    state.__oldSyntheticGoogleCallback = state.__syntheticGoogleCallback;
+  }));
+  await safe(() => tab.getByRole("button", { name: "Try Google again", exact: true }).click());
+  await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
+  await callback(tab, true); expect(posts).toBe(0);
+});
+
+it("the sign-in page offers Google in this window, which asks the portal for Google's address and goes there", async () => {
+  const tab = await page(true); const asked: unknown[] = [];
+  await tab.route("**/api/auth/google/redirect", route => { asked.push(route.request().postDataJSON());
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ url: "https://accounts.google.com/o/oauth2/v2/auth?client_id=synthetic&state=synthetic" }) }); });
+  await navigate(tab, "/sign-in?intent=account");
+  const leaving = tab.waitForRequest(request => request.url().startsWith("https://accounts.google.com/o/oauth2/v2/auth?"), { timeout: 30_000 });
+  await safe(() => tab.getByRole("button", { name: "Continue with Google in this window", exact: true }).click());
+  await safe(() => leaving);
+  expect(asked).toEqual([{ next: "account" }]);
 });
 
 describe("Connect Claude consent page on a phone", () => {
@@ -372,6 +399,9 @@ describe("Connect Claude consent page on a phone", () => {
     await ui(tab.getByText("Google sign-in didn’t open here.", { exact: true })).toBeVisible();
     await ui(tab.getByText(phoneHelp, { exact: true })).toBeVisible();
     await ui(tab.getByText(/within 15 minutes\.$/)).toBeVisible();
+    await ui(tab.getByRole("button", { name: "Continue with Google in this window", exact: true })).toBeVisible();
+    // "Open in Chrome" from a Custom Tab: another tab of the same browser, after Google failed here.
+    const chrome = await tab.context().newPage(); await consentRoutes(chrome, {}); await navigate(chrome, "/connect"); await heading(chrome, "Claude wants to connect"); await chrome.close();
     expect(await tab.locator("main").textContent()).not.toMatch(/email/i);
     expect(new URL(tab.url()).hash).toBe("");
     await safe(() => tab.evaluate(() => { (window as Window & { __sameDocument?: boolean }).__sameDocument = true; }));
@@ -391,6 +421,20 @@ describe("Connect Claude consent page on a phone", () => {
     expect(seen.length).toBe(asked);
   });
 
+  it("Continue with Google in this window keeps the request in this tab for the return from Google", async () => {
+    const tab = await page(true), seen = await consentRoutes(tab, {}), asked: unknown[] = [];
+    await tab.route("**/api/auth/google/redirect", route => { asked.push(route.request().postDataJSON());
+      return route.fulfill({ contentType: "application/json", body: JSON.stringify({ url: "https://accounts.google.com/o/oauth2/v2/auth?client_id=synthetic&state=synthetic" }) }); });
+    await navigate(tab, `/connect#request=${pending}`); await heading(tab, "Claude wants to connect");
+    const leaving = tab.waitForRequest(request => request.url().startsWith("https://accounts.google.com/o/oauth2/v2/auth?"), { timeout: 30_000 });
+    await safe(() => tab.getByRole("button", { name: "Continue with Google in this window", exact: true }).click());
+    await safe(() => leaving);
+    expect(asked).toEqual([{ next: "connect" }]);
+    // Google returns to /connect in this same tab (the harness aborts the real trip).
+    await navigate(tab, "/connect"); await heading(tab, "Claude wants to connect");
+    expect(views(seen).at(-1)).toBe(pending);
+  });
+
   it("forgets the stored request after Allow and after an expired answer, and a fresh fragment wins", async () => {
     const tab = await page(true); let expired = false;
     const seen = await consentRoutes(tab, { view: () => expired ? { error: "expired" } : { clientName: "Claude", destination: "claude.ai", account: staff },
@@ -405,7 +449,8 @@ describe("Connect Claude consent page on a phone", () => {
     await navigate(tab, "/connect"); await heading(tab, "This request has expired");
     expect(views(seen).length).toBe(asked);
     const other = "synthetic.other-request_B2";
-    await navigate(tab, `/connect#request=${other}`); await heading(tab, "Claude wants to connect");
+    // A fragment-only change to the same URL would not reload the page; start a fresh document.
+    await navigate(tab, "about:blank"); await navigate(tab, `/connect#request=${other}`); await heading(tab, "Claude wants to connect");
     expired = true; await navigate(tab, "/connect"); await heading(tab, "This request has expired");
     expect([...new Set(views(seen))]).toEqual([pending, other]);
     const askedAfterExpiry = views(seen).length;

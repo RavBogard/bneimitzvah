@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GoogleSignIn } from "./google-sign-in";
-import { forgetPendingRequest, resolvePendingRequest } from "./pending-request";
+import { browserStores, forgetPendingRequest, rememberPendingRequest, resolvePendingRequest } from "./pending-request";
 
 // The portal MCP consent page (Decided here, 2026-10-21). Claude sends the staff member here with
 // a signed request in the URL fragment; Google sign-in proves who they are; Allow returns Claude a code.
@@ -28,11 +28,12 @@ const safeRedirect = (value: unknown) => {
   } catch { return null; }
 };
 
-// Custom Tabs share Chrome's cookies, and the consent view accepts a Google sign-in from the last
-// 15 minutes (GOOGLE_CONSENT_WINDOW_MS), so signing in to the portal in Chrome first needs no popup here.
+// Custom Tabs share Chrome's cookies, and the consent view accepts a session Google created in the
+// last 15 minutes (GOOGLE_CONSENT_WINDOW_MS). An older or email-link session never gains that marker,
+// so the second line says to sign out first.
 const PHONE_HELP = [
   "On a phone, if Google won’t open inside Claude, use the ⋮ menu to open this page in Chrome (or Safari), then continue there.",
-  "Or sign in to the portal with Google in Chrome first, then come back to Claude and choose Connect again within 15 minutes.",
+  "Or, in Chrome, sign out of the portal and sign in again with Google, then come back to Claude and choose Connect again within 15 minutes.",
 ] as const;
 
 export function ConnectClaude() {
@@ -51,8 +52,8 @@ export function ConnectClaude() {
     } catch { setView({ kind: "unavailable" }); }
   }, []);
   useEffect(() => {
-    // The signed request leaves the address bar at once. A ten-minute copy in this browser's storage
-    // lets a reload or "Open in Chrome" finish; the server still checks its signature and expiry.
+    // The signed request leaves the address bar at once. A ten-minute copy in this tab's storage lets a
+    // reload or a Google round trip finish; the server still checks its signature and expiry.
     request.current = resolvePendingRequest(window.location.hash);
     if (window.location.hash) window.history.replaceState(null, "", window.location.pathname);
     void load();
@@ -101,7 +102,10 @@ export function ConnectClaude() {
             <GoogleSignIn disabled={busy} onBegin={() => true} onFinish={() => { setMessage(""); void load(); }}
               waitingText="Continue in the Google window. If it didn’t open, cancel and try again."
               failureText="Google sign-in didn’t open here."
-              failureHelp={PHONE_HELP} />
+              failureHelp={PHONE_HELP} redirectNext="connect"
+              // Only once Google has failed here may "Open in Chrome" (another tab) need the request.
+              onFailed={() => { if (request.current) rememberPendingRequest(request.current, browserStores()); }}
+              beforeRedirect={() => { if (request.current) rememberPendingRequest(request.current); }} />
           </>}
           {signedInWithGoogle && !staff && <p className="field-help">Only CRC clergy, staff and tutors can connect Claude. You’re signed in as {account!.name}.</p>}
           {signedInWithGoogle && staff && <>

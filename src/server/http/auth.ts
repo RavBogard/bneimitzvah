@@ -7,17 +7,25 @@ import { AccessDenied } from "../access/errors";
 import { requireCookieMutation } from "./mutations";
 import { readJsonBody } from "./body";
 import { closedObject, uniqueQuery } from "./query";
-import { appendSdkCookies, errorResponse, HttpBoundaryError, privateJson } from "./responses";
+import { appendSdkCookies, errorResponse, HttpBoundaryError, privateJson, privateRedirect } from "./responses";
 import { GoogleChallengeLimited } from "./google-challenge";
 
 const methods: Record<string, readonly string[]> = {
   "/api/auth/sign-in/magic-link": ["POST"], "/api/auth/sign-in/social": ["POST"], "/api/auth/sign-out": ["POST"],
   "/api/auth/email/confirm": ["POST"], "/api/auth/google/challenge": ["POST"], "/api/invitations/open": ["POST"],
+  // Redirect-mode Google (Decided here, 2026-10-21): for browsers where the GIS popup fails.
+  "/api/auth/google/redirect": ["POST"], "/api/auth/callback/google": ["GET"],
 };
 export function authRouteMethods(pathname: string): readonly string[] | null {
   return Object.hasOwn(methods, pathname) ? methods[pathname] : null;
 }
 const successPaths = new Set(["/", "/invitations/accept", "/account"]);
+// Where a redirect-mode Google sign-in may land. The SDK's own Location is never relayed.
+type GoogleReturn = "/" | "/invitations/accept" | "/account" | "/connect";
+const googleReturnPaths = new Set<string>(["/", "/invitations/accept", "/account", "/connect"]);
+const GOOGLE_AUTHORIZATION = "https://accounts.google.com/o/oauth2/v2/auth";
+// The only callback parameters the SDK reads; Google's others (scope, authuser, hd, prompt) are dropped.
+const googleCallbackKeys = ["code", "state", "error", "error_description", "iss"] as const;
 function sdkHeaders(request: Request, origin: string): Headers {
   // Closed reconstruction: no caller IP/bucket/forwarded fields reach the SDK.
   const headers = new Headers();
@@ -29,16 +37,38 @@ function sdkHeaders(request: Request, origin: string): Headers {
   headers.set(AUTH_RATE_LIMIT_HEADER, `2001:0db8:${namespace.match(/.{4}/g)!.join(":")}`);
   return headers;
 }
-function sdkRequest(request: Request, body: Record<string, unknown>, origin: string): Request {
+function sdkRequest(request: Request, body: Record<string, unknown>, origin: string, url: string = request.url): Request {
   const headers = sdkHeaders(request, origin);
   headers.set("content-type", "application/json");
-  return new Request(request.url, { method: "POST", headers, body: JSON.stringify(body), signal: request.signal });
+  return new Request(url, { method: "POST", headers, body: JSON.stringify(body), signal: request.signal });
 }
 function cookies(projected: Response, sdk: Response, origin: string): Response {
   appendSdkCookies(projected.headers, sdk.headers, origin);
   return projected;
 }
 function discard(response: Response) { void response.body?.cancel().catch(() => {}); }
+/** Google's return to /api/auth/callback/google: the SDK checks state (signed cookie and stored verification) and PKCE. */
+async function googleCallback(request: Request, runtime: HttpRuntime): Promise<Response> {
+  const failed = () => privateRedirect("/sign-in?error=authentication");
+  if (!runtime.auth.options.socialProviders?.google) return failed();
+  const incoming = new URL(request.url), internal = new URL("/api/auth/callback/google", runtime.origin);
+  for (const key of googleCallbackKeys) {
+    const values = incoming.searchParams.getAll(key);
+    if (values.length > 1 || values.some(value => value.length > 1024 || /[\u0000-\u001f\u007f]/.test(value))) return failed();
+    if (values.length) internal.searchParams.set(key, values[0]);
+  }
+  const sdk = await runtime.auth.handler(new Request(internal, { headers: sdkHeaders(request, runtime.origin), signal: request.signal }));
+  try {
+    const location = sdk.headers.get("location");
+    if (sdk.status >= 300 && sdk.status < 400 && location && location.length <= 2048) {
+      const target = new URL(location, runtime.origin);
+      if (target.origin === runtime.origin && !target.username && !target.password && !target.search && !target.hash && googleReturnPaths.has(target.pathname)) {
+        return cookies(privateRedirect(target.pathname as GoogleReturn), sdk, runtime.origin);
+      }
+    }
+    return failed();
+  } finally { discard(sdk); }
+}
 const failure = () => privateJson({ error: "authentication" }, 400);
 function magicResponse(sdk: Response, runtime: HttpRuntime): Response {
   try {
@@ -70,6 +100,8 @@ export async function handleAuthRequest(request: Request, runtime: HttpRuntime):
   if (!allowed) return null;
   if (!allowed.includes(request.method)) throw new HttpBoundaryError(405);
   if (path !== "/api/auth/sign-out" && request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
+  // A top-level cross-site navigation back from Google, not a portal mutation.
+  if (path === "/api/auth/callback/google") return googleCallback(request, runtime);
   uniqueQuery(request.url, []);
   requireCookieMutation(request, runtime.origin);
   const raw = await readJsonBody(request); // Entire envelope stays within 16 KiB.
@@ -122,6 +154,29 @@ export async function handleAuthRequest(request: Request, runtime: HttpRuntime):
       if (error instanceof GoogleChallengeLimited) return privateJson({ error: "rate-limited" }, 429);
       throw error;
     }
+  }
+  if (path === "/api/auth/google/redirect") {
+    const body = closedObject(raw, [], ["next"]);
+    if (Object.hasOwn(body, "next") && body.next !== "connect" && body.next !== "account") throw new HttpBoundaryError();
+    if (!runtime.auth.options.socialProviders?.google) return errorResponse(undefined);
+    let budget: string;
+    try { budget = await runtime.googleChallenges.limit(request); }
+    catch (error) { if (error instanceof GoogleChallengeLimited) return privateJson({ error: "rate-limited" }, 429); throw error; }
+    const next: GoogleReturn = body.next === "connect" ? "/connect" : callback === "/invitations/accept" ? callback : body.next === "account" ? "/account" : "/";
+    const sdk = await runtime.auth.handler(sdkRequest(request, { provider: "google", callbackURL: next, newUserCallbackURL: next, errorCallbackURL: "/sign-in", disableRedirect: true },
+      runtime.origin, new URL("/api/auth/sign-in/social", runtime.origin).href));
+    try {
+      if (sdk.status === 429) return privateJson({ error: "rate-limited" }, 429);
+      if (sdk.status !== 200 || sdk.headers.has("location")) return sdk.status >= 500 ? errorResponse(undefined) : failure();
+      const value: unknown = await sdk.json();
+      const url = value && typeof value === "object" && typeof (value as { url?: unknown }).url === "string" ? (value as { url: string }).url : "";
+      if (url.length > 4096 || !url.startsWith(`${GOOGLE_AUTHORIZATION}?`)) return errorResponse(undefined);
+      const target = new URL(url);
+      if (target.origin !== "https://accounts.google.com" || target.pathname !== "/o/oauth2/v2/auth" || target.username || target.password || target.hash) return errorResponse(undefined);
+      const response = cookies(privateJson({ url: target.href }), sdk, runtime.origin);
+      response.headers.append("set-cookie", budget);
+      return response;
+    } finally { discard(sdk); }
   }
   const body = closedObject(raw, ["credential", "challengeId", "csrfToken"]);
   if (!credentialValid(body.credential)) throw new HttpBoundaryError();
