@@ -21,7 +21,7 @@ import { errorResponse, HttpBoundaryError } from "./responses";
 import { finishHonoreeGuestResponse, finishHonoreeManagementResponse, handleHonoreeRequest, honoreeManagementRouteMethods } from "./honoree";
 
 export type HttpRuntimeScope = (action: (runtime: HttpRuntime) => Promise<Response>) => Promise<Response>;
-function cookieBoundary(request: Request) {
+function cookieBoundary(request: Request, duplicates = false) {
   const cookie = request.headers.get("cookie");
   if (cookie === null) return;
   if (Buffer.byteLength(cookie) > 16 * 1024 || /[\x00-\x1f\x7f]/.test(cookie)) throw new HttpBoundaryError();
@@ -29,7 +29,7 @@ function cookieBoundary(request: Request) {
   for (const part of cookie.split(";")) {
     const pair = part.trim(); if (!pair) continue;
     const equal = pair.indexOf("="); const name = pair.slice(0, equal);
-    if (equal < 1 || !/^[!#$%&'*+\-.^_`|~A-Za-z0-9]+$/.test(name) || names.has(name)) throw new HttpBoundaryError();
+    if (equal < 1 || !/^[!#$%&'*+\-.^_`|~A-Za-z0-9]+$/.test(name) || (names.has(name) && !duplicates)) throw new HttpBoundaryError();
     names.add(name);
   }
 }
@@ -68,8 +68,10 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
         response.headers.set("allow", methods.join(", "));
         return response;
       }
-      if (request.url.length > 2048) throw new HttpBoundaryError();
-      cookieBoundary(request);
+      // Google controls its return's query (scopes are echoed), and a tossed duplicate cookie must not
+      // stop the handler from consuming the state: both checks are relaxed for that one route only.
+      if (request.url.length > (googleReturn ? 8192 : 2048)) throw new HttpBoundaryError();
+      cookieBoundary(request, googleReturn);
       if (managementMethods) {
         const response = await withRuntime(async runtime => {
           try {

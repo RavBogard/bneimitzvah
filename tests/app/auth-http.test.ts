@@ -391,6 +391,20 @@ test("redirect-mode Google spends the popup challenge budget, keeps each return 
   await f.dispatch(f.request(callbackPath(b.state), undefined, { cookie: b.cookie }));
   const bucketB = (f.sdk.mock.calls.at(-1)![0] as Request).headers.get(AUTH_RATE_LIMIT_HEADER);
   expect(new Set([start, bucketA, bucketB]).size).toBe(3);
+  // A victim holding their own signed state cookie for another sign-in, or a tossed duplicate cookie,
+  // still consumes the attacker's state; Google's long scope echo is accepted on this route.
+  const exchanged = googleTokenEndpoint();
+  for (const extra of ["other-state", "duplicate"] as const) {
+    const attacker = await startGoogle(f, {}), victim = await startGoogle(f, {});
+    const cookie = extra === "other-state" ? victim.cookie : `${victim.cookie}; portal_google_return=home; portal_google_return=connect`;
+    expect((await f.dispatch(f.request(callbackPath(attacker.state), undefined, { cookie }))).headers.get("location")).toBe("/sign-in?error=authentication");
+    const before = exchanged.length;
+    expect((await f.dispatch(f.request(callbackPath(attacker.state), undefined, { cookie: attacker.cookie }))).headers.get("location")).toBe("/sign-in?error=authentication");
+    expect(exchanged.length).toBe(before);
+  }
+  const long = await startGoogle(f, {}), scope = encodeURIComponent(Array.from({ length: 60 }, (_, index) => `https://www.googleapis.com/auth/synthetic.scope${index}`).join(" "));
+  const echoed = await f.dispatch(f.request(callbackPath(long.state, `&scope=${scope}`), undefined, { cookie: long.cookie }));
+  expect(echoed.headers.get("location")).toBe("/");
   const absent = await fixture(undefined, false);
   expect((await absent.dispatch(absent.request("/api/auth/google/redirect", {}))).status).toBe(503);
   const back = await absent.dispatch(absent.request("/api/auth/callback/google?code=synthetic&state=synthetic"));

@@ -55,7 +55,10 @@ export function googleCallbackFailure(request: Request): Response {
  * in place; checking first lets a return from the wrong browser consume the state instead.
  */
 function stateBound(request: Request, origin: string, state: string, secret: string): boolean {
-  const raw = requestCookies(request).get(`${origin.startsWith("https:") ? "__Secure-" : ""}better-auth.state`);
+  const header = request.headers.get("cookie") ?? "", jar = requestCookies(request);
+  // Any duplicated cookie name (for example one tossed from a sibling subdomain) counts as unbound.
+  if (Buffer.byteLength(header) > 16 * 1024 || /[\x00-\x1f\x7f]/.test(header) || [...jar.values()].includes(null)) return false;
+  const raw = jar.get(`${origin.startsWith("https:") ? "__Secure-" : ""}better-auth.state`);
   if (!raw) return false;
   let value: string;
   try { value = decodeURIComponent(raw); } catch { return false; }
@@ -98,23 +101,27 @@ async function googleCallback(request: Request, runtime: HttpRuntime): Promise<R
   const secure = runtime.origin.startsWith("https:");
   const started = requestCookies(request).has(GOOGLE_RETURN_COOKIE);
   const failed = () => { const response = googleCallbackFailure(request); if (started) response.headers.append("set-cookie", returnCookie("", secure)); return response; };
+  // The state is read first, so every refusal below can consume it (the code may already be in a log).
+  // The SDK mints 32 characters from this alphabet; IdP-initiated sign-in (no state) is not used.
+  let incoming: URL | undefined;
+  try { incoming = new URL(request.url); } catch { return failed(); }
+  const states = incoming.searchParams.getAll("state");
+  const state = states.length === 1 && /^[A-Za-z0-9_-]{32}$/.test(states[0]) ? states[0] : null;
+  const refuse = async () => {
+    // The pinned SDK's state identifier (better-auth 1.7.10, state.mjs getAuthStateVerificationIdentifier).
+    if (state) try { await (await runtime.auth.$context).internalAdapter.deleteVerificationByIdentifier(`auth-state:${state}`); } catch { /* still refused */ }
+    return failed();
+  };
   try {
-    if (!runtime.auth.options.socialProviders?.google) return failed();
-    const incoming = new URL(request.url), internal = new URL("/api/auth/callback/google", runtime.origin);
+    if (!runtime.auth.options.socialProviders?.google || !state) return await refuse();
+    const internal = new URL("/api/auth/callback/google", runtime.origin);
     for (const key of googleCallbackKeys) {
       const values = incoming.searchParams.getAll(key);
-      if (values.length > 1 || values.some(value => value.length > 1024 || /[\u0000-\u001f\u007f]/.test(value))) return failed();
+      if (values.length > 1 || values.some(value => value.length > 1024 || /[\u0000-\u001f\u007f]/.test(value))) return await refuse();
       if (values.length) internal.searchParams.set(key, values[0]);
     }
-    const state = internal.searchParams.get("state");
-    // The SDK mints 32 characters from this alphabet; IdP-initiated sign-in (no state) is not used.
-    if (state === null || !/^[A-Za-z0-9_-]{32}$/.test(state)) return failed();
     const context = await runtime.auth.$context;
-    if (!stateBound(request, runtime.origin, state, context.secret)) {
-      // The pinned SDK's state identifier (better-auth 1.7.10, state.mjs getAuthStateVerificationIdentifier).
-      await context.internalAdapter.deleteVerificationByIdentifier(`auth-state:${state}`);
-      return failed();
-    }
+    if (!stateBound(request, runtime.origin, state, context.secret)) return await refuse();
     const sdk = await runtime.auth.handler(new Request(internal, { headers: sdkHeaders(request, runtime.origin, `callback:${state}`), signal: request.signal }));
     try {
       const location = sdk.headers.get("location");
@@ -128,7 +135,7 @@ async function googleCallback(request: Request, runtime: HttpRuntime): Promise<R
       }
       return failed();
     } finally { discard(sdk); }
-  } catch { return failed(); }
+  } catch { return refuse(); }
 }
 const failure = () => privateJson({ error: "authentication" }, 400);
 function magicResponse(sdk: Response, runtime: HttpRuntime): Response {
