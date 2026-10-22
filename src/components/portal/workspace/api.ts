@@ -16,7 +16,9 @@ export type Context = { id: string; authorityRevision: number; studentId: string
 export type Selection = { handle: string; context: Context };
 export type Reading = { id: string; kind: "torah" | "haftarah"; revision: number; ranges: string[]; verses: string[]; needsReview: boolean; aliyahStarts:string[]|null; readingKey?: string | null;
   source: { status: "available" | "unavailable" | "unknown"; fetchedAt: number | null; date: string | null; calendar: "diaspora" | "israel" | null; attribution: { name: "Hebcal"; url: "https://www.hebcal.com/" } | null }; confirmationDate: string | null; basis: string };
-export type Assigned = { student: Student; mode: ReadingMode; context: Context | null; readings: Reading[]; referenceListeningEnabled?: boolean };
+export type Assigned = { student: Student; mode: ReadingMode; context: Context | null; readings: Reading[]; referenceListeningEnabled?: boolean;
+  /** Cantor Finkel's recordings are configured and this mode may hear them (same release rule). Present only when true. */
+  finkelListeningEnabled?: true };
 const bad = (): never => { throw new PortalRequestError(503); };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function identifier(value: unknown): string { if (typeof value !== "string" || !uuid.test(value)) return bad(); return value; }
@@ -96,8 +98,10 @@ export function parseSelection(value: unknown, studentId: string): Selection {
 }
 export function parseAssigned(value: unknown, mode: ReadingMode, studentId: string, selection?: Selection): Assigned {
   const hasListeningHint = !!value && typeof value === "object" && Object.hasOwn(value, "referenceListeningEnabled");
-  const row = object(value, ["student", "mode", "context", "readings", ...(hasListeningHint ? ["referenceListeningEnabled"] : [])]), student = studentFields(object(row.student, studentKeysOf(row.student)));
+  const hasFinkelHint = !!value && typeof value === "object" && Object.hasOwn(value, "finkelListeningEnabled");
+  const row = object(value, ["student", "mode", "context", "readings", ...(hasListeningHint ? ["referenceListeningEnabled"] : []), ...(hasFinkelHint ? ["finkelListeningEnabled"] : [])]), student = studentFields(object(row.student, studentKeysOf(row.student)));
   if (hasListeningHint && typeof row.referenceListeningEnabled !== "boolean") return bad();
+  if (hasFinkelHint && row.finkelListeningEnabled !== true) return bad();
   if (student.id !== studentId || row.mode !== mode || !Array.isArray(row.readings) || row.readings.length > 2) return bad();
   const context = mode === "child-practice" ? parseContext(row.context, studentId) : null;
   // Student revision is refreshed metadata; the stable authority binding is
@@ -121,7 +125,7 @@ export function parseAssigned(value: unknown, mode: ReadingMode, studentId: stri
         date: s.date === null ? null : date(s.date), calendar: s.calendar as "diaspora" | "israel" | null, attribution } };
   });
   if (new Set(readings.map(r => r.kind)).size !== readings.length) return bad();
-  return { student, mode, context, referenceListeningEnabled: row.referenceListeningEnabled === true, readings: readings.sort((a, b) => a.kind === b.kind ? 0 : a.kind === "torah" ? -1 : 1) };
+  return { student, mode, context, referenceListeningEnabled: row.referenceListeningEnabled === true, ...(hasFinkelHint ? { finkelListeningEnabled: true as const } : {}), readings: readings.sort((a, b) => a.kind === b.kind ? 0 : a.kind === "torah" ? -1 : 1) };
 }
 
 export async function call(path: string, body?: object, handle?: string, signal?: AbortSignal, max = 256 * 1024): Promise<unknown> {
