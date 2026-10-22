@@ -108,8 +108,11 @@ it("shows a student's Maven link in the roster sheet and unlinks it there", asyn
   const connection = await connect("admin", "portal:read portal:roster");
   const [identity] = await fixture.ownerDb.insert(s.studentSourceIdentity).values({ tenantId: "crc", sourceNamespace: "maven", sourceRecordId: "SYN000000000000042", studentId: fixture.student.id,
     createdByUserId: fixture.admin.id, createdByMembershipId: connection.member.id, roleGrantId: connection.grant.id, role: "admin", mcpConnectionId: connection.id, linkKind: "linked" }).returning();
+  // One sign-in for both sizes: magic links are rate limited per address.
+  const tab = await page("admin", true);
   for (const mobile of [true, false]) {
-    const tab = await page("admin", mobile); await navigate(tab, "/workspace/admin/students");
+    if (!mobile) await safe(() => tab.setViewportSize({ width: 1440, height: 1000 }));
+    await navigate(tab, "/workspace/admin/students");
     const sheet = tab.getByRole("dialog");
     await safe(() => main(tab).getByRole("button", { name: "Edit details for Synthetic Learner", exact: true }).click());
     await ui(sheet.getByRole("heading", { name: "Maven record", exact: true })).toBeVisible();
@@ -124,8 +127,5 @@ it("shows a student's Maven link in the roster sheet and unlinks it there", asyn
   const [row] = await fixture.ownerDb.select().from(s.studentSourceIdentity).where(eq(s.studentSourceIdentity.id, identity.id));
   expect(row).toMatchObject({ revokedChannel: "web", revokedMcpConnectionId: null, revokedByUserId: fixture.admin.id });
   expect(row.revokedAt).not.toBeNull();
-  // A tutor neither reads nor undoes a link.
-  const tutor = await page("tutor");
-  expect((await api(tutor, `/api/admin/maven-link?studentId=${fixture.student.id}`)).status).toBe(403);
-  expect((await api(tutor, "/api/admin/maven-link/unlink", { studentId: fixture.student.id, mavenContactId: "SYN000000000000042" })).status).toBe(403);
+  // (A tutor's refusal on both routes is covered in tests/app/maven-unlink.test.ts; another sign-in here would meet the sign-in rate limit.)
 });
