@@ -1,11 +1,15 @@
 // Reference-audio ingestion contract: validates a private PocketTorah verse index
-// (pockettorah-verse-index/v1), maps its aligned words onto the portal's own reading words, and builds
+// (pockettorah-verse-index/v1, or v2 with refined word boundaries), maps its aligned words onto the portal's own reading words, and builds
 // the small client-safe verse DTO a reviewed player adapter may serve. No I/O; only node:crypto. The
 // index's Hebrew is alignment evidence only; the portal's licensed study text stays the authority for
 // what a word is. See docs/planning/2026-10-17-reference-audio/REFERENCE-AUDIO-CONTRACT.md.
 import { createHash } from "node:crypto";
 
 export const INDEX_SCHEMA = "pockettorah-verse-index/v1";
+/** v2 adds, per word, the refined start's measured end and the original CTC onset (scripts/reference-boundary-refine.mjs). */
+export const INDEX_SCHEMA_V2 = "pockettorah-verse-index/v2";
+/** A v2 start may differ from its CTC onset only inside this window (seconds); anything else is refused. */
+export const WORD_MOVE_BOUNDS = Object.freeze({ backS: 0.120, forwardS: 0.060 });
 export const DTO_SCHEMA = "reference-verse/v1";
 
 /** Seconds. Every bound is checked inclusively with EPSILON where stated; nothing is ever clamped. */
@@ -56,6 +60,7 @@ const MAQAF = "־", PASEQ = "׀", SOF_PASUQ = "׃", CGJ = /͏/gu;
 const RECORDING_FIELDS = new Set(["key", "parsha", "part", "table", "ref", "archiveFile", "seconds", "wordLabelsMatched", "verses"]);
 const VERSE_FIELDS = new Set(["ref", "start", "end", "words", "alignScore", "startVsSoundOnsetMs", "labelGapMedianMs", "review"]);
 const WORD_FIELDS = new Set(["he", "start", "label"]);
+const WORD_FIELDS_V2 = new Set(["he", "start", "end", "ctcStart", "label"]);
 const TOP_FIELDS = new Set(["schema", "source", "method", "recordings"]);
 
 const finite = x => typeof x === "number" && Number.isFinite(x);
@@ -105,7 +110,8 @@ export function validateIndex(index, { verseCounts = null } = {}) {
   const done = () => ({ ok: errors.length === 0, errors, warnings, recordings: envelope ? valid : new Map() });
   if (!isObject(index)) { bad("not-an-object", "index"); return done(); }
   for (const k of Object.keys(index)) if (!TOP_FIELDS.has(k)) bad("unknown-field", `index.${safeKey(k)}`);
-  if (index.schema !== INDEX_SCHEMA) bad("schema", "index.schema");
+  if (index.schema !== INDEX_SCHEMA && index.schema !== INDEX_SCHEMA_V2) bad("schema", "index.schema");
+  const v2 = index.schema === INDEX_SCHEMA_V2;
   for (const k of ["source", "method"]) if (index[k] !== undefined && (typeof index[k] !== "string" || index[k].length > 4000)) bad(k, `index.${k}`);
   if (!Array.isArray(index.recordings) || index.recordings.length === 0 || index.recordings.length > TOLERANCES.MAX_RECORDINGS) { bad("recordings", "index.recordings"); return done(); }
   const count = (f) => { const m = new Map(); for (const r of index.recordings) { const v = isObject(r) ? f(r) : null; if (typeof v === "string") m.set(v, (m.get(v) ?? 0) + 1); } return m; };
@@ -113,7 +119,7 @@ export function validateIndex(index, { verseCounts = null } = {}) {
   index.recordings.forEach((r, n) => {
     const before = errors.length;
     const at = isObject(r) && typeof r.key === "string" && KEY.test(r.key) ? r.key : `recording#${n}`;
-    try { checkRecording(r, at, fail, keyCount, fileCount, verseCounts); } catch { fail("malformed-recording", at); }
+    try { checkRecording(r, at, fail, keyCount, fileCount, verseCounts, v2); } catch { fail("malformed-recording", at); }
     if (errors.length === before) valid.set(r.key, r);
   });
   const byRef = new Map();
@@ -126,7 +132,7 @@ export function validateIndex(index, { verseCounts = null } = {}) {
   return done();
 }
 
-function checkRecording(r, at, fail, keyCount, fileCount, verseCounts) {
+function checkRecording(r, at, fail, keyCount, fileCount, verseCounts, v2 = false) {
   if (!isObject(r)) return fail("recording-not-object", at);
   for (const k of Object.keys(r)) if (!RECORDING_FIELDS.has(k)) fail("unknown-field", `${at}.${safeKey(k)}`);
   const key = typeof r.key === "string" ? KEY.exec(r.key) : null;
@@ -184,7 +190,7 @@ function checkRecording(r, at, fail, keyCount, fileCount, verseCounts) {
     v.words.forEach((w, k) => {
       const wat = `${vat}#w${k}`;
       if (!isObject(w)) return fail("word-not-object", wat);
-      for (const f of Object.keys(w)) if (!WORD_FIELDS.has(f)) fail("unknown-field", `${wat}.${safeKey(f)}`);
+      for (const f of Object.keys(w)) if (!(v2 ? WORD_FIELDS_V2 : WORD_FIELDS).has(f)) fail("unknown-field", `${wat}.${safeKey(f)}`);
       if (typeof w.he !== "string" || !w.he.isWellFormed() || w.he !== w.he.normalize("NFC") || !WORD_TEXT.test(w.he) || !HEBREW_LETTER.test(w.he)) fail("word-text", wat);
       if (!finite(w.start)) return fail("word-start", wat);
       // A word starts inside its verse, strictly before the verse ends, and strictly after the previous word.
@@ -193,6 +199,20 @@ function checkRecording(r, at, fail, keyCount, fileCount, verseCounts) {
       // label is PocketTorah's own onset; it leads the voice and is never used for highlighting.
       if (w.label !== undefined && (!finite(w.label) || w.label < 0 || w.label > r.seconds + TOLERANCES.EPSILON)) fail("word-label", wat);
       if (w.label !== undefined && r.wordLabelsMatched !== true) fail("label-without-match", wat);
+      if (v2) {
+        // The CTC onset is kept beside the refined start: it obeys the v1 word rules, and the start stays
+        // within WORD_MOVE_BOUNDS of it. Each end follows its start and reaches at most the next start
+        // (the verse end for the last word); a gap between them is silence that belongs to no word.
+        const prevW = k > 0 ? v.words[k - 1] : null, nextW = v.words[k + 1];
+        if (!finite(w.ctcStart)) fail("word-ctc-start", wat);
+        else {
+          if (finite(v.start) && finite(v.end) && (w.ctcStart < v.start - TOLERANCES.EPSILON || w.ctcStart >= v.end)) fail("word-ctc-outside-verse", wat);
+          if (isObject(prevW) && finite(prevW.ctcStart) && !(w.ctcStart > prevW.ctcStart)) fail("word-ctc-order", wat);
+          if (finite(w.start) && (w.start < w.ctcStart - WORD_MOVE_BOUNDS.backS - TOLERANCES.EPSILON || w.start > w.ctcStart + WORD_MOVE_BOUNDS.forwardS + TOLERANCES.EPSILON)) fail("word-move-out-of-bounds", wat);
+        }
+        if (!finite(w.end) || !finite(w.start) || !(w.end > w.start)) fail("word-end", wat);
+        else if (nextW !== undefined ? !isObject(nextW) || !finite(nextW.start) || w.end > nextW.start : !finite(v.end) || w.end > v.end) fail("word-end-overlap", wat);
+      }
     });
     prev = p;
   });
@@ -296,7 +316,9 @@ export function buildVerseDto({ recording, verse, asset, portal, override = null
     }
     mismatch = x.status !== "exact" && MISMATCH.has(x.reason);
     words = x.status === "exact"
-      ? { status: "ready", readingTextSha256: sha256(portal.readingText.normalize("NFC")), starts: groups.map(g => ms(verse.words[g[0]].start)) }
+      ? { status: "ready", readingTextSha256: sha256(portal.readingText.normalize("NFC")), starts: groups.map(g => ms(verse.words[g[0]].start)),
+          // v2: a portal word ends where its last index word ends. v1 has no ends; players fall back to the next start.
+          ...(verse.words.every(w => finite(w.end)) ? { ends: groups.map(g => ms(verse.words[g.at(-1)].end)) } : {}) }
       : { status: "unavailable", reason: x.reason };
   }
   const review = mismatch ? "text-mismatch" : verse.review === undefined ? null : REVIEW_STATES[verse.review];

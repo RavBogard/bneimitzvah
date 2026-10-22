@@ -10,9 +10,10 @@ class Timeline {
   readonly asset: string;
   readonly clip: SourceSecondsRange;
   readonly starts: readonly number[] | null;
-  constructor(key: typeof constructionKey, ref: string, asset: string, clip: SourceSecondsRange, starts: readonly number[] | null) {
+  readonly ends: readonly number[] | null;
+  constructor(key: typeof constructionKey, ref: string, asset: string, clip: SourceSecondsRange, starts: readonly number[] | null, ends: readonly number[] | null) {
     if (key !== constructionKey) throw new Error("Reference timeline unavailable");
-    this.ref = ref; this.asset = asset; this.clip = clip; this.starts = starts; Object.freeze(this);
+    this.ref = ref; this.asset = asset; this.clip = clip; this.starts = starts; this.ends = starts ? ends : null; Object.freeze(this);
   }
   static valid(value: unknown): value is Timeline { return typeof value === "object" && value !== null && #valid in value; }
 }
@@ -28,7 +29,7 @@ export function createReferenceTimeline(value: unknown, binding: ReferenceTextBi
     if (Reflect.ownKeys(binding).some(key => typeof key !== "string" || !["ref", "readingTextSha256", "wordCount"].includes(key)) || Object.values(fields).some(field => !Object.hasOwn(field, "value")) || fields.ref?.value !== dto.ref) return null;
     const hash: unknown = fields.readingTextSha256?.value, count: unknown = fields.wordCount?.value;
     const starts = dto.words.status === "ready" && hash === dto.words.readingTextSha256 && Number.isInteger(count) && count === dto.words.starts.length ? dto.words.starts : null;
-    return new Timeline(constructionKey, dto.ref, dto.playback.asset, dto.playback.clip, starts);
+    return new Timeline(constructionKey, dto.ref, dto.playback.asset, dto.playback.clip, starts, starts && dto.words.status === "ready" ? dto.words.ends ?? null : null);
   } catch { return null; }
 }
 
@@ -42,11 +43,12 @@ export function currentReferenceWord(timeline: ReferenceTimeline | null, sourceS
 }
 export function referenceVerseLoop(timeline: ReferenceTimeline | null): SourceSecondsRange | null { return Timeline.valid(timeline) ? timeline.clip : null; }
 
-/** Onset interval [start,next onset), or [last onset,verse end). No fabricated
- * phonetic word-end times: gaps after an onset belong to its interval. */
+/** [start, end) with the index's measured end (v2), else the onset interval [start, next onset) or
+ * [last onset, verse end). Ends are measured from the audio, never fabricated; without one, a gap
+ * after an onset belongs to its interval. Highlighting (currentReferenceWord) still follows onsets. */
 export function referenceWordLoop(timeline: ReferenceTimeline | null, wordIndex: number): SourceSecondsRange | null {
   if (!Timeline.valid(timeline) || !timeline.starts || !Number.isInteger(wordIndex) || wordIndex < 0 || wordIndex >= timeline.starts.length) return null;
-  return Object.freeze({ start: timeline.starts[wordIndex], end: timeline.starts[wordIndex + 1] ?? timeline.clip.end });
+  return Object.freeze({ start: timeline.starts[wordIndex], end: timeline.ends?.[wordIndex] ?? timeline.starts[wordIndex + 1] ?? timeline.clip.end });
 }
 /** Selection seeks are source seconds, with no hidden clip offset/subtraction. */
 export function referenceSeekSeconds(timeline: ReferenceTimeline | null, selection: "verse" | number = "verse"): number | null {

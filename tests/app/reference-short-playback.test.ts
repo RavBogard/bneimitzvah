@@ -4,7 +4,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { REFERENCE_ATTRIBUTION } from "../../src/lib/reference-audio/contract";
 import { SHORT_SOURCE_ATTRIBUTION, type ShortReferenceSource } from "../../src/lib/reference-audio/short-source";
 import { parseReferenceShortResolution, type ReferenceShortResolution } from "../../src/lib/reference-audio/short-resolution";
-import { downloadShortReferenceAudio, shortMediaFramesMatch, shortSilentPrime, shortWordWav, type ShortDecodedAudio } from "../../src/lib/reference-audio/short-playback";
+import { downloadShortReferenceAudio, shortMediaFramesMatch, shortSilentPrime, shortWordWav, SHORT_WORD_FADE_SECONDS, type ShortDecodedAudio } from "../../src/lib/reference-audio/short-playback";
 import { createShortReadingPlayback, type ShortAudioElement } from "../../src/components/portal/workspace/study/short-main-playback";
 import type { ReferenceAudioElement } from "../../src/lib/reference-audio/playback";
 const origin = "https://example.test", text = "אבג דהו", hash = (b: Uint8Array | string) => createHash("sha256").update(b).digest("hex");
@@ -242,4 +242,18 @@ test("scope suspend discards late decode and private cache; resume reloads witho
   const pending = f.player.select(0, 0); await vi.waitFor(() => expect(decode).toHaveBeenCalledOnce()); f.player.suspend(); gate.resolve(decoded(resolution().source!)); await pending;
   expect(f.player.state.suspended).toBe(true); expect(f.media.src).toBe(""); expect(f.frames.size).toBe(0);
   await f.player.select(0); expect(f.load).toHaveBeenCalledTimes(2); expect(f.fetcher).toHaveBeenCalledTimes(2); expect(f.audio).toHaveBeenCalledOnce(); f.player.dispose();
+});
+
+test("word WAV cuts fade in and out over 5 ms with a raised cosine; the middle is untouched", async () => {
+  const s = resolution().source!, bytes = new DataView(await shortWordWav(decoded(s), s, 12000, 24000).arrayBuffer());
+  const sample = (k: number) => bytes.getInt16(44 + k * 2, true) / 32767, fade = Math.round(s.sampleRate * SHORT_WORD_FADE_SECONDS);
+  expect(fade).toBe(120);
+  expect(sample(0)).toBe(0); expect(sample(11999)).toBe(0);
+  expect(sample(60)).toBeCloseTo(0.25 * 0.5, 3);
+  expect(sample(fade)).toBeCloseTo(0.25, 3); expect(sample(6000)).toBeCloseTo(0.25, 3); expect(sample(11999 - fade)).toBeCloseTo(0.25, 3);
+  for (let k = 1; k < fade; k++) expect(sample(k)).toBeGreaterThanOrEqual(sample(k - 1));
+  // A cut shorter than two fades fades over half its length and never exceeds the source level.
+  const short = new DataView(await shortWordWav(decoded(s), s, 100, 140).arrayBuffer());
+  const values = Array.from({ length: 40 }, (_, k) => short.getInt16(44 + k * 2, true) / 32767);
+  expect(values[0]).toBe(0); expect(values[39]).toBe(0); expect(Math.max(...values)).toBeLessThanOrEqual(0.2501);
 });

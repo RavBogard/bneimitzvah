@@ -209,3 +209,47 @@ describe("source-seconds reference timeline", () => {
     for (const value of [null, undefined, false, 0, "", [], {}]) expect(parseReferenceVerse(value)).toBeNull();
   });
 });
+
+describe("measured word ends (index v2)", () => {
+  const withEnds = (ends: unknown) => { const v = ready(); return { ...v, words: { ...v.words, ends } }; };
+  it("parses ends beside starts and loops each word to its measured end; v1 falls back to the next onset", () => {
+    const value = withEnds([11.6, 13.5, 14.8]);
+    expect(parseReferenceVerse(value)).toEqual(value);
+    const t = createReferenceTimeline(value, binding())!;
+    expect(t.ends).toEqual([11.6, 13.5, 14.8]);
+    expect(referenceWordLoop(t, 0)).toEqual({ start: 10.5, end: 11.6 });
+    expect(referenceWordLoop(t, 2)).toEqual({ start: 14, end: 14.8 });
+    expect(referenceSeekSeconds(t, 1)).toBe(12);
+    // Highlighting still follows onsets: the silence after a measured end stays with the word before.
+    expect(currentReferenceWord(t, 11.8)).toBe(0);
+    const v1 = timeline();
+    expect(v1.ends).toBeNull();
+    expect(referenceWordLoop(v1, 0)).toEqual({ start: 10.5, end: 12 });
+    expect(referenceWordLoop(v1, 2)).toEqual({ start: 14, end: 15 });
+    // An end may touch the next start and the clip end exactly.
+    expect(parseReferenceVerse(withEnds([12, 14, 15]))).not.toBeNull();
+  });
+  it("rejects ends that are not one per word, not after their start, past the next start or the clip end", () => {
+    for (const ends of [[11.6, 13.5], [11.6, 13.5, 14.8, 14.9], [10.5, 13.5, 14.8], [10.4, 13.5, 14.8], [12.01, 13.5, 14.8], [11.6, 13.5, 15.01],
+      [11.6, Number.NaN, 14.8], [11.6, "13.5", 14.8], [], "11.6", null, { 0: 11.6 }]) {
+      expect(parseReferenceVerse(withEnds(ends)), JSON.stringify(ends)).toBeNull();
+    }
+    const getter = ready(); Object.defineProperty(getter.words, "ends", { enumerable: true, get: () => [11.6, 13.5, 14.8] });
+    expect(parseReferenceVerse(getter)).toBeNull();
+    const extra = withEnds([11.6, 13.5, 14.8]); (extra.words as Record<string, unknown>).labels = [1];
+    expect(parseReferenceVerse(extra)).toBeNull();
+  });
+  it("timeline ends never outlive a stale binding", () => {
+    const value = withEnds([11.6, 13.5, 14.8]);
+    const stale = createReferenceTimeline(value, { ...binding(), readingTextSha256: digest("other") })!;
+    expect(stale.starts).toBeNull(); expect(stale.ends).toBeNull(); expect(referenceWordLoop(stale, 0)).toBeNull();
+  });
+  it("consumes the real producer's v2 DTO", async () => {
+    const producer = await import(new URL("../../scripts/reference-index-contract.mjs", import.meta.url).href);
+    const dto = producer.buildVerseDto({ recording: { table: "torah" }, asset: { approved: true, assetId: ready().playback.asset },
+      verse: { ref: "Genesis 1:1", start: 10, end: 15, words: [{ he: "אבג", start: 10.48, end: 11.6, ctcStart: 10.5 }, { he: "דהו", start: 11.98, end: 13.5, ctcStart: 12 }, { he: "זחט", start: 13.98, end: 15, ctcStart: 14 }] },
+      portal: { status: "ready", words: ["אבג", "דהו", "זחט"], readingText: text } });
+    const parsed = parseReferenceVerse(dto);
+    expect(parsed?.words).toEqual({ status: "ready", readingTextSha256: digest(text), starts: [10.48, 11.98, 13.98], ends: [11.6, 13.5, 15] });
+  });
+});

@@ -20,7 +20,9 @@ export const REFERENCE_WORD_REASONS = Object.freeze([
 ] as const);
 export type ReferenceWordReason = typeof REFERENCE_WORD_REASONS[number];
 export type SourceSecondsRange = Readonly<{ start: number; end: number }>;
-export type ReferenceWords = Readonly<{ status: "ready"; readingTextSha256: string; starts: readonly number[] }>
+/** ends (index v2) are measured word ends: each after its start and at most the next start (the clip end
+ * for the last word). Without ends a word runs to the next start, as in v1. */
+export type ReferenceWords = Readonly<{ status: "ready"; readingTextSha256: string; starts: readonly number[]; ends?: readonly number[] }>
   | Readonly<{ status: "unavailable"; reason: ReferenceWordReason }>;
 type AvailablePlayback = Readonly<{ status: "ready"; asset: string; clip: SourceSecondsRange }>
   | Readonly<{ status: "needs-review"; review: "start-moved" | "text-mismatch"; asset: string; clip: SourceSecondsRange }>;
@@ -54,16 +56,34 @@ function canonicalRef(value: unknown): value is string {
   const chapters = TANAKH_VERSE_COUNTS[match[1]], chapter = Number(match[2]), verse = Number(match[3]);
   return chapter <= chapters.length && verse <= chapters[chapter - 1];
 }
-function onsets(value: unknown, clip: SourceSecondsRange): readonly number[] | null {
+function times(value: unknown): unknown[] | null {
   if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) return null;
   const length = Object.getOwnPropertyDescriptor(value, "length")?.value;
   if (!Number.isInteger(length) || length < 1 || length > REFERENCE_AUDIO_LIMITS.words || Reflect.ownKeys(value).length !== length + 1) return null;
-  const result: number[] = [];
+  const result: unknown[] = [];
   for (let i = 0; i < length; i++) {
     const descriptor = Object.getOwnPropertyDescriptor(value, String(i));
     if (!descriptor || !Object.hasOwn(descriptor, "value")) return null;
-    const time: unknown = descriptor.value;
-    if (!finiteSeconds(time) || time < clip.start || time >= clip.end || i > 0 && time <= result[i - 1]) return null;
+    result.push(descriptor.value);
+  }
+  return result;
+}
+function onsets(value: unknown, clip: SourceSecondsRange): readonly number[] | null {
+  const values = times(value); if (!values) return null;
+  const result: number[] = [];
+  for (const time of values) {
+    if (!finiteSeconds(time) || time < clip.start || time >= clip.end || result.length > 0 && time <= result[result.length - 1]) return null;
+    result.push(time);
+  }
+  return Object.freeze(result);
+}
+/** One end per start: strictly after it, never past the next start, the last never past the clip end. */
+function wordEnds(value: unknown, starts: readonly number[], clip: SourceSecondsRange): readonly number[] | null {
+  const values = times(value); if (!values || values.length !== starts.length) return null;
+  const result: number[] = [];
+  for (let i = 0; i < values.length; i++) {
+    const time = values[i];
+    if (!finiteSeconds(time) || time <= starts[i] || time > (i + 1 < starts.length ? starts[i + 1] : clip.end)) return null;
     result.push(time);
   }
   return Object.freeze(result);
@@ -97,10 +117,12 @@ export function parseReferenceVerse(value: unknown): ReferenceVerse | null {
     const wordStatus = dto.words && typeof dto.words === "object" ? Object.getOwnPropertyDescriptor(dto.words, "status")?.value : undefined;
     let words: ReferenceWords;
     if (wordStatus === "ready") {
-      const word = record(dto.words, ["status", "readingTextSha256", "starts"]);
+      const withEnds = Reflect.ownKeys(dto.words as object).includes("ends");
+      const word = record(dto.words, withEnds ? ["status", "readingTextSha256", "starts", "ends"] : ["status", "readingTextSha256", "starts"]);
       if (!word || typeof word.readingTextSha256 !== "string" || !/^[a-f0-9]{64}$/.test(word.readingTextSha256)) return null;
       const starts = onsets(word.starts, clip); if (!starts) return null;
-      words = Object.freeze({ status: "ready", readingTextSha256: word.readingTextSha256, starts });
+      const ends = withEnds ? wordEnds(word.ends, starts, clip) : undefined; if (ends === null) return null;
+      words = Object.freeze(ends ? { status: "ready", readingTextSha256: word.readingTextSha256, starts, ends } : { status: "ready", readingTextSha256: word.readingTextSha256, starts });
     } else {
       const word = record(dto.words, ["status", "reason"]);
       if (!word || word.status !== "unavailable" || !(REFERENCE_WORD_REASONS as readonly unknown[]).includes(word.reason)) return null;
