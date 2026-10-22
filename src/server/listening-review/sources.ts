@@ -1,0 +1,46 @@
+import "server-only";
+import { createHash } from "node:crypto";
+import type { ListeningSource } from "../../lib/listening-review/sample";
+import { parseReferenceShortResolution, REFERENCE_SHORT_RESOLUTION_SCHEMA, type ReferenceShortResolution } from "../../lib/reference-audio/short-resolution";
+import { ReferenceUnavailable, resolveReference, type ReferenceCatalog } from "../reference-audio/catalog";
+import { findShortSource, readShortSourceEntry, type ShortSourceManifest } from "../reference-audio/short-source-manifest";
+import type { StudyVerse } from "../study/types";
+
+/**
+ * One reference source as the listening review needs it. A provider resolves a verse to the same wire
+ * shape the student reading player consumes (so the review plays exactly what a student would get), and
+ * names the pinned identity of the audio it serves. `pin()` is null while the source is not configured;
+ * its items are then listed as unavailable and never counted. A second source (Cantor Finkel's
+ * recordings) supplies its own provider with id "finkel"; nothing else here changes.
+ */
+export type ListeningSourceProvider = Readonly<{
+  id: ListeningSource;
+  pin(): string | null;
+  resolve(verse: StudyVerse, kind: "torah" | "haftarah", signal: AbortSignal): Promise<ReferenceShortResolution | null>;
+}>;
+
+const digest = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+
+/** PocketTorah short clips, through the same catalog/manifest loaders and the same resolution as students. */
+export function createPocketTorahListeningSource(input: {
+  catalogSha256?: string; manifestSha256?: string;
+  loadCatalog(signal?: AbortSignal): Promise<ReferenceCatalog>; loadManifest(signal?: AbortSignal): Promise<ShortSourceManifest>;
+}): ListeningSourceProvider {
+  const pin = digest(input.catalogSha256) && digest(input.manifestSha256)
+    ? createHash("sha256").update(`pocket-torah/short-v1:${input.catalogSha256}:${input.manifestSha256}`).digest("hex") : null;
+  return Object.freeze({
+    id: "pocket-torah" as const, pin: () => pin,
+    async resolve(verse: StudyVerse, _kind: "torah" | "haftarah", signal: AbortSignal) {
+      if (!pin) throw new ReferenceUnavailable();
+      const live = () => { if (signal.aborted) throw new ReferenceUnavailable(); };
+      try {
+        live(); const catalog = await input.loadCatalog(signal); live();
+        const manifest = await input.loadManifest(signal); live();
+        const resolved = resolveReference(catalog, verse), entry = findShortSource(manifest, resolved);
+        const result = parseReferenceShortResolution({ schema: REFERENCE_SHORT_RESOLUTION_SCHEMA, verse: resolved.verse, source: entry ? readShortSourceEntry(entry).source : null });
+        if (!result) throw new ReferenceUnavailable();
+        return result.source ? result : null;
+      } catch { throw new ReferenceUnavailable(); }
+    },
+  });
+}

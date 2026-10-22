@@ -31,6 +31,8 @@ import { createReferenceAudioService } from "../reference-audio/service";
 import { createShortReferenceAudioService } from "../reference-audio/short-service";
 import { createRuntimeShortMetadata } from "../reference-audio/runtime-short-metadata";
 import { createShortExplorationService } from "../reference-audio/short-exploration-service";
+import { createListeningReviewService } from "../listening-review/service";
+import { createPocketTorahListeningSource } from "../listening-review/sources";
 import { createReferenceCatalogLoader } from "../reference-audio/storage";
 import { ReferenceUnavailable, type ReferenceCatalog } from "../reference-audio/catalog";
 import { createStudyService } from "../study/service";
@@ -179,6 +181,9 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const shortReferenceAudio = createShortReferenceAudioService({ access, practice, loadText, ...shortMetadata, studentRelease: config.referenceAudio?.studentRelease });
   const shortExplorationAudio = createShortExplorationService({ access, practice, loadReading, loadText, signingSecret: purposeSecret(config, "reading-exploration"),
     ...shortMetadata, studentRelease: config.referenceAudio?.studentRelease });
+  // Admin-only listening review: the same pinned short clips students would get, never the student release flag.
+  const listeningReview = createListeningReviewService({ access, loadText, sources: [createPocketTorahListeningSource({ ...shortMetadata,
+    catalogSha256: config.referenceAudio?.catalogSha256, manifestSha256: process.env.REFERENCE_AUDIO_SHORT_MANIFEST_SHA256 })] });
   const readingPreview = createReadingPreviewService({ access, loadReading, loadText, signingSecret:purposeSecret(config,"reading-preview") });
   const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding") });
   const relationships = createRelationshipService({ access });
@@ -190,7 +195,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost, mcp, rosterSheet });
+  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, listeningReview, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost, mcp, rosterSheet });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

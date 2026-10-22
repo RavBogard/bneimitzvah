@@ -128,7 +128,7 @@ function wordDetailsView(value: StudyWordDetails): JsonValue {
       : { status: value.elsewhere.status, lemma: value.elsewhere.lemma, total: value.elsewhere.total,
         places: value.elsewhere.places.map(place => ({ ref: place.ref, wordIndex: place.wordIndex, words: [...place.words], mark: place.mark })) } }) };
 }
-function studyPageView(page: StudyPage): { [key: string]: JsonValue } {
+export function studyPageView(page: StudyPage): { [key: string]: JsonValue } {
   return { offset: page.offset, nextOffset: page.nextOffset, totalVerses: page.totalVerses,
     translation: { key: page.translation.key, status: page.translation.status },
     verses: page.verses.map(verse => ({ ref: verse.ref, english: verse.english, hebrew: { text: verse.hebrew.text, readingText: verse.hebrew.readingText,
