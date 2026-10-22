@@ -150,12 +150,12 @@ export function TikkunVerse({ verse, className = "", ...rest }: { verse: StudyVe
   </span>;
 }
 
-function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAvailable, listening, showEnglish, tikkun, wide, playing = false }: {
-  verse: StudyVerse; assignment: AssignmentEnding; id: string; onVerse?(): void; onWord?(index: number): void; activeWord: number | null; toolsAvailable: boolean; listening: boolean; showEnglish: boolean; tikkun: boolean; wide: boolean; playing?: boolean;
+function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAvailable, listening, showEnglish, tikkun, wide }: {
+  verse: StudyVerse; assignment: AssignmentEnding; id: string; onVerse?(): void; onWord?(index: number): void; activeWord: number | null; toolsAvailable: boolean; listening: boolean; showEnglish: boolean; tikkun: boolean; wide: boolean;
 }) {
   const prefs = useReadingPrefs(), replaced = tikkun && !wide, result = useVerseColors(verse, assignment, prefs.colors && !replaced), colors = result?.status === "ready" ? result : null;
   const number = /:([1-9]\d*)$/.exec(verse.ref)?.[1];
-  return <span data-verse-ref={verse.ref} className={styles.flowVerse} data-playing={playing ? "true" : undefined}>
+  return <span data-verse-ref={verse.ref} className={styles.flowVerse}>
     <span className={styles.flowHebrew} data-hebrew-ref={verse.ref}>
     <span className="sr-only" role="heading" aria-level={4} dir="ltr">{verse.ref}</span>
     {onVerse ? <button type="button" className={styles.verseNumber} onClick={onVerse} aria-label={`Hear ${verse.ref}`} title={verse.ref}>{number ?? verse.ref}</button>
@@ -168,11 +168,9 @@ function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAv
     {showEnglish && <span className={`study-english ${styles.flowEnglish}`} lang="en" dir="ltr" data-english-ref={verse.ref}>{verse.english ?? "English reference unavailable for this verse."}</span>}
   </span>;
 }
-export function FlowingStudyText({ verses, assignment, group, sections = [], onVerse, onWord, activeWord, toolsAvailable = true, listening = true, showEnglish = false, tikkun = false, playingVerses = null }: {
+export function FlowingStudyText({ verses, assignment, group, sections = [], onVerse, onWord, activeWord, toolsAvailable = true, listening = true, showEnglish = false, tikkun = false }: {
   verses: StudyVerse[]; assignment: AssignmentEnding; group: string; sections?: readonly { index: number; label: string }[];
   onVerse?(index: number): void; onWord?(verse: number, word: number): void; activeWord: { verse: number; index: number } | null; toolsAvailable?: boolean; listening?: boolean; showEnglish?: boolean;
-  /** Verses of a whole-passage recording that is playing (no word timing). */
-  playingVerses?: ReadonlySet<string> | null;
   /** Torah only: the caller decides, so a haftarah never shows scroll lettering. */
   tikkun?: boolean;
 }) {
@@ -180,7 +178,7 @@ export function FlowingStudyText({ verses, assignment, group, sections = [], onV
   return <div className={`study-verses ${styles.flow}`} aria-label="Hebrew reading" tabIndex={-1} data-tikkun={tikkun ? wide ? "beside" : "instead" : undefined}>
     {studyFlowGroups(verses, sections.map(section => section.index)).map(indices => <div key={verses[indices[0]].ref}>
       {sections.find(section => section.index === indices[0]) && <p className="student-aliyah">{sections.find(section => section.index === indices[0])!.label}</p>}
-      <p className={styles.flowParagraph} lang="he" dir="rtl">{indices.map(index => <FlowVerse key={verses[index].ref} verse={verses[index]} assignment={assignment} id={`${group}-flow-${index}`} onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined} activeWord={activeWord?.verse === index ? activeWord.index : null} toolsAvailable={toolsAvailable} listening={listening} showEnglish={showEnglish} tikkun={tikkun} wide={wide} playing={playingVerses?.has(verses[index].ref) ?? false} />)}</p>
+      <p className={styles.flowParagraph} lang="he" dir="rtl">{indices.map(index => <FlowVerse key={verses[index].ref} verse={verses[index]} assignment={assignment} id={`${group}-flow-${index}`} onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined} activeWord={activeWord?.verse === index ? activeWord.index : null} toolsAvailable={toolsAvailable} listening={listening} showEnglish={showEnglish} tikkun={tikkun} wide={wide} />)}</p>
     </div>)}
   </div>;
 }

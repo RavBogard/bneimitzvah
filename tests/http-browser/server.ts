@@ -13,7 +13,6 @@ import { sourceContentRouteMethods } from "../../src/server/http/source-content"
 import { serviceLearningRouteMethods } from "../../src/server/http/service-learning";
 import { serviceEcosystemRouteMethods } from "../../src/server/http/service-ecosystem";
 import { referenceReviewRouteMethods } from "../../src/server/http/reference-review";
-import { finkelReferenceRouteMethods } from "../../src/server/http/finkel-reference";
 import { studentWorkRouteMethods } from "../../src/server/http/student-work";
 import { progressRouteMethods } from "../../src/server/http/progress";
 import { lessonLogRouteMethods } from "../../src/server/http/lesson-log";
@@ -103,7 +102,7 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope) {
       const request = safeRequest(req);
       if (!request) { await send(res, new Response(null, { status: 400 })); return; }
       const pathname = new URL(request.url).pathname;
-      if (referenceReviewRouteMethods(pathname) || finkelReferenceRouteMethods(pathname)) { await send(res, await dispatch(request)); return; }
+      if (referenceReviewRouteMethods(pathname)) { await send(res, await dispatch(request)); return; }
       if (!serviceEcosystemRouteMethods(pathname) && !honoreeManagementRouteMethods(pathname) && !honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname) && !studyGuidesRouteMethods(pathname) && !congregationSettingsRouteMethods(pathname) && !notificationsRouteMethods(pathname)) { await nextHandler(req, res); return; }
       await send(res, await dispatch(request));
     } catch { if (!res.headersSent) await send(res, new Response(null, { status: 503 })); else res.destroy(); }

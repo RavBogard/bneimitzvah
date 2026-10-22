@@ -1,5 +1,7 @@
 # Finish Cantor Finkel's recordings: plan and production steps
 
+> **Playback cut, 2026-10-22.** Daniel ruled the same day that the portal plays PocketTorah only and Cantor Finkel's recordings become source material for the voice work (MISSION, "Finkel recordings become voice material"). Production's Finkel variables were removed, and the player, routes, service, config and build script described below were removed on branch `claude/remove-finkel-playback`. This plan is kept as the record of what was built and uploaded. For what the package holds and what the voice work needs, see [VOICE-HANDOFF.md](VOICE-HANDOFF.md).
+
 2026-10-22. Branch `claude/finkel-finish`. Authority: MISSION, "Amended 2026-10-22 (Daniel, Cantor Finkel's recordings)": licence done, all recordings unrestricted; finish private storage, playback beside PocketTorah and the listening review; recordings never enter the repository; student playback of any reference audio still follows Daniel's listening acceptance. Daniel approved this finish plan on 2026-10-22 ("Approved. Do it and continue").
 
 The engineering lead performs every production step below (upload, environment, deployment) after the adversarial review. Nothing in this branch uploads, migrates or changes production.
