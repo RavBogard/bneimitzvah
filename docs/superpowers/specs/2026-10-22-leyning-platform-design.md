@@ -24,7 +24,17 @@ These are Daniel's words from 2026-10-22, quoted verbatim.
 8. **The weekly page.** "The every week is good." The public weekly reading at `/read` is the base this grows from.
 9. **Order.** "Write the full vision spec first." No new feature UI is built before this spec is approved.
 
-**Standing rules that continue unchanged** (MISSION and CLAUDE.md):
+**10. **Answers to the open items, same evening** (Daniel, verbatim: "Torah.cen..., use all, don't stress. 3 women's and Rashi to start / 4 yes / 5 no age 6 standard hebcal / 7 yes 8 yes"):
+    - (1) The name is **CRC Torah**, at **torah.centralreform.org**.
+    - (2) Show every Sefaria edition with its credit. This includes CC-BY-NC and unmarked editions; section 5's "never shown in place" tier is withdrawn.
+    - (3) The first curated works are **Rashi** and **The Torah: A Women's Commentary**. Others follow from the proposed lists.
+    - (4) Members' notes are private to them.
+    - (5) There is no age requirement on account requests.
+    - (6) CRC reads the standard Hebcal reading, and there is no "Read at CRC" marking.
+    - (7) Yes to the three-door front page.
+    - (8) Study opens with English on and Rashi inline.
+
+Standing rules that continue unchanged** (MISSION and CLAUDE.md):
 - Show rather than hide.
 - Human recordings come first.
 - Generated chant stays behind G3.
@@ -310,6 +320,9 @@ The generated chant voice is outside this list. It is decided by the Cowork rese
 ---
 
 ## Open items that wait on Daniel
+
+All eight were answered on 2026-10-22 (decision 10 above). The record is kept below.
+
 
 1. **Name and address.**
    - The platform outgrows "CRC Beit Mitzvah". Possible names: "CRC Torah", "Leyn at CRC", or another name you prefer.
