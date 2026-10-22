@@ -7,6 +7,15 @@ import { CALLBACK, ORIGIN, closeMcpFixtures, mcpFixture as fixture } from "./mcp
 
 afterEach(async () => { vi.restoreAllMocks(); await closeMcpFixtures(); });
 
+/** Register a client and authorize it, as Claude does, returning the signed pending request the consent page holds. */
+async function pendingRequest(t: Awaited<ReturnType<typeof fixture>>) {
+  const clientId = await t.register(), verifier = randomBytes(32).toString("base64url");
+  const challenge = createHash("sha256").update(verifier).digest("base64url");
+  const location = (await t.get(`/api/oauth/authorize?${new URLSearchParams({ response_type: "code", client_id: clientId, redirect_uri: CALLBACK, code_challenge: challenge, code_challenge_method: "S256", state: "s1" })}`)).headers.get("location")!;
+  return { clientId, verifier, pending: location.split("#request=")[1] };
+}
+const connections = (t: Awaited<ReturnType<typeof fixture>>) => t.f.owner(() => t.f.db.select({ id: s.mcpConnection.id, revokedAt: s.mcpConnection.revokedAt }).from(s.mcpConnection));
+
 describe("portal MCP", () => {
   it("does not exist until enabled by configuration", async () => {
     const t = await fixture(false);
@@ -147,6 +156,109 @@ describe("portal MCP", () => {
     // Only hashes are stored.
     const rows = await t.f.owner(() => t.f.db.select({ hash: s.mcpToken.tokenHash }).from(s.mcpToken));
     expect(rows.some(r => r.hash === third.access_token || r.hash === third.refresh_token)).toBe(false);
+  });
+
+  it("allows one pending request once: a second Allow, a later view or Cancel answer used and make or revoke nothing", async () => {
+    const t = await fixture();
+    await t.google("admin"); await t.google("multi");
+    const { clientId, verifier, pending } = await pendingRequest(t);
+    // Cancel before Allow still returns access_denied to Claude.
+    const cancelled = await t.consent("admin", "/api/oauth/consent/deny", { request: pending });
+    expect(new URL((await cancelled.json()).redirect).searchParams.get("error")).toBe("access_denied");
+    const view = await (await t.consent("admin", "/api/oauth/consent/view", { request: pending })).json();
+    const allow = () => t.consent("admin", "/api/oauth/consent/approve", { request: pending, unattended: false, viewer: view.account.viewer });
+    // A double tap: both reach the server; exactly one makes a connection and a code.
+    const [one, two] = await Promise.all([allow(), allow()]);
+    const answers = [{ status: one.status, body: await one.json() }, { status: two.status, body: await two.json() }];
+    const won = answers.filter(a => a.body.redirect), lost = answers.filter(a => !a.body.redirect);
+    expect(won).toHaveLength(1); expect(lost).toEqual([{ status: 409, body: { error: "used" } }]);
+    expect(await connections(t)).toHaveLength(1);
+    // A replay later within the request's ten minutes, by the same or another staff member.
+    expect(await allow().then(r => r.json())).toEqual({ error: "used" });
+    // (The viewer binding is per account and session, so another request's view supplies it.)
+    const multiViewer = (await (await t.consent("multi", "/api/oauth/consent/view", { request: (await pendingRequest(t)).pending })).json()).account.viewer;
+    expect(await (await t.consent("multi", "/api/oauth/consent/approve", { request: pending, unattended: false, viewer: multiViewer })).json()).toEqual({ error: "used" });
+    // The page reloaded or reached by Back shows "already allowed" rather than Allow again.
+    const again = await t.consent("admin", "/api/oauth/consent/view", { request: pending });
+    expect(again.status).toBe(409); expect(await again.json()).toEqual({ error: "used" });
+    // Cancel after Allow neither revokes the connection silently nor sends Claude access_denied.
+    const late = await t.consent("admin", "/api/oauth/consent/deny", { request: pending });
+    expect(late.status).toBe(409); expect(await late.json()).toEqual({ error: "used" });
+    const rows = await connections(t);
+    expect(rows).toHaveLength(1); expect(rows[0].revokedAt).toBeNull();
+    // The one code still works.
+    const code = new URL(won[0].body.redirect).searchParams.get("code")!;
+    expect((await t.postForm("/api/oauth/token", { grant_type: "authorization_code", code, redirect_uri: CALLBACK, client_id: clientId, code_verifier: verifier })).status).toBe(200);
+    // A different pending request is a different connection.
+    const other = await pendingRequest(t);
+    expect((await (await t.allow("admin", other.pending)).json()).redirect).toBeTruthy();
+    expect(await connections(t)).toHaveLength(2);
+  });
+
+  it("checks the Origin header on /api/mcp: absent, the portal's own or Claude's pass; any other is 403 before authentication", async () => {
+    const t = await fixture();
+    await t.google("admin");
+    const tokens = await t.connect("admin");
+    const ping = (headers: Record<string, string>) => t.postJson("/api/mcp", { jsonrpc: "2.0", id: 1, method: "ping" }, { authorization: `Bearer ${tokens.access_token}`, ...headers });
+    for (const origin of [undefined, ORIGIN, "https://claude.ai", "https://claude.com"]) expect((await ping(origin ? { origin } : {})).status).toBe(200);
+    for (const origin of ["https://evil.example", "null", "http://localhost:3001", "https://claude.ai.evil.example", "http://claude.ai", "https://claude.ai/", `${ORIGIN}, https://evil.example`]) {
+      const refused = await ping({ origin });
+      expect(refused.status).toBe(403);
+      expect((await refused.json()).error.code).toBe(-32000);
+    }
+    // Refused before the bearer is even read: no challenge, no hint whether a token is valid.
+    const anonymous = await t.postJson("/api/mcp", { jsonrpc: "2.0", id: 1, method: "ping" }, { origin: "https://evil.example" });
+    expect(anonymous.status).toBe(403); expect(anonymous.headers.get("www-authenticate")).toBeNull();
+  });
+
+  it("accepts the MCP-Protocol-Version values it speaks, assumes one when absent and refuses others with 400", async () => {
+    const t = await fixture();
+    await t.google("admin");
+    const tokens = await t.connect("admin");
+    const send = (body: Record<string, unknown>, version?: string) => t.postJson("/api/mcp", { jsonrpc: "2.0", ...body },
+      { authorization: `Bearer ${tokens.access_token}`, accept: "application/json, text/event-stream", ...(version === undefined ? {} : { "mcp-protocol-version": version }) });
+    for (const version of [undefined, "2025-11-25", "2025-06-18", "2025-03-26"]) expect((await send({ id: 1, method: "tools/list" }, version)).status).toBe(200);
+    for (const version of ["2024-11-05", "2099-01-01", "", "2025-06-18, 2025-03-26", "latest"]) {
+      const refused = await send({ id: 1, method: "tools/list" }, version);
+      expect(refused.status).toBe(400);
+      expect((await refused.json()).error.message).toContain("MCP-Protocol-Version");
+    }
+    // A notification with an unsupported version is refused too.
+    expect((await send({ method: "notifications/initialized" }, "2024-11-05")).status).toBe(400);
+    expect((await send({ method: "notifications/initialized" }, "2025-06-18")).status).toBe(202);
+    // initialize negotiates in the body, whatever header it carries; an unknown version gets the default.
+    const init = await send({ id: 2, method: "initialize", params: { protocolVersion: "2099-01-01" } }, "2099-01-01");
+    expect(init.status).toBe(200); expect((await init.json()).result.protocolVersion).toBe("2025-06-18");
+    const current = await send({ id: 3, method: "initialize", params: { protocolVersion: "2025-11-25" } });
+    expect((await current.json()).result.protocolVersion).toBe("2025-11-25");
+  });
+
+  it("never accepts an expired code, access token or refresh token", async () => {
+    let clock = Date.now();
+    const t = await fixture(true, () => clock);
+    await t.google("admin");
+    // A code older than five minutes is refused.
+    const late = await pendingRequest(t);
+    const approved = await (await t.allow("admin", late.pending)).json();
+    const code = new URL(approved.redirect).searchParams.get("code")!;
+    clock += 5 * 60_000 + 1000;
+    expect((await t.postForm("/api/oauth/token", { grant_type: "authorization_code", code, redirect_uri: CALLBACK, client_id: late.clientId, code_verifier: late.verifier })).status).toBe(400);
+    clock = Date.now();
+    const tokens = await t.connect("admin");
+    expect((await t.rpc(tokens.access_token, "ping")).status).toBe(200);
+    // An access token past its hour is a 401, though its row is still stored.
+    clock += 3600_000 + 1000;
+    expect((await t.rpc(tokens.access_token, "ping")).status).toBe(401);
+    const rotated = await t.postForm("/api/oauth/token", { grant_type: "refresh_token", refresh_token: tokens.refresh_token, client_id: tokens.clientId });
+    expect(rotated.status).toBe(200);
+    const next = await rotated.json();
+    expect((await t.rpc(next.access_token, "ping")).status).toBe(200);
+    // Past the connection's thirty days, the refresh token and every access token are refused.
+    clock += 30 * 24 * 3600_000;
+    expect((await t.rpc(next.access_token, "ping")).status).toBe(401);
+    expect((await t.postForm("/api/oauth/token", { grant_type: "refresh_token", refresh_token: next.refresh_token, client_id: tokens.clientId })).status).toBe(400);
+    const stored = await t.f.owner(() => t.f.db.select({ hash: s.mcpToken.tokenHash, expiresAt: s.mcpToken.expiresAt }).from(s.mcpToken));
+    expect(stored.every(row => row.expiresAt.getTime() < clock)).toBe(true);
   });
 
   it("refuses a wrong PKCE verifier without spending the code", async () => {
