@@ -439,6 +439,21 @@ describe("Connect Claude consent page on a phone", () => {
     expect(new URL(tab.url()).search).toBe(""); expect(views(seen).at(-1)).toBe(pending);
   });
 
+  it("says a request already allowed was used, from Allow or from the view, and forgets it", async () => {
+    const tab = await page(true); let used = false;
+    const seen = await consentRoutes(tab, { view: () => used ? { error: "used" } : { clientName: "Claude", destination: "claude.ai", account: staff }, approve: { error: "used" } });
+    await navigate(tab, `/connect#request=${pending}`); await heading(tab, "Claude wants to connect");
+    await safe(() => tab.getByRole("button", { name: "Allow", exact: true }).click());
+    await heading(tab, "This request was already allowed");
+    await ui(tab.getByRole("button", { name: "Allow", exact: true })).toHaveCount(0);
+    // Forgotten: a later visit without a fragment asks the server nothing.
+    const asked = views(seen).length;
+    await navigate(tab, "/connect"); await heading(tab, "This request has expired");
+    expect(views(seen).length).toBe(asked);
+    used = true; await navigate(tab, "about:blank"); await navigate(tab, `/connect#request=${pending}`);
+    await heading(tab, "This request was already allowed");
+  });
+
   it("forgets the stored request after Allow and after an expired answer, and a fresh fragment wins", async () => {
     const tab = await page(true); let expired = false;
     const seen = await consentRoutes(tab, { view: () => expired ? { error: "expired" } : { clientName: "Claude", destination: "claude.ai", account: staff },

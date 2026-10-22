@@ -7,7 +7,7 @@ import { browserStores, forgetPendingRequest, rememberPendingRequest, resolvePen
 // The portal MCP consent page (Decided here, 2026-10-21). Claude sends the staff member here with
 // a signed request in the URL fragment; Google sign-in proves who they are; Allow returns Claude a code.
 type Account = { name: string; google: boolean; role: "admin" | "tutor" | null; scopes: string[]; viewer: string };
-type View = { kind: "loading" } | { kind: "expired" } | { kind: "unavailable" }
+type View = { kind: "loading" } | { kind: "expired" } | { kind: "used" } | { kind: "unavailable" }
   | { kind: "ready"; clientName: string; destination: string; account: Account | null };
 type Endpoint = "/api/oauth/consent/view" | "/api/oauth/consent/approve" | "/api/oauth/consent/deny";
 
@@ -46,7 +46,7 @@ export function ConnectClaude() {
     if (!request.current) { setView({ kind: "expired" }); return; }
     try {
       const value = await post("/api/oauth/consent/view", { request: request.current });
-      if (value.error === "expired") { forgetPendingRequest(); setView({ kind: "expired" }); return; }
+      if (value.error === "expired" || value.error === "used") { forgetPendingRequest(); setView({ kind: value.error === "used" ? "used" : "expired" }); return; }
       const account = value.account as Account | null;
       setView({ kind: "ready", clientName: String(value.clientName ?? "Claude"), destination: String(value.destination ?? ""), account });
     } catch { setView({ kind: "unavailable" }); }
@@ -74,7 +74,7 @@ export function ConnectClaude() {
       if (target) { forgetPendingRequest(); window.location.assign(target); return; }
       if (value.error === "google") setMessage("Sign in with Google first; Claude connects only from a Google sign-in.");
       else if (value.error === "staff") setMessage("Only CRC clergy, staff and tutors can connect Claude.");
-      else if (value.error === "expired") { forgetPendingRequest(); setView({ kind: "expired" }); }
+      else if (value.error === "expired" || value.error === "used") { forgetPendingRequest(); setView({ kind: value.error === "used" ? "used" : "expired" }); }
       else if (value.error === "account") { setMessage("You switched accounts in another window. Check the account below and try again."); void load(); }
       else setMessage("That didn’t go through. Try again.");
     } catch { setMessage("That didn’t go through. Try again."); }
@@ -94,6 +94,7 @@ export function ConnectClaude() {
       <section className="entry-task" aria-labelledby="connect-title" aria-busy={view.kind === "loading" || busy}>
         {view.kind === "loading" && <h2 id="connect-title">Checking this request…</h2>}
         {view.kind === "expired" && <><h2 id="connect-title">This request has expired</h2><p className="field-help">Start again from Claude: open the connector and choose Connect.</p></>}
+        {view.kind === "used" && <><h2 id="connect-title">This request was already allowed</h2><p className="field-help">Go back to Claude. If it still asks you to connect, start again from Claude: open the connector and choose Connect. To disconnect, use Claude’s connector settings.</p></>}
         {view.kind === "unavailable" && <><h2 id="connect-title">The portal isn’t answering</h2><button type="button" className="button-secondary" onClick={() => void load()}>Try again</button></>}
         {ready && <>
           <h2 id="connect-title">Claude wants to connect</h2>
