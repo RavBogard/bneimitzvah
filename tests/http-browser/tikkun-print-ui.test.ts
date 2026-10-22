@@ -9,6 +9,7 @@ import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
+import { normalizeHebrew } from "../../src/server/study/normalize";
 import { expandReadingRanges } from "../../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 import * as s from "../../src/server/db/index";
@@ -18,6 +19,9 @@ vi.mock("server-only", () => ({}));
 // Window.print is never invoked: the Print button is exercised against a stub.
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
 let calls = 0;
+// Genesis 1:3 carries invented words as long as the Torah's longest (up to ten letters), so the phone
+// columns are tested at real word lengths rather than two-letter syllables.
+const longWords = normalizeHebrew("וּלְמַחְבְּרֹתֵיהֶ֑ם וְהִתְכַּנְּס֣וּ מְשַׁבְּצִ֖ים תַּלְבִּ֥ישׁ וַיִּתְגַּלְגְּל֛וּ בְּמִשְׁכְּנֹתֵיכֶ֖ם הַמְּסֻבָּֽבִים׃");
 const contexts: BrowserContext[] = [];
 const cookies = new Map<"admin" | "student", Awaited<ReturnType<BrowserContext["cookies"]>>>();
 async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Tikkun UI browser operation failed; private details withheld"); } }
@@ -73,7 +77,10 @@ async function capture(tab: Page, name: string) {
 beforeAll(async () => {
   try {
     assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard();
-    fixture = await browserFixture({ referenceStudentRelease: false, studyLoad: async request => { calls++; return syntheticUiStudyPage(request, "available"); } });
+    fixture = await browserFixture({ referenceStudentRelease: false, studyLoad: async request => {
+      calls++; const page = syntheticUiStudyPage(request, "available");
+      return { ...page, verses: page.verses.map(verse => verse.ref === "Genesis 1:3" ? { ...verse, hebrew: longWords } : verse) };
+    } });
     const learner = await fixture.signIn("pg-tikkun-student");
     const [member] = await fixture.ownerDb.insert(s.membership).values({ tenantId: "crc", userId: learner.id }).returning();
     const [grant] = await fixture.ownerDb.insert(s.roleGrant).values({ tenantId: "crc", membershipId: member.id, role: "student" }).returning();
@@ -91,11 +98,13 @@ afterAll(async () => { await Promise.all(contexts.map(context => context.close()
 it("shows a remembered consonant-only tikkun column in the STaM face beside Torah, and never for the haftarah", async () => {
   const tab = await page("student"); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
   const flow = tab.locator(".assigned-study .study-verses");
-  await ui(tikkunControl(tab)).toHaveAttribute("aria-pressed", "false");
+  await ui(tikkunControl(tab)).toHaveAttribute("data-active", "false");
+  // It opens a menu, like Size: no toggle state of its own; the name states the current view.
+  expect(await tikkunControl(tab).getAttribute("aria-pressed")).toBeNull();
   expect(await flow.locator("[data-tikkun-ref]").count()).toBe(0);
   await ui(tikkunControl(tab)).toHaveAccessibleName("Tikkun: Pointed text");
   const before = calls;
-  await chooseTikkun(tab, "Side by side"); await ui(tikkunControl(tab)).toHaveAttribute("aria-pressed", "true");
+  await chooseTikkun(tab, "Side by side"); await ui(tikkunControl(tab)).toHaveAttribute("data-active", "true");
   await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
   expect(calls).toBe(before); // A display preference: no text is fetched again.
   await safe(() => tab.evaluate(async () => { await document.fonts.ready; }));
@@ -115,7 +124,7 @@ it("shows a remembered consonant-only tikkun column in the STaM face beside Tora
   // Colors are on by default: each colored pointed word has its colored tikkun word, and Colors off clears both.
   const colored = async () => [await flow.locator(".study-hebrew [data-word-index][data-family]").count(), await flow.locator("[data-tikkun-ref] [data-tikkun-word][data-family]").count()];
   const [pointedColored, tikkunColored] = await colored();
-  if (pointedColored > 0) expect(tikkunColored).toBeGreaterThan(0);
+  expect(pointedColored).toBeGreaterThan(0); expect(tikkunColored).toBeGreaterThan(0);
   const colorsButton = toolbar(tab).getByRole("button", { name: "Colors", exact: true });
   await safe(() => colorsButton.click()); await ui(colorsButton).toHaveAttribute("aria-pressed", "false");
   await ui(flow.locator("[data-family]")).toHaveCount(0);
@@ -124,7 +133,7 @@ it("shows a remembered consonant-only tikkun column in the STaM face beside Tora
   await capture(tab, "tikkun-desktop");
   // Remembered like the other reading choices.
   await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
-  await ui(tikkunControl(tab)).toHaveAttribute("aria-pressed", "true"); await ui(tikkunControl(tab)).toHaveAccessibleName("Tikkun: Side by side");
+  await ui(tikkunControl(tab)).toHaveAttribute("data-active", "true"); await ui(tikkunControl(tab)).toHaveAccessibleName("Tikkun: Side by side");
   await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
   // A haftarah is read from a book: no control and no scroll lettering.
   await safe(() => tab.getByRole("button", { name: "Haftarah text", exact: true }).click()); await loaded(tab, "Isaiah 1:1");
@@ -162,7 +171,7 @@ it("on a phone keeps both columns side by side, or shows the tikkun in place of 
   expect(await flow.locator("[data-tikkun-ref]").evaluateAll(markCount)).toBe(0);
   expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await capture(tab, "tikkun-phone");
-  await chooseTikkun(tab, "Pointed text"); await ui(tikkunControl(tab)).toHaveAttribute("aria-pressed", "false");
+  await chooseTikkun(tab, "Pointed text"); await ui(tikkunControl(tab)).toHaveAttribute("data-active", "false");
   await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(0);
   await ui(flow.locator(".study-hebrew").first()).toBeVisible();
   // On a phone the print action sits under the reading, so the first verse stays above the fold.
@@ -176,9 +185,33 @@ it("on a phone keeps both columns side by side, or shows the tikkun in place of 
   await safe(() => dialog.getByRole("button", { name: "Close practice sheet", exact: true }).click()); await ui(dialog).toHaveCount(0);
 });
 
+it("never breaks a Hebrew word in either side-by-side column on a phone, at Large and Huge", async () => {
+  const tab = await page("student", true); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
+  const flow = tab.locator(".assigned-study .study-verses");
+  await chooseTikkun(tab, "Side by side"); await ui(flow.locator("[data-tikkun-ref]")).toHaveCount(3);
+  for (const size of ["Large", "Huge"] as const) {
+    await safe(() => toolbar(tab).getByRole("button", { name: /^Text size: / }).click());
+    await safe(() => toolbar(tab).getByRole("group", { name: "Hebrew text size", exact: true }).getByRole("button", { name: size, exact: true }).click());
+    await ui(toolbar(tab).getByRole("button", { name: `Text size: ${size}`, exact: true })).toHaveCount(1);
+    for (const width of [360, 390]) {
+      await safe(() => tab.setViewportSize({ width, height: 844 }));
+      const words = await flow.evaluate(root => {
+        const spans = [...root.querySelectorAll("[data-tikkun-ref] [data-tikkun-word], .study-hebrew [data-word-index]")];
+        return { tikkun: root.querySelectorAll("[data-tikkun-ref] [data-tikkun-word]").length, pointed: root.querySelectorAll(".study-hebrew [data-word-index]").length,
+          offscreen: spans.filter(span => { const box = span.getBoundingClientRect(); return box.left < 0 || box.right > innerWidth; }).length,
+          broken: spans.filter(span => span.getClientRects().length !== 1).map(span => `${span.closest("[data-tikkun-ref]") ? "tikkun" : "pointed"} word of ${[...span.textContent ?? ""].length} code points`) };
+      });
+      expect(words.tikkun).toBeGreaterThanOrEqual(9); expect(words.pointed).toBeGreaterThanOrEqual(9);
+      expect(words.broken, `${size} at ${width}px`).toEqual([]); expect(words.offscreen, `${size} at ${width}px`).toBe(0);
+      expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${size} at ${width}px`).toBe(true);
+    }
+  }
+  await capture(tab, "tikkun-phone-huge");
+});
+
 it("previews a print-only practice sheet with an optional tikkun column and no English, for the student and staff", async () => {
   const tab = await page("student"); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
-  await chooseTikkun(tab, "Side by side"); await ui(tikkunControl(tab)).toHaveAttribute("aria-pressed", "true");
+  await chooseTikkun(tab, "Side by side"); await ui(tikkunControl(tab)).toHaveAttribute("data-active", "true");
   const opener = tab.getByRole("button", { name: "Print practice sheet", exact: true });
   await safe(() => opener.click());
   const dialog = tab.getByRole("dialog", { name: "Practice sheet", exact: true }); await ui(dialog).toBeVisible();

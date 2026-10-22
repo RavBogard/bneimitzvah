@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { normalizeHebrew } from "../../src/server/study/normalize";
 import { projectStudyVerse } from "../../src/lib/hebrew/study-tokens";
 import { colorStudyVerse } from "../../src/lib/hebrew/study-annotations";
-import { tikkunPieces, tikkunText } from "../../src/lib/hebrew/tikkun";
+import { INVERTED_NUN, isHebrewLetter, tikkunPieces, tikkunText } from "../../src/lib/hebrew/tikkun";
 import { TikkunVerse } from "../../src/components/portal/workspace/study/annotations";
 import { parseReadingPrefs } from "../../src/components/portal/workspace/reading-prefs";
 import type { StudyVerse } from "../../src/components/portal/workspace/study/api";
@@ -29,7 +29,8 @@ const single = (name: string) => { const value = fixture(name) as { ref: string;
 // a ketiv/qere pair, open and closed paragraph gaps, paseq, maqaf and sof pasuq.
 const synthetic = [
   '<span class="mam-spi-invnun">׆</span>אָ<b>ב</b>־גָ֣ ׀ <span class="mam-kq"><span class="mam-kq-k">כָ֔תָב</span><span class="mam-kq-q">[קָ֖רִי דָ֑בָר]</span></span><span class="mam-spi-samekh">{ס}</span>בָֽ׃<span class="mam-spi-pe">{פ}</span>',
-  'אָ֑ב גַּֽד׃ <span class="mam-spi-invnun">׆</span>',
+  // Real MAM shape for Numbers 10:36: the closing inverted nun stands before the open-paragraph gap.
+  'אָ֑ב גַּֽד׃ <span class="mam-spi-invnun">׆</span> <span class="mam-spi-pe">{פ}</span>',
   'אָב־גָ <span class="mam-kq"><span class="mam-kq-q">[קָרִי דָבָר]</span><span class="mam-kq-k">כָתָב</span></span> הָ׃',
   'הָ֣ ׀ וָ֔ זָ֖ ׃<span class="mam-spi-samekh">{ס}</span>',
 ].map((html, index) => ({ ref: `Numbers 10:${35 + index}`, html }));
@@ -62,9 +63,11 @@ describe("colored tikkun letters", () => {
       const projected = projectStudyVerse(value.ref, value.hebrew);
       if (projected.status !== "ready") continue;
       const pieces = tikkunPieces(projected.projection.runs);
-      expect(pieces.map(piece => piece.text).join(""), value.ref).toBe(tikkunText(value.hebrew.text));
-      // Every piece is either a single space or letters only; spaces never carry a word.
-      for (const piece of pieces) expect(piece.text === " " ? piece.wordIndex === null : /^[\u05d0-\u05ea]+$/u.test(piece.text), value.ref).toBe(true);
+      // With the inverted-nun signs set aside, the letters and word spaces are exactly tikkunText's.
+      expect(pieces.filter(piece => !piece.sign).map(piece => piece.text).join("").replace(/ {2,}/g, " ").trim(), value.ref).toBe(tikkunText(value.hebrew.text));
+      expect(pieces.filter(piece => piece.sign).length, value.ref).toBe(value.hebrew.segments.filter(segment => segment.kind === "inverted-nun").length);
+      // Every piece is a sign, a single space or letters only; spaces and signs never carry a word.
+      for (const piece of pieces) expect(piece.sign ? piece.text === INVERTED_NUN && piece.wordIndex === null : piece.text === " " ? piece.wordIndex === null : [...piece.text].every(char => isHebrewLetter(char.codePointAt(0)!)), value.ref).toBe(true);
       const colored = colorStudyVerse(value.ref, value.hebrew, { kind: "torah", confirmed: true, verses: [value.ref] });
       const plain = render(createElement(TikkunVerse, { verse: value }))[0];
       for (const colors of [colored.status === "ready" ? colored : null, null]) {
@@ -90,6 +93,40 @@ describe("colored tikkun letters", () => {
     expect(words.filter(node => Number(attr(node, "data-tikkun-word")) === firstRead).map(text)).toEqual([tikkunText(alternative.written)]);
     // The read form (qere) is never written in the tikkun.
     expect(text(render(createElement(TikkunVerse, { verse: value, projection: projected.projection, colors: colored }))[0])).not.toContain("\u05e7\u05e8\u05d9");
+  });
+  it("writes the inverted nuns where they stand: opening Numbers 10:35 and closing 10:36 before its open-paragraph gap", () => {
+    const [opening, closing] = [verse("Numbers 10:35", synthetic[0].html)!, verse("Numbers 10:36", synthetic[1].html)!];
+    expect(closing.hebrew.paragraphAfter).toBe("petuchah");
+    expect(closing.hebrew.segments.at(-1)!.kind).toBe("gap");
+    for (const value of [opening, closing]) {
+      const projected = projectStudyVerse(value.ref, value.hebrew);
+      if (projected.status !== "ready") throw new Error("Synthetic projection not ready");
+      const colored = colorStudyVerse(value.ref, value.hebrew, { kind: "torah", confirmed: true, verses: [value.ref] });
+      const letters = tikkunText(value.hebrew.text);
+      const expected = value === opening ? `${INVERTED_NUN} ${letters}` : `${letters} ${INVERTED_NUN}`;
+      for (const props of [{ verse: value }, { verse: value, projection: projected.projection }, { verse: value, projection: projected.projection, colors: colored.status === "ready" ? colored : null }]) {
+        const all = render(createElement(TikkunVerse, props));
+        expect(text(all[0]), value.ref).toBe(expected);
+        expect(all.filter(node => attr(node, "role") === "img" && attr(node, "aria-label") === "Inverted nun, Masoretic sign")).toHaveLength(1);
+      }
+    }
+  });
+  it("lights the ketiv while any word of its multi-word qere plays", () => {
+    // Shaped like Genesis 30:11 (ketiv of one word, qere of two), in invented syllables.
+    const value = verse("Genesis 30:11", '\u05d0\u05b8\u0591\u05d1 <span class="mam-kq"><span class="mam-kq-k">\u05d1\u05b0\u05d2\u05b8\u05d3</span><span class="mam-kq-q">[\u05d1\u05b8\u05bc\u05a3\u05d0 \u05d2\u05b8\u05bd\u05d3]</span></span> \u05d4\u05b8\u05c3')!;
+    const projected = projectStudyVerse(value.ref, value.hebrew);
+    if (projected.status !== "ready") throw new Error("Synthetic projection not ready");
+    const alternative = projected.projection.runs.find(run => run.kind === "alternative")!;
+    if (alternative.kind !== "alternative") throw new Error("No alternative");
+    const read = [...new Set(alternative.read.flatMap(part => part.wordIndex === null ? [] : [part.wordIndex]))];
+    expect(read).toHaveLength(2);
+    for (const activeWord of [...read, 0, null]) {
+      const all = render(createElement(TikkunVerse, { verse: value, projection: projected.projection, activeWord }));
+      const ketiv = all.find(node => attr(node, "data-tikkun-word") === String(read[0]))!;
+      expect(text(ketiv)).toBe(tikkunText(alternative.written));
+      expect(attr(ketiv, "data-reference-active"), String(activeWord)).toBe(activeWord !== null && read.includes(activeWord) ? "true" : undefined);
+      expect(all.filter(node => attr(node, "data-reference-active") === "true")).toHaveLength(activeWord === null ? 0 : 1);
+    }
   });
 });
 

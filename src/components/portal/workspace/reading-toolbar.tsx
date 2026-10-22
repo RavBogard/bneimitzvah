@@ -12,7 +12,7 @@ export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailab
     <button type="button" className="toolbar-item" aria-pressed={prefs.colors} onClick={() => setReadingPrefs({ colors: !prefs.colors })}>{icons.colors}<span>Colors</span></button>
     <button type="button" className="toolbar-item" aria-pressed={prefs.translation} onClick={() => setReadingPrefs({ translation: !prefs.translation })}>{icons.translate}<span>English</span></button>
     {tikkunAvailable && <>
-      <button type="button" className="toolbar-item" popoverTarget={tikkunMenu} aria-pressed={prefs.tikkunView !== "off"} aria-label={`Tikkun: ${view.label}`}>{icons.scroll}<span>Tikkun</span></button>
+      <button type="button" className="toolbar-item" popoverTarget={tikkunMenu} data-active={prefs.tikkunView !== "off"} aria-label={`Tikkun: ${view.label}`}>{icons.scroll}<span>Tikkun</span></button>
       <div id={tikkunMenu} popover="auto" className="toolbar-menu" role="group" aria-label="Tikkun view">
         {tikkunViews.map(row => <button type="button" key={row.id} aria-pressed={prefs.tikkunView === row.id} data-tikkun-view={row.id}
           onClick={event => { setReadingPrefs({ tikkunView: row.id }); (event.currentTarget.parentElement as HTMLElement & { hidePopover?(): void }).hidePopover?.(); }}>{row.label}</button>)}

@@ -56,7 +56,7 @@ describe("Tikkun control", () => {
         const all = render(createElement(ReadingToolbar, { tikkunAvailable: true }));
         const shown = all.filter(node => attr(node, "class") === "toolbar-item" && text(node) === "Tikkun");
         expect(shown).toHaveLength(1);
-        expect(attr(shown[0], "aria-pressed")).toBe(String(view !== "off"));
+        expect(attr(shown[0], "aria-pressed")).toBeUndefined(); expect(attr(shown[0], "data-active")).toBe(String(view !== "off"));
         expect(attr(shown[0], "aria-label")).toBe(`Tikkun: ${label}`);
         const menu = all.find(node => attr(node, "aria-label") === "Tikkun view")!;
         expect(attr(shown[0], "popovertarget")).toBe(attr(menu, "id"));

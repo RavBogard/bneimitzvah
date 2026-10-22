@@ -3,7 +3,7 @@ import { useMemo, type CSSProperties, type MouseEvent, type ReactNode } from "re
 import { colorStudyVerse, type AssignmentEnding, type ColorResult } from "../../../../lib/hebrew/study-annotations";
 import { projectStudyVerse, type DisplayPart, type StudyProjection } from "../../../../lib/hebrew/study-tokens";
 import { PHRASE_FAMILIES } from "../../../../lib/trope/chart-catalog";
-import { tikkunPieces, tikkunText } from "../../../../lib/hebrew/tikkun";
+import { INVERTED_NUN, tikkunPieces, tikkunSigns, tikkunText } from "../../../../lib/hebrew/tikkun";
 import hebrewStyles from "../../../../styles/hebrew-font.module.css";
 import stamStyles from "../../../../styles/stam-font.module.css";
 import { useReadingPrefs, type TikkunView } from "../reading-prefs";
@@ -135,19 +135,22 @@ export function studyFlowGroups(verses: readonly StudyVerse[], sectionStarts: re
 export function TikkunVerse({ verse, className = "", projection = null, colors = null, activeWord = null, ...rest }: {
   verse: StudyVerse; className?: string; projection?: StudyProjection | null; colors?: Ready | null; activeWord?: number | null; "aria-hidden"?: boolean;
 }) {
-  const text = useMemo(() => projection ? null : tikkunText(verse.hebrew.text), [projection, verse.hebrew.text]), segments = verse.hebrew.segments;
+  const text = useMemo(() => projection ? null : tikkunText(verse.hebrew.text), [projection, verse.hebrew.text]);
+  const signs = useMemo(() => tikkunSigns(verse.hebrew.segments), [verse.hebrew.segments]);
   const pieces = useMemo(() => projection ? tikkunPieces(projection.runs) : null, [projection]);
   // The scroll writes the inverted nuns (Numbers 10:35-36), so they stay; every other mark is gone.
-  const sign = <span role="img" aria-label="Inverted nun, Masoretic sign">{"\u05c6"}</span>;
+  const sign = (key?: number) => <span key={key} role="img" aria-label="Inverted nun, Masoretic sign">{INVERTED_NUN}</span>;
   const words = pieces?.map((piece, index) => {
+    if (piece.sign) return sign(index);
     if (piece.wordIndex === null) return piece.text;
-    const word = colors?.words[piece.wordIndex], family = word?.family ? families.get(word.family) : null, active = piece.wordIndex === activeWord;
+    // A ketiv stands for every word of its qere, so it lights up while any of them plays.
+    const word = colors?.words[piece.wordIndex], family = word?.family ? families.get(word.family) : null, active = activeWord !== null && piece.words.includes(activeWord);
     return <span key={index} data-tikkun-word={piece.wordIndex} data-family={family?.id} data-reference-active={active ? "true" : undefined}
       className={[family ? styles.word : "", active ? referenceStyles.activeWord : ""].filter(Boolean).join(" ") || undefined}
       style={family ? { "--phrase-color": family.color } as CSSProperties : undefined}>{piece.text}</span>;
   });
   return <span className={`${stamStyles.stam} ${className}`.trim()} lang="he" dir="rtl" data-tikkun-ref={verse.ref} {...rest}>
-    {segments[0]?.kind === "inverted-nun" && <>{sign} </>}{words ?? text}{segments.length > 1 && segments.at(-1)?.kind === "inverted-nun" && <> {sign}</>}
+    {words ?? <>{signs.before && <>{sign()}{text && " "}</>}{text}{signs.after && <> {sign()}</>}</>}
   </span>;
 }
 
