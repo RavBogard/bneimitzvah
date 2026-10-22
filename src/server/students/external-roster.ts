@@ -77,7 +77,9 @@ const namespace = (value: unknown): value is string => typeof value === "string"
 const sourceId = (value: unknown): value is string => typeof value === "string" && !!value && value.length <= 256 && value.isWellFormed() && value.trim() === value && Buffer.byteLength(value, "utf8") <= 256 && !/[\x00-\x1f\x7f-\x9f]/.test(value);
 const bytesWithin = (value: unknown, maximum: number) => Buffer.byteLength(JSON.stringify(value), "utf8") <= maximum;
 const uuid = (value: unknown) => identifier(value).toLowerCase();
-const nameKey = (value: StudentInput) => JSON.stringify([value.firstName, value.lastName].map(name => name.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase()).concat(value.ceremonyDate));
+/** The name-and-date key that suggests (never establishes) a reconciliation. */
+export const rosterNameKey = (firstName: string, lastName: string, ceremonyDate: string) => JSON.stringify([firstName, lastName].map(name => name.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase()).concat(ceremonyDate));
+const nameKey = (value: StudentInput) => rosterNameKey(value.firstName, value.lastName, value.ceremonyDate);
 
 type StudentSnapshot = { studentId: string; revision: number; disabled: boolean; fields: StudentInput };
 

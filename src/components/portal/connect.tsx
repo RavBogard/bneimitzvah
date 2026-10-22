@@ -96,6 +96,7 @@ export function ConnectClaude() {
             <ul className="role-list">
               {account!.role === "admin" ? <li>See every student’s preparation summary</li> : <li>See your own students’ preparation summaries</li>}
               {account!.scopes.includes("portal:study") && <li>Draft, review and publish the study guides students read</li>}
+              {account!.scopes.includes("portal:roster") && !unattended && <li>Add students from Maven and update their names and ceremony dates. It never sends invitations.</li>}
             </ul>
             {account!.scopes.includes("portal:study") && <label className="field-help">
               <input type="checkbox" checked={unattended} disabled={busy} onChange={event => setUnattended(event.target.checked)} />{" "}

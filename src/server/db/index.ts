@@ -16,3 +16,4 @@ export * from "./reference-review-schema";
 export * from "./study-guides-schema";
 export * from "./mcp-schema";
 export * from "./tenant-settings-schema";
+export * from "./roster-source-schema";

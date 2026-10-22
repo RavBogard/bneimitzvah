@@ -21,8 +21,9 @@ export const mcpConnection = pgTable("mcp_connection", {
   foreignKey({ name: "mcp_connection_member_fk", columns: [t.tenantId, t.membershipId, t.userId], foreignColumns: [membership.tenantId, membership.id, membership.userId] }),
   foreignKey({ name: "mcp_connection_grant_fk", columns: [t.tenantId, t.roleGrantId, t.membershipId], foreignColumns: [roleGrant.tenantId, roleGrant.id, roleGrant.membershipId] }),
   foreignKey({ name: "mcp_connection_role_fk", columns: [t.tenantId, t.roleGrantId, t.role], foreignColumns: [roleGrant.tenantId, roleGrant.id, roleGrant.role] }),
-  // Staff only; only an admin grant can carry the study write scope (S21).
-  check("mcp_connection_scope", sql`(${t.role}='admin' and ${t.scope} in ('portal:read','portal:read portal:study')) or (${t.role}='tutor' and ${t.scope}='portal:read')`),
+  // Staff only; only an admin grant can carry the study write scope (S21) or the roster scope, and a scheduled
+  // routine never holds the roster scope (Daniel, 2026-10-21; added in 0031).
+  check("mcp_connection_scope", sql`((${t.role}='admin' and ${t.scope} in ('portal:read','portal:read portal:study','portal:read portal:roster','portal:read portal:study portal:roster')) or (${t.role}='tutor' and ${t.scope}='portal:read')) and not (${t.unattended} and ${t.scope} like '%portal:roster%')`),
   check("mcp_connection_revisions", sql`${t.roleGrantRevision} > 0 and ${t.authorityRevision} > 0`),
   check("mcp_connection_client", sql`char_length(${t.clientName}) between 1 and 120 and ${t.clientName} !~ '[[:cntrl:]<>]' and ${t.clientHash} ~ '^[a-f0-9]{64}$' and octet_length(${t.redirectUri}) between 1 and 2048`),
   check("mcp_connection_lifetime", sql`isfinite(${t.createdAt}) and ${t.expiresAt} > ${t.createdAt} and ${t.expiresAt} <= ${t.createdAt} + interval '31 days' and (${t.revokedAt} is null or (isfinite(${t.revokedAt}) and ${t.revokedAt} >= ${t.createdAt}))`),

@@ -8,5 +8,12 @@ Tutors see their own students (list_students, get_student). The rabbi also draft
 4. Label honestly: origin "claude" for anything Claude wrote or rewrote, "rabbi" only for the rabbi's own words. reviewed:true only when the rabbi has read that exact text in this conversation and said it is reviewed. A scheduled routine never marks anything reviewed.
 5. Students see a guide as soon as it is saved, labelled with its review state, unless it is held. A draft saved over reviewed work is held for the rabbi automatically; publish_guide releases it.
 6. Every write takes expectedVersion from your last read and a fresh mutationId; on a conflict, read again and resend.
-7. Show the rabbi the full text of anything you wrote before saving it as reviewed. Student names and readings are private: use them only for this work.`;
+7. Show the rabbi the full text of anything you wrote before saving it as reviewed. Student names and readings are private: use them only for this work.
+
+Roster intake from Maven (an admin connection with the separate roster permission, never a scheduled routine; Maven is read only, never write to it):
+1. get_maven_roster_query gives the exact SOQL for a ceremony-date window. Run it with the Maven connector's maven_run_soql exactly as given.
+2. Pass that tool's structured result, unchanged, to propose_roster_changes with the same start and end. It writes nothing.
+3. Show the rabbi the proposed rows as a table: name, ceremony date, the change and the changed fields. A matching name only suggests a student; never decide a reconcile row yourself.
+4. Call apply_roster_changes only after the rabbi says which rows to apply, and for each new student whether a child or an adult and the service slot. Report each row's outcome.
+5. Applying sends no invitations and no e-mail. Inviting families is a separate step the rabbi takes in the portal.`;
 export const SERVER_INFO = Object.freeze({ name: "crc-bnei-mitzvah", version: "1.0.0" });

@@ -1,7 +1,7 @@
 import "server-only";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
-import type { ActiveMode,Actor,StudentActor } from "../access/types";
+import type { AccessTransaction,ActiveMode,Actor,StudentActor } from "../access/types";
 import { AccessDenied,AccessUnavailable } from "../access/errors";
 import { requireCookieMutation,type CookieMutationRequest } from "../http/mutations";
 import * as data from "../data/roster";
@@ -10,7 +10,7 @@ import { parsePick,type Pick } from "../../lib/readings/leyning.mjs";
 import { expandReadingRanges,type CeremonyDate,type VerseCounts } from "../../lib/readings/ranges";
 import { proposeReading,ReadingUnavailable,type Calendar,type Snapshot } from "../../lib/readings/proposals";
 import { createBindings,digest } from "./bindings";
-import { identifier,parseStudentCsv,rehearsalsFit,revision,studentInput,type StudentInput,type CsvParse } from "./validation";
+import { identifier,parseStudentCsv,rehearsalsFit,revision,studentInput,type ImportedStudentInput,type StudentInput,type CsvParse } from "./validation";
 import { readingDate } from "../../lib/readings/reading-date";
 import { validatedSnapshot } from "./preparation";
 import { aliyahStarts } from "../../lib/readings/aliyah-starts";
@@ -65,6 +65,37 @@ function matchedImport(parsed:CsvParse,tutors:Awaited<ReturnType<typeof data.imp
   return {rows,tutorMatches,missingSecondParentRows,tutorSnapshot:digest(relevant)};
 }
 
+/**
+ * The one student-create write: the row, its ceremony schedule and the audit event. The portal's
+ * create and CSV import and the MCP roster intake all write through here; the caller has already
+ * established admin authority inside this transaction.
+ */
+export async function writeNewStudent<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,actor:Actor,values:ImportedStudentInput,action:"student.create"|"student.import",at:number){
+  const student=await data.insertStudent(tx,actor.tenantId,values);
+  await scheduleCeremony(tx,actor.tenantId,student,at);
+  await data.audit(tx,actor,action,student.id);
+  return student;
+}
+/**
+ * The one student-update write, shared by the portal's edit and the MCP roster intake: locks the row,
+ * null on a stale revision, 404 for a missing or disabled student, 403 for contacts or rehearsals
+ * the new values would break. A changed date or slot sends readings and the service plan to review.
+ */
+export async function writeStudentEdit<Q extends PgQueryResultHKT>(tx:AccessTransaction<Q>,actor:Actor,id:string,expected:number,values:StudentInput,at:number){
+  const current=await data.editableStudent(tx,actor.tenantId,id);
+  if(!current || current.disabledAt)throw new AccessDenied(404);
+  if(current.revision!==expected)return null;
+  if(values.ownEmail!==null && values.ownEmail===(values.secondParentEmail===undefined?current.secondParentEmail:values.secondParentEmail))throw new AccessDenied(403);
+  // An omitted rehearsal keeps its saved date, which must still fit the new ceremony date.
+  if(!rehearsalsFit(values.ceremonyDate,values.rehearsal1===undefined?current.rehearsal1:values.rehearsal1,values.rehearsal2===undefined?current.rehearsal2:values.rehearsal2))throw new AccessDenied(403);
+  const updated=await data.updateStudent(tx,actor.tenantId,id,expected,values);
+  if(!updated)return null;
+  const readingNeedsReview=current.ceremonyDate!==values.ceremonyDate || current.serviceSlot!==values.serviceSlot;
+  if(readingNeedsReview){await data.markReadingsForReview(tx,actor.tenantId,id);await markServicePlanForReview(tx,actor.tenantId,id);await scheduleCeremony(tx,actor.tenantId,updated,at);}
+  await data.audit(tx,actor,"student.update",id);
+  return {revision:updated.revision,readingNeedsReview};
+}
+
 export function createStudentService<Q extends PgQueryResultHKT>(input:{
   access:ReturnType<typeof createAccessService<Q>>; signingSecret:string;
   loadReading:(date:string,calendar:Calendar)=>Promise<{snapshot:Snapshot;fetchedAt:number}>;
@@ -91,9 +122,7 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
     const values=studentInput(selection.student);
     const result=await input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
       requireCookieMutation(request,actor.origin);
-      const student=await data.insertStudent(tx,actor.tenantId,values);
-      await scheduleCeremony(tx,actor.tenantId,student,now());
-      await data.audit(tx,actor,"student.create",student.id);
+      const student=await writeNewStudent(tx,actor,values,"student.create",now());
       return {id:student.id,revision:student.revision};
     });
     await afterSchedule(request,selection.mode,[result.id]);return result;
@@ -102,18 +131,9 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
     const id=identifier(selection.studentId),expected=revision(selection.expectedRevision),values=studentInput(selection.student);
     const result=await input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
       requireCookieMutation(request,actor.origin);
-      const current=await data.editableStudent(tx,actor.tenantId,id);
-      if(!current || current.disabledAt)throw new AccessDenied(404);
-      if(current.revision!==expected)return conflict();
-      if(values.ownEmail!==null && values.ownEmail===(values.secondParentEmail===undefined?current.secondParentEmail:values.secondParentEmail))throw new AccessDenied(403);
-      // An omitted rehearsal keeps its saved date, which must still fit the new ceremony date.
-      if(!rehearsalsFit(values.ceremonyDate,values.rehearsal1===undefined?current.rehearsal1:values.rehearsal1,values.rehearsal2===undefined?current.rehearsal2:values.rehearsal2))throw new AccessDenied(403);
-      const updated=await data.updateStudent(tx,actor.tenantId,id,expected,values);
+      const updated=await writeStudentEdit(tx,actor,id,expected,values,now());
       if(!updated)return conflict();
-      const readingNeedsReview=current.ceremonyDate!==values.ceremonyDate || current.serviceSlot!==values.serviceSlot;
-      if(readingNeedsReview){await data.markReadingsForReview(tx,actor.tenantId,id);await markServicePlanForReview(tx,actor.tenantId,id);await scheduleCeremony(tx,actor.tenantId,updated,now());}
-      await data.audit(tx,actor,"student.update",id);
-      return {ok:true as const,id,revision:updated.revision,readingNeedsReview};
+      return {ok:true as const,id,revision:updated.revision,readingNeedsReview:updated.readingNeedsReview};
     });
     if(result.ok)await afterSchedule(request,selection.mode,[id]);return result;
   }
@@ -162,7 +182,7 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
       if(claim.tutors!==matched.tutorSnapshot)return conflict();
       if(duplicates(parsed.rows,existing,parsed.rowNumbers).length && !selection.allowDuplicates)throw new AccessDenied(403);
       const ids:string[]=[];
-      for(const values of matched.rows){assertSessionLive(actor.authSessionExpiresAt);const student=await data.insertStudent(tx,actor.tenantId,values);await scheduleCeremony(tx,actor.tenantId,student,now());await data.audit(tx,actor,"student.import",student.id);ids.push(student.id);}
+      for(const values of matched.rows){assertSessionLive(actor.authSessionExpiresAt);const student=await writeNewStudent(tx,actor,values,"student.import",now());ids.push(student.id);}
       assertSessionLive(actor.authSessionExpiresAt);
       return {ok:true as const,ids};
     });

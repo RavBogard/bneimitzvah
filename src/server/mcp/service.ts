@@ -37,9 +37,12 @@ export const GOOGLE_CONSENT_WINDOW_MS = 15 * 60_000;
 const plainName = (value: unknown) => typeof value === "string" && value.trim() && !/[\u0000-\u001f\u007f<>]/.test(value) ? value.trim().slice(0, 120) : "Claude";
 
 /** Scopes a grant may hold. Only an admin grant can carry the study write scope (S21). */
-function grantedScope(role: "admin" | "tutor", asked: ReadonlySet<string>): string {
+function grantedScope(role: "admin" | "tutor", asked: ReadonlySet<string>, unattended: boolean): string {
   if (role === "tutor") return SCOPES.read;
-  return asked.size === 1 && asked.has(SCOPES.read) ? SCOPES.read : `${SCOPES.read} ${SCOPES.study}`;
+  // Nothing asked means the admin's full consent, shown line by line on the consent page: study, and roster unless this
+  // is a scheduled routine (Daniel, 2026-10-21). A client that names scopes gets only those it named (plus read).
+  const study = asked.size === 0 || asked.has(SCOPES.study), roster = (asked.size === 0 || asked.has(SCOPES.roster)) && !unattended;
+  return [SCOPES.read, ...(study ? [SCOPES.study] : []), ...(roster ? [SCOPES.roster] : [])].join(" ");
 }
 
 export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
@@ -77,7 +80,9 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
     if (!grant || grant.revokedAt || grant.id !== connection.roleGrantId || grant.revision !== connection.roleGrantRevision) throw new AccessDenied(401);
     return Object.freeze({
       tenantId: resolved.tenantId, origin: resolved.origin, connectionId: connection.id, userId: connection.userId, membershipId: member.id, roleGrantId: grant.id,
-      role: connection.role, roleGrantRevision: grant.revision, authorityRevision: member.authorityRevision, scopes: new Set(connection.scope.split(" ")),
+      role: connection.role, roleGrantRevision: grant.revision, authorityRevision: member.authorityRevision, // Roster is an admin's attended consent only: dropped for any other connection, so no token issued, refreshed
+      // or used carries it there (the database check refuses such a row as well).
+      scopes: new Set(connection.scope.split(" ").filter(scope => scope !== SCOPES.roster || (connection.role === "admin" && !connection.unattended))),
       unattended: connection.unattended, expiresAt: Math.min(connection.expiresAt.getTime(), tokenExpiresAt ?? Infinity),
     });
   }
@@ -157,7 +162,7 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
             if (await lockRoleGrant(tx, identity.tenantId, identity.membership.id, "admin", "read")) role = "admin";
             else if (await lockRoleGrant(tx, identity.tenantId, identity.membership.id, "tutor", "read")) role = "tutor";
           }
-          return Object.freeze({ name: plainName(user?.name), google, role, scopes: role ? grantedScope(role, record.asked).split(" ") : [], viewer: viewerOf(identity) });
+          return Object.freeze({ name: plainName(user?.name), google, role, scopes: role ? grantedScope(role, record.asked, false).split(" ") : [], viewer: viewerOf(identity) });
         });
       } catch (error) { if (!(error instanceof AccessDenied)) throw error; }
       return Object.freeze({ clientName: record.clientName, destination, account });
@@ -178,7 +183,7 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
         if (record.resource !== `${identity.origin}${MCP_PATH}`) return { ok: false as const, reason: "expired" as const };
         const connection = await data.insertConnection(tx, {
           tenantId: identity.tenantId, userId: identity.userId, membershipId: identity.membership.id, roleGrantId: grant.id, role,
-          roleGrantRevision: grant.revision, authorityRevision: identity.membership.authorityRevision, scope: grantedScope(role, record.asked),
+          roleGrantRevision: grant.revision, authorityRevision: identity.membership.authorityRevision, scope: grantedScope(role, record.asked, unattended),
           unattended, clientName: record.clientName, clientHash: record.client, redirectUri: record.redirectUri,
           createdAt: new Date(at), expiresAt: new Date(at + TTL.connection),
         });
@@ -271,6 +276,20 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
         return action(t, fresh, alive);
       });
     },
+    /**
+     * Sign a roster plan (Maven intake) for this connection alone: tenant and connection are bound into
+     * the HMAC, so the token is refused on any other connection, tenant or after TTL.rosterPlan.
+     */
+    sealRosterPlan(actor: McpActor, plan: Record<string, unknown>): { token: string; expiresAt: number } {
+      const at = now();
+      return { token: sign(input.secret, "rp", { ...plan, tenant: actor.tenantId, connection: actor.connectionId }, TTL.rosterPlan, at), expiresAt: at + TTL.rosterPlan };
+    },
+    /** The signed plan when its mac, expiry, tenant and connection all hold; null otherwise. */
+    openRosterPlan(actor: McpActor, token: unknown): Record<string, unknown> | null {
+      const plan = verify(input.secret, "rp", token, now());
+      return plan && plan.tenant === actor.tenantId && plan.connection === actor.connectionId ? plan : null;
+    },
+    now,
     /** The portal Actor shape existing student-access helpers take, for an MCP connection. */
     portalActor(actor: McpActor): Actor {
       return Object.freeze({ tenantId: actor.tenantId, origin: actor.origin, userId: actor.userId, authSessionId: "", membershipId: actor.membershipId,

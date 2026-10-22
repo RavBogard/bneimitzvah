@@ -20,7 +20,9 @@ test("0030 additive migration upgrades and replays, with the generated snapshot 
   const isolation = await isolatedEnv(), client = new PGlite();
   try {
     const folder = "src/server/db/migrations", journal = JSON.parse(await readFile(join(folder, "meta/_journal.json"), "utf8"));
-    const entries = journal.entries.filter((e: { tag: string }) => e.tag !== TAG), prior = join(isolation.home, "prior");
+    // Everything before this migration: a later one applied first would make the migrator skip this one as already past.
+    const ownIdx = journal.entries.find((e: { tag: string }) => e.tag === TAG).idx;
+    const entries = journal.entries.filter((e: { idx: number }) => e.idx < ownIdx), prior = join(isolation.home, "prior");
     await mkdir(join(prior, "meta"), { recursive: true }); await writeFile(join(prior, "meta/_journal.json"), JSON.stringify({ ...journal, entries }));
     for (const e of entries) await copyFile(join(folder, e.tag + ".sql"), join(prior, e.tag + ".sql"));
     const db = drizzle(client); await migrate(db, { migrationsFolder: prior });

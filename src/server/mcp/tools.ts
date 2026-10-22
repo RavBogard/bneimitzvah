@@ -16,6 +16,7 @@ import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import * as s from "../db/index";
 import type { createMcpAuthService, McpActor } from "./service";
 import { SCOPES } from "./oauth";
+import { createRosterTools } from "./roster-tools";
 
 type JsonSchema = Readonly<Record<string, unknown>>;
 export type ToolResult = Readonly<{ content: readonly Readonly<{ type: "text"; text: string }>[]; isError?: boolean }>;
@@ -210,6 +211,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
         expectedVersion, body: additionsBody, origin, reviewed, mutationId }, ["studentId", "kind", "assignmentId", "assignmentRevision", "expectedVersion", "body", "origin", "reviewed", "mutationId"]),
       handler: async (input, ctx) => { requireStudy(ctx); return routineOrigin(ctx, input) ?? outcome(await ctx.guides.setStudentGuide(rabbiAuthority(ctx), input as never)); },
     },
+    ...createRosterTools<Q>(),
   ] satisfies Tool<Q>[]);
 }
 
