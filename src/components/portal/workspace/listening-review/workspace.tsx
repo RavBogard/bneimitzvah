@@ -120,7 +120,7 @@ function Review() {
   const saved = item?.verdict;
   return <section className="role-workspace admin-workspace listening-review"><AdminNav />
     <div className="admin-head"><h1>Listening review</h1></div>
-    <p className={styles.intro}>Listen to each verse exactly as a student will hear it, then mark it. Tap any word to hear the whole verse. Use Practice to drill one word, Repeat to loop and Speed to slow down. Students can’t hear these recordings until this review is accepted.</p>
+    <p className={styles.intro}>Listen to each verse exactly as a student will hear it, then mark it. Tap any word to hear the whole verse. Use Practice to drill one word, Repeat to loop and Speed to slow down. Students can’t hear these recordings yet; switching them on is a separate step after this review.</p>
     {!overview ? failure === null ? <p role="status">Loading the review…</p>
       : <div className="admin-state" role="alert"><p>{[401, 403].includes(failure) ? "This review is for administrators. Check your account and sign in again." : "The review couldn’t be loaded."}</p><button type="button" className="button-secondary admin-pill" onClick={() => void loadOverview()}>Reload</button></div>
       : <>

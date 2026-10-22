@@ -89,9 +89,9 @@ type ListeningSourceProvider = Readonly<{
 - policy `tenant_isolation`, whose WITH CHECK requires the request tenant and `role='admin' AND mode='admin'`;
 - trigger `immutable_listening_verdict`, which calls `portal_immutable_audit()`.
 
-It replaces `audit_action_known` with the prior list plus `listening-review.set`. The new list also carries 0032's and 0033's actions, so it is right whichever lands first.
+It replaces `audit_action_known` with the prior list plus `listening-review.set`. The new list also carries 0032's and 0033's actions, so the audit list (only) is right whichever lands first.
 
-It needs `public.portal_settings_text`, from 0030. **Ordering:** drizzle skips a migration whose `when` predates the last applied one. If #17 or #21 merges after this, its journal `when` must be later than 0034's, or the operator must apply it explicitly.
+It needs `public.portal_settings_text`, from 0030. **Ordering:** drizzle skips a migration whose journal `when` predates the last applied one. The journal times of #17's 0032 and #21's 0033 are earlier than 0034's. Whichever of them merges after this one must regenerate its `when` (and `idx`). The new `tests/migration-journal.test.mjs` now fails CI if the journal's position, number or time ever runs backwards.
 
 ## 3. Daniel's phone steps
 

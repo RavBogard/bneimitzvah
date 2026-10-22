@@ -183,7 +183,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     ...shortMetadata, studentRelease: config.referenceAudio?.studentRelease });
   // Admin-only listening review: the same pinned short clips students would get, never the student release flag.
   const listeningReview = createListeningReviewService({ access, loadText, sources: [createPocketTorahListeningSource({ ...shortMetadata,
-    catalogSha256: config.referenceAudio?.catalogSha256, manifestSha256: process.env.REFERENCE_AUDIO_SHORT_MANIFEST_SHA256 })] });
+    catalogSha256: config.referenceAudio?.catalogSha256, manifestSha256: process.env.REFERENCE_AUDIO_SHORT_MANIFEST_SHA256, configured: shortMetadata.configured })] });
   const readingPreview = createReadingPreviewService({ access, loadReading, loadText, signingSecret:purposeSecret(config,"reading-preview") });
   const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding") });
   const relationships = createRelationshipService({ access });

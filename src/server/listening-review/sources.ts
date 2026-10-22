@@ -24,14 +24,16 @@ const digest = (value: unknown): value is string => typeof value === "string" &&
 /** PocketTorah short clips, through the same catalog/manifest loaders and the same resolution as students. */
 export function createPocketTorahListeningSource(input: {
   catalogSha256?: string; manifestSha256?: string;
+  /** The loaders' own configuration check, so an item is never offered where playback would fail. */
+  configured?(): boolean;
   loadCatalog(signal?: AbortSignal): Promise<ReferenceCatalog>; loadManifest(signal?: AbortSignal): Promise<ShortSourceManifest>;
 }): ListeningSourceProvider {
   const pin = digest(input.catalogSha256) && digest(input.manifestSha256)
     ? createHash("sha256").update(`pocket-torah/short-v1:${input.catalogSha256}:${input.manifestSha256}`).digest("hex") : null;
   return Object.freeze({
-    id: "pocket-torah" as const, pin: () => pin,
+    id: "pocket-torah" as const, pin: () => { try { return input.configured === undefined || input.configured() ? pin : null; } catch { return null; } },
     async resolve(verse: StudyVerse, _kind: "torah" | "haftarah", signal: AbortSignal) {
-      if (!pin) throw new ReferenceUnavailable();
+      if (!pin || (input.configured && !input.configured())) throw new ReferenceUnavailable();
       const live = () => { if (signal.aborted) throw new ReferenceUnavailable(); };
       try {
         live(); const catalog = await input.loadCatalog(signal); live();

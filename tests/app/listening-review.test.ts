@@ -90,6 +90,10 @@ test("an admin walks the sample: text and the student's clip, a saved verdict wi
   const saved = await f.verdict({ mutationId, note: "Clean start.", latencyMs: 412 });
   expect(saved.status).toBe(200); expect(saved.body).toMatchObject({ ok: true, replayed: false, verdict: { verdict: "pass", reasons: [], note: "Clean start.", latencyMs: 412, asset: `rs_${"1".repeat(64)}` } });
   expect((await f.verdict({ mutationId, note: "Clean start.", latencyMs: 412 })).body).toMatchObject({ ok: true, replayed: true });
+  // A resend answers from its receipt before any audio lookup, even when the source is failing.
+  f.loadCatalog.mockRejectedValueOnce(new Error("synthetic outage"));
+  expect((await f.verdict({ mutationId, note: "Clean start.", latencyMs: 412 })).body).toMatchObject({ ok: true, replayed: true });
+  f.loadCatalog.mockReset(); f.loadCatalog.mockImplementation(async () => f.catalog);
   expect(await f.verdict({ mutationId, verdict: "needs-work" })).toEqual({ status: 409, body: { ok: false, code: "conflict" } });
   // A clip other than the one the student would get now is refused.
   expect((await f.verdict({ asset: `rs_${"9".repeat(64)}` })).body).toEqual({ ok: false, code: "changed" });
@@ -136,6 +140,16 @@ test("only the admin grant in admin mode reaches the review; other roles, anonym
   expect((await f.send(OVERVIEW, { who: "admin" })).status).toBe(403);
   expect((await f.verdict({})).status).toBe(403);
   expect(await f.rows()).toEqual([]);
+});
+
+test("a source whose loaders are not configured offers nothing, even with its pins set", async () => {
+  const f = await fixture();
+  const pocket = createPocketTorahListeningSource({ loadCatalog: f.loadCatalog, loadManifest: f.loadManifest, catalogSha256: "c".repeat(64), manifestSha256: "d".repeat(64), configured: () => false });
+  const review = createListeningReviewService({ access: f.service, loadText: f.loadText, sources: [pocket], sample });
+  const overview = await review.overview(f.request(OVERVIEW, { who: "admin" }));
+  expect(overview.items.every(i => !i.available)).toBe(true);
+  await expect(review.item(f.request(ITEM("pt-genesis-1-1"), { who: "admin" }), "pt-genesis-1-1")).rejects.toBeDefined();
+  expect(f.loadCatalog).not.toHaveBeenCalled();
 });
 
 test("an unconfigured source lists its items as unavailable and refuses playback and verdicts", async () => {

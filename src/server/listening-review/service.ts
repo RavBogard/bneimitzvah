@@ -90,7 +90,13 @@ export function createListeningReviewService<Q extends PgQueryResultHKT>(input: 
   async function record(request: CookieMutationRequest & { signal?: AbortSignal }, supplied: Record<string, unknown>): Promise<ListeningRecordResult> {
     if (typeof supplied.mutationId !== "string" || !UUID.test(supplied.mutationId)) throw new AccessDenied(403);
     const mutationId = supplied.mutationId.toLowerCase();
-    await admin(request, "read-defaults", async (_tx, actor) => { requireCookieMutation(request, actor.origin); });
+    const receipt = async (tx: AccessTransaction<Q>, actor: Actor) => {
+      const t = s.listeningReviewVerdict;
+      const [row] = await tx.select().from(t).where(and(eq(t.tenantId, actor.tenantId), eq(t.actorUserId, actor.userId), eq(t.mutationId, mutationId))).limit(1);
+      return row ?? null;
+    };
+    // A resent save answers from its receipt before any audio lookup, so a later clip change cannot hide it.
+    const earlier = await admin(request, "read-defaults", async (tx, actor) => { requireCookieMutation(request, actor.origin); return receipt(tx, actor); });
     const selected = listeningItem(supplied.itemId, sample), note = listeningNote(supplied.note);
     const reasons = supplied.reasons === undefined ? [] : Array.isArray(supplied.reasons) && supplied.reasons.length <= LISTENING_REASONS.length && supplied.reasons.every(r => (LISTENING_REASONS as readonly unknown[]).includes(r))
       && new Set(supplied.reasons).size === supplied.reasons.length ? LISTENING_REASONS.filter(r => (supplied.reasons as unknown[]).includes(r)) : null;
@@ -98,6 +104,9 @@ export function createListeningReviewService<Q extends PgQueryResultHKT>(input: 
       : Number.isSafeInteger(supplied.latencyMs) && (supplied.latencyMs as number) >= 0 && (supplied.latencyMs as number) <= LISTENING_LATENCY_LIMIT_MS ? supplied.latencyMs as number : undefined;
     const verdict = supplied.verdict === "pass" || supplied.verdict === "needs-work" ? supplied.verdict : null;
     if (!selected || note === undefined || !reasons || latency === undefined || !verdict || (verdict === "pass" && reasons.length) || typeof supplied.asset !== "string") return fail("invalid");
+    const same = (row: Row) => row.itemId === selected.id && row.verdict === verdict && row.note === note && row.latencyMs === latency && row.asset === supplied.asset
+      && row.reasons.length === reasons.length && row.reasons.every((r, i) => r === reasons[i]);
+    if (earlier) return same(earlier) ? Object.freeze({ ok: true as const, replayed: true, verdict: view(earlier) }) : fail("conflict");
     const pin = pinOf(selected.source); if (!pin) return fail("unavailable");
     const controller = new AbortController(), abort = () => controller.abort(); request.signal?.addEventListener("abort", abort, { once: true });
     const timer = setTimeout(abort, 20_000);
@@ -106,21 +115,18 @@ export function createListeningReviewService<Q extends PgQueryResultHKT>(input: 
     finally { clearTimeout(timer); request.signal?.removeEventListener("abort", abort); }
     if (!reference?.source) return fail("unavailable");
     const asset = reference.source.id;
-    const same = (row: Row) => row.itemId === selected.id && row.verdict === verdict && row.note === note && row.latencyMs === latency && row.asset === supplied.asset
-      && row.reasons.length === reasons.length && row.reasons.every((r, i) => r === reasons[i]);
     return admin(request, "manage-defaults", async (tx, actor) => {
       requireCookieMutation(request, actor.origin);
-      const t = s.listeningReviewVerdict;
-      const [prior] = await tx.select().from(t).where(and(eq(t.tenantId, actor.tenantId), eq(t.actorUserId, actor.userId), eq(t.mutationId, mutationId))).limit(1);
+      const t = s.listeningReviewVerdict, prior = await receipt(tx, actor);
       if (prior) return same(prior) ? Object.freeze({ ok: true as const, replayed: true, verdict: view(prior) }) : fail("conflict");
       // The verdict is about the clip the reviewer heard; a re-cut or different clip since the page loaded is refused.
-      if (supplied.asset !== asset || pinOf(selected.source) !== pin) return fail("changed");
+      if (supplied.asset !== asset) return fail("changed");
       if (actor.authSessionExpiresAt <= Date.now()) throw new AccessDenied(401);
       const [row] = await tx.insert(t).values({ tenantId: actor.tenantId, sampleVersion: LISTENING_SAMPLE_VERSION, itemId: selected.id, verseRef: selected.ref,
         source: selected.source, sourcePin: pin, asset, verdict, reasons: [...reasons], note, latencyMs: latency,
         actorUserId: actor.userId, actorMembershipId: actor.membershipId, roleGrantId: actor.roleGrantId, role: "admin", mode: "admin", mutationId }).onConflictDoNothing().returning();
       if (!row) {
-        const [raced] = await tx.select().from(t).where(and(eq(t.tenantId, actor.tenantId), eq(t.actorUserId, actor.userId), eq(t.mutationId, mutationId))).limit(1);
+        const raced = await receipt(tx, actor);
         return raced && same(raced) ? Object.freeze({ ok: true as const, replayed: true, verdict: view(raced) }) : fail("conflict");
       }
       await tx.insert(s.auditEvent).values({ tenantId: actor.tenantId, actorUserId: actor.userId, actorMembershipId: actor.membershipId, roleGrantId: actor.roleGrantId,
