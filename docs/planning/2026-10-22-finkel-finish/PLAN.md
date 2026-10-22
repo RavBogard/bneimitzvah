@@ -54,8 +54,8 @@ Where a page has Finkel coverage, a "Cantor Finkel" player appears first, above 
 
 ## Release hold and access (high-stakes boundary)
 
-- **Same hold as PocketTorah.** The service takes `studentRelease` from the existing `REFERENCE_AUDIO_STUDENT_RELEASE`. Until it is `true`, only a live admin grant in admin mode can list clips or fetch bytes; student, parent and tutor modes get 404 before any database or storage read. After release, students, parents (including linked-child practice, sent as parent mode) and tutors hear the preferred takes; the full list and the other takes stay admin-only.
-- **One switch.** Because the hold is shared, flipping it releases PocketTorah and Finkel together. If Daniel accepts one source and not the other, a separate switch is a small follow-up; it is not built.
+- **Same hold as PocketTorah, plus Finkel's own switch.** Students hear Finkel only when the existing `REFERENCE_AUDIO_STUDENT_RELEASE` is `true` **and** the new `REFERENCE_AUDIO_FINKEL_STUDENT_RELEASE` is `true`. The second switch exists because MISSION ties student playback to Daniel's listening acceptance, which may come at different times for the two sources; it can only hold Finkel back, never release it ahead of the shared hold. Until both are `true`, only a live admin grant in admin mode can list clips or fetch bytes; student, parent and tutor modes get 404 before any database or storage read. After release, students, parents (including linked-child practice, sent as parent mode) and tutors hear the preferred takes; the full list and the other takes stay admin-only.
+- **Clips Daniel holds back.** The listening verdicts are not read at run time. Before the Finkel release, the lead rebuilds the manifest with `--hold <file>` listing the asset IDs Daniel marked needs-work; held clips leave the manifest entirely, so no route can serve them.
 - **Two authorization passes.** Every list and media read verifies the session, CRC tenant, membership and role grant, does the provider work, then re-authorizes and requires the same session, grant revision and authority revision. CRC only: another congregation's members get 404.
 - **Private bytes, server-side only.** Media is read from the existing private Blob store through the reviewed private getter (native request OIDC, path allow-list `reference-review/finkel/v1/{manifests,audio}/<sha>`, no URL, token or override fallback). The whole file is buffered, its length and SHA-256 checked against the pinned manifest, then returned `private, no-store`, `no-referrer`, `nosniff`, no CDN cache, no Range. The browser checks length and SHA-256 again before playing. No client ever sees a Blob URL or key.
 - **Pinned manifest.** `REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256` pins the content-addressed manifest. Without it every Finkel route answers 404 and the reading page shows nothing.
@@ -81,21 +81,25 @@ Vercel Blob rates (unchanged since the 2026-10-17 spend notice): storage $0.023/
 
 This sits inside the approved $5-8/month media target together with PocketTorah's existing delivery.
 
+## Adversarial review
+
+The dan-auditor pass returned GO-with-fixes: no student, parent, tutor, guest, anonymous or other-congregation path reaches Finkel metadata or bytes before release; private Blob access stays server-side; never-in-repo holds. Fixed after it: a test fixture that shadowed the access service (already fixed in the pushed commit), Finkel's own release switch, the `--hold` rebuild, CLI boolean flags removed, Play disabled while the view is inactive, verse marking cleared on any pause, exact pre-release denial statuses, coordinator tests for the two new slots.
+
 ## Production steps (lead only, in order, verify after each)
 
 No migration is needed: the provider pins a content-addressed manifest, like PocketTorah's. Migration 0026's private-review backend is untouched and stays disabled.
 
 0. **Merge and deploy this PR as usual.** Verify: with no Finkel variable set, `GET /api/reference-audio/finkel/clips?mode=admin` answers 401 signed out and 404 signed in as admin; reading pages look unchanged.
-1. **Build off-repo.** `node scripts/finkel-reference-build.mjs build --package "<prepared folder>" --out "<private output folder outside Git>"`. The script refuses an output inside any Git working tree and re-hashes every selected file. Verify: it prints `clips: 167`, `objects: 168` and `manifestSha256: 3739578ea1ff7e7067392ed381296c11b7a947230fde7d878f4ff06e1c152734` (the build is deterministic for the current catalog; a different hash means the package changed, so stop and look).
+1. **Build off-repo.** `node scripts/finkel-reference-build.mjs build --package "<prepared folder>" --out "<private output folder outside Git>"` (the lead has the folder path; it is not written here). The script refuses an output inside any Git working tree and re-hashes every selected file. Verify: it prints `clips: 167`, `objects: 168` and `manifestSha256: 3739578ea1ff7e7067392ed381296c11b7a947230fde7d878f4ff06e1c152734` (the build is deterministic for the current catalog; a different hash means the package changed, so stop and look).
 2. **Confirm the CLI reaches the right private store, read-only.** In a checkout linked to the production project (`vercel link`), run `vercel blob list --prefix reference-review/finkel/v1/ --limit 5`. Verify: it succeeds against `beitmitzvah-private-media` (check in the dashboard that this is the store connected to the project) and lists nothing yet. If the CLI asks for a read-write token because the store is OIDC-only, stop: choosing a token path is a credential decision.
 3. **Dry run.** `node scripts/finkel-reference-build.mjs publish --plan "<output>/plan.json" --cwd "<linked checkout>" --dry-run`. Verify: `existing: 0, created: 0, wouldCreate: 168`.
-4. **Publish.** The same command without `--dry-run`. Audio goes first and the manifest last; nothing is overwritten (`--allow-overwrite false`, no random suffix), and each object is downloaded again and re-hashed before it counts. An existing identical object is reused; a differing one stops the run. Verify: `created` plus `existing` is 168.
+4. **Publish.** The same command without `--dry-run`. Audio goes first and the manifest last; the script relies on the CLI's documented defaults of no random suffix and no overwrite (it passes no boolean values the parser could misread), and each object is downloaded again and re-hashed before it counts. An existing identical object is reused; a differing one stops the run. Verify: `created` plus `existing` is 168.
 5. **Verify the store.** `node scripts/finkel-reference-build.mjs verify --plan "<output>/plan.json" --cwd "<linked checkout>"`. Verify: `verified: 168, missing: 0, differing: 0`.
-6. **Set one Production variable:** `REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256` = the manifest hash from step 1. It is not a secret. Do not change `REFERENCE_AUDIO_STUDENT_RELEASE`. Verify: the variable list shows it for Production only.
+6. **Set one Production variable:** `REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256` = the manifest hash from step 1. It is not a secret. Do not set `REFERENCE_AUDIO_FINKEL_STUDENT_RELEASE` and do not change `REFERENCE_AUDIO_STUDENT_RELEASE`. Verify: the variable list shows it for Production only.
 7. **Redeploy Production** from main so the variable takes effect. Verify the deployment is READY on both aliases.
 8. **Check access.** (a) Signed out, the clips route answers 401. (b) As Daniel in admin mode, open a student reading inside a covered passage (the admin clip list shows which passages are covered): the Cantor Finkel player appears with "Chanted by Cantor Josh Finkel" and plays; the passage's verses are marked. (c) With the release still off, a student or parent account sees no Finkel player, and `.../clips?mode=student&from=...&to=...` answers 404. (d) Runtime logs show no 503 from `/api/reference-audio/finkel/`. (e) Blob usage shows about 103 MB added.
 9. **Listening review.** Daniel reviews Finkel items on the listening-review page (source `finkel`).
-10. **Student release, only on Daniel's acceptance:** `REFERENCE_AUDIO_STUDENT_RELEASE=true` and redeploy. This releases PocketTorah and Finkel together (one switch, above).
+10. **Student release, only on Daniel's acceptance.** If Daniel marked any Finkel clip needs-work, first rebuild with `--hold`, publish and verify (steps 1, 3-5), and set the new manifest hash (step 6). Then set `REFERENCE_AUDIO_FINKEL_STUDENT_RELEASE=true`; Finkel reaches students only when the shared `REFERENCE_AUDIO_STUDENT_RELEASE` is also `true`. Redeploy and verify that a student account sees the Cantor Finkel player and hears a clip, and that `.../clips?mode=student` (no range) still answers 404.
 
 Rollback at any point: remove `REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256` and redeploy; every Finkel route answers 404 again. The private objects can stay where they are; they cost cents.
 
@@ -110,12 +114,12 @@ Rollback at any point: remove `REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256` and redep
 - The reading response carries `finkelListeningEnabled: true` only when Finkel is configured and the same release rule allows the mode, so pages without Finkel make no extra request.
 
 GATE: credit wording and player placement (student-visible) — proceeded because MISSION's 2026-10-17 release authority supersedes separate student-visible approval, the lead specified the credit form, and students see nothing until the shared listening release.
-GATE: no separate Finkel release switch — proceeded because the lead required the same hold as PocketTorah; a separate switch is listed as a follow-up.
+GATE: Finkel's own release switch in addition to the shared hold — proceeded because it is strictly tighter than the brief (Finkel can never release ahead of PocketTorah's hold) and MISSION ties release to Daniel's acceptance of each source; the adversarial review recommended it.
 
 ## Follow-ups (not in this release)
 
 - Service parts: 13 machine-passed blessing and service clips, mapped into Service parts (the two Torah-blessing unit IDs are known; the others live in the private service feed).
 - Drills (52) and faster/slower variants (20) as explicit practice options.
 - Verse-level cuts: review the 36 machine-checked verse candidates, or run PocketTorah's CTC alignment privately, then a timing review before any word highlighting.
-- A per-source release switch, if Daniel accepts one source before the other.
 - The 51 held scripture clips stay held unless a person listens and overrides.
+- Known low-severity limits from the adversarial review: after release any live CRC student, parent or tutor grant can hear every preferred clip (access is not tied to the student's own assignment, unlike PocketTorah's metadata); the reading hint does not check the congregation (other congregations then simply get 404); signed out, 401 versus 404 reveals whether Finkel is configured.

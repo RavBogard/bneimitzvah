@@ -10,7 +10,8 @@ export type RuntimeConfig = Readonly<{
   referenceAudio?: Readonly<{ catalogSha256: string; storeId: string; studentRelease: boolean }>;
   referenceReview?: Readonly<{ reviewer: ReviewerConfig; storeId: string }>;
   // Cantor Finkel's recordings: the pinned private manifest in the existing private store.
-  referenceFinkel?: Readonly<{ manifestSha256: string; storeId: string }>;
+  // Its own release switch is required IN ADDITION to the shared reference release (stricter, never looser).
+  referenceFinkel?: Readonly<{ manifestSha256: string; storeId: string; studentRelease: boolean }>;
   serviceMusic?: Readonly<{ url: string; token: string }>;
   serviceCronSecret?:string;
   // The portal MCP answers only when explicitly enabled (after its adversarial review).
@@ -72,10 +73,13 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
       referenceReview = Object.freeze({ reviewer, storeId: env.BLOB_STORE_ID });
     }
     let referenceFinkel: RuntimeConfig["referenceFinkel"];
+    const finkelRelease = env.REFERENCE_AUDIO_FINKEL_STUDENT_RELEASE;
+    if (finkelRelease !== undefined && finkelRelease !== "true" && finkelRelease !== "false") throw 0;
+    if (env.REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256 === undefined && finkelRelease === "true") throw 0;
     if (env.REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256 !== undefined) {
       if (!/^[a-f0-9]{64}$/.test(env.REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256) || typeof env.BLOB_STORE_ID !== "string" || !/^store_[A-Za-z0-9]{8,64}$/.test(env.BLOB_STORE_ID)
         || env.VERCEL_BLOB_API_URL !== undefined || env.NEXT_PUBLIC_VERCEL_BLOB_API_URL !== undefined) throw 0;
-      referenceFinkel = Object.freeze({ manifestSha256: env.REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256, storeId: env.BLOB_STORE_ID });
+      referenceFinkel = Object.freeze({ manifestSha256: env.REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256, storeId: env.BLOB_STORE_ID, studentRelease: finkelRelease === "true" });
     }
     let serviceMusic: RuntimeConfig["serviceMusic"];
     if(env.BEIT_MITZVAH_MUSIC_URL || env.BEIT_MITZVAH_SERVICE_TOKEN){

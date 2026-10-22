@@ -87,13 +87,14 @@ test("before student release only a live admin grant in admin mode lists or hear
   const audio = await f.call(mediaPath("admin", 2));
   expect(audio.status).toBe(200); expect(audio.headers.get("content-type")).toBe("audio/mpeg"); expect(audio.headers.get("cache-control")).toBe("private, no-store");
   expect(audio.headers.get("accept-ranges")).toBe("none"); expect(new Uint8Array(await audio.arrayBuffer())).toEqual(media[1]);
-  f.get.mockClear();
-  for (const [who, mode] of [["learner", "student"], ["multi", "parent"], ["multi", "tutor"], ["learner", "admin"], ["multi", "admin"], ["anonymous", "admin"], ["anonymous", "student"]] as const) {
-    for (const path of [clipsPath(mode), mediaPath(mode)]) expect([401, 403, 404]).toContain((await f.call(path, who)).status);
+  resetFinkelManifestCache(); f.get.mockClear();
+  // Non-admin modes are refused before authentication, database or storage work; a non-admin
+  // asking for admin mode fails the live grant check; signed-out admin mode is 401.
+  for (const [who, mode, expected] of [["learner", "student", 404], ["multi", "parent", 404], ["multi", "tutor", 404], ["anonymous", "student", 404],
+    ["admin", "student", 404], ["learner", "admin", 404], ["multi", "admin", 404], ["anonymous", "admin", 401]] as const) {
+    for (const path of [clipsPath(mode), mediaPath(mode)]) expect([who, mode, (await f.call(path, who)).status]).toEqual([who, mode, expected]);
   }
   expect(f.get).not.toHaveBeenCalled();
-  // Admin's own session cannot borrow a student mode either.
-  expect((await f.call(mediaPath("student"), "admin")).status).toBe(404);
   // A practice-context header never reaches this route.
   expect((await f.call(mediaPath("admin"), "admin", { "X-Practice-Context": "a".repeat(43) })).status).toBe(403);
 });
@@ -154,7 +155,10 @@ test("the dispatcher owns both routes and runtime configuration pins the manifes
     "BETTER_AUTH_SECRET": randomBytes(48).toString("base64url"), "RESEND_API_KEY": `re_${randomBytes(24).toString("hex")}`, RESEND_FROM: "synthetic@example.test" };
   expect(loadRuntimeConfig(base).referenceFinkel).toBeUndefined();
   expect(loadRuntimeConfig({ ...base, REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256: "a".repeat(64), BLOB_STORE_ID: "store_Synthetic123" }).referenceFinkel)
-    .toEqual({ manifestSha256: "a".repeat(64), storeId: "store_Synthetic123" });
+    .toEqual({ manifestSha256: "a".repeat(64), storeId: "store_Synthetic123", studentRelease: false });
+  expect(loadRuntimeConfig({ ...base, REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256: "a".repeat(64), BLOB_STORE_ID: "store_Synthetic123", REFERENCE_AUDIO_FINKEL_STUDENT_RELEASE: "true" }).referenceFinkel?.studentRelease).toBe(true);
+  expect(() => loadRuntimeConfig({ ...base, REFERENCE_AUDIO_FINKEL_STUDENT_RELEASE: "true" })).toThrow();
+  expect(() => loadRuntimeConfig({ ...base, REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256: "a".repeat(64), BLOB_STORE_ID: "store_Synthetic123", REFERENCE_AUDIO_FINKEL_STUDENT_RELEASE: "yes" })).toThrow();
   for (const bad of [{ REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256: "A".repeat(64), BLOB_STORE_ID: "store_Synthetic123" }, { REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256: "a".repeat(64) },
     { REFERENCE_AUDIO_FINKEL_MANIFEST_SHA256: "a".repeat(64), BLOB_STORE_ID: "store_Synthetic123", VERCEL_BLOB_API_URL: "https://example.test" }]) expect(() => loadRuntimeConfig({ ...base, ...bad })).toThrow();
 });

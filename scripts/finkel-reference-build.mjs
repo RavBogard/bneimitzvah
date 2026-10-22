@@ -1,6 +1,6 @@
 // Cantor Finkel's reference recordings: off-repo build, publish and verify.
 //
-//   node scripts/finkel-reference-build.mjs build   --package <prepared dir> --out <dir>
+//   node scripts/finkel-reference-build.mjs build   --package <prepared dir> --out <dir> [--hold <file of fj_ asset keys>]
 //   node scripts/finkel-reference-build.mjs publish --plan <out>/plan.json --cwd <linked project dir> [--dry-run]
 //   node scripts/finkel-reference-build.mjs verify  --plan <out>/plan.json --cwd <linked project dir>
 //
@@ -102,14 +102,24 @@ async function regularInside(root, path) {
   need(relation && !relation.startsWith("..") && !isAbsolute(relation), "containment");
   return info.size;
 }
-export async function buildFinkelReference({ packageDir, outDir }) {
-  need(typeof packageDir === "string" && typeof outDir === "string", "arguments");
+/** Asset keys Daniel's listening review holds back, one per line; they leave the manifest entirely. */
+async function readHolds(holdFile) {
+  if (holdFile === undefined) return new Set();
+  const lines = (await readFile(holdFile, "utf8")).split("\n").map(line => line.trim()).filter(Boolean);
+  need(lines.length <= 1000 && lines.every(line => /^fj_[a-f0-9]{20}$/.test(line)), "hold-file");
+  return new Set(lines);
+}
+export async function buildFinkelReference({ packageDir, outDir, holdFile }) {
+  need(typeof packageDir === "string" && typeof outDir === "string" && (holdFile === undefined || typeof holdFile === "string"), "arguments");
+  const holds = await readHolds(holdFile);
   const root = await realpath(resolve(packageDir)), out = resolve(outDir);
   need(!(await insideGitWorkingTree(root)), "package-inside-git");
   need(!(await insideGitWorkingTree(out)), "output-inside-git");
   const catalogPath = join(root, "catalog.json"); need((await regularInside(root, catalogPath)) <= FINKEL_BUILD.catalogBytes, "catalog-size");
   const catalog = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await readFile(catalogPath)));
-  const { clips, skipped } = selectFinkelClips(catalog), objects = [];
+  const selection = selectFinkelClips(catalog), objects = [];
+  const clips = selection.clips.filter(clip => !holds.has(clip.asset)), skipped = { ...selection.skipped, reviewHeld: selection.clips.length - clips.length };
+  need(clips.length > 0, "selection");
   for (const clip of clips) {
     // Catalog paths are package-relative ("prepared/assets/..."); the root is the prepared folder.
     const file = join(root, "assets", clip.asset, "playback.mp3");
@@ -164,8 +174,9 @@ export async function publishFinkelPlan(plan, run, { dryRun = false, scratch } =
       const before = await remoteHash(run, o, tmp);
       if (before) { need(before.sha256 === o.sha256 && before.bytes === o.bytes, "remote-differs"); report.existing++; continue; }
       if (dryRun) { report.wouldCreate++; continue; }
-      const put = await run(["blob", "put", o.file, "--pathname", o.key, "--access", "private", "--content-type", o.contentType,
-        "--add-random-suffix", "false", "--allow-overwrite", "false", "--multipart", "false"]);
+      // The CLI's documented defaults are no random suffix and no overwrite; passing them as
+      // values risks a parser reading "false" as a file. The exact-key readback below proves placement.
+      const put = await run(["blob", "put", o.file, "--pathname", o.key, "--access", "private", "--content-type", o.contentType]);
       need(put.ok, "put-failed");
       const after = await remoteHash(run, o, tmp); need(after && after.sha256 === o.sha256 && after.bytes === o.bytes, "readback");
       report.created++;
@@ -191,7 +202,7 @@ function flags(argv) {
 }
 async function main([command, ...rest]) {
   const f = flags(rest);
-  if (command === "build") return buildFinkelReference({ packageDir: f["--package"], outDir: f["--out"] });
+  if (command === "build") return buildFinkelReference({ packageDir: f["--package"], outDir: f["--out"], holdFile: f["--hold"] });
   need(command === "publish" || command === "verify", "command");
   need(typeof f["--plan"] === "string" && typeof f["--cwd"] === "string", "arguments");
   const plan = await readFinkelPlan(f["--plan"]), run = vercelRunner(resolve(f["--cwd"]));

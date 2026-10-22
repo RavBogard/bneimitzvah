@@ -58,6 +58,12 @@ test("build hashes every selected file, writes a manifest-last plan outside Git 
     // Generated private outputs would be refused if they were ever staged in the repository.
     assert.ok(entryProblems("tests/fixtures/portal/manifest.json", manifest.toString("utf8")).includes(PRIVATE));
     assert.ok(entryProblems("tests/fixtures/portal/plan.json", await readFile(join(out, "plan.json"), "utf8")).includes(PRIVATE));
+    // Clips the listening review holds back leave the manifest entirely.
+    await writeFile(join(root, "holds.txt"), `${assets[1].assetKey}\r\n`);
+    const held = await buildFinkelReference({ packageDir: pkg, outDir: join(root, "out-held"), holdFile: join(root, "holds.txt") });
+    assert.equal(held.coverage.clips, 1); assert.equal(held.skipped.reviewHeld, 1); assert.equal(held.objects, 2);
+    await writeFile(join(root, "bad-holds.txt"), "not-an-asset\n");
+    await assert.rejects(buildFinkelReference({ packageDir: pkg, outDir: join(root, "out-bad"), holdFile: join(root, "bad-holds.txt") }), { code: "hold-file" });
     // A changed file is caught by its hash.
     await writeFile(join(pkg, "assets", assets[0].assetKey, "playback.mp3"), audio(9));
     await assert.rejects(buildFinkelReference({ packageDir: pkg, outDir: out }), { code: "media-hash" });
@@ -79,7 +85,8 @@ test("publish is create-only and manifest-last, reuses identical objects, stops 
     const run = async (args) => {
       calls.push(args.slice(0, 2).join(" ") + " " + (args[1] === "get" ? args[2] : args[args.indexOf("--pathname") + 1]));
       if (args[1] === "get") { const bytes = store.get(args[2]); if (!bytes) return { ok: false, missing: true }; await writeFile(args[args.indexOf("--output") + 1], bytes); return { ok: true, missing: false }; }
-      assert.equal(args[args.indexOf("--allow-overwrite") + 1], "false"); assert.equal(args[args.indexOf("--access") + 1], "private");
+      assert.equal(args[args.indexOf("--access") + 1], "private");
+      assert.ok(!args.some(arg => arg === "false" || arg === "true" || arg === "--allow-overwrite" || arg === "--add-random-suffix"), "documented defaults only: no suffix, no overwrite");
       if (store.has(args[args.indexOf("--pathname") + 1])) return { ok: false, missing: false };
       store.set(args[args.indexOf("--pathname") + 1], await readFile(args[2])); return { ok: true, missing: false };
     };

@@ -44,7 +44,7 @@ export function FinkelPassagePlayer({ scopeKey, refs, mode, active, audio, onPla
   const media = useRef<HTMLAudioElement | null>(null), loaded = useRef<{ sha256: string; url: string } | null>(null);
   const pending = useRef<AbortController | null>(null), registration = useRef<ReturnType<ReturnType<typeof createReadingAudioCoordinator>["register"]> | null>(null);
   const ticket = useRef<ReturnType<NonNullable<typeof registration.current>["claim"]>>(null);
-  const callbacks = useRef({ onPlaying, repeat, speed }); callbacks.current = { onPlaying, repeat, speed };
+  const callbacks = useRef({ onPlaying, repeat, speed, active }); callbacks.current = { onPlaying, repeat, speed, active };
   const refsKey = JSON.stringify(refs);
 
   // One list request per scope (page) while listening is allowed.
@@ -74,7 +74,7 @@ export function FinkelPassagePlayer({ scopeKey, refs, mode, active, audio, onPla
     if (element) {
       element.preload = "auto";
       const playing = () => { setStatus("playing"); },
-        paused = () => { setStatus(value => value === "playing" ? "paused" : value); },
+        paused = () => { setStatus(value => value === "playing" ? "paused" : value); callbacks.current.onPlaying?.(null); },
         ended = () => { setStatus("ended"); callbacks.current.onPlaying?.(null); },
         tick = () => setTime({ at: element!.currentTime, length: Number.isFinite(element!.duration) ? element!.duration : 0 }),
         failed = () => { if (loaded.current) { setStatus("error"); callbacks.current.onPlaying?.(null); } };
@@ -104,7 +104,7 @@ export function FinkelPassagePlayer({ scopeKey, refs, mode, active, audio, onPla
       () => { if (owner()) setStatus("retry"); });
   };
   async function play(target: FinkelClip) {
-    const element = media.current; if (!element || !mode || !registration.current) return;
+    const element = media.current; if (!element || !mode || !registration.current || !callbacks.current.active) return;
     if (!owner()) { const claimed = registration.current.claim(); if (!claimed) return; ticket.current = claimed; }
     const mine = ticket.current;
     if (loaded.current?.sha256 === target.sha256 && element.src === loaded.current.url) {
@@ -137,7 +137,7 @@ export function FinkelPassagePlayer({ scopeKey, refs, mode, active, audio, onPla
     <div className={styles.top}>
       <p className={styles.title}>Cantor Finkel</p>
       <div className={styles.controls}>
-        <button type="button" disabled={busy || !audio} onClick={() => playing ? pause() : void play(clip)}>{playing ? "Pause" : status === "error" ? "Try again" : "Play"}</button>
+        <button type="button" disabled={busy || !audio || !active} onClick={() => playing ? pause() : void play(clip)}>{playing ? "Pause" : status === "error" ? "Try again" : "Play"}</button>
         <button type="button" disabled={!audio} aria-pressed={repeat} onClick={() => { const next = !repeat; setRepeat(next); if (media.current) media.current.loop = next; }}>Repeat</button>
       </div>
     </div>

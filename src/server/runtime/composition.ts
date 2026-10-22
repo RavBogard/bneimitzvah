@@ -180,8 +180,10 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const shortReferenceAudio = createShortReferenceAudioService({ access, practice, loadText, ...shortMetadata, studentRelease: config.referenceAudio?.studentRelease });
   const shortExplorationAudio = createShortExplorationService({ access, practice, loadReading, loadText, signingSecret: purposeSecret(config, "reading-exploration"),
     ...shortMetadata, studentRelease: config.referenceAudio?.studentRelease });
-  // Same student-release hold as PocketTorah; the bytes reuse the reviewed private getter.
-  const finkelReference = createFinkelReferenceService({ access, manifestSha256: config.referenceFinkel?.manifestSha256, studentRelease: config.referenceAudio?.studentRelease,
+  // Same student-release hold as PocketTorah, AND Finkel's own switch for Daniel's separate
+  // listening acceptance of this source. The bytes reuse the reviewed private getter.
+  const finkelReference = createFinkelReferenceService({ access, manifestSha256: config.referenceFinkel?.manifestSha256,
+    studentRelease: config.referenceAudio?.studentRelease === true && config.referenceFinkel?.studentRelease === true,
     get: config.referenceFinkel ? createPrivateReviewGet({ storeId: config.referenceFinkel.storeId }) : async () => { throw new ReviewUnavailable(); } });
   const readingPreview = createReadingPreviewService({ access, loadReading, loadText, signingSecret:purposeSecret(config,"reading-preview") });
   const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding") });
