@@ -8,10 +8,14 @@ import { AccessDenied } from "../access/errors";
 import { requireCookieMutation, type CookieMutationRequest } from "../http/mutations";
 import * as data from "../data/tenant-settings";
 import * as s from "../db/index";
-import { DEFAULT_SIDDUR_URL, legacyRabbiName, validateSettings, type CongregationSettings } from "./validation";
+import { DEFAULT_SIDDUR_URL, legacyRabbiName, SERVICE_SLOTS, validateSettings, type CongregationSettings, type ServiceSetting, type ServiceSlot } from "./validation";
 
 type Failure = Readonly<{ ok: false; code: "conflict" | "no-change" | "invalid"; problems?: readonly string[] }>;
 export type SettingsSaveResult = Failure | Readonly<{ ok: true; replayed: boolean; version: number }>;
+export type CongregationDisplay = Readonly<{
+  links: Readonly<{ siddurUrl: string; musicUrl: string | null }>;
+  services: Readonly<Partial<Record<ServiceSlot, ServiceSetting>>>; consentNotice: string | null;
+}>;
 export type SettingsView = Readonly<{
   version: number; settings: CongregationSettings; updatedAt: string | null;
   // What each field falls back to when it is left blank, so the page can say so.
@@ -62,13 +66,19 @@ export function createCongregationSettingsService<Q extends PgQueryResultHKT>(in
       const raced = await data.settingsReceipt(tx, actor, mutationId); return raced ? replay(raced) : fail("conflict");
     });
   }
-  /** The links every member's pages show; any signed-in member of the congregation may read them. */
-  async function links(request: AccessRequest) {
+  /**
+   * What every member's pages show from the settings: the links, the service names and start times,
+   * and the consent notice. Any signed-in member of the congregation may read them; none is private.
+   */
+  async function display(request: AccessRequest): Promise<CongregationDisplay> {
     return input.access.withVerifiedIdentity(request, { intent: "read" }, async (tx, identity) => {
       if (!identity.membership) throw new AccessDenied(403);
       const settings = await data.currentSettings(tx, identity.tenantId);
-      return Object.freeze({ siddurUrl: settings?.siddurUrl ?? DEFAULT_SIDDUR_URL, musicUrl: settings?.musicUrl ?? null });
+      const configured = settings?.services ?? {};
+      const services = Object.fromEntries(SERVICE_SLOTS.flatMap(slot => configured[slot] ? [[slot, { ...configured[slot] }]] : []));
+      return JSON.parse(JSON.stringify({ links: { siddurUrl: settings?.siddurUrl ?? DEFAULT_SIDDUR_URL, musicUrl: settings?.musicUrl ?? null },
+        services, consentNotice: settings?.consentNotice ?? null })) as CongregationDisplay;
     });
   }
-  return Object.freeze({ read, save, links });
+  return Object.freeze({ read, save, display });
 }

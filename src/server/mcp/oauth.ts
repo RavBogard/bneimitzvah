@@ -12,6 +12,8 @@ export const SCOPES = { read: "portal:read", study: "portal:study", roster: "por
 export const MCP_PATH = "/api/mcp";
 export const TTL = { client: 10 * 365 * 24 * 3600_000, request: 10 * 60_000, code: 5 * 60_000, access: 3600_000, connection: 30 * 24 * 3600_000, rosterPlan: 30 * 60_000 } as const;
 export const CLAUDE_CALLBACKS: readonly string[] = Object.freeze(["https://claude.ai/api/mcp/auth_callback", "https://claude.com/api/mcp/auth_callback"]);
+/** Claude's web origins: the only foreign Origin header /api/mcp accepts (see the Origin check there). */
+export const CLAUDE_ORIGINS: readonly string[] = Object.freeze(["https://claude.ai", "https://claude.com"]);
 
 const b64 = (s: string) => Buffer.from(s, "utf8").toString("base64url");
 const hmac = (secret: string, s: string) => createHmac("sha256", secret).update(s).digest("base64url");

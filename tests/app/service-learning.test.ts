@@ -11,12 +11,13 @@ import { createBindings } from "../../src/server/students/bindings";
 import { AccessDenied, AccessUnavailable } from "../../src/server/access/errors";
 import { withTenantTransaction } from "../../src/server/db/runtime";
 import * as data from "../../src/server/service-learning/data";
+import { DEFAULT_SERVICE_PARTS, defaultServiceUnitIds, parseServiceFeed } from "../../src/server/service-learning/feed";
 import * as s from "../../src/server/db/index";
 const opened: Awaited<ReturnType<typeof accessFixture>>[] = [];
 afterEach(async () => { vi.restoreAllMocks(); await Promise.all(opened.splice(0).map(f => f.client.close())); });
 const secret = "synthetic-service-plan-review-secret-value";
-async function fixture() {
-  const f = await accessFixture(); opened.push(f); const content = syntheticServiceCatalog();
+async function fixture(options: { standard?: boolean } = {}) {
+  const f = await accessFixture(); opened.push(f); const content = syntheticServiceCatalog("one", options);
   const catalogId = randomUUID();
   await f.owner(async () => {
     await f.db.update(s.student).set({ serviceSlot: "morning" });
@@ -47,6 +48,34 @@ test("staff prepare/confirm uses source order, separate revisions and audit with
   expect(saved).toMatchObject({ ok: true, revision: 1 });
   expect(await f.owner(() => f.db.select().from(s.assignment))).toEqual(before);
   expect(await f.owner(() => f.db.select().from(s.auditEvent).where(eq(s.auditEvent.action, "service-plan.set")))).toHaveLength(1);
+});
+
+test("a student with no plan is offered the standard parts the feed provides; any saved plan, even a cleared one, is never preselected over", async () => {
+  const f = await fixture({ standard: true }), staff = { mode: "admin" as const, studentId: f.selection.studentId };
+  const fresh = await f.serviceLearning.catalog(f.mutation(), staff);
+  // Morning: the two standard parts this feed has, in service order; the evening Sh'ma and the menu parts are not defaults.
+  expect(fresh).toMatchObject({ state: "available", expectedPlanRevision: 0, defaults: [f.content.standard.vahavta, f.content.standard.torahBefore] });
+  // Offering defaults writes nothing: the student still has no plan until staff confirm.
+  expect(await f.owner(() => f.db.select().from(s.studentServicePlan))).toHaveLength(0);
+  expect(await f.serviceLearning.metadata(f.request("learner"), { mode: "student", studentId: f.selection.studentId })).toEqual({ state: "no-plan" });
+  // The tutor assigned to this student gets the same offer.
+  expect(await f.serviceLearning.catalog(f.mutation("multi"), { mode: "tutor", studentId: f.selection.studentId })).toMatchObject({ defaults: [f.content.standard.vahavta, f.content.standard.torahBefore] });
+  await f.save();
+  expect(await f.serviceLearning.catalog(f.mutation(), staff)).toMatchObject({ state: "available", expectedPlanRevision: 1, defaults: [] });
+  // An explicitly cleared plan stays cleared.
+  const cleared = await f.serviceLearning.prepare(f.mutation(), { ...f.selection, expectedPlanRevision: 1, selectedIds: [] }); if (!cleared.ok) throw new Error("Synthetic clear unavailable");
+  expect(await f.serviceLearning.confirm(f.mutation(), { mode: "admin", studentId: f.selection.studentId, binding: cleared.binding })).toMatchObject({ ok: true, cleared: true });
+  expect(await f.serviceLearning.catalog(f.mutation(), staff)).toMatchObject({ expectedPlanRevision: 2, defaults: [] });
+});
+
+test("the default service parts come only from the feed's stable ids for the student's own service family", async () => {
+  const { feedBytes, provenanceBytes, pins, standard } = syntheticServiceCatalog("one", { standard: true }), plain = syntheticServiceCatalog();
+  const feed = parseServiceFeed(feedBytes, provenanceBytes, pins);
+  expect(defaultServiceUnitIds(feed, "morning")).toEqual([standard.vahavta, standard.torahBefore]);
+  expect(defaultServiceUnitIds(feed, "havdalah")).toEqual([standard.eveningShma]);
+  expect(defaultServiceUnitIds(feed, "unknown")).toEqual([]);
+  expect(defaultServiceUnitIds(parseServiceFeed(plain.feedBytes, plain.provenanceBytes, plain.pins), "morning")).toEqual([]);
+  expect(DEFAULT_SERVICE_PARTS).toEqual(["torah.blessing-before-the-torah-reading", "torah.blessing-following-the-torah-reading", "torah.blessing-before-the-haftarah-reading", "torah.blessing-following-the-haftarah-reading", "shma.the-shma", "shma.vahavta"]);
 });
 
 test("selected material preserves credits/Unicode, excludes unrelated/front/companion content and PDF/transliteration coordinates", async () => {

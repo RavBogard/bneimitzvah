@@ -52,6 +52,19 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
 }) {
   const now = input.now ?? Date.now;
   const recentGoogle = (at: Date | null) => !!at && now() - at.getTime() < GOOGLE_CONSENT_WINDOW_MS && at.getTime() <= now() + 60_000;
+  /**
+   * The id of the one connection a pending request may create. A pending request is a signed, ten-minute
+   * record the browser keeps (fragment, then tab storage), so it can be sent again (double tap, back, replay);
+   * deriving the connection id from it makes a second Allow insert nothing (no migration needed).
+   */
+  const requestConnectionId = (tenantId: string, pending: string) => {
+    const h = createHmac("sha256", input.secret).update(JSON.stringify(["mcp-consent-request/v1", tenantId, pending])).digest();
+    h[6] = (h[6] & 0x0f) | 0x80; h[8] = (h[8] & 0x3f) | 0x80; // RFC 9562 version 8 (custom), variant 10.
+    const x = h.subarray(0, 16).toString("hex");
+    return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20, 32)}`;
+  };
+  const alreadyApproved = (resolved: Resolved, pending: string) =>
+    withTenantTransaction(input.db, resolved, tx => data.connectionExists(tx as AccessTransaction<Q>, resolved.tenantId, requestConnectionId(resolved.tenantId, pending)));
   const viewerOf = (identity: { userId: string; authSessionId: string; tenantId: string }) =>
     createHmac("sha256", input.secret).update(JSON.stringify(["mcp-consent-viewer/v1", identity.tenantId, identity.userId, identity.authSessionId])).digest("base64url");
   const clientRecord = (clientId: unknown) => {
@@ -150,9 +163,10 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
       }
     },
     /** What the consent page shows: the client, where it returns, and the signed-in staff account. */
-    async describe(request: AccessRequest & { method?: string }, pending: unknown): Promise<ConsentView | null> {
+    async describe(request: AccessRequest & { method?: string }, pending: unknown, resolved: Resolved): Promise<ConsentView | "expired" | "used"> {
       const record = pendingRecord(pending);
-      if (!record) return null;
+      if (!record) return "expired";
+      if (await alreadyApproved(resolved, pending as string)) return "used";
       const destination = new URL(record.redirectUri).host;
       let account: ConsentView["account"] = null;
       try {
@@ -170,7 +184,7 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
       return Object.freeze({ clientName: record.clientName, destination, account });
     },
     /** POST /api/oauth/consent: the signed-in staff member allows the connection. */
-    async approve(request: AccessRequest & { method?: string }, pending: unknown, unattended: boolean, viewer: unknown): Promise<{ ok: true; redirect: string } | { ok: false; reason: "expired" | "google" | "staff" | "account" }> {
+    async approve(request: AccessRequest & { method?: string }, pending: unknown, unattended: boolean, viewer: unknown): Promise<{ ok: true; redirect: string } | { ok: false; reason: "expired" | "google" | "staff" | "account" | "used" }> {
       const record = pendingRecord(pending);
       if (!record) return { ok: false, reason: "expired" };
       return input.access.withVerifiedIdentity(request, { intent: "data-write", mutation: true }, async (tx, identity) => {
@@ -183,21 +197,29 @@ export function createMcpAuthService<Q extends PgQueryResultHKT>(input: {
         if (!grant || grant.revokedAt || (grant.role !== "admin" && grant.role !== "tutor")) return { ok: false as const, reason: "staff" as const };
         const role = grant.role, at = now();
         if (record.resource !== `${identity.origin}${MCP_PATH}`) return { ok: false as const, reason: "expired" as const };
-        const connection = await data.insertConnection(tx, {
-          tenantId: identity.tenantId, userId: identity.userId, membershipId: identity.membership.id, roleGrantId: grant.id, role,
+        // One pending request, one connection: a second Allow (double tap, back button, replay within the
+        // request's ten minutes, or another staff member) inserts nothing and mints no code.
+        const connection = await data.insertConnectionOnce(tx, {
+          id: requestConnectionId(identity.tenantId, pending as string), tenantId: identity.tenantId, userId: identity.userId, membershipId: identity.membership.id, roleGrantId: grant.id, role,
           roleGrantRevision: grant.revision, authorityRevision: identity.membership.authorityRevision, scope: grantedScope(role, record.asked, unattended),
           unattended, clientName: record.clientName, clientHash: record.client, redirectUri: record.redirectUri,
           createdAt: new Date(at), expiresAt: new Date(at + TTL.connection),
         });
+        if (!connection) return { ok: false as const, reason: "used" as const };
         const code = randomToken();
         await data.insertToken(tx, { tokenHash: hashOpaque(code), tenantId: identity.tenantId, connectionId: connection.id, kind: "code", codeChallenge: record.challenge, createdAt: new Date(at), expiresAt: new Date(at + TTL.code) });
         return { ok: true as const, redirect: withQuery(record.redirectUri, { code, state: record.state ?? undefined, iss: identity.origin }) };
       });
     },
-    /** The consent page's Cancel: back to the client with access_denied. */
-    deny(pending: unknown, resolved: Resolved): string | null {
+    /**
+     * The consent page's Cancel: back to the client with access_denied. A request already allowed is
+     * answered "used" instead: Cancel never revokes the connection it made, and never pretends it did.
+     */
+    async deny(pending: unknown, resolved: Resolved): Promise<{ redirect: string } | { error: "expired" | "used" }> {
       const record = pendingRecord(pending);
-      return record ? withQuery(record.redirectUri, { error: "access_denied", state: record.state ?? undefined, iss: resolved.origin }) : null;
+      if (!record) return { error: "expired" };
+      if (await alreadyApproved(resolved, pending as string)) return { error: "used" };
+      return { redirect: withQuery(record.redirectUri, { error: "access_denied", state: record.state ?? undefined, iss: resolved.origin }) };
     },
     /** POST /api/oauth/token (form-encoded). */
     async token(form: URLSearchParams, resolved: Resolved): Promise<OAuthAnswer> {
