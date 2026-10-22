@@ -217,6 +217,19 @@ I used the spend notice's formula (`storage × 0.023 + uploaded × 0.11 + played
 8. **Should tutors and clergy be able to upload reference recordings?** Recommended: only if the coverage count shows real gaps. Each voice gives written consent limited to playback for CRC students. The cantor's collection waits on its licence.
 9. **When will you do the reference-audio listening acceptance?** Offline audio has no value until students can hear reference audio at all. Recommended: before step 5 of the order above.
 
+## Daniel's rulings on this document (2026-10-22, binding)
+
+1. **Student recordings: dropped from 1.5.** Daniel: "I don't think this is really a useful thing for us." Recordings stay parked (routes 404 unless `PORTAL_RECORDINGS_ENABLED=true`); items 2 and 3 above (compressed format, parent notice) are moot.
+2. **Offline window: 14 days**, renewed on every online open, purged on sign-out or account switch.
+3. **Installed-app sign-in: yes, add a short one-time code to sign-in emails** that can be typed into the installed app (auth review required).
+4. **D'var Torah stays in 2.0** (S3 kept).
+5. **Generated chant research: paused.** No benchmark recording session; G3 untouched.
+6. **Tutor/clergy reference uploads: count PocketTorah gaps first**, build uploads only if real gaps show.
+7. **Reference-audio listening review: this week.** Prepare what Daniel needs to listen on his phone.
+8. Extra 1.5 candidates (trope drills, Hebrew decoding practice, tutor at-a-glance, second-congregation polish): no preference given; not scheduled.
+
+So 1.5 is: the installable app with 14-day offline reading and reference audio, the sign-in code, and the reference-audio gap count, after Daniel's listening review.
+
 ## Sources
 
 - WebKit, "WebKit Features in Safari 18.4" — https://webkit.org/blog/16574/webkit-features-in-safari-18-4/
