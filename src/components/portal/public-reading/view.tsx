@@ -105,7 +105,7 @@ export function PublicReading() {
 
   return <div className="portal-shell">
     <a className="skip-link" href="#public-reading-main">Skip to the reading</a>
-    <header className="portal-header app-bar"><a className="portal-brand" href="/">CRC Beit Mitzvah</a><a className="app-bar-account" href="/sign-in">Sign in</a></header>
+    <header className="portal-header app-bar"><a className="portal-brand" href="/">CRC Torah</a><a className="app-bar-account" href="/sign-in">Sign in</a></header>
     <main id="public-reading-main" className="workspace-main">
       <div className="reading-workspace reading-with-work"><section aria-labelledby="public-reading-title">
         <header className="reading-hero">

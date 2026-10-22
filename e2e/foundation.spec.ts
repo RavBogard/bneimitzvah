@@ -3,8 +3,14 @@ import { expect, test } from "@playwright/test";
 test("built portal presents an honest unavailable state with accessible retry at each supported device size", async ({ page }) => {
   const response = await page.goto("/");
   expect(response?.status()).toBe(200);
-  await expect(page).toHaveTitle("CRC Beit Mitzvah");
-  await expect(page.getByRole("heading", { level: 1, name: "Open your reading" })).toBeVisible();
+  await expect(page).toHaveTitle("CRC Torah");
+  // Unconfigured, the reading call fails too: This week says so plainly and Lein still works.
+  await expect(page.getByRole("heading", { level: 1, name: "This week’s reading", exact: true })).toBeVisible();
+  await expect(page.locator("[data-skeleton]")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveAttribute("href", "/read");
+  await expect(page.getByRole("link", { name: "Study", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 2, name: "Beit Mitzvah", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Learn to lein", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Sign-in is unavailable", exact: true })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.getByLabel("Email address")).toHaveCount(0);

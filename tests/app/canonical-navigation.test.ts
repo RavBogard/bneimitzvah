@@ -4,7 +4,7 @@ import { format } from "node:url";
 import { CANONICAL_DESTINATION, CANONICAL_ORIGIN, canonicalNavigation } from "../../src/lib/navigation/canonical";
 
 const enabled = { PORTAL_ENVIRONMENT: "production", PORTAL_DEPLOYMENT: "production", BETTER_AUTH_URL: CANONICAL_ORIGIN };
-const aliases = ["barmitzvah.centralreform.org", "batmitzvah.centralreform.org", "bnaimitzvah.centralreform.org", "bneimitzvah.centralreform.org", "bneimitzvah.vercel.app"];
+const aliases = ["barmitzvah.centralreform.org", "batmitzvah.centralreform.org", "bnaimitzvah.centralreform.org", "bneimitzvah.centralreform.org", "bneimitzvah.vercel.app", "torah.centralreform.org"];
 const require = createRequire(import.meta.url);
 function request(host: string, path = "/auth/email?token=synthetic-private#token=synthetic-fragment", method = "GET", extra: Record<string, string> = {}, origin = `https://${host}`) {
   return { url: origin + path, method, headers: new Headers({ host, ...extra }) };
@@ -55,6 +55,16 @@ test("navigation classification never trusts forwarded aliases, conflicting publ
     expect(canonicalNavigation(request(host, "/account", "GET", { "x-forwarded-host": alias, forwarded: `host=${alias}`, origin: `https://${alias}` }, "https://foreign.example.test"), enabled)).toBeNull();
   }
   expect(canonicalNavigation(request("beitmitzvah.centralreform.org"), enabled)).toBeNull();
+});
+
+test("CRC Torah's address is a navigation alias for now: the canonical stays beitmitzvah until Daniel's DNS and Google origin are ready", () => {
+  expect(CANONICAL_ORIGIN).toBe("https://beitmitzvah.centralreform.org");
+  const response = canonicalNavigation(request("torah.centralreform.org", "/"), enabled);
+  privateResponse(response, 303);
+  expect(response?.headers.get("location")).toBe(CANONICAL_DESTINATION);
+  privateResponse(canonicalNavigation(request("torah.centralreform.org", "/api/session"), enabled), 404);
+  // Whatever the canonical becomes, its own host is never treated as an alias (that would redirect it to itself).
+  expect(canonicalNavigation(request(new URL(CANONICAL_ORIGIN).host, "/"), enabled)).toBeNull();
 });
 
 test("stable preactivation and rollback are inert; exact production canonical configuration alone activates", () => {

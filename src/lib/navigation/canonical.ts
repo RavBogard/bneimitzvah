@@ -4,6 +4,8 @@ export const CANONICAL_DESTINATION = `${CANONICAL_ORIGIN}/#home`;
 const aliases = new Set([
   "barmitzvah.centralreform.org", "batmitzvah.centralreform.org",
   "bnaimitzvah.centralreform.org", "bneimitzvah.centralreform.org", "bneimitzvah.vercel.app",
+  // CRC Torah's own address; the canonical flips to it later (DNS and Google origin first), and it leaves this list then.
+  "torah.centralreform.org",
 ]);
 const canonicalHost = new URL(CANONICAL_ORIGIN).host;
 type Environment = Readonly<Record<string, string | undefined>>;

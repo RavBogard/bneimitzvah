@@ -14,9 +14,10 @@ test("0015 fresh/upgrade/reapply preserves scripture/authority state and creates
     await mkdir(join(prior, "meta"), { recursive: true }); await writeFile(join(prior, "meta/_journal.json"), JSON.stringify({ ...journal, entries }));
     for (const entry of entries) await copyFile(join(folder, entry.tag + ".sql"), join(prior, entry.tag + ".sql"));
     const db = drizzle(client); await migrate(db, { migrationsFolder: prior });
-    const before = (await client.query("select id,name,product_name,enabled,customs from tenant order by id")).rows;
+    const before = (await client.query<{ id: string; product_name: string }>("select id,name,product_name,enabled,customs from tenant order by id")).rows;
     await migrate(db, { migrationsFolder: folder }); await migrate(db, { migrationsFolder: folder });
-    expect((await client.query("select id,name,product_name,enabled,customs from tenant order by id")).rows).toEqual(before);
+    // 0015 leaves the tenant row alone; only 0035 later renames CRC's product to CRC Torah.
+    expect((await client.query("select id,name,product_name,enabled,customs from tenant order by id")).rows).toEqual(before.map(row => row.id === "crc" ? { ...row, product_name: "CRC Torah" } : row));
     const rows = (await client.query<{ name: string; enabled: boolean; forced: boolean }>("select relname as name,relrowsecurity as enabled,relforcerowsecurity as forced from pg_class where relname in ('service_catalog','service_catalog_lifecycle','student_service_plan') order by relname")).rows;
     expect(rows).toHaveLength(3); expect(rows.every(row => row.enabled && row.forced)).toBe(true);
     expect((await client.query("select count(*)::integer as count from service_catalog")).rows).toEqual([{ count: 0 }]);

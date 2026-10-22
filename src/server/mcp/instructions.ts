@@ -1,5 +1,5 @@
 // The portal MCP's standing rules (spec 2026-10-21 §3), sent at initialize, in the haftarah connector's style.
-export const INSTRUCTIONS = `CRC B'nei Mitzvah: the Central Reform Congregation portal where students prepare their Torah and haftarah readings. This connection acts as one signed-in staff member, with exactly that person's access.
+export const INSTRUCTIONS = `CRC Torah: the Central Reform Congregation portal where students prepare their Torah and haftarah readings. This connection acts as one signed-in staff member, with exactly that person's access.
 
 Tutors see their own students (list_students, get_student). The rabbi also drafts, reviews and publishes the study guides students read under their verses. Rules that always hold:
 1. Read get_study_voice before drafting and write in that voice: for a twelve-year-old and an adult in the same sentence.

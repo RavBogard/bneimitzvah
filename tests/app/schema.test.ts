@@ -53,8 +53,8 @@ describe("tenant schema and transaction boundary", () => {
     );
     expect(state.rows.length === 4 && state.rows.every((row) => row.relrowsecurity && row.relforcerowsecurity)).toBe(true);
     const hosts = await f.db.select().from(schema.tenantHost);
-    expect(hosts.length === 3 && hosts.every(host => host.tenantId === "crc" && host.environment === "production" && host.deployment === "production")
-      && hosts.map(host => host.origin).sort().join() === "https://beitmitzvah.centralreform.org,https://bneimitzvah.centralreform.org,https://bneimitzvah.vercel.app").toBe(true);
+    expect(hosts.length === 4 && hosts.every(host => host.tenantId === "crc" && host.environment === "production" && host.deployment === "production")
+      && hosts.map(host => host.origin).sort().join() === "https://beitmitzvah.centralreform.org,https://bneimitzvah.centralreform.org,https://bneimitzvah.vercel.app,https://torah.centralreform.org").toBe(true);
   });
 
   it("supports siblings and parent+tutor grants while rejecting duplicate active grants and changed authority", async () => {

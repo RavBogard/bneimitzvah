@@ -84,7 +84,7 @@ export function ConnectClaude() {
   const ready = view.kind === "ready" ? view : null, account = ready?.account ?? null;
   const signedInWithGoogle = !!account?.google, staff = !!account?.role;
   return <div className="portal-shell">
-    <header className="portal-header"><a className="portal-brand" href="/" aria-label="CRC Beit Mitzvah home">CRC Beit Mitzvah</a><span>Central Reform Congregation</span></header>
+    <header className="portal-header"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a><span>Central Reform Congregation</span></header>
     <main id="portal-main" className="entry-layout">
       <div className="entry-introduction">
         <h1>Connect Claude</h1>

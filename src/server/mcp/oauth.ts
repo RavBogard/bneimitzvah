@@ -70,7 +70,7 @@ export const authorizationMetadata = (origin: string) => ({
 });
 export const resourceMetadata = (origin: string) => ({
   resource: `${origin}${MCP_PATH}`, authorization_servers: [origin], scopes_supported: [SCOPES.read, SCOPES.study, SCOPES.roster],
-  bearer_methods_supported: ["header"], resource_name: "CRC B'nei Mitzvah",
+  bearer_methods_supported: ["header"], resource_name: "CRC Torah",
 });
 
 /** The scopes a client asked for, closed to ours; none asked means the role's default. */
