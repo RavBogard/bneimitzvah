@@ -84,6 +84,19 @@ test("adding canonical directory data never creates an auth-origin union and swi
   }
 });
 
+test("parked student recordings stay off unless PORTAL_RECORDINGS_ENABLED is exactly true, in production as anywhere", async () => {
+  const production = { ...env(), PORTAL_ENVIRONMENT: "production", PORTAL_DEPLOYMENT: "production", VERCEL_ENV: "production", NODE_ENV: "production", BETTER_AUTH_URL: "https://beitmitzvah.centralreform.org" };
+  expect(loadRuntimeConfig(production).recordingsEnabled).toBe(false);
+  expect(loadRuntimeConfig({ ...production, PORTAL_RECORDINGS_ENABLED: "false" }).recordingsEnabled).toBe(false);
+  expect(loadRuntimeConfig({ ...production, PORTAL_RECORDINGS_ENABLED: "true" }).recordingsEnabled).toBe(true);
+  for (const value of ["1", "yes", "TRUE", " true", ""]) expect(await safeUnavailable(() => loadRuntimeConfig({ ...production, PORTAL_RECORDINGS_ENABLED: value }))).toBe(true);
+  const f = await authFixture(); clients.push(f);
+  const db = drizzle(f.client, { schema });
+  const offline = async () => { throw new Error("No external requests permitted"); };
+  expect(composeRuntime(loadRuntimeConfig(production), db, offline).recordings).toBeNull();
+  expect(composeRuntime(loadRuntimeConfig({ ...production, PORTAL_RECORDINGS_ENABLED: "true" }), db, offline).recordings).not.toBeNull();
+});
+
 test("runtime scope remains lazy and missing configuration fails closed before callback/network", async () => {
   let reads = 0, calls = 0;
   const scope = createRuntimeScope(() => { reads++; return {}; });

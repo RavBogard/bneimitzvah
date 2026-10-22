@@ -1,6 +1,6 @@
 import { expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { createLogger, hostDenialEvent } from "../../src/server/logging/logger";
+import { createLogger, hostDenialEvent, MCP_BODY_UNREAD, mcpRequestLine } from "../../src/server/logging/logger";
 
 test("logger projects only fixed event/status and generated request UUID, ignoring arbitrary private objects", () => {
   const lines: string[] = [];
@@ -46,4 +46,26 @@ test("host diagnostic codes use compile-time vocabulary and reject hostile runti
   if (event) request.emit(event, 404);
   expect(lines.length).toBe(1);
   expect(JSON.parse(lines[0])).toEqual({ event, status: 404, requestId: request.requestId });
+});
+
+test("the MCP request line projects only closed fields and never touches or echoes hostile input", () => {
+  let touched = false;
+  const hostile = { toString() { touched = true; return "synthetic-private"; }, toJSON() { touched = true; return "synthetic-private"; } };
+  const allowed = ["https://claude.ai"];
+  const line = (input: Partial<Parameters<typeof mcpRequestLine>[0]>) => mcpRequestLine({ origin: null, allowedOrigins: allowed, version: null, body: MCP_BODY_UNREAD, ...input });
+  expect(line({})).toEqual({ event: "mcp.request", originPresent: false, origin: "absent", protocolVersion: "absent", method: "unread" });
+  expect(line({ origin: "https://claude.ai.synthetic-private.example" }).origin).toBe("other");
+  expect(line({ origin: hostile as never }).originPresent).toBe(false);
+  expect(line({ version: "2025-06-18\nsynthetic-private" }).protocolVersion).toBe("malformed");
+  expect(line({ version: hostile as never }).protocolVersion).toBe("absent");
+  expect(line({ body: { jsonrpc: "2.0", id: 1, method: hostile } }).method).toBe("invalid");
+  expect(line({ body: { jsonrpc: "2.0", id: 1, method: "synthetic-private" } }).method).toBe("other");
+  expect(line({ body: { jsonrpc: "2.0", id: 1, result: {} } }).method).toBe("response");
+  expect(line({ body: "synthetic-private" }).method).toBe("invalid");
+  expect(line({ body: null }).method).toBe("invalid");
+  expect(touched).toBe(false);
+  const lines: string[] = [];
+  createLogger(value => lines.push(value)).mcpRequest({ origin: "https://claude.ai", allowedOrigins: allowed, version: "2025-11-25", body: { jsonrpc: "2.0", id: 1, method: "tools/call", params: { arguments: { secret: "synthetic-private" } } } });
+  expect(lines).toEqual([JSON.stringify({ event: "mcp.request", originPresent: true, origin: "https://claude.ai", protocolVersion: "2025-11-25", method: "tools/call" })]);
+  expect(() => createLogger(() => { throw new Error("synthetic-private"); }).mcpRequest({ origin: null, allowedOrigins: [], version: null, body: null })).not.toThrow();
 });
