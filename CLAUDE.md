@@ -6,8 +6,9 @@ Read first, every session: `docs/planning/2026-10-15-kickoff/MISSION.md` (Daniel
 
 - **Never in the repo:** JPS or any licensed text, student or family data, recordings, rendered audio, model weights, credentials. `tests/never-in-repo.test.mjs` must stay green; never weaken it to pass.
 - **G3 gate:** no student hears generated chant until Daniel passes the listening review (at least 95% melody passes, zero "would teach wrong"), after G1 and G2. No code path may serve an unreleased render to a student.
+- **Show rather than hide (Daniel 2026-10-22):** texts, human recordings and study tools are open, including to signed-out visitors; people data stays private. Human recordings need no listening review. See MISSION's 2026-10-22 amendment.
 - **Engine:** `trope/` stays dependency-free Node plus its vendored, licensed copies with `PROVENANCE.md`. Nothing is installed into it. Its tests run with `node --test`. The app never imports the Python side.
-- **Stop and ask Daniel for:** money (new paid service, upgrade, spend notice); anything student-visible before it ships; any licence question; a second tenant; a MISSION ruling that proves wrong. Everything else: decide, log it in the plan's "Decided here" or STATE.md, move on.
+- **Stop and ask Daniel for:** money that would take total portal spend past $10 a month (below that, decide and log it in STATE.md; Daniel 2026-10-22); anything student-visible before it ships; any licence question; a second tenant; a MISSION ruling that proves wrong. Everything else: decide, log it in the plan's "Decided here" or STATE.md, move on.
 - **Secrets:** never print, log or return a token, cookie, connection string or full email address. Spawning tests use `tests/helpers/isolatedEnv.mjs`.
 - **High-stakes work** (auth, tenant isolation, never-in-repo, the chant gate) gets an adversarial pass by a second agent before it is reported done.
 - **Done** means tests green on Windows and in CI and a deploy Daniel can open.

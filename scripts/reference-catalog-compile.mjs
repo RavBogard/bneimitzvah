@@ -5,7 +5,7 @@ import { createReadStream } from "node:fs";
 import { readFile, lstat, realpath, open } from "node:fs/promises";
 import { resolve, join, dirname, basename } from "node:path";
 import { pathToFileURL } from "node:url";
-import { validateIndex, buildVerseDto } from "./reference-index-contract.mjs";
+import { validateIndex, buildVerseDto, checkV2AgainstV1, INDEX_SCHEMA_V2 } from "./reference-index-contract.mjs";
 import { verseCountsFrom } from "./reference-index-check.mjs";
 import { insideGitWorkingTree } from "./private-paths.mjs";
 
@@ -14,8 +14,11 @@ const failure = () => new Error("Reference catalog compilation failed");
 const plain = v => v && typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype;
 /** Pure conversion over independently measured audio facts. The CLI below measures
  * every original file itself; callers must not treat unverified facts as provenance. */
-export function compileReferenceCatalog({ index, portalWords, archiveMetadata, audioFacts }) {
+export function compileReferenceCatalog({ index, portalWords, archiveMetadata, audioFacts, v1Index = null }) {
   try {
+    // A v2 index (refined word times) compiles only beside the v1 index it was refined from, so every
+    // start's move window is measured from the real CTC onset.
+    if (index?.schema === INDEX_SCHEMA_V2 ? !v1Index || !validateIndex(v1Index, { verseCounts: verseCountsFrom(portalWords) }).ok || checkV2AgainstV1(v1Index, index).length : v1Index !== null) throw failure();
     const validation = validateIndex(index, { verseCounts: verseCountsFrom(portalWords) });
     if (!validation.ok || validation.recordings.size > 600 || !plain(portalWords?.verses) || archiveMetadata?.metadata?.identifier !== "PockettorahAudioFiles" || !Array.isArray(archiveMetadata?.files) || !(audioFacts instanceof Map)) throw failure();
     const archive = new Map();
@@ -46,9 +49,11 @@ export function compileReferenceCatalog({ index, portalWords, archiveMetadata, a
   } catch { throw failure(); }
 }
 export function parseCompileArgs(args) {
-  const names = ["--index", "--portal-words", "--archive-metadata", "--audio", "--out"], result = {};
-  if (args.length !== 10) throw failure();
+  // --v1-index is required with a v2 index and refused with a v1 index (compileReferenceCatalog).
+  const names = ["--index", "--portal-words", "--archive-metadata", "--audio", "--out", "--v1-index"], result = {};
+  if (args.length !== 10 && args.length !== 12) throw failure();
   for (let i = 0; i < args.length; i += 2) { if (!names.includes(args[i]) || Object.hasOwn(result, args[i]) || !args[i + 1] || args[i + 1].startsWith("--")) throw failure(); result[args[i]] = resolve(args[i + 1]); }
+  if (names.slice(0, 5).some(n => !Object.hasOwn(result, n))) throw failure();
   return result;
 }
 async function privateRegular(path, cap) {
@@ -66,6 +71,7 @@ export async function compileReferenceCatalogFiles(args) {
     if (await insideGitWorkingTree(parent) || basename(out) === ".git") throw failure();
     const json = async (path, cap) => { await privateRegular(path, cap); const bytes = await readFile(path); if (bytes.length > cap) throw failure(); return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes).replace(/^\uFEFF/, "")); };
     const index = await json(paths["--index"], 32 * 1024 * 1024), portalWords = await json(paths["--portal-words"], 32 * 1024 * 1024), archiveMetadata = await json(paths["--archive-metadata"], 8 * 1024 * 1024);
+    const v1Index = paths["--v1-index"] ? await json(paths["--v1-index"], 32 * 1024 * 1024) : null;
     const v = validateIndex(index, { verseCounts: verseCountsFrom(portalWords) }); if (!v.ok || v.recordings.size > 600) throw failure();
     const audioFacts = new Map();
     for (const r of v.recordings.values()) {
@@ -77,7 +83,7 @@ export async function compileReferenceCatalogFiles(args) {
       if (before.size !== bytes || after.size !== before.size || after.mtimeMs !== before.mtimeMs || after.ino !== before.ino) throw failure();
       audioFacts.set(r.archiveFile, { bytes, sha256: sha.digest("hex"), md5: md5.digest("hex") });
     }
-    const result = compileReferenceCatalog({ index, portalWords, archiveMetadata, audioFacts });
+    const result = compileReferenceCatalog({ index, portalWords, archiveMetadata, audioFacts, v1Index });
     // Exclusive create only after ALL inputs, hashes, crosswalks and bounds pass.
     const file = await open(out, "wx", 0o600); try { await file.writeFile(result.text, "utf8"); } finally { await file.close(); }
     return result.summary;
