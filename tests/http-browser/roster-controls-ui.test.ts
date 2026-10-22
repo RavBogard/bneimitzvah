@@ -17,7 +17,8 @@ let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop:
 const contexts: BrowserContext[] = [];
 const signedCookies: Partial<Record<"admin" | "tutor", Awaited<ReturnType<BrowserContext["cookies"]>>>> = {};
 let cleanupBrowser: (() => Promise<void>) | undefined;
-async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch { throw new Error("Roster controls browser operation failed; private details withheld"); } }
+// Only the error class (e.g. TimeoutError) is kept: it names no locator, value or person.
+async function safe<T>(action: () => Promise<T>): Promise<T> { try { return await action(); } catch (error) { const kind = error instanceof Error && /^[A-Za-z]{1,40}$/.test(error.name) ? error.name : "Error"; throw new Error(`Roster controls browser operation failed (${kind}); private details withheld`); } }
 async function navigate(tab: Page, path: string) { await safe(() => tab.goto(path, { waitUntil: "domcontentloaded", timeout: 30_000 })); }
 async function api(tab: Page, path: string, body?: unknown) { return safe(() => tab.evaluate(async ({ path, body }) => { const response = await fetch(path, { method: body === undefined ? "GET" : "POST", body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store", headers: body === undefined ? {} : { "content-type": "application/json" } }); return { status: response.status, data: await response.json() }; }, { path, body })); }
 async function page(who: "admin" | "tutor" = "admin", mobile = false) {
@@ -33,6 +34,9 @@ async function page(who: "admin" | "tutor" = "admin", mobile = false) {
   return tab;
 }
 async function click(tab: Page, name: string) { await safe(() => tab.getByRole("button", { name, exact: true }).click()); }
+// The roster lists 25 students a page in server (id) order, and earlier cases here add more than 25, so a named
+// student is found through the roster search, as an admin would, before its row action is used.
+async function editDetails(tab: Page, name: string) { await safe(() => tab.getByRole("searchbox", { name: "Find a student", exact: true }).fill(name)); await click(tab, `Edit details for ${name}`); }
 // Row actions are named for the person they change ("Remove Synthetic Tutor from Synthetic"); this finds one by its verb within a card.
 function action(tab: Page, card: string, verb: string) { return tab.getByRole("region", { name: card, exact: true }).getByRole("button", { name: new RegExp(`^${verb} `) }); }
 async function accessLoaded(tab: Page) { await ui(tab.getByText("Checking current access…", { exact: true })).toBeHidden(); await ui(tab.getByRole("button", { name: "Reload access", exact: true })).toBeEnabled(); }
@@ -202,7 +206,7 @@ it("sets rehearsal dates in order on or before the ceremony, shows them in the r
   const name = `${fixture.student.firstName} ${fixture.student.lastName}`, first = () => tab.getByLabel("First rehearsal (optional)", { exact: true }), second = () => tab.getByLabel("Second rehearsal (optional)", { exact: true });
   const stored = async () => (await api(tab, "/api/admin/students")).data.students.find((row: { id: string }) => row.id === fixture.student.id) as { rehearsal1: string | null; rehearsal2: string | null; revision: number };
   const before = await stored(); expect(before.rehearsal1 === null && before.rehearsal2 === null).toBe(true);
-  await click(tab, `Edit details for ${name}`); await ui(first()).toHaveValue(""); await ui(second()).toHaveValue("");
+  await editDetails(tab, name); await ui(first()).toHaveValue(""); await ui(second()).toHaveValue("");
   await ui(first()).toHaveAttribute("max", fixture.student.ceremonyDate); await ui(second()).toHaveAttribute("max", fixture.student.ceremonyDate);
   await safe(() => first().fill("2026-12-26")); await safe(() => second().fill("2026-12-12"));
   await click(tab, "Save student");
@@ -213,7 +217,7 @@ it("sets rehearsal dates in order on or before the ceremony, shows them in the r
   expect(await stored()).toMatchObject({ rehearsal1: "2026-12-12", rehearsal2: "2026-12-26", revision: before.revision + 1 });
   await navigate(tab, `/workspace/admin/students/${fixture.student.id}/reading`);
   await ui(tab.locator(".hero-rehearsals")).toHaveText("Rehearsals: Sat, Dec 12, 2026 and Sat, Dec 26, 2026");
-  await navigate(tab, "/workspace/admin/students"); await click(tab, `Edit details for ${name}`);
+  await navigate(tab, "/workspace/admin/students"); await editDetails(tab, name);
   await ui(first()).toHaveValue("2026-12-12"); await safe(() => first().fill("")); await safe(() => second().fill(""));
   await click(tab, "Save student"); await ui(tab.getByText(`Saved ${name}.`, { exact: true })).toBeVisible();
   expect(await stored()).toMatchObject({ rehearsal1: null, rehearsal2: null, revision: before.revision + 2 });
