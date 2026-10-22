@@ -21,9 +21,21 @@ test("0031 adds only student_source_identity, leaves existing students unchanged
     for (const e of entries) await copyFile(join(folder, e.tag + ".sql"), join(prior, e.tag + ".sql"));
     const db = drizzle(client); await migrate(db, { migrationsFolder: prior });
     await client.query("insert into student(id,tenant_id,first_name,last_name,ceremony_date,parent_email) values($1,'crc','Synthetic','Existing','2027-01-02','existing@example.test')", [randomUUID()]);
-    const before = (await client.query("select * from student")).rows;
+    // Production-shaped consents: admin read, admin study, an unattended study routine and a tutor. The widened scope
+    // check must re-add over all of them, and every scope stays exactly as it was.
+    for (const [who, role, scope, unattended] of [["admin-a", "admin", "portal:read", false], ["admin-b", "admin", "portal:read portal:study", false],
+      ["admin-c", "admin", "portal:read portal:study", true], ["tutor-a", "tutor", "portal:read", false]] as const) {
+      const member = randomUUID(), grant = randomUUID();
+      await client.query("insert into \"user\"(id,name,email,email_verified) values($1,'Synthetic staff',$2,true)", [who, [who, "example.test"].join("@")]);
+      await client.query("insert into membership(id,tenant_id,user_id) values($1,'crc',$2)", [member, who]);
+      await client.query("insert into role_grant(id,tenant_id,membership_id,role) values($1,'crc',$2,$3)", [grant, member, role]);
+      await client.query(`insert into mcp_connection(tenant_id,user_id,membership_id,role_grant_id,role,role_grant_revision,authority_revision,scope,unattended,client_name,client_hash,redirect_uri,expires_at)
+        values('crc',$1,$2,$3,$4,1,1,$5,$6,'Claude',$7,'https://claude.ai/api/mcp/auth_callback',now()+interval '30 days')`, [who, member, grant, role, scope, unattended, "a".repeat(64)]);
+    }
+    const before = (await client.query("select * from student")).rows, consents = (await client.query("select * from mcp_connection order by user_id")).rows;
     await migrate(db, { migrationsFolder: folder }); await migrate(db, { migrationsFolder: folder });
     expect(priorColumns((await client.query("select * from student")).rows, before)).toEqual(before);
+    expect((await client.query("select * from mcp_connection order by user_id")).rows).toEqual(consents);
     expect((await client.query("select count(*)::int as n from student_source_identity")).rows).toEqual([{ n: 0 }]);
     const previous = JSON.parse(await readFile(join(folder, `meta/${String(entry.idx - 1).padStart(4, "0")}_snapshot.json`), "utf8"));
     const current = JSON.parse(await readFile(join(folder, `meta/${String(entry.idx).padStart(4, "0")}_snapshot.json`), "utf8"));
