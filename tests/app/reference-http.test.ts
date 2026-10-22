@@ -15,7 +15,7 @@ import { parseReferenceResolution } from "../../src/lib/reference-audio/source";
 import { syntheticResponse } from "../helpers/study";
 const fixtures: Awaited<ReturnType<typeof portalRoutesFixture>>[] = [];
 afterEach(async () => { for (const f of fixtures.splice(0)) await f.client.close(); });
-async function fixture() {
+async function fixture(ends?: number[]) {
   const f = await portalRoutesFixture(); fixtures.push(f);
   const assignment = await f.owner(async () => {
     const [row] = await f.db.insert(s.assignment).values({ tenantId: "crc", studentId: f.students[0].id, kind: "torah", basis: "custom", ref: "Genesis 1:1-3", status: "confirmed", setByMembershipId: f.adminMember.id,
@@ -23,7 +23,7 @@ async function fixture() {
     await f.db.insert(s.assignmentVerse).values([1, 2, 3].map(n => ({ tenantId: "crc", studentId: f.students[0].id, assignmentId: row.id, ordinal: n, verseRef: `Genesis 1:${n}` }))); return row;
   });
   const catalog = parseReferenceCatalog({ schema: "reference-catalog/v1", source: "PockettorahAudioFiles", assets: [{ id: "ra_" + "1".repeat(32), archiveFile: "Synthetic.mp3", sha256: "a".repeat(64), bytes: 4,
-    verses: [1, 2, 3].map(n => ({ schema: "reference-verse/v1", ref: `Genesis 1:${n}`, table: "torah", playback: { status: "ready", asset: "ra_" + "1".repeat(32), clip: { start: 1, end: 3 } }, words: { status: "ready", readingTextSha256: createHash("sha256").update("אָ֑ב ג׃".normalize("NFC")).digest("hex"), starts: [1, 2] }, attribution: REFERENCE_ATTRIBUTION })) }] })!;
+    verses: [1, 2, 3].map(n => ({ schema: "reference-verse/v1", ref: `Genesis 1:${n}`, table: "torah", playback: { status: "ready", asset: "ra_" + "1".repeat(32), clip: { start: 1, end: 3 } }, words: { status: "ready", readingTextSha256: createHash("sha256").update("אָ֑ב ג׃".normalize("NFC")).digest("hex"), starts: [1, 2], ...(ends ? { ends } : {}) }, attribution: REFERENCE_ATTRIBUTION })) }] })!;
   const loadText = vi.fn(createSefariaStudyReader({ fetch: async () => syntheticResponse(), verseCounts: TANAKH_VERSE_COUNTS })), loadCatalog = vi.fn(async () => catalog);
   const referenceAudio = createReferenceAudioService({ access: f.service, practice: f.runtime.practice, loadText, loadCatalog });
   const runtime = { ...f.runtime, referenceAudio }, scope: HttpRuntimeScope = async action => action(runtime), dispatch = createHttpDispatcher(scope);
@@ -73,4 +73,12 @@ test("unconfigured and malformed provider responses yield only fixed unavailable
   const dispatch = createHttpDispatcher(async action => action({ ...f.runtime, referenceAudio }));
   const unavailable = await dispatch(f.request(f.path(), { who: "admin" })); expect(unavailable.status).toBe(503); expect(await unavailable.json()).toEqual({ error: "unavailable" });
   expect((await dispatch(f.request(`/api/students/${f.students[0].id}?mode=admin`, { who: "admin" }))).status).toBe(200);
+});
+
+test("HTTP keeps measured word ends beside starts, and emits none for a v1 catalog", async () => {
+  const measured = await fixture([1.8, 3]), body = await (await measured.dispatch(measured.request(measured.path(), { who: "admin" }))).json();
+  expect(body.reference.verse.words).toMatchObject({ status: "ready", starts: [1, 2], ends: [1.8, 3] });
+  expect(parseReferenceResolution(body.reference)?.verse.words).toMatchObject({ ends: [1.8, 3] });
+  const v1 = await fixture(), plain = await (await v1.dispatch(v1.request(v1.path(), { who: "admin" }))).json();
+  expect(plain.reference.verse.words.status).toBe("ready"); expect("ends" in plain.reference.verse.words).toBe(false);
 });

@@ -9,7 +9,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { isolatedEnv } from "./helpers/isolatedEnv.mjs";
 import {
-  INDEX_SCHEMA, REVIEW_STATES, validateIndex, crosswalkWords, applyOverride, buildVerseDto,
+  INDEX_SCHEMA, INDEX_SCHEMA_V2, WORD_MOVE_BOUNDS, REVIEW_STATES, validateIndex, checkV2AgainstV1, crosswalkWords, applyOverride, buildVerseDto,
   parseVerseRef, parseRangeRef, indexWordsDigestInput, portalWordsDigestInput,
 } from "../scripts/reference-index-contract.mjs";
 import { measure, parseArgs, expectedKeys, verseCountsFrom } from "../scripts/reference-index-check.mjs";
@@ -331,4 +331,115 @@ test("CLI refuses inputs or output inside a Git working tree and prints only a c
     assert.equal(invalid.status, 1);
     assert.equal(JSON.parse(invalid.stdout).counts.verses, 0);
   } finally { await cleanup(); await rm(outside, { recursive: true, force: true }); }
+});
+
+// ---- index v2: refined starts, measured ends, the original CTC onset kept beside them ----------------
+/** v1 recording -> v2: each start 20 ms before its CTC onset, each end 30 ms before the next start. */
+function v2Recording(over = {}) {
+  const r = recording(over);
+  r.verses = r.verses.map(v => ({ ...v, words: v.words.map((w, k) => {
+    const next = v.words[k + 1];
+    return { ...w, ctcStart: w.start, start: +(w.start - 0.02).toFixed(3), end: next ? +(next.start - 0.05).toFixed(3) : v.end };
+  }) }));
+  return r;
+}
+const indexV2 = (...recs) => ({ schema: INDEX_SCHEMA_V2, source: "synthetic", method: "synthetic", recordings: recs.length ? recs : [v2Recording()] });
+
+test("v2 index: refined starts with measured ends and kept CTC onsets validate; v1 still validates unchanged", () => {
+  const r = validateIndex(indexV2());
+  assert.equal(r.ok, true, JSON.stringify(r.errors));
+  assert.equal(validateIndex(index()).ok, true);
+  // A word may end exactly at the next start, and the last word exactly at the verse end.
+  const touching = v2Recording(); touching.verses[0].words[0].end = touching.verses[0].words[1].start;
+  assert.equal(validateIndex(indexV2(touching)).ok, true);
+});
+
+test("v2 index: the word fields are bound to the schema version", () => {
+  const v1WithEnd = recording(); v1WithEnd.verses[0].words[0].end = 1.5;
+  assert.ok(codes(validateIndex(index(v1WithEnd))).includes("unknown-field"));
+  const v1WithCtc = recording(); v1WithCtc.verses[0].words[0].ctcStart = 1.1;
+  assert.ok(codes(validateIndex(index(v1WithCtc))).includes("unknown-field"));
+  const extra = v2Recording(); extra.verses[0].words[0].moved = 1;
+  assert.ok(codes(validateIndex(indexV2(extra))).includes("unknown-field"));
+  for (const [field, code] of [["end", "word-end"], ["ctcStart", "word-ctc-start"]]) {
+    const missing = v2Recording(); delete missing.verses[0].words[1][field];
+    assert.ok(codes(validateIndex(indexV2(missing))).includes(code), field);
+  }
+});
+
+test("v2 index: a start outside the -120/+60 ms window around its CTC onset is refused", () => {
+  assert.deepEqual(WORD_MOVE_BOUNDS, { backS: 0.12, forwardS: 0.06 });
+  for (const [delta, ok] of [[-0.12, true], [0.06, true], [-0.122, false], [0.062, false], [-0.3, false]]) {
+    const r = v2Recording(); const w = r.verses[1].words[1];
+    w.start = +(w.ctcStart + delta).toFixed(3);
+    const result = validateIndex(indexV2(r));
+    assert.equal(codes(result).includes("word-move-out-of-bounds"), !ok, String(delta));
+  }
+});
+
+test("v2 index: ends follow their starts and never pass the next start or the verse end", () => {
+  const cases = [
+    [r => { r.verses[0].words[0].end = r.verses[0].words[0].start; }, "word-end"],
+    [r => { r.verses[0].words[0].end = r.verses[0].words[0].start - 0.1; }, "word-end"],
+    [r => { r.verses[0].words[0].end = r.verses[0].words[1].start + 0.01; }, "word-end-overlap"],
+    [r => { r.verses[0].words[2].end = r.verses[0].end + 0.01; }, "word-end-overlap"],
+    [r => { r.verses[0].words[0].end = Number.NaN; }, "word-end"],
+    [r => { r.verses[0].words[1].ctcStart = r.verses[0].words[0].ctcStart; }, "word-ctc-order"],
+    [r => { r.verses[0].words[0].ctcStart = r.verses[0].start - 0.05; r.verses[0].words[0].start = r.verses[0].start; }, "word-ctc-outside-verse"],
+  ];
+  for (const [mutate, code] of cases) {
+    const r = v2Recording(); mutate(r);
+    const result = validateIndex(indexV2(r));
+    assert.ok(codes(result).includes(code), `${code}: ${JSON.stringify(codes(result))}`);
+    assert.equal(result.recordings.size, 0);
+  }
+});
+
+test("v2 DTO: ends ride beside starts on the 1 ms grid; merged words end where their last index word ends; v1 has none", () => {
+  const r = v2Recording();
+  const dto = buildVerseDto({ recording: r, verse: r.verses[1], asset: ASSET, portal: ready("Genesis 1:2") });
+  assert.deepEqual(dto.words, { status: "ready", readingTextSha256: sha(PORTAL["Genesis 1:2"].readingText), starts: [4.38, 4.88, 5.38], ends: [4.85, 5.35, 8] });
+  const v1 = recording();
+  assert.equal("ends" in buildVerseDto({ recording: v1, verse: v1.verses[1], asset: ASSET, portal: ready("Genesis 1:2") }).words, false);
+  // A reviewed override that merges index words 1 and 2 into one portal word takes word 2's end.
+  const one = v2Recording({ ref: "Genesis 1:1-1:1" }); one.verses = [one.verses[0]];
+  const portal = { status: "ready", words: ["אבג", "דהוזחט"], readingText: "אבג דהוזחט" + SOF };
+  const override = { readingTextSha256: sha(portal.readingText), portalWordsSha256: sha(portalWordsDigestInput(portal.words)), indexWordsSha256: sha(indexWordsDigestInput(one.verses[0])),
+    groups: [[0], [1, 2]], reviewedBy: "reviewer", reviewedAt: "2026-10-17" };
+  const merged = buildVerseDto({ recording: one, verse: one.verses[0], asset: ASSET, portal, override });
+  assert.deepEqual(merged.words.starts, [1.08, 1.58]);
+  assert.deepEqual(merged.words.ends, [1.55, 4]);
+  // Playback-only verses (text mismatch) carry no word timing at all.
+  const mismatch = buildVerseDto({ recording: r, verse: r.verses[1], asset: ASSET, portal: ready("Genesis 1:1") });
+  assert.equal(mismatch.words.status, "unavailable");
+});
+
+test("v2 index: the move window is exact on the 1 ms grid, and a word that collapses on that grid is refused", () => {
+  for (const [delta, ok] of [[-0.121, false], [0.061, false]]) {
+    const r = v2Recording(); const w = r.verses[1].words[1];
+    w.start = +(w.ctcStart + delta).toFixed(3);
+    assert.equal(codes(validateIndex(indexV2(r))).includes("word-move-out-of-bounds"), !ok, String(delta));
+  }
+  const tiny = v2Recording(); const w = tiny.verses[0].words[0];
+  w.start = 1.0801; w.end = 1.0804;
+  assert.ok(codes(validateIndex(indexV2(tiny))).includes("word-end"));
+});
+
+test("v2 index is bound to its v1 source: only word times may differ, and ctcStart is the v1 start", () => {
+  const v1 = index(), v2 = indexV2();
+  assert.deepEqual(checkV2AgainstV1(v1, v2), []);
+  const cases = [
+    x => { x.recordings[0].verses[0].words[0].ctcStart += 0.01; x.recordings[0].verses[0].words[0].start += 0.01; },
+    x => { x.recordings[0].verses[0].words[1].he = "אאא"; },
+    x => { x.recordings[0].verses[0].end = 4.1; },
+    x => { x.recordings[0].verses[0].words.pop(); },
+    x => { x.recordings[0].seconds = 31; },
+    x => { x.recordings[0].verses[1].words[0].label = 1; },
+    x => { x.recordings.push(v2Recording({ key: "Beta-1" })); },
+    x => { x.schema = INDEX_SCHEMA; },
+  ];
+  for (const mutate of cases) { const x = JSON.parse(JSON.stringify(v2)); mutate(x); assert.notDeepEqual(checkV2AgainstV1(v1, x), [], mutate.toString()); }
+  // Problems name structure only, never text.
+  const bad = JSON.parse(JSON.stringify(v2)); bad.recordings[0].verses[0].words[1].he = "אאא";
+  assert.deepEqual(checkV2AgainstV1(v1, bad), [{ code: "v2-word", at: "Alpha-1/verse#0/w1" }]);
 });
