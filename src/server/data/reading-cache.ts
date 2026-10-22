@@ -39,7 +39,9 @@ async function validated(key: string, entry: CacheEntry) {
       keys(item[property], ["1", "2", "3", "4", "5", "6", "7", "M"]);
       for (const value of Object.values(item[property])) row(value);
     }
-    if (item.haft !== undefined) row(item.haft);
+    // One range as an object, or a multi-range haftarah as an ordered array of 1 to 8 rows.
+    if (Array.isArray(item.haft)) { if (item.haft.length < 1 || item.haft.length > 8) throw 0; item.haft.forEach(row); }
+    else if (item.haft !== undefined) row(item.haft);
   }
   // Reuse calendar/date/range/catalog validation on both reads and writes.
   await createHebcalReader({ cache: { get: async () => entry, set: async () => { throw 0; } },

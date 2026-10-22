@@ -193,3 +193,17 @@ test("linked parent overview reads assigned public references without creating c
   expect(f.text).not.toHaveBeenCalled(); expect(f.loadCatalog).not.toHaveBeenCalled(); expect(f.loadManifest).not.toHaveBeenCalled();
   expect(await snapshot()).toEqual(before);
 });
+
+test("a verse recorded twice resolves against the whole assignment, so the page plays its own recording's published cuts", async () => {
+  const f = await fixture(), raw = JSON.parse(JSON.stringify(f.catalog)), other = `ra_${"9".repeat(32)}`;
+  // A second, shorter recording that also holds Genesis 1:1 and sorts first by name. Its cut has no published short source.
+  raw.assets.push({ id: other, archiveFile: "Aaa-Other.mp3", sha256: "9".repeat(64), bytes: 9, verses: [{ ...raw.assets[0].verses[0], playback: { ...raw.assets[0].verses[0].playback, asset: other } }] });
+  const doubled = parseReferenceCatalog(raw)!;
+  expect(doubled).not.toBeNull();
+  const result = await f.service({ loadCatalog: async () => doubled }).readPage(f.request(), f.selection);
+  if (!result.ok || !("page" in result)) throw 0;
+  expect(result.page?.references.map(v => v.source?.id)).toEqual([1, 2, 3].map(n => `rs_${String(n).repeat(64)}`));
+  const hidden = await f.service({ loadCatalog: async () => doubled, studentRelease: false }).readPage(f.request({ who: "learner" }), { ...f.selection, mode: "student" });
+  if (!hidden.ok || !("page" in hidden)) throw 0;
+  expect(hidden.page?.references.every(v => v.source === null && v.verse.playback.status === "unavailable")).toBe(true);
+});
