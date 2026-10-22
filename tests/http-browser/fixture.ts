@@ -19,7 +19,6 @@ import { createReferenceAudioService } from "../../src/server/reference-audio/se
 import { createShortReferenceAudioService } from "../../src/server/reference-audio/short-service";
 import type { ShortSourceManifest } from "../../src/server/reference-audio/short-source-manifest";
 import { createShortExplorationService } from "../../src/server/reference-audio/short-exploration-service";
-import { createFinkelReferenceService } from "../../src/server/reference-audio/finkel-service";
 import { createPublicReadingService, PUBLIC_TENANT } from "../../src/server/public-reading/service";
 import { AccessDenied } from "../../src/server/access/errors";
 import type { PublicRuntime } from "../../src/server/http/public-reading";
@@ -57,7 +56,7 @@ import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
 const secret = () => randomBytes(48).toString("base64url");
 type Mail = { email: string; url: string };
 
-export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; shortReferenceStudyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceShortManifestLoad?: (signal?: AbortSignal) => Promise<ShortSourceManifest>; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown>;musicBroker?:MusicBroker;referenceReviewGet?:ReferenceCatalogGet;finkelManifestSha256?:string;finkelGet?:ReferenceCatalogGet } = {}) {
+export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; shortReferenceStudyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceShortManifestLoad?: (signal?: AbortSignal) => Promise<ShortSourceManifest>; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown>;musicBroker?:MusicBroker;referenceReviewGet?:ReferenceCatalogGet } = {}) {
   const base = await postgresAccessFixture();
   try {
     // The shared disposable fixture creates the DB, migrations and restricted
@@ -96,7 +95,6 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }), studentWork: createStudentWorkService({ access, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
     serviceLearning: createServiceLearningService({ access: access, practice, signingSecret: secret(),resolveCeremonyUnit:serviceEcosystem.materialMapping }),
     referenceReview: createReferenceReviewService({ access, reviewer: options.referenceReviewGet ? { tenantId: "crc", userId: base.admin.id } : undefined, get: options.referenceReviewGet ?? (async () => { throw new ReviewUnavailable(); }) }),
-    finkelReference: createFinkelReferenceService({ access, manifestSha256: options.finkelManifestSha256, studentRelease: options.referenceStudentRelease === true, get: options.finkelGet ?? (async () => { throw new ReviewUnavailable(); }) }),
     serviceEcosystem,
     serviceScheduler: createServiceScheduler({ db, broker:createMusicBroker(undefined) }),
       googleChallenges: createGoogleChallenges({ db, origin: BROWSER_ORIGIN, secret: secret() }),

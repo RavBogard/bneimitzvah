@@ -13,7 +13,6 @@ import { sourceContentRouteMethods } from "../../src/server/http/source-content"
 import { serviceLearningRouteMethods } from "../../src/server/http/service-learning";
 import { serviceEcosystemRouteMethods } from "../../src/server/http/service-ecosystem";
 import { referenceReviewRouteMethods } from "../../src/server/http/reference-review";
-import { finkelReferenceRouteMethods } from "../../src/server/http/finkel-reference";
 import { studentWorkRouteMethods } from "../../src/server/http/student-work";
 import { progressRouteMethods } from "../../src/server/http/progress";
 import { lessonLogRouteMethods } from "../../src/server/http/lesson-log";
@@ -104,7 +103,7 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope, withPubl
       const request = safeRequest(req);
       if (!request) { await send(res, new Response(null, { status: 400 })); return; }
       const pathname = new URL(request.url).pathname;
-      if (referenceReviewRouteMethods(pathname) || finkelReferenceRouteMethods(pathname)
+      if (referenceReviewRouteMethods(pathname)
         // Signed-out reading: the dispatcher's exact allowlist serves its routes and refuses every other /api/public path.
         || publicReadingRouteMethods(pathname) || isPublicReadingPath(pathname)) { await send(res, await dispatch(request)); return; }
       if (!serviceEcosystemRouteMethods(pathname) && !honoreeManagementRouteMethods(pathname) && !honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname) && !studyGuidesRouteMethods(pathname) && !congregationSettingsRouteMethods(pathname)) { await nextHandler(req, res); return; }

@@ -12,13 +12,11 @@ import type { createReadingAudioCoordinator } from "./reading-audio-coordinator"
 import type { ShortExplorationOwner } from "./short-exploration-owner";
 import { PortalRequestError } from "../../api";
 import { readingAudioDeadline, watchReadingAudioDeadline } from "./reading-player-intent";
-import { FinkelPassagePlayer } from "./finkel-player";
-import { finkelRequestMode } from "./finkel-api";
 
 /** Proposed audio never grants assigned word/work/calendar authority. */
 export function ExplorationContent({ state, group, retry, page, refresh, audio }: {
   state: ExplorationState; group: string; retry(): void; page(offset: number): void; refresh(): void;
-  audio?: { activeWord: { verse: number; index: number } | null; playingVerses?: ReadonlySet<string> | null; onWord(verse: number, word: number): void; onVerse(verse: number): void; player: ReactNode };
+  audio?: { activeWord: { verse: number; index: number } | null; onWord(verse: number, word: number): void; onVerse(verse: number): void; player: ReactNode };
 }) {
   const prefs = useReadingPrefs(), prepared = state.result?.status === "prepared" ? state.result : undefined;
   const current = state.page, unresolved = state.result?.status === "unresolved" ? state.result : undefined;
@@ -32,7 +30,7 @@ export function ExplorationContent({ state, group, retry, page, refresh, audio }
       <button className="button-secondary" onClick={state.error === 409 ? refresh : retry}>{state.error === 409 ? "Refresh reading" : "Try again"}</button></div>
       : unresolved ? <div role="status"><p>{explorationReasons[unresolved.reason]}</p><button className="button-secondary" onClick={retry}>Try again</button></div>
       : !current || !prepared ? <p role="status">Loading the Torah portion…</p> : <>
-        <FlowingStudyText verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false} activeWord={audio?.activeWord ?? null} playingVerses={audio?.playingVerses ?? null} onWord={audio?.onWord} onVerse={audio?.onVerse} showEnglish={prefs.translation} tikkun={prefs.tikkun} />
+        <FlowingStudyText verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false} activeWord={audio?.activeWord ?? null} onWord={audio?.onWord} onVerse={audio?.onVerse} showEnglish={prefs.translation} tikkun={prefs.tikkun} />
         {audio?.player}
         <div className="study-verse-details">{current.verses.map(verse => <div key={verse.ref} className="study-verse-detail" data-verse-ref={verse.ref}>
           <Apparatus verse={verse} learner />
@@ -83,7 +81,6 @@ export function ProposedTorahText({ baseline, reloadMetadata, authorityFailed, a
   const prepared = state.result?.status === "prepared" ? state.result : undefined, currentPage = state.page;
   const shortMetadata = useRef<ShortExplorationOwner | null>(null), playback = useRef<ReadingPlayerHandle | null>(null);
   const registerPlayback = useCallback((value: ReadingPlayerHandle | null) => { playback.current = value; }, []);
-  const [playingVerses, setPlayingVerses] = useState<ReadonlySet<string> | null>(null);
   const [activeWord, setActiveWord] = useState<{ verse: number; index: number } | null>(null), [expiredClaim, setExpiredClaim] = useState<string | null>(null);
   const view = useRef({ baseline, prepared, page: currentPage, scope, permitted, pending: state.pending, error: state.error, active, concealed });
   view.current = { baseline, prepared, page: currentPage, scope, permitted, pending: state.pending, error: state.error, active, concealed };
@@ -126,10 +123,8 @@ export function ProposedTorahText({ baseline, reloadMetadata, authorityFailed, a
   if (!permitted || concealed) return null;
   const reloadPage = (offset?: number) => { playback.current?.suspend(); shortMetadata.current?.suspend(); void owner.load(offset); };
   const hearing = audio && prepared && currentPage && listeningEnabled ? {
-    activeWord, playingVerses, onWord: (index: number) => playback.current?.select(index, "verse"), onVerse: (index: number) => playback.current?.select(index, "verse"),
-    player: <>{baseline?.finkelListeningEnabled && <FinkelPassagePlayer key={`finkel:${JSON.stringify([scope, prepared.binding, currentPage.offset])}`} scopeKey={JSON.stringify([scope, prepared.binding, currentPage.offset])}
-      refs={currentPage.verses.map(verse => verse.ref)} mode={finkelRequestMode(baseline!.mode)} active={active && available} audio={{ coordinator: audio, slot: "finkel-proposed" }} onPlaying={setPlayingVerses} />}
-      <ReadingPlayer scopeKey={JSON.stringify([scope, prepared.binding, currentPage.offset])} verses={currentPage.verses} active={active} enabled={available} expiresAt={deadline} wordTools={false}
+    activeWord, onWord: (index: number) => playback.current?.select(index, "verse"), onVerse: (index: number) => playback.current?.select(index, "verse"),
+    player: <><ReadingPlayer scopeKey={JSON.stringify([scope, prepared.binding, currentPage.offset])} verses={currentPage.verses} active={active} enabled={available} expiresAt={deadline} wordTools={false}
       audio={{ coordinator: audio, slot: "proposed" }} register={registerPlayback} onActiveWord={setActiveWord} load={async (index, signal) => {
         const now = view.current, owned = shortMetadata.current;
         if (signal.aborted || !owned || now.prepared !== prepared || now.page !== currentPage || !currentPage.verses[index] || now.scope !== scope || now.pending || now.error) throw new PortalRequestError(409);
