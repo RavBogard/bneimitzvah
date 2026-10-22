@@ -13,9 +13,9 @@ const SETUP = ["list_tutors", "get_student_setup", "find_sources", "assign_sourc
 const ALL = "portal:read portal:study portal:roster";
 const raw = (ref: string) => Array.from({ length: 40 }, (_, i) => ({ _id: `source_${String(i).padStart(2, "0")}`, sourceRef: `Invented Work ${i} on ${ref}`, index_title: `Invented Work ${i}`, category: "Commentary", anchorRef: ref }));
 
-async function setup() {
+async function setup(now?: () => number) {
   const related = vi.fn(async (ref: string) => parseRelatedMetadata(raw(ref), ref));
-  const t = await mcpFixture(true, undefined, { related });
+  const t = await mcpFixture(true, now, { related });
   await t.google("admin");
   const admin = (await t.connect("admin", { scope: ALL })).access_token as string;
   const texts: string[] = [];
@@ -139,6 +139,32 @@ describe("student setup through the portal MCP", () => {
     // Only a tutor grant can be assigned: the rabbi's own admin grant is not found.
     expect((await call("set_student_tutor", { studentId: unrelated.id, expectedTutorIds: [], tutorIds: [t.f.adminGrant.id] })).text).toMatch(/Not found/);
     expect(await audits(["tutor.assign"])).toHaveLength(1);
+  });
+
+  it("adds a tutor only within 15 minutes of approving the connection, the portal's fresh sign-in, while removing stays allowed on an older one", async () => {
+    let clock = Date.now();
+    const { t, json, owner, audits, crc, unrelated } = await setup(() => clock);
+    const tutor = t.f.tutorGrant.id, active = (id: string) => owner(async () => (await t.f.db.select().from(s.tutorStudent).where(eq(s.tutorStudent.studentId, id))).filter(l => !l.revokedAt));
+    const add = { studentId: unrelated.id, expectedTutorIds: [], tutorIds: [tutor] };
+    // Exactly 15 minutes after approval the connection is no longer fresh, as a 15-minute-old portal session is not.
+    clock += 15 * 60_000;
+    expect(await json("set_student_tutor", add)).toEqual({ ok: false, code: "fresh-sign-in-required", hint: "Adding a tutor needs a fresh sign-in. Reconnect Claude to the portal, then add the tutor within 15 minutes." });
+    expect(await active(unrelated.id)).toHaveLength(0);
+    // Removing a tutor gives no one new access, so it stays allowed on the same old connection.
+    expect(await json("set_student_tutor", { studentId: crc.id, expectedTutorIds: [tutor], tutorIds: [] })).toMatchObject({ ok: true, removed: [tutor] });
+    expect(await active(crc.id)).toHaveLength(0);
+    expect(await audits(["tutor.assign"])).toHaveLength(0);
+    expect(await audits(["tutor.revoke"])).toHaveLength(1);
+    // Reconnecting (a new Google-confirmed approval) makes adding possible again, until its own 15 minutes run out.
+    await t.google("admin", new Date(clock));
+    const fresh = (await t.connect("admin", { scope: ALL })).access_token as string;
+    expect(await json("set_student_tutor", add, fresh)).toMatchObject({ ok: true, added: [tutor] });
+    clock += 15 * 60_000 - 1;
+    expect(await json("set_student_tutor", { studentId: crc.id, expectedTutorIds: [], tutorIds: [tutor] }, fresh)).toMatchObject({ ok: true, added: [tutor] });
+    clock += 1;
+    expect(await json("set_student_tutor", { studentId: crc.id, expectedTutorIds: [tutor], tutorIds: [] }, fresh)).toMatchObject({ ok: true, removed: [tutor] });
+    expect(await json("set_student_tutor", { studentId: crc.id, expectedTutorIds: [], tutorIds: [tutor] }, fresh)).toMatchObject({ ok: false, code: "fresh-sign-in-required" });
+    expect(await audits(["tutor.assign"])).toHaveLength(2);
   });
 
   it("previews and sets readings through the portal's reading work: calendar picks, custom ranges and cut points, with conflicts on a stale revision", async () => {

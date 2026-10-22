@@ -25,7 +25,7 @@ import { parsePick } from "../../lib/readings/leyning.mjs";
 import type { Snapshot } from "../../lib/readings/proposals";
 import { expandReadingRanges } from "../../lib/readings/ranges";
 import { SCOPES } from "./oauth";
-import type { McpActor } from "./service";
+import { GOOGLE_CONSENT_WINDOW_MS, type McpActor } from "./service";
 import type { Tool, ToolContext } from "./tools";
 
 // Student setup through the portal MCP (Daniel, 2026-10-21: "Add setup + sources"): the rabbi's Claude
@@ -294,7 +294,7 @@ export function createSetupTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
     },
     {
       name: "set_student_tutor", roles, scope, annotations: replaces,
-      description: "Set which tutors a student has: tutorIds is the whole new list (from list_tutors; [] for none) and expectedTutorIds the list get_student_setup showed. A tutor added can see that student in the portal; one removed no longer can. Only on the rabbi's instruction in this conversation. Sends no invitation or e-mail.",
+      description: "Set which tutors a student has: tutorIds is the whole new list (from list_tutors; [] for none) and expectedTutorIds the list get_student_setup showed. A tutor added can see that student in the portal; one removed no longer can. Adding a tutor needs a fresh sign-in, as in the portal: only within 15 minutes of connecting Claude (otherwise tell the rabbi to reconnect Claude to the portal and add the tutor within 15 minutes); removing needs none. Only on the rabbi's instruction in this conversation. Sends no invitation or e-mail.",
       inputSchema: closed({ studentId,
         expectedTutorIds: { type: "array", maxItems: 20, items: { type: "string", pattern: UUID.source }, description: "The tutorIds get_student_setup listed for this student, unchanged." },
         tutorIds: { type: "array", maxItems: 20, items: { type: "string", pattern: UUID.source }, description: "The student's whole new tutor list, by tutorId from list_tutors." } },
@@ -349,10 +349,15 @@ async function setTutors<Q extends PgQueryResultHKT>(input: Record<string, unkno
   if (!expected || !wanted) return { ok: false, code: "invalid-input", hint: "expectedTutorIds and tutorIds are lists of at most 20 distinct tutorIds." };
   const id = input.studentId as string;
   const conflict = { ok: false, code: "conflict", hint: "The student's tutors changed since get_student_setup: read it again, show the rabbi, and resend with the current list." };
+  const stale = { ok: false, code: "fresh-sign-in-required", hint: "Adding a tutor needs a fresh sign-in. Reconnect Claude to the portal, then add the tutor within 15 minutes." };
   return refusal(() => asAdmin(ctx, "authority-write", async (tx, live, portal, alive) => {
     // Unlocked here (the portal locks tutor grants before the student); the locked read below decides.
     const [probe] = await tx.select({ disabledAt: s.student.disabledAt }).from(s.student).where(and(eq(s.student.tenantId, live.tenantId), eq(s.student.id, id))).limit(1);
     if (!probe || probe.disabledAt) throw new AccessDenied(404);
+    // The portal's fresh sign-in rule for tutor changes (manage-relationships: a session under 15 minutes old). The
+    // connection's approval needed a Google sign-in that recent, so its stored approval time stands in for the
+    // session's. Only adding a tutor gives anyone new access; removing one stays allowed on an older connection.
+    if (wanted.some(g => !expected.includes(g)) && ctx.mcp.now() - live.approvedAt >= GOOGLE_CONSENT_WINDOW_MS) throw new Refusal(stale);
     const links = async () => (await relationships.inspectLinks(tx, live.tenantId, id)).tutors.map(t => ({ grantId: t.link.tutorGrantId, linkId: t.link.id }));
     if (!sameSet((await links()).map(l => l.grantId), expected)) throw new Refusal(conflict);
     // The portal's lock order for tutor changes: each tutor's grant, then the student; then recheck under those locks.
