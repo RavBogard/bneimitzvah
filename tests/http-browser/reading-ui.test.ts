@@ -10,7 +10,7 @@ import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
 import * as s from "../../src/server/db/index";
-import { installReadingRouteGuard, readingRouteCleanupError } from "./reading-route-guard";
+import { installReadingRouteGuard, readingRouteCleanupError, routePageStep } from "./reading-route-guard";
 vi.mock("server-only", () => ({}));
 
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined;
@@ -82,13 +82,13 @@ it("lets an admin review actual calendar choices, confirm once and replace only 
   await ui(tab.getByRole("heading", { name: "Explore the full Torah portion", level: 3, exact: true })).toBeVisible();
   await capture(tab, "reading-admin-prepared-desktop");
   let confirmations = 0;
-  await tab.route("**/reading/confirm", async route => { confirmations++; const response = await route.fetch(); await route.fulfill({ response }); });
+  const counted = await routePageStep(tab, "**/reading/confirm", async route => { confirmations++; const response = await route.fetch(); await route.fulfill({ response }); });
   await safe(() => tab.getByRole("button", { name: "Save assignment", exact: true }).evaluate(button => { (button as HTMLButtonElement).click(); (button as HTMLButtonElement).click(); }));
   await ui(main(tab).getByText("Saved. The current reading above shows what the student will see.", { exact: true })).toBeVisible();
   expect(confirmations).toBe(1);
   await ui(tab.locator(".confirmed-reading").getByText("Genesis 1:31-2:2", { exact: true })).toBeVisible();
   await capture(tab, "reading-admin-confirmed-desktop");
-  await tab.unrouteAll({ behavior: "wait" });
+  await counted.remove();
   const haftarahPreparations: Record<string, unknown>[] = [];
   tab.on("request", request => { if (request.method() === "POST" && new URL(request.url()).pathname.endsWith("/reading/prepare")) haftarahPreparations.push(request.postDataJSON()); });
   await safe(()=>tab.getByRole("combobox", { name: "Reading", exact: true }).selectOption("haftarah"));
@@ -124,7 +124,7 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
     if (path === `/api/students/${fixture.student.id}/reading` && response.status() === 200) metadataSeen = true;
     if (metadataSeen && path === "/api/session" && response.status() === 200) finalSessions++;
   }; tab.on("response", observed);
-  await tab.route("**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }); });
+  const sessions = await routePageStep(tab, "**/api/session", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }); });
   try {
     await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => held).toBe(true);
     await ui(main(tab).getByRole("heading", { name: "Checking your access", level: 1, exact: true })).toBeHidden();
@@ -133,7 +133,7 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
   } finally { release(); }
   await ui.poll(() => finalSessions).toBeGreaterThanOrEqual(2); tab.off("response", observed);
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible(); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-3");
-  await tab.unrouteAll({ behavior: "wait" });
+  await sessions.remove();
   const [beforePrepare] = await fixture.ownerDb.select().from(s.student).where(eq(s.student.id, fixture.student.id));
   const admin = await page("admin");
   expect((await api(admin, `/api/admin/students/${beforePrepare.id}/edit`, { expectedRevision: beforePrepare.revision, student: {
@@ -165,7 +165,7 @@ it("retains a tutor draft during visible access revalidation, invalidates edited
   await capture(tab, "reading-tutor-confirmed-mobile");
   await custom(tab, "Genesis 1:6-7"); await click(tab, "Review assignment"); await ui(tab.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled();
   let mutations = 0;
-  await tab.route("**/reading/confirm", async route => { mutations++; const response = await route.fetch(); await response.dispose(); await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); });
+  await routePageStep(tab, "**/reading/confirm", async route => { mutations++; const response = await route.fetch(); await response.dispose(); await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); });
   await click(tab, "Save assignment"); await ui(main(tab).getByRole("alert")).toContainText("may have saved");
   await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toBeVisible(); expect(mutations).toBe(1);
@@ -191,8 +191,8 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
   }));
   async function hold(pattern: string) {
     let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
-    await tab.route(pattern, async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
-    return { release, ready: () => ui.poll(() => held).toBe(true), remove: () => tab.unrouteAll({ behavior: "wait" }) };
+    const step = await routePageStep(tab, pattern, async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
+    return { release, ready: () => ui.poll(() => held).toBe(true), remove: () => step.remove() };
   }
   async function rejectClosing(phase: string) {
     await safe(() => tab.keyboard.press("Escape"));
@@ -223,11 +223,11 @@ it("keeps the tutor sheet visible through prepare, confirm and local reload wait
   // Explicit recovery is offered only after a blocked review, not after a
   // successful confirmation. Exercise that real branch with a lost/stale
   // preparation response, while still sending the authorized server request.
-  await tab.route("**/reading/prepare", async route => {
+  const stale = await routePageStep(tab, "**/reading/prepare", async route => {
     const response = await route.fetch(); await response.dispose();
     await route.fulfill({ status: 409, contentType: "application/json", body: '{"error":"conflict"}' });
   });
-  await click(tab, "Review assignment"); await ui(sheet.getByRole("alert")).toContainText("changed while this review"); await tab.unrouteAll({ behavior: "wait" });
+  await click(tab, "Review assignment"); await ui(sheet.getByRole("alert")).toContainText("changed while this review"); await stale.remove();
   const explicitReload = await hold("**/reading?**");
   try { await click(tab, "Check what saved"); await safe(() => tab.keyboard.press("Escape")); await explicitReload.ready(); await rejectClosing("explicit metadata reload held"); }
   finally { explicitReload.release(); }
