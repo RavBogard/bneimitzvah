@@ -7,6 +7,7 @@ import { portalRoutesFixture } from "./portal-routes-fixture";
 import { createFinkelReferenceService, resetFinkelManifestCache } from "../../src/server/reference-audio/finkel-service";
 import { FINKEL_MANIFEST_SCHEMA, FinkelUnavailable, findFinkelClips, finkelAudioKey, finkelManifestKey, parseFinkelManifest } from "../../src/server/reference-audio/finkel-manifest";
 import { handleFinkelReferenceRequest } from "../../src/server/http/finkel-reference";
+import { createFinkelListeningSource, pickFinkelClip } from "../../src/server/reference-audio/finkel-listening";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
 import type { HttpRuntime } from "../../src/server/runtime/composition";
 import { loadRuntimeConfig } from "../../src/server/runtime/config";
@@ -186,4 +187,20 @@ test("flowing text marks the verses of a playing passage without touching word i
   expect(marked.replace(/ data-playing="true"/g, "")).toBe(plain);
   // The player itself renders nothing until an authorized clip list arrives.
   expect(renderToStaticMarkup(createElement(FinkelPassagePlayer, { scopeKey: "s", refs: verses.map(v => v.ref), mode: "admin", active: true }))).toBe("");
+});
+
+test("the listening-review source picks the student's take for a verse and pins the manifest", async () => {
+  const bytes = manifestBytes([clip(2), clip(1, { preferred: false }), clip(1, { asset: `fj_${"4".repeat(20)}`, sha256: "d".repeat(64), verses: ["Genesis 22:2"], preferred: true }), clip(3)]), pin = hash(bytes);
+  const manifest = parseFinkelManifest(bytes, pin);
+  expect(pickFinkelClip(manifest, "Genesis 22:2", "torah")?.asset).toBe(`fj_${"4".repeat(20)}`); // preferred first
+  expect(pickFinkelClip(manifest, "Genesis 22:1", "torah")?.asset).toBe(`fj_${"1".repeat(20)}`); // then chant before words
+  expect(pickFinkelClip(manifest, "Genesis 22:1", "haftarah")).toBeNull();
+  const source = createFinkelListeningSource({ manifestSha256: pin, loadManifest: async () => manifest });
+  expect(source.id).toBe("finkel"); expect(source.pin()).toBe(pin);
+  const resolved = await source.resolve({ ref: "Genesis 22:4" }, "torah", new AbortController().signal);
+  expect(resolved).toMatchObject({ schema: "finkel-listening/v1", source: "finkel", pin, clip: { asset: `fj_${"3".repeat(20)}` }, media: `/api/reference-audio/finkel/media/${hash(media[2])}.mp3` });
+  expect(resolved!.id).toBe(`fj_${hash(media[2])}`); expect(resolved!.id).toMatch(/^[a-z]{2}_[a-f0-9]{20,64}$/);
+  expect(await source.resolve({ ref: "Genesis 23:1" }, "torah", new AbortController().signal)).toBeNull();
+  expect(createFinkelListeningSource({ loadManifest: async () => manifest }).pin()).toBeNull();
+  await expect(createFinkelListeningSource({ manifestSha256: "a".repeat(64), loadManifest: async () => manifest }).resolve({ ref: "Genesis 22:1" }, "torah", new AbortController().signal)).rejects.toThrow(FinkelUnavailable);
 });

@@ -62,6 +62,8 @@ export function createFinkelReferenceService<Q extends PgQueryResultHKT>(input: 
   }
   return Object.freeze({
     listeningEnabled,
+    /** Internal composition only (no HTTP route calls this): the pinned manifest, unauthorized. */
+    loadManifest: manifest,
     /** Clips overlapping [from, to] in one book, or every clip for an admin's review list. */
     async clips(request: Request, selection: Readonly<{ mode: ActiveMode; from?: string; to?: string }>): Promise<FinkelClips & { sessionExpiresAt: number }> {
       const ranged = selection.from !== undefined || selection.to !== undefined;
