@@ -211,14 +211,16 @@ describe("portal MCP", () => {
     expect(anonymous.status).toBe(403); expect(anonymous.headers.get("www-authenticate")).toBeNull();
   });
 
-  it("accepts the MCP-Protocol-Version values it speaks, assumes one when absent and refuses others with 400", async () => {
+  it("accepts the MCP-Protocol-Version values it speaks or a well-formed later one, assumes one when absent and refuses others with 400", async () => {
     const t = await fixture();
     await t.google("admin");
     const tokens = await t.connect("admin");
     const send = (body: Record<string, unknown>, version?: string) => t.postJson("/api/mcp", { jsonrpc: "2.0", ...body },
       { authorization: `Bearer ${tokens.access_token}`, accept: "application/json, text/event-stream", ...(version === undefined ? {} : { "mcp-protocol-version": version }) });
-    for (const version of [undefined, "2025-11-25", "2025-06-18", "2025-03-26"]) expect((await send({ id: 1, method: "tools/list" }, version)).status).toBe(200);
-    for (const version of ["2024-11-05", "2099-01-01", "", "2025-06-18, 2025-03-26", "latest"]) {
+    // Future-safe: a well-formed version newer than the newest supported one is handled as the newest.
+    for (const version of [undefined, "2025-11-25", "2025-06-18", "2025-03-26", "2025-11-26", "2026-06-30", "2099-01-01"]) expect((await send({ id: 1, method: "tools/list" }, version)).status).toBe(200);
+    // Malformed, older than the oldest supported, or an unknown date between supported ones.
+    for (const version of ["2024-11-05", "2025-03-25", "2025-10-01", "2026-13-01", "2026-02-32", "2026-1-01", "20260101", "", "2025-06-18, 2025-03-26", "latest", "2099-01-01T00:00"]) {
       const refused = await send({ id: 1, method: "tools/list" }, version);
       expect(refused.status).toBe(400);
       expect((await refused.json()).error.message).toContain("MCP-Protocol-Version");
@@ -231,6 +233,40 @@ describe("portal MCP", () => {
     expect(init.status).toBe(200); expect((await init.json()).result.protocolVersion).toBe("2025-06-18");
     const current = await send({ id: 3, method: "initialize", params: { protocolVersion: "2025-11-25" } });
     expect((await current.json()).result.protocolVersion).toBe("2025-11-25");
+  });
+
+  it("logs one closed, non-secret line per /api/mcp request: origin class, version shape and method only", async () => {
+    const t = await fixture();
+    await t.google("admin");
+    const tokens = await t.connect("admin");
+    const lines: string[] = [];
+    const spy = vi.spyOn(console, "info").mockImplementation((line: unknown) => { lines.push(String(line)); });
+    const send = (body: unknown, headers: Record<string, string>) => t.postJson("/api/mcp", body, headers);
+    const bearer = { authorization: `Bearer ${tokens.access_token}` };
+    const secretArgument = "synthetic-private-argument";
+    await send({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_student", arguments: { studentId: secretArgument } } }, { ...bearer, origin: "https://claude.ai", "mcp-protocol-version": "2025-06-18" });
+    await send({ jsonrpc: "2.0", id: 2, method: "tools/list" }, bearer);
+    await send({ jsonrpc: "2.0", id: 3, method: "ping" }, { ...bearer, origin: "https://evil.example/private-path", "mcp-protocol-version": "2099-01-01" });
+    await send({ jsonrpc: "2.0", id: 4, method: "ping" }, { origin: ORIGIN, "mcp-protocol-version": "not a version" });
+    await send({ jsonrpc: "2.0", id: 5, method: "custom/private-method-name" }, { ...bearer, "mcp-protocol-version": "2024-11-05" });
+    await send({ jsonrpc: "2.0", method: "notifications/initialized" }, bearer);
+    await send([{ jsonrpc: "2.0", id: 6, method: "ping" }], bearer);
+    await t.postJson("/api/oauth/register", { client_name: "Claude", redirect_uris: [CALLBACK] });
+    spy.mockRestore();
+    const events = lines.filter(line => line.includes("mcp.request")).map(line => JSON.parse(line));
+    expect(events).toEqual([
+      { event: "mcp.request", originPresent: true, origin: "https://claude.ai", protocolVersion: "2025-06-18", method: "tools/call" },
+      { event: "mcp.request", originPresent: false, origin: "absent", protocolVersion: "absent", method: "tools/list" },
+      { event: "mcp.request", originPresent: true, origin: "other", protocolVersion: "2099-01-01", method: "unread" },
+      { event: "mcp.request", originPresent: true, origin: ORIGIN, protocolVersion: "malformed", method: "unread" },
+      { event: "mcp.request", originPresent: false, origin: "absent", protocolVersion: "2024-11-05", method: "other" },
+      { event: "mcp.request", originPresent: false, origin: "absent", protocolVersion: "absent", method: "notifications/initialized" },
+      { event: "mcp.request", originPresent: false, origin: "absent", protocolVersion: "absent", method: "batch" },
+    ]);
+    // Nothing else: no bearer, refresh token, argument, path, method name outside the list or client id.
+    const all = lines.join("\n");
+    for (const secret of [tokens.access_token, tokens.refresh_token, tokens.clientId, secretArgument, "private-path", "private-method-name", "Bearer"]) expect(all.includes(secret)).toBe(false);
+    expect(lines.filter(line => line.includes("mcp.request")).every(line => Object.keys(JSON.parse(line)).sort().join() === "event,method,origin,originPresent,protocolVersion")).toBe(true);
   });
 
   it("never accepts an expired code, access token or refresh token", async () => {

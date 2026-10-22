@@ -8,6 +8,20 @@ import { errorResult, textResult, validateInput, type Tool, type ToolContext, ty
 // server-initiated message, so nothing private can leave after the authorization checks.
 export const SUPPORTED_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"] as const;
 export const DEFAULT_VERSION = "2025-06-18";
+/** The newest supported version, whatever the list's order (YYYY-MM-DD compares as text in date order). */
+const NEWEST_VERSION = [...SUPPORTED_VERSIONS].sort().at(-1)!;
+/** A protocol version's shape: a calendar date, YYYY-MM-DD. */
+export const VERSION_SHAPE = /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/;
+/**
+ * Whether an MCP-Protocol-Version header may proceed (1.0.1, future-safe): a supported version, or a well-formed
+ * version newer than the newest supported one, handled as that newest (nothing here depends on the version), so a
+ * client that moves ahead never loses the connector. Malformed values, versions older than the oldest supported
+ * and unknown dates between supported ones are refused.
+ */
+export function protocolHeaderAccepted(value: string): boolean {
+  if ((SUPPORTED_VERSIONS as readonly string[]).includes(value)) return true;
+  return VERSION_SHAPE.test(value) && value > NEWEST_VERSION;
+}
 export const MAX_RESULT_CHARS = 200_000;
 const DEFAULT_DEADLINE_MS = 25_000;
 

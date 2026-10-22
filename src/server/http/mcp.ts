@@ -6,7 +6,8 @@ import { HttpBoundaryError, privateHeaders, privateJson } from "./responses";
 import { requireCookieMutation } from "./mutations";
 import { AccessDenied } from "../access/errors";
 import { authorizationMetadata, resourceMetadata, CLAUDE_ORIGINS, MCP_PATH, SCOPES } from "../mcp/oauth";
-import { SUPPORTED_VERSIONS } from "../mcp/transport";
+import { SUPPORTED_VERSIONS, protocolHeaderAccepted } from "../mcp/transport";
+import { createLogger, MCP_BODY_UNREAD } from "../logging/logger";
 
 // Every method reaches the handler, which answers 404 while the MCP is disabled and 405 otherwise,
 // so a disabled deployment does not even reveal which methods the routes take.
@@ -65,22 +66,29 @@ export async function handleMcpRequest(request: Request, runtime: HttpRuntime): 
   if (path.startsWith("/.well-known/oauth-authorization-server")) { uniqueQuery(request.url, []); return publicMetadata(authorizationMetadata(resolved.origin)); }
   // Token-authenticated endpoints never read a browser cookie; the consent endpoints only a cookie.
   if (path === MCP_PATH) {
-    const origin = request.headers.get("origin");
-    if (origin !== null && !originAllowed(origin, resolved.origin)) return rpcRefusal(403, "Forbidden: this origin may not use the portal MCP.");
-    uniqueQuery(request.url, []);
-    const actor = await mcp.authenticate(request, resolved);
-    if (!actor) return challenge(resolved.origin);
-    let body: unknown;
-    try { body = await readJsonBody(request, "mcp", 5000); }
-    catch (error) { if (error instanceof HttpBoundaryError && error.status === 413) return json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Request too large" } }, 413); return json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }, 400); }
-    // MCP-Protocol-Version (2025-06-18 onward): absent means the client predates it (the spec says to assume
-    // 2025-03-26, which is supported); present, it must name a version this server speaks, or 400. The
-    // initialize request is exempt: its version is negotiated in the body (as in the MCP TypeScript SDK).
-    const version = request.headers.get("mcp-protocol-version");
-    if (version !== null && !isInitialize(body) && !(SUPPORTED_VERSIONS as readonly string[]).includes(version))
-      return rpcRefusal(400, `Bad Request: unsupported MCP-Protocol-Version (supported: ${SUPPORTED_VERSIONS.join(", ")}).`);
-    const reply = await mcp.answer(body, actor, request.signal);
-    return reply ? json(reply, 200) : new Response(null, { status: 202, headers: privateHeaders() });
+    const origin = request.headers.get("origin"), version = request.headers.get("mcp-protocol-version");
+    let body: unknown = MCP_BODY_UNREAD;
+    // Exactly one closed, non-secret line per request, whatever the outcome (see mcpRequestLine).
+    try {
+      if (origin !== null && !originAllowed(origin, resolved.origin)) return rpcRefusal(403, "Forbidden: this origin may not use the portal MCP.");
+      uniqueQuery(request.url, []);
+      const actor = await mcp.authenticate(request, resolved);
+      if (!actor) return challenge(resolved.origin);
+      let parsed: unknown;
+      try { parsed = await readJsonBody(request, "mcp", 5000); }
+      catch (error) { body = null; if (error instanceof HttpBoundaryError && error.status === 413) return json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Request too large" } }, 413); return json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }, 400); }
+      body = parsed;
+      // MCP-Protocol-Version (2025-06-18 onward): absent means the client predates it (the spec says to assume
+      // 2025-03-26, which is supported); present, it must be a supported version or a well-formed newer one
+      // (protocolHeaderAccepted), or 400. The initialize request is exempt: its version is negotiated in the
+      // body (as in the MCP TypeScript SDK).
+      if (version !== null && !isInitialize(parsed) && !protocolHeaderAccepted(version))
+        return rpcRefusal(400, `Bad Request: unsupported MCP-Protocol-Version (supported: ${SUPPORTED_VERSIONS.join(", ")} or later).`);
+      const reply = await mcp.answer(parsed, actor, request.signal);
+      return reply ? json(reply, 200) : new Response(null, { status: 202, headers: privateHeaders() });
+    } finally {
+      createLogger().mcpRequest({ origin, allowedOrigins: [resolved.origin, ...CLAUDE_ORIGINS], version, body });
+    }
   }
   if (request.headers.has("authorization") && path !== "/api/oauth/token" && path !== "/api/oauth/revoke") throw new AccessDenied(403);
   if (path === "/api/oauth/register") {
