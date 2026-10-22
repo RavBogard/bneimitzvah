@@ -153,7 +153,7 @@ function readingChoice(input: Record<string, unknown>) {
   }
   const ranges = input.ranges;
   if (!Array.isArray(ranges) || ranges.length < 1 || ranges.length > 32 || ranges.some(r => typeof r !== "string" || r.length > 100)) return "ranges is a list of 1 to 32 references such as \"Genesis 1:1-2:3\".";
-  try { expandReadingRanges(ranges as string[], k, TANAKH_VERSE_COUNTS); } catch { return "Those ranges are not verses of the Tanakh in order (use references such as \"Genesis 1:1-2:3\")."; }
+  try { expandReadingRanges(ranges as string[], k, TANAKH_VERSE_COUNTS); } catch { return "Those ranges are not verses of the Tanakh in reading order (each range runs forward in one book, no verse twice, and Torah ranges follow one another in one book; use references such as \"Genesis 1:1-2:3\")."; }
   return { ...base, ranges: ranges as string[] };
 }
 

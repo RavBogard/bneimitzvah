@@ -5,7 +5,7 @@ import { AccessDenied, AccessUnavailable } from "../access/errors";
 import { requireCookieMutation, type CookieMutationRequest } from "../http/mutations";
 import { studentReadingContext, readingAssignmentVersion, customs } from "../data/roster";
 import { readingDate } from "../../lib/readings/reading-date";
-import { expandReadingRanges } from "../../lib/readings/ranges";
+import { expandReadingRanges, readingSegments } from "../../lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { proposeReading, ReadingUnavailable, type Calendar, type Snapshot } from "../../lib/readings/proposals";
 import { planStudyPage } from "../study/sefaria";
@@ -112,7 +112,7 @@ export function createReadingPreviewService<Q extends PgQueryResultHKT>(input: {
     let ranges: string[] = [], maftir: Source["maftir"] = null;
     if (args.source === "manual") ranges = args.ranges!;
     else if (fallback === null && snapshot) {
-      if (args.kind === "haftarah") { if (snapshot.haftarah) ranges = [snapshot.haftarah]; else fallback = "missing"; }
+      if (args.kind === "haftarah") { if (snapshot.haftarah) ranges = readingSegments(snapshot.haftarah); else fallback = "missing"; }
       else try {
         const proposal = proposeReading(snapshot, counts, { pick: "full" });
         if (proposal.selection) { ranges = [proposal.selection.ref]; maftir = proposal.selection.maftir; }

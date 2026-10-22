@@ -3,6 +3,7 @@ import { expandReadingRanges, parseCeremonyDate, type CeremonyDate, type VerseCo
 
 export type Calendar = "diaspora" | "israel";
 export type Classification = "regular" | "holiday" | "multiple" | "nonregular" | "missing";
+/** `haftarah` is the passage Hebcal gives for the date: one range, or ordered segments joined by "; " (see readingSegments). */
 export type Snapshot = { classification?: Classification; date: CeremonyDate; calendar: Calendar; reading: Leyning | null; haftarah: string | null };
 export type CacheEntry = { fetchedAt: number; expiresAt: number; payload: unknown };
 export type HebcalCache = { get(key: string): Promise<CacheEntry | null>; set(key: string, entry: CacheEntry): Promise<void> };
@@ -14,6 +15,7 @@ export class ReadingUnavailable extends Error {
 }
 const TTL = 24 * 60 * 60 * 1000;
 const MAX_BYTES = 128 * 1024;
+const MAX_HAFTARAH_SEGMENTS = 8;
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
 const label = (value: unknown): string => {
   if (typeof value !== "string" || value.length < 1 || value.length > 160 || /[<>@\x00-\x1f]/.test(value)) throw new Error("Invalid calendar label");
@@ -78,10 +80,19 @@ function normalizePayload(payload: unknown, date: CeremonyDate, calendar: Calend
     if (!object(item.reason)) throw new Error("Invalid calendar reason");
     if (item.reason.M !== undefined) safe.reason={M:label(item.reason.M)};
   }
+  // Hebcal gives `haft` as one range, or as an ordered array when the haftarah has several
+  // (Shemot, Mishpatim, Shabbat Shuva...). The haftarah is kept as its segments joined by "; ".
+  // A haftarah that cannot be read is dropped on its own: it never takes the Torah reading with it.
   let haftarah: string | null=null;
   if (item.haft !== undefined) {
-    const haft=sanitizeSet({1:item.haft},"haftarah");
-    safe.haft=haft["1"]; haftarah=hebcalRef(safe.haft);
+    try {
+      const rows=Array.isArray(item.haft)?item.haft:[item.haft];
+      if (rows.length<1 || rows.length>MAX_HAFTARAH_SEGMENTS) throw new Error("Invalid haftarah");
+      const kept=rows.map(row=>sanitizeSet({1:row},"haftarah")["1"]);
+      const refs=kept.map(row=>hebcalRef(row));
+      expandReadingRanges(refs,"haftarah",counts);
+      safe.haft=Array.isArray(item.haft)?kept:kept[0]; haftarah=refs.join("; ");
+    } catch { haftarah=null; }
   }
   return { snapshot:{date,calendar,reading:leyningOf(safe),haftarah,classification}, payload:{binding,items:[safe]} };
 }

@@ -25,7 +25,7 @@ export function createReferenceAudioService<Q extends PgQueryResultHKT>(input: {
         const page = await input.loadText(supplied), target = page.verses[0];
         if (!target || target.ref !== supplied.verses[supplied.offset]) throw new ReferenceUnavailable();
         if (supplied.signal?.aborted) throw new StudyUnavailable("upstream");
-        try { const catalog = await input.loadCatalog(supplied.signal); return { ...page, reference: resolveReference(catalog, target, asset) }; }
+        try { const catalog = await input.loadCatalog(supplied.signal); return { ...page, reference: resolveReference(catalog, target, asset, supplied.verses) }; }
         catch { throw new ReferenceUnavailable(); }
       } });
     const result = await study.read(request, selection);

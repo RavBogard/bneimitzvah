@@ -67,6 +67,10 @@ fetched 2026-10-15, for `tests/trope-hebcal.test.mjs`: `bereshit` (2026-10-10, M
 `shemot` (2027-01-02, two-range haftarah Isaiah 27:6-28:13, 29:22-23), `simchat-torah` (2026-10-04, V'Zot
 HaBerachah + Genesis 1:1-2:3 + Numbers maftir), `beshalach` (2027-01-23, the Song of the Sea), `vayakhel-shekalim`
 (2027-03-06, a special maftir as a second range). Regenerate with the same URL and date.
+Fetched 2026-10-22, for the portal's multi-range haftarah tests (`tests/app/reading-multi-range.test.ts`):
+`shabbat-shuva` (2026-09-19, Ha'azinu on Shabbat Shuva, a haftarah that crosses books: Hosea 14:2-10; Joel
+2:15-27) and `mishpatim` (2025-02-22, a haftarah whose second range comes before the first: Jeremiah 34:8-22;
+33:25-26).
 
 ## SoulX phone set: `soulx-phone-set.json`
 

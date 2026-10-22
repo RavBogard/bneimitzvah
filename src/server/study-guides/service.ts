@@ -12,7 +12,7 @@ import * as data from "../data/study-guides";
 import type { ProgressActor } from "../data/progress";
 import * as s from "../db/index";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
-import { expandReadingRanges } from "../../lib/readings/ranges";
+import { expandReadingRanges, readingSegments } from "../../lib/readings/ranges";
 import { haftarahRefForKey } from "../../lib/readings/reading-key";
 import { validateGuideBody, validateVoice, type GuideBody, type GuideNote, type GuideTheme } from "./validation";
 import { STARTER_VOICE } from "./starter-voice";
@@ -107,7 +107,7 @@ export function createStudyGuideService<Q extends PgQueryResultHKT>(input: {
   async function passage(tx: AccessTransaction<Q>, tenantId: string, kind: GuideKind, readingKey: string): Promise<Set<string>> {
     if (kind === "haftarah") {
       const ref = haftarahRefForKey(readingKey, TANAKH_VERSE_COUNTS);
-      return new Set(ref ? expandReadingRanges([ref], "haftarah", TANAKH_VERSE_COUNTS) : []);
+      return new Set(ref ? expandReadingRanges(readingSegments(ref), "haftarah", TANAKH_VERSE_COUNTS) : []);
     }
     return data.torahPassageVerses(tx, tenantId, readingKey, TANAKH_VERSE_COUNTS);
   }

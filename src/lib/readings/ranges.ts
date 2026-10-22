@@ -15,6 +15,22 @@ export function parseCeremonyDate(input: unknown): CeremonyDate {
   return input as CeremonyDate;
 }
 
+/**
+ * A stored or calendar reading reference is an ordered list of segments joined by "; "
+ * ("Isaiah 27:6-28:13; Isaiah 29:22-23"); a single range is a list of one. Segments are not
+ * validated here: pass them to expandReadingRanges.
+ */
+export function readingSegments(ref: string): string[] {
+  return ref.split(/;\s*/);
+}
+
+/**
+ * Expands an ordered list of segments into verse references, in the order given.
+ * Every segment is one range inside one book that runs forward, and no verse appears twice.
+ * Torah segments must also follow one another inside one book. A haftarah may cross books
+ * (Shabbat Shuva: Hosea, Micah, Joel) or return to an earlier chapter (Mishpatim: Jeremiah
+ * 34:8-22, then 33:25-26), because that is how those haftarot are read.
+ */
 export function expandReadingRanges(refs: readonly string[], kind: ReadingKind, counts: VerseCounts, limit = 1000): string[] {
   if (!Array.isArray(refs) || refs.length < 1 || refs.length > 32 || !Number.isInteger(limit) || limit < 1 || limit > 1000) throw new Error("Invalid reading range set");
   if (kind !== "torah" && kind !== "haftarah") throw new Error("Blessings require a separate liturgical definition");
@@ -33,7 +49,7 @@ export function expandReadingRanges(refs: readonly string[], kind: ReadingKind, 
     const [c1,v1] = range.from, [c2,v2] = range.to;
     if (![c1,v1,c2,v2].every(Number.isSafeInteger) || c1 < 1 || c2 > chapters.length || c2 < c1 || v1 < 1 || v2 < 1
         || v1 > chapters[c1-1] || v2 > chapters[c2-1] || (c1 === c2 && v2 < v1)) throw new Error("Reading reference outside chapter/verse boundaries");
-    if (previous && (previous.book !== range.book || c1 < previous.chapter || (c1 === previous.chapter && v1 <= previous.verse))) throw new Error("Reading ranges must be ordered and nonoverlapping within one book");
+    if (kind === "torah" && previous && (previous.book !== range.book || c1 < previous.chapter || (c1 === previous.chapter && v1 <= previous.verse))) throw new Error("Reading ranges must be ordered and nonoverlapping within one book");
     let expansionSize=0;
     for (let chapter=c1;chapter<=c2;chapter++) {
       const chapterSize=chapters[chapter-1];

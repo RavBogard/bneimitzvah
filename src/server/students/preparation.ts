@@ -1,4 +1,4 @@
-import { expandReadingRanges,parseCeremonyDate,type VerseCounts } from "../../lib/readings/ranges";
+import { expandReadingRanges,parseCeremonyDate,readingSegments,type VerseCounts } from "../../lib/readings/ranges";
 import type { Aliyah,Leyning } from "../../lib/readings/leyning.mjs";
 import type { Calendar,Snapshot } from "../../lib/readings/proposals";
 import { AccessDenied } from "../access/errors";
@@ -36,7 +36,8 @@ export function validatedSnapshot(value:unknown,date:string,calendar:Calendar,co
   }
   if(value.haftarah!==null){
     if(typeof value.haftarah!=="string")throw new AccessDenied(403);
-    try{expandReadingRanges([value.haftarah],"haftarah",counts);}catch{throw new AccessDenied(403);}
+    if(value.haftarah.length>400)throw new AccessDenied(403);
+    try{expandReadingRanges(readingSegments(value.haftarah),"haftarah",counts);}catch{throw new AccessDenied(403);}
   }
   const classification=["regular","holiday","multiple","nonregular","missing"].includes(String(value.classification))?value.classification as NonNullable<Snapshot["classification"]>:"nonregular";
   if(classification==="regular" && reading?.type!=="shabbat")throw new AccessDenied(403);

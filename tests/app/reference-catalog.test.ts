@@ -5,6 +5,8 @@ import { REFERENCE_ATTRIBUTION } from "../../src/lib/reference-audio/contract";
 import { parseReferenceSource, parseReferenceResolution } from "../../src/lib/reference-audio/source";
 import { parseReferenceCatalog, resolveReference, ReferenceUnavailable } from "../../src/server/reference-audio/catalog";
 import { createReferenceCatalogLoader } from "../../src/server/reference-audio/storage";
+import { expandReadingRanges } from "../../src/lib/readings/ranges";
+import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 const id = "ra_" + "1".repeat(32), text = "אָב ג׃";
 const study = { ref: "Genesis 1:1", english: null, hebrew: { text, readingText: text, segments: [{ kind: "text" as const, text }], paragraphAfter: null } };
@@ -36,9 +38,49 @@ test("current text and projected word count bind timings; held and duplicate ref
   expect(resolveReference(parseReferenceCatalog(held)!, study).source).toBeNull();
   const both = raw(), second = structuredClone(both.assets[0]); second.id = "ra_" + "2".repeat(32); second.archiveFile = "Other.mp3"; second.verses[0].playback.asset = second.id; both.assets.push(second);
   const duplicate = parseReferenceCatalog(both)!;
-  expect(resolveReference(duplicate, study).source).toBeNull();
+  // Two equally fitting recordings: the documented tie-break (archive file name), never catalog order.
+  expect(resolveReference(duplicate, study).source?.asset).toBe(second.id);
+  expect(resolveReference(parseReferenceCatalog({ ...both, assets: [...both.assets].reverse() })!, study).source?.asset).toBe(second.id);
   expect(resolveReference(duplicate, study, id).source?.asset).toBe(id);
   expect(resolveReference(catalog, { ...study, ref: "Genesis 1:2" }).source).toBeNull();
+});
+
+test("a verse recorded in several haftarot plays the cut from the recording that matches the reading studied, deterministically", () => {
+  // Synthetic stand-ins for PocketTorah's three recordings of Isaiah 54:1-55:5: one long (like Noach's haftarah)
+  // and two that each record only part of it (like Re'eh's and Ki Teitzei's). Names sort opposite to the fit.
+  const isaiah = (from: [number, number], to: [number, number]) => expandReadingRanges([`Isaiah ${from[0]}:${from[1]}-${to[0]}:${to[1]}`], "haftarah", TANAKH_VERSE_COUNTS);
+  const noach = isaiah([54, 1], [55, 5]), reeh = isaiah([54, 11], [55, 5]), kiTeitzei = isaiah([54, 1], [54, 10]);
+  const recording = (digit: string, archiveFile: string, refs: string[], held: string[] = []) => {
+    const asset = "ra_" + digit.repeat(32);
+    return { id: asset, archiveFile, sha256: digit.repeat(64), bytes: 7, verses: refs.map((ref, i) => ({ schema: "reference-verse/v1", ref, table: "haftarah",
+      playback: held.includes(ref) ? { status: "needs-review", review: "start-moved", asset, clip: { start: i * 10 + 1, end: i * 10 + 5 } } : { status: "ready", asset, clip: { start: i * 10 + 1, end: i * 10 + 5 } },
+      words: { status: "unavailable", reason: "no-words" }, attribution: REFERENCE_ATTRIBUTION })) };
+  };
+  const assets = [recording("a", "Alpha-H.mp3", noach), recording("b", "Beta-H.mp3", reeh), recording("c", "Gamma-H.mp3", kiTeitzei, ["Isaiah 54:2"])];
+  const verse = (ref: string) => ({ ...study, ref });
+  const pick = (catalog: ReturnType<typeof parseReferenceCatalog>, ref: string, reading?: readonly string[]) => resolveReference(catalog!, verse(ref), undefined, reading).source?.asset ?? null;
+  for (const order of [assets, [...assets].reverse(), [assets[1], assets[2], assets[0]]]) {
+    const catalog = parseReferenceCatalog({ schema: "reference-catalog/v1", source: "PockettorahAudioFiles", assets: order });
+    expect(catalog).not.toBeNull();
+    // Studying the long haftarah: its own recording for every verse.
+    for (const ref of noach) expect(pick(catalog, ref, noach)).toBe("ra_" + "a".repeat(32));
+    // Studying the second part: the recording of exactly that part, not the longer one that sorts first.
+    for (const ref of reeh) expect(pick(catalog, ref, reeh)).toBe("ra_" + "b".repeat(32));
+    // Studying the first part: its own recording, except a held cut, which gives way to a ready cut of the same verse.
+    for (const ref of kiTeitzei) expect(pick(catalog, ref, kiTeitzei)).toBe("ra_" + (ref === "Isaiah 54:2" ? "a" : "c").repeat(32));
+    // A custom piece inside the second part still prefers the recording that fits it best.
+    expect(pick(catalog, "Isaiah 54:12", ["Isaiah 54:11", "Isaiah 54:12", "Isaiah 54:13"])).toBe("ra_" + "b".repeat(32));
+    // Without a reading, the shortest recording that holds the verse, then the file name.
+    expect(pick(catalog, "Isaiah 54:1")).toBe("ra_" + "c".repeat(32));
+    expect(pick(catalog, "Isaiah 55:1")).toBe("ra_" + "b".repeat(32));
+    // A named asset is still honoured exactly, and a held cut never yields a source.
+    expect(resolveReference(catalog!, verse("Isaiah 54:2"), "ra_" + "c".repeat(32), kiTeitzei)).toMatchObject({ source: null, verse: { playback: { status: "needs-review" } } });
+    expect(resolveReference(catalog!, verse("Isaiah 54:1"), "ra_" + "a".repeat(32), reeh).source?.asset).toBe("ra_" + "a".repeat(32));
+    expect(pick(catalog, "Isaiah 53:12", noach)).toBeNull();
+  }
+  // Every cut of a verse held: nothing plays.
+  const allHeld = parseReferenceCatalog({ schema: "reference-catalog/v1", source: "PockettorahAudioFiles", assets: [recording("a", "Alpha-H.mp3", noach, ["Isaiah 54:3"]), recording("c", "Gamma-H.mp3", kiTeitzei, ["Isaiah 54:3"])] });
+  expect(resolveReference(allHeld!, verse("Isaiah 54:3"), undefined, kiTeitzei)).toMatchObject({ source: null, verse: { playback: { status: "needs-review" } } });
 });
 
 test("storage is lazy fixed-path, hash-bound and strict UTF8/JSON; oversized and empty-progress streams close", async () => {

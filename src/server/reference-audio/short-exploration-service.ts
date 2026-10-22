@@ -27,7 +27,7 @@ export function createShortExplorationService<Q extends PgQueryResultHKT>(input:
       live(); const catalog = await input.loadCatalog(request.signal); live();
       const manifest = await input.loadManifest(request.signal); live();
       const references = page.verses.map(verse => {
-        const resolved = resolveReference(catalog, verse), entry = findShortSource(manifest, resolved);
+        const resolved = resolveReference(catalog, verse, undefined, request.verses), entry = findShortSource(manifest, resolved);
         const parsed = parseReferenceShortResolution({ schema: REFERENCE_SHORT_RESOLUTION_SCHEMA, verse: resolved.verse,
           source: entry ? readShortSourceEntry(entry).source : null });
         if (!parsed) throw new ReferenceUnavailable(); return parsed;
