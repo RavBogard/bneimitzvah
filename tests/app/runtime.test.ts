@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { afterEach, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { drizzle } from "drizzle-orm/pglite";
@@ -206,4 +207,21 @@ test("persistent v2 cache retains missing-type uncertainty and multiple-result f
  const request=hebcalRequest("2026-10-24");
  await db.insert(schema.hebcalCache).values({requestKey:request.cacheKey.replace(":v2:",":v1:"),requestDate:request.date,parameters:{calendar:"diaspora"},payload:{binding:{version:1,date:request.date,calendar:"diaspora"},items:[]},fetchedAt:new Date(time),expiresAt:new Date(time+86400000)});
  expect(await cache.get(request.cacheKey)).toBeNull();
+});
+
+test("persistent reading cache stores and serves a multi-range haftarah (Shemot, Shabbat Shuva, Mishpatim) and still refuses smuggled fields in its rows",async()=>{
+  const f=await authFixture();clients.push(f);const db=drizzle(f.client,{schema}),cache=createPersistentReadingCache(db),time=Date.now();
+  const expected:Record<string,string>={shemot:"Isaiah 27:6-28:13; Isaiah 29:22-23","shabbat-shuva":"Hosea 14:2-10; Joel 2:15-27",mishpatim:"Jeremiah 34:8-22; Jeremiah 33:25-26"};
+  for(const name of Object.keys(expected)){
+    const payload=JSON.parse(readFileSync(new URL(`../fixtures/trope/hebcal/${name}.json`,import.meta.url),"utf8")),date=payload.range.start as string;let calls=0;
+    const read=createHebcalReader({cache,verseCounts:TANAKH_VERSE_COUNTS,now:()=>time,fetch:async()=>{calls++;return new Response(JSON.stringify(payload),{headers:{"content-type":"application/json"}});}});
+    const upstream=await read(date),cached=await read(date);
+    expect(upstream.snapshot.haftarah).toBe(expected[name]);expect(upstream.snapshot.reading).not.toBeNull();
+    expect(cached.source).toBe("cache");expect(cached.snapshot).toEqual(upstream.snapshot);expect(calls).toBe(1);
+    const key=hebcalRequest(date).cacheKey,entry=(await cache.get(key))!;
+    expect(Array.isArray((entry.payload as {items:{haft:unknown}[]}).items[0].haft)).toBe(true);
+    const mutate=(change:(haft:Record<string,unknown>[])=>unknown)=>{const copy=JSON.parse(JSON.stringify(entry));const next=change(copy.payload.items[0].haft);if(next!==undefined)copy.payload.items[0].haft=next;return copy;};
+    for(const bad of [mutate(h=>{h[1].email="synthetic@example.test";}),mutate(h=>{h[0].k="synthetic@example.test";}),mutate(h=>{h[1].b="token-abc";}),mutate(h=>{h[0].v="secret";}),mutate(h=>{h[1].reason="a@b";}),mutate(h=>{h[1].e="99:99";}),mutate(h=>[...h,"x"]),mutate(()=>[]),mutate(h=>Array.from({length:9},()=>h[0])),mutate(h=>[h[0],[h[1]]])])
+      expect(await cacheDenied(()=>cache.set(key,bad))).toBe(true);
+  }
 });

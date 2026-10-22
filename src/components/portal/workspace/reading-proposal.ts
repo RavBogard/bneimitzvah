@@ -98,7 +98,7 @@ export function parseReadingProposal(value: unknown, kind: ReadingKind, ceremony
     }
     if(metadata.manualFallback===null)rows.forEach(row => choices.push({ pick: `aliyah:${row.n}`, label: row.n === "M" ? "Calendar maftir" : `Aliyah ${row.n}`, ref: row.ref }));
   }
-  return { status, ...metadata, date: snapshot.date as string, calendar: snapshot.calendar as NeedsSelection["calendar"], parashah, choices, haftarah: snapshot.haftarah === null ? null : text(snapshot.haftarah, 100) };
+  return { status, ...metadata, date: snapshot.date as string, calendar: snapshot.calendar as NeedsSelection["calendar"], parashah, choices, haftarah: snapshot.haftarah === null ? null : text(snapshot.haftarah, 400) };
 }
 
 export function readingBaseline(value: Assigned, kind: ReadingKind): string {

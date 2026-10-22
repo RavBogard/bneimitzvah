@@ -7,7 +7,7 @@ import { requireCookieMutation,type CookieMutationRequest } from "../http/mutati
 import * as data from "../data/roster";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { parsePick,type Pick } from "../../lib/readings/leyning.mjs";
-import { expandReadingRanges,type CeremonyDate,type VerseCounts } from "../../lib/readings/ranges";
+import { expandReadingRanges,readingSegments,type CeremonyDate,type VerseCounts } from "../../lib/readings/ranges";
 import { proposeReading,ReadingUnavailable,type Calendar,type Snapshot } from "../../lib/readings/proposals";
 import { createBindings,digest } from "./bindings";
 import { identifier,parseStudentCsv,rehearsalsFit,revision,studentInput,type ImportedStudentInput,type StudentInput,type CsvParse } from "./validation";
@@ -163,7 +163,7 @@ export function createReadingWork<Q extends PgQueryResultHKT>(input:{signingSecr
     else if(manualFallback!==null)return needsSelection();
     else if(kind==="haftarah"){
       if(selection.pick!=="calendar-haftarah" || !snapshot.haftarah)return needsSelection();
-      ranges=[snapshot.haftarah];basis="selection";
+      ranges=readingSegments(snapshot.haftarah);basis="selection";
     }else{
       const pick=selection.pick;
       if(pick===undefined || pick==="explicit-selection-required")return needsSelection();

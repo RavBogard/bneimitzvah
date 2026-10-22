@@ -40,7 +40,7 @@ export function createShortReferenceAudioService<Q extends PgQueryResultHKT>(inp
           const catalog = await input.loadCatalog(supplied.signal); live();
           const manifest = await input.loadManifest(supplied.signal); live();
           const references = (pageMode ? page.verses : page.verses.slice(0, 1)).map(target => {
-            const resolved = resolveReference(catalog, target, asset), entry = findShortSource(manifest, resolved);
+            const resolved = resolveReference(catalog, target, asset, supplied.verses), entry = findShortSource(manifest, resolved);
             const result = parseReferenceShortResolution({ schema: REFERENCE_SHORT_RESOLUTION_SCHEMA, verse: resolved.verse,
               source: entry ? readShortSourceEntry(entry).source : null });
             if (!result) throw new ReferenceUnavailable(); return result;
