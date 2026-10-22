@@ -13,9 +13,17 @@ export const textSizes = [
   { id: "huge", label: "Huge" },
 ] as const;
 export type TextSize = typeof textSizes[number]["id"];
-export type ReadingPrefs = { colors: boolean; translation: boolean; size: TextSize; tikkun: boolean };
+// Daniel (2026-10-22): the tikkun is a three-way view. "beside" puts the scroll lettering in a column
+// next to the pointed text on every screen; "only" shows the scroll lettering in its place.
+export const tikkunViews = [
+  { id: "off", label: "Pointed text" },
+  { id: "beside", label: "Side by side" },
+  { id: "only", label: "Tikkun only" },
+] as const;
+export type TikkunView = typeof tikkunViews[number]["id"];
+export type ReadingPrefs = { colors: boolean; translation: boolean; size: TextSize; tikkunView: TikkunView };
 const PREFIX = "crc-bm-reading-prefs-v2:";
-const defaults: ReadingPrefs = { colors: true, translation: false, size: "standard", tikkun: false };
+const defaults: ReadingPrefs = { colors: true, translation: false, size: "standard", tikkunView: "off" };
 const cache = new Map<string, ReadingPrefs>();
 const wideDefault = () => typeof matchMedia === "function" ? matchMedia("(min-width: 1001px)").matches : defaults.translation;
 const listeners = new Set<() => void>();
@@ -29,14 +37,16 @@ export function scopeKey(studentId: string | null) {
 }
 function parse(raw: string | null, englishOnWide = false): ReadingPrefs {
   try {
-    const value = raw ? JSON.parse(raw) as Partial<ReadingPrefs> : {};
+    const value = raw ? JSON.parse(raw) as Partial<ReadingPrefs> & { tikkun?: unknown } : {};
     return {
       colors: typeof value.colors === "boolean" ? value.colors : defaults.colors,
       // English starts on in the wide two-column layout and off on phones, until the reader chooses (spec §5).
       translation: typeof value.translation === "boolean" ? value.translation : englishOnWide && wideDefault(),
       size: textSizes.some(size => size.id === value.size) ? value.size as TextSize : defaults.size,
       // The tikkun (scroll lettering) is off until the reader turns it on; it applies to Torah text only.
-      tikkun: typeof value.tikkun === "boolean" ? value.tikkun : defaults.tikkun,
+      // A stored choice from the earlier on/off control carries over: on was the column beside the text.
+      tikkunView: tikkunViews.some(view => view.id === value.tikkunView) ? value.tikkunView as TikkunView
+        : typeof value.tikkun === "boolean" ? value.tikkun ? "beside" : "off" : defaults.tikkunView,
     };
   } catch { return defaults; }
 }
@@ -77,3 +87,5 @@ export function useSetReadingPrefs() {
   const { key, englishOnWide } = useContext(Scope);
   return useCallback((change: Partial<ReadingPrefs>) => write(key, change, englishOnWide), [key, englishOnWide]);
 }
+/** The stored-value parser, exported for tests (it carries the earlier on/off tikkun choice over). */
+export { parse as parseReadingPrefs };

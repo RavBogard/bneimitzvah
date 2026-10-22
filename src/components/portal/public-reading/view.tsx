@@ -136,7 +136,7 @@ export function PublicReading() {
             <section className="assigned-study" aria-label={kind === "torah" ? "Torah text" : "Haftarah text"} data-size={prefs.size}>
               {!page ? text?.key === textKey && text.error ? <div role="status"><h4>Text unavailable</h4><p>The verses didn’t load. Check your connection and try again.</p><button type="button" className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload text</button></div>
                 : <p role="status">Loading the text…</p> : <>
-                <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} tikkun={kind === "torah" && prefs.tikkun}
+                <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
                   onVerse={listening ? index => hear(index) : undefined}
                   onWord={(index, word) => { setFocus(index); if (listening) playMainVerseForWord(playback.current, tools.current, index, word); else tools.current?.select(index, word); }} />
                 {listening && <ReadingPlayer key={`player:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} active={!lift} enabled={!lift} audio={{ coordinator: audio, slot: "proposed" }}

@@ -1,13 +1,14 @@
-import { createElement } from "react";
+import { createElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { parseFragment, type DefaultTreeAdapterMap } from "parse5";
 import { describe, expect, it, vi } from "vitest";
 import { normalizeHebrew } from "../../src/server/study/normalize";
 import { studyEditions } from "../../src/components/portal/workspace/study/credits";
 
-const prefs = vi.hoisted(() => ({ colors: true, translation: false, size: "standard", tikkun: false }));
+const prefs = vi.hoisted(() => ({ colors: true, translation: false, size: "standard", tikkunView: "off" as "off" | "beside" | "only" }));
+const setPrefs = vi.hoisted(() => ({ calls: [] as unknown[] }));
 vi.mock("server-only", () => ({}));
-vi.mock("../../src/components/portal/workspace/reading-prefs", () => ({ useReadingPrefs: () => prefs, useSetReadingPrefs: () => () => {}, textSizes: [{ id: "standard", label: "Standard" }] }));
+vi.mock("../../src/components/portal/workspace/reading-prefs", async original => ({ ...await original<typeof import("../../src/components/portal/workspace/reading-prefs")>(), useReadingPrefs: () => prefs, useSetReadingPrefs: () => (change: unknown) => { setPrefs.calls.push(change); } }));
 const ReadingToolbar = (await import("../../src/components/portal/workspace/reading-toolbar")).ReadingToolbar as (props: { tikkunAvailable?: boolean }) => ReturnType<typeof import("../../src/components/portal/workspace/reading-toolbar").ReadingToolbar>;
 const { FlowingStudyText } = await import("../../src/components/portal/workspace/study/annotations");
 const { PracticeSheetDocument } = await import("../../src/components/portal/workspace/study/practice-sheet");
@@ -29,21 +30,82 @@ const refs = ["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"];
 const verses = refs.map(ref => ({ ref, hebrew: (({ segments, ...rest }) => ({ ...rest, segments: [...segments] }))(normalizeHebrew(pointed)), english: `Synthetic English ${ref}` }));
 const assignment = { kind: "torah" as const, confirmed: true, verses: refs };
 
+const views = [["off", "Pointed text"], ["beside", "Side by side"], ["only", "Tikkun only"]] as const;
+type Tree = ReactElement<{ children?: ReactNode; onClick?(event: unknown): void; "data-tikkun-view"?: string }>;
+const elements = (node: ReactNode): Tree[] => Array.isArray(node) ? node.flatMap(elements) : isValidElement(node) ? [node as Tree, ...elements((node as Tree).props.children)] : [];
+/** The toolbar's element tree, rendered once so its hooks run, for invoking a menu choice's handler. */
+function toolbarTree(props: { tikkunAvailable?: boolean }) {
+  let tree: ReactNode = null;
+  renderToStaticMarkup(createElement(function Probe() { tree = ReadingToolbar(props); return null; }));
+  return elements(tree);
+}
+function withWidth<T>(wide: boolean, run: () => T): T {
+  const previous = (globalThis as { matchMedia?: unknown }).matchMedia;
+  (globalThis as { matchMedia?: unknown }).matchMedia = () => ({ matches: wide, addEventListener() {}, removeEventListener() {} });
+  try { return run(); } finally { (globalThis as { matchMedia?: unknown }).matchMedia = previous; }
+}
+const flow = (tikkun: "off" | "beside" | "only", activeWord: { verse: number; index: number } | null = null) =>
+  render(createElement(FlowingStudyText, { verses, assignment, group: "g", activeWord, onWord() {}, onVerse() {}, tikkun }));
+const within = (all: Node[], ref: string) => nodes(all.find(node => attr(node, "data-verse-ref") === ref)!);
+
 describe("Tikkun control", () => {
-  it("appears beside Torah text, reports its remembered state, and is absent for a haftarah", () => {
-    prefs.tikkun = true;
+  it("is a three-way menu beside Torah text that reports the remembered view, and is absent for a haftarah", () => {
     try {
-      const shown = render(createElement(ReadingToolbar, { tikkunAvailable: true })).filter(node => attr(node, "class") === "toolbar-item" && text(node) === "Tikkun");
-      expect(shown).toHaveLength(1); expect(attr(shown[0], "aria-pressed")).toBe("true");
-      expect(render(createElement(ReadingToolbar, { tikkunAvailable: false })).some(node => text(node) === "Tikkun" && attr(node, "class") === "toolbar-item")).toBe(false);
-      expect(render(createElement(ReadingToolbar, {})).some(node => text(node) === "Tikkun" && attr(node, "class") === "toolbar-item")).toBe(false);
-    } finally { prefs.tikkun = false; }
+      for (const [view, label] of views) {
+        prefs.tikkunView = view;
+        const all = render(createElement(ReadingToolbar, { tikkunAvailable: true }));
+        const shown = all.filter(node => attr(node, "class") === "toolbar-item" && text(node) === "Tikkun");
+        expect(shown).toHaveLength(1);
+        expect(attr(shown[0], "aria-pressed")).toBeUndefined(); expect(attr(shown[0], "data-active")).toBe(String(view !== "off"));
+        expect(attr(shown[0], "aria-label")).toBe(`Tikkun: ${label}`);
+        const menu = all.find(node => attr(node, "aria-label") === "Tikkun view")!;
+        expect(attr(shown[0], "popovertarget")).toBe(attr(menu, "id"));
+        const choices = nodes(menu).filter(node => attr(node, "data-tikkun-view") !== undefined);
+        expect(choices.map(text)).toEqual(views.map(([, name]) => name));
+        expect(choices.map(node => attr(node, "aria-pressed"))).toEqual(views.map(([id]) => String(id === view)));
+      }
+      for (const props of [{ tikkunAvailable: false }, {}]) {
+        const all = render(createElement(ReadingToolbar, props));
+        expect(all.some(node => text(node) === "Tikkun" && attr(node, "class") === "toolbar-item")).toBe(false);
+        expect(all.some(node => attr(node, "data-tikkun-view") !== undefined || attr(node, "aria-label") === "Tikkun view")).toBe(false);
+      }
+    } finally { prefs.tikkunView = "off"; }
+  });
+  it("stores each chosen view and closes the menu", () => {
+    setPrefs.calls.length = 0;
+    const choices = toolbarTree({ tikkunAvailable: true }).filter(element => element.props["data-tikkun-view"] !== undefined);
+    expect(choices.map(element => element.props["data-tikkun-view"])).toEqual(views.map(([id]) => id));
+    let hidden = 0;
+    for (const choice of choices) choice.props.onClick!({ currentTarget: { parentElement: { hidePopover() { hidden++; } } } });
+    expect(setPrefs.calls).toEqual(views.map(([id]) => ({ tikkunView: id })));
+    expect(hidden).toBe(3);
+    expect(toolbarTree({ tikkunAvailable: false }).some(element => element.props["data-tikkun-view"] !== undefined)).toBe(false);
   });
 });
 
 describe("Tikkun reading", () => {
-  it("replaces the pointed text on a phone with non-interactive consonant-only scroll text, verse by verse", () => {
-    const all = render(createElement(FlowingStudyText, { verses, assignment, group: "g", activeWord: null, onWord() {}, onVerse() {}, tikkun: true }));
+  it("sets the tikkun beside the pointed, playable text on every screen width, verse by verse", () => {
+    const [wide, phone] = [true, false].map(width => withWidth(width, () => renderToStaticMarkup(createElement(FlowingStudyText, { verses, assignment, group: "g", activeWord: null, onWord() {}, onVerse() {}, tikkun: "beside" }))));
+    expect(phone).toBe(wide);
+    const all = flow("beside");
+    expect(attr(all.find(node => attr(node, "aria-label") === "Hebrew reading")!, "data-tikkun")).toBe("beside");
+    for (const ref of refs) {
+      const verse = within(all, ref), pointed = verse.find(node => attr(node, "data-hebrew-ref") === ref)!, tikkun = verse.filter(node => attr(node, "data-tikkun-ref") === ref);
+      expect(tikkun).toHaveLength(1);
+      expect(text(tikkun[0])).toBe(consonants); expect(marks(text(tikkun[0]))).toEqual([]);
+      expect(attr(tikkun[0], "aria-hidden")).toBe("true"); expect(attr(tikkun[0], "lang")).toBe("he"); expect(attr(tikkun[0], "dir")).toBe("rtl");
+      expect(nodes(tikkun[0]).some(child => attr(child, "role") === "button" || attr(child, "tabindex") !== undefined || attr(child, "data-word-index") !== undefined)).toBe(false);
+      // The pointed column is untouched: marks, playable words and the verse button.
+      expect(marks(text(pointed)).length).toBeGreaterThan(0);
+      expect(nodes(pointed).some(child => attr(child, "data-word-index") !== undefined)).toBe(true);
+      expect(nodes(pointed).some(child => attr(child, "aria-label") === `Hear ${ref}`)).toBe(true);
+      expect(nodes(pointed).some(child => attr(child, "data-tikkun-ref") !== undefined)).toBe(false);
+    }
+  });
+  it("replaces the pointed text with non-interactive consonant-only scroll text on every screen width", () => {
+    const [wide, phone] = [true, false].map(width => withWidth(width, () => renderToStaticMarkup(createElement(FlowingStudyText, { verses, assignment, group: "g", activeWord: null, onWord() {}, onVerse() {}, tikkun: "only" }))));
+    expect(phone).toBe(wide);
+    const all = flow("only");
     const tikkun = all.filter(node => attr(node, "data-tikkun-ref"));
     expect(tikkun.map(node => attr(node, "data-tikkun-ref"))).toEqual(refs);
     for (const node of tikkun) {
@@ -53,13 +115,54 @@ describe("Tikkun reading", () => {
     }
     expect(all.some(node => attr(node, "data-word-index") !== undefined)).toBe(false);
     expect(all.filter(node => attr(node, "aria-label")?.startsWith("Hear "))).toHaveLength(3);
-    expect(all.find(node => attr(node, "aria-label") === "Hebrew reading") && attr(all.find(node => attr(node, "aria-label") === "Hebrew reading")!, "data-tikkun")).toBe("instead");
+    expect(attr(all.find(node => attr(node, "aria-label") === "Hebrew reading")!, "data-tikkun")).toBe("only");
+  });
+  it("colors every tikkun word like its pointed word when Colors is on, in both views, and neither text when it is off", () => {
+    try {
+      for (const view of ["beside", "only"] as const) {
+        prefs.colors = true;
+        const pointedAll = flow("off"), all = flow(view);
+        for (const ref of refs) {
+          const pointed = within(pointedAll, ref).filter(node => attr(node, "data-word-index") !== undefined && attr(node, "data-family") !== undefined);
+          const written = within(all, ref).filter(node => attr(node, "data-tikkun-word") !== undefined);
+          expect(written.length).toBeGreaterThan(0);
+          expect(written.every(node => attr(node, "data-family") !== undefined)).toBe(true);
+          for (const node of written) {
+            const match = pointed.find(word => attr(word, "data-word-index") === attr(node, "data-tikkun-word"))!;
+            expect(attr(node, "data-family")).toBe(attr(match, "data-family"));
+            expect(attr(node, "class")).toBe(attr(match, "class"));
+            expect(attr(node, "style")).toContain(`--phrase-color:${attr(match, "style")!.match(/--phrase-color:([^;]+)/)![1]}`);
+          }
+          if (view === "beside") expect(within(all, ref).filter(node => attr(node, "data-word-index") !== undefined && attr(node, "data-family") !== undefined).length).toBe(pointed.length);
+          // The phrase list for screen readers stays once per verse.
+          const phrases = within(all, ref).filter(node => /^g-flow-\d+-phrase-/.test(attr(node, "id") ?? ""));
+          expect(phrases.length).toBeGreaterThan(0); expect(new Set(phrases.map(node => attr(node, "id"))).size).toBe(phrases.length);
+        }
+        prefs.colors = false;
+        const plain = flow(view);
+        expect(plain.some(node => attr(node, "data-family") !== undefined || attr(node, "style") !== undefined)).toBe(false);
+        expect(plain.filter(node => attr(node, "data-tikkun-word") !== undefined).length).toBeGreaterThan(0);
+        expect(plain.filter(node => attr(node, "data-tikkun-ref")).map(text)).toEqual(refs.map(() => consonants));
+      }
+    } finally { prefs.colors = true; }
+  });
+  it("highlights the playing word in the tikkun too, in both views", () => {
+    for (const view of ["beside", "only"] as const) {
+      const all = flow(view, { verse: 1, index: 1 });
+      const active = all.filter(node => attr(node, "data-reference-active") === "true");
+      const written = active.filter(node => attr(node, "data-tikkun-word") !== undefined);
+      expect(written.map(node => attr(node, "data-tikkun-word"))).toEqual(["1"]);
+      expect(within(all, "Genesis 1:2").includes(written[0])).toBe(true);
+      expect(active.filter(node => attr(node, "data-word-index") !== undefined).map(node => attr(node, "data-word-index"))).toEqual(view === "beside" ? ["1"] : []);
+    }
   });
   it("leaves the pointed, playable text untouched when the tikkun is off", () => {
-    const all = render(createElement(FlowingStudyText, { verses, assignment, group: "g", activeWord: null, onWord() {}, tikkun: false }));
+    const all = render(createElement(FlowingStudyText, { verses, assignment, group: "g", activeWord: null, onWord() {}, tikkun: "off" }));
     expect(all.some(node => attr(node, "data-tikkun-ref"))).toBe(false);
     expect(all.filter(node => attr(node, "data-word-index") !== undefined).length).toBeGreaterThan(0);
     expect(marks(text(all[0])).length).toBeGreaterThan(0);
+    expect(attr(all.find(node => attr(node, "aria-label") === "Hebrew reading")!, "data-tikkun")).toBeUndefined();
+    expect(renderToStaticMarkup(createElement(FlowingStudyText, { verses, assignment, group: "g", activeWord: null, onWord() {} }))).toBe(renderToStaticMarkup(createElement(FlowingStudyText, { verses, assignment, group: "g", activeWord: null, onWord() {}, tikkun: "off" })));
   });
 });
 
