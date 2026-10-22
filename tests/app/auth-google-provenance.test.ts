@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { betterAuth } from "better-auth";
 import { eq } from "drizzle-orm";
@@ -86,6 +86,51 @@ describe("immutable private Google session provenance", () => {
       await f.auth.handler(new Request(delivered.url));
     }
     expect((await f.db.select().from(session)).filter(value => value.googleAuthenticatedAt !== null).length === 1).toBe(true);
+  });
+
+  it("marks a session the redirect-mode Google callback creates after state and PKCE, and never a magic-link one", async () => {
+    const f = await fixture(); let exchanged: URLSearchParams | undefined;
+    // Google's token endpoint is the only remote step of the authorization-code flow.
+    vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url !== "https://oauth2.googleapis.com/token") throw new Error("Unexpected network in synthetic provenance test");
+      exchanged = new URLSearchParams(input instanceof Request ? await input.text() : String(init?.body ?? ""));
+      return Response.json({ access_token: "synthetic-access", token_type: "Bearer", expires_in: 3600, scope: "openid email profile" });
+    });
+    async function start() {
+      const response = await f.auth.handler(new Request("http://localhost:3000/api/auth/sign-in/social", { method: "POST",
+        headers: { origin: "http://localhost:3000", "content-type": "application/json" },
+        body: JSON.stringify({ provider: "google", callbackURL: "/connect", errorCallbackURL: "/sign-in", disableRedirect: true }) }));
+      expect(response.status).toBe(200);
+      const authorize = new URL((await response.json()).url as string);
+      expect(authorize.origin + authorize.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
+      expect(authorize.searchParams.get("redirect_uri")).toBe("http://localhost:3000/api/auth/callback/google");
+      expect(authorize.searchParams.get("code_challenge_method")).toBe("S256");
+      const cookie = response.headers.getSetCookie().map(value => value.split(";")[0]).join("; ");
+      return { state: authorize.searchParams.get("state")!, challenge: authorize.searchParams.get("code_challenge")!, cookie };
+    }
+    const back = (state: string, cookie: string, extra = "") => f.auth.handler(new Request(`http://localhost:3000/api/auth/callback/google?code=synthetic-code&state=${encodeURIComponent(state)}${extra}`, { headers: cookie ? { cookie } : {} }));
+    // A missing state cookie, a foreign state and a provider error create nothing.
+    const first = await start();
+    expect(new URL((await back(first.state, "")).headers.get("location")!, "http://localhost:3000").pathname).toBe("/sign-in");
+    const second = await start();
+    expect(["/sign-in", "/api/auth/error"]).toContain(new URL((await back("synthetic-foreign-state", second.cookie)).headers.get("location")!, "http://localhost:3000").pathname);
+    expect((await f.db.select().from(session)).length).toBe(0);
+    const third = await start();
+    const returned = await back(third.state, third.cookie, "&scope=openid%20email%20profile&authuser=0&prompt=none");
+    expect(returned.status).toBe(302);
+    expect(returned.headers.get("location")).toBe("/connect");
+    expect(exchanged?.get("code")).toBe("synthetic-code");
+    expect(createHash("sha256").update(exchanged?.get("code_verifier") ?? "").digest("base64url")).toBe(third.challenge);
+    const stored = await f.db.select().from(session);
+    expect(stored.length === 1 && stored[0].googleAuthenticatedAt instanceof Date).toBe(true);
+    // The state is single use.
+    await back(third.state, third.cookie);
+    expect((await f.db.select().from(session)).length).toBe(1);
+    // A magic-link session for the same person stays unmarked.
+    await f.signIn("provenance@example.test");
+    const all = await f.db.select().from(session);
+    expect(all.length === 2 && all.filter(row => row.googleAuthenticatedAt !== null).length === 1).toBe(true);
   });
 
   it("rolls back a failing marked session INSERT without a session or marker residue", async () => {

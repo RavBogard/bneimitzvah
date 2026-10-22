@@ -49,6 +49,16 @@ export function parseAuthResult(value: unknown): AuthDestination {
   if (row.ok !== true || (row.next !== "/" && row.next !== "/invitations/accept" && row.next !== "/account")) return unavailable();
   return row.next;
 }
+/** Redirect-mode Google: only Google's own authorization endpoint may be navigated to. */
+export function parseGoogleRedirect(value: unknown): string {
+  const row = record(value, ["url"]);
+  if (typeof row.url !== "string" || row.url.length > 4096 || !row.url.startsWith("https://accounts.google.com/o/oauth2/v2/auth?")) return unavailable();
+  try {
+    const url = new URL(row.url);
+    if (url.origin !== "https://accounts.google.com" || url.pathname !== "/o/oauth2/v2/auth" || url.username || url.password || url.hash) return unavailable();
+    return url.href;
+  } catch { return unavailable(); }
+}
 export function parseAcknowledgement(value: unknown, key: "requested" | "ok") {
   if (record(value, [key])[key] !== true) return unavailable();
 }
@@ -61,8 +71,8 @@ export function parseAcceptance(value: unknown) {
 
 // A closed endpoint set prevents callers from turning this helper into an
 // arbitrary fetch/redirect surface. No response diagnostics cross the boundary.
-type Endpoint = "/api/session" | "/api/auth/sign-in/social" | "/api/auth/google/challenge" | "/api/auth/sign-in/magic-link" | "/api/auth/sign-out" | "/api/invitations/pending" | "/api/invitations/accept";
-const endpoints = new Set<string>(["/api/session", "/api/auth/sign-in/social", "/api/auth/google/challenge", "/api/auth/sign-in/magic-link", "/api/auth/sign-out", "/api/invitations/pending", "/api/invitations/accept"]);
+type Endpoint = "/api/session" | "/api/auth/sign-in/social" | "/api/auth/google/challenge" | "/api/auth/google/redirect" | "/api/auth/sign-in/magic-link" | "/api/auth/sign-out" | "/api/invitations/pending" | "/api/invitations/accept";
+const endpoints = new Set<string>(["/api/session", "/api/auth/sign-in/social", "/api/auth/google/challenge", "/api/auth/google/redirect", "/api/auth/sign-in/magic-link", "/api/auth/sign-out", "/api/invitations/pending", "/api/invitations/accept"]);
 export async function requestPortal(endpoint: Endpoint, body?: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> {
   if (!endpoints.has(endpoint)) return unavailable();
   const controller = new AbortController(), abort = () => controller.abort();

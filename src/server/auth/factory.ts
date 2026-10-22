@@ -42,13 +42,17 @@ export function createAuthStack(
       additionalFields: { googleAuthenticatedAt: { type: "date", required: false, input: false, returned: false } },
     },
     databaseHooks: { session: { create: { before: async (_session, context) => {
-      // In the pinned SDK this INSERT is reached only after the configured provider verified the
-      // idToken and resolved its user. A magic link, a linked account or an older session never
-      // inherits the marker; the portal MCP consents only from a Google-created session.
-      const googleAuthenticated = Boolean(input.google && context?.path === "/sign-in/social"
-        && context.method === "POST" && context.body?.provider === "google"
-        && typeof context.body.idToken?.token === "string" && context.body.idToken.token.length > 0
-        && context.context.socialProviders.some(provider => provider.id === "google"));
+      // Only a session Google just created carries the marker: the ID-token POST (the SDK verified the
+      // token and resolved its user) or the redirect-mode callback below. A magic link, a linked account
+      // or an older session never inherits it; the portal MCP consents only from a Google-created session.
+      const googleProvider = Boolean(input.google && context?.context.socialProviders.some(provider => provider.id === "google"));
+      const idTokenFlow = context?.path === "/sign-in/social" && context.method === "POST" && context.body?.provider === "google"
+        && typeof context.body.idToken?.token === "string" && context.body.idToken.token.length > 0;
+      // Redirect mode: the SDK's GET /callback/:id (here id "google") creates a session only after it checked the
+      // state (signed cookie and stored verification), exchanged the code with PKCE and the client
+      // secret at Google's token endpoint, and resolved the Google user. Linking creates no session.
+      const callbackFlow = context?.path === "/callback/:id" && context.method === "GET" && context.params?.id === "google";
+      const googleAuthenticated = googleProvider && (idTokenFlow || callbackFlow);
       // Always replace any supplied marker. Undefined (column omitted, so NULL) for every other
       // creation path, which also keeps magic-link sign-in working on a schema before 0028.
       return { data: { googleAuthenticatedAt: googleAuthenticated ? new Date() : undefined } };
