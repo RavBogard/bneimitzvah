@@ -91,7 +91,7 @@ type ListeningSourceProvider = Readonly<{
 
 It replaces `audit_action_known` with the prior list plus `listening-review.set`. The new list also carries 0032's and 0033's actions, so the audit list (only) is right whichever lands first.
 
-It needs `public.portal_settings_text`, from 0030. **Ordering:** drizzle skips a migration whose journal `when` predates the last applied one. The journal times of #17's 0032 and #21's 0033 are earlier than 0034's. Whichever of them merges after this one must regenerate its `when` (and `idx`). The new `tests/migration-journal.test.mjs` now fails CI if the journal's position, number or time ever runs backwards.
+It needs `public.portal_settings_text`, from 0030. **Ordering:** drizzle skips a migration whose journal `when` predates the last applied one. The journal times of #17's 0032 and #21's 0033 are earlier than 0034's. Whichever of them merges after this one must be renumbered above 0034 and regenerate its `when` and `idx`, and its audit list must keep `listening-review.set`. The new `tests/migration-journal.test.mjs` now fails CI if the journal's position, number or time ever runs backwards.
 
 ## 3. Daniel's phone steps
 
