@@ -17,6 +17,9 @@ export type RuntimeConfig = Readonly<{
   recordingsEnabled: boolean;
   // The owned roster Sheet: the service-account key Daniel set himself and the Sheet it writes.
   rosterSheet?: Readonly<{ serviceAccount: string; sheetId: string }>;
+  // Release 1.1 email notifications send only when this is exactly "true" AND the congregation's
+  // switch for that kind is on. Unset, "false" or anything else is off, and never takes the portal down.
+  notificationsEnabled: boolean;
 }>;
 const clean = (s: unknown): s is string => typeof s === "string" && s.length > 0 && s.trim() === s && !/[\x00-\x20\x7f]/.test(s);
 // Configuration selects exactly one; this is not a request-host alias list.
@@ -86,6 +89,7 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
     if(env.CRON_SECRET!==undefined && (!clean(env.CRON_SECRET) || env.CRON_SECRET.length<32 || env.CRON_SECRET.length>512 || env.CRON_SECRET===serviceMusic?.token || env.CRON_SECRET===env.BETTER_AUTH_SECRET))throw 0;
     return Object.freeze({ deployment: Object.freeze({ environment, deployment: env.PORTAL_DEPLOYMENT }), origin: origin.origin,
       databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, referenceReview, serviceMusic, serviceCronSecret:env.CRON_SECRET, mcpEnabled: env.PORTAL_MCP_ENABLED === "true", recordingsEnabled: env.PORTAL_RECORDINGS_ENABLED === "true", rosterSheet,
+      notificationsEnabled: env.PORTAL_NOTIFICATIONS_ENABLED === "true",
       mail: Object.freeze({ apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM }) });
   } catch { throw new RuntimeUnavailable(); }
 }
