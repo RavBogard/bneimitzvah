@@ -57,7 +57,11 @@ export function googleCallbackFailure(request: Request): Response {
 function stateBound(request: Request, origin: string, state: string, secret: string): boolean {
   const header = request.headers.get("cookie") ?? "", jar = requestCookies(request);
   // Any duplicated cookie name (for example one tossed from a sibling subdomain) counts as unbound.
-  if (Buffer.byteLength(header) > 16 * 1024 || /[\x00-\x1f\x7f]/.test(header) || [...jar.values()].includes(null)) return false;
+  // This route skips the dispatcher's cookie check, so any odd header (oversized, control characters,
+  // a nameless or malformed name, a duplicate) is refused here and still consumes the state.
+  const pairs = header.split(";").map(part => part.trim()).filter(Boolean);
+  if (Buffer.byteLength(header) > 16 * 1024 || /[\x00-\x1f\x7f]/.test(header) || [...jar.values()].includes(null)
+    || pairs.some(pair => { const equal = pair.indexOf("="); return equal < 1 || !/^[!#$%&'*+\-.^_`|~A-Za-z0-9]+$/.test(pair.slice(0, equal)); })) return false;
   const raw = jar.get(`${origin.startsWith("https:") ? "__Secure-" : ""}better-auth.state`);
   if (!raw) return false;
   let value: string;

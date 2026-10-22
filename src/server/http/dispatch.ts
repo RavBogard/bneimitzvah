@@ -21,7 +21,7 @@ import { errorResponse, HttpBoundaryError } from "./responses";
 import { finishHonoreeGuestResponse, finishHonoreeManagementResponse, handleHonoreeRequest, honoreeManagementRouteMethods } from "./honoree";
 
 export type HttpRuntimeScope = (action: (runtime: HttpRuntime) => Promise<Response>) => Promise<Response>;
-function cookieBoundary(request: Request, duplicates = false) {
+function cookieBoundary(request: Request) {
   const cookie = request.headers.get("cookie");
   if (cookie === null) return;
   if (Buffer.byteLength(cookie) > 16 * 1024 || /[\x00-\x1f\x7f]/.test(cookie)) throw new HttpBoundaryError();
@@ -29,7 +29,7 @@ function cookieBoundary(request: Request, duplicates = false) {
   for (const part of cookie.split(";")) {
     const pair = part.trim(); if (!pair) continue;
     const equal = pair.indexOf("="); const name = pair.slice(0, equal);
-    if (equal < 1 || !/^[!#$%&'*+\-.^_`|~A-Za-z0-9]+$/.test(name) || (names.has(name) && !duplicates)) throw new HttpBoundaryError();
+    if (equal < 1 || !/^[!#$%&'*+\-.^_`|~A-Za-z0-9]+$/.test(name) || names.has(name)) throw new HttpBoundaryError();
     names.add(name);
   }
 }
@@ -68,10 +68,10 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
         response.headers.set("allow", methods.join(", "));
         return response;
       }
-      // Google controls its return's query (scopes are echoed), and a tossed duplicate cookie must not
-      // stop the handler from consuming the state: both checks are relaxed for that one route only.
+      // Google controls its return's query (scopes are echoed), and a tossed odd cookie must not stop the
+      // handler from consuming the state: for that one route the handler applies the cookie checks itself.
       if (request.url.length > (googleReturn ? 8192 : 2048)) throw new HttpBoundaryError();
-      cookieBoundary(request, googleReturn);
+      if (!googleReturn) cookieBoundary(request);
       if (managementMethods) {
         const response = await withRuntime(async runtime => {
           try {

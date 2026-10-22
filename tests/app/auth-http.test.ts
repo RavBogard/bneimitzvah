@@ -394,9 +394,10 @@ test("redirect-mode Google spends the popup challenge budget, keeps each return 
   // A victim holding their own signed state cookie for another sign-in, or a tossed duplicate cookie,
   // still consumes the attacker's state; Google's long scope echo is accepted on this route.
   const exchanged = googleTokenEndpoint();
-  for (const extra of ["other-state", "duplicate"] as const) {
+  for (const extra of ["other-state", "duplicate", "malformed"] as const) {
     const attacker = await startGoogle(f, {}), victim = await startGoogle(f, {});
-    const cookie = extra === "other-state" ? victim.cookie : `${victim.cookie}; portal_google_return=home; portal_google_return=connect`;
+    const cookie = extra === "other-state" ? victim.cookie : extra === "duplicate" ? `${victim.cookie}; portal_google_return=home; portal_google_return=connect`
+      : `${attacker.cookie}; x(y=1; =nameless`;
     expect((await f.dispatch(f.request(callbackPath(attacker.state), undefined, { cookie }))).headers.get("location")).toBe("/sign-in?error=authentication");
     const before = exchanged.length;
     expect((await f.dispatch(f.request(callbackPath(attacker.state), undefined, { cookie: attacker.cookie }))).headers.get("location")).toBe("/sign-in?error=authentication");
