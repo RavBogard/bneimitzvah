@@ -70,6 +70,7 @@ import { AccessDenied } from "../access/errors";
 import { createReferenceReviewService } from "../reference-review/service";
 import { createPrivateReviewGet } from "../reference-review/private-blob";
 import { ReviewUnavailable } from "../reference-review/batch-contract";
+import { createFinkelReferenceService } from "../reference-audio/finkel-service";
 
 const purposeSecret = (config: RuntimeConfig, purpose: string) => createHmac("sha256", config.authSecret)
   .update(`crc-portal:v1:${config.deployment.environment}:${config.deployment.deployment}:${config.origin}:${purpose}`).digest("base64url");
@@ -179,6 +180,9 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const shortReferenceAudio = createShortReferenceAudioService({ access, practice, loadText, ...shortMetadata, studentRelease: config.referenceAudio?.studentRelease });
   const shortExplorationAudio = createShortExplorationService({ access, practice, loadReading, loadText, signingSecret: purposeSecret(config, "reading-exploration"),
     ...shortMetadata, studentRelease: config.referenceAudio?.studentRelease });
+  // Same student-release hold as PocketTorah; the bytes reuse the reviewed private getter.
+  const finkelReference = createFinkelReferenceService({ access, manifestSha256: config.referenceFinkel?.manifestSha256, studentRelease: config.referenceAudio?.studentRelease,
+    get: config.referenceFinkel ? createPrivateReviewGet({ storeId: config.referenceFinkel.storeId }) : async () => { throw new ReviewUnavailable(); } });
   const readingPreview = createReadingPreviewService({ access, loadReading, loadText, signingSecret:purposeSecret(config,"reading-preview") });
   const portal = createPortalService({ access, practice, sessionBindingSecret: purposeSecret(config, "session-ui-binding") });
   const relationships = createRelationshipService({ access });
@@ -190,7 +194,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost, mcp, rosterSheet });
+  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, finkelReference, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost, mcp, rosterSheet });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;
