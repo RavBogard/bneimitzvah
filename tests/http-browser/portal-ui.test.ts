@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { browserFixture } from "./fixture";
@@ -333,4 +333,83 @@ it("handles mocked setup/provider failures with retry, fixed diagnostics and acc
     await ui(tab.getByLabel("Email address")).toBeEnabled();
     await clean(tab, ["PRIVATE_PROVIDER_SENTINEL"]);
   }
+});
+
+it("Try Google again starts a fresh GIS attempt in place without reloading the sign-in page", async () => {
+  const tab = await page(); let challenges = 0;
+  tab.on("request", request => { if (new URL(request.url()).pathname === "/api/auth/google/challenge") challenges++; });
+  // The context route aborts the GIS library, so the first attempt fails as in an app's in-app browser.
+  await navigate(tab, "/sign-in");
+  await ui(tab.getByText("Google sign-in is unavailable or this attempt ended. You can use email below.", { exact: true })).toBeVisible();
+  const before = challenges; await safe(() => tab.evaluate(() => { (window as Window & { __sameDocument?: boolean }).__sameDocument = true; }));
+  await installGoogleBoundary(tab);
+  await safe(() => tab.getByRole("button", { name: "Try Google again", exact: true }).click());
+  await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
+  expect(await tab.evaluate(() => (window as Window & { __sameDocument?: boolean }).__sameDocument === true)).toBe(true);
+  expect(challenges).toBe(before + 1);
+});
+
+describe("Connect Claude consent page on a phone", () => {
+  const pending = "synthetic.pending-request_A1", phoneHelp = "On a phone, if Google won’t open inside Claude, use the ⋮ menu to open this page in Chrome (or Safari), then continue there.";
+  const staff = { name: "Synthetic Tutor", google: true, role: "tutor", scopes: ["portal:read"], viewer: "synthetic-viewer" };
+  async function consentRoutes(tab: Page, answers: { view?: () => Record<string, unknown>; approve?: Record<string, unknown>; deny?: Record<string, unknown> }) {
+    const seen: { path: string; request: unknown }[] = [];
+    for (const path of ["view", "approve", "deny"] as const) await tab.route(`**/api/oauth/consent/${path}`, route => {
+      seen.push({ path, request: route.request().postDataJSON().request });
+      const body = path === "view" ? (answers.view?.() ?? { clientName: "Claude", destination: "claude.ai", account: null }) : (answers[path] ?? { error: "unavailable" });
+      return route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+    });
+    return seen;
+  }
+  // The first visit compiles /connect in the isolated dev server; React dev effects may run twice.
+  const heading = (tab: Page, name: string) => ui(tab.getByRole("heading", { level: 2, name, exact: true })).toBeVisible({ timeout: 60_000 });
+  const views = (seen: { path: string; request: unknown }[]) => seen.filter(entry => entry.path === "view").map(entry => entry.request);
+
+  it("keeps the request across Try Google again and a reload, offers phone help not email, and forgets it on Cancel", async () => {
+    const tab = await page(true), seen = await consentRoutes(tab, {});
+    await navigate(tab, `/connect#request=${pending}`);
+    await heading(tab, "Claude wants to connect");
+    await ui(tab.getByText("Google sign-in didn’t open here.", { exact: true })).toBeVisible();
+    await ui(tab.getByText(phoneHelp, { exact: true })).toBeVisible();
+    await ui(tab.getByText(/within 15 minutes\.$/)).toBeVisible();
+    expect(await tab.locator("main").textContent()).not.toMatch(/email/i);
+    expect(new URL(tab.url()).hash).toBe("");
+    await safe(() => tab.evaluate(() => { (window as Window & { __sameDocument?: boolean }).__sameDocument = true; }));
+    await installGoogleBoundary(tab);
+    await safe(() => tab.getByRole("button", { name: "Try Google again", exact: true }).click());
+    await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
+    expect(await tab.evaluate(() => (window as Window & { __sameDocument?: boolean }).__sameDocument === true)).toBe(true);
+    // A reload (or "Open in Chrome", which shares this origin's storage) still finds the request.
+    await safe(() => tab.reload({ waitUntil: "domcontentloaded" }));
+    await heading(tab, "Claude wants to connect");
+    expect(seen.every(entry => entry.path === "view" && entry.request === pending)).toBe(true);
+    await safe(() => tab.getByRole("button", { name: "Cancel", exact: true }).click());
+    await ui(tab.getByRole("alert")).toBeVisible();
+    expect(seen.at(-1)).toEqual({ path: "deny", request: pending });
+    const asked = seen.length;
+    await navigate(tab, "/connect"); await heading(tab, "This request has expired");
+    expect(seen.length).toBe(asked);
+  });
+
+  it("forgets the stored request after Allow and after an expired answer, and a fresh fragment wins", async () => {
+    const tab = await page(true); let expired = false;
+    const seen = await consentRoutes(tab, { view: () => expired ? { error: "expired" } : { clientName: "Claude", destination: "claude.ai", account: staff },
+      approve: { redirect: "https://claude.ai/api/mcp/auth_callback?code=synthetic&state=s1" } });
+    await navigate(tab, `/connect#request=${pending}`); await heading(tab, "Claude wants to connect");
+    // The redirect to claude.ai is aborted by this harness; the copy is dropped before it leaves.
+    const leaving = tab.waitForRequest(request => new URL(request.url()).origin === "https://claude.ai", { timeout: 30_000 });
+    await safe(() => tab.getByRole("button", { name: "Allow", exact: true }).click());
+    await safe(() => leaving);
+    expect(seen.some(entry => entry.path === "approve" && entry.request === pending)).toBe(true);
+    const asked = views(seen).length;
+    await navigate(tab, "/connect"); await heading(tab, "This request has expired");
+    expect(views(seen).length).toBe(asked);
+    const other = "synthetic.other-request_B2";
+    await navigate(tab, `/connect#request=${other}`); await heading(tab, "Claude wants to connect");
+    expired = true; await navigate(tab, "/connect"); await heading(tab, "This request has expired");
+    expect([...new Set(views(seen))]).toEqual([pending, other]);
+    const askedAfterExpiry = views(seen).length;
+    expired = false; await navigate(tab, "/connect"); await heading(tab, "This request has expired");
+    expect(views(seen).length).toBe(askedAfterExpiry);
+  });
 });

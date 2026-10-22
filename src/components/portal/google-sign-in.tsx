@@ -23,12 +23,22 @@ function loadIdentity(): Promise<GoogleIdentity> {
   return library;
 }
 
-export function GoogleSignIn({ disabled, intent, onBegin, onFinish }: { disabled: boolean; intent?: GoogleIntent; onBegin: () => boolean; onFinish: (next?: AuthDestination) => void }) {
+const SIGN_IN_WAITING = "Continue in the Google window. If it did not open, cancel and use email below.";
+const SIGN_IN_FAILURE = "Google sign-in is unavailable or this attempt ended. You can use email below.";
+
+/** `waitingText`, `failureText` and `failureHelp` let a page without the email form say what fits there. */
+export function GoogleSignIn({ disabled, intent, onBegin, onFinish, waitingText = SIGN_IN_WAITING, failureText = SIGN_IN_FAILURE, failureHelp }: {
+  disabled: boolean; intent?: GoogleIntent; onBegin: () => boolean; onFinish: (next?: AuthDestination) => void;
+  waitingText?: string; failureText?: string; failureHelp?: readonly string[];
+}) {
   const container = useRef<HTMLDivElement>(null), epoch = useRef(0), callbacks = useRef({ onBegin, onFinish });
   callbacks.current = { onBegin, onFinish };
   const currentIntent = useRef(intent); currentIntent.current = intent;
   const [phase, setPhase] = useState<"preparing" | "ready" | "waiting" | "confirming" | "failed">("preparing");
   const cancel = useRef<() => void>(() => {});
+  // "Try Google again" starts a fresh attempt in place (a new challenge and nonce); reloading the page
+  // would lose the consent page's in-memory request. The old attempt's scope is retired first.
+  const [round, setRound] = useState(0);
   useEffect(() => {
     const turn = ++epoch.current, controller = createGoogleAttemptScope(() => turn === epoch.current && currentIntent.current === intent);
     let attempt: GoogleChallenge | undefined, started = false, submitted = false;
@@ -65,12 +75,13 @@ export function GoogleSignIn({ disabled, intent, onBegin, onFinish }: { disabled
       setPhase("ready");
     }).catch(fail);
     return () => { epoch.current++; invalidate(); controller.abort(); container.current?.replaceChildren(); if (started) callbacks.current.onFinish(); };
-  }, [intent]);
+  }, [intent, round]);
   return <div className="google-sign-in">
     <div ref={container} inert={disabled || phase !== "ready"} hidden={phase !== "ready"} aria-label="Sign in with Google" />
     {phase === "preparing" && <p className="field-help" role="status">Preparing Google sign-in…</p>}
-    {phase === "waiting" && <><p className="field-help" role="status">Continue in the Google window. If it did not open, cancel and use email below.</p><button type="button" className="button-text" onClick={() => cancel.current()}>Cancel Google sign-in</button></>}
+    {phase === "waiting" && <><p className="field-help" role="status">{waitingText}</p><button type="button" className="button-text" onClick={() => cancel.current()}>Cancel Google sign-in</button></>}
     {phase === "confirming" && <p className="field-help" role="status">Confirming your Google sign-in…</p>}
-    {phase === "failed" && <><p className="field-help" role="status">Google sign-in is unavailable or this attempt ended. You can use email below.</p><button type="button" className="button-text" disabled={disabled} onClick={() => window.location.reload()}>Try Google again</button></>}
+    {phase === "failed" && <><p className="field-help" role="status">{failureText}</p><button type="button" className="button-text" disabled={disabled} onClick={() => setRound(value => value + 1)}>Try Google again</button>
+      {failureHelp?.map(line => <p key={line} className="field-help">{line}</p>)}</>}
   </div>;
 }

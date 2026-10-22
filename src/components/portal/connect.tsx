@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GoogleSignIn } from "./google-sign-in";
+import { forgetPendingRequest, resolvePendingRequest } from "./pending-request";
 
 // The portal MCP consent page (Decided here, 2026-10-21). Claude sends the staff member here with
 // a signed request in the URL fragment; Google sign-in proves who they are; Allow returns Claude a code.
@@ -27,6 +28,13 @@ const safeRedirect = (value: unknown) => {
   } catch { return null; }
 };
 
+// Custom Tabs share Chrome's cookies, and the consent view accepts a Google sign-in from the last
+// 15 minutes (GOOGLE_CONSENT_WINDOW_MS), so signing in to the portal in Chrome first needs no popup here.
+const PHONE_HELP = [
+  "On a phone, if Google won’t open inside Claude, use the ⋮ menu to open this page in Chrome (or Safari), then continue there.",
+  "Or sign in to the portal with Google in Chrome first, then come back to Claude and choose Connect again within 15 minutes.",
+] as const;
+
 export function ConnectClaude() {
   const request = useRef<string | null>(null);
   const [view, setView] = useState<View>({ kind: "loading" });
@@ -37,15 +45,15 @@ export function ConnectClaude() {
     if (!request.current) { setView({ kind: "expired" }); return; }
     try {
       const value = await post("/api/oauth/consent/view", { request: request.current });
-      if (value.error === "expired") { setView({ kind: "expired" }); return; }
+      if (value.error === "expired") { forgetPendingRequest(); setView({ kind: "expired" }); return; }
       const account = value.account as Account | null;
       setView({ kind: "ready", clientName: String(value.clientName ?? "Claude"), destination: String(value.destination ?? ""), account });
     } catch { setView({ kind: "unavailable" }); }
   }, []);
   useEffect(() => {
-    const match = /^#request=([A-Za-z0-9_.-]{1,8192})$/.exec(window.location.hash);
-    request.current = match ? match[1] : null;
-    // The signed request leaves the address bar at once; it lives only in this page's memory.
+    // The signed request leaves the address bar at once. A ten-minute copy in this browser's storage
+    // lets a reload or "Open in Chrome" finish; the server still checks its signature and expiry.
+    request.current = resolvePendingRequest(window.location.hash);
     if (window.location.hash) window.history.replaceState(null, "", window.location.pathname);
     void load();
   }, [load]);
@@ -54,14 +62,16 @@ export function ConnectClaude() {
     const account = view.kind === "ready" ? view.account : null;
     if (!request.current || busy) return;
     setBusy(true); setMessage("");
+    // Cancel ends this request here whatever the server answers; Allow keeps it until it succeeds.
+    if (!allow) forgetPendingRequest();
     try {
       const value = allow ? await post("/api/oauth/consent/approve", { request: request.current, unattended, viewer: account?.viewer ?? "" })
         : await post("/api/oauth/consent/deny", { request: request.current });
       const target = safeRedirect(value.redirect);
-      if (target) { window.location.assign(target); return; }
+      if (target) { forgetPendingRequest(); window.location.assign(target); return; }
       if (value.error === "google") setMessage("Sign in with Google first; Claude connects only from a Google sign-in.");
       else if (value.error === "staff") setMessage("Only CRC clergy, staff and tutors can connect Claude.");
-      else if (value.error === "expired") setView({ kind: "expired" });
+      else if (value.error === "expired") { forgetPendingRequest(); setView({ kind: "expired" }); }
       else if (value.error === "account") { setMessage("You switched accounts in another window. Check the account below and try again."); void load(); }
       else setMessage("That didn’t go through. Try again.");
     } catch { setMessage("That didn’t go through. Try again."); }
@@ -88,7 +98,10 @@ export function ConnectClaude() {
           {message && <p className="request-error" role="alert">{message}</p>}
           {!signedInWithGoogle && <>
             <p className="field-help">{account ? "Confirm it’s you with Google to continue." : "Sign in with your CRC Google account to continue."}</p>
-            <GoogleSignIn disabled={busy} onBegin={() => true} onFinish={() => { setMessage(""); void load(); }} />
+            <GoogleSignIn disabled={busy} onBegin={() => true} onFinish={() => { setMessage(""); void load(); }}
+              waitingText="Continue in the Google window. If it didn’t open, cancel and try again."
+              failureText="Google sign-in didn’t open here."
+              failureHelp={PHONE_HELP} />
           </>}
           {signedInWithGoogle && !staff && <p className="field-help">Only CRC clergy, staff and tutors can connect Claude. You’re signed in as {account!.name}.</p>}
           {signedInWithGoogle && staff && <>
