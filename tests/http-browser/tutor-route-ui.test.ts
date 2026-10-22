@@ -101,7 +101,11 @@ it("does not substitute another reading for foreign or unknown routes and reject
     if (id === "not-a-student") continue;
     expect((await api(tab, `/api/students/${id}/reading?mode=tutor`)).status).toBe(404);
   }
-  await navigate(tab, `/workspace/tutor/${fixture.student.id}`); await loaded(tab, "Genesis 1:1");
+  // The verse marks and the study guide are read after the text is shown. Either one answering after
+  // the revocation denies in place and unregisters the reading's focus check, so the check under test
+  // would have nothing to verify. Revoke only once both have answered under the current link.
+  const followOn = ["progress", "study-guide"].map(name => tab.waitForResponse(response => response.request().method() === "GET" && new URL(response.url()).pathname === `/api/students/${fixture.student.id}/${name}`, { timeout: 30_000 }));
+  await navigate(tab, `/workspace/tutor/${fixture.student.id}`); await loaded(tab, "Genesis 1:1"); await safe(() => Promise.all(followOn));
   await fixture.ownerDb.update(s.tutorStudent).set({ revokedAt: new Date() }).where(eq(s.tutorStudent.id, fixture.link.id));
   await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
   await ui(tab.getByRole("heading", { name: "Student not found", exact: true })).toBeVisible(); expect(await tab.locator(".study-verses, .verse-work").count()).toBe(0);
