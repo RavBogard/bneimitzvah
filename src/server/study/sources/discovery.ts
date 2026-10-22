@@ -1,5 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
+import { preferredFirst } from "../../settings/validation";
 import { SOURCE_METADATA_LIMITS as L, SourceMetadataUnavailable, sourceMetadataVerse, type RelatedSourceMetadata } from "./metadata";
 
 export type SourcePageSelection = Readonly<{ sourceOffset: number; catalogHash?: string }>;
@@ -51,10 +52,16 @@ export function projectRelatedCatalog(catalog: unknown, requestedRef: string) {
   const catalogHash = createHash("sha256").update(serialized).digest("hex");
   return Object.freeze({ ref, catalogHash, receivedRows, heldCount, duplicateCount, entries: Object.freeze(entries) });
 }
-export function discoverRelatedPage(catalog: unknown, requestedRef: string, supplied: SourcePageSelection):
+/**
+ * `preferred` is the congregation's ordered list of works to show first (settings preferredSources).
+ * It changes display order only: the catalog hash stays the hash of the public catalog facts, so a
+ * source chosen from a reordered page still matches the catalog the assignment write re-checks.
+ */
+export function discoverRelatedPage(catalog: unknown, requestedRef: string, supplied: SourcePageSelection, preferred: readonly string[] = []):
   Readonly<{ status: "ready"; page: RelatedSourcePage }> | Readonly<{ status: "catalog-changed" }> | Readonly<{ status: "invalid-page" }> {
   const selection = sourcePageSelection(supplied);
-  const { ref, catalogHash, receivedRows, heldCount, duplicateCount, entries } = projectRelatedCatalog(catalog, requestedRef);
+  const projected = projectRelatedCatalog(catalog, requestedRef), { ref, catalogHash, receivedRows, heldCount, duplicateCount } = projected;
+  const entries = preferredFirst(projected.entries, preferred);
   if (selection.catalogHash !== undefined && selection.catalogHash !== catalogHash) return Object.freeze({ status: "catalog-changed" });
   if (selection.sourceOffset >= entries.length && (selection.sourceOffset !== 0 || entries.length !== 0)) return Object.freeze({ status: "invalid-page" });
   const end = Math.min(entries.length, selection.sourceOffset + 10);

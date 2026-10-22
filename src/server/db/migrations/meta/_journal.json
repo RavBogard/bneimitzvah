@@ -211,6 +211,13 @@
       "when": 1792621738415,
       "tag": "0029_rehearsal_dates",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792624862906,
+      "tag": "0030_congregation_settings",
+      "breakpoints": true
     }
   ]
 }

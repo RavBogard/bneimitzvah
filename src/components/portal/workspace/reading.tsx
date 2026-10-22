@@ -29,6 +29,7 @@ import { LiftProgress, useProgressSummary, VerseMark } from "./progress/marks";
 import { LessonLog, type LessonReload } from "./lessons/panel";
 import { PracticeCalendar } from "./practice-calendar/store";
 import { PracticeDays } from "./practice-calendar/view";
+import { useCongregationLinks } from "./settings/links";
 import { ParentStudySummary, ParentSummaryStore } from "./parent-summary";
 import type { PracticeDates } from "./practice-calendar/api";
 
@@ -163,6 +164,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const selectedKindRef = useRef(selectedKind); selectedKindRef.current = selectedKind;
   useEffect(() => registerReload(async () => { await load(); }), [registerReload, load]);
   const authorizedReading = result.key === key && !result.loading ? result.value : undefined;
+  const links = useCongregationLinks(Boolean(authorizedReading && !concealed));
   useLayoutEffect(() => {
     if (mode !== "parent" || concealed || !authorizedReading || !parentSummary.matches(authorizedReading, parentScope)) return;
     // Provider reveal precedes its visible render; start only after that render is authorized.
@@ -346,7 +348,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       <div className="sheet-bar"><button type="button" className="sheet-close" aria-label="Close verse editor" disabled={editorBusy} onClick={closeSheet}>{icons.close}</button></div>{editor}
     </dialog> : <div id={editorId} className="reading-editor-anchor">{editor}</div>)}
     {tabPanel("service", <><ServiceLearningPanel id={serviceId} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} onDepartureActive={setServiceDepartureActive} onVisit={(plan, unitId) => calendar.visitUnit(plan, unitId)} />
-      {authorizedReading && !concealed && <p className="field-help"><a href="https://siddur.centralreform.org/" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC digital siddur collection</a></p>}</>)}
+      {authorizedReading && !concealed && <p className="field-help"><a href={links.siddurUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC digital siddur collection</a>{links.musicUrl && <> · <a href={links.musicUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Service music</a></>}</p>}</>)}
     {tabPanel("lessons", <LessonLog mode={mode} studentId={studentId} register={registerLessons} tabbed={tabbed} />)}
     {printing && authorizedReading && !concealed && selectedReading && <PracticeSheet baseline={authorizedReading} initialKind={selectedReading.kind} onClose={() => setPrinting(false)}
       authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} />}
