@@ -246,6 +246,13 @@
       "when": 1792697077662,
       "tag": "0034_crc_torah_production_host",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1792697077663,
+      "tag": "0035_crc_torah_product_name",
+      "breakpoints": true
     }
   ]
 }

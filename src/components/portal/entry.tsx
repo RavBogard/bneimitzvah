@@ -8,8 +8,14 @@ import type { GoogleIntent } from "./sign-in-boundary";
 import { forgetPendingRequest } from "./pending-request";
 import { FrontDoor, type FrontDoorAccount } from "./front-door/front-door";
 
-type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "accepted" | "uncertain" }
+export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "accepted" | "uncertain" }
   | { kind: "signed-in"; summary: SessionSummary } | { kind: "invitation"; review: InvitationReview };
+/**
+ * What the front door app bar shows for an entry state. A refused account is signed in, so Sign in
+ * would be wrong, and it has no account page it can use, so the bar stays empty; the door itself offers Sign out.
+ */
+export const frontDoorAccount = (view: View): FrontDoorAccount => view.kind === "loading" || view.kind === "forbidden" ? null
+  : view.kind === "signed-in" ? { kind: "account", role: view.summary.roles.length === 1 ? roleNames[view.summary.roles[0]] : null } : { kind: "sign-in" };
 type Action = "google" | "email" | "accept" | "sign-out";
 const rolePath = (role: SessionSummary["roles"][number]) => role === "admin" ? "/workspace/admin/students" : `/workspace/${role}`;
 const roleTasks: Record<SessionSummary["roles"][number], string> = { student: "your assigned reading", parent: "your child’s preparation and practice", tutor: "the students you teach", admin: "students, people and setup" };
@@ -139,9 +145,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         {view.kind === "forbidden" && <><p>This account can’t use the requested access right now. Ask the congregation for help, or sign in with a different account.</p><button type="button" className="button-secondary" disabled={pending !== null} onClick={() => void action("sign-out")}>{pending === "sign-out" ? "Signing out…" : "Sign out"}</button></>}
       </section>;
   if (doors) {
-    const account: FrontDoorAccount = view.kind === "loading" ? null : view.kind === "signed-in"
-      ? { kind: "account", role: view.summary.roles.length === 1 ? roleNames[view.summary.roles[0]] : null } : { kind: "sign-in" };
-    return <FrontDoor account={account} onSignIn={() => heading.current?.focus({ preventScroll: true })}>{task}</FrontDoor>;
+    return <FrontDoor account={frontDoorAccount(view)} onSignIn={() => heading.current?.focus({ preventScroll: true })}>{task}</FrontDoor>;
   }
 
   return <div className="portal-shell">
