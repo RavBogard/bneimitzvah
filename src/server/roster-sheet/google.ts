@@ -62,8 +62,8 @@ export async function replaceSheet(sheetId: string, rows: readonly (readonly str
   if (!SHEET_ID.test(sheetId) || rows.length < 1 || rows.length > ROSTER_MAX_ROWS - 1 || rows.some(row => row.length > ROSTER_WIDTH)) throw new SheetUnavailable("config");
   const root = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}`;
   const headers = { authorization: `Bearer ${token}`, "content-type": "application/json" };
-  const meta = await bounded(fetcher, `${root}?fields=${encodeURIComponent("sheets.properties(sheetId,title,gridProperties.rowCount)")}`, { method: "GET", headers: { authorization: headers.authorization } }, "write");
-  const tabs = (Array.isArray(meta.sheets) ? meta.sheets : []).map(tab => (tab as { properties?: { sheetId?: unknown; title?: unknown; gridProperties?: { rowCount?: unknown } } }).properties ?? {});
+  const meta = await bounded(fetcher, `${root}?fields=${encodeURIComponent("sheets.properties")}`, { method: "GET", headers: { authorization: headers.authorization } }, "write");
+  const tabs = (Array.isArray(meta.sheets) ? meta.sheets : []).map(tab => (tab as { properties?: { sheetId?: unknown; title?: unknown; gridProperties?: { rowCount?: unknown } } } | null)?.properties ?? {});
   const tab = tabs.find(p => p.sheetId === 0) ?? tabs[0];
   if (typeof tab?.title !== "string" || !tab.title) throw new SheetUnavailable("write");
   // Blank only the owned rows the tab already has; writing the roster itself may grow a short tab.

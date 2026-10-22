@@ -97,7 +97,7 @@ describe("roster sheet writer", () => {
     const { calls, fetcher } = googleStub(undefined, [{ sheetId: 7, title: "Notes", rowCount: 1000, cells: new Map() }, { sheetId: 0, title: "Staff's roster", rowCount: 5000, cells: new Map() }]);
     await replaceSheet(SHEET, [["a", "=1+1"], ["b"]], "synthetic-access", fetcher);
     expect(calls.map(c => c.init.method)).toEqual(["GET", "PUT"]);
-    expect(new URL(calls[0].url).searchParams.get("fields")).toBe("sheets.properties(sheetId,title,gridProperties.rowCount)");
+    expect(new URL(calls[0].url).searchParams.get("fields")).toBe("sheets.properties");
     const range = `'Staff''s roster'!A1:J2000`;
     expect(calls[1].url).toBe(`https://sheets.googleapis.com/v4/spreadsheets/${SHEET}/values/${encodeURIComponent(range)}?valueInputOption=RAW`);
     const body = JSON.parse(String(calls[1].init.body));
@@ -147,6 +147,18 @@ describe("roster sheet writer", () => {
     expect(google.writes.at(-1)!.to).toEqual({ column: 9, row: 4 }); expect(roster.rowCount).toBe(4); expect(roster.cells.has("4,0")).toBe(false);
     await replaceSheet(SHEET, Array.from({ length: 6 }, (_, i) => [`r${i}`]), "t", google.fetcher);
     expect(google.writes.at(-1)!.to).toEqual({ column: 9, row: 6 }); expect(roster.rowCount).toBe(6); expect(roster.cells.get("6,0")).toBe("r5");
+  });
+
+  it("treats a missing or malformed row count as the full owned block, and skips a malformed tab entry", async () => {
+    for (const rowCount of [undefined, 0, -3, 2.5, Number.NaN, "100"]) {
+      const calls: string[] = [];
+      const fetcher = (async (url: string, init: RequestInit) => {
+        calls.push(init.method === "GET" ? "GET" : decodeURIComponent(new URL(String(url)).pathname.split("/values/")[1]));
+        return init.method === "GET" ? Response.json({ sheets: [null, { properties: { sheetId: 0, title: "Roster", gridProperties: { rowCount } } }] }) : Response.json({});
+      }) as unknown as typeof fetch;
+      await replaceSheet(SHEET, [["h"]], "t", fetcher);
+      expect(calls).toEqual(["GET", "'Roster'!A1:J2000"]);
+    }
   });
 
   it("changes nothing when Google refuses the write, so staff keep the last good roster", async () => {
