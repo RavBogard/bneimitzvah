@@ -49,6 +49,8 @@ Read AGENTS/CLAUDE, MISSION/STATE/PM review, PROVIDER-SETUP/RETURN, runtime conf
 
 ## Hosting-log addendum — observed canaries, 2026-10-16
 
+**Amended 2026-10-21 (Daniel):** One exception to the query-credential finding below. Google's code and `state` may appear in these logs for `GET /api/auth/callback/google` only, while Daniel is the sole Vercel team member; it must be revisited before anyone else joins the team. See the dated amendment in [MISSION.md](MISSION.md). Every other query-token route stays forbidden.
+
 **The hosting query-log gate now has a concrete failure.** The earlier paragraph describing hosting logging as unverified is superseded by this evidence. Root authorized a bounded read-only project inspection and harmless canary requests, then agreed that database preparation should continue independently while current query-based auth runtime enabling waits for remediation.
 
 Using the existing authenticated Vercel CLI 50.35.0, scoped only to the linked `bneimitzvah` project, the reviewer:

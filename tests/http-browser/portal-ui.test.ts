@@ -433,6 +433,10 @@ describe("Connect Claude consent page on a phone", () => {
     // Google returns to /connect in this same tab (the harness aborts the real trip).
     await navigate(tab, "/connect"); await heading(tab, "Claude wants to connect");
     expect(views(seen).at(-1)).toBe(pending);
+    // A failed Google return lands back here with a plain error, the request recovered and the address bar clean.
+    await navigate(tab, "/connect?google=failed"); await heading(tab, "Claude wants to connect");
+    await ui(tab.getByText("Google sign-in didn’t finish. Try again.", { exact: true })).toBeVisible();
+    expect(new URL(tab.url()).search).toBe(""); expect(views(seen).at(-1)).toBe(pending);
   });
 
   it("forgets the stored request after Allow and after an expired answer, and a fresh fragment wins", async () => {

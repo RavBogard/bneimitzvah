@@ -8,6 +8,8 @@
 - Daniel alone tests the product until the full planned feature set is complete. Generated chant retains its independent release gates.
 - The selected interface direction is Annotated score, implemented in code. This repair does not reopen that decision.
 
+**Amended 2026-10-21 (Daniel):** `GET /api/auth/callback/google` is routed again for redirect-mode Google sign-in, under a narrow log exception: Google's code and `state` may appear in Vercel request logs for that route only, while Daniel is the sole Vercel team member. See the dated amendment in [MISSION.md](../../planning/2026-10-15-kickoff/MISSION.md). Every other query-token route stays retired.
+
 **Status, 2026-10-16:** Astra approved bounded implementation after `QUERY-FREE-AUTH-REVIEW.md` corrected verified same-email linking and logout lifecycle. The working-tree implementation is under focused checks and independent review; production enabling remains blocked on acceptance below. The author read no private credential attachment and performed no provider mutation, credential installation, deployment or email delivery.
 
 ## Problem and recommendation

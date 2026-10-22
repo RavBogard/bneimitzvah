@@ -3,7 +3,7 @@ import { handleHonorsRequest, honorsRouteMethods } from "./honors";
 import { handleSourceContentRequest, sourceContentRouteMethods } from "./source-content";
 import { handleSourceAssignmentsRequest, sourceAssignmentsRouteMethods } from "./source-assignments";
 import { createRuntimeScope, type HttpRuntime } from "../runtime/composition";
-import { handleAuthRequest, authRouteMethods } from "./auth";
+import { handleAuthRequest, authRouteMethods, googleCallbackFailure } from "./auth";
 import { handlePortalRequest, portalRouteMethods } from "./portal";
 import { handleStudentWorkRequest, studentWorkRouteMethods } from "./student-work";
 import { handleServiceLearningRequest, serviceLearningRouteMethods } from "./service-learning";
@@ -35,8 +35,12 @@ function cookieBoundary(request: Request) {
 }
 export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRuntimeScope()) {
   return async (request: Request): Promise<Response> => {
+    // Google's redirect-mode return is a browser navigation: any failure, including an unavailable
+    // runtime, lands on a page with a plain error rather than a JSON body.
+    let googleReturn = false;
     try {
       const url = new URL(request.url);
+      googleReturn = url.pathname === "/api/auth/callback/google" && request.method === "GET";
       if (url.pathname === "/api/honoree/read") {
         const denied = () => errorResponse(new HttpBoundaryError(404));
         // Guest capability transport never interprets authentication cookies or
@@ -87,8 +91,9 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
           return errorResponse(error);
         }
       });
+      if (googleReturn && !(response.status >= 300 && response.status < 400)) return googleCallbackFailure(request);
       return finishReferenceReviewResponse(request, response);
-    } catch (error) { return errorResponse(error); }
+    } catch (error) { return googleReturn ? googleCallbackFailure(request) : errorResponse(error); }
   };
 }
 export const dispatchRequest = createHttpDispatcher();

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GoogleSignIn } from "./google-sign-in";
-import { browserStores, forgetPendingRequest, rememberPendingRequest, resolvePendingRequest } from "./pending-request";
+import { browserStores, forgetPendingRequest, rememberPendingRequest, resolvePendingRequest, tabStores } from "./pending-request";
 
 // The portal MCP consent page (Decided here, 2026-10-21). Claude sends the staff member here with
 // a signed request in the URL fragment; Google sign-in proves who they are; Allow returns Claude a code.
@@ -55,7 +55,9 @@ export function ConnectClaude() {
     // The signed request leaves the address bar at once. A ten-minute copy in this tab's storage lets a
     // reload or a Google round trip finish; the server still checks its signature and expiry.
     request.current = resolvePendingRequest(window.location.hash);
-    if (window.location.hash) window.history.replaceState(null, "", window.location.pathname);
+    // A failed Google return lands on /connect?google=failed; say so once and clean the address bar.
+    if (new URLSearchParams(window.location.search).get("google") === "failed") setMessage("Google sign-in didn’t finish. Try again.");
+    if (window.location.hash || window.location.search) window.history.replaceState(null, "", window.location.pathname);
     void load();
   }, [load]);
 
@@ -105,7 +107,7 @@ export function ConnectClaude() {
               failureHelp={PHONE_HELP} redirectNext="connect"
               // Only once Google has failed here may "Open in Chrome" (another tab) need the request.
               onFailed={() => { if (request.current) rememberPendingRequest(request.current, browserStores()); }}
-              beforeRedirect={() => { if (request.current) rememberPendingRequest(request.current); }} />
+              beforeRedirect={() => { if (request.current) rememberPendingRequest(request.current, tabStores().length ? tabStores() : browserStores()); }} />
           </>}
           {signedInWithGoogle && !staff && <p className="field-help">Only CRC clergy, staff and tutors can connect Claude. You’re signed in as {account!.name}.</p>}
           {signedInWithGoogle && staff && <>

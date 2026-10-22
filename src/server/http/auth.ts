@@ -1,5 +1,5 @@
 import "server-only";
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import type { HttpRuntime } from "../runtime/composition";
 import { AUTH_RATE_LIMIT_HEADER } from "../auth/factory";
 import { mailbox } from "../runtime/config";
@@ -26,14 +26,54 @@ const googleReturnPaths = new Set<string>(["/", "/invitations/accept", "/account
 const GOOGLE_AUTHORIZATION = "https://accounts.google.com/o/oauth2/v2/auth";
 // The only callback parameters the SDK reads; Google's others (scope, authuser, hd, prompt) are dropped.
 const googleCallbackKeys = ["code", "state", "error", "error_description", "iss"] as const;
-function sdkHeaders(request: Request, origin: string): Headers {
+// Where a failed Google return goes: back to the page the person started from, with a plain error.
+// A small non-secret cookie scoped to the callback path remembers it (only these three values).
+const GOOGLE_RETURN_COOKIE = "portal_google_return";
+const googleFailurePaths = { connect: "/connect?google=failed", account: "/sign-in?intent=account&error=authentication", home: "/sign-in?error=authentication" } as const;
+type GoogleStart = keyof typeof googleFailurePaths;
+function requestCookies(request: Request): Map<string, string | null> {
+  // A duplicated name is recorded as null and never trusted.
+  const values = new Map<string, string | null>();
+  for (const part of (request.headers.get("cookie") ?? "").split(";")) {
+    const pair = part.trim(), equal = pair.indexOf("=");
+    if (equal < 1) continue;
+    const name = pair.slice(0, equal);
+    values.set(name, values.has(name) ? null : pair.slice(equal + 1));
+  }
+  return values;
+}
+const returnCookie = (value: GoogleStart | "", secure: boolean) =>
+  `${GOOGLE_RETURN_COOKIE}=${value}; Path=/api/auth/callback/google; HttpOnly; SameSite=Lax; Max-Age=${value ? 600 : 0}${secure ? "; Secure" : ""}`;
+/** The fixed failure landing for a Google return; also used by the dispatcher when the runtime itself fails. */
+export function googleCallbackFailure(request: Request): Response {
+  const started = requestCookies(request).get(GOOGLE_RETURN_COOKIE);
+  return privateRedirect(googleFailurePaths[started === "connect" || started === "account" ? started : "home"]);
+}
+/**
+ * True only when this browser holds the SDK's own signed state cookie for exactly this state. The SDK
+ * checks the same thing, but only after reading the stored state, and on failure it leaves that state
+ * in place; checking first lets a return from the wrong browser consume the state instead.
+ */
+function stateBound(request: Request, origin: string, state: string, secret: string): boolean {
+  const raw = requestCookies(request).get(`${origin.startsWith("https:") ? "__Secure-" : ""}better-auth.state`);
+  if (!raw) return false;
+  let value: string;
+  try { value = decodeURIComponent(raw); } catch { return false; }
+  const dot = value.lastIndexOf(".");
+  if (dot < 1 || value.slice(0, dot) !== state) return false;
+  const signature = Buffer.from(value.slice(dot + 1)), expected = Buffer.from(createHmac("sha256", secret).update(state).digest("base64"));
+  return signature.length === expected.length && timingSafeEqual(signature, expected);
+}
+function sdkHeaders(request: Request, origin: string, bucket = ""): Headers {
   // Closed reconstruction: no caller IP/bucket/forwarded fields reach the SDK.
   const headers = new Headers();
   for (const key of ["host", "origin", "cookie", "user-agent", "accept", "sec-fetch-site", "sec-fetch-mode", "sec-fetch-dest"]) {
     const value = request.headers.get(key);
     if (value !== null) headers.set(key, value);
   }
-  const namespace = createHash("sha256").update(`crc-portal:auth-bucket:v1:${origin}`).digest("hex").slice(0, 24);
+  // The SDK rate-limits by this synthetic address. A Google return gets one bucket per state, so a
+  // flood of returns can only exhaust its own state's budget, never everyone's.
+  const namespace = createHash("sha256").update(`crc-portal:auth-bucket:v1:${origin}${bucket ? `:${bucket}` : ""}`).digest("hex").slice(0, 24);
   headers.set(AUTH_RATE_LIMIT_HEADER, `2001:0db8:${namespace.match(/.{4}/g)!.join(":")}`);
   return headers;
 }
@@ -47,27 +87,48 @@ function cookies(projected: Response, sdk: Response, origin: string): Response {
   return projected;
 }
 function discard(response: Response) { void response.body?.cancel().catch(() => {}); }
-/** Google's return to /api/auth/callback/google: the SDK checks state (signed cookie and stored verification) and PKCE. */
+/**
+ * Google's return to /api/auth/callback/google (MISSION amendment 2026-10-21: its code and state may
+ * appear in Vercel request logs for this route only). The SDK checks the state (signed cookie and the
+ * stored, single-use verification) and PKCE. Before that, a return without this browser's own signed
+ * state cookie consumes the state and stops: a code read from a log can then never be replayed with
+ * the cookie of whoever started that sign-in, and such returns never reach the SDK's rate limiter.
+ */
 async function googleCallback(request: Request, runtime: HttpRuntime): Promise<Response> {
-  const failed = () => privateRedirect("/sign-in?error=authentication");
-  if (!runtime.auth.options.socialProviders?.google) return failed();
-  const incoming = new URL(request.url), internal = new URL("/api/auth/callback/google", runtime.origin);
-  for (const key of googleCallbackKeys) {
-    const values = incoming.searchParams.getAll(key);
-    if (values.length > 1 || values.some(value => value.length > 1024 || /[\u0000-\u001f\u007f]/.test(value))) return failed();
-    if (values.length) internal.searchParams.set(key, values[0]);
-  }
-  const sdk = await runtime.auth.handler(new Request(internal, { headers: sdkHeaders(request, runtime.origin), signal: request.signal }));
+  const secure = runtime.origin.startsWith("https:");
+  const started = requestCookies(request).has(GOOGLE_RETURN_COOKIE);
+  const failed = () => { const response = googleCallbackFailure(request); if (started) response.headers.append("set-cookie", returnCookie("", secure)); return response; };
   try {
-    const location = sdk.headers.get("location");
-    if (sdk.status >= 300 && sdk.status < 400 && location && location.length <= 2048) {
-      const target = new URL(location, runtime.origin);
-      if (target.origin === runtime.origin && !target.username && !target.password && !target.search && !target.hash && googleReturnPaths.has(target.pathname)) {
-        return cookies(privateRedirect(target.pathname as GoogleReturn), sdk, runtime.origin);
-      }
+    if (!runtime.auth.options.socialProviders?.google) return failed();
+    const incoming = new URL(request.url), internal = new URL("/api/auth/callback/google", runtime.origin);
+    for (const key of googleCallbackKeys) {
+      const values = incoming.searchParams.getAll(key);
+      if (values.length > 1 || values.some(value => value.length > 1024 || /[\u0000-\u001f\u007f]/.test(value))) return failed();
+      if (values.length) internal.searchParams.set(key, values[0]);
     }
-    return failed();
-  } finally { discard(sdk); }
+    const state = internal.searchParams.get("state");
+    // The SDK mints 32 characters from this alphabet; IdP-initiated sign-in (no state) is not used.
+    if (state === null || !/^[A-Za-z0-9_-]{32}$/.test(state)) return failed();
+    const context = await runtime.auth.$context;
+    if (!stateBound(request, runtime.origin, state, context.secret)) {
+      // The pinned SDK's state identifier (better-auth 1.7.10, state.mjs getAuthStateVerificationIdentifier).
+      await context.internalAdapter.deleteVerificationByIdentifier(`auth-state:${state}`);
+      return failed();
+    }
+    const sdk = await runtime.auth.handler(new Request(internal, { headers: sdkHeaders(request, runtime.origin, `callback:${state}`), signal: request.signal }));
+    try {
+      const location = sdk.headers.get("location");
+      if (sdk.status >= 300 && sdk.status < 400 && location && location.length <= 2048) {
+        const target = new URL(location, runtime.origin);
+        if (target.origin === runtime.origin && !target.username && !target.password && !target.search && !target.hash && googleReturnPaths.has(target.pathname)) {
+          const response = cookies(privateRedirect(target.pathname as GoogleReturn), sdk, runtime.origin);
+          if (started) response.headers.append("set-cookie", returnCookie("", secure));
+          return response;
+        }
+      }
+      return failed();
+    } finally { discard(sdk); }
+  } catch { return failed(); }
 }
 const failure = () => privateJson({ error: "authentication" }, 400);
 function magicResponse(sdk: Response, runtime: HttpRuntime): Response {
@@ -175,6 +236,7 @@ export async function handleAuthRequest(request: Request, runtime: HttpRuntime):
       if (target.origin !== "https://accounts.google.com" || target.pathname !== "/o/oauth2/v2/auth" || target.username || target.password || target.hash) return errorResponse(undefined);
       const response = cookies(privateJson({ url: target.href }), sdk, runtime.origin);
       response.headers.append("set-cookie", budget);
+      response.headers.append("set-cookie", returnCookie(next === "/connect" ? "connect" : next === "/account" ? "account" : "home", runtime.origin.startsWith("https:")));
       return response;
     } finally { discard(sdk); }
   }

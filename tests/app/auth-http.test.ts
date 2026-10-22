@@ -271,7 +271,8 @@ test("unknown routes reject without configuration; missing provider and private 
   let scopes = 0; const absent = createHttpDispatcher(async () => { scopes++; throw new RuntimeUnavailable(); });
   for (const path of ["/api/auth/magic-link/verify?token=synthetic", "/api/auth/get-session"]) expect((await absent(new Request(`http://localhost:3000${path}`))).status).toBe(404);
   expect(scopes).toBe(0);
-  expect((await absent(new Request("http://localhost:3000/api/auth/callback/google?code=synthetic"))).status).toBe(503);
+  const unavailable = await absent(new Request("http://localhost:3000/api/auth/callback/google?code=synthetic", { headers: { cookie: "portal_google_return=connect" } }));
+  expect(unavailable.status).toBe(303); expect(unavailable.headers.get("location")).toBe("/connect?google=failed");
   const f = await fixture(undefined, false);
   expect((await f.dispatch(f.request("/api/auth/google/challenge", {}))).status).toBe(503);
   f.sdk.mockImplementationOnce(async () => { throw new Error("synthetic-private-diagnostic"); });
@@ -279,83 +280,117 @@ test("unknown routes reject without configuration; missing provider and private 
   expect(response.status).toBe(503); expect(await response.json()).toEqual({ error: "unavailable" });
 });
 
-test("redirect-mode Google: closed destinations, same-origin POST, Google's URL only, and a fixed landing after state and PKCE", async () => {
-  const f = await fixture();
-  const fresh = async () => { await f.db.delete(schema.rateLimit); };
-  let exchanged: URLSearchParams | undefined;
+function googleTokenEndpoint() {
+  const seen: URLSearchParams[] = [];
   vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
     if ((input instanceof Request ? input.url : String(input)) !== "https://oauth2.googleapis.com/token") throw new Error("Offline auth network refused");
-    exchanged = new URLSearchParams(input instanceof Request ? await input.text() : String(init?.body ?? ""));
+    seen.push(new URLSearchParams(input instanceof Request ? await input.text() : String(init?.body ?? "")));
     const part = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
     const now = Math.floor(Date.now() / 1000);
     return Response.json({ access_token: "synthetic-access", token_type: "Bearer", expires_in: 3600, scope: "openid email profile",
       id_token: `${part({ alg: "RS256" })}.${part({ iss: "https://accounts.google.com", aud: "synthetic-client", sub: "synthetic-redirect-subject", email: "redirect-identity@example.test", email_verified: true, name: "Synthetic redirect", iat: now, exp: now + 300 })}.AA` });
   });
-  // The body names only a destination word; anything else is refused before the SDK.
-  for (const body of [{ next: "/connect" }, { next: "https://foreign.example.test" }, { next: ["connect"] }, { next: null }, { callbackURL: "https://foreign.example.test" }, { next: "connect", callbackURL: "/" }, { next: "connect", errorCallbackURL: "https://foreign.example.test" }])
-    expect((await f.dispatch(f.request("/api/auth/google/redirect", body))).status).toBe(400);
-  for (const [request, status] of [
-    [f.request("/api/auth/google/redirect", {}, { origin: "https://foreign.example.test" }), 403],
-    [f.request("/api/auth/google/redirect", {}, { "sec-fetch-site": "cross-site" }), 403],
-    [f.request("/api/auth/google/redirect", {}, { "X-Practice-Context": "opaque" }), 403],
-    [f.request("/api/auth/google/redirect?next=connect", {}), 400],
-    [f.request("/api/auth/google/redirect"), 405],
-    [f.request("/api/auth/callback/google", {}), 405],
-  ] as [Request, number][]) expect((await f.dispatch(request)).status).toBe(status);
-  expect(f.sdk.mock.calls.length).toBe(0);
-  for (const [body, landing] of [[{}, "/"], [{ next: "account" }, "/account"], [{ next: "connect" }, "/connect"]] as const) {
-    await fresh();
-    const started = await f.dispatch(f.request("/api/auth/google/redirect", body));
-    expect(started.status).toBe(200);
-    const value = await started.json(); expect(Object.keys(value)).toEqual(["url"]);
-    const google = new URL(value.url);
-    expect(google.origin + google.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
-    expect(google.searchParams.get("redirect_uri")).toBe(`${f.origin}/api/auth/callback/google`);
-    expect(google.searchParams.get("code_challenge_method")).toBe("S256");
-    const state = google.searchParams.get("state")!;
-    expect(cookieOf(started)).toMatch(/(^|; )better-auth\.state=/);
-    // A different browser (no state cookie) cannot complete it.
-    const foreign = await f.dispatch(f.request(`/api/auth/callback/google?code=synthetic-code&state=${encodeURIComponent(state)}`));
-    expect(foreign.headers.get("location")).toBe("/sign-in?error=authentication"); expect(foreign.headers.getSetCookie()).toEqual([]);
-    await fresh();
-    const again = await f.dispatch(f.request("/api/auth/google/redirect", body)); expect(again.status).toBe(200);
-    const retry = new URL((await again.json()).url), retryCookie = cookieOf(again), retryState = encodeURIComponent(retry.searchParams.get("state")!);
-    const back = await f.dispatch(f.request(`/api/auth/callback/google?code=synthetic-code&state=${retryState}&scope=openid%20email%20profile&authuser=0&prompt=consent`, undefined, { cookie: retryCookie }));
-    expect(back.status).toBe(303); expect(back.headers.get("location")).toBe(landing);
-    expect(createHash("sha256").update(exchanged?.get("code_verifier") ?? "").digest("base64url")).toBe(retry.searchParams.get("code_challenge"));
-    expect((await f.dispatch(f.request("/api/session", undefined, { cookie: cookieOf(back) }))).status).toBe(200);
-    // The state is single use.
-    const replay = await f.dispatch(f.request(`/api/auth/callback/google?code=synthetic-code&state=${retryState}`, undefined, { cookie: retryCookie }));
-    expect(replay.headers.get("location")).toBe("/sign-in?error=authentication");
-  }
-  // Google's own refusal, duplicated parameters, and any SDK Location off the fixed list land on the sign-in error.
-  await fresh();
-  const denied = await f.dispatch(f.request("/api/auth/google/redirect", { next: "connect" })), deniedState = new URL((await denied.json()).url).searchParams.get("state")!;
-  expect((await f.dispatch(f.request(`/api/auth/callback/google?error=access_denied&state=${encodeURIComponent(deniedState)}`, undefined, { cookie: cookieOf(denied) }))).headers.get("location")).toBe("/sign-in?error=authentication");
-  const calls = f.sdk.mock.calls.length;
-  expect((await f.dispatch(f.request("/api/auth/callback/google?code=a&code=b&state=s"))).headers.get("location")).toBe("/sign-in?error=authentication");
-  expect(f.sdk.mock.calls.length).toBe(calls);
-  for (const location of ["https://foreign.example.test/connect", "//foreign.example.test/", "/connect?next=https://foreign.example.test", "/workspace/admin", `${f.origin}/connect#x`]) {
-    f.sdk.mockImplementationOnce(async () => new Response(null, { status: 302, headers: { location, "set-cookie": "better-auth.session_token=synthetic; Path=/; HttpOnly; SameSite=Lax" } }));
-    const projected = await f.dispatch(f.request("/api/auth/callback/google?code=synthetic&state=synthetic"));
-    expect(projected.headers.get("location")).toBe("/sign-in?error=authentication"); expect(projected.headers.getSetCookie()).toEqual([]);
-  }
-  // Only Google's authorization endpoint is ever handed to the browser.
-  for (const url of ["https://foreign.example.test/o/oauth2/v2/auth?state=x", "https://accounts.google.com.foreign.example.test/o/oauth2/v2/auth?x=1", "https://accounts.google.com/o/oauth2/other?x=1", "javascript:alert(1)"]) {
-    await fresh();
-    f.sdk.mockImplementationOnce(async () => Response.json({ url, redirect: false }));
-    const refused = await f.dispatch(f.request("/api/auth/google/redirect", {}));
-    expect(refused.status).toBe(503); expect(refused.headers.getSetCookie().some(value => value.startsWith("better-auth."))).toBe(false);
+  return seen;
+}
+async function startGoogle(f: Awaited<ReturnType<typeof fixture>>, body: Record<string, unknown>) {
+  await f.db.delete(schema.rateLimit);
+  const started = await f.dispatch(f.request("/api/auth/google/redirect", body));
+  expect(started.status).toBe(200);
+  const value = await started.json(); expect(Object.keys(value)).toEqual(["url"]);
+  const google = new URL(value.url);
+  return { google, state: google.searchParams.get("state")!, cookie: cookieOf(started), setCookies: started.headers.getSetCookie() };
+}
+const callbackPath = (state: string, extra = "") => `/api/auth/callback/google?code=synthetic-code&state=${encodeURIComponent(state)}${extra}`;
+
+test("redirect-mode Google: closed destinations, same-origin POST, Google's URL only, and a fixed landing after state and PKCE", async () => {
+  for (const origin of ["http://localhost:3000", "https://bneimitzvah.centralreform.org"]) {
+    const f = await fixture(origin), exchanged = googleTokenEndpoint(), secure = origin.startsWith("https:");
+    // The body names only a destination word; anything else is refused before the SDK.
+    for (const body of [{ next: "/connect" }, { next: "https://foreign.example.test" }, { next: ["connect"] }, { next: null }, { callbackURL: "https://foreign.example.test" }, { next: "connect", callbackURL: "/" }, { next: "connect", errorCallbackURL: "https://foreign.example.test" }])
+      expect((await f.dispatch(f.request("/api/auth/google/redirect", body))).status).toBe(400);
+    for (const [request, status] of [
+      [f.request("/api/auth/google/redirect", {}, { origin: "https://foreign.example.test" }), 403],
+      [f.request("/api/auth/google/redirect", {}, { "sec-fetch-site": "cross-site" }), 403],
+      [f.request("/api/auth/google/redirect", {}, { "X-Practice-Context": "opaque" }), 403],
+      [f.request("/api/auth/google/redirect?next=connect", {}), 400],
+      [f.request("/api/auth/google/redirect"), 405],
+      [f.request("/api/auth/callback/google", {}), 405],
+    ] as [Request, number][]) expect((await f.dispatch(request)).status).toBe(status);
+    expect(f.sdk.mock.calls.length).toBe(0);
+    for (const [body, landing, failure] of [[{}, "/", "/sign-in?error=authentication"], [{ next: "account" }, "/account", "/sign-in?intent=account&error=authentication"], [{ next: "connect" }, "/connect", "/connect?google=failed"]] as const) {
+      const first = await startGoogle(f, body);
+      expect(first.google.origin + first.google.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
+      expect(first.google.searchParams.get("redirect_uri")).toBe(`${origin}/api/auth/callback/google`);
+      expect(first.google.searchParams.get("code_challenge_method")).toBe("S256");
+      expect(first.cookie).toMatch(new RegExp(`(^|; )${secure ? "__Secure-" : ""}better-auth\\.state=`));
+      const remembered = first.setCookies.find(value => value.startsWith("portal_google_return="))!;
+      expect(remembered).toMatch(/; Path=\/api\/auth\/callback\/google; HttpOnly; SameSite=Lax; Max-Age=600/); expect(remembered.includes("; Secure")).toBe(secure);
+      // A return in a browser without this state cookie (the code may sit in a log) consumes the state:
+      // the starter's own cookie can no longer complete it, and Google's token endpoint is never called.
+      const before = exchanged.length, calls = f.sdk.mock.calls.length;
+      const foreign = await f.dispatch(f.request(callbackPath(first.state)));
+      expect(foreign.status).toBe(303); expect(foreign.headers.get("location")).toBe("/sign-in?error=authentication"); expect(foreign.headers.getSetCookie()).toEqual([]);
+      expect(f.sdk.mock.calls.length).toBe(calls);
+      const replay = await f.dispatch(f.request(callbackPath(first.state), undefined, { cookie: first.cookie }));
+      expect(replay.headers.get("location")).toBe(failure); expect(exchanged.length).toBe(before);
+      const second = await startGoogle(f, body);
+      const back = await f.dispatch(f.request(callbackPath(second.state, "&scope=openid%20email%20profile&authuser=0&prompt=consent"), undefined, { cookie: second.cookie }));
+      expect(back.status).toBe(303); expect(back.headers.get("location")).toBe(landing);
+      expect(createHash("sha256").update(exchanged.at(-1)?.get("code_verifier") ?? "").digest("base64url")).toBe(second.google.searchParams.get("code_challenge"));
+      expect(back.headers.getSetCookie().some(value => value.startsWith("portal_google_return=;") && value.includes("Max-Age=0"))).toBe(true);
+      expect((await f.dispatch(f.request("/api/session", undefined, { cookie: cookieOf(back) }))).status).toBe(200);
+      // The state is single use.
+      expect((await f.dispatch(f.request(callbackPath(second.state), undefined, { cookie: second.cookie }))).headers.get("location")).toBe(failure);
+    }
+    // Google's refusal goes back to where the person started; malformed, duplicated or unsigned state never reaches the SDK.
+    const denied = await startGoogle(f, { next: "connect" });
+    expect((await f.dispatch(f.request(`/api/auth/callback/google?error=access_denied&state=${encodeURIComponent(denied.state)}`, undefined, { cookie: denied.cookie }))).headers.get("location")).toBe("/connect?google=failed");
+    const calls = f.sdk.mock.calls.length;
+    for (const path of ["/api/auth/callback/google?code=a&code=b&state=s", "/api/auth/callback/google?code=synthetic", "/api/auth/callback/google?code=synthetic&state=short", `/api/auth/callback/google?code=synthetic&state=${"A".repeat(32)}`])
+      expect((await f.dispatch(f.request(path, undefined, { cookie: denied.cookie }))).headers.get("location")).toBe("/connect?google=failed");
+    const forged = await startGoogle(f, { next: "connect" }), stateCookie = forged.cookie.split("; ").find(value => value.includes("better-auth.state="))!;
+    expect(f.sdk.mock.calls.length).toBe(calls + 1); // the forged start itself
+    const tampered = stateCookie.replace(/=(.*)$/, () => `=${encodeURIComponent(`${forged.state}.${"A".repeat(43)}=`)}`);
+    expect((await f.dispatch(f.request(callbackPath(forged.state), undefined, { cookie: tampered }))).headers.get("location")).toBe("/sign-in?error=authentication");
+    expect(f.sdk.mock.calls.length).toBe(calls + 1);
+    // Any SDK Location off the fixed list, or an SDK failure, lands on the plain error with no cookies.
+    for (const location of ["https://foreign.example.test/connect", "//foreign.example.test/", "/connect?next=https://foreign.example.test", "/workspace/admin", `${origin}/connect#x`]) {
+      const started = await startGoogle(f, { next: "connect" });
+      f.sdk.mockImplementationOnce(async () => new Response(null, { status: 302, headers: { location, "set-cookie": `${secure ? "__Secure-" : ""}better-auth.session_token=synthetic; Path=/; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}` } }));
+      const projected = await f.dispatch(f.request(callbackPath(started.state), undefined, { cookie: started.cookie }));
+      expect(projected.headers.get("location")).toBe("/connect?google=failed");
+      expect(projected.headers.getSetCookie().some(value => value.includes("session_token"))).toBe(false);
+    }
+    const thrown = await startGoogle(f, { next: "account" });
+    f.sdk.mockImplementationOnce(async () => { throw new Error("synthetic-private-diagnostic"); });
+    const failed = await f.dispatch(f.request(callbackPath(thrown.state), undefined, { cookie: thrown.cookie }));
+    expect(failed.status).toBe(303); expect(failed.headers.get("location")).toBe("/sign-in?intent=account&error=authentication");
+    // Only Google's authorization endpoint is ever handed to the browser.
+    for (const url of ["https://foreign.example.test/o/oauth2/v2/auth?state=x", "https://accounts.google.com.foreign.example.test/o/oauth2/v2/auth?x=1", "https://accounts.google.com/o/oauth2/other?x=1", "javascript:alert(1)"]) {
+      await f.db.delete(schema.rateLimit);
+      f.sdk.mockImplementationOnce(async () => Response.json({ url, redirect: false }));
+      const refused = await f.dispatch(f.request("/api/auth/google/redirect", {}));
+      expect(refused.status).toBe(503); expect(refused.headers.getSetCookie().some(value => value.includes("better-auth."))).toBe(false);
+    }
+    vi.unstubAllGlobals();
   }
 });
 
-test("redirect-mode Google spends the popup challenge budget and needs a configured provider", async () => {
-  const f = await fixture();
+test("redirect-mode Google spends the popup challenge budget, keeps each return in its own SDK bucket, and needs a configured provider", async () => {
+  const f = await fixture(); googleTokenEndpoint();
   const first = await f.dispatch(f.request("/api/auth/google/redirect", {}));
   const browser = first.headers.getSetCookie().map(value => value.split(";")[0]).find(value => value.startsWith("portal_google_binding="))!;
   expect(browser).toBeTruthy();
   for (let index = 0; index < 4; index++) await f.dispatch(f.request("/api/auth/google/challenge", {}, { cookie: browser }));
   expect((await f.dispatch(f.request("/api/auth/google/redirect", {}, { cookie: browser }))).status).toBe(429);
+  // Each signed return uses a bucket derived from its own state, never the shared sign-in bucket.
+  const a = await startGoogle(f, {}), b = await startGoogle(f, {});
+  const start = (f.sdk.mock.calls.at(-1)![0] as Request).headers.get(AUTH_RATE_LIMIT_HEADER);
+  await f.dispatch(f.request(callbackPath(a.state), undefined, { cookie: a.cookie }));
+  const bucketA = (f.sdk.mock.calls.at(-1)![0] as Request).headers.get(AUTH_RATE_LIMIT_HEADER);
+  await f.dispatch(f.request(callbackPath(b.state), undefined, { cookie: b.cookie }));
+  const bucketB = (f.sdk.mock.calls.at(-1)![0] as Request).headers.get(AUTH_RATE_LIMIT_HEADER);
+  expect(new Set([start, bucketA, bucketB]).size).toBe(3);
   const absent = await fixture(undefined, false);
   expect((await absent.dispatch(absent.request("/api/auth/google/redirect", {}))).status).toBe(503);
   const back = await absent.dispatch(absent.request("/api/auth/callback/google?code=synthetic&state=synthetic"));

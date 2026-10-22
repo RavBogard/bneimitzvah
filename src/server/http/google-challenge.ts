@@ -49,6 +49,8 @@ export function createGoogleChallenges<Q extends PgQueryResultHKT>(input: { db: 
         .onConflictDoUpdate({ target: rateLimit.key, set: { count: sql`${rateLimit.count} + 1` }, setWhere: lt(rateLimit.count, max) }).returning({ id: rateLimit.id });
       if (result.length !== 1) throw new GoogleChallengeLimited();
     }
+    const oldBudgets = await tx.select({ id: rateLimit.id }).from(rateLimit).where(and(like(rateLimit.id, `${BUDGET}%`), lt(rateLimit.lastRequest, current - 3_600_000))).limit(100);
+    if (oldBudgets.length) await tx.delete(rateLimit).where(and(like(rateLimit.id, `${BUDGET}%`), inArray(rateLimit.id, oldBudgets.map(row => row.id))));
   }
   return Object.freeze({
     clear: () => cookie("", 0),
@@ -66,8 +68,6 @@ export function createGoogleChallenges<Q extends PgQueryResultHKT>(input: { db: 
         await spend(tx, browser, current);
         const expired = await tx.select({ id: verification.id }).from(verification).where(and(like(verification.id, `${PREFIX}%`), lt(verification.expiresAt, new Date(current)))).limit(100);
         if (expired.length) await tx.delete(verification).where(and(like(verification.id, `${PREFIX}%`), inArray(verification.id, expired.map(row => row.id)), lt(verification.expiresAt, new Date(current))));
-        const oldBudgets = await tx.select({ id: rateLimit.id }).from(rateLimit).where(and(like(rateLimit.id, `${BUDGET}%`), lt(rateLimit.lastRequest, current - 3_600_000))).limit(100);
-        if (oldBudgets.length) await tx.delete(rateLimit).where(and(like(rateLimit.id, `${BUDGET}%`), inArray(rateLimit.id, oldBudgets.map(row => row.id))));
         await tx.insert(verification).values({ id: PREFIX + challengeId, identifier: PREFIX + hmac([browser, challengeId]),
           value: JSON.stringify({ version: 1, nonce, csrfHash: hash(csrfToken).toString("hex"), origin: input.origin, next, issuedAt: current }), expiresAt: new Date(current + LIFETIME) });
       });
