@@ -73,7 +73,7 @@ describe("undoing a wrong Maven link", () => {
     expect(await audits()).toHaveLength(1);
     // The plan made before the unlink is refused as changed; nothing is written and the link does not come back.
     const replay = await apply(rows, stale.planToken, [{ row: 1, action: "update" }]);
-    expect(replay).toMatchObject({ ok: false, code: "conflict" });
+    expect(replay).toMatchObject({ ok: false, code: "plan-token-refused" });
     expect(await identities()).toHaveLength(1);
     // Proposed again, the row is open: the rabbi says it is a new student this time.
     const fresh = await propose(rows);
@@ -95,6 +95,30 @@ describe("undoing a wrong Maven link", () => {
     expect(final[0].revokedAt).toEqual(first.revokedAt);
     expect(await audits()).toHaveLength(2);
     expect((await propose(rows)).unchangedRows).toEqual([1]);
+  });
+
+  it("never lets the plan that made a link, or created a student, make it again after an unlink", async () => {
+    const { t, propose, apply, unlink, identities, owner } = await setup();
+    const rows = [unrelated(1), contact(2, { LastName: "Newcomer" })], plan = await propose(rows);
+    const choices = [{ row: 1, action: "link", studentId: t.f.students[2].id }, { row: 2, action: "create", studentKind: "child", serviceSlot: "unknown" }];
+    const applied = await apply(rows, plan.planToken, choices);
+    expect(applied.rows.map((r: { outcome: string }) => r.outcome)).toEqual(["linked", "created"]);
+    // Re-applying before any unlink is still reported as done, not written twice.
+    expect((await apply(rows, plan.planToken, choices)).rows.map((r: { outcome: string }) => r.outcome)).toEqual(["already-applied", "already-applied"]);
+    const created = applied.rows[1].studentId as string, students = async () => (await owner(() => t.f.db.select({ id: s.student.id }).from(s.student))).length;
+    const count = await students();
+    // The exact-match link changed no fields, so after the unlink the row looks as it did before it was linked.
+    expect((await unlink(t.f.students[2].id, sfid(1))).ok).toBe(true);
+    expect(await apply(rows, plan.planToken, choices)).toMatchObject({ ok: false, code: "plan-token-refused" });
+    expect(await apply(rows, plan.planToken, [choices[0]])).toMatchObject({ ok: false, code: "plan-token-refused" });
+    // Unlinking the created student's record too: the old plan cannot create a second student either.
+    expect((await unlink(created, sfid(2))).ok).toBe(true);
+    expect(await apply(rows, plan.planToken, [choices[1]])).toMatchObject({ ok: false, code: "plan-token-refused" });
+    expect(await students()).toBe(count);
+    expect((await identities()).every(r => r.revokedAt !== null)).toBe(true);
+    // A new proposal, shown to the rabbi, is what links again.
+    const fresh = await propose(rows);
+    expect((await apply(rows, fresh.planToken, [{ row: 2, action: "link", studentId: created }])).rows[0].outcome).toBe("linked");
   });
 
   it("is an attended admin roster tool only: study, read-only, tutor and routine connections neither see nor reach it", async () => {

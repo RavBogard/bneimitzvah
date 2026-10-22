@@ -68,3 +68,11 @@ test("0033 makes Maven links revocable once, keeps every existing link current a
     expect(triggers.rows).toEqual([{ tgname: "student_source_identity_revoke_once" }]);
   } finally { await client.close(); await isolation.cleanup(); }
 });
+
+test("every migration is stamped later than the one before it, so the migrator never skips one as already past", async () => {
+  const journal = JSON.parse(await readFile(join("src/server/db/migrations", "meta/_journal.json"), "utf8")) as { entries: { idx: number; when: number; tag: string }[] };
+  journal.entries.forEach((entry, i) => {
+    expect(entry.idx).toBe(i);
+    if (i) expect(entry.when, entry.tag).toBeGreaterThan(journal.entries[i - 1].when);
+  });
+});

@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import * as s from "../db/index";
@@ -17,6 +17,14 @@ export async function sourceIdentities<Q extends PgQueryResultHKT>(tx: AccessTra
   return tx.select({ sourceRecordId: t.sourceRecordId, studentId: t.studentId, linkKind: t.linkKind }).from(t)
     .where(and(eq(t.tenantId, tenantId), eq(t.sourceNamespace, namespace), isNull(t.revokedAt)))
     .orderBy(asc(t.sourceRecordId)).limit(5001);
+}
+/**
+ * How many links of one namespace have ever been undone. It only grows (a revocation is permanent and rows are never
+ * deleted), so a roster plan binds it and apply refuses the plan once any unlink has happened since the proposal.
+ */
+export async function revokedSourceIdentityCount<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, namespace: string) {
+  const [row] = await tx.select({ n: sql<number>`count(*)::int` }).from(t).where(and(eq(t.tenantId, tenantId), eq(t.sourceNamespace, namespace), isNotNull(t.revokedAt)));
+  return Number(row?.n ?? 0);
 }
 export async function insertSourceIdentity<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, row: typeof s.studentSourceIdentity.$inferInsert) {
   const [created] = await tx.insert(t).values(row).returning({ id: t.id });

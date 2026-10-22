@@ -14,10 +14,10 @@ export async function liveConnections<Q extends PgQueryResultHKT>(tx: AccessTran
     .where(and(eq(c.tenantId, tenantId), isNull(c.revokedAt), gt(c.expiresAt, now), ...(membershipId ? [eq(c.membershipId, membershipId)] : [])))
     .orderBy(desc(c.createdAt), desc(c.id)).limit(101);
 }
-/** The connection row, locked for update before a revocation. */
-export async function lockConnectionForRevoke<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, connectionId: string) {
+/** The connection row, locked for update before a revocation; only the given membership's when one is named, so no other row is ever locked. */
+export async function lockConnectionForRevoke<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, connectionId: string, membershipId?: string) {
   const [row] = await tx.select({ id: c.id, membershipId: c.membershipId, createdAt: c.createdAt, expiresAt: c.expiresAt, revokedAt: c.revokedAt }).from(c)
-    .where(and(eq(c.tenantId, tenantId), eq(c.id, connectionId))).for("update");
+    .where(and(eq(c.tenantId, tenantId), eq(c.id, connectionId), ...(membershipId ? [eq(c.membershipId, membershipId)] : []))).for("update");
   return row ?? null;
 }
 /**

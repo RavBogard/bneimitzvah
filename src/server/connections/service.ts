@@ -58,7 +58,7 @@ export function createClaudeConnectionsService<Q extends PgQueryResultHKT>(input
       if (typeof connectionId !== "string" || !UUID.test(connectionId)) throw new AccessDenied(404);
       return input.access.withVerifiedIdentity(request, { intent: "data-write", mutation: true, fresh: true }, async (tx, identity) => {
         const actor = await staff(tx, identity, "data-write");
-        const connection = await data.lockConnectionForRevoke(tx, identity.tenantId, connectionId);
+        const connection = await data.lockConnectionForRevoke(tx, identity.tenantId, connectionId, actor.role === "admin" ? undefined : actor.membershipId);
         // Another congregation's, a missing one, or (for a tutor) someone else's all look the same.
         if (!connection || (actor.role !== "admin" && connection.membershipId !== actor.membershipId)) throw new AccessDenied(404);
         if (connection.revokedAt || connection.expiresAt.getTime() <= now()) return Object.freeze({ ok: true as const, ended: false });

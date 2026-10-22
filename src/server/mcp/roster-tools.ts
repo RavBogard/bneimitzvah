@@ -3,7 +3,7 @@ import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { AccessDenied } from "../access/errors";
 import type { AccessTransaction } from "../access/types";
 import * as data from "../data/roster";
-import { insertSourceIdentity, lockRosterIntake, MAVEN_NAMESPACE, sourceIdentities, unlinkSourceIdentity } from "../data/roster-source";
+import { insertSourceIdentity, lockRosterIntake, MAVEN_NAMESPACE, revokedSourceIdentityCount, sourceIdentities, unlinkSourceIdentity } from "../data/roster-source";
 import { lockRabbi } from "../study-guides/authority";
 import { decodeMavenRosterContacts, mavenRosterQuery, type MavenContactFacts, type MavenRosterIssue } from "../students/maven-roster";
 import {
@@ -132,12 +132,14 @@ export function createRosterTools<Q extends PgQueryResultHKT>(): readonly Tool<Q
         const facts = decoded.contacts;
         return ctx.mcp.withLive(ctx.actor, "read", async (tx, live) => {
           requireAdmin(live);
+          // Read before the snapshot: an unlink committing in between can only make the plan look stale, never fresh.
+          const unlinked = await revokedSourceIdentityCount(tx, live.tenantId, MAVEN_NAMESPACE);
           const { students, identities } = await snapshot(tx, live.tenantId);
           const plan = planMavenIntake({ tenantId: live.tenantId, facts, students, identities });
           if (!plan.ok) return { ok: false, code: "roster-unreadable", hint: "A portal student record does not pass the roster's validation; fix it in the portal, then propose again." };
           const byId = new Map(students.map(st => [st.id, st])), counts: Record<string, number> = {};
           for (const row of plan.rows) counts[row.kind] = (counts[row.kind] ?? 0) + 1;
-          const sealed = facts.length ? ctx.mcp.sealRosterPlan(live, { v: 1, start: input.start, end: input.end, facts: factsDigest(facts), rows: rowDigests(plan.rows) }) : null;
+          const sealed = facts.length ? ctx.mcp.sealRosterPlan(live, { v: 1, start: input.start, end: input.end, facts: factsDigest(facts), rows: rowDigests(plan.rows), unlinked }) : null;
           return { ok: true, window: { start: input.start, end: input.end }, mavenRows: facts.length, counts,
             rows: plan.rows.filter(row => row.kind !== "unchanged").map(row => reviewRow(row, facts[row.row - 1], byId)),
             unchangedRows: plan.rows.filter(row => row.kind === "unchanged").map(row => row.row),
@@ -186,7 +188,7 @@ async function applyRosterChanges<Q extends PgQueryResultHKT>(input: Record<stri
   const decoded = decodeMavenRosterContacts({ start: input.start, end: input.end }, input.mavenResult);
   if (!decoded.ok) return refusedMaven(decoded.issues);
   const facts = decoded.contacts, claim = ctx.mcp.openRosterPlan(ctx.actor, input.planToken);
-  if (!claim || claim.v !== 1 || claim.start !== input.start || claim.end !== input.end || claim.facts !== factsDigest(facts)
+  if (!claim || claim.v !== 1 || !Number.isSafeInteger(claim.unlinked) || claim.start !== input.start || claim.end !== input.end || claim.facts !== factsDigest(facts)
     || typeof claim.rows !== "string" || claim.rows.length !== facts.length * ROW_DIGEST_LENGTH)
     return { ok: false, code: "plan-token-refused", hint: "The plan token has expired, or it is not for this connection, this window or this Maven result. Call propose_roster_changes again and show the rabbi the new table." };
   const parsed = parseChoices(input.choices, facts.length);
@@ -197,6 +199,10 @@ async function applyRosterChanges<Q extends PgQueryResultHKT>(input: Record<stri
       requireAdmin(live); if (live.unattended) throw new AccessDenied(403);
       await lockRabbi(tx, live.tenantId, live.membershipId, { roleGrantId: live.roleGrantId, roleGrantRevision: live.roleGrantRevision, authorityRevision: live.authorityRevision });
       await lockRosterIntake(tx, live.tenantId, MAVEN_NAMESPACE);
+      // An unlink since the proposal ends the plan: once a link is undone, a row's state can look exactly as it did before
+      // the link was made, so an old plan replayed would quietly make the undone link again (or recreate a student).
+      if (await revokedSourceIdentityCount(tx, live.tenantId, MAVEN_NAMESPACE) !== claim.unlinked)
+        return { ok: false, code: "plan-token-refused", hint: "A Maven link was undone after this proposal, so nothing was written. Call propose_roster_changes again and show the rabbi the new table." };
       const { students, identities } = await snapshot(tx, live.tenantId);
       const plan = planMavenIntake({ tenantId: live.tenantId, facts, students, identities }), linkKind = new Map(identities.map(i => [i.sourceRecordId, i.linkKind]));
       if (!plan.ok) return { ok: false, code: "roster-unreadable", hint: "A portal student record does not pass the roster's validation; fix it in the portal, then propose again." };
