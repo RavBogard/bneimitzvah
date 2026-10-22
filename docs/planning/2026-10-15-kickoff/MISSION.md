@@ -5,6 +5,17 @@ Filed 2026-10-15 from the kickoff interview in Cowork. This is the authority doc
 **Amended 2026-10-16:** Daniel's later rulings 27–59 in [PLAN-REVIEW.md](../2026-10-16-review/PLAN-REVIEW.md#1-rulings-from-this-session-daniel-binding-2026-10-16) are folded in below. Original numbering and dated decisions are retained; that review preserves the earlier wording and interview record. Its section 3 mechanisms remain proposals, subject to Astra's integration corrections and bounded design review. These requirements do not claim completed implementation.
 
 ## Current 1.0 scope — Daniel, 2026-10-17
+**Amended 2026-10-22 (Daniel, show rather than hide; alpha and beta):** Daniel, verbatim: "It can all go live, even before my listen. The site is in alpha right now. 1.5 release will be beta. We will be in beta until 2.0. also, as a general rule, we should always fault on the side of showing rather than hiding. Eg, provide the trope and chanting, show the text to alogged out user, etc...." His answers to the follow-up questions, the same day, bind as follows:
+- **Human recordings go live now, before any listening review.** PocketTorah reference audio and Cantor Finkel's recordings play for students, families and staff without waiting for Daniel's listen. Finkel: the producer's chosen take only. No listening review is required for human recordings; bad cuts are fixed as they are found.
+- **Generated chant keeps G3.** The trope engine's synthesized chant stays held until Daniel passes the listening review (ruling 17 and the G3 boundary are unchanged). Once it passes, it fills the verses that have no human recording; human recordings always come first.
+- **Signed-out visitors see** the Hebrew text with trope, the JPS 2023 translation (Daniel: CRC's licence allows public display), the human reference recordings, and the study tools (trope explanations, word aids, the tikkun view, "this word elsewhere"). Public pages ask search engines not to index them until beta.
+- **People stay private.** Show-rather-than-hide applies to texts, audio and tools. Anything about a student, family, tutor note, assignment or date stays visible only to that family and staff, as before.
+- **Notifications stay off** until Daniel says to switch them on.
+- **No alpha or beta label** on screen.
+- **Spend:** Claude may approve new hosting cost while total portal spend stays under $10 a month, logging each item in STATE.md; anything that would push the total past $10 a month goes to Daniel.
+- **The 18 special-Shabbat and festival haftarot with no recording** stay text-only for now (no upload feature, no new recordings requested).
+- **Default for new questions:** when a choice is between showing and hiding a text, a recording or a tool, show it.
+
 **Amended 2026-10-22 (Daniel, Cantor Finkel's recordings):** Daniel, verbatim: "Let's get it finished. I have Finkel license done... He's given us all recordings unrestricted." Cantor Josh Finkel's recording collection is licensed to the portal without restriction. This settles the open cantor-licence item (credit, honorarium and withdrawal terms are no longer blocking). Finish the Finkel integration: private storage, playback beside PocketTorah, and inclusion in Daniel's listening review. Unchanged: recordings never enter the public repository; student playback of any reference audio still follows Daniel's listening acceptance; G3 applies only to generated chant.
 
 **Amended 2026-10-20 (Daniel, adult honors):** Adult Beit Mitzvah students may manage their own honors form and their honorees' private blessing links, with staff oversight, with the same capabilities a parent has for a child. This applies to their own student record; child students and delegated child-practice views gain no honors-management authority. Existing staff oversight and private-link safeguards remain. This resolves the earlier adult self-edit policy hold; reviewed implementation and release checks still precede availability.
@@ -118,8 +129,8 @@ The 1.0 gate is a real CRC student and a real tutor using it for a real reading 
 
 - The haftarah repo is not touched by this project except: (a) the subtree extraction of `trope/` reads its history; (b) the haftarah Wave 6 engine package, when it exists, becomes a dependency. The printed sheet's golden stays byte-identical; this project never needs it to change.
 - Nothing licensed or personal in the public repo (ruling 24).
-- Hosting cap (ruling 22). Money interrupts Daniel.
-- The G3 gate (ruling 17) is not negotiable; no student hears generated chant before it.
+- Hosting cap (ruling 22). Money interrupts Daniel above the $10-a-month total (amended 2026-10-22).
+- The G3 gate (ruling 17) is not negotiable; no student hears generated chant before it. It covers generated chant only; human recordings are released (amended 2026-10-22).
 - Dependency rule: the engine folder (`trope/`) stays dependency-free Node + its vendored, licensed copies with `PROVENANCE.md`, as on the branch. The Next.js app may take pinned dependencies; it never imports from the engine's Python side.
 
 ## Authority: who decides what
