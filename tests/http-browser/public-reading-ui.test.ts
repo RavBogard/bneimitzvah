@@ -13,6 +13,8 @@ import { expandReadingRanges } from "../../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { browserFixture } from "./fixture";
+import { createSefariaCommentaryReader } from "../../src/server/study/commentary";
+import { syntheticCommentaryFetch } from "../helpers/commentary";
 import { installLoopbackFetchGuard } from "./egress";
 import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from "./server";
 vi.mock("server-only", () => ({}));
@@ -38,7 +40,7 @@ beforeAll(async () => {
   const shorts = await syntheticShortReferences(catalog, [{ asset, bytes: tone.bytes, physicalFrames: tone.physicalFrames }]);
   for (const row of shorts.sources) shortBodies.set(row.path, row.bytes);
   fixture = await browserFixture({ studyLoad: async request => syntheticUiStudyPage(request), referenceCatalogLoad: async () => catalog, referenceShortManifestLoad: async () => shorts.manifest,
-    referenceStudentRelease: true });
+    referenceStudentRelease: true, commentaryLoad: createSefariaCommentaryReader({ fetch: syntheticCommentaryFetch() as typeof globalThis.fetch }) });
   stop = await startBrowserServer(fixture.withRuntime, fixture.withPublicRuntime);
   browser = await chromium.launch({ headless: true });
 }, 120000);
@@ -124,7 +126,13 @@ it("the public API answers the visitor directly, with noindex and no cookie, and
     const week = await fetch(`/api/public/reading?date=${date}`, { credentials: "omit" });
     const finkel = await fetch(`/api/public/reference/finkel/media/${"0".repeat(64)}.mp3`, { credentials: "omit" });
     const session = await fetch("/api/public/session", { credentials: "omit" });
-    return { status: week.status, robots: week.headers.get("x-robots-tag"), cookie: week.headers.get("set-cookie"), finkel: finkel.status, session: session.status };
+    const rashi = await fetch("/api/public/commentary?work=rashi&chapter=Genesis+1", { credentials: "omit" });
+    const rashiBody = await rashi.json() as { work: string; verses: Record<string, { comments: { hebrew: { text: string }[] }[] }> };
+    const unregistered = await fetch("/api/public/commentary?work=ramban&chapter=Genesis+1", { credentials: "omit" });
+    return { status: week.status, robots: week.headers.get("x-robots-tag"), cookie: week.headers.get("set-cookie"), finkel: finkel.status, session: session.status,
+      rashi: { status: rashi.status, cdn: rashi.headers.get("vercel-cdn-cache-control"), cookie: rashi.headers.get("set-cookie"), work: rashiBody.work,
+        verses: Object.keys(rashiBody.verses), first: rashiBody.verses["1"]?.comments[0].hebrew[0].text }, unregistered: unregistered.status };
   });
-  expect(result).toEqual({ status: 200, robots: "noindex, nofollow", cookie: null, finkel: 404, session: 404 });
+  expect(result).toEqual({ status: 200, robots: "noindex, nofollow", cookie: null, finkel: 404, session: 404,
+    rashi: { status: 200, cdn: "public, s-maxage=2592000", cookie: null, work: "rashi", verses: ["1", "3"], first: "אָב גַּד." }, unregistered: 400 });
 });
