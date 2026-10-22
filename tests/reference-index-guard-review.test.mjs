@@ -22,7 +22,10 @@ test("independent reference guard decodes every character and nested/BOM/line fr
     assert.ok(entryProblems(`src/synthetic.${extension}`, `\ufeff${nested}`).includes(PRIVATE));
     for (const text of [`export const schema = ${JSON.stringify(schema)};`, `const example = ${JSON.stringify(encoded)};`, `// ${nested}\nexport {};`]) assert.deepEqual(entryProblems(`src/synthetic.${extension}`, text), []);
   }
-  for (const value of [{ schema: `${schema}-extra` }, { schema: `prefix-${schema}` }, { schema: "pockettorah-verse-index/v10" }, { Schema: schema }, { note: encoded }]) assert.equal(privateBenchmarkProblem(JSON.stringify(value), true), null);
+  for (const value of [{ schema: `${schema}-extra` }, { schema: `prefix-${schema}` }, { schema: "pockettorah-verse-index/v10" }, { schema: "pockettorah-verse-index/v20" }, { schema: "pockettorah-verse-index/v3" }, { Schema: schema }, { note: encoded }]) assert.equal(privateBenchmarkProblem(JSON.stringify(value), true), null);
+  // Index v2 is decoded and classified like v1, through escapes and nesting.
+  const v2 = "pockettorah-verse-index/v2", encodedV2 = `{"${escape("schema")}":"${escape(v2)}"}`;
+  for (const text of [encodedV2, `{"__proto__":{"payload":[${encodedV2}]}}`, `﻿[null,${encodedV2}]`]) assert.equal(privateBenchmarkProblem(text, true), PRIVATE);
 });
 
 test("independent reference guard retains fail-closed shared budgets and private path first classification", () => {

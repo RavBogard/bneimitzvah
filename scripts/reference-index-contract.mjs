@@ -132,6 +132,32 @@ export function validateIndex(index, { verseCounts = null } = {}) {
   return done();
 }
 
+/**
+ * A v2 index is v1 with refined word times: the same recordings, verses, clips, words, labels and review
+ * states, and every word's ctcStart equal to the v1 start. Anything else is a problem {code, at}
+ * (structural location only). This ties the move window to the real CTC onsets, not to the v2 file alone.
+ */
+export function checkV2AgainstV1(v1, v2) {
+  const problems = [], at = (r, v, k) => [r, v, k].filter(x => x !== undefined).join("/");
+  const plainVerse = v => { const { words: _words, ...rest } = v; return JSON.stringify(rest); };
+  const plainRecording = r => { const { verses: _verses, ...rest } = r; return JSON.stringify(rest); };
+  if (!isObject(v1) || !isObject(v2) || v1.schema !== INDEX_SCHEMA || v2.schema !== INDEX_SCHEMA_V2 || !Array.isArray(v1.recordings) || !Array.isArray(v2.recordings)
+    || v1.recordings.length !== v2.recordings.length || v1.source !== v2.source) return [{ code: "v2-envelope", at: "index" }];
+  v1.recordings.forEach((a, i) => {
+    const b = v2.recordings[i], rat = isObject(a) && typeof a.key === "string" && KEY.test(a.key) ? a.key : `recording#${i}`;
+    if (!isObject(a) || !isObject(b) || !Array.isArray(a.verses) || !Array.isArray(b.verses) || plainRecording(a) !== plainRecording(b) || a.verses.length !== b.verses.length) return problems.push({ code: "v2-recording", at: rat });
+    a.verses.forEach((v, j) => {
+      const w = b.verses[j], vat = at(rat, `verse#${j}`);
+      if (!isObject(v) || !isObject(w) || !Array.isArray(v.words) || !Array.isArray(w.words) || plainVerse(v) !== plainVerse(w) || v.words.length !== w.words.length) return problems.push({ code: "v2-verse", at: vat });
+      v.words.forEach((x, k) => {
+        const y = w.words[k];
+        if (!isObject(x) || !isObject(y) || x.he !== y.he || x.label !== y.label || y.ctcStart !== x.start) problems.push({ code: "v2-word", at: at(rat, `verse#${j}`, `w${k}`) });
+      });
+    });
+  });
+  return problems;
+}
+
 function checkRecording(r, at, fail, keyCount, fileCount, verseCounts, v2 = false) {
   if (!isObject(r)) return fail("recording-not-object", at);
   for (const k of Object.keys(r)) if (!RECORDING_FIELDS.has(k)) fail("unknown-field", `${at}.${safeKey(k)}`);
@@ -208,9 +234,11 @@ function checkRecording(r, at, fail, keyCount, fileCount, verseCounts, v2 = fals
         else {
           if (finite(v.start) && finite(v.end) && (w.ctcStart < v.start - TOLERANCES.EPSILON || w.ctcStart >= v.end)) fail("word-ctc-outside-verse", wat);
           if (isObject(prevW) && finite(prevW.ctcStart) && !(w.ctcStart > prevW.ctcStart)) fail("word-ctc-order", wat);
-          if (finite(w.start) && (w.start < w.ctcStart - WORD_MOVE_BOUNDS.backS - TOLERANCES.EPSILON || w.start > w.ctcStart + WORD_MOVE_BOUNDS.forwardS + TOLERANCES.EPSILON)) fail("word-move-out-of-bounds", wat);
+          // Both times sit on the 1 ms grid, so the window is exact (float slack only), not EPSILON wide.
+          if (finite(w.start) && (w.start < w.ctcStart - WORD_MOVE_BOUNDS.backS - 1e-6 || w.start > w.ctcStart + WORD_MOVE_BOUNDS.forwardS + 1e-6)) fail("word-move-out-of-bounds", wat);
         }
-        if (!finite(w.end) || !finite(w.start) || !(w.end > w.start)) fail("word-end", wat);
+        // An end must stay after its start on the DTO's 1 ms grid too, or the client would refuse the catalog.
+        if (!finite(w.end) || !finite(w.start) || !(w.end > w.start) || !(ms(w.end) > ms(w.start))) fail("word-end", wat);
         else if (nextW !== undefined ? !isObject(nextW) || !finite(nextW.start) || w.end > nextW.start : !finite(v.end) || w.end > v.end) fail("word-end-overlap", wat);
       }
     });

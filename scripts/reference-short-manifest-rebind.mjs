@@ -111,6 +111,8 @@ export async function rebindShortManifest(config) {
   let runtime, work;
   try {
     await mkdir(join(ROOT, ".local-logs"), { recursive: true });
+    const logs = await lstat(join(ROOT, ".local-logs"));
+    if (logs.isSymbolicLink() || !logs.isDirectory() || await realpath(join(ROOT, ".local-logs")) !== join(ROOT, ".local-logs")) fail("path");
     runtime = await mkdtemp(join(ROOT, ".local-logs/rebind-runtime-"));
     await run(compiler, shortBuildCompilerArgs(runtime), iso.env, 4 * MiB);
     await mkdir(out, { mode: 0o700 });
@@ -146,7 +148,13 @@ export async function rebindShortManifest(config) {
     await writeFile(join(out, "rebind-report.json"), JSON.stringify(report, null, 1) + "\n", { flag: "wx", mode: 0o600 });
     return report;
   } finally {
-    for (const path of [runtime, work]) if (path) await rm(path, { recursive: true, force: true });
+    // Remove only real directories directly inside their expected parents (no links, no escapes).
+    for (const [path, parent] of [[runtime, join(ROOT, ".local-logs")], [work, out]]) {
+      if (!path) continue;
+      const s = await lstat(path), real = await realpath(path), home = await realpath(parent);
+      if (s.isSymbolicLink() || !s.isDirectory() || real !== resolve(path) || dirname(real) !== home) continue;
+      await rm(path, { recursive: true, force: true });
+    }
     await iso.cleanup();
   }
 }

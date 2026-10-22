@@ -9,7 +9,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { isolatedEnv } from "./helpers/isolatedEnv.mjs";
 import {
-  INDEX_SCHEMA, INDEX_SCHEMA_V2, WORD_MOVE_BOUNDS, REVIEW_STATES, validateIndex, crosswalkWords, applyOverride, buildVerseDto,
+  INDEX_SCHEMA, INDEX_SCHEMA_V2, WORD_MOVE_BOUNDS, REVIEW_STATES, validateIndex, checkV2AgainstV1, crosswalkWords, applyOverride, buildVerseDto,
   parseVerseRef, parseRangeRef, indexWordsDigestInput, portalWordsDigestInput,
 } from "../scripts/reference-index-contract.mjs";
 import { measure, parseArgs, expectedKeys, verseCountsFrom } from "../scripts/reference-index-check.mjs";
@@ -412,4 +412,34 @@ test("v2 DTO: ends ride beside starts on the 1 ms grid; merged words end where t
   // Playback-only verses (text mismatch) carry no word timing at all.
   const mismatch = buildVerseDto({ recording: r, verse: r.verses[1], asset: ASSET, portal: ready("Genesis 1:1") });
   assert.equal(mismatch.words.status, "unavailable");
+});
+
+test("v2 index: the move window is exact on the 1 ms grid, and a word that collapses on that grid is refused", () => {
+  for (const [delta, ok] of [[-0.121, false], [0.061, false]]) {
+    const r = v2Recording(); const w = r.verses[1].words[1];
+    w.start = +(w.ctcStart + delta).toFixed(3);
+    assert.equal(codes(validateIndex(indexV2(r))).includes("word-move-out-of-bounds"), !ok, String(delta));
+  }
+  const tiny = v2Recording(); const w = tiny.verses[0].words[0];
+  w.start = 1.0801; w.end = 1.0804;
+  assert.ok(codes(validateIndex(indexV2(tiny))).includes("word-end"));
+});
+
+test("v2 index is bound to its v1 source: only word times may differ, and ctcStart is the v1 start", () => {
+  const v1 = index(), v2 = indexV2();
+  assert.deepEqual(checkV2AgainstV1(v1, v2), []);
+  const cases = [
+    x => { x.recordings[0].verses[0].words[0].ctcStart += 0.01; x.recordings[0].verses[0].words[0].start += 0.01; },
+    x => { x.recordings[0].verses[0].words[1].he = "אאא"; },
+    x => { x.recordings[0].verses[0].end = 4.1; },
+    x => { x.recordings[0].verses[0].words.pop(); },
+    x => { x.recordings[0].seconds = 31; },
+    x => { x.recordings[0].verses[1].words[0].label = 1; },
+    x => { x.recordings.push(v2Recording({ key: "Beta-1" })); },
+    x => { x.schema = INDEX_SCHEMA; },
+  ];
+  for (const mutate of cases) { const x = JSON.parse(JSON.stringify(v2)); mutate(x); assert.notDeepEqual(checkV2AgainstV1(v1, x), [], mutate.toString()); }
+  // Problems name structure only, never text.
+  const bad = JSON.parse(JSON.stringify(v2)); bad.recordings[0].verses[0].words[1].he = "אאא";
+  assert.deepEqual(checkV2AgainstV1(v1, bad), [{ code: "v2-word", at: "Alpha-1/verse#0/w1" }]);
 });

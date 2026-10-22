@@ -165,7 +165,7 @@ export async function boundaryMetricsFiles(argv) {
   const report = { schema: "reference-boundary-metrics/v1", metric: METRIC, levels: LEVELS, versions: [] };
   indexes.forEach((ix, n) => {
     const verses = measured.flatMap(r => r[n]);
-    const label = keys.map(k => byKey[n].get(k)).filter(r => r.wordLabelsMatched).map(r => r.verses.flatMap(v => v.words.map(w => [w.start, w.label])));
+    const label = keys.map(k => byKey[n].get(k)).filter(r => r.wordLabelsMatched).map(r => r.verses.flatMap(v => v.words.filter(w => typeof w.label === "number").map(w => [w.start, w.label])));
     report.versions.push({ schema: ix.schema, all: aggregate(verses), stress: { refs: stress.size, ...aggregate(verses.filter(v => stress.has(v.ref))) }, M2: labelAgreement(label) });
   });
   await mkdir(resolve(a.out), { recursive: true });

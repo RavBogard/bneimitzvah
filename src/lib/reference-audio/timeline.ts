@@ -43,9 +43,9 @@ export function currentReferenceWord(timeline: ReferenceTimeline | null, sourceS
 }
 export function referenceVerseLoop(timeline: ReferenceTimeline | null): SourceSecondsRange | null { return Timeline.valid(timeline) ? timeline.clip : null; }
 
-/** [start, end) with the index's measured end (v2), else the onset interval [start, next onset) or
- * [last onset, verse end). Ends are measured from the audio, never fabricated; without one, a gap
- * after an onset belongs to its interval. Highlighting (currentReferenceWord) still follows onsets. */
+/** [start, end) with the index's word end (v2), else the onset interval [start, next onset) or
+ * [last onset, verse end). A v2 end is either a fade-out measured in the audio or simply the next
+ * onset; none is fabricated. Highlighting (currentReferenceWord) still follows onsets. */
 export function referenceWordLoop(timeline: ReferenceTimeline | null, wordIndex: number): SourceSecondsRange | null {
   if (!Timeline.valid(timeline) || !timeline.starts || !Number.isInteger(wordIndex) || wordIndex < 0 || wordIndex >= timeline.starts.length) return null;
   return Object.freeze({ start: timeline.starts[wordIndex], end: timeline.ends?.[wordIndex] ?? timeline.starts[wordIndex + 1] ?? timeline.clip.end });

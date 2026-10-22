@@ -20,8 +20,9 @@ export const REFERENCE_WORD_REASONS = Object.freeze([
 ] as const);
 export type ReferenceWordReason = typeof REFERENCE_WORD_REASONS[number];
 export type SourceSecondsRange = Readonly<{ start: number; end: number }>;
-/** ends (index v2) are measured word ends: each after its start and at most the next start (the clip end
- * for the last word). Without ends a word runs to the next start, as in v1. */
+/** ends (index v2): each after its start and at most the next start (the clip end for the last word),
+ * either a fade-out measured in the audio or the next start itself. Without ends a word runs to the
+ * next start, as in v1. */
 export type ReferenceWords = Readonly<{ status: "ready"; readingTextSha256: string; starts: readonly number[]; ends?: readonly number[] }>
   | Readonly<{ status: "unavailable"; reason: ReferenceWordReason }>;
 type AvailablePlayback = Readonly<{ status: "ready"; asset: string; clip: SourceSecondsRange }>

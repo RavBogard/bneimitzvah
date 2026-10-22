@@ -73,9 +73,11 @@ export async function runPool(moduleURL, jobs, size = Math.max(1, Math.min(12, a
  */
 export async function wordFacts(alignVerse, indexVerse, cache = new Map()) {
   const load = async path => { if (!cache.has(path)) cache.set(path, readJson(path, "pack")); return cache.get(path); };
+  // Paths come from private aligner output; accept only its own pack and passage naming.
+  if (typeof alignVerse.pack !== "string" || !/^(?:[A-Za-z]:)?\/(?:[A-Za-z0-9_ .-]+\/)*packs\/[A-Za-z0-9_-]{1,80}-pack$/.test(alignVerse.pack) || alignVerse.pack.split("/").some(s => s === ".." || s === ".")) throw new Refusal("align-join");
   const manifest = await load(`${alignVerse.pack}/manifest.json`);
   const passage = manifest.passages.find(p => p.id === alignVerse.id);
-  if (!passage || alignVerse.ref !== indexVerse.ref) throw new Refusal("align-join");
+  if (!passage || typeof passage.directory !== "string" || !/^[A-Za-z0-9_-]{1,40}$/.test(passage.directory) || alignVerse.ref !== indexVerse.ref) throw new Refusal("align-join");
   const identity = await load(`${alignVerse.pack}/${passage.directory}/identity-map.json`);
   const syllables = identity.syllables;
   if (syllables.length !== alignVerse.syllables.length) throw new Refusal("align-join");

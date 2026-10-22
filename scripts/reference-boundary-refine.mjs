@@ -14,6 +14,7 @@ import { pathToFileURL } from "node:url";
 import { isMainThread, parentPort, workerData } from "node:worker_threads";
 import { analyzeSignal, acousticEvents, refineVerse, RULES } from "./reference-boundaries.mjs";
 import { decodeMono, readJson, assertPrivate, parseFlags, runPool, wordFacts, Refusal } from "./reference-boundary-io.mjs";
+import { validateIndex, checkV2AgainstV1 } from "./reference-index-contract.mjs";
 
 export const INDEX_V2_SCHEMA = "pockettorah-verse-index/v2";
 export const V2_METHOD = "; v2 word boundaries (scripts/reference-boundary-refine.mjs): each start moves only within -120/+60 ms of its CTC onset "
@@ -61,6 +62,7 @@ export async function refineIndexFiles(argv) {
   if (index.schema !== "pockettorah-verse-index/v1" || !Array.isArray(index.recordings)) throw new Refusal("index-schema");
   const cache = new Map(), jobs = [];
   for (const r of index.recordings) {
+    if (typeof r?.key !== "string" || !/^[A-Za-z]{2,40}-(?:[1-7]|h)$/.test(r.key) || typeof r.archiveFile !== "string" || !/^[A-Za-z0-9_-]{1,80}\.mp3$/.test(r.archiveFile)) throw new Refusal("index-record");
     const align = await readJson(join(p.align, `${r.key}.json`), "align");
     if (!Array.isArray(align.verses) || align.verses.length !== r.verses.length) throw new Refusal("align-join");
     const verses = [];
@@ -76,6 +78,10 @@ export async function refineIndexFiles(argv) {
     return v2Verse(v, result);
   }) }));
   const out = { schema: INDEX_V2_SCHEMA, source: index.source, method: `${index.method}${V2_METHOD}`, recordings };
+  // The output must be v1 with refined times only, and the contract must find nothing in it that v1 lacks
+  // (without chapter verse counts both report the same unverifiable chapter crossings).
+  const codes = ix => validateIndex(ix).errors.map(e => `${e.code}@${e.at.replace(/#w\d+$/, "")}`).sort();
+  if (checkV2AgainstV1(index, out).length || JSON.stringify(codes(out)) !== JSON.stringify(codes(index))) throw new Refusal("v2-contract");
   const summary = summarize(entries, failures);
   await mkdir(p.log, { recursive: true });
   await writeFile(join(p.log, "refine-moves.jsonl"), lines.join("\n") + "\n");
