@@ -414,7 +414,8 @@ describe("Connect Claude consent page on a phone", () => {
     await heading(tab, "Claude wants to connect");
     expect(seen.every(entry => entry.path === "view" && entry.request === pending)).toBe(true);
     await safe(() => tab.getByRole("button", { name: "Cancel", exact: true }).click());
-    await ui(tab.getByRole("alert")).toBeVisible();
+    // Scoped to the page: after the reload, Next's route announcer is also a role="alert" element.
+    await ui(tab.locator("main").getByRole("alert")).toBeVisible();
     expect(seen.at(-1)).toEqual({ path: "deny", request: pending });
     const asked = seen.length;
     await navigate(tab, "/connect"); await heading(tab, "This request has expired");

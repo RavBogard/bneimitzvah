@@ -47,24 +47,31 @@ export async function accessToken(account: ServiceAccount, fetcher: typeof fetch
 }
 
 export const ROSTER_COLUMNS = "J";
+/** The block the portal owns on the roster tab: columns A-J, rows 1-2000. Nothing outside it is written. */
+export const ROSTER_WIDTH = 10, ROSTER_MAX_ROWS = 2000;
 /**
  * Replace the roster tab's contents with `rows` (header first, at most ten columns). The roster tab
  * is the Sheet's original tab (sheet id 0) wherever staff have moved or renamed it, else the first.
- * The new rows are written first and only the old rows below them are cleared after, so a failed
- * write never leaves staff a blank Sheet; columns past J (staff notes) are never touched.
+ * One values write covers the whole owned block that exists on the tab (A1:J2000, or fewer rows on
+ * a shorter tab): the current rows, then blank cells for every owned cell below and beside them,
+ * so a student removed since the last, longer write is gone. A single request either applies whole
+ * or not at all, so a failed write never leaves staff a blank or half-cleared Sheet; columns past J
+ * (staff notes), rows past 2000 and every other tab are never touched.
  */
 export async function replaceSheet(sheetId: string, rows: readonly (readonly string[])[], token: string, fetcher: typeof fetch): Promise<void> {
-  if (!SHEET_ID.test(sheetId) || rows.length < 1 || rows.length > 1999 || rows.some(row => row.length > 10)) throw new SheetUnavailable("config");
+  if (!SHEET_ID.test(sheetId) || rows.length < 1 || rows.length > ROSTER_MAX_ROWS - 1 || rows.some(row => row.length > ROSTER_WIDTH)) throw new SheetUnavailable("config");
   const root = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}`;
   const headers = { authorization: `Bearer ${token}`, "content-type": "application/json" };
-  const meta = await bounded(fetcher, `${root}?fields=${encodeURIComponent("sheets.properties(sheetId,title)")}`, { method: "GET", headers: { authorization: headers.authorization } }, "write");
-  const tabs = (Array.isArray(meta.sheets) ? meta.sheets : []).map(tab => (tab as { properties?: { sheetId?: unknown; title?: unknown } }).properties ?? {});
+  const meta = await bounded(fetcher, `${root}?fields=${encodeURIComponent("sheets.properties")}`, { method: "GET", headers: { authorization: headers.authorization } }, "write");
+  const tabs = (Array.isArray(meta.sheets) ? meta.sheets : []).map(tab => (tab as { properties?: { sheetId?: unknown; title?: unknown; gridProperties?: { rowCount?: unknown } } } | null)?.properties ?? {});
   const tab = tabs.find(p => p.sheetId === 0) ?? tabs[0];
   if (typeof tab?.title !== "string" || !tab.title) throw new SheetUnavailable("write");
-  const quoted = `'${tab.title.replaceAll("'", "''")}'`;
-  const range = (a1: string) => `${root}/values/${encodeURIComponent(`${quoted}!${a1}`)}`;
-  const width = Math.max(...rows.map(row => row.length));
-  const padded = rows.map(row => [...row, ...Array(width - row.length).fill("")]);
-  await bounded(fetcher, `${range("A1")}?valueInputOption=RAW`, { method: "PUT", headers, body: JSON.stringify({ range: `${quoted}!A1`, majorDimension: "ROWS", values: padded }) }, "write");
-  await bounded(fetcher, `${range(`A${rows.length + 1}:${ROSTER_COLUMNS}2000`)}:clear`, { method: "POST", headers, body: "{}" }, "write");
+  // Blank only the owned rows the tab already has; writing the roster itself may grow a short tab.
+  const gridRows = tab.gridProperties?.rowCount;
+  const existing = typeof gridRows === "number" && Number.isSafeInteger(gridRows) && gridRows > 0 ? Math.min(gridRows, ROSTER_MAX_ROWS) : ROSTER_MAX_ROWS;
+  const height = Math.max(rows.length, existing);
+  const values = Array.from({ length: height }, (_, index) => { const row = rows[index] ?? []; return [...row, ...Array<string>(ROSTER_WIDTH - row.length).fill("")]; });
+  const a1 = `'${tab.title.replaceAll("'", "''")}'!A1:${ROSTER_COLUMNS}${height}`;
+  // RAW: nothing is read as a formula; an empty string clears its cell.
+  await bounded(fetcher, `${root}/values/${encodeURIComponent(a1)}?valueInputOption=RAW`, { method: "PUT", headers, body: JSON.stringify({ range: a1, majorDimension: "ROWS", values }) }, "write");
 }

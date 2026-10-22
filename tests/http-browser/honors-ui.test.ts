@@ -31,7 +31,7 @@ async function closeContext(context: BrowserContext) {
   if (cleanupFailed || owned?.failed) throw Error("Owned honors route cleanup failed");
 }
 const cookies: Partial<Record<"parent" | "admin" | "student", Awaited<ReturnType<BrowserContext["cookies"]>>>> = {};
-type QuietWitness = { complete: boolean; failed: boolean; eof: number; expected: number; dispose(): void };
+type QuietWitness = { complete: boolean; failed: boolean; started: boolean; eof: number; inflight: number; expected: number; dispose(): void };
 const sheet = (page: Page) => page.getByRole("dialog", { name: "Family honors", exact: true });
 const group = (page: Page, name: string) => sheet(page).getByRole("region", { name, exact: true });
 async function api(page: Page, path: string, body?: unknown) { return page.evaluate(async ({ path, body }) => { const response = await fetch(path, { method: body === undefined ? "GET" : "POST", cache: "no-store", headers: body === undefined ? {} : { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) }); return { status: response.status, data: await response.json() }; }, { path, body }); }
@@ -78,33 +78,61 @@ async function focus(tab: Page) {
   if (!admin) await ui(tab.locator(".reading-workspace:not([hidden]) .reading-hero")).toBeVisible();
   // Provider2 + authorized reading2 + honors2; admin roster has no reading scope.
   // The final provider proof begins only after every registered scope settles.
+  // Other workspace loads (lesson summary, practice dates, service panels) also
+  // bracket their reads with /api/session, so their EOFs can reach this count
+  // while the provider's own check is still in flight; a later focus would then
+  // be coalesced into that pre-revocation check. The proof is therefore also
+  // gated on the focus actually starting a check in its own task, and on every
+  // session, reading and honors read and hash this check chains through having
+  // finished: the check hands off between them without yielding a task, so no
+  // poll can see it idle while it is still pending.
   const expected = admin ? 4 : 6;
-  await tab.evaluate(expected => {
-    const browser = window as Window & { honorsQuietWitness?: QuietWitness }, original = window.fetch, channel = new MessageChannel(); let eof = 0;
-    const witness: QuietWitness = { complete: false, failed: false, get eof() { return eof; }, expected, dispose() { if (window.fetch === wrapped) window.fetch = original; channel.port1.close(); channel.port2.close(); if (browser.honorsQuietWitness === witness) delete browser.honorsQuietWitness; } };
+  await tab.evaluate(async expected => {
+    const browser = window as Window & { honorsQuietWitness?: QuietWitness }, original = window.fetch, subtle = crypto.subtle, digest = subtle.digest, channel = new MessageChannel();
+    let eof = 0, inflight = 0, sessions = 0;
+    const witness: QuietWitness = { complete: false, failed: false, started: false, get eof() { return eof; }, get inflight() { return inflight; }, expected, dispose() {
+      if (window.fetch === wrapped) window.fetch = original; if (Object.hasOwn(subtle, "digest") && subtle.digest === hashed) delete (subtle as { digest?: unknown }).digest;
+      channel.port1.close(); channel.port2.close(); if (browser.honorsQuietWitness === witness) delete browser.honorsQuietWitness; } };
     channel.port1.onmessage = () => { witness.complete = true; };
+    const hashed = function (...args: Parameters<SubtleCrypto["digest"]>) {
+      inflight++; let settled = false; const done = () => { if (!settled) { settled = true; inflight--; } };
+      try { const result = Reflect.apply(digest, subtle, args) as Promise<ArrayBuffer>; result.then(done, done); return result; } catch (error) { done(); throw error; }
+    };
+    Object.defineProperty(subtle, "digest", { configurable: true, writable: true, value: hashed });
     const wrapped: typeof window.fetch = async (...args) => {
-      const response = await original(...args), input = args[0], url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, location.href);
-      if (url.origin !== location.origin || url.pathname !== "/api/session") return response;
-      if (response.status !== 200) witness.failed = true;
+      const input = args[0], url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, location.href);
+      const session = url.origin === location.origin && url.pathname === "/api/session", scope = url.origin === location.origin && /^\/api\/students\/[^/]+\/(?:reading|honors)$/.test(url.pathname);
+      if (!session && !scope) return original(...args);
+      if (session) sessions++;
+      inflight++; let ended = false; const end = () => { if (!ended) { ended = true; inflight--; } };
+      let response: Response;
+      try { response = await original(...args); } catch (error) { end(); throw error; }
+      if (session && response.status !== 200) witness.failed = true;
       const body = response.body;
-      if (body) { const getReader = body.getReader;
-        Object.defineProperty(body, "getReader", { configurable: true, value: (...readerArgs: unknown[]) => {
-          const reader = Reflect.apply(getReader, body, readerArgs), read = reader.read; let ended = false;
-          reader.read = (...readArgs: unknown[]) => (Reflect.apply(read, reader, readArgs) as Promise<{ done: boolean }>).then(part => {
-            // Observe only actual parser EOF; preserve original result objects,
-            // bytes, rejection, cancellation and release semantics unchanged.
-            if (part.done && !ended) { ended = true; if (++eof === expected) channel.port2.postMessage(null); } return part;
-          }, (error: unknown) => { witness.failed = true; throw error; });
-          return reader;
-        } });
-      }
+      if (response.status !== 200 || !body) { end(); return response; }
+      const getReader = body.getReader;
+      Object.defineProperty(body, "getReader", { configurable: true, value: (...readerArgs: unknown[]) => {
+        const reader = Reflect.apply(getReader, body, readerArgs), read = reader.read, cancel = reader.cancel;
+        reader.read = (...readArgs: unknown[]) => (Reflect.apply(read, reader, readArgs) as Promise<{ done: boolean }>).then(part => {
+          // Observe only actual parser EOF; preserve original result objects,
+          // bytes, rejection, cancellation and release semantics unchanged.
+          if (part.done && !ended) { end(); if (session && ++eof === expected) channel.port2.postMessage(null); } return part;
+        }, (error: unknown) => { end(); if (session) witness.failed = true; throw error; });
+        reader.cancel = (...cancelArgs: unknown[]) => { end(); return Reflect.apply(cancel, reader, cancelArgs) as Promise<void>; };
+        return reader;
+      } });
       return response;
     };
     browser.honorsQuietWitness = witness; window.fetch = wrapped; window.dispatchEvent(new Event("focus"));
+    // Still inside this task: the provider's queued check issues its first
+    // session read within a few microtasks, and nothing else can interleave.
+    for (let hop = 0; hop < 32; hop++) await Promise.resolve();
+    witness.started = sessions > 0;
   }, expected);
-  try { await ui.poll(() => tab.evaluate(() => { const witness = (window as Window & { honorsQuietWitness?: QuietWitness }).honorsQuietWitness; return { complete: witness?.complete ?? false, failed: witness?.failed ?? false }; })).toEqual({ complete: true, failed: false }); }
-  finally { await tab.evaluate(() => (window as Window & { honorsQuietWitness?: QuietWitness }).honorsQuietWitness?.dispose()); }
+  try {
+    await ui.poll(() => tab.evaluate(() => { const witness = (window as Window & { honorsQuietWitness?: QuietWitness }).honorsQuietWitness;
+      return { started: witness?.started ?? false, complete: witness?.complete ?? false, idle: witness?.inflight === 0, failed: witness?.failed ?? false }; })).toEqual({ started: true, complete: true, idle: true, failed: false });
+  } finally { await tab.evaluate(() => (window as Window & { honorsQuietWitness?: QuietWitness }).honorsQuietWitness?.dispose()); }
 }
 async function rows(id: string) { return fixture.ownerDb.select().from(s.honorsVersion).where(eq(s.honorsVersion.studentId, id)); }
 async function audits(id: string) { return fixture.ownerDb.select().from(s.auditEvent).where(and(eq(s.auditEvent.actingStudentId, id), eq(s.auditEvent.action, "honors.set"))); }
