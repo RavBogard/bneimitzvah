@@ -31,7 +31,7 @@ Daniel, 2026-10-21: Maven, CRC's Salesforce, reaches the portal through Cowork. 
 
 ## Open items that wait on Daniel
 
-- **Undoing a wrong link.** Identities are insert-only and there is no unlink tool or screen. A wrong link (or a link to a student later disabled) can only be removed by the database owner; every later proposal would offer that Contact's changes to the wrong student. An unlink path (a revoked-at column and an admin action) is a follow-up.
+- **Undoing a wrong link.** Identities are insert-only and there is no unlink tool or screen. A wrong link (or a link to a student later disabled) can only be removed by the database owner; every later proposal would offer that Contact's changes to the wrong student. An unlink path (a revoked-at column and an admin action) is a follow-up. *Resolved in release 1.1:* an admin unlinks in the roster's student sheet or with `unlink_maven_record`; the row is stamped revoked once and kept, and the record can then be linked again ([decided](../2026-10-22-connections-unlink/DECIDED.md)).
 
 - The child's parent address comes from the Maven household's primary contact. If CRC's households often list someone else first, Daniel may prefer to type parent addresses in the portal for children; the tool then still creates adults and links existing students.
 - Inviting the families of newly created students is his separate step in the portal; nothing here invites.

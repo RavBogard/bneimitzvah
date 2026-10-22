@@ -3,7 +3,7 @@ import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { AccessDenied } from "../access/errors";
 import type { AccessTransaction } from "../access/types";
 import * as data from "../data/roster";
-import { insertSourceIdentity, lockRosterIntake, MAVEN_NAMESPACE, sourceIdentities } from "../data/roster-source";
+import { insertSourceIdentity, lockRosterIntake, MAVEN_NAMESPACE, revokedSourceIdentityCount, sourceIdentities, unlinkSourceIdentity } from "../data/roster-source";
 import { lockRabbi } from "../study-guides/authority";
 import { decodeMavenRosterContacts, mavenRosterQuery, type MavenContactFacts, type MavenRosterIssue } from "../students/maven-roster";
 import {
@@ -132,12 +132,14 @@ export function createRosterTools<Q extends PgQueryResultHKT>(): readonly Tool<Q
         const facts = decoded.contacts;
         return ctx.mcp.withLive(ctx.actor, "read", async (tx, live) => {
           requireAdmin(live);
+          // Read before the snapshot: an unlink committing in between can only make the plan look stale, never fresh.
+          const unlinked = await revokedSourceIdentityCount(tx, live.tenantId, MAVEN_NAMESPACE);
           const { students, identities } = await snapshot(tx, live.tenantId);
           const plan = planMavenIntake({ tenantId: live.tenantId, facts, students, identities });
           if (!plan.ok) return { ok: false, code: "roster-unreadable", hint: "A portal student record does not pass the roster's validation; fix it in the portal, then propose again." };
           const byId = new Map(students.map(st => [st.id, st])), counts: Record<string, number> = {};
           for (const row of plan.rows) counts[row.kind] = (counts[row.kind] ?? 0) + 1;
-          const sealed = facts.length ? ctx.mcp.sealRosterPlan(live, { v: 1, start: input.start, end: input.end, facts: factsDigest(facts), rows: rowDigests(plan.rows) }) : null;
+          const sealed = facts.length ? ctx.mcp.sealRosterPlan(live, { v: 1, start: input.start, end: input.end, facts: factsDigest(facts), rows: rowDigests(plan.rows), unlinked }) : null;
           return { ok: true, window: { start: input.start, end: input.end }, mavenRows: facts.length, counts,
             rows: plan.rows.filter(row => row.kind !== "unchanged").map(row => reviewRow(row, facts[row.row - 1], byId)),
             unchangedRows: plan.rows.filter(row => row.kind === "unchanged").map(row => row.row),
@@ -156,6 +158,26 @@ export function createRosterTools<Q extends PgQueryResultHKT>(): readonly Tool<Q
       ["start", "end", "mavenResult", "planToken", "choices"]),
       handler: async (input, ctx) => applyRosterChanges(input, ctx),
     },
+    {
+      name: "unlink_maven_record", roles: ["admin"], scope: SCOPES.roster, annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+      description: "Undo a wrong Maven link, only when the rabbi asks for it in this conversation. Pass the portal studentId and the 18-character Maven Contact Id it is linked to now (both from the proposal and the Maven result); if that pair is not the student's current link, nothing changes and currentRecordId says what the student is linked to (or null). The student and their portal record stay exactly as they are; only the link ends. The next propose_roster_changes then offers that Maven row again (to link to the right student, or create one) and the student can be linked to the right record. The old link is kept as history and never comes back by itself. A scheduled routine cannot unlink.",
+      inputSchema: closed({ studentId: { type: "string", pattern: UUID.source, description: "The portal student whose Maven link is wrong." },
+        mavenContactId: { type: "string", pattern: "^[A-Za-z0-9]{18}$", description: "The Maven Contact Id (18 characters) the student is linked to now." } }, ["studentId", "mavenContactId"]),
+      handler: async (input, ctx) => {
+        requireAdmin(ctx.actor);
+        if (ctx.actor.unattended) return { ok: false, code: "channel-not-permitted", hint: "A scheduled routine cannot change the roster; the rabbi unlinks a record in a conversation." };
+        return ctx.mcp.withLive(ctx.actor, "data-write", async (tx, live, alive) => {
+          requireAdmin(live); if (live.unattended) throw new AccessDenied(403);
+          await lockRabbi(tx, live.tenantId, live.membershipId, { roleGrantId: live.roleGrantId, roleGrantRevision: live.roleGrantRevision, authorityRevision: live.authorityRevision });
+          const result = await unlinkSourceIdentity(tx, { tenantId: live.tenantId, userId: live.userId, membershipId: live.membershipId, roleGrantId: live.roleGrantId, channel: "mcp", mcpConnectionId: live.connectionId },
+            { namespace: MAVEN_NAMESPACE, studentId: input.studentId as string, sourceRecordId: input.mavenContactId as string }, new Date(ctx.mcp.now()));
+          alive(); if (ctx.signal.aborted) throw new AccessDenied(401);
+          if (!result.ok) return { ok: false, code: "not-linked", currentRecordId: result.currentRecordId, hint: "That student is not linked to that Maven Contact now; nothing changed. Check the ids with the rabbi." };
+          return { ok: true, studentId: result.studentId, mavenContactId: result.sourceRecordId, unlinkedAt: result.unlinkedAt,
+            next: "The link has ended; the student's record is unchanged. Run get_maven_roster_query and propose_roster_changes again to link the Maven row to the right student or create one, as the rabbi decides." };
+        });
+      },
+    },
   ] satisfies Tool<Q>[]);
 }
 
@@ -166,7 +188,7 @@ async function applyRosterChanges<Q extends PgQueryResultHKT>(input: Record<stri
   const decoded = decodeMavenRosterContacts({ start: input.start, end: input.end }, input.mavenResult);
   if (!decoded.ok) return refusedMaven(decoded.issues);
   const facts = decoded.contacts, claim = ctx.mcp.openRosterPlan(ctx.actor, input.planToken);
-  if (!claim || claim.v !== 1 || claim.start !== input.start || claim.end !== input.end || claim.facts !== factsDigest(facts)
+  if (!claim || claim.v !== 1 || !Number.isSafeInteger(claim.unlinked) || claim.start !== input.start || claim.end !== input.end || claim.facts !== factsDigest(facts)
     || typeof claim.rows !== "string" || claim.rows.length !== facts.length * ROW_DIGEST_LENGTH)
     return { ok: false, code: "plan-token-refused", hint: "The plan token has expired, or it is not for this connection, this window or this Maven result. Call propose_roster_changes again and show the rabbi the new table." };
   const parsed = parseChoices(input.choices, facts.length);
@@ -177,6 +199,10 @@ async function applyRosterChanges<Q extends PgQueryResultHKT>(input: Record<stri
       requireAdmin(live); if (live.unattended) throw new AccessDenied(403);
       await lockRabbi(tx, live.tenantId, live.membershipId, { roleGrantId: live.roleGrantId, roleGrantRevision: live.roleGrantRevision, authorityRevision: live.authorityRevision });
       await lockRosterIntake(tx, live.tenantId, MAVEN_NAMESPACE);
+      // An unlink since the proposal ends the plan: once a link is undone, a row's state can look exactly as it did before
+      // the link was made, so an old plan replayed would quietly make the undone link again (or recreate a student).
+      if (await revokedSourceIdentityCount(tx, live.tenantId, MAVEN_NAMESPACE) !== claim.unlinked)
+        return { ok: false, code: "plan-token-refused", hint: "A Maven link was undone after this proposal, so nothing was written. Call propose_roster_changes again and show the rabbi the new table." };
       const { students, identities } = await snapshot(tx, live.tenantId);
       const plan = planMavenIntake({ tenantId: live.tenantId, facts, students, identities }), linkKind = new Map(identities.map(i => [i.sourceRecordId, i.linkKind]));
       if (!plan.ok) return { ok: false, code: "roster-unreadable", hint: "A portal student record does not pass the roster's validation; fix it in the portal, then propose again." };
@@ -187,7 +213,7 @@ async function applyRosterChanges<Q extends PgQueryResultHKT>(input: Record<stri
         const row = plan.rows[choice.row - 1], fact = facts[choice.row - 1], outcome: Outcome = { row: choice.row, name: nameOf(fact), outcome: "not-applied" };
         outcomes.push(outcome);
         if (row.digest !== proposed.slice((choice.row - 1) * ROW_DIGEST_LENGTH, choice.row * ROW_DIGEST_LENGTH)) {
-          // Identities are insert-only: a row now unchanged and linked as chosen (a student created for it, the chosen student, or any for an update) was applied before.
+          // Current identities only ever gain a revocation: a row now unchanged and linked as chosen (a student created for it, the chosen student, or any for an update) was applied before.
           const done = row.kind === "unchanged" && (choice.action === "update" || (choice.action === "create" ? linkKind.get(row.sourceRecordId) === "created" : choice.studentId === row.studentId));
           if (done && row.kind === "unchanged") Object.assign(outcome, { outcome: "already-applied", studentId: row.studentId, revision: row.expectedRevision });
           else Object.assign(outcome, { outcome: "conflict", reason: "changed-since-proposal" });

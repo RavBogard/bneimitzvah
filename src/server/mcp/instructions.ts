@@ -16,6 +16,7 @@ Roster intake from Maven (an admin connection with the separate roster permissio
 3. Show the rabbi the proposed rows as a table: name, ceremony date, the change and the changed fields. A matching name only suggests a student; never decide a reconcile row yourself.
 4. Call apply_roster_changes only after the rabbi says which rows to apply, and for each new student whether a child or an adult and the service slot. Report each row's outcome.
 5. Applying sends no invitations and no e-mail. Inviting families is a separate step the rabbi takes in the portal.
+6. A wrong link (a Maven row linked to the wrong student) is undone with unlink_maven_record, only when the rabbi asks: pass the student and the Maven Contact Id it is linked to now. The student's record is unchanged; propose again to link the row correctly.
 
 Student setup (the same roster permission; never a scheduled routine). Each change only when the rabbi asks for it in this conversation:
 1. Read get_student_setup first; every write takes the revision or version it showed, and a conflict means read again and show the rabbi.

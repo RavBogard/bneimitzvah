@@ -5,6 +5,8 @@ import * as s from "../../src/server/db/index";
 import { accessFixture } from "./access-fixture";
 import { createPracticeService } from "../../src/server/practice/service";
 import { createMcpEndpoint } from "../../src/server/mcp/endpoint";
+import { createClaudeConnectionsService } from "../../src/server/connections/service";
+import { createMavenLinkService } from "../../src/server/students/maven-links";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
 import { resolveTenantHost } from "../../src/server/tenancy/resolve";
 import type { HttpRuntime } from "../../src/server/runtime/composition";
@@ -30,7 +32,10 @@ export async function mcpFixture(enabled = true, now?: () => number, outside: { 
   const deployment = { environment: "test" as const, deployment: "suite" };
   const mcp = enabled ? createMcpEndpoint({ db: f.db, access: f.service, practice: createPracticeService({ access: f.service }), secret: randomBytes(48).toString("base64url"),
     loadText: async () => { throw new Error("no network"); }, related: outside.related ?? (async () => { throw new Error("no network"); }), loadReading: outside.loadReading ?? syntheticReading, now }) : null;
-  const runtime = { origin: ORIGIN, mcp, resolveHost: (request: Request) => resolveTenantHost(f.db, request, deployment) } as unknown as HttpRuntime;
+  // The staff Claude connections page and the roster's Maven link (release 1.1) share this dispatcher, so a test can end a
+  // connection from the portal and watch its bearer stop working.
+  const runtime = { origin: ORIGIN, mcp, resolveHost: (request: Request) => resolveTenantHost(f.db, request, deployment),
+    claudeConnections: createClaudeConnectionsService({ access: f.service, now }), mavenLinks: createMavenLinkService({ access: f.service, now }) } as unknown as HttpRuntime;
   const dispatch = createHttpDispatcher(async action => action(runtime));
   /** Mark a fixture session as created by Google sign-in (the hook's job in production). */
   async function google(who: "admin" | "multi" | "learner", at = new Date()) {
