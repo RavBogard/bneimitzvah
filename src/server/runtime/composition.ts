@@ -72,6 +72,7 @@ import { AccessDenied } from "../access/errors";
 import { createReferenceReviewService } from "../reference-review/service";
 import { createPrivateReviewGet } from "../reference-review/private-blob";
 import { ReviewUnavailable } from "../reference-review/batch-contract";
+import { createFinkelReferenceService } from "../reference-audio/finkel-service";
 
 const purposeSecret = (config: RuntimeConfig, purpose: string) => createHmac("sha256", config.authSecret)
   .update(`crc-portal:v1:${config.deployment.environment}:${config.deployment.deployment}:${config.origin}:${purpose}`).digest("base64url");
@@ -185,6 +186,11 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const shortReferenceAudio = createShortReferenceAudioService({ access, practice, loadText, ...shortMetadata, studentRelease: audioReleases(config).reference });
   const shortExplorationAudio = createShortExplorationService({ access, practice, loadReading, loadText, signingSecret: purposeSecret(config, "reading-exploration"),
     ...shortMetadata, studentRelease: audioReleases(config).reference });
+  // Same student-release hold as PocketTorah, AND Finkel's own switch for Daniel's separate
+  // listening acceptance of this source. The bytes reuse the reviewed private getter.
+  const finkelReference = createFinkelReferenceService({ access, manifestSha256: config.referenceFinkel?.manifestSha256,
+    studentRelease: audioReleases(config).reference && config.referenceFinkel?.studentRelease === true,
+    get: config.referenceFinkel ? createPrivateReviewGet({ storeId: config.referenceFinkel.storeId }) : async () => { throw new ReviewUnavailable(); } });
   // Admin-only listening review: the same pinned short clips students would get, never the student release flag.
   const listeningReview = createListeningReviewService({ access, loadText, sources: [createPocketTorahListeningSource({ ...shortMetadata,
     catalogSha256: config.referenceAudio?.catalogSha256, manifestSha256: process.env.REFERENCE_AUDIO_SHORT_MANIFEST_SHA256, configured: shortMetadata.configured })] });
@@ -199,7 +205,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, listeningReview, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost, mcp, rosterSheet });
+  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, finkelReference, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, listeningReview, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost, mcp, rosterSheet });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;
