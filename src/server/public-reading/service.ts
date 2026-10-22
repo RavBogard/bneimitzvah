@@ -1,6 +1,6 @@
 import "server-only";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
-import { expandReadingRanges } from "../../lib/readings/ranges";
+import { expandReadingRanges, readingSegments } from "../../lib/readings/ranges";
 import { proposeReading, type Calendar, type Snapshot } from "../../lib/readings/proposals";
 import { publicShabbat } from "../../lib/readings/public-shabbat";
 import { WORD_DETAILS_LIMITS, type StudyWordDetails } from "../../lib/hebrew/word-details";
@@ -55,9 +55,9 @@ function plan(kind: PublicKind, ranges: readonly string[]): Plan {
 export function publicPlans(snapshot: Snapshot): { torah: Plan | null; haftarah: Plan | null } {
   let torah: Plan | null = null, haftarah: Plan | null = null;
   if (snapshot.classification === "regular" && snapshot.reading) {
-    try { const ref = proposeReading(snapshot, counts, { pick: "full" }).selection?.ref; if (ref) torah = plan("torah", [ref]); } catch { torah = null; }
+    try { const ref = proposeReading(snapshot, counts, { pick: "full" }).selection?.ref; if (ref) torah = plan("torah", readingSegments(ref)); } catch { torah = null; }
   }
-  if (snapshot.haftarah) { try { haftarah = plan("haftarah", [snapshot.haftarah]); } catch { haftarah = null; } }
+  if (snapshot.haftarah) { try { haftarah = plan("haftarah", readingSegments(snapshot.haftarah)); } catch { haftarah = null; } }
   return { torah, haftarah };
 }
 const view = (value: Plan): PublicPassage => Object.freeze({ kind: value.kind, ranges: value.ranges, verseCount: value.verses.length, pages: value.pages });
