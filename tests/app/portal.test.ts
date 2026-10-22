@@ -262,5 +262,5 @@ it("legacy confirmed snapshots missing slot provenance require review while reta
  });
  const current=await f.portal.assignedReading(f.http(),{mode:"parent",studentId:f.students[0].id});
  expect(current.readings[0]).toMatchObject({needsReview:true,verses:["Genesis 1:1","Genesis 1:2","Genesis 1:3"]});
- expect(Object.keys(current.student).sort()).toEqual(["ceremonyDate","firstName","id","lastName","rehearsal1","rehearsal2","revision"]);
+ expect(Object.keys(current.student).sort()).toEqual(["ceremonyDate","firstName","id","lastName","rehearsal1","rehearsal2","revision","serviceSlot"]);
 });

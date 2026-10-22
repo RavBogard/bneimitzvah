@@ -4,7 +4,7 @@ import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction, Actor } from "../access/types";
 import * as s from "../db/tenant-schema";
 
-export type StudentView = Readonly<{ id: string; firstName: string; lastName: string; ceremonyDate: string; rehearsal1: string | null; rehearsal2: string | null; revision: number }>;
+export type StudentView = Readonly<{ id: string; firstName: string; lastName: string; ceremonyDate: string; rehearsal1: string | null; rehearsal2: string | null; serviceSlot: "morning" | "havdalah" | "unknown"; revision: number }>;
 export type StudentPage = Readonly<{ afterId?: string; limit?: number }>;
 
 export async function lockVisibleStudentCandidates<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: Actor, page: StudentPage) {
@@ -18,7 +18,7 @@ export async function lockVisibleStudentCandidates<Q extends PgQueryResultHKT>(t
   if (actor.mode === "student") relationship = exists(tx.select({ id: s.studentIdentity.id }).from(s.studentIdentity).where(and(
     eq(s.studentIdentity.tenantId, actor.tenantId), eq(s.studentIdentity.studentId, s.student.id), eq(s.studentIdentity.roleGrantId, actor.roleGrantId), isNull(s.studentIdentity.revokedAt),
   )));
-  return tx.select({ id: s.student.id, firstName: s.student.firstName, lastName: s.student.lastName, ceremonyDate: s.student.ceremonyDate, rehearsal1: s.student.rehearsal1, rehearsal2: s.student.rehearsal2, revision: s.student.revision, studentKind: s.student.studentKind })
+  return tx.select({ id: s.student.id, firstName: s.student.firstName, lastName: s.student.lastName, ceremonyDate: s.student.ceremonyDate, rehearsal1: s.student.rehearsal1, rehearsal2: s.student.rehearsal2, serviceSlot: s.student.serviceSlot, revision: s.student.revision, studentKind: s.student.studentKind })
     .from(s.student).where(and(eq(s.student.tenantId, actor.tenantId), isNull(s.student.disabledAt), relationship,
       page.afterId ? gt(s.student.id, page.afterId) : undefined))
     .orderBy(asc(s.student.id)).limit(page.limit ?? 100).for("share");

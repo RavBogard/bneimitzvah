@@ -11,6 +11,7 @@ import { createHonoreeClient } from "./honoree-api";
 import { createHonoreeOwner, type HonoreeOwner, type HonoreeState } from "./honoree-owner";
 import { HonoreeControls } from "./honoree-controls";
 import { printSavedHonors } from "./print";
+import { serviceSlotName } from "../service-slot";
 import styles from "./honors.module.css";
 
 function ContextReview({ previous, current, state, owner, blocked, canReview }: { previous: HonorsContextView; current: HonorsContextView; state: HonorsState; owner: HonorsOwner; blocked: boolean; canReview(): boolean }) {
@@ -24,7 +25,7 @@ function ContextReview({ previous, current, state, owner, blocked, canReview }: 
     <p className={styles.help}>This updates your draft. Use Save honors to record the review.</p>
   </section>;
 }
-const slotName = (slot: string) => slot === "morning" ? "Morning service" : slot === "havdalah" ? "Havdalah service" : "Service time not confirmed";
+const slotName = (slot: string) => serviceSlotName(slot) ?? "Service time not confirmed";
 const longDate = (value: string) => new Intl.DateTimeFormat("en-US", { weekday: "short", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
 const when = (date: string, slot: string) => `${longDate(date)}, ${slot === "unknown" ? "service time not confirmed" : slotName(slot).toLowerCase()}`;
 // Child students remain read-only; own-adult eligibility is projected by the live list.

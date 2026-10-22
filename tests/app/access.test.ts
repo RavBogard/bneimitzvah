@@ -19,7 +19,7 @@ it("projects own-adult honors only after the live student identity and locked ki
   expect((await list())[0].ownAdultHonors).toBe(false);
   await f.owner(() => f.db.update(s.student).set({ studentKind: "adult", ownEmail: "synthetic-adult@example.test" }).where(eq(s.student.id, f.students[0].id)));
   const own = await list(); expect(own).toHaveLength(1); expect(own[0]).toMatchObject({ id: f.students[0].id, ownAdultHonors: true });
-  expect(Object.keys(own[0]).sort()).toEqual(["id", "firstName", "lastName", "ceremonyDate", "rehearsal1", "rehearsal2", "revision", "ownAdultHonors"].sort());
+  expect(Object.keys(own[0]).sort()).toEqual(["id", "firstName", "lastName", "ceremonyDate", "rehearsal1", "rehearsal2", "serviceSlot", "revision", "ownAdultHonors"].sort());
   for (const [who, mode] of [["multi", "parent"], ["multi", "tutor"], ["admin", "admin"]] as const) expect((await f.service.listStudents(f.request(who), { mode })).every(row => row.ownAdultHonors === false)).toBe(true);
   const delegated = f.request("learner"); delegated.headers.set("X-Practice-Context", "synthetic"); expect(await denied(() => f.service.listStudents(delegated, { mode: "student" }), 403)).toBe(true);
   await f.owner(() => f.db.update(s.student).set({ studentKind: "child" }).where(eq(s.student.id, f.students[0].id))); expect((await list())[0].ownAdultHonors).toBe(false);
