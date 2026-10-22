@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq, exists, gt, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, asc, countDistinct, desc, eq, exists, gt, gte, inArray, isNull, lt, lte, notExists, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction, ActiveMode, Actor } from "../access/types";
 import { lockRoleGrant } from "./authority";
@@ -81,9 +81,9 @@ export async function delivery<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: 
   return row ?? null;
 }
 /** True when this member already has this kind sent, being sent or possibly sent for a period on or after `fromDate`. */
-export async function recentlyDelivered<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, membershipId: string, kind: NotificationKind, fromDate: string) {
+export async function recentlyDelivered<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, membershipId: string, kind: NotificationKind, fromDate: string, excluding?: string) {
   const [row] = await tx.select({ id: d.id }).from(d).where(and(eq(d.tenantId, tenantId), eq(d.membershipId, membershipId), eq(d.kind, kind),
-    gte(d.periodKey, fromDate), inArray(d.status, ["sending", "sent", "unknown"]))).limit(1);
+    gte(d.periodKey, fromDate), inArray(d.status, ["sending", "sent", "unknown"]), excluding ? sql`${d.id} <> ${excluding}` : undefined)).limit(1);
   return !!row;
 }
 /** When this member's last weekly update was handed to the provider, if ever. */
@@ -94,22 +94,32 @@ export async function lastDigestAt<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenant
 }
 
 const liveParent = (tenantId: string) => and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.role, "parent"), isNull(s.roleGrant.revokedAt));
-/** Members who may get a weekly update: a parent of a current student, or an adult student who turned it on. */
-export async function digestCandidates<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, limit: number) {
+/** Not already sent, being sent or possibly sent this kind for a period on or after `fromDate`. */
+const notRecent = <Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, membership: typeof s.roleGrant.membershipId | typeof p.membershipId, kind: NotificationKind, fromDate: string) =>
+  notExists(tx.select({ id: d.id }).from(d).where(and(eq(d.tenantId, tenantId), eq(d.membershipId, membership), eq(d.kind, kind), gte(d.periodKey, fromDate), inArray(d.status, ["sending", "sent", "unknown"]))));
+/**
+ * Members who may get this week's update and have not had it: a parent linked to a current child student whose
+ * ceremony is today or later, or an adult student who turned it on. Past classes never crowd out current families.
+ */
+export async function digestCandidates<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, today: string, recentFrom: string, limit: number) {
   const parents = await tx.selectDistinct({ membershipId: s.roleGrant.membershipId }).from(s.roleGrant)
     .innerJoin(s.membership, and(eq(s.membership.tenantId, s.roleGrant.tenantId), eq(s.membership.id, s.roleGrant.membershipId), isNull(s.membership.disabledAt)))
     .where(and(liveParent(tenantId), exists(tx.select({ id: s.guardian.id }).from(s.guardian)
-      .innerJoin(s.student, and(eq(s.student.tenantId, s.guardian.tenantId), eq(s.student.id, s.guardian.studentId), isNull(s.student.disabledAt)))
-      .where(and(eq(s.guardian.tenantId, tenantId), eq(s.guardian.parentGrantId, s.roleGrant.id), isNull(s.guardian.revokedAt))))))
+      .innerJoin(s.student, and(eq(s.student.tenantId, s.guardian.tenantId), eq(s.student.id, s.guardian.studentId), isNull(s.student.disabledAt),
+        eq(s.student.studentKind, "child"), gte(s.student.ceremonyDate, today)))
+      .where(and(eq(s.guardian.tenantId, tenantId), eq(s.guardian.parentGrantId, s.roleGrant.id), isNull(s.guardian.revokedAt)))),
+      notRecent(tx, tenantId, s.roleGrant.membershipId, "weekly-digest", recentFrom)))
     .orderBy(asc(s.roleGrant.membershipId)).limit(limit);
   const adults = await tx.selectDistinct({ membershipId: p.membershipId }).from(p)
-    .where(and(eq(p.tenantId, tenantId), eq(p.kind, "weekly-digest"), eq(p.enabled, true))).orderBy(asc(p.membershipId)).limit(limit);
+    .where(and(eq(p.tenantId, tenantId), eq(p.kind, "weekly-digest"), eq(p.enabled, true), notRecent(tx, tenantId, p.membershipId, "weekly-digest", recentFrom)))
+    .orderBy(asc(p.membershipId)).limit(limit);
   return [...new Set([...parents, ...adults].map(row => row.membershipId))].sort().slice(0, limit);
 }
 /** Members who turned the practice reminder on, with their day. */
-export async function reminderCandidates<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, limit: number) {
+export async function reminderCandidates<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, recentFrom: string, limit: number) {
   return tx.select({ membershipId: p.membershipId, weekday: p.weekday }).from(p)
-    .where(and(eq(p.tenantId, tenantId), eq(p.kind, "practice-reminder"), eq(p.enabled, true))).orderBy(asc(p.membershipId)).limit(limit);
+    .where(and(eq(p.tenantId, tenantId), eq(p.kind, "practice-reminder"), eq(p.enabled, true), notRecent(tx, tenantId, p.membershipId, "practice-reminder", recentFrom)))
+    .orderBy(asc(p.membershipId)).limit(limit);
 }
 
 /** The student this student grant signs in as, while that link is live and the student current. */
@@ -130,9 +140,9 @@ export async function lessonsBetween<Q extends PgQueryResultHKT>(tx: Tx<Q>, tena
     .where(and(eq(t.tenantId, tenantId), eq(t.studentId, studentId), eq(t.deleted, false), gte(t.lessonDate, fromDate), lte(t.lessonDate, throughDate)))
     .orderBy(desc(t.lessonDate), desc(t.entryId)).limit(limit);
 }
-/** How many verse notes tutors or staff saved for this student after `since`. */
+/** On how many verses tutors or staff saved a note (or a new version of one) for this student after `since`. */
 export async function verseNotesSince<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, studentId: string, since: Date) {
   const t = s.tutorNote;
-  const [row] = await tx.select({ n: count() }).from(t).where(and(eq(t.tenantId, tenantId), eq(t.studentId, studentId), gt(t.createdAt, since)));
+  const [row] = await tx.select({ n: countDistinct(t.verseRef) }).from(t).where(and(eq(t.tenantId, tenantId), eq(t.studentId, studentId), gt(t.createdAt, since)));
   return row?.n ?? 0;
 }

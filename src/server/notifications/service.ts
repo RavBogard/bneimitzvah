@@ -24,7 +24,7 @@ const DAY = 86_400_000;
 const TUTOR_NOTICE_WINDOW = 2 * DAY;
 const MAX_ATTEMPTS = 3;
 export type RunCounts = { sent: number; failed: number; unknown: number; skipped: number };
-export type RunResult = Readonly<{ ok: true; enabled: boolean; at: string } & RunCounts>;
+export type RunResult = Readonly<{ ok: true; enabled: boolean; at: string; deferred: number } & RunCounts>;
 type Composed = Readonly<{ email: string; message: Message; unsubscribe: string }>;
 
 const switchOn = (n: NotificationSettings, kind: NotificationKind) =>
@@ -153,7 +153,9 @@ export function createNotificationDelivery<Q extends PgQueryResultHKT>(input: {
       const t = tx as Tx<Q>, row = await data.claimDelivery(t, tenantId, id, from, from === "pending" ? 1 : MAX_ATTEMPTS, new Date(now()));
       if (!row) return null;
       const composed = input.enabled ? await composeRow(t, row) : null;
-      if (!composed) { await data.finishDelivery(t, tenantId, row.id, "sending", "skipped", new Date(now())); counts.skipped++; return null; }
+      // A retried update or reminder still goes at most once a week, even if the day changed after it first failed.
+      const spent = row.kind !== "tutor-draft" && await data.recentlyDelivered(t, tenantId, row.membershipId, row.kind, addDays(today(), -6), row.id);
+      if (!composed || spent) { await data.finishDelivery(t, tenantId, row.id, "sending", "skipped", new Date(now())); counts.skipped++; return null; }
       return { id: row.id, composed };
     });
     if (!prepared) return false;
@@ -164,11 +166,12 @@ export function createNotificationDelivery<Q extends PgQueryResultHKT>(input: {
   async function scheduled(tenantId: string, membershipId: string, kind: "weekly-digest" | "practice-reminder", digestWeekday: number, counts: RunCounts) {
     const prepared = await withTenantTransaction(input.db, { tenantId }, async tx => {
       const t = tx as Tx<Q>, day = today();
+      // Never twice in a week, even when the day was changed after this week's message went; checked before any composing.
+      if (await data.recentlyDelivered(t, tenantId, membershipId, kind, addDays(day, -6))) return null;
       const result = kind === "weekly-digest" ? await composeDigest(t, tenantId, membershipId, null) : await composeReminder(t, tenantId, membershipId);
       if (!result) return null;
       const period = dueOccurrence(day, kind === "weekly-digest" ? digestWeekday : (result as { weekday: number }).weekday);
-      // Never twice in a week, even when the day was changed after this week's message went.
-      if (!period || await data.recentlyDelivered(t, tenantId, membershipId, kind, addDays(day, -6))) return null;
+      if (!period) return null;
       const role = kind === "weekly-digest" ? (result as { role: "parent" | "student" }).role : "student";
       const row = await data.insertDelivery(t, { tenantId, membershipId, userId: result.recipient.userId, roleGrantId: result.recipient.grant.id, role, kind, periodKey: period, studentId: null, status: "sending" }, new Date(now()));
       return row ? { id: row.id, composed: result.composed } : null;
@@ -189,7 +192,7 @@ export function createNotificationDelivery<Q extends PgQueryResultHKT>(input: {
 
   async function run(tenantId: string): Promise<RunResult> {
     const counts: RunCounts = { sent: 0, failed: 0, unknown: 0, skipped: 0 }, at = new Date(now()).toISOString();
-    if (!input.enabled) return Object.freeze({ ok: true as const, enabled: false, at, ...counts });
+    if (!input.enabled) return Object.freeze({ ok: true as const, enabled: false, at, deferred: 0, ...counts });
     const started = now(), handed = () => counts.sent + counts.failed + counts.unknown;
     const budget = () => handed() < perRun && now() - started < deadlineMs;
     await deliverPending(tenantId, perRun, counts, budget);
@@ -197,20 +200,22 @@ export function createNotificationDelivery<Q extends PgQueryResultHKT>(input: {
     for (const id of failed) { if (!budget()) break; if (await resend(tenantId, id, "failed", counts)) await pause(spacingMs); }
     const plan = await withTenantTransaction(input.db, { tenantId }, async tx => {
       const t = tx as Tx<Q>, n = await notificationSettings(t, tenantId);
-      return { n, digests: switchOn(n, "weekly-digest") ? await data.digestCandidates(t, tenantId, candidateLimit) : [],
-        reminders: switchOn(n, "practice-reminder") ? await data.reminderCandidates(t, tenantId, candidateLimit) : [] };
+      const day = today(), recent = addDays(day, -6), weekday = validWeekday(n.digestWeekday) ? n.digestWeekday : DEFAULT_DIGEST_WEEKDAY;
+      return { weekday, digests: switchOn(n, "weekly-digest") && dueOccurrence(day, weekday) ? await data.digestCandidates(t, tenantId, day, recent, candidateLimit) : [],
+        reminders: switchOn(n, "practice-reminder") ? (await data.reminderCandidates(t, tenantId, recent, candidateLimit)).filter(r => validWeekday(r.weekday) && dueOccurrence(day, r.weekday)) : [] };
     });
-    const digestWeekday = validWeekday(plan.n.digestWeekday) ? plan.n.digestWeekday : DEFAULT_DIGEST_WEEKDAY;
-    if (dueOccurrence(today(), digestWeekday)) for (const membershipId of plan.digests) {
+    // Updates and reminders the budget did not reach go on the next morning's run (within the catch-up days).
+    const due = [...plan.digests.map(membershipId => ({ membershipId, kind: "weekly-digest" as const })), ...plan.reminders.map(r => ({ membershipId: r.membershipId, kind: "practice-reminder" as const }))];
+    let reached = 0;
+    for (const item of due) {
       if (!budget()) break;
-      if (await scheduled(tenantId, membershipId, "weekly-digest", digestWeekday, counts)) await pause(spacingMs);
+      reached++;
+      if (await scheduled(tenantId, item.membershipId, item.kind, plan.weekday, counts)) await pause(spacingMs);
     }
-    for (const reminder of plan.reminders) {
-      if (!budget()) break;
-      if (!validWeekday(reminder.weekday) || !dueOccurrence(today(), reminder.weekday)) continue;
-      if (await scheduled(tenantId, reminder.membershipId, "practice-reminder", digestWeekday, counts)) await pause(spacingMs);
-    }
-    return Object.freeze({ ok: true as const, enabled: true, at, ...counts });
+    const deferred = due.length - reached;
+    // Counts only: no address, name or token. A run with refusals, unanswered sends or deferrals shows in the logs.
+    if (counts.failed || counts.unknown || deferred) console.error(`notifications run: ${counts.sent} sent, ${counts.failed} refused, ${counts.unknown} unanswered, ${deferred} deferred`);
+    return Object.freeze({ ok: true as const, enabled: true, at, deferred, ...counts });
   }
 
   return Object.freeze({

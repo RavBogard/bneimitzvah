@@ -97,7 +97,7 @@ export function createNotificationTransport(input: { origin: string; apiKey: str
         || typeof message.idempotencyKey !== "string" || !UUID.test(message.idempotencyKey)) return "rejected";
     } catch { return "rejected"; }
     const controller = new AbortController();
-    let timer: ReturnType<typeof setTimeout> | undefined, answered = false;
+    let timer: ReturnType<typeof setTimeout> | undefined, refused = false, accepted = false;
     try {
       await Promise.race([
         (async () => {
@@ -107,16 +107,17 @@ export function createNotificationTransport(input: { origin: string; apiKey: str
             body: JSON.stringify({ from: input.from, to: [message.email], subject: message.subject, text: message.text,
               headers: { "List-Unsubscribe": `<${message.unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } }),
           });
-          answered = true;
+          // A 4xx (including 429) is a definite refusal; a 5xx or an odd answer may have been accepted.
+          accepted = response.ok && !response.redirected && (!response.url || response.url === "https://api.resend.com/emails");
+          refused = !accepted && response.status >= 400 && response.status < 500 && !response.redirected;
           // No provider body/header/ID escapes, even on errors; do not buffer it.
-          try {
-            if (!response.ok || response.redirected || (response.url && response.url !== "https://api.resend.com/emails")) throw 0;
-          } finally { await response.body?.cancel().catch(() => {}); }
+          await response.body?.cancel().catch(() => {});
+          if (!accepted) throw 0;
         })(),
         new Promise<never>((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new RuntimeUnavailable()); }, timeout); }),
       ]);
       return "sent";
-    } catch { return answered ? "rejected" : "unknown"; }
+    } catch { return accepted ? "sent" : refused ? "rejected" : "unknown"; }
     finally { if (timer) clearTimeout(timer); controller.abort(); }
   };
 }

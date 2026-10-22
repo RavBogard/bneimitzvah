@@ -61,7 +61,7 @@ function digestBlock(student: DigestStudent): string[] {
     lines.push("- Lesson notes:");
     for (const lesson of student.lessons) lines.push(`  ${shortDate(lesson.lessonDate)}, ${lesson.author}: ${paragraph(lesson.summary, 300)}`);
   }
-  if (student.verseNotes > 0) lines.push(`- ${student.verseNotes === 1 ? "1 new tutor note" : `${student.verseNotes} new tutor notes`} on the reading. Sign in to read ${student.verseNotes === 1 ? "it" : "them"}.`);
+  if (student.verseNotes > 0) lines.push(`- New tutor notes on ${student.verseNotes === 1 ? "1 verse" : `${student.verseNotes} verses`} of the reading. Sign in to read them.`);
   return lines;
 }
 export function weeklyDigestMessage(input: { product: string; recipientName: string | null; students: readonly DigestStudent[]; audience: "parent" | "self" | "both"; links: Links }): Message {

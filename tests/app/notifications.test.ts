@@ -78,7 +78,9 @@ async function setup() {
   return { ...f, sent, outcome, clock, secret, cronSecret, env, delivery, dispatch, switches, extra, emailOf, draft, ledger, asRequest, ceremony, rehearsal };
 }
 const noOtherData = (message: NotificationMessage, ...forbidden: string[]) => {
-  for (const value of ["Sibling A", "Sibling B", "Unrelated", ...forbidden]) { expect(message.subject).not.toContain(value); expect(message.text).not.toContain(value); }
+  // Random token characters could spell a short name by chance; compare the words around them.
+  const text = message.text.replace(/[#?]t=[tdr]\.[0-9a-f-]{36}\.[A-Za-z0-9_-]{43}/g, "");
+  for (const value of ["Sibling A", "Sibling B", "Unrelated", ...forbidden]) { expect(message.subject).not.toContain(value); expect(text).not.toContain(value); }
 };
 
 describe("notification transport", () => {
@@ -106,6 +108,8 @@ describe("notification transport", () => {
     expect(await silent(ok)).toBe("unknown");
     const thrown = createNotificationTransport({ origin: ORIGIN, apiKey, from, fetch: async () => { throw new TypeError("network"); } });
     expect(await thrown(ok)).toBe("unknown");
+    // A provider error may have accepted the message: never treated as a definite refusal.
+    for (const status of [500, 502, 503]) expect(await createNotificationTransport({ origin: ORIGIN, apiKey, from, fetch: async () => new Response("x", { status }) })(ok)).toBe("unknown");
   });
 });
 
@@ -240,7 +244,7 @@ describe("weekly digests", () => {
     });
     f.outcome.next = "rejected";
     expect(await f.delivery().run("crc")).toMatchObject({ sent: 0, failed: 1 });
-    expect(f.sent[0].text).not.toContain("Ben"); expect(f.sent[0].text).toContain("Ada");
+    expect(f.sent[0].text).not.toMatch(/^Ben$/m); expect(f.sent[0].text).toMatch(/^Ada$/m);
     f.outcome.next = "sent"; f.clock.now += 60_000;
     expect(await f.delivery().run("crc")).toMatchObject({ sent: 1 });
     expect(f.sent[1].idempotencyKey).toBe(f.sent[0].idempotencyKey);
@@ -255,13 +259,31 @@ describe("weekly digests", () => {
     expect(await h.delivery().run("crc")).toMatchObject({ sent: 0 }); expect(h.sent).toEqual([]);
   });
 
+  it("leave past classes out of the candidates and carry what one run cannot reach to the next morning", async () => {
+    const f = await digestDay();
+    // Cy's ceremony has passed: Cy's parent is not even a candidate, so past classes never crowd out current families.
+    await f.owner(() => f.db.update(s.student).set({ ceremonyDate: addDays(f.today, -3) }).where(eq(s.student.id, f.students[2].id)));
+    const tight = createNotificationDelivery({ db: f.db, origin: ORIGIN, secret: f.secret, enabled: true, send: async m => { f.sent.push(m); return "sent"; },
+      now: () => f.clock.now, pause: async () => {}, limits: { perRun: 1 } });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await f.owner(() => f.db.insert(s.guardian).values({ tenantId: "crc", studentId: f.students[1].id, parentGrantId: f.extra.people["cy-parent"].grantId, linkProvenance: "synthetic" }));
+      expect(await tight.run("crc")).toMatchObject({ sent: 1, deferred: 1 });
+      f.clock.now += DAY; expect(await tight.run("crc")).toMatchObject({ sent: 1, deferred: 0 });
+      f.clock.now += DAY; expect(await tight.run("crc")).toMatchObject({ sent: 0, deferred: 0 });
+      expect(String(error.mock.calls[0][0])).toBe("notifications run: 1 sent, 0 refused, 0 unanswered, 1 deferred");
+    } finally { error.mockRestore(); }
+    expect(new Set(f.sent.map(m => m.email)).size).toBe(2);
+    const cyParent = f.sent.find(m => m.email === "cy-parent@example.test")!.text; expect(cyParent).toMatch(/^Ben$/m); expect(cyParent).not.toMatch(/^Cy$|Synthetic Cy/m);
+  });
+
   it("go to an adult student about themselves only when they opt in, and not on other days", async () => {
     const f = await digestDay();
     await f.owner(() => f.db.update(s.student).set({ studentKind: "adult", ownEmail: ["adult", "example.test"].join("@") }).where(eq(s.student.id, f.students[0].id)));
     await f.delivery().run("crc");
     expect(f.sent.map(m => m.email)).not.toContain(await f.emailOf(f.identities.learner.id));
     // Multi's update no longer covers Ada: parents' updates cover child students.
-    expect(f.sent.find(m => m.email === "multi@example.test")?.text ?? "").not.toContain("Ada");
+    expect(f.sent.find(m => m.email === "multi@example.test")?.text ?? "").not.toMatch(/^Ada$/m);
     const g = await digestDay();
     await g.owner(() => g.db.update(s.student).set({ studentKind: "adult", ownEmail: ["adult", "example.test"].join("@") }).where(eq(s.student.id, g.students[0].id)));
     expect((await g.dispatch(g.asRequest("learner", "/api/notifications/preferences", { kind: "weekly-digest", enabled: true }))).status).toBe(200);
@@ -327,7 +349,7 @@ describe("the morning run route", () => {
     const f = await setup();
     const call = (headers: Record<string, string>, path = "/api/internal/notifications/run", method = "GET") => f.dispatch(new Request(`${ORIGIN}${path}`, { method, headers }));
     const ok = await call({ authorization: `Bearer ${f.cronSecret}` }); expect(ok.status).toBe(200);
-    expect(Object.keys(await ok.json()).sort()).toEqual(["at", "enabled", "failed", "ok", "sent", "skipped", "unknown"]);
+    expect(Object.keys(await ok.json()).sort()).toEqual(["at", "deferred", "enabled", "failed", "ok", "sent", "skipped", "unknown"]);
     expect((await call({ authorization: `Bearer ${f.cronSecret}`, cookie: "a=b" })).status).toBe(403);
     expect((await call({ authorization: `Bearer ${"x".repeat(43)}` })).status).toBe(401);
     expect((await call({})).status).toBe(401);
@@ -335,13 +357,15 @@ describe("the morning run route", () => {
     expect((await call({ authorization: `Bearer ${f.cronSecret}` }, "/api/internal/notifications/run", "POST")).status).toBe(405);
   });
 
-  it("logs nothing: no address, token or name reaches the console", async () => {
+  it("logs only counts: no address, token or name reaches the console", async () => {
     const f = await setup(); f.clock.now = nextMorning(0);
     await f.switches({ tutorDraft: true, weeklyDigest: true, studentReminder: true, digestWeekday: 0 });
     const spies = (["log", "info", "warn", "error", "debug"] as const).map(name => vi.spyOn(console, name).mockImplementation(() => {}));
     try {
       await f.draft(); f.outcome.next = "rejected"; await f.delivery().run("crc"); f.outcome.next = "unknown"; await f.delivery().run("crc");
-      for (const spy of spies) expect(spy).not.toHaveBeenCalled();
+      const lines = spies.flatMap(spy => spy.mock.calls.map(call => call.map(String).join(" ")));
+      expect(lines.length).toBeGreaterThan(0);
+      for (const line of lines) expect(line).toMatch(/^notifications run: \d+ sent, \d+ refused, \d+ unanswered, \d+ deferred$/);
     } finally { for (const spy of spies) spy.mockRestore(); }
   });
 });

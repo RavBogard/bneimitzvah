@@ -15,16 +15,22 @@
 
 ## Decided here (Daniel may overrule)
 
-- Product name in mail is the congregation's `tenant.product_name` (CRC: "CRC B'nei Mitzvah"), as the sign-in and invitation mails already use.
+- Product name in mail bodies is the congregation's `tenant.product_name` (CRC: "CRC B'nei Mitzvah"), as the sign-in and invitation mails already use. The weekly subject is the fixed "Your weekly Beit Mitzvah update".
 - Subjects never name a student. Bodies use first names only, and only of students the recipient may already see.
 - Links are the portal's address (`/`), the member's email settings and the unsubscribe page; never a link that opens content without signing in.
 - Lesson entries are chosen by lesson date: from the day of the member's previous update through yesterday (so consecutive weeks do not overlap). An entry dated earlier but written later is not in any update; it is still in the portal.
 - Parents' updates cover child students only (an adult is their own contact). An adult student's own update is opt-in.
 - A scheduled update or reminder the morning run misses is sent up to two days late, never later, and never twice in a week even if the day changes.
-- Retries: a definite provider refusal is retried (same idempotency key) up to three attempts within three days; a send with no answer is never retried automatically, because it may have arrived.
-- Each run sends at most 40 messages, stops after 45 seconds, and spaces sends 0.6 s apart (Resend's default rate limit is 2 per second).
+- Retries: a definite provider refusal (a 4xx, including 429) is retried (same idempotency key) up to three attempts within three days, and never once that member already had this week's message; a send with no answer or a provider 5xx is never retried automatically, because it may have arrived.
+- Each run sends at most 40 messages, stops after 45 seconds, and spaces sends 0.6 s apart (Resend's default rate limit is 2 per second). Candidates are only parents of current child students (ceremony today or later) and opted-in adults who have not had this week's message, so past classes never crowd out current families; what a run cannot reach is reported as `deferred` and goes on the next morning within the catch-up days. A run with refusals, unanswered sends or deferrals logs one line of counts (never an address, name or token).
+- The weekly update counts new tutor notes by verse (an edited note is one verse, not several notes).
 - Unsubscribe from the email body opens `/unsubscribe#t=...` (the token stays in the fragment and is cleared from the address bar); the header link is the same capability as a query parameter, which mail providers POST to. A GET of the header link redirects to the page; nothing changes until a POST.
 - An unset or malformed `PORTAL_NOTIFICATIONS_ENABLED` is off and never takes the portal down.
+
+## Operator notes
+
+- Rollback: once an admin saves the new `notifications` settings field, a deployment from before this release would reject the whole settings body and fall back to defaults until rolled forward. Roll back only after removing the field, or roll forward.
+- Unsubscribe links are signed with a key derived from `BETTER_AUTH_SECRET`, the deployment and the origin; rotating any of them invalidates links already sent (members can still use their email settings). The header link carries the token in a query string, which RFC 8058 requires; it can appear in request logs and only turns that kind off for that member.
 
 ## Open items that wait on Daniel
 
