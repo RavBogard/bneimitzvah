@@ -48,7 +48,7 @@ export function RehearsalDates({ student }: { student: Pick<Student, "rehearsal1
   if (!dates.length) return null;
   return <p className="hero-rehearsals">{dates.length === 1 ? "Rehearsal" : "Rehearsals"}: {dates.map((value, index) => <span key={index}>{index > 0 && " and "}<time dateTime={value}>{ceremonyCountdown(value).label}</time></span>)}</p>;
 }
-/** The confirmed service beside the ceremony date, named as the honors sheet names it. Nothing when the slot is unknown. */
+/** The confirmed service, named as the honors sheet names it. It sits on the name line, which has room on a phone, so the date line never wraps. Nothing when the slot is unknown. */
 export function ServiceSlotName({ student }: { student: Pick<Student, "serviceSlot"> }) {
   const name = serviceSlotName(student.serviceSlot);
   return name ? <span className="hero-slot"><span aria-hidden="true">· </span>{name}</span> : null;
@@ -297,7 +297,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       {song ? <><header className={`reading-hero${learner ? " reading-current-assignment" : ""}`} aria-labelledby="reading-heading">
         <div className="hero-who">
           <h2 id="reading-heading" className="hero-name"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
-          <p className="hero-date"><time dateTime={student.ceremonyDate}>{countdown!.label}</time><ServiceSlotName student={student} />{countdown!.phrase && <span className="hero-days">{countdown!.phrase}</span>}</p>
+          <ServiceSlotName student={student} />
+          <p className="hero-date"><time dateTime={student.ceremonyDate}>{countdown!.label}</time>{countdown!.phrase && <span className="hero-days">{countdown!.phrase}</span>}</p>
           <button type="button" className="hero-icon" aria-label="Refresh reading" onClick={() => {
             const target = studyDenied, turn = sequence.current;
             // Explicit reload retains translation drafts; only Sources must settle before their owners are replaced.
