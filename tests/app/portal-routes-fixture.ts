@@ -40,7 +40,6 @@ import { createStudentRecordingService } from "../../src/server/recordings/servi
 import { StudyUnavailable } from "../../src/server/study/types";
 import { createReferenceReviewService } from "../../src/server/reference-review/service";
 import { ReviewUnavailable } from "../../src/server/reference-review/batch-contract";
-import { createFinkelReferenceService } from "../../src/server/reference-audio/finkel-service";
 
 export async function portalRoutesFixture() {
   const f = await accessFixture();
@@ -78,7 +77,6 @@ export async function portalRoutesFixture() {
     portal: createPortalService({ access: f.service, practice, sessionBindingSecret: randomBytes(48).toString("base64url") }), relationships: createRelationshipService({ access: f.service }), pendingInvitations,
     serviceLearning: createServiceLearningService({ access: f.service, practice, signingSecret: randomBytes(48).toString("base64url") }),
     referenceReview: createReferenceReviewService({ access: f.service, reviewer: undefined, get: async () => { throw new ReviewUnavailable(); } }),
-    finkelReference: createFinkelReferenceService({ access: f.service, get: async () => { throw new ReviewUnavailable(); } }),
     serviceEcosystem: createServiceEcosystemService({ access:f.service,practice,broker:createMusicBroker(undefined) }),
     serviceScheduler: createServiceScheduler({ db:f.db, broker:createMusicBroker(undefined) }),
     googleChallenges: createGoogleChallenges({ db: f.db, origin: "http://localhost:3000", secret: randomBytes(48).toString("base64url") }),

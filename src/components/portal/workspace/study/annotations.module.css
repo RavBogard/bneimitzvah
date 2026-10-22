@@ -8,8 +8,6 @@
 .flowParagraph { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: var(--hebrew-size, 2rem); line-height: 2.15; margin-block: 1rem; text-align: start; overflow-wrap: anywhere; }
 .inlineHebrew[lang="he"] { display: inline; font-size: inherit; line-height: inherit; margin: 0; }
 .flowVerse { display: inline; }
-/* A whole-passage recording (no word timing) is playing these verses. */
-.flowVerse[data-playing="true"] .flowHebrew { background: var(--lake-tint); border-radius: 0.25rem; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .flowEnglish { display: block; margin-block: 0.25rem 1rem; margin-inline: 0; max-inline-size: 62ch; font: 400 1rem/1.7 "Bricolage Grotesque", sans-serif; text-align: start; unicode-bidi: isolate; }
 .verseNumber { display: inline; vertical-align: super; font: 600 0.875rem/1.8 "Bricolage Grotesque", sans-serif; color: var(--lake-deep); background: transparent; border: 0; padding: 0.35rem; cursor: pointer; border-radius: var(--radius-control); }
 .verseNumber:hover { background: var(--lake-tint); }
