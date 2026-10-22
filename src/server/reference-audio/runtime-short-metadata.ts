@@ -92,6 +92,6 @@ export function createRuntimeShortMetadata(config: Runtime, env: Environment) {
     finally { controller.abort(); clearTimeout(timer); signal?.removeEventListener("abort", abort); }
   };
   const check = (signal?: AbortSignal) => { if (!current() || signal?.aborted) throw new ReferenceUnavailable(); };
-  return Object.freeze({ loadCatalog: async (signal?: AbortSignal) => { const result = await load(signal); check(signal); return result.catalog; },
+  return Object.freeze({ configured: () => current(), loadCatalog: async (signal?: AbortSignal) => { const result = await load(signal); check(signal); return result.catalog; },
     loadManifest: async (signal?: AbortSignal) => { const result = await load(signal); check(signal); return result.manifest; } });
 }

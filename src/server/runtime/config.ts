@@ -8,6 +8,8 @@ export type RuntimeConfig = Readonly<{
   google?: Readonly<{ clientId: string; clientSecret: string }>;
   mail: Readonly<{ apiKey: string; from: string }>;
   referenceAudio?: Readonly<{ catalogSha256: string; storeId: string; studentRelease: boolean }>;
+  // CRC Music service audio for students and guardians, separate from reference recordings. Only exactly "true" releases it; anything else is off.
+  serviceAudioStudentRelease: boolean;
   referenceReview?: Readonly<{ reviewer: ReviewerConfig; storeId: string }>;
   // Cantor Finkel's recordings: the pinned private manifest in the existing private store.
   // Its own release switch is required IN ADDITION to the shared reference release (stricter, never looser).
@@ -97,7 +99,7 @@ export function loadRuntimeConfig(env: Readonly<Record<string, string | undefine
       rosterSheet = Object.freeze({ serviceAccount: env.GOOGLE_SHEETS_SERVICE_ACCOUNT, sheetId: env.GOOGLE_ROSTER_SHEET_ID });
     if(env.CRON_SECRET!==undefined && (!clean(env.CRON_SECRET) || env.CRON_SECRET.length<32 || env.CRON_SECRET.length>512 || env.CRON_SECRET===serviceMusic?.token || env.CRON_SECRET===env.BETTER_AUTH_SECRET))throw 0;
     return Object.freeze({ deployment: Object.freeze({ environment, deployment: env.PORTAL_DEPLOYMENT }), origin: origin.origin,
-      databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, referenceReview, referenceFinkel, serviceMusic, serviceCronSecret:env.CRON_SECRET, mcpEnabled: env.PORTAL_MCP_ENABLED === "true", recordingsEnabled: env.PORTAL_RECORDINGS_ENABLED === "true", rosterSheet,
+      databaseUrl: env.DATABASE_URL, authSecret: env.BETTER_AUTH_SECRET, google, referenceAudio, serviceAudioStudentRelease: env.SERVICE_AUDIO_STUDENT_RELEASE === "true", referenceReview, referenceFinkel, serviceMusic, serviceCronSecret:env.CRON_SECRET, mcpEnabled: env.PORTAL_MCP_ENABLED === "true", recordingsEnabled: env.PORTAL_RECORDINGS_ENABLED === "true", rosterSheet,
       mail: Object.freeze({ apiKey: env.RESEND_API_KEY, from: env.RESEND_FROM }) });
   } catch { throw new RuntimeUnavailable(); }
 }

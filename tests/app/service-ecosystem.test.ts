@@ -15,7 +15,7 @@ import {createPracticeService}from "../../src/server/practice/service";
 
 const open: Awaited<ReturnType<typeof accessFixture>>[] = [];
 afterEach(async () => { await Promise.all(open.splice(0).map(f => f.client.close())); });
-async function fixture() {
+async function fixture(options: { serviceAudioStudentRelease?: boolean } = {}) {
   const f = await accessFixture(); open.push(f);
   let projection: MusicProjection = { setlistId: "synthetic-set", sourceRevision: "revision-1", localDate: "2027-01-02", ceremonyType: "morning", operatorLinks: { music: "https://music.example.test/setlists/synthetic-set" },
     rows: [{ rowId: "stable-part", order: 0, title: "Synthetic service part", prayerId: "synthetic-prayer", edition: "synthetic-edition", textIdentity: "text-1", arrangement: { songId: "synthetic-song", fileId: "synthetic-score" }, resources: [{ resourceId: "synthetic-resource", kind: "score", label: "Synthetic score" }] }] };
@@ -23,7 +23,7 @@ async function fixture() {
   const linked = (): MusicResult => { if (!available) throw new AccessUnavailable(); return { version: 1, status: "linked", setlistId: projection.setlistId, sourceRevision: projection.sourceRevision, projection: structuredClone(projection) }; };
   const broker: MusicBroker = { ensure: vi.fn(async (input): Promise<MusicResult> => { if (!available) throw new AccessUnavailable(); if (ambiguous && !input.explicitSetlistId) return { version: 1, status: "ambiguous", candidates: [{ setlistId: "synthetic-set" }, { setlistId: "synthetic-other" }] }; return linked(); }),
     projection: vi.fn(async () => linked()), resource: vi.fn(async (_ceremony, _row, resourceId) => { if (!available) throw new AccessUnavailable(); return { resourceId, kind: "score" as const, url: "https://music.example.test/api/scoped/synthetic", expiresAt: new Date(Date.now() + 60000).toISOString() }; }) };
-  const practice=createPracticeService({access:f.service}),service=createServiceEcosystemService({access:f.service,practice,broker});
+  const practice=createPracticeService({access:f.service}),service=createServiceEcosystemService({access:f.service,practice,broker,serviceAudioStudentRelease:options.serviceAudioStudentRelease});
   const students = createStudentService({ access: f.service, signingSecret: randomBytes(48).toString("base64url"), loadReading: async () => { throw new Error("Synthetic calendar unused"); }, afterSchedule: service.synchronize });
   const mutation = (who: "admin" | "multi" | "learner" = "admin", origin = "http://localhost:3000") => ({ ...f.request(who, "http://localhost:3000", { origin }), method: "POST" });
   const selection = { studentId: f.students[0].id, mode: "admin" as const };
@@ -176,12 +176,21 @@ test("staff map a stable music row to an exact approved catalog unit; arbitrary/
   await expect(materials.ceremonyUnit(f.request("learner"),{...f.selection,mode:"student",rowId:"stable-part"})).rejects.toBeInstanceOf(AccessUnavailable);
 });
 
-test("the reference listening hold also blocks source-projected audio for students and guardians",async()=>{
+test("the service-audio hold, off unless SERVICE_AUDIO_STUDENT_RELEASE is exactly true, blocks source-projected audio for students and guardians",async()=>{
   const f=await fixture();await f.scheduled();await f.ecosystem.synchronize(f.mutation(),f.selection);
   f.change({rows:f.projection().rows.map(row=>({...row,resources:[...row.resources,{resourceId:"synthetic-audio",kind:"audio",label:"Synthetic held audio"}]}))});
   const student=await f.ecosystem.view(f.request("learner"),{...f.selection,mode:"student"});expect(JSON.stringify(student)).not.toContain("synthetic-audio");
   await expect(f.ecosystem.resource(f.mutation("learner"),{...f.selection,mode:"student",rowId:"stable-part",resourceId:"synthetic-audio"})).rejects.toBeInstanceOf(AccessUnavailable);
   expect(f.broker.resource).not.toHaveBeenCalled();
+});
+
+test("only the separate service-audio release shows CRC Music audio to students and guardians",async()=>{
+  const f=await fixture({serviceAudioStudentRelease:true});await f.scheduled();await f.ecosystem.synchronize(f.mutation(),f.selection);
+  f.change({rows:f.projection().rows.map(row=>({...row,resources:[...row.resources,{resourceId:"synthetic-audio",kind:"audio",label:"Synthetic released audio"}]}))});
+  const student=await f.ecosystem.view(f.request("learner"),{...f.selection,mode:"student"});expect(JSON.stringify(student)).toContain("synthetic-audio");
+  vi.mocked(f.broker.resource).mockResolvedValue({resourceId:"synthetic-audio",kind:"audio",url:"https://music.example.test/api/scoped/synthetic",expiresAt:new Date(Date.now()+60000).toISOString()});
+  await f.ecosystem.resource(f.mutation("learner"),{...f.selection,mode:"student",rowId:"stable-part",resourceId:"synthetic-audio"});
+  expect(f.broker.resource).toHaveBeenCalled();
 });
 
 test("a score grant reapproved as audio between projection and ticket issuance cannot bypass the listening hold",async()=>{

@@ -16,7 +16,7 @@ export function playMainVerseForWord(player: Pick<ReadingPlayerHandle, "select">
   if (!Number.isSafeInteger(verse) || verse < 0 || !Number.isSafeInteger(word) || word < 0) return;
   player?.select(verse, "verse"); tools?.select(verse, word);
 }
-export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expiresAt, audio, wordTools = true, target, load, register, onActiveWord }: {
+export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expiresAt, audio, wordTools = true, target, load, register, onActiveWord, onPlaybackState }: {
   scopeKey: string; verses: readonly StudyVerse[]; active: boolean; enabled?: boolean; expiresAt?: number; wordTools?: boolean;
   /** Missing composition renders inert controls; it never creates a local fallback. */
   /** Controlled modal target; changes are inert until explicit selection. */
@@ -25,9 +25,11 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
   load(index: number, signal: AbortSignal): Promise<ReferenceShortResolution>;
   register(value: ReadingPlayerHandle | null): void;
   onActiveWord(value: { verse: number; index: number } | null): void;
+  /** Observation only (the admin listening review times tap to sound); never changes playback. */
+  onPlaybackState?(value: ReadingPlaybackState): void;
 }) {
   const id = useId(), owner = useRef<ReturnType<typeof createShortReadingPlayback> | null>(null);
-  const callbacks = useRef({ load, onActiveWord, active, enabled, expiresAt, target }); callbacks.current = { load, onActiveWord, active, enabled, expiresAt, target };
+  const callbacks = useRef({ load, onActiveWord, onPlaybackState, active, enabled, expiresAt, target }); callbacks.current = { load, onActiveWord, onPlaybackState, active, enabled, expiresAt, target };
   const targetOwner = useRef<ReturnType<typeof createReadingPlayerTarget> | null>(null);
   if (!targetOwner.current) targetOwner.current = createReadingPlayerTarget();
   const targetCurrent = () => targetOwner.current!.current(callbacks.current.target);
@@ -40,7 +42,7 @@ export function ReadingPlayer({ scopeKey, verses, active, enabled = true, expire
     const playback = createShortReadingPlayback({ verses: verses.map(verse => { const projection = projectStudyVerse(verse.ref, verse.hebrew); return { ref: verse.ref, readingText: verse.hebrew.readingText, wordCount: projection.status === "ready" ? projection.projection.words.length : 0 }; }),
       canContinue: () => current && callbacks.current.active && callbacks.current.enabled && readingAudioCurrent(callbacks.current.expiresAt) && Boolean(owned?.isCurrent()) && targetCurrent(),
       load: async (index, signal) => { if (!owned?.isCurrent()) throw new Error("Reading intent replaced"); const result = await callbacks.current.load(index, signal); if (!owned?.isCurrent()) throw new Error("Reading intent replaced"); return result; },
-      onState: value => { if (current) setState(value); }, onActiveWord: value => { if (current && (value === null || owned?.isCurrent() && targetCurrent())) callbacks.current.onActiveWord(value); },
+      onState: value => { if (current) { setState(value); try { callbacks.current.onPlaybackState?.(value); } catch { /* Observers never affect playback. */ } } }, onActiveWord: value => { if (current && (value === null || owned?.isCurrent() && targetCurrent())) callbacks.current.onActiveWord(value); },
     });
     owned = createReadingPlayerIntent({ coordinator: audio.coordinator, slot: audio.slot, playback,
       enabled: () => current && callbacks.current.enabled && readingAudioCurrent(callbacks.current.expiresAt), active: () => callbacks.current.active,
