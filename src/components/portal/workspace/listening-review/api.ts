@@ -1,11 +1,11 @@
 import { PortalRequestError } from "../../api";
 import { parseStudyContent, studyRangePlan, type StudyPage } from "../study/api";
 import { parseReferenceShortResolution, type ReferenceShortResolution } from "../../../../lib/reference-audio/short-resolution";
-import { LISTENING_REASONS, LISTENING_SOURCES, listeningNote, type ListeningItem, type ListeningReason, type ListeningSource } from "../../../../lib/listening-review/sample";
+import { LISTENING_REASONS, LISTENING_SETS, LISTENING_SOURCES, listeningNote, type ListeningItem, type ListeningReason, type ListeningSet, type ListeningSource } from "../../../../lib/listening-review/sample";
 
 export type Verdict = { verdict: "pass" | "needs-work"; reasons: ListeningReason[]; note: string | null; latencyMs: number | null; asset: string; at: string };
 export type OverviewItem = ListeningItem & { available: boolean; verdict: Verdict | null };
-export type Tally = { source: ListeningSource; items: number; heard: number; pass: number; needsWork: number; wouldTeachWrong: number };
+export type Tally = { source: ListeningSource; set: ListeningSet; items: number; heard: number; pass: number; needsWork: number; wouldTeachWrong: number };
 export type Overview = { sampleVersion: string; items: OverviewItem[]; tallies: Tally[]; comparison: { passRate: number; wouldTeachWrong: number } };
 export type ItemView = { item: ListeningItem; page: StudyPage; reference: ReferenceShortResolution | null };
 export type RecordOutcome = { ok: true; verdict: Verdict } | { ok: false; code: "conflict" | "invalid" | "unavailable" | "changed" };
@@ -19,9 +19,10 @@ const count = (value: unknown) => Number.isSafeInteger(value) && (value as numbe
 const short = (value: unknown, max: number) => typeof value === "string" && value.length > 0 && value.length <= max && !/[\x00-\x1f\x7f<>]/.test(value) ? value : bad();
 
 function parseItem(value: unknown): ListeningItem {
-  const row = object(value, ["id", "source", "kind", "ref", "why"]);
-  if (typeof row.id !== "string" || !/^[a-z]{2}-[a-z0-9-]{1,60}$/.test(row.id) || !(LISTENING_SOURCES as readonly unknown[]).includes(row.source) || (row.kind !== "torah" && row.kind !== "haftarah")) return bad();
-  return { id: row.id, source: row.source as ListeningSource, kind: row.kind, ref: short(row.ref, 64), why: short(row.why, 200) };
+  const row = object(value, ["id", "source", "set", "kind", "ref", "why"]);
+  if (typeof row.id !== "string" || !/^[a-z]{2}-[a-z0-9-]{1,60}$/.test(row.id) || !(LISTENING_SOURCES as readonly unknown[]).includes(row.source) || !(LISTENING_SETS as readonly unknown[]).includes(row.set)
+    || (row.kind !== "torah" && row.kind !== "haftarah")) return bad();
+  return { id: row.id, source: row.source as ListeningSource, set: row.set as ListeningSet, kind: row.kind, ref: short(row.ref, 64), why: short(row.why, 200) };
 }
 export function parseVerdict(value: unknown): Verdict {
   const row = object(value, ["verdict", "reasons", "note", "latencyMs", "asset", "at"]);
@@ -33,16 +34,16 @@ export function parseVerdict(value: unknown): Verdict {
 }
 export function parseOverview(value: unknown): Overview {
   const view = object(object(value, ["ok", "overview"]).overview, ["sampleVersion", "items", "tallies", "comparison"]);
-  if (!Array.isArray(view.items) || view.items.length > 200 || !Array.isArray(view.tallies) || view.tallies.length > LISTENING_SOURCES.length) return bad();
+  if (!Array.isArray(view.items) || view.items.length > 200 || !Array.isArray(view.tallies) || view.tallies.length > LISTENING_SOURCES.length * LISTENING_SETS.length) return bad();
   const items = view.items.map((raw): OverviewItem => {
-    const row = object(raw, ["id", "source", "kind", "ref", "why", "available", "verdict"]);
+    const row = object(raw, ["id", "source", "set", "kind", "ref", "why", "available", "verdict"]);
     const { available, verdict, ...rest } = row; if (typeof available !== "boolean") return bad();
     return { ...parseItem(rest), available, verdict: verdict === null ? null : parseVerdict(verdict) };
   });
   const tallies = view.tallies.map((raw): Tally => {
-    const row = object(raw, ["source", "items", "heard", "pass", "needsWork", "wouldTeachWrong"]);
-    if (!(LISTENING_SOURCES as readonly unknown[]).includes(row.source)) return bad();
-    return { source: row.source as ListeningSource, items: count(row.items), heard: count(row.heard), pass: count(row.pass), needsWork: count(row.needsWork), wouldTeachWrong: count(row.wouldTeachWrong) };
+    const row = object(raw, ["source", "set", "items", "heard", "pass", "needsWork", "wouldTeachWrong"]);
+    if (!(LISTENING_SOURCES as readonly unknown[]).includes(row.source) || !(LISTENING_SETS as readonly unknown[]).includes(row.set)) return bad();
+    return { source: row.source as ListeningSource, set: row.set as ListeningSet, items: count(row.items), heard: count(row.heard), pass: count(row.pass), needsWork: count(row.needsWork), wouldTeachWrong: count(row.wouldTeachWrong) };
   });
   const comparison = object(view.comparison, ["passRate", "wouldTeachWrong"]);
   if (typeof comparison.passRate !== "number" || comparison.passRate <= 0 || comparison.passRate > 1) return bad();

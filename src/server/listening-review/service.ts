@@ -10,13 +10,13 @@ import * as s from "../db/index";
 import type { StudyPage, StudyRequest } from "../study/types";
 import { ReferenceUnavailable } from "../reference-audio/catalog";
 import type { ReferenceShortResolution } from "../../lib/reference-audio/short-resolution";
-import { LISTENING_COMPARISON_BAR, LISTENING_LATENCY_LIMIT_MS, LISTENING_REASONS, LISTENING_SAMPLE, LISTENING_SAMPLE_VERSION, LISTENING_SOURCES, listeningItem, listeningNote,
-  type ListeningItem, type ListeningReason, type ListeningSource } from "../../lib/listening-review/sample";
+import { LISTENING_COMPARISON_BAR, LISTENING_LATENCY_LIMIT_MS, LISTENING_REASONS, LISTENING_SAMPLE, LISTENING_SAMPLE_VERSION, LISTENING_SETS, LISTENING_SOURCES, listeningItem, listeningNote,
+  type ListeningItem, type ListeningReason, type ListeningSet, type ListeningSource } from "../../lib/listening-review/sample";
 import type { ListeningSourceProvider } from "./sources";
 
 export type ListeningVerdict = Readonly<{ verdict: "pass" | "needs-work"; reasons: readonly ListeningReason[]; note: string | null; latencyMs: number | null; asset: string; at: string }>;
 export type ListeningOverviewItem = ListeningItem & Readonly<{ available: boolean; verdict: ListeningVerdict | null }>;
-export type ListeningTally = Readonly<{ source: ListeningSource; items: number; heard: number; pass: number; needsWork: number; wouldTeachWrong: number }>;
+export type ListeningTally = Readonly<{ source: ListeningSource; set: ListeningSet; items: number; heard: number; pass: number; needsWork: number; wouldTeachWrong: number }>;
 export type ListeningOverview = Readonly<{ sampleVersion: string; items: readonly ListeningOverviewItem[]; tallies: readonly ListeningTally[];
   comparison: Readonly<{ passRate: number; wouldTeachWrong: number }> }>;
 export type ListeningItemView = Readonly<{ item: ListeningItem; page: StudyPage; reference: ReferenceShortResolution | null }>;
@@ -47,22 +47,39 @@ export function createListeningReviewService<Q extends PgQueryResultHKT>(input: 
   const admin = <T>(request: AccessRequest, capability: "read-defaults" | "manage-defaults", action: (tx: AccessTransaction<Q>, actor: Actor) => Promise<T>) =>
     input.access.withAdminCapability(request, { mode: "admin", capability }, action);
 
-  async function overview(request: AccessRequest): Promise<ListeningOverview> {
-    return admin(request, "read-defaults", async (tx, actor) => {
+  /** Which sampled verses a source would actually play now. Fails closed: an error means none. */
+  async function playable(signal: AbortSignal): Promise<ReadonlyMap<ListeningSource, ReadonlySet<string>>> {
+    const result = new Map<ListeningSource, ReadonlySet<string>>();
+    await Promise.all([...providers.values()].map(async provider => {
+      if (!pinOf(provider.id)) { result.set(provider.id, new Set()); return; }
+      const mine = sample.filter(item => item.source === provider.id).map(item => Object.freeze({ ref: item.ref, kind: item.kind }));
+      if (!provider.playable) { result.set(provider.id, new Set(mine.map(row => row.ref))); return; }
+      try { result.set(provider.id, await provider.playable(mine, signal)); } catch { result.set(provider.id, new Set()); }
+    }));
+    return result;
+  }
+
+  async function overview(request: AccessRequest & { signal?: AbortSignal }): Promise<ListeningOverview> {
+    const rows = await admin(request, "read-defaults", async (tx, actor) => {
       const t = s.listeningReviewVerdict;
-      const rows = await tx.select().from(t).where(and(eq(t.tenantId, actor.tenantId), eq(t.actorUserId, actor.userId), eq(t.sampleVersion, LISTENING_SAMPLE_VERSION)))
+      return tx.select().from(t).where(and(eq(t.tenantId, actor.tenantId), eq(t.actorUserId, actor.userId), eq(t.sampleVersion, LISTENING_SAMPLE_VERSION)))
         .orderBy(desc(t.createdAt), desc(t.id)).limit(5000);
-      const items = sample.map((item): ListeningOverviewItem => {
-        const pin = pinOf(item.source), latest = pin ? rows.find(row => row.itemId === item.id && row.source === item.source && row.sourcePin === pin) : undefined;
-        return Object.freeze({ ...item, available: pin !== null, verdict: latest ? view(latest) : null });
-      });
-      const tallies = LISTENING_SOURCES.filter(source => sample.some(item => item.source === source)).map((source): ListeningTally => {
-        const mine = items.filter(item => item.source === source && item.available), heard = mine.filter(item => item.verdict);
-        return Object.freeze({ source, items: mine.length, heard: heard.length, pass: heard.filter(item => item.verdict!.verdict === "pass").length,
-          needsWork: heard.filter(item => item.verdict!.verdict === "needs-work").length, wouldTeachWrong: heard.filter(item => item.verdict!.reasons.includes("would-teach-wrong")).length });
-      });
-      return Object.freeze({ sampleVersion: LISTENING_SAMPLE_VERSION, items: Object.freeze(items), tallies: Object.freeze(tallies), comparison: LISTENING_COMPARISON_BAR });
     });
+    const controller = new AbortController(), abort = () => controller.abort(); request.signal?.addEventListener("abort", abort, { once: true });
+    const timer = setTimeout(abort, 20_000);
+    let ready: ReadonlyMap<ListeningSource, ReadonlySet<string>>;
+    try { ready = await playable(controller.signal); } finally { clearTimeout(timer); request.signal?.removeEventListener("abort", abort); }
+    const items = sample.map((item): ListeningOverviewItem => {
+      const pin = pinOf(item.source), available = pin !== null && ready.get(item.source)?.has(item.ref) === true;
+      const latest = available ? rows.find(row => row.itemId === item.id && row.source === item.source && row.sourcePin === pin) : undefined;
+      return Object.freeze({ ...item, available, verdict: latest ? view(latest) : null });
+    });
+    const tallies = LISTENING_SOURCES.flatMap(source => LISTENING_SETS.filter(set => sample.some(item => item.source === source && item.set === set)).map((set): ListeningTally => {
+      const mine = items.filter(item => item.source === source && item.set === set && item.available), heard = mine.filter(item => item.verdict);
+      return Object.freeze({ source, set, items: mine.length, heard: heard.length, pass: heard.filter(item => item.verdict!.verdict === "pass").length,
+        needsWork: heard.filter(item => item.verdict!.verdict === "needs-work").length, wouldTeachWrong: heard.filter(item => item.verdict!.reasons.includes("would-teach-wrong")).length });
+    }));
+    return Object.freeze({ sampleVersion: LISTENING_SAMPLE_VERSION, items: Object.freeze(items), tallies: Object.freeze(tallies), comparison: LISTENING_COMPARISON_BAR });
   }
 
   /** Text and the clip a student would get, for one sampled verse. Throws ReferenceUnavailable when the source is not configured. */

@@ -25,9 +25,9 @@ let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop:
 let directory: string | undefined, shortBytes: Buffer, shortPath: string;
 const contexts: BrowserContext[] = [], signedIn = new Map<string, Awaited<ReturnType<BrowserContext["storageState"]>>>();
 const sample: ListeningItem[] = [
-  { id: "pt-genesis-1-1", source: "pocket-torah", kind: "torah", ref: "Genesis 1:1", why: "Synthetic first verse" },
-  { id: "pt-genesis-1-2", source: "pocket-torah", kind: "torah", ref: "Genesis 1:2", why: "Synthetic second verse" },
-  { id: "fj-genesis-1-3", source: "finkel", kind: "torah", ref: "Genesis 1:3", why: "Second source, not composed" },
+  { id: "pt-genesis-1-1", source: "pocket-torah", set: "stress", kind: "torah", ref: "Genesis 1:1", why: "Synthetic first verse" },
+  { id: "pt-genesis-1-2", source: "pocket-torah", set: "random", kind: "torah", ref: "Genesis 1:2", why: "Synthetic second verse" },
+  { id: "fj-genesis-1-3", source: "finkel", set: "stress", kind: "torah", ref: "Genesis 1:3", why: "Second source, not composed" },
 ];
 function studyPage(request: StudyRequest) {
   const page = syntheticUiStudyPage(request, "available");
@@ -89,7 +89,7 @@ it("on a phone an admin hears a sampled verse from a word tap, sees tap-to-sound
   await ui(tab.getByRole("heading", { name: "Listening review", level: 1, exact: true })).toBeVisible();
   const tally = tab.getByRole("region", { name: "Tally", exact: true });
   await ui(tally.getByRole("heading", { name: "PocketTorah", exact: true })).toBeVisible();
-  await ui(tally.getByText("of 2 heard", { exact: false })).toBeVisible();
+  await ui(tally.getByText("0 of 1 passed", { exact: false })).toHaveCount(2);
   await ui(tally.getByRole("heading", { name: "Cantor Finkel", exact: true })).toBeVisible();
   await ui(tab.getByRole("heading", { name: "Genesis 1:1", level: 2, exact: true })).toBeVisible();
   await ui(tab.getByText("Synthetic first verse", { exact: true })).toBeVisible();
@@ -100,7 +100,7 @@ it("on a phone an admin hears a sampled verse from a word tap, sees tap-to-sound
   const player = tab.getByRole("region", { name: "Reading playback", exact: true });
   await ui(player.getByRole("button", { name: "Pause", exact: true })).toBeVisible({ timeout: 20_000 });
   await ui(player.getByText("Genesis 1:1 · Whole verse", { exact: true })).toBeVisible();
-  await ui(tab.getByText(/^Tap to sound: \d+ ms/)).toBeVisible();
+  await ui(tab.getByText(/^First tap to playing: \d+ ms$/)).toBeVisible();
   expect(state.clips).toBeGreaterThan(0);
   await ui(player.getByLabel("Speed", { exact: true })).toBeEnabled();
   await ui(player.getByRole("button", { name: "Repeat", exact: true })).toBeEnabled();
@@ -109,7 +109,7 @@ it("on a phone an admin hears a sampled verse from a word tap, sees tap-to-sound
   await tab.getByRole("button", { name: "Pass", exact: true }).click();
   await tab.getByRole("button", { name: "Save and go to next", exact: true }).click();
   await ui(tab.getByRole("heading", { name: "Genesis 1:2", level: 2, exact: true })).toBeVisible();
-  await ui(tally.getByText("Pass rate", { exact: false })).toContainText("100%");
+  await ui(tally.getByText("1 of 1 passed", { exact: false })).toBeVisible();
 
   await tab.locator(".study-verses [data-word-index=\"0\"]").first().click();
   await ui(player.getByRole("button", { name: "Pause", exact: true })).toBeVisible({ timeout: 20_000 });
@@ -119,9 +119,9 @@ it("on a phone an admin hears a sampled verse from a word tap, sees tap-to-sound
   expect(await fits(tab)).toBe(true); await capture(tab, "listening-review-phone-needs-work");
   await tab.getByRole("button", { name: "Save and go to next", exact: true }).click();
   await ui(tab.getByText("Saved: Needs work.", { exact: true })).toBeVisible();
-  await ui(tally.getByText("Pass rate", { exact: false })).toContainText("50%");
-  await ui(tally.getByText("would teach wrong", { exact: false }).first()).toContainText("1");
-  await ui(tab.getByText("All 2 verses heard, below the comparison bar.", { exact: true })).toBeVisible();
+  await ui(tally.getByText("0 of 1 passed, 1 need work, 1 would teach wrong (1 of 1 heard)", { exact: true })).toBeVisible();
+  // Counts only: the page never claims a set is accepted.
+  await ui(tab.getByText(/meeting|accepted|below the/i)).toHaveCount(0);
 
   const rows = await fixture.ownerDb.select().from(s.listeningReviewVerdict);
   expect(rows.map(row => [row.itemId, row.verdict, row.reasons, row.note, row.source]).sort()).toEqual([
@@ -131,7 +131,7 @@ it("on a phone an admin hears a sampled verse from a word tap, sees tap-to-sound
   // The second source's verse is listed but cannot be played or marked.
   await tab.getByText("All 3 verses", { exact: true }).click();
   await tab.getByRole("button", { name: /Genesis 1:3/ }).click();
-  await ui(tab.getByText("This source isn’t available yet.", { exact: true })).toBeVisible();
+  await ui(tab.getByText("This verse has no recording to play from this source, so it isn’t counted.", { exact: true })).toBeVisible();
   await ui(tab.getByRole("button", { name: "Save and go to next", exact: true })).toHaveCount(0);
   expect(await fits(tab)).toBe(true);
 });

@@ -56,7 +56,7 @@ import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
 const secret = () => randomBytes(48).toString("base64url");
 type Mail = { email: string; url: string };
 
-export async function browserFixture(options: { listening?: { sample: readonly ListeningItem[]; sources: readonly ListeningSourceProvider[] }; google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; shortReferenceStudyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceShortManifestLoad?: (signal?: AbortSignal) => Promise<ShortSourceManifest>; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown>;musicBroker?:MusicBroker;referenceReviewGet?:ReferenceCatalogGet } = {}) {
+export async function browserFixture(options: { serviceAudioStudentRelease?: boolean; listening?: { sample: readonly ListeningItem[]; sources: readonly ListeningSourceProvider[] }; google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; shortReferenceStudyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceShortManifestLoad?: (signal?: AbortSignal) => Promise<ShortSourceManifest>; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown>;musicBroker?:MusicBroker;referenceReviewGet?:ReferenceCatalogGet } = {}) {
   const base = await postgresAccessFixture();
   try {
     // The shared disposable fixture creates the DB, migrations and restricted
@@ -70,7 +70,7 @@ export async function browserFixture(options: { listening?: { sample: readonly L
     const deployment = { environment: "local" as const, deployment: "http-browser" };
     const access = createAccessService({ db, auth, deployment });
     const practice = createPracticeService({ access });
-    const musicBroker=options.musicBroker??createMusicBroker(undefined),serviceEcosystem=createServiceEcosystemService({access,practice,broker:musicBroker,studentAudioRelease:options.referenceStudentRelease});
+    const musicBroker=options.musicBroker??createMusicBroker(undefined),serviceEcosystem=createServiceEcosystemService({access,practice,broker:musicBroker,serviceAudioStudentRelease:options.serviceAudioStudentRelease});
     const invitations = createInvitationService({ db, access, transport: async ({ email, url }) => {
       deliveries.push({ email, url });
       if (options.failInvitationDelivery?.()) throw new Error("Synthetic invitation delivery failure");

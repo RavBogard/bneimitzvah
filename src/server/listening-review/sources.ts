@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import type { ListeningSource } from "../../lib/listening-review/sample";
 import { parseReferenceShortResolution, REFERENCE_SHORT_RESOLUTION_SCHEMA, type ReferenceShortResolution } from "../../lib/reference-audio/short-resolution";
 import { ReferenceUnavailable, resolveReference, type ReferenceCatalog } from "../reference-audio/catalog";
+import { REFERENCE_ARCHIVE_PREFIX } from "../../lib/reference-audio/source";
 import { findShortSource, readShortSourceEntry, type ShortSourceManifest } from "../reference-audio/short-source-manifest";
 import type { StudyVerse } from "../study/types";
 
@@ -17,6 +18,9 @@ export type ListeningSourceProvider = Readonly<{
   id: ListeningSource;
   pin(): string | null;
   resolve(verse: StudyVerse, kind: "torah" | "haftarah", signal: AbortSignal): Promise<ReferenceShortResolution | null>;
+  /** Optional, cheap: which of these verses would resolve to a clip now (no text needed). Without it every
+   * item of a configured source counts as available. */
+  playable?(verses: readonly Readonly<{ ref: string; kind: "torah" | "haftarah" }>[], signal: AbortSignal): Promise<ReadonlySet<string>>;
 }>;
 
 const digest = (value: unknown): value is string => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
@@ -43,6 +47,20 @@ export function createPocketTorahListeningSource(input: {
         if (!result) throw new ReferenceUnavailable();
         return result.source ? result : null;
       } catch { throw new ReferenceUnavailable(); }
+    },
+    async playable(verses: readonly Readonly<{ ref: string; kind: "torah" | "haftarah" }>[], signal: AbortSignal) {
+      if (!pin || (input.configured && !input.configured())) return new Set<string>();
+      const catalog = await input.loadCatalog(signal); if (signal.aborted) throw new ReferenceUnavailable();
+      const manifest = await input.loadManifest(signal); if (signal.aborted) throw new ReferenceUnavailable();
+      const found = new Set<string>();
+      for (const { ref } of verses) {
+        const matches = catalog.assets.flatMap(asset => asset.verses.filter(verse => verse.ref === ref).map(verse => ({ asset, verse })));
+        if (matches.length !== 1 || matches[0].verse.playback.status !== "ready") continue;
+        const { asset, verse } = matches[0];
+        const resolution = { verse, source: { schema: "reference-source/v1" as const, asset: asset.id, url: REFERENCE_ARCHIVE_PREFIX + asset.archiveFile, sha256: asset.sha256, bytes: asset.bytes } };
+        try { if (findShortSource(manifest, resolution)) found.add(ref); } catch { /* Not playable. */ }
+      }
+      return found;
     },
   });
 }

@@ -24,7 +24,7 @@ const bounded = (value: unknown, max: number, empty = true) => {
 };
 export const resourceIdentity = (row: MusicRow) => digest([row.prayerId,row.momentId, row.biblicalRef, row.edition, row.textIdentity, row.catalogUnitId, row.liturgyRef, row.arrangement, row.resources]);
 const stale = () => ({ ok: false as const, code: "stale-revision" as const });
-export function createServiceEcosystemService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>>;practice?:ReturnType<typeof createPracticeService<Q>>;broker: MusicBroker; studentAudioRelease?: boolean;dispatchScheduled?:()=>void|Promise<void> }) {
+export function createServiceEcosystemService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>>;practice?:ReturnType<typeof createPracticeService<Q>>;broker: MusicBroker; /** CRC Music service audio for students and guardians (SERVICE_AUDIO_STUDENT_RELEASE); never the reference-recording release. */ serviceAudioStudentRelease?: boolean;dispatchScheduled?:()=>void|Promise<void> }) {
   const withStudent = <T>(request: AccessRequest, selection: Selection, staff: boolean, action:(tx:AccessTransaction<Q>,actor:StudentActor|PracticeActor,student:StudentView)=>Promise<T>):Promise<T> => {
     identifier(selection.studentId);
     if(selection.mode==="child-practice"){
@@ -117,7 +117,7 @@ export function createServiceEcosystemService<Q extends PgQueryResultHKT>(input:
       return { ...base, state: "linked" as const, sourceRevision: projection.sourceRevision,
         rows: projection.rows.map(row => ({ rowId: row.rowId, title: row.title, order: row.order, prayerId: row.prayerId, biblicalRef: row.biblicalRef, edition: row.edition,
           catalogUnitId: assigned.find(part=>part.rowId===row.rowId && part.resourceIdentity===resourceIdentity(row))?.catalogUnitId ?? undefined, liturgyRef: row.liturgyRef, sharedDirections: row.sharedDirections,
-          resources: row.resources.filter(r => r.kind !== "audio" || staff || input.studentAudioRelease), arrangementResolved: Boolean(row.arrangement?.songId || row.arrangement?.fileId) })),
+          resources: row.resources.filter(r => r.kind !== "audio" || staff || input.serviceAudioStudentRelease), arrangementResolved: Boolean(row.arrangement?.songId || row.arrangement?.fileId) })),
         parts,requests: requests.map(r => ({ id: r.id, rowId: r.rowId, message: r.message, response: r.response, state: r.state, revision: r.revision })),
         ...(staff ? { operatorLinks: projection.operatorLinks } : {}),
       };
@@ -187,10 +187,10 @@ export function createServiceEcosystemService<Q extends PgQueryResultHKT>(input:
     const rowId = bounded(selection.rowId, 128, false), resourceId = bounded(selection.resourceId, 128, false);
     const live = await loadLive(request, selection), row = live.projection?.rows.find(row => row.rowId === rowId);
     if (!row?.resources.some(r => r.resourceId === resourceId) || !live.baseline) throw new AccessUnavailable();
-    if (row.resources.find(r => r.resourceId === resourceId)?.kind === "audio" && selection.mode !== "admin" && selection.mode !== "tutor" && !input.studentAudioRelease) throw new AccessUnavailable();
+    if (row.resources.find(r => r.resourceId === resourceId)?.kind === "audio" && selection.mode !== "admin" && selection.mode !== "tutor" && !input.serviceAudioStudentRelease) throw new AccessUnavailable();
     const result = await input.broker.resource(live.baseline.ceremony.id, rowId, resourceId);
     // A resource can be reapproved between projection and ticket issuance. Check the final grant too.
-    if(result.kind!==row.resources.find(r=>r.resourceId===resourceId)!.kind || result.kind==="audio" && selection.mode!=="admin" && selection.mode!=="tutor" && !input.studentAudioRelease)throw new AccessUnavailable();
+    if(result.kind!==row.resources.find(r=>r.resourceId===resourceId)!.kind || result.kind==="audio" && selection.mode!=="admin" && selection.mode!=="tutor" && !input.serviceAudioStudentRelease)throw new AccessUnavailable();
     return withStudent(request, selection, false, async (tx, actor) => {
       requireCookieMutation(request, actor.origin);
       const value = await current(tx, actor.tenantId, selection.studentId);

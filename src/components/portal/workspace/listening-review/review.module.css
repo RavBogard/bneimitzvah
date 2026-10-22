@@ -3,6 +3,10 @@
 .tally { display: grid; gap: 0.5rem; }
 .tally + .tally { padding-top: 1.25rem; border-top: 1px solid var(--color-rule); }
 .tally h2 { margin: 0; font-size: 1.125rem; }
+.set h3 { margin: 0; font-size: 0.9375rem; font-weight: 700; }
+.counts { margin: 0.15rem 0 0; }
+.counts strong { font-variant-numeric: tabular-nums; }
+.counts span { color: var(--color-muted); }
 .figures { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin: 0; padding: 0; list-style: none; }
 .figures li { min-width: 0; }
 .figures strong { font-variant-numeric: tabular-nums; }

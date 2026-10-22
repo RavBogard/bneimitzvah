@@ -91,6 +91,10 @@ let referenceCatalogCache: Readonly<{ key: string; catalog: ReferenceCatalog }> 
 
 /** Configured construction stays lazy. The only credential comes from native
  * platform request context, supplied explicitly to the pinned private get. */
+/** Two separate student releases: reference recordings, and CRC Music service audio. Neither implies the other. */
+export function audioReleases(config: Pick<RuntimeConfig, "referenceAudio" | "serviceAudioStudentRelease">) {
+  return Object.freeze({ reference: config.referenceAudio?.studentRelease === true, service: config.serviceAudioStudentRelease === true });
+}
 export function createRuntimeReferenceLoader(config: RuntimeConfig["referenceAudio"]) {
   if (!config) return async () => { throw new ReferenceUnavailable(); };
   const { catalogSha256, storeId } = config;
@@ -144,7 +148,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const musicBroker = createMusicBroker(config.serviceMusic, fetch);
   const practice = createPracticeService({ access });
   const dispatchScheduled=async()=>{const {after}=await import("next/server");after(async()=>{await dispatchServiceJobs(config,fetch);});};
-  const serviceEcosystem = createServiceEcosystemService({ access,practice,broker: musicBroker, studentAudioRelease: config.referenceAudio?.studentRelease,dispatchScheduled });
+  const serviceEcosystem = createServiceEcosystemService({ access,practice,broker: musicBroker, serviceAudioStudentRelease: audioReleases(config).service,dispatchScheduled });
   const serviceScheduler = createServiceScheduler({ db, broker: musicBroker, cronSecret: config.serviceCronSecret });
   const students = createStudentService({ access, loadReading, signingSecret: purposeSecret(config, "student-preparations"), verseCounts: TANAKH_VERSE_COUNTS, dispatchScheduled });
   const serviceLearning = createServiceLearningService({ access, practice, signingSecret: purposeSecret(config, "service-plan-preparations"), resolveCeremonyUnit: serviceEcosystem.materialMapping });
@@ -176,11 +180,11 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const honoree = createHonoreeService({ db, access, deployment: config.deployment, origin: config.origin, signingSecret: config.authSecret, projectMaterial: loadHonoreeMaterial });
   const studySources = createStudySourceDiscoveryService({ access, practice, loadText, related: createSefariaMetadataReader({ fetch }).related });
   const studyWordDetails = createStudyWordDetailsService({ access, practice, loadText, source: stepSource });
-  const referenceAudio = createReferenceAudioService({ access, practice, loadText, loadCatalog: createRuntimeReferenceLoader(config.referenceAudio), studentRelease: config.referenceAudio?.studentRelease });
+  const referenceAudio = createReferenceAudioService({ access, practice, loadText, loadCatalog: createRuntimeReferenceLoader(config.referenceAudio), studentRelease: audioReleases(config).reference });
   const shortMetadata = createRuntimeShortMetadata(config, process.env);
-  const shortReferenceAudio = createShortReferenceAudioService({ access, practice, loadText, ...shortMetadata, studentRelease: config.referenceAudio?.studentRelease });
+  const shortReferenceAudio = createShortReferenceAudioService({ access, practice, loadText, ...shortMetadata, studentRelease: audioReleases(config).reference });
   const shortExplorationAudio = createShortExplorationService({ access, practice, loadReading, loadText, signingSecret: purposeSecret(config, "reading-exploration"),
-    ...shortMetadata, studentRelease: config.referenceAudio?.studentRelease });
+    ...shortMetadata, studentRelease: audioReleases(config).reference });
   // Admin-only listening review: the same pinned short clips students would get, never the student release flag.
   const listeningReview = createListeningReviewService({ access, loadText, sources: [createPocketTorahListeningSource({ ...shortMetadata,
     catalogSha256: config.referenceAudio?.catalogSha256, manifestSha256: process.env.REFERENCE_AUDIO_SHORT_MANIFEST_SHA256, configured: shortMetadata.configured })] });

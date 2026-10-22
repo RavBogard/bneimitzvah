@@ -7,7 +7,7 @@ import { FlowingStudyText } from "../study/annotations";
 import { ReadingPlayer, playMainVerseForWord, type ReadingPlayerHandle } from "../study/reading-player";
 import { createReadingAudioCoordinator } from "../study/reading-audio-coordinator";
 import type { ReadingPlaybackState } from "../study/main-playback";
-import { LISTENING_NOTE_LIMIT, LISTENING_REASONS, LISTENING_REASON_LABELS, LISTENING_SOURCE_LABELS, listeningNote, type ListeningReason } from "../../../../lib/listening-review/sample";
+import { LISTENING_NOTE_LIMIT, LISTENING_REASONS, LISTENING_REASON_LABELS, LISTENING_SET_LABELS, LISTENING_SOURCES, LISTENING_SOURCE_LABELS, listeningNote, type ListeningReason } from "../../../../lib/listening-review/sample";
 import { listeningApi, type ItemView, type Overview, type OverviewItem, type Tally } from "./api";
 import styles from "./review.module.css";
 
@@ -15,22 +15,16 @@ type Draft = { verdict: "pass" | "needs-work" | null; reasons: ListeningReason[]
 const emptyDraft = (): Draft => ({ verdict: null, reasons: [], note: "" });
 const percent = (value: number) => `${Math.round(value * 100)}%`;
 const time = (value: string) => new Date(value).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-const status = (item: OverviewItem) => !item.available ? "Not available yet" : !item.verdict ? "Not heard" : item.verdict.verdict === "pass" ? "Pass" : "Needs work";
+const status = (item: OverviewItem) => !item.available ? "Not available" : !item.verdict ? "Not heard" : item.verdict.verdict === "pass" ? "Pass" : "Needs work";
 
 export function ListeningReviewWorkspace() { return <RequireRole role="admin"><Review /></RequireRole>; }
 
-function TallyLine({ tally, comparison }: { tally: Tally; comparison: Overview["comparison"] }) {
-  const rate = tally.heard ? tally.pass / tally.heard : null;
-  return <div className={styles.tally}>
-    <h2>{LISTENING_SOURCE_LABELS[tally.source]}</h2>
-    {tally.items === 0 ? <p className={styles.bar}>Not available yet.</p> : <ul className={styles.figures}>
-      <li><strong>{tally.heard}</strong> of {tally.items} heard</li>
-      <li><strong>{tally.pass}</strong> pass</li>
-      <li><strong>{tally.needsWork}</strong> need work</li>
-      <li>Pass rate <strong>{rate === null ? "—" : percent(rate)}</strong></li>
-      <li><strong>{tally.wouldTeachWrong}</strong> would teach wrong</li>
-    </ul>}
-    {tally.items > 0 && tally.heard === tally.items && <p className={styles.bar}>All {tally.items} verses heard{rate !== null && rate >= comparison.passRate && tally.wouldTeachWrong <= comparison.wouldTeachWrong ? ", meeting the comparison bar." : ", below the comparison bar."}</p>}
+/** Plain counts only: the page never says a set is accepted. */
+function TallyLine({ tally }: { tally: Tally }) {
+  return <div className={styles.set}>
+    <h3>{LISTENING_SET_LABELS[tally.set]}</h3>
+    {tally.items === 0 ? <p className={styles.bar}>Not available yet.</p>
+      : <p className={styles.counts}><strong>{tally.pass} of {tally.items}</strong> passed, <strong>{tally.needsWork}</strong> need work, <strong>{tally.wouldTeachWrong}</strong> would teach wrong <span>({tally.heard} of {tally.items} heard)</span></p>}
   </div>;
 }
 
@@ -39,7 +33,7 @@ function Review() {
   const [overview, setOverview] = useState<Overview | null>(null), [failure, setFailure] = useState<number | null>(null);
   const [index, setIndex] = useState(0), [view, setView] = useState<ItemView | null>(null), [viewError, setViewError] = useState<number | null>(null);
   const [retry, setRetry] = useState(0), [draft, setDraft] = useState<Draft>(emptyDraft), [saving, setSaving] = useState(false), [message, setMessage] = useState<{ text: string; tone: "status" | "alert" } | null>(null);
-  const [activeWord, setActiveWord] = useState<{ verse: number; index: number } | null>(null), [latency, setLatency] = useState<{ first: number | null; last: number | null }>({ first: null, last: null });
+  const [activeWord, setActiveWord] = useState<{ verse: number; index: number } | null>(null), [latency, setLatency] = useState<number | null>(null);
   const player = useRef<ReadingPlayerHandle | null>(null), register = useCallback((value: ReadingPlayerHandle | null) => { player.current = value; }, []);
   const coordinator = useRef<ReturnType<typeof createReadingAudioCoordinator> | null>(null);
   if (!coordinator.current) coordinator.current = createReadingAudioCoordinator();
@@ -66,7 +60,7 @@ function Review() {
 
   const itemId = item?.id, available = item?.available === true;
   useEffect(() => {
-    itemRequest.current?.abort(); audio.stopAll(); setView(null); setViewError(null); setActiveWord(null); setLatency({ first: null, last: null }); tapStart.current = null;
+    itemRequest.current?.abort(); audio.stopAll(); setView(null); setViewError(null); setActiveWord(null); setLatency(null); tapStart.current = null;
     if (!itemId || !available) return;
     const controller = new AbortController(); itemRequest.current = controller;
     listeningApi.item(itemId, controller.signal).then(next => { if (mounted.current && !controller.signal.aborted) setView(next); },
@@ -85,7 +79,7 @@ function Review() {
     if (playback === "loading") { if (tapStart.current === null) tapStart.current = now; return; }
     if (playback === "playing" && tapStart.current !== null) {
       const measured = Math.min(60000, Math.max(0, Math.round(now - tapStart.current))); tapStart.current = null;
-      setLatency(prior => ({ first: prior.first ?? measured, last: measured })); return;
+      setLatency(prior => prior ?? measured); return;
     }
     if (playback !== "ready") tapStart.current = null;
   }, []);
@@ -100,7 +94,7 @@ function Review() {
     if (note === undefined) { setMessage({ text: `Keep the note to ${LISTENING_NOTE_LIMIT} characters, without < or >.`, tone: "alert" }); return; }
     setSaving(true); setMessage(null);
     try {
-      const outcome = await listeningApi.record({ itemId: item.id, verdict: draft.verdict, reasons: draft.verdict === "pass" ? [] : draft.reasons, note, latencyMs: latency.first,
+      const outcome = await listeningApi.record({ itemId: item.id, verdict: draft.verdict, reasons: draft.verdict === "pass" ? [] : draft.reasons, note, latencyMs: latency,
         asset: reference.source.id, mutationId: crypto.randomUUID() });
       if (!mounted.current) return;
       if (!outcome.ok) {
@@ -125,15 +119,18 @@ function Review() {
       : <div className="admin-state" role="alert"><p>{[401, 403].includes(failure) ? "This review is for administrators. Check your account and sign in again." : "The review couldn’t be loaded."}</p><button type="button" className="button-secondary admin-pill" onClick={() => void loadOverview()}>Reload</button></div>
       : <>
         <section className={`people-card ${styles.tallies}`} aria-label="Tally">
-          {overview.tallies.map(tally => <TallyLine key={tally.source} tally={tally} comparison={overview.comparison} />)}
-          <p className={styles.bar}>No pass mark has been set for recorded reference audio. For comparison, generated chant must reach {percent(overview.comparison.passRate)} pass with none marked “would teach wrong”.</p>
+          {LISTENING_SOURCES.filter(source => overview.tallies.some(t => t.source === source)).map(source => <div key={source} className={styles.tally}>
+            <h2>{LISTENING_SOURCE_LABELS[source]}</h2>
+            {overview.tallies.filter(t => t.source === source).map(tally => <TallyLine key={tally.set} tally={tally} />)}
+          </div>)}
+          <p className={styles.bar}>No pass mark has been set for recorded reference audio; these are counts, not a decision. For comparison only, generated chant (a different gate) must reach {percent(overview.comparison.passRate)} pass with none marked “would teach wrong”.</p>
         </section>
         {item && <section className="people-card" aria-labelledby={`${group}-ref`}>
           <div className={styles.item}>
-            <p className={styles.position}>{index + 1} of {items.length} · {LISTENING_SOURCE_LABELS[item.source]} · {item.kind === "torah" ? "Torah" : "Haftarah"}</p>
+            <p className={styles.position}>{index + 1} of {items.length} · {LISTENING_SET_LABELS[item.set]} · {LISTENING_SOURCE_LABELS[item.source]} · {item.kind === "torah" ? "Torah" : "Haftarah"}</p>
             <h2 id={`${group}-ref`}><bdi>{item.ref}</bdi></h2>
             <p className={styles.why}>{item.why}</p>
-            {!item.available ? <p role="status">This source isn’t available yet.</p>
+            {!item.available ? <p role="status">This verse has no recording to play from this source, so it isn’t counted.</p>
               : viewError !== null ? <div role="alert"><p>{[401, 403].includes(viewError) ? "This isn’t allowed right now. You may need to sign in again." : "This verse couldn’t be loaded."}</p>
                 <button type="button" className="button-secondary admin-pill" onClick={() => setRetry(n => n + 1)}>Try again</button></div>
               : !view ? <p role="status">Loading the verse…</p>
@@ -143,7 +140,7 @@ function Review() {
                 {reference ? <>
                   {!concealed && <ReadingPlayer key={JSON.stringify([summary.sessionBinding, epoch, item.id])} scopeKey={JSON.stringify([summary.sessionBinding, epoch, item.id])} verses={verses} active={!concealed} enabled={!concealed}
                     audio={{ coordinator: audio, slot: "assigned" }} load={load} register={register} onActiveWord={setActiveWord} onPlaybackState={observe} wordTools={false} />}
-                  <p className={styles.timing} role="status">{latency.last === null ? "Tap to sound is timed on this phone when you play." : `Tap to sound: ${latency.last} ms${latency.first !== null && latency.first !== latency.last ? ` (first play ${latency.first} ms)` : ""}`}</p>
+                  <p className={styles.timing} role="status">{latency === null ? "First tap to playing is timed on this phone when you play (time until the player starts, not to the first sound you hear)." : `First tap to playing: ${latency} ms`}</p>
                 </> : <p role="status">This source has no recording for this verse, so it can’t be marked.</p>}
                 {reference && <form onSubmit={event => { event.preventDefault(); void save(); }}>
                   <div className={styles.verdicts} role="group" aria-label="Verdict">
@@ -155,7 +152,7 @@ function Review() {
                   </fieldset>}
                   <label className={styles.note}>Note (optional)<textarea value={draft.note} maxLength={LISTENING_NOTE_LIMIT} rows={3} onChange={event => setDraft(prior => ({ ...prior, note: event.target.value }))} /></label>
                   <div className={styles.actions}><button type="submit" className="button-primary admin-pill" disabled={!draft.verdict || saving}>{saving ? "Saving…" : "Save and go to next"}</button></div>
-                  {saved && <p className={styles.saved}>Last saved {time(saved.at)}: {saved.verdict === "pass" ? "Pass" : "Needs work"}{saved.latencyMs !== null ? ` · tap to sound ${saved.latencyMs} ms` : ""}</p>}
+                  {saved && <p className={styles.saved}>Last saved {time(saved.at)}: {saved.verdict === "pass" ? "Pass" : "Needs work"}{saved.latencyMs !== null ? ` · first tap to playing ${saved.latencyMs} ms` : ""}</p>}
                 </form>}
               </>}
             {message && <p className={message.tone === "alert" ? "request-error" : "workspace-notice"} role={message.tone}>{message.text}</p>}

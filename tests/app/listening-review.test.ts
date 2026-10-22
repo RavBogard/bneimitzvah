@@ -13,6 +13,7 @@ import { parseReferenceCatalog } from "../../src/server/reference-audio/catalog"
 import { REFERENCE_ATTRIBUTION } from "../../src/lib/reference-audio/contract";
 import { SHORT_SOURCE_ATTRIBUTION, SHORT_SOURCE_RECIPE } from "../../src/lib/reference-audio/short-source";
 import { LISTENING_SAMPLE, LISTENING_SAMPLE_VERSION, listeningNote, type ListeningItem } from "../../src/lib/listening-review/sample";
+import { LISTENING_SAMPLE_PROVENANCE } from "../../src/lib/listening-review/sample-generated";
 import { createSefariaStudyReader } from "../../src/server/study/sefaria";
 import { TANAKH_VERSE_COUNTS, } from "../../src/lib/readings/catalog";
 import { expandReadingRanges } from "../../src/lib/readings/ranges";
@@ -22,8 +23,8 @@ const fixtures: Awaited<ReturnType<typeof portalRoutesFixture>>[] = [];
 afterEach(async () => { for (const f of fixtures.splice(0)) await f.client.close(); });
 const hash = (b: Uint8Array) => createHash("sha256").update(b).digest("hex"), json = (v: unknown) => new TextEncoder().encode(JSON.stringify(v));
 const OVERVIEW = "/api/admin/listening-review", VERDICTS = "/api/admin/listening-review/verdicts", ITEM = (id: string) => `/api/admin/listening-review/items/${id}`;
-const sample: ListeningItem[] = [...[1, 2, 3].map((n): ListeningItem => ({ id: `pt-genesis-1-${n}`, source: "pocket-torah", kind: "torah", ref: `Genesis 1:${n}`, why: `Synthetic ${n}` })),
-  { id: "fj-genesis-1-1", source: "finkel", kind: "torah", ref: "Genesis 1:1", why: "Second source" }];
+const sample: ListeningItem[] = [...[1, 2, 3].map((n): ListeningItem => ({ id: `pt-genesis-1-${n}`, source: "pocket-torah", set: n === 2 ? "random" : "stress", kind: "torah", ref: `Genesis 1:${n}`, why: `Synthetic ${n}` })),
+  { id: "fj-genesis-1-1", source: "finkel", set: "stress", kind: "torah", ref: "Genesis 1:1", why: "Second source" }];
 
 async function fixture(options: { configured?: boolean } = {}) {
   const f = await portalRoutesFixture(); fixtures.push(f);
@@ -52,12 +53,15 @@ async function fixture(options: { configured?: boolean } = {}) {
   return { ...f, send, verdict, rows, audits, loadText, loadCatalog, loadManifest, catalog, sealed, dispatch };
 }
 
-test("the fixed sample is 25 to 40 distinct, canonical verses across all five books and the haftarot, with valid ids", () => {
-  expect(LISTENING_SAMPLE.length).toBeGreaterThanOrEqual(25); expect(LISTENING_SAMPLE.length).toBeLessThanOrEqual(40);
+test("the generated sample is a 25-40 verse stress set plus a disjoint 20-verse random draw, distinct and canonical, across all five books and the haftarot", () => {
+  const stress = LISTENING_SAMPLE.filter(i => i.set === "stress"), draw = LISTENING_SAMPLE.filter(i => i.set === "random");
+  expect(stress.length).toBeGreaterThanOrEqual(25); expect(stress.length).toBeLessThanOrEqual(40); expect(draw.length).toBe(20);
+  expect(LISTENING_SAMPLE.every(i => i.source === "pocket-torah")).toBe(true);
+  expect(LISTENING_SAMPLE_PROVENANCE.candidates).toBeGreaterThan(6000); expect(LISTENING_SAMPLE_PROVENANCE.catalogSha256).toMatch(/^[a-f0-9]{64}$/); expect(LISTENING_SAMPLE_PROVENANCE.manifestSha256).toMatch(/^[a-f0-9]{64}$/);
   expect(new Set(LISTENING_SAMPLE.map(i => i.id)).size).toBe(LISTENING_SAMPLE.length);
   expect(new Set(LISTENING_SAMPLE.map(i => i.ref)).size).toBe(LISTENING_SAMPLE.length);
-  for (const book of ["Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy"]) expect(LISTENING_SAMPLE.some(i => i.kind === "torah" && i.ref.startsWith(`${book} `))).toBe(true);
-  expect(LISTENING_SAMPLE.filter(i => i.kind === "haftarah").length).toBeGreaterThanOrEqual(10);
+  for (const book of ["Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy"]) expect(stress.some(i => i.kind === "torah" && i.ref.startsWith(`${book} `))).toBe(true);
+  expect(stress.filter(i => i.kind === "haftarah").length).toBeGreaterThanOrEqual(10);
   for (const i of LISTENING_SAMPLE) {
     expect(i.id).toMatch(/^[a-z]{2}-[a-z0-9-]{1,60}$/);
     expect(expandReadingRanges([i.ref], i.kind, TANAKH_VERSE_COUNTS)).toEqual([i.ref]);
@@ -70,8 +74,10 @@ test("an admin walks the sample: text and the student's clip, a saved verdict wi
   const first = await f.send(OVERVIEW, { who: "admin" });
   expect(first.status).toBe(200);
   expect(first.body.overview.items.map((i: { id: string; available: boolean; verdict: unknown }) => [i.id, i.available, i.verdict])).toEqual([
-    ["pt-genesis-1-1", true, null], ["pt-genesis-1-2", true, null], ["pt-genesis-1-3", true, null], ["fj-genesis-1-1", false, null]]);
-  expect(first.body.overview.tallies).toEqual([{ source: "pocket-torah", items: 3, heard: 0, pass: 0, needsWork: 0, wouldTeachWrong: 0 }, { source: "finkel", items: 0, heard: 0, pass: 0, needsWork: 0, wouldTeachWrong: 0 }]);
+    ["pt-genesis-1-1", true, null], ["pt-genesis-1-2", true, null], ["pt-genesis-1-3", false, null], ["fj-genesis-1-1", false, null]]);
+  // A verse with no published clip is not counted, so it can never block "all heard".
+  expect(first.body.overview.tallies).toEqual([{ source: "pocket-torah", set: "stress", items: 1, heard: 0, pass: 0, needsWork: 0, wouldTeachWrong: 0 },
+    { source: "pocket-torah", set: "random", items: 1, heard: 0, pass: 0, needsWork: 0, wouldTeachWrong: 0 }, { source: "finkel", set: "stress", items: 0, heard: 0, pass: 0, needsWork: 0, wouldTeachWrong: 0 }]);
   expect(first.body.overview.comparison).toEqual({ passRate: 0.95, wouldTeachWrong: 0 });
   expect(f.loadText).not.toHaveBeenCalled();
   const item = await f.send(ITEM("pt-genesis-1-1"), { who: "admin" });
@@ -107,7 +113,8 @@ test("an admin walks the sample: text and the student's clip, a saved verdict wi
   await f.verdict({ verdict: "needs-work", reasons: ["slow-start"] });
   const after = await f.send(OVERVIEW, { who: "admin" });
   expect(after.body.overview.items[0].verdict).toMatchObject({ verdict: "needs-work", reasons: ["slow-start"] });
-  expect(after.body.overview.tallies[0]).toEqual({ source: "pocket-torah", items: 3, heard: 2, pass: 0, needsWork: 2, wouldTeachWrong: 1 });
+  expect(after.body.overview.tallies.slice(0, 2)).toEqual([{ source: "pocket-torah", set: "stress", items: 1, heard: 1, pass: 0, needsWork: 1, wouldTeachWrong: 0 },
+    { source: "pocket-torah", set: "random", items: 1, heard: 1, pass: 0, needsWork: 1, wouldTeachWrong: 1 }]);
   expect((await f.rows()).length).toBe(3);
 });
 
