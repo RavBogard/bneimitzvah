@@ -26,7 +26,7 @@ describe("portal MCP", () => {
     const denied = await t.postJson("/api/mcp", { jsonrpc: "2.0", id: 1, method: "initialize" });
     expect(denied.status).toBe(401);
     expect(denied.headers.get("www-authenticate")).toContain(`resource_metadata="${ORIGIN}/.well-known/oauth-protected-resource/api/mcp"`);
-    expect(denied.headers.get("www-authenticate")).toContain('scope="portal:read portal:study"');
+    expect(denied.headers.get("www-authenticate")).toContain('scope="portal:read portal:study portal:roster"');
     expect((await t.get("/api/mcp")).status).toBe(405);
   });
 

@@ -52,7 +52,8 @@ async function snapshot<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, te
     parentEmail: r.parentEmail, ownEmail: r.ownEmail, hebrewName: r.hebrewName, secondParentEmail: r.secondParentEmail, rehearsal1: r.rehearsal1, rehearsal2: r.rehearsal2, disabledAt: r.disabledAt, revision: r.revision }));
   return { students, identities };
 }
-const requireAdmin = (actor: McpActor) => { if (actor.role !== "admin") throw new AccessDenied(403); };
+/** Every roster tool needs the admin's separate roster consent (portal:roster), never held by a routine. */
+const requireAdmin = (actor: McpActor) => { if (actor.role !== "admin" || !actor.scopes.has(SCOPES.roster)) throw new AccessDenied(403); };
 
 /** The reviewable row: names, dates, the kind of change and field names. Contacts only as presence, never an address. */
 function reviewRow(row: IntakeRow, fact: MavenContactFacts, byId: ReadonlyMap<string, IntakeStudent>) {
@@ -107,7 +108,7 @@ export function createRosterTools<Q extends PgQueryResultHKT>(): readonly Tool<Q
   const readOnly = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
   return Object.freeze([
     {
-      name: "get_maven_roster_query", roles: ["admin"], scope: SCOPES.read, annotations: readOnly,
+      name: "get_maven_roster_query", roles: ["admin"], scope: SCOPES.roster, annotations: readOnly,
       description: "Step 1 of the Maven roster intake. Returns the exact SOQL for the ceremony-date window (default: today through two years ahead). Run it with the Maven connector's maven_run_soql exactly as given, then pass its structured result unchanged to propose_roster_changes with the same start and end. The portal never calls Maven itself.",
       inputSchema: closed({ start: date("Optional first ceremony date, YYYY-MM-DD; give both or neither."), end: date("Optional last ceremony date, YYYY-MM-DD; at most 1830 days after start.") }),
       handler: async (input, ctx) => {
@@ -121,7 +122,7 @@ export function createRosterTools<Q extends PgQueryResultHKT>(): readonly Tool<Q
       },
     },
     {
-      name: "propose_roster_changes", roles: ["admin"], scope: SCOPES.read, annotations: readOnly, deadlineMs: 55_000,
+      name: "propose_roster_changes", roles: ["admin"], scope: SCOPES.roster, annotations: readOnly, deadlineMs: 55_000,
       description: "Step 2 of the Maven roster intake: compare Maven's result with the portal roster and propose, row by row, what would change. Writes nothing. Maven's Contact id is the identity; a matching name and date only suggests a student to link. Each row gives the name, ceremony date, kind of change (update, new, reconcile, linked-student-disabled, not-importable) and changed field names; contacts appear only as whether an address is on file. Unchanged rows are listed by number only. Returns planToken (30 minutes) for apply_roster_changes. Show the rabbi the table and ask which rows to apply.",
       inputSchema: closed({ start, end, mavenResult }, ["start", "end", "mavenResult"]),
       handler: async (input, ctx) => {
@@ -147,7 +148,7 @@ export function createRosterTools<Q extends PgQueryResultHKT>(): readonly Tool<Q
       },
     },
     {
-      name: "apply_roster_changes", roles: ["admin"], scope: SCOPES.study, annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false }, deadlineMs: 55_000,
+      name: "apply_roster_changes", roles: ["admin"], scope: SCOPES.roster, annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false }, deadlineMs: 55_000,
       description: "Step 3 of the Maven roster intake, only after the rabbi has said which rows to apply. Pass the same start, end and Maven result, the planToken, and one choice per row: {row, action:\"update\"} for an update; {row, action:\"create\", studentKind:\"child\"|\"adult\", serviceSlot:\"morning\"|\"havdalah\"|\"unknown\"} for a new student (or a reconcile row the rabbi says is new); {row, action:\"link\", studentId} to link a reconcile row to a suggested student. Everything is rechecked live and applied in one transaction: if any chosen row changed since the proposal, nothing is written and each row says why. Re-applying is safe: rows already applied are reported, not written twice. Sends NO invitations or e-mail; the rabbi invites families separately in the portal. A scheduled routine cannot apply.",
       inputSchema: closed({ start, end, mavenResult, planToken: { type: "string", maxLength: 8192, description: "planToken from propose_roster_changes, unchanged." },
         choices: { type: "array", maxItems: 500, description: "The rows the rabbi chose, one entry per row.", items: closed({ row: { type: "integer", minimum: 1, maximum: 500 }, action: { type: "string", enum: ["update", "create", "link"] },
@@ -159,7 +160,7 @@ export function createRosterTools<Q extends PgQueryResultHKT>(): readonly Tool<Q
 }
 
 async function applyRosterChanges<Q extends PgQueryResultHKT>(input: Record<string, unknown>, ctx: ToolContext<Q>) {
-  if (ctx.actor.role !== "admin" || !ctx.actor.scopes.has(SCOPES.study)) throw new AccessDenied(403);
+  requireAdmin(ctx.actor);
   // Roster writes are the rabbi's decision in a conversation, never an unattended routine's.
   if (ctx.actor.unattended) return { ok: false, code: "channel-not-permitted", hint: "A scheduled routine cannot change the roster; the rabbi applies roster changes in a conversation." };
   const decoded = decodeMavenRosterContacts({ start: input.start, end: input.end }, input.mavenResult);
@@ -173,7 +174,7 @@ async function applyRosterChanges<Q extends PgQueryResultHKT>(input: Record<stri
   const proposed = claim.rows as string;
   try {
     return await ctx.mcp.withLive(ctx.actor, "data-write", async (tx, live, alive) => {
-      if (live.role !== "admin" || !live.scopes.has(SCOPES.study) || live.unattended) throw new AccessDenied(403);
+      requireAdmin(live); if (live.unattended) throw new AccessDenied(403);
       await lockRabbi(tx, live.tenantId, live.membershipId, { roleGrantId: live.roleGrantId, roleGrantRevision: live.roleGrantRevision, authorityRevision: live.authorityRevision });
       await lockRosterIntake(tx, live.tenantId, MAVEN_NAMESPACE);
       const { students, identities } = await snapshot(tx, live.tenantId);

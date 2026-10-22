@@ -1,10 +1,11 @@
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { and, eq } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { mavenRosterQuery } from "../../src/server/students/maven-roster";
 import { defaultMavenWindow } from "../../src/server/students/maven-intake";
-import { closeMcpFixtures, mcpFixture } from "./mcp-fixture";
+import { CALLBACK, closeMcpFixtures, mcpFixture } from "./mcp-fixture";
 
 afterEach(async () => { vi.restoreAllMocks(); await closeMcpFixtures(); });
 
@@ -25,11 +26,12 @@ function envelope(rows: Row[], window = WINDOW) {
     privacy: { pastoralContext: false, financialIncluded: false } };
 }
 const TOOLS = ["get_maven_roster_query", "propose_roster_changes", "apply_roster_changes"];
+const ALL = "portal:read portal:study portal:roster";
 
 async function setup(now?: () => number) {
   const t = await mcpFixture(true, now);
   await t.google("admin");
-  const admin = (await t.connect("admin")).access_token as string;
+  const admin = (await t.connect("admin", { scope: ALL })).access_token as string;
   const texts: string[] = [];
   const call = async (token: string, name: string, args: Record<string, unknown>) => { const r = await t.call(token, name, args); texts.push(r.text); return r; };
   const propose = async (rows: Row[], token = admin) => (await call(token, "propose_roster_changes", { ...WINDOW, mavenResult: envelope(rows) })).json();
@@ -43,20 +45,63 @@ async function setup(now?: () => number) {
 const unrelated = (n = 1, patch: Row = {}) => contact(n, { FirstName: "Synthetic", LastName: "Unrelated", Beit_Mitzvah_Date__c: "2027-01-02", ...patch });
 
 describe("Maven roster intake through the portal MCP", () => {
-  it("is the admin's alone; a read-only admin connection can query and propose but not apply", async () => {
+  it("needs the admin's separate roster consent: study, read-only and tutor connections see and reach no roster tool", async () => {
     const { t, admin } = await setup();
     const names = async (token: string) => (await t.rpc(token, "tools/list")).body.result.tools.map((x: { name: string }) => x.name);
     expect(await names(admin)).toEqual(expect.arrayContaining(TOOLS));
-    const readOnly = (await t.connect("admin", { scope: "portal:read" })).access_token;
-    expect(await names(readOnly)).toEqual(expect.arrayContaining(TOOLS.slice(0, 2)));
-    expect(await names(readOnly)).not.toContain("apply_roster_changes");
+    // A connection consented before the roster scope existed keeps exactly portal:read portal:study.
+    const study = await t.connect("admin");
+    expect(study.scope).toBe("portal:read portal:study");
+    const readOnly = await t.connect("admin", { scope: "portal:read" });
+    expect(readOnly.scope).toBe("portal:read");
     await t.google("multi");
-    const tutor = (await t.connect("multi")).access_token;
-    for (const name of TOOLS) {
-      expect(await names(tutor)).not.toContain(name);
-      expect((await t.rpc(tutor, "tools/call", { name, arguments: {} })).body.error.code).toBe(-32602);
+    // A tutor asking for the roster scope is not granted it.
+    const tutor = await t.connect("multi", { scope: ALL });
+    expect(tutor.scope).toBe("portal:read");
+    for (const token of [study.access_token, readOnly.access_token, tutor.access_token]) for (const name of TOOLS) {
+      expect(await names(token)).not.toContain(name);
+      expect((await t.rpc(token, "tools/call", { name, arguments: { ...WINDOW } })).body.error.code).toBe(-32602);
     }
-    expect((await t.rpc(readOnly, "tools/call", { name: "apply_roster_changes", arguments: {} })).body.error.code).toBe(-32602);
+    // Asking for roster beside read alone grants no study scope.
+    expect((await t.connect("admin", { scope: "portal:read portal:roster" })).scope).toBe("portal:read portal:roster");
+  });
+
+  it("offers the roster scope at consent only to an admin asking for it, and never grants it to a scheduled routine, even on refresh", async () => {
+    const t = await mcpFixture();
+    await t.google("admin"); await t.google("multi");
+    const pending = async (scope: string) => {
+      const clientId = await t.register();
+      const location = (await t.get(`/api/oauth/authorize?${new URLSearchParams({ response_type: "code", client_id: clientId, redirect_uri: CALLBACK, code_challenge: "a".repeat(43), code_challenge_method: "S256", scope })}`)).headers.get("location")!;
+      return location.split("#request=")[1];
+    };
+    const view = async (who: "admin" | "multi", scope: string) => (await (await t.consent(who, "/api/oauth/consent/view", { request: await pending(scope) })).json()).account.scopes;
+    expect(await view("admin", ALL)).toEqual(["portal:read", "portal:study", "portal:roster"]);
+    expect(await view("admin", "portal:read portal:study")).toEqual(["portal:read", "portal:study"]);
+    expect(await view("multi", ALL)).toEqual(["portal:read"]);
+    // A routine asking for every scope gets no roster scope and no roster tool.
+    const routine = await t.connect("admin", { unattended: true, scope: ALL });
+    expect(routine.scope).toBe("portal:read portal:study");
+    const listed = (await t.rpc(routine.access_token, "tools/list")).body.result.tools.map((x: { name: string }) => x.name);
+    for (const name of TOOLS) expect(listed).not.toContain(name);
+    expect((await t.rpc(routine.access_token, "tools/call", { name: "apply_roster_changes", arguments: {} })).body.error.code).toBe(-32602);
+    // The database refuses a routine or a tutor holding it at all.
+    const [row] = await t.f.owner(() => t.f.db.select().from(s.mcpConnection).where(eq(s.mcpConnection.unattended, true)));
+    expect(row.scope).toBe("portal:read portal:study");
+    const sqlCode = async (action: () => Promise<unknown>) => { try { await action(); return ""; } catch (error) { return String((error as { cause?: { code?: string }; code?: string }).cause?.code ?? (error as { code?: string }).code); } };
+    expect(await sqlCode(() => t.f.owner(async () => { await t.f.db.insert(s.mcpConnection).values({ ...row, id: randomUUID(), scope: ALL }); }))).toBe("23514");
+    expect(await sqlCode(() => t.f.owner(async () => { await t.f.db.insert(s.mcpConnection).values({ ...row, id: randomUUID(), unattended: false, role: "tutor", roleGrantId: t.f.tutorGrant.id, membershipId: t.f.multiMember.id, userId: t.f.identities.multi.id, scope: "portal:read portal:roster" }); }))).toBe("23514");
+    // Even a row that slipped past the check never carries the scope into a refreshed token or a call.
+    const forged = randomUUID(), refresh = randomBytes(32).toString("base64url");
+    await t.f.owner(async () => {
+      await t.f.client.exec("ALTER TABLE mcp_connection DROP CONSTRAINT mcp_connection_scope");
+      await t.f.db.insert(s.mcpConnection).values({ ...row, id: forged, scope: ALL, clientHash: createHash("sha256").update(routine.clientId).digest("hex") });
+      await t.f.db.insert(s.mcpToken).values({ tokenHash: createHash("sha256").update(refresh).digest("hex"), tenantId: "crc", connectionId: forged, kind: "refresh", expiresAt: new Date(Date.now() + 3600_000) });
+    });
+    const refreshed = await t.postForm("/api/oauth/token", { grant_type: "refresh_token", refresh_token: refresh, client_id: routine.clientId });
+    expect(refreshed.status).toBe(200);
+    const next = await refreshed.json();
+    expect(next.scope).toBe("portal:read portal:study");
+    expect((await t.rpc(next.access_token, "tools/list")).body.result.tools.map((x: { name: string }) => x.name)).not.toContain("propose_roster_changes");
   });
 
   it("gives the exact SOQL for the default or a chosen window and refuses a bad one", async () => {
@@ -171,7 +216,7 @@ describe("Maven roster intake through the portal MCP", () => {
     for (const forged of [`${kind}.${flip(body, 10)}.${mac}`, `${kind}.${body}.${flip(mac, 5)}`, `mr.${body}.${mac}`, "", token.slice(0, -1)])
       expect((await apply(rows, forged, choice)).code).toBe("plan-token-refused");
     // Another connection of the same admin cannot use it.
-    const other = (await t.connect("admin")).access_token;
+    const other = (await t.connect("admin", { scope: ALL })).access_token;
     expect((await apply(rows, token, choice, other)).code).toBe("plan-token-refused");
     // A different Maven result or window than the one proposed.
     expect((await apply([contact(2, { LastName: "Changed" })], token, choice)).code).toBe("plan-token-refused");
@@ -183,18 +228,6 @@ describe("Maven roster intake through the portal MCP", () => {
     expect(await students()).toEqual(before);
     expect(await identities()).toEqual([]);
     expect((await apply(rows, token, choice)).ok).toBe(true);
-  });
-
-  it("never lets a scheduled routine apply roster changes", async () => {
-    const t = await mcpFixture();
-    await t.google("admin");
-    const routine = (await t.connect("admin", { unattended: true })).access_token;
-    const rows = [contact(2)];
-    const plan = (await t.call(routine, "propose_roster_changes", { ...WINDOW, mavenResult: envelope(rows) })).json();
-    expect(plan.ok).toBe(true);
-    const refused = (await t.call(routine, "apply_roster_changes", { ...WINDOW, mavenResult: envelope(rows), planToken: plan.planToken, choices: [{ row: 1, action: "create", studentKind: "child", serviceSlot: "morning" }] })).json();
-    expect(refused).toMatchObject({ ok: false, code: "channel-not-permitted" });
-    expect(await t.f.owner(() => t.f.db.select().from(s.studentSourceIdentity))).toEqual([]);
   });
 
   it("refuses a Maven result that is partial or not from the exact query, naming only row numbers and codes", async () => {

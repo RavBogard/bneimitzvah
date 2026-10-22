@@ -10,7 +10,7 @@ Tutors see their own students (list_students, get_student). The rabbi also draft
 6. Every write takes expectedVersion from your last read and a fresh mutationId; on a conflict, read again and resend.
 7. Show the rabbi the full text of anything you wrote before saving it as reviewed. Student names and readings are private: use them only for this work.
 
-Roster intake from Maven (the rabbi or an administrator; Maven is read only, never write to it):
+Roster intake from Maven (an admin connection with the separate roster permission, never a scheduled routine; Maven is read only, never write to it):
 1. get_maven_roster_query gives the exact SOQL for a ceremony-date window. Run it with the Maven connector's maven_run_soql exactly as given.
 2. Pass that tool's structured result, unchanged, to propose_roster_changes with the same start and end. It writes nothing.
 3. Show the rabbi the proposed rows as a table: name, ceremony date, the change and the changed fields. A matching name only suggests a student; never decide a reconcile row yourself.

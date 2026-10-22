@@ -1,5 +1,5 @@
 {
-  "id": "0feb80b2-8400-4fd1-914a-9658b620b7e6",
+  "id": "7ce0f100-3daf-441b-86dd-eb6045a61b96",
   "prevId": "692ca2a7-5a9d-4df0-ba3f-fba355877dbf",
   "version": "7",
   "dialect": "postgresql",
@@ -2157,7 +2157,7 @@
       "checkConstraints": {
         "mcp_connection_scope": {
           "name": "mcp_connection_scope",
-          "value": "(\"mcp_connection\".\"role\"='admin' and \"mcp_connection\".\"scope\" in ('portal:read','portal:read portal:study')) or (\"mcp_connection\".\"role\"='tutor' and \"mcp_connection\".\"scope\"='portal:read')"
+          "value": "((\"mcp_connection\".\"role\"='admin' and \"mcp_connection\".\"scope\" in ('portal:read','portal:read portal:study','portal:read portal:roster','portal:read portal:study portal:roster')) or (\"mcp_connection\".\"role\"='tutor' and \"mcp_connection\".\"scope\"='portal:read')) and not (\"mcp_connection\".\"unattended\" and \"mcp_connection\".\"scope\" like '%portal:roster%')"
         },
         "mcp_connection_revisions": {
           "name": "mcp_connection_revisions",

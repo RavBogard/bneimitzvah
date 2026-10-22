@@ -29,6 +29,12 @@ test("0031 adds only student_source_identity, leaves existing students unchanged
     const current = JSON.parse(await readFile(join(folder, `meta/${String(entry.idx).padStart(4, "0")}_snapshot.json`), "utf8"));
     const expected = structuredClone(previous.tables);
     expected["public.student_source_identity"] = current.tables["public.student_source_identity"];
+    // The one change outside the new table: mcp_connection's scope check admits portal:roster for an attended admin.
+    const scopeCheck = current.tables["public.mcp_connection"].checkConstraints.mcp_connection_scope;
+    expected["public.mcp_connection"].checkConstraints.mcp_connection_scope = scopeCheck;
+    // Every scope value the 0028 check admitted is still admitted, so existing connections keep exactly their scopes.
+    for (const old of ["'portal:read','portal:read portal:study'", "\"mcp_connection\".\"role\"='tutor' and \"mcp_connection\".\"scope\"='portal:read'"]) expect(scopeCheck.value).toContain(old);
+    expect(scopeCheck.value).toContain("not (\"mcp_connection\".\"unattended\" and \"mcp_connection\".\"scope\" like '%portal:roster%')");
     expect(current.prevId).toBe(previous.id); expect(current.tables).toEqual(expected);
     expect(Object.keys(current.tables["public.student_source_identity"].uniqueConstraints).sort()).toEqual(["student_source_identity_record_key", "student_source_identity_student_key"]);
     // Row security and the runtime's insert-only rights are hand-written beside the generated DDL.

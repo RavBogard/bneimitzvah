@@ -33,8 +33,8 @@ function redirect(location: string): Response {
 }
 const publicMetadata = (body: unknown) => json(body, 200, { "cache-control": "public, max-age=300", "access-control-allow-origin": "*" });
 function challenge(origin: string): Response {
-  // Both scopes: the server grants each staff member only what their role allows (a tutor, read).
-  return json({ error: "invalid_token" }, 401, { "www-authenticate": `Bearer error="invalid_token", resource_metadata="${origin}/.well-known/oauth-protected-resource${MCP_PATH}", scope="${SCOPES.read} ${SCOPES.study}"` });
+  // Every scope: the server grants each staff member only what their role allows (a tutor, read; roster never to a routine).
+  return json({ error: "invalid_token" }, 401, { "www-authenticate": `Bearer error="invalid_token", resource_metadata="${origin}/.well-known/oauth-protected-resource${MCP_PATH}", scope="${SCOPES.read} ${SCOPES.study} ${SCOPES.roster}"` });
 }
 const answer = (a: { status: number; body: Record<string, unknown> } | { redirect: string }) => "redirect" in a ? redirect(a.redirect) : json(a.body, a.status);
 

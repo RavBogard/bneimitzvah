@@ -6,7 +6,8 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypt
 // redirects held to Claude's own callbacks or a loopback. Registration and the pending consent
 // request are HMAC-signed records carrying their own expiry; codes, access and refresh tokens are
 // random and stored only as SHA-256 hashes (mcp_token), so a connection can be revoked.
-export const SCOPES = { read: "portal:read", study: "portal:study" } as const;
+// portal:roster (Daniel, 2026-10-21): the Maven roster intake, a consent of its own, admin only and never for a scheduled routine.
+export const SCOPES = { read: "portal:read", study: "portal:study", roster: "portal:roster" } as const;
 export const MCP_PATH = "/api/mcp";
 export const TTL = { client: 10 * 365 * 24 * 3600_000, request: 10 * 60_000, code: 5 * 60_000, access: 3600_000, connection: 30 * 24 * 3600_000, rosterPlan: 30 * 60_000 } as const;
 export const CLAUDE_CALLBACKS: readonly string[] = Object.freeze(["https://claude.ai/api/mcp/auth_callback", "https://claude.com/api/mcp/auth_callback"]);
@@ -59,13 +60,13 @@ export function redirectMatches(registered: readonly string[], given: string): b
 export const authorizationMetadata = (origin: string) => ({
   issuer: origin, authorization_endpoint: `${origin}/api/oauth/authorize`, token_endpoint: `${origin}/api/oauth/token`,
   registration_endpoint: `${origin}/api/oauth/register`, revocation_endpoint: `${origin}/api/oauth/revoke`,
-  scopes_supported: [SCOPES.read, SCOPES.study], response_types_supported: ["code"], response_modes_supported: ["query"],
+  scopes_supported: [SCOPES.read, SCOPES.study, SCOPES.roster], response_types_supported: ["code"], response_modes_supported: ["query"],
   grant_types_supported: ["authorization_code", "refresh_token"], code_challenge_methods_supported: ["S256"],
   token_endpoint_auth_methods_supported: ["none"], revocation_endpoint_auth_methods_supported: ["none"],
   authorization_response_iss_parameter_supported: true,
 });
 export const resourceMetadata = (origin: string) => ({
-  resource: `${origin}${MCP_PATH}`, authorization_servers: [origin], scopes_supported: [SCOPES.read, SCOPES.study],
+  resource: `${origin}${MCP_PATH}`, authorization_servers: [origin], scopes_supported: [SCOPES.read, SCOPES.study, SCOPES.roster],
   bearer_methods_supported: ["header"], resource_name: "CRC B'nei Mitzvah",
 });
 
@@ -76,6 +77,6 @@ export function requestedScopes(value: unknown): Set<string> | null {
   const items = value.split(" ").filter(Boolean);
   if (new Set(items).size !== items.length) return null;
   // offline_access is how some clients ask for a refresh token; every grant here already has one.
-  if (items.some(item => item !== SCOPES.read && item !== SCOPES.study && item !== "offline_access")) return null;
+  if (items.some(item => item !== SCOPES.read && item !== SCOPES.study && item !== SCOPES.roster && item !== "offline_access")) return null;
   return new Set(items.filter(item => item !== "offline_access"));
 }
