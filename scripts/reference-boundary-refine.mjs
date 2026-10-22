@@ -80,7 +80,7 @@ export async function refineIndexFiles(argv) {
   const out = { schema: INDEX_V2_SCHEMA, source: index.source, method: `${index.method}${V2_METHOD}`, recordings };
   // The output must be v1 with refined times only, and the contract must find nothing in it that v1 lacks
   // (without chapter verse counts both report the same unverifiable chapter crossings).
-  const codes = ix => validateIndex(ix).errors.map(e => `${e.code}@${e.at.replace(/#w\d+$/, "")}`).sort();
+  const codes = ix => validateIndex(ix).errors.map(e => `${e.code}@${e.at}`).sort();
   if (checkV2AgainstV1(index, out).length || JSON.stringify(codes(out)) !== JSON.stringify(codes(index))) throw new Refusal("v2-contract");
   const summary = summarize(entries, failures);
   await mkdir(p.log, { recursive: true });

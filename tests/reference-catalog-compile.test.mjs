@@ -52,6 +52,11 @@ test("bad audio yields no output; Git lexical/resolved inputs and output refuse;
     await mkdir(join(f.root, ".git")); await assert.rejects(compileReferenceCatalogFiles(f.args));
   } finally { await isolated.cleanup(); await rm(f.root, { recursive: true, force: true }); }
 });
+test("the compile CLI requires every core flag; --v1-index never stands in for one", async () => {
+  const { parseCompileArgs } = await import("../scripts/reference-catalog-compile.mjs");
+  assert.throws(() => parseCompileArgs(["--index", "a", "--portal-words", "b", "--archive-metadata", "c", "--audio", "d", "--v1-index", "e"]), /failed/);
+  assert.equal(Object.keys(parseCompileArgs(["--index", "a", "--portal-words", "b", "--archive-metadata", "c", "--audio", "d", "--out", "f", "--v1-index", "e"])).length, 6);
+});
 test("a v2 index compiles only beside the v1 index it was refined from; ends reach the DTO", () => {
   const v2 = inputs(), v1 = inputs().index;
   v2.index = { ...v1, schema: "pockettorah-verse-index/v2", recordings: v1.recordings.map(r => ({ ...r, verses: r.verses.map(v => ({ ...v, words: [{ he: "אב", start: 1, end: 1.9, ctcStart: 1 }, { he: "ג׃", start: 1.98, end: 3, ctcStart: 2 }] })) })) };

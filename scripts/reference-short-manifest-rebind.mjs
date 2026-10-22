@@ -151,9 +151,11 @@ export async function rebindShortManifest(config) {
     // Remove only real directories directly inside their expected parents (no links, no escapes).
     for (const [path, parent] of [[runtime, join(ROOT, ".local-logs")], [work, out]]) {
       if (!path) continue;
-      const s = await lstat(path), real = await realpath(path), home = await realpath(parent);
-      if (s.isSymbolicLink() || !s.isDirectory() || real !== resolve(path) || dirname(real) !== home) continue;
-      await rm(path, { recursive: true, force: true });
+      try {
+        const s = await lstat(path), real = await realpath(path), home = await realpath(parent);
+        if (s.isSymbolicLink() || !s.isDirectory() || real !== resolve(path) || dirname(real) !== home) continue;
+        await rm(path, { recursive: true, force: true });
+      } catch { /* already gone or unreadable: leave it, never mask the original outcome */ }
     }
     await iso.cleanup();
   }

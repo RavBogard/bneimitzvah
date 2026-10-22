@@ -195,6 +195,12 @@ fails closed. Its findings and the fixes:
   inside their parents. The metrics skip a word without a label. An HTTP test covers `ends` pass-through,
   and the comments no longer call next-onset ends "measured".
 
+A confirming pass on `ee3ba1e` found all ten resolved and three new low issues, also fixed: the compile CLI
+requires all five core flags (`--v1-index` cannot stand in for `--out`); the rebind's cleanup tolerates an
+already-removed directory without masking the outcome; the refine self-check compares error locations down
+to the word. `validateIndex` alone still accepts a self-consistent forged `ctcStart`; the compiler, the only
+path to a catalog, refuses it.
+
 After the fixes the v2 index, catalog `ee39c3e1…` and manifest `cedd5202…` were regenerated and are byte-identical.
 
 ## Open items that wait on Daniel

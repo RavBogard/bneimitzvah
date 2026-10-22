@@ -53,6 +53,7 @@ export function parseCompileArgs(args) {
   const names = ["--index", "--portal-words", "--archive-metadata", "--audio", "--out", "--v1-index"], result = {};
   if (args.length !== 10 && args.length !== 12) throw failure();
   for (let i = 0; i < args.length; i += 2) { if (!names.includes(args[i]) || Object.hasOwn(result, args[i]) || !args[i + 1] || args[i + 1].startsWith("--")) throw failure(); result[args[i]] = resolve(args[i + 1]); }
+  if (names.slice(0, 5).some(n => !Object.hasOwn(result, n))) throw failure();
   return result;
 }
 async function privateRegular(path, cap) {
