@@ -8,6 +8,7 @@ import { AdminNav } from "./admin-nav";
 import { ceremonyCountdown } from "./reading";
 import { icons } from "./study/lift";
 import { HonorsSheet } from "./honors/sheet";
+import { MavenLinkPanel } from "./maven-link";
 
 const empty: StudentInput = { firstName: "", lastName: "", ceremonyDate: "", rehearsal1: null, rehearsal2: null, studentKind: "child", serviceSlot: "unknown", parentEmail: "", ownEmail: null };
 function draft(row: RosterStudent): StudentInput { return { firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate, rehearsal1: row.rehearsal1 ?? null, rehearsal2: row.rehearsal2 ?? null, studentKind: row.studentKind, serviceSlot: row.serviceSlot, parentEmail: row.parentEmail, ownEmail: row.ownEmail }; }
@@ -183,6 +184,7 @@ function Roster() {
             <p className="field-help">{form.studentKind === "child" ? "Children need a parent email." : "Adults need their own email."} Saving doesn’t send an invitation or change who can sign in; use People for that.{current ? " Changing the date or service keeps the verses and marks both readings for review." : ""}</p>
             <div className="form-actions"><button className="button-primary admin-pill" disabled={pending || conflict}>{pending ? "Saving…" : "Save student"}</button><button type="button" className="button-secondary admin-pill" disabled={pending} onClick={requestClose}>Cancel</button></div>
           </form>}
+        {current && <MavenLinkPanel key={current.id} studentId={current.id} name={fullName(current)} locked={pending || conflict} />}
         {current && !current.disabledAt && <div className="disable-student"><h3>Disable this student</h3><p>Stops access to their practice. Their record and history are kept.</p>
           {!confirmDisable ? <button className="button-secondary admin-pill" disabled={pending || conflict} onClick={() => setConfirmDisable(true)}>Disable student</button>
             : <><p role="status">Disable <bdi dir="auto">{fullName(current)}</bdi>?</p><div className="form-actions"><button className="button-primary admin-pill roster-danger" disabled={pending || conflict} onClick={() => void mutate(true)}>{pending ? "Disabling…" : "Confirm disable"}</button><button className="button-secondary admin-pill" disabled={pending} onClick={() => setConfirmDisable(false)}>Keep student active</button></div></>}

@@ -268,7 +268,7 @@ describe("Maven roster intake through the portal MCP", () => {
     for (const text of texts) expect(text).not.toContain("@");
   });
 
-  it("keeps student_source_identity tenant-isolated, insert-only for the runtime and one-to-one", async () => {
+  it("keeps student_source_identity tenant-isolated, insert-only for the runtime apart from its once-only revocation, and one-to-one among current links", async () => {
     const { t, owner } = await setup();
     const row = (patch: Partial<typeof s.studentSourceIdentity.$inferInsert> = {}) => ({ tenantId: "crc", sourceNamespace: "maven", sourceRecordId: sfid(1), studentId: t.f.students[0].id,
       createdByUserId: t.f.identities.admin.id, createdByMembershipId: t.f.adminMember.id, roleGrantId: t.f.adminGrant.id, role: "admin" as const,
