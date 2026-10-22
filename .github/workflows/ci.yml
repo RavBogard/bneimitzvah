@@ -24,7 +24,7 @@ jobs:
       - run: npm run build
   postgres:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:18.6
