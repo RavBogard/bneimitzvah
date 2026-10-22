@@ -41,7 +41,9 @@ async function page(who: "admin" | "student") {
   return tab;
 }
 const region = (tab: Page) => tab.getByRole("region", { name: "Cantor Finkel’s recordings", exact: true });
-const loaded = (tab: Page) => ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();
+const loaded = (tab: Page) => ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible({ timeout: 30_000 });
+// A sign-in or role redirect may supersede the first navigation; the reading itself is the barrier.
+async function open(tab: Page, path: string) { await tab.goto(path, { waitUntil: "commit" }).catch(() => undefined); await loaded(tab); }
 async function status(tab: Page, path: string) { return tab.evaluate(async path => (await fetch(path, { cache: "no-store" })).status, path); }
 
 beforeAll(async () => {
@@ -73,7 +75,7 @@ afterAll(async () => {
 
 it("an admin hears the whole passage with its credit, loop and speed, and its verses are marked while it plays", async () => {
   const tab = await page("admin");
-  await tab.goto(`/workspace/admin/students/${fixture.student.id}/reading`, { waitUntil: "domcontentloaded" }); await loaded(tab);
+  await open(tab, `/workspace/admin/students/${fixture.student.id}/reading`);
   await ui(region(tab)).toBeVisible();
   await ui(region(tab)).toContainText("Hear the chant · Genesis 1:1–3"); await ui(region(tab)).toContainText("Chanted by Cantor Josh Finkel");
   expect(mediaRequests).toBe(0); // Nothing is fetched before Play.
@@ -98,7 +100,7 @@ it("an admin hears the whole passage with its credit, loop and speed, and its ve
 
 it("before the student release a student sees no Finkel player and every Finkel route answers 404", async () => {
   const tab = await page("student");
-  await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" }); await loaded(tab);
+  await open(tab, "/workspace/student");
   await ui(region(tab)).toHaveCount(0);
   expect(await status(tab, "/api/reference-audio/finkel/clips?mode=student&from=Genesis+1%3A1&to=Genesis+1%3A3")).toBe(404);
   expect(await status(tab, `/api/reference-audio/finkel/media/${sha256}.mp3?mode=student`)).toBe(404);
