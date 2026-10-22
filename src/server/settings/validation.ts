@@ -9,14 +9,17 @@ import { HIDDEN, plain } from "../study-guides/validation";
 export const SETTINGS_LIMITS = Object.freeze({
   rabbiDisplayName: 80, serviceLabel: 40, preferredSources: 12, sourceTitle: 160, urlBytes: 512, consentNotice: 600, bodyBytes: 16384,
 });
-export const SETTINGS_KEYS = ["rabbiDisplayName", "services", "preferredSources", "siddurUrl", "musicUrl", "rosterSheetId", "consentNotice"] as const;
+export const SETTINGS_KEYS = ["rabbiDisplayName", "services", "preferredSources", "siddurUrl", "musicUrl", "rosterSheetId", "consentNotice", "notifications"] as const;
+export const NOTIFICATION_SWITCHES = ["tutorDraft", "weeklyDigest", "studentReminder"] as const;
 export const SERVICE_SLOTS = ["morning", "havdalah"] as const;
 export type SettingsKey = (typeof SETTINGS_KEYS)[number];
 export type ServiceSlot = (typeof SERVICE_SLOTS)[number];
 export type ServiceSetting = { label?: string; start?: string };
+/** Each kind's admin switch (absent or false is off) and the weekly digest's day, Sunday 0 to Saturday 6. */
+export type NotificationSettings = { tutorDraft?: boolean; weeklyDigest?: boolean; studentReminder?: boolean; digestWeekday?: number };
 export type CongregationSettings = {
   rabbiDisplayName?: string; services?: Partial<Record<ServiceSlot, ServiceSetting>>; preferredSources?: string[];
-  siddurUrl?: string; musicUrl?: string; rosterSheetId?: string; consentNotice?: string;
+  siddurUrl?: string; musicUrl?: string; rosterSheetId?: string; consentNotice?: string; notifications?: NotificationSettings;
 };
 type Result<T> = { ok: true; value: T } | { ok: false; problems: string[] };
 
@@ -79,6 +82,12 @@ export function validateSettings(body: unknown): Result<CongregationSettings> {
   for (const key of ["siddurUrl", "musicUrl"] as const) if (body[key] !== undefined && !settingsUrl(body[key])) problems.push(key);
   if (body.rosterSheetId !== undefined && (typeof body.rosterSheetId !== "string" || !ROSTER_SHEET_ID.test(body.rosterSheetId))) problems.push("rosterSheetId");
   if (body.consentNotice !== undefined && !settingsParagraph(body.consentNotice, SETTINGS_LIMITS.consentNotice)) problems.push("consentNotice");
+  if (body.notifications !== undefined) {
+    const n = body.notifications;
+    if (!record(n) || Object.keys(n).length === 0 || !onlyKeys(n, [...NOTIFICATION_SWITCHES, "digestWeekday"])
+      || NOTIFICATION_SWITCHES.some(key => n[key] !== undefined && typeof n[key] !== "boolean")
+      || (n.digestWeekday !== undefined && !(Number.isInteger(n.digestWeekday) && (n.digestWeekday as number) >= 0 && (n.digestWeekday as number) <= 6))) problems.push("notifications");
+  }
   return problems.length ? { ok: false, problems } : { ok: true, value: body as CongregationSettings };
 }
 

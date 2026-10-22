@@ -1,3 +1,3 @@
 {
-  "crons": [{ "path": "/api/internal/service-ecosystem/drain", "schedule": "17 10 * * *" }, { "path": "/api/internal/roster-sheet/sync", "schedule": "40 9 * * *" }]
+  "crons": [{ "path": "/api/internal/service-ecosystem/drain", "schedule": "17 10 * * *" }, { "path": "/api/internal/roster-sheet/sync", "schedule": "40 9 * * *" }, { "path": "/api/internal/notifications/run", "schedule": "5 14 * * *" }]
 }

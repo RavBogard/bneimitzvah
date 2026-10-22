@@ -938,3 +938,8 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
   margin: 16mm 14mm 18mm;
   @bottom-center { content: "Page " counter(page) " of " counter(pages); font: 9pt "Bricolage Grotesque", system-ui, sans-serif; color: #4b5a6b; }
 }
+.email-choice { display: flex; align-items: center; gap: 0.625rem; min-height: 44px; font-weight: 500; }
+.settings-workspace .email-choice input, .email-workspace .email-choice input { flex: 0 0 auto; width: 20px; height: 20px; min-height: 0; margin: 0; box-shadow: none; accent-color: var(--color-action); }
+.email-workspace { max-width: 46rem; }
+.email-workspace .people-card + .people-card { margin-top: 1rem; }
+.email-workspace select { margin-top: 0.5rem; }
