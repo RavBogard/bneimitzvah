@@ -39,9 +39,9 @@ const plainName = (value: unknown) => typeof value === "string" && value.trim() 
 /** Scopes a grant may hold. Only an admin grant can carry the study write scope (S21). */
 function grantedScope(role: "admin" | "tutor", asked: ReadonlySet<string>, unattended: boolean): string {
   if (role === "tutor") return SCOPES.read;
-  // Study stays the admin default (nothing asked) unless the client asked only for other scopes. Roster is granted only
-  // when asked for, and never to a scheduled routine (Daniel, 2026-10-21).
-  const study = asked.size === 0 || asked.has(SCOPES.study), roster = asked.has(SCOPES.roster) && !unattended;
+  // Nothing asked means the admin's full consent, shown line by line on the consent page: study, and roster unless this
+  // is a scheduled routine (Daniel, 2026-10-21). A client that names scopes gets only those it named (plus read).
+  const study = asked.size === 0 || asked.has(SCOPES.study), roster = (asked.size === 0 || asked.has(SCOPES.roster)) && !unattended;
   return [SCOPES.read, ...(study ? [SCOPES.study] : []), ...(roster ? [SCOPES.roster] : [])].join(" ");
 }
 

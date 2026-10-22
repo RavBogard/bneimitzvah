@@ -49,8 +49,8 @@ describe("Maven roster intake through the portal MCP", () => {
     const { t, admin } = await setup();
     const names = async (token: string) => (await t.rpc(token, "tools/list")).body.result.tools.map((x: { name: string }) => x.name);
     expect(await names(admin)).toEqual(expect.arrayContaining(TOOLS));
-    // A connection consented before the roster scope existed keeps exactly portal:read portal:study.
-    const study = await t.connect("admin");
+    // A connection holding exactly the scopes every consent before the roster scope held.
+    const study = await t.connect("admin", { scope: "portal:read portal:study" });
     expect(study.scope).toBe("portal:read portal:study");
     const readOnly = await t.connect("admin", { scope: "portal:read" });
     expect(readOnly.scope).toBe("portal:read");
@@ -62,6 +62,9 @@ describe("Maven roster intake through the portal MCP", () => {
       expect(await names(token)).not.toContain(name);
       expect((await t.rpc(token, "tools/call", { name, arguments: { ...WINDOW } })).body.error.code).toBe(-32602);
     }
+    // Asking for nothing: an attended admin gets every scope, a scheduled routine never roster.
+    expect((await t.connect("admin")).scope).toBe("portal:read portal:study portal:roster");
+    expect((await t.connect("admin", { unattended: true })).scope).toBe("portal:read portal:study");
     // Asking for roster beside read alone grants no study scope.
     expect((await t.connect("admin", { scope: "portal:read portal:roster" })).scope).toBe("portal:read portal:roster");
   });

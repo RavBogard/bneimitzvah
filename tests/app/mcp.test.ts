@@ -71,7 +71,8 @@ describe("portal MCP", () => {
     const t = await fixture();
     await t.google("admin");
     const tokens = await t.connect("admin");
-    expect(tokens.scope).toBe("portal:read portal:study");
+    // Asking for nothing, an attended admin gets the full consent, roster included.
+    expect(tokens.scope).toBe("portal:read portal:study portal:roster");
     const init = await t.rpc(tokens.access_token, "initialize", { protocolVersion: "2025-06-18" });
     expect(init.body.result.protocolVersion).toBe("2025-06-18");
     expect(init.body.result.instructions).toContain("Never invent a citation");
