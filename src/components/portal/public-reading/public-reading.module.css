@@ -1,0 +1,18 @@
+/* The signed-out reading reuses the student reading's hero, toolbar and text styles;
+   these few rules cover only what a visitor has that a student does not. */
+.eyebrow { margin: 0; color: var(--color-action); font-size: 0.9375rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
+.weeks { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-top: 1rem; }
+.picker { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 48px; color: var(--color-muted); font-weight: 600; }
+.picker > span { white-space: nowrap; }
+.picker input { min-height: 44px; padding: 0 0.75rem; border: 1px solid var(--color-control-rule); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); font: inherit; }
+.upClose { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin-block: 1rem; }
+.signIn { margin-top: 2.5rem; padding: 1.25rem 1.5rem 1.5rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.signIn h2 { margin: 0 0 0.5rem; font-size: 1.25rem; font-weight: 750; letter-spacing: -0.01em; }
+.signIn p { margin: 0 0 1rem; color: var(--color-muted); max-width: 40rem; }
+.signIn a { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+@media (max-width: 640px) {
+  .weeks > :global(.button-hero-secondary) { flex: 1 1 auto; justify-content: center; }
+  .picker { flex: 1 1 100%; justify-content: space-between; }
+  .picker input { flex: 1 1 auto; }
+  .signIn a { width: 100%; }
+}

@@ -20,6 +20,9 @@ import { createShortReferenceAudioService } from "../../src/server/reference-aud
 import type { ShortSourceManifest } from "../../src/server/reference-audio/short-source-manifest";
 import { createShortExplorationService } from "../../src/server/reference-audio/short-exploration-service";
 import { createFinkelReferenceService } from "../../src/server/reference-audio/finkel-service";
+import { createPublicReadingService, PUBLIC_TENANT } from "../../src/server/public-reading/service";
+import { AccessDenied } from "../../src/server/access/errors";
+import type { PublicRuntime } from "../../src/server/http/public-reading";
 import type { ReferenceCatalog } from "../../src/server/reference-audio/catalog";
 import { ReferenceUnavailable } from "../../src/server/reference-audio/catalog";
 import { createStudyService } from "../../src/server/study/service";
@@ -107,12 +110,29 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       await withTenantTransaction(db, { tenantId: "crc" }, async () => undefined);
       return action(runtime);
     }
+    // Signed-out reading: no auth, access or people service at all, as in production composition.
+    const publicRuntime: PublicRuntime = Object.freeze({
+      async resolveTenant(request: Request) {
+        const host = await resolveTenantHost(db, { url: request.url, headers: request.headers }, deployment);
+        if (host.origin !== BROWSER_ORIGIN || host.tenantId !== PUBLIC_TENANT) throw new AccessDenied(404);
+      },
+      reading: createPublicReadingService({
+        loadReading: async (date, calendar) => ({ fetchedAt: Date.now(), snapshot: { date: parseCeremonyDate(date), calendar, classification: "regular", reading: { parashah: "Synthetic portion", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:1-6:8" }], triennial: null }, haftarah: "Isaiah 1:1-2" } }),
+        loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }),
+        stepSource: options.wordDetailsSource ?? { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) },
+        pocketTorah: options.referenceStudentRelease === true ? { loadCatalog: options.referenceCatalogLoad ?? (async () => { throw new ReferenceUnavailable(); }), loadManifest: options.referenceShortManifestLoad ?? (async () => { throw new ReferenceUnavailable(); }) } : null,
+      }),
+    });
+    async function withPublicRuntime(action: (runtime: PublicRuntime) => Promise<Response>) {
+      await withTenantTransaction(db, { tenantId: "crc" }, async () => undefined);
+      return action(publicRuntime);
+    }
     function takeMail(email: string) {
       const index = deliveries.findIndex(row => row.email === email);
       if (index < 0) throw new Error("Expected synthetic mail was not captured");
       return deliveries.splice(index, 1)[0].url;
     }
-    return { ...base, runtime, withRuntime, takeMail, close: base.close };
+    return { ...base, runtime, withRuntime, publicRuntime, withPublicRuntime, takeMail, close: base.close };
   } catch {
     await base.close().catch(() => undefined);
     throw new Error("Browser fixture setup failed; details withheld");

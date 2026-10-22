@@ -20,6 +20,8 @@ import { finkelReferenceRouteMethods, handleFinkelReferenceRequest } from "./fin
 import { finishReferenceReviewResponse, handleReferenceReviewRequest, referenceReviewRouteMethods } from "./reference-review";
 import { errorResponse, HttpBoundaryError } from "./responses";
 import { finishHonoreeGuestResponse, finishHonoreeManagementResponse, handleHonoreeRequest, honoreeManagementRouteMethods } from "./honoree";
+import { handlePublicReadingRequest, isPublicReadingPath, type PublicRuntimeScope } from "./public-reading";
+import { createPublicRuntimeScope } from "../runtime/public-composition";
 
 export type HttpRuntimeScope = (action: (runtime: HttpRuntime) => Promise<Response>) => Promise<Response>;
 function cookieBoundary(request: Request) {
@@ -34,7 +36,7 @@ function cookieBoundary(request: Request) {
     names.add(name);
   }
 }
-export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRuntimeScope()) {
+export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRuntimeScope(), withPublic: PublicRuntimeScope = createPublicRuntimeScope()) {
   return async (request: Request): Promise<Response> => {
     // Google's redirect-mode return is a browser navigation: any failure, including an unavailable
     // runtime, lands on a page with a plain error rather than a JSON body.
@@ -42,6 +44,9 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
     try {
       const url = new URL(request.url);
       googleReturn = url.pathname === "/api/auth/callback/google" && request.method === "GET";
+      // Signed-out reading: its own allowlist and its own runtime, which has no auth stack.
+      // Cookies are never interpreted here (Authorization is refused); nothing on this branch opens a session.
+      if (isPublicReadingPath(url.pathname)) return await handlePublicReadingRequest(request, withPublic);
       if (url.pathname === "/api/honoree/read") {
         const denied = () => errorResponse(new HttpBoundaryError(404));
         // Guest capability transport never interprets authentication cookies or

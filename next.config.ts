@@ -13,7 +13,10 @@ const nextConfig: NextConfig = {
   async headers() {
     // Pages only: API, discovery and the reviewed landing handlers (honoree, e-mail and invitation
     // links) set their own exact CSP and frame headers.
-    return [{ source: "/((?!api/|\\.well-known/|honoree|auth/email|invitations/open).*)", headers: [{ key: "X-Frame-Options", value: "DENY" }] },
+    // Until beta (Daniel, 2026-10-22) nothing is indexed: this header, the root layout's robots
+    // meta and /robots.txt all say so. The public reading API sets the header itself as well.
+    return [{ source: "/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+      { source: "/((?!api/|\\.well-known/|honoree|auth/email|invitations/open).*)", headers: [{ key: "X-Frame-Options", value: "DENY" }] },
       { source: "/connect{/}?", headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'none'" }] }];
   },
 };

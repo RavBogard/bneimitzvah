@@ -106,13 +106,13 @@ const studentCore = (s: Omit<StudentView, "rehearsal1" | "rehearsal2" | "service
 // Rehearsal dates and the service slot travel with the ceremony date to every role that already sees it.
 const studentView = (s: StudentView) => ({ ...studentCore(s), rehearsal1: s.rehearsal1, rehearsal2: s.rehearsal2, serviceSlot: s.serviceSlot });
 const contextView = (c: PracticeContextView | null) => c ? { id: c.id, authorityRevision: c.authorityRevision, studentId: c.studentId, studentRevision: c.studentRevision, expiresAt: c.expiresAt } : null;
-function wordAidsView(value: StudyWordAids): JsonValue {
+export function wordAidsView(value: StudyWordAids): JsonValue {
   if (value.status === "unavailable") return { schema: value.schema, ref: value.ref, status: value.status, reason: value.reason };
   return { schema: value.schema, ref: value.ref, status: value.status, readingTextSha256: value.readingTextSha256, wordCount: value.wordCount,
     words: value.words.map((word): JsonValue => word.status === "unavailable" ? { index: word.index, status: word.status, reason: word.reason }
       : { index: word.index, status: word.status, syllables: word.syllables.map(part => ({ start: part.start, end: part.end, stress: part.stress })) }) };
 }
-function wordDetailsView(value: StudyWordDetails): JsonValue {
+export function wordDetailsView(value: StudyWordDetails): JsonValue {
   if (value.status === "unavailable" && value.reason === "reconstruction") return { schema: value.schema, ref: value.ref, wordIndex: value.wordIndex, status: value.status, reason: value.reason };
   const identity = { schema: value.schema, ref: value.ref, wordIndex: value.wordIndex, readingTextSha256: value.readingTextSha256, wordCount: value.wordCount,
     attribution: { name: value.attribution.name, source: value.attribution.source, commit: value.attribution.commit, license: value.attribution.license, licenseUrl: value.attribution.licenseUrl, changes: value.attribution.changes } };
@@ -128,7 +128,7 @@ function wordDetailsView(value: StudyWordDetails): JsonValue {
       : { status: value.elsewhere.status, lemma: value.elsewhere.lemma, total: value.elsewhere.total,
         places: value.elsewhere.places.map(place => ({ ref: place.ref, wordIndex: place.wordIndex, words: [...place.words], mark: place.mark })) } }) };
 }
-function studyPageView(page: StudyPage): { [key: string]: JsonValue } {
+export function studyPageView(page: StudyPage): { [key: string]: JsonValue } {
   return { offset: page.offset, nextOffset: page.nextOffset, totalVerses: page.totalVerses,
     translation: { key: page.translation.key, status: page.translation.status },
     verses: page.verses.map(verse => ({ ref: verse.ref, english: verse.english, hebrew: { text: verse.hebrew.text, readingText: verse.hebrew.readingText,
