@@ -43,7 +43,9 @@ test("review: retired query OAuth and missing browser challenge deny before prov
       expect(response.status).toBe(403);
       expect(response.headers.get("location")).toBeNull();
     }
-    expect((await dispatch(f.request("/api/auth/callback/google?code=synthetic&state=synthetic"))).status).toBe(404);
+    // Redirect-mode Google's return is routed; an unknown state never reaches Google or makes a session.
+    const unknown = await dispatch(f.request("/api/auth/callback/google?code=synthetic&state=synthetic"));
+    expect(unknown.status).toBe(303); expect(unknown.headers.get("location")).toBe("/sign-in?error=authentication");
     expect(network.mock.calls.length).toBe(0);
     expect(await f.owner(async () => (await f.db.select().from(s.session)).length === before)).toBe(true);
   } finally { network.mockRestore(); await f.client.close(); }

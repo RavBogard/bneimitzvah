@@ -6,10 +6,11 @@ import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 
 export type BaseMode = "student" | "parent" | "tutor" | "admin";
 export type ReadingMode = BaseMode | "child-practice";
-export type Student = { id: string; firstName: string; lastName: string; ceremonyDate: string; revision: number; ownAdultHonors?: boolean; rehearsal1?: string | null; rehearsal2?: string | null };
+export type ServiceSlot = "morning" | "havdalah" | "unknown";
+export type Student = { id: string; firstName: string; lastName: string; ceremonyDate: string; revision: number; ownAdultHonors?: boolean; rehearsal1?: string | null; rehearsal2?: string | null; serviceSlot?: ServiceSlot };
 export type ImportMetadata={version:1;parent1Name:string|null;householdPhone:string|null;parent2Name:string|null;parashahLabel:string|null;tutorName:string|null;
   tutorMatch:{status:"matched";grantId:string}|{status:"unmatched"|"ambiguous"}|null;adminNotes:string|null};
-export type RosterStudent = Student & { studentKind: "child" | "adult"; serviceSlot: "morning" | "havdalah" | "unknown"; parentEmail: string | null; ownEmail: string | null; disabledAt: string | null;hebrewName?:string|null;secondParentEmail?:string|null;importMetadata?:ImportMetadata|null };
+export type RosterStudent = Student & { studentKind: "child" | "adult"; serviceSlot: ServiceSlot; parentEmail: string | null; ownEmail: string | null; disabledAt: string | null;hebrewName?:string|null;secondParentEmail?:string|null;importMetadata?:ImportMetadata|null };
 export type StudentInput = Omit<RosterStudent, "id" | "revision" | "disabledAt" | "importMetadata" | "ownAdultHonors">;
 export type Context = { id: string; authorityRevision: number; studentId: string; studentRevision: number; expiresAt: string };
 export type Selection = { handle: string; context: Context };
@@ -29,9 +30,13 @@ function instant(value: unknown): string { if (typeof value !== "string" || !Num
 function date(value: unknown): string { const s = text(value, 10), parsed = new Date(s + "T00:00:00Z"); if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || !Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== s) return bad(); return s; }
 const baseStudentKeys = ["id", "firstName", "lastName", "ceremonyDate", "revision"];
 // Rehearsal dates arrive together or not at all; when present they must be in order and on or before the ceremony.
-const studentKeysOf = (value: unknown) => [...baseStudentKeys, ...(!!value && typeof value === "object" && Object.hasOwn(value, "rehearsal1") ? ["rehearsal1", "rehearsal2"] : [])];
+// The service slot rides beside them on every student view; the roster lists it among its own keys.
+const studentKeysOf = (value: unknown, roster = false) => [...baseStudentKeys, ...(!!value && typeof value === "object" && Object.hasOwn(value, "rehearsal1") ? ["rehearsal1", "rehearsal2"] : []),
+  ...(!roster && !!value && typeof value === "object" && Object.hasOwn(value, "serviceSlot") ? ["serviceSlot"] : [])];
+const slotOf = (value: unknown): ServiceSlot => value === "morning" || value === "havdalah" || value === "unknown" ? value : bad();
 function studentFields(row: Record<string, unknown>): Student {
-  const student: Student = { id: identifier(row.id), firstName: text(row.firstName), lastName: text(row.lastName), ceremonyDate: date(row.ceremonyDate), revision: positive(row.revision) };
+  const student: Student = { id: identifier(row.id), firstName: text(row.firstName), lastName: text(row.lastName), ceremonyDate: date(row.ceremonyDate), revision: positive(row.revision),
+    ...(Object.hasOwn(row, "serviceSlot") ? { serviceSlot: slotOf(row.serviceSlot) } : {}) };
   if (!Object.hasOwn(row, "rehearsal1")) return student;
   const rehearsal1 = row.rehearsal1 === null ? null : date(row.rehearsal1), rehearsal2 = row.rehearsal2 === null ? null : date(row.rehearsal2);
   if ((rehearsal1 !== null && rehearsal1 > student.ceremonyDate) || (rehearsal2 !== null && rehearsal2 > student.ceremonyDate) || (rehearsal1 !== null && rehearsal2 !== null && rehearsal1 > rehearsal2)) return bad();
@@ -60,7 +65,7 @@ export function parseStudents(value: unknown, roster = false): Student[] | Roste
   const result = rows.map(value => {
     const rich=roster && !!value && typeof value==="object" && Object.hasOwn(value,"importMetadata");
     const eligibility = !roster && !!value && typeof value === "object" && Object.hasOwn(value, "ownAdultHonors");
-    const studentKeys = studentKeysOf(value);
+    const studentKeys = studentKeysOf(value, roster);
     const row = object(value, roster ? [...studentKeys, "studentKind", "serviceSlot", "parentEmail", "ownEmail", "disabledAt",...(rich?["hebrewName","secondParentEmail","importMetadata"]:[])] : [...studentKeys, ...(eligibility ? ["ownAdultHonors"] : [])]), student = studentFields(row);
     if (!roster) {
       if (eligibility && typeof row.ownAdultHonors !== "boolean") return bad();
@@ -68,8 +73,7 @@ export function parseStudents(value: unknown, roster = false): Student[] | Roste
     }
     if (row.studentKind !== "child" && row.studentKind !== "adult") return bad();
     const studentKind = row.studentKind;
-    if(row.serviceSlot!=="morning" && row.serviceSlot!=="havdalah" && row.serviceSlot!=="unknown")return bad();
-    const serviceSlot=row.serviceSlot;
+    const serviceSlot=slotOf(row.serviceSlot);
     const mailbox = (value: unknown) => { const result = text(value, 254); if (!/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(result) || result !== result.trim().toLowerCase()) return bad(); return result; };
     const parentEmail = row.parentEmail === null ? null : mailbox(row.parentEmail), ownEmail = row.ownEmail === null ? null : mailbox(row.ownEmail);
     if ((studentKind === "child" && parentEmail === null) || (studentKind === "adult" && ownEmail === null) || (ownEmail !== null && ownEmail === parentEmail)) return bad();

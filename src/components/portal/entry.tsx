@@ -5,6 +5,7 @@ import { parseAcceptance, parseAcknowledgement, parseInvitation, parseSession, P
   type InvitationReview, type SessionSummary } from "./api";
 import { GoogleSignIn } from "./google-sign-in";
 import type { GoogleIntent } from "./sign-in-boundary";
+import { forgetPendingRequest } from "./pending-request";
 
 type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "accepted" | "uncertain" }
   | { kind: "signed-in"; summary: SessionSummary } | { kind: "invitation"; review: InvitationReview };
@@ -62,6 +63,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         setEmail(""); setLinkRequested(true); focusNext.current = true;
       } else if (kind === "sign-out") {
         parseAcknowledgement(await requestPortal("/api/auth/sign-out", {}), "ok");
+        forgetPendingRequest(); // A Connect Claude request never outlives the account that started it.
         setAuthGeneration(value => value + 1);
         setEmail(""); setLinkRequested(false); setView({ kind: "sign-in" }); focusNext.current = true;
       } else {

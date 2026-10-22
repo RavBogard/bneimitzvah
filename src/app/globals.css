@@ -374,6 +374,8 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .reading-hero { margin-block: 0.5rem 1.75rem; min-width: 0; }
 .hero-who { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
 .hero-name { font-size: 1.0625rem; font-weight: 700; overflow-wrap: anywhere; }
+/* The service slot shares the name line at the name's line height, so the hero keeps its phone height. */
+.hero-slot { color: var(--color-muted); line-height: 1.4; }
 .hero-date { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; color: var(--color-muted); font-variant-numeric: tabular-nums; }
 .hero-rehearsals { margin: 0.125rem 0 0; color: var(--color-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
 .hero-days { background: var(--marigold); color: var(--on-ink); font-weight: 650; font-size: 0.875rem; padding: 0.125rem 0.625rem; border-radius: 999px; }
