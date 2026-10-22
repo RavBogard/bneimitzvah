@@ -153,7 +153,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const lessonLog = createLessonLogService({ access, practice });
   const congregationSettings = createCongregationSettingsService({ access });
   const practiceCalendar = createPracticeCalendarService({ access, practice });
-  // Parked (MISSION): null unless PORTAL_RECORDINGS_ENABLED=true, and then every recordings route is a 404.
+  // Parked (MISSION): null unless PORTAL_RECORDINGS_ENABLED=true; while null, every recordings route is a 404.
   const recordings = config.recordingsEnabled ? createStudentRecordingService({ access, practice }) : null;
   const loadText = createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS, cache: createPersistentStudyCache(db), coalescer: studyTasks });
   const study = createStudyService({ access, practice, load: loadText });
