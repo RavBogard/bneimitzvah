@@ -97,7 +97,7 @@ function studentAuthority<Q extends PgQueryResultHKT>(ctx: ToolContext<Q>, inten
     await guard?.(tx, live, student.id);
     if (phase) phase.entered = true;
     return action(tx, Object.freeze({ ...portal, studentId: student.id, relationshipId: relationship.id, relationshipRevision: relationship.revision }),
-      Object.freeze({ id: student.id, firstName: student.firstName, lastName: student.lastName, ceremonyDate: student.ceremonyDate, rehearsal1: student.rehearsal1, rehearsal2: student.rehearsal2, revision: student.revision }));
+      Object.freeze({ id: student.id, firstName: student.firstName, lastName: student.lastName, ceremonyDate: student.ceremonyDate, rehearsal1: student.rehearsal1, rehearsal2: student.rehearsal2, serviceSlot: student.serviceSlot, revision: student.revision }));
   }); };
 }
 /**
