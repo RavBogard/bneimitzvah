@@ -180,6 +180,7 @@
       "family": null,
       "accents": [],
       "title": "How a verse is built",
+      "summary": "Phrases, marks and the two halves of a verse",
       "goal": "After this you can hear that a verse is made of short phrases, each with its own small tune.",
       "body": [
         "Torah is chanted, not read. Every word carries a small mark, above or below a letter, and the marks tell the reader which tune to sing. You do not need to read music. You need to hear about ten short tunes and know which mark each one belongs to.",
@@ -328,6 +329,7 @@
         "silluq"
       ],
       "title": "Sof pasuk",
+      "summary": "Where the verse ends",
       "goal": "After this you can hear the end of a verse coming and know the mark that ends it.",
       "body": [
         "Sof pasuk is the ending. It is the only phrase that is in every single verse, so it is the first tune to learn. The last word carries a small vertical line under its stressed syllable, and the verse closes with a colon-like sign.",
@@ -481,6 +483,7 @@
         "etnachta"
       ],
       "title": "Etnachta",
+      "summary": "Where the verse rests",
       "goal": "After this you can hear where a verse rests in the middle, and tell that rest from the ending.",
       "body": [
         "Etnachta is the rest in the middle of the verse. Its mark looks like a small wishbone under the stressed syllable. Nearly every verse has one, and it splits the verse into two halves of meaning.",
@@ -638,6 +641,7 @@
         "kadma"
       ],
       "title": "Zakef",
+      "summary": "The most common phrase inside a verse",
       "goal": "After this you can hear zakef, the most common phrase inside a verse, and the marks that lead into it.",
       "body": [
         "Zakef katan is two dots above the stressed syllable, one over the other. It is the commonest pause inside a verse: a small comma, not a rest.",
@@ -797,6 +801,7 @@
         "munach-legarmeh"
       ],
       "title": "Revia",
+      "summary": "A slow walk down",
       "goal": "After this you can hear revia's slow walk down and tell it from zakef's peak.",
       "body": [
         "Revia is a single dot above the word, like a small diamond. It marks a pause a little weaker than zakef, often on the first word of a verse or right before a new thought.",
@@ -953,6 +958,7 @@
         "kadma"
       ],
       "title": "Tevir",
+      "summary": "A dip, often after darga",
       "goal": "After this you can hear tevir's dip and the darga that often leads into it.",
       "body": [
         "Tevir is a dot with a small tail, under the stressed syllable. It is a short pause, and it often comes a word or two before an etnachta or a sof pasuk.",
@@ -1111,6 +1117,7 @@
         "munach"
       ],
       "title": "Kadma v'azla",
+      "summary": "A climb, with geresh and gershayim",
       "goal": "After this you can hear kadma v'azla's climb and know its two cousins, geresh and gershayim.",
       "body": [
         "Kadma v'azla is a pair: kadma, a small hook above the word, then azla, a single slanted stroke above the next. Together they lead into a longer phrase, often one that ends on revia or zakef.",
@@ -1266,6 +1273,7 @@
         "shalshelet"
       ],
       "title": "Segol",
+      "summary": "The long zarka and the short segol",
       "goal": "After this you can hear the long winding zarka and the short segol that answers it.",
       "body": [
         "Segol is three dots above the end of a word, the shape of the segol vowel turned over. It comes with zarka, a curved stroke above the end of the word before it. The pair comes less often than the phrases you already know, and it usually sits near the start of a long verse.",
@@ -1425,6 +1433,7 @@
         "munach"
       ],
       "title": "Telisha ketana",
+      "summary": "A small turn into the next phrase",
       "goal": "After this you can hear telisha ketana's small turn and know it leads into the phrase after it.",
       "body": [
         "Telisha ketana is a small circle with a tail, above the end of the word. It has one of the smallest tunes in the system: a quick turn, down a step and back, that settles on the note it came from.",
@@ -1570,6 +1579,7 @@
         "karnei-para"
       ],
       "title": "Pazer",
+      "summary": "A tall arch, and telisha gedola",
       "goal": "After this you can hear the tall arch of pazer and the long climb of telisha gedola.",
       "body": [
         "Pazer is a small branching mark above the word. It is a minor pause early in a long verse, and it has one of the highest tunes in the system: a climb to the sixth note, then a tumble back down.",
@@ -1722,6 +1732,7 @@
         "zakef-gadol"
       ],
       "title": "Zakef gadol",
+      "summary": "The larger zakef, on a word of its own",
       "goal": "After this you can hear zakef gadol and tell it from the small zakef you already know.",
       "body": [
         "Zakef gadol is zakef's bigger form: the two dots with a vertical line beside them. It stands on its own word with no words leading in, which is why it needs a bigger tune to fill the space.",
@@ -1875,6 +1886,7 @@
       "family": null,
       "accents": [],
       "title": "Your first verse",
+      "summary": "Lein one verse of this week's reading",
       "goal": "After this you have leined one verse of this week's Torah reading.",
       "body": [
         "You can hear all ten phrases. Now put them together on one verse from this week's reading. The app picks a short one; you can choose another.",
@@ -2014,6 +2026,7 @@
         "silluq"
       ],
       "title": "Sof pasuk in the haftarah",
+      "summary": "The ending, in the haftarah tune",
       "goal": "After this you can hear the haftarah ending, which settles on the home note instead of dropping below it.",
       "body": [
         "The haftarah uses the same marks and the same phrases as the Torah, with a different set of tunes. The mode is minor.",
@@ -2163,6 +2176,7 @@
         "etnachta"
       ],
       "title": "Etnachta in the haftarah",
+      "summary": "The rest, in the haftarah tune",
       "goal": "After this you can hear the haftarah rest, which rocks before it settles.",
       "body": [
         "The rest in the middle of the verse is longer in the haftarah than in the Torah. Tipcha rises a little and holds. Munach steps down. Then etnachta rocks between the home note and the third, rises to the fifth, and settles on the fourth.",
@@ -2324,6 +2338,7 @@
         "yetiv"
       ],
       "title": "Zakef in the haftarah",
+      "summary": "A short step up and a drop",
       "goal": "After this you can hear the haftarah zakef, a short step up and a drop.",
       "body": [
         "Zakef in the haftarah is shorter than in the Torah: one step up, then a drop of two. Pashta before it sits high and falls one step, and mahpach swings down to the home note first.",
@@ -2472,6 +2487,7 @@
         "revia"
       ],
       "title": "Revia in the haftarah",
+      "summary": "A walk down to home",
       "goal": "After this you can hear the haftarah revia, which walks down to home and touches it twice.",
       "body": [
         "Revia walks down here too, but it goes all the way to the home note, bounces up to the third, and lands on home again. It is longer than the Torah revia and ends more firmly.",
@@ -2613,6 +2629,7 @@
         "tevir"
       ],
       "title": "Tevir in the haftarah",
+      "summary": "A drop to the bottom and a climb back",
       "goal": "After this you can hear the haftarah tevir, a drop to the bottom and a climb back.",
       "body": [
         "Tevir in the haftarah drops to the home note, dips once below it, and climbs back to the third. It is deeper than the Torah tevir.",
@@ -2753,6 +2770,7 @@
         "gershayim"
       ],
       "title": "Kadma v'azla in the haftarah",
+      "summary": "A leap to the top of the range",
       "goal": "After this you can hear the haftarah azla, with its leap to the top of the range.",
       "body": [
         "Kadma v'azla in the haftarah starts with a plain kadma, then azla climbs, leaps up to the octave, and drops back. It is the widest phrase in the haftarah tune.",
@@ -2894,6 +2912,7 @@
         "segol"
       ],
       "title": "Segol in the haftarah",
+      "summary": "Zarka and segol, in the haftarah tune",
       "goal": "After this you can hear the haftarah zarka and segol.",
       "body": [
         "Zarka winds down here as it does in the Torah, from the fifth note all the way to the home note and a touch below. Segol answers with a rise to the fifth and a step down.",
@@ -3041,6 +3060,7 @@
         "munach"
       ],
       "title": "Telisha ketana in the haftarah",
+      "summary": "A longer turn than the Torah's",
       "goal": "After this you can hear the haftarah telisha ketana, which is longer than the Torah's.",
       "body": [
         "In the Torah, telisha ketana has one of the smallest tunes there is. In the haftarah it grows: it holds on the fourth note, turns up to the fifth, and walks down to home. It still leads straight into the phrase after it."
@@ -3168,6 +3188,7 @@
         "munach"
       ],
       "title": "Pazer in the haftarah",
+      "summary": "A climb to the octave",
       "goal": "After this you can hear the haftarah pazer, which climbs to the octave.",
       "body": [
         "Pazer climbs here too, as high as the haftarah tune goes: up to the octave and back down in one long sweep. Telisha gedola climbs only to the fourth and walks back, so it is the quieter of the two, as in the Torah."
@@ -3305,6 +3326,7 @@
         "zakef-gadol"
       ],
       "title": "Zakef gadol in the haftarah",
+      "summary": "The larger zakef, in the haftarah tune",
       "goal": "After this you can hear the haftarah zakef gadol.",
       "body": [
         "Zakef gadol stands alone on its word here too. The tune leaps to the fifth, falls to the home note, and settles on the third: a wide swing down, where the small zakef is a short step."
@@ -3441,6 +3463,7 @@
         "silluq"
       ],
       "title": "The end of the haftarah",
+      "summary": "The ending of the whole haftarah",
       "goal": "After this you can hear the special ending that closes the whole haftarah.",
       "body": [
         "The last verse of a haftarah ends with its own tune. The marks are the ordinary ones, mercha, tipcha, sof pasuk, but the melody is bigger. Tipcha walks down from high. Then the last word rises to the octave and settles on the sixth, held long, so the room knows the reading is over.",
@@ -3603,6 +3626,7 @@
       "family": null,
       "accents": [],
       "title": "Your first haftarah verse",
+      "summary": "Lein one verse of this week's haftarah",
       "goal": "After this you have leined one verse of this week's haftarah.",
       "body": [
         "Same steps as your first Torah verse: hear the phrases one by one, hear the verse whole, chant along slowly, then at full speed.",
