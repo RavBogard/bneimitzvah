@@ -1,5 +1,55 @@
 # 1.5 plan: installable app (A), typed sign-in code (B), and the move to torah.centralreform.org (C)
 
+## Changes from Daniel's 2026-10-23 rulings (binding, supersede the text below)
+
+Source: `docs/planning/2026-10-23-cowork-offload/QUESTIONS.md` (Daniel's answers) and `HANDOFF-TO-CLAUDE-CODE.md` (the mapping). Research: `docs/superpowers/research/2026-10-23-cowork-offload/`. Where a section below conflicts with this list, this list wins. Lines marked "Decided here" are mine, logged for STATE, following the research unless a ruling conflicts.
+
+### Rulings, by section
+
+- **§2.2 (settings), A3.** Unchanged: 6 digits, numeric, 5-minute expiry, 3 attempts. Daniel chose "Use this version (Recommended)".
+- **§2.3 item 3 (mail transport) and §10 item 1, A3.** The plain-text body is exactly these five lines, in this order, with `{link}` and `{code}` filled in:
+  1. `Open this link to sign in: {link}`
+  2. `Or enter this code in the CRC Torah app: {code}`
+  3. `The link and the code work once, for 5 minutes.`
+  4. `No one from CRC will ever ask you for this code. Don't read it to anyone or type it anywhere but CRC Torah.`
+  5. `If you did not request this message, you can ignore it.`
+
+  Line 3 drops "Don't share the code with anyone."; line 4 is new. "CRC Torah" in lines 2 and 4 is `{productName}` (E1). Format rules from `sign-in-codes.md`: render the code alone on one line, and it is the only 6-digit number in the email; no digits in the subject; no WebOTP `@host #code` line (it is defined only for SMS). The §6.1 test "the code isn't in the subject" extends to "the body holds exactly one 6-digit number".
+- **§2.4 (client) and §10 item 1, button.** The installed-app button label stays `Email me a sign-in link`. The "sign-in code" label option is not used.
+- **§2.8 item 5 (relay phishing).** The defence is now line 4 above plus the 5-minute expiry. Say so in the reviewer notes.
+- **§3.3 (packs) and §3.4, F3.** Add a public pack, "Learn to lein course": the lessons JSON plus every lesson clip, owner `public`, same 14-day rule, same renewal and purge. The Learn to lein routes join the worker allowlist (§3.2) on the same terms as the reading pack, and the G3 guard (§3.7) applies unchanged: only human reference clips can enter it. Course progress saved to the account syncs when the app is back online; progress for a signed-out visitor is not stored. Add the pack's size to the §3.3 table and the §3.5 budget check; add tests to §6.1 and §6.2 (open the course offline, finish a lesson, reconnect, progress arrives).
+- **§3 (scope), B6.** No parent offline view of a child in 1.5. Tutor, admin and parent keep the empty owner list (§3.3 table). §10 item 4 is answered.
+- **§3.8 (manifest and icons), B5 and E1.** The icon is Daniel's option 2, the yad. Draw it from `icons/ICON-OPTIONS.md` and `icons/option-2-yad.svg`, with strokes as drawn or heavier, never thinner (it is the thinnest of the four at 48 px). `name` and `short_name` come from `productName` (CRC's value "CRC Torah"); the manifest route is no longer a fixed string. §10 item 3 is answered.
+- **§3.8, `apple-touch-icon`.** Also serve a static, opaque 180 px `/apple-touch-icon.png` at the site root on the torah host (see Findings 4).
+- **§3.9 (screens), B4 and E1.** Replace the five strings with these. `CRC Torah` is `{productName}` everywhere.
+  - Install hint: `Install CRC Torah on this device to keep this week's reading and recordings for use offline (up to about 40 MB).`
+  - iPhone steps: `In Safari, tap Share, then scroll to Add to Home Screen. If you don't see Share, tap the menu button next to the address bar first. Keep Open as Web App on, then tap Add.`
+  - iPad steps: `In Safari, tap Share, then View More, then Add to Home Screen. Keep Open as Web App on, then tap Add.`
+  - Pill: `Offline · saved until {date}` (no final period).
+  - Expiry: `Saved readings stay on this device for 14 days after you last opened CRC Torah online. Open it with a connection to renew them. If the device runs low on space, it may remove them sooner.`
+
+  The single iOS line becomes two: iPhone and iPad, chosen by platform detection (`maxTouchPoints > 1` for iPad). The 14 days run from the last successful online open (the renewal in §3.3).
+- **§4.3 Phase 2 probe, §4.4, and the beta-tag step, F2.** The switch window is not the beta tag, so the probes (`X-Robots-Tag: noindex, nofollow`, `Disallow: /`) stay as written. Add a step to the 1.5 beta-tag release: `/read`, `/learn` and `/trope-chart` drop the noindex header and the robots `Disallow` for those paths; signed-in pages and workspaces keep both. Add a test that pins this list.
+- **§6.4 (device check), C9.** Daniel's check is on Android (Chrome), using `PHONE-CHECK.md`. The iPhone steps in §6.4 stay as a checklist for whoever has an iPhone; the iOS strings are not blocked on it.
+- **§10, answered.** Items 1 (A3), 2 (B4), 3 (B5), 4 (B6) are closed. Item 5 stays his.
+
+### Findings settled here ("Decided here")
+
+From `pwa-offline.md`:
+1. **Open as Web App off.** The worker registers only in standalone mode (§3.1), so a Home Screen add with the toggle off is a bookmark with no worker and WebKit's 7-day rule. Decided here: the B4 strings say "Keep Open as Web App on"; no code change, and device check step 1 records the toggle.
+2. **`persist()`.** Decided here: call `navigator.storage.persisted()` on every open of the installed app and `persist()` again when it is false, instead of once after the first pack (§3.5).
+3. **Android install prompt.** `beforeinstallprompt` needs a tap plus about 30 seconds. Decided here: when the event has not fired on Android, show a text fallback beside the hint: "In Chrome, open the menu and tap Install app or Add to Home screen." Check Chrome's exact menu label on the device. The wording is the research report's, not Daniel's: it is the only new user-visible text in this list, so build it behind one string constant and list it as an open wording item for Daniel.
+4. **iOS icons.** `apple-touch-icon` overrides manifest icons and maskable icons are ignored. Decided here: serve the static opaque 180 px `/apple-touch-icon.png` (still generated at build time from the yad shapes, no binary in the repo) and keep the client-injected link too.
+5. **Cookies.** Since iOS 17.2 the login cookie is copied into the installed app once at install, so §3.5's "separate from Safari" is only partly true. Decided here: reword §3.5 accordingly, keep B (the code) as the sign-in path for every later sign-in, and add to device check: sign in in Safari first, then add, and record whether the app arrives signed in.
+6. **Old Home Screen app.** Some families may already have a beitmitzvah Home Screen app. Decided here: the §4.4 cutover message adds "If you added the old address to your Home Screen, delete it and add the new one." No worker risk, because the registration gate holds.
+7. **Size.** Decided here: the hint says "up to about 40 MB", matching the plan's 35 to 40 MB for double parashiyot.
+8. **Quota and eviction.** Confirmed: the `min(0.8 × quota, 300 MB)` budget, whole-origin eviction, the blob playback, the separate maskable icon and no Background Sync stand as written.
+
+From `sign-in-codes.md`:
+9. **Mail suggestion in a Home Screen app.** Whether Mail offers an emailed code to a Home Screen web app is undocumented. Decided here: ship the typed field (`autocomplete="one-time-code"`) regardless; `PHONE-CHECK.md` tests it on Android now, and an iPhone result goes in STATE when someone has one. Nothing in the design depends on the answer.
+
+---
+
 Everything below comes from reading `C:/Users/dsbog/bneimitzvah-study` (local `main` at 8b0bea7). `origin/main` is at b233428, which adds only docs commits, so executors should branch from `origin/main`. I also read the branch `origin/claude/crc-torah-front-door` (0a0464c, 8c3e58b) and the pinned Better Auth 1.7.10 source in `node_modules`. I changed nothing.
 
 ## 0. The short version and the order
