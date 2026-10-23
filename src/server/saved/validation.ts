@@ -1,19 +1,17 @@
 import "server-only";
 import { closedObject } from "../http/query";
 import { HttpBoundaryError } from "../http/responses";
-import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
-import { NEVIIM_BOOKS, TORAH_BOOKS, commentaryChapterOfVerse, commentaryWork } from "../../lib/readings/commentary";
-import { expandReadingRanges, parseCeremonyDate, readingSegments } from "../../lib/readings/ranges";
-import { parseRange } from "../../lib/readings/leyning.mjs";
+import { commentaryChapterOfVerse, commentaryWork } from "../../lib/readings/commentary";
+import { parseCeremonyDate } from "../../lib/readings/ranges";
+import { canonicalReadingRef, READING_REF_LIMITS } from "../../lib/readings/reading-ref";
 
 /**
  * The saved layer's request shapes. Every failure is a closed 400; nothing a caller sent is echoed.
- * Ranges use the 1.3 ref contract (shelf plan §2): canonical hebcal segments joined by exactly "; ",
- * at most 1000 characters, 32 segments and 1000 verses, Torah or Nevi'im only. This is deliberately
- * minimal; when claude/any-reading's src/lib/readings/reading-ref.ts lands, `savedRanges` should call its
- * `canonicalReadingRef` instead, with the same limits.
+ * Ranges are the 1.3 ref contract itself (`canonicalReadingRef`): canonical Hebcal segments joined by
+ * exactly "; ", within READING_REF_LIMITS, Torah or Nevi'im only. Anything a member saves, the public
+ * ref routes can open.
  */
-export const SAVED_RANGE_LIMITS = Object.freeze({ characters: 1000, segments: 32, verses: 1000 });
+export const SAVED_RANGE_LIMITS = READING_REF_LIMITS;
 export type SavedKind = "torah" | "haftarah";
 export type MarkState = "unmarked" | "working" | "got-it";
 export type WorkStream = "translation" | "note";
@@ -24,9 +22,6 @@ const invalid = (): never => { throw new HttpBoundaryError(); };
 // The app refuses first, so a CHECK never fails on a member's words (which Postgres would quote in its log).
 const TEXT_CONTROLS = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\u2028\u2029]/;
 const NAME_CONTROLS = /[\x00-\x1f\x7f-\x9f\u2028\u2029]/;
-const torah = new Set<string>(TORAH_BOOKS), neviim = new Set<string>(NEVIIM_BOOKS);
-const formatRange = (book: string, [c1, v1]: number[], [c2, v2]: number[]) =>
-  c1 === c2 && v1 === v2 ? `${book} ${c1}:${v1}` : c1 === c2 ? `${book} ${c1}:${v1}-${v2}` : `${book} ${c1}:${v1}-${c2}:${v2}`;
 
 export function uuid(value: unknown): string {
   if (typeof value !== "string" || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value)) return invalid();
@@ -50,18 +45,10 @@ export function readingDate(value: unknown): string | null {
   if (value === null) return null;
   try { return parseCeremonyDate(value); } catch { return invalid(); }
 }
-/** The canonical ranges and their verses, or a 400. */
+/** The canonical ranges and their verses (the 1.3 ref contract), or a 400. */
 export function savedRanges(value: unknown, readingKind: SavedKind): { ranges: string; verses: string[] } {
-  if (typeof value !== "string" || value.length < 1 || value.length > SAVED_RANGE_LIMITS.characters || !/^[\x20-\x7e]+$/.test(value)) return invalid();
-  const segments = value.split("; ");
-  if (segments.length > SAVED_RANGE_LIMITS.segments || readingSegments(value).length !== segments.length) return invalid();
-  const books = readingKind === "torah" ? torah : neviim;
-  for (const segment of segments) {
-    const range = parseRange(segment);
-    if (!range || !books.has(range.book) || formatRange(range.book, range.from, range.to) !== segment) return invalid();
-  }
-  try { return { ranges: value, verses: expandReadingRanges(segments, readingKind, TANAKH_VERSE_COUNTS, SAVED_RANGE_LIMITS.verses) }; }
-  catch { return invalid(); }
+  const ref = canonicalReadingRef(value, readingKind);
+  return ref ? { ranges: ref.ref, verses: [...ref.verses] } : invalid();
 }
 export function verse(value: unknown): string {
   if (typeof value !== "string" || value.length > 100 || !/^[A-Za-z0-9 ]+ [1-9][0-9]*:[1-9][0-9]*$/.test(value)) return invalid();

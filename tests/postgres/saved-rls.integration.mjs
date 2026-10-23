@@ -71,6 +71,21 @@ test("real PostgreSQL: owner_only keeps every saved row to its own member, casca
       assert.deepEqual(deletes.map(row => row.table_name).sort(), ["saved_reading", "starred_comment"]);
     });
 
+    await t.test("the control-character CHECKs read \\x2028 as one code point on a real server, whatever its locale", async () => {
+      // Were "\x2028" parsed as "\x20" then "28", the class would refuse a space and the digits instead.
+      const work = (text, verse) => query(owner, "INSERT INTO saved_verse_work (tenant_id,membership_id,saved_reading_id,verse_ref,stream,text,version) VALUES ('crc',$1,$2,$3,'translation',$4,1)", [a.member, a.reading, verse, text]);
+      const reading = name => query(owner, "INSERT INTO saved_reading (tenant_id,membership_id,user_id,name,kind,ranges,verse_count) VALUES ('crc',$1,$2,$3,'torah','Genesis 1:1',1) RETURNING id", [a.member, a.user, name]);
+      for (const bad of ["a\u2028b", "a\u2029b", "a\u0085b", "a\u0007b"]) {
+        await assert.rejects(work(bad, "Genesis 1:2"), { code: "23514" }, JSON.stringify(bad));
+        await assert.rejects(reading(bad), { code: "23514" }, JSON.stringify(bad));
+      }
+      await work("a 28b", "Genesis 1:2");
+      await work("a 29b\ttab\nline \u05e9\u05dc\u05d5\u05dd", "Genesis 1:3");
+      const kept = (await reading("a 28b")).rows[0].id;
+      await query(owner, "DELETE FROM saved_verse_work WHERE saved_reading_id=$1 AND verse_ref IN ('Genesis 1:2','Genesis 1:3')", [a.reading]);
+      await query(owner, "DELETE FROM saved_reading WHERE id=$1", [kept]);
+    });
+
     await t.test("a tenant without an owner (every staff, MCP, cron and Sheet path) sees and writes nothing", async () => {
       const client = await checkout();
       try {

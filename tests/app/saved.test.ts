@@ -8,6 +8,7 @@ import { savedRanges, SAVED_RANGE_LIMITS } from "../../src/server/saved/validati
 import { SAVED_CAPS } from "../../src/server/saved/service";
 import { HttpBoundaryError } from "../../src/server/http/responses";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
+import { READING_REF_LIMITS } from "../../src/lib/readings/reading-ref";
 
 const ORIGIN = "http://localhost:3000";
 const opened: { client: { close(): Promise<void> } }[] = [];
@@ -206,7 +207,9 @@ describe("the saved layer: readings, work, marks and stars", () => {
   });
 
   it("keeps the canonical-range helper's limits identical to the 1.3 ref contract", () => {
-    expect(SAVED_RANGE_LIMITS).toEqual({ characters: 1000, segments: 32, verses: 1000 });
+    // One contract: the saved layer uses 1.3's own limits object, and the 0036 CHECK holds the same bounds.
+    expect(SAVED_RANGE_LIMITS).toBe(READING_REF_LIMITS);
+    expect(READING_REF_LIMITS).toEqual({ chars: 1000, segments: 32, verses: 1000 });
     expect(savedRanges("Genesis 1:1-31; Genesis 2:1-3", "torah")).toMatchObject({ ranges: "Genesis 1:1-31; Genesis 2:1-3" });
     expect(savedRanges("Genesis 1:1-31; Genesis 2:1-3", "torah").verses).toHaveLength(34);
     const exactly32 = Array.from({ length: 32 }, (_, i) => `Genesis ${i + 1}:1`).join("; ");
