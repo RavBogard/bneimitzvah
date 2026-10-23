@@ -32,6 +32,15 @@ describe("the account mail transport", () => {
       text: "Your account request was approved. Sign in with this email address to save readings and keep your own translation and notes.\n\nhttps://torah.centralreform.org/\n\nIf you did not ask for an account, you can ignore this email." });
     expect(accountMailText("account-request", ORIGIN, tenant).text.match(/https?:\/\/\S+/g)).toEqual([`${ORIGIN}/workspace/accounts`]);
   });
+  it("names each congregation's own product, never CRC Torah by default (Daniel, E1)", () => {
+    const other = { name: "Synthetic Congregation", productName: "Synthetic Torah" };
+    for (const kind of ["account-request", "account-approved"] as const) {
+      const { subject, text } = accountMailText(kind, ORIGIN, other);
+      expect(subject).toContain("Synthetic Torah");
+      expect(`${subject}\n${text}`).not.toContain("CRC Torah");
+    }
+    expect(accountMailText("account-request", ORIGIN, other).text).toContain("Someone has asked for a Synthetic Torah account.");
+  });
   it("refuses any other kind, recipient, name or key before the provider", async () => {
     const { send, calls } = transport(true);
     for (const [kind, to, names, key] of [["account-invite", "a@example.test", tenant, KEY], ["account-request", "not an address", tenant, KEY], ["account-request", "a@example.test", { ...tenant, name: "Evil <a href>" }, KEY],
