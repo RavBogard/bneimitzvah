@@ -4,7 +4,7 @@
 .disclosure[aria-expanded="true"] { background: var(--lake-tint); }
 .panel { padding-block-start: 1.25rem; max-width: 65ch; }
 .heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1.25rem; }
-.heading h4 { margin: 0; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 2.25rem; line-height: 1.8; }
+.heading .word { margin: 0; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 2.25rem; line-height: 1.8; }
 .heading p { margin: 0; font-size: 0.9375rem; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-block: 0.75rem 1.5rem; }
 .actions button { min-height: 44px; padding: 0.45rem 0.85rem; border: 1px solid var(--color-rule); border-radius: var(--radius-control); color: var(--color-action); background: var(--color-surface); }
@@ -35,9 +35,10 @@ button.place:hover { background: var(--lake-tint); }
 .more > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--color-action); }
 .more > .places { margin-block-start: 0.25rem; }
 .tools summary:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
-.heading h4:focus { outline: none; }
-.heading h4:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.heading .word:focus { outline: none; }
+.heading .word:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
 .note, .credit { font-size: 0.875rem; color: var(--color-muted); }
 .credit a, .retry { color: var(--color-action); text-underline-offset: 0.2em; }
 .retry { padding: 0; border: 0; background: transparent; text-decoration: underline; min-height: 44px; }
+.compact .sections { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; }
 @media (max-width: 36rem) { .sections { grid-template-columns: minmax(0, 1fr); gap: 1rem; } .actions { gap: 0.4rem; } }

@@ -94,15 +94,15 @@ export function wrongEndLine(verse: AnalysedVerse, unit: number): string {
   if (LEADS_ON.has(trope)) return `That's a ${tropeLabel(trope)}, which joins the following phrase.`;
   return `That's a ${tropeLabel(trope)}.`;
 }
-/** Where does the phrase end: the phrase plays from a marked word and stops at its end; tap that word. */
+/** Where does the phrase end: the phrase plays from a marked word and stops at its end; tap that word. The tap is
+ * the answer and plays nothing; once answered, a tapped word opens its card. */
 export function WhereDoesItEnd({ item, pools, prompt, onAnswer }: DrillProps<EndItem>) {
-  const { player } = useLearnServices(), id = `end:${item.key}`, [tapped, setTapped] = useState<number | null>(null), verse = verseOf(pools, item.target);
+  const id = `end:${item.key}`, [tapped, setTapped] = useState<number | null>(null), verse = verseOf(pools, item.target);
   useAutoplay(id, [request(item.target)], item.audio);
   if (!verse) return null;
   const [first, last] = item.target.words, right = tapped === last;
   const tap = (unit: number) => {
     if (tapped !== null) return; setTapped(unit);
-    if (unit !== last) void player.play(id, [request(item.target)]);
     onAnswer(unit === last);
   };
   return <>
@@ -120,32 +120,30 @@ export function WhereDoesItEnd({ item, pools, prompt, onAnswer }: DrillProps<End
   </>;
 }
 
-/** Tap the phrase you heard: the verse uncoloured, its phrases the tap targets, the tile above it. */
+/** Tap the phrase you heard: the verse uncoloured, its phrases the tap targets, the tile above it. The tap is the
+ * answer and plays nothing; after a miss the tile plays the phrase and the one tapped. Once answered, words open cards. */
 export function TapThePhrase({ item, pools, onAnswer }: DrillProps<TapItem>) {
-  const { player } = useLearnServices(), id = `tap:${item.key}`, [tapped, setTapped] = useState<number | null>(null), verse = verseOf(pools, item.target);
+  const id = `tap:${item.key}`, [tapped, setTapped] = useState<number | null>(null), verse = verseOf(pools, item.target);
   useAutoplay(id, [request(item.target)]);
   if (!verse) return null;
   const target = verse.phrases.findIndex(row => row.units[0] === item.target.words[0]);
   const tap = (index: number) => {
     if (tapped !== null) return; setTapped(index);
-    const right = index === target, chosen = verse.phrases[index];
-    if (!right) void player.play(`${id}:compare`, [request(item.target), phraseRequest(verse, chosen.units)]);
-    onAnswer(right);
+    onAnswer(index === target);
   };
-  const chosenFamily = tapped === null ? null : verse.phrases[tapped]?.family;
+  const chosenFamily = tapped === null ? null : verse.phrases[tapped]?.family, missed = tapped !== null && tapped !== target ? verse.phrases[tapped] : null;
   return <>
     <h2 className={styles.prompt}>Hear a phrase, then tap it.</h2>
-    <div className={styles.playRow}><PlayTile id={id} requests={[request(item.target)]} /></div>
+    <div className={styles.playRow}>{missed ? <PlayTile key="compare" id={`${id}:compare`} requests={[request(item.target), phraseRequest(verse, missed.units)]} /> : <PlayTile id={id} requests={[request(item.target)]} />}</div>
     <AudioError id={[id, `${id}:compare`]} />
     <div className={styles.verseBox} data-target-phrase={target}>
       <p className={`${styles.hebrew} ${styles.phraseStandard}`} lang="he" dir="rtl">{verse.phrases.map((phrase, index) => {
         const shown = tapped !== null && index === target, wrong = tapped !== null && index === tapped && index !== target;
         return <span key={index}>{index > 0 && <span className={styles.phraseGap} aria-hidden="true"> </span>}
-          <span className={`${styles.target}${wrong ? ` ${styles.missed}` : ""}`} role={tapped === null ? "button" : undefined} tabIndex={tapped === null ? 0 : undefined} data-phrase-target={index}
-            aria-disabled={tapped !== null ? "true" : undefined} aria-label={tapped === null ? `Phrase ${index + 1}` : undefined} onClick={() => tap(index)}
+          {tapped === null ? <span className={styles.target} role="button" tabIndex={0} data-phrase-target={index} aria-label={`Phrase ${index + 1}`} onClick={() => tap(index)}
             onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); tap(index); } }}>
-            <UnitsText as="span" verse={verse} units={phrase.units} look={() => shown ? "inked" : "plain"} />
-          </span></span>;
+            <UnitsText as="span" verse={verse} units={phrase.units} card={false} />
+          </span> : <span className={wrong ? styles.missed : undefined} data-phrase-target={index}><UnitsText as="span" verse={verse} units={phrase.units} look={() => shown ? "inked" : "plain"} /></span>}</span>;
       })}</p>
     </div>
     <p role="status" className={styles.feedback}>{tapped !== null && tapped !== target && chosenFamily ? `That one is ${familyName(item.target.family)}. Here is ${familyName(chosenFamily)} for comparison.` : ""}</p>

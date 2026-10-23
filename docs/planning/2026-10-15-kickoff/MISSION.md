@@ -233,3 +233,39 @@ Open gates attach to their dependent milestone; they do not defer the production
 - Trope engine design spec and trope audio web-integration spec, branch `trope-engine-research` at `380b1b2`; handoff `docs/superpowers/plans/2026-10-15-trope-handoff.md` (the work queue, now on the RTX 4070 laptop); `chant-audio.md` research (the cantor licence, section 5).
 - Kickoff interview, Cowork, 2026-10-15: three rounds, every proposal approved as written except ruling 8–10, which Daniel restated ("rabbi sets defaults that are shown; all sources should be theoretically available; a tutor or a rabbi can assign particular ones to the student so they show up when the student is studying").
 - [2026-10-16 plan review](../2026-10-16-review/PLAN-REVIEW.md): section 1 rulings 27–59, Astra integration corrections and Daniel's direct recording-surface clarification. These dated amendments supersede the specified kickoff provisions; section 3 is not blanket mechanism approval.
+
+## Amended 2026-10-23, later (Daniel, alignment rulings)
+
+Daniel answered the alignment questions on 2026-10-23, after the rulings above. All are binding. Where one conflicts with older text, it supersedes it and the older text stays as written.
+
+**Wording, approved verbatim**
+
+1. **Approver page help line:** "Anyone who asks in good faith can have an account, member or not. Decline only spam or abuse."
+2. **CC BY change line**, shown beside "via Sefaria (CC BY)" on More on this verse: "Selected and ordered by {productName}".
+3. **Android install fallback:** "In Chrome, open the menu and tap Install app or Add to Home screen."
+4. **1.6 Learn to lein activity strings.** The strings drafted in `C:/Users/dsbog/cowork-offload/research/learn-next-activities.md` are approved as drafted: Same sign, different place; Which half of the verse; Quick ten. They may be edited after his listening round.
+
+**Working rules**
+
+5. **Shabbat and yom tov:** "Anything, anytime." Shabbat puts no limit on deploys, merges or tags.
+6. **A deploy that breaks the live site during autonomous work:** roll back to the last good deploy at once, fix forward, and report it in the next release note.
+7. **Release check-ins (v1.4.0, v1.5.0, 1.6):** a short note in the Claude Code terminal, under 15 lines: what shipped, what to try, anything that needs him.
+8. **Real iPhone check of Learn to lein:** a tutor or family runs it later, at the pilot. An iPhone check sheet is modeled on `PHONE-CHECK.md` (`docs/planning/2026-10-23-cowork-offload/IPHONE-CHECK.md`).
+
+**Public pages**
+
+9. **Analytics, cookieless:** use Vercel Web Analytics only if it adds nothing to the bill on the current plan. Otherwise build our own page counter: path and day only, no third party. This applies the existing popup ruling (aggregate, public pages only, nothing on signed-in pages).
+10. **Share cards at v1.5.0 indexing:** a plain generated card per page with the page title, `{productName}` and the yad icon. No photos.
+11. **Google Search Console sitemap:** the CRC staff helper submits it at v1.5.0. The step is added to `FORWARD-MESSAGE.md`.
+
+**Order and parking**
+
+12. **Draft PR #22** (the admin page for the reference-audio listening review) stays parked. The voice work picks it up, renumbers its migration and finishes it.
+13. **Daniel's listening round on the lessons** (`LISTENING-ROUND.md`) happens at the v1.5.0 check-in, not at v1.4.
+14. **1.6 ships all three activities together in one release.**
+15. **New feature: the reader's print sheet.** Queued after 1.4 and 1.5; no date. It runs in parallel with 1.6 or with voice, as the second builder. Daniel, verbatim: "I want selecting a reading to do for this next Shabbat to be super easy. Including selectable and creatable from the MCP. I'm thinking through a use case where I want a printed sheet for me to have up for the Torah reading. It's got Hebrew-- I don't need a tikkun view-- and the English translation next to each other in columns. It needs to be really well thought out as a usable document. But it needs to be able to have all sorts of different formats because different people might want different things printed." He asked that the build use the impeccable, ui-ux-pro-max and frontend-design skills. Spec stub: [2026-10-23-reader-print-sheet-design.md](../../superpowers/specs/2026-10-23-reader-print-sheet-design.md).
+17. **The second builder, once 1.6 ships, takes the print sheet (15)** instead of the two-tenant groundwork.
+
+**Licences**
+
+16. **JPS 2023 in print.** Daniel: "JPS 2023 is fine in print." CRC's licence covers printed copies of JPS 2023, and each printed page carries the edition and its credit line. This supersedes the earlier reading that limited JPS 2023 to on-screen display. Never-in-repo is unchanged: no JPS text goes in the repo or in fixtures.

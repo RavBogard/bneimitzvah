@@ -89,7 +89,7 @@ test("review reader uses exactly one fixed selector, no ambient credentials, red
   expect(target.origin).toBe("https://www.sefaria.org"); expect(decodeURIComponent(target.pathname)).toBe(`/api/v3/texts/${source.ref}`);
   expect([...target.searchParams]).toEqual([["version", `hebrew|${title}`], ["fill_in_missing_segments", "0"], ["return_format", "text_only"]]);
   expect(init).toMatchObject({ method: "GET", credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store", headers: { accept: "application/json" } });
-  expect(Object.keys(init!.headers!)).toEqual(["accept"]);
+  expect(init!.headers).toEqual({ accept: "application/json", "user-agent": "CRC-Torah/1.4 (+https://torah.centralreform.org)" });
 });
 
 test("review reader rejects measured oversize, malformed UTF8/status/headers and cancels a rejected late body", async () => {

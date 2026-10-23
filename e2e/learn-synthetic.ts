@@ -4,6 +4,8 @@ import course from "../src/lib/learn/lessons.json";
 import { studyRangePlan } from "../src/components/portal/workspace/study/api";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
 import { projectStudyVerse } from "../src/lib/hebrew/study-tokens";
+import { WORD_AID_SCHEMA } from "../src/lib/hebrew/word-aids";
+import { WORD_DETAILS_ATTRIBUTION, WORD_DETAILS_SCHEMA } from "../src/lib/hebrew/word-details";
 import { expandReadingRanges } from "../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../src/lib/readings/catalog";
 import { REFERENCE_ATTRIBUTION } from "../src/lib/reference-audio/contract";
@@ -81,6 +83,17 @@ export function syntheticCourseRoutes() {
         return json(route, { date, parashah: "Synthetic", torah: passage, haftarah: null, fetchedAt: 0, listening: { pocketTorah: true } });
       }
       const ref = q.get("ref"); if (!ref) return route.fulfill({ status: 404, contentType: "application/json", body: "{}" });
+      if (url.pathname === "/api/public/word-aids" || url.pathname === "/api/public/word-details") {
+        // The word card's routes: a synthetic gloss for every word, and no syllable analysis.
+        const at = Number(q.get("verse")), member = expandReadingRanges(ref.split("; "), kind as "torah", TANAKH_VERSE_COUNTS)[at];
+        if (!member) return route.fulfill({ status: 400, contentType: "application/json", body: "{}" });
+        if (url.pathname === "/api/public/word-aids") return json(route, { kind, ref, verse: at, wordAids: { schema: WORD_AID_SCHEMA, ref: member, status: "unavailable", reason: "analysis-unavailable" } });
+        const projection = projectStudyVerse(member, hebrew(syntheticWords(member, kind)));
+        if (projection.status !== "ready") throw Error("Synthetic projection refused");
+        return json(route, { kind, ref, verse: at, wordDetails: { schema: WORD_DETAILS_SCHEMA, ref: member, wordIndex: Number(q.get("word")), status: "ready",
+          readingTextSha256: sha(projection.projection.readingText.normalize("NFC")), wordCount: projection.projection.words.length, attribution: WORD_DETAILS_ATTRIBUTION,
+          occurrence: { gloss: `Synthetic gloss for word ${Number(q.get("word")) + 1}`, grammar: { status: "unavailable", reason: "unrecognized-code" } }, dictionary: [] } });
+      }
       const offset = Number(q.get("offset")), ranges = ref.split("; "), plan = studyRangePlan(ranges, kind as "torah", offset), total = expandReadingRanges(ranges, kind as "torah", TANAKH_VERSE_COUNTS).length;
       const rows = plan.refs.map(r => resolution(r, kind));
       if (url.pathname === "/api/public/text") return json(route, { kind, ref, offset, nextOffset: plan.nextOffset, totalVerses: total, translation: { key: "jps2023", status: "unavailable" },

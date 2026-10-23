@@ -3,7 +3,7 @@ import { createElement, type FunctionComponent, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DEFAULT_WORKS, initialLens, LENS_STORAGE, lensFromSearch, normalizeWorks, readRememberedLens, rememberLens, StudyLensScope } from "../../src/components/portal/workspace/study-lens";
 import { commentaryCount, commentaryParts, commentarySummary, englishLemma } from "../../src/components/portal/workspace/study/commentary-text";
-import { CommentaryCredits, CommentaryStatus, linkedVerse, VerseRashi } from "../../src/components/portal/workspace/study/commentary-view";
+import { CommentaryCredits, CommentaryStatus, linkedVerse, VerseRashi, workStatuses } from "../../src/components/portal/workspace/study/commentary-view";
 import { StudyRows } from "../../src/components/portal/workspace/study/study-rows";
 import { ReadingToolbar as Toolbar } from "../../src/components/portal/workspace/reading-toolbar";
 const ReadingToolbar = Toolbar as FunctionComponent<NonNullable<Parameters<typeof Toolbar>[0]>>;
@@ -24,6 +24,8 @@ const chapter = parseCommentaryChapter("rashi", "Genesis 1")!, candidate = comme
 const edition = (language: "he" | "en"): CommentaryEdition => ({ language, title: candidate.title, license: candidate.license, credit: candidate.credit, url: commentaryEditionUrl(chapter, { ...candidate, language }) });
 const ready = (comments: CommentaryComment[]): CommentaryVerseState => ({ status: "ready", comments, editions: [edition("he"), edition("en")], sefariaUrl: "https://www.sefaria.org/Rashi_on_Genesis.1.1" });
 const memory = () => { const data = new Map<string, string>(); return { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => { data.set(key, value); }, data }; };
+/** What a scope's Works start as: its remembered choice when it has one, else the default (the same read StudyLensScope makes). */
+const initialWorks = (storage: ReturnType<typeof memory> | null, key: string | null) => readRememberedLens(storage, key).works ?? DEFAULT_WORKS;
 const inLens = (node: ReactNode, query: "lein" | "study" | null = "study") => renderToStaticMarkup(createElement(StudyLensScope, { storageKey: null, query, children: node }));
 
 test("the link names the lens; anything else names none", () => {
@@ -61,11 +63,49 @@ test("the remembered choice is a display preference only, read and written defen
 });
 
 test("Works holds registered works only, in registry order, at most three; none is allowed", () => {
-  expect(DEFAULT_WORKS).toEqual(["rashi"]);
+  expect(DEFAULT_WORKS).toEqual(["rashi", "womens"]);
   expect(normalizeWorks(["womens", "rashi", "rashi"])).toEqual(["rashi", "womens"]);
   expect(normalizeWorks(["malbim", "womens", "__proto__"])).toEqual(["womens"]);
   expect(normalizeWorks([])).toEqual([]);
-  expect(normalizeWorks("rashi")).toEqual(["rashi"]);
+  // Not a list at all: the default.
+  expect(normalizeWorks("rashi")).toEqual(["rashi", "womens"]);
+});
+
+test("Rashi and the Women's Commentary are on by default for everyone; a remembered choice replaces the default as it always did", () => {
+  // Signed out, signed in, student, tutor: any scope that opens fresh (no storage key, or a key with nothing stored) starts with both.
+  expect(initialWorks(null, null)).toEqual(["rashi", "womens"]);
+  expect(initialWorks(memory(), LENS_STORAGE.weekly)).toEqual(["rashi", "womens"]);
+  expect(initialWorks(memory(), LENS_STORAGE.staff)).toEqual(["rashi", "womens"]);
+  // Nothing readable in storage falls back to the default too.
+  const broken = memory(); broken.setItem(LENS_STORAGE.weekly, "not json");
+  expect(initialWorks(broken, LENS_STORAGE.weekly)).toEqual(["rashi", "womens"]);
+  // A remembered choice is respected: another work, one turned off, or none at all.
+  for (const [stored, expected] of [[["ramban"], ["ramban"]], [["rashi"], ["rashi"]], [["womens", "ramban"], ["womens", "ramban"]], [[], []]] as const) {
+    const storage = memory(); storage.setItem(LENS_STORAGE.weekly, JSON.stringify({ lens: "study", works: stored, english: true }));
+    expect(initialWorks(storage, LENS_STORAGE.weekly)).toEqual(expected);
+  }
+  // A scope with no key remembers nothing, so turning a work off there never carries to the next load.
+  const storage = memory();
+  rememberLens(storage, null, { lens: "study", works: [], english: true });
+  expect(initialWorks(storage, null)).toEqual(["rashi", "womens"]);
+});
+
+test("Study opens with both works on, for the signed-out public page and for the workspace alike; Lein is still the default lens", () => {
+  const study = (storageKey: string | null) => renderToStaticMarkup(createElement(StudyLensScope, { storageKey, query: "study", children: createElement(ReadingToolbar, {}) }));
+  for (const key of [null, LENS_STORAGE.weekly, LENS_STORAGE.staff]) expect(study(key)).toContain('aria-label="Works: Rashi, Women’s Commentary"');
+  const lein = renderToStaticMarkup(createElement(StudyLensScope, { storageKey: null, children: createElement(LensSwitch) }));
+  expect(lein).toMatch(/aria-pressed="true" data-lens="lein">Lein/);
+});
+
+test("the Women's Commentary covers the Torah only: on a haftarah it is not offered, with no line and no error", () => {
+  const rows = [{ work: "rashi", status: "ready" as const, retry: () => {} }, { work: "womens", status: "none" as const, retry: () => {} }];
+  expect(workStatuses(rows, "neviim").map(row => row.work)).toEqual(["rashi"]);
+  expect(renderToStaticMarkup(createElement(CommentaryStatus, { works: workStatuses(rows, "neviim") }))).toBe("");
+  expect(workStatuses(rows, "torah").map(row => [row.work, row.covers])).toEqual([["rashi", true], ["womens", true]]);
+  // A work the viewer chose that is not a default still says what it covers.
+  expect(workStatuses([{ work: "ramban", status: "none" as const, retry: () => {} }], "neviim").map(row => [row.work, row.covers])).toEqual([["ramban", false]]);
+  // The toolbar's label leaves the Women's Commentary out on a haftarah.
+  expect(inLens(createElement(ReadingToolbar, { worksCorpus: "neviim" }), "study")).toContain('aria-label="Works: Rashi"');
 });
 
 test("the weekly address carries another Shabbat and the Study lens, and this week's Lein is plain /read", () => {
@@ -223,7 +263,7 @@ test("the toolbar: Lein keeps Tikkun; Study drops it and adds Works, five items 
   const study = inLens(createElement(ReadingToolbar, { listeningEnabled: true, tikkunAvailable: true, onHear: () => {} }), "study");
   expect(study).not.toContain("Tikkun");
   expect(study).toContain(">Works</span>");
-  expect(study).toContain('aria-label="Works: Rashi"');
+  expect(study).toContain('aria-label="Works: Rashi, Women’s Commentary"');
   expect(items(study)).toBeLessThanOrEqual(5);
   expect(items(lein)).toBeLessThanOrEqual(5);
   // Study's English starts on, whatever Lein's English is.
