@@ -1,0 +1,35 @@
+/* A member's saved readings (Release 1.4), inside the Song session world: white objects with
+   hairlines on the canvas, lake as the only accent, no shadows, badges or new motion. */
+
+/* Save on /read: a quiet secondary beside the passage, opening inline. */
+.save { display: contents; }
+.line { flex: 1 1 100%; margin: 0; }
+.line a { display: inline-flex; align-items: center; min-height: 44px; }
+.panel { flex: 1 1 100%; display: grid; gap: 1rem; max-width: 32rem; margin-top: 0.25rem; padding: 1.25rem 1.25rem 1.5rem; border-radius: var(--radius-object);
+  background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.panel label { margin-bottom: 0.5rem; }
+.panel input { border-radius: var(--radius-control); }
+.optional { color: var(--color-muted); font-weight: 400; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.actions > :global(.button-primary) { width: auto; }
+.panel > :global(.request-error) { margin: 0; }
+
+/* My readings on the front door, between This week and the doors. */
+.mine { min-width: 0; margin-bottom: 2.5rem; padding: 1.5rem 1.5rem 1.75rem; border-radius: var(--radius-object); background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-rule); overflow-wrap: anywhere; }
+.mineTitle { font-size: 1.5rem; }
+.mineLine { margin-top: 0.5rem; color: var(--color-muted); }
+.list { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: 0; }
+.list li + li { border-top: 1px solid var(--color-rule); }
+.item { display: flex; flex-direction: column; justify-content: center; gap: 0.125rem; min-height: 56px; padding-block: 0.625rem; color: var(--color-ink); text-decoration: none; }
+.item:hover .itemName { text-decoration: underline; text-underline-offset: 0.2em; }
+.itemName { color: var(--color-action); font-weight: 650; }
+.itemMeta { color: var(--color-muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.more { margin-top: 0.75rem; }
+
+@media (max-width: 640px) {
+  .panel { padding: 1rem 1rem 1.25rem; }
+  .actions > :global(.button-primary), .actions > :global(.button-secondary) { flex: 1 1 0; min-width: 0; }
+  .mine { margin-bottom: 2rem; padding: 1.25rem 1rem 1.5rem; }
+  .more { width: 100%; }
+}

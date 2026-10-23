@@ -20,6 +20,7 @@ import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { expandReadingRanges } from "../../../lib/readings/ranges";
 import { addDays, isSaturday, shabbatOnOrAfter, thisShabbat } from "../../../lib/readings/public-shabbat";
 import { fetchPublicShortPage, fetchPublicText, fetchPublicWeek, fetchPublicWordAids, fetchPublicWordDetails, type PublicShortPage, type PublicWeek } from "./api";
+import { SaveReading } from "../saved/save-reading";
 import styles from "./public-reading.module.css";
 
 const displayRange = (ranges: readonly string[]) => ranges.join("; ").replace(/(\d)-(\d)/g, "$1–$2");
@@ -152,6 +153,7 @@ function WeeklyReading() {
           {current && (current.torah || current.haftarah) && <div className="hero-actions">
             <button type="button" className="button-start" disabled={!page} onClick={() => { textAnchor.current?.scrollIntoView({ block: "start" }); if (listening && page) hear(0); else textAnchor.current?.focus(); }}>Start reading</button>
             <a className="button-hero-secondary" href="/trope-chart">Trope chart</a>
+            {passage && <SaveReading passage={{ parashah: current.parashah ?? null, kind, ranges: passage.ranges, date: current.date }} />}
           </div>}
         </header>
         {week?.error && <div className="workspace-state" role="status"><h2>{week.error === 400 ? "That date isn’t available" : "The reading didn’t load"}</h2>
