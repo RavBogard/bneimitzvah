@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FirstVerse as FirstVerseActivity, Lesson } from "../../lib/learn/course";
 import type { AnalysedVerse } from "../../lib/learn/verse";
 import { firstVerseCandidates } from "../../lib/learn/first-verse";
-import { leinHref } from "../../lib/learn/lein-link";
+import { leinHref } from "./lein-link";
 import { AudioError, FamilyChip, phraseRequest, PlayTile, UnitsText } from "./bits";
 import { useCourseVerses } from "./course-data";
 import { useLearnServices, usePlayerState, useProgress } from "./services";

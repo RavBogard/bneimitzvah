@@ -1,5 +1,6 @@
 import { PortalRequestError } from "../portal/api";
 import { getJson } from "../portal/public-reading/api";
+import { publicShortPath, publicTextPath } from "../portal/public-reading/urls";
 import { parseStudyContent, studyRangePlan, type StudyVerse } from "../portal/workspace/study/api";
 import { referenceRecord } from "../../lib/reference-audio/source";
 import { parseReferenceShortResolution, type ReferenceShortResolution } from "../../lib/reference-audio/short-resolution";
@@ -17,7 +18,6 @@ import type { LoadedVerse } from "../../lib/learn/phrase-audio";
  */
 export const REF_LIMITS = Object.freeze({ segments: 32, chars: 1000 });
 const bad = (): never => { throw new PortalRequestError(503); };
-const query = (entries: [string, string][]) => new URLSearchParams(entries).toString();
 const position = (ref: string) => { const m = /^(.+) ([1-9]\d*):([1-9]\d*)$/.exec(ref); return m ? { book: m[1], chapter: Number(m[2]), verse: Number(m[3]) } : null; };
 const ORDER = Object.keys(TANAKH_VERSE_COUNTS);
 
@@ -37,13 +37,13 @@ export function passagesFor(refs: readonly string[], kind: Melody): string[] {
 type Page = { refs: string[]; verses: StudyVerse[]; shorts: (ReferenceShortResolution | null)[]; shortsFailed: boolean };
 async function textPage(ref: string, kind: Melody, offset: number, total: number, signal: AbortSignal) {
   const plan = studyRangePlan(ref.split("; "), kind, offset);
-  const row = referenceRecord(await getJson(`/api/public/text?${query([["ref", ref], ["kind", kind], ["offset", String(offset)]])}`, 2 * 1024 * 1024, signal),
+  const row = referenceRecord(await getJson(publicTextPath({ by: "ref", ref, kind }, kind, offset), 2 * 1024 * 1024, signal),
     ["kind", "ref", "offset", "nextOffset", "totalVerses", "translation", "verses", "chapters"]);
   if (!row || row.kind !== kind || row.ref !== ref) return bad();
   return { plan, page: parseStudyContent(row, plan, offset, total) };
 }
 async function shortPage(ref: string, kind: Melody, offset: number, refs: readonly string[], nextOffset: number | null, total: number, signal: AbortSignal) {
-  const row = referenceRecord(await getJson(`/api/public/reference/short?${query([["ref", ref], ["kind", kind], ["offset", String(offset)]])}`, 1024 * 1024, signal), ["kind", "ref", "page"]);
+  const row = referenceRecord(await getJson(publicShortPath({ by: "ref", ref, kind }, kind, offset), 1024 * 1024, signal), ["kind", "ref", "page"]);
   if (!row || row.kind !== kind || row.ref !== ref) return bad();
   const page = referenceRecord(row.page, ["offset", "nextOffset", "totalVerses", "references"]);
   if (!page || page.offset !== offset || page.nextOffset !== nextOffset || page.totalVerses !== total || !Array.isArray(page.references) || page.references.length !== refs.length) return bad();
