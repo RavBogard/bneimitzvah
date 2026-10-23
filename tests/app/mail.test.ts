@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { createMailTransport } from "../../src/server/mail/transport";
+import { createMailTransport, SIGN_IN_CODE_LINES } from "../../src/server/mail/transport";
 import { RuntimeUnavailable } from "../../src/server/runtime/errors";
 
 const origin = "https://synthetic.example.test";
@@ -21,9 +21,10 @@ test("both mail kinds use the fixed Resend endpoint and plain text with no track
   const captured: { endpoint: string; init: RequestInit }[] = [];
   const fetch: typeof globalThis.fetch = async (url, init) => { captured.push({ endpoint: String(url), init: init! }); return new Response("provider-details", { status: 200 }); };
   const send = createMailTransport({ origin, apiKey, from: email, fetch });
+  const code = "048213";
   for (const kind of ["invitation", "magic-link"] as const) {
     const url = link(kind);
-    expect(await send(kind, { email, url })).toBeUndefined();
+    expect(await send(kind, kind === "magic-link" ? { email, url, code } : { email, url })).toBeUndefined();
     const capture = captured.at(-1)!;
     const body = JSON.parse(String(capture.init.body));
     expect(capture.endpoint).toBe("https://api.resend.com/emails");
@@ -31,6 +32,12 @@ test("both mail kinds use the fixed Resend endpoint and plain text with no track
     expect(capture.init.credentials).toBe("omit");
     expect(Object.keys(body).sort()).toEqual(["from", "subject", "text", "to"]);
     expect(body.text.includes(url)).toBe(true);
+    // The sign-in email carries its code in the body only, after the link; never in the subject.
+    expect(body.subject.includes(code)).toBe(false);
+    expect(body.text.includes(code)).toBe(kind === "magic-link");
+    if (kind === "magic-link") {
+      expect(body.text).toBe(`Open this link to sign in:\n\n${url}\n\n${SIGN_IN_CODE_LINES.code(code)}\n\n${SIGN_IN_CODE_LINES.once}\n\nIf you did not request this message, you can ignore it.`);
+    } else expect(body.text).toBe(`Open this link to review your invitation:\n\n${url}\n\nIf you did not request this message, you can ignore it.`);
     expect((capture.init.headers as Record<string, string>).authorization === `Bearer ${apiKey}`).toBe(true);
   }
 });
@@ -45,6 +52,11 @@ test("mail rejects foreign, ambiguous, duplicated-token, header-injection and un
     expect(await safeFailure(() => send(url.includes("magic-link") ? "magic-link" : "invitation", { email, url }))).toBe(true);
   }
   expect(await safeFailure(() => send("invitation", { email: email + "\r\nBcc: bad", url: good }))).toBe(true);
+  // A sign-in email never goes out without a well-formed code, and an invitation never carries one.
+  for (const code of [undefined, "", "12345", "1234567", "12a456", " 123456", "123456\n", "１２３４５６"]) {
+    expect(await safeFailure(() => send("magic-link", { email, url: link("magic-link"), code }))).toBe(true);
+  }
+  expect(await safeFailure(() => send("invitation", { email, url: good, code: "123456" }))).toBe(true);
   expect(calls).toBe(0);
 });
 

@@ -32,6 +32,22 @@ export function projectMagicLink(urlValue: string, token: string, origin: string
   } catch { throw new RuntimeUnavailable(); }
 }
 
+/**
+ * The sign-in email's code lines. DRAFT, awaiting Daniel's wording (1.5 popup, plan §10.1); the structure
+ * is fixed (link, then code, then the once-and-5-minutes line), the strings may change.
+ */
+export const SIGN_IN_CODE_LINES = Object.freeze({
+  code: (code: string) => `Or enter this code on the sign-in page: ${code}`,
+  once: "The link and the code work once, for 5 minutes. Don’t share the code with anyone.",
+});
+const CODE = /^\d{6}$/;
+function bodyOf(kind: Kind, link: string, code: string | undefined): string {
+  const ignore = "If you did not request this message, you can ignore it.";
+  if (kind === "invitation") return `Open this link to review your invitation:\n\n${link}\n\n${ignore}`;
+  // The code is in the body only, never the subject (lock screens, provider subject logs).
+  return `Open this link to sign in:\n\n${link}\n\n${SIGN_IN_CODE_LINES.code(code!)}\n\n${SIGN_IN_CODE_LINES.once}\n\n${ignore}`;
+}
+
 // Plain-text transactional mail only. Tracking must also be disabled on the
 // sending domain in Resend; their API has no per-message tracking override.
 export function createMailTransport(input: { origin: string; apiKey: string; from: string; fetch: typeof globalThis.fetch; timeoutMs?: number }) {
@@ -42,11 +58,13 @@ export function createMailTransport(input: { origin: string; apiKey: string; fro
       || !mailbox(input.from) || !/^re_[A-Za-z0-9_-]{8,256}$/.test(input.apiKey)
       || !Number.isInteger(timeout) || timeout < 1 || timeout > 10000) throw 0;
   } catch { throw new RuntimeUnavailable(); }
-  return async (kind: Kind, message: Readonly<{ email: string; url: string }>): Promise<void> => {
+  return async (kind: Kind, message: Readonly<{ email: string; url: string; code?: string }>): Promise<void> => {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       if (!mailbox(input.from) || !mailbox(message.email)) throw 0;
+      // A sign-in email always carries its code; an invitation never does.
+      if (kind === "magic-link" ? typeof message.code !== "string" || !CODE.test(message.code) : message.code !== undefined) throw 0;
       const link = canonicalLink(message.url, input.origin, kind);
       await Promise.race([
         (async () => {
@@ -54,7 +72,7 @@ export function createMailTransport(input: { origin: string; apiKey: string; fro
             method: "POST", redirect: "error", credentials: "omit", signal: controller.signal,
             headers: { authorization: `Bearer ${input.apiKey}`, "content-type": "application/json" },
             body: JSON.stringify({ from: input.from, to: [message.email], subject: kind === "invitation" ? "Your Beit Mitzvah invitation from CRC Torah" : "Sign in to CRC Torah",
-              text: `Open this link to ${kind === "invitation" ? "review your invitation" : "sign in"}:\n\n${link}\n\nIf you did not request this message, you can ignore it.` }),
+              text: bodyOf(kind, link, message.code) }),
           });
           // No provider body/header/ID escapes, even on errors; do not buffer it.
           try {

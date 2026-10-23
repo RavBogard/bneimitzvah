@@ -604,6 +604,16 @@ No new service. The worker reduces repeat traffic. Packing adds about 25 MB of C
 - `release-migrate-support.mjs` left unchanged.
 - The order B, C, window, A1, A2.
 
+**Decided here while building B (`claude/sign-in-code`, 2026-10-23):**
+
+- A code request with no usable binding (none, tampered, other cookie scheme, another origin's, or past 5 minutes) answers **409** `{error:"expired"}`, not the 400 in §2.3. The client's `requestPortal` drops error bodies and keeps only the status, so 400 is "wrong code" and 409 is "ask again". A duplicated cookie name stays the dispatcher's 400.
+- After a wrong code the route reads the code's remaining tries (better-auth 1.7.10: identifier `sign-in-otp-<email>`, value `<hmac>:<tries>`). With none left, or no live code (already used, replaced and spent), it removes the code and answers `expired` at once, so the person isn't told to type a fourth time into the per-binding 3/min limiter. The SDK's own attempt count is still the real limit (tested directly against the SDK).
+- `/api/auth/sign-in/code` joins the paths on which a pending invitation sets `next` to `/invitations/accept`; it never accepts an invitation.
+- The device remembers only a timestamp (`crc.signin.code-requested-at`) and reopens on the code form for 5 minutes, also on a plain reload of the sign-in page. "Use a different email" clears it, as do sign-in and sign-out.
+- `disableSignUp: false` on both plugins, named once (`SIGN_IN_DISABLE_SIGN_UP`), so a code signs in exactly the addresses a link does.
+- The email wording uses "on the sign-in page" rather than §10.1's "in the CRC Torah app", because the code works in any browser before A ships. Both are drafts awaiting Daniel.
+- Noted for the reviewer: a wrong guess recreates the row with a fresh `createdAt`. If a new code is issued between the SDK's consume and that recreate, the older code becomes "latest" for its remaining tries and lifetime. This is bounded by the same 3 tries and 5 minutes.
+
 ---
 
 ## 10. Waiting on Daniel (flagged, not decided)

@@ -64,6 +64,7 @@ import { resolveTenantHost } from "../tenancy/resolve";
 import { createHebcalReader } from "../../lib/readings/proposals";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { createMailTransport, createNotificationTransport, projectMagicLink } from "../mail/transport";
+import { createSignInCodeBindings } from "../http/sign-in-code-binding";
 import { createNotificationDelivery, createNotificationPreferences } from "../notifications/service";
 import { createSavedService } from "../saved/service";
 import { createLogger } from "../logging/logger";
@@ -148,8 +149,14 @@ async function dispatchNotificationJobs(config: RuntimeConfig, fetch: typeof glo
 export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch,
   studyTasks: PublicStudyCoalescer = sharedStudyTasks(fetch), stepSource: StepSourceLoader = publicStepSource) {
   const send = createMailTransport({ ...config.mail, origin: config.origin, fetch });
-  const auth = createAuthStack(db, schema, { origin: config.origin, secret: config.authSecret, google: config.google,
-    sendMagicLink: ({ email, url, token }) => send("magic-link", { email, url: projectMagicLink(url, token, config.origin) }) });
+  // One email carries the link and a typed code (1.5). If the code cannot be created, nothing is sent.
+  const auth = createAuthStack(db, schema, { origin: config.origin, secret: config.authSecret, google: config.google, codeSecret: purposeSecret(config, "sign-in-code"),
+    sendMagicLink: async ({ email, url, token }) => {
+      const link = projectMagicLink(url, token, config.origin);
+      const code = await auth.api.createVerificationOTP({ body: { email, type: "sign-in" } });
+      await send("magic-link", { email, url: link, code });
+    } });
+  const signInCodes = createSignInCodeBindings({ origin: config.origin, secret: purposeSecret(config, "sign-in-code-binding") });
   const access = createAccessService({ db, auth, deployment: config.deployment });
   const referenceReview = createReferenceReviewService({ access, reviewer: config.referenceReview?.reviewer,
     get: config.referenceReview ? createPrivateReviewGet({ storeId: config.referenceReview.storeId }) : async () => { throw new ReviewUnavailable(); } });
@@ -215,7 +222,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved });
+  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;
