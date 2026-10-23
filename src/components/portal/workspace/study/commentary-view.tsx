@@ -177,12 +177,13 @@ export function useWorkCommentary(work: string, refs: readonly string[], enabled
 export function VerseRashi({ verse, state, link, retry, children }: { verse: StudyVerse | null; state: CommentaryVerseState; link?: CommentLink; retry?(): void; children?: ReactNode }) {
   const id = useId(), [open, setOpen] = useState(false), words = useMemo(() => verse ? verseWords(verse) : [], [verse]);
   const count = commentaryCount(state), key = (index: number) => `${verse?.ref}|rashi:${index}`;
-  if (!verse || (state.status !== "failed" && count === 0)) return null;
+  // Nothing when Rashi has nothing to say here, and nothing when Rashi could not be read: Lein stays calm (a failed
+  // chapter is asked for again by a later load), and a page of verse tools never shows a row of empty "Rashi" buttons.
+  if (!verse || count === 0) return null;
   return <section className={styles.disclosureSection} aria-label={`Rashi on ${verse.ref}`} data-verse-rashi={verse.ref}>
     <button type="button" className={styles.disclosure} aria-expanded={open} aria-controls={`${id}-panel`} onClick={() => setOpen(value => !value)}>{count ? `Rashi (${count})` : "Rashi"}</button>
     {open && <div id={`${id}-panel`} className={styles.panel}>
-      {state.status === "failed" ? <p className={styles.status} role="status">Rashi isn’t available right now. {retry && <button type="button" onClick={retry}>Try again</button>}</p>
-        : state.status === "ready" && <div className={styles.inline}>
+      {state.status === "ready" && <div className={styles.inline}>
           <h4 className={styles.panelHeading}>Rashi on <bdi dir="ltr">{verse.ref}</bdi></h4>
           {state.comments.map((comment, index) => <CommentaryEntry key={`${verse.ref}:${index}`} comment={comment} words={words} verseRef={verse.ref}
             onLink={link ? link.point(key(index)) : undefined} pinned={link?.pinned === key(index)} />)}

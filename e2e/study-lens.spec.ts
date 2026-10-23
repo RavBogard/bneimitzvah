@@ -162,6 +162,18 @@ test("a commentary failure is a quiet line with Try again and never holds back t
   await expect(rows(page).nth(0).getByText("SYNTHETIC LEMMA ONE — synthetic comment one.")).toBeVisible();
 });
 
+test("in Lein a commentary outage shows nothing under the selected verse, and Up close reads with its spaces", async ({ page }) => {
+  await mock(page, { commentary: "fail" });
+  await page.goto("/read");
+  await page.locator('[data-hebrew-ref="Genesis 1:1"] [data-word-index="0"]').click();
+  const up = page.getByRole("button", { name: "View Genesis 1:1 up close", exact: true });
+  await expect(up).toBeVisible();
+  expect(await up.evaluate(node => (node as HTMLElement).innerText.trim())).toBe("View Genesis 1:1 up close"); // as laid out: no line breaks or lost spaces between the parts
+  await page.waitForTimeout(300); // let the failed commentary settle
+  await expect(page.getByRole("button", { name: /^Rashi/ })).toHaveCount(0);
+  await expect(page.getByText("Rashi isn’t available right now.")).toHaveCount(0);
+});
+
 test("Works adds the Women's Commentary on the Torah; on the haftarah Rashi on the Prophets shows and the Women's Commentary says it covers the Torah only", async ({ page }) => {
   const server = await mock(page);
   await page.goto("/read?lens=study");
