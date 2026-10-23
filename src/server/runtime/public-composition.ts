@@ -11,6 +11,8 @@ import { createPersistentStudyCache } from "../data/study-cache";
 import { createSefariaStudyReader } from "../study/sefaria";
 import { createSefariaCommentaryReader } from "../study/commentary";
 import { createSefariaTranslationsReader } from "../study/translations";
+import { createSefariaSourceReader } from "../study/source-text";
+import { createSefariaMetadataReader } from "../study/sources/sefaria-metadata";
 import { createHebcalReader } from "../../lib/readings/proposals";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { resolveTenantHost } from "../tenancy/resolve";
@@ -43,6 +45,7 @@ export function composePublicRuntime<Q extends PgQueryResultHKT>(config: Runtime
   const pocketTorah = config.referenceAudio?.studentRelease === true && env.REFERENCE_AUDIO_SHORT_PUBLIC_RELEASE === "true" ? createRuntimeShortMetadata(config, env) : null;
   const reading = createPublicReadingService({ loadReading, loadText, stepSource: publicStepSource,
     pocketTorah: pocketTorah ? { loadCatalog: pocketTorah.loadCatalog, loadManifest: pocketTorah.loadManifest } : null });
+  const shelfLinks = createSefariaMetadataReader({ fetch });
   return Object.freeze({
     async resolveTenant(request: Request) {
       const resolved = await resolveTenantHost(db, { url: request.url, headers: request.headers }, config.deployment);
@@ -52,6 +55,8 @@ export function composePublicRuntime<Q extends PgQueryResultHKT>(config: Runtime
     // The commentary reader itself keeps nothing (the route still resolves the tenant); the CDN keeps each chapter's answer.
     commentary: createSefariaCommentaryReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS }),
     translations: createSefariaTranslationsReader({ fetch }),
+    shelf: (verse: string, signal?: AbortSignal) => shelfLinks.shelfLinks(verse, signal ?? new AbortController().signal),
+    source: createSefariaSourceReader({ fetch }),
   });
 }
 

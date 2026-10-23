@@ -34,9 +34,9 @@ export function reviewItems(slots: readonly ReviewSlot[], pools: Pools, progress
 
 export function ReviewScreen() { return <LearnServices><Review /></LearnServices>; }
 function Review() {
-  const { progress: loaded, update } = useProgress(), progress = loaded ?? emptyProgress();
+  const { progress: loaded, update, until } = useProgress(), progress = loaded ?? emptyProgress();
   const seed = useRef(Math.floor(Math.random() * 2 ** 31)), today = localDay(Date.now());
-  const plan = useMemo(() => loaded ? composeReview(loaded, today, seededRandom(seed.current)) : null, [loaded === null]); // eslint-disable-line react-hooks/exhaustive-deps
+  const plan = useMemo(() => loaded ? composeReview(loaded, today, seededRandom(seed.current), until) : null, [loaded === null]); // eslint-disable-line react-hooks/exhaustive-deps
   const lessons = useMemo(() => plan ? COURSE.lessons.filter(lesson => lesson.family && plan.some(slot => slot.melody === lesson.melody && (slot.family === lesson.family || learned(progress, slot.melody).includes(lesson.family!)))) : [], [plan]); // eslint-disable-line react-hooks/exhaustive-deps
   const [retry, setRetry] = useState(0), data = useCourseVerses(lessons, retry);
   const frame = (body: ReactNode, footer?: ReactNode) => <div className={`portal-shell ${styles.shell}`}>
@@ -48,9 +48,9 @@ function Review() {
   if (data.status === "loading") return frame(<p role="status" className={styles.state}>Loading the review…</p>);
   if (data.status === "error" || !data.pools.families.size) return frame(<div role="status" className={styles.state}><p>The recording did not load. Try again.</p>
     <button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>, <a className={styles.backLink} href="/learn">Back to the path</a>);
-  return <ReviewRun slots={plan} pools={data.pools} progress={progress} seed={seed.current} today={today} update={update} frame={frame} />;
+  return <ReviewRun slots={plan} pools={data.pools} progress={progress} seed={seed.current} today={today} until={until} update={update} frame={frame} />;
 }
-function ReviewRun({ slots, pools, progress, seed, today, update, frame }: { slots: ReviewSlot[]; pools: Pools; progress: Progress; seed: number; today: string;
+function ReviewRun({ slots, pools, progress, seed, today, until, update, frame }: { slots: ReviewSlot[]; pools: Pools; progress: Progress; seed: number; today: string; until: string | null;
   update: ReturnType<typeof useProgress>["update"]; frame(body: ReactNode, footer?: ReactNode): ReactElement }) {
   const items = useMemo(() => reviewItems(slots, pools, progress, seed), [slots, pools]); // eslint-disable-line react-hooks/exhaustive-deps
   const slotOf = useMemo(() => new Map(items.map(row => [row.item.key, row.slot])), [items]);
@@ -70,7 +70,7 @@ function ReviewRun({ slots, pools, progress, seed, today, update, frame }: { slo
     // One box up per card per review, however often it comes up right; a miss still drops it.
     if (right && moved.current.has(slot.card)) return;
     moved.current.add(slot.card);
-    update(value => recordAnswer(value, slot.card, right, today));
+    update(value => recordAnswer(value, slot.card, right, today, { until }));
   };
   const advance = () => { player.stop(); if (runDone(run)) { setFinished(true); return; } setShown({ item: currentItem(run), n: shown.n + 1 }); setAnswered(false); window.scrollTo({ top: 0 }); };
   const props = { pools, melody: slot.melody, contrast, onAnswer: answer }, key = `${item.key}:${shown.n}`;

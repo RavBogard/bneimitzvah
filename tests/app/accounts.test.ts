@@ -278,6 +278,27 @@ describe("members and approvers", () => {
     expect((await t.call("/api/accounts/summary?mode=tutor", "multi")).status).toBe(200);
   });
 
+  it("keeps each congregation's requests, members and approvers to that congregation", async () => {
+    const t = await setup();
+    await t.person("here");
+    await t.call("/api/account/request", "here", { name: "Here only" });
+    const [row] = (await requests(t)).json.requests;
+    // multi is an admin in the other congregation as well; there it sees and decides nothing of this one.
+    const [other] = await t.f.owner(() => t.f.db.select().from(s.membership).where(eq(s.membership.tenantId, "other")));
+    await t.f.owner(async () => { await t.f.db.insert(s.roleGrant).values({ tenantId: "other", membershipId: other.id, role: "admin" }); });
+    const there = (path: string, body?: unknown) => t.dispatch(new Request(`http://localhost:3101${path}`, { method: body === undefined ? "GET" : "POST",
+      headers: { cookie: t.f.identities.multi.cookie, ...(body === undefined ? {} : { origin: "http://localhost:3101", "content-type": "application/json" }) }, body: body === undefined ? undefined : JSON.stringify(body) }));
+    expect(await (await there("/api/accounts/summary?mode=admin")).json()).toEqual({ ok: true, requests: 0 });
+    expect(await (await there("/api/accounts/requests?mode=admin")).json()).toEqual({ ok: true, requests: [] });
+    // Refused either way: the runtime answers one origin (403), and the request is not in that congregation (404).
+    expect([403, 404]).toContain((await there("/api/accounts/requests/approve", { mode: "admin", requestId: row.id })).status);
+    // Refused either way: the runtime answers one origin (403), and the request is not in that congregation (404).
+    expect([403, 404]).toContain((await there("/api/accounts/requests/decline", { mode: "admin", requestId: row.id })).status);
+    expect([403, 404]).toContain((await there("/api/accounts/approvers/add", { tutorGrantId: t.f.tutorGrant.id })).status);
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.accountApprover)).length)).toBe(0);
+    expect((await requests(t)).json.requests).toHaveLength(1);
+  });
+
   it("serves every accounts route private and no-store, errors included, and refuses unknown methods and query keys", async () => {
     const t = await setup();
     const gets = ["/api/account/request", "/api/accounts/summary?mode=admin", "/api/accounts/requests?mode=admin", "/api/accounts/members", "/api/accounts/approvers"];

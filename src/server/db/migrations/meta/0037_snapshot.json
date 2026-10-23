@@ -1,520 +1,9 @@
 {
-  "id": "a7c37dba-6ae1-4bb5-9fbc-43fa3c0a5248",
+  "id": "2bed7f0b-6110-4287-a590-6866cfd3f879",
   "prevId": "f525ace5-97a5-43e8-ae0d-af74b2cd1735",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.account_approver": {
-      "name": "account_approver",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "membership_id": {
-          "name": "membership_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tutor_grant_id": {
-          "name": "tutor_grant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "role": {
-          "name": "role",
-          "type": "portal_role",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'tutor'"
-        },
-        "designated_by_membership_id": {
-          "name": "designated_by_membership_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "revoked_at": {
-          "name": "revoked_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "revoked_by_membership_id": {
-          "name": "revoked_by_membership_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "account_approver_active_key": {
-          "name": "account_approver_active_key",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "membership_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"account_approver\".\"revoked_at\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "account_approver_tenant_id_tenant_id_fk": {
-          "name": "account_approver_tenant_id_tenant_id_fk",
-          "tableFrom": "account_approver",
-          "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "account_approver_grant_fk": {
-          "name": "account_approver_grant_fk",
-          "tableFrom": "account_approver",
-          "tableTo": "role_grant",
-          "columnsFrom": [
-            "tenant_id",
-            "tutor_grant_id",
-            "membership_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id",
-            "membership_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "account_approver_role_fk": {
-          "name": "account_approver_role_fk",
-          "tableFrom": "account_approver",
-          "tableTo": "role_grant",
-          "columnsFrom": [
-            "tenant_id",
-            "tutor_grant_id",
-            "role"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id",
-            "role"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "account_approver_designator_fk": {
-          "name": "account_approver_designator_fk",
-          "tableFrom": "account_approver",
-          "tableTo": "membership",
-          "columnsFrom": [
-            "tenant_id",
-            "designated_by_membership_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "account_approver_revoker_fk": {
-          "name": "account_approver_revoker_fk",
-          "tableFrom": "account_approver",
-          "tableTo": "membership",
-          "columnsFrom": [
-            "tenant_id",
-            "revoked_by_membership_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "account_approver_tenant_id_key": {
-          "name": "account_approver_tenant_id_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "account_approver_role": {
-          "name": "account_approver_role",
-          "value": "\"account_approver\".\"role\" = 'tutor'"
-        },
-        "account_approver_revoked_pair": {
-          "name": "account_approver_revoked_pair",
-          "value": "(\"account_approver\".\"revoked_at\" is null) = (\"account_approver\".\"revoked_by_membership_id\" is null)"
-        },
-        "account_approver_instants": {
-          "name": "account_approver_instants",
-          "value": "isfinite(\"account_approver\".\"created_at\") and (\"account_approver\".\"revoked_at\" is null or isfinite(\"account_approver\".\"revoked_at\"))"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.account_request": {
-      "name": "account_request",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "display_name": {
-          "name": "display_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "purpose": {
-          "name": "purpose",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "notify_status": {
-          "name": "notify_status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "notify_attempted_at": {
-          "name": "notify_attempted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "account_request_tenant_id_tenant_id_fk": {
-          "name": "account_request_tenant_id_tenant_id_fk",
-          "tableFrom": "account_request",
-          "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "account_request_user_id_user_id_fk": {
-          "name": "account_request_user_id_user_id_fk",
-          "tableFrom": "account_request",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "account_request_tenant_id_key": {
-          "name": "account_request_tenant_id_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "id"
-          ]
-        },
-        "account_request_user_key": {
-          "name": "account_request_user_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "user_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "account_request_name": {
-          "name": "account_request_name",
-          "value": "\"account_request\".\"display_name\" = btrim(\"account_request\".\"display_name\") and char_length(\"account_request\".\"display_name\") between 1 and 80 and \"account_request\".\"display_name\" !~ '[\\x01-\\x1f\\x7f-\\x9f\\x2028\\x2029\\x202a-\\x202e\\x2066-\\x2069]'"
-        },
-        "account_request_purpose": {
-          "name": "account_request_purpose",
-          "value": "\"account_request\".\"purpose\" is null or (\"account_request\".\"purpose\" = btrim(\"account_request\".\"purpose\") and char_length(\"account_request\".\"purpose\") between 1 and 500 and \"account_request\".\"purpose\" !~ '[\\x01-\\x1f\\x7f-\\x9f\\x2028\\x2029\\x202a-\\x202e\\x2066-\\x2069]')"
-        },
-        "account_request_notify_shape": {
-          "name": "account_request_notify_shape",
-          "value": "(\"account_request\".\"notify_status\" in ('pending','skipped') and \"account_request\".\"notify_attempted_at\" is null) or (\"account_request\".\"notify_status\" in ('sent','failed') and \"account_request\".\"notify_attempted_at\" is not null)"
-        },
-        "account_request_instants": {
-          "name": "account_request_instants",
-          "value": "isfinite(\"account_request\".\"created_at\") and (\"account_request\".\"notify_attempted_at\" is null or isfinite(\"account_request\".\"notify_attempted_at\"))"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.tenant_member": {
-      "name": "tenant_member",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "membership_id": {
-          "name": "membership_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "display_name": {
-          "name": "display_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "approved_by_membership_id": {
-          "name": "approved_by_membership_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "revoked_at": {
-          "name": "revoked_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "revoked_by_membership_id": {
-          "name": "revoked_by_membership_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "welcome_status": {
-          "name": "welcome_status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "welcome_attempted_at": {
-          "name": "welcome_attempted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "tenant_member_active_key": {
-          "name": "tenant_member_active_key",
-          "columns": [
-            {
-              "expression": "tenant_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "membership_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"tenant_member\".\"revoked_at\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "tenant_member_tenant_id_tenant_id_fk": {
-          "name": "tenant_member_tenant_id_tenant_id_fk",
-          "tableFrom": "tenant_member",
-          "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "tenant_member_member_fk": {
-          "name": "tenant_member_member_fk",
-          "tableFrom": "tenant_member",
-          "tableTo": "membership",
-          "columnsFrom": [
-            "tenant_id",
-            "membership_id",
-            "user_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id",
-            "user_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "tenant_member_approver_fk": {
-          "name": "tenant_member_approver_fk",
-          "tableFrom": "tenant_member",
-          "tableTo": "membership",
-          "columnsFrom": [
-            "tenant_id",
-            "approved_by_membership_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "tenant_member_revoker_fk": {
-          "name": "tenant_member_revoker_fk",
-          "tableFrom": "tenant_member",
-          "tableTo": "membership",
-          "columnsFrom": [
-            "tenant_id",
-            "revoked_by_membership_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "tenant_member_tenant_id_key": {
-          "name": "tenant_member_tenant_id_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "tenant_id",
-            "id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "tenant_member_name": {
-          "name": "tenant_member_name",
-          "value": "\"tenant_member\".\"display_name\" = btrim(\"tenant_member\".\"display_name\") and char_length(\"tenant_member\".\"display_name\") between 1 and 80 and \"tenant_member\".\"display_name\" !~ '[\\x01-\\x1f\\x7f-\\x9f\\x2028\\x2029\\x202a-\\x202e\\x2066-\\x2069]'"
-        },
-        "tenant_member_revoked_pair": {
-          "name": "tenant_member_revoked_pair",
-          "value": "(\"tenant_member\".\"revoked_at\" is null) = (\"tenant_member\".\"revoked_by_membership_id\" is null)"
-        },
-        "tenant_member_welcome_shape": {
-          "name": "tenant_member_welcome_shape",
-          "value": "(\"tenant_member\".\"welcome_status\" in ('pending','skipped') and \"tenant_member\".\"welcome_attempted_at\" is null) or (\"tenant_member\".\"welcome_status\" in ('sent','failed') and \"tenant_member\".\"welcome_attempted_at\" is not null)"
-        },
-        "tenant_member_instants": {
-          "name": "tenant_member_instants",
-          "value": "isfinite(\"tenant_member\".\"created_at\") and (\"tenant_member\".\"revoked_at\" is null or isfinite(\"tenant_member\".\"revoked_at\")) and (\"tenant_member\".\"welcome_attempted_at\" is null or isfinite(\"tenant_member\".\"welcome_attempted_at\"))"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.account": {
       "name": "account",
       "schema": "",
@@ -952,6 +441,116 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.course_progress": {
+      "name": "course_progress",
+      "schema": "",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "membership_id": {
+          "name": "membership_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "progress": {
+          "name": "progress",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "course_progress_tenant_id_tenant_id_fk": {
+          "name": "course_progress_tenant_id_tenant_id_fk",
+          "tableFrom": "course_progress",
+          "tableTo": "tenant",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "course_progress_member_fk": {
+          "name": "course_progress_member_fk",
+          "tableFrom": "course_progress",
+          "tableTo": "membership",
+          "columnsFrom": [
+            "tenant_id",
+            "membership_id",
+            "user_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "course_progress_key": {
+          "name": "course_progress_key",
+          "columns": [
+            "tenant_id",
+            "membership_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "course_progress_document": {
+          "name": "course_progress_document",
+          "value": "jsonb_typeof(\"course_progress\".\"progress\") = 'object' and coalesce(\"course_progress\".\"progress\"->>'schema' = 'learn-progress/v1' and jsonb_typeof(\"course_progress\".\"progress\"->'lessons') = 'object' and jsonb_typeof(\"course_progress\".\"progress\"->'cards') = 'object', false) and octet_length(\"course_progress\".\"progress\"::text) <= 98304"
+        },
+        "course_progress_version": {
+          "name": "course_progress_version",
+          "value": "\"course_progress\".\"version\" > 0"
+        },
+        "course_progress_instants": {
+          "name": "course_progress_instants",
+          "value": "isfinite(\"course_progress\".\"created_at\") and isfinite(\"course_progress\".\"updated_at\")"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.honoree_group_epoch": {
@@ -2311,7 +1910,7 @@
       "checkConstraints": {
         "invitation_throttle_scope": {
           "name": "invitation_throttle_scope",
-          "value": "\"invitation_throttle\".\"scope\" in ('actor','recipient','account-request','account-mail')"
+          "value": "\"invitation_throttle\".\"scope\" in ('actor','recipient')"
         },
         "invitation_throttle_hash": {
           "name": "invitation_throttle_hash",
@@ -8733,7 +8332,7 @@
       "checkConstraints": {
         "audit_action_known": {
           "name": "audit_action_known",
-          "value": "\"audit_event\".\"action\" in ('student.create','student.update','student.import','grant.issue','grant.revoke','guardian.link','guardian.revoke','guardian.practice-set','tutor.cantor-set','tutor.assign','tutor.revoke','invite.issue','invite.accept','invite.revoke','invite.delivery-sent','invite.delivery-failed','context.enter','context.exit','reading.set','identity.link','identity.revoke','draft.append','note.append','service-plan.set','progress.self-check.set','progress.assessment.set','lesson-log.create','lesson-log.edit','lesson-log.delete','recording.create','recording.submit','recording.delete-request','source-assignment.set','honors.set','honoree.issue','honoree.revoke','honoree.reissue','study-voice.set','study-guide.set','study-guide.publish','study-guide-student.set','study-theme.read','tenant-settings.set','notification-preference.set','notification.unsubscribe','mcp-connection.revoke','source-identity.revoke','account-request.approve','account-request.decline','member.revoke','approver.designate','approver.revoke')"
+          "value": "\"audit_event\".\"action\" in ('student.create','student.update','student.import','grant.issue','grant.revoke','guardian.link','guardian.revoke','guardian.practice-set','tutor.cantor-set','tutor.assign','tutor.revoke','invite.issue','invite.accept','invite.revoke','invite.delivery-sent','invite.delivery-failed','context.enter','context.exit','reading.set','identity.link','identity.revoke','draft.append','note.append','service-plan.set','progress.self-check.set','progress.assessment.set','lesson-log.create','lesson-log.edit','lesson-log.delete','recording.create','recording.submit','recording.delete-request','source-assignment.set','honors.set','honoree.issue','honoree.revoke','honoree.reissue','study-voice.set','study-guide.set','study-guide.publish','study-guide-student.set','study-theme.read','tenant-settings.set','notification-preference.set','notification.unsubscribe','mcp-connection.revoke','source-identity.revoke')"
         }
       },
       "isRLSEnabled": false

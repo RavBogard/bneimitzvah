@@ -9,17 +9,18 @@ export class SourceMetadataUnavailable extends Error {
 }
 const fail = (): never => { throw new SourceMetadataUnavailable(); };
 const size = (value: string) => new TextEncoder().encode(value).byteLength;
-const absent = Symbol("absent"), invalid = Symbol("invalid");
+export const absent = Symbol("absent"), invalid = Symbol("invalid");
 type Row = Record<string, unknown>;
-function row(value: unknown): Row | null { return value !== null && typeof value === "object" && [Object.prototype, null].includes(Object.getPrototypeOf(value)) ? value as Row : null; }
-function field(value: Row, name: string): unknown { const d = Object.getOwnPropertyDescriptor(value, name); return !d ? absent : Object.hasOwn(d, "value") ? d.value : invalid; }
-function list(value: unknown, bound: number): readonly unknown[] | null {
+export function row(value: unknown): Row | null { return value !== null && typeof value === "object" && [Object.prototype, null].includes(Object.getPrototypeOf(value)) ? value as Row : null; }
+export function field(value: Row, name: string): unknown { const d = Object.getOwnPropertyDescriptor(value, name); return !d ? absent : Object.hasOwn(d, "value") ? d.value : invalid; }
+export function list(value: unknown, bound: number): readonly unknown[] | null {
   if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype || value.length > bound || Reflect.ownKeys(value).length !== value.length + 1) return null;
   const result: unknown[] = [];
   for (let i = 0; i < value.length; i++) { const d = Object.getOwnPropertyDescriptor(value, String(i)); if (!d || !Object.hasOwn(d, "value")) return null; result.push(d.value); }
   return result;
 }
-function plain(value: unknown, bound: number): string | null {
+/** Shared with the public shelf (shelf.ts): the same hygiene for every Sefaria label and citation. */
+export function plain(value: unknown, bound: number): string | null {
   if (typeof value !== "string" || !value.length || value.length > bound || !value.isWellFormed()
     || /[<>\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/u.test(value)) return null;
   const normalized = value.normalize("NFC");
@@ -31,7 +32,7 @@ function nullable(value: unknown, bound: number): string | null | typeof invalid
   return value === absent || value === null || value === "" ? null : plain(value, bound) ?? invalid;
 }
 // Only direct body fields are inspected. collectiveTitle.en/he are title labels.
-function hasText(value: Row) {
+export function hasText(value: Row) {
   for (const key of ["text", "he", "en", "hebrew", "english", "body", "content", "snippet", "segments"]) {
     const v = field(value, key);
     if (v === absent || v === null || v === "") continue;
@@ -45,7 +46,7 @@ export type RelatedSourceMetadata = Readonly<{ id: string; ref: string; indexTit
 export type SourceEditionMetadata = Readonly<{ versionTitle: string; language: string; actualLanguage: string | null; license: string | null; source: string | null }>;
 export type RelatedSourceCatalog = Readonly<{ schema: "study-related-metadata/v1"; verse: string; entries: readonly RelatedSourceMetadata[]; receivedRows: number; heldCount: number; duplicateCount: number }>;
 export type SourceEditionCatalog = Readonly<{ schema: "study-edition-metadata/v1"; workTitle: string; entries: readonly SourceEditionMetadata[]; receivedRows: number; heldCount: number; duplicateCount: number }>;
-function anchor(value: Row, requested: string) {
+export function anchor(value: Row, requested: string) {
   const exact = plain(field(value, "anchorRef"), SOURCE_METADATA_LIMITS.citationBytes);
   if (exact === requested) return true;
   const expanded = list(field(value, "anchorRefExpanded"), SOURCE_METADATA_LIMITS.expandedAnchors);

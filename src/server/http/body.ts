@@ -1,7 +1,7 @@
 import "server-only";
 import { HttpBoundaryError } from "./responses";
 
-const limits = { ordinary: 16 * 1024, work: 32 * 1024, binding: 64 * 1024, honors: 66 * 1024, honoree: 1024, csv: 2 * 1024 * 1024, mcp: 512 * 1024 } as const;
+const limits = { ordinary: 16 * 1024, work: 32 * 1024, binding: 64 * 1024, honors: 66 * 1024, honoree: 1024, csv: 2 * 1024 * 1024, mcp: 512 * 1024, progress: 72 * 1024 } as const;
 export async function readJsonBody(request: Request, profile: keyof typeof limits = "ordinary", deadlineMs = 5000): Promise<unknown> {
   if (!Object.hasOwn(limits, profile) || !Number.isInteger(deadlineMs) || deadlineMs < 1 || deadlineMs > 5000) throw new HttpBoundaryError();
   const limit = limits[profile];

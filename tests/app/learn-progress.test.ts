@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { lessonById, pathLessons } from "../../src/lib/learn/course";
-import { BOX_DAYS, PROGRESS_KEY, PROGRESS_LIMITS, addDays, answerCard, browserProgressStore, comesBack, completeLesson, composeReview, courseDone, dueCards, emptyProgress, heard,
+import { BOX_DAYS, gapDays, mergeProgress, PROGRESS_KEY, PROGRESS_LIMITS, addDays, answerCard, browserProgressStore, comesBack, completeLesson, composeReview, courseDone, dueCards, emptyProgress, heard,
   isUnlocked, lessonCards, localDay, nextLesson, parseProgress, recordAnswer, reviewSummary, serializeProgress, type Progress } from "../../src/lib/learn/progress";
 import { seededRandom } from "../../src/lib/learn/pools";
 import { COURSE } from "../../src/lib/learn/course";
@@ -35,9 +35,9 @@ describe("the Leitner scheduler", () => {
   it("moves a card up at most one box in one run, however often it comes up right, but still drops it on a miss", () => {
     const moved = new Set<string>();
     let progress = done(emptyProgress(), "torah-sof-pasuk");
-    for (let i = 0; i < 8; i++) progress = recordAnswer(progress, "sof-pasuk:torah:name", true, today, moved);
+    for (let i = 0; i < 8; i++) progress = recordAnswer(progress, "sof-pasuk:torah:name", true, today, { moved });
     expect(progress.cards["sof-pasuk:torah:name"].box).toBe(2);
-    progress = recordAnswer(progress, "sof-pasuk:torah:name", false, today, moved);
+    progress = recordAnswer(progress, "sof-pasuk:torah:name", false, today, { moved });
     expect(progress.cards["sof-pasuk:torah:name"].box).toBe(0);
   });
 });
@@ -126,5 +126,39 @@ describe("browser storage", () => {
     const progress = done(emptyProgress(), ...COURSE.lessons.map(lesson => lesson.id));
     expect(parseProgress(JSON.parse(serializeProgress(progress)!))).toEqual(progress);
     expect(serializeProgress(progress)!.length).toBeLessThan(PROGRESS_LIMITS.bytes);
+  });
+});
+
+describe("signed-in progress", () => {
+  it("merges two copies: every lesson either finished with its earliest done, every card at the higher box with that copy's due", () => {
+    const early = "2026-10-01T10:00:00.000Z", late = "2026-10-05T10:00:00.000Z";
+    const browser = parseProgress({ schema: "learn-progress/v1", lessons: { "intro-phrases": { done: late }, "torah-sof-pasuk": { done: late } },
+      cards: { "sof-pasuk:torah:name": { box: 3, due: "2026-10-30" }, "etnachta:torah:name": { box: 1, due: "2026-10-21" } } })!;
+    const account = parseProgress({ schema: "learn-progress/v1", lessons: { "intro-phrases": { done: early }, "torah-etnachta": { done: late } },
+      cards: { "sof-pasuk:torah:name": { box: 2, due: "2026-10-22" }, "etnachta:torah:name": { box: 1, due: "2026-10-20" }, "zakef:torah:name": { box: 4, due: "2026-11-10" } } })!;
+    const merged = mergeProgress(browser, account);
+    expect(merged.lessons).toEqual({ "intro-phrases": { done: early }, "torah-etnachta": { done: late }, "torah-sof-pasuk": { done: late } });
+    expect(merged.cards).toEqual({ "etnachta:torah:name": { box: 1, due: "2026-10-20" }, "sof-pasuk:torah:name": { box: 3, due: "2026-10-30" }, "zakef:torah:name": { box: 4, due: "2026-11-10" } });
+    expect(mergeProgress(account, browser)).toEqual(merged);
+    expect(mergeProgress(merged, merged)).toEqual(merged);
+    expect(parseProgress(JSON.parse(serializeProgress(merged)!))).toEqual(merged);
+    expect(mergeProgress(emptyProgress(), browser)).toEqual(mergeProgress(browser, emptyProgress()));
+  });
+  it("caps every gap at a fifth of the days left before a known date, and resumes the normal gaps after it", () => {
+    expect(gapDays(5, "2026-10-20", null)).toBe(35);
+    expect(gapDays(5, "2026-10-20", "2027-10-20")).toBe(35);
+    expect(gapDays(5, "2026-10-20", "2026-12-09")).toBe(10);
+    expect(gapDays(3, "2026-10-20", "2026-10-30")).toBe(2);
+    expect(gapDays(2, "2026-10-20", "2026-10-22")).toBe(1);
+    expect(gapDays(0, "2026-10-20", "2026-10-22")).toBe(0);
+    expect(gapDays(4, "2026-10-20", "2026-10-20")).toBe(16);
+    expect(gapDays(4, "2026-10-20", "2026-10-01")).toBe(16);
+    // Each review then lands within the final fifth of the time left, closing in on the date.
+    let today = "2026-10-20"; const until = "2026-12-31"; const seen: number[] = [];
+    for (let box = 1; today < until && seen.length < 40; box = Math.min(5, box + 1)) { const gap = gapDays(box, today, until); seen.push(gap); today = addDays(today, gap); }
+    expect(today).toBe(until);
+    expect(Math.max(...seen.slice(-3))).toBeLessThanOrEqual(2);
+    const card = recordAnswer(done(emptyProgress(), "torah-sof-pasuk"), "sof-pasuk:torah:name", true, "2026-10-20", { until: "2026-10-30" }).cards["sof-pasuk:torah:name"];
+    expect(card).toEqual({ box: 2, due: "2026-10-22" });
   });
 });
