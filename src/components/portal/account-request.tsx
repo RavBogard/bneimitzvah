@@ -33,7 +33,8 @@ const stateOf = (value: unknown): RequestState | null => value === "requestable"
 export function parseRequestView(status: number, value: unknown): RequestView {
   const row = status === 200 ? keys(value, ["ok", "state", "suggestedName", "productName"]) : null, state = stateOf(row?.state);
   if (!row || row.ok !== true || !state || typeof row.suggestedName !== "string" || Array.from(row.suggestedName).length > 80 || CONTROLS.test(row.suggestedName)) return { status: "failed" };
-  if (typeof row.productName !== "string" || !row.productName.trim() || Array.from(row.productName).length > 80 || CONTROLS.test(row.productName)) return { status: "failed" };
+  // The congregation's product name: the same bounds as the mail transport and the add-congregation script.
+  if (typeof row.productName !== "string" || !row.productName || row.productName.trim() !== row.productName || Array.from(row.productName).length > 120 || CONTROLS.test(row.productName)) return { status: "failed" };
   return { status: "ready", state, suggestedName: row.suggestedName, productName: row.productName };
 }
 export function parseRequestResult(status: number, value: unknown): "pending" | "member" | Exclude<Problem, null> {
@@ -56,7 +57,7 @@ export function AccountRequestView({ view, level, name, purpose, problem, sendin
   if (view.state === "pending") return <div className="account-request" data-request-state="pending"><Heading>Your request is in</Heading>
     <p role="status">You’ll get one email when it’s approved.</p></div>;
   return <div className="account-request" data-request-state="requestable"><Heading id={`${formId}-title`}>Ask for an account</Heading>
-    <p>An account keeps your own readings, translation and notes. Everything else on {view.productName} is open without one.</p>
+    <p>An account keeps your own readings, translation and notes. Everything else on <bdi dir="auto">{view.productName}</bdi> is open without one.</p>
     <form aria-labelledby={`${formId}-title`} onSubmit={event => { event.preventDefault(); onSubmit(); }}>
       <label htmlFor={`${formId}-name`}>Your name</label>
       <input id={`${formId}-name`} name="name" value={name} maxLength={80} required autoComplete="name" disabled={sending} onChange={event => onName(event.target.value)} />

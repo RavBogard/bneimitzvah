@@ -13,7 +13,7 @@ describe("asking for an account, on screen", () => {
   it("offers the form with the person's name filled in, and an optional purpose", () => {
     const form = view({ status: "ready", state: "requestable", suggestedName: "Ruth", productName: "CRC Torah" });
     expect(form).toContain(">Ask for an account</h3>");
-    expect(form).toContain("An account keeps your own readings, translation and notes. Everything else on CRC Torah is open without one.");
+    expect(form).toContain('An account keeps your own readings, translation and notes. Everything else on <bdi dir="auto">CRC Torah</bdi> is open without one.');
     expect(form).toContain('<label for="req-name">Your name</label>');
     expect(form).toContain('value="Ruth"');
     expect(form).toContain("What would you like to work on? <span class=\"field-help\">(optional)</span>");
@@ -32,12 +32,12 @@ describe("asking for an account, on screen", () => {
     expect(view({ status: "failed" })).toContain(">Try again</button>");
     for (const state of ["requestable", "pending", "member"] as const) expect(view({ status: "ready", state, suggestedName: "", productName: "CRC Torah" })).not.toMatch(/!/);
     // Each congregation's own product name (Daniel, E1).
-    expect(view({ status: "ready", state: "requestable", suggestedName: "", productName: "Synthetic Torah" })).toContain("Everything else on Synthetic Torah is open without one.");
+    expect(view({ status: "ready", state: "requestable", suggestedName: "", productName: "Synthetic Torah" })).toContain('Everything else on <bdi dir="auto">Synthetic Torah</bdi> is open without one.');
   });
   it("reads the server's answers strictly", () => {
     expect(parseRequestView(200, { ok: true, state: "pending", suggestedName: "", productName: "CRC Torah" })).toEqual({ status: "ready", state: "pending", suggestedName: "", productName: "CRC Torah" });
     for (const [status, value] of [[200, { ok: true, state: "owner", suggestedName: "", productName: "CRC Torah" }], [200, { ok: true, state: "pending" }], [200, { ok: true, state: "pending", suggestedName: "A\u202eB", productName: "CRC Torah" }], [200, { ok: true, state: "pending", suggestedName: "" }],
-      [200, { ok: true, state: "pending", suggestedName: "", productName: "" }], [200, { ok: true, state: "pending", suggestedName: "", productName: "A\u202eB" }], [401, {}], [503, null]] as const)
+      [200, { ok: true, state: "pending", suggestedName: "", productName: "" }], [200, { ok: true, state: "pending", suggestedName: "", productName: " CRC Torah" }], [200, { ok: true, state: "pending", suggestedName: "", productName: "A\u202eB" }], [401, {}], [503, null]] as const)
       expect(parseRequestView(status, value)).toEqual({ status: "failed" });
     expect(parseRequestResult(200, { ok: true, state: "pending" })).toBe("pending");
     expect(parseRequestResult(200, { ok: true, state: "member" })).toBe("member");
@@ -56,7 +56,7 @@ describe("the approvers' client", () => {
     expect(parseSummary({ ok: true, requests: 3 })).toBe(3);
     for (const bad of [() => parseRequests({ ok: true, requests: [{ id: ID, name: "A\u202eB", purpose: null, email: null, requestedAt: stamp }], productName: "CRC Torah" }),
       () => parseRequests({ ok: true, requests: [{ id: ID, name: "Ruth", purpose: null, email: null, requestedAt: stamp, extra: 1 }], productName: "CRC Torah" }),
-      () => parseRequests({ ok: true, requests: [] }), () => parseRequests({ ok: true, requests: [], productName: "" }), () => parseRequests({ ok: true, requests: [], productName: "A\u202eB" }),
+      () => parseRequests({ ok: true, requests: [] }), () => parseRequests({ ok: true, requests: [], productName: "" }), () => parseRequests({ ok: true, requests: [], productName: "   " }), () => parseRequests({ ok: true, requests: [], productName: "A\u202eB" }),
       () => parseMembers({ ok: true, members: [{ id: ID, name: "Ruth", since: stamp, email: "x@example.test" }] }),
       () => parseApprovers({ ok: true, admins: [], designated: [], candidates: [{ tutorGrantId: "nope", name: "X" }] }),
       () => parseSummary({ ok: true, requests: -1 })]) expect(bad).toThrow(PortalRequestError);

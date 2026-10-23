@@ -27,12 +27,13 @@ test("the accounts code never writes a role grant, never imports a grant writer,
     for (const spec of importsOf(file.text)) assert.doesNotMatch(spec, /(^|\/)(data\/invitations|relationships|data\/saved|saved)(\/|$)/, `${file.path} imports ${spec}`);
     assert.doesNotMatch(file.text, /\b(savedReading|savedVerseWork|savedVerseMark|starredComment)\b/, `${file.path} names a saved table`);
     // The product name comes from the one shared reader (Daniel, E1), never a second query or a fixed "CRC Torah".
-    assert.doesNotMatch(file.text, /s\.tenant\.productName|CRC Torah/, `${file.path} reads or fixes the product name itself`);
+    assert.doesNotMatch(file.text, /\bs\.tenant\b|product_name|CRC Torah/, `${file.path} reads or fixes the product name itself`);
   }
   const reader = sources.find(file => file.path === "src/server/data/product-name.ts");
   assert.ok(reader && /export async function readProductName\b/.test(reader.text) && /export async function readTenantNames\b/.test(reader.text));
   for (const path of ["src/components/portal/account-request.tsx", "src/components/portal/workspace/accounts/workspace.tsx", "src/server/mail/transport.ts"])
-    assert.doesNotMatch(sources.find(file => file.path === path).text.replace(/subject: kind === "invitation"[^\n]*/, ""), /CRC Torah/, `${path} fixes the product name`);
+    // The sign-in and invitation subject on that one line still fixes the name; the sign-in code PR (#44) moves it to the reader.
+    assert.doesNotMatch(sources.find(file => file.path === path).text.replace(/subject: kind === "invitation" \? "Your Beit Mitzvah invitation from CRC Torah" : "Sign in to CRC Torah",/, ""), /CRC Torah/, `${path} fixes the product name`);
 });
 
 test("an approver is never a workspace mode, and only the accounts service writes the account tables", () => {

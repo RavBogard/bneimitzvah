@@ -43,7 +43,8 @@ export type RequestQueue = Readonly<{ requests: readonly AccountRequest[]; produ
 export function parseRequests(value: unknown): RequestQueue {
   const row = object(value, ["ok", "requests", "productName"]);
   if (row.ok !== true || !Array.isArray(row.requests) || row.requests.length > 50) return bad();
-  return { productName: text(row.productName, 80), requests: row.requests.map(raw => { const item = object(raw, ["id", "name", "purpose", "email", "requestedAt"]);
+  const productName = text(row.productName, 120); if (productName.trim() !== productName) return bad();
+  return { productName, requests: row.requests.map(raw => { const item = object(raw, ["id", "name", "purpose", "email", "requestedAt"]);
     return { id: id(item.id), name: text(item.name, 80), purpose: item.purpose === null ? null : text(item.purpose, 500), email: email(item.email), requestedAt: instant(item.requestedAt) }; }) };
 }
 export function parseMembers(value: unknown): readonly Member[] {
