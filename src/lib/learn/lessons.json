@@ -339,14 +339,14 @@
       "listenFor": "The last word drops to the lowest note in the verse and rests on it.",
       "examples": [
         {
-          "ref": "Numbers 6:24",
+          "ref": "Numbers 6:26",
           "words": [
-            0,
-            2
+            4,
+            6
           ],
-          "firstWord": "יְבָרֶכְךָ֥",
-          "lastWord": "וְיִשְׁמְרֶֽךָ׃",
-          "why": "A whole verse that is one ending phrase: mercha, tipcha, sof pasuk. The priestly blessing.",
+          "firstWord": "וְיָשֵׂ֥ם",
+          "lastWord": "שָׁלֽוֹם׃",
+          "why": "Three words that end the verse: mercha, tipcha, sof pasuk. The last line of the priestly blessing.",
           "tropes": [
             "mercha",
             "tipcha",
@@ -866,14 +866,14 @@
           ]
         },
         {
-          "ref": "Exodus 3:14",
+          "ref": "Genesis 27:22",
           "words": [
-            6,
-            6
+            5,
+            5
           ],
           "firstWord": "וַיֹּ֗אמֶר",
           "lastWord": "וַיֹּ֗אמֶר",
-          "why": "Revia on one word in the second half of a verse, before a new thought.",
+          "why": "Revia on one word in the second half of a verse, just before Isaac speaks.",
           "tropes": [
             "revia"
           ]
@@ -1917,25 +1917,6 @@
               "words": [
                 3,
                 6
-              ]
-            }
-          ]
-        },
-        {
-          "ref": "Numbers 6:24",
-          "words": [
-            0,
-            2
-          ],
-          "firstWord": "יְבָרֶכְךָ֥",
-          "lastWord": "וְיִשְׁמְרֶֽךָ׃",
-          "why": "Fallback: one phrase.",
-          "phrases": [
-            {
-              "family": "sof-pasuk",
-              "words": [
-                0,
-                2
               ]
             }
           ]
