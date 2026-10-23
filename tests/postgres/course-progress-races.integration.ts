@@ -37,7 +37,7 @@ test("two devices merging at once: the write lock makes the second merge see the
   } finally { release.resolve(); stop(); }
   const results = await Promise.all([a, b!]) as { ok?: boolean; version?: number }[];
   expect(results.map(r => r.version).sort()).toEqual([1, 2]);
-  const row = (await query(f.owner, "SELECT progress, version FROM course_progress WHERE membership_id=$1", [f.member.id])).rows[0];
+  const row = (await query(f.owner, "SELECT progress, version FROM course_progress WHERE membership_id=$1", [f.member.id])).rows[0] as { progress: { lessons: Record<string, unknown> }; version: number };
   expect(row.version).toBe(2);
   expect(Object.keys(row.progress.lessons).sort()).toEqual(["intro-phrases", "torah-sof-pasuk"]);
 });

@@ -1,7 +1,8 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPhraseAudio, type PhraseAudio } from "../../lib/learn/phrase-audio";
-import { browserProgressStore, emptyProgress, localDay, type Progress } from "../../lib/learn/progress";
+import { browserProgressStore, emptyProgress, localDay, type Progress, type ProgressStore } from "../../lib/learn/progress";
+import { createProgressSync, type Account, type ProgressSync } from "./progress-sync";
 import { createClipPlayer, type ClipPlayer, type PlayerState } from "./player";
 import { createVerseLoader, type VerseLoader } from "./verses-api";
 
@@ -33,13 +34,39 @@ export function usePlayerState(): PlayerState {
   return useSyncExternalStore(player.subscribe, () => player.state, () => idle);
 }
 
-/** Signed-out progress, in this browser: read after mount (so the server render is the fresh course), saved on every change. */
+/**
+ * The learner's progress: this browser's copy, and, when signed in with a live grant, the account's
+ * (progress-sync.ts). One store and one sync per page, shared by every component that asks.
+ */
+type ProgressState = Readonly<{ progress: Progress | null; account: Account }>;
+let shared: { state: ProgressState; listeners: Set<() => void>; store: ProgressStore; sync: ProgressSync } | null = null;
+const UNLOADED: ProgressState = Object.freeze({ progress: null, account: Object.freeze({ state: "unknown" as const }) });
+function progressHub() {
+  if (shared) return shared;
+  const store = browserProgressStore(), listeners = new Set<() => void>();
+  const hub = { state: UNLOADED, listeners, store, sync: null as unknown as ProgressSync };
+  const set = (patch: Partial<ProgressState>) => { hub.state = Object.freeze({ ...hub.state, ...patch }); for (const listener of listeners) listener(); };
+  hub.sync = createProgressSync({ fetch: (...args) => fetch(...args), storage: () => { try { return window.localStorage; } catch { return null; } }, store,
+    onProgress: progress => set({ progress }), onAccount: account => set({ account }) });
+  hub.state = Object.freeze({ progress: store.load(), account: hub.state.account });
+  shared = hub;
+  void hub.sync.start();
+  const hide = () => { if (document.visibilityState !== "visible") hub.sync.flush(); };
+  document.addEventListener("visibilitychange", hide); window.addEventListener("pagehide", () => hub.sync.flush());
+  return hub;
+}
+function useProgressState(): ProgressState {
+  return useSyncExternalStore(listener => { const hub = progressHub(); hub.listeners.add(listener); return () => { hub.listeners.delete(listener); }; },
+    () => progressHub().state, () => UNLOADED);
+}
 export function useProgress() {
-  const store = useMemo(() => browserProgressStore(), []);
-  const [progress, setProgress] = useState<Progress | null>(null);
-  useEffect(() => { setProgress(store.load()); }, [store]);
+  const { progress, account } = useProgressState();
   const update = useCallback((change: (value: Progress) => Progress) => {
-    setProgress(current => { const next = change(current ?? store.load()); store.save(next); return next; });
-  }, [store]);
-  return { progress, update, today: () => localDay(Date.now()), fresh: emptyProgress };
+    const hub = progressHub(), next = change(hub.state.progress ?? hub.store.load());
+    hub.store.save(next); hub.state = Object.freeze({ ...hub.state, progress: next }); for (const listener of hub.listeners) listener();
+    hub.sync.changed();
+  }, []);
+  /** A signed-in student's ceremony: review gaps close in on it. */
+  const until = account.state === "synced" ? account.until : null;
+  return { progress, update, account, until, today: () => localDay(Date.now()), fresh: emptyProgress };
 }

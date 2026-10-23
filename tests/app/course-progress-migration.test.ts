@@ -42,8 +42,10 @@ test("0037 adds only the course_progress table, leaves existing rows and the aud
 
     // The generated snapshot adds the one table and changes nothing else.
     const snapshots = (await readdir(join(folder, "meta"))).filter(name => /^\d{4}_snapshot\.json$/.test(name)).sort();
-    expect(snapshots.at(-1)).toBe("0037_snapshot.json");
-    const previous = JSON.parse(await readFile(join(folder, "meta", snapshots.at(-2)!), "utf8")), current = JSON.parse(await readFile(join(folder, "meta/0037_snapshot.json"), "utf8"));
+    // A later migration adds its own snapshot; 0037's is compared with the one just before it.
+    const at = snapshots.indexOf("0037_snapshot.json");
+    expect(at).toBeGreaterThan(0);
+    const previous = JSON.parse(await readFile(join(folder, "meta", snapshots[at - 1]), "utf8")), current = JSON.parse(await readFile(join(folder, "meta/0037_snapshot.json"), "utf8"));
     expect(current.prevId).toBe(previous.id);
     const expected = structuredClone(previous.tables);
     expected[`public.${TABLE}`] = current.tables[`public.${TABLE}`];

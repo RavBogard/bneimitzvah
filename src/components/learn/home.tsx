@@ -31,7 +31,7 @@ function PathList({ melody, progress, next }: { melody: Melody; progress: Progre
 
 /** The course home: one next step, the review line when anything is due, the two paths, and what you can hear. */
 export function CourseHome() {
-  const { progress: loaded } = useProgress();
+  const { progress: loaded, account } = useProgress();
   const progress = loaded ?? emptyProgress(), ready = loaded !== null;
   const next = nextLesson(progress), review = ready ? reviewSummary(progress, localDay(Date.now())) : null;
   const torah = heard(progress, "torah"), haftarah = heard(progress, "haftarah");
@@ -54,7 +54,7 @@ export function CourseHome() {
           {review && <a className={styles.review} href="/learn/review"><span>Review: {plural(review.phrases, "phrase", "phrases")}, about {plural(review.minutes, "minute", "minutes")}</span>{icons.arrow}</a>}
           <p className={styles.heard}>Can hear: {torah.heard} of {torah.of} Torah phrases · {haftarah.heard} of {haftarah.of} haftarah phrases</p>
           <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a></nav>
-          <p className={styles.saved}>Progress is saved on this device. Sign in to keep it.</p>
+          {account.state !== "synced" && <p className={styles.saved}>Progress is saved on this device. Sign in to keep it.</p>}
         </div>
         <div className={styles.paths}>
           <section aria-labelledby="path-torah"><div className={styles.pathHead}><h2 id="path-torah">Torah</h2></div><PathList melody="torah" progress={progress} next={next} /></section>
