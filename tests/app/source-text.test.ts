@@ -32,19 +32,19 @@ test("a string is one segment and an array a range; segments pair by index; each
 
 test("deeper, larger or empty texts are unsupported (open on Sefaria); a bad shape is upstream trouble", () => {
   const project = (versions: Record<string, unknown>[], warnings: unknown[] = [], at = "Synthetic 1:1") => code(() => projectSourceText(sourceAnswer(at, versions, warnings), at));
-  expect(project([sourceVersion("he", "H", [["nested"]])])).toBe("not-found");
-  expect(project([sourceVersion("he", "H", Array.from({ length: 65 }, () => "x"))])).toBe("not-found");
-  expect(project([sourceVersion("he", "H", "")])).toBe("not-found");
-  expect(project([sourceVersion("he", "H", "x".repeat(70 * 1024))])).toBe("not-found");
-  expect(project([sourceVersion("he", "H", Array.from({ length: 64 }, () => "word ".repeat(1000)))])).toBe("not-found"); // over 256 KiB
+  expect(project([sourceVersion("he", "H", [["nested"]])])).toBe("unsupported");
+  expect(project([sourceVersion("he", "H", Array.from({ length: 65 }, () => "x"))])).toBe("unsupported");
+  expect(project([sourceVersion("he", "H", "")])).toBe("unsupported");
+  expect(project([sourceVersion("he", "H", "x".repeat(70 * 1024))])).toBe("unsupported");
+  expect(project([sourceVersion("he", "H", Array.from({ length: 64 }, () => "word ".repeat(1000)))])).toBe("unsupported"); // over 256 KiB
   expect(project([sourceVersion("he", "H", [1, 2])])).toBe("upstream");
   expect(project([sourceVersion("he", "H", { a: 1 })])).toBe("upstream");
-  expect(project([{ ...sourceVersion("he", "H", "x"), actualLanguage: "en" }])).toBe("upstream");
-  expect(project([sourceVersion("he", "‮", "x")])).toBe("upstream"); // no title left once made plain
+  expect(project([{ ...sourceVersion("he", "H", "x"), actualLanguage: "en" }])).toBe("unsupported");
+  expect(project([sourceVersion("he", "‮", "x")])).toBe("unsupported"); // no title left once made plain
   expect(projectSourceText(sourceAnswer("Synthetic 1:1", [sourceVersion("he", "<b>Title</b>‮", "x")]), "Synthetic 1:1").editions[0].title).toBe("bTitle/b");
   expect(project([sourceVersion("he", "H", "x")], [{ hebrew: { warning_code: 500 } }])).toBe("upstream");
   expect(project([sourceVersion("he", "H", "x")], [{ "hebrew|Other": { warning_code: 101 } }])).toBe("upstream");
-  expect(code(() => projectSourceText(sourceAnswer("Synthetic 1:2", [sourceVersion("he", "H", "x")]), "Synthetic 1:1"))).toBe("not-found"); // renamed: open on Sefaria
+  expect(code(() => projectSourceText(sourceAnswer("Synthetic 1:2", [sourceVersion("he", "H", "x")]), "Synthetic 1:1"))).toBe("unsupported"); // renamed: open on Sefaria
   expect(code(() => projectSourceText({ error: "x" }, "Synthetic 1:1"))).toBe("upstream");
 });
 
@@ -57,6 +57,8 @@ test("the reader: one bounded request in the default editions; Sefaria's 404 or 
   expect(asked?.pathname).toBe(`/api/v3/texts/${encodeURIComponent(ref)}`); expect(asked?.searchParams.getAll("version")).toEqual(["hebrew", "english"]);
   const json = (status: number) => () => new Response(JSON.stringify({ error: "synthetic" }), { status, headers: { "content-type": "application/json" } });
   await expect(answering(json(404))(ref)).rejects.toMatchObject({ code: "not-found" });
+  // Sefaria's own "no text" is definite: unsupported, which the route lets the CDN keep.
+  await expect(answering(() => new Response(JSON.stringify({ error: `We have no text for ${ref}.` }), { status: 404, headers: { "content-type": "application/json" } }))(ref)).rejects.toMatchObject({ code: "unsupported" });
   await expect(answering(json(400))(ref)).rejects.toMatchObject({ code: "not-found" });
   await expect(answering(json(500))(ref)).rejects.toMatchObject({ code: "upstream" });
   await expect(answering(() => new Response("<html>", { headers: { "content-type": "text/html" } }))(ref)).rejects.toMatchObject({ code: "upstream" });
@@ -73,9 +75,25 @@ test("the related and source routes: closed queries checked before the runtime, 
   expect((await related.json()).groups).toHaveLength(6);
   const text = await call(`/api/public/source?${new URLSearchParams([["ref", ref]])}`);
   expect(text.status).toBe(200); expect(text.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=2592000");
+  // A 404 that is not Sefaria's own "no text" is not kept.
   source = createSefariaSourceReader({ fetch: (async () => new Response(JSON.stringify({ error: "x" }), { status: 404, headers: { "content-type": "application/json" } })) as typeof globalThis.fetch });
   const missing = await call(`/api/public/source?${new URLSearchParams([["ref", ref]])}`);
-  expect(missing.status).toBe(404); expect(missing.headers.get("cache-control")).toBe("no-store");
+  expect(missing.status).toBe(404); expect(missing.headers.get("cache-control")).toBe("no-store"); expect(missing.headers.get("vercel-cdn-cache-control")).toBe("no-store");
+  // Definite answers are kept an hour: Sefaria's "no text", and texts this page will never show (too deep, too large, renamed).
+  for (const definite of [() => new Response(JSON.stringify({ error: `We have no text for ${ref}.` }), { status: 404, headers: { "content-type": "application/json" } }),
+    () => new Response(JSON.stringify(sourceAnswer(ref, [sourceVersion("he", "H", [["nested"]])])), { headers: { "content-type": "application/json" } }),
+    () => new Response(JSON.stringify(sourceAnswer("Renamed 1:1", [sourceVersion("he", "H", "x")])), { headers: { "content-type": "application/json" } })]) {
+    source = createSefariaSourceReader({ fetch: (async () => definite()) as typeof globalThis.fetch });
+    const kept = await call(`/api/public/source?${new URLSearchParams([["ref", ref]])}`);
+    expect(kept.status).toBe(404); expect(kept.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=3600"); expect(kept.headers.get("cache-control")).toBe("public, max-age=300");
+    expect(kept.headers.get("x-robots-tag")).toBe("noindex, nofollow"); expect(await kept.json()).toEqual({ error: "not-found" });
+  }
+  // A real upstream failure is never kept.
+  for (const failing of [() => new Response("x", { status: 502 }), () => new Response("{", { headers: { "content-type": "application/json" } })]) {
+    source = createSefariaSourceReader({ fetch: (async () => failing()) as typeof globalThis.fetch });
+    const down = await call(`/api/public/source?${new URLSearchParams([["ref", ref]])}`);
+    expect(down.status).toBe(503); expect(down.headers.get("vercel-cdn-cache-control")).toBe("no-store");
+  }
   shelf = async () => { throw new (await import("../../src/server/study/sources/metadata")).SourceMetadataUnavailable(); };
   const down = await call("/api/public/related?verse=Genesis+12%3A1");
   expect(down.status).toBe(503); expect(down.headers.get("vercel-cdn-cache-control")).toBe("no-store");

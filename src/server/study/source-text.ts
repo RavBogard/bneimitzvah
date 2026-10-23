@@ -4,15 +4,18 @@ import { creditLine, EDITION_TEXT_LIMITS, licenseLabel, plainCredit } from "../.
 import { parseSourceRef, sourceSefariaUrl } from "../../lib/readings/shelf";
 import { sefariaRuns } from "./sefaria-runs";
 import { fetchSefariaJson, SEFARIA_ORIGIN } from "./sefaria-json";
+import { isNoTextAnswer } from "./commentary";
 
 /**
  * One shelf item's text (`/api/public/source?ref=`): a bounded proxy of a public Sefaria text in Sefaria's
  * default Hebrew and English editions (hundreds of works: nothing pinned), each credited from what Sefaria
  * returns. A string is one segment, an array of up to 64 strings a section or range; anything deeper, larger
- * or empty is "unsupported" and the page offers Sefaria instead. Sefaria's 404 or 400 is "not found".
+ * or empty is "unsupported" and the page offers Sefaria instead. Sefaria's own "We have no text for …" 404 is
+ * "unsupported" too: both are definite, the same on every retry, so the route lets the CDN keep them an hour.
+ * Any other 404 or 400 is "not found" (not kept); timeouts, 5xx and bad JSON are "upstream" (not kept).
  */
 export class SourceTextUnavailable extends Error {
-  constructor(readonly code: "invalid-request" | "not-found" | "upstream") { super("Source text unavailable"); this.name = "SourceTextUnavailable"; }
+  constructor(readonly code: "invalid-request" | "unsupported" | "not-found" | "upstream") { super("Source text unavailable"); this.name = "SourceTextUnavailable"; }
 }
 export type SourceTextEdition = Readonly<{ language: "he" | "en"; title: string; license: string; licenseLabel: string; credit: string; url: string }>;
 export type SourceText = Readonly<{ ref: string; sefariaUrl: string; segments: readonly CommentaryComment[]; editions: readonly SourceTextEdition[] }>;
@@ -20,7 +23,7 @@ export type SourceTextReader = (ref: string, signal?: AbortSignal) => Promise<So
 export const SOURCE_TEXT_LIMITS = Object.freeze({ segments: 64, responseBytes: 256 * 1024, upstreamBytes: 1024 * 1024, requestMs: 5000, versions: 8 });
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
 const upstream = (): never => { throw new SourceTextUnavailable("upstream"); };
-const unsupported = (): never => { throw new SourceTextUnavailable("not-found"); };
+const unsupported = (): never => { throw new SourceTextUnavailable("unsupported"); };
 
 /** A version's text as segments: null when this language has none here. */
 function segmentsOf(text: unknown): readonly string[] | null {
@@ -43,11 +46,13 @@ export function projectSourceText(payload: unknown, ref: string): SourceText {
   }
   const picked: Partial<Record<"he" | "en", { title: string; license: string; segments: readonly string[] }>> = {};
   for (const version of payload.versions as unknown[]) {
-    if (!object(version) || version.language !== "he" && version.language !== "en" || version.actualLanguage !== version.language) return upstream();
+    if (!object(version) || version.language !== "he" && version.language !== "en") return upstream();
+    // An edition Sefaria labels as another language than it holds, or with no usable title, is never shown here.
+    if (version.actualLanguage !== version.language) return unsupported();
     const language = version.language as "he" | "en";
     if (picked[language]) continue; // Sefaria's default edition is the first
     const title = plainCredit(version.versionTitle, EDITION_TEXT_LIMITS.title);
-    if (!title) return upstream();
+    if (!title) return unsupported();
     const segments = segmentsOf(version.text);
     if (segments) picked[language] = { title, license: plainCredit(version.license, EDITION_TEXT_LIMITS.license) ?? "", segments };
   }
@@ -82,6 +87,7 @@ export function createSefariaSourceReader(input: { fetch: typeof globalThis.fetc
     let row: Readonly<{ status: number; json: unknown }>;
     try { row = await fetchSefariaJson(input.fetch, url, { deadlineMs: SOURCE_TEXT_LIMITS.requestMs, maxBytes: SOURCE_TEXT_LIMITS.upstreamBytes }, signal); }
     catch { throw new SourceTextUnavailable("upstream"); }
+    if (row.status === 404 && isNoTextAnswer(row.json)) throw new SourceTextUnavailable("unsupported");
     if (row.status === 404 || row.status === 400) throw new SourceTextUnavailable("not-found");
     if (row.status !== 200) throw new SourceTextUnavailable("upstream");
     return projectSourceText(row.json, ref);

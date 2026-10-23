@@ -71,6 +71,11 @@ function failure(status: keyof typeof messages): Response {
   if (status === 405) headers.set("allow", "GET");
   return new Response(JSON.stringify({ error: messages[status] }), { status, headers });
 }
+/** 404 for an answer that cannot change soon: briefly cacheable, unlike every other failure. */
+function definiteNotFound(): Response {
+  return new Response(JSON.stringify({ error: messages[404] }), { status: 404, headers: { ...common, "content-type": "application/json; charset=utf-8",
+    "cache-control": "public, max-age=300", "vercel-cdn-cache-control": "public, s-maxage=3600" } });
+}
 function json(value: JsonValue, cdnSeconds: number): Response {
   const body = JSON.stringify(value);
   if (Buffer.byteLength(body) > 2 * 1024 * 1024) return failure(503);
@@ -82,7 +87,7 @@ function statusOf(error: unknown): keyof typeof messages {
     if (error instanceof PublicReadingUnavailable) return error.code === "not-found" ? 404 : error.code === "invalid-request" ? 400 : 503;
     if (error instanceof CommentaryUnavailable) return error.code === "invalid-request" ? 400 : 503;
     if (error instanceof TranslationsUnavailable) return error.code === "invalid-request" ? 400 : 503;
-    if (error instanceof SourceTextUnavailable) return error.code === "invalid-request" ? 400 : error.code === "not-found" ? 404 : 503;
+    if (error instanceof SourceTextUnavailable) return error.code === "invalid-request" ? 400 : error.code === "not-found" || error.code === "unsupported" ? 404 : 503;
     if (error instanceof SourceMetadataUnavailable) return 503;
     if (error instanceof HttpBoundaryError) return error.status === 404 ? 404 : error.status === 405 ? 405 : 400;
     if (error instanceof AccessDenied) return 404;
@@ -187,7 +192,14 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
             return json(shelf as unknown as JsonValue, 604800);
           }
           case "source": {
-            const text = await runtime.source(query.ref, signal);
+            let text;
+            try { text = await runtime.source(query.ref, signal); }
+            catch (error) {
+              // A definite "this page will never show that" (Sefaria's own "no text", or a text too deep, large or
+              // renamed) is kept an hour, so repeated requests for it stop at the CDN; any other failure is not kept.
+              if (error instanceof SourceTextUnavailable && error.code === "unsupported") return definiteNotFound();
+              throw error;
+            }
             return json(text as unknown as JsonValue, 2592000);
           }
         }
