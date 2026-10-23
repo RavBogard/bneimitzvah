@@ -25,7 +25,7 @@ export function createAuthStack(
     throw new Error("Invalid authentication origin");
   }
   return betterAuth({
-    appName: "CRC B'nei Mitzvah",
+    appName: "CRC Torah",
     baseURL: input.origin,
     secret: input.secret,
     trustedOrigins: [input.origin],

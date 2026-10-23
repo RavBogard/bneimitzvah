@@ -8,7 +8,7 @@ import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 // Actual built Next, no database or provider configuration. Every network
 // connection stays on loopback; public hostnames are synthetic request metadata.
 const loopback = "http://127.0.0.1:3192", canonical = "https://beitmitzvah.centralreform.org";
-const aliases = ["barmitzvah.centralreform.org", "batmitzvah.centralreform.org", "bnaimitzvah.centralreform.org", "bneimitzvah.centralreform.org", "bneimitzvah.vercel.app"];
+const aliases = ["barmitzvah.centralreform.org", "batmitzvah.centralreform.org", "bnaimitzvah.centralreform.org", "bneimitzvah.centralreform.org", "bneimitzvah.vercel.app", "torah.centralreform.org"];
 let child: ChildProcess | undefined, browser: Browser | undefined, cleanup: (() => Promise<void>) | undefined;
 let cleanupBrowser: (() => Promise<void>) | undefined;
 function headers(host: string, extra: Record<string, string> = {}) {

@@ -6,15 +6,23 @@ import { parseAcceptance, parseAcknowledgement, parseInvitation, parseSession, P
 import { GoogleSignIn } from "./google-sign-in";
 import type { GoogleIntent } from "./sign-in-boundary";
 import { forgetPendingRequest } from "./pending-request";
+import { FrontDoor, type FrontDoorAccount } from "./front-door/front-door";
 
-type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "accepted" | "uncertain" }
+export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "accepted" | "uncertain" }
   | { kind: "signed-in"; summary: SessionSummary } | { kind: "invitation"; review: InvitationReview };
+/**
+ * What the front door app bar shows for an entry state. A refused account is signed in, so Sign in
+ * would be wrong, and it has no account page it can use, so the bar stays empty; the door itself offers Sign out.
+ */
+export const frontDoorAccount = (view: View): FrontDoorAccount => view.kind === "loading" || view.kind === "forbidden" ? null
+  : view.kind === "signed-in" ? { kind: "account", role: view.summary.roles.length === 1 ? roleNames[view.summary.roles[0]] : null } : { kind: "sign-in" };
 type Action = "google" | "email" | "accept" | "sign-out";
 const rolePath = (role: SessionSummary["roles"][number]) => role === "admin" ? "/workspace/admin/students" : `/workspace/${role}`;
 const roleTasks: Record<SessionSummary["roles"][number], string> = { student: "your assigned reading", parent: "your child’s preparation and practice", tutor: "the students you teach", admin: "students, people and setup" };
 const failure = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
 
-export function PortalEntry({ invitation = false, authenticationError = false, autoEnterStudent = true, inlineGoogle = false, googleIntent }: { invitation?: boolean; authenticationError?: boolean; autoEnterStudent?: boolean; inlineGoogle?: boolean; googleIntent?: GoogleIntent }) {
+/** `frontDoor` puts this same entry task inside the CRC Torah home's Beit Mitzvah door; invitation entry never gets doors. */
+export function PortalEntry({ invitation = false, authenticationError = false, autoEnterStudent = true, inlineGoogle = false, googleIntent, frontDoor = false }: { invitation?: boolean; authenticationError?: boolean; autoEnterStudent?: boolean; inlineGoogle?: boolean; googleIntent?: GoogleIntent; frontDoor?: boolean }) {
   const [view, setView] = useState<View>({ kind: "loading" });
   const [pending, setPending] = useState<Action | null>(null), [message, setMessage] = useState("");
   const [email, setEmail] = useState(""), [linkRequested, setLinkRequested] = useState(false);
@@ -93,18 +101,9 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
     : view.kind === "signed-in" ? autoEnterStudent ? "You’re signed in" : "Your account" : view.kind === "invitation" ? "Review your invitation" : view.kind === "accepted" ? "Invitation accepted"
       : view.kind === "invalid-invitation" ? "Invitation unavailable" : view.kind === "uncertain" ? "We couldn’t confirm the result" : "Access is unavailable";
 
-  return <div className="portal-shell">
-    <a className="skip-link" href="#portal-main">Skip to sign-in and access</a>
-    <header className="portal-header"><a className="portal-brand" href="/" aria-label="CRC Beit Mitzvah home">CRC Beit Mitzvah</a><span>Central Reform Congregation</span></header>
-    <main id="portal-main" className="entry-layout">
-      <div className="entry-introduction">
-        <h1>{invitation ? "Join your congregation’s practice" : "Open your reading"}</h1>
-        <p>{invitation ? "Review the access you’ve been invited to use. You choose whether to accept it." : "Your assigned passage is the starting point. Sign in with the account on your invitation."}</p>
-        <div className="entry-notes"><p>For students, parents and the people who teach them.</p><p>Parents use their own account to reach a linked child’s practice.</p></div>
-        {!invitation && <div className="hero-actions"><a className="button-hero-secondary" href="/read">Read this week’s Torah and haftarah</a><span className="field-help">Open to everyone, no sign-in needed.</span></div>}
-      </div>
-      <section className="entry-task" aria-labelledby="entry-title" aria-busy={view.kind === "loading" || pending !== null}>
-        <h2 id="entry-title" ref={heading} tabIndex={-1} aria-live="polite" aria-atomic="true">{title}</h2>
+  const doors = frontDoor && !invitation, TaskHeading = doors ? "h3" : "h2";
+  const task = <section className="entry-task" aria-labelledby="entry-title" aria-busy={view.kind === "loading" || pending !== null}>
+        <TaskHeading id="entry-title" ref={heading} tabIndex={-1} aria-live="polite" aria-atomic="true">{title}</TaskHeading>
         {view.kind === "sign-in" && authenticationError && !attemptedSignIn && <p className="request-error" role="alert">That sign-in attempt couldn’t be verified. Please try again.</p>}
         {message && <p className="request-error" role="alert">{message}</p>}
         {view.kind === "loading" && <p role="status">One moment while we check your access.</p>}
@@ -144,7 +143,22 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         {view.kind === "invalid-invitation" && <><p>This invitation may have changed, expired, already been accepted, or belong to another account. No new access has been added by this request.</p><p>Open the latest invitation email, or ask the congregation for a new invitation.</p><button type="button" className="button-primary" onClick={retry}>{message ? "Review invitation again" : "Check invitation again"}</button><a className="button-text" href="/">Check my access</a></>}
         {view.kind === "uncertain" && <><p>The request was interrupted. Your invitation may have been accepted. Check your access before trying again.</p><a className="button-primary" href="/">Check my access</a><button type="button" className="button-text" onClick={retry}>Review invitation again</button></>}
         {view.kind === "forbidden" && <><p>This account can’t use the requested access right now. Ask the congregation for help, or sign in with a different account.</p><button type="button" className="button-secondary" disabled={pending !== null} onClick={() => void action("sign-out")}>{pending === "sign-out" ? "Signing out…" : "Sign out"}</button></>}
-      </section>
+      </section>;
+  if (doors) {
+    return <FrontDoor account={frontDoorAccount(view)} onSignIn={() => heading.current?.focus({ preventScroll: true })}>{task}</FrontDoor>;
+  }
+
+  return <div className="portal-shell">
+    <a className="skip-link" href="#portal-main">Skip to sign-in and access</a>
+    <header className="portal-header"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a><span>Central Reform Congregation</span></header>
+    <main id="portal-main" className="entry-layout">
+      <div className="entry-introduction">
+        <h1>{invitation ? "Join your congregation’s practice" : "Open your reading"}</h1>
+        <p>{invitation ? "Review the access you’ve been invited to use. You choose whether to accept it." : "Your assigned passage is the starting point. Sign in with the account on your invitation."}</p>
+        <div className="entry-notes"><p>For students, parents and the people who teach them.</p><p>Parents use their own account to reach a linked child’s practice.</p></div>
+        {!invitation && <div className="hero-actions"><a className="button-hero-secondary" href="/read">Read this week’s Torah and haftarah</a><span className="field-help">Open to everyone, no sign-in needed.</span></div>}
+      </div>
+      {task}
     </main>
     <footer className="portal-footer"><span>Learning at Central Reform Congregation</span><span>Your account and reading stay private.</span></footer>
   </div>;

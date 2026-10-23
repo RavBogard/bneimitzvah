@@ -53,7 +53,7 @@ export function createMailTransport(input: { origin: string; apiKey: string; fro
           const response = await input.fetch("https://api.resend.com/emails", {
             method: "POST", redirect: "error", credentials: "omit", signal: controller.signal,
             headers: { authorization: `Bearer ${input.apiKey}`, "content-type": "application/json" },
-            body: JSON.stringify({ from: input.from, to: [message.email], subject: kind === "invitation" ? "Your CRC B'nei Mitzvah invitation" : "Sign in to CRC B'nei Mitzvah",
+            body: JSON.stringify({ from: input.from, to: [message.email], subject: kind === "invitation" ? "Your Beit Mitzvah invitation from CRC Torah" : "Sign in to CRC Torah",
               text: `Open this link to ${kind === "invitation" ? "review your invitation" : "sign in"}:\n\n${link}\n\nIf you did not request this message, you can ignore it.` }),
           });
           // No provider body/header/ID escapes, even on errors; do not buffer it.

@@ -8,7 +8,7 @@ test("the public reading is open to signed-out visitors, never asks for a sessio
   const response = await page.goto("/read");
   expect(response?.status()).toBe(200);
   expect(response?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
-  await expect(page).toHaveTitle("This week’s reading | CRC Beit Mitzvah");
+  await expect(page).toHaveTitle("This week’s reading | CRC Torah");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   await expect(page.getByRole("link", { name: "Sign in", exact: true }).first()).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Reading unavailable", exact: true })).toBeVisible();
@@ -23,5 +23,5 @@ test("the public reading is open to signed-out visitors, never asks for a sessio
   expect(await robots.text()).toMatch(/User-Agent: \*\s+Disallow: \//i);
   const home = await page.goto("/");
   expect(home?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
-  await expect(page.getByRole("link", { name: "Read this week’s Torah and haftarah", exact: true })).toHaveAttribute("href", "/read");
+  await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveAttribute("href", "/read");
 });
