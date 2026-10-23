@@ -77,7 +77,8 @@ export function startOfflineRuntime() {
       if (document.visibilityState !== "visible") { hiddenAt = Date.now(); return; }
       if (hiddenAt && Date.now() - hiddenAt >= REOPEN_MS) { hiddenAt = 0; void keepPersisted().then(open); }
     });
-    window.addEventListener("online", () => { void open(); });
+    let online: ReturnType<typeof setTimeout> | undefined;
+    window.addEventListener("online", () => { clearTimeout(online); online = setTimeout(() => { void open(); }, 5000); });
   })();
 }
 

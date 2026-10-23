@@ -6,8 +6,8 @@ import type { ShortReferenceSource } from "../reference-audio/short-source";
 import { coursePassages } from "../../components/learn/verses-api";
 import { parsePublicRefReading, parsePublicShortPage, parsePublicTextPage, parsePublicWeek, refSource, weekSource, type PublicSource } from "../../components/portal/public-reading/api";
 import { publicReadingPath, publicShortPath, publicTextPath } from "../../components/portal/public-reading/urls";
-import { BUDGET, OFFLINE_CACHE, OFFLINE_HEADER, PACK_CONCURRENCY, packAssetAllowed, WINDOW_MS, type Pack, type PackDescriptor } from "./policy";
-import { assetKey, packingStarted, purgeGeneration, readIndex, refreshOfflineState, setOfflineState, sweep, trackPacking, writeIndex, type PackState } from "./pack-index";
+import { BUDGET, OFFLINE_CACHE, RENEW_AFTER_MS, OFFLINE_HEADER, PACK_CONCURRENCY, packAssetAllowed, WINDOW_MS, type Pack, type PackDescriptor } from "./policy";
+import { assetKey, inspectPack, packingStarted, purgeGeneration, readIndex, refreshOfflineState, setOfflineState, sweep, trackPacking, writeIndex, type PackState } from "./pack-index";
 
 /**
  * The packer (§3.3–§3.5). It runs in the page, never the worker, and only in the installed app on the torah origin.
@@ -111,7 +111,6 @@ export async function renewPack(io: PackerIo, descriptor: PackDescriptor, signal
     if (purgeGeneration() !== generation || signal.aborted) throw new PackStopped("purged");
     await cache.put(io.origin + key, response);
   };
-  for (const [key, response] of plan.json) await put(key, response);
   await pool(missing, async source => {
     if (purgeGeneration() !== generation || signal.aborted) throw new PackStopped("purged");
     const url = io.origin + source.path;
@@ -126,6 +125,8 @@ export async function renewPack(io: PackerIo, descriptor: PackDescriptor, signal
     catch { throw new PackStopped("failed"); }
     await put(source.path, original);
   });
+  // The JSON goes in only once every clip it names is stored, so a failed renewal never leaves new pages over old clips.
+  for (const [key, response] of plan.json) await put(key, response);
   const assets = [...plan.json.keys(), ...plan.clips.keys()];
   if (!assets.every(packAssetAllowed)) throw new PackStopped("failed");
   if (purgeGeneration() !== generation || signal.aborted) throw new PackStopped("purged");
@@ -148,7 +149,12 @@ export async function openOffline(io: PackerIo & { locks?: Locks | null }) {
     const cache = await io.caches.open(OFFLINE_CACHE);
     await sweep(cache, io.now(), pack => pack.descriptor.type !== "week" || pack.key === weekKey);
     await refreshOfflineState(io.now(), weekKey);
+    const fresh = await readIndex(cache);
     for (const [name, descriptor] of [["week", { type: "week", date }], ["course", { type: "course" }]] as const) {
+      // A complete pack renewed in the last 12 hours is left alone, so moving between pages never re-asks the public routes
+      // (their firewall allows 120 requests a minute per address). Decided here: renewal is at most twice a day.
+      const current = fresh.packs.find(pack => pack.key === (name === "week" ? weekKey : "course"));
+      if (current && io.now() - current.renewedAt < RENEW_AFTER_MS && await inspectPack(cache, current, io.now(), io.origin) === "saved") continue;
       setOfflineState({ [name]: "saving" });
       try { await renewPack(io, descriptor, controller.signal); }
       catch (error) {

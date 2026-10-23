@@ -23,6 +23,15 @@ export function subscribeOfflineState(listener: () => void) { listeners.add(list
 /** Bumped by a purge: a pack in progress checks it before every write and stops. */
 let generation = 0, running: AbortController | null = null, work: Promise<unknown> | null = null;
 export const purgeGeneration = () => generation;
+/** A sign-out in one tab stops a pack running in every other tab of this origin. */
+const PURGE_CHANNEL = "crc-offline-purge";
+let channel: BroadcastChannel | null = null;
+try {
+  if (typeof BroadcastChannel !== "undefined") {
+    channel = new BroadcastChannel(PURGE_CHANNEL);
+    channel.onmessage = event => { if (event.data === "purge") { generation += 1; running?.abort(); running = null; } };
+  }
+} catch { channel = null; }
 export function packingStarted(): AbortController { running?.abort(); running = new AbortController(); return running; }
 /** The pack in progress, so a purge can wait for it to stop before it deletes. */
 export function trackPacking<T>(promise: Promise<T>): Promise<T> { work = promise; void promise.finally(() => { if (work === promise) work = null; }).catch(() => {}); return promise; }
@@ -51,9 +60,9 @@ export async function sweep(cache: Cache, now: number, keep: (pack: Pack) => boo
 }
 
 /** Saved, partly saved (an asset was evicted) or nothing, from what the cache actually holds. */
-export async function inspectPack(cache: Cache, pack: Pack | undefined, now: number): Promise<PackState> {
+export async function inspectPack(cache: Cache, pack: Pack | undefined, now: number, origin = location.origin): Promise<PackState> {
   if (!pack || !packLive(pack, now)) return null;
-  for (const asset of pack.assets) if (!await cache.match(new URL(asset, location.origin).href, { ignoreVary: true })) return "partial";
+  for (const asset of pack.assets) if (!await cache.match(new URL(asset, origin).href, { ignoreVary: true })) return "partial";
   return "saved";
 }
 /** The state the page shows, recomputed from the stored index; `savedUntil` is This week's expiry. */
@@ -81,6 +90,7 @@ export async function savedPacks(now = Date.now()): Promise<readonly Pack[]> {
  */
 export async function purgeOffline(): Promise<void> {
   generation += 1; running?.abort(); running = null;
+  try { channel?.postMessage("purge"); } catch { /* No other tabs to tell. */ }
   setOfflineState({ week: null, course: null, savedUntil: null });
   const storage = cacheStorage(); if (!storage) return;
   try { await storage.delete(OFFLINE_CACHE); } catch { /* Nothing more to do here. */ }

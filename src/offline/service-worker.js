@@ -10,6 +10,7 @@
  * so a purge or a renewal by the page takes effect at once.
  */
 const STATIC_PATH = new RegExp(POLICY.staticPath);
+const STATIC_UNSAFE = new RegExp(POLICY.staticUnsafe, "i");
 const CLIP_PATH = new RegExp(POLICY.clipPath);
 const PACK_DATA_PATH = new RegExp(POLICY.packDataPath);
 const OWN_ORIGIN = self.location.origin;
@@ -41,12 +42,14 @@ async function readIndex(cache) {
 }
 async function withLock(action) {
   const locks = self.navigator && self.navigator.locks;
-  return locks && typeof locks.request === "function" ? locks.request("crc-offline", action) : action();
+  // Only when the page is not packing: activation never waits behind a long pack, and the page sweeps at its next open.
+  return locks && typeof locks.request === "function" ? locks.request("crc-offline", { ifAvailable: true }, lock => lock ? action() : undefined) : action();
 }
 
 /** Drops expired packs and the assets only they held. Orphans with no pack at all are the page's sweep, under the same lock. */
 async function sweep(now) {
   await withLock(async () => {
+    if (!await caches.has(POLICY.offlineCache)) return;
     const cache = await caches.open(POLICY.offlineCache), index = await readIndex(cache);
     if (!index) return;
     const kept = index.packs.filter(pack => live(pack, now)), dropped = index.packs.filter(pack => !live(pack, now));
@@ -112,6 +115,8 @@ async function activate() {
 
 /** A packed asset, only while some live pack lists it; marked so the page can say it is offline. */
 async function fromPack(url) {
+  // Never reopen (and so recreate) a pack cache a purge deleted.
+  if (!await caches.has(POLICY.offlineCache)) return null;
   const cache = await caches.open(POLICY.offlineCache), index = await readIndex(cache), key = url.pathname + url.search, now = Date.now();
   if (!index || !index.packs.some(pack => live(pack, now) && pack.assets.includes(key))) return null;
   const hit = await cache.match(url.href, { ignoreVary: true });
@@ -156,7 +161,7 @@ function onFetch(event) {
   try { url = new URL(request.url); } catch { return; }
   if (url.origin !== OWN_ORIGIN || request.method !== "GET" || request.headers.has("range")) return;
   if (request.mode === "navigate") return event.respondWith(navigate(request, url));
-  if (STATIC_PATH.test(url.pathname)) return event.respondWith(appCode(request));
+  if (STATIC_PATH.test(url.pathname) && !STATIC_UNSAFE.test(url.pathname)) return event.respondWith(appCode(request));
   if (CLIP_PATH.test(url.pathname) && url.search === "") return event.respondWith(clip(request, url));
   if (PACK_DATA_PATH.test(url.pathname) && url.search.length > 1) return event.respondWith(packData(request, url));
   if (url.pathname === POLICY.manifestPath && url.search === "") return event.respondWith(manifest(request));

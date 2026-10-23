@@ -96,6 +96,7 @@ describe("routing is the complete allowlist", () => {
       "/reference-audio/voice/alto.mp3", "/workspace/student/recordings.json", "/sw.js", INDEX_KEY]) {
       expect(await w.request(path), path).toBeNull();
     }
+    for (const path of ["/_next/static/..%2Fapi%2Fsession", "/_next/static/%2e%2e/api/session", "/_next/static/../api/session", "/fonts//x.woff2", "/_next/static/a%5Cb.js"]) expect(await w.request(path), path).toBeNull();
     expect(await w.request(DATA, { method: "POST", body: "{}" })).toBeNull();
     expect(await w.request(CLIP, { headers: { range: "bytes=0-1" } })).toBeNull();
     expect(await w.request(DATA, {}, "https://beitmitzvah.centralreform.org")).toBeNull();
@@ -147,6 +148,15 @@ describe("packed assets are served only from a live pack", () => {
     }
     const skew = await load(); await seed(skew.caches, [pack(now + SKEW_MS - 60_000, [DATA])]);
     expect((await skew.request(DATA))!.headers.get(OFFLINE_HEADER)).toBe("1");
+  });
+  test("after a purge the worker serves nothing and never recreates the pack cache", async () => {
+    const w = await load();
+    await seed(w.caches, [pack(Date.now(), [DATA, CLIP])]);
+    await w.caches.delete(OFFLINE_CACHE);
+    await expect(w.request(CLIP)).rejects.toThrow();
+    await expect(w.request(DATA)).rejects.toThrow();
+    await w.lifecycle("activate");
+    expect(await w.caches.has(OFFLINE_CACHE)).toBe(false);
   });
   test("G3: a generated, voice, Finkel or recording path is never served, even if it is in the cache and listed", async () => {
     const generated = ["/reference-audio/generated/" + "c".repeat(64) + ".mp3", "/api/public/reference/finkel/media/" + "c".repeat(64) + ".mp3", "/api/students/s1/recordings/r1", "/reference-audio/voice/v.mp3", "/api/public/chant?ref=Genesis+1%3A1"];

@@ -14,7 +14,7 @@ import { thisShabbat } from "../../src/lib/readings/public-shabbat";
 import { syntheticResponse } from "../helpers/study";
 import { syntheticCommentaryFetch } from "../helpers/commentary";
 import { publicShortFixture, byteStream } from "./reference-public-short-fixture";
-import { PackStopped, renewPack, type PackerIo } from "../../src/lib/offline/packer";
+import { openOffline, PackStopped, renewPack, type PackerIo } from "../../src/lib/offline/packer";
 import { readIndex, sweep } from "../../src/lib/offline/pack-index";
 import { INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, packAssetAllowed, WINDOW_MS, type Pack } from "../../src/lib/offline/policy";
 import { publicReadingPath, publicShortPath, publicTextPath } from "../../src/components/portal/public-reading/urls";
@@ -127,6 +127,19 @@ describe("This week", () => {
     h.setMarked(false);
     await renewPack(h.io, { type: "week", date }, signal());
     expect((await packs(h))[0].renewedAt).toBe(first + 3 * 86_400_000);
+  });
+  test("an open within 12 hours of a complete renewal asks the public routes nothing (their firewall limit); after that it renews", async () => {
+    const h = await harness(), first = Date.parse("2026-10-21T15:00:00Z");
+    await openOffline({ ...h.io, origin });
+    const count = h.requests.length;
+    expect((await packs(h)).map(row => row.key).sort()).toEqual(["course", `week:${thisShabbat(first)}`].sort());
+    h.setNow(first + 11 * 3_600_000);
+    await openOffline(h.io);
+    expect(h.requests.length).toBe(count);
+    h.setNow(first + 13 * 3_600_000);
+    await openOffline(h.io);
+    expect(h.requests.length).toBeGreaterThan(count);
+    expect((await packs(h)).every(row => row.renewedAt === first + 13 * 3_600_000)).toBe(true);
   });
   test("the sweep drops expired packs, last week's pack and every asset no live pack lists", async () => {
     const h = await harness(), now = Date.parse("2026-10-21T15:00:00Z");

@@ -20,6 +20,8 @@ export const DAY_MS = 86_400_000;
 export const WINDOW_MS = 14 * DAY_MS;
 /** Clock-skew allowance before renewedAt; a clock set further back makes the pack expired. */
 export const SKEW_MS = 5 * 60_000;
+/** A complete pack renewed more recently than this is not renewed again on an open (firewall: 120 /api/public requests a minute). */
+export const RENEW_AFTER_MS = 12 * 60 * 60_000;
 /** Becoming visible after this long hidden counts as an open (§3.3). */
 export const REOPEN_MS = 60 * 60_000;
 /** Pack only while usage + needed stays under min(0.8 × quota, 300 MB) (§3.5). */
@@ -36,6 +38,8 @@ export const HINT_DISMISSED_KEY = "crc.offline.install-dismissed";
 export const SHELL_BASE_PAGES: readonly string[] = Object.freeze(["/read", "/offline", "/learn", "/learn/about", "/learn/review"]);
 /** App code: cache-first into the shell cache. */
 export const STATIC_PATH = /^\/(?:_next\/static|fonts)\//;
+/** Never app code, whatever its prefix: an encoded slash, backslash or dot segment. */
+export const STATIC_UNSAFE = /%2f|%5c|%2e|\/\.\.?(?:\/|$)|\/\//i;
 /** PocketTorah short clips only (G3): exactly the content-addressed short-v1 path, no query. */
 export const CLIP_PATH = /^\/reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$/;
 /** The public reading routes a pack may hold (§3.2): reading, text and short-reference pages. */
@@ -100,7 +104,7 @@ export function workerPolicy(input: { build: string; enabled: boolean; shellPage
     shellCache: SHELL_CACHE_PREFIX + (/^[a-z0-9]{1,64}$/i.test(input.build) ? input.build : "dev"), shellPrefix: SHELL_CACHE_PREFIX,
     offlineCache: OFFLINE_CACHE, family: CACHE_FAMILY, indexKey: INDEX_KEY, header: OFFLINE_HEADER, windowMs: WINDOW_MS, skewMs: SKEW_MS,
     shellPages: Object.freeze([...input.shellPages]), shellAssets: [MANIFEST_PATH], shellLimits: SHELL_LIMITS, manifestPath: MANIFEST_PATH,
-    staticPath: STATIC_PATH.source, clipPath: CLIP_PATH.source, packDataPath: PACK_DATA_PATH.source,
+    staticPath: STATIC_PATH.source, staticUnsafe: STATIC_UNSAFE.source, clipPath: CLIP_PATH.source, packDataPath: PACK_DATA_PATH.source,
   });
 }
 export type WorkerPolicy = ReturnType<typeof workerPolicy>;
