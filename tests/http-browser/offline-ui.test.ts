@@ -109,6 +109,10 @@ it("one online visit saves this week; offline, the reading opens from the shell,
   // The manifest and the Apple icon are linked in the installed app on this origin.
   await ui(tab.locator('link[rel="manifest"][href="/api/public/manifest"]')).toHaveCount(1);
   await saved(tab);
+  // The worker is active and controls the page now; this visit fills any build file the install did not name.
+  await tab.goto("/read", { waitUntil: "load" });
+  await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
+  await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
   const index = await pack(tab);
   expect(index?.packs.map(row => row.key).sort()).toEqual(expect.arrayContaining([expect.stringMatching(/^week:/)]));
   expect(index!.packs.flatMap(row => row.assets).every(asset => /^\/(?:api\/public\/(?:reading|text|reference\/short)\?|reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$)/.test(asset))).toBe(true);
@@ -172,9 +176,11 @@ async function answer(tab: Page) {
 it("the Learn to lein course works offline: a lesson finished offline reaches the account when the app is back online", async () => {
   const { tab, offline } = await installed({ course: true });
   await signIn(tab, "pg-admin@example.test");
+  await ui(tab.getByText("Saved on this device", { exact: true })).toBeVisible({ timeout: 150_000 });
   await expect.poll(async () => (await pack(tab))?.packs.some(row => row.key === "course") ?? false, { timeout: 150_000 }).toBe(true);
+  await expect.poll(() => tab.evaluate(() => navigator.serviceWorker.controller !== null), { timeout: 30_000 }).toBe(true);
   // The course page itself once online, so its build files are in the shell too.
-  await tab.goto("/learn/torah-sof-pasuk", { waitUntil: "domcontentloaded" });
+  await tab.goto("/learn/torah-sof-pasuk", { waitUntil: "load" });
   await ui(tab.locator("main[data-step=hear]")).toBeVisible({ timeout: 30_000 });
 
   await offline(true);

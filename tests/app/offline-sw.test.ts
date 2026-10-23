@@ -172,13 +172,13 @@ describe("install, activate and the tombstone", () => {
     const w = await load({ fetch: async request => {
       requests.push(request);
       const path = new URL(request.url).pathname;
-      if (path === "/read") return basic(new Response('<script src="/_next/static/chunks/a.js?dpl=1&amp;x=2"></script><link rel="stylesheet" href="/_next/static/css/b.css">', { headers: { "content-type": "text/html" } }));
+      if (path === "/read") return basic(new Response('<script src="/_next/static/chunks/a.js?dpl=1&amp;x=2"></script><link rel="stylesheet" href="/_next/static/css/b.css"><script>self.list=["static/chunks/c.js"]</script>', { headers: { "content-type": "text/html" } }));
       if (path.endsWith(".css")) return basic(new Response("@font-face{src:url(/fonts/noto/x.woff2)}", { headers: { "content-type": "text/css" } }));
       return basic(new Response(path.startsWith("/api/") ? "{}" : "<p></p>", { headers: { "content-type": "text/html" } }));
     } });
     await w.lifecycle("install");
     const shell = await w.caches.open("crc-shell-abc1234");
-    for (const path of ["/read", "/offline", "/learn", "/learn/torah-sof-pasuk", "/api/public/manifest", "/_next/static/chunks/a.js?dpl=1&x=2", "/_next/static/css/b.css", "/fonts/noto/x.woff2"]) expect(shell.entries.has(ORIGIN + path), path).toBe(true);
+    for (const path of ["/read", "/offline", "/learn", "/learn/torah-sof-pasuk", "/api/public/manifest", "/_next/static/chunks/a.js?dpl=1&x=2", "/_next/static/css/b.css", "/_next/static/chunks/c.js", "/fonts/noto/x.woff2"]) expect(shell.entries.has(ORIGIN + path), path).toBe(true);
     expect(requests.every(request => request.credentials === "omit")).toBe(true);
     expect([...shell.entries.keys()].some(key => key.includes("/api/") && !key.endsWith("/api/public/manifest"))).toBe(false);
   });

@@ -61,11 +61,14 @@ async function sweep(now) {
 }
 
 const ASSET = /(?:\/_next\/static\/|\/fonts\/)[^"'()\s\\<>`]+/g;
+/** Chunk lists in inline bootstrap data name build files without the /_next prefix. */
+const BARE_ASSET = /(?<![\w/.-])static\/(?:chunks|css|media)\/[^"'()\s\\<>`]+/g;
 const CSS_URL = /url\(\s*['"]?([^'")\s]+)['"]?\s*\)/g;
 /** Same-origin app-code paths named in a page or a stylesheet. */
 function staticPaths(text, base) {
   const out = [];
   for (const match of text.matchAll(ASSET)) out.push(match[0].replace(/&amp;/g, "&"));
+  for (const match of text.matchAll(BARE_ASSET)) out.push("/_next/" + match[0].replace(/&amp;/g, "&"));
   for (const match of text.matchAll(CSS_URL)) {
     try { const url = new URL(match[1], base); if (url.origin === OWN_ORIGIN && STATIC_PATH.test(url.pathname)) out.push(url.pathname + url.search); } catch { /* Not a URL. */ }
   }
