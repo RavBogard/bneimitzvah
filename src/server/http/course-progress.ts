@@ -3,7 +3,8 @@ import type { HttpRuntime } from "../runtime/composition";
 import { readJsonBody } from "./body";
 import { requireCookieMutation } from "./mutations";
 import { uniqueQuery } from "./query";
-import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
+import { errorResponse, HttpBoundaryError, privateHeaders, privateJson, type JsonValue } from "./responses";
+import { CourseRefused } from "../course-progress/access";
 
 /**
  * A member's own Learn to lein progress (plan, slice 3). Never under /api/public/ (that runtime has no
@@ -30,5 +31,12 @@ export async function handleCourseProgressRequest(request: Request, runtime: Htt
       result = pathname === "/api/learn/progress/put" ? await service.put(request, body) : await service.merge(request, body);
     }
     return privateJson(result as unknown as JsonValue, result.ok ? 200 : 409);
-  } catch (error) { return errorResponse(error); }
+  } catch (error) {
+    // A verified membership without course progress: the 403 names its own owner, and only to it.
+    if (error instanceof CourseRefused) {
+      const headers = privateHeaders(); headers.set("content-type", "application/json; charset=utf-8");
+      return new Response(JSON.stringify({ error: "forbidden", owner: error.owner }), { status: 403, headers });
+    }
+    return errorResponse(error);
+  }
 }

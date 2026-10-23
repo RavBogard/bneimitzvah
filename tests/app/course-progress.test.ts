@@ -118,8 +118,14 @@ describe("signed-in course progress", () => {
     // The learner's document is untouched by the Member's writes, and neither sees the other's.
     expect((await t.call("/api/learn/progress", "learner")).json).toMatchObject({ version: 1, progress: theirs });
     expect((await t.call("/api/learn/progress", "member")).json).toMatchObject({ version: 2, progress: merged.json.progress });
-    // An ended membership is refused, and its row stays the owner's alone.
-    expect((await t.call("/api/learn/progress/put", "ended", { progress: mine, expectedVersion: 0 })).status).toBe(403);
+    // An ended membership is refused, naming only its own owner; no membership at all names none.
+    const ended = await t.call("/api/learn/progress/put", "ended", { progress: mine, expectedVersion: 0 });
+    expect(ended.status).toBe(403);
+    expect(Object.keys(ended.json).sort()).toEqual(["error", "owner"]);
+    expect(ended.json.owner).toMatch(/^[a-f0-9]{32}$/);
+    expect([empty.json.owner, (await t.call("/api/learn/progress", "learner")).json.owner]).not.toContain(ended.json.owner);
+    expect((await t.call("/api/learn/progress", "ended")).json.owner).toBe(ended.json.owner);
+    for (const who of ["recipient", "disabled", "anonymous"] as const) expect(Object.keys((await t.call("/api/learn/progress", who)).json), who).toEqual(["error"]);
     expect(await t.f.owner(async () => (await t.f.db.select().from(s.courseProgressTable)).length)).toBe(2);
   });
 

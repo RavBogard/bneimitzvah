@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
@@ -9,6 +10,20 @@ import { courseEligibility } from "../data/course-progress";
 /** The verified owner of a member's course progress, fixed for one request. */
 export type CourseOwner = Readonly<{ tenantId: string; membershipId: string; userId: string; sessionExpiresAt: number }>;
 export type CourseIntent = "read" | "data-write";
+/**
+ * An opaque, stable name for this member's account, so a browser can tell whose progress it holds (a
+ * shared device must never fold one member's progress into another's). It is a hash, not an id, and it
+ * is only ever returned to the member themself.
+ */
+export const courseOwnerName = (owner: Pick<CourseOwner, "tenantId" | "membershipId">) =>
+  createHash("sha256").update(`learn-progress-owner/v1:${owner.tenantId}:${owner.membershipId}`).digest("hex").slice(0, 32);
+/**
+ * A verified membership that does not keep course progress now. Its 403 carries that membership's own owner
+ * name, so the browser keeps a copy that is theirs and clears one that is someone else's (a shared device).
+ */
+export class CourseRefused extends AccessDenied {
+  constructor(readonly owner: string) { super(403); this.name = "CourseRefused"; }
+}
 
 /**
  * The only place that sets app.course_owner (a structural test holds this), on the saved layer's model
@@ -25,7 +40,7 @@ export function createCourseProgressAccess<Q extends PgQueryResultHKT>(input: { 
     if (intent !== "read" && intent !== "data-write") throw new AccessDenied(403);
     return input.access.withVerifiedIdentity(request, { intent, mutation: intent !== "read" }, async (tx, identity) => {
       if (!identity.membership) throw new AccessDenied(403);
-      if (!await courseEligibility(tx, identity.tenantId, identity.membership.id)) throw new AccessDenied(403);
+      if (!await courseEligibility(tx, identity.tenantId, identity.membership.id)) throw new CourseRefused(courseOwnerName({ tenantId: identity.tenantId, membershipId: identity.membership.id }));
       await tx.execute(sql`select set_config('app.course_owner', ${identity.membership.id}, true)`);
       const owner: CourseOwner = Object.freeze({ tenantId: identity.tenantId, membershipId: identity.membership.id, userId: identity.userId,
         sessionExpiresAt: identity.sessionExpiresAt.getTime() });

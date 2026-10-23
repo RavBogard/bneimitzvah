@@ -145,13 +145,15 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
       }
       return { ok: true as const, memberId: result.memberId };
     },
-    /** Decline: the request is removed and nothing is sent. Not one's own request either, as with approve. */
+    /**
+     * Decline: the request is removed and nothing is sent. One's own request may be declined: it grants nothing, and it
+     * is how an approver who asked before gaining a role clears it (a lone admin has no one else to).
+     */
     async decline(request: Request, supplied: unknown) {
       const value = validate.decision(supplied);
       return withApprover(request, value.mode, "manage-accounts", async (tx, actor) => {
         const pending = await data.lockRequest(tx, actor.tenantId, value.requestId);
         if (!pending) throw new AccessDenied(404);
-        if (pending.userId === actor.userId) return failed("own-request");
         if (!await data.deleteRequest(tx, actor.tenantId, pending.id)) throw new Error("Account request unavailable");
         await data.audit(tx, actor, "account-request.decline", "account_request", pending.id, randomUUID());
         return { ok: true as const };
