@@ -7,7 +7,7 @@ async function session(page: Page, answer: { status: number; body: unknown }) {
   await page.route("**/api/session", route => route.fulfill({ status: answer.status, contentType: "application/json", body: JSON.stringify(answer.body) }));
 }
 const signedOut = { status: 401, body: { error: "unauthenticated" } };
-const roles = (list: string[]) => ({ status: 200, body: { membershipAvailable: list.length > 0, roles: list, saved: list.some(role => role !== "student"), sessionBinding: binding } });
+const roles = (list: string[]) => ({ status: 200, body: { membershipAvailable: list.length > 0, roles: list, saved: list.some(role => role !== "student"), approver: false, sessionBinding: binding } });
 async function week(page: Page) {
   await page.route("**/api/public/reading?*", route => {
     const date = new URL(route.request().url()).searchParams.get("date");

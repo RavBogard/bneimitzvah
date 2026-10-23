@@ -121,3 +121,57 @@ export function createNotificationTransport(input: { origin: string; apiKey: str
     finally { if (timer) clearTimeout(timer); controller.abort(); }
   };
 }
+
+/**
+ * Release 1.4's two account emails, the only ones (accounts plan section 4). The transport writes every word itself:
+ * callers give a kind, one verified recipient, the congregation's own names and an idempotency key, never a URL,
+ * a requester's name or their purpose, so a request cannot relay text to staff. Its one link is a fixed path on
+ * this origin. Outside production (`enabled` false) it hands nothing to the provider and answers "skipped".
+ */
+export type AccountMailKind = "account-request" | "account-approved";
+export type AccountMailOutcome = NotificationOutcome | "skipped";
+const ACCOUNT_LINKS: Readonly<Record<AccountMailKind, string>> = { "account-request": "/workspace/accounts", "account-approved": "/" };
+const plainName = (value: unknown) => typeof value === "string" && value.length >= 1 && value.length <= 120 && value === value.trim() && !/[\x00-\x1f\x7f-\x9f\u00ad\u061c\u115f\u1160\u200b-\u200d\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\u3164\ufeff\uffa0\u{e0000}-\u{e007f}<>@]/u.test(value);
+export function accountMailText(kind: AccountMailKind, origin: string, tenant: Readonly<{ name: string; productName: string }>) {
+  const link = `${origin}${ACCOUNT_LINKS[kind]}`;
+  return kind === "account-request"
+    ? { subject: `An account request for ${tenant.productName}`,
+      text: `Someone has asked for a ${tenant.productName} account.\n\nReview account requests: ${link}\n\nYou receive this because you approve accounts for ${tenant.name}.` }
+    : { subject: `Your ${tenant.productName} account is ready`,
+      text: `Your account request was approved. Sign in with this email address to save readings and keep your own translation and notes.\n\n${link}\n\nIf you did not ask for an account, you can ignore this email.` };
+}
+export function createAccountMailTransport(input: { origin: string; apiKey: string; from: string; fetch: typeof globalThis.fetch; enabled: boolean; timeoutMs?: number }) {
+  const timeout = input.timeoutMs ?? 5000;
+  try {
+    const origin = new URL(input.origin);
+    if (origin.origin !== input.origin || origin.username || origin.password || !["http:", "https:"].includes(origin.protocol) || typeof input.enabled !== "boolean"
+      || !mailbox(input.from) || !/^re_[A-Za-z0-9_-]{8,256}$/.test(input.apiKey) || !Number.isInteger(timeout) || timeout < 1 || timeout > 10000) throw 0;
+  } catch { throw new RuntimeUnavailable(); }
+  return async (kind: AccountMailKind, to: string, tenant: Readonly<{ name: string; productName: string }>, idempotencyKey: string): Promise<AccountMailOutcome> => {
+    try {
+      if (!Object.hasOwn(ACCOUNT_LINKS, kind) || !mailbox(to) || !plainName(tenant?.name) || !plainName(tenant?.productName) || typeof idempotencyKey !== "string" || !UUID.test(idempotencyKey)) return "rejected";
+    } catch { return "rejected"; }
+    // Tests, local and preview deployments never reach a real person.
+    if (!input.enabled) return "skipped";
+    const message = accountMailText(kind, input.origin, tenant), controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined, refused = false, accepted = false;
+    try {
+      await Promise.race([
+        (async () => {
+          const response = await input.fetch("https://api.resend.com/emails", {
+            method: "POST", redirect: "error", credentials: "omit", signal: controller.signal,
+            headers: { authorization: `Bearer ${input.apiKey}`, "content-type": "application/json", "idempotency-key": idempotencyKey },
+            body: JSON.stringify({ from: input.from, to: [to], subject: message.subject, text: message.text }),
+          });
+          accepted = response.ok && !response.redirected && (!response.url || response.url === "https://api.resend.com/emails");
+          refused = !accepted && response.status >= 400 && response.status < 500 && !response.redirected;
+          await response.body?.cancel().catch(() => {});
+          if (!accepted) throw 0;
+        })(),
+        new Promise<never>((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new RuntimeUnavailable()); }, timeout); }),
+      ]);
+      return "sent";
+    } catch { return accepted ? "sent" : refused ? "rejected" : "unknown"; }
+    finally { if (timer) clearTimeout(timer); controller.abort(); }
+  };
+}

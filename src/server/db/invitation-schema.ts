@@ -10,7 +10,8 @@ export const invitationThrottle = pgTable("invitation_throttle", {
 }, (t) => [
   unique("invitation_throttle_tenant_id_key").on(t.tenantId, t.id),
   unique("invitation_throttle_bucket_key").on(t.tenantId, t.scope, t.key, t.bucketStart),
-  check("invitation_throttle_scope", sql`${t.scope} in ('actor','recipient')`),
+  // account-request: a requester's own requests per day; account-mail: request emails per congregation per hour (release 1.4).
+  check("invitation_throttle_scope", sql`${t.scope} in ('actor','recipient','account-request','account-mail')`),
   check("invitation_throttle_hash", sql`${t.key} ~ '^[a-f0-9]{64}$'`),
   check("invitation_throttle_positive", sql`${t.count} > 0 and ${t.bucketStart} >= 0`),
 ]);

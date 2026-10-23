@@ -65,7 +65,7 @@ describe("private portal read DTOs and recipient invitation review", () => {
     const f = await fixture();
     expect(await denied(() => f.portal.sessionSummary(f.http("multi", undefined, { cookie: "" })), 401)).toBe(true);
     const empty = await f.portal.sessionSummary(f.http("recipient"));
-    expect(!empty.membershipAvailable && empty.roles.length === 0 && !empty.saved && Object.keys(empty).sort().join() === "membershipAvailable,roles,saved,sessionBinding").toBe(true);
+    expect(!empty.membershipAvailable && empty.roles.length === 0 && !empty.saved && !empty.approver && Object.keys(empty).sort().join() === "approver,membershipAvailable,roles,saved,sessionBinding").toBe(true);
     const summary = await f.portal.sessionSummary(f.http());
     expect(summary.membershipAvailable && summary.roles.join() === "parent,tutor" && summary.saved && !JSON.stringify(summary).includes("@")).toBe(true);
     const other = await f.portal.sessionSummary(f.http("multi", undefined, { origin: "http://localhost:3101" }));

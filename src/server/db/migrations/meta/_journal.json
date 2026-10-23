@@ -267,6 +267,13 @@
       "when": 1792769694341,
       "tag": "0037_course_progress",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792783382502,
+      "tag": "0038_account_requests",
+      "breakpoints": true
     }
   ]
 }

@@ -25,6 +25,18 @@ const adminRules: Record<AdminCapability, { fresh: boolean; intent: LockIntent }
   "read-guides": { fresh: false, intent: "read" },
 };
 
+/**
+ * Release 1.4 accounts (plan section 2b). Admins approve; so may a tutor an admin designated, which the accounts
+ * service checks under its own share lock on top of this tutor actor. Only an admin manages approvers, with a fresh
+ * session. None of these is a new mode: an approver is a tutor, a member is no mode at all.
+ */
+type AccountsCapability = "read-accounts" | "manage-accounts" | "manage-approvers";
+const accountsRules: Record<AccountsCapability, { fresh: boolean; intent: LockIntent; modes: readonly ("admin" | "tutor")[] }> = {
+  "read-accounts": { fresh: false, intent: "read", modes: ["admin", "tutor"] },
+  "manage-accounts": { fresh: false, intent: "authority-write", modes: ["admin", "tutor"] },
+  "manage-approvers": { fresh: true, intent: "authority-write", modes: ["admin"] },
+};
+
 const studentView = (row: StudentView): StudentView => Object.freeze({
   id: row.id, firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate, rehearsal1: row.rehearsal1, rehearsal2: row.rehearsal2, serviceSlot: row.serviceSlot, revision: row.revision,
 });
@@ -95,12 +107,23 @@ export function createAccessService<Q extends PgQueryResultHKT>(input: {
     });
   }
 
+  async function withAccountsCapability<T>(request: AccessRequest, selection: { mode: ActiveMode; capability: AccountsCapability }, action: (tx: AccessTransaction<Q>, actor: Actor) => Promise<T>) {
+    if (!Object.hasOwn(accountsRules, selection.capability)) throw new AccessDenied(403);
+    const rule = accountsRules[selection.capability];
+    if (!(rule.modes as readonly string[]).includes(selection.mode)) throw new AccessDenied(403);
+    return withActor(request, selection.mode, rule.intent, rule.fresh, async (tx, actor) => {
+      if (!(rule.modes as readonly string[]).includes(actor.mode)) throw new AccessDenied(403);
+      return action(tx, actor);
+    });
+  }
+
   return Object.freeze({
     // Callback APIs are INTERNAL server composition, never transport handlers.
     // A trusted operation chooses its literal capability and callback; callers
     // supply only a mode selector/target, both checked against live authority.
     withStudentCapability,
     withAdminCapability,
+    withAccountsCapability,
     withVerifiedIdentity,
     readStudent: (request: AccessRequest, selection: { mode: ActiveMode; studentId: string }) => withStudentCapability(request, { ...selection, capability: "read" }, async (_tx, _actor, student) => student),
     listStudents: (request: AccessRequest, selection: { mode: ActiveMode } & StudentPage) => withActor(request, selection.mode, "read", false, async (tx, actor) => {

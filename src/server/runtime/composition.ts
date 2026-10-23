@@ -63,9 +63,10 @@ import { createPublicStudyCoalescer, type PublicStudyCoalescer } from "../study/
 import { resolveTenantHost } from "../tenancy/resolve";
 import { createHebcalReader } from "../../lib/readings/proposals";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
-import { createMailTransport, createNotificationTransport, projectMagicLink } from "../mail/transport";
+import { createAccountMailTransport, createMailTransport, createNotificationTransport, projectMagicLink } from "../mail/transport";
 import { createNotificationDelivery, createNotificationPreferences } from "../notifications/service";
 import { createSavedService } from "../saved/service";
+import { createAccountsService } from "../accounts/service";
 import { createCourseProgressService } from "../course-progress/service";
 import { createLogger } from "../logging/logger";
 import type { HostFrame } from "../logging/logger";
@@ -208,6 +209,9 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const relationships = createRelationshipService({ access });
   // Release 1.4: a member's own readings, translation, notes, marks and stars, readable only by that member.
   const saved = createSavedService({ access });
+  // Release 1.4: account requests and the Member role. Its two emails go to real people only from production.
+  const accounts = createAccountsService({ db, access, throttleSecret: purposeSecret(config, "account-throttle"),
+    send: createAccountMailTransport({ ...config.mail, origin: config.origin, fetch, enabled: config.deployment.environment === "production" }) });
   // Learn to lein, slice 3: a member's own course progress, readable only by that member.
   const courseProgress = createCourseProgressService({ access });
   const pendingInvitations = createPendingInvitations({ secret: config.authSecret, origin: config.origin, environment: config.deployment.environment as "local" | "preview" | "production" });
@@ -218,7 +222,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, courseProgress });
+  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, courseProgress, accounts });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;
