@@ -29,7 +29,7 @@ it("builds only exact official chapter requests and projects only assigned verse
     expect(u.searchParams.getAll("version")).toEqual([versionParameter(MAM), versionParameter(JPS2023)]);
     expect(u.searchParams.get("fill_in_missing_segments")).toBe("0");
     expect(options).toMatchObject({ credentials: "omit", redirect: "error", cache: "no-store", method: "GET", headers: { accept: "application/json" } });
-    expect(Object.keys(options!.headers!)).toEqual(["accept"]);
+    expect(options!.headers).toEqual({ accept: "application/json", "user-agent": "CRC-Torah/1.4 (+https://torah.centralreform.org)" });
     return response(payload());
   });
   const page = await reader(fetch)(request(["Genesis 1:2-3"]));

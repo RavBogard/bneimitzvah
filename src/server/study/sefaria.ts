@@ -1,4 +1,5 @@
 import "server-only";
+import { SEFARIA_REQUEST_HEADERS } from "./sefaria-json";
 import { createHash } from "node:crypto";
 import type { VerseCounts } from "../../lib/readings/ranges";
 import { expandReadingRanges } from "../../lib/readings/ranges";
@@ -90,7 +91,7 @@ function publicChapterTasks(fetch: typeof globalThis.fetch, now: () => number, r
           if (local.signal.aborted) throw new StudyUnavailable("upstream");
           const url = requestUrl(selection, translation);
           let response: Response;
-          try { response = await fetch(url, { method: "GET", headers: { accept: "application/json" },
+          try { response = await fetch(url, { method: "GET", headers: SEFARIA_REQUEST_HEADERS,
             credentials: "omit", redirect: "error", cache: "no-store", signal: local.signal }); }
           catch { throw new StudyUnavailable("upstream"); }
           if (local.signal.aborted) { void response.body?.cancel().catch(() => {}); throw new StudyUnavailable("upstream"); }

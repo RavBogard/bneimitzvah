@@ -1,4 +1,5 @@
 import "server-only";
+import { SEFARIA_REQUEST_HEADERS } from "../sefaria-json";
 import { parseRelatedMetadata, parseEditionMetadata, SOURCE_METADATA_LIMITS, SourceMetadataUnavailable, sourceMetadataVerse, sourceMetadataWork } from "./metadata";
 import { parseShelfLinks } from "../shelf";
 
@@ -34,7 +35,7 @@ export function createSefariaMetadataReader(input: { fetch?: typeof globalThis.f
     }
     try {
       live();
-      const pending = Promise.resolve(fetcher(url.href, { method: "GET", headers: { accept: "application/json" }, credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store", signal: abort.signal }))
+      const pending = Promise.resolve(fetcher(url.href, { method: "GET", headers: SEFARIA_REQUEST_HEADERS, credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store", signal: abort.signal }))
         .then(value => { incoming = value; receivedAt = performance.now(); if (abort.signal.aborted) cancelResponse(value); return value; });
       const response = await wait(pending, end, cancelResponse);
       const type = response.headers.get("content-type"), length = response.headers.get("content-length");

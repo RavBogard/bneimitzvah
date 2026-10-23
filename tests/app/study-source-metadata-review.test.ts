@@ -78,7 +78,7 @@ it("review only fixed metadata GET destinations and flags are used, with no cons
   const [related, versions] = fetcher.mock.calls.map(([input, options]) => ({ url: new URL(String(input)), options }));
   expect(related.url.origin).toBe("https://www.sefaria.org"); expect(related.url.pathname).toBe(`/api/links/${encodeURIComponent(verse)}`); expect([...related.url.searchParams.entries()].sort()).toEqual([["with_sheet_links", "0"], ["with_text", "0"]]);
   expect(versions.url.origin).toBe("https://www.sefaria.org"); expect(versions.url.pathname).toBe(`/api/texts/versions/${encodeURIComponent(work)}`); expect(versions.url.search).toBe("");
-  for (const call of [related, versions]) { expect(call.options).toMatchObject({ method: "GET", credentials: "omit", redirect: "error", cache: "no-store" }); expect([...new Headers(call.options?.headers).keys()]).toEqual(["accept"]); }
+  for (const call of [related, versions]) { expect(call.options).toMatchObject({ method: "GET", credentials: "omit", redirect: "error", cache: "no-store" }); expect([...new Headers(call.options?.headers).keys()]).toEqual(["accept", "user-agent"]); expect(new Headers(call.options?.headers).get("user-agent")).toBe("CRC-Torah/1.4 (+https://torah.centralreform.org)"); }
   await expect(reader.related("Genesis 1:1-2", new AbortController().signal)).rejects.toBeInstanceOf(SourceMetadataUnavailable);
   for (const dot of [".", ".."]) await expect(reader.editions(dot, new AbortController().signal)).rejects.toBeInstanceOf(SourceMetadataUnavailable);
   expect(fetcher).toHaveBeenCalledTimes(2);

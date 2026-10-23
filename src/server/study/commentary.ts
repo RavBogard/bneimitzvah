@@ -1,4 +1,5 @@
 import "server-only";
+import { SEFARIA_REQUEST_HEADERS } from "./sefaria-json";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import type { VerseCounts } from "../../lib/readings/ranges";
 import { commentaryCandidates, commentaryComplex, commentaryEditionUrl, parseCommentaryChapter, COMMENTARY_LIMITS, type CommentaryChapter, type CommentaryChapterRef,
@@ -119,7 +120,7 @@ export function createSefariaCommentaryReader(input: { fetch: typeof globalThis.
           if (local.signal.aborted) throw new CommentaryUnavailable("upstream");
           const url = commentaryRequestUrl(chapter);
           let response: Response;
-          try { response = await input.fetch(url, { method: "GET", headers: { accept: "application/json" }, credentials: "omit", redirect: "error", cache: "no-store", signal: local.signal }); }
+          try { response = await input.fetch(url, { method: "GET", headers: SEFARIA_REQUEST_HEADERS, credentials: "omit", redirect: "error", cache: "no-store", signal: local.signal }); }
           catch { throw new CommentaryUnavailable("upstream"); }
           if (local.signal.aborted) { void response.body?.cancel().catch(() => {}); throw new CommentaryUnavailable("upstream"); }
           if (response.status !== 200 && response.status !== 404 || response.redirected || response.url && response.url !== url.href
