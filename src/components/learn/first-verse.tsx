@@ -81,7 +81,7 @@ function Celebration({ verse, lein, onBack }: { verse: AnalysedVerse; lein: stri
     onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); onBack(); } }}>
     <div className={styles.sheetStage}>
       <p className={styles.sheetRef}><bdi dir="ltr">{verse.ref}</bdi></p>
-      <UnitsText key={inking ? "ink" : "plain"} verse={verse} className={styles.sheetHebrew} look={() => inking ? "pull" : "plain"} wipe={delay} />
+      <UnitsText key={inking ? "ink" : "plain"} verse={verse} className={styles.sheetHebrew} look={() => inking ? "pull" : "plain"} wipe={delay} card={false} />
       <p id="celebration-line" className={`${styles.sheetLine}${shown ? "" : ` ${styles.sheetHidden}`}`} aria-live="polite">{shown ? "You can lein this verse." : ""}</p>
     </div>
     <div className={`${styles.sheetActions}${shown ? "" : ` ${styles.sheetHidden}`}`}>

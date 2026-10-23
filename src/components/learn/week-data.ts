@@ -26,12 +26,12 @@ export function useWeekVerses(kind: Melody, retry = 0): WeekVerses {
       if (!week[kind]) { date = addDays(date, 7); week = await fetchPublicWeek(date, signal); shifted = true; }
       const passage = week[kind];
       if (!passage) { setState({ status: "none" }); return; }
-      const loaded = await loader.passage(passage.ranges.join("; "), kind);
+      const ref = passage.ranges.join("; "), loaded = await loader.passage(ref, kind);
       const assets = loaded.map(verse => verse.short?.verse.playback.status === "ready" ? verse.short.verse.playback.asset : null);
       const verses = (await Promise.all(loaded.map(async (verse, i) => {
         const wordReady = verse.short?.source ? await audio.wordReady(verse.ref, kind, signal) : false;
         const last = i === loaded.length - 1, endsRecording = last ? true : assets[i] && assets[i + 1] ? assets[i] !== assets[i + 1] : null;
-        return analyseVerse({ ref: verse.ref, kind, hebrew: verse.hebrew, final: kind === "haftarah" && last, endsRecording, wordReady });
+        return analyseVerse({ ref: verse.ref, kind, hebrew: verse.hebrew, final: kind === "haftarah" && last, endsRecording, wordReady, passage: { ref, index: i, count: loaded.length } });
       }))).filter((verse): verse is AnalysedVerse => verse !== null);
       if (!signal.aborted) setState({ status: "ready", date, shifted, verses, recorded: verses.some(verse => verse.wordReady), refs: loaded.map(verse => verse.ref) });
     })().catch(() => { if (!signal.aborted) setState({ status: "error" }); });

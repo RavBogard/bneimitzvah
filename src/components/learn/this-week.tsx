@@ -5,7 +5,6 @@ import { buildPools, poolOf, type Phrase } from "../../lib/learn/pools";
 import type { AnalysedVerse } from "../../lib/learn/verse";
 import { AudioError, FamilyChip, phraseRequest, PlayTile, UnitsText } from "./bits";
 import type { ExampleVerse } from "./course-data";
-import { useLearnServices } from "./services";
 import { useWeekVerses } from "./week-data";
 import styles from "./learn.module.css";
 
@@ -45,9 +44,10 @@ function Row({ verse, words, family }: { verse: AnalysedVerse; words: readonly [
       <p className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi>{family && <span className="sr-only">, {familyName(family)}</span>}</p><AudioError id={id} /></div>
   </li>;
 }
-/** The small reader: tap phrases of the family; each find colours and plays; a miss names its own family. */
+/** The small reader: tap phrases of the family; each find colours; a miss names its own family. A find plays
+ * nothing (the rows above have the play tiles); once all are found, a tapped word opens its card. */
 function Finder({ verses, family, need, skip }: { verses: readonly AnalysedVerse[]; family: NonNullable<Lesson["family"]>; need: number; skip: ReadonlySet<string> }) {
-  const { player } = useLearnServices(), [open, setOpen] = useState(false), [found, setFound] = useState<string[]>([]), [miss, setMiss] = useState<{ key: string; line: string } | null>(null);
+  const [open, setOpen] = useState(false), [found, setFound] = useState<string[]>([]), [miss, setMiss] = useState<{ key: string; line: string } | null>(null);
   const available = verses.reduce((sum, verse) => sum + verse.phrases.filter(phrase => phrase.family === family && !skip.has(`${verse.ref}#${phrase.units[0]}`)).length, 0);
   const target = Math.min(need, available), done = found.length >= target;
   if (!target) return null;
@@ -55,7 +55,6 @@ function Finder({ verses, family, need, skip }: { verses: readonly AnalysedVerse
   if (!open) return <button type="button" className={styles.textButton} onClick={() => setOpen(true)}>{prompt}</button>;
   const tap = (verse: AnalysedVerse, index: number) => {
     const phrase = verse.phrases[index], key = `${verse.ref}#${phrase.units[0]}`;
-    void player.play(`find:${key}`, [phraseRequest(verse, phrase.units)]);
     if (phrase.family === family) { if (!skip.has(key) && !found.includes(key) && !done) setFound([...found, key]); setMiss(null); }
     else setMiss({ key, line: `That one is ${familyName(phrase.family)}.` });
   };
@@ -66,9 +65,10 @@ function Finder({ verses, family, need, skip }: { verses: readonly AnalysedVerse
       {verses.map(verse => <div key={verse.ref} className={styles.readerVerse}>
         <p className={`${styles.hebrew} ${styles.phraseStandard}`} lang="he" dir="rtl">{verse.phrases.map((phrase, index) => {
           const key = `${verse.ref}#${phrase.units[0]}`, shown = found.includes(key) || skip.has(key) && phrase.family === family;
-          return <span key={index}>{index > 0 && " "}<span role="button" tabIndex={0} className={`${styles.target}${miss?.key === key ? ` ${styles.missed}` : ""}`} aria-label={`${verse.ref}, phrase ${index + 1}`}
+          return <span key={index}>{index > 0 && " "}{done ? <span className={miss?.key === key ? styles.missed : undefined}><UnitsText as="span" verse={verse} units={phrase.units} look={() => shown ? "inked" : "plain"} /></span>
+            : <span role="button" tabIndex={0} className={`${styles.target}${miss?.key === key ? ` ${styles.missed}` : ""}`} aria-label={`${verse.ref}, phrase ${index + 1}`}
             onClick={() => tap(verse, index)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); tap(verse, index); } }}>
-            <UnitsText as="span" verse={verse} units={phrase.units} look={() => shown ? "inked" : "plain"} /></span></span>;
+            <UnitsText as="span" verse={verse} units={phrase.units} look={() => shown ? "inked" : "plain"} card={false} /></span>}</span>;
         })}</p>
         <p className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></p>
       </div>)}
