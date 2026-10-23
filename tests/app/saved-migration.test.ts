@@ -43,8 +43,10 @@ test("0036 adds only the four saved tables, leaves existing rows and the audit l
 
     // The generated snapshot adds the four tables and changes nothing else (0034 and 0035 were data-only, without snapshots).
     const snapshots = (await readdir(join(folder, "meta"))).filter(name => /^\d{4}_snapshot\.json$/.test(name)).sort();
-    expect(snapshots.at(-1)).toBe("0036_snapshot.json");
-    const previous = JSON.parse(await readFile(join(folder, "meta", snapshots.at(-2)!), "utf8")), current = JSON.parse(await readFile(join(folder, "meta/0036_snapshot.json"), "utf8"));
+    // The snapshot just before 0036 (later migrations may add their own after it).
+    const at = snapshots.indexOf("0036_snapshot.json");
+    expect(at).toBeGreaterThan(0);
+    const previous = JSON.parse(await readFile(join(folder, "meta", snapshots[at - 1]), "utf8")), current = JSON.parse(await readFile(join(folder, "meta/0036_snapshot.json"), "utf8"));
     expect(current.prevId).toBe(previous.id);
     const expected = structuredClone(previous.tables);
     for (const table of TABLES) expected[`public.${table}`] = current.tables[`public.${table}`];
