@@ -28,7 +28,7 @@ import { AccessDenied } from "../../src/server/access/errors";
 import type { PublicRuntime } from "../../src/server/http/public-reading";
 import { CommentaryUnavailable, type CommentaryReader } from "../../src/server/study/commentary";
 import type { TranslationsReader } from "../../src/server/study/translations";
-import { unavailableTranslations } from "../helpers/translations";
+import { unavailableShelf, unavailableSource, unavailableTranslations } from "../helpers/translations";
 import type { ReferenceCatalog } from "../../src/server/reference-audio/catalog";
 import { ReferenceUnavailable } from "../../src/server/reference-audio/catalog";
 import { createStudyService } from "../../src/server/study/service";
@@ -63,7 +63,7 @@ import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
 const secret = () => randomBytes(48).toString("base64url");
 type Mail = { email: string; url: string };
 
-export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; shortReferenceStudyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceShortManifestLoad?: (signal?: AbortSignal) => Promise<ShortSourceManifest>; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown>;musicBroker?:MusicBroker;referenceReviewGet?:ReferenceCatalogGet; commentaryLoad?: CommentaryReader; translationsLoad?: TranslationsReader } = {}) {
+export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; shortReferenceStudyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceShortManifestLoad?: (signal?: AbortSignal) => Promise<ShortSourceManifest>; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown>;musicBroker?:MusicBroker;referenceReviewGet?:ReferenceCatalogGet; commentaryLoad?: CommentaryReader; translationsLoad?: TranslationsReader; shelfLoad?: PublicRuntime["shelf"]; sourceLoad?: PublicRuntime["source"] } = {}) {
   const base = await postgresAccessFixture();
   try {
     // The shared disposable fixture creates the DB, migrations and restricted
@@ -130,6 +130,8 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       // Never Sefaria: a synthetic stub, or a plain upstream failure.
       commentary: options.commentaryLoad ?? (async () => { throw new CommentaryUnavailable("upstream"); }),
       translations: options.translationsLoad ?? unavailableTranslations,
+      shelf: options.shelfLoad ?? unavailableShelf,
+      source: options.sourceLoad ?? unavailableSource,
     });
     async function withPublicRuntime(action: (runtime: PublicRuntime) => Promise<Response>) {
       await withTenantTransaction(db, { tenantId: "crc" }, async () => undefined);

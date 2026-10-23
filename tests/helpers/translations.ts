@@ -1,5 +1,7 @@
 import { TranslationsUnavailable, type TranslationsReader } from "../../src/server/study/translations";
 import { JPS2023 } from "../../src/server/study/versions";
+import { SourceMetadataUnavailable } from "../../src/server/study/sources/metadata";
+import { SourceTextUnavailable } from "../../src/server/study/source-text";
 
 // Invented edition titles and numbered English only: never a translation's words, never a publisher's name.
 /** A public runtime's Compare reader that always reports upstream trouble (for tests that do not use Compare). */
@@ -34,3 +36,8 @@ export function syntheticTranslationsFetch(options: { english?: (ref: string) =>
   };
   return { fetch: fetch as typeof globalThis.fetch, calls };
 }
+
+/** The public runtime's Sefaria-backed extras, all reporting upstream trouble, for tests that use none of them. */
+export const unavailableShelf = async (): Promise<never> => { throw new SourceMetadataUnavailable(); };
+export const unavailableSource = async (): Promise<never> => { throw new SourceTextUnavailable("upstream"); };
+export const unavailableExtras = Object.freeze({ translations: unavailableTranslations, shelf: unavailableShelf, source: unavailableSource });

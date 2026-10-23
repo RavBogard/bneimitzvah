@@ -5,7 +5,7 @@ import { handlePublicReadingRequest, type PublicRuntime } from "../../src/server
 import { COMPARE_LIMITS, parseCompareVerse, sefariaEditionUrl, targumRef } from "../../src/lib/readings/compare";
 import { creditLine, licenseLabel, NOT_STATED, plainCredit } from "../../src/lib/readings/edition-credit";
 import { englishVersion, shownTranslation, syntheticTranslationsFetch, targumVersion, textsAnswer } from "../helpers/translations";
-import { unavailableTranslations } from "../helpers/translations";
+import { unavailableExtras, unavailableTranslations } from "../helpers/translations";
 
 // Invented edition titles, licences and numbered English; invented syllables for the Aramaic.
 const verse = "Genesis 12:1";
@@ -99,7 +99,7 @@ test("one side failing leaves that side null and the answer incomplete; both fai
 
 test("the public route: closed query, checked before the runtime, cached thirty days when whole and an hour when partial, no-store on failure", async () => {
   let opened = 0, reader = createSefariaTranslationsReader({ fetch: ok().fetch });
-  const runtime = () => ({ resolveTenant: async () => undefined, reading: {} as PublicRuntime["reading"], commentary: async () => { throw new Error("unused"); }, translations: reader }) satisfies PublicRuntime;
+  const runtime = () => ({ resolveTenant: async () => undefined, reading: {} as PublicRuntime["reading"], commentary: async () => { throw new Error("unused"); }, ...unavailableExtras, translations: reader }) satisfies PublicRuntime;
   const call = (query: string) => handlePublicReadingRequest(new Request(`https://beitmitzvah.centralreform.org/api/public/translations${query}`), async action => { opened++; return action(runtime()); });
   const whole = await call("?verse=Genesis+12%3A1");
   expect(whole.status).toBe(200); expect(whole.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=2592000"); expect(whole.headers.get("x-robots-tag")).toBe("noindex, nofollow");
