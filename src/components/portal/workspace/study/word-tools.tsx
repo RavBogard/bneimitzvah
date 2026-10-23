@@ -20,10 +20,12 @@ function Place({ value, onPlace }: { value: WordPlace; onPlace?(ref: string, wor
 /** Other places in the student's own reading, from the STEP lexical id. */
 export function WordElsewhereList({ value, onPlace }: { value: WordElsewhere; onPlace?(ref: string, wordIndex: number): void }) {
   if (value.status !== "ready") return <p>Other places for this word aren’t available.</p>;
-  if (value.total === 0) return <p>No other places found in your reading.</p>;
+  // A long reading is searched only part way; the count and places then cover that part, and say so.
+  const scope = value.partial ? "in the part of this reading searched" : "in your reading";
+  if (value.total === 0) return <p>{`No other places found ${scope}.`}</p>;
   const first = value.places.slice(0, PLACES_SHOWN), rest = value.places.slice(PLACES_SHOWN);
   return <>
-    <p>{value.total === 1 ? "It appears 1 more time in your reading." : `It appears ${value.total} more times in your reading.`}</p>
+    <p>{value.total === 1 ? `It appears 1 more time ${scope}.` : `It appears ${value.total} more times ${scope}.`}</p>
     <ul className={styles.places}>{first.map(place => <Place key={`${place.ref}#${place.wordIndex}`} value={place} onPlace={onPlace} />)}</ul>
     {rest.length > 0 && <details className={styles.more}><summary>More places</summary><ul className={styles.places}>{rest.map(place => <Place key={`${place.ref}#${place.wordIndex}`} value={place} onPlace={onPlace} />)}</ul>
       {value.total > value.places.length && <p className={styles.note}>Showing the first {value.places.length}.</p>}</details>}

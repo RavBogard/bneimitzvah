@@ -102,7 +102,7 @@ test("inputs are bounded: dates, kinds, page offsets, verse and word indexes", a
     () => h.service.wordDetails("torah", date, 0, 512), () => h.service.wordDetails("torah", date, 0, 2) /* the verse has two words */]) {
     await expect(action()).rejects.toBeInstanceOf(PublicReadingUnavailable);
   }
-  // The passage always comes from the calendar: there is no caller-supplied range anywhere.
+  // A date always takes its passage from the calendar, never from the caller (ref routes are tested below).
   expect(h.loadText.mock.calls.every(([request]) => request.ranges.join() === "Genesis 1:1-4:26" || request.ranges.join() === "Isaiah 1:1-3")).toBe(true);
 });
 
@@ -250,4 +250,111 @@ test("a momentary lexical miss is a 503 that no cache keeps, and book changes ar
   const waiting = [shared.book("Exo"), shared.book("Exo"), shared.book("Exo"), shared.book("Exo")];
   release(); await Promise.all(waiting); await shared.book("Exo");
   await expect(shared.book("Lev")).rejects.toBeInstanceOf(StepSourceUnavailable);
+});
+
+// ---- "Any reading": the ref-keyed forms of the same routes (1.3; the 1.5 offline packer's contract).
+const refRoutes = (ref = "Genesis 12:1-20", kind = "torah") => [
+  `/api/public/reading?${q([["ref", ref], ["kind", kind]])}`,
+  `/api/public/text?${q([["ref", ref], ["kind", kind], ["offset", "0"]])}`,
+  `/api/public/word-aids?${q([["ref", ref], ["kind", kind], ["verse", "1"]])}`,
+  `/api/public/word-details?${q([["ref", ref], ["kind", kind], ["verse", "0"], ["word", "0"]])}`,
+  `/api/public/reference/short?${q([["ref", ref], ["kind", kind], ["offset", "0"]])}`,
+];
+
+test("every route also answers a canonical ref, signed-out, cacheable per route, with no people data and no calendar call", async () => {
+  const h = await harness();
+  for (const [ref, kind] of [["Genesis 12:1-20", "torah"], ["Exodus 32:11-14; Exodus 34:1-10", "torah"], ["Isaiah 27:6-28:13; Isaiah 29:22-23", "haftarah"]]) {
+    for (const path of refRoutes(ref, kind)) {
+      const response = await h.call(path);
+      expect(response.status, path).toBe(200);
+      expect(response.headers.get("x-robots-tag"), path).toBe("noindex, nofollow");
+      expect(response.headers.get("set-cookie"), path).toBeNull();
+      expect(response.headers.get("cache-control"), path).toBe("public, max-age=300");
+      expect(response.headers.get("vercel-cdn-cache-control"), path).toBe(`public, s-maxage=${path.startsWith("/api/public/reading?") ? 3600 : 86400}`);
+      const body = await response.json();
+      expect(body.ref, path).toBe(ref); expect(body.kind, path).toBe(kind); expect(body.date, path).toBeUndefined();
+      expect([...keys(body)].filter(key => PEOPLE.test(key)), path).toEqual([]);
+    }
+  }
+  const reading = await (await h.call(refRoutes()[0])).json();
+  expect(reading).toEqual({ ref: "Genesis 12:1-20", kind: "torah", listening: { pocketTorah: true },
+    passage: { kind: "torah", ranges: ["Genesis 12:1-20"], verseCount: 20, pages: [{ offset: 0, first: "Genesis 12:1", last: "Genesis 12:20" }] } });
+  expect(h.calendar).not.toHaveBeenCalled(); // a ref passage is computed locally
+  expect(h.loadText.mock.calls.some(([request]) => request.ranges.join("; ") === "Exodus 32:11-14; Exodus 34:1-10")).toBe(true);
+  expect(h.sessionRuntime()).toBe(0);
+});
+
+test("the ref keysets are closed and canonical: no mixing with date, fixed order, + for spaces, encoded colons", async () => {
+  const h = await harness(), ref = "Genesis 12:1-20";
+  expect((await h.call(`/api/public/reading?ref=Genesis+12%3A1-20&kind=torah`)).status).toBe(200);
+  for (const path of [
+    `/api/public/reading?ref=Genesis%2012%3A1-20&kind=torah`, `/api/public/reading?ref=Genesis+12:1-20&kind=torah`, `/api/public/reading?ref=Genesis+12%3a1-20&kind=torah`,
+    `/api/public/reading?${q([["kind", "torah"], ["ref", ref]])}`, `/api/public/reading?${q([["ref", ref]])}`, `/api/public/reading?${q([["kind", "torah"]])}`,
+    `/api/public/reading?${q([["ref", ref], ["kind", "torah"], ["date", date]])}`, `/api/public/reading?${q([["date", date], ["ref", ref], ["kind", "torah"]])}`,
+    `/api/public/reading?${q([["date", date], ["kind", "torah"]])}`, `/api/public/reading?${q([["ref", ref], ["ref", ref], ["kind", "torah"]])}`,
+    `/api/public/text?${q([["ref", ref], ["date", date], ["kind", "torah"], ["offset", "0"]])}`, `/api/public/text?${q([["date", date], ["ref", ref], ["kind", "torah"], ["offset", "0"]])}`,
+    `/api/public/text?${q([["ref", ref], ["kind", "torah"]])}`, `/api/public/text?${q([["kind", "torah"], ["ref", ref], ["offset", "0"]])}`,
+    `/api/public/text?${q([["ref", ref], ["kind", "torah"], ["offset", "0"], ["x", "1"]])}`, `/api/public/text?${q([["ref", ref], ["kind", "torah"], ["offset", "00"]])}`,
+    `/api/public/word-details?${q([["ref", ref], ["kind", "torah"], ["verse", "0"]])}`, `/api/public/commentary?${q([["ref", ref], ["kind", "torah"]])}`,
+    `/api/public/reference/short?${q([["ref", ref], ["kind", "torah"], ["verse", "0"]])}`,
+  ]) {
+    const response = await h.call(path);
+    expect(response.status, path).toBe(400); expect(response.headers.get("cache-control"), path).toBe("no-store");
+    expect(response.headers.get("vercel-cdn-cache-control"), path).toBe("no-store");
+  }
+  expect(h.publicRuntime()).toBe(1);
+});
+
+test("a bad, long or mismatched ref is refused before any runtime or database opens", async () => {
+  const h = await harness();
+  const long = Array.from({ length: 33 }, (_, i) => `Genesis ${i + 1}:1`).join("; ");
+  for (const [ref, kind] of [["Genesis 12:1-12:20", "torah"], ["Genesis  12:1-20", "torah"], ["Genesis 12:1-20;", "torah"], ["Genesis 12:1-20; ", "torah"], ["Psalms 1:1-6", "haftarah"],
+    ["Ruth 1:1-22", "haftarah"], ["Isaiah 1:1-3", "torah"], ["Genesis 1:1-3", "haftarah"], ["Genesis 50:26; Exodus 1:1", "torah"], ["Genesis 1:1-50:26", "torah"], [long, "torah"],
+    ["Genesis １２:1", "torah"], ["Genesis 1:1", "megillah"], ["", "torah"], ["a".repeat(1001), "torah"], ["Genesis 51:1", "torah"]]) {
+    for (const path of refRoutes(ref, kind)) {
+      const response = await h.call(path);
+      expect(response.status, `${ref} ${path.slice(0, 40)}`).toBe(400); expect(response.headers.get("cache-control")).toBe("no-store");
+    }
+  }
+  // Longer than 1000 characters, and a URL longer than 2048: refused whatever the rest says.
+  expect((await h.call(`/api/public/reading?${q([["ref", "Genesis 1:1" + "; Genesis 1:1".repeat(80)], ["kind", "torah"]])}`)).status).toBe(400);
+  expect((await h.call(`/api/public/reading?${q([["ref", "Genesis 12:1-20"], ["kind", "torah"]])}&${"x".repeat(2100)}`)).status).toBe(400);
+  expect(h.publicRuntime()).toBe(0); expect(h.tenant).not.toHaveBeenCalled();
+});
+
+test("ref routes keep the page and index rules: page starts only, real verses and words, PocketTorah 404 while held, upstream 503 never cached", async () => {
+  const h = await harness(), ref = "Genesis 1:1-4:26", verses = 31 + 25 + 24 + 26;
+  for (const path of [`/api/public/text?${q([["ref", ref], ["kind", "torah"], ["offset", "1"]])}`, `/api/public/text?${q([["ref", ref], ["kind", "torah"], ["offset", String(verses)]])}`,
+    `/api/public/reference/short?${q([["ref", ref], ["kind", "torah"], ["offset", "99"]])}`, `/api/public/word-aids?${q([["ref", ref], ["kind", "torah"], ["verse", String(verses)]])}`,
+    `/api/public/word-details?${q([["ref", ref], ["kind", "torah"], ["verse", "0"], ["word", "2"]])}`, `/api/public/word-details?${q([["ref", ref], ["kind", "torah"], ["verse", "0"], ["word", "512"]])}`]) {
+    const response = await h.call(path);
+    expect(response.status, path).toBe(400); expect(response.headers.get("cache-control"), path).toBe("no-store");
+  }
+  const second = await (await h.call(`/api/public/text?${q([["ref", ref], ["kind", "torah"], ["offset", "100"]])}`)).json();
+  expect(second.verses[0].ref).toBe(expandReadingRanges([ref], "torah", TANAKH_VERSE_COUNTS)[100]); expect(second.nextOffset).toBeNull();
+  const held = await harness({ pocketTorah: false });
+  const short = await held.call(refRoutes()[4]);
+  expect(short.status).toBe(404); expect(short.headers.get("cache-control")).toBe("no-store");
+  expect((await (await held.call(refRoutes()[0])).json()).listening).toEqual({ pocketTorah: false });
+  h.loadText.mockRejectedValue(new Error("synthetic text outage"));
+  for (const path of refRoutes().slice(1)) {
+    const response = await h.call(path);
+    expect(response.status, path).toBe(503); expect(response.headers.get("vercel-cdn-cache-control"), path).toBe("no-store");
+  }
+  expect((await h.call(refRoutes()[0])).status).toBe(200); // the passage itself needs no upstream
+  h.tenant.mockImplementation(async () => { throw new AccessDenied(404); });
+  for (const path of refRoutes()) expect((await h.call(path)).status, path).toBe(404);
+});
+
+test("the service refuses non-canonical refs itself, not only at the route", async () => {
+  const h = await harness();
+  for (const action of [() => h.service.readingByRef("torah", "Genesis 12:1-12:20"), () => h.service.readingByRef("haftarah", "Psalms 1:1"),
+    () => h.service.readingByRef("torah", "Isaiah 1:1"), () => h.service.readingByRef("other" as never, "Genesis 1:1")]) {
+    expect(action).toThrow(PublicReadingUnavailable);
+  }
+  for (const action of [() => h.service.textByRef("torah", "Genesis 1:1-1:3", 0), () => h.service.wordAidsByRef("torah", "Genesis 1:1-3", 3),
+    () => h.service.wordDetailsByRef("torah", "Genesis 1:1-3", 0, 512), () => h.service.shortReferencesByRef("torah", "Genesis 1:1-3", 1)]) {
+    await expect(action()).rejects.toMatchObject({ code: "invalid-request" });
+  }
+  expect(h.loadText).not.toHaveBeenCalled();
 });
