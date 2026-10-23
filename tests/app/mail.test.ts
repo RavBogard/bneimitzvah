@@ -74,15 +74,23 @@ test("mail rejects foreign, ambiguous, duplicated-token, header-injection and un
     expect(await safeFailure(() => send("magic-link", { email, productName, url: link("magic-link"), code }))).toBe(true);
   }
   expect(await safeFailure(() => send("invitation", { email, productName, url: good, code: "123456" }))).toBe(true);
-  // The code must be the only run of 6 or more digits in the email; an address that adds one sends nothing, and an
-  // invitation with such a run is refused too.
+  // The code must be the only run of 6 or more digits in the email; an address that adds one sends nothing.
   const digits = "https://torah123456.example.test";
   const digitSend = createMailTransport({ origin: digits, apiKey, from: email, fetch: async () => { calls++; return new Response(); } });
   const digitLink = new URL("/auth/email", digits); digitLink.hash = `token=${"A".repeat(32)}`;
   expect(await safeFailure(() => digitSend("magic-link", { email, productName, url: digitLink.href, code: "048213" }))).toBe(true);
-  const digitInvite = new URL("/invitations/open", digits); digitInvite.hash = `token=${randomBytes(32).toString("base64url")}`;
-  expect(await safeFailure(() => digitSend("invitation", { email, productName, url: digitInvite.href }))).toBe(true);
   expect(calls).toBe(0);
+});
+
+test("an invitation whose random token happens to hold six digits in a row is still sent", async () => {
+  let calls = 0;
+  const send = createMailTransport({ origin, apiKey, from: email, fetch: async () => { calls++; return new Response(); } });
+  const url = new URL("/invitations/open", origin); url.hash = `token=${Buffer.from(randomBytes(32)).toString("base64url").replace(/^.{9}/, "AAA123456")}`;
+  // Keep it a canonical base64url token: re-encode the decoded bytes, then confirm the run survived.
+  const token = Buffer.from(url.hash.slice("#token=".length), "base64url").toString("base64url"); url.hash = `token=${token}`;
+  expect(token).toMatch(/\d{6}/);
+  expect(await send("invitation", { email, productName, url: url.href })).toBeUndefined();
+  expect(calls).toBe(1);
 });
 
 test("provider failures, private error causes, oversized bodies and stalled fetches stay sanitized and bounded", async () => {

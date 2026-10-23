@@ -46,15 +46,16 @@ const CODE = /^\d{6}$/;
 const IGNORE = "If you did not request this message, you can ignore it.";
 // A congregation's product name (tenant.product_name, E1) as these emails accept it: a plain name with no number of
 // any kind, so no name can add a code-like run or a digit to a subject. A refused name sends nothing.
-const mailProductName = (value: unknown): value is string => plainName(value) && !/[\p{N}\p{Cf}\p{Cc}]/u.test(value as string);
+export const mailProductName = (value: unknown): value is string => plainName(value) && !/[\p{N}\p{Cf}\p{Cc}]/u.test(value as string);
 function bodyOf(kind: Kind, link: string, code: string | undefined, product: string): string {
-  const body = kind === "invitation" ? `Open this link to review your invitation:\n\n${link}\n\n${IGNORE}`
-    // The code is in the body only, never the subject (lock screens, provider subject logs).
-    : `Open this link to sign in:\n\n${link}\n\n${SIGN_IN_CODE_LINES.code(product)}\n${code}\n\n${SIGN_IN_CODE_LINES.once}\n\n${SIGN_IN_CODE_LINES.never(product)}\n\n${IGNORE}`;
-  // Fail closed rather than send an email a phone could misread: no number but ASCII digits, and the code (if any)
-  // is the only run of 6 or more of them.
+  // An invitation carries no code; its random token may hold digits by chance, so only the sign-in email is counted.
+  if (kind === "invitation") return `Open this link to review your invitation:\n\n${link}\n\n${IGNORE}`;
+  // The code is in the body only, never the subject (lock screens, provider subject logs).
+  const body = `Open this link to sign in:\n\n${link}\n\n${SIGN_IN_CODE_LINES.code(product)}\n${code}\n\n${SIGN_IN_CODE_LINES.once}\n\n${SIGN_IN_CODE_LINES.never(product)}\n\n${IGNORE}`;
+  // Fail closed rather than send an email a phone could misread: no number but ASCII digits, and the code is the
+  // only run of 6 or more of them (the sign-in token is letters only, so only an origin could add one).
   const runs = body.match(/\p{N}{6,}/gu) ?? [];
-  if (/(?![0-9])\p{N}/u.test(body) || (kind === "invitation" ? runs.length !== 0 : runs.length !== 1 || runs[0] !== code)) throw 0;
+  if (/(?![0-9])\p{N}/u.test(body) || runs.length !== 1 || runs[0] !== code) throw 0;
   return body;
 }
 function subjectOf(kind: Kind, product: string): string {

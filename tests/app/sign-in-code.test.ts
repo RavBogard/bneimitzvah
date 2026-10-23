@@ -15,9 +15,9 @@ import { SIGN_IN_CODE_LINES } from "../../src/server/mail/transport";
 type Mail = { email: string; subject: string; text: string; url: string; code: string };
 const opened: Awaited<ReturnType<typeof authFixture>>[] = [];
 afterEach(async () => { vi.restoreAllMocks(); await Promise.all(opened.splice(0).map(f => f.client.close())); });
-const codeLabel = SIGN_IN_CODE_LINES.code("CRC Torah");
+const codeLabel = /^Or enter this code in the .+ app:$/;
 
-async function fixture(origin = "http://localhost:3000") {
+async function fixture(origin = "http://localhost:3000", productName?: string) {
   const f = await authFixture(); opened.push(f);
   const db = drizzle(f.client, { schema });
   const database = new URL("postgresql://ep-synthetic.us-east-2.aws.neon.tech/synthetic"); database.username = "synthetic_login"; database.password = randomBytes(32).toString("hex"); database.searchParams.set("sslmode", "require");
@@ -25,6 +25,7 @@ async function fixture(origin = "http://localhost:3000") {
   const config = loadRuntimeConfig({ PORTAL_ENVIRONMENT: production ? "production" : "local", PORTAL_DEPLOYMENT: production ? "production" : "sign-in-code", BETTER_AUTH_URL: origin,
     "DATABASE_URL": database.href, "BETTER_AUTH_SECRET": randomBytes(48).toString("base64url"), "RESEND_API_KEY": `re_${randomBytes(24).toString("hex")}`, RESEND_FROM: "synthetic@example.test" });
   if (!production) await db.insert(schema.tenantHost).values({ host: new URL(origin).host, origin, tenantId: "crc", environment: "local", deployment: config.deployment.deployment });
+  if (productName !== undefined) await db.update(schema.tenant).set({ productName }).where(eq(schema.tenant.id, "crc"));
   await f.client.exec("CREATE ROLE code_login LOGIN; GRANT portal_runtime TO code_login; SET SESSION AUTHORIZATION code_login; SET ROLE portal_runtime");
   const messages: Mail[] = [];
   const runtime = composeRuntime(config, db, async (endpoint, options) => {
@@ -32,7 +33,7 @@ async function fixture(origin = "http://localhost:3000") {
     const payload = JSON.parse(String(options?.body));
     const text = String(payload.text), url = text.match(/https?:\/\/\S+/)?.[0];
     // The code is alone on the line after its label.
-    const lines = text.split("\n"), label = lines.indexOf(codeLabel), line = label >= 0 ? lines[label + 1] : undefined;
+    const lines = text.split("\n"), label = lines.findIndex(value => codeLabel.test(value)), line = label >= 0 ? lines[label + 1] : undefined;
     if (!url || !Array.isArray(payload.to) || !line) throw new Error("Invalid synthetic mail capture");
     messages.push({ email: payload.to[0], subject: String(payload.subject), text, url, code: line });
     return new Response("{}", { status: 200 });
@@ -310,6 +311,25 @@ test("the code never appears in any console line, response body or response head
   expect(lines.some(line => line.includes(mail.code))).toBe(false);
   expect(texts.some(text => text.includes(mail.code))).toBe(false);
   expect(texts.some(text => text.toLowerCase().includes("quiet@example.test"))).toBe(false);
+});
+
+test("the email names the product from this congregation's own setting", async () => {
+  const f = await fixture("http://localhost:3000", "Temple Torah");
+  const { mail, binding } = await f.ask("other-name@example.test");
+  expect(mail.subject).toBe("Sign in to Temple Torah");
+  expect(mail.text.includes(`${SIGN_IN_CODE_LINES.code("Temple Torah")}\n${mail.code}\n`)).toBe(true);
+  expect(mail.text.includes(SIGN_IN_CODE_LINES.never("Temple Torah"))).toBe(true);
+  expect(mail.text.includes("CRC Torah")).toBe(false);
+  expect((await f.enter(mail.code, binding)).status).toBe(200);
+});
+
+test("a stored product name the email refuses leaves no code behind and sends nothing", async () => {
+  const f = await fixture("http://localhost:3000", "Torah 2");
+  const response = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "refused-name@example.test" }));
+  expect(response.status).toBeGreaterThanOrEqual(500);
+  expect(f.bindingOf(response)).toBe("");
+  expect(f.messages).toHaveLength(0);
+  expect(await f.codeRows()).toHaveLength(0);
 });
 
 test("if the code cannot be created, no email is sent and the request fails closed", async () => {

@@ -64,7 +64,7 @@ import { createPublicStudyCoalescer, type PublicStudyCoalescer } from "../study/
 import { resolveTenantHost } from "../tenancy/resolve";
 import { createHebcalReader } from "../../lib/readings/proposals";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
-import { createAccountMailTransport, createMailTransport, createNotificationTransport, projectMagicLink } from "../mail/transport";
+import { createAccountMailTransport, createMailTransport, createNotificationTransport, mailProductName, projectMagicLink } from "../mail/transport";
 import { createSignInCodeBindings } from "../http/sign-in-code-binding";
 import { createNotificationDelivery, createNotificationPreferences } from "../notifications/service";
 import { createSavedService } from "../saved/service";
@@ -162,6 +162,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
       // failure leaves no code behind and sends nothing.
       const { tenantId } = await resolveHost({ url: config.origin, headers: new Headers() }, "configured");
       const productName = await productNameOf(tenantId);
+      if (!mailProductName(productName)) throw new RuntimeUnavailable();
       const code = await auth.api.createVerificationOTP({ body: { email, type: "sign-in" } });
       await send("magic-link", { email, url: link, productName, code });
     } });
