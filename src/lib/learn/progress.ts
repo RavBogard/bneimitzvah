@@ -44,14 +44,16 @@ export function parseProgress(value: unknown): Progress | null {
     const lessons: Record<string, { done: string }> = {}, cards: Record<string, Card> = {};
     const lessonEntries = Object.entries(lessonsIn), cardEntries = Object.entries(cardsIn);
     if (lessonEntries.length > COURSE.lessons.length || cardEntries.length > PROGRESS_LIMITS.cards) return null;
+    // An entry the course no longer knows (a lesson renamed or removed later) is dropped, never fatal, so a stored
+    // document always opens; a malformed entry still refuses the whole document.
     for (const [id, entry] of lessonEntries) {
-      if (!lessonById(id) || !entry || typeof entry !== "object" || Object.keys(entry).length !== 1 || !realInstant((entry as { done?: unknown }).done)) return null;
-      lessons[id] = Object.freeze({ done: (entry as { done: string }).done });
+      if (!entry || typeof entry !== "object" || Array.isArray(entry) || Object.keys(entry).length !== 1 || !realInstant((entry as { done?: unknown }).done) || id.length > 80) return null;
+      if (lessonById(id)) lessons[id] = Object.freeze({ done: (entry as { done: string }).done });
     }
     for (const [id, entry] of cardEntries) {
       const card = entry as { box?: unknown; due?: unknown };
-      if (!parseCardId(id) || !entry || typeof entry !== "object" || Object.keys(entry).length !== 2 || !Number.isSafeInteger(card.box) || (card.box as number) < 0 || (card.box as number) >= BOX_DAYS.length || !realDate(card.due)) return null;
-      cards[id] = Object.freeze({ box: card.box as number, due: card.due as string });
+      if (!entry || typeof entry !== "object" || Array.isArray(entry) || Object.keys(entry).length !== 2 || !Number.isSafeInteger(card.box) || (card.box as number) < 0 || (card.box as number) >= BOX_DAYS.length || !realDate(card.due) || id.length > 80) return null;
+      if (parseCardId(id)) cards[id] = Object.freeze({ box: card.box as number, due: card.due as string });
     }
     return Object.freeze({ schema: PROGRESS_SCHEMA, lessons: Object.freeze(lessons), cards: Object.freeze(cards) });
   } catch { return null; }
@@ -115,12 +117,18 @@ export function heard(progress: Progress, melody: Melody): { heard: number; of: 
 }
 
 export const REVIEW_LIMITS = Object.freeze({ min: 8, max: 12, secondsPerItem: 10 });
-export function dueCards(progress: Progress, today: string): CardId[] {
-  return Object.entries(progress.cards).filter(([, card]) => card.due <= today).map(([id]) => id as CardId).sort();
+/** A card's due date as review sees it: before a known date, never later than the day before it. */
+export function effectiveDue(card: Card, today: string, until?: string | null): string {
+  if (!until || !realDate(until) || until <= today) return card.due;
+  const last = addDays(until, -1);
+  return card.due > last ? last : card.due;
+}
+export function dueCards(progress: Progress, today: string, until?: string | null): CardId[] {
+  return Object.entries(progress.cards).filter(([, card]) => effectiveDue(card, today, until) <= today).map(([id]) => id as CardId).sort();
 }
 /** The home's review line: phrases due (family and tune), and about how long a run of them takes. */
-export function reviewSummary(progress: Progress, today: string): { phrases: number; minutes: number } | null {
-  const due = dueCards(progress, today); if (!due.length) return null;
+export function reviewSummary(progress: Progress, today: string, until?: string | null): { phrases: number; minutes: number } | null {
+  const due = dueCards(progress, today, until); if (!due.length) return null;
   const phrases = new Set(due.map(id => id.split(":").slice(0, 2).join(":"))).size;
   const items = Math.min(REVIEW_LIMITS.max, Math.max(REVIEW_LIMITS.min, due.length));
   return { phrases, minutes: Math.max(1, Math.ceil(items * REVIEW_LIMITS.secondsPerItem / 60)) };
@@ -139,8 +147,8 @@ export type ReviewSlot = Readonly<{ card: CardId; family: FamilyId; melody: Melo
  * least once, confusable families placed back to back. The caller fills each slot with an item from a
  * verse other than the last one's.
  */
-export function composeReview(progress: Progress, today: string, rng: () => number): ReviewSlot[] {
-  let ids = dueCards(progress, today);
+export function composeReview(progress: Progress, today: string, rng: () => number, until?: string | null): ReviewSlot[] {
+  let ids = dueCards(progress, today, until);
   if (!ids.length) ids = Object.keys(progress.cards).sort() as CardId[];
   if (!ids.length) return [];
   const cards = ids.map(id => ({ card: id, ...parseCardId(id)! }));

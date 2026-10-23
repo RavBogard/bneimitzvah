@@ -101,7 +101,7 @@ describe("signed-in course progress", () => {
 
   it("refuses bad documents, extra keys, a missing or foreign Origin, queries and other methods, echoing nothing", async () => {
     const t = await setup();
-    const bad = [{ progress: { ...doc(), extra: 1 } }, { progress: doc({ "no-such-lesson": "2026-10-20T10:00:00.000Z" }) }, { progress: doc({}, { "zakef:torah:name": [9, "2026-10-20"] }) },
+    const bad = [{ progress: { ...doc(), extra: 1 } }, { progress: doc({ "intro-phrases": "not-a-time" }) }, { progress: doc({}, { "zakef:torah:name": [9, "2026-10-20"] }) },
       { progress: doc(), more: true }, { progress: "x" }, {}];
     for (const body of bad) {
       const result = await t.call("/api/learn/progress/merge", "learner", body);
@@ -116,6 +116,12 @@ describe("signed-in course progress", () => {
     expect((await t.call("/api/learn/progress/merge", "learner", { progress: doc() }, { "sec-fetch-site": "cross-site" })).status).toBe(403);
     expect((await t.call("/api/learn/progress/merge", "learner", undefined, {}, JSON.stringify({ progress: { ...doc(), pad: "x".repeat(80 * 1024) } }))).status).toBeGreaterThanOrEqual(400);
     expect((await t.call("/api/learn/progress", "anonymous")).status).toBe(401);
+    // A practice context (a parent acting for a child) never reaches anyone's progress.
+    expect((await t.call("/api/learn/progress", "multi", undefined, { "x-practice-context": "00000000-0000-4000-8000-000000000000" })).status).toBe(403);
     expect(await t.f.owner(async () => (await t.f.db.select().from(s.courseProgressTable)).length)).toBe(0);
+    // A lesson the course no longer knows is dropped, not refused, so an old browser's document still syncs.
+    const kept = await t.call("/api/learn/progress/merge", "learner", { progress: doc({ "no-such-lesson": "2026-10-20T10:00:00.000Z", "intro-phrases": "2026-10-20T10:00:00.000Z" }) });
+    expect(kept.status).toBe(200);
+    expect(Object.keys(kept.json.progress.lessons)).toEqual(["intro-phrases"]);
   });
 });

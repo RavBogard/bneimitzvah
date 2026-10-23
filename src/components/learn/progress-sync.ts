@@ -1,13 +1,16 @@
-import { emptyProgress, parseProgress, serializeProgress, type Progress, type ProgressStore } from "../../lib/learn/progress";
+import { emptyProgress, mergeProgress, parseProgress, serializeProgress, type Progress, type ProgressStore } from "../../lib/learn/progress";
 
 /**
- * Signed-in course progress in the browser (plan, slice 3). The browser copy stays the working copy; the
- * account's is fetched once per page and written back after changes.
+ * Signed-in course progress in the browser (plan, slice 3). The browser's stored copy is the working copy;
+ * the account's is fetched once per page and written back after changes.
  * - First sign-in in this browser: its progress is merged into the account's (lessons the union with the
  *   earliest done, cards the higher box), and only the server's answer replaces the local copy.
  * - Afterwards: a change is written under the version last seen; a stale version merges instead.
+ * - A change made while a request is out is never overwritten by its answer: it is merged in and sent next.
  * - A browser holding another account's progress (a shared device) takes this account's from the server and
  *   never folds the other's into it.
+ * - Signed out (or without a live grant) after a clean sync, the device is cleared: the account holds it all,
+ *   and the next person at a shared device starts fresh. Unsent changes are kept for that account.
  * Signed out, or with no live grant, nothing leaves the browser.
  */
 export const SYNC_KEY = "crc-torah:learn-sync/v1";
@@ -26,7 +29,9 @@ function readMarker(storage: Storage | null): Marker | null {
     return { owner: value.owner, version: value.version as number, dirty: value.dirty };
   } catch { return null; }
 }
-function writeMarker(storage: Storage | null, marker: Marker) { try { storage?.setItem(SYNC_KEY, JSON.stringify(marker)); } catch { /* The next page load starts over. */ } }
+function writeMarker(storage: Storage | null, marker: Marker): boolean { try { storage?.setItem(SYNC_KEY, JSON.stringify(marker)); return !!storage; } catch { return false; } }
+function dropMarker(storage: Storage | null) { try { storage?.removeItem(SYNC_KEY); } catch { /* Nothing to clear. */ } }
+const same = (a: Progress, b: Progress) => serializeProgress(a) === serializeProgress(b);
 
 /** The account's answer, strictly: anything unexpected is no answer. */
 export function parseRemote(value: unknown): Remote | null {
@@ -49,29 +54,40 @@ export function createProgressSync(io: SyncIo) {
   const setAccount = (next: Account) => { account = next; io.onAccount(next); };
   async function call(path: string, body?: unknown): Promise<{ status: number; value: unknown }> {
     try {
+      // keepalive lets the last write leave as the page hides; the body is bounded well under its 64 KB.
       const response = await io.fetch(path, { method: body === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer",
-        headers: body === undefined ? { accept: "application/json" } : { accept: "application/json", "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+        keepalive: body !== undefined, headers: body === undefined ? { accept: "application/json" } : { accept: "application/json", "content-type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body) });
       const text = response.headers.get("content-type")?.toLowerCase().startsWith("application/json") ? await response.text() : "";
       if (text.length > LIMIT) return { status: 503, value: null };
       let value: unknown = null; try { value = text ? JSON.parse(text) : null; } catch { value = null; }
       return { status: response.status, value };
     } catch { return { status: 503, value: null }; }
   }
-  /** The server's document becomes the browser's, and the marker records whose and which version. */
-  function adopt(remote: Remote) {
-    const progress = remote.progress ?? emptyProgress();
-    io.store.save(progress); owner = remote.owner;
-    writeMarker(io.storage(), { owner: remote.owner, version: remote.version, dirty: false });
+  /**
+   * The server answered `remote` to a request that carried `sent` (null when nothing was sent). Whatever the
+   * learner changed in this browser meanwhile is folded in and left to send, never overwritten; otherwise the
+   * server's copy becomes the browser's. The marker is written only once the copy is saved.
+   */
+  function settle(remote: Remote, sent: Progress | null) {
+    const server = remote.progress ?? emptyProgress(), now = io.store.load(), moved = sent !== null && !same(now, sent);
+    const progress = moved ? mergeProgress(server, now) : server;
+    owner = remote.owner;
+    if (!io.store.save(progress) || !writeMarker(io.storage(), { owner: remote.owner, version: remote.version, dirty: moved })) { setAccount({ state: "unknown" }); return; }
     io.onProgress(progress); setAccount({ state: "synced", until: remote.until });
+    if (moved) queueMicrotask(() => { void push(); });
   }
+  /** Signed out or refused: after a clean sync the device is cleared (the account has it all); unsent changes stay. */
   function refused(status: number) {
-    if (status === 401) setAccount({ state: "signed-out" });
-    else if (status === 403) setAccount({ state: "not-eligible" });
+    if (status !== 401 && status !== 403) return;
+    const marker = readMarker(io.storage());
+    if (marker && !marker.dirty) { io.store.save(emptyProgress()); dropMarker(io.storage()); io.onProgress(emptyProgress()); }
+    setAccount({ state: status === 401 ? "signed-out" : "not-eligible" });
   }
   async function merge(progress: Progress) {
     const answer = await call("/api/learn/progress/merge", { progress });
     const remote = answer.status === 200 ? parseRemote(answer.value) : null;
-    if (remote) adopt(remote); else refused(answer.status);
+    if (remote) settle(remote, progress); else refused(answer.status);
   }
   async function push() {
     if (writing) { again = true; return; }
@@ -82,12 +98,9 @@ export function createProgressSync(io: SyncIo) {
       const progress = io.store.load();
       const answer = await call("/api/learn/progress/put", { progress, expectedVersion: marker.version });
       const remote = answer.status === 200 ? parseRemote(answer.value) : null;
-      if (remote) {
-        // A change made while this write was in flight stays dirty and goes next.
-        const changed = serializeProgress(io.store.load()) !== serializeProgress(progress);
-        owner = remote.owner; writeMarker(io.storage(), { owner: remote.owner, version: remote.version, dirty: changed });
-        if (changed) again = true;
-      } else if (answer.status === 409) await merge(progress);
+      if (remote) settle(remote, progress);
+      // Another device wrote first: merge what this browser has now, including anything made since.
+      else if (answer.status === 409) await merge(io.store.load());
       else refused(answer.status);
     } finally { writing = false; if (again) { again = false; void push(); } }
   }
@@ -98,13 +111,19 @@ export function createProgressSync(io: SyncIo) {
       const answer = await call("/api/learn/progress");
       if (answer.status !== 200) { refused(answer.status); return; }
       const remote = parseRemote(answer.value); if (!remote) return;
-      const marker = readMarker(io.storage()), local = io.store.load();
-      if (!marker) { owner = remote.owner; await merge(local); return; }
-      if (marker.owner !== remote.owner) { adopt(remote); return; }
+      const marker = readMarker(io.storage());
+      // First sign-in in this browser: merge its progress into the account's.
+      if (!marker) { owner = remote.owner; await merge(io.store.load()); return; }
+      // Another account's copy (a shared device): take this account's, fold nothing in.
+      if (marker.owner !== remote.owner) { settle(remote, null); return; }
       owner = remote.owner;
-      if (marker.version !== remote.version) { if (marker.dirty) await merge(local); else adopt(remote); return; }
-      setAccount({ state: "synced", until: remote.until });
-      if (marker.dirty) await push();
+      if (marker.dirty) {
+        if (marker.version === remote.version) { setAccount({ state: "synced", until: remote.until }); await push(); }
+        else await merge(io.store.load());
+        return;
+      }
+      // Nothing unsent: the account's copy is the truth, whichever version this browser last saw.
+      settle(remote, null);
     },
     /** After every local save: mark it, and write it back shortly when this browser is synced. */
     changed() {

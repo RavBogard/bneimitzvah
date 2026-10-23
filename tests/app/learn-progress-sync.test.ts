@@ -4,7 +4,7 @@ import { createProgressSync, SYNC_KEY, type Account } from "../../src/components
 
 // The browser half of signed-in progress, against a fake server and in-memory storage.
 class MemoryStorage { values = new Map<string, string>();
-  getItem(key: string) { return this.values.get(key) ?? null; } setItem(key: string, value: string) { this.values.set(key, value); } }
+  getItem(key: string) { return this.values.get(key) ?? null; } setItem(key: string, value: string) { this.values.set(key, value); } removeItem(key: string) { this.values.delete(key); } }
 const A = "a".repeat(32), B = "b".repeat(32);
 const doc = (lessons: Record<string, string>, cards: Record<string, [number, string]> = {}) => parseProgress({ schema: "learn-progress/v1",
   lessons: Object.fromEntries(Object.entries(lessons).map(([id, done]) => [id, { done }])), cards: Object.fromEntries(Object.entries(cards).map(([id, [box, due]]) => [id, { box, due }])) })!;
@@ -14,12 +14,13 @@ function rig(server: { owner?: string; progress?: Progress | null; version?: num
   const storage = new MemoryStorage(), store = browserProgressStore(() => storage as unknown as Storage);
   if (local) store.save(local);
   if (marker !== undefined) storage.setItem(SYNC_KEY, typeof marker === "string" ? marker : JSON.stringify(marker));
-  const state = { owner: server.owner ?? A, progress: server.progress ?? null, version: server.version ?? 0, status: server.status ?? 200, until: server.until ?? null, conflictOnce: false };
+  const state = { owner: server.owner ?? A, progress: server.progress ?? null, version: server.version ?? 0, status: server.status ?? 200, until: server.until ?? null, conflictOnce: false, before: null as null | ((path: string) => void) };
   const calls: { path: string; body: any }[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
   const reply = (status: number, value: unknown) => new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
   const view = () => ({ ok: true, owner: state.owner, progress: state.progress, version: state.version, until: state.until });
   const fetcher = (async (path: string, init?: RequestInit) => {
     const body = init?.body ? JSON.parse(String(init.body)) : undefined; calls.push({ path, body });
+    state.before?.(path);
     if (state.status !== 200) return reply(state.status, { error: "x" });
     if (path === "/api/learn/progress") return reply(200, view());
     if (path === "/api/learn/progress/merge") { state.progress = state.progress ? mergeProgress(state.progress, parseProgress(body.progress)!) : parseProgress(body.progress); state.version++; return reply(200, view()); }
@@ -116,5 +117,42 @@ describe("signed-in progress in the browser", () => {
     expect(r.calls.map(c => c.path)).toEqual(["/api/learn/progress"]);
     expect(r.store.load()).toEqual(local);
     expect(r.sync.account.state).toBe("unknown");
+  });
+  it("never drops a change made while the first-sign-in merge is out: it is folded in and sent next", async () => {
+    const r = rig({ progress: null }, undefined, doc({ "intro-phrases": T1 }));
+    r.state.before = path => { if (path === "/api/learn/progress/merge") { r.store.save(doc({ "intro-phrases": T1, "torah-etnachta": T2 })); r.sync.changed(); r.state.before = null; } };
+    await r.sync.start(); await settle(); await settle(); await settle();
+    expect(r.calls.map(c => c.path)).toEqual(["/api/learn/progress", "/api/learn/progress/merge", "/api/learn/progress/put"]);
+    expect(Object.keys(r.store.load().lessons).sort()).toEqual(["intro-phrases", "torah-etnachta"]);
+    expect(Object.keys(r.state.progress!.lessons).sort()).toEqual(["intro-phrases", "torah-etnachta"]);
+    expect(r.marker()).toEqual({ owner: A, version: 2, dirty: false });
+  });
+  it("never drops a change made while a put meets a conflict", async () => {
+    const r = rig({ progress: doc({ "intro-phrases": T1 }), version: 1 }, { owner: A, version: 1, dirty: false }, doc({ "intro-phrases": T1 }));
+    await r.sync.start();
+    r.state.conflictOnce = true; r.state.progress = doc({ "torah-sof-pasuk": T2 }); r.state.version = 4;
+    r.state.before = path => { if (path === "/api/learn/progress/put") { r.store.save(doc({ "intro-phrases": T1, "torah-zakef": T2, "torah-etnachta": T2 })); r.state.before = null; } };
+    r.store.save(doc({ "intro-phrases": T1, "torah-zakef": T2 })); r.sync.changed();
+    r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
+    expect(Object.keys(r.store.load().lessons).sort()).toEqual(["intro-phrases", "torah-etnachta", "torah-sof-pasuk", "torah-zakef"]);
+    expect(Object.keys(r.state.progress!.lessons).sort()).toEqual(["intro-phrases", "torah-etnachta", "torah-sof-pasuk", "torah-zakef"]);
+    expect(r.marker().dirty).toBe(false);
+  });
+  it("clears the device when signed out after a clean sync, and keeps unsent changes for their account", async () => {
+    const clean = rig({ status: 401 }, { owner: A, version: 3, dirty: false }, doc({ "intro-phrases": T1 }));
+    await clean.sync.start();
+    expect(clean.store.load()).toEqual(emptyProgress());
+    expect(clean.marker()).toBeNull();
+    const dirty = rig({ status: 401 }, { owner: A, version: 3, dirty: true }, doc({ "intro-phrases": T1 }));
+    await dirty.sync.start();
+    expect(dirty.store.load()).toEqual(doc({ "intro-phrases": T1 }));
+    expect(dirty.marker()).toEqual({ owner: A, version: 3, dirty: true });
+  });
+  it("takes the account's copy when nothing is unsent, even at the same version", async () => {
+    const account = doc({ "torah-etnachta": T2 });
+    const r = rig({ progress: account, version: 2 }, { owner: A, version: 2, dirty: false }, doc({ "intro-phrases": T1 }));
+    await r.sync.start();
+    expect(r.store.load()).toEqual(account);
+    expect(r.calls.map(c => c.path)).toEqual(["/api/learn/progress"]);
   });
 });

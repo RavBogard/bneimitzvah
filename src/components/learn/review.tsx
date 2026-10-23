@@ -36,7 +36,7 @@ export function ReviewScreen() { return <LearnServices><Review /></LearnServices
 function Review() {
   const { progress: loaded, update, until } = useProgress(), progress = loaded ?? emptyProgress();
   const seed = useRef(Math.floor(Math.random() * 2 ** 31)), today = localDay(Date.now());
-  const plan = useMemo(() => loaded ? composeReview(loaded, today, seededRandom(seed.current)) : null, [loaded === null]); // eslint-disable-line react-hooks/exhaustive-deps
+  const plan = useMemo(() => loaded ? composeReview(loaded, today, seededRandom(seed.current), until) : null, [loaded === null]); // eslint-disable-line react-hooks/exhaustive-deps
   const lessons = useMemo(() => plan ? COURSE.lessons.filter(lesson => lesson.family && plan.some(slot => slot.melody === lesson.melody && (slot.family === lesson.family || learned(progress, slot.melody).includes(lesson.family!)))) : [], [plan]); // eslint-disable-line react-hooks/exhaustive-deps
   const [retry, setRetry] = useState(0), data = useCourseVerses(lessons, retry);
   const frame = (body: ReactNode, footer?: ReactNode) => <div className={`portal-shell ${styles.shell}`}>

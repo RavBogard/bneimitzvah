@@ -1,8 +1,8 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPhraseAudio, type PhraseAudio } from "../../lib/learn/phrase-audio";
-import { browserProgressStore, emptyProgress, localDay, type Progress, type ProgressStore } from "../../lib/learn/progress";
-import { createProgressSync, type Account, type ProgressSync } from "./progress-sync";
+import { browserProgressStore, emptyProgress, localDay, PROGRESS_KEY, type Progress, type ProgressStore } from "../../lib/learn/progress";
+import { createProgressSync, SYNC_KEY, type Account, type ProgressSync } from "./progress-sync";
 import { createClipPlayer, type ClipPlayer, type PlayerState } from "./player";
 import { createVerseLoader, type VerseLoader } from "./verses-api";
 
@@ -53,6 +53,8 @@ function progressHub() {
   void hub.sync.start();
   const hide = () => { if (document.visibilityState !== "visible") hub.sync.flush(); };
   document.addEventListener("visibilitychange", hide); window.addEventListener("pagehide", () => hub.sync.flush());
+  // Another tab saved: show what it saved.
+  window.addEventListener("storage", event => { if (event.key === null || event.key === PROGRESS_KEY || event.key === SYNC_KEY) set({ progress: store.load() }); });
   return hub;
 }
 function useProgressState(): ProgressState {
@@ -62,7 +64,8 @@ function useProgressState(): ProgressState {
 export function useProgress() {
   const { progress, account } = useProgressState();
   const update = useCallback((change: (value: Progress) => Progress) => {
-    const hub = progressHub(), next = change(hub.state.progress ?? hub.store.load());
+    // The stored copy is the working copy: another tab may have saved since this one last read it.
+    const hub = progressHub(), next = change(hub.store.load());
     hub.store.save(next); hub.state = Object.freeze({ ...hub.state, progress: next }); for (const listener of hub.listeners) listener();
     hub.sync.changed();
   }, []);

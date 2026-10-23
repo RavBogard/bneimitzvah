@@ -56,6 +56,8 @@ test("real PostgreSQL: owner_only keeps every course-progress document to its ow
       assert.equal(row.relrowsecurity, true); assert.equal(row.relforcerowsecurity, true); assert.notEqual(row.owner, "portal_runtime"); assert.notEqual(row.owner, login);
       assert.deepEqual((await query(owner, "SELECT policyname, cmd, roles::text[] AS roles FROM pg_policies WHERE tablename = 'course_progress'")).rows, [{ policyname: "owner_only", cmd: "ALL", roles: ["portal_runtime"] }]);
       assert.deepEqual((await query(owner, "SELECT privilege_type FROM information_schema.table_privileges WHERE grantee='portal_runtime' AND table_name='course_progress' ORDER BY privilege_type")).rows.map(r => r.privilege_type), ["INSERT", "SELECT"]);
+      assert.deepEqual((await query(owner, "SELECT privilege_type FROM information_schema.table_privileges WHERE grantee='PUBLIC' AND table_name='course_progress'")).rows, []);
+      assert.deepEqual((await query(owner, "SELECT column_name FROM information_schema.column_privileges WHERE grantee='portal_runtime' AND privilege_type='UPDATE' AND table_name='course_progress' ORDER BY column_name")).rows.map(r => r.column_name), ["progress", "updated_at", "version"]);
     });
 
     await t.test("a tenant without an owner, or with the saved layer's owner setting, sees and writes nothing", async () => {
