@@ -32,7 +32,7 @@ function LessonFlow({ id }: { id: string }) {
   const sources = useMemo(() => lessonSources(lesson), [lesson]);
   const data = useCourseVerses(steps[0].kind === "first-verse" ? [] : sources, retry);
   const { player } = useLearnServices();
-  const { progress, update } = useProgress();
+  const { progress, update, until } = useProgress();
   const main = useRef<HTMLElement>(null), moved = useRef(new Set<string>());
   const go = useCallback((next: number) => { player.stop(); setAt(next); window.scrollTo({ top: 0 }); main.current?.focus({ preventScroll: true }); }, [player]);
   const step = steps[at];
@@ -42,8 +42,8 @@ function LessonFlow({ id }: { id: string }) {
     // A card goes up at most one box in a lesson, however often its family comes up right; a miss still drops it.
     if (right && moved.current.has(id)) return;
     moved.current.add(id);
-    update(value => recordAnswer(value, id, right, localDay(Date.now())));
-  }, [update]);
+    update(value => recordAnswer(value, id, right, localDay(Date.now()), { until }));
+  }, [update, until]);
   const doneIndex = steps.length - 1;
   return <div className={`portal-shell ${styles.shell}`}>
     <a className="skip-link" href="#lesson-main">Skip to the lesson</a>
@@ -54,7 +54,7 @@ function LessonFlow({ id }: { id: string }) {
     </header>
     <main id="lesson-main" ref={main} tabIndex={-1} className={styles.lesson} data-step={step.kind}>
       {step.kind === "first-verse" ? <FirstVerse lesson={lesson} onDone={() => go(doneIndex)} />
-        : step.kind === "done" ? <Done lesson={lesson} fallback={data.status === "ready" ? data.examples.get(lesson.id) ?? [] : []} complete={() => update(value => completeLesson(value, lesson, Date.now()))} nextId={progress ? nextLesson(completeLesson(progress, lesson, Date.now()))?.id ?? null : null} />
+        : step.kind === "done" ? <Done lesson={lesson} fallback={data.status === "ready" ? data.examples.get(lesson.id) ?? [] : []} complete={() => update(value => completeLesson(value, lesson, Date.now(), until))} nextId={progress ? nextLesson(completeLesson(progress, lesson, Date.now()))?.id ?? null : null} />
         : data.status === "loading" ? <p role="status" className={styles.state}>Loading the lesson…</p>
         : data.status === "error" || !(data.examples.get(lesson.id)?.length) ? <div role="status" className={styles.state}><p>The recording did not load. Try again.</p><button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>
         : step.kind === "hear" ? <HearIt lesson={lesson} examples={data.examples.get(lesson.id) ?? []} onNext={() => go(at + 1)} />
