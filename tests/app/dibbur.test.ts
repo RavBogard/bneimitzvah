@@ -70,6 +70,21 @@ test("the divine-name abbreviation reads as the four letters; any other abbrevia
   expect(matchDibbur('א"ב.ככ', ["אָב", "כָּ֔ךְ"])).toBeNull();
 });
 
+test("written euphemisms for the divine names read as the verse's spelling, deterministically and never loosely", () => {
+  const named = ["אָמַ֣ר", "אֱלֹהִ֔ים", "לֵאלֹהֶ֖יךָ", "יְהוָ֔ה", "אֶלְקָ֖נָה"];
+  expect(matchDibbur("אמר אלקים", named)).toEqual({ first: 0, last: 1 });
+  expect(matchDibbur("אמר אלוקים", named)).toEqual({ first: 0, last: 1 });
+  expect(matchDibbur("לאלקיך", named)).toEqual({ first: 2, last: 2 });
+  expect(matchDibbur("אמר אלהים", named)).toEqual({ first: 0, last: 1 }); // the plain spelling still matches
+  for (const name of ["יי", "יקוק", "ידוד", "ה׳"]) expect(matchDibbur(name, named)).toEqual({ first: 3, last: 3 });
+  // A real word with אלק in it is matched as written, and the euphemism never turns it into another word.
+  expect(matchDibbur("אלקנה", named)).toEqual({ first: 4, last: 4 });
+  expect(matchDibbur("אלהנה", named)).toBeNull();
+  // The verse's own spelling is never rewritten: a verse with אלקים matches only a quotation that says so.
+  expect(matchDibbur("אלהים", ["אֱלֹקִים"])).toBeNull();
+  expect(matchDibbur("אלקים", ["אֱלֹקִים"])).toEqual({ first: 0, last: 0 });
+});
+
 test("an editor's bracketed or parenthesized insertion is not part of the verse's words", () => {
   expect(matchDibbur("אבג [מלה] דה", verse)).toEqual({ first: 0, last: 1 });
   expect(matchDibbur("אבג (מלה) דה", verse)).toEqual({ first: 0, last: 1 });

@@ -17,6 +17,15 @@ const ABBREVIATION_MARKS = /[׳״'"’”]/g;
 const ETCETERA = new Set(["וגו", "וגומר", "וכו", "כו", "וגומ"]);
 /** The one abbreviation that names a single word for certain: the Tetragrammaton. */
 const DIVINE_NAME = "יהוה";
+/** Whole-word written substitutes for the Tetragrammaton that commentaries print in place of it. */
+const NAME_SUBSTITUTES = new Set(["יי", "יקוק", "ידוד"]);
+/**
+ * The written euphemism for Elohim and its forms (אלקים, אלקיך, לאלקי, אלוקים): a quoted word matches a
+ * verse word when it is the same, or the same once ק (after אל, with or without ו) is read as ה.
+ * Applied to the quotation only and compared exactly, so it can only find the verse's own spelling.
+ */
+const euphemism = (word: string) => word.replace(/אלו?ק/g, "אלה");
+const sameWord = (quoted: string, verse: string) => quoted === verse || euphemism(quoted) === verse;
 
 /** Letters only, final forms folded; maqaf, paseq, sof pasuq and every other mark or sign become nothing or a word break. */
 export function hebrewLetters(text: string): string {
@@ -46,7 +55,7 @@ export function dibburWords(dibbur: string): readonly string[] | null {
       return null;
     }
     if (ETCETERA.has(letters) && words.length) break;
-    words.push(letters);
+    words.push(NAME_SUBSTITUTES.has(letters) ? DIVINE_NAME : letters);
   }
   return words.length ? Object.freeze(words) : null;
 }
@@ -70,7 +79,7 @@ export function matchDibbur(dibbur: string | null | undefined, verseWords: reado
   let found: DibburMatch | null = null;
   for (let start = 0; start + quoted.length <= parts.length; start++) {
     const end = start + quoted.length - 1;
-    if (!parts[start].first || !parts[end].last || !quoted.every((word, offset) => parts[start + offset].letters === word)) continue;
+    if (!parts[start].first || !parts[end].last || !quoted.every((word, offset) => sameWord(word, parts[start + offset].letters))) continue;
     if (found) return null; // Twice in the verse: which one is meant is a guess.
     found = Object.freeze({ first: parts[start].word, last: parts[end].word });
   }

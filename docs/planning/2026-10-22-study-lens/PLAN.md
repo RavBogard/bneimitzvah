@@ -35,7 +35,8 @@
      - The maqaf, paseq and sof pasuq break words.
      - An editor's `[…]` or `(…)` is dropped.
      - A trailing "etc." (וגו׳, וגומר, וכו׳) ends the quotation.
-     - ה׳ reads as the four-letter name.
+     - ה׳, and the whole-word substitutes יי, יקוק and ידוד, read as the four-letter name.
+     - The Elohim euphemism (אלקים, אלוקים, אלקיך, לאלקי) matches the verse's אלהים forms. Only the quotation is read this way, and the comparison stays exact, so a real word with אלק (אלקנה) still matches only itself. (Root relaying Daniel's answer, 2026-10-22.)
    - What makes a quotation unlinked:
      - Any other abbreviation.
      - Words that are absent, repeated in the verse, out of order or not consecutive.
@@ -97,8 +98,17 @@
   Every commentary and reading answer in these tests is a synthetic route fulfilment.
 - `e2e/front-door.spec.ts`, `e2e/foundation.spec.ts` and `tests/app/front-door.test.ts`: the Study link is back.
 
+14. **English line breaks** (a fix to the shared text reader, found in Study). Sefaria's JPS 2023 HTML puts raw newlines beside small caps ("
+G<small>OD</small>
+ said"). Those newlines are now whitespace, as HTML treats them, and only `<br>` makes an English line. The CDN keeps `/api/public/text` for a day, and the study cache for a day, so the fix reaches cached chapters within a day.
+
+## Answered (root relaying Daniel, 2026-10-22)
+
+- Lens memory per browser is fine as built.
+- אלקים reads as אלהים (decision 5).
+- Rashi's capitalized English lemma stays as Sefaria prints it; lowercasing would mangle proper nouns.
+- Study guides on `/read` stay deferred to their own slice, with an adversarial review.
+
 ## Open items that wait on Daniel
 
-- **Study guides on the public reading**: which guides, and what label (see Deferred).
-- **Silbermann's capitalized English lemma** ("GET THEE OUT") is shown as Sefaria has it. Should it be set in ordinary case?
-- **ה׳ as the four-letter name** is the only abbreviation the link reads. Should אלקים also read as אלהים?
+- **Study guides on the public reading**: which guides, and what label (see Deferred), when that slice is built.
