@@ -61,19 +61,30 @@ export function serializeProgress(progress: Progress): string | null {
   return new TextEncoder().encode(text).length <= PROGRESS_LIMITS.bytes ? text : null;
 }
 
-/** The modified Leitner step: right moves up one box, wrong drops two and comes back today. */
-export function answerCard(card: Card, right: boolean, today: string): Card {
-  const box = right ? Math.min(BOX_DAYS.length - 1, card.box + 1) : Math.max(0, card.box - 2);
-  return Object.freeze({ box, due: addDays(today, BOX_DAYS[box]) });
+/**
+ * A known date (a signed-in Beit Mitzvah student's ceremony): before it, no gap may exceed a fifth of the
+ * days left, so the reviews close in on the date and the last one lands in its final 10 to 20 percent
+ * (plan, slice 3). On and after the date the normal gaps resume.
+ */
+export function gapDays(box: number, today: string, until?: string | null): number {
+  const gap = BOX_DAYS[box];
+  if (!until || !realDate(until) || until <= today || gap === 0) return gap;
+  return Math.min(gap, Math.max(1, Math.floor(daysBetween(today, until) / 5)));
 }
+/** The modified Leitner step: right moves up one box, wrong drops two and comes back today. */
+export function answerCard(card: Card, right: boolean, today: string, until?: string | null): Card {
+  const box = right ? Math.min(BOX_DAYS.length - 1, card.box + 1) : Math.max(0, card.box - 2);
+  return Object.freeze({ box, due: addDays(today, gapDays(box, today, until)) });
+}
+export type AnswerOptions = Readonly<{ moved?: Set<string>; until?: string | null }>;
 /** Record one answer. Only cards that already exist move; a lesson's own cards arrive when it is done.
  * `moved` is the run's (a lesson's or a review's) record: a card goes up at most one box per run, however
  * often it comes up right; a miss still drops it. */
-export function recordAnswer(progress: Progress, id: CardId, right: boolean, today: string, moved?: Set<string>): Progress {
+export function recordAnswer(progress: Progress, id: CardId, right: boolean, today: string, options: AnswerOptions = {}): Progress {
   const card = progress.cards[id]; if (!card) return progress;
-  if (right && moved?.has(id)) return progress;
-  moved?.add(id);
-  return Object.freeze({ ...progress, cards: Object.freeze({ ...progress.cards, [id]: answerCard(card, right, today) }) });
+  if (right && options.moved?.has(id)) return progress;
+  options.moved?.add(id);
+  return Object.freeze({ ...progress, cards: Object.freeze({ ...progress.cards, [id]: answerCard(card, right, today, options.until) }) });
 }
 /** The skills a lesson's drills practise, for its family in its melody. */
 export function lessonCards(lesson: Lesson): CardId[] {
@@ -82,9 +93,9 @@ export function lessonCards(lesson: Lesson): CardId[] {
   return SKILLS.filter(skill => skills.has(skill)).map(skill => cardId(lesson.family!, lesson.melody, skill));
 }
 /** A lesson is done: it is marked, and its new cards enter box 1, due tomorrow. Existing cards keep their place. */
-export function completeLesson(progress: Progress, lesson: Lesson, now: number): Progress {
+export function completeLesson(progress: Progress, lesson: Lesson, now: number, until?: string | null): Progress {
   const today = localDay(now), cards: Record<string, Card> = { ...progress.cards };
-  for (const id of lessonCards(lesson)) if (!cards[id]) cards[id] = Object.freeze({ box: 1, due: addDays(today, BOX_DAYS[1]) });
+  for (const id of lessonCards(lesson)) if (!cards[id]) cards[id] = Object.freeze({ box: 1, due: addDays(today, gapDays(1, today, until)) });
   const lessons = progress.lessons[lesson.id] ? progress.lessons : Object.freeze({ ...progress.lessons, [lesson.id]: Object.freeze({ done: new Date(now).toISOString() }) });
   return Object.freeze({ ...progress, lessons, cards: Object.freeze(cards) });
 }
@@ -148,6 +159,25 @@ export function composeReview(progress: Progress, today: string, rng: () => numb
     chained.push(rest.splice(index, 1)[0]);
   }
   return chained.map(slot => Object.freeze(slot));
+}
+
+/**
+ * Two copies of one learner's progress (the browser's and the account's) made one, for the first
+ * sign-in and for a conflict between devices: every lesson either copy finished, with its earliest
+ * done; every card at the higher box of the two, with that copy's due date (on a tie, the sooner due).
+ */
+export function mergeProgress(a: Progress, b: Progress): Progress {
+  const lessons: Record<string, { done: string }> = {}, cards: Record<string, Card> = {};
+  for (const source of [a, b]) for (const [id, entry] of Object.entries(source.lessons)) {
+    const known = lessons[id];
+    lessons[id] = Object.freeze({ done: !known || Date.parse(entry.done) < Date.parse(known.done) ? entry.done : known.done });
+  }
+  for (const source of [a, b]) for (const [id, card] of Object.entries(source.cards)) {
+    const known = cards[id];
+    cards[id] = !known || card.box > known.box || card.box === known.box && card.due < known.due ? card : known;
+  }
+  const sorted = <T,>(value: Record<string, T>) => Object.freeze(Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]])));
+  return Object.freeze({ schema: PROGRESS_SCHEMA, lessons: sorted(lessons), cards: sorted(cards) });
 }
 
 /** Browser storage for signed-out learners: one key, every access guarded; corrupt or missing means fresh. */
