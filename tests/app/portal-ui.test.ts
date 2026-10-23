@@ -35,12 +35,16 @@ describe("portal entry client trust and transport contracts", () => {
   });
   it("loads only a minimal session role summary and rejects unexpected identity/provider fields", () => {
     const sessionBinding = "a".repeat(43);
-    expect(parseSession({ membershipAvailable: false, roles: [], sessionBinding })).toEqual({ membershipAvailable: false, roles: [], sessionBinding });
-    expect(parseSession({ membershipAvailable: true, roles: ["parent", "tutor"], sessionBinding }).roles).toEqual(["parent", "tutor"]);
-    for (const value of [{ membershipAvailable: false, roles: ["admin"] }, { membershipAvailable: true, roles: ["admin", "admin"] },
-      { membershipAvailable: true, roles: ["owner"] }, { membershipAvailable: true, roles: [], user: {} }, { membershipAvailable: "true", roles: [] }])
+    expect(parseSession({ membershipAvailable: false, roles: [], saved: false, sessionBinding })).toEqual({ membershipAvailable: false, roles: [], saved: false, sessionBinding });
+    expect(parseSession({ membershipAvailable: true, roles: ["parent", "tutor"], saved: true, sessionBinding })).toEqual({ membershipAvailable: true, roles: ["parent", "tutor"], saved: true, sessionBinding });
+    expect(parseSession({ membershipAvailable: true, roles: ["student"], saved: false, sessionBinding }).saved).toBe(false);
+    for (const value of [{ membershipAvailable: false, roles: ["admin"], saved: false }, { membershipAvailable: true, roles: ["admin", "admin"], saved: true },
+      { membershipAvailable: true, roles: ["owner"], saved: false }, { membershipAvailable: true, roles: [], saved: false, user: {} }, { membershipAvailable: "true", roles: [], saved: false },
+      // The saved flag is required, strictly boolean, and never true without a membership.
+      { membershipAvailable: true, roles: ["parent"] }, { membershipAvailable: true, roles: ["parent"], saved: "true" }, { membershipAvailable: true, roles: ["parent"], saved: 1 },
+      { membershipAvailable: false, roles: [], saved: true }])
       expect(() => parseSession({ ...value, sessionBinding })).toThrow(PortalRequestError);
-    expect(() => parseSession({ membershipAvailable: true, roles: [], sessionBinding: "untrusted-readable-claims" })).toThrow(PortalRequestError);
+    expect(() => parseSession({ membershipAvailable: true, roles: [], saved: false, sessionBinding: "untrusted-readable-claims" })).toThrow(PortalRequestError);
   });
 
   it("requires a reviewed invitation DTO without raw token/mailbox/session claims and enforces role-target shape", () => {

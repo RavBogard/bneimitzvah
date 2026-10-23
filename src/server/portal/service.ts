@@ -8,6 +8,7 @@ import type { createPracticeService } from "../practice/service";
 import type { PracticeContextView } from "../practice/types";
 import type { StudentView } from "../data/students";
 import { confirmedReadings, availableRoles } from "../data/portal";
+import { savedEligibleRole } from "../saved/eligibility";
 import { expandReadingRanges, parseCeremonyDate } from "../../lib/readings/ranges";
 import { assignmentNeedsReview } from "../../lib/readings/review";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
@@ -44,7 +45,9 @@ export function createPortalService<Q extends PgQueryResultHKT>(input: { access:
       const grants = identity.membership ? await availableRoles(tx, identity.tenantId, identity.membership.id) : [];
       const sessionBinding = createHmac("sha256", input.sessionBindingSecret).update(JSON.stringify(["session-ui-binding:v1", identity.origin, identity.tenantId, identity.userId,
         identity.authSessionId, identity.membership?.id ?? null, identity.membership?.authorityRevision ?? null, grants.map(grant => [grant.role, grant.id, grant.revision])])).digest("base64url");
-      return Object.freeze({ membershipAvailable: identity.membership !== null, roles: Object.freeze(grants.map(grant => grant.role)), sessionBinding });
+      // `saved`: whether this account keeps its own saved layer (accounts plan choice B), from the same live grants.
+      return Object.freeze({ membershipAvailable: identity.membership !== null, roles: Object.freeze(grants.map(grant => grant.role)),
+        saved: grants.some(grant => savedEligibleRole(grant.role)), sessionBinding });
     });
   }
   async function assignedReading(request: AccessRequest, selection: { mode: ActiveMode | "child-practice"; studentId: string }) {

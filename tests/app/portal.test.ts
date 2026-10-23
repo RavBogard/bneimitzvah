@@ -65,14 +65,16 @@ describe("private portal read DTOs and recipient invitation review", () => {
     const f = await fixture();
     expect(await denied(() => f.portal.sessionSummary(f.http("multi", undefined, { cookie: "" })), 401)).toBe(true);
     const empty = await f.portal.sessionSummary(f.http("recipient"));
-    expect(!empty.membershipAvailable && empty.roles.length === 0 && Object.keys(empty).sort().join() === "membershipAvailable,roles,sessionBinding").toBe(true);
+    expect(!empty.membershipAvailable && empty.roles.length === 0 && !empty.saved && Object.keys(empty).sort().join() === "membershipAvailable,roles,saved,sessionBinding").toBe(true);
     const summary = await f.portal.sessionSummary(f.http());
-    expect(summary.membershipAvailable && summary.roles.join() === "parent,tutor" && !JSON.stringify(summary).includes("@")).toBe(true);
+    expect(summary.membershipAvailable && summary.roles.join() === "parent,tutor" && summary.saved && !JSON.stringify(summary).includes("@")).toBe(true);
     const other = await f.portal.sessionSummary(f.http("multi", undefined, { origin: "http://localhost:3101" }));
-    expect(other.membershipAvailable && other.roles.join() === "student").toBe(true);
+    // A student-only account keeps no saved layer (accounts plan choice B).
+    expect(other.membershipAvailable && other.roles.join() === "student" && !other.saved).toBe(true);
     for (const handle of ["", randomBytes(32).toString("base64url")]) expect(await denied(() => f.portal.sessionSummary(f.http("multi", handle)), 403)).toBe(true);
     await f.owner(async () => { await f.db.update(s.roleGrant).set({ revokedAt: new Date() }).where(eq(s.roleGrant.id, f.tutorGrant.id)); });
     expect((await f.portal.sessionSummary(f.http())).roles.join() === "parent").toBe(true);
+    expect((await f.portal.sessionSummary(f.http())).saved).toBe(true);
     await f.owner(async () => { await f.db.update(s.membership).set({ disabledAt: new Date() }).where(eq(s.membership.id, f.multiMember.id)); });
     expect(await denied(() => f.portal.sessionSummary(f.http()), 403)).toBe(true);
     await f.owner(async () => { await f.db.update(s.user).set({ emailVerified: false }).where(eq(s.user.id, f.identities.recipient.id)); });
