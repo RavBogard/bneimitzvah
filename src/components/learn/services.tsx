@@ -5,8 +5,9 @@ import { browserProgressStore, emptyProgress, localDay, PROGRESS_KEY, type Progr
 import { createProgressSync, SYNC_KEY, type Account, type ProgressSync } from "./progress-sync";
 import { createClipPlayer, type ClipPlayer, type PlayerState } from "./player";
 import { createVerseLoader, type VerseLoader } from "./verses-api";
+import { WordCardScope } from "./word-card";
 
-/** One loader, one phrase cache and one audio element per course page; stopped when the page hides. */
+/** One loader, one phrase cache and one audio element per course page; stopped when the page hides. The page's one word card lives here too. */
 type Services = Readonly<{ loader: VerseLoader; audio: PhraseAudio; player: ClipPlayer }>;
 const Context = createContext<Services | null>(null);
 
@@ -22,7 +23,7 @@ export function LearnServices({ children }: { children: ReactNode }) {
     document.addEventListener("visibilitychange", hide); window.addEventListener("pagehide", leave);
     return () => { document.removeEventListener("visibilitychange", hide); window.removeEventListener("pagehide", leave); services.player.stop(); };
   }, [services]);
-  return <Context.Provider value={services}>{children}</Context.Provider>;
+  return <Context.Provider value={services}><WordCardScope>{children}</WordCardScope></Context.Provider>;
 }
 export function useLearnServices(): Services {
   const value = useContext(Context); if (!value) throw new Error("Learn services missing");

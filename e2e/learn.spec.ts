@@ -74,6 +74,16 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
     const nextButton = page.getByRole("button", { name: "Next", exact: true });
     await expect(nextButton).toBeEnabled();
     if (i === 1 && testInfo.project.name === "phone") expect(await noHorizontalScroll(page)).toBe(true);
+    if (i === 2) {
+      // Once answered, the verse's words open their cards; a tapped word plays nothing.
+      const word = page.locator("main [data-word-card]").first(), heard = await plays(page);
+      await word.focus(); await page.keyboard.press("Enter");
+      await expect(page.getByRole("dialog")).toContainText(/Synthetic gloss for word \d+/);
+      await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(word).toBeFocused();
+      expect(await plays(page)).toBe(heard);
+    }
     await nextButton.click();
   }
   expect(missedPrompt).not.toBe("");
@@ -100,6 +110,47 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
   // Nothing is due today; the review line appears only when a phrase is.
   await expect(page.getByRole("link", { name: /^Review:/ })).toHaveCount(0);
   expect(routes.seen.every(path => path.startsWith("/api/public/"))).toBe(true);
+});
+
+test("tapping a word opens its card, never trope; Escape, Close and a tap outside close it and focus goes back to the word", async ({ page }, testInfo) => {
+  const routes = syntheticCourseRoutes(); await routes.install(page); await seed(page, introDone);
+  await page.goto("/learn/torah-etnachta");
+  await expect(page.locator("main[data-step=hear]")).toBeVisible({ timeout: 20_000 });
+  const words = page.locator("main [data-word-card]");
+  await expect(words.first()).toBeVisible();
+  const word = words.nth(1), text = (await word.innerText()).trim(), before = await plays(page);
+  await word.click();
+  const card = page.getByRole("dialog");
+  await expect(card).toBeVisible();
+  await expect(card).toHaveAttribute("data-layout", testInfo.project.name === "phone" ? "sheet" : "panel");
+  const heading = card.getByRole("heading", { level: 4 });
+  await expect(heading).toBeFocused();
+  await expect(heading).toHaveAttribute("lang", "he");
+  await expect(heading).toHaveText(text);
+  await expect(card).toContainText("Meaning in this verse");
+  await expect(card).toContainText(/Synthetic gloss for word \d+/);
+  await expect(card).toContainText("Syllables and stress aren\u2019t available for this word.");
+  expect(await plays(page), "a tapped word plays nothing").toBe(before);
+  expect(routes.seen.some(path => path.startsWith("/api/public/word-details?"))).toBe(true);
+  const close = card.getByRole("button", { name: "Close" });
+  expect((await close.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  if (testInfo.project.name === "phone") expect(await noHorizontalScroll(page)).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(card).toHaveCount(0);
+  await expect(word).toBeFocused();
+  // Keyboard: Enter opens it; Close closes it.
+  await page.keyboard.press("Enter");
+  await expect(card).toBeVisible();
+  await close.click();
+  await expect(card).toHaveCount(0);
+  await expect(word).toBeFocused();
+  // A tap outside closes it.
+  await word.click();
+  await expect(card).toBeVisible();
+  const size = page.viewportSize()!; await page.mouse.click(size.width - 4, Math.round(size.height / 2));
+  await expect(card).toHaveCount(0);
+  await expect(word).toBeFocused();
+  expect(await plays(page)).toBe(before);
 });
 
 test("a corrupt saved value means a fresh start, never an error", async ({ page }) => {

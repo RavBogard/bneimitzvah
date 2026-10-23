@@ -1,11 +1,13 @@
 "use client";
-import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
+import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
 import type { FamilyId } from "../../lib/trope/chart-catalog";
 import { familyColor, familyName, type Melody } from "../../lib/learn/course";
 import { contourPath, CONTOUR_BOX } from "../../lib/learn/contours";
 import type { AnalysedVerse } from "../../lib/learn/verse";
 import type { PhraseRequest } from "../../lib/learn/phrase-audio";
+import { routeUnitTap, unitWordParts } from "../../lib/learn/word-tap";
 import { usePlayerState, useLearnServices } from "./services";
+import { useWordCard } from "./word-card";
 import styles from "./learn.module.css";
 
 const svg = (children: ReactNode, size = 22) => <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>;
@@ -38,20 +40,31 @@ export type UnitLook = "plain" | "inked" | "pull";
 /**
  * Hebrew of units [first, last] of a verse, read text only, each unit its own span. `look` colours a
  * unit by its phrase's family; "pull" wipes the colour in word by word (the ink pull).
+ * A tap on a unit answers through `onUnit` while a question is open; otherwise, inside a word card scope, it
+ * opens the word's card (a maqaf unit opens on the word tapped). `card={false}` keeps the words plain, for Hebrew
+ * that sits inside another answer target. A tap never plays.
  */
-export function UnitsText({ verse, units, look = () => "plain", className = "", onUnit, unitLabel, unitClass, as = "p", wipe }: {
+export function UnitsText({ verse, units, look = () => "plain", className = "", onUnit, unitLabel, unitClass, as = "p", wipe, card = true }: {
   verse: AnalysedVerse; units?: readonly [number, number]; look?: (unit: number) => UnitLook; className?: string; as?: "p" | "span";
   /** The ink pull's stagger step for a unit (in 70 ms steps); the default is its place in the range. */ wipe?(unit: number): number;
-  onUnit?(unit: number): void; unitLabel?(unit: number): string; unitClass?(unit: number): string | undefined;
+  onUnit?(unit: number): void; unitLabel?(unit: number): string; unitClass?(unit: number): string | undefined; card?: boolean;
 }) {
-  const [first, last] = units ?? [0, verse.units.length - 1], Tag = as;
-  const key = (event: KeyboardEvent, unit: number) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onUnit?.(unit); } };
+  const [first, last] = units ?? [0, verse.units.length - 1], Tag = as, opener = useWordCard(), openCard = !onUnit && card && opener ? opener : undefined;
+  const tap = (unit: number, part: number | null, trigger: HTMLElement) => routeUnitTap({ verse, onAnswer: onUnit, openCard }, unit, part, trigger);
+  const key = (event: KeyboardEvent<HTMLElement>, unit: number) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); tap(unit, null, event.currentTarget); } };
+  const click = (event: MouseEvent<HTMLElement>, unit: number) => {
+    const part = event.target instanceof Element ? event.target.closest("[data-part]")?.getAttribute("data-part") : null;
+    tap(unit, part == null ? null : Number(part), event.currentTarget);
+  };
   return <Tag className={`${styles.hebrew} ${className}`} lang="he" dir="rtl">
     {verse.units.slice(first, last + 1).map((unit, k) => {
-      const mode = look(unit.index), extra = unitClass?.(unit.index);
-      const classes = [styles.unit, mode === "inked" ? styles.inked : mode === "pull" ? styles.pull : "", onUnit ? styles.target : "", extra ?? ""].filter(Boolean).join(" ");
+      const mode = look(unit.index), extra = unitClass?.(unit.index), target = !!onUnit || !!openCard, parts = openCard ? unitWordParts(unit) : null;
+      const classes = [styles.unit, mode === "inked" ? styles.inked : mode === "pull" ? styles.pull : "", target ? styles.target : "", extra ?? ""].filter(Boolean).join(" ");
       return <span key={unit.index}>{k > 0 && " "}<span className={classes} style={mode !== "plain" ? phraseStyle(unit.family, wipe ? wipe(unit.index) : k) : undefined} data-unit={unit.index} data-family={mode !== "plain" ? unit.family : undefined}
-        {...(onUnit ? { role: "button", tabIndex: 0, "aria-label": unitLabel?.(unit.index), onClick: () => onUnit(unit.index), onKeyDown: (event: KeyboardEvent) => key(event, unit.index) } : {})}>{unit.text}</span>{unit.legarmeh && " ׀"}</span>;
+        data-tap={target ? onUnit ? "answer" : "card" : undefined} data-word-card={openCard ? "" : undefined}
+        {...(target ? { role: "button", tabIndex: 0, "aria-label": onUnit ? unitLabel?.(unit.index) : undefined, "aria-haspopup": openCard ? "dialog" as const : undefined,
+          onClick: (event: MouseEvent<HTMLElement>) => click(event, unit.index), onKeyDown: (event: KeyboardEvent<HTMLElement>) => key(event, unit.index) } : {})}>
+        {parts ? parts.map((part, n) => <span key={n} data-part={n}>{part.text}</span>) : unit.text}</span>{unit.legarmeh && " ׀"}</span>;
     })}
   </Tag>;
 }

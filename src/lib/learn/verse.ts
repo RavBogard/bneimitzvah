@@ -16,7 +16,11 @@ export type AnalysedVerse = Readonly<{ ref: string; kind: Melody; book: string; 
   /** Reading words (the timeline's count). */ wordCount: number;
   /** The last verse of a haftarah: its last phrase is the end-of-haftarah family. */ final: boolean;
   /** The last verse of its recording (an aliyah's or a haftarah's end); null when the course cannot tell. */ endsRecording: boolean | null;
-  /** The recording has per-word timings, so any phrase can be cut. */ wordReady: boolean }>;
+  /** The recording has per-word timings, so any phrase can be cut. */ wordReady: boolean;
+  /** The verse's Hebrew as loaded, for the word card's binding. */ hebrew: HebrewSource;
+  /** The canonical passage the verse was loaded in (this week's reading), with its place there; null for a course verse,
+   * which the word card names by its own ref. */ passage: VersePassage | null }>;
+export type VersePassage = Readonly<{ ref: string; index: number; count: number }>;
 
 // trope/melody.mjs CP_TROPE, without meteg (a gaya is not a trope; the final word is silluq by position).
 const CP_TROPE: Readonly<Record<string, TropeId>> = Object.freeze({
@@ -52,7 +56,7 @@ function unitTrope(accents: readonly TropeId[], legarmeh: boolean, last: boolean
   return main === "munach" && legarmeh ? "munach-legarmeh" : main;
 }
 
-export function analyseVerse(input: { ref: string; kind: Melody; hebrew: HebrewSource; final?: boolean; endsRecording?: boolean | null; wordReady?: boolean }): AnalysedVerse | null {
+export function analyseVerse(input: { ref: string; kind: Melody; hebrew: HebrewSource; final?: boolean; endsRecording?: boolean | null; wordReady?: boolean; passage?: VersePassage | null }): AnalysedVerse | null {
   const final = input.kind === "haftarah" && input.final === true;
   const colors = colorStudyVerse(input.ref, input.hebrew, { kind: input.kind, confirmed: final, verses: final ? [input.ref] : [] });
   if (colors.status !== "ready") return null;
@@ -74,7 +78,8 @@ export function analyseVerse(input: { ref: string; kind: Melody; hebrew: HebrewS
     else phrases.push(Object.freeze({ index: unit.phrase, family: unit.family, units: Object.freeze([unit.index, unit.index] as const) }));
   }
   return Object.freeze({ ref: input.ref, kind: input.kind, book: bookOf(input.ref), units: Object.freeze(units), phrases: Object.freeze(phrases),
-    wordCount: colors.projection.words.length, final, endsRecording: input.endsRecording ?? null, wordReady: input.wordReady ?? false });
+    wordCount: colors.projection.words.length, final, endsRecording: input.endsRecording ?? null, wordReady: input.wordReady ?? false,
+    hebrew: input.hebrew, passage: input.passage ? Object.freeze({ ...input.passage }) : null });
 }
 
 /** Does a lessons.json example still describe this verse? Its edge words must be the engine's units there,
