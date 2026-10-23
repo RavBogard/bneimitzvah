@@ -10,7 +10,20 @@
 .signIn h2 { margin: 0 0 0.5rem; font-size: 1.25rem; font-weight: 750; letter-spacing: -0.01em; }
 .signIn p { margin: 0 0 1rem; color: var(--color-muted); max-width: 40rem; }
 .signIn a { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+/* "Choose a reading": an in-place panel under the hero, in the sign-in card's quiet surface. */
+.chooser { margin-block: 1.5rem; padding: 1.25rem 1.5rem 1.5rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.chooser h2 { margin: 0 0 1rem; font-size: 1.25rem; font-weight: 750; letter-spacing: -0.01em; }
+.chooser h3 { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 700; }
+.choice { margin-block: 0 1.5rem; }
+.choice > label { display: block; margin-bottom: 0.5rem; font-weight: 700; }
+.choiceRow { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: center; }
+.choiceRow select { flex: 1 1 16rem; min-width: 0; max-width: 28rem; min-height: 48px; }
+.custom { min-width: 0; }
+.credit { margin: 0; color: var(--color-muted); font-size: 0.875rem; }
+.passageNote { margin-block: 0.5rem 0; }
 @media (max-width: 640px) {
+  .chooser { padding: 1rem; }
+  .choiceRow > button { flex: 1 1 100%; }
   .weeks > :global(.button-hero-secondary) { flex: 1 1 auto; justify-content: center; }
   .picker { flex: 1 1 100%; justify-content: space-between; }
   .picker input { flex: 1 1 auto; }
