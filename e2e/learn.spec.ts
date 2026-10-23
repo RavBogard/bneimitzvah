@@ -75,7 +75,8 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
     await expect(nextButton).toBeEnabled();
     if (i === 1 && testInfo.project.name === "phone") expect(await noHorizontalScroll(page)).toBe(true);
     if (i === 2) {
-      // Once answered, the verse's words open their cards; a tapped word plays nothing.
+      // Once answered, the verse's words open their cards; a tapped word plays nothing. The reveal hands focus to Next first.
+      await expect(nextButton).toBeFocused();
       const word = page.locator("main [data-word-card]").first(), heard = await plays(page);
       await word.focus(); await page.keyboard.press("Enter");
       await expect(page.getByRole("dialog")).toContainText(/Synthetic gloss for word \d+/);

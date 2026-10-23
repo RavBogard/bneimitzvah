@@ -70,7 +70,12 @@ function WordSheet({ target, trigger, onClose }: { target: WordCardTarget; trigg
   }, [study, source, passage.index, word]);
   // The selection closes itself when the reading answers that the word cannot be shown; the sheet goes with it.
   useEffect(() => { if (state.open) opened.current = true; else if (opened.current) done.current(true); }, [state.open]);
-  useEffect(() => { if (wide !== null) heading.current?.focus({ preventScroll: true }); }, [wide, state.selection]);
+  // Focus moves to the heading once the card is on screen: a wide panel is hidden until it has its place.
+  const focused = useRef(false);
+  useEffect(() => {
+    if (focused.current || wide === null || (wide && !place) || !heading.current) return;
+    focused.current = true; heading.current.focus({ preventScroll: true });
+  }, [wide, place, state.selection]);
 
   // Wide: under the word (or above it when there is more room there), inside the 16px gutters; it scrolls with the page.
   useLayoutEffect(() => {
@@ -88,7 +93,13 @@ function WordSheet({ target, trigger, onClose }: { target: WordCardTarget; trigg
   useEffect(() => {
     const key = (event: KeyboardEvent) => { if (event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); done.current(true); } };
     // A tap outside closes the card; on the word that opened it, it stays.
-    const down = (event: PointerEvent) => { const node = event.target as Node | null; if (node && (panel.current?.contains(node) || trigger?.contains(node))) return; done.current(!(node instanceof Element && node.closest("[data-word-card]"))); };
+    const down = (event: PointerEvent) => {
+      const node = event.target as Node | null; if (node && (panel.current?.contains(node) || trigger?.contains(node))) return;
+      const another = node instanceof Element && node.closest("[data-word-card]") !== null;
+      // Focus goes back to the word; the press itself must not then move it to the page behind (a click still lands).
+      if (!another) event.preventDefault();
+      done.current(!another);
+    };
     document.addEventListener("keydown", key); document.addEventListener("pointerdown", down);
     return () => { document.removeEventListener("keydown", key); document.removeEventListener("pointerdown", down); };
   }, [trigger]);
