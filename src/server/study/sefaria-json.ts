@@ -7,6 +7,9 @@ import "server-only";
  */
 export class SefariaJsonUnavailable extends Error { constructor() { super("Sefaria unavailable"); this.name = "SefariaJsonUnavailable"; } }
 export const SEFARIA_ORIGIN = "https://www.sefaria.org";
+/** Sent on every request to Sefaria so they can tell who the steady trickle from our host is. Names no person and adds no address. */
+export const SEFARIA_USER_AGENT = "CRC-Torah/1.4 (+https://torah.centralreform.org)";
+export const SEFARIA_REQUEST_HEADERS: Readonly<Record<string, string>> = Object.freeze({ accept: "application/json", "user-agent": SEFARIA_USER_AGENT });
 
 export async function fetchSefariaJson(fetch: typeof globalThis.fetch, url: URL, limits: Readonly<{ deadlineMs: number; maxBytes: number }>, signal?: AbortSignal)
   : Promise<Readonly<{ status: number; json: unknown }>> {
@@ -18,7 +21,7 @@ export async function fetchSefariaJson(fetch: typeof globalThis.fetch, url: URL,
   try {
     return await Promise.race([ended, (async () => {
       let response: Response;
-      try { response = await fetch(url, { method: "GET", headers: { accept: "application/json" }, credentials: "omit", redirect: "error", cache: "no-store", signal: local.signal }); }
+      try { response = await fetch(url, { method: "GET", headers: SEFARIA_REQUEST_HEADERS, credentials: "omit", redirect: "error", cache: "no-store", signal: local.signal }); }
       catch { throw new SefariaJsonUnavailable(); }
       const length = response.headers.get("content-length");
       if (response.redirected || response.url && response.url !== url.href || !/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(response.headers.get("content-type") ?? "")

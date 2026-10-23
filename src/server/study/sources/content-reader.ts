@@ -1,4 +1,5 @@
 import "server-only";
+import { SEFARIA_REQUEST_HEADERS } from "../sefaria-json";
 import { sourceNumericCitation } from "./content-extents";
 import { SourceContentUnavailable, SOURCE_CONTENT_LIMITS, MOTHER_TONGUES, type ContentSelection } from "./content";
 import { sourceMetadataWork } from "./metadata";
@@ -33,7 +34,7 @@ export function createSefariaContentReader(input:{fetch?:typeof globalThis.fetch
     }
     try {
       live();
-      const pending = Promise.resolve(fetcher(url.href, { method: "GET", headers: { accept: "application/json" }, credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store", signal: abort.signal }))
+      const pending = Promise.resolve(fetcher(url.href, { method: "GET", headers: SEFARIA_REQUEST_HEADERS, credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store", signal: abort.signal }))
         .then(value => { incoming = value; receivedAt = performance.now(); if (abort.signal.aborted) cancelResponse(value); return value; });
       const response = await wait(pending, end, cancelResponse);
       const type = response.headers.get("content-type"), length = response.headers.get("content-length");

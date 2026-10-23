@@ -4,6 +4,7 @@ import { PortalRequestError } from "../../api";
 import { compositionDates, isInlineWork, sourceSefariaUrl, type ShelfAnswer, type ShelfGroupKey, type ShelfWork } from "../../../../lib/readings/shelf";
 import { CommentaryEntry } from "./commentary-view";
 import { fetchShelf, fetchSourceText, type SourceTextAnswer } from "./shelf-api";
+import { licenseLabel } from "../../../../lib/readings/edition-credit";
 import styles from "./commentary.module.css";
 
 /** One linked text, opened in place: its segments (three lines, then More; Hebrew in place), then its credit. */
@@ -52,6 +53,15 @@ function Work({ value, heading }: { value: ShelfWork; heading: string | null }) 
 }
 
 /**
+ * The links behind More on this verse are Sefaria's links dataset, which is CC BY: credit Sefaria and link the licence.
+ * It reuses the credit format Compare and each opened text already use, "Title, via Sefaria (licence)", with the
+ * licence linked as the edition credits link theirs.
+ */
+export function ShelfLinksCredit() {
+  return <p className={styles.compareCredit}><span className={styles.creditLine}>More on this verse, via Sefaria (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">{licenseLabel("CC-BY")}</a>)</span></p>;
+}
+
+/**
  * More on this verse (1.3): what Sefaria links to the verse, by kind (pills that wrap), the curated works first.
  * Rows show the work, its composition dates and the citation; a citation opens its text in place. Works already
  * shown inline (Study's Works) are left out here. Loaded only when opened.
@@ -85,6 +95,7 @@ export function ShelfView({ verse, inline }: { verse: string; inline: readonly s
         return <Work key={`${work.category}|${work.title}|${index}`} value={work} heading={heading} />;
       })}
     </ul>
+    <ShelfLinksCredit />
     {all}
   </>;
 }
