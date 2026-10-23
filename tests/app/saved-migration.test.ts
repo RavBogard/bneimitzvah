@@ -11,6 +11,7 @@ import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import { priorColumns } from "../helpers/prior-columns";
 import { accessFixture } from "./access-fixture";
 import { withTenantTransaction } from "../../src/server/db/runtime";
+import { name as validName, text as validText } from "../../src/server/saved/validation";
 
 const TAG = "0036_saved_layer";
 const TABLES = ["saved_reading", "saved_verse_mark", "saved_verse_work", "starred_comment"];
@@ -51,7 +52,7 @@ test("0036 adds only the four saved tables, leaves existing rows and the audit l
     for (const key of ["enums", "schemas", "sequences", "roles", "policies", "views"]) expect(current[key]).toEqual(previous[key]);
     expect(current.tables["public.audit_event"]).toEqual(previous.tables["public.audit_event"]);
 
-    // Row security and grants are hand-written beside the generated DDL: forced, one policy, column UPDATE only, DELETE only on saved_reading.
+    // Row security and grants are hand-written beside the generated DDL: forced, one policy, column UPDATE only, DELETE only on a member's own readings and stars.
     const text = await readFile(join(folder, `${TAG}.sql`), "utf8");
     expect(text).not.toContain("\r");
     for (const table of TABLES) for (const line of [`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY;`, `ALTER TABLE ${table} FORCE ROW LEVEL SECURITY;`,
@@ -59,9 +60,15 @@ test("0036 adds only the four saved tables, leaves existing rows and the audit l
     for (const line of ["GRANT SELECT, INSERT, DELETE ON saved_reading TO portal_runtime;", "GRANT UPDATE (name, reading_date, revision, updated_at) ON saved_reading TO portal_runtime;",
       "GRANT SELECT, INSERT ON saved_verse_work TO portal_runtime;", "GRANT UPDATE (text, version, updated_at) ON saved_verse_work TO portal_runtime;",
       "GRANT SELECT, INSERT ON saved_verse_mark TO portal_runtime;", "GRANT UPDATE (state, version, updated_at) ON saved_verse_mark TO portal_runtime;",
-      "GRANT SELECT, INSERT ON starred_comment TO portal_runtime;", "GRANT UPDATE (starred, updated_at) ON starred_comment TO portal_runtime;"]) expect(text).toContain(line);
+      "GRANT SELECT, INSERT, DELETE ON starred_comment TO portal_runtime;"]) expect(text).toContain(line);
     expect(text).not.toMatch(/GRANT[^;(]*UPDATE ON/); expect(text).not.toMatch(/GRANT\s+(ALL|TRUNCATE)/i);
-    expect(text.match(/GRANT[^;]*DELETE[^;]*;/g)).toEqual(["GRANT SELECT, INSERT, DELETE ON saved_reading TO portal_runtime;"]);
+    expect(text.match(/GRANT[^;]*DELETE[^;]*;/g)).toEqual(["GRANT SELECT, INSERT, DELETE ON saved_reading TO portal_runtime;", "GRANT SELECT, INSERT, DELETE ON starred_comment TO portal_runtime;"]);
+    expect(text).not.toMatch(/GRANT[^;]*ON starred_comment[^;]*UPDATE|GRANT UPDATE[^;]*ON starred_comment/);
+    // Control characters are an explicit, locale-independent class (the app's own), never [[:cntrl:]].
+    expect(text).not.toContain("[[:cntrl:]]");
+    expect(text).toContain(String.raw`!~ '[\x01-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\x2028\x2029]'`);
+    expect(text).toContain(String.raw`!~ '[\x01-\x1f\x7f-\x9f\x2028\x2029]'`);
+    expect(text).toMatch(/^[\x09\x0a\x20-\x7e]*$/);
     expect(text).not.toMatch(/audit_event|DISABLE ROW LEVEL SECURITY|NO FORCE|DROP POLICY|tenant_isolation/i);
     const rls = await client.query("select relname, relrowsecurity, relforcerowsecurity from pg_class where relname = any($1) and relkind='r' order by relname", [TABLES]);
     expect(rls.rows).toEqual(TABLES.map(relname => ({ relname, relrowsecurity: true, relforcerowsecurity: true })));
@@ -71,11 +78,10 @@ test("0036 adds only the four saved tables, leaves existing rows and the audit l
     const tableGrants = await client.query("select table_name, privilege_type from information_schema.table_privileges where grantee='portal_runtime' and table_name = any($1) order by table_name, privilege_type", [TABLES]);
     expect(tableGrants.rows).toEqual([...["DELETE", "INSERT", "SELECT"].map(p => ({ table_name: "saved_reading", privilege_type: p })),
       ...["INSERT", "SELECT"].map(p => ({ table_name: "saved_verse_mark", privilege_type: p })), ...["INSERT", "SELECT"].map(p => ({ table_name: "saved_verse_work", privilege_type: p })),
-      ...["INSERT", "SELECT"].map(p => ({ table_name: "starred_comment", privilege_type: p }))]);
+      ...["DELETE", "INSERT", "SELECT"].map(p => ({ table_name: "starred_comment", privilege_type: p }))]);
     const columnGrants = await client.query("select table_name, column_name from information_schema.column_privileges where grantee='portal_runtime' and privilege_type='UPDATE' and table_name = any($1) order by table_name, column_name", [TABLES]);
     expect(columnGrants.rows).toEqual([...["name", "reading_date", "revision", "updated_at"].map(c => ({ table_name: "saved_reading", column_name: c })),
-      ...["state", "updated_at", "version"].map(c => ({ table_name: "saved_verse_mark", column_name: c })), ...["text", "updated_at", "version"].map(c => ({ table_name: "saved_verse_work", column_name: c })),
-      ...["starred", "updated_at"].map(c => ({ table_name: "starred_comment", column_name: c }))]);
+      ...["state", "updated_at", "version"].map(c => ({ table_name: "saved_verse_mark", column_name: c })), ...["text", "updated_at", "version"].map(c => ({ table_name: "saved_verse_work", column_name: c }))]);
     expect((await client.query("select count(*)::int as n from information_schema.table_privileges where grantee='PUBLIC' and table_name = any($1)", [TABLES])).rows).toEqual([{ n: 0 }]);
     // Every composite key and FK carries the tenant.
     const fks = await client.query<{ conname: string; def: string }>("select conname, pg_get_constraintdef(oid) as def from pg_constraint where contype='f' and conrelid::regclass::text = any($1) order by conname", [TABLES]);
@@ -100,11 +106,27 @@ test("the ranges, name, text and shape checks refuse what the app refuses", asyn
     const [{ id }] = (await insert("Parent", "Genesis 1:1-3")).rows as { id: string }[];
     const work = (text: string, stream = "note", ref = "Genesis 1:1") => client.query("insert into saved_verse_work(tenant_id,membership_id,saved_reading_id,verse_ref,stream,text,version) values('crc',$1,$2,$3,$4,$5,1)", [member, id, ref, stream, text]);
     await work("A note\twith a tab\nand a line.");
+    for (const bad of ["line\u2028sep", "para\u2029sep", "next\u0085line", "esc\u001b"]) await expect(work(bad, "translation", "Genesis 1:3"), JSON.stringify(bad)).rejects.toThrow();
+    for (const bad of ["a\u2028b", "a\u0085b"]) await expect(insert(bad, "Genesis 1:1"), JSON.stringify(bad)).rejects.toThrow();
+    // The CHECKs and the app refuse exactly the same code points, whatever the database's locale: the app always refuses first.
+    const refused = async (column: "name" | "text") => new Set((await client.query<{ cp: number }>(column === "name"
+      ? String.raw`select cp from generate_series(1, 12288) cp where chr(cp) ~ '[\x01-\x1f\x7f-\x9f\x2028\x2029]' and cp not between 55296 and 57343`
+      : String.raw`select cp from generate_series(1, 12288) cp where chr(cp) ~ '[\x01-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\x2028\x2029]' and cp not between 55296 and 57343`)).rows.map(row => row.cp));
+    const appRefuses = (check: (value: unknown) => string, cp: number) => { try { check(`a${String.fromCodePoint(cp)}b`); return false; } catch { return true; } };
+    for (const [column, check] of [["name", validName], ["text", validText]] as const) {
+      const db = await refused(column);
+      for (let cp = 1; cp <= 12288; cp++) {
+        if (cp >= 55296 && cp <= 57343) continue;
+        // Carriage return is normalized to a newline by the app before it is stored.
+        if (column === "text" && cp === 13) { expect(db.has(cp)).toBe(false); continue; }
+        expect(appRefuses(check, cp), `${column} U+${cp.toString(16)}`).toBe(db.has(cp));
+      }
+    }
     for (const [text, stream, ref] of [["x".repeat(4097), "translation", "Genesis 1:2"], ["bell\u0007", "translation", "Genesis 1:2"], ["ok", "draft", "Genesis 1:2"], ["ok", "translation", "Genesis 1"], ["ok", "translation", "Genesis 1:0"]])
       await expect(work(text, stream, ref)).rejects.toThrow();
     await expect(client.query("insert into saved_verse_mark(tenant_id,membership_id,saved_reading_id,verse_ref,state,version) values('crc',$1,$2,'Genesis 1:1','done',1)", [member, id])).rejects.toThrow();
     for (const [work_, index] of [["Rashi", 1], ["rashi", 0], ["rashi", 61]] as const)
-      await expect(client.query("insert into starred_comment(tenant_id,membership_id,user_id,work,verse_ref,comment_index,starred) values('crc',$1,'check-user',$2,'Genesis 1:1',$3,true)", [member, work_, index])).rejects.toThrow();
+      await expect(client.query("insert into starred_comment(tenant_id,membership_id,user_id,work,verse_ref,comment_index) values('crc',$1,'check-user',$2,'Genesis 1:1',$3)", [member, work_, index])).rejects.toThrow();
     // A child row can only point at a reading of its own member: the FK carries the membership.
     const stranger = randomUUID();
     await client.query("insert into \"user\"(id,name,email,email_verified) values('check-other','Synthetic',$1,true)", [["check-other", "example.test"].join("@")]);
@@ -131,7 +153,7 @@ test("row security as portal_runtime: no owner sees nothing, one owner never rea
       rows[key] = reading.id;
       await f.client.query("insert into saved_verse_work(tenant_id,membership_id,saved_reading_id,verse_ref,stream,text,version) values('crc',$1,$2,'Genesis 1:1','note','private',1)", [member, reading.id]);
       await f.client.query("insert into saved_verse_mark(tenant_id,membership_id,saved_reading_id,verse_ref,state,version) values('crc',$1,$2,'Genesis 1:1','working',1)", [member, reading.id]);
-      await f.client.query("insert into starred_comment(tenant_id,membership_id,user_id,work,verse_ref,comment_index,starred) values('crc',$1,$2,'rashi','Genesis 1:1',1,true)", [member, user]);
+      await f.client.query("insert into starred_comment(tenant_id,membership_id,user_id,work,verse_ref,comment_index) values('crc',$1,$2,'rashi','Genesis 1:1',1)", [member, user]);
     }
     return rows;
   });
@@ -156,16 +178,16 @@ test("row security as portal_runtime: no owner sees nothing, one owner never rea
   // Owner A cannot update or delete B's rows, insert rows for B, or point a child row at B's reading.
   for (const statement of [sql`update saved_reading set name = 'Taken' where id = ${seed.b}`, sql`delete from saved_reading where id = ${seed.b}`,
     sql`update saved_verse_work set text = 'Taken' where saved_reading_id = ${seed.b}`, sql`update saved_verse_mark set state = 'got-it' where saved_reading_id = ${seed.b}`,
-    sql`update starred_comment set starred = false where membership_id = ${B.id}`]) expect(await affected("crc", A.id, statement)).toBe(0);
+    sql`delete from starred_comment where membership_id = ${B.id}`]) expect(await affected("crc", A.id, statement)).toBe(0);
   expect(await sqlState(as("crc", A.id, tx => tx.execute(newReading(B.id, f.identities.admin.id))))).toBe("42501");
   expect(await sqlState(as("crc", A.id, tx => tx.execute(sql`insert into saved_verse_work(tenant_id,membership_id,saved_reading_id,verse_ref,stream,text,version) values('crc',${B.id},${seed.b},'Genesis 1:2','note','x',1)`)))).toBe("42501");
   expect(await sqlState(as("crc", A.id, tx => tx.execute(sql`insert into saved_verse_work(tenant_id,membership_id,saved_reading_id,verse_ref,stream,text,version) values('crc',${A.id},${seed.b},'Genesis 1:2','note','x',1)`)))).toBe("23503");
-  expect(await sqlState(as("crc", A.id, tx => tx.execute(sql`insert into starred_comment(tenant_id,membership_id,user_id,work,verse_ref,comment_index,starred) values('crc',${B.id},${f.identities.admin.id},'rashi','Genesis 1:2',1,true)`)))).toBe("42501");
+  expect(await sqlState(as("crc", A.id, tx => tx.execute(sql`insert into starred_comment(tenant_id,membership_id,user_id,work,verse_ref,comment_index) values('crc',${B.id},${f.identities.admin.id},'rashi','Genesis 1:2',1)`)))).toBe("42501");
   // Ownership and identity columns never change, and child rows are never deleted directly.
   for (const statement of ["update saved_reading set membership_id = membership_id", "update saved_reading set ranges = 'Genesis 1:1'", "update saved_reading set kind = 'haftarah'",
     "update saved_reading set verse_count = 1", "update saved_verse_work set membership_id = membership_id", "update saved_verse_work set saved_reading_id = saved_reading_id",
     "update saved_verse_work set stream = 'translation'", "update saved_verse_mark set verse_ref = verse_ref", "update starred_comment set work = work", "update starred_comment set membership_id = membership_id",
-    "delete from saved_verse_work", "delete from saved_verse_mark", "delete from starred_comment", "truncate saved_reading cascade"])
+    "update starred_comment set comment_index = 2", "delete from saved_verse_work", "delete from saved_verse_mark", "truncate saved_reading cascade", "truncate starred_comment"])
     expect(await sqlState(as("crc", A.id, tx => tx.execute(sql.raw(statement)))), statement).toBe("42501");
   // A malformed owner throws instead of matching; an owner from another congregation matches nothing.
   for (const garbage of ["not-a-uuid", `${A.id}' or true --`]) expect(await sqlState(as("crc", garbage, counts))).toBe("22P02");
@@ -173,6 +195,9 @@ test("row security as portal_runtime: no owner sees nothing, one owner never rea
   // The owner's own delete cascades as the table owner, though the runtime has no DELETE on the children.
   expect(await affected("crc", A.id, sql`delete from saved_reading where id = ${seed.a}`)).toBe(1);
   expect(await as("crc", A.id, counts)).toEqual([0, 0, 0, 1]);
+  expect(await as("crc", B.id, counts)).toEqual([1, 1, 1, 1]);
+  // Unstarring is the owner's own delete: an unscoped delete removes only the owner's stars.
+  expect(await affected("crc", A.id, sql`delete from starred_comment`)).toBe(1);
   expect(await as("crc", B.id, counts)).toEqual([1, 1, 1, 1]);
   // The setting is transaction-local: the next transaction on the same connection has no owner.
   expect(await as("crc", null, async tx => (await run(tx, sql`select coalesce(current_setting('app.saved_owner', true), '') as v`)).rows[0].v)).toBe("");

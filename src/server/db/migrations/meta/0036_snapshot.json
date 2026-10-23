@@ -1,5 +1,5 @@
 {
-  "id": "99192b1b-25af-47f4-b0db-78838cef8c39",
+  "id": "f525ace5-97a5-43e8-ae0d-af74b2cd1735",
   "prevId": "5905b5d7-cca6-4c39-bd2b-30b4ebd22182",
   "version": "7",
   "dialect": "postgresql",
@@ -4172,7 +4172,7 @@
       "checkConstraints": {
         "saved_reading_name": {
           "name": "saved_reading_name",
-          "value": "\"saved_reading\".\"name\" = btrim(\"saved_reading\".\"name\") and char_length(\"saved_reading\".\"name\") between 1 and 80 and \"saved_reading\".\"name\" !~ '[[:cntrl:]]'"
+          "value": "\"saved_reading\".\"name\" = btrim(\"saved_reading\".\"name\") and char_length(\"saved_reading\".\"name\") between 1 and 80 and \"saved_reading\".\"name\" !~ '[\\x01-\\x1f\\x7f-\\x9f\\x2028\\x2029]'"
         },
         "saved_reading_kind": {
           "name": "saved_reading_kind",
@@ -4477,7 +4477,7 @@
         },
         "saved_verse_work_text_bound": {
           "name": "saved_verse_work_text_bound",
-          "value": "octet_length(\"saved_verse_work\".\"text\") <= 4096 and translate(\"saved_verse_work\".\"text\", chr(9) || chr(10), '') !~ '[[:cntrl:]]'"
+          "value": "octet_length(\"saved_verse_work\".\"text\") <= 4096 and \"saved_verse_work\".\"text\" !~ '[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f-\\x9f\\x2028\\x2029]'"
         },
         "saved_verse_work_ref": {
           "name": "saved_verse_work_ref",
@@ -4534,14 +4534,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "starred": {
-          "name": "starred",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
@@ -4610,7 +4604,7 @@
         },
         "starred_comment_instant": {
           "name": "starred_comment_instant",
-          "value": "isfinite(\"starred_comment\".\"updated_at\")"
+          "value": "isfinite(\"starred_comment\".\"created_at\")"
         }
       },
       "isRLSEnabled": false

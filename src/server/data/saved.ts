@@ -116,21 +116,21 @@ export async function countStars<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: S
   return row?.n ?? 0;
 }
 export async function listStars<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, limit: number) {
-  return tx.select().from(s.starredComment).where(and(starOwner(owner), eq(s.starredComment.starred, true)))
+  return tx.select().from(s.starredComment).where(starOwner(owner))
     .orderBy(asc(s.starredComment.work), asc(s.starredComment.verseRef), asc(s.starredComment.commentIndex)).limit(limit);
 }
+const oneStar = (owner: SavedOwner, work: string, verseRef: string, comment: number) =>
+  and(starOwner(owner), eq(s.starredComment.work, work), eq(s.starredComment.verseRef, verseRef), eq(s.starredComment.commentIndex, comment));
 export async function starRow<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, work: string, verseRef: string, comment: number) {
-  const [row] = await tx.select().from(s.starredComment).where(and(starOwner(owner), eq(s.starredComment.work, work), eq(s.starredComment.verseRef, verseRef),
-    eq(s.starredComment.commentIndex, comment))).limit(1);
+  const [row] = await tx.select().from(s.starredComment).where(oneStar(owner, work, verseRef, comment)).limit(1);
   return row ?? null;
 }
-export async function insertStar<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, work: string, verseRef: string, comment: number, starred: boolean) {
-  const [row] = await tx.insert(s.starredComment).values({ tenantId: owner.tenantId, membershipId: owner.membershipId, userId: owner.userId, work, verseRef, commentIndex: comment, starred })
+export async function insertStar<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, work: string, verseRef: string, comment: number) {
+  const [row] = await tx.insert(s.starredComment).values({ tenantId: owner.tenantId, membershipId: owner.membershipId, userId: owner.userId, work, verseRef, commentIndex: comment })
     .onConflictDoNothing().returning();
   return row ?? null;
 }
-export async function updateStar<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, work: string, verseRef: string, comment: number, starred: boolean) {
-  const [row] = await tx.update(s.starredComment).set({ starred, updatedAt: sql`now()` }).where(and(starOwner(owner), eq(s.starredComment.work, work),
-    eq(s.starredComment.verseRef, verseRef), eq(s.starredComment.commentIndex, comment))).returning();
-  return row ?? null;
+/** Unstarring is the member's own delete of the row, so the cap counts only live stars. */
+export async function deleteStar<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, work: string, verseRef: string, comment: number) {
+  await tx.delete(s.starredComment).where(oneStar(owner, work, verseRef, comment));
 }

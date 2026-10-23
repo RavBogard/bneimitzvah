@@ -54,7 +54,7 @@ test("real PostgreSQL: owner_only keeps every saved row to its own member, casca
       const reading = (await query(owner, "INSERT INTO saved_reading (tenant_id,membership_id,user_id,name,kind,ranges,verse_count) VALUES ($1,$2,$3,'Synthetic','torah','Genesis 1:1-3',3) RETURNING id", [tenant, member, user])).rows[0].id;
       await query(owner, "INSERT INTO saved_verse_work (tenant_id,membership_id,saved_reading_id,verse_ref,stream,text,version) VALUES ($1,$2,$3,'Genesis 1:1','note','private',1)", [tenant, member, reading]);
       await query(owner, "INSERT INTO saved_verse_mark (tenant_id,membership_id,saved_reading_id,verse_ref,state,version) VALUES ($1,$2,$3,'Genesis 1:1','working',1)", [tenant, member, reading]);
-      await query(owner, "INSERT INTO starred_comment (tenant_id,membership_id,user_id,work,verse_ref,comment_index,starred) VALUES ($1,$2,$3,'rashi','Genesis 1:1',1,true)", [tenant, member, user]);
+      await query(owner, "INSERT INTO starred_comment (tenant_id,membership_id,user_id,work,verse_ref,comment_index) VALUES ($1,$2,$3,'rashi','Genesis 1:1',1)", [tenant, member, user]);
       members[key] = { user, member, reading, tenant };
     }
     const { a, b, x } = members;
@@ -68,7 +68,7 @@ test("real PostgreSQL: owner_only keeps every saved row to its own member, casca
       const updates = (await query(owner, "SELECT table_name FROM information_schema.table_privileges WHERE grantee='portal_runtime' AND privilege_type IN ('UPDATE','TRUNCATE','REFERENCES','TRIGGER') AND table_name = ANY($1)", [TABLES])).rows;
       assert.deepEqual(updates, []);
       const deletes = (await query(owner, "SELECT table_name FROM information_schema.table_privileges WHERE grantee='portal_runtime' AND privilege_type='DELETE' AND table_name = ANY($1)", [TABLES])).rows;
-      assert.deepEqual(deletes, [{ table_name: "saved_reading" }]);
+      assert.deepEqual(deletes.map(row => row.table_name).sort(), ["saved_reading", "starred_comment"]);
     });
 
     await t.test("a tenant without an owner (every staff, MCP, cron and Sheet path) sees and writes nothing", async () => {
@@ -105,7 +105,7 @@ test("real PostgreSQL: owner_only keeps every saved row to its own member, casca
         assert.equal((await query(client, "UPDATE saved_reading SET name='Taken' WHERE id=$1", [b.reading])).rowCount, 0);
         assert.equal((await query(client, "DELETE FROM saved_reading WHERE id=$1", [b.reading])).rowCount, 0);
         assert.equal((await query(client, "UPDATE saved_verse_work SET text='Taken' WHERE saved_reading_id=$1", [b.reading])).rowCount, 0);
-        assert.equal((await query(client, "UPDATE starred_comment SET starred=false WHERE membership_id=$1", [b.member])).rowCount, 0);
+        assert.equal((await query(client, "DELETE FROM starred_comment WHERE membership_id=$1", [b.member])).rowCount, 0);
         await rejects(client, "INSERT INTO saved_reading (tenant_id,membership_id,user_id,name,kind,ranges,verse_count) VALUES ('crc',$1,$2,'X','torah','Genesis 1:1',1)", [b.member, b.user], "42501");
         await rejects(client, "INSERT INTO saved_verse_work (tenant_id,membership_id,saved_reading_id,verse_ref,stream,text,version) VALUES ('crc',$1,$2,'Genesis 1:2','note','x',1)", [b.member, b.reading], "42501");
         // Pointing your own child row at another member's reading fails the (tenant, reading, member) FK.
@@ -113,7 +113,7 @@ test("real PostgreSQL: owner_only keeps every saved row to its own member, casca
         // Ownership and identity never change; child rows are never deleted directly.
         for (const statement of ["UPDATE saved_reading SET membership_id = membership_id", "UPDATE saved_reading SET tenant_id = tenant_id", "UPDATE saved_reading SET ranges = ranges",
           "UPDATE saved_verse_work SET membership_id = membership_id", "UPDATE saved_verse_mark SET membership_id = membership_id", "UPDATE starred_comment SET membership_id = membership_id",
-          "UPDATE saved_verse_work SET saved_reading_id = saved_reading_id", "DELETE FROM saved_verse_work", "DELETE FROM saved_verse_mark", "DELETE FROM starred_comment", "TRUNCATE saved_reading CASCADE"])
+          "UPDATE saved_verse_work SET saved_reading_id = saved_reading_id", "UPDATE starred_comment SET comment_index = 2", "DELETE FROM saved_verse_work", "DELETE FROM saved_verse_mark", "TRUNCATE saved_reading CASCADE", "TRUNCATE starred_comment"])
           await rejects(client, statement, [], "42501");
         await query(client, "ROLLBACK");
         // The same member id named under another congregation's tenant matches nothing, and that member's own rows stay there.

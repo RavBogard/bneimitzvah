@@ -12,7 +12,7 @@ CREATE TABLE "saved_reading" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "saved_reading_owner_key" UNIQUE("tenant_id","id","membership_id"),
-	CONSTRAINT "saved_reading_name" CHECK ("saved_reading"."name" = btrim("saved_reading"."name") and char_length("saved_reading"."name") between 1 and 80 and "saved_reading"."name" !~ '[[:cntrl:]]'),
+	CONSTRAINT "saved_reading_name" CHECK ("saved_reading"."name" = btrim("saved_reading"."name") and char_length("saved_reading"."name") between 1 and 80 and "saved_reading"."name" !~ '[\x01-\x1f\x7f-\x9f\x2028\x2029]'),
 	CONSTRAINT "saved_reading_kind" CHECK ("saved_reading"."kind" in ('torah','haftarah')),
 	CONSTRAINT "saved_reading_ranges" CHECK (octet_length("saved_reading"."ranges") <= 1000 and "saved_reading"."ranges" ~ '^[[:alpha:]][[:alpha:] 0-9]* [1-9][0-9]*:[1-9][0-9]*(-([1-9][0-9]*:)?[1-9][0-9]*)?(\x3b [[:alpha:]][[:alpha:] 0-9]* [1-9][0-9]*:[1-9][0-9]*(-([1-9][0-9]*:)?[1-9][0-9]*)?)*$' and cardinality(string_to_array("saved_reading"."ranges", chr(59) || ' ')) <= 32),
 	CONSTRAINT "saved_reading_verse_count" CHECK ("saved_reading"."verse_count" between 1 and 1000),
@@ -48,7 +48,7 @@ CREATE TABLE "saved_verse_work" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "saved_verse_work_key" UNIQUE("tenant_id","saved_reading_id","verse_ref","stream"),
 	CONSTRAINT "saved_verse_work_stream" CHECK ("saved_verse_work"."stream" in ('translation','note')),
-	CONSTRAINT "saved_verse_work_text_bound" CHECK (octet_length("saved_verse_work"."text") <= 4096 and translate("saved_verse_work"."text", chr(9) || chr(10), '') !~ '[[:cntrl:]]'),
+	CONSTRAINT "saved_verse_work_text_bound" CHECK (octet_length("saved_verse_work"."text") <= 4096 and "saved_verse_work"."text" !~ '[\x01-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\x2028\x2029]'),
 	CONSTRAINT "saved_verse_work_ref" CHECK ("saved_verse_work"."verse_ref" ~ '^[[:alpha:] 0-9]+ [1-9][0-9]*:[1-9][0-9]*$'),
 	CONSTRAINT "saved_verse_work_version" CHECK ("saved_verse_work"."version" >= 1),
 	CONSTRAINT "saved_verse_work_instant" CHECK (isfinite("saved_verse_work"."updated_at"))
@@ -61,13 +61,12 @@ CREATE TABLE "starred_comment" (
 	"work" text NOT NULL,
 	"verse_ref" text NOT NULL,
 	"comment_index" integer NOT NULL,
-	"starred" boolean NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "starred_comment_key" PRIMARY KEY("tenant_id","membership_id","work","verse_ref","comment_index"),
 	CONSTRAINT "starred_comment_work" CHECK ("starred_comment"."work" ~ '^[a-z][a-z0-9-]{0,31}$'),
 	CONSTRAINT "starred_comment_ref" CHECK ("starred_comment"."verse_ref" ~ '^[[:alpha:] 0-9]+ [1-9][0-9]*:[1-9][0-9]*$'),
 	CONSTRAINT "starred_comment_index" CHECK ("starred_comment"."comment_index" between 1 and 60),
-	CONSTRAINT "starred_comment_instant" CHECK (isfinite("starred_comment"."updated_at"))
+	CONSTRAINT "starred_comment_instant" CHECK (isfinite("starred_comment"."created_at"))
 );
 --> statement-breakpoint
 ALTER TABLE "saved_reading" ADD CONSTRAINT "saved_reading_tenant_id_tenant_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenant"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -84,7 +83,8 @@ CREATE INDEX "saved_verse_work_member_idx" ON "saved_verse_work" USING btree ("t
 --> statement-breakpoint
 -- Release 1.4 saved layer (accounts plan, section 1a). Only the owner reads: every table has one forced owner_only policy on the
 -- tenant and app.saved_owner, a transaction-local membership id that only src/server/saved/access.ts sets after the session and
--- eligibility checks. Unset or empty matches nothing; a malformed value fails the uuid cast. No table-level UPDATE anywhere.
+-- eligibility checks. Unset or empty matches nothing; a malformed value fails the uuid cast. No table-level UPDATE anywhere;
+-- DELETE only on saved_reading (cascading to its children as the table owner) and starred_comment, both limited by owner_only.
 ALTER TABLE saved_reading ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE saved_reading FORCE ROW LEVEL SECURITY;
@@ -138,9 +138,7 @@ REVOKE ALL ON starred_comment FROM PUBLIC;
 --> statement-breakpoint
 REVOKE ALL ON starred_comment FROM portal_runtime;
 --> statement-breakpoint
--- A star is turned on and off in place and never deleted.
-GRANT SELECT, INSERT ON starred_comment TO portal_runtime;
---> statement-breakpoint
-GRANT UPDATE (starred, updated_at) ON starred_comment TO portal_runtime;
+-- A row is a star: starring inserts it and unstarring is the member's own delete, so the cap counts only live stars. Nothing is updated.
+GRANT SELECT, INSERT, DELETE ON starred_comment TO portal_runtime;
 --> statement-breakpoint
 CREATE POLICY owner_only ON starred_comment TO portal_runtime USING (tenant_id = nullif(current_setting('app.tenant_id', true), '') AND membership_id = nullif(current_setting('app.saved_owner', true), '')::uuid) WITH CHECK (tenant_id = nullif(current_setting('app.tenant_id', true), '') AND membership_id = nullif(current_setting('app.saved_owner', true), '')::uuid);

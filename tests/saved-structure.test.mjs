@@ -12,11 +12,13 @@ async function files(dir) {
   for (const entry of await readdir(join(root, dir), { withFileTypes: true })) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) out.push(...await files(path));
-    else if (/\.(ts|tsx|mts|mjs|js|sql|json)$/.test(entry.name)) out.push(path.split(sep).join("/"));
+    else if (/\.(ts|tsx|mts|mjs|cjs|js|sql|json|py|sh|ps1)$/.test(entry.name)) out.push(path.split(sep).join("/"));
   }
   return out;
 }
-const sources = await Promise.all((await files("src")).map(async path => ({ path, text: await readFile(join(root, path), "utf8") })));
+// The application and the operator scripts: an operator tool must not set the owner or read saved tables either.
+const sources = await Promise.all([...await files("src"), ...await files("scripts")].map(async path => ({ path, text: await readFile(join(root, path), "utf8") })));
+assert.ok(sources.some(file => file.path.startsWith("scripts/")), "the scripts are scanned");
 const importsOf = text => [...text.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)].map(m => m[1]);
 
 test("only src/server/saved/access.ts and the 0036 migration name app.saved_owner", () => {
@@ -40,8 +42,11 @@ test("no code outside the saved layer names the saved tables, and the MCP never 
     if (allowed.has(file.path) || /^src\/server\/db\/migrations\/meta\/\d{4}_snapshot\.json$/.test(file.path) && Number(file.path.match(/(\d{4})_snapshot/)[1]) > 36) continue;
     assert.doesNotMatch(file.text, /\b(savedReading|savedVerseWork|savedVerseMark|starredComment)\b|\b(saved_reading|saved_verse_work|saved_verse_mark|starred_comment)\b/, `${file.path} names a saved table`);
   }
-  for (const file of sources.filter(file => file.path.startsWith("src/server/mcp/")))
+  for (const file of sources.filter(file => file.path.startsWith("src/server/mcp/"))) {
     for (const spec of importsOf(file.text)) assert.doesNotMatch(spec, /saved/, `${file.path} imports ${spec}`);
+    // MCP handlers receive the runtime's services; none may reach the saved service through it.
+    assert.doesNotMatch(file.text, /\.saved\b|runtime\.saved|\bsaved\s*:/, `${file.path} reaches the saved service`);
+  }
   // Staff-facing services that run without a member's own request never reach the saved service either.
   for (const file of sources.filter(file => /^src\/server\/(mcp|notifications|roster-sheet|relationships|students|study-guides|connections|settings|invitations)\//.test(file.path)))
     for (const spec of importsOf(file.text)) assert.doesNotMatch(spec, /(^|\/)saved(\/|$)/, `${file.path} imports ${spec}`);

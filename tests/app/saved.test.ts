@@ -158,7 +158,7 @@ describe("the saved layer: readings, work, marks and stars", () => {
     expect((await work({ verseRef: "Genesis 1:6" })).status).toBe(404);
     expect((await work({ verseRef: "Exodus 1:1" })).status).toBe(404);
     expect((await t.call("/api/saved/work", "admin", { readingId: id, verseRef: "Genesis 1:2", stream: "note", expectedVersion: 0, text: "Not mine." })).status).toBe(404);
-    for (const bad of [{ text: "x".repeat(4097) }, { text: "bell\u0007" }, { text: "\ud800" }, { stream: "draft" }, { verseRef: "Genesis 1" }, { expectedVersion: -1 }, { expectedVersion: 1.5 }, { extra: 1 }])
+    for (const bad of [{ text: "x".repeat(4097) }, { text: "bell\u0007" }, { text: "line\u2028sep" }, { text: "para\u2029sep" }, { text: "next\u0085line" }, { text: "c1\u009f" }, { text: "del\u007f" }, { text: "\ud800" }, { stream: "draft" }, { verseRef: "Genesis 1" }, { expectedVersion: -1 }, { expectedVersion: 1.5 }, { extra: 1 }])
       expect((await work(bad)).status, JSON.stringify(bad)).toBe(400);
     const mark = (body: Record<string, unknown>) => t.call("/api/saved/mark", "multi", { readingId: id, verseRef: "Genesis 1:3", expectedVersion: 0, state: "working", ...body });
     expect((await mark({})).json).toMatchObject({ ok: true, verseRef: "Genesis 1:3", mark: { state: "working", version: 1 } });
@@ -198,7 +198,7 @@ describe("the saved layer: readings, work, marks and stars", () => {
     for (const ranges of refused) expect((await t.create("admin", ranges)).status, ranges).toBe(400);
     for (const [ranges, kind] of [["Isaiah 1:1", "torah"], ["Genesis 1:1", "haftarah"], ["Psalms 1:1-6", "haftarah"], ["Ruth 1:1", "haftarah"], ["Genesis 1:1", "blessing-before"]])
       expect((await t.create("admin", ranges, kind)).status, `${kind} ${ranges}`).toBe(400);
-    for (const name of ["", "   ", "x".repeat(81), "Line\nbreak", "Tab\tname", "\u0085next", "\ud800"]) expect((await t.create("admin", "Genesis 1:1", "torah", name)).status, JSON.stringify(name)).toBe(400);
+    for (const name of ["", "   ", "x".repeat(81), "Line\nbreak", "Tab\tname", "\u0085next", "a\u2028b", "a\u2029b", "a\u0007b", "a\u009fb", "\ud800"]) expect((await t.create("admin", "Genesis 1:1", "torah", name)).status, JSON.stringify(name)).toBe(400);
     expect((await t.create("admin", "Genesis 1:1", "torah", "ש".repeat(80))).status).toBe(200);
     for (const date of ["2026-02-30", "26-10-17", "2026-10-17T00:00:00Z", 20261017]) expect((await t.call("/api/saved/readings/create", "admin", { name: "R", date, kind: "torah", ranges: "Genesis 1:1" })).status, String(date)).toBe(400);
     for (const body of [{ name: "R", kind: "torah", ranges: "Genesis 1:1" }, { name: "R", date: null, kind: "torah", ranges: "Genesis 1:1", membershipId: "x" }, [], null])
@@ -221,16 +221,20 @@ describe("the saved layer: readings, work, marks and stars", () => {
     for (const bad of [42, null, undefined, {}, ["Genesis 1:1"]]) expect(() => savedRanges(bad, "torah")).toThrow(HttpBoundaryError);
   });
 
-  it("stars a registered commentary's comment on a verse it covers, per member, and lists only starred ones", async () => {
+  it("stars a registered commentary's comment on a verse it covers, per member; unstarring deletes the star", async () => {
     const t = await setup();
     const star = (body: Record<string, unknown>, who: Who = "multi") => t.call("/api/saved/star", who, { work: "rashi", verseRef: "Genesis 1:1", comment: 2, starred: true, ...body });
     expect((await star({})).json).toEqual({ ok: true, star: { work: "rashi", verseRef: "Genesis 1:1", comment: 2, starred: true } });
     expect((await star({ verseRef: "Isaiah 1:1" })).status).toBe(200);
     expect((await star({ work: "womens", verseRef: "Exodus 2:1", comment: 1 })).status).toBe(200);
-    expect((await star({ comment: 2, starred: false })).json.star.starred).toBe(false);
+    // Starring twice is idempotent; unstarring removes the row, and unstarring again is harmless.
+    expect((await star({})).json.star.starred).toBe(true);
+    expect((await star({ comment: 2, starred: false })).json).toEqual({ ok: true, star: { work: "rashi", verseRef: "Genesis 1:1", comment: 2, starred: false } });
+    expect((await star({ comment: 2, starred: false })).status).toBe(200);
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.starredComment)).length)).toBe(2);
     for (const bad of [{ work: "unknown" }, { work: "Rashi" }, { work: "womens", verseRef: "Isaiah 1:1" }, { verseRef: "Psalms 1:1" }, { verseRef: "Genesis 1:32" }, { comment: 0 }, { comment: 61 }, { starred: "yes" }])
       expect((await star(bad)).status, JSON.stringify(bad)).toBe(400);
-    expect((await t.call("/api/saved/stars", "multi")).json.stars).toEqual([{ work: "rashi", verseRef: "Isaiah 1:1", comment: 2, starred: true }, { work: "womens", verseRef: "Exodus 2:1", comment: 1, starred: true }]);
+    expect((await t.call("/api/saved/stars", "multi")).json.stars).toEqual([{ work: "rashi", verseRef: "Isaiah 1:1", comment: 2 }, { work: "womens", verseRef: "Exodus 2:1", comment: 1 }]);
     expect((await t.call("/api/saved/stars", "admin")).json.stars).toEqual([]);
   });
 });
@@ -246,7 +250,7 @@ describe("the saved layer: caps", () => {
       const readings = (await t.f.client.query<{ id: string }>("select id from saved_reading where membership_id=$1 and id<>$2 order by id limit 10", [member, id])).rows.map(r => r.id);
       await t.f.client.query(`insert into saved_verse_work(tenant_id,membership_id,saved_reading_id,verse_ref,stream,text,version) select 'crc',$1,$2,'Genesis 2:'||g,st,'x',1 from generate_series(1,1500) g, unnest(array['translation','note']) st`, [member, readings[0]]);
       await t.f.client.query(`insert into saved_verse_mark(tenant_id,membership_id,saved_reading_id,verse_ref,state,version) select 'crc',$1,r,'Genesis 3:'||g,'working',1 from generate_series(1,1000) g, unnest($2::uuid[]) r`, [member, readings]);
-      await t.f.client.query(`insert into starred_comment(tenant_id,membership_id,user_id,work,verse_ref,comment_index,starred) select 'crc',$1,$2,'rashi','Genesis 4:'||v,c,true from generate_series(1,40) v, generate_series(1,50) c`, [member, user]);
+      await t.f.client.query(`insert into starred_comment(tenant_id,membership_id,user_id,work,verse_ref,comment_index) select 'crc',$1,$2,'rashi','Genesis 4:'||v,c from generate_series(1,40) v, generate_series(1,50) c`, [member, user]);
     });
     const limit = { ok: false, code: "limit" };
     const over = await t.create("multi");
@@ -257,7 +261,10 @@ describe("the saved layer: caps", () => {
     // A full account still renames, toggles an existing star, and frees room by removing a reading.
     expect((await t.call("/api/saved/readings/update", "multi", { id, revision: 1, name: "Renamed", date: null })).status).toBe(200);
     expect((await t.call("/api/saved/star", "multi", { work: "rashi", verseRef: "Genesis 4:1", comment: 1, starred: false })).status).toBe(200);
+    // Unstarring frees room under the cap, so a full account is never stuck at 409.
     expect((await t.call("/api/saved/stars", "multi")).json.stars).toHaveLength(1999);
+    expect((await t.call("/api/saved/star", "multi", { work: "rashi", verseRef: "Genesis 1:1", comment: 1, starred: true })).json).toMatchObject({ ok: true });
+    expect((await t.call("/api/saved/star", "multi", { work: "rashi", verseRef: "Genesis 1:2", comment: 1, starred: true })).json).toEqual(limit);
     expect((await t.call("/api/saved/readings/remove", "multi", { id, revision: 2 })).status).toBe(200);
     expect((await t.create("multi")).status).toBe(200);
     // Another member is unaffected by this member's caps.

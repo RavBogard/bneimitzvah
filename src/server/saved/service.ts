@@ -20,7 +20,7 @@ const readingView = (row: data.SavedReadingRow) => ({ id: row.id, name: row.name
   verseCount: row.verseCount, revision: row.revision, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() });
 const workView = (row: data.WorkRow) => ({ text: row.text, version: row.version, updatedAt: row.updatedAt.toISOString() });
 const markView = (row: data.MarkRow) => ({ state: row.state, version: row.version, updatedAt: row.updatedAt.toISOString() });
-const starView = (row: data.StarRow) => ({ work: row.work, verseRef: row.verseRef, comment: row.commentIndex, starred: row.starred });
+const starView = (row: data.StarRow) => ({ work: row.work, verseRef: row.verseRef, comment: row.commentIndex });
 
 /** A stored reading re-expanded from its own canonical ranges; a row that no longer agrees is refused, never served. */
 function versesOf(row: data.SavedReadingRow) {
@@ -137,20 +137,16 @@ export function createSavedService<Q extends PgQueryResultHKT>(input: { access: 
     async stars(request: Request) {
       return withSavedOwner(request, "read", async (tx, owner) => ({ ok: true as const, stars: (await data.listStars(tx, owner, SAVED_CAPS.stars)).map(starView) }));
     },
-    /** Stars belong to the member, not to a reading; turning one off keeps its row. */
+    /** Stars belong to the member, not to a reading. Starring is idempotent; unstarring deletes the row, so the cap counts live stars only. */
     async star(request: Request, supplied: unknown) {
       const value = validate.star(supplied);
+      const star = { work: value.work, verseRef: value.verseRef, comment: value.comment, starred: value.starred };
       return write(request, async (tx, owner) => {
-        const current = await data.starRow(tx, owner, value.work, value.verseRef, value.comment);
-        if (current) {
-          const updated = await data.updateStar(tx, owner, value.work, value.verseRef, value.comment, value.starred);
-          if (!updated) throw new Error("Saved star unavailable");
-          return { ok: true as const, star: starView(updated) };
-        }
+        if (!value.starred) { await data.deleteStar(tx, owner, value.work, value.verseRef, value.comment); return { ok: true as const, star }; }
+        if (await data.starRow(tx, owner, value.work, value.verseRef, value.comment)) return { ok: true as const, star };
         if (await data.countStars(tx, owner) >= SAVED_CAPS.stars) return limit;
-        const inserted = await data.insertStar(tx, owner, value.work, value.verseRef, value.comment, value.starred);
-        if (!inserted) throw new Error("Saved star unavailable");
-        return { ok: true as const, star: starView(inserted) };
+        if (!await data.insertStar(tx, owner, value.work, value.verseRef, value.comment)) throw new Error("Saved star unavailable");
+        return { ok: true as const, star };
       });
     },
   });

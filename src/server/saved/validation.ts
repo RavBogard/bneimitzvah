@@ -19,6 +19,11 @@ export type MarkState = "unmarked" | "working" | "got-it";
 export type WorkStream = "translation" | "note";
 
 const invalid = (): never => { throw new HttpBoundaryError(); };
+// The same code points the 0036 CHECKs refuse (SAVED_TEXT_CONTROLS, SAVED_NAME_CONTROLS), plus NUL, which Postgres text cannot hold:
+// C0 (text keeps tab and newline), DEL, C1 including U+0085, and the line and paragraph separators U+2028 and U+2029.
+// The app refuses first, so a CHECK never fails on a member's words (which Postgres would quote in its log).
+const TEXT_CONTROLS = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\u2028\u2029]/;
+const NAME_CONTROLS = /[\x00-\x1f\x7f-\x9f\u2028\u2029]/;
 const torah = new Set<string>(TORAH_BOOKS), neviim = new Set<string>(NEVIIM_BOOKS);
 const formatRange = (book: string, [c1, v1]: number[], [c2, v2]: number[]) =>
   c1 === c2 && v1 === v2 ? `${book} ${c1}:${v1}` : c1 === c2 ? `${book} ${c1}:${v1}-${v2}` : `${book} ${c1}:${v1}-${c2}:${v2}`;
@@ -38,7 +43,7 @@ export function kind(value: unknown): SavedKind {
 export function name(value: unknown): string {
   if (typeof value !== "string" || !value.isWellFormed()) return invalid();
   const trimmed = value.trim(), length = Array.from(trimmed).length;
-  if (length < 1 || length > 80 || /[\x00-\x1f\x7f-\x9f]/.test(trimmed)) return invalid();
+  if (length < 1 || length > 80 || NAME_CONTROLS.test(trimmed)) return invalid();
   return trimmed;
 }
 export function readingDate(value: unknown): string | null {
@@ -66,7 +71,7 @@ export function verse(value: unknown): string {
 export function text(value: unknown): string {
   if (typeof value !== "string" || !value.isWellFormed()) return invalid();
   const normalized = value.replace(/\r\n?/g, "\n");
-  if (Buffer.byteLength(normalized, "utf8") > 4096 || /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/.test(normalized)) return invalid();
+  if (Buffer.byteLength(normalized, "utf8") > 4096 || TEXT_CONTROLS.test(normalized)) return invalid();
   return normalized;
 }
 export function stream(value: unknown): WorkStream {
