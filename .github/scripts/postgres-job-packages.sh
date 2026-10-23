@@ -6,7 +6,7 @@
 # The runner's default apt mirror (azure.archive.ubuntu.com) has stalled this job for over
 # ten minutes at a time. The .deb files apt downloads are therefore cached per runner image
 # and Playwright version and installed offline with dpkg; apt runs only on a cache miss
-# (about once per runner-image release), with network timeouts, a bounded wall clock and a
+# (about once per runner-image release), with network timeouts, a 150-second wall clock and a
 # fallback to archive.ubuntu.com.
 #
 # Usage: postgres-job-packages.sh <cache-hit: true|other>. Writes fresh=true|false to
@@ -39,9 +39,12 @@ offline() {
 online_once() {
   local seconds=$1
   sudo dpkg --configure -a || true
-  # install-deps elevates with sudo itself and runs apt-get update before installing.
-  timeout -k 15 "$seconds" npx playwright install-deps chromium firefox &&
-    timeout -k 15 "$seconds" sudo apt-get install -y --no-install-recommends "${audio[@]}"
+  # timeout runs as root so that, on expiry, its process-group kill reaches apt-get and its
+  # download methods directly. Run as a user, it would signal only sudo, which does not relay
+  # signals from its own process group, leaving apt-get holding the dpkg lock.
+  # install-deps runs apt-get update and apt-get install itself (without sudo, as root).
+  sudo env "PATH=$PATH" timeout -k 15 "$seconds" npx playwright install-deps chromium firefox &&
+    sudo timeout -k 15 "$seconds" apt-get install -y --no-install-recommends "${audio[@]}"
 }
 
 online() {
@@ -54,8 +57,8 @@ APT::Keep-Downloaded-Packages "true";
 Binary::apt::APT::Keep-Downloaded-Packages "true";
 EOF
   sudo rm -f /var/cache/apt/archives/*.deb
-  if ! online_once 240; then
-    echo "::warning::The default apt mirror did not finish within 4 minutes; retrying against archive.ubuntu.com"
+  if ! online_once 150; then
+    echo "::warning::The default apt mirror did not finish within 150 seconds; retrying against archive.ubuntu.com"
     for file in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources /etc/apt/apt-mirrors.txt; do
       if [ -f "$file" ]; then sudo sed -i 's#azure\.archive\.ubuntu\.com#archive.ubuntu.com#g' "$file"; fi
     done
