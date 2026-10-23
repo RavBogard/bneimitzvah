@@ -20,6 +20,10 @@
 .doorTitle { font-size: 1.5rem; }
 .doorLine { margin-top: 0.5rem; color: var(--color-muted); }
 .doorAction { margin-top: 1.25rem; justify-content: center; }
+.doorStart { display: inline-flex; align-items: center; color: #fff; text-decoration: none; }
+.doorStart:hover { color: #fff; }
+.doorMore { margin-top: 0.75rem; }
+.doorMore a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
 
 /* The existing sign-in task sits inside the Beit Mitzvah door under a hairline. */
 .task { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--color-rule); }

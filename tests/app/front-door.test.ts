@@ -33,7 +33,9 @@ test("the home is CRC Torah's front door: This week, then the Beit Mitzvah door,
   expect(markup).toContain(">For students, families and tutors preparing a Beit Mitzvah.</p>");
   expect(markup).toContain('id="learn-title"');
   expect(markup).toContain(">Learn to lein</h2>");
-  expect(markup).toContain('href="/trope-chart">Open the trope chart</a>');
+  expect(markup).toContain("Hear the phrases, then lein a verse of this week&#x27;s reading.");
+  expect(markup).toMatch(/href="\/learn"[^>]*>Start<\/a>/);
+  expect(markup).toContain('href="/trope-chart">Trope chart</a>');
   // The existing sign-in task sits inside the Beit Mitzvah door, a level under the door's own heading.
   expect(markup.indexOf('<h3 id="entry-title"')).toBeGreaterThan(beit);
   expect(markup.indexOf('<h3 id="entry-title"')).toBeLessThan(learn);

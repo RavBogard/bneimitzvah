@@ -32,8 +32,10 @@ test("the home is a front door to This week, Beit Mitzvah and Learn to lein", as
   await expect(page.getByRole("heading", { level: 2, name: "Beit Mitzvah", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { level: 3, name: "Sign in", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Learn to lein", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Open the trope chart", exact: true })).toHaveAttribute("href", "/trope-chart");
-  for (const name of ["Lein", "Open the trope chart", "Sign in"]) {
+  await expect(page.getByRole("link", { name: "Start", exact: true })).toHaveAttribute("href", "/learn");
+  await expect(page.getByText("Hear the phrases, then lein a verse of this week's reading.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Trope chart", exact: true })).toHaveAttribute("href", "/trope-chart");
+  for (const name of ["Lein", "Start", "Sign in"]) {
     const box = await page.getByRole("link", { name, exact: true }).boundingBox();
     expect(box && box.height >= 44 && box.width >= 44, `${name} is at least 44px`).toBe(true);
   }
