@@ -146,8 +146,9 @@ async function googleCallback(request: Request, runtime: HttpRuntime): Promise<R
 /**
  * Tries left on this address's outstanding code, after a wrong one. The SDK has already recreated the code with one
  * more try used (better-auth 1.7.10 email-otp: identifier `sign-in-otp-<email>`, value `<hmac>:<tries>`). With none
- * left, or no live code, the code is removed now and the person is told to ask again, not to type a fourth time.
- * Any doubt answers 0: the code is spent and a new email is the way back in.
+ * left, or no live code, the person is told to ask again, not to type a fourth time. This only reads: a spent row is
+ * left for the SDK, which consumes it and refuses it as too many attempts, so a newer code issued meanwhile is never
+ * removed here. Any doubt answers 0: a new email is the way back in.
  */
 async function codeTriesLeft(runtime: HttpRuntime, email: string): Promise<number> {
   const identifier = `sign-in-otp-${email}`;
@@ -156,7 +157,6 @@ async function codeTriesLeft(runtime: HttpRuntime, email: string): Promise<numbe
     const row = await context.internalAdapter.findVerificationValue(identifier);
     const tries = row && row.expiresAt > new Date() && typeof row.value === "string" ? Number(row.value.slice(row.value.lastIndexOf(":") + 1)) : NaN;
     const left = Number.isSafeInteger(tries) && tries >= 0 ? SIGN_IN_CODE.attempts - tries : 0;
-    if (left <= 0 && row) await context.internalAdapter.deleteVerificationByIdentifier(identifier);
     return Math.max(left, 0);
   } catch { return 0; }
 }

@@ -144,7 +144,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         {view.kind === "loading" && <p role="status">One moment while we check your access.</p>}
         {view.kind === "unavailable" && <><p>The portal isn’t ready to sign you in right now. Your reading remains private.</p><p>Please try again shortly. If this continues, ask your tutor or the congregation for help.</p><button type="button" className="button-primary" onClick={retry}>Try again</button></>}
         {view.kind === "sign-in" && (linkRequested ? <><p role="status">{SIGN_IN_CODE_COPY.sent}</p>
-            <form onSubmit={submitCode}>
+            <form method="post" onSubmit={submitCode}>
               <label htmlFor="entry-code">{SIGN_IN_CODE_COPY.label}</label>
               <input id="entry-code" name="code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" minLength={6} maxLength={6} required spellCheck={false}
                 value={code} onChange={event => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} disabled={pending !== null} aria-describedby="entry-code-help" />

@@ -158,12 +158,14 @@ test("three wrong codes spend the code: the third answers expired and the right 
       expect(response.headers.getSetCookie().some(set => set.startsWith("portal-code=;") && set.includes("Max-Age=0"))).toBe(true);
     }
   }
-  expect(await f.codeRows()).toHaveLength(0);
+  // The spent row stays for the SDK to refuse; the portal never deletes codes itself, so it cannot remove a newer one.
+  expect(await f.codeRows()).toHaveLength(1);
   // A fresh binding for the same address (a new limiter bucket) does not bring the spent code back.
   const fresh = f.runtime.signInCodes.issue("tries@example.test").split(";")[0];
   const fourth = await f.enter(mail.code, fresh);
   expect(fourth.status).toBe(409); expect(await fourth.json()).toEqual({ error: "expired" });
   expect(fourth.headers.getSetCookie().some(set => set.startsWith("better-auth"))).toBe(false);
+  expect(await f.codeRows()).toHaveLength(0);
 });
 
 test("the attempt limit is the SDK's own: a stale fourth try with the right code is refused as too many attempts", async () => {
