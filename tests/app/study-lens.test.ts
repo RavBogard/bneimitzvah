@@ -181,7 +181,8 @@ test("Lein's Rashi (n) disclosure: closed, counted, hidden when Rashi is silent 
   expect(closed).not.toContain("synthetic");
   for (const state of [ready([]), { status: "loading" }, { status: "none" }] as CommentaryVerseState[]) expect(renderToStaticMarkup(createElement(VerseRashi, { verse: one, state }))).toBe("");
   expect(renderToStaticMarkup(createElement(VerseRashi, { verse: null, state: ready([comment("דה", "a")]) }))).toBe("");
-  expect(renderToStaticMarkup(createElement(VerseRashi, { verse: one, state: { status: "failed" } }))).toContain(">Rashi</button>");
+  // A failure shows nothing in Lein: never a row of empty "Rashi" buttons (Study has its one quiet line).
+  expect(renderToStaticMarkup(createElement(VerseRashi, { verse: one, state: { status: "failed" } }))).toBe("");
 });
 
 test("quiet states: loading, a failure with Try again, and the Women's Commentary on a haftarah", () => {

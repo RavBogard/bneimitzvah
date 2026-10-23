@@ -392,8 +392,12 @@ it("keeps proposed Torah, assigned Haftarah and true Lift exclusive in all six d
   const proposedBox = await portion(tab).boundingBox(), headingBox = await tab.getByRole("heading", { name: "Assigned Haftarah", exact: true }).boundingBox(), assignedBox = await tab.getByRole("region", { name: "Assigned text", exact: true }).boundingBox();
   expect(Boolean(proposedBox && headingBox && assignedBox)).toBe(true);
   if (!proposedBox || !headingBox || !assignedBox) throw new Error("Exploration desktop geometry unavailable");
-  expect(proposedBox.y + proposedBox.height).toBeLessThanOrEqual(headingBox.y);
-  expect(headingBox.y + headingBox.height).toBeLessThanOrEqual(assignedBox.y);
+  // Stacked, never overlapping. Chromium lays boxes out in 1/64 px units and reports them as doubles, so two boxes that
+  // touch can differ by a rounding error far below one unit (CI saw 10911.3505859375 against 10911.349609375); any real
+  // overlap is at least one whole unit, which this still refuses.
+  const LAYOUT_UNIT = 1 / 64;
+  expect(proposedBox.y + proposedBox.height).toBeLessThanOrEqual(headingBox.y + LAYOUT_UNIT);
+  expect(headingBox.y + headingBox.height).toBeLessThanOrEqual(assignedBox.y + LAYOUT_UNIT);
   // Modal must close before an underlying main slot can receive an actual click.
   for (const slot of ["proposed", "assigned", "lifted", "proposed", "lifted", "assigned", "proposed"] as const) {
     if (slot !== "lifted" && await tab.getByRole("dialog").count()) {
