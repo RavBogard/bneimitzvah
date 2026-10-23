@@ -4,6 +4,7 @@ import { creditLine, EDITION_TEXT_LIMITS, licenseLabel, plainCredit } from "../.
 import { JPS2023 } from "./versions";
 import { sefariaRuns } from "./sefaria-runs";
 import { fetchSefariaJson, SEFARIA_ORIGIN } from "./sefaria-json";
+import { isNoTextAnswer } from "./commentary";
 
 /**
  * Compare's public reader: two bounded Sefaria requests in parallel, each 5 s and 1 MiB at most.
@@ -79,16 +80,20 @@ export function createSefariaTranslationsReader(input: { fetch: typeof globalThi
         return projectTranslations(row.json, verse);
       }),
       fetchSefariaJson(input.fetch, textUrl(targumRef(verse), ["hebrew", "english"]), limits, signal).then(row => {
-        // A verse with no Targum text at all is an answer (no Targum), not a failure.
-        if (row.status === 404) return null;
+        // Sefaria's own "We have no text for …" is an answer (no Targum); any other 404 is a failure, never cached long.
+        if (row.status === 404 && isNoTextAnswer(row.json)) return null;
         if (row.status !== 200) throw new TranslationsUnavailable("upstream");
         return projectTargum(row.json, verse);
       }),
     ]);
     if (signal?.aborted || translations.status === "rejected" && targum.status === "rejected") throw new TranslationsUnavailable("upstream");
-    const answer: CompareAnswer = Object.freeze({ verse: verse.ref, translations: translations.status === "fulfilled" ? translations.value : null,
-      targum: targum.status === "fulfilled" ? targum.value : null });
-    if (Buffer.byteLength(JSON.stringify(answer)) > COMPARE_LIMITS.responseBytes) throw new TranslationsUnavailable("upstream");
-    return Object.freeze({ answer, complete: translations.status === "fulfilled" && targum.status === "fulfilled" });
+    const english = translations.status === "fulfilled" ? translations.value : null, aramaic = targum.status === "fulfilled" ? targum.value : null;
+    const answer: CompareAnswer = Object.freeze({ verse: verse.ref, translations: english, targum: aramaic });
+    const fits = (value: CompareAnswer) => Buffer.byteLength(JSON.stringify(value)) <= COMPARE_LIMITS.responseBytes;
+    if (fits(answer)) return Object.freeze({ answer, complete: translations.status === "fulfilled" && targum.status === "fulfilled" });
+    // An oversize Targum costs only the Targum: the translations still answer, briefly cached, never a repeated 503.
+    const without: CompareAnswer = Object.freeze({ verse: verse.ref, translations: english, targum: null });
+    if (english && fits(without)) return Object.freeze({ answer: without, complete: false });
+    throw new TranslationsUnavailable("upstream");
   };
 }

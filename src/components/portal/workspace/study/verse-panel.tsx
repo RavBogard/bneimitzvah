@@ -55,7 +55,15 @@ export function VersePanelScope({ children }: { children: ReactNode }) {
   }, [open, wide]);
   useEffect(() => {
     if (!open) return;
-    const key = (event: KeyboardEvent) => { if (event.key === "Escape" && !event.defaultPrevented) { event.preventDefault(); close(); } };
+    // Esc belongs to the panel only while the reader is in it (or on the button that opened it) and no modal is
+    // open above the page: a modal (Up close, the reading sheet, a guide walk) closes itself, and the panel stays.
+    const key = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      let modal = false; try { modal = document.querySelector("dialog:modal") !== null; } catch { modal = document.querySelector("dialog[open]") !== null; }
+      const panel = document.getElementById(open.id), focused = document.activeElement;
+      if (modal || !focused || !(panel?.contains(focused) || focused === trigger.current)) return;
+      event.preventDefault(); close();
+    };
     document.addEventListener("keydown", key); return () => document.removeEventListener("keydown", key);
   }, [open, close]);
   useEffect(() => { if (!active) setOpen(null); }, [active]);

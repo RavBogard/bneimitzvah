@@ -86,3 +86,26 @@ test("a failed Compare is one quiet line with Try again, and the reading is unto
   await panel(page).getByRole("button", { name: "Try again", exact: true }).click();
   await expect(panel(page).getByText("Synthetic rendering one of Genesis 1:1.")).toBeVisible();
 });
+
+test("Esc with a modal open closes the modal, never the Compare panel under it", async ({ page }) => {
+  await mock(page);
+  await page.goto("/read?lens=study");
+  await compare(page, "Genesis 1:1").click();
+  await expect(panel(page).getByText("Synthetic rendering one of Genesis 1:1.")).toBeVisible();
+  // Up close is a modal dialog over the page.
+  await row(page, "Genesis 1:2").locator('[data-word-index="0"]').first().click();
+  await page.getByRole("button", { name: "View Genesis 1:2 up close", exact: true }).click();
+  const lift = page.locator("dialog.lift");
+  await expect(lift).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(lift).toHaveCount(0);
+  await expect(panel(page)).toBeVisible();
+  // Focus elsewhere on the page: Esc leaves the panel alone too.
+  await page.getByRole("heading", { level: 1 }).click();
+  await page.keyboard.press("Escape");
+  await expect(panel(page)).toBeVisible();
+  // Back in the panel, Esc closes it.
+  await panel(page).getByRole("link").first().focus();
+  await page.keyboard.press("Escape");
+  await expect(panel(page)).toHaveCount(0);
+});

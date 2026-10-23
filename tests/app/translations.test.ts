@@ -78,6 +78,17 @@ test("one side failing leaves that side null and the answer incomplete; both fai
   // No Targum text at all (Sefaria's 404) is an answer, not a failure.
   const noTargum = syntheticTranslationsFetch({ english: ref => textsAnswer(ref, [englishVersion("Synthetic Edition One")]) });
   expect(await createSefariaTranslationsReader({ fetch: noTargum.fetch })(verse)).toMatchObject({ complete: true, answer: { targum: null } });
+  // Any other 404 is a failure of that half: answered without it, and only briefly cached.
+  for (const body of [{ error: "Something else." }, { error: "We have no text for <b>x</b>." }, {}]) {
+    const odd = syntheticTranslationsFetch({ english: ref => textsAnswer(ref, [englishVersion("Synthetic Edition One")]), targum: () => new Response(JSON.stringify(body), { status: 404, headers: { "content-type": "application/json" } }) });
+    expect(await createSefariaTranslationsReader({ fetch: odd.fetch })(verse), JSON.stringify(body)).toMatchObject({ complete: false, answer: { targum: null } });
+  }
+  // An oversize Targum costs only the Targum, never the whole answer.
+  const hugeTargum = syntheticTranslationsFetch({ english: ref => textsAnswer(ref, Array.from({ length: 40 }, (_, i) => englishVersion(`Synthetic Big ${i + 1}`, "word ".repeat(1150)))),
+    targum: ref => textsAnswer(ref, [targumVersion("he", "Synthetic Aramaic", "אָב ".repeat(3900)), targumVersion("en", "Synthetic Targum English", "word ".repeat(3000))]) });
+  const degraded = await createSefariaTranslationsReader({ fetch: hugeTargum.fetch })(verse);
+  expect(degraded).toMatchObject({ complete: false, answer: { targum: null } });
+  expect(degraded.answer.translations!.length).toBeGreaterThan(0);
   const down = syntheticTranslationsFetch({ english: () => new Response("x", { status: 502 }), targum: () => new Response("x", { status: 502 }) });
   await expect(createSefariaTranslationsReader({ fetch: down.fetch })(verse)).rejects.toMatchObject({ code: "upstream" });
   await expect(createSefariaTranslationsReader({ fetch: ok().fetch })("Psalms 1:1")).rejects.toMatchObject({ code: "invalid-request" });
