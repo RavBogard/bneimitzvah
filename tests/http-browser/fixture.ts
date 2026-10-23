@@ -55,6 +55,7 @@ import { projectMagicLink } from "../../src/server/mail/transport";
 import { resolveTenantHost } from "../../src/server/tenancy/resolve";
 import { parseCeremonyDate } from "../../src/lib/readings/ranges";
 import { withTenantTransaction } from "../../src/server/db/runtime";
+import { readProductName } from "../../src/server/data/product-name";
 import type { HttpRuntime } from "../../src/server/runtime/composition";
 import { createReferenceReviewService } from "../../src/server/reference-review/service";
 import { ReviewUnavailable } from "../../src/server/reference-review/batch-contract";
@@ -140,6 +141,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       translations: options.translationsLoad ?? unavailableTranslations,
       shelf: options.shelfLoad ?? unavailableShelf,
       source: options.sourceLoad ?? unavailableSource,
+      productName: () => withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => readProductName(tx, PUBLIC_TENANT)),
     });
     async function withPublicRuntime(action: (runtime: PublicRuntime) => Promise<Response>) {
       await withTenantTransaction(db, { tenantId: "crc" }, async () => undefined);

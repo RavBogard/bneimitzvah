@@ -156,6 +156,14 @@ describe("tutor draft notices", () => {
     expect(f.sent).toEqual([]);
   });
 
+  it("name the product from the congregation's own setting, through the shared reader", async () => {
+    const f = await setup(); await f.switches({ tutorDraft: true });
+    await f.owner(() => f.db.update(s.tenant).set({ productName: "Synthetic Portal" }).where(eq(s.tenant.id, "crc")));
+    expect(await f.draft("Synthetic draft one", 1)).toMatchObject({ ok: true });
+    expect(f.sent).toHaveLength(1);
+    expect(f.sent[0].text).toContain("saved a translation draft in Synthetic Portal."); expect(f.sent[0].text).not.toContain("CRC Torah");
+  });
+
   it("go to the student's assigned tutor only, once per student per day, with a sign-in link and no bearer link", async () => {
     const f = await setup(); await f.switches({ tutorDraft: true });
     expect(await f.draft("Synthetic draft one", 1)).toMatchObject({ ok: true });

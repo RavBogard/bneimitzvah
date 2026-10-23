@@ -61,8 +61,11 @@ test("every server file that fetches from Sefaria uses the shared headers or the
 // The links behind More on this verse are CC BY: the panel credits Sefaria and links the licence, in the credit format
 // the rest of Study already uses, with the panel's own name as the title (no new wording).
 test("More on this verse credits the CC BY links in the existing credit format and links the licence", () => {
-  const html = renderToStaticMarkup(createElement(ShelfLinksCredit));
-  expect(html.replace(/<[^>]+>/g, "")).toBe(creditLine("More on this verse", "CC-BY"));
+  const html = renderToStaticMarkup(createElement(ShelfLinksCredit, { productName: "Synthetic Portal" }));
+  // Beside it, the note of changes in Daniel's approved words (2026-10-23), naming the congregation's own product.
+  expect(html.replace(/<[^>]+>/g, "")).toBe(`${creditLine("More on this verse", "CC-BY")}Selected and ordered by Synthetic Portal`);
+  expect(html).toMatch(/<span[^>]*data-shelf-changes=""[^>]*>Selected and ordered by <bdi dir="auto">Synthetic Portal<\/bdi><\/span>/);
+  expect(html).not.toContain("CRC Torah");
   expect(html).toContain('href="https://creativecommons.org/licenses/by/4.0/"');
   expect(html).toContain('rel="noopener noreferrer"');
 });

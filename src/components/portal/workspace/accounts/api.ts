@@ -5,7 +5,8 @@ export type ApproverMode = "admin" | "tutor";
 export type AccountRequest = Readonly<{ id: string; name: string; purpose: string | null; email: string | null; requestedAt: string }>;
 export type Member = Readonly<{ id: string; name: string; since: string }>;
 export type ApproversView = Readonly<{ admins: readonly string[]; designated: readonly Readonly<{ id: string; name: string }>[]; candidates: readonly Readonly<{ tutorGrantId: string; name: string }>[] }>;
-export type DecisionResult = Readonly<{ ok: true } | { ok: false; code: "disabled" }>;
+/** "admin-only": an admin ended this person's membership, so only an admin approves them again. */
+export type DecisionResult = Readonly<{ ok: true } | { ok: false; code: "disabled" | "admin-only" }>;
 export type DesignationResult = Readonly<{ ok: true } | { ok: false; code: "admin" | "designated" }>;
 
 const bad = (): never => { throw new PortalRequestError(503); };
@@ -64,13 +65,15 @@ export function parseSummary(value: unknown): number {
   return row.ok === true && Number.isSafeInteger(row.requests) && (row.requests as number) >= 0 && (row.requests as number) <= 50 ? row.requests as number : bad();
 }
 const done = (value: unknown, keys: readonly string[] = ["ok"]) => object(value, keys).ok === true ? { ok: true as const } : bad();
+/** An approval's answer: done, or one of the two refusals that keep the request. */
+export const parseDecision = (status: number, value: unknown): DecisionResult => status === 409 ? refusal(value, ["disabled", "admin-only"] as const) : done(value, ["ok", "memberId"]);
 
 export const accountsApi = {
   async summary(mode: ApproverMode, signal?: AbortSignal) { return parseSummary((await request(`/api/accounts/summary?mode=${mode}`, undefined, signal)).value); },
   async requests(mode: ApproverMode, signal?: AbortSignal) { return parseRequests((await request(`/api/accounts/requests?mode=${mode}`, undefined, signal)).value); },
   async approve(mode: ApproverMode, requestId: string): Promise<DecisionResult> {
     const { status, value } = await request("/api/accounts/requests/approve", { mode, requestId });
-    return status === 409 ? refusal(value, ["disabled"] as const) : done(value, ["ok", "memberId"]);
+    return parseDecision(status, value);
   },
   async decline(mode: ApproverMode, requestId: string): Promise<DecisionResult> { return done((await request("/api/accounts/requests/decline", { mode, requestId })).value); },
   async members(signal?: AbortSignal) { return parseMembers((await request("/api/accounts/members", undefined, signal)).value); },

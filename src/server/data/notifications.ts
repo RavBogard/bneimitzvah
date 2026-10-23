@@ -3,6 +3,7 @@ import { and, asc, countDistinct, desc, eq, exists, gt, gte, inArray, isNull, lt
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction, ActiveMode, Actor } from "../access/types";
 import { lockRoleGrant } from "./authority";
+import { readProductName } from "./product-name";
 import { mailbox } from "../runtime/config";
 import type { NotificationKind } from "../notifications/schedule";
 import * as s from "../db/index";
@@ -29,15 +30,17 @@ export async function setPreference<Q extends PgQueryResultHKT>(tx: Tx<Q>, write
 
 /** A recipient's live authority for one role: congregation on, member current, address verified, grant unrevoked. */
 export async function liveRecipient<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, membershipId: string, role: ActiveMode) {
-  const [tenant] = await tx.select({ enabled: s.tenant.enabled, productName: s.tenant.productName }).from(s.tenant).where(eq(s.tenant.id, tenantId)).for("share");
+  const [tenant] = await tx.select({ enabled: s.tenant.enabled }).from(s.tenant).where(eq(s.tenant.id, tenantId)).for("share");
   if (!tenant?.enabled) return null;
+  // The product name from the one shared reader (Daniel, E1), on the row this transaction already holds.
+  const productName = await readProductName(tx, tenantId);
   const [member] = await tx.select().from(s.membership).where(and(eq(s.membership.tenantId, tenantId), eq(s.membership.id, membershipId))).for("share");
   if (!member || member.disabledAt) return null;
   const [user] = await tx.select({ id: s.user.id, email: s.user.email, name: s.user.name, verified: s.user.emailVerified }).from(s.user).where(eq(s.user.id, member.userId)).for("share");
   if (!user?.verified || !mailbox(user.email)) return null;
   const grant = await lockRoleGrant(tx, tenantId, member.id, role, "read");
   if (!grant || grant.revokedAt) return null;
-  return Object.freeze({ tenantId, productName: tenant.productName, membershipId: member.id, userId: user.id, email: user.email, name: user.name, grant,
+  return Object.freeze({ tenantId, productName, membershipId: member.id, userId: user.id, email: user.email, name: user.name, grant,
     authorityRevision: member.authorityRevision });
 }
 export type LiveRecipient = NonNullable<Awaited<ReturnType<typeof liveRecipient>>>;

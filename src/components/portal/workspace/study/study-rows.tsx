@@ -5,20 +5,22 @@ import { Apparatus, PhraseLegend, StudyHebrew, useVerseColors } from "./annotati
 import { useCommentLink, VerseCommentary, type WorkState } from "./commentary-view";
 import type { StudyVerse } from "./api";
 import { InlineVersePanel, VerseActions } from "./verse-panel";
+import { useOwnLayer } from "./own-layer";
 import styles from "./commentary.module.css";
 
 /**
  * The Study lens (spec 2026-10-22 §3.2): each verse on its own row with room
  * under it. Hebrew with colors and its verse number (Hear), the English when it
  * is on, then the inline commentary, quieter than scripture and set off by a
- * hairline, and the verse's actions (Compare) under it. No tikkun here: Study is about meaning.
+ * hairline, and the verse's actions (Compare) under it, then, on a member's own saved reading only, the closed
+ * Yours row (spec §3.2 item 5). No tikkun here: Study is about meaning.
  */
 function StudyRow({ verse, assignment, id, onVerse, onWord, activeWord, listening, toolsAvailable, showEnglish, works, label }: {
   verse: StudyVerse; assignment: AssignmentEnding; id: string; onVerse?(): void; onWord?(index: number): void; activeWord: number | null;
   listening: boolean; toolsAvailable: boolean; showEnglish: boolean; works: readonly WorkState[]; label?: string;
 }) {
   const prefs = useReadingPrefs(), result = useVerseColors(verse, assignment, prefs.colors), colors = result?.status === "ready" ? result : null;
-  const link = useCommentLink(), number = /:([1-9]\d*)$/.exec(verse.ref)?.[1] ?? verse.ref;
+  const link = useCommentLink(), number = /:([1-9]\d*)$/.exec(verse.ref)?.[1] ?? verse.ref, own = useOwnLayer();
   return <>
     {label && <p className="student-aliyah">{label}</p>}
     <article className={styles.row} data-verse-ref={verse.ref} aria-label={verse.ref}>
@@ -34,6 +36,7 @@ function StudyRow({ verse, assignment, id, onVerse, onWord, activeWord, listenin
         {showEnglish && <p className={`study-english ${styles.english}`} lang="en" dir="ltr" data-english-ref={verse.ref}>{verse.english ?? "English reference unavailable for this verse."}</p>}
         <VerseCommentary verse={verse} works={works} link={link} />
         <VerseActions verse={verse.ref} />
+        {own?.yours(verse, works)}
       </div>
     </article>
     <InlineVersePanel verse={verse.ref} />

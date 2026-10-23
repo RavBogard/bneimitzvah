@@ -65,6 +65,11 @@ describe("the Learn to lein course data", () => {
       expect(problems(value).length, bad).toBeGreaterThan(0);
     }
   });
+  it("leads each kadma v'azla lesson with kadma and azla together, as its description opens", () => {
+    // The haftarah lesson once led with gershayim alone (Isaiah 6:8), against its own first sentence.
+    for (const id of ["torah-azla", "haftarah-azla"]) expect(lessonById(id)!.examples[0].tropes).toEqual(["kadma", "geresh"]);
+    expect(lessonById("haftarah-azla")!.examples.map(example => example.ref)).toEqual(["Isaiah 54:11", "Isaiah 6:8", "Micah 6:8", "Isaiah 54:10", "Amos 9:12", "I Kings 18:9"]);
+  });
   it("words each lesson's goal for the end screen in the present", () => {
     expect(presentGoal(lessonById("torah-etnachta")!.goal)).toBe("You can hear where a verse rests in the middle, and tell that rest from the ending.");
     expect(presentGoal(lessonById("torah-first-verse")!.goal)).toBe("You have leined one verse of this week's Torah reading.");

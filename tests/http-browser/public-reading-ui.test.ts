@@ -168,3 +168,96 @@ it("any reading: a named reading, a deep-linked verse that plays from the player
     expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
 });
+
+const noScroll = (tab: Page) => tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+async function controls44(tab: Page, scope: string) {
+  for (const height of await tab.locator(`${scope} button`).evaluateAll(nodes => nodes.filter(node => (node as HTMLElement).offsetParent).map(node => node.getBoundingClientRect().height)))
+    expect(height).toBeGreaterThanOrEqual(44);
+}
+
+it("the translate drill, signed out, in Lein only: hides every verse's English and Rashi, reveals, moves on and ends with the view as it was, storing nothing", async () => {
+  for (const mobile of [true, false]) {
+    const { tab, seen } = await visitor(mobile);
+    await tab.goto("/read", { waitUntil: "domcontentloaded" });
+    await ui(reading(tab).getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
+    // The visitor's own English choice, made before the drill; the drill must leave it exactly as it is.
+    await tab.getByRole("navigation", { name: "Reading tools", exact: true }).getByRole("button", { name: "English", exact: true }).click();
+    const english = reading(tab).locator("[data-english-ref]"), hidden = reading(tab).locator("[data-english-hidden]");
+    await ui(english.first()).toBeVisible();
+    const shown = await english.count();
+    expect(shown).toBeGreaterThan(1);
+    await word(tab, "Genesis 1:1", 1).click(); await playing(tab);
+    await tab.getByRole("region", { name: "Reading playback", exact: true }).getByRole("button", { name: "Pause", exact: true }).click();
+    await tab.getByRole("button", { name: "Rashi (1)", exact: true }).click();
+    const rashi = tab.getByRole("region", { name: "Rashi on Genesis 1:1", exact: true });
+    await ui(rashi.getByText("SYNTHETIC LEMMA", { exact: false }).first()).toBeVisible();
+    const stored = await tab.evaluate(() => JSON.stringify(Object.entries(localStorage).sort()));
+    const api = seen.api.length;
+
+    const toggle = tab.getByRole("button", { name: "Translate drill", exact: true });
+    await ui(toggle).toHaveAttribute("aria-pressed", "false");
+    await toggle.click();
+    await ui(toggle).toHaveAttribute("aria-pressed", "true");
+    const drill = tab.getByRole("region", { name: "Translate drill on Genesis 1:1", exact: true });
+    await ui(drill.getByText("English hidden", { exact: true })).toBeVisible();
+    await ui(drill.getByText("Tap a word for its meaning. Hear plays the verse.", { exact: true })).toBeVisible();
+    // Every verse's English is hidden, not only this one's, and Rashi is closed away.
+    await ui(english).toHaveCount(0); await ui(hidden).toHaveCount(shown);
+    await ui(tab.locator("[data-verse-rashi]")).toBeHidden();
+    await ui(tab.getByRole("button", { name: /up close$/ })).toHaveCount(0);
+    await drill.getByRole("button", { name: "Reveal", exact: true }).click();
+    await ui(drill.getByRole("heading", { name: "JPS", exact: true })).toBeFocused();
+    await ui(drill.getByText("Synthetic reference 1:", { exact: false })).toBeVisible();
+    await ui(drill.getByText("Compare it with what you said.", { exact: true })).toBeVisible();
+    // Signed out: no own translation, no Yours, no sign-in prompt.
+    await ui(drill.getByText(/My translation|Yours|Sign in/)).toHaveCount(0);
+    expect(await tab.evaluate(() => window.publicAudios.every(media => media.paused))).toBe(true);
+    expect(await noScroll(tab)).toBe(true);
+    await controls44(tab, "[data-translate-drill]");
+    await drill.getByRole("button", { name: "Hide again", exact: true }).click();
+    await ui(drill.getByRole("button", { name: "Reveal", exact: true })).toBeFocused();
+    await drill.getByRole("button", { name: "Reveal", exact: true }).click();
+    await drill.getByRole("button", { name: "Next verse", exact: true }).click();
+    const second = tab.getByRole("region", { name: "Translate drill on Genesis 1:2", exact: true });
+    await ui(second.getByRole("button", { name: "Reveal", exact: true })).toBeFocused();
+    await ui(second.getByText("Tap a word", { exact: false })).toHaveCount(0);
+    await second.getByRole("button", { name: "Reveal", exact: true }).click();
+    await ui(second.getByText("No JPS translation is available for this verse.", { exact: true })).toBeVisible();
+    expect(await tab.evaluate(() => window.publicAudios.every(media => media.paused))).toBe(true);
+    await second.getByRole("button", { name: "Hide again", exact: true }).click();
+    // Escape inside the drill ends it: the view is exactly as it was, with the English back on every verse.
+    await tab.keyboard.press("Escape");
+    await ui(toggle).toHaveAttribute("aria-pressed", "false"); await ui(toggle).toBeFocused();
+    await ui(english).toHaveCount(shown); await ui(hidden).toHaveCount(0);
+    // On the verse it started on, End drill brings Rashi back as it was left: open.
+    await toggle.click();
+    await tab.getByRole("region", { name: "Translate drill on Genesis 1:2", exact: true }).getByRole("button", { name: "End drill", exact: true }).click();
+    await ui(english).toHaveCount(shown);
+    // Nothing was written: no request beyond the public reading's own, no storage, the English choice untouched.
+    expect(seen.api.slice(api).every(path => path.startsWith("/api/public/"))).toBe(true);
+    expect(await tab.evaluate(() => JSON.stringify(Object.entries(localStorage).sort()))).toBe(stored);
+    expect(await tab.evaluate(() => sessionStorage.length)).toBe(0);
+    // Study has no drill, and a visitor has no Yours row or stars.
+    await tab.getByRole("group", { name: "Reading lens", exact: true }).getByRole("button", { name: "Study", exact: true }).click();
+    await ui(tab.locator("[data-study-rows]")).toBeVisible();
+    await ui(tab.getByRole("button", { name: "Translate drill", exact: true })).toHaveCount(0);
+    await ui(tab.locator("[data-yours-ref], [data-star]")).toHaveCount(0);
+    expect(seen.privateApi).toBe(false); expect(seen.cookie).toBe(false);
+  }
+});
+
+it("ending the drill on the verse it began shows Rashi as it was left", async () => {
+  const { tab } = await visitor(false);
+  await tab.goto("/read", { waitUntil: "domcontentloaded" });
+  await ui(reading(tab).getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
+  await word(tab, "Genesis 1:1", 1).click(); await playing(tab);
+  await tab.getByRole("region", { name: "Reading playback", exact: true }).getByRole("button", { name: "Pause", exact: true }).click();
+  await tab.getByRole("button", { name: "Rashi (1)", exact: true }).click();
+  const comment = tab.getByRole("region", { name: "Rashi on Genesis 1:1", exact: true }).getByText("SYNTHETIC LEMMA", { exact: false }).first();
+  await ui(comment).toBeVisible();
+  await tab.getByRole("button", { name: "Translate drill", exact: true }).click();
+  await ui(comment).toBeHidden();
+  await tab.getByRole("button", { name: "End drill", exact: true }).click();
+  await ui(comment).toBeVisible();
+  await ui(tab.getByRole("button", { name: "Rashi (1)", exact: true })).toHaveAttribute("aria-expanded", "true");
+});
