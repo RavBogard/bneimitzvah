@@ -2,6 +2,7 @@
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { parseCompareVerse } from "../../../../lib/readings/compare";
 import { CompareView } from "./compare-view";
+import { ShelfView } from "./shelf-view";
 import { useStudyLens } from "../study-lens";
 import styles from "./commentary.module.css";
 
@@ -11,7 +12,8 @@ import styles from "./commentary.module.css";
  * the tools rail. Opening moves focus to its heading; Close or Esc closes it and puts focus back on the
  * button that opened it. The verse that opened it stays where it was on screen while the text reflows.
  */
-export type VersePanelKind = "compare";
+/** Compare translations, or More on this verse (the shelf). */
+export type VersePanelKind = "compare" | "shelf";
 type Open = Readonly<{ verse: string; kind: VersePanelKind; id: string }>;
 type Scope = Readonly<{ open: Open | null; wide: boolean; toggle(verse: string, kind: VersePanelKind, trigger: HTMLElement): void; close(): void }>;
 const Context = createContext<Scope | null>(null);
@@ -72,26 +74,27 @@ export function VersePanelScope({ children }: { children: ReactNode }) {
 }
 const usePanel = () => useContext(Context);
 
-/** The verse's actions, under its row in Study: Compare. Nothing outside a VersePanelScope. */
+const ACTIONS: readonly { kind: VersePanelKind; label: string }[] = [{ kind: "compare", label: "Compare" }, { kind: "shelf", label: "More on this verse" }];
+/** The verse's actions, under its row in Study: Compare, and More on this verse. Nothing outside a VersePanelScope. */
 export function VerseActions({ verse }: { verse: string }) {
   const scope = usePanel();
   if (!scope || !parseCompareVerse(verse)) return null;
-  const open = scope.open?.verse === verse && scope.open.kind === "compare";
   return <div className={styles.actions}>
-    <button type="button" className={styles.action} aria-expanded={open} aria-controls={open ? scope.open!.id : undefined}
-      onClick={event => scope.toggle(verse, "compare", event.currentTarget)}>Compare</button>
+    {ACTIONS.map(action => { const open = scope.open?.verse === verse && scope.open.kind === action.kind;
+      return <button key={action.kind} type="button" className={styles.action} aria-expanded={open} aria-controls={open ? scope.open!.id : undefined}
+        onClick={event => scope.toggle(verse, action.kind, event.currentTarget)}>{action.label}</button>; })}
   </div>;
 }
 
 function Panel({ open, onClose }: { open: Open; onClose(): void }) {
-  const heading = useRef<HTMLHeadingElement | null>(null);
+  const heading = useRef<HTMLHeadingElement | null>(null), lens = useStudyLens();
   useEffect(() => { heading.current?.focus({ preventScroll: true }); }, [open.verse, open.kind]);
   return <section id={open.id} className={styles.versePanel} aria-labelledby={`${open.id}-heading`} data-verse-panel={open.verse}>
     <div className={styles.panelHead}>
-      <h3 id={`${open.id}-heading`} ref={heading} tabIndex={-1}>Compare <bdi dir="ltr">{open.verse}</bdi></h3>
+      <h3 id={`${open.id}-heading`} ref={heading} tabIndex={-1}>{open.kind === "compare" ? "Compare" : "More on"} <bdi dir="ltr">{open.verse}</bdi></h3>
       <button type="button" className={styles.panelClose} onClick={onClose}>Close</button>
     </div>
-    {open.kind === "compare" && <CompareView verse={open.verse} />}
+    {open.kind === "compare" ? <CompareView verse={open.verse} /> : <ShelfView key={open.verse} verse={open.verse} inline={lens.works} />}
   </section>;
 }
 /** Phones: the panel in place, right after its verse's row. */

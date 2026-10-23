@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { unavailableTranslations } from "../helpers/translations";
+import { unavailableExtras } from "../helpers/translations";
 vi.mock("server-only", () => ({}));
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -39,7 +39,7 @@ async function harness(options: { pocketTorah?: boolean; stepSource?: StepSource
     pocketTorah: options.pocketTorah === false ? null : { loadCatalog: async () => catalog, loadManifest: async () => short } });
   const tenant = vi.fn(async (_request: Request) => undefined);
   const commentary = vi.fn(createSefariaCommentaryReader({ fetch: syntheticCommentaryFetch() as typeof globalThis.fetch }));
-  const runtime: PublicRuntime = { resolveTenant: tenant, reading: service, commentary, translations: unavailableTranslations };
+  const runtime: PublicRuntime = { resolveTenant: tenant, reading: service, commentary, ...unavailableExtras };
   let sessionRuntimeUsed = 0, publicRuntimeOpened = 0;
   const dispatch = createHttpDispatcher(async () => { sessionRuntimeUsed++; throw new Error("The session runtime must not be reached"); }, async action => { publicRuntimeOpened++; return action(runtime); });
   const call = (path: string, init: RequestInit = {}) => dispatch(new Request(origin + path, init));

@@ -1,5 +1,6 @@
 import "server-only";
 import { parseRelatedMetadata, parseEditionMetadata, SOURCE_METADATA_LIMITS, SourceMetadataUnavailable, sourceMetadataVerse, sourceMetadataWork } from "./metadata";
+import { parseShelfLinks } from "../shelf";
 
 export const SEFARIA_METADATA_BOUNDS = Object.freeze({ totalMs: 10000, idleMs: 5000, emptyReads: 64, headerLength: 128 });
 const fail = (): never => { throw new SourceMetadataUnavailable(); };
@@ -65,6 +66,11 @@ export function createSefariaMetadataReader(input: { fetch?: typeof globalThis.f
   return Object.freeze({
     async related(value: string, signal: AbortSignal) {
       try { const verse = sourceMetadataVerse(value), url = new URL(`https://www.sefaria.org/api/links/${encodeURIComponent(verse)}`); url.searchParams.set("with_text", "0"); url.searchParams.set("with_sheet_links", "0"); return await request(url, signal, data => parseRelatedMetadata(data, verse)); }
+      catch { return fail(); }
+    },
+    /** The public shelf's projection of the same links request (bounds as related()); the signed-in catalog is untouched. */
+    async shelfLinks(value: string, signal: AbortSignal) {
+      try { const verse = sourceMetadataVerse(value), url = new URL(`https://www.sefaria.org/api/links/${encodeURIComponent(verse)}`); url.searchParams.set("with_text", "0"); url.searchParams.set("with_sheet_links", "0"); return await request(url, signal, data => parseShelfLinks(data, verse)); }
       catch { return fail(); }
     },
     async editions(value: string, signal: AbortSignal) {

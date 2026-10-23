@@ -9,6 +9,9 @@ import { parseCommentaryChapter } from "../../lib/readings/commentary";
 import { CommentaryUnavailable, type CommentaryReader } from "../study/commentary";
 import { TranslationsUnavailable, type TranslationsReader } from "../study/translations";
 import { parseCompareVerse } from "../../lib/readings/compare";
+import { parseSourceRef, type ShelfAnswer } from "../../lib/readings/shelf";
+import { SourceTextUnavailable, type SourceTextReader } from "../study/source-text";
+import { SourceMetadataUnavailable } from "../study/sources/metadata";
 
 /**
  * Signed-out reading routes. A strict allowlist under /api/public/: GET only, a
@@ -28,6 +31,10 @@ export type PublicRuntime = Readonly<{
   commentary: CommentaryReader;
   /** Compare: one verse's English translations and its Targum, from public transport only. */
   translations: TranslationsReader;
+  /** More on this verse: Sefaria's links for one verse, grouped and curated (public transport only). */
+  shelf(verse: string, signal?: AbortSignal): Promise<ShelfAnswer>;
+  /** One shelf item's text in Sefaria's default editions. */
+  source: SourceTextReader;
 }>;
 export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Response>) => Promise<Response>;
 
@@ -36,7 +43,7 @@ export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Re
  * named by a Shabbat `date` (the weekly page) or, for "Any reading", by a canonical `ref` with its
  * `kind` (the 1.5 offline packer depends on these exact shapes).
  */
-type Route = Readonly<{ kind: "reading" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations"; keysets: readonly (readonly string[])[] }>;
+type Route = Readonly<{ kind: "reading" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source"; keysets: readonly (readonly string[])[] }>;
 const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/reading": { kind: "reading", keysets: [["date"], ["ref", "kind"]] },
   "/api/public/text": { kind: "text", keysets: [["date", "kind", "offset"], ["ref", "kind", "offset"]] },
@@ -45,9 +52,11 @@ const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/reference/short": { kind: "short", keysets: [["date", "kind", "offset"], ["ref", "kind", "offset"]] },
   "/api/public/commentary": { kind: "commentary", keysets: [["work", "chapter"]] },
   "/api/public/translations": { kind: "translations", keysets: [["verse"]] },
+  "/api/public/related": { kind: "related", keysets: [["verse"]] },
+  "/api/public/source": { kind: "source", keysets: [["ref"]] },
 });
 /** Longest decoded value per key; a `ref` is bounded by READING_REF_LIMITS.chars, everything else by 80. */
-const valueLimit = (key: string) => key === "ref" ? READING_REF_LIMITS.chars : 80;
+const valueLimit = (key: string) => key === "ref" ? READING_REF_LIMITS.chars : 80; // a source ref is bounded tighter (256 bytes) by its own check
 function route(pathname: string): Route | null {
   return Object.hasOwn(exact, pathname) ? exact[pathname] : null;
 }
@@ -62,6 +71,11 @@ function failure(status: keyof typeof messages): Response {
   if (status === 405) headers.set("allow", "GET");
   return new Response(JSON.stringify({ error: messages[status] }), { status, headers });
 }
+/** 404 for an answer that cannot change soon: briefly cacheable, unlike every other failure. */
+function definiteNotFound(): Response {
+  return new Response(JSON.stringify({ error: messages[404] }), { status: 404, headers: { ...common, "content-type": "application/json; charset=utf-8",
+    "cache-control": "public, max-age=300", "vercel-cdn-cache-control": "public, s-maxage=3600" } });
+}
 function json(value: JsonValue, cdnSeconds: number): Response {
   const body = JSON.stringify(value);
   if (Buffer.byteLength(body) > 2 * 1024 * 1024) return failure(503);
@@ -73,6 +87,8 @@ function statusOf(error: unknown): keyof typeof messages {
     if (error instanceof PublicReadingUnavailable) return error.code === "not-found" ? 404 : error.code === "invalid-request" ? 400 : 503;
     if (error instanceof CommentaryUnavailable) return error.code === "invalid-request" ? 400 : 503;
     if (error instanceof TranslationsUnavailable) return error.code === "invalid-request" ? 400 : 503;
+    if (error instanceof SourceTextUnavailable) return error.code === "invalid-request" ? 400 : error.code === "not-found" || error.code === "unsupported" ? 404 : 503;
+    if (error instanceof SourceMetadataUnavailable) return 503;
     if (error instanceof HttpBoundaryError) return error.status === 404 ? 404 : error.status === 405 ? 405 : 400;
     if (error instanceof AccessDenied) return 404;
   } catch { /* Hostile accessors never shape a response. */ }
@@ -114,10 +130,11 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
     // Cheap checks first: a bad date, ref, kind, number, work or chapter never opens the database.
     // Every route but commentary and translations is keyed by a date or a ref, and those always check it.
     if (query.date !== undefined && publicShabbat(query.date) === null || selected.kind === "commentary" && parseCommentaryChapter(query.work, query.chapter) === null
-      || selected.kind === "translations" && parseCompareVerse(query.verse) === null
+      || (selected.kind === "translations" || selected.kind === "related") && parseCompareVerse(query.verse) === null
+      || selected.kind === "source" && parseSourceRef(query.ref) === null
       || query.kind !== undefined && query.kind !== "torah" && query.kind !== "haftarah"
-      || query.ref !== undefined && canonicalReadingRef(query.ref, query.kind) === null
-      || [query.offset, selected.kind === "translations" ? undefined : query.verse, query.word].some(value => value !== undefined && !/^(?:0|[1-9]\d{0,3})$/.test(value))) return failure(400);
+      || query.ref !== undefined && selected.kind !== "source" && canonicalReadingRef(query.ref, query.kind) === null
+      || [query.offset, selected.kind === "translations" || selected.kind === "related" ? undefined : query.verse, query.word].some(value => value !== undefined && !/^(?:0|[1-9]\d{0,3})$/.test(value))) return failure(400);
     const ref = query.ref;
     return await withPublic(async runtime => {
       try {
@@ -168,6 +185,22 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
             // Thirty days when both halves answered; an hour when one side was missing, so it is asked again soon.
             const result = await runtime.translations(query.verse, signal);
             return json(result.answer as unknown as JsonValue, result.complete ? 2592000 : 3600);
+          }
+          case "related": {
+            // A verse's links change slowly: the CDN keeps the shelf a week.
+            const shelf = await runtime.shelf(query.verse, signal);
+            return json(shelf as unknown as JsonValue, 604800);
+          }
+          case "source": {
+            let text;
+            try { text = await runtime.source(query.ref, signal); }
+            catch (error) {
+              // A definite "this page will never show that" (Sefaria's own "no text", or a text too deep, large or
+              // renamed) is kept an hour, so repeated requests for it stop at the CDN; any other failure is not kept.
+              if (error instanceof SourceTextUnavailable && error.code === "unsupported") return definiteNotFound();
+              throw error;
+            }
+            return json(text as unknown as JsonValue, 2592000);
           }
         }
       } catch (error) { return failure(statusOf(error)); }
