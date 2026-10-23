@@ -5,6 +5,8 @@ import type { StudyWordAids } from "../../../../lib/hebrew/word-aids";
 import { WORD_DETAILS_ATTRIBUTION, type StudyWordDetails, type WordElsewhere, type WordGrammar, type WordPlace } from "../../../../lib/hebrew/word-details";
 import { createWordToolsSelection, type WordToolsState } from "./word-tools-selection";
 import type { StudyVerse } from "./api";
+import { useOfflineWording } from "../../offline/status";
+import { PLAN as OFFLINE } from "../../../../lib/offline/copy";
 import styles from "./word-tools.module.css";
 export type WordToolsHandle = Pick<ReturnType<typeof createWordToolsSelection>, "select" | "selectVerse">;
 const idle: WordToolsState = Object.freeze({ open: false, selection: null, aids: Object.freeze({ status: "idle" }), details: Object.freeze({ status: "idle" }) });
@@ -41,6 +43,7 @@ export function WordTools({ scopeKey, verses, register, readAids, readDetails, o
   takePlace?(): Readonly<{ ref: string; wordIndex: number }> | null;
 }) {
   const id = useId(), callbacks = useRef({ readAids, readDetails, takePlace }); callbacks.current = { readAids, readDetails, takePlace };
+  const offline = useOfflineWording();
   const owner = useRef<ReturnType<typeof createWordToolsSelection> | null>(null), [state, setState] = useState<WordToolsState>(idle);
   // Taken once per mounted instance; a StrictMode effect replay reuses this instance's copy.
   const initialPlace = useRef<Readonly<{ ref: string; wordIndex: number }> | null | undefined>(undefined);
@@ -80,7 +83,7 @@ export function WordTools({ scopeKey, verses, register, readAids, readDetails, o
         </div>
         {details?.elsewhere && <section className={styles.elsewhere} aria-label="This word elsewhere"><h5>This word elsewhere</h5><WordElsewhereList value={details.elsewhere} onPlace={go} /></section>}
         {details && details.dictionary.length > 0 && <section className={styles.dictionary} aria-label="Dictionary senses"><h5>Dictionary senses</h5><p className={styles.note}>Dictionary senses may differ from this word’s meaning in the verse.</p><ul>{details.dictionary.map(entry => <li key={entry.lemma}>{entry.status === "ready" ? <><bdi lang="he" dir="rtl">{entry.headword}</bdi><span>{entry.dictionaryGloss}</span></> : <span>A dictionary sense isn’t available for this entry.</span>}</li>)}</ul><p className={styles.credit}>{WORD_DETAILS_ATTRIBUTION.name} · <a href={WORD_DETAILS_ATTRIBUTION.licenseUrl} target="_blank" rel="noreferrer">{WORD_DETAILS_ATTRIBUTION.license}</a>. Normalized into selected-word facts.</p></section>}
-        {(state.aids.status === "error" || state.details.status === "error") && <p className={styles.note}>Some word tools couldn’t be loaded. <button type="button" className={styles.retry} onClick={() => owner.current?.retry()}>Try word tools again</button></p>}
+        {(state.aids.status === "error" || state.details.status === "error") && (offline ? <p className={styles.note}>{OFFLINE.needsConnection}</p> : <p className={styles.note}>Some word tools couldn’t be loaded. <button type="button" className={styles.retry} onClick={() => owner.current?.retry()}>Try word tools again</button></p>)}
       </>}
     </div>}
   </section>;

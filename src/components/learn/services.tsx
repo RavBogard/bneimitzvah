@@ -53,6 +53,8 @@ function progressHub() {
   void hub.sync.start();
   const hide = () => { if (document.visibilityState !== "visible") hub.sync.flush(); };
   document.addEventListener("visibilitychange", hide); window.addEventListener("pagehide", () => hub.sync.flush());
+  // Back online (the installed app used offline, 1.5 A1): the account's copy and this device's meet again.
+  window.addEventListener("online", () => { void hub.sync.start(); });
   // Another tab saved: show what it saved.
   window.addEventListener("storage", event => { if (event.key === null || event.key === PROGRESS_KEY || event.key === SYNC_KEY) set({ progress: store.load() }); });
   return hub;

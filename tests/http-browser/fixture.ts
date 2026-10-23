@@ -28,6 +28,7 @@ import { createShortExplorationService } from "../../src/server/reference-audio/
 import { createPublicReadingService, PUBLIC_TENANT } from "../../src/server/public-reading/service";
 import { AccessDenied } from "../../src/server/access/errors";
 import type { PublicRuntime } from "../../src/server/http/public-reading";
+import { readProductName } from "../../src/server/data/product-name";
 import { CommentaryUnavailable, type CommentaryReader } from "../../src/server/study/commentary";
 import type { TranslationsReader } from "../../src/server/study/translations";
 import { unavailableShelf, unavailableSource, unavailableTranslations } from "../helpers/translations";
@@ -134,6 +135,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       translations: options.translationsLoad ?? unavailableTranslations,
       shelf: options.shelfLoad ?? unavailableShelf,
       source: options.sourceLoad ?? unavailableSource,
+      productName: () => withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => readProductName(tx, PUBLIC_TENANT)),
     });
     async function withPublicRuntime(action: (runtime: PublicRuntime) => Promise<Response>) {
       await withTenantTransaction(db, { tenantId: "crc" }, async () => undefined);

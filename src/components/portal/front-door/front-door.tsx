@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { thisShabbat } from "../../../lib/readings/public-shabbat";
 import { fetchPublicWeek, type PublicWeek } from "../public-reading/api";
 import { MyReadings } from "../saved/my-readings";
+import { InstallHint } from "../offline/install-hint";
+import { SavedLine } from "../offline/status";
 import styles from "./front-door.module.css";
 
 /** What the app bar offers on the right: nothing while access is being checked or when a signed-in account is refused, Sign in, or the signed-in account (named by its role when it has exactly one). `saved`: the account keeps saved readings, so My readings shows. */
@@ -67,6 +69,7 @@ export function FrontDoor({ account, onSignIn, children }: { account: FrontDoorA
     </header>
     <main id="front-door-main" className={styles.main}>
       <ThisWeek />
+      <SavedLine />
       {account?.kind === "account" && account.saved && <MyReadings />}
       <div className={styles.doors}>
         <section id="beit-mitzvah" ref={door} className={styles.door} aria-labelledby="beit-mitzvah-title" data-door="beit-mitzvah">
@@ -81,6 +84,7 @@ export function FrontDoor({ account, onSignIn, children }: { account: FrontDoorA
           <p className={styles.doorMore}><a href="/trope-chart">Trope chart</a></p>
         </section>
       </div>
+      <InstallHint place="front-door" />
     </main>
     <footer className="portal-footer"><span>Central Reform Congregation</span><span>Your account and reading stay private.</span></footer>
   </div>;

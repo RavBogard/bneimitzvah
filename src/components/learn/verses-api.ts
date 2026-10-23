@@ -6,7 +6,7 @@ import { referenceRecord } from "../../lib/reference-audio/source";
 import { parseReferenceShortResolution, type ReferenceShortResolution } from "../../lib/reference-audio/short-resolution";
 import { expandReadingRanges } from "../../lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
-import type { Melody } from "../../lib/learn/course";
+import { COURSE, type Melody } from "../../lib/learn/course";
 import type { LoadedVerse } from "../../lib/learn/phrase-audio";
 
 /**
@@ -32,6 +32,27 @@ export function passagesFor(refs: readonly string[], kind: Melody): string[] {
     if (fits) group.push(ref); else groups.push([ref]);
   }
   return groups.map(group => group.join("; "));
+}
+
+/**
+ * The course's own verses always travel in the same passages: every example verse of a melody, grouped once by
+ * passagesFor. Whichever lesson, drill or review card asks for a verse, its whole fixed passage is fetched, so the
+ * requests are the same on every page and the installed app's course pack (1.5 A1, F3) holds exactly them.
+ * Verses outside the course (this week's reading) keep the ad hoc grouping.
+ */
+const fixed = new Map<Melody, ReadonlyMap<string, string>>();
+export function coursePassages(kind: Melody): readonly string[] {
+  return [...new Set(coursePassageOf(kind).values())];
+}
+function coursePassageOf(kind: Melody): ReadonlyMap<string, string> {
+  let map = fixed.get(kind);
+  if (!map) {
+    const refs = COURSE.lessons.filter(lesson => lesson.melody === kind).flatMap(lesson => lesson.examples.map(example => example.ref));
+    const built = new Map<string, string>();
+    for (const passage of passagesFor(refs, kind)) for (const member of passage.split("; ")) built.set(member, passage);
+    map = built; fixed.set(kind, map);
+  }
+  return map;
 }
 
 type Page = { refs: string[]; verses: StudyVerse[]; shorts: (ReferenceShortResolution | null)[]; shortsFailed: boolean };
@@ -71,9 +92,11 @@ export function createVerseLoader(fetchPassage: typeof passage = passage) {
   const key = (ref: string, kind: Melody) => `${kind}:${ref}`;
   function request(refs: readonly string[], kind: Melody) {
     const missing = [...new Set(refs)].filter(ref => !verses.has(key(ref, kind)));
-    for (const ref of passagesFor(missing, kind)) {
+    const course = coursePassageOf(kind), whole = new Set<string>(), loose: string[] = [];
+    for (const ref of missing) { const passage = course.get(ref); if (passage) whole.add(passage); else loose.push(ref); }
+    for (const ref of [...whole, ...passagesFor(loose, kind)]) {
       const work = fetchPassage(ref, kind, new AbortController().signal);
-      const members = ref.split("; ");
+      const members = ref.split("; ").filter(member => !verses.has(key(member, kind)));
       for (const member of members) {
         const one = work.then(result => {
           const i = result.refs.indexOf(member); if (i < 0) return bad();

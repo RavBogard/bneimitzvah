@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Page, Route } from "@playwright/test";
+import type { BrowserContext, Page, Route } from "@playwright/test";
 import course from "../src/lib/learn/lessons.json";
 import { studyRangePlan } from "../src/components/portal/workspace/study/api";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
@@ -71,10 +71,17 @@ export function syntheticCourseRoutes() {
         codec: "mp3", bitrate: 64000, sampleRate: RATE, channels: 1, presentationFrames: frames, origin: { firstFrame: first, parentRate: RATE }, attributionVersion: SHORT_SOURCE_ATTRIBUTION.version } } };
   }
   const json = (route: Route, body: unknown) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
-  async function install(page: Page, week: { date?: string; torah?: string | null } = {}) {
+  /** A page, or a whole context (the offline browser test: a context also routes the service worker's own requests). */
+  async function install(page: Pick<Page | BrowserContext, "route" | "addInitScript">, week: { date?: string; torah?: string | null } = {}) {
     await page.route("**/api/public/**", async route => {
       const url = new URL(route.request().url()), q = url.searchParams; seen.push(url.pathname + url.search);
       const kind = q.get("kind") ?? "torah";
+      if (url.pathname === "/api/public/reading" && q.has("ref")) {
+        // "Any reading" by ref: the passage's paging (the installed app's packer asks for it).
+        const ref = q.get("ref")!, ranges = ref.split("; "), total = expandReadingRanges(ranges, kind as "torah", TANAKH_VERSE_COUNTS).length, pages = [];
+        for (let offset: number | null = 0; offset !== null;) { const plan = studyRangePlan(ranges, kind as "torah", offset); pages.push({ offset, first: plan.refs[0], last: plan.refs.at(-1)! }); offset = plan.nextOffset; }
+        return json(route, { ref, kind, passage: { kind, ranges, verseCount: total, pages }, listening: { pocketTorah: true } });
+      }
       if (url.pathname === "/api/public/reading") {
         const date = q.get("date")!, range = week.torah === undefined ? "Genesis 12:1-8" : week.torah;
         const passage = range && { kind: "torah", ranges: [range], verseCount: expandReadingRanges([range], "torah", TANAKH_VERSE_COUNTS).length, pages: [{ offset: 0, ...(() => { const plan = studyRangePlan([range], "torah", 0); return { first: plan.refs[0], last: plan.refs.at(-1)! }; })() }] };

@@ -8,6 +8,8 @@ import { commentaryCount, commentaryParts, commentarySummary } from "./commentar
 import { useCommentaryChapters, type CommentaryLookup } from "./use-commentary";
 import { workCoverageNote, workLabel } from "../reading-toolbar";
 import type { StudyVerse } from "./api";
+import { useOfflineWording } from "../../offline/status";
+import { PLAN as OFFLINE } from "../../../../lib/offline/copy";
 import styles from "./commentary.module.css";
 
 /** Text only: bold and italic runs become <strong> and <em>; nothing is ever markup. */
@@ -150,11 +152,11 @@ export function CommentaryCredits({ works, refs }: { works: readonly Readonly<{ 
 export type WorkStatus = Readonly<{ work: string; status: "none" | "loading" | "failed" | "ready"; retry(): void; covers: boolean }>;
 /** Quiet, one line per work: loading, a failure with Try again, or a work that doesn't cover this text. Never blocks the Hebrew. */
 export function CommentaryStatus({ works }: { works: readonly WorkStatus[] }) {
-  const rows = works.filter(row => !row.covers || row.status === "loading" || row.status === "failed");
+  const rows = works.filter(row => !row.covers || row.status === "loading" || row.status === "failed"), offline = useOfflineWording();
   if (!rows.length) return null;
   return <div className={styles.status} role="status">{rows.map(row => <p key={row.work}>
     {!row.covers ? `${COMMENTARY_WORKS[row.work]?.title.startsWith("The ") ? "The " : ""}${workLabel(row.work)} covers the ${workCoverageNote(row.work) === "Prophets only" ? "Prophets" : "Torah"} only.` : row.status === "loading" ? `Loading ${workLabel(row.work)}…`
-      : <>{workLabel(row.work)} isn’t available right now. <button type="button" onClick={row.retry}>Try again</button></>}
+      : offline ? <>{workLabel(row.work)}: {OFFLINE.needsConnection}</> : <>{workLabel(row.work)} isn’t available right now. <button type="button" onClick={row.retry}>Try again</button></>}
   </p>)}</div>;
 }
 
