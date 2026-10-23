@@ -15,11 +15,17 @@ import * as s from "../db/index";
  */
 type Tx<Q extends PgQueryResultHKT> = AccessTransaction<Q>;
 
-/** Share-locks one live grant that makes this membership eligible, so a concurrent revocation waits for this request. */
+/**
+ * Share-locks one live grant (parent, tutor or admin) or the live Member row that makes this membership eligible,
+ * so a concurrent revocation or end of membership waits for this request (accounts plan choice B).
+ */
 export async function savedEligibility<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, membershipId: string) {
   const [grant] = await tx.select({ id: s.roleGrant.id }).from(s.roleGrant).where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.membershipId, membershipId),
     inArray(s.roleGrant.role, [...SAVED_ELIGIBLE_ROLES]), isNull(s.roleGrant.revokedAt))).orderBy(asc(s.roleGrant.role), asc(s.roleGrant.id)).limit(1).for("share");
-  return grant !== undefined;
+  if (grant) return true;
+  const [member] = await tx.select({ id: s.tenantMember.id }).from(s.tenantMember).where(and(eq(s.tenantMember.tenantId, tenantId), eq(s.tenantMember.membershipId, membershipId),
+    isNull(s.tenantMember.revokedAt))).limit(1).for("share");
+  return member !== undefined;
 }
 
 /** One member's writes run one at a time, so the row caps hold exactly even under concurrent requests. */

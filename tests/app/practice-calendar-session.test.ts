@@ -31,7 +31,7 @@ import { PortalRequestError } from "../../src/components/portal/api";
 import { PracticeCalendarError, type PracticeOperation } from "../../src/components/portal/workspace/practice-calendar/api";
 import type { PracticeCoordinator } from "../../src/components/portal/workspace/practice";
 
-const session = { membershipAvailable: true, roles: ["student", "parent"], saved: true, sessionBinding: "a".repeat(43) }, studentId = "10000000-0000-4000-8000-000000000001";
+const session = { membershipAvailable: true, roles: ["student", "parent"], saved: true, approver: false, sessionBinding: "a".repeat(43) }, studentId = "10000000-0000-4000-8000-000000000001";
 const operation: PracticeOperation = { type: "visit", eventId: "10000000-0000-4000-8000-000000000003", expectedDay: "2026-10-17", target: { type: "verse", kind: "torah", assignmentId: "10000000-0000-4000-8000-000000000004", assignmentRevision: 1, verseRef: "Genesis 1:1" } };
 type Workspace = ReturnType<typeof import("../../src/components/portal/workspace/provider").useWorkspace>;
 function find(node: ReactNode): Workspace | undefined {

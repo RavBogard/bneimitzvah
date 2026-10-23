@@ -983,3 +983,20 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .email-workspace { max-width: 46rem; }
 .email-workspace .people-card + .people-card { margin-top: 1rem; }
 .email-workspace select { margin-top: 0.5rem; }
+
+/* Release 1.4 accounts: asking for an account on entry, and the approvers' page. Existing inks only. */
+.account-request { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--color-rule); }
+.account-request h3, .account-request h4 { margin: 0; font-size: 1.125rem; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
+.account-request > p { margin-top: 0.75rem; }
+.account-request form { margin-top: 1rem; }
+.account-request label { margin-top: 1rem; }
+.account-request label:first-child { margin-top: 0; }
+.account-request textarea { display: block; width: 100%; min-height: 6rem; border: 1px solid var(--color-control-rule); border-radius: var(--radius-control); padding: 0.6875rem 0.875rem; background: var(--color-surface); color: var(--color-ink); font: inherit; caret-color: var(--color-action); resize: vertical; }
+.account-request form .button-primary { margin-top: 1.25rem; }
+.account-request > .button-secondary { margin-top: 1rem; }
+.accounts-line { margin: 0 0 1rem; }
+.accounts-line a { display: inline-flex; align-items: center; min-height: 44px; color: var(--color-action); font-weight: 650; }
+.accounts-add { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--color-rule); }
+.accounts-add-row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.accounts-add select { flex: 1 1 14rem; min-width: 0; min-height: 48px; padding: 0 0.875rem; border: 1px solid var(--color-control-rule); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); font: inherit; }
+.account-request-row .people-actions .field-help { flex-basis: 100%; margin: 0; }

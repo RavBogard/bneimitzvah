@@ -90,7 +90,7 @@ test("the front door shows My readings under This week for a member: five, then 
     await page.setViewportSize({ width, height: 900 });
     await page.unrouteAll({ behavior: "ignoreErrors" });
     await week(page);
-    await page.route("**/api/session", route => json(route, 200, { membershipAvailable: true, roles: ["parent"], saved: true, sessionBinding: binding }));
+    await page.route("**/api/session", route => json(route, 200, { membershipAvailable: true, roles: ["parent"], saved: true, approver: false, sessionBinding: binding }));
     await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: Array.from({ length: 7 }, (_, i) => row(i + 1)) }));
     await page.goto("/");
     const mine = page.getByRole("region", { name: "My readings" });
@@ -116,10 +116,10 @@ test("with none saved it says how to save one; signed out or student-only, the f
   page.on("request", request => { if (new URL(request.url()).pathname.startsWith("/api/saved/")) saved.push(new URL(request.url()).pathname); });
   await week(page);
   await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
-  await page.route("**/api/session", route => json(route, 200, { membershipAvailable: true, roles: ["parent", "tutor"], saved: true, sessionBinding: binding }));
+  await page.route("**/api/session", route => json(route, 200, { membershipAvailable: true, roles: ["parent", "tutor"], saved: true, approver: false, sessionBinding: binding }));
   await page.goto("/");
   await expect(page.getByRole("region", { name: "My readings" }).getByText("Save a reading from This week to see it here.", { exact: true })).toBeVisible();
-  for (const answer of [{ status: 401, body: { error: "authentication-required" } }, { status: 200, body: { membershipAvailable: true, roles: ["student", "parent"], saved: false, sessionBinding: binding } }]) {
+  for (const answer of [{ status: 401, body: { error: "authentication-required" } }, { status: 200, body: { membershipAvailable: true, roles: ["student", "parent"], saved: false, approver: false, sessionBinding: binding } }]) {
     saved.length = 0;
     await page.unroute("**/api/session"); await page.route("**/api/session", route => json(route, answer.status, answer.body));
     await page.goto("/");

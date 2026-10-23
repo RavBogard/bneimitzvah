@@ -160,7 +160,7 @@ it("prepares the real browser challenge and submits GIS credentials only in a bo
 it("cancellation and acknowledged logout discard late GIS callbacks without posting an old credential", async () => {
   const tab = await page(); await installGoogleBoundary(tab); let posts = 0, signedIn = false;
   await tab.route("**/api/auth/sign-in/social", async route => { posts++; await route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"authentication"}' }); });
-  await tab.route("**/api/session", route => signedIn ? route.fulfill({ contentType: "application/json", body: JSON.stringify({ roles: [], membershipAvailable: false, saved: false, sessionBinding: "A".repeat(43) }) }) : route.fallback());
+  await tab.route("**/api/session", route => signedIn ? route.fulfill({ contentType: "application/json", body: JSON.stringify({ roles: [], membershipAvailable: false, saved: false, approver: false, sessionBinding: "A".repeat(43) }) }) : route.fallback());
   await navigate(tab, "/"); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
   await safe(() => tab.getByRole("button", { name: "Continue with Google", exact: true }).click());
   await safe(() => tab.getByRole("button", { name: "Cancel Google sign-in", exact: true }).click());

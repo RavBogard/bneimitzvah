@@ -23,7 +23,7 @@ async function routes(page: Page, signedIn: { value: boolean }) {
     if (url.pathname === "/api/public/reading") return json(route, 200, { date: q.get("date"), parashah: "Noach", fetchedAt: 0, listening: { pocketTorah: false }, torah: null, haftarah: null });
     return json(route, 503, { error: "unavailable" });
   });
-  await page.route("**/api/session", route => signedIn.value ? json(route, 200, { membershipAvailable: true, roles: ["parent"], saved: true, sessionBinding: binding }) : json(route, 401, { error: "authentication-required" }));
+  await page.route("**/api/session", route => signedIn.value ? json(route, 200, { membershipAvailable: true, roles: ["parent"], saved: true, approver: false, sessionBinding: binding }) : json(route, 401, { error: "authentication-required" }));
   await page.route("**/api/saved/readings", route => signedIn.value ? json(route, 200, { ok: true, readings: [reading] }) : json(route, 401, { error: "authentication-required" }));
   await page.route("**/api/saved/reading?*", route => signedIn.value ? json(route, 200, { ok: true, reading, offset: 0, totalVerses: 3, nextOffset: null,
     verses: refs.map(ref => ({ ref, translation: null, note: null, mark: null })) }) : json(route, 401, { error: "authentication-required" }));

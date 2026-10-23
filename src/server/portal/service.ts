@@ -9,6 +9,7 @@ import type { PracticeContextView } from "../practice/types";
 import type { StudentView } from "../data/students";
 import { confirmedReadings, availableRoles } from "../data/portal";
 import { savedEligibleRole } from "../saved/eligibility";
+import { activeMember, approves } from "../accounts/data";
 import { expandReadingRanges, parseCeremonyDate } from "../../lib/readings/ranges";
 import { assignmentNeedsReview } from "../../lib/readings/review";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
@@ -43,11 +44,15 @@ export function createPortalService<Q extends PgQueryResultHKT>(input: { access:
   async function sessionSummary(request: AccessRequest) {
     return input.access.withVerifiedIdentity(request, { intent: "read" }, async (tx, identity) => {
       const grants = identity.membership ? await availableRoles(tx, identity.tenantId, identity.membership.id) : [];
-      const sessionBinding = createHmac("sha256", input.sessionBindingSecret).update(JSON.stringify(["session-ui-binding:v1", identity.origin, identity.tenantId, identity.userId,
-        identity.authSessionId, identity.membership?.id ?? null, identity.membership?.authorityRevision ?? null, grants.map(grant => [grant.role, grant.id, grant.revision])])).digest("base64url");
-      // `saved`: whether this account keeps its own saved layer (accounts plan choice B), from the same live grants.
+      // The Member role (an approved account request) and approving accounts are worked out live, never granted (accounts plan choice B).
+      const member = identity.membership ? await activeMember(tx, identity.tenantId, identity.membership.id) : null;
+      const approver = identity.membership ? await approves(tx, identity.tenantId, identity.membership.id) : false;
+      const sessionBinding = createHmac("sha256", input.sessionBindingSecret).update(JSON.stringify(["session-ui-binding:v2", identity.origin, identity.tenantId, identity.userId,
+        identity.authSessionId, identity.membership?.id ?? null, identity.membership?.authorityRevision ?? null, grants.map(grant => [grant.role, grant.id, grant.revision]),
+        member?.id ?? null, approver])).digest("base64url");
+      // `saved`: this account keeps its own saved layer; `approver`: it may approve account requests.
       return Object.freeze({ membershipAvailable: identity.membership !== null, roles: Object.freeze(grants.map(grant => grant.role)),
-        saved: grants.some(grant => savedEligibleRole(grant.role)), sessionBinding });
+        saved: member !== null || grants.some(grant => savedEligibleRole(grant.role)), approver, sessionBinding });
     });
   }
   async function assignedReading(request: AccessRequest, selection: { mode: ActiveMode | "child-practice"; studentId: string }) {

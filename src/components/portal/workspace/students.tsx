@@ -1,4 +1,5 @@
 "use client";
+import { AccountRequestsLine } from "./accounts/workspace";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -10,7 +11,10 @@ import { reconcileSelectedStudent } from "./student-label";
 import { HonorsEntry, HonorsNote } from "./honors/sheet";
 
 export function StudentWorkspace({ mode, studentId }: { mode: "student" | "parent" | "tutor"; studentId?: string }) {
-  return <RequireRole role={mode}><StudentSelection key={studentId ?? ""} mode={mode} routeStudentId={studentId} /></RequireRole>;
+  const { summary } = useWorkspace();
+  // A tutor an admin chose to approve accounts sees waiting requests here, as admins do on Students.
+  return <RequireRole role={mode}>{mode === "tutor" && !studentId && summary.approver && !summary.roles.includes("admin") && <AccountRequestsLine mode="tutor" />}
+    <StudentSelection key={studentId ?? ""} mode={mode} routeStudentId={studentId} /></RequireRole>;
 }
 
 /** A student as a card: name first, then the date and how far away it is. */
