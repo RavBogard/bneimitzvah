@@ -1,6 +1,8 @@
 import { randomBytes } from "node:crypto";
 import { expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
+const product = vi.hoisted(() => ({ name: "CRC Torah" }));
+vi.mock("../../src/server/mail/product-name", () => ({ productName: () => product.name }));
 import { createMailTransport, SIGN_IN_CODE_LINES } from "../../src/server/mail/transport";
 import { RuntimeUnavailable } from "../../src/server/runtime/errors";
 
@@ -91,4 +93,19 @@ test("provider failures, private error causes, oversized bodies and stalled fetc
     }
     expect(log.mock.calls.length).toBe(0);
   } finally { log.mockRestore(); }
+});
+
+test("a product name with any digit, ASCII or not, sends no email of either kind rather than a misreadable one", async () => {
+  let calls = 0;
+  const send = createMailTransport({ origin, apiKey, from: email, fetch: async () => { calls++; return new Response(); } });
+  try {
+    for (const name of ["Torah 2", "Torah ٢", "Torah ２"]) {
+      product.name = name;
+      expect(await safeFailure(() => send("magic-link", { email, url: link("magic-link"), code: "048213" }))).toBe(true);
+      expect(await safeFailure(() => send("invitation", { email, url: link("invitation") }))).toBe(true);
+    }
+    expect(calls).toBe(0);
+  } finally { product.name = "CRC Torah"; }
+  expect(await send("magic-link", { email, url: link("magic-link"), code: "048213" })).toBeUndefined();
+  expect(calls).toBe(1);
 });

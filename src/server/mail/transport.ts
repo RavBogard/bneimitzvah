@@ -50,15 +50,16 @@ function bodyOf(kind: Kind, link: string, code: string | undefined): string {
   const product = productName();
   // The code is in the body only, never the subject (lock screens, provider subject logs).
   const body = `Open this link to sign in:\n\n${link}\n\n${SIGN_IN_CODE_LINES.code(product)}\n${code}\n\n${SIGN_IN_CODE_LINES.once}\n\n${SIGN_IN_CODE_LINES.never(product)}\n\n${IGNORE}`;
-  // Fail closed rather than send an email a phone could misread: the code is its only run of 6 or more digits.
-  const runs = body.match(/\d{6,}/g) ?? [];
-  if (runs.length !== 1 || runs[0] !== code) throw 0;
+  // Fail closed rather than send an email a phone could misread: the code is its only run of 6 or more digits, and
+  // there are no non-ASCII digits at all (a congregation's product name is a setting).
+  const runs = body.match(/\p{Nd}{6,}/gu) ?? [];
+  if (runs.length !== 1 || runs[0] !== code || /(?![0-9])\p{Nd}/u.test(body)) throw 0;
   return body;
 }
 function subjectOf(kind: Kind): string {
   const subject = kind === "invitation" ? `Your Beit Mitzvah invitation from ${productName()}` : `Sign in to ${productName()}`;
   // No digits in a subject: a lock screen or Gmail card must never offer one as the code.
-  if (/\d/.test(subject)) throw 0;
+  if (/\p{Nd}/u.test(subject)) throw 0;
   return subject;
 }
 

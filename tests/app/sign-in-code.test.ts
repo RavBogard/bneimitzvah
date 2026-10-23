@@ -169,6 +169,10 @@ test("three wrong codes spend the code: the third answers expired and the right 
   expect(fourth.status).toBe(409); expect(await fourth.json()).toEqual({ error: "expired" });
   expect(fourth.headers.getSetCookie().some(set => set.startsWith("better-auth"))).toBe(false);
   expect(await f.codeRows()).toHaveLength(0);
+  // Asking again after a spent code gives a new code that works.
+  const again = await f.ask("tries@example.test");
+  expect(again.mail.code).toMatch(/^\d{6}$/);
+  expect((await f.enter(again.mail.code, again.binding)).status).toBe(200);
 });
 
 test("the attempt limit is the SDK's own: a stale fourth try with the right code is refused as too many attempts", async () => {
