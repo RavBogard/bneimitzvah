@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AccountRequestView, parseRequestResult, parseRequestView, type RequestView } from "../../src/components/portal/account-request";
-import { parseApprovers, parseDecision, parseMembers, parseRequests, parseSummary } from "../../src/components/portal/workspace/accounts/api";
+import { parseApprovers, parseDecision, parseDecline, parseMembers, parseRequests, parseSummary } from "../../src/components/portal/workspace/accounts/api";
 import { ADMIN_REAPPROVAL_LINE } from "../../src/components/portal/workspace/accounts/workspace";
 import { PortalRequestError } from "../../src/components/portal/api";
 
@@ -59,6 +59,10 @@ describe("the approvers' client", () => {
     expect(parseDecision(409, { ok: false, code: "disabled" })).toEqual({ ok: false, code: "disabled" });
     expect(parseDecision(409, { ok: false, code: "admin-only" })).toEqual({ ok: false, code: "admin-only" });
     expect(() => parseDecision(409, { ok: false, code: "other" })).toThrow(PortalRequestError);
+    expect(parseDecision(409, { ok: false, code: "own-request" })).toEqual({ ok: false, code: "own-request" });
+    expect(parseDecline(200, { ok: true })).toEqual({ ok: true });
+    expect(parseDecline(409, { ok: false, code: "own-request" })).toEqual({ ok: false, code: "own-request" });
+    expect(() => parseDecline(409, { ok: false, code: "admin-only" })).toThrow(PortalRequestError);
     // The tutor's refusal keeps the request and names who can act, in the house tone.
     expect(ADMIN_REAPPROVAL_LINE).toMatch(/only an admin can approve them again. The request is kept.$/); expect(ADMIN_REAPPROVAL_LINE).not.toMatch(/!/);
     for (const bad of [() => parseRequests({ ok: true, requests: [{ id: ID, name: "A\u202eB", purpose: null, email: null, requestedAt: stamp }], productName: "CRC Torah" }),

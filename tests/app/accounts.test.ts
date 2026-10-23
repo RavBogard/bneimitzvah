@@ -242,6 +242,29 @@ describe("members and approvers", () => {
     expect((await t.call("/api/saved/readings", "kept")).json.readings).toHaveLength(1);
   });
 
+  it("never lets an approver approve or decline their own request; another approver decides it", async () => {
+    const t = await setup();
+    await t.designate();
+    // Each asked before gaining a role (the designated tutor via an invitation), so the request is still waiting.
+    const [tutorAsked, adminAsked] = await t.f.owner(async () => [
+      (await t.f.db.insert(s.accountRequest).values({ tenantId: "crc", userId: t.f.identities.multi.id, displayName: "Tutor asked" }).returning())[0].id,
+      (await t.f.db.insert(s.accountRequest).values({ tenantId: "crc", userId: t.f.identities.admin.id, displayName: "Admin asked" }).returning())[0].id]);
+    const members = () => t.f.owner(async () => (await t.f.db.select().from(s.tenantMember)).length);
+    for (const path of ["/api/accounts/requests/approve", "/api/accounts/requests/decline"]) {
+      expect(await t.call(path, "multi", { mode: "tutor", requestId: tutorAsked }), path).toEqual({ status: 409, json: { ok: false, code: "own-request" } });
+      expect(await t.call(path, "admin", { mode: "admin", requestId: adminAsked }), path).toEqual({ status: 409, json: { ok: false, code: "own-request" } });
+    }
+    expect(await members()).toBe(0);
+    expect((await requests(t)).json.requests.map((row: { id: string }) => row.id).sort()).toEqual([tutorAsked, adminAsked].sort());
+    expect(await t.audits("account-request.approve")).toHaveLength(0);
+    expect(await t.audits("account-request.decline")).toHaveLength(0);
+    // The other approver may decide each one.
+    expect((await t.call("/api/accounts/requests/approve", "admin", { mode: "admin", requestId: tutorAsked })).status).toBe(200);
+    expect((await t.call("/api/accounts/requests/decline", "multi", { mode: "tutor", requestId: adminAsked })).json).toEqual({ ok: true });
+    expect(await members()).toBe(1);
+    expect((await requests(t)).json.requests).toEqual([]);
+  });
+
   it("lets only an admin approve again someone an admin ended; a designated tutor is refused and the request is kept", async () => {
     const t = await setup();
     await t.designate();

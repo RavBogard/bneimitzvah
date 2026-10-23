@@ -10,7 +10,7 @@ import { PROGRESS_SCHEMA } from "../../src/lib/learn/progress";
 const ORIGIN = "http://localhost:3000";
 const opened: { client: { close(): Promise<void> } }[] = [];
 afterEach(async () => { await Promise.all(opened.splice(0).map(f => f.client.close())); });
-type Who = "admin" | "multi" | "learner" | "recipient" | "disabled" | "revoked" | "anonymous";
+type Who = "admin" | "multi" | "learner" | "recipient" | "disabled" | "revoked" | "member" | "ended" | "anonymous";
 const doc = (lessons: Record<string, string> = {}, cards: Record<string, [number, string]> = {}) => ({ schema: PROGRESS_SCHEMA,
   lessons: Object.fromEntries(Object.entries(lessons).map(([id, done]) => [id, { done }])), cards: Object.fromEntries(Object.entries(cards).map(([id, [box, due]]) => [id, { box, due }])) });
 
@@ -25,6 +25,17 @@ async function setup() {
       if (!proof) throw new Error("Synthetic course identity failed");
       const [member] = await f.db.insert(s.membership).values({ tenantId: "crc", userId: proof.user.id, disabledAt: key === "disabled" ? new Date() : null }).returning();
       await f.db.insert(s.roleGrant).values({ tenantId: "crc", membershipId: member.id, role: "student", revokedAt: key === "revoked" ? new Date() : null });
+      people[key] = { cookie };
+    }
+    // Approved Members with no role grant (release 1.4): one live, one whose membership an admin ended.
+    for (const [key, email] of [["member", "course-member@example.test"], ["ended", "course-ended@example.test"]] as const) {
+      await f.db.delete(s.rateLimit);
+      const { cookie } = await f.signIn(email);
+      const proof = await f.auth.api.getSession({ headers: new Headers({ cookie }), query: { disableRefresh: true, disableCookieCache: true } });
+      if (!proof) throw new Error("Synthetic course identity failed");
+      const [member] = await f.db.insert(s.membership).values({ tenantId: "crc", userId: proof.user.id }).returning();
+      await f.db.insert(s.tenantMember).values({ tenantId: "crc", membershipId: member.id, userId: proof.user.id, displayName: "Synthetic member",
+        approvedByMembershipId: f.adminMember.id, ...(key === "ended" ? { revokedAt: new Date(), revokedByMembershipId: f.adminMember.id } : {}) });
       people[key] = { cookie };
     }
     return people;
@@ -46,7 +57,7 @@ async function setup() {
 describe("signed-in course progress", () => {
   it("is 401 signed out and 403 without a membership, with a disabled membership or with every grant revoked; any live grant keeps it, students included", async () => {
     const t = await setup();
-    for (const [who, status] of [["anonymous", 401], ["recipient", 403], ["disabled", 403], ["revoked", 403], ["learner", 200], ["multi", 200], ["admin", 200]] as const)
+    for (const [who, status] of [["anonymous", 401], ["recipient", 403], ["disabled", 403], ["revoked", 403], ["ended", 403], ["member", 200], ["learner", 200], ["multi", 200], ["admin", 200]] as const)
       expect((await t.call("/api/learn/progress", who)).status, who).toBe(status);
   });
 
@@ -89,6 +100,27 @@ describe("signed-in course progress", () => {
       expect(seen.json.owner).not.toBe((await t.call("/api/learn/progress", "learner")).json.owner);
     }
     expect(await t.f.owner(async () => (await t.f.db.select().from(s.courseProgressTable).where(eq(s.courseProgressTable.membershipId, t.f.learnerMember.id))).length)).toBe(1);
+  });
+
+  it("lets an approved Member with no role read and write only their own progress", async () => {
+    const t = await setup();
+    const theirs = doc({ "intro-phrases": "2026-10-20T10:00:00.000Z" });
+    await t.call("/api/learn/progress/merge", "learner", { progress: theirs });
+    const empty = await t.call("/api/learn/progress", "member");
+    expect(empty.status).toBe(200);
+    expect(empty.json).toMatchObject({ ok: true, progress: null, version: 0, until: null });
+    expect(empty.json.owner).not.toBe((await t.call("/api/learn/progress", "learner")).json.owner);
+    const mine = doc({ "torah-sof-pasuk": "2026-10-21T10:00:00.000Z" });
+    expect((await t.call("/api/learn/progress/put", "member", { progress: mine, expectedVersion: 0 })).json).toMatchObject({ ok: true, version: 1, progress: mine });
+    const merged = await t.call("/api/learn/progress/merge", "member", { progress: doc({ "intro-phrases": "2026-10-22T10:00:00.000Z" }) });
+    expect(merged.json).toMatchObject({ ok: true, version: 2 });
+    expect(Object.keys(merged.json.progress.lessons).sort()).toEqual(["intro-phrases", "torah-sof-pasuk"]);
+    // The learner's document is untouched by the Member's writes, and neither sees the other's.
+    expect((await t.call("/api/learn/progress", "learner")).json).toMatchObject({ version: 1, progress: theirs });
+    expect((await t.call("/api/learn/progress", "member")).json).toMatchObject({ version: 2, progress: merged.json.progress });
+    // An ended membership is refused, and its row stays the owner's alone.
+    expect((await t.call("/api/learn/progress/put", "ended", { progress: mine, expectedVersion: 0 })).status).toBe(403);
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.courseProgressTable)).length)).toBe(2);
   });
 
   it("gives a signed-in student their own ceremony date for the known-date cap, and nobody else a date", async () => {

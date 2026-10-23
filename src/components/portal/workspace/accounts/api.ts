@@ -5,8 +5,11 @@ export type ApproverMode = "admin" | "tutor";
 export type AccountRequest = Readonly<{ id: string; name: string; purpose: string | null; email: string | null; requestedAt: string }>;
 export type Member = Readonly<{ id: string; name: string; since: string }>;
 export type ApproversView = Readonly<{ admins: readonly string[]; designated: readonly Readonly<{ id: string; name: string }>[]; candidates: readonly Readonly<{ tutorGrantId: string; name: string }>[] }>;
-/** "admin-only": an admin ended this person's membership, so only an admin approves them again. */
-export type DecisionResult = Readonly<{ ok: true } | { ok: false; code: "disabled" | "admin-only" }>;
+/**
+ * "admin-only": an admin ended this person's membership, so only an admin approves them again. "own-request": the
+ * approver asked for this account themselves, so another approver decides it.
+ */
+export type DecisionResult = Readonly<{ ok: true } | { ok: false; code: "disabled" | "admin-only" | "own-request" }>;
 export type DesignationResult = Readonly<{ ok: true } | { ok: false; code: "admin" | "designated" }>;
 
 const bad = (): never => { throw new PortalRequestError(503); };
@@ -65,8 +68,10 @@ export function parseSummary(value: unknown): number {
   return row.ok === true && Number.isSafeInteger(row.requests) && (row.requests as number) >= 0 && (row.requests as number) <= 50 ? row.requests as number : bad();
 }
 const done = (value: unknown, keys: readonly string[] = ["ok"]) => object(value, keys).ok === true ? { ok: true as const } : bad();
-/** An approval's answer: done, or one of the two refusals that keep the request. */
-export const parseDecision = (status: number, value: unknown): DecisionResult => status === 409 ? refusal(value, ["disabled", "admin-only"] as const) : done(value, ["ok", "memberId"]);
+/** An approval's answer: done, or one of the refusals that keep the request. */
+export const parseDecision = (status: number, value: unknown): DecisionResult => status === 409 ? refusal(value, ["disabled", "admin-only", "own-request"] as const) : done(value, ["ok", "memberId"]);
+/** A decline's answer: done, or refused because it is the approver's own request (kept for another approver). */
+export const parseDecline = (status: number, value: unknown): DecisionResult => status === 409 ? refusal(value, ["own-request"] as const) : done(value);
 
 export const accountsApi = {
   async summary(mode: ApproverMode, signal?: AbortSignal) { return parseSummary((await request(`/api/accounts/summary?mode=${mode}`, undefined, signal)).value); },
@@ -75,7 +80,10 @@ export const accountsApi = {
     const { status, value } = await request("/api/accounts/requests/approve", { mode, requestId });
     return parseDecision(status, value);
   },
-  async decline(mode: ApproverMode, requestId: string): Promise<DecisionResult> { return done((await request("/api/accounts/requests/decline", { mode, requestId })).value); },
+  async decline(mode: ApproverMode, requestId: string): Promise<DecisionResult> {
+    const { status, value } = await request("/api/accounts/requests/decline", { mode, requestId });
+    return parseDecline(status, value);
+  },
   async members(signal?: AbortSignal) { return parseMembers((await request("/api/accounts/members", undefined, signal)).value); },
   async endMember(memberId: string) { return done((await request("/api/accounts/members/end", { memberId })).value); },
   async approvers(signal?: AbortSignal) { return parseApprovers((await request("/api/accounts/approvers", undefined, signal)).value); },

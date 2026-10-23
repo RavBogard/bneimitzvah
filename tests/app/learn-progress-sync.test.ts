@@ -148,6 +148,26 @@ describe("signed-in progress in the browser", () => {
     expect(dirty.store.load()).toEqual(doc({ "intro-phrases": T1 }));
     expect(dirty.marker()).toEqual({ owner: A, version: 3, dirty: true });
   });
+  it("never clears the device on a refusal or any other failure, even after a clean sync", async () => {
+    for (const status of [403, 404, 409, 429, 500, 503]) {
+      const local = doc({ "intro-phrases": T1 }), r = rig({ status }, { owner: A, version: 3, dirty: false }, local);
+      await r.sync.start();
+      expect(r.store.load(), String(status)).toEqual(local);
+      expect(r.marker(), String(status)).toEqual({ owner: A, version: 3, dirty: false });
+      expect(r.seen.progress, String(status)).toEqual([]);
+    }
+    // A grant lost mid-session: the write is refused, the change stays here and stays unsent.
+    const r = rig({ progress: doc({ "intro-phrases": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "intro-phrases": T1 }));
+    await r.sync.start();
+    expect(r.sync.account.state).toBe("synced");
+    const changed = doc({ "intro-phrases": T1, "torah-zakef": T2 });
+    r.store.save(changed); r.sync.changed(); r.state.status = 403;
+    r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
+    expect(r.calls.at(-1)?.path).toBe("/api/learn/progress/put");
+    expect(r.sync.account.state).toBe("not-eligible");
+    expect(r.store.load()).toEqual(changed);
+    expect(r.marker()).toEqual({ owner: A, version: 3, dirty: true });
+  });
   it("takes the account's copy when nothing is unsent, even at the same version", async () => {
     const account = doc({ "torah-etnachta": T2 });
     const r = rig({ progress: account, version: 2 }, { owner: A, version: 2, dirty: false }, doc({ "intro-phrases": T1 }));

@@ -9,9 +9,10 @@ import { emptyProgress, mergeProgress, parseProgress, serializeProgress, type Pr
  * - A change made while a request is out is never overwritten by its answer: it is merged in and sent next.
  * - A browser holding another account's progress (a shared device) takes this account's from the server and
  *   never folds the other's into it.
- * - Signed out (or without a live grant) after a clean sync, the device is cleared: the account holds it all,
- *   and the next person at a shared device starts fresh. Unsent changes are kept for that account.
- * Signed out, or with no live grant, nothing leaves the browser.
+ * - Signed out (a 401) after a clean sync, the device is cleared: the account holds it all, and the next person
+ *   at a shared device starts fresh. Unsent changes are kept for that account. A refusal (a 403) or any other
+ *   failure clears nothing: the learner may still be working here, and a wrong refusal must not cost progress.
+ * Signed out, or refused, nothing leaves the browser.
  */
 export const SYNC_KEY = "crc-torah:learn-sync/v1";
 export type Account = Readonly<{ state: "unknown" | "signed-out" | "not-eligible" } | { state: "synced"; until: string | null }>;
@@ -77,11 +78,16 @@ export function createProgressSync(io: SyncIo) {
     io.onProgress(progress); setAccount({ state: "synced", until: remote.until });
     if (moved) queueMicrotask(() => { void push(); });
   }
-  /** Signed out or refused: after a clean sync the device is cleared (the account has it all); unsent changes stay. */
+  /**
+   * Signed out: after a clean sync the device is cleared (the account has it all); unsent changes stay. Refused
+   * (403): nothing is cleared, since the browser's copy may be the only one this person can reach now.
+   */
   function refused(status: number) {
     if (status !== 401 && status !== 403) return;
-    const marker = readMarker(io.storage());
-    if (marker && !marker.dirty) { io.store.save(emptyProgress()); dropMarker(io.storage()); io.onProgress(emptyProgress()); }
+    if (status === 401) {
+      const marker = readMarker(io.storage());
+      if (marker && !marker.dirty) { io.store.save(emptyProgress()); dropMarker(io.storage()); io.onProgress(emptyProgress()); }
+    }
     setAccount({ state: status === 401 ? "signed-out" : "not-eligible" });
   }
   async function merge(progress: Progress) {

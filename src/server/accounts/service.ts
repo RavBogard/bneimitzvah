@@ -115,12 +115,16 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
         requests: (await data.listRequests(tx, actor.tenantId, data.ACCOUNT_LIMITS.pendingPerTenant)).map(row => ({ id: row.id, name: row.name, purpose: row.purpose,
           email: row.verified ? row.email : null, requestedAt: row.requestedAt.toISOString() })), productName: (await data.tenantNames(tx, actor.tenantId)).productName }));
     },
-    /** Approve: the Member role and, when it is new, one email to that person. Never a role grant. */
+    /**
+     * Approve: the Member role and, when it is new, one email to that person. Never a role grant. An approver never
+     * decides their own request (someone who asked, then became a designated tutor); it is kept for another approver.
+     */
     async approve(request: Request, supplied: unknown) {
       const value = validate.decision(supplied);
       const result = await withApprover(request, value.mode, "manage-accounts", async (tx, actor) => {
         const pending = await data.lockRequest(tx, actor.tenantId, value.requestId);
         if (!pending) throw new AccessDenied(404);
+        if (pending.userId === actor.userId) return failed("own-request");
         const requester = await data.lockRequester(tx, actor.tenantId, pending.userId);
         if (!requester.account) throw new AccessDenied(404);
         if (requester.membership?.disabledAt) return failed("disabled");
@@ -141,12 +145,13 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
       }
       return { ok: true as const, memberId: result.memberId };
     },
-    /** Decline: the request is removed and nothing is sent. */
+    /** Decline: the request is removed and nothing is sent. Not one's own request either, as with approve. */
     async decline(request: Request, supplied: unknown) {
       const value = validate.decision(supplied);
       return withApprover(request, value.mode, "manage-accounts", async (tx, actor) => {
         const pending = await data.lockRequest(tx, actor.tenantId, value.requestId);
         if (!pending) throw new AccessDenied(404);
+        if (pending.userId === actor.userId) return failed("own-request");
         if (!await data.deleteRequest(tx, actor.tenantId, pending.id)) throw new Error("Account request unavailable");
         await data.audit(tx, actor, "account-request.decline", "account_request", pending.id, randomUUID());
         return { ok: true as const };
