@@ -21,6 +21,7 @@ import { budgetedStepSource, createPublicReadingService, PUBLIC_TENANT } from ".
 import { createStepSource } from "../study/lexical/source";
 import type { PublicRuntime, PublicRuntimeScope } from "../http/public-reading";
 import { createLogger } from "../logging/logger";
+import { readProductName } from "../data/product-name";
 import { loadRuntimeConfig, type RuntimeConfig } from "./config";
 import { RuntimeUnavailable } from "./errors";
 import { sharedStudyTasks } from "./composition";
@@ -33,7 +34,7 @@ const publicStepSource = budgetedStepSource(createStepSource());
  * The signed-out runtime. Deliberately NOT composeRuntime: no auth stack, access
  * service, mail transport or student service exists here, so no public request
  * can open, read or refresh a session or reach a people table by any path. The
- * database handle serves only the exact host lookup and the two global,
+ * database handle serves only the exact host lookup, CRC's product name and the two global,
  * non-tenant public text caches (Hebcal calendar and Sefaria chapters) that the
  * signed-in reading already fills.
  */
@@ -57,6 +58,7 @@ export function composePublicRuntime<Q extends PgQueryResultHKT>(config: Runtime
     translations: createSefariaTranslationsReader({ fetch }),
     shelf: (verse: string, signal?: AbortSignal) => shelfLinks.shelfLinks(verse, signal ?? new AbortController().signal),
     source: createSefariaSourceReader({ fetch }),
+    productName: () => withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => readProductName(tx, PUBLIC_TENANT)),
   });
 }
 

@@ -53,6 +53,10 @@ test("as the restricted runtime role, the public runtime reads only the host map
     .filter(name => name !== "set"))); // "on conflict do update set" is a cache refill, not a table
   expect([...tables].sort()).toEqual(["hebcal_cache", "sefaria_text_cache", "tenant_host"]);
   expect(statements.some(sql => /\b(?:delete|truncate|alter|grant|set_config)\b/i.test(sql))).toBe(false);
+  // The shelf's change line names CRC's product through the shared reader, which reads the tenant row and nothing else.
+  const named = statements.length;
+  expect(await runtime.productName()).toBe("CRC Torah");
+  expect([...new Set(statements.slice(named).flatMap(sql => [...sql.matchAll(/\b(?:from|into|update|join)\s+"?([a-z_]+)"?/gi)].map(match => match[1].toLowerCase())).filter(name => name !== "pg_catalog"))]).toEqual(["tenant"]); // pg_catalog: the restricted-role preflight
   // Another congregation's host never reaches the reading.
   await expect(runtime.resolveTenant(new Request(`http://localhost:3101/api/public/reading?date=${date}`))).rejects.toBeInstanceOf(AccessDenied);
 });

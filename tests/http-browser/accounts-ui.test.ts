@@ -70,6 +70,9 @@ it("a person asks, an admin sees the count and approves, and the new member save
     await ui(queue.getByRole("heading", { name: "Synthetic Asker", exact: true })).toBeVisible();
     await ui(queue.getByText("ui-asker@example.test")).toBeVisible();
     await ui(queue.getByText("Shabbat readings", { exact: true })).toBeVisible();
+    // Daniel's approved help line (F1): accounts are for anyone in good faith, and no line says members only.
+    await ui(queue.getByText("Anyone who asks in good faith can have an account, member or not. Decline only spam or abuse.", { exact: true })).toBeVisible();
+    expect(await admin.locator(".accounts-workspace").innerText()).not.toMatch(/members only|only members/i);
     await ui(admin.getByRole("region", { name: "Approvers" }).getByText("Admins approve requests.", { exact: false })).toBeVisible();
     expect(await noHorizontalScroll(admin)).toBe(true);
     await controlsAtLeast44(admin, ".accounts-workspace");

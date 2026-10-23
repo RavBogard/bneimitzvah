@@ -4,6 +4,8 @@ import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
 import { AdminNav } from "../admin-nav";
 import { accountsApi, type AccountRequest, type ApproverMode, type ApproversView, type Member } from "./api";
 
+/** Daniel's approved approver help line (F1, wording approved 2026-10-23). */
+export const APPROVER_HELP_LINE = "Anyone who asks in good faith can have an account, member or not. Decline only spam or abuse.";
 /** Proposed wording, not yet approved by Daniel: a designated tutor approving someone an admin ended (Decided here, 2026-10-23). */
 export const ADMIN_REAPPROVAL_LINE = "An admin ended this person’s membership, so only an admin can approve them again. The request is kept.";
 const initial = (name: string) => Array.from(name.trim())[0]?.toLocaleUpperCase() ?? "A";
@@ -83,7 +85,8 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
       : broken || !requests ? <div className="admin-state" role="alert"><p>Account requests couldn’t be loaded.</p><button type="button" className="button-secondary admin-pill" onClick={() => void load()}>Reload</button></div>
       : <>
         <section className="people-card" aria-labelledby="accounts-requests"><div className="people-card-head"><h2 id="accounts-requests">Requests</h2>
-          <p>Approving gives the person an account and sends them one email. Declining removes the request and sends nothing.</p></div>
+          <p>Approving gives the person an account and sends them one email. Declining removes the request and sends nothing.</p>
+          <p>{APPROVER_HELP_LINE}</p></div>
           {requests.length ? <ul className="people-list">{requests.map(row => <li key={row.id} className="people-row account-request-row">
             <span className="people-avatar" aria-hidden="true">{initial(row.name)}</span>
             <div className="people-body">

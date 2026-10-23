@@ -35,6 +35,8 @@ export type PublicRuntime = Readonly<{
   shelf(verse: string, signal?: AbortSignal): Promise<ShelfAnswer>;
   /** One shelf item's text in Sefaria's default editions. */
   source: SourceTextReader;
+  /** The congregation's product name, from the one shared reader (data/product-name.ts), for the shelf's change line. */
+  productName(): Promise<string>;
 }>;
 export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Response>) => Promise<Response>;
 
@@ -188,8 +190,9 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
           }
           case "related": {
             // A verse's links change slowly: the CDN keeps the shelf a week.
-            const shelf = await runtime.shelf(query.verse, signal);
-            return json(shelf as unknown as JsonValue, 604800);
+            // With the name its change line needs ("Selected and ordered by {productName}", the CC BY note of changes).
+            const shelf = await runtime.shelf(query.verse, signal), productName = await runtime.productName();
+            return json({ ...shelf, productName } as unknown as JsonValue, 604800);
           }
           case "source": {
             let text;
