@@ -63,7 +63,7 @@ test("the remembered choice is a display preference only, read and written defen
 test("Works holds registered works only, in registry order, at most three; none is allowed", () => {
   expect(DEFAULT_WORKS).toEqual(["rashi"]);
   expect(normalizeWorks(["womens", "rashi", "rashi"])).toEqual(["rashi", "womens"]);
-  expect(normalizeWorks(["ramban", "womens", "__proto__"])).toEqual(["womens"]);
+  expect(normalizeWorks(["malbim", "womens", "__proto__"])).toEqual(["womens"]);
   expect(normalizeWorks([])).toEqual([]);
   expect(normalizeWorks("rashi")).toEqual(["rashi"]);
 });
@@ -181,7 +181,8 @@ test("Lein's Rashi (n) disclosure: closed, counted, hidden when Rashi is silent 
   expect(closed).not.toContain("synthetic");
   for (const state of [ready([]), { status: "loading" }, { status: "none" }] as CommentaryVerseState[]) expect(renderToStaticMarkup(createElement(VerseRashi, { verse: one, state }))).toBe("");
   expect(renderToStaticMarkup(createElement(VerseRashi, { verse: null, state: ready([comment("דה", "a")]) }))).toBe("");
-  expect(renderToStaticMarkup(createElement(VerseRashi, { verse: one, state: { status: "failed" } }))).toContain(">Rashi</button>");
+  // A failure shows nothing in Lein: never a row of empty "Rashi" buttons (Study has its one quiet line).
+  expect(renderToStaticMarkup(createElement(VerseRashi, { verse: one, state: { status: "failed" } }))).toBe("");
 });
 
 test("quiet states: loading, a failure with Try again, and the Women's Commentary on a haftarah", () => {

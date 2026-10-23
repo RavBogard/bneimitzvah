@@ -1,7 +1,7 @@
 import "server-only";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import type { VerseCounts } from "../../lib/readings/ranges";
-import { commentaryCandidates, commentaryEditionUrl, parseCommentaryChapter, COMMENTARY_LIMITS, type CommentaryChapter, type CommentaryChapterRef,
+import { commentaryCandidates, commentaryComplex, commentaryEditionUrl, parseCommentaryChapter, COMMENTARY_LIMITS, type CommentaryChapter, type CommentaryChapterRef,
   type CommentaryComment, type CommentaryEdition, type CommentaryEditionCandidate, type CommentaryRun } from "../../lib/readings/commentary";
 import { sefariaRuns } from "./sefaria-runs";
 
@@ -10,11 +10,22 @@ import { sefariaRuns } from "./sefaria-runs";
  * Every pinned edition for the corpus is requested at once; Sefaria returns the
  * ones it has and a warning for each it does not, and the first pinned edition
  * (in preference order) with any comment in the chapter is used, per language.
+ * A chapter Sefaria has no text for at all (a 404 "We have no text for …", as for
+ * a work with gaps) is an empty chapter, marked `absent` so the route can cache it
+ * for a day; every other failure stays a failure.
  */
 export class CommentaryUnavailable extends Error {
   constructor(readonly code: "invalid-request" | "upstream" | "invalid-response") { super("Commentary unavailable"); }
 }
-export type CommentaryReader = (work: string, chapter: string, signal?: AbortSignal) => Promise<CommentaryChapter>;
+/** `absent`: Sefaria has no text for this chapter of the work (never sent to the browser; the body is the same empty chapter). */
+export type ReadCommentaryChapter = CommentaryChapter & Readonly<{ absent?: true }>;
+export type CommentaryReader = (work: string, chapter: string, signal?: AbortSignal) => Promise<ReadCommentaryChapter>;
+/** The one 404 that means "nothing here" rather than a failure: Sefaria's own words, bounded (it appends "<d>" to some refs). */
+const NO_TEXT = /^We have no text for [\p{L}\p{N} ,.'’()\-:;"]{1,200}(?:<d>)?\.$/u;
+export function isNoTextAnswer(payload: unknown): boolean {
+  return payload !== null && typeof payload === "object" && !Array.isArray(payload) && Object.keys(payload).length === 1
+    && typeof (payload as Record<string, unknown>).error === "string" && NO_TEXT.test((payload as Record<string, string>).error);
+}
 export const COMMENTARY_FETCH_LIMITS = Object.freeze({ requestMs: 5000, upstreamBytes: 1024 * 1024, verseSlots: 1000 });
 const invalid = (): never => { throw new CommentaryUnavailable("invalid-response"); };
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -38,7 +49,7 @@ const runsOf = (value: unknown): CommentaryRun[] => { try { return sefariaRuns(v
 export function validateCommentaryPayload(payload: unknown, chapter: CommentaryChapterRef): CommentaryChapter {
   const number = String(chapter.number);
   if (!object(payload) || payload.ref !== chapter.ref || payload.book !== chapter.index || payload.indexTitle !== chapter.indexTitle
-    || payload.textDepth !== 3 || payload.isComplex !== chapter.work.complex || payload.isSpanning !== false
+    || payload.textDepth !== 3 || payload.isComplex !== commentaryComplex(chapter.work, chapter.book) || payload.isSpanning !== false
     || !Array.isArray(payload.sectionNames) || payload.sectionNames.join("|") !== chapter.work.sectionNames.join("|")
     || !Array.isArray(payload.sections) || payload.sections.length !== 1 || String(payload.sections[0]) !== number
     || !Array.isArray(payload.toSections) || payload.toSections.length !== 1 || String(payload.toSections[0]) !== number
@@ -95,7 +106,7 @@ export function validateCommentaryPayload(payload: unknown, chapter: CommentaryC
 export function createSefariaCommentaryReader(input: { fetch: typeof globalThis.fetch; verseCounts?: VerseCounts; requestMs?: number }): CommentaryReader {
   const requestMs = input.requestMs ?? COMMENTARY_FETCH_LIMITS.requestMs, counts = input.verseCounts ?? TANAKH_VERSE_COUNTS;
   if (!Number.isInteger(requestMs) || requestMs < 1 || requestMs > COMMENTARY_FETCH_LIMITS.requestMs) throw new Error("Invalid commentary deadline");
-  return async function load(work: string, value: string, signal?: AbortSignal): Promise<CommentaryChapter> {
+  return async function load(work: string, value: string, signal?: AbortSignal): Promise<ReadCommentaryChapter> {
     const chapter = parseCommentaryChapter(work, value, counts);
     if (!chapter) throw new CommentaryUnavailable("invalid-request");
     const local = new AbortController(), stop = () => local.abort();
@@ -111,7 +122,7 @@ export function createSefariaCommentaryReader(input: { fetch: typeof globalThis.
           try { response = await input.fetch(url, { method: "GET", headers: { accept: "application/json" }, credentials: "omit", redirect: "error", cache: "no-store", signal: local.signal }); }
           catch { throw new CommentaryUnavailable("upstream"); }
           if (local.signal.aborted) { void response.body?.cancel().catch(() => {}); throw new CommentaryUnavailable("upstream"); }
-          if (response.status !== 200 || response.redirected || response.url && response.url !== url.href
+          if (response.status !== 200 && response.status !== 404 || response.redirected || response.url && response.url !== url.href
             || !/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(response.headers.get("content-type") ?? "")) {
             void response.body?.cancel().catch(() => {}); throw new CommentaryUnavailable("upstream");
           }
@@ -132,6 +143,10 @@ export function createSefariaCommentaryReader(input: { fetch: typeof globalThis.
           }
           let payload: unknown;
           try { payload = JSON.parse(text + decoder.decode()); } catch { return invalid(); }
+          if (response.status === 404) {
+            if (!isNoTextAnswer(payload)) throw new CommentaryUnavailable("upstream");
+            return Object.freeze({ work: chapter.work.key, chapter: chapter.chapter, verses: Object.freeze({}), editions: Object.freeze([]), absent: true as const });
+          }
           return validateCommentaryPayload(payload, chapter);
         })(),
         new Promise<never>((_, reject) => { timer = setTimeout(() => { local.abort(); reject(new CommentaryUnavailable("upstream")); }, requestMs); }),

@@ -10,6 +10,7 @@ import { createPersistentReadingCache } from "../data/reading-cache";
 import { createPersistentStudyCache } from "../data/study-cache";
 import { createSefariaStudyReader } from "../study/sefaria";
 import { createSefariaCommentaryReader } from "../study/commentary";
+import { createSefariaTranslationsReader } from "../study/translations";
 import { createHebcalReader } from "../../lib/readings/proposals";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { resolveTenantHost } from "../tenancy/resolve";
@@ -50,6 +51,7 @@ export function composePublicRuntime<Q extends PgQueryResultHKT>(config: Runtime
     reading,
     // The commentary reader itself keeps nothing (the route still resolves the tenant); the CDN keeps each chapter's answer.
     commentary: createSefariaCommentaryReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS }),
+    translations: createSefariaTranslationsReader({ fetch }),
   });
 }
 

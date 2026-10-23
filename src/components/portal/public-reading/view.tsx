@@ -13,7 +13,8 @@ import { ReadingToolbar } from "../workspace/reading-toolbar";
 import { LensSwitch } from "../workspace/lens-switch";
 import { LENS_STORAGE, lensFromSearch, StudyLensScope, useStudyLens, type Lens } from "../workspace/study-lens";
 import { StudyRows } from "../workspace/study/study-rows";
-import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useWorkCommentary, VerseRashi } from "../workspace/study/commentary-view";
+import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi } from "../workspace/study/commentary-view";
+import { VersePanelColumn, VersePanelScope } from "../workspace/study/verse-panel";
 import { COMMENTARY_WORKS } from "../../../lib/readings/commentary";
 import { namedReading, type NamedReading } from "../../../lib/readings/named-readings";
 import { useReadingPrefs } from "../workspace/reading-prefs";
@@ -31,6 +32,8 @@ import styles from "./public-reading.module.css";
 export const displayRange = (ranges: readonly string[]) => ranges.join("; ").replace(/(\d)-(\d)/g, "$1–$2");
 const statusOf = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
 export const longDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
+/** Week mode keeps the static page title. */
+const WEEK_TITLE = "This week’s reading";
 const GROUP_EYEBROW: Readonly<Record<NamedReading["group"], string>> = { parashah: "Parashah", special: "Special Shabbat", festival: "Festival", fast: "Fast day" };
 
 /** This week is plain /read; another Shabbat and the Study lens are in the address, so it can be shared. */
@@ -48,7 +51,7 @@ export function PublicReading() {
   const [address, setAddress] = useState<ReadAddress | null>(null), [query, setQuery] = useState<Lens | null>(null);
   useEffect(() => { setQuery(lensFromSearch(window.location.search)); setAddress(parseReadAddress(window.location.search)); }, []);
   return <StudyLensScope storageKey={LENS_STORAGE.weekly} query={query}>
-    {!address ? <Shell><Hero eyebrow="Torah and haftarah" title="Loading the reading" /></Shell>
+    {!address ? <Shell title={WEEK_TITLE}><Hero eyebrow="Torah and haftarah" title="Loading the reading" /></Shell>
       : address.target?.mode === "week" ? <WeekReading initial={address.target} verse={address.verse} />
         : address.target?.mode === "saved" ? <SavedReadingPage id={address.target.id} verse={address.verse} />
         : address.target ? <ChosenReading target={address.target} verse={address.verse} />
@@ -59,8 +62,21 @@ export function PublicReading() {
 export const go = (address: string) => { try { window.location.assign(address); } catch { /* Stay. */ } };
 export function replaceAddress(address: string) { try { if (window.location.pathname + window.location.search !== address) window.history.replaceState(null, "", address); } catch { /* Address bar stays as it was. */ } }
 
+export const readTitle = (name: string) => `${name} | CRC Torah`;
+/** The tab names what is shown. The page is one static shell whose metadata says "This week’s reading", and
+ * Next writes that title again after hydration, so a single document.title write is lost; this keeps it. */
+export function useDocumentTitle(text: string) {
+  useEffect(() => {
+    const apply = () => { if (document.title !== text) document.title = text; };
+    apply();
+    let observer: MutationObserver | null = null;
+    try { observer = new MutationObserver(apply); observer.observe(document.head, { childList: true, subtree: true, characterData: true }); } catch { /* The title stays as written. */ }
+    return () => observer?.disconnect();
+  }, [text]);
+}
 /** `signedIn`: the page already verified the session (a member's own saved reading); public modes never ask, and offer Sign in. */
-export function Shell({ children, signedIn = false }: { children: ReactNode; signedIn?: boolean }) {
+export function Shell({ title, children, signedIn = false }: { title: string; children: ReactNode; signedIn?: boolean }) {
+  useDocumentTitle(readTitle(title));
   return <div className="portal-shell">
     <a className="skip-link" href="#public-reading-main">Skip to the reading</a>
     <header className="portal-header app-bar"><a className="portal-brand" href="/">CRC Torah</a>
@@ -108,7 +124,7 @@ export function useStarter() {
 
 function Unavailable() {
   const chooser = useChooser(true), today = useToday();
-  return <Shell>
+  return <Shell title="Reading unavailable">
     <Hero eyebrow="Torah and haftarah" title="Reading unavailable" nav={<>{today && <button type="button" className="button-hero-secondary" onClick={() => go("/read")}>This week</button>}{chooser.button}</>} />
     {chooser.panel}
     <div className="workspace-state" role="status"><h2>That reading isn’t available</h2><p>The address doesn’t name a reading this page can open. Choose one, or go back to this week.</p></div>
@@ -138,7 +154,7 @@ function WeekReading({ initial, verse }: { initial: Extract<ReadTarget, { mode: 
   const change = (next: string) => { if (next !== date) { setDate(next); setKind(null); setLinked(null); } };
   const index = Math.max(0, sources.findIndex(row => row.source.passage.kind === kind)), isThisWeek = date !== null && date === today;
   const shown = sources[index]?.source.passage;
-  return <Shell>
+  return <Shell title={WEEK_TITLE}>
     <Hero eyebrow={isThisWeek ? "This Shabbat" : date ? "Shabbat" : "Torah and haftarah"} title={current ? current.parashah ?? "Shabbat reading" : week?.error ? "Reading unavailable" : "Loading the reading"}
       meta={date && <><time dateTime={date}>{longDate(date)}</time>{current?.torah && <> · Torah <bdi dir="ltr">{displayRange(current.torah.ranges)}</bdi></>}{current?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(current.haftarah.ranges)}</bdi></>}</>}
       nav={<>
@@ -169,7 +185,6 @@ function ChosenReading({ target, verse }: { target: Extract<ReadTarget, { mode: 
   const title = named ? named.name : target.mode === "ref" ? displayRange([target.ref]) : "Reading";
   const [index, setIndex] = useState(target.mode === "named" ? Math.min(target.passage, passages.length) - 1 : 0), [linked, setLinked] = useState(verse);
   const [loaded, setLoaded] = useState<{ sources?: readonly LabelledSource[]; error?: number } | null>(null), [retry, setRetry] = useState(0);
-  useEffect(() => { try { document.title = `${title} | CRC Torah`; } catch { /* Keep the title. */ } }, [title]);
   useEffect(() => {
     const address: ReadTarget = target.mode === "named" ? { mode: "named", slug: target.slug, passage: index + 1 } : target;
     replaceAddress(readAddress(address, { verse: linked, study: lens.lens === "study" }));
@@ -184,7 +199,7 @@ function ChosenReading({ target, verse }: { target: Extract<ReadTarget, { mode: 
     return () => controller.abort();
   }, [passages, retry]);
   const sources = loaded?.sources ?? [];
-  return <Shell>
+  return <Shell title={title}>
     <Hero eyebrow={named ? GROUP_EYEBROW[named.group] : "Any reading"} title={loaded?.error ? "Reading unavailable" : title}
       meta={<>{passages.map((row, at) => <span key={at}>{at > 0 && " · "}{row.label} <bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</>}
       nav={<><button type="button" className="button-hero-secondary" onClick={() => go(readAddress({ mode: "week", date: null, kind: null }, { study: lens.lens === "study" }))}>This week</button>{chooser.button}</>}
@@ -253,9 +268,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   // the Women's Commentary only when Study shows it on a Torah text.
   const refs = useMemo(() => page?.verses.map(row => row.ref) ?? [], [page]);
   const corpus = kind === "torah" ? "torah" : "neviim";
-  const rashi = useWorkCommentary("rashi", refs, Boolean(page) && (!study || lens.works.includes("rashi")));
-  const womens = useWorkCommentary("womens", refs, Boolean(page) && study && kind === "torah" && lens.works.includes("womens"));
-  const works = useMemo(() => [rashi, womens].filter(row => lens.works.includes(row.work)), [rashi, womens, lens.works]);
+  const { rashi, works } = useReadingWorks(refs, { ready: Boolean(page), study, chosen: lens.works, corpus });
   const leinLink = useCommentLink(), clearLink = leinLink.clear;
   // A pinned underline belongs to the verse it was pinned on; choosing another verse lets it go.
   useEffect(() => { clearLink(); }, [focus, textKey, clearLink]);
@@ -290,7 +303,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   const start = useRef<() => void>(() => {}); start.current = () => { textAnchor.current?.scrollIntoView({ block: "start" }); if (listening && page) hear(0); else textAnchor.current?.focus(); };
   useEffect(() => { registerStart(page ? () => start.current() : null); return () => registerStart(null); }, [page, registerStart]);
 
-  return <>
+  return <VersePanelScope>
     <div className="reading-lens-row">
       {sources.length > 1 && <div className="study-kind-choice" role="group" aria-label="Reading text selection">
         {sources.map((row, at) => <button key={at} type="button" className="button-secondary" aria-pressed={at === index} onClick={() => changeIndex(at)}>{row.label}</button>)}
@@ -325,7 +338,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
             takePlace={() => { const place = pendingPlace.current; pendingPlace.current = null; return place && place.key === scopeKey ? { ref: place.ref, wordIndex: place.wordIndex } : null; }} />
           {!study && <VerseRashi key={focus !== null ? page.verses[focus]?.ref : "none"} verse={focus !== null ? page.verses[focus] ?? null : null} state={focus !== null && page.verses[focus] ? rashi.lookup.forVerse(page.verses[focus].ref) : { status: "none" }} link={leinLink} retry={rashi.retry} />}
           {!study && verseExtra && focus !== null && page.verses[focus] && verseExtra(page.verses[focus].ref)}
-          {focus !== null && page.verses[focus] && <p className={styles.upClose}><button type="button" className="button-secondary" onClick={() => release(() => setLift({ index: focus, opening: ++openings.current, navigation: 0 }))}>View <bdi dir="ltr">{page.verses[focus].ref}</bdi> up close</button>
+          {focus !== null && page.verses[focus] && <p className={styles.upClose}><button type="button" className="button-secondary" onClick={() => release(() => setLift({ index: focus, opening: ++openings.current, navigation: 0 }))}>{/* One span: the button is a flex box, which would drop the spaces between separate text items. */}<span>View <bdi dir="ltr">{page.verses[focus].ref}</bdi> up close</span></button>
             <span className="field-help">Up close shows each phrase of trope by name.</span></p>}
           {(previousOffset !== undefined || nextOffset !== null) && <>
             <p className="study-page-position">Verses {page.offset + 1}–{page.offset + page.verses.length} of {page.totalVerses}</p>
@@ -338,6 +351,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
             onIndex={at => setLift(value => value && { index: at, opening: value.opening, navigation: value.navigation + 1 })} onClose={() => { audio.stopAll(); setLift(null); }} />}
         </>}
       </section>
+      <VersePanelColumn />
     </div>
-  </>;
+  </VersePanelScope>;
 }

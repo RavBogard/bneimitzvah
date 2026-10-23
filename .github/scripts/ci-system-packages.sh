@@ -1,25 +1,29 @@
 #!/usr/bin/env bash
-# OS packages for the postgres job: Playwright's system dependencies for Chromium and Firefox
-# (the same set `npx playwright install --with-deps chromium firefox` installs) plus the
-# synthetic reference-audio encoder and the owned PulseAudio sink.
+# OS packages for a CI job: Playwright's system dependencies for the named browsers (the same
+# set `npx playwright install --with-deps <browsers>` installs) plus any extra apt packages,
+# such as the postgres job's synthetic reference-audio encoder and owned PulseAudio sink.
 #
-# The runner's default apt mirror (azure.archive.ubuntu.com) has stalled this job for over
-# ten minutes at a time. The .deb files apt downloads are therefore cached per runner image
-# and Playwright version and installed offline with dpkg; apt runs only on a cache miss
-# (about once per runner-image release), with network timeouts, a 150-second wall clock and a
+# The runner's default apt mirror (azure.archive.ubuntu.com) has stalled jobs for over ten
+# minutes at a time. The .deb files apt downloads are therefore cached per job, runner image
+# and Playwright version and installed offline with dpkg; apt runs only on a cache miss (about
+# once per runner-image release), with network timeouts, a 150-second wall clock and a
 # fallback to archive.ubuntu.com.
 #
-# Usage: postgres-job-packages.sh <cache-hit: true|other>. Writes fresh=true|false to
-# $GITHUB_OUTPUT; fresh=true means the cache directory was rebuilt and should be saved.
+# Usage: ci-system-packages.sh <cache-hit: true|other> "<browsers>" [extra apt packages...]
+# Writes fresh=true|false to $GITHUB_OUTPUT; fresh=true means the cache directory was rebuilt
+# and should be saved.
 set -euo pipefail
 
+hit=${1:-}
+read -r -a browsers <<< "${2:?browsers required}"
+shift 2
+extra=("$@")
 debs="$HOME/.cache/ci-apt-debs"
-audio=(ffmpeg pulseaudio pulseaudio-utils)
 fresh=false
 
 verify() {
-  for tool in ffmpeg /usr/bin/pulseaudio /usr/bin/pactl; do
-    command -v "$tool" >/dev/null || { echo "missing $tool after install"; return 1; }
+  for package in "${extra[@]}"; do
+    dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q "install ok installed" || { echo "missing $package after install"; return 1; }
   done
 }
 
@@ -43,8 +47,10 @@ online_once() {
   # download methods directly. Run as a user, it would signal only sudo, which does not relay
   # signals from its own process group, leaving apt-get holding the dpkg lock.
   # install-deps runs apt-get update and apt-get install itself (without sudo, as root).
-  sudo env "PATH=$PATH" timeout -k 15 "$seconds" npx playwright install-deps chromium firefox &&
-    sudo timeout -k 15 "$seconds" apt-get install -y --no-install-recommends "${audio[@]}"
+  sudo env "PATH=$PATH" timeout -k 15 "$seconds" npx playwright install-deps "${browsers[@]}" || return 1
+  if [ "${#extra[@]}" -gt 0 ]; then
+    sudo timeout -k 15 "$seconds" apt-get install -y --no-install-recommends "${extra[@]}"
+  fi
 }
 
 online() {
@@ -71,10 +77,10 @@ EOF
   fresh=true
 }
 
-if [ "${1:-}" = "true" ] && offline; then
+if [ "$hit" = "true" ] && offline; then
   echo "Installed $(compgen -G "$debs/*.deb" | wc -l) cached packages without apt"
 else
-  [ "${1:-}" = "true" ] && echo "::warning::Cached packages did not install; falling back to apt"
+  if [ "$hit" = "true" ]; then echo "::warning::Cached packages did not install; falling back to apt"; fi
   online
 fi
 echo "fresh=$fresh" >> "$GITHUB_OUTPUT"

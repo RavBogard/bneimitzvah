@@ -10,19 +10,20 @@ import { commentaryCandidates, commentaryChapterOfVerse, commentaryEditionUrl, c
  * Everything here is text for React to render as text; nothing is ever markup.
  */
 const bad = (): never => { throw new PortalRequestError(503); };
-function runs(value: unknown): readonly CommentaryRun[] {
+/** Strict text runs, as the sanitiser makes them (shared with Compare). */
+export function parseRuns(value: unknown, maxChars: number = COMMENTARY_LIMITS.runChars): readonly CommentaryRun[] {
   if (!Array.isArray(value) || value.length > COMMENTARY_LIMITS.runsPerComment) return bad();
   return Object.freeze(value.map(raw => {
     const has = (key: string) => raw !== null && typeof raw === "object" && Object.hasOwn(raw, key), bold = has("bold"), italic = has("italic");
     const row = referenceRecord(raw, ["text", ...bold ? ["bold"] : [], ...italic ? ["italic"] : []]);
-    if (!row || typeof row.text !== "string" || !row.text || row.text.length > COMMENTARY_LIMITS.runChars || bold && row.bold !== true || italic && row.italic !== true) return bad();
+    if (!row || typeof row.text !== "string" || !row.text || row.text.length > maxChars || bold && row.bold !== true || italic && row.italic !== true) return bad();
     return Object.freeze({ text: row.text, ...bold ? { bold: true as const } : {}, ...italic ? { italic: true as const } : {} });
   }));
 }
 function comment(value: unknown): CommentaryComment {
   const row = referenceRecord(value, ["hebrew", "english"]);
   if (!row) return bad();
-  const hebrew = row.hebrew === null ? null : runs(row.hebrew), english = row.english === null ? null : runs(row.english);
+  const hebrew = row.hebrew === null ? null : parseRuns(row.hebrew), english = row.english === null ? null : parseRuns(row.english);
   if (hebrew && !hebrew.length || english && !english.length || !hebrew && !english) return bad();
   return Object.freeze({ hebrew, english });
 }

@@ -2,16 +2,16 @@
 import { Fragment, useCallback, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { matchDibbur, type DibburMatch } from "../../../../lib/hebrew/dibbur";
 import { projectStudyVerse } from "../../../../lib/hebrew/study-tokens";
-import { commentaryChapterOfVerse, commentarySefariaUrl, type CommentaryComment, type CommentaryEdition, type CommentaryRun } from "../../../../lib/readings/commentary";
+import { COMMENTARY_WORKS, commentaryChapterOfVerse, commentarySefariaUrl, type CommentaryComment, type CommentaryCorpus, type CommentaryEdition, type CommentaryRun } from "../../../../lib/readings/commentary";
 import { createCommentaryChapterStore, type CommentaryVerseState } from "./commentary-api";
 import { commentaryCount, commentaryParts, commentarySummary } from "./commentary-text";
 import { useCommentaryChapters, type CommentaryLookup } from "./use-commentary";
-import { workLabel } from "../reading-toolbar";
+import { workCoverageNote, workLabel } from "../reading-toolbar";
 import type { StudyVerse } from "./api";
 import styles from "./commentary.module.css";
 
 /** Text only: bold and italic runs become <strong> and <em>; nothing is ever markup. */
-function Runs({ runs }: { runs: readonly CommentaryRun[] }) {
+export function Runs({ runs }: { runs: readonly CommentaryRun[] }) {
   return <>{runs.map((run, index) => run.bold ? <strong key={index}>{run.text}</strong> : run.italic ? <em key={index}>{run.text}</em> : <Fragment key={index}>{run.text}</Fragment>)}</>;
 }
 /** The verse's words as the reader sees them, for the comment-to-word link; empty when the verse can't be split into words. */
@@ -151,7 +151,7 @@ export function CommentaryStatus({ works }: { works: readonly WorkStatus[] }) {
   const rows = works.filter(row => !row.covers || row.status === "loading" || row.status === "failed");
   if (!rows.length) return null;
   return <div className={styles.status} role="status">{rows.map(row => <p key={row.work}>
-    {!row.covers ? `The ${workLabel(row.work)} covers the Torah only.` : row.status === "loading" ? `Loading ${workLabel(row.work)}…`
+    {!row.covers ? `${COMMENTARY_WORKS[row.work]?.title.startsWith("The ") ? "The " : ""}${workLabel(row.work)} covers the ${workCoverageNote(row.work) === "Prophets only" ? "Prophets" : "Torah"} only.` : row.status === "loading" ? `Loading ${workLabel(row.work)}…`
       : <>{workLabel(row.work)} isn’t available right now. <button type="button" onClick={row.retry}>Try again</button></>}
   </p>)}</div>;
 }
@@ -169,6 +169,24 @@ export function useWorkCommentary(work: string, refs: readonly string[], enabled
   return useMemo(() => ({ work, lookup, retry, status }), [work, lookup, retry, status]);
 }
 
+const ALL_WORKS = Object.freeze(Object.keys(COMMENTARY_WORKS));
+/** Whether a registered work has editions for this corpus (the Women's Commentary and Ramban: the Torah; Radak: the Prophets). */
+export const workCovers = (work: string, corpus: CommentaryCorpus) => Boolean(COMMENTARY_WORKS[work]?.editions[corpus]);
+/**
+ * Every registered work's commentary for the verses on screen, from one store each. Rashi loads in Lein
+ * too (for "Rashi (n)"); in Study, each work loads only while it is chosen in Works and covers this text
+ * (`corpus` null: a mixed passage, where each verse says for itself). Returns Rashi, and the chosen works in
+ * Works order for Study's rows, status and credits.
+ */
+export function useReadingWorks(refs: readonly string[], options: Readonly<{ ready: boolean; study: boolean; chosen: readonly string[]; corpus: CommentaryCorpus | null }>) {
+  const { ready, study, chosen, corpus } = options;
+  // A fixed list (the registry): the same hooks in the same order on every render.
+  const rows = ALL_WORKS.map(work => useWorkCommentary(work, refs, ready && (work === "rashi" && !study // eslint-disable-line react-hooks/rules-of-hooks
+    || study && chosen.includes(work) && (corpus === null || workCovers(work, corpus)))));
+  const works = useMemo(() => chosen.flatMap(work => rows.filter(row => row.work === work)), [chosen, ...rows]); // eslint-disable-line react-hooks/exhaustive-deps
+  return { rashi: rows[ALL_WORKS.indexOf("rashi")], works };
+}
+
 /**
  * Lein's quiet way to Rashi: a closed "Rashi (n)" disclosure in the selected
  * verse's tools, hidden when Rashi says nothing on the verse. Opening it shows
@@ -177,12 +195,13 @@ export function useWorkCommentary(work: string, refs: readonly string[], enabled
 export function VerseRashi({ verse, state, link, retry, children }: { verse: StudyVerse | null; state: CommentaryVerseState; link?: CommentLink; retry?(): void; children?: ReactNode }) {
   const id = useId(), [open, setOpen] = useState(false), words = useMemo(() => verse ? verseWords(verse) : [], [verse]);
   const count = commentaryCount(state), key = (index: number) => `${verse?.ref}|rashi:${index}`;
-  if (!verse || (state.status !== "failed" && count === 0)) return null;
+  // Nothing when Rashi has nothing to say here, and nothing when Rashi could not be read: Lein stays calm (a failed
+  // chapter is asked for again by a later load), and a page of verse tools never shows a row of empty "Rashi" buttons.
+  if (!verse || count === 0) return null;
   return <section className={styles.disclosureSection} aria-label={`Rashi on ${verse.ref}`} data-verse-rashi={verse.ref}>
     <button type="button" className={styles.disclosure} aria-expanded={open} aria-controls={`${id}-panel`} onClick={() => setOpen(value => !value)}>{count ? `Rashi (${count})` : "Rashi"}</button>
     {open && <div id={`${id}-panel`} className={styles.panel}>
-      {state.status === "failed" ? <p className={styles.status} role="status">Rashi isn’t available right now. {retry && <button type="button" onClick={retry}>Try again</button>}</p>
-        : state.status === "ready" && <div className={styles.inline}>
+      {state.status === "ready" && <div className={styles.inline}>
           <h4 className={styles.panelHeading}>Rashi on <bdi dir="ltr">{verse.ref}</bdi></h4>
           {state.comments.map((comment, index) => <CommentaryEntry key={`${verse.ref}:${index}`} comment={comment} words={words} verseRef={verse.ref}
             onLink={link ? link.point(key(index)) : undefined} pinned={link?.pinned === key(index)} />)}

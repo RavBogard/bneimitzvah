@@ -7,6 +7,8 @@ import { publicShabbat } from "../../lib/readings/public-shabbat";
 import { studyPageView, wordAidsView, wordDetailsView } from "./portal";
 import { parseCommentaryChapter } from "../../lib/readings/commentary";
 import { CommentaryUnavailable, type CommentaryReader } from "../study/commentary";
+import { TranslationsUnavailable, type TranslationsReader } from "../study/translations";
+import { parseCompareVerse } from "../../lib/readings/compare";
 
 /**
  * Signed-out reading routes. A strict allowlist under /api/public/: GET only, a
@@ -24,6 +26,8 @@ export type PublicRuntime = Readonly<{
   reading: PublicReadingService;
   /** One registered commentary on one Torah or Nevi'im chapter, from public transport only. */
   commentary: CommentaryReader;
+  /** Compare: one verse's English translations and its Targum, from public transport only. */
+  translations: TranslationsReader;
 }>;
 export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Response>) => Promise<Response>;
 
@@ -32,7 +36,7 @@ export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Re
  * named by a Shabbat `date` (the weekly page) or, for "Any reading", by a canonical `ref` with its
  * `kind` (the 1.5 offline packer depends on these exact shapes).
  */
-type Route = Readonly<{ kind: "reading" | "text" | "word-aids" | "word-details" | "short" | "commentary"; keysets: readonly (readonly string[])[] }>;
+type Route = Readonly<{ kind: "reading" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations"; keysets: readonly (readonly string[])[] }>;
 const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/reading": { kind: "reading", keysets: [["date"], ["ref", "kind"]] },
   "/api/public/text": { kind: "text", keysets: [["date", "kind", "offset"], ["ref", "kind", "offset"]] },
@@ -40,6 +44,7 @@ const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/word-details": { kind: "word-details", keysets: [["date", "kind", "verse", "word"], ["ref", "kind", "verse", "word"]] },
   "/api/public/reference/short": { kind: "short", keysets: [["date", "kind", "offset"], ["ref", "kind", "offset"]] },
   "/api/public/commentary": { kind: "commentary", keysets: [["work", "chapter"]] },
+  "/api/public/translations": { kind: "translations", keysets: [["verse"]] },
 });
 /** Longest decoded value per key; a `ref` is bounded by READING_REF_LIMITS.chars, everything else by 80. */
 const valueLimit = (key: string) => key === "ref" ? READING_REF_LIMITS.chars : 80;
@@ -67,6 +72,7 @@ function statusOf(error: unknown): keyof typeof messages {
   try {
     if (error instanceof PublicReadingUnavailable) return error.code === "not-found" ? 404 : error.code === "invalid-request" ? 400 : 503;
     if (error instanceof CommentaryUnavailable) return error.code === "invalid-request" ? 400 : 503;
+    if (error instanceof TranslationsUnavailable) return error.code === "invalid-request" ? 400 : 503;
     if (error instanceof HttpBoundaryError) return error.status === 404 ? 404 : error.status === 405 ? 405 : 400;
     if (error instanceof AccessDenied) return 404;
   } catch { /* Hostile accessors never shape a response. */ }
@@ -106,11 +112,12 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
       || request.headers.has("range") || request.headers.has("if-range") || request.headers.has("content-length") && request.headers.get("content-length") !== "0") return failure(400);
     const query = canonical(url, selected.keysets), signal = request.signal;
     // Cheap checks first: a bad date, ref, kind, number, work or chapter never opens the database.
-    // Every route but commentary is keyed by a date or a ref, and those always check it.
+    // Every route but commentary and translations is keyed by a date or a ref, and those always check it.
     if (query.date !== undefined && publicShabbat(query.date) === null || selected.kind === "commentary" && parseCommentaryChapter(query.work, query.chapter) === null
+      || selected.kind === "translations" && parseCompareVerse(query.verse) === null
       || query.kind !== undefined && query.kind !== "torah" && query.kind !== "haftarah"
       || query.ref !== undefined && canonicalReadingRef(query.ref, query.kind) === null
-      || [query.offset, query.verse, query.word].some(value => value !== undefined && !/^(?:0|[1-9]\d{0,3})$/.test(value))) return failure(400);
+      || [query.offset, selected.kind === "translations" ? undefined : query.verse, query.word].some(value => value !== undefined && !/^(?:0|[1-9]\d{0,3})$/.test(value))) return failure(400);
     const ref = query.ref;
     return await withPublic(async runtime => {
       try {
@@ -151,11 +158,16 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
               references: page.references as unknown as JsonValue[] } }, 86400);
           }
           case "commentary": {
-            // A pinned edition does not change: the CDN may keep a chapter for thirty days. An answer with no
-            // edition at all may be a momentary gap upstream, so it is kept for an hour only.
+            // A pinned edition does not change: the CDN may keep a chapter for thirty days. A chapter Sefaria says it has
+            // no text for is kept a day; an answer with no edition at all may be a momentary gap upstream, so an hour only.
             const chapter = await runtime.commentary(query.work, query.chapter, signal);
             return json({ work: chapter.work, chapter: chapter.chapter, verses: chapter.verses as unknown as JsonValue, editions: chapter.editions as unknown as JsonValue[] },
-              chapter.editions.length ? 2592000 : 3600);
+              chapter.editions.length ? 2592000 : chapter.absent ? 86400 : 3600);
+          }
+          case "translations": {
+            // Thirty days when both halves answered; an hour when one side was missing, so it is asked again soon.
+            const result = await runtime.translations(query.verse, signal);
+            return json(result.answer as unknown as JsonValue, result.complete ? 2592000 : 3600);
           }
         }
       } catch (error) { return failure(statusOf(error)); }

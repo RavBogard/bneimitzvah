@@ -108,8 +108,6 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
     document.addEventListener("visibilitychange", back); window.addEventListener("pageshow", restored);
     return () => { document.removeEventListener("visibilitychange", back); window.removeEventListener("pageshow", restored); controller?.abort(); };
   }, [loadHeader]);
-  // The private name stays on the page; the tab title (and so browser history) only ever says "My reading".
-  useEffect(() => { try { document.title = "My reading | CRC Torah"; } catch { /* Keep the title. */ } }, [reading !== null]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { replaceAddress(readAddress({ mode: "saved", id }, { verse: linked, study: lens.lens === "study" })); }, [id, linked, lens.lens]);
 
   // The passage itself, by its canonical ref, from the same open routes as any reading.
@@ -192,7 +190,8 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
   useEffect(() => () => live.current?.abort(), []);
 
   const editButton = reading && <button type="button" className="button-hero-secondary" aria-expanded={edit !== "closed"} aria-controls={edit !== "closed" ? editId : undefined} onClick={openEdit}>Edit</button>;
-  return <Shell signedIn={header.status === "ready"}>
+  // The private name stays on the page; the tab title (and so browser history) only ever says "My reading".
+  return <Shell title="My reading" signedIn={header.status === "ready"}>
     <Hero eyebrow="My reading" title={reading ? reading.name : header.status === "loading" ? "Loading your reading" : "Reading unavailable"}
       meta={reading && <>{reading.date && <><time dateTime={reading.date}>{longDate(reading.date)}</time> · </>}{kindName(reading.kind)} <bdi dir="ltr">{displayRange([reading.ranges])}</bdi></>}
       nav={<><button type="button" className="button-hero-secondary" onClick={() => go(readAddress({ mode: "week", date: null, kind: null }, { study: lens.lens === "study" }))}>This week</button>{chooser.button}</>}

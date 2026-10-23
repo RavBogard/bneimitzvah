@@ -1,8 +1,9 @@
 import { expect, test, vi } from "vitest";
+import { unavailableTranslations } from "../helpers/translations";
 vi.mock("server-only", () => ({}));
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { COMMENTARY_WORKS, commentaryCandidates, commentaryChaptersOf, commentaryChapterOfVerse, commentaryEditionUrl, commentarySefariaUrl, NEVIIM_BOOKS,
+import { COMMENTARY_LIMITS, COMMENTARY_WORKS, commentaryCandidates, commentaryChaptersOf, commentaryChapterOfVerse, commentaryEditionUrl, commentarySefariaUrl, NEVIIM_BOOKS,
   parseCommentaryChapter, TORAH_BOOKS, type CommentaryChapter } from "../../src/lib/readings/commentary";
 import { sefariaRuns } from "../../src/server/study/sefaria-runs";
 import { commentaryRequestUrl, CommentaryUnavailable, createSefariaCommentaryReader, validateCommentaryPayload } from "../../src/server/study/commentary";
@@ -19,7 +20,7 @@ const genesis = () => chapter("rashi", "Genesis 1"), samuel = () => chapter("ras
 const invalid = (action: () => unknown) => { try { action(); } catch (error) { expect(error).toBeInstanceOf(CommentaryUnavailable); expect((error as CommentaryUnavailable).code).toBe("invalid-response"); return; } throw new Error("Expected refusal"); };
 
 test("the registry holds Rashi and the Women's Commentary, with their verified pinned editions in preference order and a credit for each", () => {
-  expect(Object.keys(COMMENTARY_WORKS)).toEqual(["rashi", "womens"]);
+  expect(Object.keys(COMMENTARY_WORKS)).toEqual(["rashi", "womens", "ramban", "ibn-ezra", "sforno", "rashbam", "or-hachaim", "kli-yakar", "chizkuni", "radak", "metzudat-david"]);
   expect(Object.isFrozen(COMMENTARY_WORKS) && Object.isFrozen(COMMENTARY_WORKS.rashi.editions.torah!.he)).toBe(true);
   const rashi = COMMENTARY_WORKS.rashi;
   expect(rashi).toMatchObject({ key: "rashi", title: "Rashi", hebrewTitle: "רש״י", index: "Rashi on {book}" });
@@ -50,12 +51,12 @@ test("chapters: a registered work and a real Torah or Nevi'im chapter only", () 
   }
   for (const value of ["Psalms 1", "Ruth 1", "Esther 1", "I Chronicles 1", "Song of Songs 1", "Genesis 0", "Genesis 01", "Genesis 1:1", "genesis 1", "Genesis", " Genesis 1", "Genesis  1", "", "Genesis 1000"])
     expect(parseCommentaryChapter("rashi", value), value).toBeNull();
-  for (const work of ["ramban", "Rashi", "", "__proto__", "constructor", "toString", null, 1]) expect(parseCommentaryChapter(work, "Genesis 1"), String(work)).toBeNull();
+  for (const work of ["malbim", "Rashi", "", "__proto__", "constructor", "toString", null, 1]) expect(parseCommentaryChapter(work, "Genesis 1"), String(work)).toBeNull();
   expect(commentaryChapterOfVerse("rashi", "Genesis 1:31")?.chapter).toBe("Genesis 1");
   expect(commentaryChapterOfVerse("rashi", "Genesis 1:32")).toBeNull();
   expect(commentaryChapterOfVerse("rashi", "Psalms 1:1")).toBeNull();
   expect(commentaryChaptersOf("rashi", ["Genesis 1:30", "Genesis 1:31", "Genesis 2:1", "Ruth 1:1", "Isaiah 40:1"])).toEqual(["Genesis 1", "Genesis 2", "Isaiah 40"]);
-  expect(commentaryChaptersOf("ramban", ["Genesis 1:1"])).toEqual([]);
+  expect(commentaryChaptersOf("malbim", ["Genesis 1:1"])).toEqual([]);
   expect(commentarySefariaUrl(samuel(), 5)).toBe("https://www.sefaria.org/Rashi_on_I_Samuel.20.5");
   expect(commentaryEditionUrl(samuel(), commentaryCandidates(samuel()).en[1])).toBe("https://www.sefaria.org/Rashi_on_I_Samuel.20?ven=The_Metsudah_Tanach_series%2C_Lakewood%2C_N.J&lang=bi");
 });
@@ -79,7 +80,7 @@ test("the sanitiser keeps text and bold runs, drops footnotes and every other ta
   expect(sefariaRuns("<b> </b>")).toEqual([]);
   expect(sefariaRuns("")).toEqual([]);
   expect(sefariaRuns("<b>bold <i>nested</i></b> plain")).toEqual([{ text: "bold ", bold: true }, { text: "nested", bold: true, italic: true }, { text: " plain" }]);
-  expect(() => sefariaRuns("x".repeat(16 * 1024 + 1))).toThrow();
+  expect(() => sefariaRuns("x".repeat(COMMENTARY_LIMITS.runChars + 1))).toThrow();
   expect(() => sefariaRuns(5)).toThrow();
 });
 
@@ -131,7 +132,7 @@ test("payload validation is strict about shape, editions and warnings", () => {
     ["section names", p => { p.sectionNames = ["Chapter", "Verse"]; }], ["sections", p => { p.sections = ["2"]; }], ["to sections", p => { p.toSections = ["1", "2"]; }],
     ["versions not array", p => { (p as Record<string, unknown>).versions = {}; }], ["warnings missing", p => { delete (p as Record<string, unknown>).warnings; }],
     ["verse is a string", p => { (p.versions[0].text as unknown[])[0] = "<b>x</b>"; }], ["comment not a string", p => { (p.versions[0].text[0] as unknown[])[0] = 7; }],
-    ["too many comments", p => { p.versions[0].text[0] = Array.from({ length: 61 }, () => "x"); }],
+    ["too many comments", p => { p.versions[0].text[0] = Array.from({ length: COMMENTARY_LIMITS.commentsPerVerse + 1 }, () => "x"); }],
     ["too many verse slots", p => { p.versions[0].text = Array.from({ length: 1001 }, () => []); }],
     ["unrequested edition", p => { p.versions[0].versionTitle = "Unpinned synthetic edition"; }],
     ["licence changed", p => { (p.versions[1] as Record<string, unknown>).license = "CC-BY-NC"; }], ["language mismatch", p => { p.versions[0].actualLanguage = "en"; }],
@@ -145,7 +146,7 @@ test("payload validation is strict about shape, editions and warnings", () => {
   expect(validateCommentaryPayload(base(), genesis()).editions).toHaveLength(2);
   for (const [name, mutate] of cases) { const payload = base(); mutate(payload); try { validateCommentaryPayload(payload, genesis()); throw new Error(`accepted: ${name}`); } catch (error) { expect(error, name).toBeInstanceOf(CommentaryUnavailable); } }
   invalid(() => validateCommentaryPayload(null, genesis()));
-  invalid(() => validateCommentaryPayload(syntheticCommentaryPayload("rashi", "Genesis 1", { text: () => "x".repeat(17 * 1024) }), genesis()));
+  invalid(() => validateCommentaryPayload(syntheticCommentaryPayload("rashi", "Genesis 1", { text: () => "x".repeat(COMMENTARY_LIMITS.runChars + 1) }), genesis()));
 });
 
 test("the reader asks Sefaria for every pinned edition in one bounded request and maps failures to upstream or invalid", async () => {
@@ -161,7 +162,7 @@ test("the reader asks Sefaria for every pinned edition in one bounded request an
     try { await reader(work, value, signal); return "ok"; } catch (error) { return error instanceof CommentaryUnavailable ? error.code : "other"; }
   };
   const answering = (response: () => Response | Promise<Response>) => createSefariaCommentaryReader({ fetch: (async () => response()) as typeof globalThis.fetch, requestMs: 200 });
-  expect(await code(read, "ramban")).toBe("invalid-request"); expect(await code(read, "rashi", "Psalms 1")).toBe("invalid-request");
+  expect(await code(read, "malbim")).toBe("invalid-request"); expect(await code(read, "rashi", "Psalms 1")).toBe("invalid-request");
   expect(await code(answering(() => { throw new TypeError("synthetic network"); }))).toBe("upstream");
   expect(await code(answering(() => new Response("{}", { status: 500, headers: { "content-type": "application/json" } })))).toBe("upstream");
   expect(await code(answering(() => new Response("<html>", { headers: { "content-type": "text/html" } })))).toBe("upstream");
@@ -179,7 +180,7 @@ test("the public commentary route serves a canonical, CDN-cacheable chapter and 
   const origin = "https://beitmitzvah.centralreform.org", path = "/api/public/commentary?work=rashi&chapter=I+Samuel+20";
   let opened = 0;
   const commentary = vi.fn(createSefariaCommentaryReader({ fetch: syntheticCommentaryFetch() as typeof globalThis.fetch }));
-  const runtime = { resolveTenant: vi.fn(async () => undefined), reading: {} as PublicRuntime["reading"], commentary } satisfies PublicRuntime;
+  const runtime = { resolveTenant: vi.fn(async () => undefined), reading: {} as PublicRuntime["reading"], commentary, translations: unavailableTranslations } satisfies PublicRuntime;
   const scope = async (action: (r: PublicRuntime) => Promise<Response>) => { opened++; return action(runtime); };
   const response = await handlePublicReadingRequest(new Request(origin + path), scope);
   expect(response.status).toBe(200);
@@ -203,7 +204,7 @@ test("the public commentary route serves a canonical, CDN-cacheable chapter and 
   runtime.resolveTenant.mockRejectedValueOnce(Object.assign(new (await import("../../src/server/access/errors")).AccessDenied(404)));
   expect((await handlePublicReadingRequest(new Request(origin + path), scope)).status).toBe(404);
   const before = opened;
-  for (const bad of ["/api/public/commentary?work=ramban&chapter=Genesis+1", "/api/public/commentary?work=rashi&chapter=Psalms+23", "/api/public/commentary?work=rashi&chapter=Genesis+51"]) {
+  for (const bad of ["/api/public/commentary?work=malbim&chapter=Genesis+1", "/api/public/commentary?work=rashi&chapter=Psalms+23", "/api/public/commentary?work=rashi&chapter=Genesis+51"]) {
     const refused = await handlePublicReadingRequest(new Request(origin + bad), scope);
     expect(refused.status, bad).toBe(400); expect(refused.headers.get("cache-control")).toBe("no-store");
   }
@@ -225,7 +226,7 @@ test("the browser parser accepts exactly the server's shape and refuses anything
     ["run not string", v => { v.verses["1"].comments[0].hebrew[0].text = 1; }], ["empty english array", v => { v.verses["1"].comments[0].english = []; }],
     ["unknown edition", v => { v.editions[0].title = "Unpinned"; }], ["edition url changed", v => { v.editions[0].url = "https://example.test/"; }],
     ["two Hebrew editions", v => { v.editions[1] = v.editions[0]; }], ["comments without editions", v => { v.editions = []; }],
-    ["verses array", v => { v.verses = []; }], ["too many comments", v => { v.verses["1"].comments = Array.from({ length: 61 }, () => v.verses["3"].comments[0]); }],
+    ["verses array", v => { v.verses = []; }], ["too many comments", v => { v.verses["1"].comments = Array.from({ length: COMMENTARY_LIMITS.commentsPerVerse + 1 }, () => v.verses["3"].comments[0]); }],
   ];
   for (const [name, mutate] of mutations) {
     const value = structuredClone(good) as Record<string, any>; mutate(value);
@@ -313,7 +314,7 @@ test("the hook renders nothing in the way: no fetch while rendering, loading for
   };
   renderToStaticMarkup(createElement(Probe, { enabled: true, work: "rashi" }));
   renderToStaticMarkup(createElement(Probe, { enabled: false, work: "rashi" }));
-  renderToStaticMarkup(createElement(Probe, { enabled: true, work: "ramban" }));
+  renderToStaticMarkup(createElement(Probe, { enabled: true, work: "malbim" }));
   expect(seen).toEqual(["loading,none", "none,none", "none,none"]);
   expect(fetchChapter).not.toHaveBeenCalled();
   // A store for another work is ignored rather than looping.
@@ -359,7 +360,7 @@ test("the Women's Commentary: a complex, English-only, Torah-only index whose pa
   expect(validateCommentaryPayload(syntheticCommentaryPayload("womens", "Genesis 12", { present: [] }), womens)).toEqual({ work: "womens", chapter: "Genesis 12", verses: {}, editions: [] });
   // Through the public route and back through the browser parser.
   const commentary = createSefariaCommentaryReader({ fetch: syntheticCommentaryFetch({ commented: { 1: 4 }, text: (_c, _v, c) => paragraphs[c] }) as typeof globalThis.fetch });
-  const runtime = { resolveTenant: async () => undefined, reading: {} as PublicRuntime["reading"], commentary } satisfies PublicRuntime;
+  const runtime = { resolveTenant: async () => undefined, reading: {} as PublicRuntime["reading"], commentary, translations: unavailableTranslations } satisfies PublicRuntime;
   const response = await handlePublicReadingRequest(new Request("https://beitmitzvah.centralreform.org/api/public/commentary?work=womens&chapter=Genesis+12"), async action => action(runtime));
   expect(response.status).toBe(200); expect(response.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=2592000");
   const body = await response.json();
@@ -379,4 +380,69 @@ test("the Women's Commentary: a complex, English-only, Torah-only index whose pa
   const numbers = syntheticCommentaryPayload("womens", "Numbers 25", { padding: 1, commented: { 1: 1 } });
   (numbers.versions[0].text[18] as unknown[]) = ["Synthetic overflow paragraph", "<i>Another</i>"];
   expect(Object.keys(validateCommentaryPayload(numbers, chapter("womens", "Numbers 25")).verses)).toEqual(["1"]);
+});
+
+// ---- 1.3: more Works (plan 2026-10-22-shelf-1-3 §2).
+const NEW_WORKS = { ramban: "torah", "ibn-ezra": "torah", sforno: "torah", rashbam: "torah", "or-hachaim": "torah", "kli-yakar": "torah", chizkuni: "torah", radak: "neviim", "metzudat-david": "neviim" } as const;
+
+test("the nine new works: their corpus only, pinned editions in preference order, each credited with its licence and Sefaria", () => {
+  for (const [key, corpus] of Object.entries(NEW_WORKS)) {
+    const other = corpus === "torah" ? "Isaiah 40" : "Genesis 1", own = corpus === "torah" ? "Exodus 20" : "Isaiah 40";
+    expect(parseCommentaryChapter(key, own), key).not.toBeNull();
+    expect(parseCommentaryChapter(key, other), key).toBeNull();
+    const candidates = commentaryCandidates(chapter(key, own));
+    expect(candidates.he.length, key).toBeGreaterThan(0); expect(candidates.en.length, key).toBeGreaterThan(0);
+    for (const candidate of [...candidates.he, ...candidates.en]) {
+      expect(candidate.credit, key).toMatch(/, via Sefaria \((?:public domain|CC0|CC BY|CC BY-NC|CC BY-SA|licence not stated)\)\. Markup and footnotes removed; spacing normalized\.$/);
+      // A generic edition title is credited with the work's name.
+      if (["Vocalized Edition", "On Your Way", "Sefaria Community Translation", "daat"].includes(candidate.title)) expect(candidate.credit.startsWith(`${COMMENTARY_WORKS[key].title} (`), key).toBe(true);
+    }
+  }
+  expect(chapter("chizkuni", "Genesis 12")).toMatchObject({ index: "Chizkuni, Genesis", indexTitle: "Chizkuni", ref: "Chizkuni, Genesis 12" });
+  expect(chapter("radak", "I Kings 18")).toMatchObject({ index: "Radak on I Kings", ref: "Radak on I Kings 18" });
+  expect(COMMENTARY_WORKS.radak.sectionNames).toEqual(["Chapter", "Verse", "Paragraph"]);
+  // Licences Sefaria states as unknown read plainly, never guessed.
+  expect(commentaryCandidates(chapter("ramban", "Exodus 1")).he.map(row => [row.title, row.license])).toEqual([["Sefaria Vocalized Edition", "unknown"]]);
+  expect(commentaryCandidates(chapter("ramban", "Genesis 1")).he.map(row => [row.title, row.license])).toEqual([["Vocalized Edition", "CC0"]]);
+  expect(commentaryCandidates(chapter("radak", "Isaiah 1")).he[0].credit).toContain("(licence not stated)");
+  // An edition scoped to some books is asked for, and credited, only in those books: each Rashbam book has its own
+  // Hebrew title, and Sefaria states one Metzudat David translation's licence in some books and not in others.
+  expect(commentaryRequestUrl(chapter("rashbam", "Leviticus 1")).searchParams.getAll("version")).toEqual(["hebrew|Rashbam on Leviticus - Daat", "english|Eliyahu Munk, HaChut Hameshulash"]);
+  expect(commentaryRequestUrl(chapter("rashbam", "Genesis 1")).searchParams.getAll("version")).toEqual(["hebrew|daat", "english|Eliyahu Munk, HaChut Hameshulash"]);
+  expect(commentaryCandidates(chapter("metzudat-david", "Joshua 2")).en.map(row => row.license)).toEqual(["CC-BY", "CC0"]);
+  expect(commentaryCandidates(chapter("metzudat-david", "Isaiah 2")).en.map(row => row.license)).toEqual(["unknown", "CC0"]);
+  expect(commentaryCandidates(chapter("metzudat-david", "Hosea 2")).en.map(row => row.title)).toEqual(["Sefaria Community Translation"]);
+  expect(commentaryCandidates(chapter("ramban", "Exodus 1")).he.map(row => row.title)).toEqual(["Sefaria Vocalized Edition"]);
+  expect(commentaryCandidates(chapter("ibn-ezra", "Leviticus 1")).he.map(row => row.title)).toEqual(["On Your Way"]);
+  // The scoped candidates validate per book: a Joshua payload with the unknown-licence version is refused.
+  const joshua = syntheticCommentaryPayload("metzudat-david", "Joshua 2");
+  invalid(() => validateCommentaryPayload({ ...joshua, versions: joshua.versions.map(v => v.language === "en" ? { ...v, license: "unknown" } : v) }, chapter("metzudat-david", "Joshua 2")));
+});
+
+test("isComplex is checked per book: true for Ibn Ezra on Genesis, false for Ibn Ezra on Leviticus, and either way round is refused", () => {
+  expect(validateCommentaryPayload(syntheticCommentaryPayload("ibn-ezra", "Genesis 1"), chapter("ibn-ezra", "Genesis 1")).work).toBe("ibn-ezra");
+  expect(validateCommentaryPayload(syntheticCommentaryPayload("ibn-ezra", "Leviticus 19"), chapter("ibn-ezra", "Leviticus 19")).work).toBe("ibn-ezra");
+  expect(syntheticCommentaryPayload("ibn-ezra", "Genesis 1").isComplex).toBe(true);
+  expect(syntheticCommentaryPayload("ibn-ezra", "Leviticus 19").isComplex).toBe(false);
+  invalid(() => validateCommentaryPayload({ ...syntheticCommentaryPayload("ibn-ezra", "Genesis 1"), isComplex: false }, chapter("ibn-ezra", "Genesis 1")));
+  invalid(() => validateCommentaryPayload({ ...syntheticCommentaryPayload("ibn-ezra", "Leviticus 19"), isComplex: true }, chapter("ibn-ezra", "Leviticus 19")));
+  expect(syntheticCommentaryPayload("ramban", "Leviticus 1").isComplex).toBe(true);
+  expect(syntheticCommentaryPayload("radak", "Isaiah 1").isComplex).toBe(false);
+});
+
+test("a chapter Sefaria has no text for is an empty answer the CDN keeps a day; any other 404 is still a failure", async () => {
+  const noText = (body: unknown) => async () => syntheticJsonResponse(body, { status: 404 });
+  const read = (body: unknown) => createSefariaCommentaryReader({ fetch: noText(body) as typeof globalThis.fetch })("ramban", "Genesis 50");
+  expect(await read({ error: "We have no text for Ramban on Genesis 50<d>." })).toEqual({ work: "ramban", chapter: "Genesis 50", verses: {}, editions: [], absent: true });
+  expect(await read({ error: "We have no text for Sforno on Leviticus 3." })).toMatchObject({ absent: true });
+  for (const body of [{ error: "Something else went wrong." }, { error: "We have no text for <script>." }, { error: "We have no text for Ramban on Genesis 50.", extra: 1 }, { error: 1 }, []]) {
+    await expect(read(body), JSON.stringify(body)).rejects.toMatchObject({ code: "upstream" });
+  }
+  const commentary = createSefariaCommentaryReader({ fetch: noText({ error: "We have no text for Sforno on Leviticus 3." }) as typeof globalThis.fetch });
+  const runtime = { resolveTenant: async () => undefined, reading: {} as PublicRuntime["reading"], commentary, translations: unavailableTranslations } satisfies PublicRuntime;
+  const response = await handlePublicReadingRequest(new Request("https://beitmitzvah.centralreform.org/api/public/commentary?work=sforno&chapter=Leviticus+3"), async action => action(runtime));
+  expect(response.status).toBe(200); expect(response.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=86400");
+  const body = await response.json();
+  expect(body).toEqual({ work: "sforno", chapter: "Leviticus 3", verses: {}, editions: [] });
+  expect(parseCommentaryResponse(body, "sforno", "Leviticus 3")).toEqual(body); // the browser reads it as a chapter with nothing to say
 });
