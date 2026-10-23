@@ -4,7 +4,8 @@ import type { ReadingKind } from "./reading-proposal";
 import styles from "./reading-selection.module.css";
 
 /** Familiar book/chapter/verse pickers for one or more passages. Manual ranges that are not plain passages stay untouched. */
-export function ReadingPassageSelect({ custom, kind, disabled, onChange }: { custom: string; kind: ReadingKind; disabled: boolean; onChange(ref: string): void }) {
+export function ReadingPassageSelect({ custom, kind, disabled, onChange, neviim, idPrefix = "reading", legend = "Custom passage" }: { custom: string; kind: ReadingKind; disabled: boolean; onChange(ref: string): void;
+  /** Offer only the Prophets for a haftarah. */ neviim?: boolean; /** Field ids are `<idPrefix>-book` and so on. */ idPrefix?: string; /** The legend of a single passage. */ legend?: string }) {
   const parsed = passagesFromCustom(custom, kind), manual = custom.trim() !== "" && parsed === null;
   const passages: (Passage | null)[] = parsed && parsed.length ? parsed : [null];
   const write = (next: (Passage | null)[]) => onChange(next.filter((value): value is Passage => value !== null).map(passageReference).join("\n"));
@@ -15,19 +16,19 @@ export function ReadingPassageSelect({ custom, kind, disabled, onChange }: { cus
   const last = passages[passages.length - 1];
   return <div className={styles.passages}>
     {manual && <p className="field-help">These verses were entered as typed references, so they are kept exactly as written. Change them under Advanced references and aliyah boundaries below.</p>}
-    {passages.map((passage, index) => <PassageFields key={index} index={index} count={passages.length} passage={passage} kind={kind} disabled={disabled || manual}
+    {passages.map((passage, index) => <PassageFields key={index} index={index} count={passages.length} passage={passage} kind={kind} neviim={neviim} idPrefix={idPrefix} legend={legend} disabled={disabled || manual}
       onChange={(field, value) => update(index, field, value)} onRemove={() => write(passages.filter((_, at) => at !== index))} />)}
     {!manual && last && passages.length < 32 && <button type="button" className="button-text" disabled={disabled} onClick={() => write([...passages, followingPassage(last)])}>Add another passage</button>}
   </div>;
 }
 
-function PassageFields({ index, count, passage, kind, disabled, onChange, onRemove }: { index: number; count: number; passage: Passage | null; kind: ReadingKind; disabled: boolean; onChange(field: keyof Passage, value: string): void; onRemove(): void }) {
-  const counts = passage ? TANAKH_VERSE_COUNTS[passage.book] : [], id = (name: string) => index === 0 ? `reading-${name}` : `reading-${name}-${index + 1}`;
+function PassageFields({ index, count, passage, kind, neviim, idPrefix, legend, disabled, onChange, onRemove }: { index: number; count: number; passage: Passage | null; kind: ReadingKind; neviim?: boolean; idPrefix: string; legend: string; disabled: boolean; onChange(field: keyof Passage, value: string): void; onRemove(): void }) {
+  const counts = passage ? TANAKH_VERSE_COUNTS[passage.book] : [], id = (name: string) => index === 0 ? `${idPrefix}-${name}` : `${idPrefix}-${name}-${index + 1}`;
   const numbers = (total: number, start = 1) => Array.from({ length: Math.max(0, total - start + 1) }, (_, at) => { const value = start + at; return <option key={value} value={value}>{value}</option>; });
   return <fieldset className={styles.passage} disabled={disabled}>
-    <legend>{count > 1 ? `Passage ${index + 1}` : "Custom passage"}</legend>
+    <legend>{count > 1 ? `Passage ${index + 1}` : legend}</legend>
     <div className={styles.book}><label htmlFor={id("book")}>Book</label><select id={id("book")} value={passage?.book ?? ""} required={index === 0} onChange={event => onChange("book", event.target.value)}>
-      <option value="" disabled>Choose a book</option>{readingBooks(kind).map(book => <option key={book}>{book}</option>)}
+      <option value="" disabled>Choose a book</option>{readingBooks(kind, { neviim }).map(book => <option key={book}>{book}</option>)}
     </select></div>
     <div className={styles.endpoints}>
       <div><label htmlFor={id("start-chapter")}>Start chapter</label><select id={id("start-chapter")} value={passage?.startChapter ?? ""} disabled={!passage} onChange={event => onChange("startChapter", event.target.value)}>{numbers(counts.length)}</select></div>

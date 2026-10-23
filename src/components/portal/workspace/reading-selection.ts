@@ -1,10 +1,13 @@
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { expandReadingRanges, TORAH_BOOKS } from "../../../lib/readings/ranges";
 import { parseRange } from "../../../lib/readings/leyning.mjs";
+import { NEVIIM_BOOKS } from "../../../lib/readings/commentary";
 import type { ReadingKind } from "./reading-proposal";
 
 export type Passage = { book: string; startChapter: number; startVerse: number; endChapter: number; endVerse: number };
-export const readingBooks = (kind: ReadingKind): readonly string[] => kind === "torah" ? TORAH_BOOKS : Object.keys(TANAKH_VERSE_COUNTS);
+/** The books a passage of this kind may come from. `neviim` narrows a haftarah to the Prophets (the public "Any reading"); the default is unchanged. */
+export const readingBooks = (kind: ReadingKind, options: { neviim?: boolean } = {}): readonly string[] =>
+  kind === "torah" ? TORAH_BOOKS : options.neviim ? NEVIIM_BOOKS : Object.keys(TANAKH_VERSE_COUNTS);
 
 /** Never flatten multiple manual ranges or silently repair an invalid reference. */
 export function passageFromCustom(custom: string, kind: ReadingKind): Passage | null {
