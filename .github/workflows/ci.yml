@@ -11,10 +11,10 @@ jobs:
     env:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Release tests verify the pinned historical migration ancestor.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -41,10 +41,10 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # Release tests verify the pinned historical migration ancestor.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -59,7 +59,7 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: disposable-ci-only
       # Browsers and OS packages come from the Actions cache so this job does not wait on the
-      # runner's apt mirror, which has stalled it for 10+ minutes. See postgres-job-packages.sh.
+      # runner's apt mirror, which has stalled these jobs for 10+ minutes. See ci-system-packages.sh.
       - name: Resolve browser and package cache keys
         id: keys
         run: |
@@ -72,7 +72,7 @@ jobs:
           fi
       - name: Restore Playwright browsers
         id: browsers
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-browsers-${{ runner.os }}-${{ runner.arch }}-${{ steps.keys.outputs.playwright }}-chromium-firefox
@@ -80,26 +80,26 @@ jobs:
         timeout-minutes: 10
       - name: Save Playwright browsers
         if: steps.browsers.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-browsers-${{ runner.os }}-${{ runner.arch }}-${{ steps.keys.outputs.playwright }}-chromium-firefox
       - name: Restore browser system packages and synthetic reference-audio test encoder
         id: debs
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: ~/.cache/ci-apt-debs
-          key: ci-apt-debs-${{ steps.keys.outputs.image }}-${{ steps.keys.outputs.playwright }}-${{ hashFiles('.github/scripts/postgres-job-packages.sh') }}
+          key: ci-apt-debs-postgres-${{ steps.keys.outputs.image }}-${{ steps.keys.outputs.playwright }}-${{ hashFiles('.github/scripts/ci-system-packages.sh') }}
       - name: Install browser system packages and synthetic reference-audio test encoder
         id: packages
         timeout-minutes: 12
-        run: bash .github/scripts/postgres-job-packages.sh "${{ steps.debs.outputs.cache-hit }}"
+        run: bash .github/scripts/ci-system-packages.sh "${{ steps.debs.outputs.cache-hit }}" "chromium firefox" ffmpeg pulseaudio pulseaudio-utils
       - name: Save browser system packages and synthetic reference-audio test encoder
         if: steps.debs.outputs.cache-hit != 'true' && steps.packages.outputs.fresh == 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: ~/.cache/ci-apt-debs
-          key: ci-apt-debs-${{ steps.keys.outputs.image }}-${{ steps.keys.outputs.playwright }}-${{ hashFiles('.github/scripts/postgres-job-packages.sh') }}
+          key: ci-apt-debs-postgres-${{ steps.keys.outputs.image }}-${{ steps.keys.outputs.playwright }}-${{ hashFiles('.github/scripts/ci-system-packages.sh') }}
       - run: npm run build
       - name: Exercise browser HTTP authority and built production denial
         run: npm run test:http:browser
@@ -115,14 +115,54 @@ jobs:
     env:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # Browsers and OS packages come from the Actions cache so this job does not wait on the
+      # runner's apt mirror, which has stalled these jobs for 10+ minutes. See ci-system-packages.sh.
+      - name: Resolve browser and package cache keys
+        id: keys
+        run: |
+          echo "playwright=$(node -p "require('playwright-core/package.json').version")" >> "$GITHUB_OUTPUT"
+          if [ -n "${ImageOS:-}" ] && [ -n "${ImageVersion:-}" ]; then
+            echo "image=$ImageOS-$ImageVersion" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Runner image version unknown; packages will not be reused"
+            echo "image=unknown-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Restore Playwright browsers
+        id: browsers
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ runner.arch }}-${{ steps.keys.outputs.playwright }}-chromium
+      - run: npx playwright install chromium
         timeout-minutes: 10
+      - name: Save Playwright browsers
+        if: steps.browsers.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ runner.arch }}-${{ steps.keys.outputs.playwright }}-chromium
+      - name: Restore browser system packages
+        id: debs
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cache/ci-apt-debs
+          key: ci-apt-debs-browser-${{ steps.keys.outputs.image }}-${{ steps.keys.outputs.playwright }}-${{ hashFiles('.github/scripts/ci-system-packages.sh') }}
+      - name: Install browser system packages
+        id: packages
+        timeout-minutes: 12
+        run: bash .github/scripts/ci-system-packages.sh "${{ steps.debs.outputs.cache-hit }}" chromium
+      - name: Save browser system packages
+        if: steps.debs.outputs.cache-hit != 'true' && steps.packages.outputs.fresh == 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cache/ci-apt-debs
+          key: ci-apt-debs-browser-${{ steps.keys.outputs.image }}-${{ steps.keys.outputs.playwright }}-${{ hashFiles('.github/scripts/ci-system-packages.sh') }}
       - run: npm run build
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
