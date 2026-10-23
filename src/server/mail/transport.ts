@@ -47,15 +47,17 @@ const IGNORE = "If you did not request this message, you can ignore it.";
 // A congregation's product name (tenant.product_name, E1) as these emails accept it: a plain name with no number of
 // any kind, so no name can add a code-like run or a digit to a subject. A refused name sends nothing.
 export const mailProductName = (value: unknown): value is string => plainName(value) && !/[\p{N}\p{Cf}\p{Cc}]/u.test(value as string);
-function bodyOf(kind: Kind, link: string, code: string | undefined, product: string): string {
+function bodyOf(kind: Kind, link: string, code: string | null | undefined, product: string): string {
   // An invitation carries no code; its random token may hold digits by chance, so only the sign-in email is counted.
   if (kind === "invitation") return `Open this link to review your invitation:\n\n${link}\n\n${IGNORE}`;
-  // The code is in the body only, never the subject (lock screens, provider subject logs).
-  const body = `Open this link to sign in:\n\n${link}\n\n${SIGN_IN_CODE_LINES.code(product)}\n${code}\n\n${SIGN_IN_CODE_LINES.once}\n\n${SIGN_IN_CODE_LINES.never(product)}\n\n${IGNORE}`;
+  // The code is in the body only, never the subject (lock screens, provider subject logs). A capped address (null
+  // code) gets the link only: just the code's own line (its label and the code) is left out, the rest is unchanged.
+  const codeLines = code === null ? "" : `${SIGN_IN_CODE_LINES.code(product)}\n${code}\n\n`;
+  const body = `Open this link to sign in:\n\n${link}\n\n${codeLines}${SIGN_IN_CODE_LINES.once}\n\n${SIGN_IN_CODE_LINES.never(product)}\n\n${IGNORE}`;
   // Fail closed rather than send an email a phone could misread: no number but ASCII digits, and the code is the
-  // only run of 6 or more of them (the sign-in token is letters only, so only an origin could add one).
+  // only run of 6 or more of them (none at all when link-only; the sign-in token is letters only).
   const runs = body.match(/\p{N}{6,}/gu) ?? [];
-  if (/(?![0-9])\p{N}/u.test(body) || runs.length !== 1 || runs[0] !== code) throw 0;
+  if (/(?![0-9])\p{N}/u.test(body) || (code === null ? runs.length !== 0 : runs.length !== 1 || runs[0] !== code)) throw 0;
   return body;
 }
 function subjectOf(kind: Kind, product: string): string {
@@ -75,13 +77,14 @@ export function createMailTransport(input: { origin: string; apiKey: string; fro
       || !mailbox(input.from) || !/^re_[A-Za-z0-9_-]{8,256}$/.test(input.apiKey)
       || !Number.isInteger(timeout) || timeout < 1 || timeout > 10000) throw 0;
   } catch { throw new RuntimeUnavailable(); }
-  return async (kind: Kind, message: Readonly<{ email: string; url: string; productName: string; code?: string }>): Promise<void> => {
+  return async (kind: Kind, message: Readonly<{ email: string; url: string; productName: string; code?: string | null }>): Promise<void> => {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       if (!mailbox(input.from) || !mailbox(message.email) || !mailProductName(message.productName)) throw 0;
-      // A sign-in email always carries its code; an invitation never does.
-      if (kind === "magic-link" ? typeof message.code !== "string" || !CODE.test(message.code) : message.code !== undefined) throw 0;
+      // A sign-in email carries its code, or an explicit null when the address is capped (link only); an invitation
+      // never carries one.
+      if (kind === "magic-link" ? message.code !== null && (typeof message.code !== "string" || !CODE.test(message.code)) : message.code !== undefined) throw 0;
       const link = canonicalLink(message.url, input.origin, kind);
       await Promise.race([
         (async () => {

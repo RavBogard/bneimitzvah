@@ -82,6 +82,25 @@ test("mail rejects foreign, ambiguous, duplicated-token, header-injection and un
   expect(calls).toBe(0);
 });
 
+test("a capped address's sign-in email (an explicit null code) leaves out only the code's line; an omitted code is still refused", async () => {
+  const sent: { subject: string; text: string }[] = [];
+  const send = createMailTransport({ origin, apiKey, from: email, fetch: async (_url, init) => { sent.push(JSON.parse(String(init!.body))); return new Response(); } });
+  const url = link("magic-link");
+  await send("magic-link", { email, productName, url, code: null });
+  expect(sent[0].subject).toBe("Sign in to CRC Torah");
+  expect(sent[0].text).toBe(["Open this link to sign in:", "", url, "", SIGN_IN_CODE_LINES.once, "", SIGN_IN_CODE_LINES.never(productName), "",
+    "If you did not request this message, you can ignore it."].join("\n"));
+  expect(sent[0].text.includes(SIGN_IN_CODE_LINES.code(productName))).toBe(false);
+  expect(await safeFailure(() => send("magic-link", { email, productName, url }))).toBe(true);
+  expect(await safeFailure(() => send("invitation", { email, productName, url: link("invitation"), code: null }))).toBe(true);
+  // Link-only mail may hold no 6-digit run at all.
+  const digits = "https://torah123456.example.test";
+  const digitLink = new URL("/auth/email", digits); digitLink.hash = `token=${"A".repeat(32)}`;
+  const digitSend = createMailTransport({ origin: digits, apiKey, from: email, fetch: async () => { throw new Error("Not sent"); } });
+  expect(await safeFailure(() => digitSend("magic-link", { email, productName, url: digitLink.href, code: null }))).toBe(true);
+  expect(sent).toHaveLength(1);
+});
+
 test("an invitation whose random token happens to hold six digits in a row is still sent", async () => {
   let calls = 0;
   const send = createMailTransport({ origin, apiKey, from: email, fetch: async () => { calls++; return new Response(); } });

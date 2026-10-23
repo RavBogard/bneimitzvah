@@ -230,6 +230,9 @@ export async function handleAuthRequest(request: Request, runtime: HttpRuntime):
     const expired = () => { const response = privateJson({ error: "expired" }, 409); response.headers.append("set-cookie", runtime.signInCodes.clear()); return response; };
     const bound = runtime.signInCodes.read(request);
     if (!bound) return expired();
+    // 9 failed tries for this address within the hour: every code is refused, right or wrong, until the hour passes,
+    // with the same answer as an expired code. The link in the email still works.
+    if (await runtime.signInCodeCap.guessesSpent(bound.email)) return expired();
     const sdk = await runtime.auth.handler(sdkRequest(request, { email: bound.email, otp: body.code }, runtime.origin,
       new URL("/api/auth/sign-in/email-otp", runtime.origin).href, `code:${bound.bucket}`));
     try {
@@ -244,7 +247,10 @@ export async function handleAuthRequest(request: Request, runtime: HttpRuntime):
       try { const text = await sdk.text(); reason = text.length <= 4096 ? (JSON.parse(text) as { code?: unknown }).code : undefined; } catch { reason = undefined; }
       // A wrong code keeps this device's binding while the code has tries left (the code counts them, not the
       // binding); a spent, used or expired code does not.
-      if (reason === "INVALID_OTP") return await codeTriesLeft(runtime, bound.email) > 0 ? privateJson({ error: "code" }, 400) : expired();
+      if (reason === "INVALID_OTP") {
+        await runtime.signInCodeCap.recordGuess(bound.email);
+        return await codeTriesLeft(runtime, bound.email) > 0 && !await runtime.signInCodeCap.guessesSpent(bound.email) ? privateJson({ error: "code" }, 400) : expired();
+      }
       return reason === "OTP_EXPIRED" || reason === "TOO_MANY_ATTEMPTS" ? expired() : errorResponse(undefined);
     } finally { discard(sdk); }
   }

@@ -10,6 +10,7 @@ import { loadRuntimeConfig } from "../../src/server/runtime/config";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
 import { AUTH_RATE_LIMIT_HEADER, SIGN_IN_CODE, SIGN_IN_DISABLE_SIGN_UP } from "../../src/server/auth/factory";
 import { SIGN_IN_CODE_LINES } from "../../src/server/mail/transport";
+import { SIGN_IN_CODE_CAP } from "../../src/server/auth/sign-in-code-cap";
 
 // Synthetic only: every "email" is captured from a stubbed Resend fetch and nothing leaves the process.
 type Mail = { email: string; subject: string; text: string; url: string; code: string };
@@ -34,8 +35,9 @@ async function fixture(origin = "http://localhost:3000", productName?: string) {
     const text = String(payload.text), url = text.match(/https?:\/\/\S+/)?.[0];
     // The code is alone on the line after its label.
     const lines = text.split("\n"), label = lines.findIndex(value => codeLabel.test(value)), line = label >= 0 ? lines[label + 1] : undefined;
-    if (!url || !Array.isArray(payload.to) || !line) throw new Error("Invalid synthetic mail capture");
-    messages.push({ email: payload.to[0], subject: String(payload.subject), text, url, code: line });
+    // A capped address gets the link only: no label and no code ("" here).
+    if (!url || !Array.isArray(payload.to) || (label >= 0 && !line)) throw new Error("Invalid synthetic mail capture");
+    messages.push({ email: payload.to[0], subject: String(payload.subject), text, url, code: line ?? "" });
     return new Response("{}", { status: 200 });
   });
   const sdk = vi.spyOn(runtime.auth, "handler");
@@ -339,4 +341,77 @@ test("if the code cannot be created, no email is sent and the request fails clos
   expect(response.status).toBeGreaterThanOrEqual(500);
   expect(f.bindingOf(response)).toBe("");
   expect(f.messages).toHaveLength(0);
+});
+
+const tokenOf = (mail: Mail) => new URLSearchParams(new URL(mail.url).hash.slice(1)).get("token")!;
+function capLines() {
+  const lines: string[] = [];
+  vi.spyOn(console, "info").mockImplementation((...args: unknown[]) => { lines.push(args.map(String).join(" ")); });
+  return lines;
+}
+
+test("past 3 codes for an address in the hour, its sign-in emails carry the link only, and the link still works", async () => {
+  const f = await fixture();
+  const lines = capLines();
+  const address = "Capped-Learner@Example.test";
+  for (let issued = 0; issued < SIGN_IN_CODE_CAP.codesPerHour; issued++) expect((await f.ask(address)).mail.code).toMatch(/^\d{6}$/);
+  const { mail, response } = await f.ask(address.toLowerCase());
+  // Same answer and binding cookie as any other request; only the email changes.
+  expect(f.bindingOf(response)).not.toBe("");
+  expect(mail.code).toBe("");
+  expect(mail.text).toBe(["Open this link to sign in:", "", mail.url, "", SIGN_IN_CODE_LINES.once, "", SIGN_IN_CODE_LINES.never("CRC Torah"), "",
+    "If you did not request this message, you can ignore it."].join("\n"));
+  expect(mail.text.match(/\d{6,}/g)).toBeNull();
+  // The capped email's link signs in.
+  expect((await f.dispatch(f.request("/api/auth/email/confirm", { token: tokenOf(mail) }))).status).toBe(200);
+  // One closed log line per capped email, naming neither the address nor any hash of it.
+  const capped = lines.filter(line => line.includes("sign-in.code-capped"));
+  expect(capped).toEqual([JSON.stringify({ event: "sign-in.code-capped", cap: "code" })]);
+  expect(lines.some(line => line.toLowerCase().includes("capped-learner"))).toBe(false);
+  // The rows are keyed on an HMAC of the normalized address, never the address.
+  const rows = await f.db.select().from(schema.verification).where(like(schema.verification.identifier, "sign-in-cap:%"));
+  expect(rows).toHaveLength(SIGN_IN_CODE_CAP.codesPerHour);
+  expect(rows.every(row => /^sign-in-cap:code:[a-f0-9]{64}$/.test(row.identifier))).toBe(true);
+  // A different address is unaffected.
+  const other = await f.ask("other-learner@example.test");
+  expect(other.mail.code).toMatch(/^\d{6}$/);
+  expect((await f.enter(other.mail.code, other.binding)).status).toBe(200);
+});
+
+test("the code cap is a rolling hour: an hour after the first codes, the address gets a code again", async () => {
+  const f = await fixture();
+  const start = Date.now();
+  for (let issued = 0; issued < SIGN_IN_CODE_CAP.codesPerHour; issued++) await f.ask("rolling@example.test");
+  expect((await f.ask("rolling@example.test")).mail.code).toBe("");
+  vi.useFakeTimers({ toFake: ["Date"], now: start + SIGN_IN_CODE_CAP.windowMs + 60_000 });
+  try { expect((await f.ask("rolling@example.test")).mail.code).toMatch(/^\d{6}$/); }
+  finally { vi.useRealTimers(); }
+});
+
+test("9 failed tries for an address in the hour refuse every code for it, even a right one, as expired; the link still works", async () => {
+  const f = await fixture();
+  const lines = capLines();
+  // Three codes, three wrong tries each: nine failed tries for this address.
+  for (let issued = 0; issued < SIGN_IN_CODE_CAP.codesPerHour; issued++) {
+    const { mail, binding } = await f.ask("guessed@example.test");
+    for (let attempt = 0; attempt < SIGN_IN_CODE.attempts; attempt++) await f.enter(wrong(mail.code), binding);
+  }
+  expect(await f.runtime.signInCodeCap.guessesSpent("guessed@example.test")).toBe(true);
+  // Codes are capped now too, so mint one directly: even the right code is refused, with the expired answer, and
+  // the SDK is never asked.
+  const binding = f.runtime.signInCodes.issue("guessed@example.test").split(";")[0];
+  const code = await f.runtime.auth.api.createVerificationOTP({ body: { email: "guessed@example.test", type: "sign-in" } });
+  const sdkCalls = f.sdk.mock.calls.length;
+  const refused = await f.enter(code, binding);
+  expect(refused.status).toBe(409); expect(await refused.json()).toEqual({ error: "expired" });
+  expect(refused.headers.getSetCookie().some(set => set.startsWith("better-auth"))).toBe(false);
+  expect(f.sdk.mock.calls.length).toBe(sdkCalls);
+  expect(lines.some(line => line === JSON.stringify({ event: "sign-in.code-capped", cap: "guess" }))).toBe(true);
+  // The email's link still signs the address in.
+  const linkOnly = await f.ask("guessed@example.test");
+  expect(linkOnly.mail.code).toBe("");
+  expect((await f.dispatch(f.request("/api/auth/email/confirm", { token: tokenOf(linkOnly.mail) }))).status).toBe(200);
+  // A different address is unaffected by this one's failed tries.
+  const other = await f.ask("unguessed@example.test");
+  expect((await f.enter(other.mail.code, other.binding)).status).toBe(200);
 });

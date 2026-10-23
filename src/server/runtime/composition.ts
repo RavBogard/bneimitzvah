@@ -66,6 +66,7 @@ import { createHebcalReader } from "../../lib/readings/proposals";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { createAccountMailTransport, createMailTransport, createNotificationTransport, mailProductName, projectMagicLink } from "../mail/transport";
 import { createSignInCodeBindings } from "../http/sign-in-code-binding";
+import { createSignInCodeCap } from "../auth/sign-in-code-cap";
 import { createNotificationDelivery, createNotificationPreferences } from "../notifications/service";
 import { createSavedService } from "../saved/service";
 import { createAccountsService } from "../accounts/service";
@@ -163,9 +164,11 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
       const { tenantId } = await resolveHost({ url: config.origin, headers: new Headers() }, "configured");
       const productName = await productNameOf(tenantId);
       if (!mailProductName(productName)) throw new RuntimeUnavailable();
-      const code = await auth.api.createVerificationOTP({ body: { email, type: "sign-in" } });
+      // Past 3 codes for this address in the hour, the email carries the link only (review §2.8 finding 1).
+      const code = await signInCodeCap.claimCode(email) ? await auth.api.createVerificationOTP({ body: { email, type: "sign-in" } }) : null;
       await send("magic-link", { email, url: link, productName, code });
     } });
+  const signInCodeCap = createSignInCodeCap({ db, secret: purposeSecret(config, "sign-in-code-cap"), capped: event => createLogger().signInCodeCapped(event) });
   const signInCodes = createSignInCodeBindings({ origin: config.origin, secret: purposeSecret(config, "sign-in-code-binding") });
   const access = createAccessService({ db, auth, deployment: config.deployment });
   const referenceReview = createReferenceReviewService({ access, reviewer: config.referenceReview?.reviewer,
@@ -237,7 +240,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, courseProgress, accounts });
+  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, signInCodeCap, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, courseProgress, accounts });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;

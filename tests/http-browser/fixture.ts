@@ -51,6 +51,7 @@ import { createRelationshipService } from "../../src/server/relationships/servic
 import { createPendingInvitations } from "../../src/server/http/pending-invitations";
 import { createGoogleChallenges } from "../../src/server/http/google-challenge";
 import { createSignInCodeBindings } from "../../src/server/http/sign-in-code-binding";
+import { createSignInCodeCap } from "../../src/server/auth/sign-in-code-cap";
 import { projectMagicLink } from "../../src/server/mail/transport";
 import { resolveTenantHost } from "../../src/server/tenancy/resolve";
 import { parseCeremonyDate } from "../../src/lib/readings/ranges";
@@ -114,6 +115,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     serviceScheduler: createServiceScheduler({ db, broker:createMusicBroker(undefined) }),
       googleChallenges: createGoogleChallenges({ db, origin: BROWSER_ORIGIN, secret: secret() }),
       signInCodes: createSignInCodeBindings({ origin: BROWSER_ORIGIN, secret: secret() }),
+      signInCodeCap: createSignInCodeCap({ db, secret: secret(), capped: () => undefined }),
       resolveHost: async request => {
         const host = await resolveTenantHost(db, request, deployment);
         if (host.origin !== BROWSER_ORIGIN) throw new Error("Host mismatch");
