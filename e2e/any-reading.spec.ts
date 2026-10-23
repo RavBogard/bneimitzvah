@@ -43,6 +43,7 @@ test("Choose a reading opens a parashah, a holiday and a custom passage of the P
   const calls = await mock(page);
   await page.goto("/read");
   await expect(page.getByRole("heading", { level: 1, name: "Synthetic", exact: true })).toBeVisible();
+  await expect(page).toHaveTitle("This week’s reading | CRC Torah");
   await expect(page.getByRole("button", { name: "Previous week", exact: true })).toBeVisible();
   const toggle = page.getByRole("button", { name: "Choose a reading", exact: true });
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -57,6 +58,7 @@ test("Choose a reading opens a parashah, a holiday and a custom passage of the P
   await chooser(page).locator("form").nth(0).getByRole("button", { name: "Open", exact: true }).click();
   await expect(page).toHaveURL(/\/read\?reading=noach$/);
   await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
+  await expect(page).toHaveTitle("Noach | CRC Torah");
   await expect(page.getByText("Parashah", { exact: true }).first()).toBeVisible();
   await expect(verse(page, "Genesis 6:9")).toBeVisible();
   await expect(passageButton(page, "Torah")).toHaveAttribute("aria-pressed", "true");
@@ -64,6 +66,7 @@ test("Choose a reading opens a parashah, a holiday and a custom passage of the P
   await expect(page.getByRole("button", { name: "Previous week", exact: true })).toHaveCount(0);
   await passageButton(page, "Haftarah").click();
   await expect(verse(page, "Isaiah 54:1")).toBeVisible();
+  await expect(page).toHaveTitle("Noach | CRC Torah"); // the address changed; the title stays
   await expect(page).toHaveURL(/\/read\?reading=noach&passage=2$/);
   await page.reload();
   await expect(passageButton(page, "Haftarah")).toHaveAttribute("aria-pressed", "true");
@@ -86,6 +89,7 @@ test("Choose a reading opens a parashah, a holiday and a custom passage of the P
   await custom.locator("form").nth(2).getByRole("button", { name: "Open", exact: true }).click();
   await expect(page).toHaveURL(/\/read\?ref=Jonah\+1%3A1-5&kind=haftarah$/);
   await expect(page.getByRole("heading", { level: 1, name: "Jonah 1:1–5", exact: true })).toBeVisible();
+  await expect(page).toHaveTitle("Jonah 1:1–5 | CRC Torah");
   await expect(page.getByText("Any reading", { exact: true })).toBeVisible();
   await expect(verse(page, "Jonah 1:5")).toBeVisible();
   expect(await noHorizontalScroll(page)).toBe(true);
@@ -96,6 +100,7 @@ test("a deep link opens its verse selected in the player, on the right text page
   const refs = expandReadingRanges(["Genesis 1:1-6:8"], "torah", TANAKH_VERSE_COUNTS);
   await page.goto("/read?ref=Genesis+1%3A1-6%3A8&kind=torah&verse=120");
   await expect(page.getByText("Verses 101–146 of 146", { exact: true })).toBeVisible();
+  await expect(page).toHaveTitle("Genesis 1:1–6:8 | CRC Torah");
   const player = page.getByRole("region", { name: "Reading playback", exact: true });
   await expect(player.getByText(`${refs[119]} · Whole verse`, { exact: true })).toBeVisible();
   await expect(player.getByRole("button", { name: "Play", exact: true })).toBeEnabled();
@@ -117,6 +122,7 @@ test("Study works in a named reading, and an address that names nothing shows th
     await page.goto(address);
     await expect(page.getByRole("heading", { level: 1, name: "Reading unavailable", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "That reading isn’t available", exact: true })).toBeVisible();
+    await expect(page).toHaveTitle("Reading unavailable | CRC Torah");
     await expect(chooser(page)).toBeVisible();
   }
 });

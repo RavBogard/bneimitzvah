@@ -29,6 +29,8 @@ import styles from "./public-reading.module.css";
 const displayRange = (ranges: readonly string[]) => ranges.join("; ").replace(/(\d)-(\d)/g, "$1–$2");
 const statusOf = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
 const longDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
+/** Week mode keeps the static page title. */
+const WEEK_TITLE = "This week’s reading";
 const GROUP_EYEBROW: Readonly<Record<NamedReading["group"], string>> = { parashah: "Parashah", special: "Special Shabbat", festival: "Festival", fast: "Fast day" };
 
 /** This week is plain /read; another Shabbat and the Study lens are in the address, so it can be shared. */
@@ -46,7 +48,7 @@ export function PublicReading() {
   const [address, setAddress] = useState<ReadAddress | null>(null), [query, setQuery] = useState<Lens | null>(null);
   useEffect(() => { setQuery(lensFromSearch(window.location.search)); setAddress(parseReadAddress(window.location.search)); }, []);
   return <StudyLensScope storageKey={LENS_STORAGE.weekly} query={query}>
-    {!address ? <Shell><Hero eyebrow="Torah and haftarah" title="Loading the reading" /></Shell>
+    {!address ? <Shell title={WEEK_TITLE}><Hero eyebrow="Torah and haftarah" title="Loading the reading" /></Shell>
       : address.target?.mode === "week" ? <WeekReading initial={address.target} verse={address.verse} />
         : address.target ? <ChosenReading target={address.target} verse={address.verse} />
           : <Unavailable />}
@@ -56,7 +58,20 @@ export function PublicReading() {
 const go = (address: string) => { try { window.location.assign(address); } catch { /* Stay. */ } };
 function replaceAddress(address: string) { try { if (window.location.pathname + window.location.search !== address) window.history.replaceState(null, "", address); } catch { /* Address bar stays as it was. */ } }
 
-function Shell({ children }: { children: ReactNode }) {
+export const readTitle = (name: string) => `${name} | CRC Torah`;
+/** The tab names what is shown. The page is one static shell whose metadata says "This week’s reading", and
+ * Next writes that title again after hydration, so a single document.title write is lost; this keeps it. */
+export function useDocumentTitle(text: string) {
+  useEffect(() => {
+    const apply = () => { if (document.title !== text) document.title = text; };
+    apply();
+    let observer: MutationObserver | null = null;
+    try { observer = new MutationObserver(apply); observer.observe(document.head, { childList: true, subtree: true, characterData: true }); } catch { /* The title stays as written. */ }
+    return () => observer?.disconnect();
+  }, [text]);
+}
+function Shell({ title, children }: { title: string; children: ReactNode }) {
+  useDocumentTitle(readTitle(title));
   return <div className="portal-shell">
     <a className="skip-link" href="#public-reading-main">Skip to the reading</a>
     <header className="portal-header app-bar"><a className="portal-brand" href="/">CRC Torah</a><a className="app-bar-account" href="/sign-in">Sign in</a></header>
@@ -101,7 +116,7 @@ function useStarter() {
 
 function Unavailable() {
   const chooser = useChooser(true), today = useToday();
-  return <Shell>
+  return <Shell title="Reading unavailable">
     <Hero eyebrow="Torah and haftarah" title="Reading unavailable" nav={<>{today && <button type="button" className="button-hero-secondary" onClick={() => go("/read")}>This week</button>}{chooser.button}</>} />
     {chooser.panel}
     <div className="workspace-state" role="status"><h2>That reading isn’t available</h2><p>The address doesn’t name a reading this page can open. Choose one, or go back to this week.</p></div>
@@ -130,7 +145,7 @@ function WeekReading({ initial, verse }: { initial: Extract<ReadTarget, { mode: 
   const sources = useMemo(() => current ? (["torah", "haftarah"] as const).flatMap(row => { const source = weekSource(current, row); return source ? [{ label: row === "torah" ? "Torah" : "Haftarah", source }] : []; }) : [], [current]);
   const change = (next: string) => { if (next !== date) { setDate(next); setKind(null); setLinked(null); } };
   const index = Math.max(0, sources.findIndex(row => row.source.passage.kind === kind)), isThisWeek = date !== null && date === today;
-  return <Shell>
+  return <Shell title={WEEK_TITLE}>
     <Hero eyebrow={isThisWeek ? "This Shabbat" : date ? "Shabbat" : "Torah and haftarah"} title={current ? current.parashah ?? "Shabbat reading" : week?.error ? "Reading unavailable" : "Loading the reading"}
       meta={date && <><time dateTime={date}>{longDate(date)}</time>{current?.torah && <> · Torah <bdi dir="ltr">{displayRange(current.torah.ranges)}</bdi></>}{current?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(current.haftarah.ranges)}</bdi></>}</>}
       nav={<>
@@ -161,7 +176,6 @@ function ChosenReading({ target, verse }: { target: Extract<ReadTarget, { mode: 
   const title = named ? named.name : target.mode === "ref" ? displayRange([target.ref]) : "Reading";
   const [index, setIndex] = useState(target.mode === "named" ? Math.min(target.passage, passages.length) - 1 : 0), [linked, setLinked] = useState(verse);
   const [loaded, setLoaded] = useState<{ sources?: readonly LabelledSource[]; error?: number } | null>(null), [retry, setRetry] = useState(0);
-  useEffect(() => { try { document.title = `${title} | CRC Torah`; } catch { /* Keep the title. */ } }, [title]);
   useEffect(() => {
     const address: ReadTarget = target.mode === "named" ? { mode: "named", slug: target.slug, passage: index + 1 } : target;
     replaceAddress(readAddress(address, { verse: linked, study: lens.lens === "study" }));
@@ -176,7 +190,7 @@ function ChosenReading({ target, verse }: { target: Extract<ReadTarget, { mode: 
     return () => controller.abort();
   }, [passages, retry]);
   const sources = loaded?.sources ?? [];
-  return <Shell>
+  return <Shell title={title}>
     <Hero eyebrow={named ? GROUP_EYEBROW[named.group] : "Any reading"} title={loaded?.error ? "Reading unavailable" : title}
       meta={<>{passages.map((row, at) => <span key={at}>{at > 0 && " · "}{row.label} <bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</>}
       nav={<><button type="button" className="button-hero-secondary" onClick={() => go(readAddress({ mode: "week", date: null, kind: null }, { study: lens.lens === "study" }))}>This week</button>{chooser.button}</>}
