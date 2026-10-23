@@ -1,0 +1,56 @@
+/* A member's saved readings (Release 1.4), inside the Song session world: white objects with
+   hairlines on the canvas, lake as the only accent, no shadows, badges or new motion. */
+
+/* Save on /read: a quiet secondary beside the passage, opening inline. */
+.save { display: contents; }
+.line { flex: 1 1 100%; margin: 0; }
+.line a { display: inline-flex; align-items: center; min-height: 44px; }
+.panel { flex: 1 1 100%; display: grid; gap: 1rem; max-width: 32rem; margin-top: 0.25rem; padding: 1.25rem 1.25rem 1.5rem; border-radius: var(--radius-object);
+  background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.panel label { margin-bottom: 0.5rem; }
+.panel input { border-radius: var(--radius-control); }
+.optional { color: var(--color-muted); font-weight: 400; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.actions > :global(.button-primary) { width: auto; }
+.panel > :global(.request-error) { margin: 0; }
+
+/* My readings on the front door, between This week and the doors. */
+.mine { min-width: 0; margin-bottom: 2.5rem; padding: 1.5rem 1.5rem 1.75rem; border-radius: var(--radius-object); background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-rule); overflow-wrap: anywhere; }
+.mineTitle { font-size: 1.5rem; }
+.mineLine { margin-top: 0.5rem; color: var(--color-muted); }
+.list { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: 0; }
+.list li + li { border-top: 1px solid var(--color-rule); }
+.item { display: flex; flex-direction: column; justify-content: center; gap: 0.125rem; min-height: 56px; padding-block: 0.625rem; color: var(--color-ink); text-decoration: none; }
+.item:hover .itemName { text-decoration: underline; text-underline-offset: 0.2em; }
+.itemName { color: var(--color-action); font-weight: 650; }
+.itemMeta { color: var(--color-muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.more { margin-top: 0.75rem; }
+
+@media (max-width: 640px) {
+  .panel { padding: 1rem 1rem 1.25rem; }
+  .actions > :global(.button-primary), .actions > :global(.button-secondary) { flex: 1 1 0; min-width: 0; }
+  .mine { margin-bottom: 2rem; padding: 1.25rem 1rem 1.5rem; }
+  .more { width: 100%; }
+}
+
+/* /read?saved=<id>: Edit opens inline under the hero; Remove asks once, in place. */
+.editForm { display: grid; gap: 1rem; }
+.remove { display: grid; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--color-rule); }
+.confirmLine { margin: 0; }
+.danger { color: var(--color-danger); }
+.editNotice { margin: 0.75rem 0 0; color: var(--color-muted); }
+
+/* A saved reading's own marks on the selected verse in Lein, with the progress marks' inks:
+   marigold behind ink for Still working, forest on its tint for Got it. */
+.marksRow { display: grid; gap: 0.375rem; margin-block: 1rem 0.5rem; }
+.marks { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.mark { display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; min-height: 44px; padding: 0 1.125rem; border: 1px solid var(--color-control-rule);
+  border-radius: 999px; background: var(--color-surface); color: var(--color-ink); font-size: 0.9375rem; font-weight: 650; }
+.mark:hover { background: var(--color-hover); }
+.mark[aria-pressed="true"][data-state="working"] { border-color: transparent; background: color-mix(in srgb, var(--marigold) 22%, var(--color-surface)); color: var(--color-ink); }
+.mark[aria-pressed="true"][data-state="got-it"] { border-color: transparent; background: color-mix(in srgb, var(--color-teal) 14%, var(--color-surface)); color: var(--color-teal); }
+.mark[aria-disabled="true"] { cursor: progress; opacity: 0.7; }
+.markNote { margin: 0; min-height: 1.25em; color: var(--color-muted); font-size: 0.875rem; }
+.markNote:empty { min-height: 0; }
+@media (max-width: 640px) { .mark { flex: 1 1 0; } }

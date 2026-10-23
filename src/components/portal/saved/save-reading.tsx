@@ -1,0 +1,86 @@
+"use client";
+import { useEffect, useId, useRef, useState } from "react";
+import { createSavedReading, fetchSavedReadings, type SavedKind } from "./api";
+import { savedReadingHref } from "./my-readings";
+import styles from "./saved.module.css";
+
+/** The passage on screen, as /read knows it: the page's title (a parashah, a named reading or a range; absent on a
+ * Shabbat with no weekly portion), the passage's own label (Torah, Haftarah, or a named reading's), and its Shabbat when it has one. */
+export type SavablePassage = Readonly<{ title: string | null; label: string | null; kind: SavedKind; ranges: readonly string[]; date: string | null }>;
+export type SaveStep = "idle" | "checking" | "signed-out" | "not-eligible" | "form" | "saving" | "saved" | "unavailable";
+export type SaveProblem = null | "invalid" | "limit" | "unavailable";
+
+const kindName = (kind: SavedKind) => kind === "torah" ? "Torah" : "Haftarah";
+/** "{title} · {label}" ("Noach · Torah"), within the 80-character name the server keeps. */
+export function suggestedName(passage: SavablePassage): string {
+  return Array.from(`${passage.title ?? "Shabbat reading"} · ${passage.label ?? kindName(passage.kind)}`).slice(0, 80).join("");
+}
+const problems: Record<Exclude<SaveProblem, null>, string> = {
+  invalid: "Use a name of 1 to 80 characters and a real date, or leave the date empty.",
+  limit: "You have 100 saved readings, the most an account keeps. Remove one to save another.",
+  unavailable: "The reading didn’t save. Try again.",
+};
+
+/** The quiet Save beside the passage, in each of its states. Everything opens inline; nothing is a dialog. */
+export function SaveReadingView({ step, problem, name, date, panelId, savedId = null, onSave, onName, onDate, onSubmit, onCancel }: {
+  step: SaveStep; problem: SaveProblem; name: string; date: string; panelId: string; savedId?: string | null;
+  onSave: () => void; onName: (value: string) => void; onDate: (value: string) => void; onSubmit: () => void; onCancel: () => void;
+}) {
+  const open = step === "form" || step === "saving";
+  return <div className={styles.save} data-save-step={step}>
+    {step !== "saved" && <button type="button" className="button-hero-secondary" aria-expanded={open} aria-controls={open ? panelId : undefined}
+      disabled={step === "checking" || step === "saving"} onClick={onSave}>Save</button>}
+    {step === "signed-out" && <p className={styles.line}><a href="/sign-in">Sign in to save readings</a></p>}
+    {step === "not-eligible" && <p className={styles.line}><a href="/account">Ask for an account to save readings</a></p>}
+    {step === "unavailable" && <p className={styles.line} role="status">Saving isn’t available right now. Try again.</p>}
+    {step === "saved" && <p className={styles.line} role="status">Saved to <a href="/">My readings</a>.{savedId && <> <a href={savedReadingHref(savedId)}>Open your reading</a></>}</p>}
+    {open && <form id={panelId} className={styles.panel} aria-label="Save this reading" onSubmit={event => { event.preventDefault(); onSubmit(); }}>
+      <div><label htmlFor={`${panelId}-name`}>Name</label>
+        <input id={`${panelId}-name`} name="name" value={name} maxLength={80} required autoComplete="off" onChange={event => onName(event.target.value)} /></div>
+      <div><label htmlFor={`${panelId}-date`}>Date <span className={styles.optional}>(optional)</span></label>
+        <input id={`${panelId}-date`} name="date" type="date" value={date} onChange={event => onDate(event.target.value)} /></div>
+      {problem && <p className="request-error" role="alert">{problems[problem]}</p>}
+      <div className={styles.actions}>
+        <button type="submit" className="button-primary" disabled={step === "saving"}>Save reading</button>
+        <button type="button" className="button-secondary" disabled={step === "saving"} onClick={onCancel}>Cancel</button>
+      </div>
+    </form>}
+  </div>;
+}
+
+/**
+ * Save on the signed-out reading (accounts plan §5). It asks about the account only when pressed:
+ * signed out it offers sign-in, an account without saved readings is pointed to /account, and a
+ * member gets an inline form pre-filled with the passage's name and its Shabbat.
+ */
+export function SaveReading({ passage }: { passage: SavablePassage }) {
+  const [step, setStep] = useState<SaveStep>("idle"), [problem, setProblem] = useState<SaveProblem>(null), [savedId, setSavedId] = useState<string | null>(null);
+  const [name, setName] = useState(() => suggestedName(passage)), [date, setDate] = useState(passage.date ?? "");
+  const panelId = useId(), live = useRef<AbortController | null>(null);
+  // Another passage on screen starts over; nothing typed for the last one carries across.
+  const key = JSON.stringify([passage.kind, passage.ranges, passage.date, passage.title, passage.label]);
+  useEffect(() => { live.current?.abort(); setStep("idle"); setProblem(null); setName(suggestedName(passage)); setDate(passage.date ?? ""); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => live.current?.abort(), []);
+  const begin = () => { live.current?.abort(); const controller = new AbortController(); live.current = controller; return controller; };
+  const onSave = () => {
+    if (step === "form") { setStep("idle"); setProblem(null); return; }
+    const controller = begin(); setStep("checking");
+    fetchSavedReadings(controller.signal).then(list => {
+      if (controller.signal.aborted) return;
+      setStep(list.state === "signed-out" ? "signed-out" : list.state === "not-eligible" ? "not-eligible" : "form");
+    }, () => { if (!controller.signal.aborted) setStep("unavailable"); });
+  };
+  const onSubmit = () => {
+    const trimmed = name.trim(), length = Array.from(trimmed).length;
+    if (length < 1 || length > 80 || (date && !/^\d{4}-\d{2}-\d{2}$/.test(date))) { setProblem("invalid"); return; }
+    const controller = begin(); setStep("saving"); setProblem(null);
+    createSavedReading({ name: trimmed, date: date || null, kind: passage.kind, ranges: passage.ranges.join("; ") }, controller.signal).then(result => {
+      if (controller.signal.aborted) return;
+      if (result.ok) { setSavedId(result.reading.id); setStep("saved"); return; }
+      if (result.code === "signed-out" || result.code === "not-eligible") { setStep(result.code); return; }
+      setStep("form"); setProblem(result.code);
+    });
+  };
+  return <SaveReadingView step={step} problem={problem} name={name} date={date} panelId={panelId} savedId={savedId} onSave={onSave} onName={setName} onDate={setDate} onSubmit={onSubmit}
+    onCancel={() => { live.current?.abort(); setStep("idle"); setProblem(null); }} />;
+}

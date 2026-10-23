@@ -15,7 +15,7 @@ export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invi
  * would be wrong, and it has no account page it can use, so the bar stays empty; the door itself offers Sign out.
  */
 export const frontDoorAccount = (view: View): FrontDoorAccount => view.kind === "loading" || view.kind === "forbidden" ? null
-  : view.kind === "signed-in" ? { kind: "account", role: view.summary.roles.length === 1 ? roleNames[view.summary.roles[0]] : null } : { kind: "sign-in" };
+  : view.kind === "signed-in" ? { kind: "account", role: view.summary.roles.length === 1 ? roleNames[view.summary.roles[0]] : null, saved: view.summary.saved } : { kind: "sign-in" };
 type Action = "google" | "email" | "accept" | "sign-out";
 const rolePath = (role: SessionSummary["roles"][number]) => role === "admin" ? "/workspace/admin/students" : `/workspace/${role}`;
 const roleTasks: Record<SessionSummary["roles"][number], string> = { student: "your assigned reading", parent: "your child’s preparation and practice", tutor: "the students you teach", admin: "students, people and setup" };
@@ -52,8 +52,10 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
   useEffect(() => {
     refresh();
     const visible = () => { if (document.visibilityState === "visible") refresh(); };
-    window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", visible);
-    return () => { generation.current++; controller.current?.abort(); window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", visible); };
+    // A page restored from the back-forward cache (after signing out on a shared device) checks its session again.
+    const restored = (event: PageTransitionEvent) => { if (event.persisted) refresh(); };
+    window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", visible); window.addEventListener("pageshow", restored);
+    return () => { generation.current++; controller.current?.abort(); window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", visible); window.removeEventListener("pageshow", restored); };
   }, [refresh]);
   useEffect(() => {
     if (view.kind !== "loading" && focusNext.current) { heading.current?.focus(); focusNext.current = false; }

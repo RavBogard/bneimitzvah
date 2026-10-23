@@ -296,7 +296,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       }
       case "session": {
         uniqueQuery(request.url, []); const value = await runtime.portal.sessionSummary(request);
-        return privateJson({ membershipAvailable: value.membershipAvailable, roles: value.roles.map(role => role), sessionBinding: value.sessionBinding });
+        return privateJson({ membershipAvailable: value.membershipAvailable, roles: value.roles.map(role => role), saved: value.saved, sessionBinding: value.sessionBinding });
       }
       case "students": {
         const query = uniqueQuery(request.url, ["mode", "afterId", "limit"]), limit = query.get("limit");
