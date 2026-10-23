@@ -74,8 +74,9 @@ export function FrontDoor({ account, onSignIn, children }: { account: FrontDoorA
         </section>
         <section className={styles.door} aria-labelledby="learn-title" data-door="learn">
           <h2 id="learn-title" className={styles.doorTitle}>Learn to lein</h2>
-          <p className={styles.doorLine}>Start with the trope chart: every family of trope marks, with the name of each sign.</p>
-          <a className={`button-hero-secondary ${styles.doorAction}`} href="/trope-chart">Open the trope chart</a>
+          <p className={styles.doorLine}>Hear the phrases, then lein a verse of this week's reading.</p>
+          <a className={`button-start ${styles.doorAction} ${styles.doorStart}`} href="/learn" aria-describedby="learn-title">Start</a>
+          <p className={styles.doorMore}><a href="/trope-chart">Trope chart</a></p>
         </section>
       </div>
     </main>

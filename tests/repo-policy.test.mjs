@@ -83,6 +83,20 @@ test("reviewed config and synthetic fixture paths do not bypass content checks",
   assert.ok(entryProblems("src/leak.ts", samples[0]).includes("credential pattern"));
 });
 
+test("only the exact course data file is allowed, and never with fields derived from the private index", () => {
+  const path = "src/lib/learn/lessons.json";
+  const course = JSON.stringify({ schema: "learn-to-lein-course/v1", lessons: [{ id: "torah-sof-pasuk", examples: [{ ref: "Genesis 1:1", words: [3, 6] }] }] });
+  assert.deepEqual(entryProblems(path, course), []);
+  for (const neighbor of ["src/lib/learn/lessons-full.json", "src/lib/learn/other.json", "src/lib/learn/nested/lessons.json", "src/lessons.json"]) {
+    assert.ok(entryProblems(neighbor, course).includes("data file outside reviewed allow-list"));
+  }
+  for (const field of ["alignScore", "recording", "indexWords"]) {
+    assert.ok(entryProblems(path, JSON.stringify({ lessons: [{ examples: [{ [field]: 1 }] }] })).includes("private index field in course data"), field);
+  }
+  assert.ok(entryProblems(path, JSON.stringify({ notes: "C:/private/pockettorah/x" })).includes("private index field in course data"));
+  assert.ok(entryProblems(path, JSON.stringify({ token: "vercel_blob_" + "rw_" + "syntheticMetadataToken" })).includes("credential pattern"));
+});
+
 test("only exact design token metadata is allowed while credential, email and binary checks remain active", () => {
   const path = ".impeccable/design.json";
   const tokens = JSON.stringify({ colors: { paper: "#fffdf8", ink: "#252520" }, fonts: { body: "system-ui" }, tokens: { space: 8 } });
