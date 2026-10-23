@@ -19,6 +19,7 @@ import { ServiceLearningPanel, type ServiceReload } from "./service-learning/pan
 import { ReadingToolbar } from "./reading-toolbar";
 import { PracticeSheet } from "./study/practice-sheet";
 import { ReadingPrefsScope } from "./reading-prefs";
+import { LENS_STORAGE, StudyLensScope } from "./study-lens";
 import { ProgressStore } from "./progress/store";
 import { GuideStore } from "./study/guide-store";
 import { GuideCard, GuideVerseNotes } from "./study/guide-card";
@@ -294,7 +295,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
     event.preventDefault(); setTab(pageTabs[next][0]); document.getElementById(tabId(pageTabs[next][0]))?.focus();
   };
   const countdown = student ? ceremonyCountdown(student.ceremonyDate) : null, marked = useProgressSummary(progress, selectedReading?.kind);
-  return <ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><DepartureReview coordinator={work} /><div className="reading-workspace reading-with-work" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
+  // Learners (students, child practice, parents) always open in Lein; staff open in the lens they last used.
+  return <ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} /><div className="reading-workspace reading-with-work" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
     <section aria-label="Assigned reading">
       {!student ? <div className="workspace-state" aria-live="polite"><h2>{current?.error ? "Reading unavailable" : "Loading the assigned reading"}</h2>
         <p>{current?.error === 404 || current?.error === 403 ? "This reading is no longer available in the selected role. Choose another available student." : current?.error ? "We couldn’t load the confirmed assignment. No previous student’s reading is being shown." : "Checking the selected student and confirmed references."}</p>
@@ -336,7 +338,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       {current?.loading && <p role="status">Checking the current assignment…</p>}
       {readings.length === 0 ? <div className="reading-empty"><h3>No reading has been assigned yet</h3><p>Your tutor or rabbi will confirm the verses here.</p></div>
         : <AssignmentContext row={selectedReading} current />}</>}</>}
-      {tabPanel("reading", <>{student && authorizedReading && !concealed && !exploring && selectedReading && mode === "admin" && <GuideStatusLine kind={selectedReading.kind} readingKey={selectedReading.readingKey ?? null} />}{student && authorizedReading && !concealed && !exploring && selectedReading && <div className={`guide-place guide-place-wide`}><GuideCard store={guide} kind={selectedReading.kind} firstName={student.firstName} learner={learner} onStudy={() => setWalking(true)} /></div>}{walking && selectedReading && guide.view(selectedReading.kind) && <GuideWalk view={guide.view(selectedReading.kind)!} lookup={ref => verseLookup.current?.(ref) ?? null} onClose={closeWalk} />}<div className="reading-passage-layout" ref={readingPanel}>{student && song && (!tabbed || tab === "reading") && <ReadingToolbar listeningEnabled={listeningEnabled} tikkunAvailable={exploring || selectedReading?.kind === "torah"} onHear={(exploring ? proposedHearReady : hearReady) && !concealed && !current?.loading ? startReading : undefined} />}
+      {tabPanel("reading", <>{student && authorizedReading && !concealed && !exploring && selectedReading && mode === "admin" && <GuideStatusLine kind={selectedReading.kind} readingKey={selectedReading.readingKey ?? null} />}{student && authorizedReading && !concealed && !exploring && selectedReading && <div className={`guide-place guide-place-wide`}><GuideCard store={guide} kind={selectedReading.kind} firstName={student.firstName} learner={learner} onStudy={() => setWalking(true)} /></div>}{walking && selectedReading && guide.view(selectedReading.kind) && <GuideWalk view={guide.view(selectedReading.kind)!} lookup={ref => verseLookup.current?.(ref) ?? null} onClose={closeWalk} />}<div className="reading-passage-layout" ref={readingPanel}>{student && song && (!tabbed || tab === "reading") && <ReadingToolbar listeningEnabled={listeningEnabled} tikkunAvailable={exploring || selectedReading?.kind === "torah"} worksCorpus={exploring || selectedReading?.kind !== "haftarah" ? "torah" : "neviim"} onHear={(exploring ? proposedHearReady : hearReady) && !concealed && !current?.loading ? startReading : undefined} />}
         {authorizedReading && !listeningEnabled && <p className="field-help">{readings.length ? "Listening isn’t available yet. You can read, use word tools and practice up close." : "Listening isn’t available yet. You can keep reading the Torah portion."}</p>}
         <ProposedTorahText audio={audio} hearHandle={proposedHear} onReadingReady={setProposedReady} onHearReady={setProposedHearReady} baseline={current?.loading ? null : current?.value ?? null} reloadMetadata={load} active={!tabbed || tab === "reading"} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} />
         {exploring && readings.length > 0 && <header><h3>Assigned Haftarah</h3><p className="reading-reference">{displayRange(readings[0].ranges)}</p>
@@ -364,5 +366,5 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
     {tabPanel("lessons", <>{staff && student && authorizedReading && !concealed && <StaffPracticeDays calendar={calendar} firstName={student.firstName} />}<LessonLog mode={mode} studentId={studentId} register={registerLessons} tabbed={tabbed} /></>)}
     {printing && authorizedReading && !concealed && selectedReading && <PracticeSheet baseline={authorizedReading} initialKind={selectedReading.kind} onClose={() => setPrinting(false)}
       authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} />}
-  </ReadingPrefsScope>;
+  </StudyLensScope></ReadingPrefsScope>;
 }

@@ -34,7 +34,9 @@ const classes = (node: Element) => (node.attrs.find(attr => attr.name === "class
 const note = (node: Element) => (node.tagName === "sup" && classes(node).join() === "footnote-marker")
   || (node.tagName === "i" && classes(node).join() === "footnote");
 function basic(node: Node, hebrew: boolean): string {
-  if (node.nodeName === "#text") return plain((node as DefaultTreeAdapterMap["textNode"]).value, hebrew);
+  // A raw newline in a text node is whitespace, as in HTML (Sefaria's JPS 2023 wraps small caps in them:
+  // "\nG<small>OD</small>\n said"); only <br> makes an English line break.
+  if (node.nodeName === "#text") { const value = (node as DefaultTreeAdapterMap["textNode"]).value; return plain(hebrew ? value : value.replace(/\n/g, " "), hebrew); }
   const el = element(node);
   if (note(el)) return ""; // Entire subtree omitted; never render or follow links.
   const cls = classes(el);

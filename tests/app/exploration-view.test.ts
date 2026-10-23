@@ -62,3 +62,18 @@ test("unresolved slot and temporary failures offer honest recovery with no inven
   const stale = renderToStaticMarkup(createElement(ExplorationContent, { ...actions, state: { pending: false, error: 409 } }));
   expect(stale).toContain("Refresh reading"); expect(stale).not.toContain("Checking your access");
 });
+
+test("the proposed portion has the Lein | Study switch for staff and learners alike, and Study shows verse rows with no tikkun", async () => {
+  const { StudyLensScope } = await import("../../src/components/portal/workspace/study-lens");
+  const content = createElement(ExplorationContent, { ...actions, state: { pending: false, result: explorationPrepared(), page: explorationPage() } });
+  const lein = renderToStaticMarkup(createElement(StudyLensScope, { storageKey: null, children: content }));
+  expect(lein).toMatch(/aria-pressed="true" data-lens="lein">Lein<\/button>/);
+  expect(lein).not.toContain("data-study-rows");
+  const study = renderToStaticMarkup(createElement(StudyLensScope, { storageKey: null, query: "study", children: content }));
+  expect(study).toContain("data-study-rows");
+  expect(study).not.toContain("data-tikkun");
+  // The proposed portion's words have no tools, and their labels say so.
+  expect(study).not.toContain("for tools");
+  // Outside a lens scope (no switch), the proposed portion is Lein exactly as before.
+  expect(renderToStaticMarkup(content)).not.toContain('aria-label="Reading lens"');
+});

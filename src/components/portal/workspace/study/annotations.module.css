@@ -49,3 +49,7 @@
   /* With English between verses the column breaks, so each verse's tikkun is its own card. */
   .flowParagraph:has(.flowEnglish) .flowVerse .flowTikkun { border-radius: var(--radius-control); box-shadow: inset 0 0 0 1px var(--color-rule); padding-block: 0.5rem; }
 }
+/* The comment-to-word link: the quoted words are underlined while their comment is pointed at.
+   An underline that appears, never an animation; it sits below the lowest vowels. */
+.linked { text-decoration-line: underline; text-decoration-thickness: 0.07em; text-underline-offset: 0.5em; text-decoration-skip-ink: none; text-decoration-color: var(--lake-deep); }
+@media (prefers-color-scheme: dark) { .linked { text-decoration-color: var(--color-action); } }
