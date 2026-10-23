@@ -359,7 +359,7 @@ test("past 3 codes for an address in the hour, its sign-in emails carry the link
   // Same answer and binding cookie as any other request; only the email changes.
   expect(f.bindingOf(response)).not.toBe("");
   expect(mail.code).toBe("");
-  expect(mail.text).toBe(["Open this link to sign in:", "", mail.url, "", SIGN_IN_CODE_LINES.once, "", SIGN_IN_CODE_LINES.never("CRC Torah"), "",
+  expect(mail.text).toBe(["Open this link to sign in:", "", mail.url, "", SIGN_IN_CODE_LINES.linkOnce, "", SIGN_IN_CODE_LINES.never("CRC Torah"), "",
     "If you did not request this message, you can ignore it."].join("\n"));
   expect(mail.text.match(/\d{6,}/g)).toBeNull();
   // The capped email's link signs in.
@@ -370,8 +370,9 @@ test("past 3 codes for an address in the hour, its sign-in emails carry the link
   expect(lines.some(line => line.toLowerCase().includes("capped-learner"))).toBe(false);
   // The rows are keyed on an HMAC of the normalized address, never the address.
   const rows = await f.db.select().from(schema.verification).where(like(schema.verification.identifier, "sign-in-cap:%"));
-  expect(rows).toHaveLength(SIGN_IN_CODE_CAP.codesPerHour);
-  expect(rows.every(row => /^sign-in-cap:code:[a-f0-9]{64}$/.test(row.identifier))).toBe(true);
+  // One hour row and one day row per code issued; the capped request left none.
+  expect(rows).toHaveLength(SIGN_IN_CODE_CAP.codesPerHour * 2);
+  expect(rows.every(row => /^sign-in-cap:code(-day)?:[a-f0-9]{64}$/.test(row.identifier))).toBe(true);
   // A different address is unaffected.
   const other = await f.ask("other-learner@example.test");
   expect(other.mail.code).toMatch(/^\d{6}$/);
@@ -386,6 +387,26 @@ test("the code cap is a rolling hour: an hour after the first codes, the address
   vi.useFakeTimers({ toFake: ["Date"], now: start + SIGN_IN_CODE_CAP.windowMs + 60_000 });
   try { expect((await f.ask("rolling@example.test")).mail.code).toMatch(/^\d{6}$/); }
   finally { vi.useRealTimers(); }
+});
+
+test("past 6 codes for an address in a rolling 24 hours, its emails carry the link only even in a fresh hour", async () => {
+  const f = await fixture();
+  const start = Date.now(), hour = SIGN_IN_CODE_CAP.windowMs + 60_000;
+  try {
+    for (let batch = 0; batch < SIGN_IN_CODE_CAP.codesPerDay / SIGN_IN_CODE_CAP.codesPerHour; batch++) {
+      vi.useFakeTimers({ toFake: ["Date"], now: start + batch * hour });
+      for (let issued = 0; issued < SIGN_IN_CODE_CAP.codesPerHour; issued++) expect((await f.ask("daily@example.test")).mail.code).toMatch(/^\d{6}$/);
+    }
+    // A fresh hour, but the 24-hour window is full: link only, and the link still works.
+    vi.useFakeTimers({ toFake: ["Date"], now: start + 2 * hour });
+    const capped = await f.ask("daily@example.test");
+    expect(capped.mail.code).toBe("");
+    expect((await f.dispatch(f.request("/api/auth/email/confirm", { token: tokenOf(capped.mail) }))).status).toBe(200);
+    expect((await f.ask("other-daily@example.test")).mail.code).toMatch(/^\d{6}$/);
+    // 24 hours after the first batch, its codes leave the window and a code is issued again.
+    vi.useFakeTimers({ toFake: ["Date"], now: start + SIGN_IN_CODE_CAP.dayMs + 60_000 });
+    expect((await f.ask("daily@example.test")).mail.code).toMatch(/^\d{6}$/);
+  } finally { vi.useRealTimers(); }
 });
 
 test("9 failed tries for an address in the hour refuse every code for it, even a right one, as expired; the link still works", async () => {

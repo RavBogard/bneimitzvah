@@ -88,7 +88,7 @@ test("a capped address's sign-in email (an explicit null code) leaves out only t
   const url = link("magic-link");
   await send("magic-link", { email, productName, url, code: null });
   expect(sent[0].subject).toBe("Sign in to CRC Torah");
-  expect(sent[0].text).toBe(["Open this link to sign in:", "", url, "", SIGN_IN_CODE_LINES.once, "", SIGN_IN_CODE_LINES.never(productName), "",
+  expect(sent[0].text).toBe(["Open this link to sign in:", "", url, "", SIGN_IN_CODE_LINES.linkOnce, "", SIGN_IN_CODE_LINES.never(productName), "",
     "If you did not request this message, you can ignore it."].join("\n"));
   expect(sent[0].text.includes(SIGN_IN_CODE_LINES.code(productName))).toBe(false);
   expect(await safeFailure(() => send("magic-link", { email, productName, url }))).toBe(true);

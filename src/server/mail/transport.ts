@@ -40,6 +40,8 @@ export function projectMagicLink(urlValue: string, token: string, origin: string
 export const SIGN_IN_CODE_LINES = Object.freeze({
   code: (product: string) => `Or enter this code in the ${product} app:`,
   once: "The link and the code work once, for 5 minutes.",
+  // A capped address's link-only email: Daniel's line 3 with the code taken out (a derivation, not new wording).
+  linkOnce: "The link works once, for 5 minutes.",
   never: (product: string) => `No one from CRC will ever ask you for this code. Don’t read it to anyone or type it anywhere but ${product}.`,
 });
 const CODE = /^\d{6}$/;
@@ -51,9 +53,11 @@ function bodyOf(kind: Kind, link: string, code: string | null | undefined, produ
   // An invitation carries no code; its random token may hold digits by chance, so only the sign-in email is counted.
   if (kind === "invitation") return `Open this link to review your invitation:\n\n${link}\n\n${IGNORE}`;
   // The code is in the body only, never the subject (lock screens, provider subject logs). A capped address (null
-  // code) gets the link only: just the code's own line (its label and the code) is left out, the rest is unchanged.
+  // code) gets the link only: line 2 (the label and the code) is left out and line 3 names only the link; lines 1, 4
+  // and 5 are unchanged.
   const codeLines = code === null ? "" : `${SIGN_IN_CODE_LINES.code(product)}\n${code}\n\n`;
-  const body = `Open this link to sign in:\n\n${link}\n\n${codeLines}${SIGN_IN_CODE_LINES.once}\n\n${SIGN_IN_CODE_LINES.never(product)}\n\n${IGNORE}`;
+  const once = code === null ? SIGN_IN_CODE_LINES.linkOnce : SIGN_IN_CODE_LINES.once;
+  const body = `Open this link to sign in:\n\n${link}\n\n${codeLines}${once}\n\n${SIGN_IN_CODE_LINES.never(product)}\n\n${IGNORE}`;
   // Fail closed rather than send an email a phone could misread: no number but ASCII digits, and the code is the
   // only run of 6 or more of them (none at all when link-only; the sign-in token is letters only).
   const runs = body.match(/\p{N}{6,}/gu) ?? [];
