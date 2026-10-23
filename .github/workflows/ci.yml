@@ -70,12 +70,13 @@ jobs:
             echo "::warning::Runner image version unknown; packages will not be reused"
             echo "image=unknown-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
           fi
+      # The cache matches a key by prefix too, so no key may be a prefix of another job's key.
       - name: Restore Playwright browsers
         id: browsers
         uses: actions/cache/restore@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ runner.arch }}-${{ steps.keys.outputs.playwright }}-chromium-firefox
+          key: playwright-browsers-chromium-firefox-${{ runner.os }}-${{ runner.arch }}-${{ steps.keys.outputs.playwright }}
       - run: npx playwright install chromium firefox
         timeout-minutes: 10
       - name: Save Playwright browsers
@@ -83,7 +84,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ runner.arch }}-${{ steps.keys.outputs.playwright }}-chromium-firefox
+          key: playwright-browsers-chromium-firefox-${{ runner.os }}-${{ runner.arch }}-${{ steps.keys.outputs.playwright }}
       - name: Restore browser system packages and synthetic reference-audio test encoder
         id: debs
         uses: actions/cache/restore@v6
@@ -133,12 +134,13 @@ jobs:
             echo "::warning::Runner image version unknown; packages will not be reused"
             echo "image=unknown-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
           fi
+      # The cache matches a key by prefix too, so no key may be a prefix of another job's key.
       - name: Restore Playwright browsers
         id: browsers
         uses: actions/cache/restore@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ runner.arch }}-${{ steps.keys.outputs.playwright }}-chromium
+          key: playwright-browsers-chromium-${{ runner.os }}-${{ runner.arch }}-${{ steps.keys.outputs.playwright }}
       - run: npx playwright install chromium
         timeout-minutes: 10
       - name: Save Playwright browsers
@@ -146,7 +148,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ runner.arch }}-${{ steps.keys.outputs.playwright }}-chromium
+          key: playwright-browsers-chromium-${{ runner.os }}-${{ runner.arch }}-${{ steps.keys.outputs.playwright }}
       - name: Restore browser system packages
         id: debs
         uses: actions/cache/restore@v6
