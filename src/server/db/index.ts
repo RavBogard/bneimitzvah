@@ -19,4 +19,5 @@ export * from "./tenant-settings-schema";
 export * from "./roster-source-schema";
 export * from "./notification-schema";
 export * from "./saved-schema";
+export * from "./accounts-schema";
 export * from "./course-progress-schema";

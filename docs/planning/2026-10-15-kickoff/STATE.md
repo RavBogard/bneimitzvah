@@ -1,5 +1,9 @@
 # State — CRC B'nei Mitzvah portal
 
+**Order of the remaining work (Daniel, 2026-10-23 popup rulings; recorded in MISSION):** finish 1.5 (installable app, typed sign-in code, torah.centralreform.org; v1.5.0 is the beta tag and opens `/read`, `/learn` and `/trope-chart` to indexing), then 1.6 (Learn to lein look-alikes, which half, quick ten), then the voice track starting at M0. The real-family pilot waits until Daniel says when; nothing goes to families before it. Codex's PR #43 is "Review and close now", handled by Daniel. At most two builders at once, Sonnet for routine work; Daniel is interrupted only at release tags and true blockers.
+
+- GATE: filed Daniel's 2026-10-23 rulings from Cowork in MISSION and the two 1.5 plans (docs only, commit 85913c9) — proceeded because Daniel's answers are binding and the commit touches no code; `tests/never-in-repo.test.mjs` and `scripts/repo-policy.mjs` passed.
+
 ## Current return point — 2026-10-21 night: toward 1.0
 
 **Daniel, 2026-10-21 night:** "continue until we are feature complete and 1.0 released." Rulings the same evening: (1) the Bamidbar guide goes live now, labelled unreviewed until the MCP can record his review; (2) rewrite history to remove a student's details that a STATE line had exposed; (3) the tikkun uses the Culmus "Stam Ashkenaz CLM" face; (4) Maven reaches the portal through Cowork (Claude reads Maven with Daniel's existing connector and proposes roster changes through the portal MCP; the portal stores no Maven credential); (5) the roster Sheet is written by a free Google service account; (6) no translation picker in 1.0: the main text stays JPS 2023 (amends ruling 12's "translation picker across editions").

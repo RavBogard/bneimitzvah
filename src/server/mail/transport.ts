@@ -1,7 +1,6 @@
 import "server-only";
 import { mailbox } from "../runtime/config";
 import { RuntimeUnavailable } from "../runtime/errors";
-import { productName } from "./product-name";
 
 type Kind = "invitation" | "magic-link";
 const paths = { invitation: "/invitations/open", "magic-link": "/auth/email" } as const;
@@ -45,21 +44,23 @@ export const SIGN_IN_CODE_LINES = Object.freeze({
 });
 const CODE = /^\d{6}$/;
 const IGNORE = "If you did not request this message, you can ignore it.";
-function bodyOf(kind: Kind, link: string, code: string | undefined): string {
-  if (kind === "invitation") return `Open this link to review your invitation:\n\n${link}\n\n${IGNORE}`;
-  const product = productName();
-  // The code is in the body only, never the subject (lock screens, provider subject logs).
-  const body = `Open this link to sign in:\n\n${link}\n\n${SIGN_IN_CODE_LINES.code(product)}\n${code}\n\n${SIGN_IN_CODE_LINES.once}\n\n${SIGN_IN_CODE_LINES.never(product)}\n\n${IGNORE}`;
-  // Fail closed rather than send an email a phone could misread: the code is its only run of 6 or more digits, and
-  // there are no non-ASCII digits at all (a congregation's product name is a setting).
-  const runs = body.match(/\p{Nd}{6,}/gu) ?? [];
-  if (runs.length !== 1 || runs[0] !== code || /(?![0-9])\p{Nd}/u.test(body)) throw 0;
+// A congregation's product name (tenant.product_name, E1) as these emails accept it: a plain name with no number of
+// any kind, so no name can add a code-like run or a digit to a subject. A refused name sends nothing.
+const mailProductName = (value: unknown): value is string => plainName(value) && !/[\p{N}\p{Cf}\p{Cc}]/u.test(value as string);
+function bodyOf(kind: Kind, link: string, code: string | undefined, product: string): string {
+  const body = kind === "invitation" ? `Open this link to review your invitation:\n\n${link}\n\n${IGNORE}`
+    // The code is in the body only, never the subject (lock screens, provider subject logs).
+    : `Open this link to sign in:\n\n${link}\n\n${SIGN_IN_CODE_LINES.code(product)}\n${code}\n\n${SIGN_IN_CODE_LINES.once}\n\n${SIGN_IN_CODE_LINES.never(product)}\n\n${IGNORE}`;
+  // Fail closed rather than send an email a phone could misread: no number but ASCII digits, and the code (if any)
+  // is the only run of 6 or more of them.
+  const runs = body.match(/\p{N}{6,}/gu) ?? [];
+  if (/(?![0-9])\p{N}/u.test(body) || (kind === "invitation" ? runs.length !== 0 : runs.length !== 1 || runs[0] !== code)) throw 0;
   return body;
 }
-function subjectOf(kind: Kind): string {
-  const subject = kind === "invitation" ? `Your Beit Mitzvah invitation from ${productName()}` : `Sign in to ${productName()}`;
-  // No digits in a subject: a lock screen or Gmail card must never offer one as the code.
-  if (/\p{Nd}/u.test(subject)) throw 0;
+function subjectOf(kind: Kind, product: string): string {
+  const subject = kind === "invitation" ? `Your Beit Mitzvah invitation from ${product}` : `Sign in to ${product}`;
+  // No number in a subject: a lock screen or Gmail card must never offer one as the code.
+  if (/\p{N}/u.test(subject)) throw 0;
   return subject;
 }
 
@@ -73,11 +74,11 @@ export function createMailTransport(input: { origin: string; apiKey: string; fro
       || !mailbox(input.from) || !/^re_[A-Za-z0-9_-]{8,256}$/.test(input.apiKey)
       || !Number.isInteger(timeout) || timeout < 1 || timeout > 10000) throw 0;
   } catch { throw new RuntimeUnavailable(); }
-  return async (kind: Kind, message: Readonly<{ email: string; url: string; code?: string }>): Promise<void> => {
+  return async (kind: Kind, message: Readonly<{ email: string; url: string; productName: string; code?: string }>): Promise<void> => {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      if (!mailbox(input.from) || !mailbox(message.email)) throw 0;
+      if (!mailbox(input.from) || !mailbox(message.email) || !mailProductName(message.productName)) throw 0;
       // A sign-in email always carries its code; an invitation never does.
       if (kind === "magic-link" ? typeof message.code !== "string" || !CODE.test(message.code) : message.code !== undefined) throw 0;
       const link = canonicalLink(message.url, input.origin, kind);
@@ -86,8 +87,8 @@ export function createMailTransport(input: { origin: string; apiKey: string; fro
           const response = await input.fetch("https://api.resend.com/emails", {
             method: "POST", redirect: "error", credentials: "omit", signal: controller.signal,
             headers: { authorization: `Bearer ${input.apiKey}`, "content-type": "application/json" },
-            body: JSON.stringify({ from: input.from, to: [message.email], subject: subjectOf(kind),
-              text: bodyOf(kind, link, message.code) }),
+            body: JSON.stringify({ from: input.from, to: [message.email], subject: subjectOf(kind, message.productName),
+              text: bodyOf(kind, link, message.code, message.productName) }),
           });
           // No provider body/header/ID escapes, even on errors; do not buffer it.
           try {
@@ -144,6 +145,60 @@ export function createNotificationTransport(input: { origin: string; apiKey: str
           accepted = response.ok && !response.redirected && (!response.url || response.url === "https://api.resend.com/emails");
           refused = !accepted && response.status >= 400 && response.status < 500 && !response.redirected;
           // No provider body/header/ID escapes, even on errors; do not buffer it.
+          await response.body?.cancel().catch(() => {});
+          if (!accepted) throw 0;
+        })(),
+        new Promise<never>((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new RuntimeUnavailable()); }, timeout); }),
+      ]);
+      return "sent";
+    } catch { return accepted ? "sent" : refused ? "rejected" : "unknown"; }
+    finally { if (timer) clearTimeout(timer); controller.abort(); }
+  };
+}
+
+/**
+ * Release 1.4's two account emails, the only ones (accounts plan section 4). The transport writes every word itself:
+ * callers give a kind, one verified recipient, the congregation's own names and an idempotency key, never a URL,
+ * a requester's name or their purpose, so a request cannot relay text to staff. Its one link is a fixed path on
+ * this origin. Outside production (`enabled` false) it hands nothing to the provider and answers "skipped".
+ */
+export type AccountMailKind = "account-request" | "account-approved";
+export type AccountMailOutcome = NotificationOutcome | "skipped";
+const ACCOUNT_LINKS: Readonly<Record<AccountMailKind, string>> = { "account-request": "/workspace/accounts", "account-approved": "/" };
+const plainName = (value: unknown) => typeof value === "string" && value.length >= 1 && value.length <= 120 && value === value.trim() && !/[\x00-\x1f\x7f-\x9f\u00ad\u061c\u115f\u1160\u200b-\u200d\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\u3164\ufeff\uffa0\u{e0000}-\u{e007f}<>@]/u.test(value);
+export function accountMailText(kind: AccountMailKind, origin: string, tenant: Readonly<{ name: string; productName: string }>) {
+  const link = `${origin}${ACCOUNT_LINKS[kind]}`;
+  return kind === "account-request"
+    ? { subject: `An account request for ${tenant.productName}`,
+      text: `Someone has asked for a ${tenant.productName} account.\n\nReview account requests: ${link}\n\nYou receive this because you approve accounts for ${tenant.name}.` }
+    : { subject: `Your ${tenant.productName} account is ready`,
+      text: `Your account request was approved. Sign in with this email address to save readings and keep your own translation and notes.\n\n${link}\n\nIf you did not ask for an account, you can ignore this email.` };
+}
+export function createAccountMailTransport(input: { origin: string; apiKey: string; from: string; fetch: typeof globalThis.fetch; enabled: boolean; timeoutMs?: number }) {
+  const timeout = input.timeoutMs ?? 5000;
+  try {
+    const origin = new URL(input.origin);
+    if (origin.origin !== input.origin || origin.username || origin.password || !["http:", "https:"].includes(origin.protocol) || typeof input.enabled !== "boolean"
+      || !mailbox(input.from) || !/^re_[A-Za-z0-9_-]{8,256}$/.test(input.apiKey) || !Number.isInteger(timeout) || timeout < 1 || timeout > 10000) throw 0;
+  } catch { throw new RuntimeUnavailable(); }
+  return async (kind: AccountMailKind, to: string, tenant: Readonly<{ name: string; productName: string }>, idempotencyKey: string): Promise<AccountMailOutcome> => {
+    try {
+      if (!Object.hasOwn(ACCOUNT_LINKS, kind) || !mailbox(to) || !plainName(tenant?.name) || !plainName(tenant?.productName) || typeof idempotencyKey !== "string" || !UUID.test(idempotencyKey)) return "rejected";
+    } catch { return "rejected"; }
+    // Tests, local and preview deployments never reach a real person.
+    if (!input.enabled) return "skipped";
+    const message = accountMailText(kind, input.origin, tenant), controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined, refused = false, accepted = false;
+    try {
+      await Promise.race([
+        (async () => {
+          const response = await input.fetch("https://api.resend.com/emails", {
+            method: "POST", redirect: "error", credentials: "omit", signal: controller.signal,
+            headers: { authorization: `Bearer ${input.apiKey}`, "content-type": "application/json", "idempotency-key": idempotencyKey },
+            body: JSON.stringify({ from: input.from, to: [to], subject: message.subject, text: message.text }),
+          });
+          accepted = response.ok && !response.redirected && (!response.url || response.url === "https://api.resend.com/emails");
+          refused = !accepted && response.status >= 400 && response.status < 500 && !response.redirected;
           await response.body?.cancel().catch(() => {});
           if (!accepted) throw 0;
         })(),

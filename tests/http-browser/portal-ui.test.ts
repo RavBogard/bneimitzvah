@@ -163,7 +163,7 @@ it("prepares the real browser challenge and submits GIS credentials only in a bo
 it("cancellation and acknowledged logout discard late GIS callbacks without posting an old credential", async () => {
   const tab = await page(); await installGoogleBoundary(tab); let posts = 0, signedIn = false;
   await tab.route("**/api/auth/sign-in/social", async route => { posts++; await route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"authentication"}' }); });
-  await tab.route("**/api/session", route => signedIn ? route.fulfill({ contentType: "application/json", body: JSON.stringify({ roles: [], membershipAvailable: false, saved: false, sessionBinding: "A".repeat(43) }) }) : route.fallback());
+  await tab.route("**/api/session", route => signedIn ? route.fulfill({ contentType: "application/json", body: JSON.stringify({ roles: [], membershipAvailable: false, saved: false, approver: false, sessionBinding: "A".repeat(43) }) }) : route.fallback());
   await navigate(tab, "/"); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
   await safe(() => tab.getByRole("button", { name: "Continue with Google", exact: true }).click());
   await safe(() => tab.getByRole("button", { name: "Cancel Google sign-in", exact: true }).click());
@@ -356,7 +356,8 @@ it("keeps invitation landing nonaccepting and accepts one reviewed binding only,
 it("revalidates an uninvited real session after logout in another tab", async () => {
   const tab = await page(true); await navigate(tab, "/"); await signIn(tab, "ui-uninvited@example.test");
   expect(await tab.getByRole("list", { name: "Available roles" }).count()).toBe(0);
-  await ui(tab.getByText("No congregation role is linked to this account yet.", { exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: "Ask for an account", exact: true })).toBeVisible();
+  expect(await tab.getByText("No congregation role is linked to this account yet.", { exact: true }).count()).toBe(0);
   const other = await tab.context().newPage(); await navigate(other, "/");
   expect((await api(other, "/api/auth/sign-out", {})).status).toBe(200);
   await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));

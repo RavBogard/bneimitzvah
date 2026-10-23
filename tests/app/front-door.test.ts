@@ -111,7 +111,7 @@ test("a signed-in account that is refused sees neither Sign in nor an account li
   expect(frontDoorAccount({ kind: "forbidden" })).toBeNull();
   expect(frontDoorAccount({ kind: "loading" })).toBeNull();
   expect(frontDoorAccount({ kind: "sign-in" })).toEqual({ kind: "sign-in" });
-  expect(frontDoorAccount({ kind: "signed-in", summary: { membershipAvailable: true, roles: ["tutor"], saved: true, sessionBinding: "A".repeat(43) } })).toEqual({ kind: "account", role: "Tutor", saved: true });
+  expect(frontDoorAccount({ kind: "signed-in", summary: { membershipAvailable: true, roles: ["tutor"], saved: true, approver: false, sessionBinding: "A".repeat(43) } })).toEqual({ kind: "account", role: "Tutor", saved: true });
   const bar = (account: ReturnType<typeof frontDoorAccount>) => {
     const markup = renderToStaticMarkup(createElement(FrontDoor, { account, onSignIn: () => {}, children: createElement("p", null, "Synthetic task") }));
     return markup.slice(markup.indexOf("<header"), markup.indexOf("</header>"));

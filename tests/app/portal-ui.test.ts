@@ -35,16 +35,22 @@ describe("portal entry client trust and transport contracts", () => {
   });
   it("loads only a minimal session role summary and rejects unexpected identity/provider fields", () => {
     const sessionBinding = "a".repeat(43);
-    expect(parseSession({ membershipAvailable: false, roles: [], saved: false, sessionBinding })).toEqual({ membershipAvailable: false, roles: [], saved: false, sessionBinding });
-    expect(parseSession({ membershipAvailable: true, roles: ["parent", "tutor"], saved: true, sessionBinding })).toEqual({ membershipAvailable: true, roles: ["parent", "tutor"], saved: true, sessionBinding });
-    expect(parseSession({ membershipAvailable: true, roles: ["student"], saved: false, sessionBinding }).saved).toBe(false);
-    for (const value of [{ membershipAvailable: false, roles: ["admin"], saved: false }, { membershipAvailable: true, roles: ["admin", "admin"], saved: true },
-      { membershipAvailable: true, roles: ["owner"], saved: false }, { membershipAvailable: true, roles: [], saved: false, user: {} }, { membershipAvailable: "true", roles: [], saved: false },
+    expect(parseSession({ membershipAvailable: false, roles: [], saved: false, approver: false, sessionBinding })).toEqual({ membershipAvailable: false, roles: [], saved: false, approver: false, sessionBinding });
+    expect(parseSession({ membershipAvailable: true, roles: ["parent", "tutor"], saved: true, approver: false, sessionBinding })).toEqual({ membershipAvailable: true, roles: ["parent", "tutor"], saved: true, approver: false, sessionBinding });
+    expect(parseSession({ membershipAvailable: true, roles: ["student"], saved: false, approver: false, sessionBinding }).saved).toBe(false);
+    // An approved member may hold no role at all, and an admin or a designated tutor approves.
+    expect(parseSession({ membershipAvailable: true, roles: [], saved: true, approver: false, sessionBinding })).toMatchObject({ roles: [], saved: true });
+    expect(parseSession({ membershipAvailable: true, roles: ["tutor"], saved: true, approver: true, sessionBinding }).approver).toBe(true);
+    for (const value of [{ membershipAvailable: false, roles: ["admin"], saved: false, approver: false }, { membershipAvailable: true, roles: ["admin", "admin"], saved: true, approver: false },
+      { membershipAvailable: true, roles: ["owner"], saved: false, approver: false }, { membershipAvailable: true, roles: [], saved: false, approver: false, user: {} }, { membershipAvailable: "true", roles: [], saved: false, approver: false },
       // The saved flag is required, strictly boolean, and never true without a membership.
-      { membershipAvailable: true, roles: ["parent"] }, { membershipAvailable: true, roles: ["parent"], saved: "true" }, { membershipAvailable: true, roles: ["parent"], saved: 1 },
-      { membershipAvailable: false, roles: [], saved: true }])
+      { membershipAvailable: true, roles: ["parent"], approver: false }, { membershipAvailable: true, roles: ["parent"], saved: "true", approver: false }, { membershipAvailable: true, roles: ["parent"], saved: 1, approver: false },
+      { membershipAvailable: false, roles: [], saved: true, approver: false },
+      // So is the approver flag, and approving needs an admin or tutor role.
+      { membershipAvailable: true, roles: ["parent"], saved: true }, { membershipAvailable: true, roles: ["parent"], saved: true, approver: "true" },
+      { membershipAvailable: true, roles: ["parent"], saved: true, approver: true }, { membershipAvailable: true, roles: [], saved: true, approver: true }, { membershipAvailable: false, roles: [], saved: false, approver: true }])
       expect(() => parseSession({ ...value, sessionBinding })).toThrow(PortalRequestError);
-    expect(() => parseSession({ membershipAvailable: true, roles: [], saved: false, sessionBinding: "untrusted-readable-claims" })).toThrow(PortalRequestError);
+    expect(() => parseSession({ membershipAvailable: true, roles: [], saved: false, approver: false, sessionBinding: "untrusted-readable-claims" })).toThrow(PortalRequestError);
   });
 
   it("requires a reviewed invitation DTO without raw token/mailbox/session claims and enforces role-target shape", () => {

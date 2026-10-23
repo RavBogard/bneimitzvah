@@ -7,6 +7,7 @@ import { GoogleSignIn } from "./google-sign-in";
 import type { GoogleIntent } from "./sign-in-boundary";
 import { forgetPendingRequest } from "./pending-request";
 import { FrontDoor, type FrontDoorAccount } from "./front-door/front-door";
+import { AccountRequest } from "./account-request";
 
 export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "accepted" | "uncertain" }
   | { kind: "signed-in"; summary: SessionSummary } | { kind: "invitation"; review: InvitationReview };
@@ -170,8 +171,11 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
             </form></>)}
         {view.kind === "signed-in" && <>
           {view.summary.roles.length ? <><p>{view.summary.roles.length === 1 ? "Continue to your work." : "This account has more than one role. Choose what you want to do now; you can switch later from the top of the page."}</p><ul className="role-list" aria-label="Available roles">{view.summary.roles.map(role => <li key={role}><a href={rolePath(role)}>{roleNames[role]}</a><span className="field-help"> · {roleTasks[role]}</span></li>)}</ul><p><a href="/workspace/email">Email settings</a><span className="field-help"> · choose which portal emails you get</span></p>
-            {view.summary.roles.some(role => role === "admin" || role === "tutor") && <p><a href="/workspace/claude">Claude connections</a><span className="field-help"> · see and end Claude’s access to the portal</span></p>}</>
-            : <><p>No congregation role is linked to this account yet.</p><p>If you received an invitation, open its email link while signed in. Otherwise, ask your tutor or the congregation for an invitation.</p></>}
+            {view.summary.roles.some(role => role === "admin" || role === "tutor") && <p><a href="/workspace/claude">Claude connections</a><span className="field-help"> · see and end Claude’s access to the portal</span></p>}
+            {view.summary.approver && <p><a href="/workspace/accounts">Account requests</a><span className="field-help"> · approve accounts for people who ask</span></p>}
+            {/* A student-only account may ask for its own saved readings too (accounts plan choice B). */}
+            {!view.summary.saved && <AccountRequest level={doors ? 4 : 3} />}</>
+            : <><AccountRequest level={doors ? 4 : 3} />{!view.summary.saved && <p className="field-help">Received an invitation to a Beit Mitzvah? Open its email link while signed in.</p>}</>}
           <p className="field-help">Signing out removes your private reading and notes from this device’s screen. Use it on a shared phone or computer.</p>
           <button type="button" className="button-secondary" disabled={pending !== null} onClick={() => void action("sign-out")}>{pending === "sign-out" ? "Signing out…" : "Sign out"}</button>
         </>}

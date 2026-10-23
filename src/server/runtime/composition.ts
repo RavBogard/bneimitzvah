@@ -25,6 +25,7 @@ import { createRelationshipService } from "../relationships/service";
 import { createPendingInvitations } from "../http/pending-invitations";
 import { createGoogleChallenges } from "../http/google-challenge";
 import { createPersistentReadingCache } from "../data/reading-cache";
+import { readProductName } from "../data/product-name";
 import { createPersistentStudyCache } from "../data/study-cache";
 import { createSefariaStudyReader } from "../study/sefaria";
 import { createReferenceAudioService } from "../reference-audio/service";
@@ -63,10 +64,11 @@ import { createPublicStudyCoalescer, type PublicStudyCoalescer } from "../study/
 import { resolveTenantHost } from "../tenancy/resolve";
 import { createHebcalReader } from "../../lib/readings/proposals";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
-import { createMailTransport, createNotificationTransport, projectMagicLink } from "../mail/transport";
+import { createAccountMailTransport, createMailTransport, createNotificationTransport, projectMagicLink } from "../mail/transport";
 import { createSignInCodeBindings } from "../http/sign-in-code-binding";
 import { createNotificationDelivery, createNotificationPreferences } from "../notifications/service";
 import { createSavedService } from "../saved/service";
+import { createAccountsService } from "../accounts/service";
 import { createCourseProgressService } from "../course-progress/service";
 import { createLogger } from "../logging/logger";
 import type { HostFrame } from "../logging/logger";
@@ -150,18 +152,24 @@ async function dispatchNotificationJobs(config: RuntimeConfig, fetch: typeof glo
 export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch,
   studyTasks: PublicStudyCoalescer = sharedStudyTasks(fetch), stepSource: StepSourceLoader = publicStepSource) {
   const send = createMailTransport({ ...config.mail, origin: config.origin, fetch });
+  // Mail names the product through the one shared reader (src/server/data/product-name.ts), in its own short transaction.
+  const productNameOf = (tenantId: string) => withTenantTransaction(db, { tenantId }, tx => readProductName(tx, tenantId));
   // One email carries the link and a typed code (1.5). If the code cannot be created, nothing is sent.
   const auth = createAuthStack(db, schema, { origin: config.origin, secret: config.authSecret, google: config.google, codeSecret: purposeSecret(config, "sign-in-code"),
     sendMagicLink: async ({ email, url, token }) => {
       const link = projectMagicLink(url, token, config.origin);
+      // The congregation this deployment's origin serves names the product (E1). Read before a code exists, so a
+      // failure leaves no code behind and sends nothing.
+      const { tenantId } = await resolveHost({ url: config.origin, headers: new Headers() }, "configured");
+      const productName = await productNameOf(tenantId);
       const code = await auth.api.createVerificationOTP({ body: { email, type: "sign-in" } });
-      await send("magic-link", { email, url: link, code });
+      await send("magic-link", { email, url: link, productName, code });
     } });
   const signInCodes = createSignInCodeBindings({ origin: config.origin, secret: purposeSecret(config, "sign-in-code-binding") });
   const access = createAccessService({ db, auth, deployment: config.deployment });
   const referenceReview = createReferenceReviewService({ access, reviewer: config.referenceReview?.reviewer,
     get: config.referenceReview ? createPrivateReviewGet({ storeId: config.referenceReview.storeId }) : async () => { throw new ReviewUnavailable(); } });
-  const invitations = createInvitationService({ db, access, transport: (message) => send("invitation", message), throttleSecret: purposeSecret(config, "invitation-throttle") });
+  const invitations = createInvitationService({ db, access, transport: async ({ email, url, tenantId }) => send("invitation", { email, url, productName: await productNameOf(tenantId) }), throttleSecret: purposeSecret(config, "invitation-throttle") });
   const loadReading = createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS });
   const musicBroker = createMusicBroker(config.serviceMusic, fetch);
   const practice = createPracticeService({ access });
@@ -215,6 +223,9 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const relationships = createRelationshipService({ access });
   // Release 1.4: a member's own readings, translation, notes, marks and stars, readable only by that member.
   const saved = createSavedService({ access });
+  // Release 1.4: account requests and the Member role. Its two emails go to real people only from production.
+  const accounts = createAccountsService({ db, access, throttleSecret: purposeSecret(config, "account-throttle"),
+    send: createAccountMailTransport({ ...config.mail, origin: config.origin, fetch, enabled: config.deployment.environment === "production" }) });
   // Learn to lein, slice 3: a member's own course progress, readable only by that member.
   const courseProgress = createCourseProgressService({ access });
   const pendingInvitations = createPendingInvitations({ secret: config.authSecret, origin: config.origin, environment: config.deployment.environment as "local" | "preview" | "production" });
@@ -225,7 +236,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     if (resolved.origin !== config.origin) throw new RuntimeUnavailable();
     return resolved;
   };
-  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, courseProgress });
+  return Object.freeze({ origin: config.origin, auth, access, referenceReview, invitations, students, practice, study, readingExploration, studyWordAids, studyWordDetails, studySources, sourceAssignments, sourceContent, referenceAudio, shortReferenceAudio, shortExplorationAudio, readingPreview, studentWork, progress, studyGuides, haftarahSheets, congregationSettings, claudeConnections, mavenLinks, lessonLog, practiceCalendar, recordings, serviceLearning, serviceEcosystem, serviceScheduler, honors, honoree, portal, relationships, pendingInvitations, googleChallenges, signInCodes, resolveHost, mcp, rosterSheet, notifications, notificationPreferences, saved, courseProgress, accounts });
 }
 
 export type HttpRuntime = ReturnType<typeof composeRuntime>;
