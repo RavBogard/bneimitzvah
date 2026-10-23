@@ -70,4 +70,13 @@ export function AudioError({ id }: { id: string | readonly string[] }) {
   const state = usePlayerState(), ids = typeof id === "string" ? [id] : id;
   return state.status === "error" && state.id && ids.includes(state.id) ? <p role="status" className={styles.feedback}>The recording did not load. Try again.</p> : null;
 }
+/** After an answer: bring the revealed answer fully into view above the thumb's band, then hand focus to Next. */
+export function revealAnswer(next: { current: HTMLButtonElement | null }) {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const answers = document.querySelectorAll<HTMLElement>("main [data-answer]");
+    answers[answers.length - 1]?.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
+    next.current?.focus({ preventScroll: true });
+  }));
+}
 export const phraseRequest = (verse: Pick<AnalysedVerse, "ref" | "kind">, words: readonly [number, number]): PhraseRequest => ({ ref: verse.ref, kind: verse.kind, words });

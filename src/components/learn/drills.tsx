@@ -116,7 +116,7 @@ export function WhereDoesItEnd({ item, pools, prompt, onAnswer }: DrillProps<End
         unitClass={unit => [unit === first ? styles.start : "", tapped !== null && unit === tapped && !right ? styles.missed : ""].filter(Boolean).join(" ") || undefined} />
     </div>
     <p role="status" className={styles.feedback}>{tapped !== null && !right ? wrongEndLine(verse, tapped) : ""}</p>
-    {tapped !== null && <div className={styles.answerHead}><FamilyChip family={item.target.family} melody={item.target.kind} /><span className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></span></div>}
+    {tapped !== null && <div className={styles.answerHead} data-answer><FamilyChip family={item.target.family} melody={item.target.kind} /><span className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></span></div>}
   </>;
 }
 
@@ -149,7 +149,7 @@ export function TapThePhrase({ item, pools, onAnswer }: DrillProps<TapItem>) {
       })}</p>
     </div>
     <p role="status" className={styles.feedback}>{tapped !== null && tapped !== target && chosenFamily ? `That one is ${familyName(item.target.family)}. Here is ${familyName(chosenFamily)} for comparison.` : ""}</p>
-    {tapped !== null && <div className={styles.answerHead}><FamilyChip family={item.target.family} melody={item.target.kind} /><span className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></span></div>}
+    {tapped !== null && <div className={styles.answerHead} data-answer><FamilyChip family={item.target.family} melody={item.target.kind} /><span className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></span></div>}
   </>;
 }
 

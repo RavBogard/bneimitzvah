@@ -7,7 +7,7 @@ import { drillItems, itemCard, poolOf, seededRandom, type DrillItem, type Phrase
 import { cardId, completeLesson, localDay, nextLesson, recordAnswer } from "../../lib/learn/progress";
 import { answerRun, currentItem, freshPace, mayStopEarly, pace, runDone, startRun, type LessonPace, type Run } from "../../lib/learn/run";
 import { lessonSources, useCourseVerses, type CourseVerses, type ExampleVerse } from "./course-data";
-import { AudioError, FamilyChip, icons, phraseRequest, PlayTile, UnitsText } from "./bits";
+import { AudioError, FamilyChip, icons, phraseRequest, PlayTile, revealAnswer, UnitsText } from "./bits";
 import { BuildThePhrase, HearAndName, SameOrDifferent, TapThePhrase, WhereDoesItEnd } from "./drills";
 import { FirstVerse } from "./first-verse";
 import { ThisWeekSection } from "./this-week";
@@ -146,7 +146,7 @@ function DrillStep({ lesson, activity, data, stopEarly, onAnswered, onDone }: { 
     const upcoming = currentItem(next);
     if (upcoming) void prefetch(audio, upcoming);
     // The answered control is disabled now; keep keyboard focus moving forward.
-    requestAnimationFrame(() => nextButton.current?.focus({ preventScroll: true }));
+    revealAnswer(nextButton);
   };
   const advance = () => {
     player.stop();

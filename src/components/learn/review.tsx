@@ -6,7 +6,7 @@ import { drillItems, itemRefs, poolOf, seededRandom, type DrillItem, type Phrase
 import { comesBack, composeReview, emptyProgress, isDone, localDay, recordAnswer, type Progress, type ReviewSlot } from "../../lib/learn/progress";
 import { answerRun, currentItem, runDone, startRun, type Run } from "../../lib/learn/run";
 import { useCourseVerses } from "./course-data";
-import { icons } from "./bits";
+import { icons, revealAnswer } from "./bits";
 import { HearAndName, SameOrDifferent, TapThePhrase, WhereDoesItEnd } from "./drills";
 import { LearnServices, useLearnServices, useProgress } from "./services";
 import styles from "./learn.module.css";
@@ -66,7 +66,7 @@ function ReviewRun({ slots, pools, progress, seed, today, update, frame }: { slo
   const contrast = (family: FamilyId, avoid: readonly string[]): Phrase | null => { const pool = poolOf(pools, family, slot.melody).filter(phrase => !avoid.includes(phrase.ref)); return pool[Math.floor(rng.current() * pool.length)] ?? null; };
   const answer = (right: boolean) => {
     if (answered) return; setAnswered(true); setRun(answerRun(run, right, rng.current));
-    requestAnimationFrame(() => nextButton.current?.focus({ preventScroll: true }));
+    revealAnswer(nextButton);
     // One box up per card per review, however often it comes up right; a miss still drops it.
     if (right && moved.current.has(slot.card)) return;
     moved.current.add(slot.card);

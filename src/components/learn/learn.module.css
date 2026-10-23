@@ -91,7 +91,10 @@ a.stepLink:hover { background: var(--color-hover); color: var(--color-ink); }
 .rail li[data-state="current"] { background: var(--marigold); }
 .lesson { width: 100%; max-width: 42rem; margin-inline: auto; padding-block: 1.75rem 2rem; display: grid; gap: 1.5rem; align-content: start; }
 .lesson > * { min-width: 0; }
-.footer { position: sticky; bottom: 0; z-index: 2; padding: 0.75rem 0 max(0.875rem, env(safe-area-inset-bottom)); background: var(--color-canvas); box-shadow: 0 -1px 0 var(--color-rule), 0 0 0 100vmax var(--color-canvas); clip-path: inset(-1px -100vmax 0); }
+/* The thumb's band: plain canvas, no rule, so nothing scrolling under it looks like a cut edge. */
+.footer { position: sticky; bottom: 0; z-index: 2; padding: 0.75rem 0 max(0.875rem, env(safe-area-inset-bottom)); background: var(--color-canvas); box-shadow: 0 0 0 100vmax var(--color-canvas); clip-path: inset(0 -100vmax 0); }
+/* A revealed answer scrolls fully clear of that band. */
+.answer, .answerHead { scroll-margin-bottom: 7rem; scroll-margin-top: 5rem; }
 .footerInner { max-width: 42rem; margin-inline: auto; display: grid; gap: 0.5rem; }
 .footerInner > :global(.button-start) { width: 100%; display: inline-flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; }
 .footerInner > :global(.button-start):hover { color: #fff; }
@@ -185,7 +188,7 @@ a.stepLink:hover { background: var(--color-hover); color: var(--color-ink); }
 .sheetLine { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; }
 .sheetRef { font-weight: 650; opacity: 0.85; }
 .sheetActions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; width: 100%; max-width: 32rem; margin-inline: auto; padding: 0.75rem 1rem max(1rem, env(safe-area-inset-bottom)); }
-.sheetStep { display: inline-flex; align-items: center; justify-content: center; min-height: 56px; padding: 0 1rem; border-radius: 999px; background: rgb(255 255 255 / 0.14); color: #fff; font-size: 1.0625rem; font-weight: 700; text-decoration: none; text-align: center; }
+.sheetStep { display: inline-flex; align-items: center; justify-content: center; min-height: 56px; padding: 0 1rem; border: 0; border-radius: 999px; background: rgb(255 255 255 / 0.14); color: #fff; font-size: 1.0625rem; font-weight: 700; text-decoration: none; text-align: center; }
 .sheetStep:hover { background: rgb(255 255 255 / 0.22); color: #fff; }
 .sheetPrimary { background: #fff; color: var(--lake-deep); }
 .sheetPrimary:hover { background: var(--lake-tint); color: var(--lake-deep); }
