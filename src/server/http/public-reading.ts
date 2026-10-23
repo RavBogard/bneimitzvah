@@ -36,8 +36,8 @@ export type PublicRuntime = Readonly<{
   shelf(verse: string, signal?: AbortSignal): Promise<ShelfAnswer>;
   /** One shelf item's text in Sefaria's default editions. */
   source: SourceTextReader;
-  /** The public tenant's productName (E1), for the web app manifest. Absent: the manifest is unavailable. */
-  productName?: () => Promise<string>;
+  /** The congregation's product name, from the one shared reader (data/product-name.ts), for the shelf's change line. */
+  productName(): Promise<string>;
 }>;
 export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Response>) => Promise<Response>;
 
@@ -193,11 +193,12 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
           }
           case "related": {
             // A verse's links change slowly: the CDN keeps the shelf a week.
-            const shelf = await runtime.shelf(query.verse, signal);
-            return json(shelf as unknown as JsonValue, 604800);
+            // With the name its change line needs ("Selected and ordered by {productName}", the CC BY note of changes).
+            const shelf = await runtime.shelf(query.verse, signal), productName = await runtime.productName();
+            return json({ ...shelf, productName } as unknown as JsonValue, 604800);
           }
           case "manifest": {
-            const name = plainProductName(runtime.productName ? await runtime.productName() : null);
+            const name = plainProductName(await runtime.productName());
             if (!name) return failure(503);
             return new Response(JSON.stringify(webManifest(name)), { status: 200, headers: { ...common, "content-type": "application/manifest+json; charset=utf-8",
               "cache-control": "public, max-age=300", "vercel-cdn-cache-control": "public, s-maxage=3600" } });

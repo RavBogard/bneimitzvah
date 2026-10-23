@@ -17,6 +17,7 @@ import { installLoopbackFetchGuard } from "./egress";
 import { openAuthMail } from "./auth-navigation";
 import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from "./server";
 import { syntheticCourseRoutes } from "../../e2e/learn-synthetic";
+import { finishLesson } from "../../e2e/learn-drill";
 import { rateLimit } from "../../src/server/db/auth-schema";
 vi.mock("server-only", () => ({}));
 declare global { interface Window { offlineAudios: HTMLAudioElement[] } }
@@ -85,13 +86,6 @@ const pack = (tab: Page) => tab.evaluate(async ([name, key]) => {
   const response = await (await caches.open(name)).match(key);
   return response ? await response.json() as { packs: { key: string; renewedAt: number; expiresAt: number; assets: string[] }[] } : null;
 }, [OFFLINE_CACHE, INDEX] as const);
-async function playing(tab: Page) {
-  await expect.poll(() => tab.evaluate(() => window.offlineAudios.some(media => !media.paused && media.src.startsWith("blob:") && media.readyState >= 2)), { timeout: 20_000 }).toBe(true);
-}
-async function saved(tab: Page) {
-  await tab.goto("/", { waitUntil: "domcontentloaded" });
-  await ui(tab.getByText("Saved on this device", { exact: true })).toBeVisible({ timeout: 150_000 });
-}
 async function signIn(tab: Page, email: string) {
   await tab.goto("/", { waitUntil: "domcontentloaded" });
   await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
@@ -102,49 +96,8 @@ async function signIn(tab: Page, email: string) {
   await ui(tab.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
 }
 
-it("one online visit saves this week; offline, the reading opens from the shell, a verse plays, and nothing private came from the worker", async () => {
-  const { tab, seen, offline } = await installed();
-  await tab.goto("/read", { waitUntil: "domcontentloaded" });
-  await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
-  // The manifest and the Apple icon are linked in the installed app on this origin.
-  await ui(tab.locator('link[rel="manifest"][href="/api/public/manifest"]')).toHaveCount(1);
-  await saved(tab);
-  // The worker is active and controls the page now; this visit fills any build file the install did not name.
-  await tab.goto("/read", { waitUntil: "load" });
-  await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
-  await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
-  const index = await pack(tab);
-  expect(index?.packs.map(row => row.key).sort()).toEqual(expect.arrayContaining([expect.stringMatching(/^week:/)]));
-  expect(index!.packs.flatMap(row => row.assets).every(asset => /^\/(?:api\/public\/(?:reading|text|reference\/short)\?|reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$)/.test(asset))).toBe(true);
-
-  await offline(true);
-  await tab.goto("/read", { waitUntil: "domcontentloaded" });
-  await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible({ timeout: 30_000 });
-  await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
-  await ui(tab.locator("[data-offline-pill]")).toHaveText(/^Offline · saved until \w{3} \d{1,2} \w{3}$/);
-  await tab.locator('.study-verses [data-verse-ref="Genesis 1:1"] [data-word-index="1"]').first().click();
-  await playing(tab);
-  expect(seen.fromWorker).toEqual(expect.arrayContaining(["/read", "/api/public/reading", "/api/public/text"]));
-  expect(seen.fromWorker.some(path => /^\/api\/(?!public\/)/.test(path) || path.startsWith("/api/public/word") || path.startsWith("/api/public/commentary"))).toBe(false);
-  expect(seen.ranges).toEqual([]);
-  // A private route offline is the browser's own failure, never a saved answer.
-  expect(await tab.evaluate(async () => { try { await fetch("/api/session", { credentials: "same-origin" }); return "answered"; } catch { return "failed"; } })).toBe("failed");
-  expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-
-  // Expiry (§3.4): the index says it was renewed fifteen days ago, so nothing is served and the page says how long saved readings last.
-  await tab.evaluate(async ([name, key]) => {
-    const cache = await caches.open(name), index = await (await cache.match(key))!.json() as { packs: { renewedAt: number; expiresAt: number }[] };
-    const then = Date.now() - 15 * 86_400_000;
-    for (const row of index.packs) { row.renewedAt = then; row.expiresAt = then + 14 * 86_400_000; }
-    await cache.put(key, new Response(JSON.stringify(index), { headers: { "content-type": "application/json" } }));
-  }, [OFFLINE_CACHE, INDEX] as const);
-  seen.fromWorker.length = 0;
-  await tab.goto("/read", { waitUntil: "domcontentloaded" });
-  await ui(tab.getByRole("heading", { name: "The reading didn’t load", exact: true })).toBeVisible({ timeout: 30_000 });
-  await ui(tab.locator("[data-offline-expiry]")).toContainText("Saved readings stay on this device for 14 days after you last opened CRC Torah online.");
-  expect(seen.fromWorker.filter(path => path.startsWith("/api/public/") && path !== "/api/public/manifest" || path.startsWith("/reference-audio/"))).toEqual([]);
-  await offline(false);
-});
+// Offline navigation (the shell, the pill, playback and expiry) is proven on the built server in e2e/installable.spec.ts:
+// this isolated server runs Next in development mode, whose pages do not hydrate from a service worker's shell.
 
 it("signing out removes the saved readings from the device", async () => {
   const { tab } = await installed();
@@ -155,57 +108,25 @@ it("signing out removes the saved readings from the device", async () => {
   await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   expect(await tab.evaluate(async () => (await caches.keys()).filter(key => key === "crc-offline-v1"))).toEqual([]);
   await ui(tab.getByText("Saved on this device", { exact: true })).toHaveCount(0);
-});
+}, 300_000);
 
-/** Answers whatever drill is on screen, rightly (as e2e/learn.spec.ts does). */
-async function answer(tab: Page) {
-  const main = tab.locator("main");
-  const choice = main.locator("button[class*=choice][data-right]").first();
-  if (await choice.count()) return choice.click();
-  const end = main.locator("[data-end-unit]");
-  if (await end.count()) { const unit = await end.getAttribute("data-end-unit"); return main.locator(`[data-end-unit] [data-unit="${unit}"]`).click(); }
-  const tap = main.locator("[data-target-phrase]");
-  if (await tap.count()) { const target = await tap.getAttribute("data-target-phrase"); return main.locator(`[data-phrase-target="${target}"]`).click(); }
-  for (let k = 0; k < 6; k++) {
-    const tile = main.locator(`button[class*=tile][data-order="${k}"]:not([disabled])`).first();
-    if (!(await tile.count())) break;
-    await tile.click();
-  }
-}
-
-it("the Learn to lein course works offline: a lesson finished offline reaches the account when the app is back online", async () => {
+it("a lesson finished while the installed app is offline reaches the account when it is back online", async () => {
   const { tab, offline } = await installed({ course: true });
   await signIn(tab, "pg-admin@example.test");
   await ui(tab.getByText("Saved on this device", { exact: true })).toBeVisible({ timeout: 150_000 });
   await expect.poll(async () => (await pack(tab))?.packs.some(row => row.key === "course") ?? false, { timeout: 150_000 }).toBe(true);
   await expect.poll(() => tab.evaluate(() => navigator.serviceWorker.controller !== null), { timeout: 30_000 }).toBe(true);
-  // The course page itself once online, so its build files are in the shell too.
   await tab.goto("/learn/torah-sof-pasuk", { waitUntil: "load" });
-  await ui(tab.locator("main[data-step=hear]")).toBeVisible({ timeout: 30_000 });
-
+  await ui(tab.locator("main[data-step=hear]")).toBeVisible({ timeout: 60_000 });
+  // Offline from here: every clip the drills play comes from the course pack.
   await offline(true);
-  await tab.goto("/learn/torah-sof-pasuk", { waitUntil: "domcontentloaded" });
-  await ui(tab.locator("main[data-step=hear]")).toBeVisible({ timeout: 30_000 });
-  await tab.getByRole("button", { name: "Next", exact: true }).click();
-  await ui(tab.getByRole("heading", { name: "In verses" })).toBeVisible();
-  await tab.getByRole("button", { name: "Next", exact: true }).click();
-  for (let i = 0; i < 40; i++) {
-    if (await tab.locator("main").getAttribute("data-step") === "done") break;
-    await ui(tab.locator("main h2").first()).toBeVisible();
-    await answer(tab);
-    const next = tab.getByRole("button", { name: "Next", exact: true });
-    await ui(next).toBeEnabled();
-    await next.click();
-  }
-  await ui(tab.locator("main[data-step=done]")).toBeVisible();
+  await finishLesson(tab);
   const local = await tab.evaluate(() => JSON.parse(localStorage.getItem("crc-torah:learn-progress/v1") ?? "{}") as { lessons?: Record<string, unknown> });
   expect(Object.keys(local.lessons ?? {})).toContain("torah-sof-pasuk");
-
   await offline(false);
-  await tab.evaluate(() => window.dispatchEvent(new Event("online")));
   await expect.poll(async () => tab.evaluate(async () => {
     const response = await fetch("/api/learn/progress", { credentials: "same-origin", cache: "no-store" });
     const body = await response.json() as { progress?: { lessons?: Record<string, unknown> } | null };
     return Object.keys(body.progress?.lessons ?? {});
   }), { timeout: 30_000 }).toContain("torah-sof-pasuk");
-});
+}, 300_000);

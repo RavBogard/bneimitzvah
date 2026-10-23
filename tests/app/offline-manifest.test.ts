@@ -34,7 +34,7 @@ describe("the web app manifest", () => {
     }
   });
   test("is refused without a product name, with a query or body, for another host, or for any method but GET", async () => {
-    expect((await call(runtime())).status).toBe(503);
+    expect((await call(runtime(async () => { throw new Error("Congregation unavailable"); }))).status).toBe(503);
     for (const bad of ["", " CRC Torah", "CRC\nTorah", "x".repeat(121)]) expect((await call(runtime(async () => bad))).status, JSON.stringify(bad)).toBe(503);
     expect((await call(runtime(async () => "CRC Torah"), "/api/public/manifest?x=1")).status).toBe(400);
     expect((await call(runtime(async () => "CRC Torah"), "/api/public/manifest/")).status).toBe(404);

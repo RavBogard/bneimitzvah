@@ -29,7 +29,7 @@ async function mock(page: Page, options: { shelf?: "ok" | "fail"; source?: "ok" 
       torah: { kind: "torah", ranges: ["Genesis 1:1-3"], verseCount: 3, pages: [{ offset: 0, first: "Genesis 1:1", last: "Genesis 1:3" }] }, haftarah: null });
     if (url.pathname === "/api/public/text") return json({ kind: "torah", date: q.get("date"), offset: 0, nextOffset: null, totalVerses: 3, translation: { key: "jps2023", status: "available" },
       verses: refs.map(verseOf), chapters: [{ ref: "Genesis 1", sefariaUrl: "https://www.sefaria.org/Genesis.1", fetchedAt: 0, hash: "c".repeat(64), editions: [studyEditions.mam, studyEditions.jps2023] }] });
-    if (url.pathname === "/api/public/related") return shelfFails ? json({ error: "unavailable" }, 503) : json(shelfFor(q.get("verse")!));
+    if (url.pathname === "/api/public/related") return shelfFails ? json({ error: "unavailable" }, 503) : json({ ...shelfFor(q.get("verse")!), productName: "Synthetic Portal" });
     if (url.pathname === "/api/public/source") {
       const ref = q.get("ref")!;
       if (ref.includes("Missing")) return json({ error: "not-found" }, 404);
@@ -87,6 +87,8 @@ test("More on this verse: kinds of texts as wrapping pills, curated works, a cit
   await expect(panel(page).getByRole("heading", { name: "Chasidut" })).toBeVisible();
   await expect(panel(page).getByRole("heading", { name: "Kabbalah" })).toBeVisible();
   await expect(panel(page).getByRole("link", { name: "All related texts on Sefaria" })).toHaveAttribute("href", shelfSefariaUrl("Genesis 1:2"));
+  // The CC BY note of changes, naming the congregation's product as the related route gives it.
+  await expect(panel(page).getByText("Selected and ordered by Synthetic Portal", { exact: true })).toBeVisible();
   // Esc (focus in the panel) closes it and gives focus back.
   await panel(page).getByRole("link", { name: "All related texts on Sefaria" }).focus();
   await page.keyboard.press("Escape");

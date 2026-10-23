@@ -13,9 +13,8 @@ import { ReadingToolbar } from "../workspace/reading-toolbar";
 import { LensSwitch } from "../workspace/lens-switch";
 import { LENS_STORAGE, lensFromSearch, StudyLensScope, useStudyLens, type Lens } from "../workspace/study-lens";
 import { StudyRows } from "../workspace/study/study-rows";
-import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi } from "../workspace/study/commentary-view";
+import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi, workStatuses } from "../workspace/study/commentary-view";
 import { VersePanelColumn, VersePanelScope } from "../workspace/study/verse-panel";
-import { COMMENTARY_WORKS } from "../../../lib/readings/commentary";
 import { namedReading, type NamedReading } from "../../../lib/readings/named-readings";
 import { useReadingPrefs } from "../workspace/reading-prefs";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
@@ -28,7 +27,10 @@ import { ReadingChooser } from "./reading-chooser";
 import { SaveReading } from "../saved/save-reading";
 import { SavedReadingPage } from "../saved/saved-reading";
 import { OfflineExpiryNote, OfflinePill } from "../offline/status";
+import { useOwnLayer } from "../workspace/study/own-layer";
+import { DRILL_STRINGS, drillNext, TranslateDrillPanel } from "./translate-drill";
 import styles from "./public-reading.module.css";
+import drillStyles from "./translate-drill.module.css";
 
 export const displayRange = (ranges: readonly string[]) => ranges.join("; ").replace(/(\d)-(\d)/g, "$1–$2");
 const statusOf = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
@@ -249,6 +251,12 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   const deferred = useRef<(() => void) | null>(null), linkShown = useRef(false);
   useLayoutEffect(() => { const run = deferred.current; deferred.current = null; run?.(); });
   const release = (action: () => void) => { if (linkedIndex === null) { action(); return; } deferred.current = action; onVerseLeft(); };
+  // The translate drill (Lein only, Daniel F4): a view state, never stored. `revealed` names the verse whose English is shown.
+  const [drill, setDrill] = useState<{ revealed: string | null } | null>(null), [announce, setAnnounce] = useState("");
+  const drillHint = useRef<string | null>(null), drillToPage = useRef(false), drillFocus = useRef<"jps" | "reveal" | "toggle" | null>(null);
+  const jpsRef = useRef<HTMLHeadingElement | null>(null), revealRef = useRef<HTMLButtonElement | null>(null), drillToggle = useRef<HTMLButtonElement | null>(null);
+  const own = useOwnLayer();
+  useEffect(() => { const target = drillFocus.current; if (!target) return; drillFocus.current = null; (target === "jps" ? jpsRef : target === "reveal" ? revealRef : drillToggle).current?.focus({ preventScroll: target !== "toggle" }); });
 
   useEffect(() => () => { audio.stopAll(); }, [audio]);
   useEffect(() => {
@@ -295,7 +303,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     if (word === "verse") tools.current?.selectVerse(at); else tools.current?.select(at, word);
   });
   const chooseWord = (at: number, word: number) => release(() => { setFocus(at); if (listening) playMainVerseForWord(playback.current, tools.current, at, word); else tools.current?.select(at, word); });
-  const changeIndex = (next: number) => { if (next === index) return; audio.stopAll(); setLift(null); setFocus(null); setOffset(0); onIndex(next); };
+  const changeIndex = (next: number) => { if (next === index) return; audio.stopAll(); setLift(null); setFocus(null); setDrill(null); setOffset(0); onIndex(next); };
   const changeOffset = (next: number) => { if (next === offset) return; if (linkedIndex !== null) onVerseLeft(); setOffset(next); };
   const offsets = passage.pages.map(row => row.offset);
   const previousOffset = offsets[offsets.indexOf(offset) - 1], nextOffset = page?.nextOffset ?? null;
@@ -304,6 +312,38 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   const scopeKey = textKey;
   const start = useRef<() => void>(() => {}); start.current = () => { textAnchor.current?.scrollIntoView({ block: "start" }); if (listening && page) hear(0); else textAnchor.current?.focus(); };
   useEffect(() => { registerStart(page ? () => start.current() : null); return () => registerStart(null); }, [page, registerStart]);
+
+  // The drill follows the selected verse. Reveal, Next verse and End drill never start or stop audio themselves; Study ends it.
+  const drillVerse = !study && drill && focus !== null ? page?.verses[focus] ?? null : null;
+  useEffect(() => { if (study) setDrill(null); }, [study]);
+  // Choosing another verse hides the English again: a reveal belongs to the verse it was made on.
+  const drillRef = drillVerse?.ref ?? null;
+  useEffect(() => { setDrill(current => current?.revealed && current.revealed !== drillRef ? { revealed: null } : current); }, [drillRef]);
+  const drillGo = (at: number) => {
+    if (!page?.verses[at]) return;
+    const ref = page.verses[at].ref;
+    release(() => { setFocus(at); tools.current?.selectVerse(at); });
+    setDrill({ revealed: null }); setAnnounce(DRILL_STRINGS.moved(/:([1-9]\d*)$/.exec(ref)?.[1] ?? ref)); drillFocus.current = "reveal";
+    try { document.querySelector(`.study-verses [data-verse-ref="${CSS.escape(ref)}"]`)?.scrollIntoView({ block: "start" }); } catch { /* Stay where the page is. */ }
+  };
+  // Next verse or Start from the first verse onto another text page: once that page is on screen, its first verse.
+  useEffect(() => { if (page && drillToPage.current) { drillToPage.current = false; drillGo(0); } }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+  const drillStart = () => { if (!drillVerse && focus !== null && page?.verses[focus]) { drillHint.current ??= page.verses[focus].ref; setLift(null); setAnnounce(""); setDrill({ revealed: null }); } };
+  const drillEnd = () => { setDrill(null); setAnnounce(""); drillFocus.current = "toggle"; };
+  const drillNextVerse = () => {
+    if (!page || focus === null) return;
+    const step = drillNext(focus, page.verses.length, nextOffset);
+    if (step === "on-page") drillGo(focus + 1);
+    else if (step === "next-page" && nextOffset !== null) { drillToPage.current = true; changeOffset(nextOffset); }
+  };
+  const drillRestart = () => { if (!page) return; if (page.offset === 0) drillGo(0); else { drillToPage.current = true; changeOffset(offsets[0] ?? 0); } };
+  const drillPanel = drillVerse && focus !== null && page && <TranslateDrillPanel verseRef={drillVerse.ref} english={drillVerse.english} revealed={drill?.revealed === drillVerse.ref}
+    hint={drillHint.current === drillVerse.ref} last={drillNext(focus, page.verses.length, nextOffset) === "last"} draft={own?.draft(drillVerse.ref) ?? { state: "none" }} announce={announce}
+    jpsRef={jpsRef} revealRef={revealRef}
+    onReveal={() => { setDrill({ revealed: drillVerse.ref }); setAnnounce(DRILL_STRINGS.shown); drillFocus.current = "jps"; }}
+    onHide={() => { setDrill({ revealed: null }); setAnnounce(DRILL_STRINGS.hidden); drillFocus.current = "reveal"; }}
+    onNext={drillNextVerse} onRestart={drillRestart} onEnd={drillEnd}
+    onWriteOwn={own ? () => { const ref = drillVerse.ref; setDrill(null); own.writeOwn(ref); } : undefined} />;
 
   return <VersePanelScope>
     <div className="reading-lens-row">
@@ -319,11 +359,11 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
         {!page ? text?.key === textKey && text.error ? <div role="status"><h4>Text unavailable</h4><p>The verses didn’t load. Check your connection and try again.</p><button type="button" className="button-secondary" onClick={onRetry}>Reload text</button></div>
           : <p role="status">Loading the text…</p> : <>
           {study ? <>
-            <CommentaryStatus works={works.map(row => ({ work: row.work, status: row.status, retry: row.retry, covers: Boolean(COMMENTARY_WORKS[row.work]?.editions[corpus]) }))} />
+            <CommentaryStatus works={workStatuses(works, corpus)} />
             <StudyRows verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={lens.english}
               works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))}
               onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} />
-          </> : <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
+          </> : <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} englishHidden={drillVerse ? DRILL_STRINGS.hidden : undefined} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
             linked={linkedVerse(leinLink, page.verses)} onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} />}
           {listening && <ReadingPlayer key={`player:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} active={!lift} enabled={!lift} audio={{ coordinator: audio, slot: "proposed" }}
             target={linkedOnPage !== null ? { index: linkedOnPage, generation: 0 } : undefined} register={registerPlayback} onActiveWord={setPlayingWord} load={loadShort} />}
@@ -338,9 +378,15 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
               if (position >= 0 && target !== undefined && target !== page.offset) { pendingPlace.current = { key: JSON.stringify([key, kind, target]), ref, wordIndex }; changeOffset(target); }
             }}
             takePlace={() => { const place = pendingPlace.current; pendingPlace.current = null; return place && place.key === scopeKey ? { ref: place.ref, wordIndex: place.wordIndex } : null; }} />
-          {!study && <VerseRashi key={focus !== null ? page.verses[focus]?.ref : "none"} verse={focus !== null ? page.verses[focus] ?? null : null} state={focus !== null && page.verses[focus] ? rashi.lookup.forVerse(page.verses[focus].ref) : { status: "none" }} link={leinLink} retry={rashi.retry} />}
+          {/* While the drill is on, Rashi (whose English carries a translation) is closed away; ending it shows Rashi as it was. */}
+          {!study && <div hidden={Boolean(drillVerse)}><VerseRashi key={focus !== null ? page.verses[focus]?.ref : "none"} verse={focus !== null ? page.verses[focus] ?? null : null} state={focus !== null && page.verses[focus] ? rashi.lookup.forVerse(page.verses[focus].ref) : { status: "none" }} link={leinLink} retry={rashi.retry} /></div>}
           {!study && verseExtra && focus !== null && page.verses[focus] && verseExtra(page.verses[focus].ref)}
-          {focus !== null && page.verses[focus] && <p className={styles.upClose}><button type="button" className="button-secondary" onClick={() => release(() => setLift({ index: focus, opening: ++openings.current, navigation: 0 }))}>{/* One span: the button is a flex box, which would drop the spaces between separate text items. */}<span>View <bdi dir="ltr">{page.verses[focus].ref}</bdi> up close</span></button>
+          {!study && focus !== null && page.verses[focus] && <div className={drillStyles.control}>
+            <button type="button" ref={drillToggle} className={drillStyles.toggle} aria-pressed={Boolean(drillVerse)} onClick={() => drillVerse ? drillEnd() : drillStart()}>{DRILL_STRINGS.control}</button>
+            {drillPanel}
+          </div>}
+          {/* Up close shows the English too, so it waits while the drill is on. */}
+          {!drillVerse && focus !== null && page.verses[focus] && <p className={styles.upClose}><button type="button" className="button-secondary" onClick={() => release(() => setLift({ index: focus, opening: ++openings.current, navigation: 0 }))}>{/* One span: the button is a flex box, which would drop the spaces between separate text items. */}<span>View <bdi dir="ltr">{page.verses[focus].ref}</bdi> up close</span></button>
             <span className="field-help">Up close shows each phrase of trope by name.</span></p>}
           {(previousOffset !== undefined || nextOffset !== null) && <>
             <p className="study-page-position">Verses {page.offset + 1}–{page.offset + page.verses.length} of {page.totalVerses}</p>

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { projectStudyVerse } from "../../../../lib/hebrew/study-tokens";
 import type { StudyWordAids } from "../../../../lib/hebrew/word-aids";
 import { WORD_DETAILS_ATTRIBUTION, type StudyWordDetails, type WordElsewhere, type WordGrammar, type WordPlace } from "../../../../lib/hebrew/word-details";
@@ -43,7 +43,6 @@ export function WordTools({ scopeKey, verses, register, readAids, readDetails, o
   takePlace?(): Readonly<{ ref: string; wordIndex: number }> | null;
 }) {
   const id = useId(), callbacks = useRef({ readAids, readDetails, takePlace }); callbacks.current = { readAids, readDetails, takePlace };
-  const offline = useOfflineWording();
   const owner = useRef<ReturnType<typeof createWordToolsSelection> | null>(null), [state, setState] = useState<WordToolsState>(idle);
   // Taken once per mounted instance; a StrictMode effect replay reuses this instance's copy.
   const initialPlace = useRef<Readonly<{ ref: string; wordIndex: number }> | null | undefined>(undefined);
@@ -65,26 +64,45 @@ export function WordTools({ scopeKey, verses, register, readAids, readDetails, o
   }, [state.selection, verses]);
   const go = onPlace ? (ref: string, wordIndex: number) => { focusWord.current = Object.freeze({ ref, wordIndex }); onPlace(ref, wordIndex); } : undefined;
   const selected = state.selection, verse = selected ? verses[selected.verse] : null, projection = verse ? projectStudyVerse(verse.ref, verse.hebrew) : null;
-  const words = projection?.status === "ready" ? projection.projection.words : [], word = selected ? words[selected.index] : null;
-  const aid = state.aids.status === "ready" && state.aids.value.status === "ready" && selected ? state.aids.value.words[selected.index] : null;
-  const details = state.details.status === "ready" && state.details.value.status === "ready" ? state.details.value : null;
+  const words = projection?.status === "ready" ? projection.projection.words : [];
   const previous = selected && (selected.index > 0 || verses.slice(0, selected.verse).some(row => projectStudyVerse(row.ref, row.hebrew).status === "ready"));
   const next = selected && (selected.index + 1 < words.length || verses.slice(selected.verse + 1).some(row => projectStudyVerse(row.ref, row.hebrew).status === "ready"));
   return <section className={styles.tools} aria-label="Word tools">
     <button type="button" className={styles.disclosure} aria-expanded={state.open} aria-controls={`${id}-panel`} onClick={() => state.open ? owner.current?.close() : owner.current?.open()}>Word tools</button>
-    {state.open && <div id={`${id}-panel`} className={styles.panel}>
-      {!word || !verse || !selected ? <p>Word tools aren’t available for this passage.</p> : <>
-        <div className={styles.heading}><h4 lang="he" dir="rtl" ref={heading} tabIndex={-1}>{word.text}</h4><p><bdi>{verse.ref}</bdi> · Word {selected.index + 1} of {words.length}</p></div>
-        <div className={styles.actions}><button type="button" disabled={!previous} onClick={() => owner.current?.navigate(-1)}>Previous word</button><button type="button" disabled={!next} onClick={() => owner.current?.navigate(1)}>Next word</button>{onHear && <button type="button" onClick={() => onHear(selected.verse, selected.index)}>Hear this word</button>}</div>
-        <div className={styles.sections}>
-          <section aria-label="Meaning in this verse"><h5>Meaning in this verse</h5>{state.details.status === "loading" ? <p role="status">Loading word details…</p> : <p>{details?.occurrence.gloss || "An occurrence meaning isn’t available for this word."}</p>}</section>
-          <section aria-label="Syllables and stress"><h5>Syllables and stress</h5>{state.aids.status === "loading" ? <p role="status">Loading word guide…</p> : aid?.status === "ready" ? <><div className={styles.syllables} lang="he" dir="rtl" role="group" aria-label="Hebrew syllables">{aid.syllables.map(part => <span key={part.start} data-stress={part.stress ?? "none"} role="group" aria-describedby={part.stress ? `${id}-${part.stress}` : undefined}>{word.text.slice(part.start, part.end)}</span>)}</div><p className={styles.note}><span id={`${id}-tonic`}>Solid underline: primary stress.</span> <span id={`${id}-secondary`}>Dotted underline: secondary stress.</span></p></> : <p>Syllables and stress aren’t available for this word.</p>}</section>
-          <section aria-label="Grammar"><h5>Grammar</h5>{state.details.status === "loading" ? null : details ? <Grammar value={details.occurrence.grammar} /> : <p>Grammar isn’t available for this word.</p>}</section>
-        </div>
-        {details?.elsewhere && <section className={styles.elsewhere} aria-label="This word elsewhere"><h5>This word elsewhere</h5><WordElsewhereList value={details.elsewhere} onPlace={go} /></section>}
-        {details && details.dictionary.length > 0 && <section className={styles.dictionary} aria-label="Dictionary senses"><h5>Dictionary senses</h5><p className={styles.note}>Dictionary senses may differ from this word’s meaning in the verse.</p><ul>{details.dictionary.map(entry => <li key={entry.lemma}>{entry.status === "ready" ? <><bdi lang="he" dir="rtl">{entry.headword}</bdi><span>{entry.dictionaryGloss}</span></> : <span>A dictionary sense isn’t available for this entry.</span>}</li>)}</ul><p className={styles.credit}>{WORD_DETAILS_ATTRIBUTION.name} · <a href={WORD_DETAILS_ATTRIBUTION.licenseUrl} target="_blank" rel="noreferrer">{WORD_DETAILS_ATTRIBUTION.license}</a>. Normalized into selected-word facts.</p></section>}
-        {(state.aids.status === "error" || state.details.status === "error") && (offline ? <p className={styles.note}>{OFFLINE.needsConnection}</p> : <p className={styles.note}>Some word tools couldn’t be loaded. <button type="button" className={styles.retry} onClick={() => owner.current?.retry()}>Try word tools again</button></p>)}
-      </>}
-    </div>}
+    {state.open && <WordCard id={`${id}-panel`} state={state} verse={verse} headingRef={heading} onRetry={() => owner.current?.retry()} onPlace={go}
+      actions={selected && <><button type="button" disabled={!previous} onClick={() => owner.current?.navigate(-1)}>Previous word</button><button type="button" disabled={!next} onClick={() => owner.current?.navigate(1)}>Next word</button>{onHear && <button type="button" onClick={() => onHear(selected.verse, selected.index)}>Hear this word</button>}</>} />}
   </section>;
+}
+
+/**
+ * The word card: one selected word's meaning, syllables and stress, grammar, other places and dictionary senses.
+ * Word tools on /read and the Learn word sheet both show it, from one createWordToolsSelection state.
+ */
+export function WordCard({ id, state, verse, heading, headingId, headingRef, actions, showElsewhere = true, compact = false, className, onRetry, onPlace }: {
+  id?: string; state: WordToolsState; verse: StudyVerse | null;
+  /** The heading's Hebrew, when the owner shows more than the selected word (a whole maqaf unit). */ heading?: ReactNode;
+  headingId?: string; headingRef?: Ref<HTMLHeadingElement>; actions?: ReactNode;
+  /** Other places only mean something across a passage; a one-verse owner leaves them out. */ showElsewhere?: boolean;
+  /** One column of sections, for a narrow panel. */ compact?: boolean;
+  className?: string; onRetry(): void; onPlace?(ref: string, wordIndex: number): void;
+}) {
+  const offline = useOfflineWording();
+  const key = useId(), selected = state.selection, projection = verse ? projectStudyVerse(verse.ref, verse.hebrew) : null;
+  const words = projection?.status === "ready" ? projection.projection.words : [], word = selected ? words[selected.index] : null;
+  const aid = state.aids.status === "ready" && state.aids.value.status === "ready" && selected ? state.aids.value.words[selected.index] : null;
+  const details = state.details.status === "ready" && state.details.value.status === "ready" ? state.details.value : null;
+  return <div id={id} className={[styles.panel, compact ? styles.compact : "", className ?? ""].filter(Boolean).join(" ")}>
+    {!word || !verse || !selected ? <p>Word tools aren’t available for this passage.</p> : <>
+      <div className={styles.heading}><h4 id={headingId} className={styles.word} lang="he" dir="rtl" ref={headingRef} tabIndex={-1}>{heading ?? word.text}</h4><p><bdi>{verse.ref}</bdi> · Word {selected.index + 1} of {words.length}</p></div>
+      {actions && <div className={styles.actions}>{actions}</div>}
+      <div className={styles.sections}>
+        <section aria-label="Meaning in this verse"><h5>Meaning in this verse</h5>{state.details.status === "loading" ? <p role="status">Loading word details…</p> : <p>{details?.occurrence.gloss || "An occurrence meaning isn’t available for this word."}</p>}</section>
+        <section aria-label="Syllables and stress"><h5>Syllables and stress</h5>{state.aids.status === "loading" ? <p role="status">Loading word guide…</p> : aid?.status === "ready" ? <><div className={styles.syllables} lang="he" dir="rtl" role="group" aria-label="Hebrew syllables">{aid.syllables.map(part => <span key={part.start} data-stress={part.stress ?? "none"} role="group" aria-describedby={part.stress ? `${key}-${part.stress}` : undefined}>{word.text.slice(part.start, part.end)}</span>)}</div><p className={styles.note}><span id={`${key}-tonic`}>Solid underline: primary stress.</span> <span id={`${key}-secondary`}>Dotted underline: secondary stress.</span></p></> : <p>Syllables and stress aren’t available for this word.</p>}</section>
+        <section aria-label="Grammar"><h5>Grammar</h5>{state.details.status === "loading" ? null : details ? <Grammar value={details.occurrence.grammar} /> : <p>Grammar isn’t available for this word.</p>}</section>
+      </div>
+      {showElsewhere && details?.elsewhere && <section className={styles.elsewhere} aria-label="This word elsewhere"><h5>This word elsewhere</h5><WordElsewhereList value={details.elsewhere} onPlace={onPlace} /></section>}
+      {details && details.dictionary.length > 0 && <section className={styles.dictionary} aria-label="Dictionary senses"><h5>Dictionary senses</h5><p className={styles.note}>Dictionary senses may differ from this word’s meaning in the verse.</p><ul>{details.dictionary.map(entry => <li key={entry.lemma}>{entry.status === "ready" ? <><bdi lang="he" dir="rtl">{entry.headword}</bdi><span>{entry.dictionaryGloss}</span></> : <span>A dictionary sense isn’t available for this entry.</span>}</li>)}</ul><p className={styles.credit}>{WORD_DETAILS_ATTRIBUTION.name} · <a href={WORD_DETAILS_ATTRIBUTION.licenseUrl} target="_blank" rel="noreferrer">{WORD_DETAILS_ATTRIBUTION.license}</a>. Normalized into selected-word facts.</p></section>}
+      {(state.aids.status === "error" || state.details.status === "error") && (offline ? <p className={styles.note}>{OFFLINE.needsConnection}</p> : <p className={styles.note}>Some word tools couldn’t be loaded. <button type="button" className={styles.retry} onClick={onRetry}>Try word tools again</button></p>)}
+    </>}
+  </div>;
 }

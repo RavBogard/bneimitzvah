@@ -15,9 +15,8 @@ import { useReadingPrefs } from "../reading-prefs";
 import { useStudyLens } from "../study-lens";
 import { LensSwitch } from "../lens-switch";
 import { StudyRows } from "./study-rows";
-import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi } from "./commentary-view";
+import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi, workStatuses } from "./commentary-view";
 import { VersePanelColumn, VersePanelScope } from "./verse-panel";
-import { COMMENTARY_WORKS } from "../../../../lib/readings/commentary";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
 import { PortalRequestError } from "../../api";
 import { watchReadingAudioDeadline } from "./reading-player-intent";
@@ -216,7 +215,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {renderActiveWork?.()}
     </div> : current.page && <>
       {study ? <>
-        <CommentaryStatus works={works.map(row => ({ work: row.work, status: row.status, retry: row.retry, covers: Boolean(COMMENTARY_WORKS[row.work]?.editions[corpus]) }))} />
+        <CommentaryStatus works={workStatuses(works, corpus)} />
         <StudyRows verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled} showEnglish={lens.english}
           sections={aliyahSections(kind, assignment!, current.page.verses)} works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))}
           onVerse={listeningEnabled ? index => hear(current.page!, index) : undefined} onWord={(index, word) => { if (listeningEnabled) playMainVerseForWord(playback.current, tools.current, index, word); else tools.current?.select(index, word); onVisit?.(kind, current.page!.verses[index].ref); }} />

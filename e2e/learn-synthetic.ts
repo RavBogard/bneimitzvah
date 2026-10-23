@@ -4,6 +4,8 @@ import course from "../src/lib/learn/lessons.json";
 import { studyRangePlan } from "../src/components/portal/workspace/study/api";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
 import { projectStudyVerse } from "../src/lib/hebrew/study-tokens";
+import { WORD_AID_SCHEMA } from "../src/lib/hebrew/word-aids";
+import { WORD_DETAILS_ATTRIBUTION, WORD_DETAILS_SCHEMA } from "../src/lib/hebrew/word-details";
 import { expandReadingRanges } from "../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../src/lib/readings/catalog";
 import { REFERENCE_ATTRIBUTION } from "../src/lib/reference-audio/contract";
@@ -76,6 +78,7 @@ export function syntheticCourseRoutes() {
     await page.route("**/api/public/**", async route => {
       const url = new URL(route.request().url()), q = url.searchParams; seen.push(url.pathname + url.search);
       const kind = q.get("kind") ?? "torah";
+      if (url.pathname === "/api/public/manifest") return route.fulfill({ status: 200, contentType: "application/manifest+json", body: JSON.stringify({ id: "/", name: "CRC Torah", short_name: "CRC Torah", start_url: "/", scope: "/", display: "standalone", icons: [] }) });
       if (url.pathname === "/api/public/reading" && q.has("ref")) {
         // "Any reading" by ref: the passage's paging (the installed app's packer asks for it).
         const ref = q.get("ref")!, ranges = ref.split("; "), total = expandReadingRanges(ranges, kind as "torah", TANAKH_VERSE_COUNTS).length, pages = [];
@@ -87,13 +90,27 @@ export function syntheticCourseRoutes() {
         const passage = range && { kind: "torah", ranges: [range], verseCount: expandReadingRanges([range], "torah", TANAKH_VERSE_COUNTS).length, pages: [{ offset: 0, ...(() => { const plan = studyRangePlan([range], "torah", 0); return { first: plan.refs[0], last: plan.refs.at(-1)! }; })() }] };
         return json(route, { date, parashah: "Synthetic", torah: passage, haftarah: null, fetchedAt: 0, listening: { pocketTorah: true } });
       }
-      const ref = q.get("ref"); if (!ref) return route.fulfill({ status: 404, contentType: "application/json", body: "{}" });
+      // By date (the weekly reader) the passage is this week's synthetic Torah reading; the body echoes the key that named it.
+      const weekRange = week.torah === undefined ? "Genesis 12:1-8" : week.torah;
+      const ref = q.get("ref") ?? (q.has("date") && kind === "torah" ? weekRange : null); if (!ref) return route.fulfill({ status: 404, contentType: "application/json", body: "{}" });
+      const echo = q.has("date") ? { date: q.get("date") } : { ref };
+      if (url.pathname === "/api/public/word-aids" || url.pathname === "/api/public/word-details") {
+        // The word card's routes: a synthetic gloss for every word, and no syllable analysis.
+        const at = Number(q.get("verse")), member = expandReadingRanges(ref.split("; "), kind as "torah", TANAKH_VERSE_COUNTS)[at];
+        if (!member) return route.fulfill({ status: 400, contentType: "application/json", body: "{}" });
+        if (url.pathname === "/api/public/word-aids") return json(route, { kind, ...echo, verse: at, wordAids: { schema: WORD_AID_SCHEMA, ref: member, status: "unavailable", reason: "analysis-unavailable" } });
+        const projection = projectStudyVerse(member, hebrew(syntheticWords(member, kind)));
+        if (projection.status !== "ready") throw Error("Synthetic projection refused");
+        return json(route, { kind, ...echo, verse: at, wordDetails: { schema: WORD_DETAILS_SCHEMA, ref: member, wordIndex: Number(q.get("word")), status: "ready",
+          readingTextSha256: sha(projection.projection.readingText.normalize("NFC")), wordCount: projection.projection.words.length, attribution: WORD_DETAILS_ATTRIBUTION,
+          occurrence: { gloss: `Synthetic gloss for word ${Number(q.get("word")) + 1}`, grammar: { status: "unavailable", reason: "unrecognized-code" } }, dictionary: [] } });
+      }
       const offset = Number(q.get("offset")), ranges = ref.split("; "), plan = studyRangePlan(ranges, kind as "torah", offset), total = expandReadingRanges(ranges, kind as "torah", TANAKH_VERSE_COUNTS).length;
       const rows = plan.refs.map(r => resolution(r, kind));
-      if (url.pathname === "/api/public/text") return json(route, { kind, ref, offset, nextOffset: plan.nextOffset, totalVerses: total, translation: { key: "jps2023", status: "unavailable" },
+      if (url.pathname === "/api/public/text") return json(route, { kind, ...echo, offset, nextOffset: plan.nextOffset, totalVerses: total, translation: { key: "jps2023", status: "unavailable" },
         verses: plan.refs.map((r, i) => ({ ref: r, english: null, hebrew: rows[i].h })),
         chapters: plan.chapters.map(c => ({ ref: c.ref, sefariaUrl: c.url, fetchedAt: 0, hash: "c".repeat(64), editions: [studyEditions.mam] })) });
-      if (url.pathname === "/api/public/reference/short") return json(route, { kind, ref, page: { offset, nextOffset: plan.nextOffset, totalVerses: total, references: rows.map(r => r.short) } });
+      if (url.pathname === "/api/public/reference/short") return json(route, { kind, ...echo, page: { offset, nextOffset: plan.nextOffset, totalVerses: total, references: rows.map(r => r.short) } });
       return route.fulfill({ status: 404, contentType: "application/json", body: "{}" });
     });
     await page.route("**/reference-audio/short-v1/*", route => {

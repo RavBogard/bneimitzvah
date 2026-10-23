@@ -242,6 +242,32 @@ describe("members and approvers", () => {
     expect((await t.call("/api/saved/readings", "kept")).json.readings).toHaveLength(1);
   });
 
+  it("lets only an admin approve again someone an admin ended; a designated tutor is refused and the request is kept", async () => {
+    const t = await setup();
+    await t.designate();
+    await t.person("ended"); await t.person("fresh");
+    await t.call("/api/account/request", "ended", { name: "Ended" });
+    const [first] = (await requests(t)).json.requests;
+    // A first approval by the designated tutor is fine.
+    expect((await t.call("/api/accounts/requests/approve", "multi", { mode: "tutor", requestId: first.id })).status).toBe(200);
+    const memberId = (await t.call("/api/accounts/members", "admin")).json.members[0].id;
+    expect((await t.call("/api/accounts/members/end", "admin", { memberId })).json).toEqual({ ok: true });
+    await t.call("/api/account/request", "ended", { name: "Ended again" });
+    await t.call("/api/account/request", "fresh", { name: "Fresh" });
+    const queue = (await requests(t, "multi", "tutor")).json.requests as { id: string; name: string }[];
+    const again = queue.find(row => row.name === "Ended again")!, fresh = queue.find(row => row.name === "Fresh")!;
+    const refused = await t.call("/api/accounts/requests/approve", "multi", { mode: "tutor", requestId: again.id });
+    expect(refused).toEqual({ status: 409, json: { ok: false, code: "admin-only" } });
+    expect((await requests(t)).json.requests.map((row: { id: string }) => row.id)).toContain(again.id);
+    expect((await t.call("/api/saved/readings", "ended")).status).toBe(403);
+    expect(t.mail.filter(row => row.kind === "account-approved")).toHaveLength(1);
+    // Someone never ended is still the tutor's to approve; the ended person is the admin's.
+    expect((await t.call("/api/accounts/requests/approve", "multi", { mode: "tutor", requestId: fresh.id })).status).toBe(200);
+    expect((await t.call("/api/accounts/requests/approve", "admin", { mode: "admin", requestId: again.id })).status).toBe(200);
+    expect((await t.call("/api/saved/readings", "ended")).status).toBe(200);
+    expect((await t.audits("account-request.approve")).map(audit => audit.mode).sort()).toEqual(["admin", "tutor", "tutor"]);
+  });
+
   it("designates tutors only (never admins, never twice) with a fresh sign-in, and removes them without one", async () => {
     const t = await setup();
     const view = await t.call("/api/accounts/approvers", "admin");

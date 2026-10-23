@@ -34,7 +34,7 @@ const publicStepSource = budgetedStepSource(createStepSource());
  * The signed-out runtime. Deliberately NOT composeRuntime: no auth stack, access
  * service, mail transport or student service exists here, so no public request
  * can open, read or refresh a session or reach a people table by any path. The
- * database handle serves only the exact host lookup and the two global,
+ * database handle serves only the exact host lookup, CRC's product name and the two global,
  * non-tenant public text caches (Hebcal calendar and Sefaria chapters) that the
  * signed-in reading already fills, plus the public tenant's own productName for the web app manifest
  * (1.5 A1, E1): one column of the one tenant this runtime ever serves, read only after resolveTenant.

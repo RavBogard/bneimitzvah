@@ -40,4 +40,6 @@ export function syntheticTranslationsFetch(options: { english?: (ref: string) =>
 /** The public runtime's Sefaria-backed extras, all reporting upstream trouble, for tests that use none of them. */
 export const unavailableShelf = async (): Promise<never> => { throw new SourceMetadataUnavailable(); };
 export const unavailableSource = async (): Promise<never> => { throw new SourceTextUnavailable("upstream"); };
-export const unavailableExtras = Object.freeze({ translations: unavailableTranslations, shelf: unavailableShelf, source: unavailableSource });
+/** The congregation's product name, as CRC's tenant row has it (the real runtime reads it with the shared reader). */
+export const syntheticProductName = async () => "CRC Torah";
+export const unavailableExtras = Object.freeze({ translations: unavailableTranslations, shelf: unavailableShelf, source: unavailableSource, productName: syntheticProductName });

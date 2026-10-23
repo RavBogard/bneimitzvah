@@ -20,7 +20,8 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const RANGES = /^[\x20-\x7e]{1,1000}$/;
 const CONTROLS = /[\x00-\x1f\x7f-\x9f\u2028\u2029]/;
 
-type SavedPath = "/api/saved/readings" | "/api/saved/readings/create" | "/api/saved/readings/update" | "/api/saved/readings/remove" | "/api/saved/reading" | "/api/saved/mark";
+type SavedPath = "/api/saved/readings" | "/api/saved/readings/create" | "/api/saved/readings/update" | "/api/saved/readings/remove" | "/api/saved/reading" | "/api/saved/mark"
+  | "/api/saved/work" | "/api/saved/stars" | "/api/saved/star";
 async function request(path: SavedPath, body?: Record<string, unknown>, signal?: AbortSignal, search = "") {
   const controller = new AbortController(), abort = () => controller.abort();
   if (signal?.aborted) abort();
@@ -158,4 +159,55 @@ export async function setSavedMark(input: { readingId: string; verseRef: string;
 export function conflictMark(current: unknown): SavedMark | null | undefined {
   if (current === null) return null;
   try { return parseMark(current); } catch { return undefined; }
+}
+
+/** The bound the server keeps on a translation or note: 4,096 bytes of UTF-8, carriage returns read as newlines. */
+export const SAVED_TEXT_BYTES = 4096;
+const TEXT_CONTROLS = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\u2028\u2029]/;
+/** The text as the server would keep it, or null when it is too long or holds a character the server refuses. */
+export function savedText(value: string): string | null {
+  const normalized = value.replace(/\r\n?/g, "\n");
+  return normalized.isWellFormed() && new TextEncoder().encode(normalized).byteLength <= SAVED_TEXT_BYTES && !TEXT_CONTROLS.test(normalized) ? normalized : null;
+}
+export type WorkStream = "translation" | "note";
+/** Save My translation or My notes for one verse of a saved reading (the Yours row, PR 3). Empty clears it. */
+export async function saveSavedWork(input: { readingId: string; verseRef: string; stream: WorkStream; expectedVersion: number; text: string }, signal?: AbortSignal): Promise<ChangeResult<SavedWork>> {
+  const { status, value } = await request("/api/saved/work", { readingId: input.readingId, verseRef: input.verseRef, stream: input.stream, expectedVersion: input.expectedVersion, text: input.text }, signal);
+  return change(status, value, "work", item => parseWork(item));
+}
+/** A work conflict's current text: null when none is saved yet, undefined when the answer is not one. */
+export function conflictWork(current: unknown): SavedWork | null | undefined {
+  if (current === null) return null;
+  try { return parseWork(current); } catch { return undefined; }
+}
+
+/** One starred comment: a registered work's 1-based comment on a verse. Stars belong to the member, not to a reading. */
+export type SavedStar = Readonly<{ work: string; verseRef: string; comment: number }>;
+export type SavedStars = Readonly<{ state: "signed-out" } | { state: "not-eligible" } | { state: "ready"; stars: readonly SavedStar[] }>;
+const WORK = /^[a-z][a-z0-9-]{0,31}$/;
+function parseStar(value: unknown, keys: readonly string[] = ["work", "verseRef", "comment"]): SavedStar & { starred?: boolean } {
+  const row = record(value, keys);
+  if (!row || typeof row.work !== "string" || !WORK.test(row.work) || typeof row.verseRef !== "string" || !VERSE.test(row.verseRef)
+    || !Number.isSafeInteger(row.comment) || (row.comment as number) < 1 || (row.comment as number) > 60 || (keys.includes("starred") && typeof row.starred !== "boolean")) throw new SavedRequestError(503);
+  return Object.freeze({ work: row.work, verseRef: row.verseRef, comment: row.comment as number, ...keys.includes("starred") ? { starred: row.starred as boolean } : {} });
+}
+export function parseSavedStars(status: number, value: unknown): SavedStars {
+  if (status === 401) return { state: "signed-out" };
+  if (status === 403) return { state: "not-eligible" };
+  const row = status === 200 ? record(value, ["ok", "stars"]) : null;
+  if (!row || row.ok !== true || !Array.isArray(row.stars) || row.stars.length > 2000) throw new SavedRequestError(503);
+  return { state: "ready", stars: Object.freeze(row.stars.map(item => parseStar(item))) };
+}
+/** Every comment the member has starred. */
+export async function fetchSavedStars(signal?: AbortSignal): Promise<SavedStars> {
+  const { status, value } = await request("/api/saved/stars", undefined, signal);
+  return parseSavedStars(status, value);
+}
+/** Star or unstar one comment; the answer says which it is now. */
+export async function setSavedStar(input: SavedStar & { starred: boolean }, signal?: AbortSignal): Promise<ChangeResult<SavedStar & { starred: boolean }>> {
+  const { status, value } = await request("/api/saved/star", { work: input.work, verseRef: input.verseRef, comment: input.comment, starred: input.starred }, signal);
+  return change(status, value, "star", item => {
+    const star = parseStar(item, ["work", "verseRef", "comment", "starred"]) as SavedStar & { starred: boolean };
+    return star.work === input.work && star.verseRef === input.verseRef && star.comment === input.comment ? star : null;
+  });
 }

@@ -3,7 +3,7 @@ vi.mock("server-only", () => ({}));
 import { createSefariaSourceReader, projectSourceText, SourceTextUnavailable } from "../../src/server/study/source-text";
 import { handlePublicReadingRequest, type PublicRuntime } from "../../src/server/http/public-reading";
 import { parseShelfLinks } from "../../src/server/study/shelf";
-import { parseSourceText } from "../../src/components/portal/workspace/study/shelf-api";
+import { parseShelfAnswer, parseSourceText } from "../../src/components/portal/workspace/study/shelf-api";
 import { sourceSefariaUrl } from "../../src/lib/readings/shelf";
 import { sourceAnswer, sourceVersion, syntheticLinks } from "../helpers/shelf";
 import { unavailableExtras } from "../helpers/translations";
@@ -68,11 +68,14 @@ test("the reader: one bounded request in the default editions; Sefaria's 404 or 
 test("the related and source routes: closed queries checked before the runtime, a week and thirty days on the CDN, no-store on failure", async () => {
   let opened = 0, source = createSefariaSourceReader({ fetch: (async () => new Response(JSON.stringify(sourceAnswer(ref, [sourceVersion("he", "Synthetic Hebrew", "א")])), { headers: { "content-type": "application/json" } })) as typeof globalThis.fetch });
   let shelf: PublicRuntime["shelf"] = async verse => parseShelfLinks(syntheticLinks(), verse);
-  const runtime = () => ({ resolveTenant: async () => undefined, reading: {} as PublicRuntime["reading"], commentary: async () => { throw new Error("unused"); }, ...unavailableExtras, shelf, source }) satisfies PublicRuntime;
+  const runtime = () => ({ resolveTenant: async () => undefined, reading: {} as PublicRuntime["reading"], commentary: async () => { throw new Error("unused"); }, ...unavailableExtras, shelf, source,
+    productName: async () => "Synthetic Portal" }) satisfies PublicRuntime;
   const call = (path: string) => handlePublicReadingRequest(new Request(`https://beitmitzvah.centralreform.org${path}`), async action => { opened++; return action(runtime()); });
   const related = await call("/api/public/related?verse=Genesis+12%3A1");
   expect(related.status).toBe(200); expect(related.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=604800");
-  expect((await related.json()).groups).toHaveLength(6);
+  const shelfBody = await related.json();
+  expect(shelfBody.groups).toHaveLength(6); expect(shelfBody.productName).toBe("Synthetic Portal");
+  expect(parseShelfAnswer(shelfBody, "Genesis 12:1").productName).toBe("Synthetic Portal");
   const text = await call(`/api/public/source?${new URLSearchParams([["ref", ref]])}`);
   expect(text.status).toBe(200); expect(text.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=2592000");
   // A 404 that is not Sefaria's own "no text" is not kept.

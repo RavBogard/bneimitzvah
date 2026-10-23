@@ -1,6 +1,6 @@
 import "server-only";
 import { createHmac } from "node:crypto";
-import { and, asc, count, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction, Actor } from "../access/types";
 import * as s from "../db/index";
@@ -16,6 +16,11 @@ export const ACCOUNT_LIMITS = Object.freeze({ requestsPerDay: 3, pendingPerTenan
 export async function activeMember<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, membershipId: string, lock: "share" | "update" = "share") {
   const [row] = await tx.select().from(s.tenantMember).where(and(eq(s.tenantMember.tenantId, tenantId), eq(s.tenantMember.membershipId, membershipId), isNull(s.tenantMember.revokedAt))).limit(1).for(lock);
   return row ?? null;
+}
+/** Whether an admin ever ended a Member role on this membership (only admins end one). */
+export async function wasEnded<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, membershipId: string) {
+  const [row] = await tx.select({ id: s.tenantMember.id }).from(s.tenantMember).where(and(eq(s.tenantMember.tenantId, tenantId), eq(s.tenantMember.membershipId, membershipId), isNotNull(s.tenantMember.revokedAt))).limit(1);
+  return Boolean(row);
 }
 /** A live designation for this tutor grant of this membership, share-locked so revoking it waits for the request. */
 export async function liveDesignation<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, membershipId: string, tutorGrantId: string) {

@@ -6,10 +6,13 @@ import { readAddress } from "../public-reading/urls";
 import { displayRange, go, Hero, longDate, PassageReading, replaceAddress, Shell, useChooser, useStarter, type LabelledSource } from "../public-reading/view";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { expandReadingRanges } from "../../../lib/readings/ranges";
-import { conflictMark, fetchSavedPage, parseSavedReading, removeSavedReading, setSavedMark, updateSavedReading, type SavedMark, type SavedReading } from "./api";
+import { conflictMark, fetchSavedPage, parseSavedReading, removeSavedReading, setSavedMark, updateSavedReading, type SavedMark, type SavedPage, type SavedReading, type SavedWork, type WorkStream } from "./api";
+import { OwnLayerScope } from "../workspace/study/own-layer";
+import { useSavedOwnLayer, type VerseWork } from "./yours";
 import styles from "./saved.module.css";
 
 const kindName = (kind: SavedReading["kind"]) => kind === "torah" ? "Torah" : "Haftarah";
+const workOf = (row: Extract<SavedPage, { state: "ready" }>["verses"][number]): VerseWork => ({ translation: row.translation, note: row.note });
 const PAGE = 10;
 type Header = Readonly<{ status: "loading" } | { status: "ready"; reading: SavedReading } | { status: "signed-out" | "not-eligible" | "missing" | "failed" }>;
 type Text = Readonly<{ key: string; sources?: readonly LabelledSource[]; error?: boolean }>;
@@ -75,7 +78,8 @@ export function SavedVerseMarks({ verseRef, mark, pending, notice, onChoose, onS
 /**
  * /read?saved=<id>: a member's own saved reading. The passage comes from the account (never the address), so the
  * same text, recordings and tools open on it; above it the reading's name and date with Edit, and in Lein each
- * selected verse carries its Still working / Got it mark. A tab coming back revalidates quietly and stays mounted.
+ * selected verse carries its Still working / Got it mark. In Study each verse has its closed Yours row and each inline comment its
+ * star (PR 3), and the translate drill reveals the member's own translation. A tab coming back revalidates quietly and stays mounted.
  */
 export function SavedReadingPage({ id, verse }: { id: string; verse: number | null }) {
   const lens = useStudyLens(), chooser = useChooser(), starter = useStarter(), editId = useId();
@@ -83,6 +87,7 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
   const [text, setText] = useState<Text | null>(null), [textRetry, setTextRetry] = useState(0);
   const [edit, setEdit] = useState<EditStep>("closed"), [draft, setDraft] = useState({ name: "", date: "" }), [editNotice, setEditNotice] = useState("");
   const [marks, setMarks] = useState<ReadonlyMap<string, SavedMark | null>>(new Map()), [pending, setPending] = useState<string | null>(null), [markNotice, setMarkNotice] = useState<{ ref: string; text: string } | null>(null);
+  const [work, setWork] = useState<ReadonlyMap<string, VerseWork>>(new Map());
   const loadedPages = useRef(new Set<number>()), live = useRef<AbortController | null>(null);
   const reading = header.status === "ready" ? header.reading : null;
 
@@ -95,6 +100,8 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
       // The first page's marks come with it; later pages load when one of their verses is chosen.
       loadedPages.current = new Set([0]);
       setMarks(new Map(page.verses.map(row => [row.ref, row.mark])));
+      // Merged, not replaced: a quiet revalidation must not blank the own texts of verses on later pages (an open Yours row, the drill).
+      setWork(current => { const next = new Map(current); for (const row of page.verses) next.set(row.ref, workOf(row)); return next; });
     } catch { if (!signal.aborted && !quiet) setHeader({ status: "failed" }); }
   }, [id]);
   useEffect(() => { const controller = new AbortController(); setHeader({ status: "loading" }); void loadHeader(false, controller.signal); return () => controller.abort(); }, [loadHeader, retry]);
@@ -132,6 +139,7 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
     fetchSavedPage(id, offset).then(page => {
       if (page.state !== "ready") { loadedPages.current.delete(offset); return; }
       setMarks(current => { const next = new Map(current); for (const row of page.verses) next.set(row.ref, row.mark); return next; });
+      setWork(current => { const next = new Map(current); for (const row of page.verses) next.set(row.ref, workOf(row)); return next; });
     }, () => { loadedPages.current.delete(offset); });
   }, [id, verses]);
   const choose = (ref: string, state: "working" | "got-it") => {
@@ -149,6 +157,11 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
       if (result.code === "signed-out" || result.code === "not-eligible" || result.code === "missing") setRetry(value => value + 1);
     });
   };
+  const putWork = useCallback((ref: string, stream: WorkStream, value: SavedWork | null) => setWork(current => {
+    const next = new Map(current), row = next.get(ref) ?? { translation: null, note: null };
+    next.set(ref, stream === "translation" ? { ...row, translation: value } : { ...row, note: value }); return next;
+  }), []);
+  const own = useSavedOwnLayer({ readingId: id, active: header.status === "ready", work, putWork, ensure: ensureMarks, refused: () => setRetry(value => value + 1), openStudy: () => lens.setLens("study") });
   const verseExtra = (ref: string): ReactNode =>
     <SavedVerseMarks key={ref} onShow={ensureMarks} verseRef={ref} mark={marks.has(ref) ? marks.get(ref) : undefined} pending={pending === ref} notice={markNotice?.ref === ref ? markNotice.text : ""} onChoose={state => choose(ref, state)} />;
 
@@ -203,7 +216,7 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
     {header.status !== "loading" && header.status !== "ready" && <SavedReadingState status={header.status} onRetry={() => setRetry(value => value + 1)} />}
     {reading && text?.key === textKey && text.error && <div className="workspace-state" role="status"><h2>The text didn’t load</h2><p>Check your connection and try again.</p>
       <button type="button" className="button-secondary" onClick={() => setTextRetry(value => value + 1)}>Try again</button></div>}
-    {reading && sources && <PassageReading key={textKey} sources={sources} index={0} onIndex={() => {}} verse={linked} onVerseLeft={() => setLinked(null)}
-      registerStart={starter.register} retry={textRetry} onRetry={() => setTextRetry(value => value + 1)} verseExtra={verseExtra} />}
+    {reading && sources && <OwnLayerScope value={own}><PassageReading key={textKey} sources={sources} index={0} onIndex={() => {}} verse={linked} onVerseLeft={() => setLinked(null)}
+      registerStart={starter.register} retry={textRetry} onRetry={() => setTextRetry(value => value + 1)} verseExtra={verseExtra} /></OwnLayerScope>}
   </Shell>;
 }

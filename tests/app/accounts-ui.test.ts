@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AccountRequestView, parseRequestResult, parseRequestView, type RequestView } from "../../src/components/portal/account-request";
-import { parseApprovers, parseMembers, parseRequests, parseSummary } from "../../src/components/portal/workspace/accounts/api";
+import { parseApprovers, parseDecision, parseMembers, parseRequests, parseSummary } from "../../src/components/portal/workspace/accounts/api";
+import { ADMIN_REAPPROVAL_LINE } from "../../src/components/portal/workspace/accounts/workspace";
 import { PortalRequestError } from "../../src/components/portal/api";
 
 const ID = "00000000-0000-4000-8000-000000000001", stamp = "2026-10-23T00:00:00.000Z";
@@ -54,6 +55,12 @@ describe("the approvers' client", () => {
     expect(parseMembers({ ok: true, members: [{ id: ID, name: "Ruth", since: stamp }] })).toEqual([{ id: ID, name: "Ruth", since: stamp }]);
     expect(parseApprovers({ ok: true, admins: ["Rabbi"], designated: [{ id: ID, name: "Tutor" }], candidates: [{ tutorGrantId: ID, name: "Other" }] }).designated).toHaveLength(1);
     expect(parseSummary({ ok: true, requests: 3 })).toBe(3);
+    expect(parseDecision(200, { ok: true, memberId: ID })).toEqual({ ok: true });
+    expect(parseDecision(409, { ok: false, code: "disabled" })).toEqual({ ok: false, code: "disabled" });
+    expect(parseDecision(409, { ok: false, code: "admin-only" })).toEqual({ ok: false, code: "admin-only" });
+    expect(() => parseDecision(409, { ok: false, code: "other" })).toThrow(PortalRequestError);
+    // The tutor's refusal keeps the request and names who can act, in the house tone.
+    expect(ADMIN_REAPPROVAL_LINE).toMatch(/only an admin can approve them again. The request is kept.$/); expect(ADMIN_REAPPROVAL_LINE).not.toMatch(/!/);
     for (const bad of [() => parseRequests({ ok: true, requests: [{ id: ID, name: "A\u202eB", purpose: null, email: null, requestedAt: stamp }], productName: "CRC Torah" }),
       () => parseRequests({ ok: true, requests: [{ id: ID, name: "Ruth", purpose: null, email: null, requestedAt: stamp, extra: 1 }], productName: "CRC Torah" }),
       () => parseRequests({ ok: true, requests: [] }), () => parseRequests({ ok: true, requests: [], productName: "" }), () => parseRequests({ ok: true, requests: [], productName: "   " }), () => parseRequests({ ok: true, requests: [], productName: "A\u202eB" }),
