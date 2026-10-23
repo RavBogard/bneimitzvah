@@ -133,3 +133,14 @@ test("at 360px the home, a lesson and a drill fit with no sideways scroll and 56
   await page.evaluate(async () => { await document.fonts.ready; });
   await page.screenshot({ path: testInfo.outputPath("learn-drill-360.png"), fullPage: true });
 });
+
+test("when the recordings do not answer, a lesson says so and offers Try again; nothing is marked done", async ({ page }) => {
+  const routes = syntheticCourseRoutes(); await routes.install(page); await seed(page, introDone);
+  await page.route("**/api/public/reference/short?*", route => route.fulfill({ status: 503, contentType: "application/json", body: "{}" }));
+  await page.goto("/learn/torah-sof-pasuk");
+  await expect(page.getByText("The recording did not load. Try again.")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Next", exact: true })).toHaveCount(0);
+  const stored = JSON.parse((await page.evaluate(key => localStorage.getItem(key), KEY))!);
+  expect(Object.keys(stored.lessons)).toEqual(["intro-phrases"]);
+});

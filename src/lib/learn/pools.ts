@@ -140,7 +140,8 @@ export function drillItems(activity: Drill, pools: Pools, context: DrillContext,
       }
       const live = families.filter(family => poolOf(pools, family, melody).length > 0);
       for (const [i, alike] of same.entries()) {
-        const a = live[(i + Math.floor(rng() * live.length)) % Math.max(1, live.length)]; if (!a) break;
+        // With a focus family (the lesson's, or a review slot's), every pair starts from it.
+        const a = context.focus && live.includes(context.focus) ? context.focus : live[(i + Math.floor(rng() * live.length)) % Math.max(1, live.length)]; if (!a) break;
         const others = live.filter(family => family !== a);
         const b = alike || !others.length ? a : weighted(others, distractorWeight(a, {}), rng);
         const first = picks.pick(poolOf(pools, a, melody)), second = first && picks.pick(poolOf(pools, b, melody), [first.ref]);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { answerRun, currentItem, freshPace, mayStopEarly, pace, runDone, startRun } from "../../src/lib/learn/run";
+import { answerRun, currentItem, freshPace, mayStopEarly, pace, REASKS, runDone, startRun } from "../../src/lib/learn/run";
 import { buildPools, drillItems, itemRefs, seededRandom } from "../../src/lib/learn/pools";
 import type { Drill } from "../../src/lib/learn/course";
 import { threePhrases, verse } from "./learn-synthetic";
@@ -32,6 +32,12 @@ describe("a drill run", () => {
     expect(currentItem(run)!.key).toBe(last.key);
     run = answerRun(run, true, seededRandom(3));
     expect(runDone(run)).toBe(true);
+  });
+  it("re-asks a missed item at most twice, so a run always ends", () => {
+    let run = startRun(items());
+    for (let guard = 0; guard < 200 && !runDone(run); guard++) run = answerRun(run, false, seededRandom(guard));
+    expect(runDone(run)).toBe(true);
+    expect(run.queue.length).toBe(items().length * (1 + REASKS));
   });
   it("keeps a re-asked item away from a neighbour from the same verse where it can", () => {
     let run = startRun(items());

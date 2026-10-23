@@ -33,13 +33,16 @@ function LessonFlow({ id }: { id: string }) {
   const data = useCourseVerses(steps[0].kind === "first-verse" ? [] : sources, retry);
   const { player } = useLearnServices();
   const { progress, update } = useProgress();
-  const main = useRef<HTMLElement>(null);
+  const main = useRef<HTMLElement>(null), moved = useRef(new Set<string>());
   const go = useCallback((next: number) => { player.stop(); setAt(next); window.scrollTo({ top: 0 }); main.current?.focus({ preventScroll: true }); }, [player]);
   const step = steps[at];
   const onAnswered = useCallback((item: DrillItem, activity: Drill, right: boolean) => {
     setPace(value => pace(value, right));
-    const { family, melody } = itemCard(item);
-    update(value => recordAnswer(value, cardId(family, melody, drillSkill(activity)), right, localDay(Date.now())));
+    const { family, melody } = itemCard(item), id = cardId(family, melody, drillSkill(activity));
+    // A card goes up at most one box in a lesson, however often its family comes up right; a miss still drops it.
+    if (right && moved.current.has(id)) return;
+    moved.current.add(id);
+    update(value => recordAnswer(value, id, right, localDay(Date.now())));
   }, [update]);
   const doneIndex = steps.length - 1;
   return <div className={`portal-shell ${styles.shell}`}>
@@ -53,7 +56,7 @@ function LessonFlow({ id }: { id: string }) {
       {step.kind === "first-verse" ? <FirstVerse lesson={lesson} onDone={() => go(doneIndex)} />
         : step.kind === "done" ? <Done lesson={lesson} fallback={data.status === "ready" ? data.examples.get(lesson.id) ?? [] : []} complete={() => update(value => completeLesson(value, lesson, Date.now()))} nextId={progress ? nextLesson(completeLesson(progress, lesson, Date.now()))?.id ?? null : null} />
         : data.status === "loading" ? <p role="status" className={styles.state}>Loading the lesson…</p>
-        : data.status === "error" ? <div role="status" className={styles.state}><p>The recording did not load. Try again.</p><button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>
+        : data.status === "error" || !(data.examples.get(lesson.id)?.length) ? <div role="status" className={styles.state}><p>The recording did not load. Try again.</p><button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>
         : step.kind === "hear" ? <HearIt lesson={lesson} examples={data.examples.get(lesson.id) ?? []} onNext={() => go(at + 1)} />
         : step.kind === "verses" ? <InVerses lesson={lesson} examples={data.examples.get(lesson.id) ?? []} onNext={() => go(at + 1)} />
         : <DrillStep key={`${at}`} lesson={lesson} activity={step.activity} data={data} stopEarly={mayStopEarly(paceState)}
@@ -129,7 +132,8 @@ function DrillStep({ lesson, activity, data, stopEarly, onAnswered, onDone }: { 
   const seed = useRef(Math.floor(Math.random() * 2 ** 31));
   const items = useMemo(() => drillItems(activity, data.pools, { melody, focus: lesson.family }, seededRandom(seed.current)), [activity, data.pools, melody, lesson.family]);
   const [run, setRun] = useState<Run>(() => startRun(items)), [shown, setShown] = useState<{ item: DrillItem; n: number } | null>(() => items[0] ? { item: items[0], n: 0 } : null);
-  const [answered, setAnswered] = useState(false), rng = useRef(seededRandom(seed.current + 1));
+  const [answered, setAnswered] = useState(false), rng = useRef(seededRandom(seed.current + 1)), nextButton = useRef<HTMLButtonElement>(null);
+  const { player } = useLearnServices();
   useEffect(() => { if (!items.length) onDone(); }, [items.length]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!shown) return null;
   const contrast = (family: FamilyId, avoid: readonly string[]): Phrase | null => {
@@ -141,8 +145,11 @@ function DrillStep({ lesson, activity, data, stopEarly, onAnswered, onDone }: { 
     const next = answerRun(run, right, rng.current); setRun(next); onAnswered(shown.item, activity, right);
     const upcoming = currentItem(next);
     if (upcoming) void prefetch(audio, upcoming);
+    // The answered control is disabled now; keep keyboard focus moving forward.
+    requestAnimationFrame(() => nextButton.current?.focus({ preventScroll: true }));
   };
   const advance = () => {
+    player.stop();
     const finished = runDone(run);
     if (finished || stopEarly) { onDone(); return; }
     setShown({ item: currentItem(run)!, n: shown.n + 1 }); setAnswered(false); window.scrollTo({ top: 0 });
@@ -155,7 +162,7 @@ function DrillStep({ lesson, activity, data, stopEarly, onAnswered, onDone }: { 
       : item.type === "where-does-it-end" ? <WhereDoesItEnd key={key} item={item} {...props} prompt={activity.type === "where-does-it-end" ? activity.params.prompt : undefined} />
       : item.type === "tap-the-phrase" ? <TapThePhrase key={key} item={item} {...props} />
       : <BuildThePhrase key={key} item={item} {...props} />}
-    <Footer><button type="button" className="button-start" disabled={!answered} onClick={advance}>Next</button></Footer>
+    <Footer><button ref={nextButton} type="button" className="button-start" disabled={!answered} onClick={advance}>Next</button></Footer>
   </>;
 }
 function prefetch(audio: ReturnType<typeof useLearnServices>["audio"], item: DrillItem) {

@@ -31,13 +31,13 @@ function Answer({ verse, phrase, id }: { verse: AnalysedVerse; phrase: Phrase; i
 
 /** Hear and name: a phrase plays; two to four family chips; the right one takes its colour. */
 export function HearAndName({ item, pools, melody, contrast, onAnswer }: DrillProps<NameItem>) {
-  const { player } = useLearnServices(), id = `name:${item.key}`, [chosen, setChosen] = useState<FamilyId | null>(null);
+  const { player } = useLearnServices(), id = `name:${item.key}`, [chosen, setChosen] = useState<FamilyId | null>(null), [compared, setCompared] = useState(false);
   const verse = verseOf(pools, item.answer);
   useAutoplay(id, [request(item.answer)]);
   const pick = (family: FamilyId) => {
     if (chosen) return; setChosen(family);
     const right = family === item.answer.family;
-    if (!right) { const other = contrast(family, [item.answer.ref]); void player.play(`${id}:compare`, other ? [request(item.answer), request(other)] : [request(item.answer)]); }
+    if (!right) { const other = contrast(family, [item.answer.ref]); setCompared(!!other); void player.play(`${id}:compare`, other ? [request(item.answer), request(other)] : [request(item.answer)]); }
     onAnswer(right);
   };
   return <>
@@ -51,7 +51,8 @@ export function HearAndName({ item, pools, melody, contrast, onAnswer }: DrillPr
         <ContourMark family={family} melody={melody} /><span>{familyName(family)}</span>{state === "right" && <span className={styles.choiceMark}>{icons.check}</span>}
       </button></li>;
     })}</ul>
-    <p role="status" className={styles.feedback}>{chosen && chosen !== item.answer.family ? `That one is ${familyName(item.answer.family)}. Here is ${familyName(chosen)} for comparison.` : ""}</p>
+    <p role="status" className={styles.feedback}>{chosen && chosen !== item.answer.family ? compared ? `That one is ${familyName(item.answer.family)}. Here is ${familyName(chosen)} for comparison.` : `That one is ${familyName(item.answer.family)}.`
+      : chosen ? <span className="sr-only">{familyName(item.answer.family)}</span> : ""}</p>
     {chosen && verse && <Answer verse={verse} phrase={item.answer} id={id} />}
   </>;
 }

@@ -27,7 +27,7 @@ export function FirstVerse({ lesson, onDone }: { lesson: Lesson; onDone(): void 
   if (!settled) return <p role="status" className={styles.state}>Loading the reading…</p>;
   if (week.status === "none" && kind === "haftarah" && !fallback.length) return <p>No recording for this haftarah yet.</p>;
   const verse = candidates[choice % Math.max(1, candidates.length)];
-  if (!verse) return <div role="status" className={styles.state}><p>The recording did not load. Try again.</p></div>;
+  if (!verse) return <div role="status" className={styles.state}><p>The recording did not load. Try again.</p><button type="button" className="button-secondary" onClick={() => window.location.reload()}>Try again</button></div>;
   const date = week.status === "ready" ? week.date : null;
   const whole = phraseRequest(verse, [0, verse.units.length - 1]), current = verse.phrases[phrase];
   const id = `first:${verse.ref}:${step}:${phrase}`;
@@ -64,20 +64,21 @@ export function FirstVerse({ lesson, onDone }: { lesson: Lesson; onDone(): void 
 function Celebration({ verse, lein, onBack }: { verse: AnalysedVerse; lein: string | null; onBack(): void }) {
   const state = usePlayerState(), [shown, setShown] = useState(false), start = useRef<number | null>(null), sheet = useRef<HTMLDivElement>(null);
   const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const playing = state.id === `sheet:${verse.ref}` && state.status === "playing", seconds = playing ? state.seconds : 0;
-  if (playing && start.current === null) start.current = seconds;
+  const id = `sheet:${verse.ref}`, playing = state.id === id && state.status === "playing";
+  if (playing && start.current === null) start.current = state.seconds;
   const span = start.current ?? 0, inking = reduced || start.current !== null;
   useEffect(() => { sheet.current?.focus(); }, []);
+  // The line and actions arrive when the recording stops, however it stops (ended, failed, stopped or
+  // refused by the browser), and in any case within twenty seconds: the sheet never traps the learner.
   useEffect(() => {
-    if (reduced) { setShown(true); return; }
-    if (state.id === `sheet:${verse.ref}` && (state.status === "error" || state.status === "idle") && start.current === null) { setShown(true); return; }
-    if (start.current === null) return;
-    const timer = setTimeout(() => setShown(true), (span + 0.6) * 1000);
+    if (reduced || start.current !== null && !playing || state.status === "error" && state.id === id) { setShown(true); return; }
+    const timer = setTimeout(() => setShown(true), 20_000);
     return () => clearTimeout(timer);
-  }, [reduced, span, state.status, state.id, verse.ref]);
+  }, [reduced, playing, state.status, state.id, id]);
   // Each word starts its wipe at its share of the recording, so the colour follows the voice.
   const delay = (unit: number) => reduced ? 0 : span * unit / verse.units.length / 0.07;
-  return <div ref={sheet} className={styles.sheet} role="dialog" aria-modal="true" aria-labelledby="celebration-line" tabIndex={-1}>
+  return <div ref={sheet} className={styles.sheet} role="dialog" aria-modal="true" aria-labelledby="celebration-line" tabIndex={-1}
+    onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); onBack(); } }}>
     <div className={styles.sheetStage}>
       <p className={styles.sheetRef}><bdi dir="ltr">{verse.ref}</bdi></p>
       <UnitsText key={inking ? "ink" : "plain"} verse={verse} className={styles.sheetHebrew} look={() => inking ? "pull" : "plain"} wipe={delay} />

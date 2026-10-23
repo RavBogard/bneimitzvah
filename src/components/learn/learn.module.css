@@ -82,7 +82,7 @@ a.stepLink:hover { background: var(--color-hover); color: var(--color-ink); }
 .bar { position: sticky; top: 0; z-index: 3; display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(8rem, 16rem); align-items: center; gap: 0.75rem;
   padding: max(0.5rem, env(safe-area-inset-top)) 0 0.5rem; background: var(--lake); color: #fff; box-shadow: 0 0 0 100vmax var(--lake); clip-path: inset(0 -100vmax); }
 .bar :focus-visible { outline-color: var(--marigold); }
-.close { display: inline-grid; place-items: center; width: 48px; height: 48px; margin-inline-start: -0.5rem; border-radius: 999px; color: #fff; }
+.close { display: inline-grid; place-items: center; width: 56px; height: 56px; margin-inline-start: -0.5rem; border-radius: 999px; color: #fff; }
 .close:hover { background: rgb(255 255 255 / 0.14); color: #fff; }
 .barTitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.0625rem; font-weight: 700; max-width: none; }
 .rail { list-style: none; display: flex; gap: 4px; margin: 0; padding: 0; }
@@ -136,11 +136,12 @@ a.stepLink:hover { background: var(--color-hover); color: var(--color-ink); }
 .feedback { font-size: 1.0625rem; font-weight: 550; min-height: 1.5em; }
 .answer { display: grid; gap: 0.75rem; padding: 1rem 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
 .answerHead { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
-.textButton { display: inline-flex; align-items: center; gap: 0.375rem; min-height: 44px; padding: 0 0.25rem; border: 0; background: transparent; color: var(--color-action); font-weight: 650; text-decoration: underline; text-underline-offset: 0.2em; }
+.textButton { display: inline-flex; align-items: center; gap: 0.375rem; min-height: 56px; padding: 0 0.25rem; border: 0; background: transparent; color: var(--color-action); font-weight: 650; text-decoration: underline; text-underline-offset: 0.2em; }
 .textButton:hover { color: var(--color-action-hover); }
 /* Words and phrases the learner taps in a verse. */
 .verseBox { padding: 1rem 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
-.target { cursor: pointer; border-radius: 0.22em; padding-inline: 0.06em; outline-offset: 2px; transition: background-color 160ms var(--ease-settle); }
+/* Inline padding grows the hit area of a word or phrase without moving the line. */
+.target { cursor: pointer; border-radius: 0.22em; padding: 0.32em 0.06em; outline-offset: 2px; transition: background-color 160ms var(--ease-settle); }
 .target:hover { background: var(--color-hover); }
 .target:focus-visible { outline: 3px solid var(--marigold); outline-offset: 2px; }
 .target[aria-disabled="true"] { cursor: default; }

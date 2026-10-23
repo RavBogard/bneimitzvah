@@ -34,7 +34,7 @@ export function passagesFor(refs: readonly string[], kind: Melody): string[] {
   return groups.map(group => group.join("; "));
 }
 
-type Page = { refs: string[]; verses: StudyVerse[]; shorts: (ReferenceShortResolution | null)[] };
+type Page = { refs: string[]; verses: StudyVerse[]; shorts: (ReferenceShortResolution | null)[]; shortsFailed: boolean };
 async function textPage(ref: string, kind: Melody, offset: number, total: number, signal: AbortSignal) {
   const plan = studyRangePlan(ref.split("; "), kind, offset);
   const row = referenceRecord(await getJson(`/api/public/text?${query([["ref", ref], ["kind", kind], ["offset", String(offset)]])}`, 2 * 1024 * 1024, signal),
@@ -53,12 +53,12 @@ async function shortPage(ref: string, kind: Melody, offset: number, refs: readon
 async function passage(ref: string, kind: Melody, signal: AbortSignal): Promise<Page> {
   let total: number;
   try { total = expandReadingRanges(ref.split("; "), kind, TANAKH_VERSE_COUNTS).length; } catch { return bad(); }
-  const out: Page = { refs: [], verses: [], shorts: [] };
+  const out: Page = { refs: [], verses: [], shorts: [], shortsFailed: false };
   for (let offset: number | null = 0, guard = 0; offset !== null && guard < 12; guard++) {
     const { plan, page } = await textPage(ref, kind, offset, total, signal);
     let shorts: (ReferenceShortResolution | null)[];
     try { shorts = await shortPage(ref, kind, offset, plan.refs, plan.nextOffset, total, signal); }
-    catch (error) { if (signal.aborted) throw error; shorts = plan.refs.map(() => null); }
+    catch (error) { if (signal.aborted) throw error; shorts = plan.refs.map(() => null); out.shortsFailed = true; }
     out.refs.push(...plan.refs); out.verses.push(...page.verses); out.shorts.push(...shorts);
     offset = plan.nextOffset;
   }
@@ -77,6 +77,8 @@ export function createVerseLoader(fetchPassage: typeof passage = passage) {
       for (const member of members) {
         const one = work.then(result => {
           const i = result.refs.indexOf(member); if (i < 0) return bad();
+          // A recording answer that failed is not remembered, so Try again asks again.
+          if (result.shortsFailed) queueMicrotask(() => { if (verses.get(key(member, kind)) === one) verses.delete(key(member, kind)); });
           return Object.freeze({ ref: member, kind, hebrew: result.verses[i].hebrew, short: result.shorts[i] });
         });
         verses.set(key(member, kind), one);
@@ -89,12 +91,14 @@ export function createVerseLoader(fetchPassage: typeof passage = passage) {
     const k = `passage:${kind}:${ref}`;
     let work = passages.get(k);
     if (!work) {
-      work = fetchPassage(ref, kind, new AbortController().signal).then(result => Object.freeze(result.refs.map((member, i) => {
+      const fetched = fetchPassage(ref, kind, new AbortController().signal);
+      work = fetched.then(result => Object.freeze(result.refs.map((member, i) => {
         const verse = Object.freeze({ ref: member, kind, hebrew: result.verses[i].hebrew, short: result.shorts[i] });
-        if (!verses.has(key(member, kind))) verses.set(key(member, kind), Promise.resolve(verse));
+        if (!result.shortsFailed && !verses.has(key(member, kind))) verses.set(key(member, kind), Promise.resolve(verse));
         return verse;
       })));
       passages.set(k, work); void work.catch(() => passages.delete(k));
+      void work.then(() => fetched.then(result => { if (result.shortsFailed) passages.delete(k); }), () => {});
     }
     return work;
   }

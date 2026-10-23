@@ -9,7 +9,7 @@ import { useLearnServices } from "./services";
 import { useWeekVerses } from "./week-data";
 import styles from "./learn.module.css";
 
-const READER_VERSES = 60;
+const READER_VERSES = 60, COUNT: Record<number, string> = { 1: "one", 2: "two", 3: "three", 4: "four", 5: "five" };
 /** Rows of the family in this Shabbat's reading, then "Find three more." in a small reader (ACTIVITIES.md 6). */
 export function ThisWeekSection({ activity, lesson, fallback = [] }: { activity: ThisWeek; lesson: Lesson; fallback?: readonly ExampleVerse[] }) {
   const kind = activity.params.kind ?? lesson.melody, family = activity.params.family;
@@ -51,15 +51,16 @@ function Finder({ verses, family, need, skip }: { verses: readonly AnalysedVerse
   const available = verses.reduce((sum, verse) => sum + verse.phrases.filter(phrase => phrase.family === family && !skip.has(`${verse.ref}#${phrase.units[0]}`)).length, 0);
   const target = Math.min(need, available), done = found.length >= target;
   if (!target) return null;
-  if (!open) return <button type="button" className={styles.textButton} onClick={() => setOpen(true)}>Find three more.</button>;
+  const prompt = `Find ${COUNT[target] ?? target} more.`;
+  if (!open) return <button type="button" className={styles.textButton} onClick={() => setOpen(true)}>{prompt}</button>;
   const tap = (verse: AnalysedVerse, index: number) => {
     const phrase = verse.phrases[index], key = `${verse.ref}#${phrase.units[0]}`;
     void player.play(`find:${key}`, [phraseRequest(verse, phrase.units)]);
-    if (phrase.family === family && !skip.has(key)) { if (!found.includes(key) && !done) setFound([...found, key]); setMiss(null); }
+    if (phrase.family === family) { if (!skip.has(key) && !found.includes(key) && !done) setFound([...found, key]); setMiss(null); }
     else setMiss({ key, line: `That one is ${familyName(phrase.family)}.` });
   };
   return <div className={styles.reader}>
-    <p className={styles.prompt}>Find three more.</p>
+    <p className={styles.prompt}>{prompt}</p>
     <p role="status" className={done ? styles.found : styles.feedback}>{done ? `${target} of ${target} found.` : miss?.line ?? ""}</p>
     <div className={styles.reader} style={{ maxHeight: "60vh", overflowY: "auto" }} tabIndex={0} aria-label="This week's reading">
       {verses.map(verse => <div key={verse.ref} className={styles.readerVerse}>

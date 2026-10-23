@@ -66,9 +66,13 @@ export function answerCard(card: Card, right: boolean, today: string): Card {
   const box = right ? Math.min(BOX_DAYS.length - 1, card.box + 1) : Math.max(0, card.box - 2);
   return Object.freeze({ box, due: addDays(today, BOX_DAYS[box]) });
 }
-/** Record one answer. Only cards that already exist move; a lesson's own cards arrive when it is done. */
-export function recordAnswer(progress: Progress, id: CardId, right: boolean, today: string): Progress {
+/** Record one answer. Only cards that already exist move; a lesson's own cards arrive when it is done.
+ * `moved` is the run's (a lesson's or a review's) record: a card goes up at most one box per run, however
+ * often it comes up right; a miss still drops it. */
+export function recordAnswer(progress: Progress, id: CardId, right: boolean, today: string, moved?: Set<string>): Progress {
   const card = progress.cards[id]; if (!card) return progress;
+  if (right && moved?.has(id)) return progress;
+  moved?.add(id);
   return Object.freeze({ ...progress, cards: Object.freeze({ ...progress.cards, [id]: answerCard(card, right, today) }) });
 }
 /** The skills a lesson's drills practise, for its family in its melody. */

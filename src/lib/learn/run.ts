@@ -5,8 +5,10 @@ import { itemRefs, type DrillItem } from "./pools";
  * three to five items later and again at the end until it has been answered right once. Nothing is
  * scored. Pure, so the lesson screen and the tests share it.
  */
-export type Run = Readonly<{ queue: readonly DrillItem[]; at: number; right: ReadonlySet<string>; missed: ReadonlySet<string> }>;
-export const startRun = (items: readonly DrillItem[]): Run => Object.freeze({ queue: Object.freeze([...items]), at: 0, right: new Set<string>(), missed: new Set<string>() });
+export type Run = Readonly<{ queue: readonly DrillItem[]; at: number; right: ReadonlySet<string>; missed: ReadonlySet<string>; misses: ReadonlyMap<string, number> }>;
+/** A missed item comes back at most this many times in one run; after that it is left to review. */
+export const REASKS = 2;
+export const startRun = (items: readonly DrillItem[]): Run => Object.freeze({ queue: Object.freeze([...items]), at: 0, right: new Set<string>(), missed: new Set<string>(), misses: new Map<string, number>() });
 export const currentItem = (run: Run): DrillItem | null => run.queue[run.at] ?? null;
 export const runDone = (run: Run) => run.at >= run.queue.length;
 
@@ -20,10 +22,13 @@ function reaskAt(queue: readonly DrillItem[], from: number, item: DrillItem, rng
 export function answerRun(run: Run, right: boolean, rng: () => number): Run {
   const item = currentItem(run); if (!item) return run;
   const queue = [...run.queue], next = run.at + 1;
-  const rightSet = new Set(run.right), missed = new Set(run.missed);
+  const rightSet = new Set(run.right), missed = new Set(run.missed), misses = new Map(run.misses);
   if (right) rightSet.add(item.key);
-  else { missed.add(item.key); queue.splice(reaskAt(queue, next, item, rng), 0, item); }
-  return Object.freeze({ queue: Object.freeze(queue), at: next, right: rightSet, missed });
+  else {
+    missed.add(item.key); const count = (misses.get(item.key) ?? 0) + 1; misses.set(item.key, count);
+    if (count <= REASKS) queue.splice(reaskAt(queue, next, item, rng), 0, item);
+  }
+  return Object.freeze({ queue: Object.freeze(queue), at: next, right: rightSet, missed, misses });
 }
 
 /** Across a lesson's drills: eight right in a row with no miss lets the rest of the drills go. */

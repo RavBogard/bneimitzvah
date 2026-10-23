@@ -32,6 +32,14 @@ describe("the Leitner scheduler", () => {
     expect(recordAnswer(progress, "zakef:torah:name", true, today)).toBe(progress);
     expect(lessonCards(lessonById("intro-phrases")!)).toEqual([]);
   });
+  it("moves a card up at most one box in one run, however often it comes up right, but still drops it on a miss", () => {
+    const moved = new Set<string>();
+    let progress = done(emptyProgress(), "torah-sof-pasuk");
+    for (let i = 0; i < 8; i++) progress = recordAnswer(progress, "sof-pasuk:torah:name", true, today, moved);
+    expect(progress.cards["sof-pasuk:torah:name"].box).toBe(2);
+    progress = recordAnswer(progress, "sof-pasuk:torah:name", false, today, moved);
+    expect(progress.cards["sof-pasuk:torah:name"].box).toBe(0);
+  });
 });
 
 describe("the course path", () => {

@@ -65,7 +65,8 @@ export function createPhraseAudio(io: PhraseAudioIo) {
     return wait(work, signal);
   }
   function audio(source: ShortReferenceSource, signal: AbortSignal): Promise<ShortDecodedAudio> {
-    const key = source.sha256;
+    const key = source.sha256, known = decoded.get(key);
+    if (known) return wait(known, signal);
     let raw = bytes.get(key);
     if (!raw) {
       raw = downloadShortReferenceAudio(source, new AbortController().signal, { origin: io.origin ?? location.origin, fetch: io.fetch, digest: io.digest });
@@ -73,7 +74,7 @@ export function createPhraseAudio(io: PhraseAudioIo) {
     }
     let work = decoded.get(key);
     if (!work) {
-      work = raw.then(async value => { const out = await (io.decode ?? decodeShortReferenceAudio)(value, source); validateShortDecodedAudio(out, source); return out; });
+      work = raw.then(async value => { const out = await (io.decode ?? decodeShortReferenceAudio)(value, source); validateShortDecodedAudio(out, source); bytes.delete(key); return out; });
       decoded.set(key, work); void work.catch(() => decoded.delete(key));
     }
     return wait(work, signal);
