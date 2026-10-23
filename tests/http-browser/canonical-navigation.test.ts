@@ -1,14 +1,17 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { request as httpRequest } from "node:http";
 import { join } from "node:path";
-import { afterAll, beforeAll, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { chromium, type Browser } from "playwright";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 
 // Actual built Next, no database or provider configuration. Every network
 // connection stays on loopback; public hostnames are synthetic request metadata.
-const loopback = "http://127.0.0.1:3192", canonical = "https://beitmitzvah.centralreform.org";
-const aliases = ["barmitzvah.centralreform.org", "batmitzvah.centralreform.org", "bnaimitzvah.centralreform.org", "bneimitzvah.centralreform.org", "bneimitzvah.vercel.app", "torah.centralreform.org"];
+// Both hard-coded canonical selections run against the same build; the
+// unselected canonical is then an alias like the five fixed ones.
+const loopback = "http://127.0.0.1:3192", BEIT = "https://beitmitzvah.centralreform.org", TORAH = "https://torah.centralreform.org";
+const fixedAliases = ["barmitzvah.centralreform.org", "batmitzvah.centralreform.org", "bnaimitzvah.centralreform.org", "bneimitzvah.centralreform.org", "bneimitzvah.vercel.app"];
+const allHosts = [...fixedAliases, new URL(BEIT).host, new URL(TORAH).host];
 let child: ChildProcess | undefined, browser: Browser | undefined, cleanup: (() => Promise<void>) | undefined;
 let cleanupBrowser: (() => Promise<void>) | undefined;
 function headers(host: string, extra: Record<string, string> = {}) {
@@ -51,7 +54,6 @@ async function stop() {
   await cleanup?.(); cleanup = undefined;
 }
 beforeAll(async () => {
-  await start(canonical);
   const isolation = await isolatedEnv(); cleanupBrowser = isolation.cleanup;
   browser = await chromium.launch({ headless: true, env: isolation.env });
 });
@@ -61,118 +63,137 @@ afterAll(async () => {
   await stop();
 });
 
-test("built alias pages drop path/query with a private fixed redirect while APIs, mutations and hostile frames never redirect", async () => {
-  for (const host of aliases) {
-    for (const method of ["GET", "HEAD"]) {
-      const response = await exchange("/auth/email/?token=synthetic-private", host, method);
-      expect(response.status).toBe(303); expect(response.headers.get("location")).toBe(canonical + "/#home");
-      expect(response.headers.get("cache-control")).toBe("private, no-store");
-      expect(response.headers.get("referrer-policy")).toBe("no-referrer");
-      expect(response.headers.has("set-cookie")).toBe(false); await response.body?.cancel();
-    }
-    for (const [path, method] of [["/api/session?token=synthetic-private", "GET"], ["/api/auth/google/challenge", "POST"], ["/auth/email", "POST"]]) {
-      const response = await exchange(path, host, method);
-      expect(response.status).toBe(404); expect(response.headers.has("location")).toBe(false);
-      expect(response.headers.has("set-cookie")).toBe(false); await response.body?.cancel();
-    }
-  }
-  for (const extra of [{ origin: "https://foreign.example.test" }, { "x-forwarded-host": "beitmitzvah.centralreform.org" }, { "x-forwarded-proto": "http" }, { "x-forwarded-port": "80" }] as Record<string, string>[]) {
-    const response = await exchange("/account?code=synthetic-private", aliases[0], "GET", extra);
-    expect(response.status).toBe(404); expect(response.headers.has("location")).toBe(false); expect(response.headers.has("set-cookie")).toBe(false); await response.body?.cancel();
-  }
-  const unknown = await exchange("/account?state=synthetic-private", "foreign.example.test");
-  expect(unknown.headers.has("location")).toBe(false); expect(unknown.headers.has("set-cookie")).toBe(false); await unknown.body?.cancel();
-});
+for (const canonical of [BEIT, TORAH]) {
+  const other = canonical === BEIT ? TORAH : BEIT;
+  const aliases = [...fixedAliases, new URL(other).host];
+  describe(`BETTER_AUTH_URL = ${canonical}`, () => {
+    beforeAll(async () => { await stop(); await start(canonical); });
 
-test("real browser follows the built redirect with no query or inherited token fragment", async () => {
-  const context = await browser!.newContext({ serviceWorkers: "block", acceptDownloads: false });
-  const tab = await context.newPage();
-  const session = await context.newCDPSession(tab);
-  let closed = false, failed = false;
-  try {
-    const canonicalRequests: string[] = [], canonicalPaused: string[] = [], canonicalNavigations: string[] = [], aliasNavigations: string[] = [];
-    const canonicalDocumentPauses: string[] = [], aliasDocumentPauses: string[] = [], foreignRequests: string[] = [];
-    const { frameTree } = await session.send("Page.getFrameTree");
-    context.on("request", request => {
-      const url = new URL(request.url());
-      if (url.origin === canonical) canonicalRequests.push(url.href);
-      else if (url.protocol !== "https:" || !aliases.includes(url.hostname)) foreignRequests.push(url.href);
-      if (request.isNavigationRequest() && request.frame() === tab.mainFrame()) {
-        if (url.origin === canonical) canonicalNavigations.push(url.href);
-        else aliasNavigations.push(url.href);
+    test("the selected canonical serves its own pages and APIs without the alias redirect or 404 gate", async () => {
+      const host = new URL(canonical).host;
+      const page = await exchange("/account", host);
+      expect(page.status).toBe(200); expect(page.headers.has("location")).toBe(false); expect(page.headers.has("set-cookie")).toBe(false); await page.body?.cancel();
+      // Missing provider configuration fails closed with 503, which proves the alias gate did not run.
+      const api = await exchange("/api/session", host);
+      expect(api.status).toBe(503); expect(api.headers.has("location")).toBe(false); expect(api.headers.has("set-cookie")).toBe(false); await api.body?.cancel();
+      const forwarded = await exchange("/account", host, "GET", { "x-forwarded-host": new URL(other).host });
+      expect(forwarded.headers.has("location")).toBe(false); expect(forwarded.headers.has("set-cookie")).toBe(false); await forwarded.body?.cancel();
+    });
+
+    test("built alias pages drop path/query with a private fixed redirect while APIs, mutations and hostile frames never redirect", async () => {
+      for (const host of aliases) {
+        for (const method of ["GET", "HEAD"]) {
+          const response = await exchange("/auth/email/?token=synthetic-private", host, method);
+          expect(response.status).toBe(303); expect(response.headers.get("location")).toBe(canonical + "/#home");
+          expect(response.headers.get("cache-control")).toBe("private, no-store");
+          expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+          expect(response.headers.has("set-cookie")).toBe(false); await response.body?.cancel();
+        }
+        for (const [path, method] of [["/api/session?token=synthetic-private", "GET"], ["/api/auth/google/challenge", "POST"], ["/auth/email", "POST"]]) {
+          const response = await exchange(path, host, method);
+          expect(response.status).toBe(404); expect(response.headers.has("location")).toBe(false);
+          expect(response.headers.has("set-cookie")).toBe(false); await response.body?.cancel();
+        }
+      }
+      for (const extra of [{ origin: "https://foreign.example.test" }, { "x-forwarded-host": new URL(canonical).host }, { "x-forwarded-proto": "http" }, { "x-forwarded-port": "80" }] as Record<string, string>[]) {
+        const response = await exchange("/account?code=synthetic-private", aliases[0], "GET", extra);
+        expect(response.status).toBe(404); expect(response.headers.has("location")).toBe(false); expect(response.headers.has("set-cookie")).toBe(false); await response.body?.cancel();
+      }
+      const unknown = await exchange("/account?state=synthetic-private", "foreign.example.test");
+      expect(unknown.headers.has("location")).toBe(false); expect(unknown.headers.has("set-cookie")).toBe(false); await unknown.body?.cancel();
+    });
+
+    test("real browser follows the built redirect with no query or inherited token fragment", async () => {
+      const context = await browser!.newContext({ serviceWorkers: "block", acceptDownloads: false });
+      const tab = await context.newPage();
+      const session = await context.newCDPSession(tab);
+      let closed = false, failed = false;
+      try {
+        const canonicalRequests: string[] = [], canonicalPaused: string[] = [], canonicalNavigations: string[] = [], aliasNavigations: string[] = [];
+        const canonicalDocumentPauses: string[] = [], aliasDocumentPauses: string[] = [], foreignRequests: string[] = [];
+        const { frameTree } = await session.send("Page.getFrameTree");
+        context.on("request", request => {
+          const url = new URL(request.url());
+          if (url.origin === canonical) canonicalRequests.push(url.href);
+          else if (url.protocol !== "https:" || !aliases.includes(url.hostname)) foreignRequests.push(url.href);
+          if (request.isNavigationRequest() && request.frame() === tab.mainFrame()) {
+            if (url.origin === canonical) canonicalNavigations.push(url.href);
+            else aliasNavigations.push(url.href);
+          }
+        });
+        // Playwright route handlers skip subsequent redirect hops. CDP's Request
+        // stage explicitly pauses every hop (pinned protocol requestPaused docs).
+        // Never continue a public request: fulfill from loopback/synthetic HTML or
+        // fail it. No redirect can escape through a real public network fallback.
+        session.on("Fetch.requestPaused", (event: { requestId: string; frameId: string; resourceType: string; request: { url: string; method: string } }) => {
+          void (async () => {
+            const url = new URL(event.request.url);
+            const document = event.resourceType === "Document" && event.frameId === frameTree.frame.id;
+            if (url.origin === canonical) {
+              canonicalPaused.push(url.href);
+              if (document) canonicalDocumentPauses.push(url.href);
+              if (document && url.pathname === "/" && !url.search) {
+                await session.send("Fetch.fulfillRequest", { requestId: event.requestId, responseCode: 200,
+                  responseHeaders: [{ name: "content-type", value: "text/html" }], body: Buffer.from("<p>Canonical synthetic landing</p>").toString("base64") });
+                return;
+              }
+            } else if (url.protocol === "https:" && aliases.includes(url.host)) {
+              if (document) aliasDocumentPauses.push(url.href);
+              const response = await exchange(url.pathname + url.search, url.host, event.request.method);
+              const responseHeaders = [...response.headers].filter(([name]) => !["connection", "transfer-encoding", "content-length", "keep-alive"].includes(name)).map(([name, value]) => ({ name, value }));
+              await session.send("Fetch.fulfillRequest", { requestId: event.requestId, responseCode: response.status, responseHeaders });
+              return;
+            }
+            await session.send("Fetch.failRequest", { requestId: event.requestId, errorReason: "BlockedByClient" });
+          })().catch(() => {
+            if (!closed) failed = true;
+            void session.send("Fetch.failRequest", { requestId: event.requestId, errorReason: "BlockedByClient" }).catch(() => {});
+          });
+        });
+        await session.send("Fetch.enable", { patterns: [{ urlPattern: "*", requestStage: "Request" }] });
+        for (const host of aliases) {
+          await tab.goto(`https://${host}/invitations/open/?token=synthetic-private#token=synthetic-fragment`);
+          const destination = new URL(tab.url());
+          expect(destination.origin + destination.pathname).toBe(canonical + "/");
+          expect(destination.search).toBe(""); expect(destination.hash).toBe("#home");
+          expect(tab.url()).not.toContain("synthetic-private"); expect(tab.url()).not.toContain("synthetic-fragment");
+        }
+        const expectedAliases = aliases.map(host => `https://${host}/invitations/open/?token=synthetic-private`);
+        const expectedCanonical = aliases.map(() => canonical + "/");
+        expect(aliasNavigations).toEqual(expectedAliases); expect(aliasDocumentPauses).toEqual(expectedAliases);
+        expect(canonicalNavigations).toEqual(expectedCanonical); expect(canonicalDocumentPauses).toEqual(expectedCanonical);
+        expect(canonicalRequests.length).toBeGreaterThanOrEqual(aliases.length);
+        expect(canonicalRequests.every(value => canonicalPaused.includes(value))).toBe(true);
+        for (const value of [...canonicalRequests, ...canonicalPaused]) {
+          expect(new URL(value).search).toBe("");
+          expect(value).not.toContain("synthetic-private"); expect(value).not.toContain("synthetic-fragment");
+        }
+        expect(foreignRequests).toEqual([]); expect(failed).toBe(false);
+        expect(await context.cookies()).toEqual([]);
+      } finally { closed = true; await context.close(); }
+    });
+
+    test("pinned Next malformed origin-form normalization stays same-origin before alias gate", async () => {
+      for (const method of ["GET", "POST"]) {
+        const response = await exchange("/auth//email?token=synthetic-private", aliases[0], method);
+        expect(response.status).toBe(308); expect(response.headers.has("set-cookie")).toBe(false);
+        const location = response.headers.get("location")!;
+        expect(location.startsWith("/") && !location.startsWith("//")).toBe(true);
+        expect(new URL(location, `https://${aliases[0]}`).origin).toBe(`https://${aliases[0]}`);
+        expect(new URL(location, loopback).search).toBe("?token=synthetic-private");
+        await response.body?.cancel();
+        const next = await exchange(location, aliases[0], method);
+        expect(next.status).toBe(method === "GET" ? 303 : 404);
+        expect(next.headers.get("location")).toBe(method === "GET" ? canonical + "/#home" : null);
+        expect(next.headers.has("set-cookie")).toBe(false); await next.body?.cancel();
       }
     });
-    // Playwright route handlers skip subsequent redirect hops. CDP's Request
-    // stage explicitly pauses every hop (pinned protocol requestPaused docs).
-    // Never continue a public request: fulfill from loopback/synthetic HTML or
-    // fail it. No redirect can escape through a real public network fallback.
-    session.on("Fetch.requestPaused", (event: { requestId: string; frameId: string; resourceType: string; request: { url: string; method: string } }) => {
-      void (async () => {
-        const url = new URL(event.request.url);
-        const document = event.resourceType === "Document" && event.frameId === frameTree.frame.id;
-        if (url.origin === canonical) {
-          canonicalPaused.push(url.href);
-          if (document) canonicalDocumentPauses.push(url.href);
-          if (document && url.pathname === "/" && !url.search) {
-            await session.send("Fetch.fulfillRequest", { requestId: event.requestId, responseCode: 200,
-              responseHeaders: [{ name: "content-type", value: "text/html" }], body: Buffer.from("<p>Canonical synthetic landing</p>").toString("base64") });
-            return;
-          }
-        } else if (url.protocol === "https:" && aliases.includes(url.host)) {
-          if (document) aliasDocumentPauses.push(url.href);
-          const response = await exchange(url.pathname + url.search, url.host, event.request.method);
-          const responseHeaders = [...response.headers].filter(([name]) => !["connection", "transfer-encoding", "content-length", "keep-alive"].includes(name)).map(([name, value]) => ({ name, value }));
-          await session.send("Fetch.fulfillRequest", { requestId: event.requestId, responseCode: response.status, responseHeaders });
-          return;
-        }
-        await session.send("Fetch.failRequest", { requestId: event.requestId, errorReason: "BlockedByClient" });
-      })().catch(() => {
-        if (!closed) failed = true;
-        void session.send("Fetch.failRequest", { requestId: event.requestId, errorReason: "BlockedByClient" }).catch(() => {});
-      });
-    });
-    await session.send("Fetch.enable", { patterns: [{ urlPattern: "*", requestStage: "Request" }] });
-    for (const host of aliases) {
-      await tab.goto(`https://${host}/invitations/open/?token=synthetic-private#token=synthetic-fragment`);
-      const destination = new URL(tab.url());
-      expect(destination.origin + destination.pathname).toBe(canonical + "/");
-      expect(destination.search).toBe(""); expect(destination.hash).toBe("#home");
-      expect(tab.url()).not.toContain("synthetic-private"); expect(tab.url()).not.toContain("synthetic-fragment");
-    }
-    const expectedAliases = aliases.map(host => `https://${host}/invitations/open/?token=synthetic-private`);
-    const expectedCanonical = aliases.map(() => canonical + "/");
-    expect(aliasNavigations).toEqual(expectedAliases); expect(aliasDocumentPauses).toEqual(expectedAliases);
-    expect(canonicalNavigations).toEqual(expectedCanonical); expect(canonicalDocumentPauses).toEqual(expectedCanonical);
-    expect(canonicalRequests.length).toBeGreaterThanOrEqual(aliases.length);
-    expect(canonicalRequests.every(value => canonicalPaused.includes(value))).toBe(true);
-    for (const value of [...canonicalRequests, ...canonicalPaused]) {
-      expect(new URL(value).search).toBe("");
-      expect(value).not.toContain("synthetic-private"); expect(value).not.toContain("synthetic-fragment");
-    }
-    expect(foreignRequests).toEqual([]); expect(failed).toBe(false);
-    expect(await context.cookies()).toEqual([]);
-  } finally { closed = true; await context.close(); }
-});
-
-test("pinned Next malformed origin-form normalization stays same-origin before alias gate", async () => {
-  for (const method of ["GET", "POST"]) {
-    const response = await exchange("/auth//email?token=synthetic-private", aliases[0], method);
-    expect(response.status).toBe(308); expect(response.headers.has("set-cookie")).toBe(false);
-    const location = response.headers.get("location")!;
-    expect(location.startsWith("/") && !location.startsWith("//")).toBe(true);
-    expect(new URL(location, `https://${aliases[0]}`).origin).toBe(`https://${aliases[0]}`);
-    expect(new URL(location, loopback).search).toBe("?token=synthetic-private");
-    await response.body?.cancel();
-    const next = await exchange(location, aliases[0], method);
-    expect(next.status).toBe(method === "GET" ? 303 : 404);
-    expect(next.headers.get("location")).toBe(method === "GET" ? canonical + "/#home" : null);
-    expect(next.headers.has("set-cookie")).toBe(false); await next.body?.cancel();
-  }
-});
+  });
+}
 
 test("runtime rollback to stable origin leaves clean stable pages and preactivation alias pages unredirected", async () => {
   await stop(); await start("https://bneimitzvah.vercel.app");
-  for (const host of aliases) {
+  for (const host of allHosts) {
     const response = await exchange("/account", host);
     expect(response.status).toBe(200); expect(response.headers.has("location")).toBe(false);
     expect(response.headers.has("set-cookie")).toBe(false); await response.body?.cancel();
