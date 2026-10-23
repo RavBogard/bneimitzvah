@@ -1,8 +1,12 @@
 "use client";
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type MutableRefObject, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type MutableRefObject, type ReactNode } from "react";
 import type { Assigned } from "../api";
 import { useWorkspace } from "../provider";
 import { useReadingPrefs } from "../reading-prefs";
+import { useStudyLens } from "../study-lens";
+import { LensSwitch } from "../lens-switch";
+import { StudyRows } from "./study-rows";
+import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useWorkCommentary, VerseRashi } from "./commentary-view";
 import { Apparatus, FlowingStudyText } from "./annotations";
 import { StudyCredits } from "./credits";
 import { explorationBinding, explorationReasons } from "./exploration-api";
@@ -20,20 +24,32 @@ export function ExplorationContent({ state, group, retry, page, refresh, audio }
 }) {
   const prefs = useReadingPrefs(), prepared = state.result?.status === "prepared" ? state.result : undefined;
   const current = state.page, unresolved = state.result?.status === "unresolved" ? state.result : undefined;
+  // The proposed portion is always Torah: Rashi and the Women's Commentary both cover it.
+  const lens = useStudyLens(), study = lens.lens === "study", leinLink = useCommentLink();
+  const refs = useMemo(() => current && prepared ? current.verses.map(verse => verse.ref) : [], [current, prepared]);
+  const rashi = useWorkCommentary("rashi", refs, refs.length > 0 && (!study || lens.works.includes("rashi")));
+  const womens = useWorkCommentary("womens", refs, refs.length > 0 && study && lens.works.includes("womens"));
+  const works = useMemo(() => [rashi, womens].filter(row => lens.works.includes(row.work)), [rashi, womens, lens.works]);
   const offsetIndex = prepared && current ? prepared.pages.findIndex(row => row.offset === current.offset) : -1;
   const previous = prepared?.pages[offsetIndex - 1]?.offset;
   return <section className="assigned-study" aria-label="Proposed Torah portion" data-size={prefs.size} aria-busy={state.pending}>
     <header><h3>{prepared?.portion ?? "Explore the Torah portion"}</h3>
       <p className="field-help">Read the full portion while you and your tutor choose your verses. This is not an assigned reading yet.</p>
-      {prepared && <p className="reading-reference">{prepared.ranges.join("; ").replace(/(\d)-(\d)/g, "$1–$2")}</p>}</header>
+      {prepared && <p className="reading-reference">{prepared.ranges.join("; ").replace(/(\d)-(\d)/g, "$1–$2")}</p>}
+      {lens.available && <div className="reading-lens-row" data-learner=""><LensSwitch onChange={() => leinLink.clear()} /></div>}</header>
     {state.error ? <div role="status"><p>{state.error === 409 ? "The reading changed. Refresh it to continue." : [401, 403, 404].includes(state.error) ? "This reading is no longer available in the selected role." : "The Torah portion couldn’t be loaded. Try again in a moment."}</p>
       <button className="button-secondary" onClick={state.error === 409 ? refresh : retry}>{state.error === 409 ? "Refresh reading" : "Try again"}</button></div>
       : unresolved ? <div role="status"><p>{explorationReasons[unresolved.reason]}</p><button className="button-secondary" onClick={retry}>Try again</button></div>
       : !current || !prepared ? <p role="status">Loading the Torah portion…</p> : <>
-        <FlowingStudyText verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false} activeWord={audio?.activeWord ?? null} onWord={audio?.onWord} onVerse={audio?.onVerse} showEnglish={prefs.translation} tikkun={prefs.tikkunView} />
+        {study ? <>
+          <CommentaryStatus works={works.map(row => ({ work: row.work, status: row.status, retry: row.retry, covers: true }))} />
+          <StudyRows verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false} activeWord={audio?.activeWord ?? null} onWord={audio?.onWord} onVerse={audio?.onVerse}
+            showEnglish={lens.english} works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))} />
+        </> : <FlowingStudyText verses={current.verses} assignment={{ kind: "torah", confirmed: false, verses: [] }} group={group} toolsAvailable={false} activeWord={audio?.activeWord ?? null} onWord={audio?.onWord} onVerse={audio?.onVerse} showEnglish={prefs.translation} tikkun={prefs.tikkunView} linked={linkedVerse(leinLink, current.verses)} />}
         {audio?.player}
         <div className="study-verse-details">{current.verses.map(verse => <div key={verse.ref} className="study-verse-detail" data-verse-ref={verse.ref}>
           <Apparatus verse={verse} learner />
+          {!study && <VerseRashi verse={verse} state={rashi.lookup.forVerse(verse.ref)} link={leinLink} retry={rashi.retry} />}
         </div>)}</div>
         <p className="study-page-position">Verses {current.offset + 1}–{current.offset + current.verses.length} of {current.totalVerses}</p>
         {prepared.pages.length > 1 && <nav className="study-pages" aria-label="Proposed Torah text pages">
@@ -41,7 +57,8 @@ export function ExplorationContent({ state, group, retry, page, refresh, audio }
           <button className="button-secondary" disabled={state.pending || current.nextOffset === null} onClick={() => current.nextOffset !== null && page(current.nextOffset)}>Next text page</button>
         </nav>}
         {state.pending && <p role="status">Loading the next text page…</p>}
-        <div className="study-more"><StudyCredits chapters={current.chapters} summary="About this text" /></div>
+        {study && <CommentaryCredits works={works} refs={refs} />}
+        <div className="study-more"><StudyCredits chapters={current.chapters} summary="About this text" />{lens.available && <div className="reading-lens-foot"><LensSwitch onChange={() => leinLink.clear()} /></div>}</div>
       </>}
   </section>;
 }

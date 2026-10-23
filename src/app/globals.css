@@ -436,6 +436,26 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .study-kind-choice .button-secondary:hover { background: var(--color-hover); }
 .study-kind-choice [aria-pressed="true"], .study-kind-choice [aria-pressed="true"]:hover { background: var(--lake); color: #fff; border-color: transparent; }
 .study-kind-choice .service-entry { text-decoration: none; }
+/* The text choice (Torah / Haftarah) and the lens (Lein / Study) share one row above the passage; on a phone they wrap. */
+.reading-lens-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-block: 1rem; }
+.reading-lens-row > .study-kind-choice { margin: 0; }
+.reading-lens-row > .reading-lens-choice:only-child { margin-inline-start: auto; }
+.reading-lens-foot { display: none; }
+@media (max-width: 640px) {
+  .reading-lens-row { gap: 0.5rem; margin-block: 0.5rem; }
+  .reading-lens-row .study-kind-choice { gap: 0; }
+  .reading-lens-row .study-kind-choice .button-secondary { padding-inline: 0.8125rem; }
+  /* Learners' phones keep the first verse above the fold: the switch moves under the passage (Lein stays as it was). */
+  .reading-lens-row[data-learner] > .reading-lens-choice { display: none; }
+  .reading-lens-row[data-learner]:not(:has(> .study-kind-choice:not(.reading-lens-choice))) { display: none; }
+  .reading-lens-foot { display: block; flex-basis: 100%; }
+}
+/* Works menu rows: a check column, then the work's short name and any note. */
+.toolbar-menu-check { display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; flex: none; border-radius: 6px; box-shadow: inset 0 0 0 1.5px var(--color-control-rule); color: var(--color-action); }
+.toolbar-menu button[aria-pressed="true"] .toolbar-menu-check { background: var(--color-surface); box-shadow: inset 0 0 0 1.5px var(--lake); }
+.toolbar-menu-label { display: flex; flex-direction: column; gap: 0.125rem; }
+.toolbar-menu-note { color: var(--color-muted); font-size: 0.8125rem; font-weight: 500; }
+.toolbar-menu button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* Verses are objects you can tap. */
 .assigned-study { border-top: 0; padding-top: 0; --hebrew-size: 2rem; }
