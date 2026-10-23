@@ -32,18 +32,22 @@ button.number:focus-visible { outline: 3px solid var(--color-focus); outline-off
 }
 
 /* Inline commentary */
-.inline { direction: ltr; margin-block-start: 0.875rem; padding-inline-start: 0.875rem; box-shadow: inset 2px 0 0 var(--color-rule); color: var(--color-ink); }
+/* Quieter than scripture: muted ink and a smaller size; the quoted Hebrew words and the work's name are the one dark anchor. */
+.inline { direction: ltr; margin-block-start: 0.875rem; padding-inline-start: 0.875rem; box-shadow: inset 2px 0 0 var(--color-rule); color: var(--color-muted); }
 .verseSide > .inline:first-child { margin-block-start: 0.6rem; }
 @media (min-width: 1001px) { .verseSide > .inline { padding-inline-start: 0; box-shadow: none; } }
 .work + .work { margin-block-start: 1rem; }
-.workName { margin: 0 0 0.125rem; color: var(--color-muted); font-size: 0.8125rem; font-weight: 650; line-height: 1.4; }
+.workName { margin: 0 0 0.125rem; color: var(--color-ink); font-size: 0.8125rem; font-weight: 650; line-height: 1.4; }
 .entry + .entry { margin-block-start: 0.375rem; }
-.text { margin: 0; max-inline-size: 62ch; font-size: 0.9375rem; line-height: 1.6; overflow-wrap: break-word; }
+.text { margin: 0; max-inline-size: 62ch; font-size: 0.875rem; line-height: 1.6; overflow-wrap: break-word; }
 .text strong { font-weight: 600; }
 .clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
 .hebrewText { margin-block-start: 0.25rem; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 1.1875rem; line-height: 1.85; text-align: start; }
-.hebrewText strong { font-weight: 700; }
-.dibbur { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 1.1875rem; font-weight: 700; line-height: 1; unicode-bidi: isolate; }
+.hebrewText strong { font-weight: 600; color: var(--color-ink); }
+.dibbur { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 1.125rem; font-weight: 600; line-height: 1; color: var(--color-ink); unicode-bidi: isolate; }
+/* The English edition's own lemma, calmer than bold; capitals become small capitals, the letters unchanged. */
+.lemma { font-weight: 500; }
+.lemma[data-caps] { font-variant-caps: all-small-caps; letter-spacing: 0.02em; }
 .dibburLink { display: inline; margin: 0; padding: 0; border: 0; border-radius: 0.25em; background: transparent; color: inherit; font: inherit; line-height: inherit; text-align: inherit; cursor: pointer; }
 .dibburLink:hover .dibbur, .dibburLink[aria-pressed="true"] .dibbur { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.3em; }
 .dibburLink:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
@@ -51,6 +55,10 @@ button.number:focus-visible { outline: 3px solid var(--color-focus); outline-off
 .controls button, .status button { min-height: 44px; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--color-action); font: 600 0.8125rem/1 "Bricolage Grotesque", system-ui, sans-serif; cursor: pointer; }
 .controls button:hover, .status button:hover { color: var(--color-action-hover); text-decoration: underline; text-underline-offset: 0.2em; }
 .controls button[aria-expanded="true"] { color: var(--color-ink); }
+/* "Rashi: 2 more": one row that opens the rest of a busy verse's comments in place. */
+.moreComments { display: inline-flex; align-items: center; min-height: 44px; margin: 0.125rem 0 0; padding: 0; border: 0; background: transparent; color: var(--color-action); font: 600 0.8125rem/1 "Bricolage Grotesque", system-ui, sans-serif; cursor: pointer; }
+.moreComments:hover { color: var(--color-action-hover); text-decoration: underline; text-underline-offset: 0.2em; }
+.moreComments:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
 .controls button:focus-visible, .status button:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
 
 /* Credit, at the work's foot */

@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { createElement, type FunctionComponent, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DEFAULT_WORKS, initialLens, LENS_STORAGE, lensFromSearch, normalizeWorks, readRememberedLens, rememberLens, StudyLensScope } from "../../src/components/portal/workspace/study-lens";
-import { commentaryCount, commentaryParts, commentarySummary } from "../../src/components/portal/workspace/study/commentary-text";
+import { commentaryCount, commentaryParts, commentarySummary, englishLemma } from "../../src/components/portal/workspace/study/commentary-text";
 import { CommentaryCredits, CommentaryStatus, linkedVerse, VerseRashi } from "../../src/components/portal/workspace/study/commentary-view";
 import { StudyRows } from "../../src/components/portal/workspace/study/study-rows";
 import { ReadingToolbar as Toolbar } from "../../src/components/portal/workspace/reading-toolbar";
@@ -79,17 +79,49 @@ test("a comment leads with Rashi's quoted words; an English edition's repeat of 
   const parts = commentaryParts({ hebrew: [{ text: "דֵּה וְזַח.", bold: true }, { text: " חִי כָּל" }], english: [{ text: "דה וזח SYNTHETIC LEMMA — synthetic comment" }] });
   expect(parts.dibbur).toBe("דֵּה וְזַח");
   expect(parts.hebrew).toEqual([{ text: "חִי כָּל" }]);
-  expect(parts.english).toEqual([{ text: "SYNTHETIC LEMMA — synthetic comment" }]);
+  expect(parts.lemma).toEqual({ text: "SYNTHETIC LEMMA", caps: true });
+  expect(parts.english).toEqual([{ text: "— synthetic comment" }]);
   // A different leading Hebrew phrase is the English's own; it stays.
   expect(commentaryParts({ hebrew: [{ text: "דה", bold: true }], english: [{ text: "אבג synthetic" }] }).english).toEqual([{ text: "אבג synthetic" }]);
   // A bold English lemma is left alone.
-  expect(commentaryParts({ hebrew: [{ text: "דה", bold: true }], english: [{ text: "Synthetic lemma", bold: true }, { text: " synthetic" }] }).english?.[0]).toEqual({ text: "Synthetic lemma", bold: true });
+  const bold = commentaryParts({ hebrew: [{ text: "דה", bold: true }], english: [{ text: "Synthetic lemma", bold: true }, { text: " synthetic" }] });
+  expect(bold.lemma).toEqual({ text: "Synthetic lemma", caps: false });
+  expect(bold.english).toEqual([{ text: "synthetic" }]);
   // No bold lead: no quoted words, the whole Hebrew comment kept.
   const plain = commentaryParts({ hebrew: [{ text: "חִי כָּל" }], english: null });
   expect(plain.dibbur).toBeNull();
   expect(plain.hebrew).toEqual([{ text: "חִי כָּל" }]);
   // English only (the Women's Commentary).
-  expect(commentaryParts({ hebrew: null, english: [{ text: "Synthetic heading", italic: true }] })).toEqual({ dibbur: null, hebrew: null, english: [{ text: "Synthetic heading", italic: true }] });
+  expect(commentaryParts({ hebrew: null, english: [{ text: "Synthetic heading", italic: true }] })).toEqual({ dibbur: null, hebrew: null, lemma: null, english: [{ text: "Synthetic heading", italic: true }] });
+});
+
+test("the English edition's lemma is split off as printed: a bold run, or capitals up to the first dash outside brackets", () => {
+  // A bold lemma keeps its case.
+  expect(englishLemma([{ text: " Synthetic lemma ", bold: true }, { text: " synthetic rest" }])).toEqual({ lemma: { text: "Synthetic lemma", caps: false }, english: [{ text: "synthetic rest" }] });
+  expect(englishLemma([{ text: "SYNTHETIC CAPS", bold: true }, { text: " rest" }]).lemma).toEqual({ text: "SYNTHETIC CAPS", caps: false });
+  // Capitals up to the first dash, with an editor's lower-case gloss in brackets kept inside.
+  expect(englishLemma([{ text: "SYNTHETIC LEMMA (synthetic gloss) — synthetic rest" }])).toEqual({ lemma: { text: "SYNTHETIC LEMMA (synthetic gloss)", caps: true }, english: [{ text: "— synthetic rest" }] });
+  expect(englishLemma([{ text: "[SYNTHETIC] CAPITAL WORDS —synthetic rest" }]).lemma).toEqual({ text: "[SYNTHETIC] CAPITAL WORDS", caps: true });
+  expect(englishLemma([{ text: "SYNTHETIC LEMMA – synthetic rest" }]).lemma?.text).toBe("SYNTHETIC LEMMA");
+  expect(englishLemma([{ text: "SYNTHETIC LEMMA - synthetic rest" }]).lemma?.text).toBe("SYNTHETIC LEMMA");
+  // A hyphen inside a word, and a dash inside brackets, do not end the lemma.
+  expect(englishLemma([{ text: "SYNTHETIC-WORD LEMMA (12:1–9) — rest" }]).lemma?.text).toBe("SYNTHETIC-WORD LEMMA (12:1–9)");
+  // A whole capitalized paragraph with no dash is a section head (the Women's Commentary).
+  expect(englishLemma([{ text: "SYNTHETIC SECTION HEAD (12:1–9)" }])).toEqual({ lemma: { text: "SYNTHETIC SECTION HEAD (12:1–9)", caps: true }, english: [] });
+  // Not a lemma: ordinary sentences, one capitalized word, lower case outside brackets, italics, nothing.
+  for (const runs of [[{ text: "Synthetic sentence — with a dash" }], [{ text: "I synthetic — rest" }], [{ text: "SYNTHETIC words then — rest" }],
+    [{ text: "SYNTHETIC CAPS" }, { text: " more", bold: true as const }], [{ text: "SYNTHETIC TITLE", italic: true as const }], []]) expect(englishLemma(runs).lemma).toBeNull();
+});
+
+test("a busy verse shows three comments per work, then one row for the rest", () => {
+  const verses = [verse("Genesis 1:1")];
+  const many = ready([1, 2, 3, 4, 5].map(n => comment("קרש", `synthetic comment ${n}`)));
+  const markup = inLens(createElement(StudyRows, { verses, assignment: { kind: "torah", confirmed: true, verses: ["Genesis 1:1"] }, group: "g", activeWord: null, works: () => [{ work: "rashi", state: many }] }));
+  expect(markup).toContain("synthetic comment 3");
+  expect(markup).not.toContain("synthetic comment 4");
+  expect(markup).toMatch(/<button type="button" class="[^"]*moreComments[^"]*" aria-expanded="false"[^>]*>Rashi: 2 more<\/button>/);
+  const three = inLens(createElement(StudyRows, { verses, assignment: { kind: "torah", confirmed: true, verses: ["Genesis 1:1"] }, group: "g", activeWord: null, works: () => [{ work: "rashi", state: ready([1, 2, 3].map(n => comment("קרש", `synthetic ${n}`))) }] }));
+  expect(three).not.toContain("more</button>");
 });
 
 test("Rashi (n) counts a verse's comments, and is 0 while loading, after a failure and where Rashi is silent", () => {
@@ -114,7 +146,7 @@ test("Study rows: Hebrew, then English, then Rashi English-led with bold quoted 
   expect(first.indexOf("Synthetic verse Genesis 1:1")).toBeLessThan(first.indexOf(">Rashi</h5>"));
   // The quoted words are found once in the verse, so they are a button that shows them there.
   expect(first).toMatch(/<button type="button" class="[^"]*dibburLink[^"]*" aria-pressed="false"><bdi lang="he" dir="rtl" class="[^"]*">דֵּה וְזַח<\/bdi>/);
-  expect(first).toContain("SYNTHETIC LEMMA — synthetic comment one");
+  expect(first).toMatch(/<span class="[^"]*lemma[^"]*" data-caps="">SYNTHETIC LEMMA<\/span> — synthetic comment one/);
   expect(first).toContain(">Hebrew</button>");
   expect(first).toContain('data-linkable="true"');
   // A verse Rashi is silent on shows no commentary at all, and no filler.

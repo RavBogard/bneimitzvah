@@ -68,7 +68,8 @@ export function CommentaryEntry({ comment, words, verseRef, onLink, pinned }: {
     const observer = new ResizeObserver(measure); observer.observe(element);
     return () => observer.disconnect();
   }, [expanded, parts]);
-  const english = parts.english, leadsInHebrew = !english;
+  const english = parts.english, leadsInHebrew = !english && !parts.lemma;
+  const lemma = parts.lemma && <span className={styles.lemma} data-caps={parts.lemma.caps ? "" : undefined}>{parts.lemma.text}</span>;
   const quoted = parts.dibbur && <bdi lang="he" dir="rtl" className={styles.dibbur}>{parts.dibbur}</bdi>;
   const lead = parts.dibbur ? match ? <button type="button" className={styles.dibburLink} aria-pressed={pinned ?? false}
     onClick={event => { event.stopPropagation(); onLink?.("pin", pinned ? null : match);
@@ -85,7 +86,7 @@ export function CommentaryEntry({ comment, words, verseRef, onLink, pinned }: {
     onClick={match ? event => { if ((event.target as Element).closest("a, button") || window.getSelection()?.toString()) return; onLink?.("pin", pinned ? null : match); } : undefined}>
     {leadsInHebrew
       ? <p ref={body} id={`${id}-text`} lang="he" dir="rtl" className={`${styles.text} ${styles.hebrewText} ${expanded ? "" : styles.clamped}`}>{match ? <>{lead}{parts.hebrew && " "}{parts.hebrew && <Runs runs={parts.hebrew} />}</> : hebrewText}</p>
-      : <p ref={body} id={`${id}-text`} lang="en" dir="ltr" className={`${styles.text} ${expanded ? "" : styles.clamped}`}>{lead}{lead && " "}<Runs runs={english} /></p>}
+      : <p ref={body} id={`${id}-text`} lang="en" dir="ltr" className={`${styles.text} ${expanded ? "" : styles.clamped}`}>{lead}{lead && " "}{lemma}{lemma && english && " "}{english && <Runs runs={english} />}</p>}
     {hebrew && hasHebrew && <p id={`${id}-hebrew`} lang="he" dir="rtl" className={`${styles.text} ${styles.hebrewText}`}>{hebrewText}</p>}
     {(overflows || expanded || hasHebrew) && <div className={styles.controls}>
       {(overflows || expanded) && <button type="button" aria-expanded={expanded} aria-controls={`${id}-text`} onClick={() => setExpanded(value => !value)}>{expanded ? "Less" : "More"}</button>}
@@ -96,16 +97,28 @@ export function CommentaryEntry({ comment, words, verseRef, onLink, pinned }: {
 
 export type WorkState = Readonly<{ work: string; state: CommentaryVerseState }>;
 /** A verse's inline commentary, set off by a hairline in its margin: each work with something to say, in Works order. */
+/** A busy verse shows this many comments per work inline; the rest open in place from one row. */
+export const INLINE_COMMENTS = 3;
+function WorkComments({ verse, work, comments, words, link }: { verse: StudyVerse; work: string; comments: readonly CommentaryComment[]; words: readonly string[]; link?: CommentLink }) {
+  const id = useId(), [all, setAll] = useState(false), hidden = comments.length - INLINE_COMMENTS;
+  const entry = (comment: CommentaryComment, index: number) => <CommentaryEntry key={index} comment={comment} words={words} verseRef={verse.ref}
+    onLink={link ? link.point(`${verse.ref}|${work}:${index}`) : undefined} pinned={link?.pinned === `${verse.ref}|${work}:${index}`} />;
+  return <section className={styles.work} aria-label={`${workLabel(work)} on ${verse.ref}`} data-work={work}>
+    <h5 className={styles.workName}>{workLabel(work)}</h5>
+    {comments.slice(0, INLINE_COMMENTS).map(entry)}
+    {hidden > 0 && <>
+      {all && <div id={`${id}-rest`}>{comments.slice(INLINE_COMMENTS).map((comment, index) => entry(comment, index + INLINE_COMMENTS))}</div>}
+      <button type="button" className={styles.moreComments} aria-expanded={all} aria-controls={`${id}-rest`} onClick={() => setAll(value => !value)}>
+        {all ? `${workLabel(work)}: fewer` : `${workLabel(work)}: ${hidden} more`}</button>
+    </>}
+  </section>;
+}
 export function VerseCommentary({ verse, works, link }: { verse: StudyVerse; works: readonly WorkState[]; link?: CommentLink }) {
   const words = useMemo(() => verseWords(verse), [verse]);
   const shown = works.filter(row => commentaryCount(row.state) > 0);
   if (!shown.length) return null;
   return <div className={styles.inline} data-commentary-ref={verse.ref}>
-    {shown.map(({ work, state }) => state.status === "ready" && <section key={work} className={styles.work} aria-label={`${workLabel(work)} on ${verse.ref}`} data-work={work}>
-      <h5 className={styles.workName}>{workLabel(work)}</h5>
-      {state.comments.map((comment, index) => <CommentaryEntry key={index} comment={comment} words={words} verseRef={verse.ref}
-        onLink={link ? link.point(`${verse.ref}|${work}:${index}`) : undefined} pinned={link?.pinned === `${verse.ref}|${work}:${index}`} />)}
-    </section>)}
+    {shown.map(({ work, state }) => state.status === "ready" && <WorkComments key={work} verse={verse} work={work} comments={state.comments} words={words} link={link} />)}
   </div>;
 }
 

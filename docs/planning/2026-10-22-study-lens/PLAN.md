@@ -101,6 +101,15 @@
 14. **English line breaks** (a fix to the shared text reader, found in Study). Sefaria's JPS 2023 HTML puts raw newlines beside small caps ("
 G<small>OD</small>
  said"). Those newlines are now whitespace, as HTML treats them, and only `<br>` makes an English line. The CDN keeps `/api/public/text` for a day, and the study cache for a day, so the fix reaches cached chapters within a day.
+15. **Busy verses** (decided by root after the finish review). Study shows at most three comments per work under a verse. The rest open in place from one row of at least 44px, "Rashi: 2 more" (the work's name, the count, "more"). There is no modal and no animation.
+16. **Tapping** (logged at root's request; it replaces the spec's "marks them briefly"). A tap holds the underline until it is tapped again or another verse is chosen, because touch has no hover. There is no timer and no animation.
+17. **Finish review** (root, 2026-10-22).
+    - Commentary text is set in muted ink at 0.875rem, below the 1rem English. Muted ink is 6.3:1 on the light canvas and 9.0:1 on the dark one.
+    - The quoted Hebrew words (600, 1.125rem) and the work's name stay in ink, as the one dark anchor.
+    - The English edition's own lemma is split off without changing its text, and set at weight 500:
+      - Bold lemmas keep their case.
+      - Capitalized lemmas, including the Women's Commentary's capitalized section heads, become small capitals (`all-small-caps`).
+    - So the Torah and Prophets editions read alike.
 
 ## Answered (root relaying Daniel, 2026-10-22)
 
