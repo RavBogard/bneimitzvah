@@ -4,6 +4,8 @@ import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
 import { AdminNav } from "../admin-nav";
 import { accountsApi, type AccountRequest, type ApproverMode, type ApproversView, type Member } from "./api";
 
+/** Proposed wording, not yet approved by Daniel: a designated tutor approving someone an admin ended (Decided here, 2026-10-23). */
+export const ADMIN_REAPPROVAL_LINE = "An admin ended this person’s membership, so only an admin can approve them again. The request is kept.";
 const initial = (name: string) => Array.from(name.trim())[0]?.toLocaleUpperCase() ?? "A";
 const day = (value: string) => new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
 type Message = { text: string; tone: "status" | "alert"; signIn?: boolean } | null;
@@ -50,7 +52,8 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
   }
   const approve = (row: AccountRequest) => act(async () => {
     const result = await accountsApi.approve(mode, row.id);
-    return result.ok ? { text: `${row.name} now has an account. They’ll get one email saying so.`, tone: "status" } : { text: "That person’s account is turned off here, so it can’t be approved. The request is kept.", tone: "alert" };
+    return result.ok ? { text: `${row.name} now has an account. They’ll get one email saying so.`, tone: "status" }
+      : { text: result.code === "admin-only" ? ADMIN_REAPPROVAL_LINE : "That person’s account is turned off here, so it can’t be approved. The request is kept.", tone: "alert" };
   }, "approve the request");
   const decline = (row: AccountRequest) => act(async () => { await accountsApi.decline(mode, row.id); return { text: "Request declined. Nothing was sent.", tone: "status" }; }, "decline the request");
   const end = (row: Member) => act(async () => { await accountsApi.endMember(row.id); return { text: `${row.name}’s membership has ended.`, tone: "status" }; }, "end the membership");
