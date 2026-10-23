@@ -7,7 +7,11 @@ import { privateBenchmarkProblem } from "./private-benchmark-policy.mjs";
 
 const run = promisify(execFile);
 const DATA = new Set([".json", ".csv", ".tsv", ".txt", ".jsonl", ".ndjson"]);
-const CONFIGS = new Set(["package.json", "package-lock.json", "tsconfig.json", ".impeccable/config.json", ".impeccable/design.json"]);
+// The Learn to lein course content: reviewed text and engine word ranges only. Fields derived from the
+// private PocketTorah index (alignment scores, recording keys, index word counts) never enter it.
+const COURSE_DATA = "src/lib/learn/lessons.json";
+const COURSE_PRIVATE_FIELDS = /"(?:alignScore|recording|indexWords)"\s*:|[A-Za-z]:[\\/]+private[\\/]/i;
+const CONFIGS = new Set(["package.json", "package-lock.json", "tsconfig.json", ".impeccable/config.json", ".impeccable/design.json", COURSE_DATA]);
 const DRIZZLE_METADATA = /^src\/server\/db\/migrations\/meta\/(?:_journal|[0-9]{4}_snapshot)\.json$/;
 function reviewedServiceCron(text) {
   try {
@@ -80,6 +84,7 @@ export function entryProblems(path, content = "") {
   if (/(?:^|\/)\.env[^/]*$/i.test(file) && file !== ".env.example") problems.push("environment file");
   if (file === ".env.example" && text.split(/\r?\n/).some(line => !/^\s*(?:#|$)/.test(line) && !/^[A-Z][A-Z0-9_]*=\s*$/.test(line))) problems.push("environment example must contain names only");
   if (data && !CONFIGS.has(file) && file !== "vercel.json" && !migrationMetadata && !/^(?:trope\/|tests\/fixtures\/(?:trope|portal)\/)/.test(file) && !/(?:^|\/)(?:LICENSE|OFL|PROVENANCE)(?:\.txt)?$/i.test(file)) problems.push("data file outside reviewed allow-list");
+  if (file === COURSE_DATA && COURSE_PRIVATE_FIELDS.test(text)) problems.push("private index field in course data");
   if (file === "vercel.json" && !reviewedServiceCron(text)) problems.push("deployment config must contain only the reviewed daily service drain cron");
   if (migrationMetadata) {
     try {
