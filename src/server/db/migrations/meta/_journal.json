@@ -260,6 +260,13 @@
       "when": 1792721102930,
       "tag": "0036_saved_layer",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1792769694341,
+      "tag": "0037_course_progress",
+      "breakpoints": true
     }
   ]
 }

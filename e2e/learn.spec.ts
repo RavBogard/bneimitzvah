@@ -144,3 +144,32 @@ test("when the recordings do not answer, a lesson says so and offers Try again; 
   const stored = JSON.parse((await page.evaluate(key => localStorage.getItem(key), KEY))!);
   expect(Object.keys(stored.lessons)).toEqual(["intro-phrases"]);
 });
+
+test("signed in, the browser's progress is merged into the account on first sign-in and the device-only note goes away", async ({ page }) => {
+  const routes = syntheticCourseRoutes(); await routes.install(page); await seed(page, introDone);
+  const owner = "c".repeat(32), posts: { path: string; body: unknown }[] = [];
+  let stored: unknown = null, version = 0;
+  await page.route("**/api/learn/progress**", async route => {
+    const request = route.request(), path = new URL(request.url()).pathname;
+    if (request.method() === "POST") {
+      const body = request.postDataJSON() as { progress: unknown }; posts.push({ path, body });
+      expect(request.headers()["content-type"]).toContain("application/json");
+      stored = body.progress; version++;
+    }
+    return route.fulfill({ status: 200, contentType: "application/json", headers: { "cache-control": "private, no-store" },
+      body: JSON.stringify({ ok: true, owner, progress: stored, version, until: null }) });
+  });
+  await page.goto("/learn");
+  await expect(page.locator("[data-next]")).toHaveAttribute("data-next", "torah-sof-pasuk");
+  await expect.poll(() => posts.length).toBe(1);
+  expect(posts[0].path).toBe("/api/learn/progress/merge");
+  expect(posts[0].body).toEqual({ progress: JSON.parse(introDone) });
+  await expect(page.getByText("Progress is saved on this device. Sign in to keep it.")).toHaveCount(0);
+  const marker = JSON.parse((await page.evaluate(() => localStorage.getItem("crc-torah:learn-sync/v1")))!);
+  expect(marker).toEqual({ owner, version: 1, dirty: false });
+  // The next page load finds the same account and version: nothing is sent.
+  await page.reload();
+  await expect(page.locator("[data-next]")).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(posts).toHaveLength(1);
+});
