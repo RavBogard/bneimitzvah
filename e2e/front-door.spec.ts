@@ -27,15 +27,14 @@ test("the home is a front door to This week, Beit Mitzvah and Learn to lein", as
   await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
   await expect(page.getByText("Torah Genesis 6:9–11:32 · Haftarah Isaiah 54:1–55:5")).toBeVisible();
   await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveAttribute("href", "/read");
-  // Study returns with the Study lens; until then the home offers Lein alone.
-  await expect(page.getByRole("link", { name: "Study", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Study", exact: true })).toHaveAttribute("href", "/read?lens=study");
   await expect(page.getByRole("heading", { level: 2, name: "Beit Mitzvah", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { level: 3, name: "Sign in", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Learn to lein", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Start", exact: true })).toHaveAttribute("href", "/learn");
   await expect(page.getByText("Hear the phrases, then lein a verse of this week's reading.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Trope chart", exact: true })).toHaveAttribute("href", "/trope-chart");
-  for (const name of ["Lein", "Start", "Sign in"]) {
+  for (const name of ["Lein", "Study", "Start", "Sign in"]) {
     const box = await page.getByRole("link", { name, exact: true }).boundingBox();
     expect(box && box.height >= 44 && box.width >= 44, `${name} is at least 44px`).toBe(true);
   }
@@ -65,7 +64,7 @@ test("on a 390px phone the Beit Mitzvah sign-in is one scroll away, Sign in jump
   }
 });
 
-test("a failed reading call still shows This week's reading with a working Lein link", async ({ page }) => {
+test("a failed reading call still shows This week's reading with working Lein and Study links", async ({ page }) => {
   await session(page, signedOut);
   await page.route("**/api/public/reading?*", route => route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }));
   await page.goto("/");
@@ -73,8 +72,8 @@ test("a failed reading call still shows This week's reading with a working Lein 
   await expect(page.locator("[data-skeleton]")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   // /read later tidies its own address, so check the navigation the link made rather than the final URL.
-  const opened = page.waitForRequest(request => request.isNavigationRequest() && new URL(request.url()).pathname === "/read");
-  await page.getByRole("link", { name: "Lein", exact: true }).click();
+  const opened = page.waitForRequest(request => request.isNavigationRequest() && new URL(request.url()).pathname === "/read" && new URL(request.url()).search === "?lens=study");
+  await page.getByRole("link", { name: "Study", exact: true }).click();
   await opened;
 });
 

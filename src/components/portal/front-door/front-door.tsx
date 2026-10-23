@@ -15,7 +15,7 @@ const FALLBACK_TITLE = "This week’s reading";
 /** What This week shows: nothing known yet (loading), the week, or a failure. */
 export type ThisWeekState = Readonly<{ date: string | null; status: "loading" } | { date: string; status: "ready"; week: PublicWeek } | { date: string | null; status: "failed" }>;
 
-/** This Shabbat at display scale. Lein always works, whatever the reading call did. */
+/** This Shabbat at display scale. Lein and Study always work, whatever the reading call did. */
 export function ThisWeekView({ state }: { state: ThisWeekState }) {
   const week = state.status === "ready" ? state.week : null, loading = state.status === "loading";
   return <section className={styles.week} aria-labelledby="this-week-title" aria-busy={loading}>
@@ -28,7 +28,7 @@ export function ThisWeekView({ state }: { state: ThisWeekState }) {
       {week?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(week.haftarah.ranges)}</bdi></>}</p>}
     <div className={styles.actions}>
       <a className="button-start" href="/read">Lein</a>
-      {/* Study returns here with the Study lens, so it never opens the same page as Lein. */}
+      <a className="button-hero-secondary" href="/read?lens=study">Study</a>
     </div>
   </section>;
 }

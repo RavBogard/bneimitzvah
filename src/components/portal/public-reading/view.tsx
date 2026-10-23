@@ -10,6 +10,11 @@ import { WordTools, type WordToolsHandle } from "../workspace/study/word-tools";
 import { LiftedLine } from "../workspace/study/lift";
 import { createReadingAudioCoordinator } from "../workspace/study/reading-audio-coordinator";
 import { ReadingToolbar } from "../workspace/reading-toolbar";
+import { LensSwitch } from "../workspace/lens-switch";
+import { LENS_STORAGE, lensFromSearch, StudyLensScope, useStudyLens, type Lens } from "../workspace/study-lens";
+import { StudyRows } from "../workspace/study/study-rows";
+import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useWorkCommentary, VerseRashi } from "../workspace/study/commentary-view";
+import { COMMENTARY_WORKS } from "../../../lib/readings/commentary";
 import { useReadingPrefs } from "../workspace/reading-prefs";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { expandReadingRanges } from "../../../lib/readings/ranges";
@@ -28,9 +33,22 @@ function initialDate(today: string): string {
   return today;
 }
 
+/** This week is plain /read; another Shabbat and the Study lens are in the address, so it can be shared. */
+export function readingAddress(date: string, today: string, lens: Lens): string {
+  const query = new URLSearchParams([...date === today ? [] : [["date", date]], ...lens === "study" ? [["lens", "study"]] : []]).toString();
+  return query ? `/read?${query}` : "/read";
+}
+
 /** The signed-out reading: any Shabbat's parashah and haftarah, with the same text,
- * translation, recordings and study tools students use, and nothing about anyone. */
+ * translation, recordings and study tools students use, and nothing about anyone.
+ * Lein opens first; Study opens from /read?lens=study, or when this browser last used it. */
 export function PublicReading() {
+  const [query, setQuery] = useState<Lens | null>(null);
+  useEffect(() => { setQuery(lensFromSearch(window.location.search)); }, []);
+  return <StudyLensScope storageKey={LENS_STORAGE.weekly} query={query}><WeeklyReading /></StudyLensScope>;
+}
+
+function WeeklyReading() {
   const [today, setToday] = useState<string | null>(null), [date, setDate] = useState<string | null>(null);
   const [week, setWeek] = useState<{ date: string; value?: PublicWeek; error?: number } | null>(null);
   const [kind, setKind] = useState<StudyKind>("torah");
@@ -46,7 +64,7 @@ export function PublicReading() {
   const playback = useRef<ReadingPlayerHandle | null>(null), registerPlayback = useCallback((value: ReadingPlayerHandle | null) => { playback.current = value; }, []);
   const tools = useRef<WordToolsHandle | null>(null), registerTools = useCallback((value: WordToolsHandle | null) => { tools.current = value; }, []);
   const shortPages = useRef(new Map<string, Promise<PublicShortPage>>()), pendingPlace = useRef<{ key: string; ref: string; wordIndex: number } | null>(null);
-  const textAnchor = useRef<HTMLDivElement | null>(null), openings = useRef(0), group = useId(), prefs = useReadingPrefs();
+  const textAnchor = useRef<HTMLDivElement | null>(null), openings = useRef(0), group = useId(), prefs = useReadingPrefs(), lens = useStudyLens(), study = lens.lens === "study";
   const [offset, setOffset] = useState(0);
 
   useEffect(() => { const now = thisShabbat(); setToday(now); setDate(initialDate(now)); }, []);
@@ -56,10 +74,13 @@ export function PublicReading() {
     document.addEventListener("visibilitychange", background); window.addEventListener("pagehide", leave);
     return () => { document.removeEventListener("visibilitychange", background); window.removeEventListener("pagehide", leave); };
   }, [audio]);
-  // One Shabbat at a time; its address is shareable (and this week's is plain /read).
+  // One Shabbat at a time; its address is shareable (and this week's Lein is plain /read).
   useEffect(() => {
     if (!date || !today) return;
-    try { window.history.replaceState(null, "", date === today ? "/read" : `/read?date=${date}`); } catch { /* Address bar stays as it was. */ }
+    try { window.history.replaceState(null, "", readingAddress(date, today, lens.lens)); } catch { /* Address bar stays as it was. */ }
+  }, [date, today, lens.lens]);
+  useEffect(() => {
+    if (!date || !today) return;
     const controller = new AbortController();
     audio.stopAll(); setLift(null); setFocus(null); setWeek({ date }); setText(null);
     fetchPublicWeek(date, controller.signal).then(value => {
@@ -81,6 +102,16 @@ export function PublicReading() {
   const page = text?.key === textKey ? text.page : undefined;
   const allVerses = useMemo(() => { try { return passage ? expandReadingRanges(passage.ranges, passage.kind, TANAKH_VERSE_COUNTS) : []; } catch { return []; } }, [passage]);
   const listening = Boolean(current?.listening.pocketTorah);
+  // Commentary follows the text, never in its way: Rashi loads after the verses (for Lein's "Rashi (n)" too),
+  // the Women's Commentary only when Study shows it on a Torah text.
+  const refs = useMemo(() => page?.verses.map(verse => verse.ref) ?? [], [page]);
+  const corpus = kind === "torah" ? "torah" : "neviim";
+  const rashi = useWorkCommentary("rashi", refs, Boolean(page) && (!study || lens.works.includes("rashi")));
+  const womens = useWorkCommentary("womens", refs, Boolean(page) && study && kind === "torah" && lens.works.includes("womens"));
+  const works = useMemo(() => [rashi, womens].filter(row => lens.works.includes(row.work)), [rashi, womens, lens.works]);
+  const leinLink = useCommentLink(), clearLink = leinLink.clear;
+  // A pinned underline belongs to the verse it was pinned on; choosing another verse lets it go.
+  useEffect(() => { clearLink(); }, [focus, textKey, clearLink]);
   useLayoutEffect(() => { if (lift) audio.stopAll(); }, [lift?.opening, audio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadShort = useCallback(async (index: number, signal: AbortSignal) => {
@@ -128,17 +159,28 @@ export function PublicReading() {
           {week.error === 400 && today ? <button type="button" className="button-secondary" onClick={() => go(today)}>Go to this week</button> : <button type="button" className="button-secondary" onClick={() => setRetry(value => value + 1)}>Try again</button>}</div>}
         {current && !current.torah && !current.haftarah && <div className="workspace-state" role="status"><h2>No reading to show for this Shabbat</h2><p>The calendar lists no weekly Torah portion or haftarah here. Try the week before or after.</p></div>}
         {current && passage && <>
-          {current.torah && current.haftarah ? <div className="study-kind-choice" role="group" aria-label="Reading text selection">
-            {(["torah", "haftarah"] as const).map(row => <button key={row} type="button" className="button-secondary" aria-pressed={kind === row} onClick={() => changeKind(row)}>{row === "torah" ? "Torah" : "Haftarah"}</button>)}
-          </div> : !current.torah && current.parashah && <p className="field-help">This Shabbat’s Torah reading isn’t shown here. The haftarah is below.</p>}
+          <div className="reading-lens-row">
+            {current.torah && current.haftarah && <div className="study-kind-choice" role="group" aria-label="Reading text selection">
+              {(["torah", "haftarah"] as const).map(row => <button key={row} type="button" className="button-secondary" aria-pressed={kind === row} onClick={() => changeKind(row)}>{row === "torah" ? "Torah" : "Haftarah"}</button>)}
+            </div>}
+            <LensSwitch onChange={() => leinLink.clear()} />
+          </div>
+          {!current.torah && current.parashah && <p className="field-help">This Shabbat’s Torah reading isn’t shown here. The haftarah is below.</p>}
           <div className="reading-passage-layout" ref={textAnchor} tabIndex={-1}>
-            <ReadingToolbar listeningEnabled={listening} tikkunAvailable={kind === "torah"} onHear={listening && page ? () => hear(focus ?? 0) : undefined} />
+            <ReadingToolbar listeningEnabled={listening} tikkunAvailable={kind === "torah"} worksCorpus={corpus} onHear={listening && page ? () => hear(focus ?? 0) : undefined} />
             <section className="assigned-study" aria-label={kind === "torah" ? "Torah text" : "Haftarah text"} data-size={prefs.size}>
               {!page ? text?.key === textKey && text.error ? <div role="status"><h4>Text unavailable</h4><p>The verses didn’t load. Check your connection and try again.</p><button type="button" className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload text</button></div>
                 : <p role="status">Loading the text…</p> : <>
-                <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
+                {study ? <>
+                  <CommentaryStatus works={works.map(row => ({ work: row.work, status: row.status, retry: row.retry, covers: Boolean(COMMENTARY_WORKS[row.work]?.editions[corpus]) }))} />
+                  <StudyRows verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={lens.english}
+                    works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))}
+                    onVerse={listening ? index => hear(index) : undefined}
+                    onWord={(index, word) => { setFocus(index); if (listening) playMainVerseForWord(playback.current, tools.current, index, word); else tools.current?.select(index, word); }} />
+                </> : <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
+                  linked={linkedVerse(leinLink, page.verses)}
                   onVerse={listening ? index => hear(index) : undefined}
-                  onWord={(index, word) => { setFocus(index); if (listening) playMainVerseForWord(playback.current, tools.current, index, word); else tools.current?.select(index, word); }} />
+                  onWord={(index, word) => { setFocus(index); if (listening) playMainVerseForWord(playback.current, tools.current, index, word); else tools.current?.select(index, word); }} />}
                 {listening && <ReadingPlayer key={`player:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} active={!lift} enabled={!lift} audio={{ coordinator: audio, slot: "proposed" }}
                   register={registerPlayback} onActiveWord={setPlayingWord} load={loadShort} />}
                 <WordTools key={`tools:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} register={registerTools}
@@ -152,12 +194,14 @@ export function PublicReading() {
                     if (position >= 0 && target !== undefined && target !== page.offset) { pendingPlace.current = { key: JSON.stringify([current.date, kind, target]), ref, wordIndex }; setOffset(target); }
                   }}
                   takePlace={() => { const place = pendingPlace.current; pendingPlace.current = null; return place && place.key === scopeKey ? { ref: place.ref, wordIndex: place.wordIndex } : null; }} />
+                {!study && <VerseRashi key={focus !== null ? page.verses[focus]?.ref : "none"} verse={focus !== null ? page.verses[focus] ?? null : null} state={focus !== null && page.verses[focus] ? rashi.lookup.forVerse(page.verses[focus].ref) : { status: "none" }} link={leinLink} retry={rashi.retry} />}
                 {focus !== null && page.verses[focus] && <p className={styles.upClose}><button type="button" className="button-secondary" onClick={() => setLift({ index: focus, opening: ++openings.current, navigation: 0 })}>View <bdi dir="ltr">{page.verses[focus].ref}</bdi> up close</button>
                   <span className="field-help">Up close shows each phrase of trope by name.</span></p>}
                 {(previousOffset !== undefined || nextOffset !== null) && <>
                   <p className="study-page-position">Verses {page.offset + 1}–{page.offset + page.verses.length} of {page.totalVerses}</p>
                   <nav className="study-pages" aria-label="Text pages"><button type="button" className="button-secondary" disabled={previousOffset === undefined} onClick={() => previousOffset !== undefined && setOffset(previousOffset)}>Previous text page</button>
                     <button type="button" className="button-secondary" disabled={nextOffset === null} onClick={() => nextOffset !== null && setOffset(nextOffset)}>Next text page</button></nav></>}
+                {study && <CommentaryCredits works={works} refs={refs} />}
                 <div className="study-more"><StudyCredits chapters={page.chapters} summary="About this text" /><a href="/trope-chart">Trope chart</a></div>
                 {lift && page.verses[lift.index] && <LiftedLine learner verses={page.verses} assignment={assignment} index={lift.index} total={page.totalVerses} offset={page.offset}
                   reference={listening ? { audio, active: true, navigation: lift.navigation, scopeKey: JSON.stringify([scopeKey, lift.opening]), load: loadShort } : undefined}

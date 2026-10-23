@@ -4,11 +4,11 @@ test("built portal presents an honest unavailable state with accessible retry at
   const response = await page.goto("/");
   expect(response?.status()).toBe(200);
   await expect(page).toHaveTitle("CRC Torah");
-  // Unconfigured, the reading call fails too: This week says so plainly and Lein still works.
+  // Unconfigured, the reading call fails too: This week says so plainly and its actions still work.
   await expect(page.getByRole("heading", { level: 1, name: "This week’s reading", exact: true })).toBeVisible();
   await expect(page.locator("[data-skeleton]")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveAttribute("href", "/read");
-  await expect(page.getByRole("link", { name: "Study", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Study", exact: true })).toHaveAttribute("href", "/read?lens=study");
   await expect(page.getByRole("heading", { level: 2, name: "Beit Mitzvah", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Learn to lein", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Sign-in is unavailable", exact: true })).toBeVisible();

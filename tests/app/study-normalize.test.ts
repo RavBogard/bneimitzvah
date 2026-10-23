@@ -125,6 +125,17 @@ describe("synthetic study plaintext normalization", () => {
       .toBe("Synthetic first\nsecond & third\nfourth");
     expect(normalizeEnglish('<span class="indentAllDouble">Synthetic only</span>')).toBe("Synthetic only");
   });
+  it("treats a raw newline in an English text node as a space, as HTML does; only <br> breaks a line", () => {
+    // The shape Sefaria's translation uses around small caps (synthetic words only).
+    expect(normalizeEnglish("\nL<small>ORD</small>\n spoke")).toBe("LORD spoke");
+    expect(normalizeEnglish("Synthetic \nG<small>OD</small>\n said to a synthetic name")).toBe("Synthetic GOD said to a synthetic name");
+    expect(normalizeEnglish("Synthetic one\nsynthetic two\r\nsynthetic three")).toBe("Synthetic one synthetic two synthetic three");
+    expect(normalizeEnglish('<span class="poetry indentAll">a</span><br><span class="poetry indentAll">b</span>')).toBe("a\nb");
+    expect(normalizeEnglish('<span class="poetry indentAll">a\n</span><br>\n<span class="poetry indentAll">\nb</span>')).toBe("a\nb");
+    expect(normalizeEnglish("Synthetic first<br>\nL<small>ORD</small>\n second")).toBe("Synthetic first\nLORD second");
+    // Hebrew is unchanged: every newline there was already a space.
+    expect(normalizeHebrew("אָב\nג׃").text).toBe("אָב ג׃");
+  });
   it.each([
     '<span class="poetry indentAllDouble unknown">Synthetic</span>',
     '<span class="poetry indentAllDoubleExtra">Synthetic</span>',

@@ -26,9 +26,8 @@ test("the home is CRC Torah's front door: This week, then the Beit Mitzvah door,
   expect(learn).toBeGreaterThan(beit);
   expect(markup).toContain(">This Shabbat</p>");
   expect(markup).toContain('<a class="button-start" href="/read">Lein</a>');
-  // Study waits for the Study lens; until then nothing on the home links to it.
-  expect(markup).not.toContain("lens=study");
-  expect(markup).not.toContain(">Study</a>");
+  // Study opens the same reading in the Study lens.
+  expect(markup).toContain('href="/read?lens=study">Study</a>');
   expect(markup).toContain('id="beit-mitzvah-title"');
   expect(markup).toContain(">For students, families and tutors preparing a Beit Mitzvah.</p>");
   expect(markup).toContain('id="learn-title"');
@@ -58,23 +57,23 @@ test("the home's metadata names CRC Torah and describes the three doors; every p
   expect(rootMetadata.robots).toEqual({ index: false, follow: false });
 });
 
-test("while This week loads it shows one quiet skeleton line, and Lein already works", () => {
+test("while This week loads it shows one quiet skeleton line, and Lein and Study already work", () => {
   const markup = renderToStaticMarkup(createElement(ThisWeekView, { state: { date: "2026-10-24", status: "loading" } }));
   expect(markup.match(/data-skeleton/g)).toHaveLength(1);
   expect(markup).toContain('<span class="sr-only">This week’s reading</span>');
   expect(markup).toContain('href="/read">Lein</a>');
-  expect(markup).not.toContain("lens=study");
+  expect(markup).toContain('href="/read?lens=study">Study</a>');
   expect(markup).not.toMatch(/spinner|Loading/i);
 });
 
-test("when the reading call fails, This week says so plainly and Lein still links to the reading", () => {
+test("when the reading call fails, This week says so plainly and Lein and Study still link to the reading", () => {
   for (const date of ["2026-10-24", null]) {
     const markup = renderToStaticMarkup(createElement(ThisWeekView, { state: { date, status: "failed" } }));
     expect(markup).toContain('id="this-week-title"');
     expect(markup).toMatch(/<h1 [^>]*id="this-week-title"[^>]*>This week’s reading<\/h1>/);
     expect(markup).not.toContain("data-skeleton");
     expect(markup).toContain('href="/read">Lein</a>');
-    expect(markup).not.toContain("lens=study");
+    expect(markup).toContain('href="/read?lens=study">Study</a>');
     expect(markup.includes("Saturday, October 24, 2026")).toBe(date !== null);
   }
 });

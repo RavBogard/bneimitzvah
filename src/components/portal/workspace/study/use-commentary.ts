@@ -12,8 +12,8 @@ const OFF: CommentaryLookup = Object.freeze({ forVerse: () => Object.freeze({ st
  * the page of verses changes or the reader leaves. A failure is quiet: those
  * verses report "failed" and the reading is untouched. With `enabled` false
  * nothing is fetched and every verse reports "none". A shared `store` is used
- * only when it is for the same work. Not yet used by any reading surface: the
- * study UI that shows it is still being designed.
+ * only when it is for the same work. The reading surfaces use it through
+ * useWorkCommentary (commentary-view.tsx): Study's inline works and Lein's "Rashi (n)".
  */
 export function useCommentaryChapters(work: string, verseRefs: readonly string[], enabled = true, store?: CommentaryChapterStore): CommentaryLookup {
   const key = enabled ? commentaryChaptersOf(work, verseRefs).join("\n") : "";
