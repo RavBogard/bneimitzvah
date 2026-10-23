@@ -21,7 +21,7 @@ test("a signed-in account with no role asks for one on the front door and on /ac
     await page.route("**/api/session", route => json(route, 200, session([], false)));
     await page.route("**/api/account/request", route => {
       if (route.request().method() === "POST") { posted.push(route.request().postDataJSON()); return json(route, 200, { ok: true, state: "pending" }); }
-      return json(route, 200, { ok: true, state: "requestable", suggestedName: "Ruth Synthetic" });
+      return json(route, 200, { ok: true, state: "requestable", suggestedName: "Ruth Synthetic", productName: "CRC Torah" });
     });
     await page.goto(path);
     await expect(page.getByRole("heading", { name: "Ask for an account", exact: true })).toBeVisible();
@@ -43,7 +43,7 @@ test("a pending request says so, a full day or queue is refused plainly, and a m
   let state = "pending", answer: { status: number; body: unknown } = { status: 429, body: { ok: false, code: "rate-limited" } };
   await page.route("**/api/session", route => json(route, 200, session([], state === "member")));
   await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
-  await page.route("**/api/account/request", route => route.request().method() === "POST" ? json(route, answer.status, answer.body) : json(route, 200, { ok: true, state, suggestedName: "" }));
+  await page.route("**/api/account/request", route => route.request().method() === "POST" ? json(route, answer.status, answer.body) : json(route, 200, { ok: true, state, suggestedName: "", productName: "CRC Torah" }));
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Your request is in", exact: true })).toBeVisible();
   state = "requestable"; await page.reload();
@@ -66,7 +66,7 @@ test("parents, tutors and admins are not offered a request; a student-only accou
   let roles = ["parent"], saved = true;
   await page.route("**/api/session", route => json(route, 200, session(roles, saved)));
   await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));
-  await page.route("**/api/account/request", route => json(route, 200, { ok: true, state: "requestable", suggestedName: "" }));
+  await page.route("**/api/account/request", route => json(route, 200, { ok: true, state: "requestable", suggestedName: "", productName: "CRC Torah" }));
   await page.goto("/account");
   await expect(page.getByRole("list", { name: "Available roles" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Ask for an account", exact: true })).toHaveCount(0);

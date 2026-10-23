@@ -6,7 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
  * notes; everything else is open without one. A request waits for an approver and ends in one email.
  */
 export type RequestState = "requestable" | "pending" | "member";
-export type RequestView = Readonly<{ status: "loading" } | { status: "failed" } | { status: "ready"; state: RequestState; suggestedName: string }>;
+export type RequestView = Readonly<{ status: "loading" } | { status: "failed" } | { status: "ready"; state: RequestState; suggestedName: string; productName: string }>;
 type Problem = null | "invalid" | "rate-limited" | "busy" | "unavailable";
 const CONTROLS = /[\x00-\x1f\x7f-\x9f\u00ad\u061c\u115f\u1160\u200b-\u200d\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\u3164\ufeff\uffa0\u{e0000}-\u{e007f}]/u;
 const problems: Record<Exclude<Problem, null>, string> = {
@@ -31,9 +31,10 @@ const keys = (value: unknown, list: readonly string[]): Record<string, unknown> 
   value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === list.length && list.every(key => Object.hasOwn(value, key)) ? value as Record<string, unknown> : null;
 const stateOf = (value: unknown): RequestState | null => value === "requestable" || value === "pending" || value === "member" ? value : null;
 export function parseRequestView(status: number, value: unknown): RequestView {
-  const row = status === 200 ? keys(value, ["ok", "state", "suggestedName"]) : null, state = stateOf(row?.state);
+  const row = status === 200 ? keys(value, ["ok", "state", "suggestedName", "productName"]) : null, state = stateOf(row?.state);
   if (!row || row.ok !== true || !state || typeof row.suggestedName !== "string" || Array.from(row.suggestedName).length > 80 || CONTROLS.test(row.suggestedName)) return { status: "failed" };
-  return { status: "ready", state, suggestedName: row.suggestedName };
+  if (typeof row.productName !== "string" || !row.productName.trim() || Array.from(row.productName).length > 80 || CONTROLS.test(row.productName)) return { status: "failed" };
+  return { status: "ready", state, suggestedName: row.suggestedName, productName: row.productName };
 }
 export function parseRequestResult(status: number, value: unknown): "pending" | "member" | Exclude<Problem, null> {
   if (status === 429) { const row = keys(value, ["ok", "code"]); return row?.code === "rate-limited" ? "rate-limited" : "busy"; }
@@ -55,7 +56,7 @@ export function AccountRequestView({ view, level, name, purpose, problem, sendin
   if (view.state === "pending") return <div className="account-request" data-request-state="pending"><Heading>Your request is in</Heading>
     <p role="status">You’ll get one email when it’s approved.</p></div>;
   return <div className="account-request" data-request-state="requestable"><Heading id={`${formId}-title`}>Ask for an account</Heading>
-    <p>An account keeps your own readings, translation and notes. Everything else on CRC Torah is open without one.</p>
+    <p>An account keeps your own readings, translation and notes. Everything else on {view.productName} is open without one.</p>
     <form aria-labelledby={`${formId}-title`} onSubmit={event => { event.preventDefault(); onSubmit(); }}>
       <label htmlFor={`${formId}-name`}>Your name</label>
       <input id={`${formId}-name`} name="name" value={name} maxLength={80} required autoComplete="name" disabled={sending} onChange={event => onName(event.target.value)} />
@@ -87,7 +88,7 @@ export function AccountRequest({ level }: { level: 3 | 4 }) {
       const { status, value } = await call(aim ? { name: trimmed, purpose: aim } : { name: trimmed });
       if (!alive.current) return;
       const result = parseRequestResult(status, value);
-      if (result === "pending" || result === "member") setView({ status: "ready", state: result, suggestedName: trimmed }); else setProblem(result);
+      if (result === "pending" || result === "member") setView(prior => prior.status === "ready" ? { ...prior, state: result, suggestedName: trimmed } : prior); else setProblem(result);
     } finally { gate.current = false; if (alive.current) setSending(false); }
   };
   return <AccountRequestView view={view} level={level} name={name} purpose={purpose} problem={problem} sending={sending} formId={formId}

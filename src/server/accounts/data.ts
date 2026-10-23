@@ -82,11 +82,7 @@ export async function approverRecipients<Q extends PgQueryResultHKT>(tx: Tx<Q>, 
   for (const row of rows) { if (seen.has(row.userId) || out.length >= limit) continue; seen.add(row.userId); out.push(Object.freeze({ userId: row.userId, email: row.email })); }
   return out;
 }
-export async function tenantNames<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string) {
-  const [row] = await tx.select({ name: s.tenant.name, productName: s.tenant.productName }).from(s.tenant).where(eq(s.tenant.id, tenantId)).limit(1);
-  if (!row) throw new Error("Congregation unavailable");
-  return row;
-}
+export { readTenantNames as tenantNames } from "../data/product-name";
 
 export async function listRequests<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, limit: number) {
   return tx.select({ id: s.accountRequest.id, name: s.accountRequest.displayName, purpose: s.accountRequest.purpose, email: s.user.email, verified: s.user.emailVerified, requestedAt: s.accountRequest.createdAt })

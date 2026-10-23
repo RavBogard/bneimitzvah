@@ -23,7 +23,7 @@ export function AccountsWorkspace() {
 function AccountsPage({ mode }: { mode: ApproverMode }) {
   const { registerReload } = useWorkspace();
   const admin = mode === "admin";
-  const [requests, setRequests] = useState<readonly AccountRequest[] | null>(null), [members, setMembers] = useState<readonly Member[] | null>(null), [approvers, setApprovers] = useState<ApproversView | null>(null);
+  const [requests, setRequests] = useState<readonly AccountRequest[] | null>(null), [productName, setProductName] = useState<string | null>(null), [members, setMembers] = useState<readonly Member[] | null>(null), [approvers, setApprovers] = useState<ApproversView | null>(null);
   const [loading, setLoading] = useState(true), [broken, setBroken] = useState(false), [pending, setPending] = useState(false), [message, setMessage] = useState<Message>(null);
   const [confirming, setConfirming] = useState<string | null>(null), [candidate, setCandidate] = useState("");
   const request = useRef<AbortController | null>(null), alive = useRef(true), gate = useRef(false), selectId = useId();
@@ -33,7 +33,7 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
     try {
       const [queue, people, chooser] = await Promise.all([accountsApi.requests(mode, controller.signal), admin ? accountsApi.members(controller.signal) : null, admin ? accountsApi.approvers(controller.signal) : null]);
       if (controller.signal.aborted) return;
-      setRequests(queue); setMembers(people); setApprovers(chooser);
+      setRequests(queue.requests); setProductName(queue.productName); setMembers(people); setApprovers(chooser);
       setCandidate(current => chooser?.candidates.some(row => row.tutorGrantId === current) ? current : chooser?.candidates[0]?.tutorGrantId ?? "");
     } catch { if (!controller.signal.aborted) { setRequests(null); setBroken(true); } }
     finally { if (!controller.signal.aborted) setLoading(false); }
@@ -73,7 +73,7 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
 
   return <section className="role-workspace admin-workspace accounts-workspace">{admin && <AdminNav />}
     <div className="admin-head"><h1>Accounts</h1></div>
-    <p className="people-student">An account keeps a person’s own readings, translation and notes. Everything else on CRC Torah is open without one.</p>
+    {productName && <p className="people-student">An account keeps a person’s own readings, translation and notes. Everything else on <bdi dir="auto">{productName}</bdi> is open without one.</p>}
     {message && <p className={message.tone === "alert" ? "request-error roster-message" : "workspace-notice roster-message"} role={message.tone}>{message.text}</p>}
     {message?.signIn && <p><WorkspaceLink href="/">Check account and sign in again</WorkspaceLink></p>}
     {loading && !requests ? <p role="status">Loading account requests…</p>

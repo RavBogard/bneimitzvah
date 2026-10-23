@@ -68,9 +68,10 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
         const [account] = await tx.select({ name: s.user.name }).from(s.user).where(eq(s.user.id, identity.userId)).limit(1);
         // The account's own name, when it is a plain name rather than an address.
         const shown = account ? validate.shownName(account.name) : "", suggestedName = shown === "Portal member" ? "" : shown;
-        if (identity.membership && await savedEligible(tx, identity.tenantId, identity.membership.id)) return { ok: true as const, state: "member" as const, suggestedName };
+        const { productName } = await data.tenantNames(tx, identity.tenantId);
+        if (identity.membership && await savedEligible(tx, identity.tenantId, identity.membership.id)) return { ok: true as const, state: "member" as const, suggestedName, productName };
         const pending = await data.requestOf(tx, identity.tenantId, identity.userId);
-        return { ok: true as const, state: pending ? "pending" as const : "requestable" as const, suggestedName };
+        return { ok: true as const, state: pending ? "pending" as const : "requestable" as const, suggestedName, productName };
       });
     },
 
@@ -112,7 +113,7 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
     async requests(request: Request, mode: Mode) {
       return withApprover(request, mode, "read-accounts", async (tx, actor) => ({ ok: true as const,
         requests: (await data.listRequests(tx, actor.tenantId, data.ACCOUNT_LIMITS.pendingPerTenant)).map(row => ({ id: row.id, name: row.name, purpose: row.purpose,
-          email: row.verified ? row.email : null, requestedAt: row.requestedAt.toISOString() })) }));
+          email: row.verified ? row.email : null, requestedAt: row.requestedAt.toISOString() })), productName: (await data.tenantNames(tx, actor.tenantId)).productName }));
     },
     /** Approve: the Member role and, when it is new, one email to that person. Never a role grant. */
     async approve(request: Request, supplied: unknown) {

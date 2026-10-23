@@ -58,7 +58,7 @@ describe("asking for an account", () => {
     expect((await t.call("/api/account/request", "anonymous")).status).toBe(401);
     expect((await t.call("/api/account/request", "anonymous", { name: "X" })).status).toBe(401);
     const state = await t.call("/api/account/request", "asker");
-    expect(state.json).toEqual({ ok: true, state: "requestable", suggestedName: expect.any(String) });
+    expect(state.json).toEqual({ ok: true, state: "requestable", suggestedName: expect.any(String), productName: "CRC Torah" });
     expect(JSON.stringify(state.json)).not.toContain("@");
     await t.designate();
     const sent = await t.call("/api/account/request", "asker", { name: "  Ruth bat Naomi ", purpose: "Learning\nto lein" });
@@ -289,7 +289,7 @@ describe("members and approvers", () => {
     const there = (path: string, body?: unknown) => t.dispatch(new Request(`http://localhost:3101${path}`, { method: body === undefined ? "GET" : "POST",
       headers: { cookie: t.f.identities.multi.cookie, ...(body === undefined ? {} : { origin: "http://localhost:3101", "content-type": "application/json" }) }, body: body === undefined ? undefined : JSON.stringify(body) }));
     expect(await (await there("/api/accounts/summary?mode=admin")).json()).toEqual({ ok: true, requests: 0 });
-    expect(await (await there("/api/accounts/requests?mode=admin")).json()).toEqual({ ok: true, requests: [] });
+    expect(await (await there("/api/accounts/requests?mode=admin")).json()).toEqual({ ok: true, requests: [], productName: "Synthetic" });
     // Refused either way: the runtime answers one origin (403), and the request is not in that congregation (404).
     expect([403, 404]).toContain((await there("/api/accounts/requests/approve", { mode: "admin", requestId: row.id })).status);
     // Refused either way: the runtime answers one origin (403), and the request is not in that congregation (404).
