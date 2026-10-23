@@ -158,8 +158,9 @@ export function TikkunVerse({ verse, className = "", projection = null, colors =
   </span>;
 }
 
-function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAvailable, listening, showEnglish, tikkun, linked }: {
-  verse: StudyVerse; assignment: AssignmentEnding; id: string; onVerse?(): void; onWord?(index: number): void; activeWord: number | null; toolsAvailable: boolean; listening: boolean; showEnglish: boolean; tikkun: TikkunView; linked: DibburMatch | null;
+function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAvailable, listening, showEnglish, englishHidden, tikkun, linked }: {
+  verse: StudyVerse; assignment: AssignmentEnding; id: string; onVerse?(): void; onWord?(index: number): void; activeWord: number | null; toolsAvailable: boolean; listening: boolean; showEnglish: boolean;
+  englishHidden?: string; tikkun: TikkunView; linked: DibburMatch | null;
 }) {
   // Daniel (2026-10-22): trope colors show on both texts whenever Colors is on, in every tikkun view.
   const prefs = useReadingPrefs(), replaced = tikkun === "only", result = useVerseColors(verse, assignment, prefs.colors), colors = result?.status === "ready" ? result : null;
@@ -180,13 +181,16 @@ function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAv
     {colors && <span className="sr-only">{phraseGroups(colors).map(row => <span key={row.phrase} id={`${id}-phrase-${row.phrase}`}>{row.family.label}, {range(row.first, row.last)}. </span>)}</span>}
     </span>
     {tikkun === "beside" && <TikkunVerse verse={verse} className={styles.flowTikkun} projection={projection} colors={colors} activeWord={activeWord} aria-hidden />}
-    {showEnglish && <span className={`study-english ${styles.flowEnglish}`} lang="en" dir="ltr" data-english-ref={verse.ref}>{verse.english ?? "English reference unavailable for this verse."}</span>}
+    {showEnglish && (englishHidden ? <span className={`study-english ${styles.flowEnglish} ${styles.flowEnglishHidden}`} lang="en" dir="ltr" data-english-hidden={verse.ref}>{englishHidden}</span>
+      : <span className={`study-english ${styles.flowEnglish}`} lang="en" dir="ltr" data-english-ref={verse.ref}>{verse.english ?? "English reference unavailable for this verse."}</span>)}
   </span>;
 }
 /** "beside" sets the tikkun in a column next to the pointed text on every screen width; "only" shows it instead. */
-export function FlowingStudyText({ verses, assignment, group, sections = [], onVerse, onWord, activeWord, toolsAvailable = true, listening = true, showEnglish = false, tikkun = "off", linked = null }: {
+export function FlowingStudyText({ verses, assignment, group, sections = [], onVerse, onWord, activeWord, toolsAvailable = true, listening = true, showEnglish = false, englishHidden, tikkun = "off", linked = null }: {
   verses: StudyVerse[]; assignment: AssignmentEnding; group: string; sections?: readonly { index: number; label: string }[];
   onVerse?(index: number): void; onWord?(verse: number, word: number): void; activeWord: { verse: number; index: number } | null; toolsAvailable?: boolean; listening?: boolean; showEnglish?: boolean;
+  /** Lein's translate drill: while set, each verse's English shows this placeholder instead. A view state only; the English preference is untouched. */
+  englishHidden?: string;
   /** Torah only: the caller decides, so a haftarah never shows scroll lettering. */
   tikkun?: TikkunView;
   /** The verse (page index) and words a pointed-at comment quotes. */
@@ -195,7 +199,7 @@ export function FlowingStudyText({ verses, assignment, group, sections = [], onV
   return <div className={`study-verses ${styles.flow}`} aria-label="Hebrew reading" tabIndex={-1} data-tikkun={tikkun === "off" ? undefined : tikkun}>
     {studyFlowGroups(verses, sections.map(section => section.index)).map(indices => <div key={verses[indices[0]].ref}>
       {sections.find(section => section.index === indices[0]) && <p className="student-aliyah">{sections.find(section => section.index === indices[0])!.label}</p>}
-      <p className={styles.flowParagraph} lang="he" dir="rtl">{indices.map(index => <FlowVerse key={verses[index].ref} verse={verses[index]} assignment={assignment} id={`${group}-flow-${index}`} onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined} activeWord={activeWord?.verse === index ? activeWord.index : null} toolsAvailable={toolsAvailable} listening={listening} showEnglish={showEnglish} tikkun={tikkun} linked={linked?.verse === index ? linked : null} />)}</p>
+      <p className={styles.flowParagraph} lang="he" dir="rtl">{indices.map(index => <FlowVerse key={verses[index].ref} verse={verses[index]} assignment={assignment} id={`${group}-flow-${index}`} onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined} activeWord={activeWord?.verse === index ? activeWord.index : null} toolsAvailable={toolsAvailable} listening={listening} showEnglish={showEnglish} englishHidden={englishHidden} tikkun={tikkun} linked={linked?.verse === index ? linked : null} />)}</p>
     </div>)}
   </div>;
 }

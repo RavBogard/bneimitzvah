@@ -8,6 +8,7 @@ import { commentaryCount, commentaryParts, commentarySummary } from "./commentar
 import { useCommentaryChapters, type CommentaryLookup } from "./use-commentary";
 import { workCoverageNote, workLabel } from "../reading-toolbar";
 import type { StudyVerse } from "./api";
+import { StarButton, useOwnLayer } from "./own-layer";
 import styles from "./commentary.module.css";
 
 /** Text only: bold and italic runs become <strong> and <em>; nothing is ever markup. */
@@ -52,8 +53,10 @@ const CLAMP_SLACK = 2;
  * When the quoted words are found once in the verse, pointing at the comment
  * underlines them there; tapping the quoted words keeps them underlined.
  */
-export function CommentaryEntry({ comment, words, verseRef, onLink, pinned, language = "he" }: {
+export function CommentaryEntry({ comment, words, verseRef, onLink, pinned, language = "he", star }: {
   comment: CommentaryComment; words: readonly string[]; verseRef: string; onLink?: LinkHandler; pinned?: boolean;
+  /** A member's star on this comment (their own saved reading only), first in the comment's controls. */
+  star?: ReactNode;
   /** The language of the non-English text: Hebrew, or Aramaic for a Targum or the Talmud (same direction and font). */
   language?: "he" | "arc";
 }) {
@@ -90,7 +93,8 @@ export function CommentaryEntry({ comment, words, verseRef, onLink, pinned, lang
       ? <p ref={body} id={`${id}-text`} lang={language} dir="rtl" className={`${styles.text} ${styles.hebrewText} ${expanded ? "" : styles.clamped}`}>{match ? <>{lead}{parts.hebrew && " "}{parts.hebrew && <Runs runs={parts.hebrew} />}</> : hebrewText}</p>
       : <p ref={body} id={`${id}-text`} lang="en" dir="ltr" className={`${styles.text} ${expanded ? "" : styles.clamped}`}>{lead}{lead && " "}{lemma}{lemma && english && " "}{english && <Runs runs={english} />}</p>}
     {hebrew && hasHebrew && <p id={`${id}-hebrew`} lang={language} dir="rtl" className={`${styles.text} ${styles.hebrewText}`}>{hebrewText}</p>}
-    {(overflows || expanded || hasHebrew) && <div className={styles.controls}>
+    {(overflows || expanded || hasHebrew || star) && <div className={styles.controls}>
+      {star}
       {(overflows || expanded) && <button type="button" aria-expanded={expanded} aria-controls={`${id}-text`} onClick={() => setExpanded(value => !value)}>{expanded ? "Less" : "More"}</button>}
       {hasHebrew && <button type="button" aria-expanded={hebrew} aria-controls={`${id}-hebrew`} lang="en" onClick={() => setHebrew(value => !value)}>Hebrew</button>}
     </div>}
@@ -102,9 +106,10 @@ export type WorkState = Readonly<{ work: string; state: CommentaryVerseState }>;
 /** A busy verse shows this many comments per work inline; the rest open in place from one row. */
 export const INLINE_COMMENTS = 3;
 function WorkComments({ verse, work, comments, words, link }: { verse: StudyVerse; work: string; comments: readonly CommentaryComment[]; words: readonly string[]; link?: CommentLink }) {
-  const id = useId(), [all, setAll] = useState(false), hidden = comments.length - INLINE_COMMENTS;
+  const id = useId(), [all, setAll] = useState(false), hidden = comments.length - INLINE_COMMENTS, stars = useOwnLayer()?.stars ?? null;
   const entry = (comment: CommentaryComment, index: number) => <CommentaryEntry key={index} comment={comment} words={words} verseRef={verse.ref}
-    onLink={link ? link.point(`${verse.ref}|${work}:${index}`) : undefined} pinned={link?.pinned === `${verse.ref}|${work}:${index}`} />;
+    onLink={link ? link.point(`${verse.ref}|${work}:${index}`) : undefined} pinned={link?.pinned === `${verse.ref}|${work}:${index}`}
+    star={stars && <StarButton stars={stars} work={work} verseRef={verse.ref} index={index} />} />;
   return <section className={styles.work} aria-label={`${workLabel(work)} on ${verse.ref}`} data-work={work}>
     <h5 className={styles.workName}>{workLabel(work)}</h5>
     {comments.slice(0, INLINE_COMMENTS).map(entry)}

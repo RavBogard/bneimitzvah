@@ -2,6 +2,7 @@
 
 **Order of the remaining work (Daniel, 2026-10-23 popup rulings; recorded in MISSION):** finish 1.5 (installable app, typed sign-in code, torah.centralreform.org; v1.5.0 is the beta tag and opens `/read`, `/learn` and `/trope-chart` to indexing), then 1.6 (Learn to lein look-alikes, which half, quick ten), then the voice track starting at M0. The real-family pilot waits until Daniel says when; nothing goes to families before it. Codex's PR #43 is "Review and close now", handled by Daniel. At most two builders at once, Sonnet for routine work; Daniel is interrupted only at release tags and true blockers.
 
+- GATE: 1.4 PR 3 (claude/accounts-study): the Yours row and stars on a member’s own saved reading, the translate drill in Lein only, admin-only re-approval of an ended member, the haftarah kadma v’azla lesson’s lead example, the shared product-name reader for notification emails, and Daniel’s two approved lines (the approver help line and the shelf’s change line) — proceeded because the plan and Daniel’s 2026-10-23 rulings settle each; no migration; decisions 50 to 54 in the 1.4 plan; unapproved proposed lines listed as open item 5.
 - GATE: filed Daniel's 2026-10-23 rulings from Cowork in MISSION and the two 1.5 plans (docs only, commit 85913c9) — proceeded because Daniel's answers are binding and the commit touches no code; `tests/never-in-repo.test.mjs` and `scripts/repo-policy.mjs` passed.
 
 ## Current return point — 2026-10-21 night: toward 1.0

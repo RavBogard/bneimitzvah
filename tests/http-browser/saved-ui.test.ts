@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { browserFixture } from "./fixture";
 import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
@@ -9,6 +9,8 @@ import { openAuthMail } from "./auth-navigation";
 import { rateLimit } from "../../src/server/db/auth-schema";
 import * as s from "../../src/server/db/index";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
+import { createSefariaCommentaryReader } from "../../src/server/study/commentary";
+import { syntheticCommentaryFetch } from "../helpers/commentary";
 vi.mock("server-only", () => ({}));
 
 // Release 1.4 saved readings end to end: the real dispatcher, cookie session, Origin check and
@@ -17,7 +19,7 @@ let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop:
 const contexts: BrowserContext[] = [];
 beforeAll(async () => {
   assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard();
-  fixture = await browserFixture({ studyLoad: async request => syntheticUiStudyPage(request) });
+  fixture = await browserFixture({ studyLoad: async request => syntheticUiStudyPage(request), commentaryLoad: createSefariaCommentaryReader({ fetch: syntheticCommentaryFetch() as typeof globalThis.fetch }) });
   stop = await startBrowserServer(fixture.withRuntime, fixture.withPublicRuntime);
   browser = await chromium.launch({ headless: true });
 }, 120_000);
@@ -151,3 +153,73 @@ it("another member's saved reading id opens nothing", async () => {
   await ui(tab.locator(".study-verses")).toHaveCount(0);
   expect(await tab.content()).not.toContain(other.name);
 }, 120_000);
+
+it("on their own saved reading a member keeps a translation and a note in Yours, stars a comment, and the drill reveals their own words; only their rows exist, and none is audited", async () => {
+  const { tab, seen } = await visitor(390);
+  await signIn(tab, "pg-admin@example.test");
+  await tab.goto("/read", { waitUntil: "domcontentloaded" });
+  await ui(tab.locator(".study-verses")).toBeVisible();
+  // A public reading never shows Yours or stars: it does not ask about the account.
+  await ui(tab.locator("[data-yours-ref], [data-star]")).toHaveCount(0);
+  await tab.getByRole("button", { name: "Save", exact: true }).click();
+  await tab.getByRole("form", { name: "Save this reading" }).getByLabel("Name").fill("Admin study");
+  await tab.getByRole("form", { name: "Save this reading" }).getByRole("button", { name: "Save reading", exact: true }).click();
+  await tab.getByRole("link", { name: "Open your reading", exact: true }).click();
+  await ui(tab.getByRole("heading", { level: 1, name: "Admin study", exact: true })).toBeVisible();
+  const id = new URL(tab.url()).searchParams.get("saved")!;
+  await tab.getByRole("group", { name: "Reading lens", exact: true }).getByRole("button", { name: "Study", exact: true }).click();
+  const first = tab.getByRole("region", { name: "Yours on Genesis 1:1", exact: true });
+  await ui(first.getByRole("button", { name: "Yours", exact: true })).toHaveAttribute("aria-expanded", "false");
+  await first.getByRole("button", { name: "Yours", exact: true }).click();
+  const translation = first.getByRole("form", { name: "My translation", exact: true }), notes = first.getByRole("form", { name: "My notes", exact: true });
+  await ui(translation.getByLabel("My translation")).toBeEnabled();
+  await translation.getByLabel("My translation").fill("Synthetic own words for the first verse.");
+  await translation.getByRole("button", { name: "Save", exact: true }).click();
+  await ui(translation.getByText("Saved.", { exact: true })).toBeVisible();
+  await notes.getByLabel("My notes").fill("Synthetic private note.");
+  await notes.getByRole("button", { name: "Save", exact: true }).click();
+  await ui(notes.getByText("Saved.", { exact: true })).toBeVisible();
+  // A star on the inline Rashi comment: pressed in place, and listed in Yours.
+  const star = tab.locator('[data-commentary-ref="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]');
+  await ui(star).toHaveAttribute("aria-label", "Star comment");
+  await star.click();
+  await ui(star).toHaveAttribute("aria-pressed", "true"); await ui(star).toHaveAttribute("aria-label", "Starred");
+  await ui(first.getByRole("region", { name: "Starred comments on Genesis 1:1", exact: true }).getByText("SYNTHETIC LEMMA", { exact: false })).toBeVisible();
+  expect(await noHorizontalScroll(tab)).toBe(true);
+  for (const height of await tab.locator("[data-yours-ref] button, [data-star]").evaluateAll(nodes => nodes.filter(node => (node as HTMLElement).offsetParent).map(node => node.getBoundingClientRect().height)))
+    expect(height).toBeGreaterThanOrEqual(44);
+  // After a reload all of it is still there, for this member.
+  await tab.reload({ waitUntil: "domcontentloaded" });
+  await ui(tab.locator("[data-study-rows]")).toBeVisible();
+  await ui(tab.locator('[data-commentary-ref="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]').first()).toHaveAttribute("aria-pressed", "true");
+  await tab.getByRole("region", { name: "Yours on Genesis 1:1", exact: true }).getByRole("button", { name: "Yours", exact: true }).click();
+  await ui(tab.getByRole("region", { name: "Yours on Genesis 1:1", exact: true }).getByLabel("My translation")).toHaveValue("Synthetic own words for the first verse.");
+  // Lein: the drill reveals JPS and the member's own translation; on a verse without one, a way into Yours.
+  await tab.getByRole("group", { name: "Reading lens", exact: true }).getByRole("button", { name: "Lein", exact: true }).click();
+  await tab.locator('.study-verses [data-verse-ref="Genesis 1:1"] [data-word-index="0"]').first().click();
+  await tab.getByRole("button", { name: "Translate drill", exact: true }).click();
+  const drill = tab.getByRole("region", { name: "Translate drill on Genesis 1:1", exact: true });
+  await drill.getByRole("button", { name: "Reveal", exact: true }).click();
+  await ui(drill.getByRole("heading", { name: "My translation", exact: true })).toBeVisible();
+  await ui(drill.getByText("Synthetic own words for the first verse.", { exact: true })).toBeVisible();
+  await drill.getByRole("button", { name: "Next verse", exact: true }).click();
+  const second = tab.getByRole("region", { name: "Translate drill on Genesis 1:2", exact: true });
+  await second.getByRole("button", { name: "Reveal", exact: true }).click();
+  await ui(second.getByText("No translation of this verse yet.", { exact: false })).toBeVisible();
+  await second.getByRole("button", { name: "Write one in Yours", exact: true }).click();
+  await ui(tab.locator("[data-study-rows]")).toBeVisible();
+  const yours = tab.getByRole("region", { name: "Yours on Genesis 1:2", exact: true });
+  await ui(yours.getByRole("button", { name: "Yours", exact: true })).toHaveAttribute("aria-expanded", "true");
+  await ui(yours.getByLabel("My translation")).toBeFocused();
+  // Unstarring deletes the star.
+  await tab.locator('[data-commentary-ref="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]').first().click();
+  await ui(tab.locator('[data-commentary-ref="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]').first()).toHaveAttribute("aria-pressed", "false");
+  // Stored for this member only, never audited, and the writes were exactly these.
+  const [member] = await fixture.ownerDb.select().from(s.savedReading).where(eq(s.savedReading.id, id));
+  const work = await fixture.ownerDb.select().from(s.savedVerseWork).where(eq(s.savedVerseWork.savedReadingId, id));
+  expect(work.map(row => [row.verseRef, row.stream, row.text]).sort()).toEqual([["Genesis 1:1", "note", "Synthetic private note."], ["Genesis 1:1", "translation", "Synthetic own words for the first verse."]]);
+  expect(work.every(row => row.membershipId === member.membershipId)).toBe(true);
+  expect((await fixture.ownerDb.select().from(s.starredComment).where(eq(s.starredComment.membershipId, member.membershipId))).length).toBe(0);
+  expect((await fixture.ownerDb.select().from(s.auditEvent).where(inArray(s.auditEvent.targetType, ["saved_reading", "saved_verse_work", "starred_comment"]))).length).toBe(0);
+  expect(seen.filter(row => row.startsWith("POST")).sort()).toEqual(["POST /api/saved/readings/create", "POST /api/saved/star", "POST /api/saved/star", "POST /api/saved/work", "POST /api/saved/work"]);
+}, 240_000);
