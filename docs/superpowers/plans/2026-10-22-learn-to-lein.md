@@ -49,6 +49,7 @@
 19. **The front door card** keeps COPY's title and line, with a lake Start button to /learn and the trope chart as a plain link beneath.
 20. **Celebration.** Each word's ink pull starts at its share of the recording's length, so the colour follows the voice; the line and actions appear after the last word. It runs only the first time a path's first-verse lesson is finished.
 21. **Test hooks.** Drill elements carry their answer as data attributes (`data-right`, `data-end-unit`, `data-target-phrase`, `data-order`) so browser tests can answer deterministically. Nothing is scored, so exposing them costs nothing.
+22. **After the adversarial review (2026-10-23).** A card moves up at most one box per lesson or review run (a miss still drops it), so one session cannot carry a new card to the 35-day box. A missed item comes back at most twice in a run; after that its card carries it into review. A lesson whose examples cannot be played shows "The recording did not load. Try again." with a button and is never marked done. The celebration's line and actions appear when the recording stops however it stops, within twenty seconds at most, and Escape leaves it. "Find three more." counts down to what the reading holds ("Find two more."). The review's loading line is "Loading the review…".
 
 ## Slice 1: data, cut, pools, home, shell, first three drills (`claude/learn-to-lein`)
 
