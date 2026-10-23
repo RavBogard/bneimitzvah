@@ -4,6 +4,10 @@ import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
 import { AdminNav } from "../admin-nav";
 import { accountsApi, type AccountRequest, type ApproverMode, type ApproversView, type Member } from "./api";
 
+/** Daniel's approved approver help line (F1, wording approved 2026-10-23). */
+export const APPROVER_HELP_LINE = "Anyone who asks in good faith can have an account, member or not. Decline only spam or abuse.";
+/** Proposed wording, not yet approved by Daniel: a designated tutor approving someone an admin ended (Decided here, 2026-10-23). */
+export const ADMIN_REAPPROVAL_LINE = "An admin ended this person’s membership, so only an admin can approve them again. The request is kept.";
 const initial = (name: string) => Array.from(name.trim())[0]?.toLocaleUpperCase() ?? "A";
 const day = (value: string) => new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
 type Message = { text: string; tone: "status" | "alert"; signIn?: boolean } | null;
@@ -50,7 +54,8 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
   }
   const approve = (row: AccountRequest) => act(async () => {
     const result = await accountsApi.approve(mode, row.id);
-    return result.ok ? { text: `${row.name} now has an account. They’ll get one email saying so.`, tone: "status" } : { text: "That person’s account is turned off here, so it can’t be approved. The request is kept.", tone: "alert" };
+    return result.ok ? { text: `${row.name} now has an account. They’ll get one email saying so.`, tone: "status" }
+      : { text: result.code === "admin-only" ? ADMIN_REAPPROVAL_LINE : "That person’s account is turned off here, so it can’t be approved. The request is kept.", tone: "alert" };
   }, "approve the request");
   const decline = (row: AccountRequest) => act(async () => { await accountsApi.decline(mode, row.id); return { text: "Request declined. Nothing was sent.", tone: "status" }; }, "decline the request");
   const end = (row: Member) => act(async () => { await accountsApi.endMember(row.id); return { text: `${row.name}’s membership has ended.`, tone: "status" }; }, "end the membership");
@@ -80,7 +85,8 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
       : broken || !requests ? <div className="admin-state" role="alert"><p>Account requests couldn’t be loaded.</p><button type="button" className="button-secondary admin-pill" onClick={() => void load()}>Reload</button></div>
       : <>
         <section className="people-card" aria-labelledby="accounts-requests"><div className="people-card-head"><h2 id="accounts-requests">Requests</h2>
-          <p>Approving gives the person an account and sends them one email. Declining removes the request and sends nothing.</p></div>
+          <p>Approving gives the person an account and sends them one email. Declining removes the request and sends nothing.</p>
+          <p>{APPROVER_HELP_LINE}</p></div>
           {requests.length ? <ul className="people-list">{requests.map(row => <li key={row.id} className="people-row account-request-row">
             <span className="people-avatar" aria-hidden="true">{initial(row.name)}</span>
             <div className="people-body">

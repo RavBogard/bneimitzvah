@@ -34,8 +34,9 @@ test("groups in order, curated works first in the curated order, the rest by com
   expect(answer.groups.find(group => group.key === "midrash")!.works[2].dates).toBeNull();
   // A Talmud segment never folds into its whole daf, nor a midrash into its chapter.
   expect(answer.groups.find(group => group.key === "talmud")!.works[0].items).toEqual([{ ref: "Synthetic Tractate 16b:7", segments: 1 }]);
-  // The browser parser accepts exactly this answer.
-  expect(parseShelfAnswer(JSON.parse(JSON.stringify(answer)), verse)).toEqual(JSON.parse(JSON.stringify(answer)));
+  // The browser parser accepts exactly this answer, with the congregation's product name the related route adds.
+  const routed = JSON.parse(JSON.stringify({ ...answer, productName: "Synthetic Portal" }));
+  expect(parseShelfAnswer(routed, verse)).toEqual(routed);
 });
 
 test("a Prophets verse uses the Prophets' curated commentators", () => {
@@ -111,7 +112,7 @@ test("citations, dates, inline works and Sefaria links", () => {
 });
 
 test("the browser parser refuses anything but the server's shape", () => {
-  const body = JSON.parse(JSON.stringify(parseShelfLinks(syntheticLinks(), verse)));
+  const body = JSON.parse(JSON.stringify({ ...parseShelfLinks(syntheticLinks(), verse), productName: "CRC Torah" }));
   const mutations: [string, (v: Record<string, any>) => void][] = [
     ["other verse", v => { v.verse = "Genesis 12:2"; }], ["link elsewhere", v => { v.sefariaUrl = "https://example.com/"; }], ["extra key", v => { v.extra = 1; }],
     ["group order", v => { v.groups.reverse(); }], ["label", v => { v.groups[0].label = "Notes"; }], ["empty group", v => { v.groups[0].works = []; }],
@@ -119,6 +120,8 @@ test("the browser parser refuses anything but the server's shape", () => {
     ["bad citation", v => { v.groups[0].works[0].items[0].ref = "javascript:alert(1)"; }], ["no items", v => { v.groups[0].works[0].items = []; }],
     ["repeated item", v => { v.groups[0].works[1].items[1] = v.groups[0].works[1].items[0]; }], ["dates backwards", v => { v.groups[0].works[1].dates = [1270, 1246]; }],
     ["segments zero", v => { v.groups[0].works[1].items[0].segments = 0; }], ["curated not boolean", v => { v.groups[0].works[0].curated = "yes"; }],
+    ["no product name", v => { delete v.productName; }], ["empty product name", v => { v.productName = ""; }], ["padded product name", v => { v.productName = " CRC Torah"; }],
+    ["markup product name", v => { v.productName = "A‮B"; }],
   ];
   for (const [name, mutate] of mutations) { const value = structuredClone(body); mutate(value); expect(() => parseShelfAnswer(value, verse), name).toThrow(); }
 });

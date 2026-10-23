@@ -31,6 +31,10 @@ test("the accounts code never writes a role grant, never imports a grant writer,
   }
   const reader = sources.find(file => file.path === "src/server/data/product-name.ts");
   assert.ok(reader && /export async function readProductName\b/.test(reader.text) && /export async function readTenantNames\b/.test(reader.text));
+  // No server code but the reader selects the column itself: the notification emails take it from the reader too.
+  const readers = sources.filter(file => file.path.startsWith("src/server/") && !file.path.startsWith("src/server/db/") && /\bs\.tenant\.productName\b/.test(file.text)).map(file => file.path);
+  assert.deepEqual(readers, ["src/server/data/product-name.ts"]);
+  assert.match(sources.find(file => file.path === "src/server/data/notifications.ts").text, /import \{ readProductName \} from "\.\/product-name";/);
   for (const path of ["src/components/portal/account-request.tsx", "src/components/portal/workspace/accounts/workspace.tsx", "src/server/mail/transport.ts"])
     // The sign-in and invitation subject on that one line still fixes the name; the sign-in code PR (#44) moves it to the reader.
     assert.doesNotMatch(sources.find(file => file.path === path).text.replace(/subject: kind === "invitation" \? "Your Beit Mitzvah invitation from CRC Torah" : "Sign in to CRC Torah",/, ""), /CRC Torah/, `${path} fixes the product name`);

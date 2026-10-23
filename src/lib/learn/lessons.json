@@ -2760,19 +2760,6 @@
       "listenFor": "A climb, a leap to the very top, and a drop back; gershayim rises and holds instead.",
       "examples": [
         {
-          "ref": "Isaiah 6:8",
-          "words": [
-            0,
-            0
-          ],
-          "firstWord": "וָאֶשְׁמַ֞ע",
-          "lastWord": "וָאֶשְׁמַ֞ע",
-          "why": "Gershayim alone on the first word, before 'here I am'.",
-          "tropes": [
-            "gershayim"
-          ]
-        },
-        {
           "ref": "Isaiah 54:11",
           "words": [
             4,
@@ -2784,6 +2771,19 @@
           "tropes": [
             "kadma",
             "geresh"
+          ]
+        },
+        {
+          "ref": "Isaiah 6:8",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וָאֶשְׁמַ֞ע",
+          "lastWord": "וָאֶשְׁמַ֞ע",
+          "why": "Gershayim alone on the first word, before 'here I am'.",
+          "tropes": [
+            "gershayim"
           ]
         },
         {

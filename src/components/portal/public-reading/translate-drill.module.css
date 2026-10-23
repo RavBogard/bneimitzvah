@@ -1,0 +1,30 @@
+/* The translate drill on Lein's selected verse: a white object on the canvas with a hairline, lake as the only
+   accent, no motion. The English appears in place on Reveal; the placeholder keeps the row from jumping. */
+.drill { display: grid; gap: 0.5rem; max-width: 65ch; margin-block: 0.75rem 1rem; padding: 1rem 1.25rem 1.25rem; border-radius: var(--radius-object);
+  background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); color: var(--color-ink); }
+.hidden { margin: 0; min-height: 1.7em; color: var(--color-muted); font-style: italic; }
+.prompt { margin: 0; font-weight: 600; }
+.hint, .line { margin: 0; color: var(--color-muted); }
+.label { margin: 0.25rem 0 0; color: var(--color-ink); font-size: 0.8125rem; font-weight: 650; line-height: 1.4; }
+.label:focus { outline: none; }
+.label:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.english:global(.study-english) { margin: 0; font: 400 1rem/1.7 "Bricolage Grotesque", system-ui, sans-serif; }
+.mine { margin: 0; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; margin-top: 0.5rem; }
+.actions > :global(.button-primary) { width: auto; }
+.quiet, .inlineLink { min-height: 44px; margin: 0; padding: 0; border: 0; background: transparent; color: var(--color-action); font: 600 0.9375rem/1 "Bricolage Grotesque", system-ui, sans-serif; cursor: pointer; }
+.inlineLink { display: inline-flex; align-items: center; font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 0.2em; }
+.quiet:hover, .inlineLink:hover { color: var(--color-action-hover); text-decoration: underline; text-underline-offset: 0.2em; }
+.quiet:focus-visible, .inlineLink:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+@media (max-width: 640px) {
+  .drill { padding: 1rem; }
+  /* One row on a phone when it fits, the primary action first; a longer primary takes its own line. */
+  .actions { gap: 0.25rem 1rem; }
+  .actions > :global(.button-primary) { flex: 1 1 auto; min-width: 0; padding-inline: 0.75rem; }
+  .quiet { flex: 0 0 auto; white-space: nowrap; }
+}
+/* The control in the selected verse's tools: a quiet pill like "Rashi (n)", pressed while the drill is on. */
+.control { margin-block: 0.5rem 1rem; }
+.toggle { min-height: 44px; padding: 0.5rem 1rem; border: 1px solid var(--color-action); border-radius: 999px; background: transparent; color: var(--color-action); font: inherit; font-weight: 600; cursor: pointer; }
+.toggle[aria-pressed="true"], .toggle:hover { background: var(--lake-tint); }
+.toggle:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }

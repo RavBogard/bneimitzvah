@@ -60,6 +60,13 @@ button.number:focus-visible { outline: 3px solid var(--color-focus); outline-off
 .moreComments:hover { color: var(--color-action-hover); text-decoration: underline; text-underline-offset: 0.2em; }
 .moreComments:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
 .controls button:focus-visible, .status button:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+/* 1.4: a member's star on a comment. A 44px icon button; pressed, it fills in lake blue (never marigold). */
+.controls .star, .star { display: inline-flex; align-items: center; justify-content: center; width: 44px; min-height: 44px; margin-inline-start: -12px; padding: 0; border: 0; border-radius: 999px;
+  background: transparent; color: var(--color-muted); cursor: pointer; }
+.controls .star:hover, .star:hover { color: var(--color-action); background: var(--color-hover); text-decoration: none; }
+.controls .star[aria-pressed="true"], .star[aria-pressed="true"] { color: var(--color-action); }
+.star[aria-disabled="true"] { cursor: progress; opacity: 0.7; }
+.starNote { display: inline-flex; align-items: center; min-height: 44px; color: var(--color-muted); font-size: 0.8125rem; }
 
 /* Credit, at the work's foot */
 .credits { margin-block: 1.25rem 0; color: var(--color-muted); font-size: 0.8125rem; line-height: 1.55; max-inline-size: 72ch; }

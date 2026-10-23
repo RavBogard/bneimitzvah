@@ -37,9 +37,11 @@ function work(value: unknown, group: ShelfGroupKey): ShelfWork {
   if (new Set(items.map(item => item.ref)).size !== items.length) return bad();
   return Object.freeze({ title: row.title as string, heTitle: row.heTitle as string | null, dates, category: row.category as string, curated: row.curated, items: Object.freeze(items), more: row.more as number });
 }
-export function parseShelfAnswer(value: unknown, verse: string): ShelfAnswer {
-  const row = referenceRecord(value, ["verse", "sefariaUrl", "groups"]);
-  if (!row || row.verse !== verse || row.sefariaUrl !== shelfSefariaUrl(verse) || !Array.isArray(row.groups) || row.groups.length > SHELF_GROUP_KEYS.length) return bad();
+/** The shelf as the related route answers it: Sefaria's links, and the congregation's product name for the credit's change line. */
+export type ShelfView = ShelfAnswer & Readonly<{ productName: string }>;
+export function parseShelfAnswer(value: unknown, verse: string): ShelfView {
+  const row = referenceRecord(value, ["verse", "sefariaUrl", "groups", "productName"]);
+  if (!row || row.verse !== verse || row.sefariaUrl !== shelfSefariaUrl(verse) || !text(row.productName, 120) || !Array.isArray(row.groups) || row.groups.length > SHELF_GROUP_KEYS.length) return bad();
   let last = -1, works = 0;
   const groups = row.groups.map((raw): ShelfGroup => {
     const group = referenceRecord(raw, ["key", "label", "count", "works"]), at = SHELF_GROUP_KEYS.indexOf(group?.key as ShelfGroupKey);
@@ -48,9 +50,9 @@ export function parseShelfAnswer(value: unknown, verse: string): ShelfAnswer {
     if (works > SHELF_LIMITS.works) return bad();
     return Object.freeze({ key: group.key as ShelfGroupKey, label: group.label as string, count: group.count as number, works: Object.freeze(group.works.map(item => work(item, group.key as ShelfGroupKey))) });
   });
-  return Object.freeze({ verse, sefariaUrl: row.sefariaUrl as string, groups: Object.freeze(groups) });
+  return Object.freeze({ verse, sefariaUrl: row.sefariaUrl as string, groups: Object.freeze(groups), productName: row.productName as string });
 }
-export async function fetchShelf(verse: string, signal: AbortSignal): Promise<ShelfAnswer> {
+export async function fetchShelf(verse: string, signal: AbortSignal): Promise<ShelfView> {
   if (!parseCompareVerse(verse)) return bad();
   return parseShelfAnswer(await getJson(shelfPath(verse), SHELF_LIMITS.responseBytes, signal), verse);
 }

@@ -126,6 +126,8 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
         if (requester.membership?.disabledAt) return failed("disabled");
         const membership = requester.membership ?? await data.insertMembership(tx, actor.tenantId, pending.userId);
         let member = await data.activeMember(tx, actor.tenantId, membership.id, "update"), created = false;
+        // Only an admin approves again someone an admin ended (Decided here, 2026-10-23); the request is kept for one.
+        if (!member && actor.mode !== "admin" && requester.membership && await data.wasEnded(tx, actor.tenantId, membership.id)) return failed("admin-only");
         if (!member) { member = await data.insertMember(tx, { tenantId: actor.tenantId, membershipId: membership.id, userId: pending.userId, displayName: pending.displayName, approvedBy: actor.membershipId }); created = true; }
         if (!await data.deleteRequest(tx, actor.tenantId, pending.id)) throw new Error("Account request unavailable");
         await data.audit(tx, actor, "account-request.approve", "tenant_member", member.id, randomUUID());
