@@ -136,3 +136,35 @@ it("the public API answers the visitor directly, with noindex and no cookie, and
   expect(result).toEqual({ status: 200, robots: "noindex, nofollow", cookie: null, finkel: 404, session: 404,
     rashi: { status: 200, cdn: "public, s-maxage=2592000", cookie: null, work: "rashi", verses: ["1", "3"], first: "אָב גַּד." }, unregistered: 400 });
 });
+
+it("any reading: a named reading, a deep-linked verse that plays from the player, and the chooser, all on the signed-out routes", async () => {
+  for (const mobile of [true, false]) {
+    const { tab, seen } = await visitor(mobile);
+    // A deep link into "Any reading": the verse is selected in the player, ready, and plays on Play.
+    await tab.goto("/read?ref=Genesis+1%3A1-6%3A8&kind=torah&verse=1", { waitUntil: "domcontentloaded" });
+    await ui(tab.getByRole("heading", { level: 1, name: "Genesis 1:1–6:8", exact: true })).toBeVisible();
+    const player = tab.getByRole("region", { name: "Reading playback", exact: true });
+    await ui(player.getByText("Genesis 1:1 · Whole verse", { exact: true })).toBeVisible();
+    await player.getByRole("button", { name: "Play", exact: true }).click(); await playing(tab);
+    await player.getByRole("button", { name: "Pause", exact: true }).click();
+    expect(seen.api).toContain("/api/public/reference/short");
+    // A named reading from the catalog, by its address.
+    await tab.goto("/read?reading=bereshit", { waitUntil: "domcontentloaded" });
+    await ui(tab.getByRole("heading", { level: 1, name: "Bereshit", exact: true })).toBeVisible();
+    await ui(reading(tab).getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
+    await tab.getByRole("group", { name: "Reading text selection" }).getByRole("button", { name: "Haftarah", exact: true }).click();
+    await ui(reading(tab).getByRole("heading", { name: "Isaiah 42:5", exact: true })).toBeVisible();
+    await ui(tab).toHaveURL(/\/read\?reading=bereshit&passage=2$/);
+    // The chooser opens another reading in place of this one.
+    await tab.getByRole("button", { name: "Choose a reading", exact: true }).click();
+    const chooser = tab.getByRole("region", { name: "Choose a reading", exact: true });
+    await chooser.getByLabel("Holidays and special Shabbatot", { exact: true }).selectOption("shabbat-shekalim");
+    await chooser.locator("form").nth(1).getByRole("button", { name: "Open", exact: true }).click();
+    await ui(tab.getByRole("heading", { level: 1, name: "Shabbat Shekalim", exact: true })).toBeVisible();
+    await ui(reading(tab).getByRole("heading", { name: "Exodus 30:11", exact: true })).toBeVisible();
+    expect(seen.api.some(path => path === "/api/public/reading")).toBe(true);
+    expect(seen.privateApi).toBe(false); expect(seen.cookie).toBe(false);
+    expect((await tab.context().cookies()).length).toBe(0);
+    expect(await tab.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+});

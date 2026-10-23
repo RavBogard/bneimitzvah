@@ -20,16 +20,17 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const RANGES = /^[\x20-\x7e]{1,1000}$/;
 const CONTROLS = /[\x00-\x1f\x7f-\x9f\u2028\u2029]/;
 
-async function request(path: "/api/saved/readings" | "/api/saved/readings/create", body?: Record<string, unknown>, signal?: AbortSignal) {
+type SavedPath = "/api/saved/readings" | "/api/saved/readings/create" | "/api/saved/readings/update" | "/api/saved/readings/remove" | "/api/saved/reading" | "/api/saved/mark";
+async function request(path: SavedPath, body?: Record<string, unknown>, signal?: AbortSignal, search = "") {
   const controller = new AbortController(), abort = () => controller.abort();
   if (signal?.aborted) abort();
   signal?.addEventListener("abort", abort, { once: true });
   const timeout = setTimeout(abort, 12_000);
   try {
-    const response = await fetch(path, { method: body === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer",
+    const response = await fetch(path + search, { method: body === undefined ? "GET" : "POST", credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer",
       signal: controller.signal, headers: body === undefined ? { accept: "application/json" } : { accept: "application/json", "content-type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body) });
-    const status = [200, 400, 401, 403, 409].includes(response.status) ? response.status : 503;
+    const status = [200, 400, 401, 403, 404, 409].includes(response.status) ? response.status : 503;
     if (!response.headers.get("content-type")?.toLowerCase().startsWith("application/json") || !response.body) return { status: status === 200 ? 503 : status, value: null };
     const reader = response.body.getReader(), chunks: Uint8Array[] = []; let size = 0;
     try {
@@ -89,4 +90,72 @@ export async function fetchSavedReadings(signal?: AbortSignal): Promise<SavedLis
 export async function createSavedReading(input: { name: string; date: string | null; kind: SavedKind; ranges: string }, signal?: AbortSignal): Promise<SaveResult> {
   const { status, value } = await request("/api/saved/readings/create", { name: input.name, date: input.date, kind: input.kind, ranges: input.ranges }, signal);
   return parseSaveResult(status, value);
+}
+
+/** One verse of a saved reading as the member keeps it. Translation and note are read here; PR 3's Yours row writes them. */
+export type SavedMark = Readonly<{ state: "unmarked" | "working" | "got-it"; version: number }>;
+export type SavedWork = Readonly<{ text: string; version: number }>;
+export type SavedVerse = Readonly<{ ref: string; translation: SavedWork | null; note: SavedWork | null; mark: SavedMark | null }>;
+export type SavedPage = Readonly<{ state: "ready"; reading: SavedReading; offset: number; totalVerses: number; nextOffset: number | null; verses: readonly SavedVerse[] }>
+  | Readonly<{ state: "signed-out" } | { state: "not-eligible" } | { state: "missing" }>;
+const VERSE = /^[A-Za-z0-9 ]+ [1-9][0-9]*:[1-9][0-9]*$/;
+function parseMark(value: unknown): SavedMark {
+  const row = record(value, ["state", "version", "updatedAt"]);
+  if (!row || (row.state !== "unmarked" && row.state !== "working" && row.state !== "got-it") || !Number.isSafeInteger(row.version) || (row.version as number) < 1 || typeof row.updatedAt !== "string") throw new SavedRequestError(503);
+  return Object.freeze({ state: row.state, version: row.version as number });
+}
+function parseWork(value: unknown): SavedWork {
+  const row = record(value, ["text", "version", "updatedAt"]);
+  if (!row || typeof row.text !== "string" || row.text.length > 4096 || !Number.isSafeInteger(row.version) || (row.version as number) < 1 || typeof row.updatedAt !== "string") throw new SavedRequestError(503);
+  return Object.freeze({ text: row.text, version: row.version as number });
+}
+export function parseSavedPage(status: number, value: unknown, offset: number): SavedPage {
+  if (status === 401) return { state: "signed-out" };
+  if (status === 403) return { state: "not-eligible" };
+  if (status === 404) return { state: "missing" };
+  const row = status === 200 ? record(value, ["ok", "reading", "offset", "totalVerses", "nextOffset", "verses"]) : null, reading = row?.ok === true ? parseSavedReading(row.reading) : null;
+  if (!row || !reading || row.offset !== offset || row.totalVerses !== reading.verseCount || !Array.isArray(row.verses) || row.verses.length < 1 || row.verses.length > 10
+    || (row.nextOffset !== null && row.nextOffset !== offset + row.verses.length)) throw new SavedRequestError(503);
+  const verses = row.verses.map(item => {
+    const verse = record(item, ["ref", "translation", "note", "mark"]);
+    if (!verse || typeof verse.ref !== "string" || !VERSE.test(verse.ref)) throw new SavedRequestError(503);
+    return Object.freeze({ ref: verse.ref, translation: verse.translation === null ? null : parseWork(verse.translation), note: verse.note === null ? null : parseWork(verse.note),
+      mark: verse.mark === null ? null : parseMark(verse.mark) });
+  });
+  return Object.freeze({ state: "ready" as const, reading, offset, totalVerses: reading.verseCount, nextOffset: row.nextOffset as number | null, verses: Object.freeze(verses) });
+}
+/** A page of up to ten verses of one saved reading, with the member's marks. */
+export async function fetchSavedPage(id: string, offset: number, signal?: AbortSignal): Promise<SavedPage> {
+  if (!UUID.test(id) || !Number.isSafeInteger(offset) || offset < 0 || offset > 999) throw new SavedRequestError(400);
+  const search = new URLSearchParams(offset ? [["id", id], ["offset", String(offset)]] : [["id", id]]).toString();
+  const { status, value } = await request("/api/saved/reading", undefined, signal, `?${search}`);
+  return parseSavedPage(status, value, offset);
+}
+export type ChangeResult<T> = Readonly<{ ok: true; value: T } | { ok: false; code: "signed-out" | "not-eligible" | "missing" | "invalid" | "limit" | "unavailable" } | { ok: false; code: "conflict"; current: unknown }>;
+function change<T>(status: number, value: unknown, key: string, parse: (item: unknown) => T | null): ChangeResult<T> {
+  if (status === 401) return { ok: false, code: "signed-out" };
+  if (status === 403) return { ok: false, code: "not-eligible" };
+  if (status === 404) return { ok: false, code: "missing" };
+  if (status === 400) return { ok: false, code: "invalid" };
+  const row = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+  if (status === 409) return row?.ok === false && row.code === "conflict" ? { ok: false, code: "conflict", current: row.current } : { ok: false, code: row?.ok === false && row.code === "limit" ? "limit" : "unavailable" };
+  try { const parsed = status === 200 && row?.ok === true ? parse(row[key]) : null; return parsed === null ? { ok: false, code: "unavailable" } : { ok: true, value: parsed }; }
+  catch { return { ok: false, code: "unavailable" }; }
+}
+export async function updateSavedReading(input: { id: string; revision: number; name: string; date: string | null }, signal?: AbortSignal): Promise<ChangeResult<SavedReading>> {
+  const { status, value } = await request("/api/saved/readings/update", { id: input.id, revision: input.revision, name: input.name, date: input.date }, signal);
+  return change(status, value, "reading", parseSavedReading);
+}
+export async function removeSavedReading(input: { id: string; revision: number }, signal?: AbortSignal): Promise<ChangeResult<string>> {
+  const { status, value } = await request("/api/saved/readings/remove", { id: input.id, revision: input.revision }, signal);
+  return change(status, value, "removed", item => item === input.id ? input.id : null);
+}
+export async function setSavedMark(input: { readingId: string; verseRef: string; expectedVersion: number; state: SavedMark["state"] }, signal?: AbortSignal): Promise<ChangeResult<SavedMark>> {
+  const { status, value } = await request("/api/saved/mark", { readingId: input.readingId, verseRef: input.verseRef, expectedVersion: input.expectedVersion, state: input.state }, signal);
+  return change(status, value, "mark", parseMark);
+}
+/** A mark conflict's current mark: null when none is saved yet, undefined when the answer is not a mark. */
+export function conflictMark(current: unknown): SavedMark | null | undefined {
+  if (current === null) return null;
+  try { return parseMark(current); } catch { return undefined; }
 }

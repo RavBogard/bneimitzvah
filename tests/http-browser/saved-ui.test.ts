@@ -96,3 +96,56 @@ it("an account without saved readings is pointed to /account, and its front door
   await ui(tab.getByRole("link", { name: "Ask for an account to save readings", exact: true })).toHaveAttribute("href", "/account");
   await ui(tab.getByRole("form", { name: "Save this reading" })).toHaveCount(0);
 }, 120_000);
+
+it("the member opens the saved reading from My readings, marks a verse that stays marked after a reload, renames it and removes it", async () => {
+  const { tab, seen } = await visitor(390);
+  await signIn(tab, "pg-admin@example.test");
+  await tab.goto("/read", { waitUntil: "domcontentloaded" });
+  await ui(tab.locator(".study-verses")).toBeVisible();
+  await tab.getByRole("button", { name: "Save", exact: true }).click();
+  const form = tab.getByRole("form", { name: "Save this reading" });
+  await form.getByLabel("Name").fill("Admin creation");
+  await form.getByRole("button", { name: "Save reading", exact: true }).click();
+  await tab.getByRole("link", { name: "Open your reading", exact: true }).click();
+  await ui(tab.getByRole("heading", { level: 1, name: "Admin creation", exact: true })).toBeVisible();
+  const id = new URL(tab.url()).searchParams.get("saved")!;
+  expect(id).toMatch(/^[0-9a-f-]{36}$/);
+  // Lein: choose the second verse, mark it, and find the mark again after a reload.
+  const word = tab.locator('.study-verses [data-verse-ref="Genesis 1:2"] [data-word-index="0"]').first();
+  await word.click();
+  const marks = tab.getByRole("group", { name: "How Genesis 1:2 is going" });
+  await ui(marks.getByRole("button", { name: "Still working", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await marks.getByRole("button", { name: "Still working", exact: true }).click();
+  await ui(marks.getByRole("button", { name: "Still working", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await tab.reload({ waitUntil: "domcontentloaded" });
+  await ui(tab.locator(".study-verses")).toBeVisible();
+  await tab.locator('.study-verses [data-verse-ref="Genesis 1:2"] [data-word-index="0"]').first().click();
+  await ui(tab.getByRole("group", { name: "How Genesis 1:2 is going" }).getByRole("button", { name: "Still working", exact: true })).toHaveAttribute("aria-pressed", "true");
+  // Rename, then remove: the marks go with it.
+  await tab.getByRole("button", { name: "Edit", exact: true }).click();
+  await tab.getByRole("form", { name: "Edit this reading" }).getByLabel("Name").fill("Admin creation, renamed");
+  await tab.getByRole("button", { name: "Save changes", exact: true }).click();
+  await ui(tab.getByRole("heading", { level: 1, name: "Admin creation, renamed", exact: true })).toBeVisible();
+  expect(await noHorizontalScroll(tab)).toBe(true);
+  await tab.getByRole("button", { name: "Edit", exact: true }).click();
+  await tab.getByRole("button", { name: "Remove reading", exact: true }).click();
+  await tab.getByRole("button", { name: "Remove", exact: true }).click();
+  await ui(tab.getByRole("region", { name: "My readings" })).toBeVisible();
+  await ui(tab.getByRole("region", { name: "My readings" }).getByText("Admin creation, renamed")).toHaveCount(0);
+  expect((await fixture.ownerDb.select().from(s.savedReading).where(eq(s.savedReading.id, id))).length).toBe(0);
+  expect((await fixture.ownerDb.select().from(s.savedVerseMark).where(eq(s.savedVerseMark.savedReadingId, id))).length).toBe(0);
+  // Another member cannot open it while it existed, and nothing about it reached the audit log.
+  expect(seen.filter(row => row.startsWith("POST")).sort()).toEqual(["POST /api/saved/mark", "POST /api/saved/readings/create", "POST /api/saved/readings/remove", "POST /api/saved/readings/update"]);
+  expect((await fixture.ownerDb.select().from(s.auditEvent).where(eq(s.auditEvent.targetType, "saved_reading"))).length).toBe(0);
+}, 240_000);
+
+it("another member's saved reading id opens nothing", async () => {
+  const [other] = await fixture.ownerDb.select().from(s.savedReading).limit(1);
+  expect(other).toBeDefined();
+  const { tab } = await visitor(390);
+  await signIn(tab, "pg-admin@example.test");
+  await tab.goto(`/read?saved=${other.id}`, { waitUntil: "domcontentloaded" });
+  await ui(tab.getByRole("heading", { level: 2, name: "This reading isn’t in your saved readings", exact: true })).toBeVisible();
+  await ui(tab.locator(".study-verses")).toHaveCount(0);
+  expect(await tab.content()).not.toContain(other.name);
+}, 120_000);

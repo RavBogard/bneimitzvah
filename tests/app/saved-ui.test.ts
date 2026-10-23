@@ -92,10 +92,11 @@ describe("Save on /read", () => {
     for (const step of ["idle", "signed-out", "not-eligible", "form", "saved", "unavailable"] as const) expect(view(step)).not.toMatch(/!/);
   });
   it("names the reading after its parashah and kind, within 80 characters", () => {
-    expect(suggestedName({ parashah: "Noach", kind: "torah", ranges: ["Genesis 6:9-11:32"], date: "2026-10-24" })).toBe("Noach · Torah");
-    expect(suggestedName({ parashah: "Noach", kind: "haftarah", ranges: ["Isaiah 54:1-55:5"], date: "2026-10-24" })).toBe("Noach · Haftarah");
-    expect(suggestedName({ parashah: null, kind: "torah", ranges: ["Exodus 12:21-51"], date: null })).toBe("Shabbat reading · Torah");
-    expect(Array.from(suggestedName({ parashah: "א".repeat(100), kind: "torah", ranges: ["Genesis 1:1"], date: null }))).toHaveLength(80);
+    expect(suggestedName({ title: "Noach", label: null, kind: "torah", ranges: ["Genesis 6:9-11:32"], date: "2026-10-24" })).toBe("Noach · Torah");
+    expect(suggestedName({ title: "Noach", label: null, kind: "haftarah", ranges: ["Isaiah 54:1-55:5"], date: "2026-10-24" })).toBe("Noach · Haftarah");
+    expect(suggestedName({ title: null, label: null, kind: "torah", ranges: ["Exodus 12:21-51"], date: null })).toBe("Shabbat reading · Torah");
+    expect(suggestedName({ title: "Bereshit", label: "Maftir", kind: "torah", ranges: ["Genesis 6:5-8"], date: null })).toBe("Bereshit · Maftir");
+    expect(Array.from(suggestedName({ title: "א".repeat(100), label: null, kind: "torah", ranges: ["Genesis 1:1"], date: null }))).toHaveLength(80);
   });
 });
 
