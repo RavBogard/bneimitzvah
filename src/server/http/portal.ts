@@ -126,7 +126,8 @@ export function wordDetailsView(value: StudyWordDetails): JsonValue {
       : { lemma: entry.lemma, status: entry.status, headword: entry.headword, dictionaryGloss: entry.dictionaryGloss }),
     ...(value.elsewhere === undefined ? {} : { elsewhere: value.elsewhere.status === "unavailable" ? { status: value.elsewhere.status, reason: value.elsewhere.reason }
       : { status: value.elsewhere.status, lemma: value.elsewhere.lemma, total: value.elsewhere.total,
-        places: value.elsewhere.places.map(place => ({ ref: place.ref, wordIndex: place.wordIndex, words: [...place.words], mark: place.mark })) } }) };
+        places: value.elsewhere.places.map(place => ({ ref: place.ref, wordIndex: place.wordIndex, words: [...place.words], mark: place.mark })),
+        ...(value.elsewhere.partial ? { partial: true } : {}) } }) };
 }
 export function studyPageView(page: StudyPage): { [key: string]: JsonValue } {
   return { offset: page.offset, nextOffset: page.nextOffset, totalVerses: page.totalVerses,
