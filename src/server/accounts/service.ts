@@ -8,7 +8,7 @@ import type { AccessDatabase, AccessRequest, AccessTransaction, Actor } from "..
 import { withTenantTransaction } from "../db/runtime";
 import { requireCookieMutation } from "../http/mutations";
 import type { AccountMailKind, AccountMailOutcome } from "../mail/transport";
-import { savedEligible } from "../saved/eligible";
+import { memberEligible as savedEligible } from "../access/eligibility";
 import * as s from "../db/index";
 import * as data from "./data";
 import * as validate from "./validation";
@@ -53,12 +53,9 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
   }
   /** After commit: send, then record what happened in a second transaction. Never fails the caller. */
   async function deliver(tenantId: string, sends: readonly { to: string; key: string }[], kind: AccountMailKind, names: { name: string; productName: string }, record: (tx: AccessTransaction<Q>, status: "sent" | "failed" | "skipped") => Promise<void>) {
-    let sent = 0, skipped = 0;
-    for (const item of sends) {
-      let outcome: AccountMailOutcome = "unknown";
-      try { outcome = await input.send(kind, item.to, names, item.key); } catch { outcome = "unknown"; }
-      if (outcome === "sent") sent++; else if (outcome === "skipped") skipped++;
-    }
+    // All recipients at once, each bounded by the transport's own timeout, so the reply never waits on them one by one.
+    const outcomes = await Promise.all(sends.map(item => input.send(kind, item.to, names, item.key).catch((): AccountMailOutcome => "unknown")));
+    const sent = outcomes.filter(outcome => outcome === "sent").length, skipped = outcomes.filter(outcome => outcome === "skipped").length;
     const status = sent ? "sent" : !sends.length || skipped === sends.length ? "skipped" : "failed";
     try { await withTenantTransaction(input.db, { tenantId }, tx => record(tx, status)); } catch { /* The status stays pending; nothing is resent. */ }
     return status;
@@ -85,9 +82,10 @@ export function createAccountsService<Q extends PgQueryResultHKT>(input: {
         await data.lockRequestQueue(tx, identity.tenantId);
         if (await data.requestOf(tx, identity.tenantId, identity.userId)) return { ok: true as const, state: "pending" as const, mail: null };
         const at = now();
+        // A full queue is refused before the person's own daily budget is spent.
+        if (await data.pendingCount(tx, identity.tenantId) >= data.ACCOUNT_LIMITS.pendingPerTenant) return failed("busy");
         if (!await data.consume(tx, { tenantId: identity.tenantId, scope: "account-request", subject: identity.userId, limit: data.ACCOUNT_LIMITS.requestsPerDay, secret: input.throttleSecret, now: at }))
           return failed("rate-limited");
-        if (await data.pendingCount(tx, identity.tenantId) >= data.ACCOUNT_LIMITS.pendingPerTenant) return failed("busy");
         const row = await data.insertRequest(tx, identity.tenantId, identity.userId, value.name, value.purpose);
         if (!row) return { ok: true as const, state: "pending" as const, mail: null };
         // Over the congregation's hourly mail budget the request still waits in the list; only its email is skipped.

@@ -8,7 +8,7 @@ import { useEffect, useId, useRef, useState } from "react";
 export type RequestState = "requestable" | "pending" | "member";
 export type RequestView = Readonly<{ status: "loading" } | { status: "failed" } | { status: "ready"; state: RequestState; suggestedName: string }>;
 type Problem = null | "invalid" | "rate-limited" | "busy" | "unavailable";
-const CONTROLS = /[\x00-\x1f\x7f-\x9f\u2028\u2029\u202a-\u202e\u2066-\u2069]/;
+const CONTROLS = /[\x00-\x1f\x7f-\x9f\u00ad\u061c\u115f\u1160\u200b-\u200d\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\u3164\ufeff\uffa0\u{e0000}-\u{e007f}]/u;
 const problems: Record<Exclude<Problem, null>, string> = {
   invalid: "Use a name of 1 to 80 characters, and up to 500 for what you’d like to work on.",
   "rate-limited": "You’ve asked several times today. Try again tomorrow.",

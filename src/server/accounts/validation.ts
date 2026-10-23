@@ -8,13 +8,14 @@ import { HttpBoundaryError } from "../http/responses";
  * (U+202A-U+202E, U+2066-U+2069) that could make one name read as another. The 0037 CHECKs refuse the same set,
  * so a CHECK is never the first to fail. A purpose's line breaks become spaces: it is shown as one line.
  */
-export const ACCOUNT_CONTROLS = /[\x00-\x1f\x7f-\x9f\u2028\u2029\u202a-\u202e\u2066-\u2069]/;
+export const ACCOUNT_CONTROLS = /[\x00-\x1f\x7f-\x9f\u00ad\u061c\u115f\u1160\u200b-\u200d\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\u3164\ufeff\uffa0\u{e0000}-\u{e007f}]/u;
 const invalid = (): never => { throw new HttpBoundaryError(); };
 
 function words(value: unknown, max: number): string {
   if (typeof value !== "string" || !value.isWellFormed()) return invalid();
   const text = value.replace(/\r\n?|\n/g, " ").trim(), length = Array.from(text).length;
-  if (length < 1 || length > max || ACCOUNT_CONTROLS.test(text)) return invalid();
+  // Something readable: at least one letter, never a name made of blank-looking or invisible characters.
+  if (length < 1 || length > max || ACCOUNT_CONTROLS.test(text) || !/\p{L}/u.test(text)) return invalid();
   return text;
 }
 export const name = (value: unknown) => {
@@ -43,6 +44,6 @@ export const removeApprover = (value: unknown) => Object.freeze({ approverId: uu
 /** A display name from an account, as staff see it: never an email address, never control or override characters. */
 export function shownName(value: string | null | undefined): string {
   if (typeof value !== "string" || !value.isWellFormed() || value.includes("@")) return "Portal member";
-  const text = value.replace(new RegExp(ACCOUNT_CONTROLS.source, "g"), " ").replace(/\s+/g, " ").trim();
+  const text = value.replace(new RegExp(ACCOUNT_CONTROLS.source, "gu"), " ").replace(/\s+/g, " ").trim();
   return Array.from(text).slice(0, 80).join("") || "Portal member";
 }

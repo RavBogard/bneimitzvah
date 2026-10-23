@@ -12,7 +12,7 @@ const tenantId = () => text("tenant_id").notNull().references(() => tenant.id);
 const createdAt = () => timestamp("created_at", { withTimezone: true }).defaultNow().notNull();
 // A person's own words, shown to staff: no control characters, line or paragraph separators, or bidirectional
 // overrides and isolates (which could make one name read as another). The app refuses the same set first.
-export const ACCOUNT_TEXT_CONTROLS = String.raw`[\x01-\x1f\x7f-\x9f\x2028\x2029\x202a-\x202e\x2066-\x2069]`;
+export const ACCOUNT_TEXT_CONTROLS = String.raw`[\x01-\x1f\x7f-\x9f\xad\x61c\x115f\x1160\x200b-\x200d\x2028\x2029\x202a-\x202e\x2060-\x2064\x2066-\x2069\x3164\xfeff\xffa0\xe0000-\xe007f]`;
 const clean = (column: unknown) => sql`${column} !~ ${sql.raw(`'${ACCOUNT_TEXT_CONTROLS}'`)}`;
 
 export const accountRequest = pgTable("account_request", {

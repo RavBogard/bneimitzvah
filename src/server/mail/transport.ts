@@ -131,7 +131,7 @@ export function createNotificationTransport(input: { origin: string; apiKey: str
 export type AccountMailKind = "account-request" | "account-approved";
 export type AccountMailOutcome = NotificationOutcome | "skipped";
 const ACCOUNT_LINKS: Readonly<Record<AccountMailKind, string>> = { "account-request": "/workspace/accounts", "account-approved": "/" };
-const plainName = (value: unknown) => typeof value === "string" && value.length >= 1 && value.length <= 120 && value === value.trim() && !/[\x00-\x1f\x7f-\x9f\u2028\u2029\u202a-\u202e\u2066-\u2069<>@]/.test(value);
+const plainName = (value: unknown) => typeof value === "string" && value.length >= 1 && value.length <= 120 && value === value.trim() && !/[\x00-\x1f\x7f-\x9f\u00ad\u061c\u115f\u1160\u200b-\u200d\u2028\u2029\u202a-\u202e\u2060-\u2064\u2066-\u2069\u3164\ufeff\uffa0\u{e0000}-\u{e007f}<>@]/u.test(value);
 export function accountMailText(kind: AccountMailKind, origin: string, tenant: Readonly<{ name: string; productName: string }>) {
   const link = `${origin}${ACCOUNT_LINKS[kind]}`;
   return kind === "account-request"

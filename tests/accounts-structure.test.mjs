@@ -24,7 +24,7 @@ test("the accounts code never writes a role grant, never imports a grant writer,
   for (const file of accounts) {
     assert.doesNotMatch(file.text, /(insert|update|delete)\(s\.roleGrant\)/, `${file.path} writes role_grant`);
     assert.doesNotMatch(file.text, /\binsertGrant\b|\brevokeRoleGrant\b/, `${file.path} uses a grant writer`);
-    for (const spec of importsOf(file.text)) assert.doesNotMatch(spec, /(^|\/)(data\/invitations|relationships|data\/saved)(\/|$)/, `${file.path} imports ${spec}`);
+    for (const spec of importsOf(file.text)) assert.doesNotMatch(spec, /(^|\/)(data\/invitations|relationships|data\/saved|saved)(\/|$)/, `${file.path} imports ${spec}`);
     assert.doesNotMatch(file.text, /\b(savedReading|savedVerseWork|savedVerseMark|starredComment)\b/, `${file.path} names a saved table`);
   }
 });

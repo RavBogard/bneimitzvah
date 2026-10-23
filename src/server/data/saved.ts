@@ -3,7 +3,7 @@ import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import type { SavedOwner } from "../saved/access";
-import { SAVED_ELIGIBLE_ROLES } from "../saved/eligibility";
+import { memberEligible } from "../access/eligibility";
 import type { MarkState, SavedKind, WorkStream } from "../saved/validation";
 import * as s from "../db/index";
 
@@ -15,18 +15,8 @@ import * as s from "../db/index";
  */
 type Tx<Q extends PgQueryResultHKT> = AccessTransaction<Q>;
 
-/**
- * Share-locks one live grant (parent, tutor or admin) or the live Member row that makes this membership eligible,
- * so a concurrent revocation or end of membership waits for this request (accounts plan choice B).
- */
-export async function savedEligibility<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, membershipId: string) {
-  const [grant] = await tx.select({ id: s.roleGrant.id }).from(s.roleGrant).where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.membershipId, membershipId),
-    inArray(s.roleGrant.role, [...SAVED_ELIGIBLE_ROLES]), isNull(s.roleGrant.revokedAt))).orderBy(asc(s.roleGrant.role), asc(s.roleGrant.id)).limit(1).for("share");
-  if (grant) return true;
-  const [member] = await tx.select({ id: s.tenantMember.id }).from(s.tenantMember).where(and(eq(s.tenantMember.tenantId, tenantId), eq(s.tenantMember.membershipId, membershipId),
-    isNull(s.tenantMember.revokedAt))).limit(1).for("share");
-  return member !== undefined;
-}
+/** The saved layer's eligibility is the shared member rule (src/server/access/eligibility.ts), share-locked. */
+export const savedEligibility = memberEligible;
 
 /** One member's writes run one at a time, so the row caps hold exactly even under concurrent requests. */
 export async function lockOwnerWrites<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner) {
