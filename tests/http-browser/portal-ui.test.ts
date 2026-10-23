@@ -312,7 +312,8 @@ it("keeps invitation landing nonaccepting and accepts one reviewed binding only,
 it("revalidates an uninvited real session after logout in another tab", async () => {
   const tab = await page(true); await navigate(tab, "/"); await signIn(tab, "ui-uninvited@example.test");
   expect(await tab.getByRole("list", { name: "Available roles" }).count()).toBe(0);
-  await ui(tab.getByText("No congregation role is linked to this account yet.", { exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: "Ask for an account", exact: true })).toBeVisible();
+  expect(await tab.getByText("No congregation role is linked to this account yet.", { exact: true }).count()).toBe(0);
   const other = await tab.context().newPage(); await navigate(other, "/");
   expect((await api(other, "/api/auth/sign-out", {})).status).toBe(200);
   await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
