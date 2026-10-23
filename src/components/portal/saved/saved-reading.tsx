@@ -100,7 +100,8 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
       // The first page's marks come with it; later pages load when one of their verses is chosen.
       loadedPages.current = new Set([0]);
       setMarks(new Map(page.verses.map(row => [row.ref, row.mark])));
-      setWork(new Map(page.verses.map(row => [row.ref, workOf(row)])));
+      // Merged, not replaced: a quiet revalidation must not blank the own texts of verses on later pages (an open Yours row, the drill).
+      setWork(current => { const next = new Map(current); for (const row of page.verses) next.set(row.ref, workOf(row)); return next; });
     } catch { if (!signal.aborted && !quiet) setHeader({ status: "failed" }); }
   }, [id]);
   useEffect(() => { const controller = new AbortController(); setHeader({ status: "loading" }); void loadHeader(false, controller.signal); return () => controller.abort(); }, [loadHeader, retry]);

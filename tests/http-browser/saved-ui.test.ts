@@ -172,11 +172,11 @@ it("on their own saved reading a member keeps a translation and a note in Yours,
   await ui(first.getByRole("button", { name: "Yours", exact: true })).toHaveAttribute("aria-expanded", "false");
   await first.getByRole("button", { name: "Yours", exact: true }).click();
   const translation = first.getByRole("form", { name: "My translation", exact: true }), notes = first.getByRole("form", { name: "My notes", exact: true });
-  await ui(translation.getByLabel("My translation")).toBeEnabled();
-  await translation.getByLabel("My translation").fill("Synthetic own words for the first verse.");
+  await ui(translation.getByRole("textbox", { name: "My translation", exact: true })).toBeEnabled();
+  await translation.getByRole("textbox", { name: "My translation", exact: true }).fill("Synthetic own words for the first verse.");
   await translation.getByRole("button", { name: "Save", exact: true }).click();
   await ui(translation.getByText("Saved.", { exact: true })).toBeVisible();
-  await notes.getByLabel("My notes").fill("Synthetic private note.");
+  await notes.getByRole("textbox", { name: "My notes", exact: true }).fill("Synthetic private note.");
   await notes.getByRole("button", { name: "Save", exact: true }).click();
   await ui(notes.getByText("Saved.", { exact: true })).toBeVisible();
   // A star on the inline Rashi comment: pressed in place, and listed in Yours.
@@ -193,7 +193,7 @@ it("on their own saved reading a member keeps a translation and a note in Yours,
   await ui(tab.locator("[data-study-rows]")).toBeVisible();
   await ui(tab.locator('[data-commentary-ref="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]').first()).toHaveAttribute("aria-pressed", "true");
   await tab.getByRole("region", { name: "Yours on Genesis 1:1", exact: true }).getByRole("button", { name: "Yours", exact: true }).click();
-  await ui(tab.getByRole("region", { name: "Yours on Genesis 1:1", exact: true }).getByLabel("My translation")).toHaveValue("Synthetic own words for the first verse.");
+  await ui(tab.getByRole("region", { name: "Yours on Genesis 1:1", exact: true }).getByRole("textbox", { name: "My translation", exact: true })).toHaveValue("Synthetic own words for the first verse.");
   // Lein: the drill reveals JPS and the member's own translation; on a verse without one, a way into Yours.
   await tab.getByRole("group", { name: "Reading lens", exact: true }).getByRole("button", { name: "Lein", exact: true }).click();
   await tab.locator('.study-verses [data-verse-ref="Genesis 1:1"] [data-word-index="0"]').first().click();
@@ -210,7 +210,7 @@ it("on their own saved reading a member keeps a translation and a note in Yours,
   await ui(tab.locator("[data-study-rows]")).toBeVisible();
   const yours = tab.getByRole("region", { name: "Yours on Genesis 1:2", exact: true });
   await ui(yours.getByRole("button", { name: "Yours", exact: true })).toHaveAttribute("aria-expanded", "true");
-  await ui(yours.getByLabel("My translation")).toBeFocused();
+  await ui(yours.getByRole("textbox", { name: "My translation", exact: true })).toBeFocused();
   // Unstarring deletes the star.
   await tab.locator('[data-commentary-ref="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]').first().click();
   await ui(tab.locator('[data-commentary-ref="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]').first()).toHaveAttribute("aria-pressed", "false");

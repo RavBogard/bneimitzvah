@@ -315,6 +315,9 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   // The drill follows the selected verse. Reveal, Next verse and End drill never start or stop audio themselves; Study ends it.
   const drillVerse = !study && drill && focus !== null ? page?.verses[focus] ?? null : null;
   useEffect(() => { if (study) setDrill(null); }, [study]);
+  // Choosing another verse hides the English again: a reveal belongs to the verse it was made on.
+  const drillRef = drillVerse?.ref ?? null;
+  useEffect(() => { setDrill(current => current?.revealed && current.revealed !== drillRef ? { revealed: null } : current); }, [drillRef]);
   const drillGo = (at: number) => {
     if (!page?.verses[at]) return;
     const ref = page.verses[at].ref;
