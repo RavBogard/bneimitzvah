@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FamilyId } from "../../lib/trope/chart-catalog";
 import type { FirstVerse as FirstVerseActivity, Lesson } from "../../lib/learn/course";
 import { isSpecialMelody, type AnalysedVerse } from "../../lib/learn/verse";
+import { leinHref } from "../../lib/learn/lein-link";
 import { AudioError, FamilyChip, phraseRequest, PlayTile, UnitsText } from "./bits";
 import { useCourseVerses } from "./course-data";
 import { useLearnServices, usePlayerState, useProgress } from "./services";
@@ -17,8 +18,6 @@ export function firstVerseCandidates(verses: readonly AnalysedVerse[], maxWords:
   const common = (verse: AnalysedVerse) => verse.phrases.every(phrase => COMMON.has(phrase.family)) ? 0 : 1;
   return fits.map((verse, order) => ({ verse, order })).sort((a, b) => common(a.verse) - common(b.verse) || a.verse.units.length - b.verse.units.length || a.order - b.order).map(row => row.verse);
 }
-/** The deep link into Lein: this Shabbat, this reading, this verse (its 1-based place in the reading) selected. */
-export const readLink = (date: string, kind: string, position: number) => `/read?${new URLSearchParams([["date", date], ["kind", kind], ["verse", String(position)]]).toString()}`;
 const STEPS = ["Hear each phrase", "Hear the verse", "Chant along, slowly", "Chant along"] as const;
 
 /** Your first verse: hear each phrase, the verse, then chant along at 0.75 and at 1; then the one quiet moment. */
@@ -48,7 +47,7 @@ export function FirstVerse({ lesson, onDone }: { lesson: Lesson; onDone(): void 
     else onDone();
   };
   const position = week.status === "ready" ? week.refs.indexOf(verse.ref) + 1 : 0;
-  const lein = date && fromWeek && position > 0 ? readLink(date, kind, position) : "/read";
+  const lein = date && fromWeek && position > 0 ? leinHref({ date, kind, verse: position }) : "/read";
   return <>
     <p className={styles.listen}>One verse from this week's reading.</p>
     {!fromWeek && <p className={styles.muted}>From the course's own verses while this week's recording is not ready.</p>}
