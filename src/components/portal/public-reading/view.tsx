@@ -13,9 +13,8 @@ import { ReadingToolbar } from "../workspace/reading-toolbar";
 import { LensSwitch } from "../workspace/lens-switch";
 import { LENS_STORAGE, lensFromSearch, StudyLensScope, useStudyLens, type Lens } from "../workspace/study-lens";
 import { StudyRows } from "../workspace/study/study-rows";
-import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi } from "../workspace/study/commentary-view";
+import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi, workStatuses } from "../workspace/study/commentary-view";
 import { VersePanelColumn, VersePanelScope } from "../workspace/study/verse-panel";
-import { COMMENTARY_WORKS } from "../../../lib/readings/commentary";
 import { namedReading, type NamedReading } from "../../../lib/readings/named-readings";
 import { useReadingPrefs } from "../workspace/reading-prefs";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
@@ -317,7 +316,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
         {!page ? text?.key === textKey && text.error ? <div role="status"><h4>Text unavailable</h4><p>The verses didn’t load. Check your connection and try again.</p><button type="button" className="button-secondary" onClick={onRetry}>Reload text</button></div>
           : <p role="status">Loading the text…</p> : <>
           {study ? <>
-            <CommentaryStatus works={works.map(row => ({ work: row.work, status: row.status, retry: row.retry, covers: Boolean(COMMENTARY_WORKS[row.work]?.editions[corpus]) }))} />
+            <CommentaryStatus works={workStatuses(works, corpus)} />
             <StudyRows verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={lens.english}
               works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))}
               onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} />

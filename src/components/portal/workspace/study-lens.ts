@@ -15,7 +15,8 @@ export const LENSES: readonly { id: Lens; label: string }[] = Object.freeze([{ i
 /** Registry order; at most three works appear inline under a verse (§3.2). */
 export const STUDY_WORKS = Object.freeze(Object.keys(COMMENTARY_WORKS));
 export const MAX_INLINE_WORKS = 3;
-export const DEFAULT_WORKS: readonly string[] = Object.freeze(["rashi"]);
+/** On for every viewer (Daniel, 2026-10-23); a remembered choice, including turning one off, still replaces it. */
+export const DEFAULT_WORKS: readonly string[] = Object.freeze(["rashi", "womens"]);
 /** `english`: Study's own English choice, which starts on (spec decision 10.8) and leaves Lein's English as it was. */
 export type LensChoice = Readonly<{ lens: Lens; works: readonly string[]; english: boolean }>;
 const PREFIX = "crc-torah-lens-v1:";

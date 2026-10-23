@@ -7,6 +7,7 @@ import { createCommentaryChapterStore, type CommentaryVerseState } from "./comme
 import { commentaryCount, commentaryParts, commentarySummary } from "./commentary-text";
 import { useCommentaryChapters, type CommentaryLookup } from "./use-commentary";
 import { workCoverageNote, workLabel } from "../reading-toolbar";
+import { DEFAULT_WORKS } from "../study-lens";
 import type { StudyVerse } from "./api";
 import styles from "./commentary.module.css";
 
@@ -148,6 +149,13 @@ export function CommentaryCredits({ works, refs }: { works: readonly Readonly<{ 
 }
 
 export type WorkStatus = Readonly<{ work: string; status: "none" | "loading" | "failed" | "ready"; retry(): void; covers: boolean }>;
+/**
+ * Status rows for the chosen works on this text. A default work that does not cover the text (the Women's Commentary on
+ * a haftarah) is simply not offered: no line, no panel. Any other uncovered work the viewer chose still says what it covers.
+ */
+export function workStatuses(works: readonly Readonly<{ work: string; status: WorkStatus["status"]; retry(): void }>[], corpus: CommentaryCorpus): WorkStatus[] {
+  return works.map(row => ({ work: row.work, status: row.status, retry: row.retry, covers: workCovers(row.work, corpus) })).filter(row => row.covers || !DEFAULT_WORKS.includes(row.work));
+}
 /** Quiet, one line per work: loading, a failure with Try again, or a work that doesn't cover this text. Never blocks the Hebrew. */
 export function CommentaryStatus({ works }: { works: readonly WorkStatus[] }) {
   const rows = works.filter(row => !row.covers || row.status === "loading" || row.status === "failed");

@@ -154,10 +154,13 @@ test("a commentary failure is a quiet line with Try again and never holds back t
   await page.goto("/read?lens=study");
   await expect(rows(page)).toHaveCount(3);
   await expect(rows(page).nth(0).locator(".study-hebrew")).toBeVisible();
-  const status = page.getByRole("status").filter({ hasText: "Rashi isn’t available right now." });
-  await expect(status).toBeVisible();
+  // Rashi and the Women's Commentary are both on, so each says so on its own line.
+  const status = page.getByRole("status"), line = (text: string) => status.locator("p", { hasText: text });
+  await expect(line("Rashi isn’t available right now.")).toBeVisible();
+  await expect(line("Women’s Commentary isn’t available right now.")).toBeVisible();
   server.recover();
-  await status.getByRole("button", { name: "Try again", exact: true }).click();
+  await line("Rashi isn’t available right now.").getByRole("button", { name: "Try again", exact: true }).click();
+  await line("Women’s Commentary isn’t available right now.").getByRole("button", { name: "Try again", exact: true }).click();
   await expect(status).toHaveCount(0);
   await expect(rows(page).nth(0).getByText("SYNTHETIC LEMMA ONE — synthetic comment one.")).toBeVisible();
 });
@@ -174,21 +177,30 @@ test("in Lein a commentary outage shows nothing under the selected verse, and Up
   await expect(page.getByText("Rashi isn’t available right now.")).toHaveCount(0);
 });
 
-test("Works adds the Women's Commentary on the Torah; on the haftarah Rashi on the Prophets shows and the Women's Commentary says it covers the Torah only", async ({ page }) => {
+test("Study opens with Rashi and the Women's Commentary on the Torah; Works can turn the Women's Commentary off and it is remembered; on the haftarah it is simply not offered", async ({ page }) => {
   const server = await mock(page);
   await page.goto("/read?lens=study");
   await expect(rows(page)).toHaveCount(3);
-  expect(server.calls.some(call => call.startsWith("/api/public/commentary?work=womens"))).toBe(false);
-  await page.getByRole("button", { name: /^Works/ }).click();
-  await page.locator('[data-work="womens"]').click();
-  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Works: Rashi, Women’s Commentary" })).toBeVisible();
   await expect(rows(page).nth(1).getByRole("heading", { name: "Women’s Commentary", exact: true })).toBeVisible();
   await expect(rows(page).nth(1).getByText("synthetic paragraph")).toBeVisible();
+  expect(server.calls.some(call => call.startsWith("/api/public/commentary?work=womens"))).toBe(true);
+  // On the haftarah Rashi on the Prophets shows; the Women's Commentary is not offered: no request, no line, no panel.
   await page.getByRole("button", { name: "Haftarah", exact: true }).click();
   await expect(rows(page)).toHaveCount(2);
   await expect(rows(page).nth(0).getByText("Synthetic prophet comment")).toBeVisible();
-  await expect(page.getByText("The Women’s Commentary covers the Torah only.")).toBeVisible();
+  await expect(page.getByText("The Women’s Commentary covers the Torah only.")).toHaveCount(0);
   expect(server.calls.some(call => call === "/api/public/commentary?work=womens&chapter=Isaiah+54")).toBe(false);
+  // A viewer can turn it off, and that choice is remembered in this browser like any other.
+  await page.getByRole("button", { name: "Torah", exact: true }).click();
+  await expect(rows(page)).toHaveCount(3);
+  await page.getByRole("button", { name: /^Works/ }).click();
+  await page.getByRole("group", { name: "Commentaries under each verse" }).locator('[data-work="womens"]').click();
+  await page.keyboard.press("Escape");
+  await expect(rows(page).nth(1).getByRole("heading", { name: "Women’s Commentary" })).toHaveCount(0);
+  await page.reload();
+  await expect(rows(page)).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Works: Rashi", exact: true })).toBeVisible();
 });
 
 test("at 360px every Study row fits with no horizontal scroll, the toolbar is one row of at most five, and controls are 44px", async ({ page }) => {
