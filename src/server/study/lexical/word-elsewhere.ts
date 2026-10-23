@@ -7,7 +7,9 @@ import type { StudyVerse } from "../types";
 /** The student's own assigned verses in reading order, the text page already
  * authorized for this request, and a loader for further pages of the same reading. */
 export type WordReading = Readonly<{ verses: readonly string[]; loaded: readonly StudyVerse[]; load(offset: number, signal: AbortSignal): Promise<readonly StudyVerse[]> }>;
-/** Extra text pages one selected word may read; the first page is already loaded. */
+/** Extra text pages one selected word may read; the first page is already loaded. A long reading that
+ * needs more gets a `partial` answer: the places in the pages searched, the same every time (so a cache
+ * may keep it). Only a failed, slow or aborted load drops the places. */
 export const WORD_ELSEWHERE_LOADS = 4;
 /** Whole budget for those pages, so slow text drops only the places, never the word facts. */
 export const WORD_ELSEWHERE_MS = 4000;
@@ -48,10 +50,12 @@ export async function findWordElsewhere(input: Readonly<{ book: readonly StepVer
     const wanted = [...candidates.keys()].sort((a, b) => order.get(a)! - order.get(b)!), text = new Map<string, StudyVerse>();
     const take = (rows: readonly StudyVerse[]) => { for (const row of rows) if (row && typeof row.ref === "string" && order.has(row.ref) && !text.has(row.ref)) text.set(row.ref, row); };
     take(reading.loaded);
-    let loads = 0;
+    let loads = 0, partial = false;
     for (const verse of wanted) {
       if (text.has(verse)) continue;
-      if (++loads > WORD_ELSEWHERE_LOADS) return unavailable("text-unavailable");
+      // Over the page budget: search no further, and say so; never a failure.
+      if (loads === WORD_ELSEWHERE_LOADS) { partial = true; break; }
+      loads++;
       let rows: readonly StudyVerse[];
       try { rows = await Promise.race([reading.load(order.get(verse)!, own.signal), ended]); } catch { connected(); return unavailable("text-unavailable"); }
       connected(); if (own.signal.aborted) return unavailable("text-unavailable");
@@ -60,7 +64,8 @@ export async function findWordElsewhere(input: Readonly<{ book: readonly StepVer
     }
     const places: WordPlace[] = []; let total = 0;
     for (const verse of wanted) {
-      const row = text.get(verse), candidate = candidates.get(verse)!; if (!row) return unavailable("text-unavailable");
+      const row = text.get(verse), candidate = candidates.get(verse)!;
+      if (!row) { if (partial) continue; return unavailable("text-unavailable"); }
       let projected; try { projected = projectStudyVerse(verse, row.hebrew); } catch { continue; }
       if (projected.status !== "ready") continue;
       const words = Object.freeze(projected.projection.words.map(word => word.text));
@@ -71,7 +76,7 @@ export async function findWordElsewhere(input: Readonly<{ book: readonly StepVer
       }
     }
     connected();
-    return Object.freeze({ status: "ready", lemma, total, places: Object.freeze(places) });
+    return Object.freeze({ status: "ready", lemma, total, places: Object.freeze(places), ...(partial ? { partial: true as const } : {}) });
   } catch { connected(); return unavailable("text-unavailable"); }
   finally { clearTimeout(timer); signal?.removeEventListener("abort", stop); }
 }

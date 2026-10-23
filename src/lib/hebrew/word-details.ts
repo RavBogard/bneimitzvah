@@ -12,7 +12,8 @@ export type WordDictionaryEntry = Readonly<{ lemma: string; status: "ready"; hea
   | Readonly<{ lemma: string; status: "unavailable"; reason: "missing" | "source-format" | "bounded" }>;
 /** Other occurrences of the same STEP lexical id inside the student's own assigned verses. */
 export type WordPlace = Readonly<{ ref: string; wordIndex: number; words: readonly string[]; mark: number }>;
-export type WordElsewhere = Readonly<{ status: "ready"; lemma: string; total: number; places: readonly WordPlace[] }>
+/** `partial`: a long reading was searched only as far as the page budget; total and places cover that part. */
+export type WordElsewhere = Readonly<{ status: "ready"; lemma: string; total: number; places: readonly WordPlace[]; partial?: true }>
   | Readonly<{ status: "unavailable"; reason: "no-lexeme" | "text-unavailable" }>;
 type Identity = Readonly<{ schema: typeof WORD_DETAILS_SCHEMA; ref: string; readingTextSha256: string; wordCount: number; wordIndex: number; attribution: typeof WORD_DETAILS_ATTRIBUTION }>;
 export type StudyWordDetails = Readonly<{ schema: typeof WORD_DETAILS_SCHEMA; ref: string; wordIndex: number; status: "unavailable"; reason: "reconstruction" }>
@@ -68,11 +69,12 @@ export function wordDetailsWord(value: unknown): value is string {
     && !/[^א-ת\u0591-\u05bd\u05bf\u05c1\u05c2\u05c4\u05c5\u05c7\u034f\u200c\u200d]/u.test(value);
 }
 export function parseWordElsewhere(value: unknown, selected: Readonly<{ ref: string; wordIndex: number }>, lemmas: ReadonlySet<string>): WordElsewhere | null {
-  const outer = row(value, ["status", "reason", "lemma", "total", "places"], true); if (!outer) return null;
+  const outer = row(value, ["status", "reason", "lemma", "total", "places", "partial"], true); if (!outer) return null;
   if (outer.status === "unavailable") return row(value, ["status", "reason"]) && ["no-lexeme", "text-unavailable"].includes(outer.reason as string)
     ? Object.freeze({ status: "unavailable", reason: outer.reason as "no-lexeme" | "text-unavailable" }) : null;
   const places = list(outer.places, WORD_DETAILS_LIMITS.places), total = outer.total;
-  if (outer.status !== "ready" || !row(value, ["status", "lemma", "total", "places"]) || typeof outer.lemma !== "string" || !lemmas.has(outer.lemma) || !places
+  const partial = Object.hasOwn(outer, "partial");
+  if (outer.status !== "ready" || !row(value, partial ? ["status", "lemma", "total", "places", "partial"] : ["status", "lemma", "total", "places"]) || partial && outer.partial !== true || typeof outer.lemma !== "string" || !lemmas.has(outer.lemma) || !places
     || typeof total !== "number" || !Number.isSafeInteger(total) || total < 0 || total > WORD_DETAILS_LIMITS.placeTotal || places.length !== Math.min(total, WORD_DETAILS_LIMITS.places)) return null;
   const result: WordPlace[] = [], seen = new Set<string>();
   for (const item of places) {
@@ -84,7 +86,7 @@ export function parseWordElsewhere(value: unknown, selected: Readonly<{ ref: str
     seen.add(`${place.ref}#${place.wordIndex}`);
     result.push(Object.freeze({ ref: place.ref, wordIndex: place.wordIndex as number, words: Object.freeze([...(words as string[])]), mark: place.mark as number }));
   }
-  return Object.freeze({ status: "ready", lemma: outer.lemma, total, places: Object.freeze(result) });
+  return Object.freeze({ status: "ready", lemma: outer.lemma, total, places: Object.freeze(result), ...(partial ? { partial: true as const } : {}) });
 }
 export function parseStudyWordDetails(value: unknown, expected: WordDetailsBinding): StudyWordDetails | null {
   try {

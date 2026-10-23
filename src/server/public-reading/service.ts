@@ -24,8 +24,10 @@ import { findShortSource, readShortSourceEntry, type ShortSourceManifest } from 
  * Shabbat date (resolved through the same Hebcal calendar the signed-in reading uses) or, for "Any
  * reading" (1.3), by a caller's reference. Caller ranges are accepted only in canonical, bounded form
  * (canonicalReadingRef: Hebcal's own segment form joined by "; ", at most 1000 characters, 32 segments
- * and 1000 verses, Torah in one book or Nevi'im only), so every passage has exactly one URL. Either way
- * the text comes from the same Sefaria reader, paged identically. Everything else is a kind and small
+ * and 1000 verses, Torah in one book or Nevi'im only): one spelling per segment list. The same verses can
+ * still be named more than one way (adjacent segments, or a haftarah's segments in another order), so a
+ * cache may hold a passage under several URLs; every body echoes its own ref, so one can never stand in
+ * for another. Either way the text comes from the same Sefaria reader, paged identically. Everything else is a kind and small
  * bounded numbers. This service holds no database handle, session, actor or tenant row: its
  * dependencies are public readers only.
  */
@@ -132,7 +134,8 @@ export function createPublicReadingService(input: {
     connected(signal);
     if (!details) return notFound();
     // A momentary miss (lexical source busy or over budget, or "elsewhere" out of time) is a 503,
-    // never a cacheable "unavailable" that the CDN would keep for a day.
+    // never a cacheable "unavailable" that the CDN would keep for a day. A long reading searched only as far
+    // as the page budget is a ready, `partial` answer, the same every time, and is cached like any other.
     if (details.status === "unavailable" && details.reason === "source-unavailable"
       || details.status === "ready" && details.elsewhere?.status === "unavailable" && details.elsewhere.reason === "text-unavailable") throw new PublicReadingUnavailable("upstream");
     return details;

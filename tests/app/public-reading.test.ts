@@ -102,7 +102,7 @@ test("inputs are bounded: dates, kinds, page offsets, verse and word indexes", a
     () => h.service.wordDetails("torah", date, 0, 512), () => h.service.wordDetails("torah", date, 0, 2) /* the verse has two words */]) {
     await expect(action()).rejects.toBeInstanceOf(PublicReadingUnavailable);
   }
-  // The passage always comes from the calendar: there is no caller-supplied range anywhere.
+  // A date always takes its passage from the calendar, never from the caller (ref routes are tested below).
   expect(h.loadText.mock.calls.every(([request]) => request.ranges.join() === "Genesis 1:1-4:26" || request.ranges.join() === "Isaiah 1:1-3")).toBe(true);
 });
 

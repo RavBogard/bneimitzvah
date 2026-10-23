@@ -70,16 +70,25 @@ it("leaves out a verse whose rendered words do not fully align instead of guessi
   expect(only.value.elsewhere).toEqual({ status: "ready", lemma: "H0001", total: 0, places: [] });
 });
 
-it("a text failure or too many pages drops only the places, keeping the selected word's facts", async () => {
+it("a text failure drops only the places, keeping the selected word's facts; too many pages is a partial answer, not a failure", async () => {
   const rows = { "Genesis 1:1": "BD", "Genesis 1:2": "DB" }, failing = reading(rows); failing.load.mockRejectedValue(new Error("SYNTHETIC_PRIVATE_TEXT"));
   const { value } = await elsewhere(rows, "Genesis 1:1", 0, failing);
   expect(value).toMatchObject({ status: "ready", occurrence: { gloss: "Synthetic B gloss" }, elsewhere: { status: "unavailable", reason: "text-unavailable" } }); expect(JSON.stringify(value)).not.toContain("SYNTHETIC_PRIVATE");
   const wrong = reading(rows); wrong.load.mockResolvedValue([verse("Genesis 1:1", "BD")]);
   expect((await elsewhere(rows, "Genesis 1:1", 0, wrong)).value.elsewhere).toEqual({ status: "unavailable", reason: "text-unavailable" });
   const many = Object.fromEntries(Array.from({ length: WORD_ELSEWHERE_LOADS + 2 }, (_, i) => [`Genesis 1:${i + 1}`, "BD"]));
-  const bounded = reading(many);
-  expect((await elsewhere(many, "Genesis 1:1", 0, bounded)).value.elsewhere).toEqual({ status: "unavailable", reason: "text-unavailable" });
+  const bounded = reading(many), searched = Array.from({ length: WORD_ELSEWHERE_LOADS }, (_, i) => `Genesis 1:${i + 2}`);
+  const partial = (await elsewhere(many, "Genesis 1:1", 0, bounded)).value;
+  // The places in the pages the budget allows, marked partial; the last verse is never read or counted.
+  expect(partial.elsewhere).toEqual({ status: "ready", lemma: "H0001", total: WORD_ELSEWHERE_LOADS, partial: true,
+    places: searched.map(ref => ({ ref, wordIndex: 0, words: ["בָּ֑ג", "דָּ֖ג"], mark: 0 })) });
   expect(bounded.load).toHaveBeenCalledTimes(WORD_ELSEWHERE_LOADS);
+  expect(parseStudyWordDetails(structuredClone(partial), binding(verse("Genesis 1:1", "BD"), 0))).toEqual(partial);
+  // The same reading gives the same partial answer every time.
+  expect((await elsewhere(many, "Genesis 1:1", 0, reading(many))).value).toEqual(partial);
+  // A failed load inside the budget is still a failure, never a partial answer.
+  const broken = reading(many); broken.load.mockImplementation(async (offset: number) => { if (offset === 3) throw new Error("synthetic"); return [verse(`Genesis 1:${offset + 1}`, "BD")]; });
+  expect((await elsewhere(many, "Genesis 1:1", 0, broken)).value.elsewhere).toEqual({ status: "unavailable", reason: "text-unavailable" });
   // A word with no lexical identity says so; nothing is loaded.
   const bare = reading(rows), sources: StepSourceLoader = { book: async () => parseTahot("Gen.1.1#1=L\tבָּג\tDISCARDED\tSynthetic bare\tH0001\tHNcmsa\t\nGen.1.1#2=L\tדָּג\tDISCARDED\tSynthetic D\t{H0002}\tHNcmsa\t", "Gen"), lexicon: async () => lexicon };
   expect((await elsewhere(rows, "Genesis 1:1", 0, bare, sources)).value.elsewhere).toEqual({ status: "unavailable", reason: "no-lexeme" }); expect(bare.load).not.toHaveBeenCalled();
@@ -127,7 +136,10 @@ it("the client parser refuses places that are not closed, bounded and distinct f
     place({ ref: "Genesis 1:1", wordIndex: 0, mark: 0 }), place({ mark: 2 }), place({ mark: -1 }), place({ wordIndex: 512 }), place({ ref: "Genesis 99:1" }), place({ words: [] }),
     place({ words: ["א", "ב", "ג", "ד", "ה", "ו"] }), place({ words: ["<b>"], mark: 0 }), place({ words: ["דָּ֑ג־"], mark: 0 }), place({ words: ["abc"], mark: 0 }), place({ transliteration: "bag" }), place({ words: ["ב".repeat(600)], mark: 0 }), place({ wordIndex: 0 }),
   ]) expect(parseStudyWordDetails(bad, bind)).toBeNull();
-  for (const patch of [{ lemma: "H0009" }, { total: 2 }, { total: 0 }, { total: -1 }, { total: 1.5 }, { extra: true }, { status: "unavailable" }]) { const value = good(); value.elsewhere = { ...value.elsewhere, ...patch }; expect(parseStudyWordDetails(value, bind)).toBeNull(); }
+  { const value = good(); value.elsewhere = { ...value.elsewhere, partial: true }; expect(parseStudyWordDetails(value, bind)).toMatchObject({ elsewhere: { total: 1, partial: true } }); }
+  expect((parseStudyWordDetails(good(), bind) as { elsewhere?: object }).elsewhere).not.toHaveProperty("partial");
+  expect(parseStudyWordDetails({ ...good(), elsewhere: { status: "unavailable", reason: "text-unavailable", partial: true } }, bind)).toBeNull();
+  for (const patch of [{ lemma: "H0009" }, { total: 2 }, { total: 0 }, { total: -1 }, { total: 1.5 }, { extra: true }, { status: "unavailable" }, { partial: false }, { partial: "true" }, { partial: 1 }, { partial: null }]) { const value = good(); value.elsewhere = { ...value.elsewhere, ...patch }; expect(parseStudyWordDetails(value, bind)).toBeNull(); }
   const duplicate = good(); (duplicate.elsewhere as { total: number; places: unknown[] }).total = 2; (duplicate.elsewhere as { places: unknown[] }).places.push({ ...(duplicate.elsewhere.places as object[])[0] }); expect(parseStudyWordDetails(duplicate, bind)).toBeNull();
   for (const reason of ["no-lexeme", "text-unavailable"]) expect(parseStudyWordDetails({ ...good(), elsewhere: { status: "unavailable", reason } }, bind)).toMatchObject({ elsewhere: { status: "unavailable", reason } });
   expect(parseStudyWordDetails({ ...good(), elsewhere: { status: "unavailable", reason: "other" } }, bind)).toBeNull();
@@ -177,5 +189,10 @@ it("the word sheet lists a few places calmly, folds the rest under More places, 
   expect(html({ status: "ready", lemma: "H0001", total: 40, places: [...places, ...places.map(p => ({ ...p, wordIndex: 0, mark: 0 }))].slice(0, 10) })).toContain("Showing the first 10.");
   expect(html({ status: "ready", lemma: "H0001", total: 0, places: [] })).toContain("No other places found in your reading.");
   expect(html({ status: "unavailable", reason: "text-unavailable" })).toContain("Other places for this word aren’t available.");
+  // A long reading searched part way says so in plain words, and never claims the whole reading.
+  const part = html({ status: "ready", lemma: "H0001", total: 5, places, partial: true });
+  expect(part).toContain("It appears 5 more times in the part of this reading searched."); expect(part).not.toContain("in your reading");
+  expect(html({ status: "ready", lemma: "H0001", total: 1, places: places.slice(0, 1), partial: true })).toContain("It appears 1 more time in the part of this reading searched.");
+  expect(html({ status: "ready", lemma: "H0001", total: 0, places: [], partial: true })).toContain("No other places found in the part of this reading searched.");
   expect(html({ status: "ready", lemma: "H0001", total: 5, places })).not.toMatch(/H0001|Strong/);
 });
