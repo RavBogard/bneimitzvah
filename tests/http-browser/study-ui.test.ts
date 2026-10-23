@@ -436,7 +436,13 @@ it("preserves staff drafts, paging and quiet same-session reading while rejectin
   expect((await api(tab, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: replacement.data.binding })).status === 200).toBe(true);
   await click(tab, "Previous text page"); await ui(tab.getByRole("heading", { name: "Assignment changed", level: 4, exact: true })).toBeVisible();
   expect(await tab.locator(".study-hebrew").count()).toBe(0);
-  await click(tab, "Refresh reading and text"); await loaded(tab, "Genesis 2:1"); await ui(tab.locator(".study-verses [data-verse-ref]")).toHaveCount(2);
+  // The verse marks and the study guide are read after the reloaded text is shown. If the server answers
+  // either one after the expiry below, it denies the reading in place and unregisters the reading's focus
+  // check while that check's own session 401 is in flight, so the provider discards it as stale and never
+  // asks to sign in. Expire only once both reads of this reload have answered under the live session.
+  const followOn = ["progress", "study-guide"].map(name => tab.waitForResponse(response => response.request().method() === "GET" && new URL(response.url()).pathname === `/api/students/${fixture.student.id}/${name}`, { timeout: 30_000 }));
+  for (const read of followOn) read.catch(() => undefined); // Awaited below; a failure before then must not surface as an unhandled rejection.
+  await click(tab, "Refresh reading and text"); await loaded(tab, "Genesis 2:1"); await ui(tab.locator(".study-verses [data-verse-ref]")).toHaveCount(2); await safe(() => Promise.all(followOn));
   expect(await tab.getByRole("navigation", { name: "Text pages", exact: true }).count()).toBe(0); // A single page shows no paging controls.
   await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:4-5");
   await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(s.session.userId, fixture.admin.id));
