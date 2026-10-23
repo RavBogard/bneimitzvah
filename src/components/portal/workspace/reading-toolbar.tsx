@@ -6,8 +6,14 @@ import { COMMENTARY_WORKS } from "../../../lib/readings/commentary";
 import { icons } from "./study/lift";
 
 /** Short names for the Works menu; the full title and edition are in each work's credit. */
-export const WORK_LABELS: Readonly<Record<string, string>> = Object.freeze({ rashi: "Rashi", womens: "Women’s Commentary" });
+export const WORK_LABELS: Readonly<Record<string, string>> = Object.freeze({ rashi: "Rashi", womens: "Women’s Commentary", ramban: "Ramban", "ibn-ezra": "Ibn Ezra",
+  sforno: "Sforno", rashbam: "Rashbam", "or-hachaim": "Or HaChaim", "kli-yakar": "Kli Yakar", chizkuni: "Chizkuni", radak: "Radak", "metzudat-david": "Metzudat David" });
 export const workLabel = (key: string) => WORK_LABELS[key] ?? COMMENTARY_WORKS[key]?.title ?? key;
+/** "Torah only" or "Prophets only" for a work that covers one of the two; null for one that covers both. */
+export function workCoverageNote(key: string): "Torah only" | "Prophets only" | null {
+  const editions = COMMENTARY_WORKS[key]?.editions;
+  return editions?.torah && !editions.neviim ? "Torah only" : editions?.neviim && !editions.torah ? "Prophets only" : null;
+}
 
 /** One toolbar drives every verse on the page through shared preferences. */
 /** The Tikkun control appears only beside Torah text in Lein; a haftarah is read from a printed book, not a scroll,
@@ -37,7 +43,7 @@ export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailab
           const on = lens.works.includes(work), full = !on && lens.works.length >= MAX_INLINE_WORKS;
           return <button type="button" key={work} aria-pressed={on} disabled={full} data-work={work}
             onClick={() => lens.setWorks(on ? lens.works.filter(row => row !== work) : [...lens.works, work])}>
-            <span className="toolbar-menu-check" aria-hidden="true">{on && <svg viewBox="0 0 24 24" width="20" height="20"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /></svg>}</span><span className="toolbar-menu-label">{workLabel(work)}{!covers(work) && <span className="toolbar-menu-note">Torah only</span>}</span></button>;
+            <span className="toolbar-menu-check" aria-hidden="true">{on && <svg viewBox="0 0 24 24" width="20" height="20"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /></svg>}</span><span className="toolbar-menu-label">{workLabel(work)}{!covers(work) && <span className="toolbar-menu-note">{workCoverageNote(work)}</span>}</span></button>;
         })}
       </div>
     </>}

@@ -1,4 +1,4 @@
-import { commentaryCandidates, parseCommentaryChapter, COMMENTARY_WORKS, type CommentaryEditionCandidate } from "../../src/lib/readings/commentary";
+import { commentaryCandidates, commentaryComplex, parseCommentaryChapter, COMMENTARY_WORKS, type CommentaryEditionCandidate } from "../../src/lib/readings/commentary";
 
 // Invented syllables and numbered English labels only: never a commentary's words,
 // never any licensed translation. The markup imitates Sefaria's shape, not its content.
@@ -24,7 +24,7 @@ export function syntheticCommentaryPayload(work = "rashi", chapterName = "Genesi
     text: Array.from({ length: chapter.verseCount + (options.padding ?? 0) }, (_, i) =>
       Array.from({ length: i < chapter.verseCount ? commented[i + 1] ?? 0 : 0 }, (_, c) => text(candidate, i + 1, c))) }));
   const warnings = candidates.filter(candidate => !present.includes(candidate)).map(candidate => ({ [versionParameter(candidate)]: { warning_code: 101, message: "synthetic" } }));
-  return { ref: chapter.ref, book: chapter.index, indexTitle: chapter.indexTitle, textDepth: 3, isComplex: chapter.work.complex, isSpanning: false,
+  return { ref: chapter.ref, book: chapter.index, indexTitle: chapter.indexTitle, textDepth: 3, isComplex: commentaryComplex(chapter.work, chapter.book), isSpanning: false,
     sectionNames: [...chapter.work.sectionNames], sections: [String(chapter.number)], toSections: [String(chapter.number)], versions, warnings };
 }
 export const syntheticJsonResponse = (payload: unknown, init: ResponseInit = {}) =>

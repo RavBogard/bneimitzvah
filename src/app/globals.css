@@ -599,6 +599,13 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
   .workspace-main:has(.reading-toolbar) { padding-bottom: 4rem; }
   .toolbar-menu { position: fixed; inset: auto; top: 50%; left: 50%; bottom: auto; transform: translate(-50%, -50%); }
 }
+/* 1.3: the verse panel opens its own column between the text and the tools rail; the verse stays put (verse-panel.tsx). */
+@media (min-width: 1001px) {
+  .reading-passage-layout:has(> .verse-panel-column) { grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem) 6.5rem; }
+  .reading-passage-layout:has(> .verse-panel-column) > .reading-toolbar { grid-column: 3; }
+  .verse-panel-column { grid-column: 2; grid-row: 1; align-self: start; position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow: auto; overscroll-behavior: contain; min-width: 0; }
+  .verse-panel-column > section { margin: 0; }
+}
 
 /* Phase 2: tutor home as student cards, a page per student, the same reading. */
 .selection-lede { font-size: clamp(1.75rem, 5vw, 2.5rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin: 0.25rem 0 1.25rem; max-width: 20ch; }

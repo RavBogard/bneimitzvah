@@ -4,13 +4,14 @@ import type { AssignmentEnding } from "../../../../lib/hebrew/study-annotations"
 import { Apparatus, PhraseLegend, StudyHebrew, useVerseColors } from "./annotations";
 import { useCommentLink, VerseCommentary, type WorkState } from "./commentary-view";
 import type { StudyVerse } from "./api";
+import { InlineVersePanel, VerseActions } from "./verse-panel";
 import styles from "./commentary.module.css";
 
 /**
  * The Study lens (spec 2026-10-22 §3.2): each verse on its own row with room
  * under it. Hebrew with colors and its verse number (Hear), the English when it
  * is on, then the inline commentary, quieter than scripture and set off by a
- * hairline. No tikkun here: Study is about meaning.
+ * hairline, and the verse's actions (Compare) under it. No tikkun here: Study is about meaning.
  */
 function StudyRow({ verse, assignment, id, onVerse, onWord, activeWord, listening, toolsAvailable, showEnglish, works, label }: {
   verse: StudyVerse; assignment: AssignmentEnding; id: string; onVerse?(): void; onWord?(index: number): void; activeWord: number | null;
@@ -32,8 +33,10 @@ function StudyRow({ verse, assignment, id, onVerse, onWord, activeWord, listenin
       <div className={styles.verseSide}>
         {showEnglish && <p className={`study-english ${styles.english}`} lang="en" dir="ltr" data-english-ref={verse.ref}>{verse.english ?? "English reference unavailable for this verse."}</p>}
         <VerseCommentary verse={verse} works={works} link={link} />
+        <VerseActions verse={verse.ref} />
       </div>
     </article>
+    <InlineVersePanel verse={verse.ref} />
   </>;
 }
 

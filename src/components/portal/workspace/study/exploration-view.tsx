@@ -6,7 +6,7 @@ import { useReadingPrefs } from "../reading-prefs";
 import { useStudyLens } from "../study-lens";
 import { LensSwitch } from "../lens-switch";
 import { StudyRows } from "./study-rows";
-import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useWorkCommentary, VerseRashi } from "./commentary-view";
+import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi } from "./commentary-view";
 import { Apparatus, FlowingStudyText } from "./annotations";
 import { StudyCredits } from "./credits";
 import { explorationBinding, explorationReasons } from "./exploration-api";
@@ -27,9 +27,7 @@ export function ExplorationContent({ state, group, retry, page, refresh, audio }
   // The proposed portion is always Torah: Rashi and the Women's Commentary both cover it.
   const lens = useStudyLens(), study = lens.lens === "study", leinLink = useCommentLink();
   const refs = useMemo(() => current && prepared ? current.verses.map(verse => verse.ref) : [], [current, prepared]);
-  const rashi = useWorkCommentary("rashi", refs, refs.length > 0 && (!study || lens.works.includes("rashi")));
-  const womens = useWorkCommentary("womens", refs, refs.length > 0 && study && lens.works.includes("womens"));
-  const works = useMemo(() => [rashi, womens].filter(row => lens.works.includes(row.work)), [rashi, womens, lens.works]);
+  const { rashi, works } = useReadingWorks(refs, { ready: refs.length > 0, study, chosen: lens.works, corpus: null });
   const offsetIndex = prepared && current ? prepared.pages.findIndex(row => row.offset === current.offset) : -1;
   const previous = prepared?.pages[offsetIndex - 1]?.offset;
   return <section className="assigned-study" aria-label="Proposed Torah portion" data-size={prefs.size} aria-busy={state.pending}>
