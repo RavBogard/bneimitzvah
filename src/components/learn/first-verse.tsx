@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { FamilyId } from "../../lib/trope/chart-catalog";
 import type { FirstVerse as FirstVerseActivity, Lesson } from "../../lib/learn/course";
-import { isSpecialMelody, type AnalysedVerse } from "../../lib/learn/verse";
+import type { AnalysedVerse } from "../../lib/learn/verse";
+import { firstVerseCandidates } from "../../lib/learn/first-verse";
 import { leinHref } from "../../lib/learn/lein-link";
 import { AudioError, FamilyChip, phraseRequest, PlayTile, UnitsText } from "./bits";
 import { useCourseVerses } from "./course-data";
@@ -10,14 +10,6 @@ import { useLearnServices, usePlayerState, useProgress } from "./services";
 import { useWeekVerses } from "./week-data";
 import styles from "./learn.module.css";
 
-/** The families every beginner meets first; a verse made only of these is preferred. */
-const COMMON: ReadonlySet<FamilyId> = new Set<FamilyId>(["sof-pasuk", "etnachta", "zakef", "revia", "tevir", "sof-haftarah"]);
-/** Shortest word-ready verse of the week first, common families first; ties keep reading order. */
-export function firstVerseCandidates(verses: readonly AnalysedVerse[], maxWords: number): AnalysedVerse[] {
-  const fits = verses.filter(verse => verse.wordReady && !isSpecialMelody(verse.ref) && verse.units.length <= maxWords && verse.units.length >= 2);
-  const common = (verse: AnalysedVerse) => verse.phrases.every(phrase => COMMON.has(phrase.family)) ? 0 : 1;
-  return fits.map((verse, order) => ({ verse, order })).sort((a, b) => common(a.verse) - common(b.verse) || a.verse.units.length - b.verse.units.length || a.order - b.order).map(row => row.verse);
-}
 const STEPS = ["Hear each phrase", "Hear the verse", "Chant along, slowly", "Chant along"] as const;
 
 /** Your first verse: hear each phrase, the verse, then chant along at 0.75 and at 1; then the one quiet moment. */

@@ -140,3 +140,16 @@ describe("drill items", () => {
     expect(analyseVerse({ ref: "Psalms 1:1", kind: "torah", hebrew: source(threePhrases()) })).toBeNull();
   });
 });
+
+import { firstVerseCandidates } from "../../src/lib/learn/first-verse";
+describe("your first verse", () => {
+  it("picks the shortest word-ready verse of common families, preferring two halves over a one-phrase list", () => {
+    const list = verse("Genesis 7:1", [w(A.mercha, 0), w(A.tipcha, 1), end(2)]);
+    const halves = verse("Genesis 7:2", [w(A.tipcha, 0), w(A.etnachta, 1), w(A.tipcha, 2), end(3)]);
+    const rare = verse("Genesis 7:3", [w(A.pazer, 0), w(A.tipcha, 1), end(2)]);
+    const quiet = verse("Genesis 7:4", [w(A.tipcha, 0), w(A.etnachta, 1), end(2)], "torah", { wordReady: false });
+    const long = verse("Genesis 7:5", threePhrases());
+    expect(firstVerseCandidates([long, rare, list, quiet, halves], 12).map(v => v.ref)).toEqual(["Genesis 7:2", "Genesis 7:5", "Genesis 7:1", "Genesis 7:3"]);
+    expect(firstVerseCandidates([long], 6)).toEqual([]);
+  });
+});

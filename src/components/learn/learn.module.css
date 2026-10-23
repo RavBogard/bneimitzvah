@@ -18,7 +18,8 @@
 .chipLarge { min-height: 2.75rem; padding-inline: 0.75rem 1.125rem; font-size: 1.125rem; }
 .contour { flex: none; width: 30px; height: 16px; overflow: visible; }
 .chipLarge .contour { width: 40px; height: 22px; }
-.contour polyline { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.contour polyline { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.chipLarge .contour polyline { stroke-width: 1.6; }
 /* While the phrase plays, its mark draws itself along with the sound; reduced motion keeps it whole. */
 .drawing polyline { stroke-dasharray: 1; stroke-dashoffset: 1; animation: contour-draw var(--draw, 2s) linear forwards; }
 @keyframes contour-draw { to { stroke-dashoffset: 0; } }
@@ -234,6 +235,7 @@ a.stepLink:hover { background: var(--color-hover); color: var(--color-ink); }
   .verseRow { padding-inline: 0.75rem; column-gap: 0.75rem; }
   .verseBox { padding-inline: 0.875rem; }
   .sheetHebrew { font-size: 2.6rem; }
+  .sheetActions { grid-template-columns: minmax(0, 1fr); }
   .doneTitle { font-size: 2.125rem; }
   .slot, .tile { width: 4.25rem; min-width: 4.25rem; }
 }
