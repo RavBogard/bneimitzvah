@@ -120,3 +120,19 @@ test("with reduced motion the panel opens at once, and Lein offers no shelf", as
   await expect(page.getByRole("button", { name: "More on this verse", exact: true })).toHaveCount(0);
   await expect(panel(page)).toHaveCount(0);
 });
+
+test("an opened Targum or Talmud text is marked Aramaic; a midrash stays Hebrew", async ({ page }) => {
+  await mock(page);
+  await page.goto("/read?lens=study");
+  await more(page, "Genesis 1:1").click();
+  await pills(page).getByRole("button", { name: /^Talmud/ }).click();
+  await panel(page).getByRole("button", { name: "Synthetic Tractate 2a:1", exact: true }).click();
+  await expect(panel(page).locator('p[lang="arc"][dir="rtl"]').filter({ hasText: "הוּ זַח" })).toBeVisible();
+  await pills(page).getByRole("button", { name: /^Targum/ }).click();
+  await panel(page).getByRole("button", { name: "Onkelos Genesis 1:1", exact: true }).click();
+  await expect(panel(page).locator('p[lang="arc"]').first()).toBeVisible();
+  await pills(page).getByRole("button", { name: /^Midrash/ }).click();
+  await panel(page).getByRole("button", { name: "Synthetic Midrash 1:1", exact: true }).click();
+  await expect(panel(page).locator('p[lang="he"][dir="rtl"]').filter({ hasText: "הוּ זַח" })).toBeVisible();
+  await expect(panel(page).locator('[lang="arc"]')).toHaveCount(0);
+});

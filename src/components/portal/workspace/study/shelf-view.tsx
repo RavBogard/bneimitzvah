@@ -7,7 +7,7 @@ import { fetchShelf, fetchSourceText, type SourceTextAnswer } from "./shelf-api"
 import styles from "./commentary.module.css";
 
 /** One linked text, opened in place: its segments (three lines, then More; Hebrew in place), then its credit. */
-function SourceText({ reference }: { reference: string }) {
+function SourceText({ reference, language }: { reference: string; language: "he" | "arc" }) {
   const [state, setState] = useState<{ key: string; value?: SourceTextAnswer; status?: number } | null>(null), [retry, setRetry] = useState(0);
   const key = `${reference}|${retry}`;
   useEffect(() => {
@@ -24,7 +24,7 @@ function SourceText({ reference }: { reference: string }) {
     : <p className={styles.status} role="status">This text isn’t available right now. <button type="button" onClick={() => setRetry(value => value + 1)}>Try again</button></p>;
   const { segments, editions, sefariaUrl } = current.value;
   return <div className={styles.sourceText}>
-    {segments.map((segment, index) => <CommentaryEntry key={index} comment={segment} words={[]} verseRef={reference} />)}
+    {segments.map((segment, index) => <CommentaryEntry key={index} comment={segment} words={[]} verseRef={reference} language={language} />)}
     <p className={styles.compareCredit}>
       {editions.map(edition => <span key={edition.language} className={styles.creditLine}>{edition.language === "he" ? "Hebrew" : "English"}: <a href={edition.url} target="_blank" rel="noopener noreferrer">{edition.credit}</a></span>)}
       <a className={styles.creditLine} href={sefariaUrl} target="_blank" rel="noopener noreferrer"><bdi dir="ltr">{reference}</bdi> on Sefaria</a>
@@ -32,6 +32,8 @@ function SourceText({ reference }: { reference: string }) {
   </div>;
 }
 
+/** A Targum and the Talmud (Bavli and Yerushalmi) are Aramaic; Mishnah, Tosefta and the rest read as Hebrew. */
+export const aramaicText = (category: string) => category === "Targum" || category === "Talmud";
 function Work({ value, heading }: { value: ShelfWork; heading: string | null }) {
   const [open, setOpen] = useState<string | null>(null), id = useId(), dates = compositionDates(value.dates);
   return <li className={styles.shelfWork}>
@@ -42,7 +44,7 @@ function Work({ value, heading }: { value: ShelfWork; heading: string | null }) 
       {value.items.map((item, index) => <li key={item.ref}>
         <button type="button" className={styles.shelfItem} aria-expanded={open === item.ref} aria-controls={`${id}-${index}`} onClick={() => setOpen(current => current === item.ref ? null : item.ref)}>
           <bdi dir="ltr">{item.ref}</bdi>{item.segments > 1 && <span className={styles.shelfSegments}> · {item.segments} comments</span>}</button>
-        {open === item.ref && <div id={`${id}-${index}`}><SourceText reference={item.ref} /></div>}
+        {open === item.ref && <div id={`${id}-${index}`}><SourceText reference={item.ref} language={aramaicText(value.category) ? "arc" : "he"} /></div>}
       </li>)}
     </ul>
     {value.more > 0 && <p className={styles.shelfDates}>{value.more === 1 ? "1 more on Sefaria" : `${value.more} more on Sefaria`}</p>}

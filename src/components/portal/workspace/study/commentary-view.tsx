@@ -52,8 +52,10 @@ const CLAMP_SLACK = 2;
  * When the quoted words are found once in the verse, pointing at the comment
  * underlines them there; tapping the quoted words keeps them underlined.
  */
-export function CommentaryEntry({ comment, words, verseRef, onLink, pinned }: {
+export function CommentaryEntry({ comment, words, verseRef, onLink, pinned, language = "he" }: {
   comment: CommentaryComment; words: readonly string[]; verseRef: string; onLink?: LinkHandler; pinned?: boolean;
+  /** The language of the non-English text: Hebrew, or Aramaic for a Targum or the Talmud (same direction and font). */
+  language?: "he" | "arc";
 }) {
   const id = useId(), parts = useMemo(() => commentaryParts(comment), [comment]);
   const linkable = Boolean(onLink), match = useMemo(() => linkable ? matchDibbur(parts.dibbur, words) : null, [linkable, parts.dibbur, words]);
@@ -70,7 +72,7 @@ export function CommentaryEntry({ comment, words, verseRef, onLink, pinned }: {
   }, [expanded, parts]);
   const english = parts.english, leadsInHebrew = !english && !parts.lemma;
   const lemma = parts.lemma && <span className={styles.lemma} data-caps={parts.lemma.caps ? "" : undefined}>{parts.lemma.text}</span>;
-  const quoted = parts.dibbur && <bdi lang="he" dir="rtl" className={styles.dibbur}>{parts.dibbur}</bdi>;
+  const quoted = parts.dibbur && <bdi lang={language} dir="rtl" className={styles.dibbur}>{parts.dibbur}</bdi>;
   const lead = parts.dibbur ? match ? <button type="button" className={styles.dibburLink} aria-pressed={pinned ?? false}
     onClick={event => { event.stopPropagation(); onLink?.("pin", pinned ? null : match);
       // Once the underline is drawn, bring the quoted words into view if they are off screen; no smooth scroll.
@@ -85,9 +87,9 @@ export function CommentaryEntry({ comment, words, verseRef, onLink, pinned }: {
     onBlur={match ? event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onLink?.("focus", null); } : undefined}
     onClick={match ? event => { if ((event.target as Element).closest("a, button") || window.getSelection()?.toString()) return; onLink?.("pin", pinned ? null : match); } : undefined}>
     {leadsInHebrew
-      ? <p ref={body} id={`${id}-text`} lang="he" dir="rtl" className={`${styles.text} ${styles.hebrewText} ${expanded ? "" : styles.clamped}`}>{match ? <>{lead}{parts.hebrew && " "}{parts.hebrew && <Runs runs={parts.hebrew} />}</> : hebrewText}</p>
+      ? <p ref={body} id={`${id}-text`} lang={language} dir="rtl" className={`${styles.text} ${styles.hebrewText} ${expanded ? "" : styles.clamped}`}>{match ? <>{lead}{parts.hebrew && " "}{parts.hebrew && <Runs runs={parts.hebrew} />}</> : hebrewText}</p>
       : <p ref={body} id={`${id}-text`} lang="en" dir="ltr" className={`${styles.text} ${expanded ? "" : styles.clamped}`}>{lead}{lead && " "}{lemma}{lemma && english && " "}{english && <Runs runs={english} />}</p>}
-    {hebrew && hasHebrew && <p id={`${id}-hebrew`} lang="he" dir="rtl" className={`${styles.text} ${styles.hebrewText}`}>{hebrewText}</p>}
+    {hebrew && hasHebrew && <p id={`${id}-hebrew`} lang={language} dir="rtl" className={`${styles.text} ${styles.hebrewText}`}>{hebrewText}</p>}
     {(overflows || expanded || hasHebrew) && <div className={styles.controls}>
       {(overflows || expanded) && <button type="button" aria-expanded={expanded} aria-controls={`${id}-text`} onClick={() => setExpanded(value => !value)}>{expanded ? "Less" : "More"}</button>}
       {hasHebrew && <button type="button" aria-expanded={hebrew} aria-controls={`${id}-hebrew`} lang="en" onClick={() => setHebrew(value => !value)}>Hebrew</button>}

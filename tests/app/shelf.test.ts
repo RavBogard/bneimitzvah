@@ -122,3 +122,15 @@ test("the browser parser refuses anything but the server's shape", () => {
   ];
   for (const [name, mutate] of mutations) { const value = structuredClone(body); mutate(value); expect(() => parseShelfAnswer(value, verse), name).toThrow(); }
 });
+
+test("opened Targum and Talmud texts carry lang=\"arc\" (same direction and font); every other caller keeps Hebrew", async () => {
+  const { createElement } = await import("react"), { renderToStaticMarkup } = await import("react-dom/server");
+  const { CommentaryEntry } = await import("../../src/components/portal/workspace/study/commentary-view");
+  const { aramaicText } = await import("../../src/components/portal/workspace/study/shelf-view");
+  const comment = { hebrew: [{ text: "אָב גַּד" }], english: null };
+  const aramaic = renderToStaticMarkup(createElement(CommentaryEntry, { comment, words: [], verseRef: "Synthetic 2a:1", language: "arc" }));
+  expect(aramaic).toContain('lang="arc" dir="rtl"'); expect(aramaic).not.toContain('lang="he"');
+  const hebrew = renderToStaticMarkup(createElement(CommentaryEntry, { comment, words: [], verseRef: "Synthetic 2a:1" }));
+  expect(hebrew).toContain('lang="he" dir="rtl"'); expect(hebrew).not.toContain('lang="arc"');
+  expect(["Targum", "Talmud", "Mishnah", "Tosefta", "Midrash", "Commentary"].map(aramaicText)).toEqual([true, true, false, false, false, false]);
+});
