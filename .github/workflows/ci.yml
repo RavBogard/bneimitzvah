@@ -58,11 +58,48 @@ jobs:
           PGDATABASE: portal_rls_test
           PGUSER: postgres
           PGPASSWORD: disposable-ci-only
-      - run: npx playwright install --with-deps chromium firefox
+      # Browsers and OS packages come from the Actions cache so this job does not wait on the
+      # runner's apt mirror, which has stalled it for 10+ minutes. See postgres-job-packages.sh.
+      - name: Resolve browser and package cache keys
+        id: keys
+        run: |
+          echo "playwright=$(node -p "require('playwright-core/package.json').version")" >> "$GITHUB_OUTPUT"
+          if [ -n "${ImageOS:-}" ] && [ -n "${ImageVersion:-}" ]; then
+            echo "image=$ImageOS-$ImageVersion" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Runner image version unknown; packages will not be reused"
+            echo "image=unknown-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Restore Playwright browsers
+        id: browsers
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ runner.arch }}-${{ steps.keys.outputs.playwright }}-chromium-firefox
+      - run: npx playwright install chromium firefox
         timeout-minutes: 10
-      - name: Install synthetic reference-audio test encoder
-        timeout-minutes: 10
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg pulseaudio pulseaudio-utils
+      - name: Save Playwright browsers
+        if: steps.browsers.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ runner.arch }}-${{ steps.keys.outputs.playwright }}-chromium-firefox
+      - name: Restore browser system packages and synthetic reference-audio test encoder
+        id: debs
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ci-apt-debs
+          key: ci-apt-debs-${{ steps.keys.outputs.image }}-${{ steps.keys.outputs.playwright }}-${{ hashFiles('.github/scripts/postgres-job-packages.sh') }}
+      - name: Install browser system packages and synthetic reference-audio test encoder
+        id: packages
+        timeout-minutes: 12
+        run: bash .github/scripts/postgres-job-packages.sh "${{ steps.debs.outputs.cache-hit }}"
+      - name: Save browser system packages and synthetic reference-audio test encoder
+        if: steps.debs.outputs.cache-hit != 'true' && steps.packages.outputs.fresh == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ci-apt-debs
+          key: ci-apt-debs-${{ steps.keys.outputs.image }}-${{ steps.keys.outputs.playwright }}-${{ hashFiles('.github/scripts/postgres-job-packages.sh') }}
       - run: npm run build
       - name: Exercise browser HTTP authority and built production denial
         run: npm run test:http:browser

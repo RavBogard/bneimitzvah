@@ -1,0 +1,3732 @@
+{
+  "schema": "learn-to-lein-course/v1",
+  "melodies": [
+    "torah",
+    "haftarah"
+  ],
+  "families": {
+    "sof-pasuk": {
+      "name": "sof pasuk",
+      "confusedWith": [
+        "etnachta"
+      ]
+    },
+    "etnachta": {
+      "name": "etnachta",
+      "confusedWith": [
+        "sof-pasuk",
+        "tevir"
+      ]
+    },
+    "zakef": {
+      "name": "zakef",
+      "confusedWith": [
+        "revia",
+        "zakef-gadol",
+        "segol"
+      ]
+    },
+    "revia": {
+      "name": "revia",
+      "confusedWith": [
+        "zakef",
+        "tevir"
+      ]
+    },
+    "tevir": {
+      "name": "tevir",
+      "confusedWith": [
+        "etnachta",
+        "revia"
+      ]
+    },
+    "azla": {
+      "name": "kadma v'azla",
+      "confusedWith": [
+        "pazer",
+        "telisha-ketana"
+      ]
+    },
+    "segol": {
+      "name": "segol",
+      "confusedWith": [
+        "zakef",
+        "revia"
+      ]
+    },
+    "telisha-ketana": {
+      "name": "telisha ketana",
+      "confusedWith": [
+        "azla",
+        "pazer"
+      ]
+    },
+    "pazer": {
+      "name": "pazer",
+      "confusedWith": [
+        "telisha-ketana",
+        "azla",
+        "zakef-gadol"
+      ]
+    },
+    "zakef-gadol": {
+      "name": "zakef gadol",
+      "confusedWith": [
+        "zakef",
+        "pazer"
+      ]
+    },
+    "sof-haftarah": {
+      "name": "end of the haftarah",
+      "confusedWith": [
+        "sof-pasuk"
+      ]
+    }
+  },
+  "units": [
+    {
+      "id": "u0-how-a-verse-is-built",
+      "melody": "torah",
+      "title": "How a verse is built",
+      "summary": "A verse is a chain of short phrases, and each phrase ends on a mark that gives it its tune.",
+      "lessons": [
+        "intro-phrases"
+      ]
+    },
+    {
+      "id": "u1-the-two-endings",
+      "melody": "torah",
+      "title": "The two endings",
+      "summary": "Where every verse rests and where it ends.",
+      "lessons": [
+        "torah-sof-pasuk",
+        "torah-etnachta"
+      ]
+    },
+    {
+      "id": "u2-inside-the-verse",
+      "melody": "torah",
+      "title": "Inside the verse",
+      "summary": "The three phrases that fill most verses.",
+      "lessons": [
+        "torah-zakef",
+        "torah-revia",
+        "torah-tevir"
+      ]
+    },
+    {
+      "id": "u3-the-rarer-phrases",
+      "melody": "torah",
+      "title": "The rarer phrases",
+      "summary": "Everything else the Torah tune uses.",
+      "lessons": [
+        "torah-azla",
+        "torah-segol",
+        "torah-telisha-ketana",
+        "torah-pazer",
+        "torah-zakef-gadol"
+      ]
+    },
+    {
+      "id": "u4-your-first-verse",
+      "melody": "torah",
+      "title": "Your first verse",
+      "summary": "Lein one verse of this week's reading.",
+      "lessons": [
+        "torah-first-verse"
+      ]
+    },
+    {
+      "id": "u5-haftarah-same-phrases-new-tune",
+      "melody": "haftarah",
+      "title": "Haftarah: the same phrases, a new tune",
+      "summary": "The common families, in the haftarah melody.",
+      "lessons": [
+        "haftarah-sof-pasuk",
+        "haftarah-etnachta",
+        "haftarah-zakef",
+        "haftarah-revia",
+        "haftarah-tevir"
+      ]
+    },
+    {
+      "id": "u6-haftarah-the-rarer-phrases",
+      "melody": "haftarah",
+      "title": "Haftarah: the rarer phrases",
+      "summary": "Everything else, and the ending of the whole haftarah.",
+      "lessons": [
+        "haftarah-azla",
+        "haftarah-segol",
+        "haftarah-telisha-ketana",
+        "haftarah-pazer",
+        "haftarah-zakef-gadol",
+        "haftarah-sof-haftarah"
+      ]
+    },
+    {
+      "id": "u7-your-first-haftarah-verse",
+      "melody": "haftarah",
+      "title": "Your first haftarah verse",
+      "summary": "Lein one verse of this week's haftarah.",
+      "lessons": [
+        "haftarah-first-verse"
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "id": "intro-phrases",
+      "melody": "torah",
+      "family": null,
+      "accents": [],
+      "title": "How a verse is built",
+      "summary": "Phrases, marks and the two halves of a verse",
+      "goal": "After this you can hear that a verse is made of short phrases, each with its own small tune.",
+      "body": [
+        "Torah is chanted, not read. Every word carries a small mark, above or below a letter, and the marks tell the reader which tune to sing. You do not need to read music. You need to hear about ten short tunes and know which mark each one belongs to.",
+        "The marks come in phrases. A phrase is two or three words that run together and end on a mark with a tune of its own. The colour on this site belongs to the whole phrase, not to one word.",
+        "Every verse has two halves. The first half rests on a mark called etnachta. The second half ends on sof pasuk. Listen for the rest, then the ending."
+      ],
+      "listenFor": "Two places where the tune settles: a rest in the middle of the verse, and a lower, final landing at the end.",
+      "examples": [
+        {
+          "ref": "Genesis 1:1",
+          "words": [
+            0,
+            6
+          ],
+          "firstWord": "בְּרֵאשִׁ֖ית",
+          "lastWord": "הָאָֽרֶץ׃",
+          "why": "Two phrases: the rest on etnachta, then the ending.",
+          "phrases": [
+            {
+              "family": "etnachta",
+              "words": [
+                0,
+                2
+              ]
+            },
+            {
+              "family": "sof-pasuk",
+              "words": [
+                3,
+                6
+              ]
+            }
+          ]
+        },
+        {
+          "ref": "Numbers 24:5",
+          "words": [
+            0,
+            4
+          ],
+          "firstWord": "מַה־טֹּ֥בוּ",
+          "lastWord": "יִשְׂרָאֵֽל׃",
+          "why": "The same two halves in a verse many people know from the morning service.",
+          "phrases": [
+            {
+              "family": "etnachta",
+              "words": [
+                0,
+                2
+              ]
+            },
+            {
+              "family": "sof-pasuk",
+              "words": [
+                3,
+                4
+              ]
+            }
+          ]
+        },
+        {
+          "ref": "Deuteronomy 6:4",
+          "words": [
+            0,
+            5
+          ],
+          "firstWord": "שְׁמַ֖ע",
+          "lastWord": "אֶחָֽד׃",
+          "why": "The Shema: a two-word first half, a four-word ending.",
+          "phrases": [
+            {
+              "family": "etnachta",
+              "words": [
+                0,
+                1
+              ]
+            },
+            {
+              "family": "sof-pasuk",
+              "words": [
+                2,
+                5
+              ]
+            }
+          ]
+        },
+        {
+          "ref": "Exodus 25:8",
+          "words": [
+            0,
+            4
+          ],
+          "firstWord": "וְעָ֥שׂוּ",
+          "lastWord": "בְּתוֹכָֽם׃",
+          "why": "Short, clear, and the rest comes early.",
+          "phrases": [
+            {
+              "family": "etnachta",
+              "words": [
+                0,
+                2
+              ]
+            },
+            {
+              "family": "sof-pasuk",
+              "words": [
+                3,
+                4
+              ]
+            }
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "same-or-different",
+          "params": {
+            "families": [
+              "sof-pasuk",
+              "etnachta"
+            ],
+            "items": 4
+          }
+        },
+        {
+          "type": "where-does-it-end",
+          "params": {
+            "families": [
+              "etnachta"
+            ],
+            "items": 4,
+            "audio": true,
+            "prompt": "Tap the word where the verse rests."
+          }
+        }
+      ],
+      "prerequisites": []
+    },
+    {
+      "id": "torah-sof-pasuk",
+      "melody": "torah",
+      "family": "sof-pasuk",
+      "accents": [
+        "merkha",
+        "tipcha",
+        "silluq"
+      ],
+      "title": "Sof pasuk",
+      "summary": "Where the verse ends",
+      "goal": "After this you can hear the end of a verse coming and know the mark that ends it.",
+      "body": [
+        "Sof pasuk is the ending. It is the only phrase that is in every single verse, so it is the first tune to learn. The last word carries a small vertical line under its stressed syllable, and the verse closes with a colon-like sign.",
+        "The phrase is usually three words: mercha, tipcha, then the ending. Mercha stays level. Tipcha lifts and falls back. The last word steps down to the lowest note of the verse and stays there. Sometimes a fourth word, a second mercha, comes between tipcha and the end.",
+        "When you hear the tune land low and stop, the verse is over. Breathe there."
+      ],
+      "listenFor": "The last word drops to the lowest note in the verse and rests on it.",
+      "examples": [
+        {
+          "ref": "Numbers 6:26",
+          "words": [
+            4,
+            6
+          ],
+          "firstWord": "וְיָשֵׂ֥ם",
+          "lastWord": "שָׁלֽוֹם׃",
+          "why": "Three words that end the verse: mercha, tipcha, sof pasuk. The last line of the priestly blessing.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "Genesis 1:1",
+          "words": [
+            3,
+            6
+          ],
+          "firstWord": "אֵ֥ת",
+          "lastWord": "הָאָֽרֶץ׃",
+          "why": "Four words: mercha, tipcha, mercha, then the end.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "mercha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "Deuteronomy 6:4",
+          "words": [
+            2,
+            5
+          ],
+          "firstWord": "יְהֹוָ֥ה",
+          "lastWord": "אֶחָֽד׃",
+          "why": "The second half of the Shema, four words.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "mercha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "Leviticus 19:18",
+          "words": [
+            7,
+            8
+          ],
+          "firstWord": "אֲנִ֖י",
+          "lastWord": "יְהֹוָֽה׃",
+          "why": "Two words: tipcha straight into the end, no mercha.",
+          "tropes": [
+            "tipcha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "Numbers 24:5",
+          "words": [
+            3,
+            4
+          ],
+          "firstWord": "מִשְׁכְּנֹתֶ֖יךָ",
+          "lastWord": "יִשְׂרָאֵֽל׃",
+          "why": "Two words again, in a verse you may know as a song.",
+          "tropes": [
+            "tipcha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "Genesis 1:3",
+          "words": [
+            4,
+            4
+          ],
+          "firstWord": "וַֽיְהִי־אֽוֹר׃",
+          "lastWord": "וַֽיְהִי־אֽוֹר׃",
+          "why": "The ending on a single word, with nothing before it.",
+          "tropes": [
+            "silluq"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "same-or-different",
+          "params": {
+            "families": [
+              "sof-pasuk",
+              "etnachta"
+            ],
+            "items": 4
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "sof-pasuk",
+              "etnachta"
+            ],
+            "items": 6,
+            "choices": 2
+          }
+        },
+        {
+          "type": "build-the-phrase",
+          "params": {
+            "family": "sof-pasuk",
+            "items": 2,
+            "patterns": [
+              "mercha-tipcha-silluq"
+            ],
+            "extraMarks": 1
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "sof-pasuk",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "intro-phrases"
+      ]
+    },
+    {
+      "id": "torah-etnachta",
+      "melody": "torah",
+      "family": "etnachta",
+      "accents": [
+        "tipcha",
+        "munach",
+        "etnachta"
+      ],
+      "title": "Etnachta",
+      "summary": "Where the verse rests",
+      "goal": "After this you can hear where a verse rests in the middle, and tell that rest from the ending.",
+      "body": [
+        "Etnachta is the rest in the middle of the verse. Its mark looks like a small wishbone under the stressed syllable. Nearly every verse has one, and it splits the verse into two halves of meaning.",
+        "The phrase is usually tipcha, munach, etnachta, or just tipcha and etnachta. Tipcha lifts and falls, as it did before the ending. Munach steps down. Then etnachta climbs back up and holds a note in the middle of the range, where the tune rests but does not finish.",
+        "Sof pasuk lands low and closes. Etnachta stays up and waits. That difference is the first thing to listen for."
+      ],
+      "listenFor": "Before the rest the tune steps down, then rises and holds a middle note, waiting rather than closing.",
+      "examples": [
+        {
+          "ref": "Genesis 1:1",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "בְּרֵאשִׁ֖ית",
+          "lastWord": "אֱלֹהִ֑ים",
+          "why": "The first three words of the Torah: tipcha, munach, etnachta.",
+          "tropes": [
+            "tipcha",
+            "munach",
+            "etnachta"
+          ]
+        },
+        {
+          "ref": "Deuteronomy 6:4",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "שְׁמַ֖ע",
+          "lastWord": "יִשְׂרָאֵ֑ל",
+          "why": "Two words, tipcha straight into etnachta. The Shema.",
+          "tropes": [
+            "tipcha",
+            "etnachta"
+          ]
+        },
+        {
+          "ref": "Numbers 24:5",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "מַה־טֹּ֥בוּ",
+          "lastWord": "יַעֲקֹ֑ב",
+          "why": "Mercha, tipcha, etnachta: a level word first.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "etnachta"
+          ]
+        },
+        {
+          "ref": "Exodus 25:8",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "וְעָ֥שׂוּ",
+          "lastWord": "מִקְדָּ֑שׁ",
+          "why": "Short and clear; hear the rest hold.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "etnachta"
+          ]
+        },
+        {
+          "ref": "Leviticus 19:18",
+          "words": [
+            4,
+            6
+          ],
+          "firstWord": "וְאָֽהַבְתָּ֥",
+          "lastWord": "כָּמ֑וֹךָ",
+          "why": "A familiar line, resting on its last word.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "etnachta"
+          ]
+        },
+        {
+          "ref": "Deuteronomy 16:20",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "צֶ֥דֶק",
+          "lastWord": "תִּרְדֹּ֑ף",
+          "why": "Three words, the middle one repeated; the rest is on the third.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "etnachta"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "same-or-different",
+          "params": {
+            "families": [
+              "sof-pasuk",
+              "etnachta"
+            ],
+            "items": 4
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "sof-pasuk",
+              "etnachta"
+            ],
+            "items": 6,
+            "choices": 2
+          }
+        },
+        {
+          "type": "where-does-it-end",
+          "params": {
+            "families": [
+              "etnachta",
+              "sof-pasuk"
+            ],
+            "items": 4,
+            "audio": true
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "etnachta",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "torah-sof-pasuk"
+      ]
+    },
+    {
+      "id": "torah-zakef",
+      "melody": "torah",
+      "family": "zakef",
+      "accents": [
+        "mahpach",
+        "pashta",
+        "munach",
+        "zakef-katan",
+        "yetiv",
+        "kadma"
+      ],
+      "title": "Zakef",
+      "summary": "The most common phrase inside a verse",
+      "goal": "After this you can hear zakef, the most common phrase inside a verse, and the marks that lead into it.",
+      "body": [
+        "Zakef katan is two dots above the stressed syllable, one over the other. It is the commonest pause inside a verse: a small comma, not a rest.",
+        "Its tune is a peak: up to a high note, then down to settle. The words before it set it up. Pashta sits high and holds, on a mark at the very end of the word. Mahpach, a small angle, swings low first. Munach steps gently. A full phrase runs mahpach, pashta, munach, zakef; two words, munach and zakef, are very common.",
+        "Sometimes a whole zakef phrase sits on one word, with munach and zakef both on it. Yetiv, a mark before the first letter, opens a zakef phrase too."
+      ],
+      "listenFor": "A climb to a high note, then a drop that settles without closing; pashta before it sits high and still.",
+      "examples": [
+        {
+          "ref": "Genesis 2:24",
+          "words": [
+            4,
+            5
+          ],
+          "firstWord": "וְדָבַ֣ק",
+          "lastWord": "בְּאִשְׁתּ֔וֹ",
+          "why": "Two words: munach, zakef. The simplest form.",
+          "tropes": [
+            "munach",
+            "zakef-katan"
+          ]
+        },
+        {
+          "ref": "Leviticus 1:1",
+          "words": [
+            2,
+            4
+          ],
+          "firstWord": "וַיְדַבֵּ֤ר",
+          "lastWord": "אֵלָ֔יו",
+          "why": "Mahpach, pashta, zakef: the common three.",
+          "tropes": [
+            "mahpach",
+            "pashta",
+            "zakef-katan"
+          ]
+        },
+        {
+          "ref": "Leviticus 19:16",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "לֹא־תֵלֵ֤ךְ",
+          "lastWord": "בְּעַמֶּ֔יךָ",
+          "why": "Mahpach, pashta, zakef on a line from the holiness code.",
+          "tropes": [
+            "mahpach",
+            "pashta",
+            "zakef-katan"
+          ]
+        },
+        {
+          "ref": "Numbers 6:26",
+          "words": [
+            0,
+            3
+          ],
+          "firstWord": "יִשָּׂ֨א",
+          "lastWord": "אֵלֶ֔יךָ",
+          "why": "Four words, kadma first: kadma, mahpach, pashta, zakef. The priestly blessing.",
+          "tropes": [
+            "kadma",
+            "mahpach",
+            "pashta",
+            "zakef-katan"
+          ]
+        },
+        {
+          "ref": "Deuteronomy 6:5",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וְאָ֣הַבְתָּ֔",
+          "lastWord": "וְאָ֣הַבְתָּ֔",
+          "why": "The whole phrase on one word: munach and zakef together on the first word of the verse after the Shema.",
+          "tropes": [
+            "zakef-katan"
+          ]
+        },
+        {
+          "ref": "Genesis 6:9",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "אֵ֚לֶּה",
+          "lastWord": "נֹ֔חַ",
+          "why": "Yetiv, munach, zakef: the mark before the first letter opens the phrase.",
+          "tropes": [
+            "yetiv",
+            "munach",
+            "zakef-katan"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "zakef",
+              "etnachta",
+              "sof-pasuk"
+            ],
+            "items": 6,
+            "choices": 3
+          }
+        },
+        {
+          "type": "tap-the-phrase",
+          "params": {
+            "families": [
+              "zakef"
+            ],
+            "items": 4,
+            "verseWords": [
+              6,
+              12
+            ]
+          }
+        },
+        {
+          "type": "build-the-phrase",
+          "params": {
+            "family": "zakef",
+            "items": 2,
+            "patterns": [
+              "mahpach-pashta-zakef-katan",
+              "munach-zakef-katan"
+            ],
+            "extraMarks": 1
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "zakef",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "torah-etnachta"
+      ]
+    },
+    {
+      "id": "torah-revia",
+      "melody": "torah",
+      "family": "revia",
+      "accents": [
+        "munach",
+        "revia",
+        "darga",
+        "munach-legarmeh"
+      ],
+      "title": "Revia",
+      "summary": "A slow walk down",
+      "goal": "After this you can hear revia's slow walk down and tell it from zakef's peak.",
+      "body": [
+        "Revia is a single dot above the word, like a small diamond. It marks a pause a little weaker than zakef, often on the first word of a verse or right before a new thought.",
+        "The tune walks down: four steps, one after another, landing well below where it started. Nothing leaps. If a munach comes before it, the munach rises first, so the phrase goes up, then slowly down.",
+        "Zakef peaks and drops; revia only descends. Munach followed by a short vertical bar, called legarmeh, takes the same place as revia and sings a small tune of its own; the site colours it as revia."
+      ],
+      "listenFor": "Four even steps downward, like coming down a short staircase, with no leap.",
+      "examples": [
+        {
+          "ref": "Genesis 1:2",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וְהָאָ֗רֶץ",
+          "lastWord": "וְהָאָ֗רֶץ",
+          "why": "Revia alone on the first word of the verse.",
+          "tropes": [
+            "revia"
+          ]
+        },
+        {
+          "ref": "Genesis 28:17",
+          "words": [
+            5,
+            6
+          ],
+          "firstWord": "אֵ֣ין",
+          "lastWord": "זֶ֗ה",
+          "why": "Munach, revia: two short words.",
+          "tropes": [
+            "munach",
+            "revia"
+          ]
+        },
+        {
+          "ref": "Deuteronomy 16:18",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "שֹׁפְטִ֣ים",
+          "lastWord": "וְשֹֽׁטְרִ֗ים",
+          "why": "Munach, revia opening a verse.",
+          "tropes": [
+            "munach",
+            "revia"
+          ]
+        },
+        {
+          "ref": "Genesis 24:67",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "וַיְבִאֶ֣הָ",
+          "lastWord": "יִצְחָ֗ק",
+          "why": "Munach, revia in a story verse.",
+          "tropes": [
+            "munach",
+            "revia"
+          ]
+        },
+        {
+          "ref": "Genesis 27:22",
+          "words": [
+            5,
+            5
+          ],
+          "firstWord": "וַיֹּ֗אמֶר",
+          "lastWord": "וַיֹּ֗אמֶר",
+          "why": "Revia on one word in the second half of a verse, just before Isaac speaks.",
+          "tropes": [
+            "revia"
+          ]
+        },
+        {
+          "ref": "Numbers 6:2",
+          "words": [
+            5,
+            6
+          ],
+          "firstWord": "אִ֣ישׁ",
+          "lastWord": "אֽוֹ־אִשָּׁ֗ה",
+          "why": "Munach, revia with a maqaf-joined word.",
+          "tropes": [
+            "munach",
+            "revia"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "revia",
+              "zakef",
+              "etnachta",
+              "sof-pasuk"
+            ],
+            "items": 6,
+            "choices": 3,
+            "weight": {
+              "zakef": 2
+            }
+          }
+        },
+        {
+          "type": "same-or-different",
+          "params": {
+            "families": [
+              "revia",
+              "zakef"
+            ],
+            "items": 4
+          }
+        },
+        {
+          "type": "tap-the-phrase",
+          "params": {
+            "families": [
+              "revia",
+              "zakef"
+            ],
+            "items": 4,
+            "verseWords": [
+              6,
+              12
+            ]
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "revia",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "torah-zakef"
+      ]
+    },
+    {
+      "id": "torah-tevir",
+      "melody": "torah",
+      "family": "tevir",
+      "accents": [
+        "darga",
+        "merkha",
+        "tevir",
+        "kadma"
+      ],
+      "title": "Tevir",
+      "summary": "A dip, often after darga",
+      "goal": "After this you can hear tevir's dip and the darga that often leads into it.",
+      "body": [
+        "Tevir is a dot with a small tail, under the stressed syllable. It is a short pause, and it often comes a word or two before an etnachta or a sof pasuk.",
+        "The tune dips: down a step, down again, then back up to settle. The word before it is often darga, a zigzag under the word, which comes down the scale to meet tevir. Or it is a mercha that lifts and drops onto tevir. Kadma can come before either.",
+        "Etnachta rises to a rest; tevir dips and recovers, and the verse keeps going."
+      ],
+      "listenFor": "A dip below the line and a climb back, in one word; darga before it winds down to meet it.",
+      "examples": [
+        {
+          "ref": "Genesis 1:4",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "וַיַּ֧רְא",
+          "lastWord": "אֱלֹהִ֛ים",
+          "why": "Darga, tevir on the first two words.",
+          "tropes": [
+            "darga",
+            "tevir"
+          ]
+        },
+        {
+          "ref": "Exodus 31:16",
+          "words": [
+            3,
+            4
+          ],
+          "firstWord": "לַעֲשׂ֧וֹת",
+          "lastWord": "אֶת־הַשַּׁבָּ֛ת",
+          "why": "Darga, tevir in the verse about keeping Shabbat.",
+          "tropes": [
+            "darga",
+            "tevir"
+          ]
+        },
+        {
+          "ref": "Numbers 6:25",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "יָאֵ֨ר",
+          "lastWord": "פָּנָ֛יו",
+          "why": "Kadma, darga, tevir: three words. The priestly blessing.",
+          "tropes": [
+            "kadma",
+            "darga",
+            "tevir"
+          ]
+        },
+        {
+          "ref": "Deuteronomy 30:14",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "כִּֽי־קָר֥וֹב",
+          "lastWord": "אֵלֶ֛יךָ",
+          "why": "Mercha, tevir: the level word first.",
+          "tropes": [
+            "mercha",
+            "tevir"
+          ]
+        },
+        {
+          "ref": "Leviticus 16:30",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "כִּֽי־בַיּ֥וֹם",
+          "lastWord": "הַזֶּ֛ה",
+          "why": "Mercha, tevir again, in a Yom Kippur verse.",
+          "tropes": [
+            "mercha",
+            "tevir"
+          ]
+        },
+        {
+          "ref": "Genesis 3:9",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וַיִּקְרָ֛א",
+          "lastWord": "וַיִּקְרָ֛א",
+          "why": "Tevir alone on the first word.",
+          "tropes": [
+            "tevir"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "tevir",
+              "etnachta",
+              "revia",
+              "zakef"
+            ],
+            "items": 6,
+            "choices": 3,
+            "weight": {
+              "etnachta": 2
+            }
+          }
+        },
+        {
+          "type": "where-does-it-end",
+          "params": {
+            "families": [
+              "tevir",
+              "etnachta",
+              "zakef"
+            ],
+            "items": 4,
+            "audio": true
+          }
+        },
+        {
+          "type": "build-the-phrase",
+          "params": {
+            "family": "tevir",
+            "items": 2,
+            "patterns": [
+              "darga-tevir",
+              "mercha-tevir"
+            ],
+            "extraMarks": 2
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "tevir",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "torah-revia"
+      ]
+    },
+    {
+      "id": "torah-azla",
+      "melody": "torah",
+      "family": "azla",
+      "accents": [
+        "kadma",
+        "geresh",
+        "gershayim",
+        "munach"
+      ],
+      "title": "Kadma v'azla",
+      "summary": "A climb, with geresh and gershayim",
+      "goal": "After this you can hear kadma v'azla's climb and know its two cousins, geresh and gershayim.",
+      "body": [
+        "Kadma v'azla is a pair: kadma, a small hook above the word, then azla, a single slanted stroke above the next. Together they lead into a longer phrase, often one that ends on revia or zakef.",
+        "The tune climbs. Kadma starts low. Azla goes up, wobbles at the top, and holds. It sounds like a question being set up.",
+        "The same slanted stroke on its own is called geresh, and a double stroke is gershayim. They sing close relatives of the azla tune, and this site colours all three the same. Kadma looks like pashta but sits on the stressed syllable, not at the end of the word."
+      ],
+      "listenFor": "A climb that reaches high, wavers once at the top, and holds there.",
+      "examples": [
+        {
+          "ref": "Genesis 22:11",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "וַיִּקְרָ֨א",
+          "lastWord": "אֵלָ֜יו",
+          "why": "Kadma, azla on two words.",
+          "tropes": [
+            "kadma",
+            "geresh"
+          ]
+        },
+        {
+          "ref": "Deuteronomy 34:5",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "וַיָּ֨מׇת",
+          "lastWord": "שָׁ֜ם",
+          "why": "Kadma, azla opening a verse.",
+          "tropes": [
+            "kadma",
+            "geresh"
+          ]
+        },
+        {
+          "ref": "Genesis 1:9",
+          "words": [
+            2,
+            3
+          ],
+          "firstWord": "יִקָּו֨וּ",
+          "lastWord": "הַמַּ֜יִם",
+          "why": "Kadma, azla in the middle of a verse.",
+          "tropes": [
+            "kadma",
+            "geresh"
+          ]
+        },
+        {
+          "ref": "Exodus 40:18",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "וַיָּ֨קֶם",
+          "lastWord": "מֹשֶׁ֜ה",
+          "why": "Kadma, azla with a name on the second word.",
+          "tropes": [
+            "kadma",
+            "geresh"
+          ]
+        },
+        {
+          "ref": "Leviticus 19:2",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "דַּבֵּ֞ר",
+          "lastWord": "דַּבֵּ֞ר",
+          "why": "Gershayim alone on the first word.",
+          "tropes": [
+            "gershayim"
+          ]
+        },
+        {
+          "ref": "Deuteronomy 6:6",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וְהָי֞וּ",
+          "lastWord": "וְהָי֞וּ",
+          "why": "Gershayim alone again, in the verse after the Shema.",
+          "tropes": [
+            "gershayim"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "azla",
+              "zakef",
+              "revia",
+              "tevir"
+            ],
+            "items": 6,
+            "choices": 3
+          }
+        },
+        {
+          "type": "tap-the-phrase",
+          "params": {
+            "families": [
+              "azla",
+              "revia",
+              "zakef"
+            ],
+            "items": 4,
+            "verseWords": [
+              6,
+              14
+            ]
+          }
+        },
+        {
+          "type": "build-the-phrase",
+          "params": {
+            "family": "azla",
+            "items": 2,
+            "patterns": [
+              "kadma-geresh"
+            ],
+            "extraMarks": 2
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "azla",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "torah-tevir"
+      ]
+    },
+    {
+      "id": "torah-segol",
+      "melody": "torah",
+      "family": "segol",
+      "accents": [
+        "munach",
+        "zarka",
+        "segol",
+        "shalshelet"
+      ],
+      "title": "Segol",
+      "summary": "The long zarka and the short segol",
+      "goal": "After this you can hear the long winding zarka and the short segol that answers it.",
+      "body": [
+        "Segol is three dots above the end of a word, the shape of the segol vowel turned over. It comes with zarka, a curved stroke above the end of the word before it. The pair comes less often than the phrases you already know, and it usually sits near the start of a long verse.",
+        "Zarka is the longest tune so far: it winds down and down, step by step. Segol then answers with a short turn and settles.",
+        "A munach often opens the phrase. A very rare mark, shalshelet, a zigzag above the word, is a long chain of the same tune; it appears only four times in the Torah, and this site colours it with segol."
+      ],
+      "listenFor": "A long winding descent on zarka, then a short turn that settles on segol.",
+      "examples": [
+        {
+          "ref": "Genesis 1:7",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "וַיַּ֣עַשׂ",
+          "lastWord": "אֶת־הָרָקִ֒יעַ֒",
+          "why": "Munach, zarka, segol, three words.",
+          "tropes": [
+            "munach",
+            "zarka",
+            "segol"
+          ]
+        },
+        {
+          "ref": "Genesis 28:16",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "וַיִּיקַ֣ץ",
+          "lastWord": "מִשְּׁנָתוֹ֒",
+          "why": "The same three marks as Jacob wakes.",
+          "tropes": [
+            "munach",
+            "zarka",
+            "segol"
+          ]
+        },
+        {
+          "ref": "Exodus 34:6",
+          "words": [
+            0,
+            3
+          ],
+          "firstWord": "וַיַּעֲבֹ֨ר",
+          "lastWord": "וַיִּקְרָא֒",
+          "why": "Kadma, mercha, zarka, segol: four words before the thirteen attributes.",
+          "tropes": [
+            "kadma",
+            "mercha",
+            "zarka",
+            "segol"
+          ]
+        },
+        {
+          "ref": "Deuteronomy 4:39",
+          "words": [
+            2,
+            3
+          ],
+          "firstWord": "וַהֲשֵׁבֹתָ֮",
+          "lastWord": "אֶל־לְבָבֶ֒ךָ֒",
+          "why": "Zarka, segol on two words, in a verse many people know from the end of the service.",
+          "tropes": [
+            "zarka",
+            "segol"
+          ]
+        },
+        {
+          "ref": "Leviticus 4:2",
+          "words": [
+            1,
+            3
+          ],
+          "firstWord": "אֶל־בְּנֵ֣י",
+          "lastWord": "לֵאמֹר֒",
+          "why": "Munach, zarka, segol with a maqaf-joined word.",
+          "tropes": [
+            "munach",
+            "zarka",
+            "segol"
+          ]
+        },
+        {
+          "ref": "Deuteronomy 30:19",
+          "words": [
+            0,
+            4
+          ],
+          "firstWord": "הַעִדֹ֨תִי",
+          "lastWord": "וְאֶת־הָאָ֒רֶץ֒",
+          "why": "A five-word phrase: kadma, munach, zarka, munach, segol.",
+          "tropes": [
+            "kadma",
+            "munach",
+            "zarka",
+            "munach",
+            "segol"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "segol",
+              "zakef",
+              "revia",
+              "azla"
+            ],
+            "items": 6,
+            "choices": 3
+          }
+        },
+        {
+          "type": "same-or-different",
+          "params": {
+            "families": [
+              "segol",
+              "zakef",
+              "revia"
+            ],
+            "items": 4
+          }
+        },
+        {
+          "type": "where-does-it-end",
+          "params": {
+            "families": [
+              "segol",
+              "zakef"
+            ],
+            "items": 4,
+            "audio": true
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "segol",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "torah-azla"
+      ]
+    },
+    {
+      "id": "torah-telisha-ketana",
+      "melody": "torah",
+      "family": "telisha-ketana",
+      "accents": [
+        "telisha-ketana",
+        "munach"
+      ],
+      "title": "Telisha ketana",
+      "summary": "A small turn into the next phrase",
+      "goal": "After this you can hear telisha ketana's small turn and know it leads into the phrase after it.",
+      "body": [
+        "Telisha ketana is a small circle with a tail, above the end of the word. It has one of the smallest tunes in the system: a quick turn, down a step and back, that settles on the note it came from.",
+        "It is a joining mark, not a pause, and it almost always leads into kadma v'azla or into a longer phrase. This site gives it its own colour because it is easy to hear once you know it.",
+        "Its bigger cousin, telisha gedola, sits at the start of the word and sings a long climb; it lives in the pazer lesson."
+      ],
+      "listenFor": "A quick small turn on one word, down and back, that leads straight into the next phrase.",
+      "examples": [
+        {
+          "ref": "Genesis 2:22",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וַיִּ֩בֶן֩",
+          "lastWord": "וַיִּ֩בֶן֩",
+          "why": "Telisha ketana on the first word, then kadma and darga follow.",
+          "tropes": [
+            "telisha-ketana"
+          ]
+        },
+        {
+          "ref": "Genesis 1:29",
+          "words": [
+            2,
+            2
+          ],
+          "firstWord": "הִנֵּה֩",
+          "lastWord": "הִנֵּה֩",
+          "why": "On a single short word in the middle of a verse.",
+          "tropes": [
+            "telisha-ketana"
+          ]
+        },
+        {
+          "ref": "Genesis 18:13",
+          "words": [
+            3,
+            4
+          ],
+          "firstWord": "לָ֣מָּה",
+          "lastWord": "זֶּה֩",
+          "why": "Munach, telisha ketana: two words.",
+          "tropes": [
+            "munach",
+            "telisha-ketana"
+          ]
+        },
+        {
+          "ref": "Deuteronomy 4:33",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "הֲשָׁ֣מַֽע",
+          "lastWord": "עָם֩",
+          "why": "Munach, telisha ketana opening a verse.",
+          "tropes": [
+            "munach",
+            "telisha-ketana"
+          ]
+        },
+        {
+          "ref": "Leviticus 4:22",
+          "words": [
+            4,
+            5
+          ],
+          "firstWord": "אַחַ֣ת",
+          "lastWord": "מִכׇּל־מִצְוֺת֩",
+          "why": "Munach, telisha ketana after a pazer.",
+          "tropes": [
+            "munach",
+            "telisha-ketana"
+          ]
+        },
+        {
+          "ref": "Numbers 29:7",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וּבֶעָשׂוֹר֩",
+          "lastWord": "וּבֶעָשׂוֹר֩",
+          "why": "On the first word of a Yom Kippur verse.",
+          "tropes": [
+            "telisha-ketana"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "telisha-ketana",
+              "azla",
+              "tevir",
+              "revia"
+            ],
+            "items": 6,
+            "choices": 3,
+            "weight": {
+              "azla": 2
+            }
+          }
+        },
+        {
+          "type": "tap-the-phrase",
+          "params": {
+            "families": [
+              "telisha-ketana",
+              "azla"
+            ],
+            "items": 4,
+            "verseWords": [
+              6,
+              14
+            ]
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "telisha-ketana",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "torah-segol"
+      ]
+    },
+    {
+      "id": "torah-pazer",
+      "melody": "torah",
+      "family": "pazer",
+      "accents": [
+        "pazer",
+        "telisha-gedola",
+        "munach",
+        "karnei-para"
+      ],
+      "title": "Pazer",
+      "summary": "A tall arch, and telisha gedola",
+      "goal": "After this you can hear the tall arch of pazer and the long climb of telisha gedola.",
+      "body": [
+        "Pazer is a small branching mark above the word. It is a minor pause early in a long verse, and it has one of the highest tunes in the system: a climb to the sixth note, then a tumble back down.",
+        "Telisha gedola, a circle with a tail at the start of the word, is grouped with it here. Its tune climbs to the fifth and walks back down to where it began. The two are easy to tell apart by shape: pazer goes higher and falls faster.",
+        "Karnei farah, a double-horned mark that appears once in the Torah, is grouped here too. A munach often comes first."
+      ],
+      "listenFor": "A tall climb and a fall back down on one word; telisha gedola climbs and walks back more evenly.",
+      "examples": [
+        {
+          "ref": "Genesis 1:21",
+          "words": [
+            7,
+            7
+          ],
+          "firstWord": "הָֽרֹמֶ֡שֶׂת",
+          "lastWord": "הָֽרֹמֶ֡שֶׂת",
+          "why": "Pazer on one word in the story of creation.",
+          "tropes": [
+            "pazer"
+          ]
+        },
+        {
+          "ref": "Genesis 8:22",
+          "words": [
+            3,
+            3
+          ],
+          "firstWord": "זֶ֡רַע",
+          "lastWord": "זֶ֡רַע",
+          "why": "Pazer on a one-syllable word.",
+          "tropes": [
+            "pazer"
+          ]
+        },
+        {
+          "ref": "Genesis 8:22",
+          "words": [
+            4,
+            4
+          ],
+          "firstWord": "וְ֠קָצִ֠יר",
+          "lastWord": "וְ֠קָצִ֠יר",
+          "why": "Telisha gedola on the very next word: hear the two side by side.",
+          "tropes": [
+            "telisha-gedola"
+          ]
+        },
+        {
+          "ref": "Genesis 22:2",
+          "words": [
+            1,
+            1
+          ],
+          "firstWord": "קַח־נָ֠א",
+          "lastWord": "קַח־נָ֠א",
+          "why": "Telisha gedola on a maqaf-joined pair.",
+          "tropes": [
+            "telisha-gedola"
+          ]
+        },
+        {
+          "ref": "Deuteronomy 6:22",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "וַיִּתֵּ֣ן",
+          "lastWord": "יְהֹוָ֡ה",
+          "why": "Munach, pazer: two words.",
+          "tropes": [
+            "munach",
+            "pazer"
+          ]
+        },
+        {
+          "ref": "Leviticus 1:7",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וְ֠נָתְנ֠וּ",
+          "lastWord": "וְ֠נָתְנ֠וּ",
+          "why": "Telisha gedola opening a verse.",
+          "tropes": [
+            "telisha-gedola"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "pazer",
+              "telisha-ketana",
+              "azla",
+              "segol"
+            ],
+            "items": 6,
+            "choices": 3,
+            "weight": {
+              "telisha-ketana": 2
+            }
+          }
+        },
+        {
+          "type": "same-or-different",
+          "params": {
+            "families": [
+              "pazer",
+              "telisha-ketana",
+              "azla"
+            ],
+            "items": 4
+          }
+        },
+        {
+          "type": "tap-the-phrase",
+          "params": {
+            "families": [
+              "pazer",
+              "azla",
+              "telisha-ketana"
+            ],
+            "items": 4,
+            "verseWords": [
+              8,
+              16
+            ]
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "pazer",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "torah-telisha-ketana"
+      ]
+    },
+    {
+      "id": "torah-zakef-gadol",
+      "melody": "torah",
+      "family": "zakef-gadol",
+      "accents": [
+        "zakef-gadol"
+      ],
+      "title": "Zakef gadol",
+      "summary": "The larger zakef, on a word of its own",
+      "goal": "After this you can hear zakef gadol and tell it from the small zakef you already know.",
+      "body": [
+        "Zakef gadol is zakef's bigger form: the two dots with a vertical line beside them. It stands on its own word with no words leading in, which is why it needs a bigger tune to fill the space.",
+        "The tune rises, holds high with a small lean, and comes back down to settle. Zakef katan is a quick peak; zakef gadol stays up longer and ends the same way. If you hear the peak hold, it is gadol.",
+        "This is the last of the Torah families. After it you can hear everything in a regular verse."
+      ],
+      "listenFor": "A rise that holds at the top with a small lean, then settles; longer than the small zakef's peak.",
+      "examples": [
+        {
+          "ref": "Genesis 9:13",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "אֶת־קַשְׁתִּ֕י",
+          "lastWord": "אֶת־קַשְׁתִּ֕י",
+          "why": "Zakef gadol on the first word, the rainbow.",
+          "tropes": [
+            "zakef-gadol"
+          ]
+        },
+        {
+          "ref": "Numbers 12:13",
+          "words": [
+            4,
+            4
+          ],
+          "firstWord": "אֵ֕ל",
+          "lastWord": "אֵ֕ל",
+          "why": "On a one-syllable word in a short prayer.",
+          "tropes": [
+            "zakef-gadol"
+          ]
+        },
+        {
+          "ref": "Genesis 28:16",
+          "words": [
+            3,
+            3
+          ],
+          "firstWord": "וַיֹּ֕אמֶר",
+          "lastWord": "וַיֹּ֕אמֶר",
+          "why": "On a verb, right after a segol phrase.",
+          "tropes": [
+            "zakef-gadol"
+          ]
+        },
+        {
+          "ref": "Exodus 32:32",
+          "words": [
+            3,
+            3
+          ],
+          "firstWord": "וְאִם־אַ֕יִן",
+          "lastWord": "וְאִם־אַ֕יִן",
+          "why": "On a maqaf-joined pair, as Moses pleads.",
+          "tropes": [
+            "zakef-gadol"
+          ]
+        },
+        {
+          "ref": "Genesis 2:9",
+          "words": [
+            13,
+            13
+          ],
+          "firstWord": "וְעֵ֕ץ",
+          "lastWord": "וְעֵ֕ץ",
+          "why": "Before the ending phrase; compare with the zakef earlier in the verse.",
+          "tropes": [
+            "zakef-gadol"
+          ]
+        },
+        {
+          "ref": "Numbers 14:8",
+          "words": [
+            9,
+            9
+          ],
+          "firstWord": "אֶ֕רֶץ",
+          "lastWord": "אֶ֕רֶץ",
+          "why": "On a one-syllable word in a long verse.",
+          "tropes": [
+            "zakef-gadol"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "zakef-gadol",
+              "zakef",
+              "pazer",
+              "revia"
+            ],
+            "items": 6,
+            "choices": 3,
+            "weight": {
+              "zakef": 3
+            }
+          }
+        },
+        {
+          "type": "same-or-different",
+          "params": {
+            "families": [
+              "zakef-gadol",
+              "zakef"
+            ],
+            "items": 4
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "sof-pasuk",
+              "etnachta",
+              "zakef",
+              "revia",
+              "tevir",
+              "azla",
+              "segol",
+              "telisha-ketana",
+              "pazer",
+              "zakef-gadol"
+            ],
+            "items": 4,
+            "choices": 4,
+            "label": "All ten"
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "zakef-gadol",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "torah-pazer"
+      ]
+    },
+    {
+      "id": "torah-first-verse",
+      "melody": "torah",
+      "family": null,
+      "accents": [],
+      "title": "Your first verse",
+      "summary": "Lein one verse of this week's reading",
+      "goal": "After this you have leined one verse of this week's Torah reading.",
+      "body": [
+        "You can hear all ten phrases. Now put them together on one verse from this week's reading. The app picks a short one; you can choose another.",
+        "First hear each phrase on its own, in order. Then hear the verse whole. Then chant along with the recording, slowly at first, then at full speed. Breathe at the rest and at the end.",
+        "If your verse is the last one in its aliyah, the ending changes a little; the recording shows you how. The reader's version is one good version. If your cantor or tutor sings a phrase differently, theirs wins."
+      ],
+      "listenFor": "Your own voice landing the rest and the ending where the reader does.",
+      "examples": [
+        {
+          "ref": "Genesis 1:1",
+          "words": [
+            0,
+            6
+          ],
+          "firstWord": "בְּרֵאשִׁ֖ית",
+          "lastWord": "הָאָֽרֶץ׃",
+          "why": "Fallback verse if this week's reading has no word-ready verse: two phrases only.",
+          "phrases": [
+            {
+              "family": "etnachta",
+              "words": [
+                0,
+                2
+              ]
+            },
+            {
+              "family": "sof-pasuk",
+              "words": [
+                3,
+                6
+              ]
+            }
+          ]
+        },
+        {
+          "ref": "Numbers 6:26",
+          "words": [
+            0,
+            6
+          ],
+          "firstWord": "יִשָּׂ֨א",
+          "lastWord": "שָׁלֽוֹם׃",
+          "why": "Fallback: zakef then the ending.",
+          "phrases": [
+            {
+              "family": "zakef",
+              "words": [
+                0,
+                3
+              ]
+            },
+            {
+              "family": "sof-pasuk",
+              "words": [
+                4,
+                6
+              ]
+            }
+          ]
+        },
+        {
+          "ref": "Deuteronomy 6:4",
+          "words": [
+            0,
+            5
+          ],
+          "firstWord": "שְׁמַ֖ע",
+          "lastWord": "אֶחָֽד׃",
+          "why": "Fallback: the Shema.",
+          "phrases": [
+            {
+              "family": "etnachta",
+              "words": [
+                0,
+                1
+              ]
+            },
+            {
+              "family": "sof-pasuk",
+              "words": [
+                2,
+                5
+              ]
+            }
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "first-verse",
+          "params": {
+            "source": "this-week",
+            "kind": "torah",
+            "pick": "shortest-word-ready",
+            "maxWords": 12,
+            "steps": [
+              "phrases",
+              "whole",
+              "along-0.75",
+              "along-1"
+            ],
+            "celebrate": true,
+            "openInLein": true
+          }
+        }
+      ],
+      "prerequisites": [
+        "torah-zakef-gadol"
+      ]
+    },
+    {
+      "id": "haftarah-sof-pasuk",
+      "melody": "haftarah",
+      "family": "sof-pasuk",
+      "accents": [
+        "merkha",
+        "tipcha",
+        "silluq"
+      ],
+      "title": "Sof pasuk in the haftarah",
+      "summary": "The ending, in the haftarah tune",
+      "goal": "After this you can hear the haftarah ending, which settles on the home note instead of dropping below it.",
+      "body": [
+        "The haftarah uses the same marks and the same phrases as the Torah, with a different set of tunes. The mode is minor.",
+        "The ending is the first difference to hear. In the Torah the last word drops to the lowest note. In the haftarah, tipcha falls low first; then the last word rises to the third and falls back onto the home note, the note the whole tune keeps returning to.",
+        "The words are the same: mercha, tipcha, sof pasuk."
+      ],
+      "listenFor": "Tipcha falls low, then the last word rises and falls back onto the home note.",
+      "examples": [
+        {
+          "ref": "Isaiah 40:1",
+          "words": [
+            3,
+            4
+          ],
+          "firstWord": "יֹאמַ֖ר",
+          "lastWord": "אֱלֹהֵיכֶֽם׃",
+          "why": "Tipcha, sof pasuk: two words, in the haftarah of comfort.",
+          "tropes": [
+            "tipcha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "Isaiah 6:3",
+          "words": [
+            9,
+            11
+          ],
+          "firstWord": "מְלֹ֥א",
+          "lastWord": "כְּבוֹדֽוֹ׃",
+          "why": "Mercha, tipcha, sof pasuk after the three holies.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "I Kings 19:12",
+          "words": [
+            8,
+            10
+          ],
+          "firstWord": "ק֖וֹל",
+          "lastWord": "דַקָּֽה׃",
+          "why": "Tipcha, mercha, sof pasuk: the still small voice.",
+          "tropes": [
+            "tipcha",
+            "mercha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "Isaiah 60:1",
+          "words": [
+            5,
+            8
+          ],
+          "firstWord": "וּכְב֥וֹד",
+          "lastWord": "זָרָֽח׃",
+          "why": "Four words, mercha, tipcha, mercha, sof pasuk.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "mercha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "Hosea 2:21",
+          "words": [
+            7,
+            8
+          ],
+          "firstWord": "וּבְחֶ֖סֶד",
+          "lastWord": "וּֽבְרַחֲמִֽים׃",
+          "why": "Two words, from the line said while wrapping tefillin.",
+          "tropes": [
+            "tipcha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "Jeremiah 1:5",
+          "words": [
+            8,
+            10
+          ],
+          "firstWord": "נָבִ֥יא",
+          "lastWord": "נְתַתִּֽיךָ׃",
+          "why": "Three words ending a verse about a prophet's calling.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "silluq"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "same-or-different",
+          "params": {
+            "families": [
+              "sof-pasuk"
+            ],
+            "melodies": [
+              "torah",
+              "haftarah"
+            ],
+            "items": 4,
+            "label": "Torah or haftarah"
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "sof-pasuk",
+              "etnachta"
+            ],
+            "items": 6,
+            "choices": 2
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "sof-pasuk",
+            "kind": "haftarah",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "torah-sof-pasuk",
+        "torah-etnachta"
+      ]
+    },
+    {
+      "id": "haftarah-etnachta",
+      "melody": "haftarah",
+      "family": "etnachta",
+      "accents": [
+        "tipcha",
+        "munach",
+        "etnachta"
+      ],
+      "title": "Etnachta in the haftarah",
+      "summary": "The rest, in the haftarah tune",
+      "goal": "After this you can hear the haftarah rest, which rocks before it settles.",
+      "body": [
+        "The rest in the middle of the verse is longer in the haftarah than in the Torah. Tipcha rises a little and holds. Munach steps down. Then etnachta rocks between the home note and the third, rises to the fifth, and settles on the fourth.",
+        "So the rest does not finish the thought: it leaves the tune hanging above home, and the second half of the verse brings it down.",
+        "The marks are unchanged: tipcha, munach, etnachta."
+      ],
+      "listenFor": "A rocking figure between home and the third, a rise, and a settle on the fourth, hanging rather than closing.",
+      "examples": [
+        {
+          "ref": "Isaiah 40:1",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "נַחֲמ֥וּ",
+          "lastWord": "עַמִּ֑י",
+          "why": "Mercha, tipcha, etnachta on the three words everyone knows.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "etnachta"
+          ]
+        },
+        {
+          "ref": "Isaiah 6:3",
+          "words": [
+            6,
+            8
+          ],
+          "firstWord": "קָד֖וֹשׁ",
+          "lastWord": "צְבָא֑וֹת",
+          "why": "Tipcha, munach, etnachta on the third holy.",
+          "tropes": [
+            "tipcha",
+            "munach",
+            "etnachta"
+          ]
+        },
+        {
+          "ref": "Hosea 2:21",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "וְאֵרַשְׂתִּ֥יךְ",
+          "lastWord": "לְעוֹלָ֑ם",
+          "why": "Mercha, tipcha, etnachta.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "etnachta"
+          ]
+        },
+        {
+          "ref": "Isaiah 60:1",
+          "words": [
+            0,
+            4
+          ],
+          "firstWord": "ק֥וּמִי",
+          "lastWord": "אוֹרֵ֑ךְ",
+          "why": "Five words with two munachs before the rest.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "munach",
+            "munach",
+            "etnachta"
+          ]
+        },
+        {
+          "ref": "I Kings 19:12",
+          "words": [
+            3,
+            5
+          ],
+          "firstWord": "לֹ֥א",
+          "lastWord": "יְהֹוָ֑ה",
+          "why": "Mercha, tipcha, etnachta before the still small voice.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "etnachta"
+          ]
+        },
+        {
+          "ref": "Isaiah 1:17",
+          "words": [
+            2,
+            5
+          ],
+          "firstWord": "דִּרְשׁ֥וּ",
+          "lastWord": "חָמ֑וֹץ",
+          "why": "Four words, resting on the fourth.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "munach",
+            "etnachta"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "same-or-different",
+          "params": {
+            "families": [
+              "sof-pasuk",
+              "etnachta"
+            ],
+            "items": 4
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "sof-pasuk",
+              "etnachta"
+            ],
+            "items": 6,
+            "choices": 2
+          }
+        },
+        {
+          "type": "where-does-it-end",
+          "params": {
+            "families": [
+              "etnachta",
+              "sof-pasuk"
+            ],
+            "items": 4,
+            "audio": true
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "etnachta",
+            "kind": "haftarah",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "haftarah-sof-pasuk"
+      ]
+    },
+    {
+      "id": "haftarah-zakef",
+      "melody": "haftarah",
+      "family": "zakef",
+      "accents": [
+        "mahpach",
+        "pashta",
+        "munach",
+        "zakef-katan",
+        "yetiv"
+      ],
+      "title": "Zakef in the haftarah",
+      "summary": "A short step up and a drop",
+      "goal": "After this you can hear the haftarah zakef, a short step up and a drop.",
+      "body": [
+        "Zakef in the haftarah is shorter than in the Torah: one step up, then a drop of two. Pashta before it sits high and falls one step, and mahpach swings down to the home note first.",
+        "The munach that comes right before zakef has a tune of its own here, with a leap up near its end. Listen for that leap: it tells you a zakef is coming.",
+        "Yetiv, before the first letter, opens the phrase with a high note that falls."
+      ],
+      "listenFor": "A small step up and a two-step drop; the munach before it leaps upward as a warning.",
+      "examples": [
+        {
+          "ref": "I Kings 19:12",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "וְאַחַ֤ר",
+          "lastWord": "אֵ֔שׁ",
+          "why": "Mahpach, pashta, zakef.",
+          "tropes": [
+            "mahpach",
+            "pashta",
+            "zakef-katan"
+          ]
+        },
+        {
+          "ref": "Isaiah 43:21",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "עַם־זוּ֙",
+          "lastWord": "לִ֔י",
+          "why": "Pashta, munach, zakef: hear the munach's leap.",
+          "tropes": [
+            "pashta",
+            "munach",
+            "zakef-katan"
+          ]
+        },
+        {
+          "ref": "Isaiah 49:15",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "הֲתִשְׁכַּ֤ח",
+          "lastWord": "עוּלָ֔הּ",
+          "why": "Mahpach, pashta, zakef opening a verse.",
+          "tropes": [
+            "mahpach",
+            "pashta",
+            "zakef-katan"
+          ]
+        },
+        {
+          "ref": "Isaiah 40:31",
+          "words": [
+            0,
+            3
+          ],
+          "firstWord": "וְקוֹיֵ֤",
+          "lastWord": "כֹ֔חַ",
+          "why": "Four words: mahpach, pashta, munach, zakef.",
+          "tropes": [
+            "mahpach",
+            "pashta",
+            "munach",
+            "zakef-katan"
+          ]
+        },
+        {
+          "ref": "Hosea 14:2",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "שׁ֚וּבָה",
+          "lastWord": "יִשְׂרָאֵ֔ל",
+          "why": "Yetiv, zakef on the two words that open a call to return.",
+          "tropes": [
+            "yetiv",
+            "zakef-katan"
+          ]
+        },
+        {
+          "ref": "Isaiah 41:10",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "אַל־תִּירָא֙",
+          "lastWord": "עִמְּךָ־אָ֔נִי",
+          "why": "Pashta, munach, zakef in a verse of reassurance.",
+          "tropes": [
+            "pashta",
+            "munach",
+            "zakef-katan"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "zakef",
+              "etnachta",
+              "sof-pasuk"
+            ],
+            "items": 6,
+            "choices": 3
+          }
+        },
+        {
+          "type": "tap-the-phrase",
+          "params": {
+            "families": [
+              "zakef"
+            ],
+            "items": 4,
+            "verseWords": [
+              6,
+              12
+            ]
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "zakef",
+            "kind": "haftarah",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "haftarah-etnachta"
+      ]
+    },
+    {
+      "id": "haftarah-revia",
+      "melody": "haftarah",
+      "family": "revia",
+      "accents": [
+        "munach",
+        "revia"
+      ],
+      "title": "Revia in the haftarah",
+      "summary": "A walk down to home",
+      "goal": "After this you can hear the haftarah revia, which walks down to home and touches it twice.",
+      "body": [
+        "Revia walks down here too, but it goes all the way to the home note, bounces up to the third, and lands on home again. It is longer than the Torah revia and ends more firmly.",
+        "The munach before it leaps up to the top note and comes straight back. When you hear that leap, a revia follows."
+      ],
+      "listenFor": "A walk down to the home note, a touch above, and home again; the munach before it leaps up high.",
+      "examples": [
+        {
+          "ref": "Isaiah 52:7",
+          "words": [
+            2,
+            3
+          ],
+          "firstWord": "רַגְלֵ֣י",
+          "lastWord": "מְבַשֵּׂ֗ר",
+          "why": "Munach, revia: hear the octave leap on the munach.",
+          "tropes": [
+            "munach",
+            "revia"
+          ]
+        },
+        {
+          "ref": "Judges 13:3",
+          "words": [
+            3,
+            4
+          ],
+          "firstWord": "וַיֹּ֣אמֶר",
+          "lastWord": "אֵלֶ֗יהָ",
+          "why": "Munach, revia in a story verse.",
+          "tropes": [
+            "munach",
+            "revia"
+          ]
+        },
+        {
+          "ref": "Isaiah 54:10",
+          "words": [
+            6,
+            7
+          ],
+          "firstWord": "מֵאִתֵּ֣ךְ",
+          "lastWord": "לֹא־יָמ֗וּשׁ",
+          "why": "Munach, revia with a maqaf-joined word.",
+          "tropes": [
+            "munach",
+            "revia"
+          ]
+        },
+        {
+          "ref": "Micah 6:8",
+          "words": [
+            5,
+            6
+          ],
+          "firstWord": "דּוֹרֵ֣שׁ",
+          "lastWord": "מִמְּךָ֗",
+          "why": "Munach, revia in a verse many people know.",
+          "tropes": [
+            "munach",
+            "revia"
+          ]
+        },
+        {
+          "ref": "Judges 5:3",
+          "words": [
+            4,
+            4
+          ],
+          "firstWord": "אָנֹכִ֗י",
+          "lastWord": "אָנֹכִ֗י",
+          "why": "Revia alone on one word, from the song of Deborah.",
+          "tropes": [
+            "revia"
+          ]
+        },
+        {
+          "ref": "Isaiah 42:6",
+          "words": [
+            6,
+            6
+          ],
+          "firstWord": "וְאֶצׇּרְךָ֗",
+          "lastWord": "וְאֶצׇּרְךָ֗",
+          "why": "Revia alone in the second half of a verse.",
+          "tropes": [
+            "revia"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "revia",
+              "zakef",
+              "etnachta",
+              "sof-pasuk"
+            ],
+            "items": 6,
+            "choices": 3,
+            "weight": {
+              "zakef": 2
+            }
+          }
+        },
+        {
+          "type": "same-or-different",
+          "params": {
+            "families": [
+              "revia",
+              "zakef"
+            ],
+            "items": 4
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "revia",
+            "kind": "haftarah",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "haftarah-zakef"
+      ]
+    },
+    {
+      "id": "haftarah-tevir",
+      "melody": "haftarah",
+      "family": "tevir",
+      "accents": [
+        "darga",
+        "merkha",
+        "tevir"
+      ],
+      "title": "Tevir in the haftarah",
+      "summary": "A drop to the bottom and a climb back",
+      "goal": "After this you can hear the haftarah tevir, a drop to the bottom and a climb back.",
+      "body": [
+        "Tevir in the haftarah drops to the home note, dips once below it, and climbs back to the third. It is deeper than the Torah tevir.",
+        "Darga before it starts high and walks down four steps to meet it. Mercha before it leaps up and comes back."
+      ],
+      "listenFor": "A drop to the bottom, a dip below it, and a climb back; darga before it walks down from high.",
+      "examples": [
+        {
+          "ref": "Isaiah 6:3",
+          "words": [
+            4,
+            5
+          ],
+          "firstWord": "קָד֧וֹשׁ",
+          "lastWord": "קָד֛וֹשׁ",
+          "why": "Darga, tevir on the first two holies.",
+          "tropes": [
+            "darga",
+            "tevir"
+          ]
+        },
+        {
+          "ref": "Isaiah 51:12",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "אָנֹכִ֧י",
+          "lastWord": "אָנֹכִ֛י",
+          "why": "Darga, tevir on a repeated word.",
+          "tropes": [
+            "darga",
+            "tevir"
+          ]
+        },
+        {
+          "ref": "Isaiah 1:17",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "לִמְד֥וּ",
+          "lastWord": "הֵיטֵ֛ב",
+          "why": "Mercha, tevir opening a verse.",
+          "tropes": [
+            "mercha",
+            "tevir"
+          ]
+        },
+        {
+          "ref": "Isaiah 1:18",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "לְכוּ־נָ֛א",
+          "lastWord": "לְכוּ־נָ֛א",
+          "why": "Tevir alone on a maqaf-joined pair.",
+          "tropes": [
+            "tevir"
+          ]
+        },
+        {
+          "ref": "I Kings 8:13",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "בָּנֹ֥ה",
+          "lastWord": "בָנִ֛יתִי",
+          "why": "Mercha, tevir at Solomon's dedication.",
+          "tropes": [
+            "mercha",
+            "tevir"
+          ]
+        },
+        {
+          "ref": "II Samuel 22:2",
+          "words": [
+            1,
+            1
+          ],
+          "firstWord": "יְהֹוָ֛ה",
+          "lastWord": "יְהֹוָ֛ה",
+          "why": "Tevir alone on one word.",
+          "tropes": [
+            "tevir"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "tevir",
+              "etnachta",
+              "revia",
+              "zakef"
+            ],
+            "items": 6,
+            "choices": 3
+          }
+        },
+        {
+          "type": "where-does-it-end",
+          "params": {
+            "families": [
+              "tevir",
+              "etnachta",
+              "zakef"
+            ],
+            "items": 4,
+            "audio": true
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "tevir",
+            "kind": "haftarah",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "haftarah-revia"
+      ]
+    },
+    {
+      "id": "haftarah-azla",
+      "melody": "haftarah",
+      "family": "azla",
+      "accents": [
+        "kadma",
+        "geresh",
+        "gershayim"
+      ],
+      "title": "Kadma v'azla in the haftarah",
+      "summary": "A leap to the top of the range",
+      "goal": "After this you can hear the haftarah azla, with its leap to the top of the range.",
+      "body": [
+        "Kadma v'azla in the haftarah starts with a plain kadma, then azla climbs, leaps up to the octave, and drops back. It is the widest phrase in the haftarah tune.",
+        "Geresh on its own winds up and down more gently. Gershayim rises and holds high. All three share a colour here, as in the Torah."
+      ],
+      "listenFor": "A climb, a leap to the very top, and a drop back; gershayim rises and holds instead.",
+      "examples": [
+        {
+          "ref": "Isaiah 6:8",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וָאֶשְׁמַ֞ע",
+          "lastWord": "וָאֶשְׁמַ֞ע",
+          "why": "Gershayim alone on the first word, before 'here I am'.",
+          "tropes": [
+            "gershayim"
+          ]
+        },
+        {
+          "ref": "Isaiah 54:11",
+          "words": [
+            4,
+            5
+          ],
+          "firstWord": "הִנֵּ֨ה",
+          "lastWord": "אָנֹכִ֜י",
+          "why": "Kadma, azla: hear the leap.",
+          "tropes": [
+            "kadma",
+            "geresh"
+          ]
+        },
+        {
+          "ref": "Micah 6:8",
+          "words": [
+            4,
+            4
+          ],
+          "firstWord": "וּמָֽה־יְהֹוָ֞ה",
+          "lastWord": "וּמָֽה־יְהֹוָ֞ה",
+          "why": "Gershayim on one word in a familiar verse.",
+          "tropes": [
+            "gershayim"
+          ]
+        },
+        {
+          "ref": "Isaiah 54:10",
+          "words": [
+            5,
+            5
+          ],
+          "firstWord": "וְחַסְדִּ֞י",
+          "lastWord": "וְחַסְדִּ֞י",
+          "why": "Gershayim again, on a single word.",
+          "tropes": [
+            "gershayim"
+          ]
+        },
+        {
+          "ref": "Amos 9:12",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "לְמַ֨עַן",
+          "lastWord": "יִֽירְשׁ֜וּ",
+          "why": "Kadma, azla opening a verse.",
+          "tropes": [
+            "kadma",
+            "geresh"
+          ]
+        },
+        {
+          "ref": "I Kings 18:9",
+          "words": [
+            3,
+            3
+          ],
+          "firstWord": "כִּֽי־אַתָּ֞ה",
+          "lastWord": "כִּֽי־אַתָּ֞ה",
+          "why": "Gershayim on a maqaf-joined pair.",
+          "tropes": [
+            "gershayim"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "azla",
+              "zakef",
+              "revia",
+              "tevir"
+            ],
+            "items": 6,
+            "choices": 3
+          }
+        },
+        {
+          "type": "tap-the-phrase",
+          "params": {
+            "families": [
+              "azla",
+              "revia",
+              "zakef"
+            ],
+            "items": 4,
+            "verseWords": [
+              6,
+              14
+            ]
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "azla",
+            "kind": "haftarah",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "haftarah-tevir"
+      ]
+    },
+    {
+      "id": "haftarah-segol",
+      "melody": "haftarah",
+      "family": "segol",
+      "accents": [
+        "munach",
+        "zarka",
+        "segol"
+      ],
+      "title": "Segol in the haftarah",
+      "summary": "Zarka and segol, in the haftarah tune",
+      "goal": "After this you can hear the haftarah zarka and segol.",
+      "body": [
+        "Zarka winds down here as it does in the Torah, from the fifth note all the way to the home note and a touch below. Segol answers with a rise to the fifth and a step down.",
+        "The pair is less common in the haftarah than in the Torah, so it stands out when it comes."
+      ],
+      "listenFor": "A winding descent to the bottom, then a short rise and a step down.",
+      "examples": [
+        {
+          "ref": "Jeremiah 32:17",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "אֲהָהּ֮",
+          "lastWord": "יֱהֹוִה֒",
+          "why": "Zarka, munach, segol on three words.",
+          "tropes": [
+            "zarka",
+            "munach",
+            "segol"
+          ]
+        },
+        {
+          "ref": "Isaiah 51:13",
+          "words": [
+            3,
+            6
+          ],
+          "firstWord": "נוֹטֶ֣ה",
+          "lastWord": "אָ֒רֶץ֒",
+          "why": "Four words: munach, zarka, munach, segol.",
+          "tropes": [
+            "munach",
+            "zarka",
+            "munach",
+            "segol"
+          ]
+        },
+        {
+          "ref": "Amos 9:14",
+          "words": [
+            0,
+            3
+          ],
+          "firstWord": "וְשַׁבְתִּי֮",
+          "lastWord": "יִשְׂרָאֵל֒",
+          "why": "Zarka, munach, munach, segol.",
+          "tropes": [
+            "zarka",
+            "munach",
+            "munach",
+            "segol"
+          ]
+        },
+        {
+          "ref": "I Kings 1:24",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "וַיֹּ֘אמֶר֮",
+          "lastWord": "נָתָן֒",
+          "why": "Zarka, segol on two words.",
+          "tropes": [
+            "zarka",
+            "segol"
+          ]
+        },
+        {
+          "ref": "Jeremiah 9:23",
+          "words": [
+            4,
+            6
+          ],
+          "firstWord": "הַשְׂכֵּל֮",
+          "lastWord": "אוֹתִי֒",
+          "why": "Zarka, munach, segol in the middle of a verse.",
+          "tropes": [
+            "zarka",
+            "munach",
+            "segol"
+          ]
+        },
+        {
+          "ref": "II Kings 4:26",
+          "words": [
+            0,
+            2
+          ],
+          "firstWord": "עַתָּה֮",
+          "lastWord": "לִקְרָאתָהּ֒",
+          "why": "Zarka, munach, segol opening a verse.",
+          "tropes": [
+            "zarka",
+            "munach",
+            "segol"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "segol",
+              "zakef",
+              "revia",
+              "azla"
+            ],
+            "items": 6,
+            "choices": 3
+          }
+        },
+        {
+          "type": "where-does-it-end",
+          "params": {
+            "families": [
+              "segol",
+              "zakef"
+            ],
+            "items": 4,
+            "audio": true
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "segol",
+            "kind": "haftarah",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "haftarah-azla"
+      ]
+    },
+    {
+      "id": "haftarah-telisha-ketana",
+      "melody": "haftarah",
+      "family": "telisha-ketana",
+      "accents": [
+        "telisha-ketana",
+        "munach"
+      ],
+      "title": "Telisha ketana in the haftarah",
+      "summary": "A longer turn than the Torah's",
+      "goal": "After this you can hear the haftarah telisha ketana, which is longer than the Torah's.",
+      "body": [
+        "In the Torah, telisha ketana has one of the smallest tunes there is. In the haftarah it grows: it holds on the fourth note, turns up to the fifth, and walks down to home. It still leads straight into the phrase after it."
+      ],
+      "listenFor": "A held note, a turn upward, and a walk down to home, all on one word that leads on.",
+      "examples": [
+        {
+          "ref": "I Kings 19:7",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וַיָּ֩שׇׁב֩",
+          "lastWord": "וַיָּ֩שׇׁב֩",
+          "why": "On the first word, before Elijah is woken a second time.",
+          "tropes": [
+            "telisha-ketana"
+          ]
+        },
+        {
+          "ref": "Isaiah 54:17",
+          "words": [
+            10,
+            10
+          ],
+          "firstWord": "נַחֲלַת֩",
+          "lastWord": "נַחֲלַת֩",
+          "why": "On one word, right after a pazer.",
+          "tropes": [
+            "telisha-ketana"
+          ]
+        },
+        {
+          "ref": "Zechariah 2:15",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וְנִלְווּ֩",
+          "lastWord": "וְנִלְווּ֩",
+          "why": "Opening a verse.",
+          "tropes": [
+            "telisha-ketana"
+          ]
+        },
+        {
+          "ref": "II Samuel 6:11",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וַיֵּ֩שֶׁב֩",
+          "lastWord": "וַיֵּ֩שֶׁב֩",
+          "why": "On the first word of a story verse.",
+          "tropes": [
+            "telisha-ketana"
+          ]
+        },
+        {
+          "ref": "Ezekiel 44:27",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וּבְיוֹם֩",
+          "lastWord": "וּבְיוֹם֩",
+          "why": "On a one-word opening.",
+          "tropes": [
+            "telisha-ketana"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "telisha-ketana",
+              "azla",
+              "tevir",
+              "revia"
+            ],
+            "items": 6,
+            "choices": 3,
+            "weight": {
+              "azla": 2
+            }
+          }
+        },
+        {
+          "type": "tap-the-phrase",
+          "params": {
+            "families": [
+              "telisha-ketana",
+              "azla"
+            ],
+            "items": 4,
+            "verseWords": [
+              6,
+              16
+            ]
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "telisha-ketana",
+            "kind": "haftarah",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "haftarah-segol"
+      ]
+    },
+    {
+      "id": "haftarah-pazer",
+      "melody": "haftarah",
+      "family": "pazer",
+      "accents": [
+        "pazer",
+        "telisha-gedola",
+        "munach"
+      ],
+      "title": "Pazer in the haftarah",
+      "summary": "A climb to the octave",
+      "goal": "After this you can hear the haftarah pazer, which climbs to the octave.",
+      "body": [
+        "Pazer climbs here too, as high as the haftarah tune goes: up to the octave and back down in one long sweep. Telisha gedola climbs only to the fourth and walks back, so it is the quieter of the two, as in the Torah."
+      ],
+      "listenFor": "A long sweep up to the octave and all the way back; telisha gedola is the same shape at half the height.",
+      "examples": [
+        {
+          "ref": "Isaiah 54:17",
+          "words": [
+            9,
+            9
+          ],
+          "firstWord": "זֹ֡את",
+          "lastWord": "זֹ֡את",
+          "why": "Pazer on a one-syllable word.",
+          "tropes": [
+            "pazer"
+          ]
+        },
+        {
+          "ref": "I Kings 8:6",
+          "words": [
+            0,
+            1
+          ],
+          "firstWord": "וַיָּבִ֣אוּ",
+          "lastWord": "הַ֠כֹּהֲנִ֠ים",
+          "why": "Munach, telisha gedola: two words.",
+          "tropes": [
+            "munach",
+            "telisha-gedola"
+          ]
+        },
+        {
+          "ref": "Zechariah 4:5",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וַ֠יַּ֠עַן",
+          "lastWord": "וַ֠יַּ֠עַן",
+          "why": "Telisha gedola opening a verse.",
+          "tropes": [
+            "telisha-gedola"
+          ]
+        },
+        {
+          "ref": "Jeremiah 7:22",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "כִּ֠י",
+          "lastWord": "כִּ֠י",
+          "why": "Telisha gedola on a one-syllable word.",
+          "tropes": [
+            "telisha-gedola"
+          ]
+        },
+        {
+          "ref": "II Samuel 7:8",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וְ֠עַתָּ֠ה",
+          "lastWord": "וְ֠עַתָּ֠ה",
+          "why": "Telisha gedola on the first word.",
+          "tropes": [
+            "telisha-gedola"
+          ]
+        },
+        {
+          "ref": "Ezekiel 43:12",
+          "words": [
+            3,
+            4
+          ],
+          "firstWord": "עַל־רֹ֣אשׁ",
+          "lastWord": "הָ֠הָ֠ר",
+          "why": "Munach, telisha gedola in the middle of a verse.",
+          "tropes": [
+            "munach",
+            "telisha-gedola"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "pazer",
+              "telisha-ketana",
+              "azla",
+              "segol"
+            ],
+            "items": 6,
+            "choices": 3,
+            "weight": {
+              "telisha-ketana": 2
+            }
+          }
+        },
+        {
+          "type": "same-or-different",
+          "params": {
+            "families": [
+              "pazer",
+              "telisha-ketana",
+              "azla"
+            ],
+            "items": 4
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "pazer",
+            "kind": "haftarah",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "haftarah-telisha-ketana"
+      ]
+    },
+    {
+      "id": "haftarah-zakef-gadol",
+      "melody": "haftarah",
+      "family": "zakef-gadol",
+      "accents": [
+        "zakef-gadol"
+      ],
+      "title": "Zakef gadol in the haftarah",
+      "summary": "The larger zakef, in the haftarah tune",
+      "goal": "After this you can hear the haftarah zakef gadol.",
+      "body": [
+        "Zakef gadol stands alone on its word here too. The tune leaps to the fifth, falls to the home note, and settles on the third: a wide swing down, where the small zakef is a short step."
+      ],
+      "listenFor": "A leap up, a fall to the bottom, and a settle on the third; wider than the small zakef.",
+      "examples": [
+        {
+          "ref": "Isaiah 40:16",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וּלְבָנ֕וֹן",
+          "lastWord": "וּלְבָנ֕וֹן",
+          "why": "On the first word of a verse about Lebanon.",
+          "tropes": [
+            "zakef-gadol"
+          ]
+        },
+        {
+          "ref": "Isaiah 43:26",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "הַזְכִּירֵ֕נִי",
+          "lastWord": "הַזְכִּירֵ֕נִי",
+          "why": "On a single long word.",
+          "tropes": [
+            "zakef-gadol"
+          ]
+        },
+        {
+          "ref": "Judges 5:24",
+          "words": [
+            2,
+            2
+          ],
+          "firstWord": "יָעֵ֕ל",
+          "lastWord": "יָעֵ֕ל",
+          "why": "On a name, in the song of Deborah.",
+          "tropes": [
+            "zakef-gadol"
+          ]
+        },
+        {
+          "ref": "II Samuel 6:14",
+          "words": [
+            5,
+            5
+          ],
+          "firstWord": "וְדָוִ֕ד",
+          "lastWord": "וְדָוִ֕ד",
+          "why": "On a name, as David dances.",
+          "tropes": [
+            "zakef-gadol"
+          ]
+        },
+        {
+          "ref": "I Kings 8:10",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וַיְהִ֕י",
+          "lastWord": "וַיְהִ֕י",
+          "why": "On the first word.",
+          "tropes": [
+            "zakef-gadol"
+          ]
+        },
+        {
+          "ref": "Zechariah 3:3",
+          "words": [
+            0,
+            0
+          ],
+          "firstWord": "וִיהוֹשֻׁ֕עַ",
+          "lastWord": "וִיהוֹשֻׁ֕עַ",
+          "why": "On a name opening a verse.",
+          "tropes": [
+            "zakef-gadol"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "zakef-gadol",
+              "zakef",
+              "pazer",
+              "revia"
+            ],
+            "items": 6,
+            "choices": 3,
+            "weight": {
+              "zakef": 3
+            }
+          }
+        },
+        {
+          "type": "same-or-different",
+          "params": {
+            "families": [
+              "zakef-gadol",
+              "zakef"
+            ],
+            "items": 4
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "zakef-gadol",
+            "kind": "haftarah",
+            "show": 3,
+            "find": 3
+          }
+        }
+      ],
+      "prerequisites": [
+        "haftarah-pazer"
+      ]
+    },
+    {
+      "id": "haftarah-sof-haftarah",
+      "melody": "haftarah",
+      "family": "sof-haftarah",
+      "accents": [
+        "merkha",
+        "tipcha",
+        "silluq"
+      ],
+      "title": "The end of the haftarah",
+      "summary": "The ending of the whole haftarah",
+      "goal": "After this you can hear the special ending that closes the whole haftarah.",
+      "body": [
+        "The last verse of a haftarah ends with its own tune. The marks are the ordinary ones, mercha, tipcha, sof pasuk, but the melody is bigger. Tipcha walks down from high. Then the last word rises to the octave and settles on the sixth, held long, so the room knows the reading is over.",
+        "This is an ending context, not a separate mark. The site colours the last phrase of a haftarah in its own colour so you can see it coming.",
+        "This is the last of the families. After it you can hear everything in a haftarah."
+      ],
+      "listenFor": "On the last word of the haftarah, a rise to the top and a long held settle, instead of the usual quiet close.",
+      "examples": [
+        {
+          "ref": "Hosea 2:22",
+          "words": [
+            3,
+            4
+          ],
+          "firstWord": "וְיָדַ֖עַתְּ",
+          "lastWord": "אֶת־יְהֹוָֽה׃",
+          "why": "Two words close the haftarah; a line many people know.",
+          "tropes": [
+            "tipcha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "I Kings 18:39",
+          "words": [
+            8,
+            10
+          ],
+          "firstWord": "יְהֹוָ֖ה",
+          "lastWord": "הָאֱלֹהִֽים׃",
+          "why": "Three words, the shout at Carmel.",
+          "tropes": [
+            "tipcha",
+            "mercha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "Micah 6:8",
+          "words": [
+            12,
+            14
+          ],
+          "firstWord": "וְהַצְנֵ֥עַ",
+          "lastWord": "עִם־אֱלֹהֶֽיךָ׃",
+          "why": "Three words closing a well-known verse.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "Joshua 1:18",
+          "words": [
+            8,
+            10
+          ],
+          "firstWord": "רַ֖ק",
+          "lastWord": "וֶאֱמָֽץ׃",
+          "why": "Three words: be strong and brave.",
+          "tropes": [
+            "tipcha",
+            "mercha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "Isaiah 60:22",
+          "words": [
+            6,
+            9
+          ],
+          "firstWord": "אֲנִ֥י",
+          "lastWord": "אֲחִישֶֽׁנָּה׃",
+          "why": "Four words closing the haftarah of Ki Tavo.",
+          "tropes": [
+            "mercha",
+            "tipcha",
+            "mercha",
+            "silluq"
+          ]
+        },
+        {
+          "ref": "Isaiah 1:27",
+          "words": [
+            3,
+            4
+          ],
+          "firstWord": "וְשָׁבֶ֖יהָ",
+          "lastWord": "בִּצְדָקָֽה׃",
+          "why": "Two words closing the haftarah of Devarim.",
+          "tropes": [
+            "tipcha",
+            "silluq"
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "same-or-different",
+          "params": {
+            "families": [
+              "sof-haftarah",
+              "sof-pasuk"
+            ],
+            "items": 4
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "sof-haftarah",
+              "sof-pasuk",
+              "etnachta"
+            ],
+            "items": 4,
+            "choices": 3
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "sof-pasuk",
+              "etnachta",
+              "zakef",
+              "revia",
+              "tevir",
+              "azla",
+              "segol",
+              "telisha-ketana",
+              "pazer",
+              "zakef-gadol",
+              "sof-haftarah"
+            ],
+            "items": 6,
+            "choices": 4,
+            "label": "All eleven"
+          }
+        },
+        {
+          "type": "this-week",
+          "params": {
+            "family": "sof-haftarah",
+            "kind": "haftarah",
+            "show": 1,
+            "find": 0
+          }
+        }
+      ],
+      "prerequisites": [
+        "haftarah-zakef-gadol"
+      ]
+    },
+    {
+      "id": "haftarah-first-verse",
+      "melody": "haftarah",
+      "family": null,
+      "accents": [],
+      "title": "Your first haftarah verse",
+      "summary": "Lein one verse of this week's haftarah",
+      "goal": "After this you have leined one verse of this week's haftarah.",
+      "body": [
+        "Same steps as your first Torah verse: hear the phrases one by one, hear the verse whole, chant along slowly, then at full speed.",
+        "If this week's haftarah has no recording yet, the app offers a verse from a recent one instead. If your own reading is saved, the app offers that."
+      ],
+      "listenFor": "Your voice settling on the home note at the end, where the reader does.",
+      "examples": [
+        {
+          "ref": "Isaiah 40:1",
+          "words": [
+            0,
+            4
+          ],
+          "firstWord": "נַחֲמ֥וּ",
+          "lastWord": "אֱלֹהֵיכֶֽם׃",
+          "why": "Fallback verse when this week's haftarah is text-only: two phrases.",
+          "phrases": [
+            {
+              "family": "etnachta",
+              "words": [
+                0,
+                2
+              ]
+            },
+            {
+              "family": "sof-pasuk",
+              "words": [
+                3,
+                4
+              ]
+            }
+          ]
+        },
+        {
+          "ref": "Hosea 2:21",
+          "words": [
+            0,
+            8
+          ],
+          "firstWord": "וְאֵרַשְׂתִּ֥יךְ",
+          "lastWord": "וּֽבְרַחֲמִֽים׃",
+          "why": "Fallback: three phrases.",
+          "phrases": [
+            {
+              "family": "etnachta",
+              "words": [
+                0,
+                2
+              ]
+            },
+            {
+              "family": "zakef",
+              "words": [
+                3,
+                6
+              ]
+            },
+            {
+              "family": "sof-pasuk",
+              "words": [
+                7,
+                8
+              ]
+            }
+          ]
+        },
+        {
+          "ref": "Isaiah 43:21",
+          "words": [
+            0,
+            4
+          ],
+          "firstWord": "עַם־זוּ֙",
+          "lastWord": "יְסַפֵּֽרוּ׃",
+          "why": "Fallback: zakef then the ending.",
+          "phrases": [
+            {
+              "family": "zakef",
+              "words": [
+                0,
+                2
+              ]
+            },
+            {
+              "family": "sof-pasuk",
+              "words": [
+                3,
+                4
+              ]
+            }
+          ]
+        }
+      ],
+      "activities": [
+        {
+          "type": "first-verse",
+          "params": {
+            "source": "this-week",
+            "kind": "haftarah",
+            "pick": "shortest-word-ready",
+            "maxWords": 12,
+            "steps": [
+              "phrases",
+              "whole",
+              "along-0.75",
+              "along-1"
+            ],
+            "celebrate": true,
+            "openInLein": true
+          }
+        }
+      ],
+      "prerequisites": [
+        "haftarah-sof-haftarah"
+      ]
+    }
+  ],
+  "notes": {
+    "families": "Family ids and names follow src/lib/trope/chart-catalog.ts. confusedWith drives distractor weighting (ACTIVITIES.md, item generation rules).",
+    "items": "Each activity's items is the planned count; a lesson's drills may stop early once eight items in a row have been answered right with no miss, and missed items are re-asked until each is right once."
+  }
+}

@@ -1,0 +1,250 @@
+/* Learn to lein, inside the Song session world (DESIGN.md): lake app bar and primary action, lake canvas,
+   white objects with inset hairlines, marigold only as a fill or ring, Bricolage for UI and Noto Serif
+   Hebrew for every Hebrew word, which is always the largest text on its screen. Existing tokens only;
+   flat print, no shadows or gradients; the ink pull is the one authored motion. */
+
+/* ---------- shared ---------- */
+.hebrew { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", "Times New Roman", serif; font-weight: 400; font-synthesis: none; font-feature-settings: "mark", "mkmk"; direction: rtl; unicode-bidi: isolate; overflow-wrap: anywhere; }
+.unit { border-radius: 0.18em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.inked { background: var(--phrase-color); color: #13202f; }
+/* The ink pull: a phrase's colour wipes in word by word, right to left with the reading. */
+.pull { background: linear-gradient(var(--phrase-color), var(--phrase-color)) right / 0% 100% no-repeat; color: inherit; animation: ink-pull 560ms var(--ease-settle) both; animation-delay: calc(var(--w, 0) * 70ms); }
+@keyframes ink-pull { from { background-size: 0% 100%; } to { background-size: 100% 100%; color: #13202f; } }
+.muted { color: var(--color-muted); }
+.ref { color: var(--color-muted); font-size: 0.9375rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Family chip: name, colour and contour mark, never colour alone. */
+.chip { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.25rem; padding: 0.25rem 0.875rem 0.25rem 0.625rem; border-radius: 999px; background: var(--phrase-color); color: #13202f; font-weight: 650; line-height: 1.2; white-space: nowrap; }
+.chipLarge { min-height: 2.75rem; padding-inline: 0.75rem 1.125rem; font-size: 1.125rem; }
+.contour { flex: none; width: 30px; height: 16px; overflow: visible; }
+.chipLarge .contour { width: 40px; height: 22px; }
+.contour polyline { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.chipLarge .contour polyline { stroke-width: 1.6; }
+/* While the phrase plays, its mark draws itself along with the sound; reduced motion keeps it whole. */
+.drawing polyline { stroke-dasharray: 1; stroke-dashoffset: 1; animation: contour-draw var(--draw, 2s) linear forwards; }
+@keyframes contour-draw { to { stroke-dashoffset: 0; } }
+
+/* Play tile: the listening control, lake-tint so the lake Next stays the one forward action. */
+.play { display: inline-flex; align-items: center; justify-content: center; gap: 0.625rem; min-height: 56px; min-width: 56px; padding: 0 1.5rem 0 1.125rem; border: 0; border-radius: 999px;
+  background: var(--lake-tint); color: var(--lake-deep); font-size: 1.0625rem; font-weight: 700; transition: background-color 160ms var(--ease-settle), transform 160ms var(--ease-settle); }
+.play:hover { background: var(--color-hover); }
+.play:active { transform: scale(0.97); }
+.play[data-state="playing"] { background: var(--lake); color: #fff; }
+.play svg { flex: none; }
+.playIcon { padding: 0; width: 56px; }
+.playing .bars rect { animation: none; }
+
+/* ---------- app bar and page frame ---------- */
+.shell { min-height: 100svh; display: flex; flex-direction: column; }
+.main { flex: 1; min-width: 0; padding-block: 2rem 4rem; }
+.title { font-size: 3rem; font-weight: 750; line-height: 1.04; letter-spacing: -0.03em; max-width: 12ch; }
+.intro { margin-top: 0.875rem; max-width: 34ch; color: var(--color-muted); font-size: 1.1875rem; line-height: 1.45; }
+
+/* ---------- course home ---------- */
+.home { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2.5rem; }
+.next { margin-top: 1.75rem; padding: 1.25rem 1.25rem 1.5rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.nextTop { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.nextLabel { display: inline-flex; align-items: center; min-height: 1.75rem; padding: 0 0.75rem; border-radius: 999px; background: var(--marigold); color: var(--on-ink); font-size: 0.875rem; font-weight: 700; }
+.nextTitle { margin-top: 1rem; font-size: 2rem; font-weight: 800; line-height: 1.05; letter-spacing: -0.03em; }
+.nextLine { margin-top: 0.375rem; color: var(--color-muted); font-size: 1.0625rem; }
+.nextAction { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; margin-top: 1.25rem; }
+.nextAction > a { display: inline-flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; }
+.nextAction > a:hover { color: #fff; }
+.minutes { color: var(--color-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+.review { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 56px; margin-top: 1rem; padding: 0.5rem 1.25rem; border-radius: var(--radius-object);
+  background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); color: var(--color-ink); font-weight: 650; text-decoration: none; }
+.review:hover { background: var(--color-hover); color: var(--color-ink); }
+.review svg { flex: none; color: var(--color-action); }
+.heard { margin-top: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.links { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; margin-top: 0.75rem; }
+.links a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+.saved { margin-top: 0.75rem; color: var(--color-muted); font-size: 0.875rem; }
+.paths { display: grid; gap: 2.25rem; align-content: start; }
+.pathHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; }
+.pathNote { color: var(--color-muted); font-size: 0.9375rem; }
+.unitTitle { margin: 1.25rem 0 0.25rem; color: var(--color-muted); font-size: 0.875rem; font-weight: 650; }
+.path { list-style: none; margin: 0; padding: 0; }
+.step { position: relative; }
+.stepLink { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr) auto; align-items: center; gap: 0.875rem; min-height: 56px; padding: 0.25rem 0.75rem 0.25rem 0.5rem; margin-inline: -0.5rem;
+  border-radius: var(--radius-control); color: var(--color-ink); text-decoration: none; font-size: 1.0625rem; font-weight: 600; }
+a.stepLink:hover { background: var(--color-hover); color: var(--color-ink); }
+.stepLink[data-state="later"] { color: var(--color-muted); font-weight: 500; }
+.dot { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 999px; box-shadow: inset 0 0 0 2px var(--color-control-rule); color: #13202f; }
+.dot[data-state="done"] { background: var(--phrase-color, var(--lake)); box-shadow: none; }
+.dot[data-state="done"][data-plain] { color: #fff; }
+.dot[data-state="next"] { box-shadow: inset 0 0 0 4px var(--marigold); }
+.stepMark { color: var(--color-muted); }
+.stepLink[data-state="next"] .stepMark, .stepLink[data-state="done"] .stepMark { color: var(--color-ink); }
+/* A thin lake thread joins the dots, so the path reads as one line. */
+.path .step + .step::before { content: ""; position: absolute; inset-inline-start: 0.8125rem; top: -0.75rem; height: 1.5rem; width: 2px; background: var(--color-rule); }
+
+/* ---------- lesson frame ---------- */
+.bar { position: sticky; top: 0; z-index: 3; display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(8rem, 16rem); align-items: center; gap: 0.75rem;
+  padding: max(0.5rem, env(safe-area-inset-top)) 0 0.5rem; background: var(--lake); color: #fff; box-shadow: 0 0 0 100vmax var(--lake); clip-path: inset(0 -100vmax); }
+.bar :focus-visible { outline-color: var(--marigold); }
+.close { display: inline-grid; place-items: center; width: 56px; height: 56px; margin-inline-start: -0.5rem; border-radius: 999px; color: #fff; }
+.close:hover { background: rgb(255 255 255 / 0.14); color: #fff; }
+.barTitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.0625rem; font-weight: 700; max-width: none; }
+.rail { list-style: none; display: flex; gap: 4px; margin: 0; padding: 0; }
+.rail li { flex: 1; height: 6px; border-radius: 3px; background: rgb(255 255 255 / 0.28); }
+.rail li[data-state="past"] { background: rgb(255 255 255 / 0.78); }
+.rail li[data-state="current"] { background: var(--marigold); }
+.lesson { width: 100%; max-width: 42rem; margin-inline: auto; padding-block: 1.75rem 2rem; display: grid; gap: 1.5rem; align-content: start; }
+.lesson > * { min-width: 0; }
+/* The thumb's band: plain canvas, no rule, so nothing scrolling under it looks like a cut edge. */
+.footer { position: sticky; bottom: 0; z-index: 2; padding: 0.75rem 0 max(0.875rem, env(safe-area-inset-bottom)); background: var(--color-canvas); box-shadow: 0 0 0 100vmax var(--color-canvas); clip-path: inset(0 -100vmax 0); }
+/* A revealed answer scrolls fully clear of that band. */
+.answer, .answerHead { scroll-margin-bottom: 7rem; scroll-margin-top: 5rem; }
+.footerInner { max-width: 42rem; margin-inline: auto; display: grid; gap: 0.5rem; }
+.footerInner > :global(.button-start) { width: 100%; display: inline-flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; }
+.footerInner > :global(.button-start):hover { color: #fff; }
+.footerInner > :global(.button-start):disabled { cursor: default; opacity: 0.45; }
+.state { padding: 2rem 0; display: grid; gap: 1rem; justify-items: start; }
+
+/* ---------- hear it ---------- */
+.stage { display: grid; gap: 1.25rem; justify-items: center; padding: 1.75rem 1.25rem 1.5rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); text-align: center; }
+.phraseLarge { font-size: 2.75rem; line-height: 2; margin: 0; max-width: none; text-align: center; }
+.phraseStandard { font-size: 2rem; line-height: 2.05; margin: 0; max-width: none; }
+.listen { font-size: 1.1875rem; font-weight: 550; line-height: 1.5; max-width: 40ch; }
+.body { display: grid; gap: 0.75rem; color: var(--color-muted); }
+.body p { max-width: 62ch; }
+.marks { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; }
+.mark { display: grid; justify-items: center; gap: 0.125rem; min-width: 5.25rem; padding: 0.375rem 0.625rem 0.5rem; border-radius: var(--radius-control); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.markSample { font-size: 1.875rem; line-height: 1.5; }
+.markName { font-size: 0.8125rem; font-weight: 600; color: var(--color-muted); }
+.sectionTitle { font-size: 1.375rem; font-weight: 750; letter-spacing: -0.02em; }
+
+/* ---------- in verses ---------- */
+.verses { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; }
+.verseRow { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 0.5rem 1rem; align-items: center; padding: 0.875rem 1rem 1rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.verseRow .phraseStandard { text-align: start; }
+.why { font-size: 0.9375rem; color: var(--color-muted); }
+
+/* ---------- drills ---------- */
+.prompt { font-size: 1.5rem; font-weight: 750; letter-spacing: -0.02em; line-height: 1.2; }
+.playRow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.choices { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.625rem; }
+.choice { display: flex; align-items: center; gap: 0.875rem; width: 100%; min-height: 60px; padding: 0.5rem 1.25rem; border: 0; border-radius: var(--radius-object); background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-control-rule); color: var(--color-ink); font-size: 1.125rem; font-weight: 650; text-align: start;
+  transition: background-color 200ms var(--ease-settle), box-shadow 200ms var(--ease-settle); }
+.choice:hover:not(:disabled) { background: var(--color-hover); box-shadow: inset 0 0 0 1px var(--color-ink); }
+.choice:disabled { cursor: default; opacity: 1; }
+.choice[data-state="right"] { background: var(--phrase-color); color: #13202f; box-shadow: none; }
+.choice[data-state="chosen"] { box-shadow: inset 0 0 0 2px var(--color-ink); }
+.choice[data-state="other"] { color: var(--color-muted); }
+.choiceMark { margin-inline-start: auto; display: inline-flex; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0.625rem; }
+.pair .choice { position: relative; justify-content: center; text-align: center; padding-inline: 2.25rem; }
+.pair .choiceMark { position: absolute; inset-inline-end: 0.875rem; top: 50%; translate: 0 -50%; }
+.feedback { font-size: 1.0625rem; font-weight: 550; min-height: 1.5em; }
+.answer { display: grid; gap: 0.75rem; padding: 1rem 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.answerHead { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.textButton { display: inline-flex; align-items: center; gap: 0.375rem; min-height: 56px; padding: 0 0.25rem; border: 0; background: transparent; color: var(--color-action); font-weight: 650; text-decoration: underline; text-underline-offset: 0.2em; }
+.textButton:hover { color: var(--color-action-hover); }
+/* Words and phrases the learner taps in a verse. */
+.verseBox { padding: 1rem 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+/* Inline padding grows the hit area of a word or phrase without moving the line. */
+.target { cursor: pointer; border-radius: 0.22em; padding: 0.32em 0.06em; outline-offset: 2px; transition: background-color 160ms var(--ease-settle); }
+.target:hover { background: var(--color-hover); }
+.target:focus-visible { outline: 3px solid var(--marigold); outline-offset: 2px; }
+.target[aria-disabled="true"] { cursor: default; }
+.target[aria-disabled="true"]:hover { background: transparent; }
+.target.inked:hover { background: var(--phrase-color); }
+.start { text-decoration: underline 0.12em var(--marigold); text-underline-offset: 0.42em; }
+.missed { box-shadow: inset 0 0 0 2px var(--color-ink); }
+.phraseGap { display: inline-block; width: 0.55em; }
+.pairList { display: grid; gap: 0.75rem; }
+.pairRow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1rem; }
+.number { display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 999px; background: var(--lake-tint); color: var(--color-ink); font-weight: 750; font-variant-numeric: tabular-nums; }
+.number[data-on="true"] { background: var(--marigold); color: var(--on-ink); }
+
+/* Build the phrase: slots read right to left; tiles carry the chart's sample letter. */
+.slots { display: flex; flex-direction: row-reverse; justify-content: center; flex-wrap: wrap; gap: 0.625rem; }
+.slot { display: grid; place-items: center; width: 4.5rem; height: 4.75rem; border-radius: var(--radius-control); box-shadow: inset 0 0 0 2px var(--color-control-rule); background: var(--color-surface); }
+.slot[data-filled="true"] { box-shadow: inset 0 0 0 1px var(--color-rule); }
+.tray { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.625rem; }
+.tile { display: grid; justify-items: center; align-content: center; gap: 0; min-width: 4.5rem; min-height: 4.75rem; padding: 0.25rem 0.5rem; border: 0; border-radius: var(--radius-control);
+  background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-control-rule); color: var(--color-ink); }
+.tile:hover:not(:disabled) { background: var(--color-hover); }
+.tile:disabled { opacity: 0.35; cursor: default; }
+.tile[data-miss="true"] { animation: shake 320ms var(--ease-settle); box-shadow: inset 0 0 0 2px var(--color-ink); }
+@keyframes shake { 20% { transform: translateX(-5px); } 45% { transform: translateX(4px); } 70% { transform: translateX(-2px); } }
+.tileSample { font-size: 2rem; line-height: 1.4; }
+.tileName { font-size: 0.75rem; font-weight: 650; color: var(--color-muted); }
+
+/* ---------- done ---------- */
+.doneHead { display: grid; gap: 0.25rem; }
+.doneTitle { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.04; }
+.doneWord { font-size: 1.5rem; font-weight: 700; color: var(--color-muted); }
+.doneLine { font-size: 1.1875rem; line-height: 1.5; max-width: 42ch; }
+.backLink { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; font-weight: 650; }
+.nextName { font-weight: 650; }
+
+/* ---------- the one celebration: the verse on the lake sheet ---------- */
+.sheet { position: fixed; inset: 0; z-index: 20; display: grid; grid-template-rows: minmax(0, 1fr) auto; background: var(--lake); color: #fff; overflow-y: auto; }
+.sheet :focus-visible { outline: 3px solid var(--marigold); outline-offset: 3px; }
+.sheetStage { display: flex; flex-direction: column; justify-content: safe center; align-items: center; gap: 1.25rem; padding: 2rem 1.25rem 1rem; text-align: center; }
+.sheetHebrew { font-size: 3.2rem; line-height: 1.9; max-width: 22ch; margin: 0; }
+.sheetLine { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; }
+.sheetRef { font-weight: 650; opacity: 0.85; }
+.sheetActions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; width: 100%; max-width: 32rem; margin-inline: auto; padding: 0.75rem 1rem max(1rem, env(safe-area-inset-bottom)); }
+.sheetStep { display: inline-flex; align-items: center; justify-content: center; min-height: 56px; padding: 0 1rem; border: 0; border-radius: 999px; background: rgb(255 255 255 / 0.14); color: #fff; font-size: 1.0625rem; font-weight: 700; text-decoration: none; text-align: center; }
+.sheetStep:hover { background: rgb(255 255 255 / 0.22); color: #fff; }
+.sheetPrimary { background: #fff; color: var(--lake-deep); }
+.sheetPrimary:hover { background: var(--lake-tint); color: var(--lake-deep); }
+.sheetHidden { visibility: hidden; }
+
+/* ---------- this week and first verse ---------- */
+.week { display: grid; gap: 0.75rem; }
+.weekRows { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.625rem; }
+.reader { display: grid; gap: 0.75rem; }
+.readerVerse { padding: 0.75rem 1rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.readerVerse .phraseStandard { font-size: 1.625rem; }
+.found { font-weight: 650; font-variant-numeric: tabular-nums; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.stepItem { display: flex; align-items: center; gap: 0.75rem; font-weight: 600; color: var(--color-muted); }
+.stepItem[data-state="current"] { color: var(--color-ink); }
+.stepItem[data-state="done"] { color: var(--color-ink); }
+
+/* ---------- about ---------- */
+.about { max-width: 44rem; display: grid; gap: 1rem; }
+.about p { font-size: 1.0625rem; }
+
+@media (prefers-color-scheme: dark) {
+  .bar, .sheet { background: #10335e; box-shadow: 0 0 0 100vmax #10335e; }
+  .sheetPrimary, .sheetPrimary:hover { color: #10335e; }
+  .play[data-state="playing"] { background: var(--color-action-fill); }
+  .play { color: var(--color-action); }
+  .dot[data-state="done"][data-plain] { background: var(--color-action-fill); }
+}
+@media (min-width: 1001px) {
+  .main { padding-top: 3rem; }
+  .home { grid-template-columns: minmax(0, 5fr) minmax(0, 4fr); gap: 4rem; align-items: start; }
+  .homeLead { position: sticky; top: 2rem; }
+  .phraseLarge { font-size: 3.125rem; }
+}
+@media (max-width: 640px) {
+  .main { padding-block: 1.5rem 3rem; }
+  .title { font-size: 2.5rem; }
+  .intro { font-size: 1.0625rem; }
+  .next { padding: 1.125rem 1rem 1.25rem; }
+  .nextTitle { font-size: 1.75rem; }
+  .nextAction > a { flex: 1 1 100%; }
+  .bar { grid-template-columns: auto minmax(0, 1fr); row-gap: 0.25rem; }
+  .rail { grid-column: 1 / -1; padding-bottom: 0.25rem; }
+  .lesson { padding-top: 1.25rem; gap: 1.25rem; }
+  .stage { padding-inline: 0.75rem; }
+  .phraseLarge { font-size: 2.5rem; }
+  .prompt { font-size: 1.3125rem; }
+  .verseRow { padding-inline: 0.75rem; column-gap: 0.75rem; }
+  .verseBox { padding-inline: 0.875rem; }
+  .sheetHebrew { font-size: 2.6rem; }
+  .sheetActions { grid-template-columns: minmax(0, 1fr); }
+  .doneTitle { font-size: 2.125rem; }
+  .slot, .tile { width: 4.25rem; min-width: 4.25rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pull { animation: none; background-size: 100% 100%; color: #13202f; }
+  .drawing polyline { animation: none; stroke-dashoffset: 0; }
+  .tile[data-miss="true"] { animation: none; }
+}
