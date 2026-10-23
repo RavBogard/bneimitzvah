@@ -611,7 +611,7 @@ No new service. The worker reduces repeat traffic. Packing adds about 25 MB of C
 - `/api/auth/sign-in/code` joins the paths on which a pending invitation sets `next` to `/invitations/accept`; it never accepts an invitation.
 - The device remembers only a timestamp (`crc.signin.code-requested-at`) and reopens on the code form for 5 minutes, also on a plain reload of the sign-in page. "Use a different email" clears it, as do sign-in and sign-out.
 - `disableSignUp: false` on both plugins, named once (`SIGN_IN_DISABLE_SIGN_UP`), so a code signs in exactly the addresses a link does.
-- The email wording uses "on the sign-in page" rather than §10.1's "in the CRC Torah app", because the code works in any browser before A ships. Both are drafts awaiting Daniel.
+- Email wording is Daniel's final (2026-10-23, offload A3): link line, then "Or enter this code in the {productName} app:" with the code alone on the next line, the once-and-5-minutes line, "No one from CRC will ever ask you for this code. Don’t read it to anyone or type it anywhere but {productName}.", then the ignore line. The code must be the email's only run of 6+ digits and the subject has no digits; the transport refuses to send otherwise. No WebOTP line. `productName` comes from one helper (`src/server/mail/product-name.ts`, "CRC Torah") until the per-congregation tenant setting (E1) reaches the sign-in path.
 - Noted for the reviewer: a wrong guess recreates the row with a fresh `createdAt`. If a new code is issued between the SDK's consume and that recreate, the older code becomes "latest" for its remaining tries and lifetime. This is bounded by the same 3 tries and 5 minutes.
 
 ---

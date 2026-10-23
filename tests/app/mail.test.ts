@@ -35,8 +35,20 @@ test("both mail kinds use the fixed Resend endpoint and plain text with no track
     // The sign-in email carries its code in the body only, after the link; never in the subject.
     expect(body.subject.includes(code)).toBe(false);
     expect(body.text.includes(code)).toBe(kind === "magic-link");
+    // No digits at all in either subject.
+    expect(body.subject).not.toMatch(/\d/);
     if (kind === "magic-link") {
-      expect(body.text).toBe(`Open this link to sign in:\n\n${url}\n\n${SIGN_IN_CODE_LINES.code(code)}\n\n${SIGN_IN_CODE_LINES.once}\n\nIf you did not request this message, you can ignore it.`);
+      // Daniel's wording (2026-10-23), in order, with the code alone on the line after its label.
+      expect(body.subject).toBe("Sign in to CRC Torah");
+      expect(body.text).toBe([`Open this link to sign in:`, ``, url, ``, `Or enter this code in the CRC Torah app:`, code, ``,
+        `The link and the code work once, for 5 minutes.`, ``,
+        `No one from CRC will ever ask you for this code. Don’t read it to anyone or type it anywhere but CRC Torah.`, ``,
+        `If you did not request this message, you can ignore it.`].join("\n"));
+      expect(body.text.split("\n").filter((line: string) => line === code)).toHaveLength(1);
+      expect(body.text.match(/\d{6,}/g)).toEqual([code]);
+      // No WebOTP origin-bound line (`@host #code`): it is defined for SMS only.
+      expect(body.text).not.toMatch(/@\S+\s+#\d/);
+      expect(body.text.includes(`#${code}`)).toBe(false);
     } else expect(body.text).toBe(`Open this link to review your invitation:\n\n${url}\n\nIf you did not request this message, you can ignore it.`);
     expect((capture.init.headers as Record<string, string>).authorization === `Bearer ${apiKey}`).toBe(true);
   }
@@ -57,6 +69,11 @@ test("mail rejects foreign, ambiguous, duplicated-token, header-injection and un
     expect(await safeFailure(() => send("magic-link", { email, url: link("magic-link"), code }))).toBe(true);
   }
   expect(await safeFailure(() => send("invitation", { email, url: good, code: "123456" }))).toBe(true);
+  // The code must be the only run of 6 or more digits in the email; an address that adds one sends nothing.
+  const digits = "https://torah123456.example.test";
+  const digitSend = createMailTransport({ origin: digits, apiKey, from: email, fetch: async () => { calls++; return new Response(); } });
+  const digitLink = new URL("/auth/email", digits); digitLink.hash = `token=${"A".repeat(32)}`;
+  expect(await safeFailure(() => digitSend("magic-link", { email, url: digitLink.href, code: "048213" }))).toBe(true);
   expect(calls).toBe(0);
 });
 

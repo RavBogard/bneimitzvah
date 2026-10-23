@@ -15,7 +15,7 @@ import { SIGN_IN_CODE_LINES } from "../../src/server/mail/transport";
 type Mail = { email: string; subject: string; text: string; url: string; code: string };
 const opened: Awaited<ReturnType<typeof authFixture>>[] = [];
 afterEach(async () => { vi.restoreAllMocks(); await Promise.all(opened.splice(0).map(f => f.client.close())); });
-const codePrefix = SIGN_IN_CODE_LINES.code("");
+const codeLabel = SIGN_IN_CODE_LINES.code("CRC Torah");
 
 async function fixture(origin = "http://localhost:3000") {
   const f = await authFixture(); opened.push(f);
@@ -31,9 +31,10 @@ async function fixture(origin = "http://localhost:3000") {
     if (String(endpoint) !== "https://api.resend.com/emails") throw new Error("Unexpected synthetic provider");
     const payload = JSON.parse(String(options?.body));
     const text = String(payload.text), url = text.match(/https?:\/\/\S+/)?.[0];
-    const line = text.split("\n").find(value => value.startsWith(codePrefix));
+    // The code is alone on the line after its label.
+    const lines = text.split("\n"), label = lines.indexOf(codeLabel), line = label >= 0 ? lines[label + 1] : undefined;
     if (!url || !Array.isArray(payload.to) || !line) throw new Error("Invalid synthetic mail capture");
-    messages.push({ email: payload.to[0], subject: String(payload.subject), text, url, code: line.slice(codePrefix.length) });
+    messages.push({ email: payload.to[0], subject: String(payload.subject), text, url, code: line });
     return new Response("{}", { status: 200 });
   });
   const sdk = vi.spyOn(runtime.auth, "handler");
@@ -60,9 +61,11 @@ test("one sign-in email carries the link and a 6-digit code in its body only, an
     const { response, binding, mail } = await f.ask("Code-Learner@Example.test");
     expect(f.messages).toHaveLength(1);
     expect(mail.code).toMatch(/^\d{6}$/);
-    expect(mail.subject.includes(mail.code)).toBe(false);
+    expect(mail.subject).not.toMatch(/\d/);
     expect(mail.text.indexOf(mail.url)).toBeLessThan(mail.text.indexOf(mail.code));
+    expect(mail.text.match(/\d{6,}/g)).toEqual([mail.code]);
     expect(mail.text.includes(SIGN_IN_CODE_LINES.once)).toBe(true);
+    expect(mail.text.includes(SIGN_IN_CODE_LINES.never("CRC Torah"))).toBe(true);
     // The binding: sealed, HttpOnly, SameSite=Strict, scoped to the code route only, 5 minutes, Secure on HTTPS.
     const set = response.headers.getSetCookie().find(value => value.startsWith(`${f.bindingName}=`))!;
     expect(set).toMatch(new RegExp(`^${f.bindingName}=[A-Za-z0-9_-]{40,}; Path=/api/auth/sign-in/code; HttpOnly; SameSite=Strict; Max-Age=300${origin.startsWith("https:") ? "; Secure" : ""}$`));
