@@ -1,6 +1,7 @@
 import "server-only";
 import { AccessDenied } from "../access/errors";
-import { PublicReadingUnavailable, type PublicKind, type PublicReadingService } from "../public-reading/service";
+import { PublicReadingUnavailable, type PublicKind, type PublicPassage, type PublicReadingService } from "../public-reading/service";
+import { canonicalReadingRef, READING_REF_LIMITS } from "../../lib/readings/reading-ref";
 import { HttpBoundaryError, type JsonValue } from "./responses";
 import { publicShabbat } from "../../lib/readings/public-shabbat";
 import { studyPageView, wordAidsView, wordDetailsView } from "./portal";
@@ -14,7 +15,8 @@ import { CommentaryUnavailable, type CommentaryReader } from "../study/commentar
  * the exact host mapping, which must be CRC. Responses are the same for every
  * caller, so the CDN may keep them. No audio bytes are served here: PocketTorah
  * clips stay on the existing content-addressed /reference-audio/short-v1 route.
- * Every response asks search engines not to index.
+ * A passage is a Shabbat date or a canonical reading ref (reading-ref.ts), checked before any
+ * runtime opens. Every response asks search engines not to index.
  */
 export type PublicRuntime = Readonly<{
   /** Exact host → tenant; refuses (404) anything that is not CRC. Reads tenant_host only. */
@@ -25,15 +27,22 @@ export type PublicRuntime = Readonly<{
 }>;
 export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Response>) => Promise<Response>;
 
-type Route = Readonly<{ kind: "reading" | "text" | "word-aids" | "word-details" | "short" | "commentary"; keys: readonly string[] }>;
+/**
+ * Each route lists the keysets it accepts; a query must match exactly one, in its order. A passage is
+ * named by a Shabbat `date` (the weekly page) or, for "Any reading", by a canonical `ref` with its
+ * `kind` (the 1.5 offline packer depends on these exact shapes).
+ */
+type Route = Readonly<{ kind: "reading" | "text" | "word-aids" | "word-details" | "short" | "commentary"; keysets: readonly (readonly string[])[] }>;
 const exact: Readonly<Record<string, Route>> = Object.freeze({
-  "/api/public/reading": { kind: "reading", keys: ["date"] },
-  "/api/public/text": { kind: "text", keys: ["date", "kind", "offset"] },
-  "/api/public/word-aids": { kind: "word-aids", keys: ["date", "kind", "verse"] },
-  "/api/public/word-details": { kind: "word-details", keys: ["date", "kind", "verse", "word"] },
-  "/api/public/reference/short": { kind: "short", keys: ["date", "kind", "offset"] },
-  "/api/public/commentary": { kind: "commentary", keys: ["work", "chapter"] },
+  "/api/public/reading": { kind: "reading", keysets: [["date"], ["ref", "kind"]] },
+  "/api/public/text": { kind: "text", keysets: [["date", "kind", "offset"], ["ref", "kind", "offset"]] },
+  "/api/public/word-aids": { kind: "word-aids", keysets: [["date", "kind", "verse"], ["ref", "kind", "verse"]] },
+  "/api/public/word-details": { kind: "word-details", keysets: [["date", "kind", "verse", "word"], ["ref", "kind", "verse", "word"]] },
+  "/api/public/reference/short": { kind: "short", keysets: [["date", "kind", "offset"], ["ref", "kind", "offset"]] },
+  "/api/public/commentary": { kind: "commentary", keysets: [["work", "chapter"]] },
 });
+/** Longest decoded value per key; a `ref` is bounded by READING_REF_LIMITS.chars, everything else by 80. */
+const valueLimit = (key: string) => key === "ref" ? READING_REF_LIMITS.chars : 80;
 function route(pathname: string): Route | null {
   return Object.hasOwn(exact, pathname) ? exact[pathname] : null;
 }
@@ -63,14 +72,15 @@ function statusOf(error: unknown): keyof typeof messages {
   } catch { /* Hostile accessors never shape a response. */ }
   return 503;
 }
-/** All keys present once, nothing else, in one fixed order: one URL per resource. */
-function canonical(url: URL, keys: readonly string[]): Record<string, string> {
+/** One accepted keyset, every key present once, nothing else, in that fixed order: one URL per resource. */
+function canonical(url: URL, keysets: readonly (readonly string[])[]): Record<string, string> {
   const values: Record<string, string> = Object.create(null);
   const seen = [...url.searchParams.keys()];
-  if (seen.length !== keys.length || seen.some((key, i) => key !== keys[i])) throw new HttpBoundaryError();
+  const keys = keysets.find(set => seen.length === set.length && seen.every((key, i) => key === set[i]));
+  if (!keys) throw new HttpBoundaryError();
   for (const key of keys) {
     const value = url.searchParams.get(key);
-    if (value === null || value.length > 80 || /[\u0000-\u001f\u007f]/.test(value)) throw new HttpBoundaryError();
+    if (value === null || value.length > valueLimit(key) || /[\u0000-\u001f\u007f]/.test(value)) throw new HttpBoundaryError();
     values[key] = value;
   }
   const rebuilt = new URLSearchParams(keys.map(key => [key, values[key]])).toString();
@@ -78,6 +88,11 @@ function canonical(url: URL, keys: readonly string[]): Record<string, string> {
   return values;
 }
 const kindOf = (value: string): PublicKind => { if (value !== "torah" && value !== "haftarah") throw new HttpBoundaryError(); return value; };
+/** The passage shape both reading forms serve (`PublicPassage`), so the 1.5 packer and the page parse one thing. */
+const passageView = (value: PublicPassage): JsonValue => ({ kind: value.kind, ranges: [...value.ranges], verseCount: value.verseCount,
+  pages: value.pages.map(page => ({ offset: page.offset, first: page.first, last: page.last })) });
+/** The key that named the passage, echoed in the body in the position `date` always had. */
+const selector = (query: Record<string, string>): { date: string } | { ref: string } => query.ref !== undefined ? { ref: query.ref } : { date: query.date };
 const count = (value: string): number => { if (!/^(?:0|[1-9]\d{0,3})$/.test(value)) throw new HttpBoundaryError(); return Number(value); };
 
 export async function handlePublicReadingRequest(request: Request, withPublic: PublicRuntimeScope): Promise<Response> {
@@ -89,40 +104,50 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
     // The page never sends Authorization or Range; refusing them keeps every answer CDN-cacheable.
     if (url.username || url.password || url.hash || request.headers.has("transfer-encoding") || request.headers.has("authorization")
       || request.headers.has("range") || request.headers.has("if-range") || request.headers.has("content-length") && request.headers.get("content-length") !== "0") return failure(400);
-    const query = canonical(url, selected.keys), signal = request.signal;
-    // Cheap checks first: a bad date, kind, number, work or chapter never opens the database.
-    // Every route but commentary is keyed by a date, and those always check it.
-    if (selected.keys.includes("date") && publicShabbat(query.date) === null || selected.kind === "commentary" && parseCommentaryChapter(query.work, query.chapter) === null
+    const query = canonical(url, selected.keysets), signal = request.signal;
+    // Cheap checks first: a bad date, ref, kind, number, work or chapter never opens the database.
+    // Every route but commentary is keyed by a date or a ref, and those always check it.
+    if (query.date !== undefined && publicShabbat(query.date) === null || selected.kind === "commentary" && parseCommentaryChapter(query.work, query.chapter) === null
       || query.kind !== undefined && query.kind !== "torah" && query.kind !== "haftarah"
+      || query.ref !== undefined && canonicalReadingRef(query.ref, query.kind) === null
       || [query.offset, query.verse, query.word].some(value => value !== undefined && !/^(?:0|[1-9]\d{0,3})$/.test(value))) return failure(400);
+    const ref = query.ref;
     return await withPublic(async runtime => {
       try {
         await runtime.resolveTenant(request);
         const reading = runtime.reading;
         switch (selected.kind) {
           case "reading": {
+            if (ref !== undefined) {
+              // Computed locally from the canonical ref: the same passage shape and paging as a week's.
+              const named = reading.readingByRef(kindOf(query.kind), ref);
+              return json({ ref: named.ref, kind: named.kind, passage: passageView(named.passage), listening: { pocketTorah: named.listening.pocketTorah } }, 3600);
+            }
             const week = await reading.week(query.date, signal);
-            const passage = (value: typeof week.torah) => value && { kind: value.kind, ranges: [...value.ranges], verseCount: value.verseCount,
-              pages: value.pages.map(page => ({ offset: page.offset, first: page.first, last: page.last })) };
-            return json({ date: week.date, parashah: week.parashah, torah: passage(week.torah), haftarah: passage(week.haftarah), fetchedAt: week.fetchedAt,
-              listening: { pocketTorah: week.listening.pocketTorah } }, 3600);
+            return json({ date: week.date, parashah: week.parashah, torah: week.torah && passageView(week.torah), haftarah: week.haftarah && passageView(week.haftarah),
+              fetchedAt: week.fetchedAt, listening: { pocketTorah: week.listening.pocketTorah } }, 3600);
           }
+          // Every page body below is the weekly one with `ref` in place of `date`.
           case "text": {
-            const page = await reading.text(kindOf(query.kind), query.date, count(query.offset), signal);
-            return json({ kind: query.kind, date: query.date, ...studyPageView(page) }, 86400);
+            const kind = kindOf(query.kind), offset = count(query.offset);
+            const page = ref !== undefined ? await reading.textByRef(kind, ref, offset, signal) : await reading.text(kind, query.date, offset, signal);
+            return json({ kind: query.kind, ...selector(query), ...studyPageView(page) }, 86400);
           }
           case "word-aids": {
-            const aids = await reading.wordAids(kindOf(query.kind), query.date, count(query.verse), signal);
-            return json({ kind: query.kind, date: query.date, verse: Number(query.verse), wordAids: wordAidsView(aids) }, 86400);
+            const kind = kindOf(query.kind), verse = count(query.verse);
+            const aids = ref !== undefined ? await reading.wordAidsByRef(kind, ref, verse, signal) : await reading.wordAids(kind, query.date, verse, signal);
+            return json({ kind: query.kind, ...selector(query), verse: Number(query.verse), wordAids: wordAidsView(aids) }, 86400);
           }
           case "word-details": {
-            const details = await reading.wordDetails(kindOf(query.kind), query.date, count(query.verse), count(query.word), signal);
-            const body = { kind: query.kind, date: query.date, verse: Number(query.verse), wordDetails: wordDetailsView(details) };
+            const kind = kindOf(query.kind), verse = count(query.verse), word = count(query.word);
+            const details = ref !== undefined ? await reading.wordDetailsByRef(kind, ref, verse, word, signal) : await reading.wordDetails(kind, query.date, verse, word, signal);
+            const body = { kind: query.kind, ...selector(query), verse: Number(query.verse), wordDetails: wordDetailsView(details) };
             return json(body, 86400);
           }
           case "short": {
-            const page = await reading.shortReferences(kindOf(query.kind), query.date, count(query.offset), signal);
-            return json({ kind: query.kind, date: query.date, page: { offset: page.offset, nextOffset: page.nextOffset, totalVerses: page.totalVerses,
+            const kind = kindOf(query.kind), offset = count(query.offset);
+            const page = ref !== undefined ? await reading.shortReferencesByRef(kind, ref, offset, signal) : await reading.shortReferences(kind, query.date, offset, signal);
+            return json({ kind: query.kind, ...selector(query), page: { offset: page.offset, nextOffset: page.nextOffset, totalVerses: page.totalVerses,
               references: page.references as unknown as JsonValue[] } }, 86400);
           }
           case "commentary": {
