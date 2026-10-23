@@ -1,4 +1,5 @@
 import { expect, test, vi } from "vitest";
+import { unavailableTranslations } from "../helpers/translations";
 vi.mock("server-only", () => ({}));
 import { createPublicReadingService, type PublicPassage } from "../../src/server/public-reading/service";
 import type { PublicRuntime } from "../../src/server/http/public-reading";
@@ -39,7 +40,7 @@ async function harness() {
   const short = await createShortSourceManifestLoader({ sha256: source.manifestSHA256, parentCatalogSHA256: source.parentCatalogSHA256, parentCatalogBytes: source.parent, get: async () => byteStream(source.manifest) })();
   const service = createPublicReadingService({ loadReading: calendar, loadText: createSefariaStudyReader({ fetch, verseCounts: TANAKH_VERSE_COUNTS }),
     stepSource, pocketTorah: { loadCatalog: async () => catalog, loadManifest: async () => short } });
-  const runtime: PublicRuntime = { resolveTenant: async () => undefined, reading: service, commentary: createSefariaCommentaryReader({ fetch: syntheticCommentaryFetch() as typeof globalThis.fetch }) };
+  const runtime: PublicRuntime = { resolveTenant: async () => undefined, reading: service, commentary: createSefariaCommentaryReader({ fetch: syntheticCommentaryFetch() as typeof globalThis.fetch }), translations: unavailableTranslations };
   const dispatch = createHttpDispatcher(async () => { throw new Error("The session runtime must not be reached"); }, async action => action(runtime));
   return async (path: string, entries: [string, string][]) => {
     const response = await dispatch(new Request(`${origin}${path}?${new URLSearchParams(entries)}`));

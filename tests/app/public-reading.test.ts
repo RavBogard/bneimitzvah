@@ -1,4 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
+import { unavailableTranslations } from "../helpers/translations";
 vi.mock("server-only", () => ({}));
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -38,7 +39,7 @@ async function harness(options: { pocketTorah?: boolean; stepSource?: StepSource
     pocketTorah: options.pocketTorah === false ? null : { loadCatalog: async () => catalog, loadManifest: async () => short } });
   const tenant = vi.fn(async (_request: Request) => undefined);
   const commentary = vi.fn(createSefariaCommentaryReader({ fetch: syntheticCommentaryFetch() as typeof globalThis.fetch }));
-  const runtime: PublicRuntime = { resolveTenant: tenant, reading: service, commentary };
+  const runtime: PublicRuntime = { resolveTenant: tenant, reading: service, commentary, translations: unavailableTranslations };
   let sessionRuntimeUsed = 0, publicRuntimeOpened = 0;
   const dispatch = createHttpDispatcher(async () => { sessionRuntimeUsed++; throw new Error("The session runtime must not be reached"); }, async action => { publicRuntimeOpened++; return action(runtime); });
   const call = (path: string, init: RequestInit = {}) => dispatch(new Request(origin + path, init));
@@ -223,7 +224,7 @@ test("uncacheable headers and invalid dates or numbers are refused before any ru
   for (const path of [`/api/public/reading?${q([["date", addDays(date, 1)]])}`, `/api/public/reading?${q([["date", addDays(date, 7 * 200)]])}`,
     `/api/public/text?${q([["date", date], ["kind", "megillah"], ["offset", "0"]])}`, `/api/public/word-details?${q([["date", date], ["kind", "torah"], ["verse", "0"], ["word", "12345"]])}`,
     // An unregistered work, a Ketuvim book, a chapter or verse out of range, a non-chapter: refused before the runtime opens.
-    ...[["ramban", "Genesis 1"], ["Rashi", "Genesis 1"], ["__proto__", "Genesis 1"], ["rashi", "Psalms 1"], ["rashi", "Ruth 1"], ["rashi", "Genesis 51"], ["rashi", "Genesis 0"],
+    ...[["malbim", "Genesis 1"], ["Rashi", "Genesis 1"], ["__proto__", "Genesis 1"], ["rashi", "Psalms 1"], ["rashi", "Ruth 1"], ["rashi", "Genesis 51"], ["rashi", "Genesis 0"],
       ["rashi", "Genesis 01"], ["rashi", "Genesis 1:1"], ["rashi", "genesis 1"], ["rashi", "Genesis"], ["rashi", "Obadiah 2"], ["rashi", ""]]
       .map(([work, chapter]) => `/api/public/commentary?${q([["work", work], ["chapter", chapter]])}`)]) {
     expect((await h.call(path)).status, path).toBe(400);

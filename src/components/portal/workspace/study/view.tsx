@@ -15,7 +15,8 @@ import { useReadingPrefs } from "../reading-prefs";
 import { useStudyLens } from "../study-lens";
 import { LensSwitch } from "../lens-switch";
 import { StudyRows } from "./study-rows";
-import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useWorkCommentary, VerseRashi } from "./commentary-view";
+import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi } from "./commentary-view";
+import { VersePanelColumn, VersePanelScope } from "./verse-panel";
 import { COMMENTARY_WORKS } from "../../../../lib/readings/commentary";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
 import { PortalRequestError } from "../../api";
@@ -165,9 +166,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   // Women's Commentary when Study shows it on Torah. Public texts only; nothing about the student is sent.
   const commentaryRefs = useMemo(() => livePage && !concealed ? livePage.verses.map(verse => verse.ref) : [], [livePage, concealed]);
   const corpus = state.kind === "haftarah" ? "neviim" : "torah";
-  const rashi = useWorkCommentary("rashi", commentaryRefs, commentaryRefs.length > 0 && (!study || lens.works.includes("rashi")));
-  const womens = useWorkCommentary("womens", commentaryRefs, commentaryRefs.length > 0 && study && state.kind === "torah" && lens.works.includes("womens"));
-  const works = useMemo(() => [rashi, womens].filter(row => lens.works.includes(row.work)), [rashi, womens, lens.works]);
+  const { rashi, works } = useReadingWorks(commentaryRefs, { ready: commentaryRefs.length > 0, study, chosen: lens.works, corpus: state.kind === "torah" ? "torah" : "neviim" });
   const clearLink = leinLink.clear;
   useEffect(() => { clearLink(); }, [livePage, study, clearLink]);
   useEffect(() => { if (shown) onShown?.(...shown); }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps

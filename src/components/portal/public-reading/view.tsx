@@ -13,7 +13,8 @@ import { ReadingToolbar } from "../workspace/reading-toolbar";
 import { LensSwitch } from "../workspace/lens-switch";
 import { LENS_STORAGE, lensFromSearch, StudyLensScope, useStudyLens, type Lens } from "../workspace/study-lens";
 import { StudyRows } from "../workspace/study/study-rows";
-import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useWorkCommentary, VerseRashi } from "../workspace/study/commentary-view";
+import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi } from "../workspace/study/commentary-view";
+import { VersePanelColumn, VersePanelScope } from "../workspace/study/verse-panel";
 import { COMMENTARY_WORKS } from "../../../lib/readings/commentary";
 import { namedReading, type NamedReading } from "../../../lib/readings/named-readings";
 import { useReadingPrefs } from "../workspace/reading-prefs";
@@ -243,9 +244,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   // the Women's Commentary only when Study shows it on a Torah text.
   const refs = useMemo(() => page?.verses.map(row => row.ref) ?? [], [page]);
   const corpus = kind === "torah" ? "torah" : "neviim";
-  const rashi = useWorkCommentary("rashi", refs, Boolean(page) && (!study || lens.works.includes("rashi")));
-  const womens = useWorkCommentary("womens", refs, Boolean(page) && study && kind === "torah" && lens.works.includes("womens"));
-  const works = useMemo(() => [rashi, womens].filter(row => lens.works.includes(row.work)), [rashi, womens, lens.works]);
+  const { rashi, works } = useReadingWorks(refs, { ready: Boolean(page), study, chosen: lens.works, corpus });
   const leinLink = useCommentLink(), clearLink = leinLink.clear;
   // A pinned underline belongs to the verse it was pinned on; choosing another verse lets it go.
   useEffect(() => { clearLink(); }, [focus, textKey, clearLink]);
@@ -280,7 +279,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   const start = useRef<() => void>(() => {}); start.current = () => { textAnchor.current?.scrollIntoView({ block: "start" }); if (listening && page) hear(0); else textAnchor.current?.focus(); };
   useEffect(() => { registerStart(page ? () => start.current() : null); return () => registerStart(null); }, [page, registerStart]);
 
-  return <>
+  return <VersePanelScope>
     <div className="reading-lens-row">
       {sources.length > 1 && <div className="study-kind-choice" role="group" aria-label="Reading text selection">
         {sources.map((row, at) => <button key={at} type="button" className="button-secondary" aria-pressed={at === index} onClick={() => changeIndex(at)}>{row.label}</button>)}
@@ -327,6 +326,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
             onIndex={at => setLift(value => value && { index: at, opening: value.opening, navigation: value.navigation + 1 })} onClose={() => { audio.stopAll(); setLift(null); }} />}
         </>}
       </section>
+      <VersePanelColumn />
     </div>
-  </>;
+  </VersePanelScope>;
 }

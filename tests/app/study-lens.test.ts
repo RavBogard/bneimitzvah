@@ -63,7 +63,7 @@ test("the remembered choice is a display preference only, read and written defen
 test("Works holds registered works only, in registry order, at most three; none is allowed", () => {
   expect(DEFAULT_WORKS).toEqual(["rashi"]);
   expect(normalizeWorks(["womens", "rashi", "rashi"])).toEqual(["rashi", "womens"]);
-  expect(normalizeWorks(["ramban", "womens", "__proto__"])).toEqual(["womens"]);
+  expect(normalizeWorks(["malbim", "womens", "__proto__"])).toEqual(["womens"]);
   expect(normalizeWorks([])).toEqual([]);
   expect(normalizeWorks("rashi")).toEqual(["rashi"]);
 });

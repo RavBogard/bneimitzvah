@@ -128,7 +128,7 @@ it("the public API answers the visitor directly, with noindex and no cookie, and
     const session = await fetch("/api/public/session", { credentials: "omit" });
     const rashi = await fetch("/api/public/commentary?work=rashi&chapter=Genesis+1", { credentials: "omit" });
     const rashiBody = await rashi.json() as { work: string; verses: Record<string, { comments: { hebrew: { text: string }[] }[] }> };
-    const unregistered = await fetch("/api/public/commentary?work=ramban&chapter=Genesis+1", { credentials: "omit" });
+    const unregistered = await fetch("/api/public/commentary?work=malbim&chapter=Genesis+1", { credentials: "omit" });
     return { status: week.status, robots: week.headers.get("x-robots-tag"), cookie: week.headers.get("set-cookie"), finkel: finkel.status, session: session.status,
       rashi: { status: rashi.status, cdn: rashi.headers.get("vercel-cdn-cache-control"), cookie: rashi.headers.get("set-cookie"), work: rashiBody.work,
         verses: Object.keys(rashiBody.verses), first: rashiBody.verses["1"]?.comments[0].hebrew[0].text }, unregistered: unregistered.status };
