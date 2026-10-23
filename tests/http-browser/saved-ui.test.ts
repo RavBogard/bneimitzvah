@@ -134,14 +134,16 @@ it("the member opens the saved reading from My readings, marks a verse that stay
   await ui(tab.getByRole("region", { name: "My readings" }).getByText("Admin creation, renamed")).toHaveCount(0);
   expect((await fixture.ownerDb.select().from(s.savedReading).where(eq(s.savedReading.id, id))).length).toBe(0);
   expect((await fixture.ownerDb.select().from(s.savedVerseMark).where(eq(s.savedVerseMark.savedReadingId, id))).length).toBe(0);
-  // Another member cannot open it while it existed, and nothing about it reached the audit log.
+  // The member's saved-layer writes were exactly these four, and none of them reached the audit log.
   expect(seen.filter(row => row.startsWith("POST")).sort()).toEqual(["POST /api/saved/mark", "POST /api/saved/readings/create", "POST /api/saved/readings/remove", "POST /api/saved/readings/update"]);
   expect((await fixture.ownerDb.select().from(s.auditEvent).where(eq(s.auditEvent.targetType, "saved_reading"))).length).toBe(0);
 }, 240_000);
 
 it("another member's saved reading id opens nothing", async () => {
-  const [other] = await fixture.ownerDb.select().from(s.savedReading).limit(1);
-  expect(other).toBeDefined();
+  // Its own row: a reading the tutor-and-parent keeps, which the admin then tries to open by id.
+  const [tutor] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.userId, fixture.tutor.id));
+  const [other] = await fixture.ownerDb.insert(s.savedReading).values({ tenantId: "crc", membershipId: tutor.id, userId: fixture.tutor.id, name: "Tutor private reading",
+    kind: "torah", ranges: "Genesis 1:1-3", verseCount: 3 }).returning();
   const { tab } = await visitor(390);
   await signIn(tab, "pg-admin@example.test");
   await tab.goto(`/read?saved=${other.id}`, { waitUntil: "domcontentloaded" });

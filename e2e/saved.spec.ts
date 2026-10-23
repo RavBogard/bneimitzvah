@@ -33,8 +33,9 @@ test("Save on /read asks about the account only when pressed, and answers signed
   await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
   const save = page.getByRole("button", { name: "Save", exact: true });
   await expect(save).toBeVisible();
-  // Visiting the reading never asks about a session.
+  // Visiting the reading never asks about a session, and the app bar offers Sign in.
   expect(saved).toEqual([]);
+  await expect(page.getByRole("banner").getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
   await save.click();
   await expect(page.getByRole("link", { name: "Sign in to save readings", exact: true })).toHaveAttribute("href", "/sign-in");
   expect(saved).toEqual(["/api/saved/readings"]);
@@ -167,7 +168,11 @@ test("a saved reading opens with its name and date, keeps Still working and Got 
     await expect(page.getByRole("heading", { level: 1, name: "Synthetic reading 1", exact: true })).toBeVisible();
     await expect(page.getByText("My reading", { exact: true })).toBeVisible();
     await expect(page.getByText("Saturday, October 24, 2026 · Torah Genesis 1:1–3")).toBeVisible();
-    await expect(page).toHaveTitle("Synthetic reading 1 | CRC Torah");
+    // The private name is on the page, never in the tab title or browser history; the app bar knows the owner is signed in.
+    await expect(page).toHaveTitle("My reading | CRC Torah");
+    await expect(page.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
+    await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Preparing for your Beit Mitzvah?" })).toHaveCount(0);
     await expect(page).toHaveURL(new RegExp(`/read\\?saved=${savedRow.id}$`));
     await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
     // Choosing a verse in Lein shows its mark; pressing again clears it.

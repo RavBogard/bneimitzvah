@@ -59,18 +59,21 @@ export function PublicReading() {
 export const go = (address: string) => { try { window.location.assign(address); } catch { /* Stay. */ } };
 export function replaceAddress(address: string) { try { if (window.location.pathname + window.location.search !== address) window.history.replaceState(null, "", address); } catch { /* Address bar stays as it was. */ } }
 
-export function Shell({ children }: { children: ReactNode }) {
+/** `signedIn`: the page already verified the session (a member's own saved reading); public modes never ask, and offer Sign in. */
+export function Shell({ children, signedIn = false }: { children: ReactNode; signedIn?: boolean }) {
   return <div className="portal-shell">
     <a className="skip-link" href="#public-reading-main">Skip to the reading</a>
-    <header className="portal-header app-bar"><a className="portal-brand" href="/">CRC Torah</a><a className="app-bar-account" href="/sign-in">Sign in</a></header>
+    <header className="portal-header app-bar"><a className="portal-brand" href="/">CRC Torah</a>
+      {signedIn ? <a className="app-bar-account" href="/account"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M5 20c1.2-3.6 3.8-5.5 7-5.5s5.8 1.9 7 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg><span>Account</span></a>
+        : <a className="app-bar-account" href="/sign-in">Sign in</a>}</header>
     <main id="public-reading-main" className="workspace-main">
       <div className="reading-workspace reading-with-work"><section aria-labelledby="public-reading-title">
         {children}
-        <aside className={styles.signIn} aria-labelledby="public-sign-in-heading">
+        {!signedIn && <aside className={styles.signIn} aria-labelledby="public-sign-in-heading">
           <h2 id="public-sign-in-heading">Preparing for your Beit Mitzvah?</h2>
           <p>Sign in to see your own verses, your tutor’s notes and your practice days. Everything on this page is open to anyone.</p>
           <a className="button-start" href="/sign-in">Sign in</a>
-        </aside>
+        </aside>}
       </section></div>
     </main>
   </div>;

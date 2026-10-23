@@ -99,13 +99,17 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
   }, [id]);
   useEffect(() => { const controller = new AbortController(); setHeader({ status: "loading" }); void loadHeader(false, controller.signal); return () => controller.abort(); }, [loadHeader, retry]);
   // Back to the tab: check quietly that the reading is still this member's and unchanged; the page stays mounted.
+  // Restored from the back-forward cache (say, after signing out on a shared device): hide everything first, then ask again.
   useEffect(() => {
     let controller: AbortController | null = null;
-    const back = () => { if (document.visibilityState !== "visible") return; controller?.abort(); controller = new AbortController(); void loadHeader(true, controller.signal); };
-    document.addEventListener("visibilitychange", back);
-    return () => { document.removeEventListener("visibilitychange", back); controller?.abort(); };
+    const check = (quiet: boolean) => { controller?.abort(); controller = new AbortController(); if (!quiet) { setEdit("closed"); setHeader({ status: "loading" }); } void loadHeader(quiet, controller.signal); };
+    const back = () => { if (document.visibilityState === "visible") check(true); };
+    const restored = (event: PageTransitionEvent) => { if (event.persisted) check(false); };
+    document.addEventListener("visibilitychange", back); window.addEventListener("pageshow", restored);
+    return () => { document.removeEventListener("visibilitychange", back); window.removeEventListener("pageshow", restored); controller?.abort(); };
   }, [loadHeader]);
-  useEffect(() => { try { document.title = `${reading ? reading.name : "My reading"} | CRC Torah`; } catch { /* Keep the title. */ } }, [reading?.name]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The private name stays on the page; the tab title (and so browser history) only ever says "My reading".
+  useEffect(() => { try { document.title = "My reading | CRC Torah"; } catch { /* Keep the title. */ } }, [reading !== null]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { replaceAddress(readAddress({ mode: "saved", id }, { verse: linked, study: lens.lens === "study" })); }, [id, linked, lens.lens]);
 
   // The passage itself, by its canonical ref, from the same open routes as any reading.
@@ -188,7 +192,7 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
   useEffect(() => () => live.current?.abort(), []);
 
   const editButton = reading && <button type="button" className="button-hero-secondary" aria-expanded={edit !== "closed"} aria-controls={edit !== "closed" ? editId : undefined} onClick={openEdit}>Edit</button>;
-  return <Shell>
+  return <Shell signedIn={header.status === "ready"}>
     <Hero eyebrow="My reading" title={reading ? reading.name : header.status === "loading" ? "Loading your reading" : "Reading unavailable"}
       meta={reading && <>{reading.date && <><time dateTime={reading.date}>{longDate(reading.date)}</time> · </>}{kindName(reading.kind)} <bdi dir="ltr">{displayRange([reading.ranges])}</bdi></>}
       nav={<><button type="button" className="button-hero-secondary" onClick={() => go(readAddress({ mode: "week", date: null, kind: null }, { study: lens.lens === "study" }))}>This week</button>{chooser.button}</>}

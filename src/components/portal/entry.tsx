@@ -52,8 +52,10 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
   useEffect(() => {
     refresh();
     const visible = () => { if (document.visibilityState === "visible") refresh(); };
-    window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", visible);
-    return () => { generation.current++; controller.current?.abort(); window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", visible); };
+    // A page restored from the back-forward cache (after signing out on a shared device) checks its session again.
+    const restored = (event: PageTransitionEvent) => { if (event.persisted) refresh(); };
+    window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", visible); window.addEventListener("pageshow", restored);
+    return () => { generation.current++; controller.current?.abort(); window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", visible); window.removeEventListener("pageshow", restored); };
   }, [refresh]);
   useEffect(() => {
     if (view.kind !== "loading" && focusNext.current) { heading.current?.focus(); focusNext.current = false; }

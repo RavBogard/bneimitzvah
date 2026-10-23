@@ -35,6 +35,12 @@ export function MyReadingsView({ state, expanded, listId, onExpand, onRetry }: {
 /** My readings for an account the session says keeps saved readings. Refused or signed out on the way, it disappears. */
 export function MyReadings() {
   const [state, setState] = useState<MyReadingsState>({ status: "loading" }), [expanded, setExpanded] = useState(false), [retry, setRetry] = useState(0), listId = useId();
+  // Restored from the back-forward cache: hide the names at once and ask again; a 401 or 403 keeps them hidden.
+  useEffect(() => {
+    const restored = (event: PageTransitionEvent) => { if (event.persisted) { setExpanded(false); setRetry(value => value + 1); } };
+    window.addEventListener("pageshow", restored);
+    return () => window.removeEventListener("pageshow", restored);
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     setState({ status: "loading" });
