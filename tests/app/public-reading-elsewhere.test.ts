@@ -1,5 +1,5 @@
 import { expect, test, vi } from "vitest";
-import { unavailableTranslations } from "../helpers/translations";
+import { unavailableExtras } from "../helpers/translations";
 vi.mock("server-only", () => ({}));
 import { createPublicReadingService } from "../../src/server/public-reading/service";
 import { handlePublicReadingRequest, type PublicRuntime } from "../../src/server/http/public-reading";
@@ -26,7 +26,7 @@ function harness() {
   });
   const reading = createPublicReadingService({ loadReading: async () => { throw new Error("no calendar for a ref"); }, loadText,
     stepSource: { book: async () => book, lexicon: async () => lexicon }, pocketTorah: null });
-  const runtime: PublicRuntime = { resolveTenant: async () => undefined, reading, commentary: (async () => { throw new Error("unused"); }) as unknown as PublicRuntime["commentary"], translations: unavailableTranslations };
+  const runtime: PublicRuntime = { resolveTenant: async () => undefined, reading, commentary: (async () => { throw new Error("unused"); }) as unknown as PublicRuntime["commentary"], ...unavailableExtras };
   const call = (ref: string) => handlePublicReadingRequest(new Request(`https://beitmitzvah.centralreform.org/api/public/word-details?${new URLSearchParams([["ref", ref], ["kind", "torah"], ["verse", "0"], ["word", "0"]])}`),
     async action => action(runtime));
   return { loadText, call };

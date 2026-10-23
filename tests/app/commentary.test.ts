@@ -1,5 +1,5 @@
 import { expect, test, vi } from "vitest";
-import { unavailableTranslations } from "../helpers/translations";
+import { unavailableExtras } from "../helpers/translations";
 vi.mock("server-only", () => ({}));
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -180,7 +180,7 @@ test("the public commentary route serves a canonical, CDN-cacheable chapter and 
   const origin = "https://beitmitzvah.centralreform.org", path = "/api/public/commentary?work=rashi&chapter=I+Samuel+20";
   let opened = 0;
   const commentary = vi.fn(createSefariaCommentaryReader({ fetch: syntheticCommentaryFetch() as typeof globalThis.fetch }));
-  const runtime = { resolveTenant: vi.fn(async () => undefined), reading: {} as PublicRuntime["reading"], commentary, translations: unavailableTranslations } satisfies PublicRuntime;
+  const runtime = { resolveTenant: vi.fn(async () => undefined), reading: {} as PublicRuntime["reading"], commentary, ...unavailableExtras } satisfies PublicRuntime;
   const scope = async (action: (r: PublicRuntime) => Promise<Response>) => { opened++; return action(runtime); };
   const response = await handlePublicReadingRequest(new Request(origin + path), scope);
   expect(response.status).toBe(200);
@@ -360,7 +360,7 @@ test("the Women's Commentary: a complex, English-only, Torah-only index whose pa
   expect(validateCommentaryPayload(syntheticCommentaryPayload("womens", "Genesis 12", { present: [] }), womens)).toEqual({ work: "womens", chapter: "Genesis 12", verses: {}, editions: [] });
   // Through the public route and back through the browser parser.
   const commentary = createSefariaCommentaryReader({ fetch: syntheticCommentaryFetch({ commented: { 1: 4 }, text: (_c, _v, c) => paragraphs[c] }) as typeof globalThis.fetch });
-  const runtime = { resolveTenant: async () => undefined, reading: {} as PublicRuntime["reading"], commentary, translations: unavailableTranslations } satisfies PublicRuntime;
+  const runtime = { resolveTenant: async () => undefined, reading: {} as PublicRuntime["reading"], commentary, ...unavailableExtras } satisfies PublicRuntime;
   const response = await handlePublicReadingRequest(new Request("https://beitmitzvah.centralreform.org/api/public/commentary?work=womens&chapter=Genesis+12"), async action => action(runtime));
   expect(response.status).toBe(200); expect(response.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=2592000");
   const body = await response.json();
@@ -439,7 +439,7 @@ test("a chapter Sefaria has no text for is an empty answer the CDN keeps a day; 
     await expect(read(body), JSON.stringify(body)).rejects.toMatchObject({ code: "upstream" });
   }
   const commentary = createSefariaCommentaryReader({ fetch: noText({ error: "We have no text for Sforno on Leviticus 3." }) as typeof globalThis.fetch });
-  const runtime = { resolveTenant: async () => undefined, reading: {} as PublicRuntime["reading"], commentary, translations: unavailableTranslations } satisfies PublicRuntime;
+  const runtime = { resolveTenant: async () => undefined, reading: {} as PublicRuntime["reading"], commentary, ...unavailableExtras } satisfies PublicRuntime;
   const response = await handlePublicReadingRequest(new Request("https://beitmitzvah.centralreform.org/api/public/commentary?work=sforno&chapter=Leviticus+3"), async action => action(runtime));
   expect(response.status).toBe(200); expect(response.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=86400");
   const body = await response.json();
