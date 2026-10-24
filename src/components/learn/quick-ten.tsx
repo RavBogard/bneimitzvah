@@ -7,7 +7,7 @@ import { heardFamilies, practiceOpen, quickTenDrill } from "../../lib/learn/prac
 import { cardId, localDay, recordAnswer } from "../../lib/learn/progress";
 import { answerRun, currentItem, runDone, startRun, type Run } from "../../lib/learn/run";
 import { DRAFTED, NEW } from "./activity-copy";
-import { icons, revealAnswer } from "./bits";
+import { icons, LoadFailure, revealAnswer } from "./bits";
 import { useCourseVerses } from "./course-data";
 import { HearAndName } from "./drills";
 import { useWordCardOpen } from "./word-card";
@@ -41,8 +41,7 @@ function QuickTen({ practice }: { practice: Practice }) {
   if (!loaded) return frame(<p role="status" className={styles.state}>{NEW.quickTenLoading}</p>);
   if (!open) return frame(<p className={styles.doneLine}>{copy.empty}</p>, back);
   if (data.status === "loading") return frame(<p role="status" className={styles.state}>{NEW.quickTenLoading}</p>);
-  if (data.status === "error" || !data.pools.families.size) return frame(<div role="status" className={styles.state}><p>The recording did not load. Try again.</p>
-    <button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>, back);
+  if (data.status === "error" || !data.pools.families.size) return frame(<LoadFailure rateLimited={data.status === "error" && data.rateLimited} onRetry={() => setRetry(n => n + 1)} />, back);
   return <QuickTenRun practice={practice} families={families} pools={data.pools} frame={frame} main={main} back={back} />;
 }
 

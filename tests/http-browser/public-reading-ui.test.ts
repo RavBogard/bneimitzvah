@@ -134,7 +134,7 @@ it("the public API answers the visitor directly, with noindex and no cookie, and
         verses: Object.keys(rashiBody.verses), first: rashiBody.verses["1"]?.comments[0].hebrew[0].text }, unregistered: unregistered.status };
   });
   expect(result).toEqual({ status: 200, robots: "noindex, nofollow", cookie: null, finkel: 404, session: 404,
-    rashi: { status: 200, cdn: "public, s-maxage=2592000", cookie: null, work: "rashi", verses: ["1", "3"], first: "אָב גַּד." }, unregistered: 400 });
+    rashi: { status: 200, cdn: "public, s-maxage=2592000, stale-while-revalidate=86400", cookie: null, work: "rashi", verses: ["1", "3"], first: "אָב גַּד." }, unregistered: 400 });
 });
 
 it("any reading: a named reading, a deep-linked verse that plays from the player, and the chooser, all on the signed-out routes", async () => {

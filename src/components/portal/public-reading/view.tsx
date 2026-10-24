@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PortalRequestError } from "../api";
+import { RATE_LIMITED_MESSAGE } from "./rate-limited";
 import type { StudyKind, StudyPage } from "../workspace/study/api";
 import { FlowingStudyText } from "../workspace/study/annotations";
 import { StudyCredits } from "../workspace/study/credits";
@@ -184,7 +185,7 @@ function WeekReading({ initial, verse }: { initial: Extract<ReadTarget, { mode: 
       actions={sources.length > 0 && starter.row(current && shown && !choosing && <SaveReading passage={{ title: current.parashah, label: shown.kind === "torah" ? "Torah" : "Haftarah", kind: shown.kind, ranges: shown.ranges, date: current.date }} />, date && shown ? printAddress({ mode: "week", date, kind: shown.kind === "haftarah" ? "haftarah" : null, pick: "full" }, undefined, { today }) : undefined)} />
     {chooser.panel}
     {week?.error && <div className="workspace-state" role="status"><h2>{week.error === 400 ? "That date isn’t available" : "The reading didn’t load"}</h2>
-      <p>{week.error === 400 ? "Choose a Shabbat within the next few years, or go back to this week." : "Check your connection and try again."}</p>
+      <p>{week.error === 400 ? "Choose a Shabbat within the next few years, or go back to this week." : week.error === 429 ? RATE_LIMITED_MESSAGE : "Check your connection and try again."}</p>
       {week.error === 400 && today ? <button type="button" className="button-secondary" onClick={() => change(today)}>Go to this week</button> : <button type="button" className="button-secondary" onClick={() => setRetry(value => value + 1)}>Try again</button>}
       <OfflineExpiryNote /></div>}
     {current && !sources.length && <div className="workspace-state" role="status"><h2>No reading to show for this Shabbat</h2><p>The calendar lists no weekly Torah portion or haftarah here. Try the week before or after.</p></div>}
@@ -242,7 +243,7 @@ function ChosenReading({ target, verse }: { target: Extract<ReadTarget, { mode: 
         printAddress(target.mode === "named" ? { mode: "named", slug: target.slug, passage: index + 1 } : target))} />
     {chooser.panel}
     {loaded?.error && <div className="workspace-state" role="status"><h2>{loaded.error === 400 ? "That reading isn’t available" : "The reading didn’t load"}</h2>
-      <p>{loaded.error === 400 ? "Choose another reading, or go back to this week." : "Check your connection and try again."}</p>
+      <p>{loaded.error === 400 ? "Choose another reading, or go back to this week." : loaded.error === 429 ? RATE_LIMITED_MESSAGE : "Check your connection and try again."}</p>
       {loaded.error !== 400 && <button type="button" className="button-secondary" onClick={() => setRetry(value => value + 1)}>Try again</button>}</div>}
     {sources.length > 0 && <PassageReading key={sources.map(row => selectorKey(row.source.selector)).join("|")} sources={sources} index={index}
       onIndex={next => { setIndex(next); setLinked(null); }} verse={linked} onVerseLeft={() => setLinked(null)} registerStart={starter.register} retry={retry} onRetry={() => setRetry(value => value + 1)} choose={choosePlan} />}
@@ -433,7 +434,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     <div className="reading-passage-layout" ref={textAnchor} tabIndex={-1}>
       <ReadingToolbar englishHidden={Boolean(drillVerse)} listeningEnabled={listening} tikkunAvailable={kind === "torah"} worksCorpus={corpus} onHear={listening && page ? () => hear(focus ?? 0) : undefined} />
       <section className="assigned-study" aria-label={kind === "torah" ? "Torah text" : "Haftarah text"} data-size={prefs.size}>
-        {!page ? text?.key === textKey && text.error ? <div role="status"><h4>Text unavailable</h4><p>The verses didn’t load. Check your connection and try again.</p><button type="button" className="button-secondary" onClick={onRetry}>Reload text</button></div>
+        {!page ? text?.key === textKey && text.error ? <div role="status"><h4>Text unavailable</h4><p>{text.error === 429 ? RATE_LIMITED_MESSAGE : "The verses didn’t load. Check your connection and try again."}</p><button type="button" className="button-secondary" onClick={onRetry}>Reload text</button></div>
           : <p role="status">Loading the text…</p> : <>
           {study ? <>
             <CommentaryStatus works={workStatuses(works, corpus)} />

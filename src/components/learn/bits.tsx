@@ -7,6 +7,7 @@ import type { AnalysedVerse } from "../../lib/learn/verse";
 import type { PhraseRequest } from "../../lib/learn/phrase-audio";
 import { routeUnitTap, unitWordParts } from "../../lib/learn/word-tap";
 import { usePlayerState, useLearnServices } from "./services";
+import { RATE_LIMITED_MESSAGE } from "../portal/public-reading/rate-limited";
 import { useWordCard } from "./word-card";
 import styles from "./learn.module.css";
 
@@ -82,6 +83,13 @@ export function PlayTile({ id, requests, label = "Hear it", iconOnly = false, ra
 export function AudioError({ id }: { id: string | readonly string[] }) {
   const state = usePlayerState(), ids = typeof id === "string" ? [id] : id;
   return state.status === "error" && state.id && ids.includes(state.id) ? <p role="status" className={styles.feedback}>The recording did not load. Try again.</p> : null;
+}
+/**
+ * A lesson, drill or review that could not load its verses. A rate limit (429) says so (2.0 F1); anything else keeps the
+ * recording line (COPY.md), because the recordings travel with the verses.
+ */
+export function LoadFailure({ rateLimited = false, onRetry }: { rateLimited?: boolean; onRetry(): void }) {
+  return <div role="status" className={styles.state}><p>{rateLimited ? RATE_LIMITED_MESSAGE : "The recording did not load. Try again."}</p><button type="button" className="button-secondary" onClick={onRetry}>Try again</button></div>;
 }
 /** After an answer: bring the revealed answer fully into view above the thumb's band, then hand focus to Next. */
 export function revealAnswer(next: { current: HTMLButtonElement | null }) {

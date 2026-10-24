@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { PortalRequestError } from "../api";
+import { RATE_LIMITED_MESSAGE } from "../public-reading/rate-limited";
 import { fetchPublicRefReading, fetchPublicText, fetchPublicWeek, refSource, weekSource, type PublicSource } from "../public-reading/api";
 import { ReadingChooser } from "../public-reading/reading-chooser";
 import { useProductName } from "../public-reading/product-name";
@@ -321,7 +322,7 @@ function Status({ load, unavailable, onRetry, onThisWeek }: { load: Load | null;
   if (load.status === "empty") return <div className={`workspace-state ${styles.loading}`} role="status"><h2>No reading to show for this Shabbat</h2><p>The calendar lists no weekly Torah portion or haftarah here. Try the week before or after.</p></div>;
   if (load.status === "failed") return <div className={`workspace-state ${styles.loading}`} role="status">
     <h2>{load.code === 400 ? "That reading isn’t available" : "The reading didn’t load"}</h2>
-    <p>{load.code === 400 ? "Choose another reading, or go back to this week." : "Check your connection and try again."}</p>
+    <p>{load.code === 400 ? "Choose another reading, or go back to this week." : load.code === 429 ? RATE_LIMITED_MESSAGE : "Check your connection and try again."}</p>
     {load.code === 400 ? onThisWeek && <button type="button" className="button-secondary" onClick={onThisWeek}>Go to this week</button> : <button type="button" className="button-secondary" onClick={onRetry}>Try again</button>}
   </div>;
   return null;

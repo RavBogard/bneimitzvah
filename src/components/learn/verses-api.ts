@@ -1,5 +1,6 @@
 import { PortalRequestError } from "../portal/api";
 import { getJson } from "../portal/public-reading/api";
+import { isRateLimited } from "../portal/public-reading/rate-limited";
 import { publicShortPath, publicTextPath } from "../portal/public-reading/urls";
 import { parseStudyContent, studyRangePlan, type StudyVerse } from "../portal/workspace/study/api";
 import { referenceRecord } from "../../lib/reference-audio/source";
@@ -80,7 +81,8 @@ async function passage(ref: string, kind: Melody, signal: AbortSignal): Promise<
     const { plan, page } = await textPage(ref, kind, offset, total, signal);
     let shorts: (ReferenceShortResolution | null)[];
     try { shorts = await shortPage(ref, kind, offset, plan.refs, plan.nextOffset, total, signal); }
-    catch (error) { if (signal.aborted) throw error; shorts = plan.refs.map(() => null); out.shortsFailed = true; }
+    // A 429 is not "the recordings are down": it stops the passage so the lesson can say what happened (2.0 F1). Any other failure stays quiet.
+    catch (error) { if (signal.aborted || isRateLimited(error)) throw error; shorts = plan.refs.map(() => null); out.shortsFailed = true; }
     out.refs.push(...plan.refs); out.verses.push(...page.verses); out.shorts.push(...shorts);
     offset = plan.nextOffset;
   }

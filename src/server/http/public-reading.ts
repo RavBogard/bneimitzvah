@@ -93,11 +93,21 @@ function definiteNotFound(): Response {
   return new Response(JSON.stringify({ error: messages[404] }), { status: 404, headers: { ...common, "content-type": "application/json; charset=utf-8",
     "cache-control": "public, max-age=300", "vercel-cdn-cache-control": "public, s-maxage=3600" } });
 }
-function json(value: JsonValue, cdnSeconds: number): Response {
+/**
+ * What a complete, pinned answer may keep (2.0 F1): the browser an hour, and the CDN may serve it stale for a day while it asks again.
+ * The platform firewall's /api/public/ rate limit counts every request that reaches the edge, a CDN hit included; only a browser
+ * that already holds the answer never sends one. So the answers that cannot change under a reader (a verse page, a word, a pinned
+ * commentary edition, a translation set, a source text) are kept longer in the browser than the five minutes everything else gets,
+ * and a repeat read of the same page, lesson or chapter costs the limiter nothing.
+ */
+const KEPT = { browser: 3600, stale: 86400 } as const;
+type Kept = typeof KEPT | undefined;
+function json(value: JsonValue, cdnSeconds: number, kept?: Kept): Response {
   const body = JSON.stringify(value);
   if (Buffer.byteLength(body) > 2 * 1024 * 1024) return failure(503);
   return new Response(body, { status: 200, headers: { ...common, "content-type": "application/json; charset=utf-8",
-    "cache-control": "public, max-age=300", "vercel-cdn-cache-control": `public, s-maxage=${cdnSeconds}` } });
+    "cache-control": `public, max-age=${kept ? kept.browser : 300}`,
+    "vercel-cdn-cache-control": `public, s-maxage=${cdnSeconds}${kept ? `, stale-while-revalidate=${kept.stale}` : ""}` } });
 }
 function statusOf(error: unknown): keyof typeof messages {
   try {
@@ -178,36 +188,36 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
           case "text": {
             const kind = kindOf(query.kind), offset = count(query.offset);
             const page = ref !== undefined ? await reading.textByRef(kind, ref, offset, signal) : await reading.text(kind, query.date, offset, signal);
-            return json({ kind: query.kind, ...selector(query), ...studyPageView(page) }, 86400);
+            return json({ kind: query.kind, ...selector(query), ...studyPageView(page) }, 86400, KEPT);
           }
           case "word-aids": {
             const kind = kindOf(query.kind), verse = count(query.verse);
             const aids = ref !== undefined ? await reading.wordAidsByRef(kind, ref, verse, signal) : await reading.wordAids(kind, query.date, verse, signal);
-            return json({ kind: query.kind, ...selector(query), verse: Number(query.verse), wordAids: wordAidsView(aids) }, 86400);
+            return json({ kind: query.kind, ...selector(query), verse: Number(query.verse), wordAids: wordAidsView(aids) }, 86400, KEPT);
           }
           case "word-details": {
             const kind = kindOf(query.kind), verse = count(query.verse), word = count(query.word);
             const details = ref !== undefined ? await reading.wordDetailsByRef(kind, ref, verse, word, signal) : await reading.wordDetails(kind, query.date, verse, word, signal);
             const body = { kind: query.kind, ...selector(query), verse: Number(query.verse), wordDetails: wordDetailsView(details) };
-            return json(body, 86400);
+            return json(body, 86400, KEPT);
           }
           case "short": {
             const kind = kindOf(query.kind), offset = count(query.offset);
             const page = ref !== undefined ? await reading.shortReferencesByRef(kind, ref, offset, signal) : await reading.shortReferences(kind, query.date, offset, signal);
             return json({ kind: query.kind, ...selector(query), page: { offset: page.offset, nextOffset: page.nextOffset, totalVerses: page.totalVerses,
-              references: page.references as unknown as JsonValue[] } }, 86400);
+              references: page.references as unknown as JsonValue[] } }, 86400, KEPT);
           }
           case "commentary": {
             // A pinned edition does not change: the CDN may keep a chapter for thirty days. A chapter Sefaria says it has
             // no text for is kept a day; an answer with no edition at all may be a momentary gap upstream, so an hour only.
             const chapter = await runtime.commentary(query.work, query.chapter, signal);
             return json({ work: chapter.work, chapter: chapter.chapter, verses: chapter.verses as unknown as JsonValue, editions: chapter.editions as unknown as JsonValue[] },
-              chapter.editions.length ? 2592000 : chapter.absent ? 86400 : 3600);
+              chapter.editions.length ? 2592000 : chapter.absent ? 86400 : 3600, chapter.editions.length ? KEPT : undefined);
           }
           case "translations": {
             // Thirty days when both halves answered; an hour when one side was missing, so it is asked again soon.
             const result = await runtime.translations(query.verse, signal);
-            return json(result.answer as unknown as JsonValue, result.complete ? 2592000 : 3600);
+            return json(result.answer as unknown as JsonValue, result.complete ? 2592000 : 3600, result.complete ? KEPT : undefined);
           }
           case "related": {
             // The shelf is selected and ordered by code, so a deploy can change it, and this route has no deploy-keyed URL (one URL per verse):
@@ -245,7 +255,7 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
               if (error instanceof SourceTextUnavailable && error.code === "unsupported") return definiteNotFound();
               throw error;
             }
-            return json(text as unknown as JsonValue, 2592000);
+            return json(text as unknown as JsonValue, 2592000, KEPT);
           }
         }
       } catch (error) { return failure(statusOf(error)); }
