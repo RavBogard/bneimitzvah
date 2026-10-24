@@ -64,11 +64,14 @@
   - the four triggers;
   - empty tables, and unchanged counts for the older tables, tenants, hosts, audit events and students.
   The apply's own output was filtered by mistake, so the full check list comes from that verify pass on the live database. The Opus adversarial review of #69 found no security blocker, and its fixes were in the merged head. Main, with #65, was merged locally first and the MCP, discussions, saved-structure and never-in-repo tests passed.
-- **Resume point, 2026-10-24 night:**
-  - In flight: M6b (#70, the discussions UI), which is merging main after #69's squash.
-  - Then v1.8.0, with a check-in. Two things to ask Daniel there:
+- GATE: merged #70 (M6b, the discussions UI, 7c13cac) and tagged v1.8.0 there. Proceeded because CI was green on the merge with main and the live /read check was clean: Lech-Lecha, the siddur blessing links, commentary loading and no console errors. 1.5 through 1.8 are now all released.
+- **Resume point, 2026-10-24 night (after v1.8.0):**
+  - Nothing in flight.
+  - Asked Daniel at the check-in:
     - whether the curator's own account name may appear after "Selected by";
     - the M4 consent line.
+  - Next on the roadmap: 2.0, which waits on Cowork's handoff (docs/planning/2026-10-24-release-2-0).
+  - Waiting on others: DNS for torah.centralreform.org, then §4.3 of the cutover runbook.
   - Follow-ups:
     - the "and/ he said" slash in dictionary glosses;
     - the counter's Neon check around 2026-10-30;
