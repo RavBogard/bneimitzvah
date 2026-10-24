@@ -50,6 +50,25 @@ Link into the live siddur at the printed page; don't embed it or copy it.
 - Open the live links by hand and record what each page shows: Sh'ma (10), V'ahavta (11), Torah blessing (22), Havdalah wine (60), and both service starts (1 and 33).
 - Where a page holds several prayers, the link lands on the page's first prayer; list the affected parts.
 
+### Live link check (Claude, 2026-10-24, after 6dceef9 deployed)
+
+Every link opens the Beit Mitzvah volume at the printed page. The reader takes a few seconds to load, and briefly shows its default book before the page appears. What each page opens on:
+
+| Page | Opens on |
+|---|---|
+| 1 | Welcome (Shabbat morning service start) |
+| 10 | Sh'ma, under Sh'ma and its blessings |
+| 11 | V'ahavta |
+| 22 | Blessing Before the Torah Reading |
+| 23 | Mi Shebeirach. The Blessing Before the Haftarah Reading is lower on the same page. |
+| 24 | Reading of the Haftarah, then the Blessing Following the Haftarah Reading |
+| 33 | Welcome (Shabbat evening service start) |
+| 60 | Havdalah, The Wine |
+
+Affected parts (several prayers on one page; the link lands on the page's first prayer): the haftarah blessings line on /read (page 23 opens on Mi Shebeirach), and any assigned part that shares a page with an earlier prayer. The reader has no in-page anchor in its link format, so this stays as is.
+
+- GATE: the /read blessings lines use the recognised CRC reader address, not a per-congregation setting, because signed-out /read has no congregation settings and public routes serve only CRC's host (#64) — proceeded because CRC is the only tenant. A second congregation (2.5) needs a small public settings read before it can show its own siddur, under the licence item below.
+
 ## Open items that wait on Daniel
 
 - **Licence, 2.5:** another congregation gets no CRC catalog text, no CRC siddur by default, and no links into this book. Ask when 2.5 starts.
