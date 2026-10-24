@@ -25,11 +25,11 @@ Ranked by learning value first, then by how much of it can be built from data th
 | 6 | In this week's reading | `this-week` | transfer to the real text | M | yes |
 | 7 | Review | `review` | keeping it | M | yes |
 | 8 | Your first verse | `first-verse` | the goal | M | yes |
-| 9 | Same sign, different place | `look-alikes` | pashta and kadma, mahpach and yetiv, geresh and azla | S | later, first |
+| 9 | Same sign, different place | `look-alikes` | pashta and kadma, mahpach and yetiv, kadma and azla, azla and geresh | S | 1.6 |
 | 10 | Fill the gap | `fill-the-gap` | predicting the melody from the marks | M | later |
 | 11 | Odd one out | `odd-one-out` | fine discrimination | S | later |
-| 12 | Which half of the verse | `which-half` | etnachta as the middle | S | later |
-| 13 | Quick ten | `quick-ten` | fluency, untimed | S | later |
+| 12 | Which half of the verse | `which-half` | etnachta as the middle | S | 1.6 |
+| 13 | Quick ten | `quick-ten` | fluency, untimed | S | 1.6 |
 | 14 | Tap the stress | `tap-the-stress` | mil'el and mil'ra | M | later |
 | 15 | Trope song, call and response | `trope-song` | the names as a chain | M | later, needs a recording |
 | 16 | Hands-free listening | `listen-list` | passive exposure | S | later |
@@ -129,9 +129,11 @@ Any mechanic that needs a rule change (a daily goal, a streak) is not here; it i
 
 ## Later
 
-### 9. Same sign, different place  (`look-alikes`)  S, later but first
+### 9. Same sign, different place  (`look-alikes`)  S, ships in 1.6
 
 Two words appear, each carrying the same-looking sign in a different place (pashta on the last letter, kadma on the stressed syllable; mahpach inside the word, yetiv before the first letter; geresh and azla). The learner hears one and taps the word it belongs to, or reads only and names each. Teaches the three confusions every teacher lists (REPORT.md, A1). Needs per-word accents (exists). Cheap to build; it is "later" only because v1 is already eight.
+
+As built in 1.6 (strings, pairs and examples from `docs/superpowers/research/2026-10-23-cowork-offload/learn-next-activities.md`): four pairs in lessons.json `lookAlikes`, every word checked against the engine. Read mode only in the lessons (torah-zakef, torah-azla, haftarah-azla). The tap is the answer and plays nothing; then both words show their mark names, the tell appears, a Hear it tile plays the tapped word then the other, and the words open their word cards. Azla against geresh is decided by the word before, so each word is shown with the word before it, muted. Daniel, 2026-10-23: azla against geresh is reading only, with no listening version, now or later. No review card.
 
 ### 10. Fill the gap  (`fill-the-gap`)  M
 
@@ -141,13 +143,13 @@ The verse plays with one phrase silent (the cut skips its word range). The learn
 
 Three phrases play; two share a family. Tap the odd one. Fine discrimination for the review queue once a learner is solid.
 
-### 12. Which half of the verse  (`which-half`)  S
+### 12. Which half of the verse  (`which-half`)  S, ships in 1.6
 
-A phrase plays; the learner says whether it came before or after the etnachta. A quiet way to teach that the verse has two halves and that the tune tells you which you are in. Needs only phrase index per word (exists).
+The verse plays from its first word up to the end of one phrase; the learner says whether that phrase came before or after the etnachta. Daniel, 2026-10-23, "Hide until answered": nothing marks the phrase before the answer (no underline, nothing in the screen-reader text), so the half is chosen by ear; the underline arrives with the answer, with the half's tint and the tell line. A quiet way to teach that the verse has two halves. Changed by Daniel, 2026-10-23: the verse up to the phrase tells you which half you are in, not the phrase alone, because zakef, revia and tevir sound the same on either side of the rest. A phrase-only variant (`"audio": "phrase"`) is a reading item: the phrase alone plays and the learner finds it in the text. Pool: phrases of the listed families in verses with exactly one etnachta and 6 to 18 words, never the etnachta phrase or the ending, about half before and half after. Placed in intro-phrases (all families), torah-zakef and haftarah-zakef. No review card. Needs only phrase index per word (exists).
 
-### 13. Quick ten  (`quick-ten`)  S
+### 13. Quick ten  (`quick-ten`)  S, ships in 1.6
 
-Ten hear-and-name items with no pauses between them and no timer. Calm by default; a timer would be a rule change and is not proposed.
+Ten hear-and-name items with no pauses between them and no timer. Calm by default; a timer would be a rule change and is not proposed. As built in 1.6: a practice run (lessons.json `practice`, one per melody, at `/learn/practice/quick-ten-torah` and `/learn/practice/quick-ten-haftarah`), not a lesson. It opens once three families are heard in that melody, from a row on the course home and on the review page. Three choices from the families heard. After each answer the phrase shows in its verse for 1.5 seconds once any comparison has played, then the next phrase plays on its own. "Stop here" ends it. Misses come back after the ten. Answers move the name cards, as hear-and-name does; Quick ten records no lesson.
 
 ### 14. Tap the stress  (`tap-the-stress`)  M
 
@@ -169,6 +171,6 @@ Hear the reference phrase, record yourself, see the two melody lines one above t
 
 - Pools: for a family F in melody M, the pool is every phrase of family F in a word-ready verse of table M, 1 to 5 words long, excluding the special-melody passages (Gen 1:5, 8, 13, 19, 23, 31; Ex 15:1–19; Num 33:11–49; Ex 20 and Deut 5; Gen 35:22) and excluding the last verse of a Torah aliyah recording and the last verse of a haftarah for the sof pasuk family (their endings differ). For the sof-haftarah family the pool is only the last verse of each haftarah recording.
 - Distractors: by default, the families the learner has completed (one exception: the first lesson of each path contrasts sof pasuk with etnachta, which the intro lesson has already played as "the rest"), weighted 2 to 1 toward each family's confusable neighbours: sof pasuk with etnachta; zakef with revia and with zakef gadol; tevir with etnachta; kadma v'azla with pazer and with telisha ketana; segol with zakef; telisha ketana with kadma v'azla; pazer with telisha ketana; zakef gadol with zakef.
-- Counts: a lesson's drills total 8 to 14 planned items. Missed items are re-asked until right once, so a lesson can run a little longer for a learner who is struggling; a lesson's drills may stop early once eight items in a row have been answered right with no miss.
+- Counts: a lesson's drills total 8 to 14 planned items. Missed items are re-asked until right once, so a lesson can run a little longer for a learner who is struggling; a lesson's drills may stop early once eight items in a row have been answered right with no miss. From 1.6 that early stop never skips a look-alikes or which-half step: each is the lesson's one look at its skill, so it still runs in full.
 - Verse length: prefer verses of 5 to 12 words for tap-the-phrase and where-does-it-end.
 - Variety: never two items in a row from the same verse; spread across books.

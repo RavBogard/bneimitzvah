@@ -122,3 +122,34 @@ test("offline, a Learn to lein lesson opens from the shell and can be finished; 
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("crc-torah:learn-progress/v1") ?? "{}") as { lessons?: Record<string, unknown> });
   expect(Object.keys(stored.lessons ?? {})).toContain("torah-sof-pasuk");
 });
+
+test("offline, the 1.6 activities run from the course pack: look-alikes and which-half lessons finish and Quick ten opens", async ({ context, page }, testInfo) => {
+  test.skip(testInfo.project.name !== "phone", "one device is enough for the worker");
+  test.setTimeout(240_000);
+  const app = await installedApp(context);
+  await saved(page);
+  // The look-alike verses (some in no lesson's examples) travel in the course pack's fixed passages.
+  const course = (await packs(page)).find(row => row.key === "course")!;
+  const texts = course.assets.filter(asset => asset.startsWith("/api/public/text?")).map(asset => new URL(asset, "http://x").searchParams.get("ref") ?? "").join("; ");
+  for (const ref of ["Deuteronomy 30:13", "Deuteronomy 6:10", "Genesis 1:29", "Isaiah 60:17", "I Kings 19:8", "Isaiah 54:11"]) expect(texts.split("; "), ref).toContain(ref);
+  for (const id of ["torah-azla", "haftarah-zakef"]) {
+    await app.offline(false);
+    await page.goto(`/learn/${id}`);
+    await expect(page.locator("main[data-step=hear]")).toBeVisible({ timeout: 30_000 });
+    await app.offline(true);
+    await page.goto(`/learn/${id}`);
+    await expect(page.locator("main[data-step=hear]")).toBeVisible({ timeout: 30_000 });
+    await finishLesson(page);
+  }
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("crc-torah:learn-progress/v1") ?? "{}") as { lessons?: Record<string, unknown> });
+  expect(Object.keys(stored.lessons ?? {})).toEqual(expect.arrayContaining(["torah-azla", "haftarah-zakef"]));
+  // Quick ten, opened offline from the shell once three Torah families are heard.
+  await page.evaluate(() => {
+    const value = JSON.parse(localStorage.getItem("crc-torah:learn-progress/v1")!) as { lessons: Record<string, { done: string }> };
+    for (const id of ["intro-phrases", "torah-sof-pasuk", "torah-etnachta", "torah-zakef"]) value.lessons[id] = { done: "2026-10-20T15:00:00.000Z" };
+    localStorage.setItem("crc-torah:learn-progress/v1", JSON.stringify(value));
+  });
+  await page.goto("/learn/practice/quick-ten-torah");
+  await expect(page.getByRole("heading", { name: "Which phrase is this?" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("The recording did not load. Try again.")).toHaveCount(0);
+});

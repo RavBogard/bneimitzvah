@@ -1,6 +1,6 @@
 import type { FamilyId } from "../trope/chart-catalog";
-import { COURSE, MELODY_FAMILIES, TROPE_IDS, type Drill, type Melody, type TropeId } from "./course";
-import { isSpecialMelody, type AnalysedVerse } from "./verse";
+import { COURSE, lookAlikeExamples, MELODY_FAMILIES, TROPE_IDS, type Drill, type LookAlikeMark, type LookAlikePairId, type LookAlikeWord, type Melody, type TropeId } from "./course";
+import { isSpecialMelody, lookAlikeMatches, type AnalysedVerse } from "./verse";
 
 /**
  * Item generation over the verses the course has loaded (plan, Decided 3). Pure: a seeded rng makes
@@ -64,15 +64,36 @@ export type SameItem = Readonly<{ type: "same-or-different"; key: string; first:
 export type EndItem = Readonly<{ type: "where-does-it-end"; key: string; target: Phrase; audio: boolean }>;
 export type TapItem = Readonly<{ type: "tap-the-phrase"; key: string; target: Phrase }>;
 export type BuildItem = Readonly<{ type: "build-the-phrase"; key: string; phrase: Phrase; tiles: readonly TropeId[] }>;
-export type DrillItem = NameItem | SameItem | EndItem | TapItem | BuildItem;
+/** One look-alike word on screen, in its verse as loaded. */
+export type LookSide = Readonly<{ word: LookAlikeWord; verse: AnalysedVerse }>;
+/** Same sign, different place: two words side by side; the learner taps the one carrying `ask`. `answer` is its place in `shown`. */
+export type LookItem = Readonly<{ type: "look-alikes"; key: string; pair: LookAlikePairId; context: "word" | "previous-word"; ask: LookAlikeMark;
+  shown: readonly [LookSide, LookSide]; answer: 0 | 1; hard: boolean; mode: "read" | "hear"; first: boolean }>;
+/** Which half of the verse: `target` is a phrase of a verse with one etnachta, on unit `rest`; before or after it? */
+export type HalfItem = Readonly<{ type: "which-half"; key: string; target: Phrase; rest: number; half: "before" | "after"; audio: "lead-in" | "phrase" }>;
+export type DrillItem = NameItem | SameItem | EndItem | TapItem | BuildItem | LookItem | HalfItem;
 /** The verses an item plays from; consecutive items never share one. */
 export const itemRefs = (item: DrillItem): string[] => item.type === "same-or-different" ? [item.first.ref, item.second.ref]
+  : item.type === "look-alikes" ? [...new Set(item.shown.map(side => side.verse.ref))]
   : [item.type === "hear-and-name" ? item.answer.ref : item.type === "build-the-phrase" ? item.phrase.ref : item.target.ref];
-/** The family and melody whose review card an item answers. */
-export const itemCard = (item: DrillItem): { family: FamilyId; melody: Melody } => {
+/** The family and melody whose review card an item answers; look-alikes and which-half answer none (they teach marks and halves). */
+export const itemCard = (item: DrillItem): { family: FamilyId; melody: Melody } | null => {
+  if (item.type === "look-alikes" || item.type === "which-half") return null;
   const phrase = item.type === "hear-and-name" ? item.answer : item.type === "same-or-different" ? item.first : item.type === "build-the-phrase" ? item.phrase : item.target;
   return { family: phrase.family, melody: phrase.kind };
 };
+
+/** The phrase of a verse that holds unit `unit`, as a pool phrase, for a look-alike heard in its phrase. */
+export function phraseAt(verse: AnalysedVerse, unit: number): Phrase | null {
+  const phrase = verse.phrases.find(row => row.units[0] <= unit && unit <= row.units[1]); if (!phrase) return null;
+  return Object.freeze({ ref: verse.ref, kind: verse.kind, family: phrase.family, words: phrase.units,
+    tropes: Object.freeze(verse.units.slice(phrase.units[0], phrase.units[1] + 1).map(row => row.trope)), book: verse.book, verseUnits: verse.units.length });
+}
+/** The unit of a verse's one etnachta, or null when it has none or more than one. */
+export function restUnit(verse: AnalysedVerse): number | null {
+  const rests = verse.units.filter(unit => unit.trope === "etnachta");
+  return rests.length === 1 ? rests[0].index : null;
+}
 
 /** Picks phrases so that no two in a row share a verse and books are spread: least-used book first. */
 function picker(rng: () => number) {
@@ -162,6 +183,57 @@ export function drillItems(activity: Drill, pools: Pools, context: DrillContext,
         const target = picks.pick(poolOf(pools, family, melody).filter(fits)); if (!target) continue;
         push(activity.type === "tap-the-phrase" ? { type: "tap-the-phrase", key: key("tap", phraseKey(target)), target }
           : { type: "where-does-it-end", key: key("end", phraseKey(target)), target, audio: activity.params.audio });
+      }
+      break;
+    }
+    case "look-alikes": {
+      // Every example of the lesson's melody whose two words still match the loaded verses, each used once, the pairs in turn.
+      type Row = { id: LookAlikePairId; a: LookSide; b: LookSide; hard: boolean };
+      const byPair = new Map<LookAlikePairId, Row[]>();
+      for (const { pair, example } of lookAlikeExamples(activity, melody)) {
+        const a = pools.verses.get(example.a.ref), b = pools.verses.get(example.b.ref);
+        if (!a || !b || a.kind !== melody || b.kind !== melody || !lookAlikeMatches(a, example.a) || !lookAlikeMatches(b, example.b)) continue;
+        if (activity.params.mode === "hear" && a === b && phraseAt(a, example.a.word)?.words[0] === phraseAt(b, example.b.word)?.words[0]) continue;
+        const list = byPair.get(pair.id) ?? []; byPair.set(pair.id, list);
+        list.push({ id: pair.id, a: { word: example.a, verse: a }, b: { word: example.b, verse: b }, hard: example.hard });
+      }
+      const queues = activity.params.pairs.flatMap(id => byPair.has(id) ? [shuffle(byPair.get(id)!, rng)] : []), chosen: Row[] = [];
+      for (let turn = 0; chosen.length < activity.params.items && queues.some(queue => queue.length); turn++) { const row = queues[turn % queues.length].shift(); if (row) chosen.push(row); }
+      // A hard item is never first, and two items in a row never share a verse when the order can avoid it.
+      const refs = (row: Row) => [row.a.verse.ref, row.b.verse.ref], shares = (x: Row, y: Row) => refs(x).some(ref => refs(y).includes(ref));
+      const start = shuffle(chosen, rng);
+      // A depth-first search over at most eight items finds an order with no shared neighbours whenever one exists.
+      const search = (order: Row[], rest: Row[], strict: boolean): Row[] | null => {
+        if (!rest.length) return order;
+        for (const [i, row] of rest.entries()) {
+          if (!order.length && row.hard || strict && order.length && shares(order.at(-1)!, row)) continue;
+          const found = search([...order, row], rest.filter((_, k) => k !== i), strict); if (found) return found;
+        }
+        return null;
+      };
+      const ordered = search([], start, true) ?? search([], start, false) ?? start;
+      for (const [n, row] of ordered.entries()) {
+        const askA = rng() < 0.5, flip = rng() < 0.5, shown = Object.freeze(flip ? [row.b, row.a] : [row.a, row.b]) as readonly [LookSide, LookSide];
+        out.push(Object.freeze({ type: "look-alikes", key: key("look", row.id, row.a.verse.ref, String(row.a.word.word), row.b.verse.ref, String(row.b.word.word)), pair: row.id,
+          context: COURSE.lookAlikes[row.id].context, ask: askA ? row.a.word.mark : row.b.word.mark, shown, answer: askA !== flip ? 0 : 1, hard: row.hard, mode: activity.params.mode, first: n === 0 }));
+      }
+      break;
+    }
+    case "which-half": {
+      const { families, items, verseWords, audio } = activity.params;
+      // Phrases of the listed families in verses of one etnachta and 6 to 18 words, never the etnachta phrase or the ending.
+      const candidates = { before: [] as Phrase[], after: [] as Phrase[] };
+      for (const family of families) for (const phrase of poolOf(pools, family, melody)) {
+        const verse = pools.verses.get(phrase.ref), rest = verse ? restUnit(verse) : null;
+        if (!verse || rest === null || verse.units.length < verseWords[0] || verse.units.length > verseWords[1]) continue;
+        if (phrase.family === "etnachta" || phrase.family === "sof-pasuk" || phrase.family === "sof-haftarah" || phrase.words[0] <= rest && rest <= phrase.words[1] || phrase.words[1] === verse.units.length - 1) continue;
+        (phrase.words[1] < rest ? candidates.before : candidates.after).push(phrase);
+      }
+      // About half before the rest and half after it.
+      for (const wanted of shuffle(Array.from({ length: items }, (_, i) => i % 2 === 0 ? "before" as const : "after" as const), rng)) {
+        const first = picks.pick(candidates[wanted]), half = first ? wanted : wanted === "before" ? "after" : "before", target = first ?? picks.pick(candidates[half]);
+        if (!target) continue;
+        push(Object.freeze({ type: "which-half", key: key("half", phraseKey(target)), target, rest: restUnit(pools.verses.get(target.ref)!)!, half, audio }));
       }
       break;
     }
