@@ -33,7 +33,7 @@ jobs:
       - run: bash .github/scripts/ci-system-packages.sh "false" "chromium firefox" ffmpeg pulseaudio pulseaudio-utils
       - name: repeat the calendar session review file
         run: |
-          for i in 1 2 3 4 5 6 7 8; do
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
             echo "=== attempt $i"
             npx vitest run --config vitest.http-browser.config.mts tests/http-browser/zz-diag.test.ts 2>&1 | grep -vE "source map|map file|ENOENT|^\s+at " || true
           done
