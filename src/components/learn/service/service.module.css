@@ -1,0 +1,32 @@
+/* The service course's own pieces, on Learn to lein's frame (learn.module.css): the lake bar, rail, footer, path rows and
+   Done classes are shared. Existing tokens only; flat print, no shadows or gradients, no authored motion. */
+
+.stepTitle { font-size: 1.5rem; font-weight: 750; letter-spacing: -0.02em; line-height: 1.2; }
+.note { color: var(--color-muted); max-width: 62ch; }
+
+/* About: the approved teaching, set for reading. */
+.teaching { display: grid; gap: 1rem; max-width: 62ch; }
+.teaching p { font-size: 1.1875rem; line-height: 1.6; margin: 0; max-width: none; text-wrap: pretty; }
+/* The page font has no italic face; allow the browser's slant for the transliterated words a teaching sets apart. */
+.teaching em { font-style: italic; font-synthesis: style; }
+.teaching .credit { margin-top: 0.25rem; color: var(--color-muted); font-size: 1rem; font-weight: 650; }
+
+/* Where: the service as a map; the learner's section opens and the prayer is bold and marked, never colour alone. */
+.map { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.mapSection { padding: 0.75rem 1rem; border-radius: var(--radius-control); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); color: var(--color-muted); font-weight: 600; }
+.mapSection[data-here] { color: var(--color-ink); box-shadow: inset 0 0 0 2px var(--color-ink); font-weight: 700; }
+.mapLessons { list-style: none; margin: 0.625rem 0 0; padding: 0; display: grid; gap: 0.25rem; font-weight: 500; }
+.mapLesson { position: relative; padding-inline-start: 1.5rem; min-height: 1.75rem; }
+.mapLesson::before { content: "\00b7"; position: absolute; inset-inline-start: 0.5rem; }
+.mapLesson[aria-current="step"] { font-weight: 800; }
+.mapLesson[aria-current="step"]::before { content: "\25B6"; inset-inline-start: 0; font-size: 0.75em; line-height: 2.2; }
+.whereText { display: grid; gap: 0.5rem; max-width: 62ch; }
+.whereText p { margin: 0; }
+
+/* The siddur link row on Read and Done. */
+.siddur { margin: 0; }
+.siddur a { display: inline-flex; align-items: center; min-height: 48px; font-weight: 650; }
+
+/* Home. */
+.unitSummary { margin: 0.25rem 0 0.5rem; max-width: 62ch; color: var(--color-muted); font-size: 0.9375rem; }
+.later { color: var(--color-muted); }

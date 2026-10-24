@@ -97,6 +97,26 @@ test("only the exact course data file is allowed, and never with fields derived 
   assert.ok(entryProblems(path, JSON.stringify({ token: "vercel_blob_" + "rw_" + "syntheticMetadataToken" })).includes("credential pattern"));
 });
 
+test("the service course data files are allowed by exact path, with Hebrew only in the alphabet table and none in a congregation file", () => {
+  const course = "src/lib/service-course/course.json", tenant = "src/lib/service-course/tenants/crc.json";
+  const alef = String.fromCharCode(0x05d0), shma = [0x05e9, 0x05de, 0x05e2].map(code => String.fromCharCode(code)).join("");
+  const clean = JSON.stringify({ schema: "service-course/v1", lessons: [{ id: "shma", title: "Sh’ma" }], alphabet: { letters: [{ id: "alef", name: "Alef", char: alef }] } });
+  assert.deepEqual(entryProblems(course, clean), []);
+  assert.deepEqual(entryProblems(tenant, JSON.stringify({ tenant: "crc", lessons: { shma: { teaching: { text: "A teaching in Latin letters.", approved: "2026-10-24" } } } })), []);
+  // A prayer word outside the alphabet table is refused, as a value, a key, escaped, or shadowed by a duplicate key.
+  for (const bad of [JSON.stringify({ lessons: [{ title: shma }], alphabet: {} }), JSON.stringify({ [shma]: 1, alphabet: {} }),
+    `{"lessons":[{"title":"x"}],"alphabet":{},"note":"\\u05e9\\u05de\\u05e2"}`, `{"title":"${shma}","title":"x","alphabet":{}}`]) {
+    assert.ok(entryProblems(course, bad).some(problem => /Hebrew|escaped/.test(problem)), bad.slice(0, 40));
+  }
+  for (const bad of [JSON.stringify({ lessons: { shma: { teaching: { text: shma } } } }), `{"text":"\\u05e9"}`, `{"text":"${shma}","text":"x"}`]) assert.ok(entryProblems(tenant, bad).some(problem => /Hebrew|escaped/.test(problem)), bad.slice(0, 40));
+  assert.ok(entryProblems(course, "{not json").includes("service course data is not valid JSON"));
+  for (const neighbor of ["src/lib/service-course/other.json", "src/lib/service-course/tenants/nested/crc.json", "src/lib/service-course/tenants/CRC.json", "src/service-course/course.json"]) {
+    assert.ok(entryProblems(neighbor, clean).includes("data file outside reviewed allow-list"), neighbor);
+  }
+  assert.ok(entryProblems(course, JSON.stringify({ note: "The JPS Tanakh", alphabet: {} })).some(problem => /licensed-text/.test(problem)));
+  assert.ok(entryProblems(tenant, JSON.stringify({ token: "vercel_blob_" + "rw_" + "syntheticMetadataToken" })).includes("credential pattern"));
+});
+
 test("only exact design token metadata is allowed while credential, email and binary checks remain active", () => {
   const path = ".impeccable/design.json";
   const tokens = JSON.stringify({ colors: { paper: "#fffdf8", ink: "#252520" }, fonts: { body: "system-ui" }, tokens: { space: 8 } });

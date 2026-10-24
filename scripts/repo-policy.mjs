@@ -11,6 +11,25 @@ const DATA = new Set([".json", ".csv", ".tsv", ".txt", ".jsonl", ".ndjson"]);
 // private PocketTorah index (alignment scores, recording keys, index word counts) never enter it.
 const COURSE_DATA = "src/lib/learn/lessons.json";
 const COURSE_PRIVATE_FIELDS = /"(?:alignScore|recording|indexWords)"\s*:|[A-Za-z]:[\\/]+private[\\/]/i;
+// The service course (release 2.0): structure and the congregation's approved teaching only. course.json may hold Hebrew
+// nowhere but its alphabet table (single letters and vowel marks); a congregation file holds no Hebrew at all. Both are
+// refused if they carry any, escaped or not, so prayer text, licensed or public, cannot enter the repo through them.
+const SERVICE_COURSE_FILE = "src/lib/service-course/course.json";
+const SERVICE_COURSE_TENANT = /^src\/lib\/service-course\/tenants\/[a-z][a-z0-9-]{1,30}\.json$/;
+function serviceCourseProblem(file, text) {
+  let value;
+  try { value = JSON.parse(text); } catch { return "service course data is not valid JSON"; }
+  // Parsed and raw both: an escaped Hebrew letter is Hebrew once decoded, and a shadowed duplicate key would hide it from the parse.
+  // The alphabet table is the one exemption, so the raw Hebrew count must equal the table's own.
+  const hebrew = string => (string.match(/[\u0590-\u05FF]/g) ?? []).length;
+  if (/\u05[0-9a-f]{2}/i.test(text)) return "escaped Hebrew in service course data";
+  if (file === SERVICE_COURSE_FILE) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return "service course data is not an object";
+    const { alphabet, ...rest } = value;
+    return hebrew(JSON.stringify(rest)) || hebrew(text) !== hebrew(JSON.stringify(alphabet ?? null)) ? "Hebrew outside the service course alphabet table" : undefined;
+  }
+  return hebrew(JSON.stringify(value)) || hebrew(text) ? "Hebrew in a service course congregation file" : undefined;
+}
 const CONFIGS = new Set(["package.json", "package-lock.json", "tsconfig.json", ".impeccable/config.json", ".impeccable/design.json", COURSE_DATA]);
 const DRIZZLE_METADATA = /^src\/server\/db\/migrations\/meta\/(?:_journal|[0-9]{4}_snapshot)\.json$/;
 function reviewedServiceCron(text) {
@@ -83,7 +102,8 @@ export function entryProblems(path, content = "") {
   if (KEYS.test(file) || /\.local\.json$/i.test(file)) problems.push("credential/config file");
   if (/(?:^|\/)\.env[^/]*$/i.test(file) && file !== ".env.example") problems.push("environment file");
   if (file === ".env.example" && text.split(/\r?\n/).some(line => !/^\s*(?:#|$)/.test(line) && !/^[A-Z][A-Z0-9_]*=\s*$/.test(line))) problems.push("environment example must contain names only");
-  if (data && !CONFIGS.has(file) && file !== "vercel.json" && !migrationMetadata && !/^(?:trope\/|tests\/fixtures\/(?:trope|portal)\/)/.test(file) && !/(?:^|\/)(?:LICENSE|OFL|PROVENANCE)(?:\.txt)?$/i.test(file)) problems.push("data file outside reviewed allow-list");
+  if (data && !CONFIGS.has(file) && file !== "vercel.json" && !migrationMetadata && file !== SERVICE_COURSE_FILE && !SERVICE_COURSE_TENANT.test(file) && !/^(?:trope\/|tests\/fixtures\/(?:trope|portal)\/)/.test(file) && !/(?:^|\/)(?:LICENSE|OFL|PROVENANCE)(?:\.txt)?$/i.test(file)) problems.push("data file outside reviewed allow-list");
+  if (data && (file === SERVICE_COURSE_FILE || SERVICE_COURSE_TENANT.test(file))) { const problem = serviceCourseProblem(file, text); if (problem) problems.push(problem); }
   if (file === COURSE_DATA && COURSE_PRIVATE_FIELDS.test(text)) problems.push("private index field in course data");
   if (file === "vercel.json" && !reviewedServiceCron(text)) problems.push("deployment config must contain only the reviewed daily service drain cron");
   if (migrationMetadata) {
