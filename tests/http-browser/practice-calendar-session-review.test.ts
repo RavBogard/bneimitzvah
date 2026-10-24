@@ -50,7 +50,10 @@ function traffic(tab: Page) {
 }
 async function page() {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
-  await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
+  // Egress guard: only requests to other origins are intercepted, and they are aborted. Same-origin requests are deliberately NOT routed:
+  // Firefox never reports requestfinished or requestfailed for a routed fetch that the page aborts (AbortSignal) before route.continue() settles,
+  // so Playwright counted it as in flight for good and every waitForLoadState("networkidle") below then timed out after 30 s.
+  await context.route(url => url.origin !== BROWSER_ORIGIN, route => route.abort());
   const tab = await context.newPage(), reads:ServiceRead[]=[],requests=new WeakMap<BrowserRequest,ServiceRead>();serviceReads.set(tab,reads);
   tab.on("request",request=>{const url=new URL(request.url()),match=/^\/api\/students\/([^/]+)\/my-service$/.exec(url.pathname);if(match){const read:ServiceRead={studentId:match[1],mode:url.searchParams.get("mode")??"",started:performance.now(),terminal:"pending"};reads.push(read);requests.set(request,read);}});
   tab.on("response",response=>{const read=requests.get(response.request());if(read){read.status=response.status();read.responseMs=Math.round(performance.now()-read.started);}});
