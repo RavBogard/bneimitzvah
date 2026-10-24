@@ -1,6 +1,6 @@
 # State — CRC B'nei Mitzvah portal
 
-**Order of the remaining work (Daniel, 2026-10-23 popup and alignment rulings; recorded in MISSION):** 1.4 PR 3, then the v1.4.0 tag. Then 1.5: the two-origin work, the switch to torah.centralreform.org, A1, A2, cookieless analytics, `{productName}` in public page titles, share cards, and v1.5.0 (the beta tag: `/read`, `/learn` and `/trope-chart` open to indexing, plus Daniel's listening round on the lessons, which moves here from v1.4). Then 1.6, all three Learn to lein activities in one release, alongside the reader's print sheet (second builder, no date; spec stub `docs/superpowers/specs/2026-10-23-reader-print-sheet-design.md`). Then the voice track from M0, which also picks up parked draft PR #22 (the reference-audio listening-review admin page) and renumbers its migration. The real-family pilot waits until Daniel says when; nothing goes to families before it. Codex's PR #43 is "Review and close now", handled by Daniel. At most two builders at once, Sonnet for routine work. Check-ins at v1.4.0, v1.5.0 and 1.6 are a short terminal note, under 15 lines: what shipped, what to try, anything that needs him. Shabbat and yom tov put no limit on deploys, merges or tags; a deploy that breaks the live site is rolled back at once, fixed forward, and reported in the next release note.
+**Order of the remaining work (Daniel, 2026-10-23 popup and alignment rulings; recorded in MISSION):** 1.4 PR 3, then the v1.4.0 tag. Then 1.5: the two-origin work, the switch to torah.centralreform.org, A1, A2, cookieless analytics, `{productName}` in public page titles, share cards, and v1.5.0 (the beta tag: `/read`, `/learn` and `/trope-chart` open to indexing, plus Daniel's listening round on the lessons, which moves here from v1.4). Then 1.6, all three Learn to lein activities in one release, alongside the reader's print sheet (second builder, no date; spec stub `docs/superpowers/specs/2026-10-23-reader-print-sheet-design.md`). Then the voice track from M0, which also picks up parked draft PR #22 (the reference-audio listening-review admin page) and renumbers its migration. The real-family pilot waits until Daniel says when; nothing goes to families before it. Codex's PR #43 is "Review and close now", handled by Daniel. At most two builders at once, Sonnet for routine work. Check-ins at v1.4.0, v1.5.0 and 1.6 are a short terminal note, under 15 lines: what shipped, what to try, anything that needs him. Shabbat and yom tov put no limit on deploys, merges or tags; a deploy that breaks the live site is rolled back at once, fixed forward, and reported in the next release note. **[Superseded 2026-10-24: v1.5.0 is not the beta tag; see "Amendments, 2026-10-24 (G0)" below.]**
 
 - GATE: recorded Daniel's 2026-10-23 alignment rulings in MISSION ("Amended 2026-10-23, later"), this order, the print-sheet spec stub and the cowork-offload copies (sitemap step in FORWARD-MESSAGE.md, new IPHONE-CHECK.md) — proceeded because the answers are binding and the commit touches no code; `tests/never-in-repo.test.mjs` passed.
 - **v1.5.0 sitemap.** The CRC staff helper submits the sitemap to Google Search Console at v1.5.0 (second message in `docs/planning/2026-10-23-cowork-offload/FORWARD-MESSAGE.md`). `src/app` has `robots.ts` but no sitemap today, so the v1.5.0 build must serve `/sitemap.xml` for the public pages and `robots.ts` must stop disallowing them.
@@ -65,18 +65,34 @@
   - empty tables, and unchanged counts for the older tables, tenants, hosts, audit events and students.
   The apply's own output was filtered by mistake, so the full check list comes from that verify pass on the live database. The Opus adversarial review of #69 found no security blocker, and its fixes were in the merged head. Main, with #65, was merged locally first and the MCP, discussions, saved-structure and never-in-repo tests passed.
 - GATE: merged #70 (M6b, the discussions UI, 7c13cac) and tagged v1.8.0 there. Proceeded because CI was green on the merge with main and the live /read check was clean: Lech-Lecha, the siddur blessing links, commentary loading and no console errors. 1.5 through 1.8 are now all released.
-- **Resume point, 2026-10-24 night (after v1.8.0):**
-  - Nothing in flight.
-  - Daniel, at the v1.8.0 check-in:
-    - "Selected by" shows the curating admin's own account name ("Admin's own name");
-    - the M4 consent line is kept as is.
-  - Next on the roadmap: 2.0, which waits on Cowork's handoff (docs/planning/2026-10-24-release-2-0).
+- **Resume point, 2026-10-24 night (v1.8.0 live; product review running; 2.0 plan imported and starting):**
+  - Live: v1.8.0 at 7c13cac, prod ledger 43 (newest migration 0042_curated_discussions; the next free number is 0043).
+  - Product review in progress: [docs/planning/2026-10-24-product-review/](../2026-10-24-product-review/BRIEF.md). Daniel's twenty alignment rulings and the "study and learning companion, not a source-sheet builder" ruling are recorded there.
+  - In flight, both open and neither adds a migration: PR #71 (review/patch-1-8-1, the 1.8.1 review defect fixes) and PR #72 (review/fix-ad01-refresh-loop, the AD-01 refresh loop).
+  - 2.0 plan imported and starting: [docs/planning/2026-10-24-release-2-0/PLAN.md](../2026-10-24-release-2-0/PLAN.md), with Cowork's designs, strings and the 49 approved teachings under its cowork/ folder. G0 (this docs catch-up) is done. Next suggested slices: F1 (public routes and the rate limit), SC1 (course skeleton), DV1 (D'var link table); builders may reorder. Daniel, 2026-10-24: "I don't care about order. Feel free to reorder however, and continue until they are all finished."
+  - Daniel, at the v1.8.0 check-in: "Selected by" shows the curating admin's own account name ("Admin's own name"); the M4 consent line is kept as is.
+  - Still Daniel's: the D'var binder (CRC's stage list and dates), the pilot kit's keep or edit, the beta word, licence questions for any evening or Havdalah prayer whose text is only in a licensed lane.
   - Waiting on others: DNS for torah.centralreform.org, then §4.3 of the cutover runbook.
   - Follow-ups:
     - the "and/ he said" slash in dictionary glosses;
     - the counter's Neon check around 2026-10-30;
     - a saved reading named like an email address hides that person's list from the MCP until renamed.
 
+
+## Amendments, 2026-10-24 (G0: docs catch up with Daniel's 2.0 rulings)
+
+Dated additions only; earlier lines stand as history. The binding text is MISSION's "Amended 2026-10-24 (G0)" section; this is the state-file view.
+
+- **Beta.** v1.5.0 is an ordinary version, not the beta tag. The "v1.5.0 (the beta tag ...)" wording in the order line at the top of this file, the v1.5.0 sitemap bullet and any "1.5 release will be beta" wording are superseded by Daniel's line already recorded above ("The beta label comes when I say so, and not until then"). Indexing, the sitemap submission and any "beta" wording on screen wait for his word; `PUBLIC_INDEXING` stays false.
+- **Teaching and credit.** Claude may draft each prayer's teaching in Daniel's voice; he approves each one; all 49 are approved. Approved teachings are credited "Rabbi Daniel Bogard"; unapproved text keeps "Written by Claude for CRC · not yet reviewed by Rabbi Daniel Bogard".
+- **Ruling 45** is widened for the service course only: tutors and rabbis see a per-part finished mark; parents do not.
+- **Ruling 51** is replaced for 2.0: no melody link and no prayer audio until 2.1.
+- **`dvar_torah_draft`** is retired for `dvar_torah_progress` (shared Google Doc model).
+- **Prayer text** for the course comes from CRC's own public-lane texts in the shireishabbat and shirei-tfilah repos; licensed-lane-only evening or Havdalah text goes back to Daniel as a licence question.
+- **Copy:** "Keep all" for the course strings, the D'var strings and the five fix lines.
+- **Learn-to-lein spec path:** `docs/superpowers/plans/2026-10-22-learn-to-lein.md`, not `specs/`.
+- GATE: G0 imported the 2.0 plan and Cowork's designs and amended MISSION and STATE — proceeded because it is docs only (no product code, no student-visible change), the copied files were scanned for licensed text, Hebrew beyond the Sh'ma verse and alphabet, emails and credentials, and `tests/never-in-repo.test.mjs` passes.
+- GATE: migration numbers for 2.0 confirmed against main (newest 0042, next free 0043; PRs #71 and #72 add none) — proceeded because they stay "renumber at merge" proposals in the plan.
 
 ## Current return point — 2026-10-21 night: toward 1.0
 

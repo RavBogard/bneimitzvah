@@ -303,7 +303,7 @@ Each release ships, deploys and is tagged. "Beta" starts at 1.5, as Daniel set.
 | **1.3: The shelf** | <ul><li>"More on this verse" with curated commentary, midrash, halakhah, Talmud and Targum.</li><li>The Works control.</li><li>Compare translations.</li><li>"Any reading" by parashah, haftarah, holiday or range.</li></ul> | Licence policy (open item 2), curated lists (open item 3) |
 | **1.4: Accounts for everyone** | <ul><li>Account requests and approval.</li><li>The Member role.</li><li>My readings, My translation, My notes, starred comments.</li><li>The translate drill.</li><li>The adversarial security review.</li></ul> | Open items 4 and 5 |
 | **1.5: Beta** | <ul><li>Learn to lein (course, families in this week's reading, hear-and-name).</li><li>Recall drills.</li><li>The installable app with 14-day offline for saved readings.</li><li>The typed sign-in code.</li><li>The new name and front door.</li></ul> | Open items 1 and 7; the 1.5 research already written |
-| **2.0** | Out of beta: indexing on if Daniel wants it, the notifications he chooses, and anything the beta teaches us | Daniel |
+| **2.0** | Out of beta: indexing on if Daniel wants it, the notifications he chooses, and anything the beta teaches us | Daniel **[Superseded 2026-10-24: v1.5.0 is not the beta tag; beta and indexing wait on Daniel's word. See MISSION, "Amended 2026-10-24 (G0)".]** |
 
 The generated chant voice is outside this list. It is decided by the Cowork research and the G3 gate.
 

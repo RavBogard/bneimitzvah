@@ -35,7 +35,7 @@ Source: `docs/planning/2026-10-23-cowork-offload/QUESTIONS.md` (Daniel's answers
 
 ### Popup rulings, 2026-10-23 (relayed after the list above; binding)
 
-- **F2, the beta tag is v1.5.0.** The noindex flip for `/read`, `/learn` and `/trope-chart` ships with the v1.5.0 tag, not earlier. Section 4.3's switch-window probes stay noindex.
+- **F2, the beta tag is v1.5.0.** The noindex flip for `/read`, `/learn` and `/trope-chart` ships with the v1.5.0 tag, not earlier. Section 4.3's switch-window probes stay noindex. **[Superseded 2026-10-24: v1.5.0 is not the beta tag; beta and indexing wait on Daniel's word. See MISSION, "Amended 2026-10-24 (G0)".]**
 - **Section 3.9 install hint, replaces the "When" line.** Shown once to anyone on a phone or tablet, signed in or not, on the torah origin and not already installed. Once dismissed it stays dismissed (this replaces the 90-day "Not now"), and it is always available from the menu (Account and the app menu keep an Install entry). Never on reading pages, never as a modal.
 - **Analytics.** Aggregate, cookieless page counts on public pages only; no per-person data; nothing on signed-in pages. It goes in its own small batched PR, after a check that Vercel Web Analytics costs nothing extra on the current plan; if it would, stop and ask Daniel. Log the check as a GATE line.
 - **Learn's tap exercises (for the 1.6 activities and the current drills).** A tap answers while the question is open and plays no audio; once answered, any word opens its word card.

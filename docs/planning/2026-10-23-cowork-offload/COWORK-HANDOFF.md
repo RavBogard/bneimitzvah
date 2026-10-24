@@ -31,7 +31,7 @@ Claude Code reads your folder and builds from it. You deliver decisions, researc
 | 1.2, Lein and Study with Rashi inline | Live, v1.2.0 |
 | 1.3, any reading by name or ref, nine more Works, Compare translations, More on this verse | Live, v1.3.0 |
 | 1.4, accounts | Part 1, saved readings, is live. Part 2 is being built: account requests, the Member role, approvers and two emails. Part 3, the Yours row, stars and the translate drill, is next. |
-| 1.5 beta | Learn to lein is live at `/learn`. The rest is to come, in this order: course progress saved to the account (being built), the typed sign-in code (being built), the switch to torah.centralreform.org, the installable app with 14-day offline reading, and the beta tag. |
+| 1.5 beta | Learn to lein is live at `/learn`. The rest is to come, in this order: course progress saved to the account (being built), the typed sign-in code (being built), the switch to torah.centralreform.org, the installable app with 14-day offline reading, and the beta tag. **[Superseded 2026-10-24: v1.5.0 is not the beta tag; beta and indexing wait on Daniel's word. See MISSION, "Amended 2026-10-24 (G0)".]** |
 | The generated chant voice | Waits until 1.5 is done. Nothing generated reaches a student before Daniel's G3 blind review. |
 
 ---

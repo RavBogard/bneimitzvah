@@ -25,7 +25,7 @@ Sources are cited by short name:
 
 | Item | Status | Where it is ruled |
 |---|---|---|
-| Beta runs from 1.5 until 2.0; 2.0 is "out of beta" | [Ruled] | MISSION, 2026-10-22 amendment ("1.5 release will be beta. We will be in beta until 2.0"); SPEC §6 |
+| Beta runs from 1.5 until 2.0; 2.0 is "out of beta" | [Ruled] | MISSION, 2026-10-22 amendment ("1.5 release will be beta. We will be in beta until 2.0"); SPEC §6 **[Superseded 2026-10-24: beta is Daniel's word alone; see MISSION.]** |
 | Search-engine indexing turned on, if Daniel wants it | [Ruled as Daniel's choice] | SPEC §6 2.0 row; MISSION ("Public pages ask search engines not to index them until beta") |
 | The notifications Daniel chooses. The code is live but switched off: `PORTAL_NOTIFICATIONS_ENABLED` is unset. It covers tutor draft notices, the weekly parent digest and student reminders | [Ruled: off until Daniel says] | SPEC §6; MISSION ("Notifications stay off until Daniel says to switch them on"); STATE, the PR #17 gate line |
 | D'var Torah drafting and tutor feedback | [Ruled: 2.0] | R1.5 ruling 4 ("D'var Torah stays in 2.0", keeping study-guide spec S3); STATE, 2026-10-22 (1.5 planning); REVIEW ruling 30 and §6 |
@@ -164,7 +164,7 @@ These are checks to run before Daniel's provisioning gate. The adversarial pass 
 |---|---|---|
 | D'var Torah | Per-student draft table with a larger text limit than today's 4 KB; writing screen; tutor and rabbi comments; parent read access decided; its own MCP consent scope if Claude may read drafts (R1.5 §3D) | M |
 | Web siddur integration [Ruled: D12] | Proper integration of the existing web siddur (shirei-shabbat repo, web-siddur, Beit Mitzvah volume) into the portal: the student's service parts open in the siddur, in place of a custom-built one. Claude Code to check how the siddur is served today and what a clean link or embed needs [Inferred] | M |
-| Service course [Ruled: D12, E2] | A course for the service in the Learn to lein pattern: lessons, drills, review and a path, prayer by prayer. Each prayer also teaches about the prayer itself, using Daniel's own commentary and framing pulled from the shirei-shabbat and shirei-tfilah repos; Claude does not write that teaching fresh. Likely uses the siddur's service parts and the CRC Music link-out (REVIEW ruling 51). Needs a short design pass before sizing; open questions are in §4 [Inferred] | M–L |
+| Service course [Ruled: D12, E2] | A course for the service in the Learn to lein pattern: lessons, drills, review and a path, prayer by prayer. Each prayer also teaches about the prayer itself, using Daniel's own commentary and framing pulled from the shirei-shabbat and shirei-tfilah repos; Claude does not write that teaching fresh. Likely uses the siddur's service parts and the CRC Music link-out (REVIEW ruling 51). Needs a short design pass before sizing; open questions are in §4 [Inferred] | M–L **[Teaching clause superseded 2026-10-24: Claude drafts, Daniel approves each; no CRC Music link in 2.0; see MISSION.]** |
 | Notifications switched on | Daniel picks which of the three kinds; global flag on; each congregation's switches | S |
 | Indexing on | Remove noindex and the robots Disallow on chosen public pages | S |
 

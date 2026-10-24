@@ -39,7 +39,7 @@ Each line is a question Daniel was asked and the answer he gave. Numbering conti
 
 **Progress, lessons, parents, notifications**
 
-45. Progress means three things: the tutor marks each verse (not started / working / solid), the student self-checks, and a practice log (plays, recordings, visits) shown to the student as a quiet calendar or streak and to the parent as days practiced. No leaderboards. Amends ruling 14's "plays counted in aggregate only": per-student practice events are kept for the student's own calendar; nothing finer than days-practiced is reported to anyone else, and nothing is reported across students.
+45. Progress means three things: the tutor marks each verse (not started / working / solid), the student self-checks, and a practice log (plays, recordings, visits) shown to the student as a quiet calendar or streak and to the parent as days practiced. No leaderboards. Amends ruling 14's "plays counted in aggregate only": per-student practice events are kept for the student's own calendar; nothing finer than days-practiced is reported to anyone else, and nothing is reported across students. **[Widened 2026-10-24 for the service course only: a per-part finished mark for tutors and rabbis; see MISSION.]**
 46. Notifications, all through the existing Resend account: tutor inbox email when a student sends a recording or draft; a parent weekly digest; opt-in student practice reminders.
 47. **Lesson log, without hours.** The tutor writes "what we did today" per lesson; parents see it. No scheduling in the portal and no accounting against the 20 included hours.
 48. The parent view shows: the reading and progress; date, service slot and logistics; tutor notes and the lesson log; the honors form. Not the child's recordings.
@@ -48,7 +48,7 @@ Each line is a question Daniel was asked and the answer he gave. Numbering conti
 **Audio, platform, tenants**
 
 50. **Generated chant remains the goal** for Torah and haftarah audio; recordings are the interim. G3 is unchanged.
-51. **Prayer audio links out to CRC Music** (centralreform.live), where CRC's actual melodies and charts live. The portal does not host prayer recordings; tutor and clergy reference recordings in the portal are for Torah and haftarah verses only.
+51. **Prayer audio links out to CRC Music** (centralreform.live), where CRC's actual melodies and charts live. The portal does not host prayer recordings; tutor and clergy reference recordings in the portal are for Torah and haftarah verses only. **[Replaced for 2.0 on 2026-10-24: no melody link or audio until 2.1; see MISSION.]**
 52. **A second congregation is likely within a year.** Build the congregation-settings screen and a minimal onboarding path now. Amends ruling 21's "not building a second tenant's onboarding yet".
 53. **PWA with offline audio.** Installable on phones; the student's current audio is available offline; recordings made offline upload later. Amends ruling 14's "no downloads" to the extent that a service-worker cache the app controls is not a download; the student still cannot save a file.
 54. **No student-facing assistant in 1.0** (ruling 11 stands).
@@ -98,7 +98,7 @@ These are the schema additions the rulings require. Names are suggestions; Astra
 - `recording`: student, `assignment_verse` range or unit, blob URL, duration, created at, submitted to tutor at, reviewed at (by whom), deleted at. Retention is computed from the student's ceremony date at job time (ceremony plus one year), not stored, so a moved date moves the deletion. `reference_recording`: tutor or clergy recordings per `assignment_verse` (Torah and haftarah only, per ruling 51).
 - `lesson_entry`: student, author (tutor or rabbi), date, text. Parent-visible.
 - `notification_pref` (user × kind × on/off, plus reminder days) and `outbox` (recipient, kind, payload, send after, sent at, provider id, error).
-- `dvar_torah_draft` and `siddur_input`: reserved, not built (rulings 30, 44). A reserved kind or an empty table is enough; no UI.
+- `dvar_torah_draft` and `siddur_input`: reserved, not built (rulings 30, 44). A reserved kind or an empty table is enough; no UI. **[Amended 2026-10-24: `dvar_torah_draft` is retired for `dvar_torah_progress`; see MISSION, "Amended 2026-10-24 (G0)".]**
 - `tenant` additions (or keys in `tenant.customs`): slot options and times, default nusach, siddur volume IDs, CRC Music base URL, roster sheet ID, sender address, consent notice text.
 - `import_run`: source (maven | csv), when, counts, per-row outcome.
 - `audit_event`: add the new actions (honors edit, honoree link issue/revoke, verse status, lesson entry, recording submit/review/delete, service part change, roster import, sheet export) to the `audit_action_known` check constraint.

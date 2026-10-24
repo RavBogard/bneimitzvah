@@ -73,7 +73,7 @@ You deliver decisions, research, designs and finished text. You write no code.
 | Area | Ruling |
 |---|---|
 | **Tone** | Every learner-facing string is in sentence case, with plain verbs, and respects an adult reader. The same words serve a 12-year-old and a 60-year-old. Never use exclamation points, emoji, mascots, confetti, streaks, badges, scores, pep talk ("great job", "you got this"), slang or a youth-group voice. Learn to lein has no streak and no daily goal. |
-| **Daniel's teaching** | The service course teaches about each prayer from Daniel's own commentary and framing in the siddur repos. Claude does not write that teaching fresh. Where none exists, there's a gap for Daniel, not an invented paragraph. |
+| **Daniel's teaching** | The service course teaches about each prayer from Daniel's own commentary and framing in the siddur repos. Claude does not write that teaching fresh. Where none exists, there's a gap for Daniel, not an invented paragraph. **[Superseded 2026-10-24: Claude drafts, Daniel approves each; see MISSION.]** |
 | **Licences** | The CRC Beit Mitzvah siddur (`legacy-beit-mitzvah`) carries third-party text. It is licensed for CRC's non-commercial use only. It never enters the app repo and never goes to the public mirror. Never paste its text into your files: cite it by volume, page and prayer. The public Shirei Tfilah volumes are CC BY-NC-SA 4.0. Sefaria texts may be shown live with edition, licence and credit. JPS 2023 may be printed with its credit. Any new licence question goes to Daniel. |
 | **Audio** | No recording of learners, of any kind. No generated audio before 2.5 and G3. The trope-song activity waits for a human recording. CRC Music (centralreform.live) is the melody link-out (REVIEW ruling 51). |
 | **Writing** | Since 1.7, writing happens in Claude, not the app. The note and My translation editors were cut. Collide this with D'var Torah drafting in Track B. |
@@ -98,7 +98,7 @@ The goal is a course, in the Learn to lein pattern, through which a student lear
 
 **A1. Learn the Learn to lein pattern first.** Read:
 
-- `docs/superpowers/specs/2026-10-22-learn-to-lein.md`;
+- `docs/superpowers/specs/2026-10-22-learn-to-lein.md` [path does not exist; use `docs/superpowers/plans/2026-10-22-learn-to-lein.md`];
 - `src/lib/learn/course.ts` and `lessons.json`;
 - `../research/learn-next-activities.md`.
 
@@ -366,7 +366,7 @@ Ask in batches of at most five, with your recommendation first. Record each answ
 - `docs/planning/2026-10-15-kickoff/MISSION.md`. Read every dated amendment. They override older lines.
 - `docs/planning/2026-10-15-kickoff/STATE.md`, especially the 1.5 rulings and the popup answers.
 - `docs/planning/2026-10-16-review/PLAN-REVIEW.md`, rulings 30, 44, 51 and 58 and §6.
-- `docs/superpowers/specs/2026-10-22-learn-to-lein.md` and `docs/superpowers/plans/2026-10-23-web-siddur-integration.md`.
+- `docs/superpowers/specs/2026-10-22-learn-to-lein.md` [path does not exist; use `docs/superpowers/plans/2026-10-22-learn-to-lein.md`] and `docs/superpowers/plans/2026-10-23-web-siddur-integration.md`.
 - `docs/planning/2026-10-23-friday-preparation/` (the 1.7 direction; "writing stays in Claude").
 - `docs/superpowers/specs/2026-10-23-reader-print-sheet-design.md` (the print work the course may reuse).
 - `../ROADMAP-2.md`, `../QUESTIONS.md` and `../research/`.
