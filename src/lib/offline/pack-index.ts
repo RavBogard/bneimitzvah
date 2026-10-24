@@ -33,6 +33,8 @@ try {
     channel.onmessage = event => { if (event.data === "purge") { generation += 1; running?.abort(); running = null; } };
   }
 } catch { channel = null; }
+/** Resolves when the pack in progress (if any) has finished, so a caller can start the next one without cutting it short. */
+export const packingIdle = (): Promise<void> => (work ?? Promise.resolve()).then(() => {}, () => {});
 export function packingStarted(): AbortController { running?.abort(); running = new AbortController(); return running; }
 /** The pack in progress, so a purge can wait for it to stop before it deletes. */
 export function trackPacking<T>(promise: Promise<T>): Promise<T> { work = promise; void promise.finally(() => { if (work === promise) work = null; }).catch(() => {}); return promise; }
