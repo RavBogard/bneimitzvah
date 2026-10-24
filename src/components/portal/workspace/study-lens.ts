@@ -41,9 +41,16 @@ export function readRememberedLens(storage: Storage | null, key: string | null):
       ...typeof value.english === "boolean" ? { english: value.english } : {} };
   } catch { return {}; }
 }
-export function rememberLens(storage: Storage | null, key: string | null, choice: LensChoice) {
+/**
+ * `chosen`: which of works and English the person has chosen (by default both). One not chosen is left out, so a lens
+ * switch alone never turns today's default commentaries into a remembered choice (release 1.7 M3b: the account keeps
+ * only real choices).
+ */
+export function rememberLens(storage: Storage | null, key: string | null, choice: LensChoice, chosen: Readonly<{ works: boolean; english: boolean }> = { works: true, english: true }) {
   if (!storage || !key) return;
-  try { storage.setItem(key, JSON.stringify({ lens: choice.lens, works: [...choice.works], english: choice.english })); } catch { /* The choice still applies on this page. */ }
+  try {
+    storage.setItem(key, JSON.stringify({ lens: choice.lens, ...chosen.works ? { works: [...choice.works] } : {}, ...chosen.english ? { english: choice.english } : {} }));
+  } catch { /* The choice still applies on this page. */ }
 }
 /** The lens a reading opens in: the link's, else (only when remembering) the last one used, else Lein. */
 export function initialLens(input: { query: Lens | null; remember: boolean; remembered: Lens | undefined }): Lens {
@@ -78,8 +85,10 @@ export function StudyLensScope({ storageKey, query = null, children }: { storage
   }, [storageKey]);
   const update = useCallback((change: Partial<LensChoice>) => setChoice(current => {
     const next = { lens: change.lens ?? current.lens, works: change.works ? normalizeWorks(change.works) : current.works, english: change.english ?? current.english };
-    rememberLens(browserStorage(), storageKey, next);
-    if (storageKey === LENS_STORAGE.weekly && (next.english !== current.english || next.works.join() !== current.works.join())) notePreferencesChanged();
+    const prior = readRememberedLens(browserStorage(), storageKey);
+    rememberLens(browserStorage(), storageKey, next, { works: change.works !== undefined || prior.works !== undefined, english: change.english !== undefined || prior.english !== undefined });
+    if (storageKey === LENS_STORAGE.weekly && (change.works !== undefined || change.english !== undefined))
+      notePreferencesChanged([...change.works !== undefined ? ["works" as const] : [], ...change.english !== undefined ? ["studyEnglish" as const] : []]);
     return next;
   }), [storageKey]);
   const value = useMemo<LensContext>(() => ({ ...choice, available: true, setLens: lens => update({ lens }), setWorks: works => update({ works }), setEnglish: english => update({ english }) }), [choice, update]);

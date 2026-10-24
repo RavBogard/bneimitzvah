@@ -46,6 +46,16 @@ export function versesFor(selection: { reading?: { passages: readonly { kind: "t
   return [];
 }
 
+/**
+ * The selector's public name for "Selected by {name}" (Daniel, 2026-10-24: the person who selected the source), taken from
+ * their account name when they select it and kept with the source: one plain line of at most 120 characters, never an
+ * address. A name that fails reads "Portal member", as lesson logs and student work do.
+ */
+export function selectorName(raw: unknown): string {
+  const value = typeof raw === "string" ? raw.normalize("NFC").replace(/\s+/g, " ").trim() : "";
+  return value && plain(value, 480) && [...value].length <= 120 && !value.includes("@") ? value : "Portal member";
+}
+
 /** One plain line of at most 160 bytes, the same rule as the CHECK (portal_source_plain). */
 export function validTitle(value: unknown): value is string {
   return plain(value, DISCUSSION_LIMITS.titleBytes);

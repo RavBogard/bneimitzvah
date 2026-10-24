@@ -136,7 +136,7 @@ export function createPreferencesSync(io: PreferencesSyncIo) {
     if (remote && remote.owner === owner) {
       adopt(remote);
       // Whatever changed in this browser while the request was out stays changed and is sent next.
-      const moved = changedFields(value, browserPreferences(io.storage()));
+      const local = browserPreferences(io.storage()), moved = changedFields(value, local).filter(field => local[field] !== undefined);
       marker(moved);
       if (moved.length) schedule();
       return;
@@ -158,8 +158,11 @@ export function createPreferencesSync(io: PreferencesSyncIo) {
     if (writing) { again = true; return; }
     const current = readMarker(io.storage());
     if (account !== "synced" || !current || current.owner !== owner || !current.changed.length) return;
+    const next = overlayPreferences(base, browserPreferences(io.storage()), current.changed);
+    // Nothing differs from the account's copy (a change undone, or a field this browser no longer holds): nothing to send.
+    if (samePreferences(next, base)) { marker([]); return; }
     writing = true;
-    try { await send(overlayPreferences(base, browserPreferences(io.storage()), current.changed), false); }
+    try { await send(next, false); }
     finally { writing = false; if (again) { again = false; void push(); } }
   }
   function schedule() {
@@ -173,7 +176,9 @@ export function createPreferencesSync(io: PreferencesSyncIo) {
     const answer = await call(PREFERENCES_PATHS.get);
     if (answer.status !== 200) { refused(answer.status); return; }
     const remote = parseRemotePreferences(answer.value); if (!remote) return;
-    if (known && known.owner !== remote.owner) {
+    // Read again: a choice made while the answer was on its way is in the marker now.
+    const fresh = readMarker(io.storage()) ?? known;
+    if (fresh && fresh.owner !== remote.owner) {
       // Another account's choices (a shared device): never copied up. This account's copy, or none, replaces them.
       adopt(remote); apply(base); marker([]);
       return;
@@ -187,7 +192,7 @@ export function createPreferencesSync(io: PreferencesSyncIo) {
       return;
     }
     // The account wins; this account's own unsent changes from this browser are laid over it.
-    const changed = known?.changed ?? [], next = overlayPreferences(base, local, changed);
+    const changed = fresh?.changed ?? [], next = overlayPreferences(base, local, changed);
     apply(next); marker(changed);
     if (changed.length && !samePreferences(next, base)) await push();
   }
@@ -198,14 +203,23 @@ export function createPreferencesSync(io: PreferencesSyncIo) {
       if (!starting) starting = begin(activate).finally(() => { starting = null; });
       return starting;
     },
-    /** After this browser saved a personal-reader choice: mark what changed, and save it to the account shortly. */
-    changed() {
-      if (account !== "synced" || owner === null) return;
+    /**
+     * After this browser saved a personal-reader choice (`fields`: the ones it set): mark what changed, and save it to the
+     * account shortly. Before the account has answered (still loading, offline, or the answer failed), a browser active for
+     * an account keeps the mark, and the next start lays those fields over the account's copy, so the choice is not lost.
+     * Signed out or refused, nothing is marked: the account's copy wins at the next sign-in.
+     */
+    changed(fields: readonly PreferenceField[] = []) {
+      if (account === "signed-out" || account === "not-eligible") return;
       const current = readMarker(io.storage());
+      if (account !== "synced" || owner === null) {
+        if (current?.active && fields.length) writeMarker(io.storage(), { ...current, changed: [...new Set([...current.changed, ...fields])] });
+        return;
+      }
       if (!current || current.owner !== owner) return;
-      const fields = changedFields(base, browserPreferences(io.storage()));
-      if (!fields.length && !current.changed.length) return;
-      marker([...current.changed, ...fields]);
+      const all = [...current.changed, ...fields, ...changedFields(base, browserPreferences(io.storage()))];
+      if (!all.length) return;
+      marker(all);
       schedule();
     },
     /** Write now (the page is hiding). */
@@ -235,5 +249,5 @@ export function startAccountPreferences(activate: boolean) {
   startedWith = activate;
   void shared.start(activate);
 }
-/** A personal-reader choice was just saved in this browser. */
-export function notePreferencesChanged() { shared?.changed(); }
+/** A personal-reader choice was just saved in this browser; `fields` names the ones it set. */
+export function notePreferencesChanged(fields: readonly PreferenceField[]) { shared?.changed(fields); }

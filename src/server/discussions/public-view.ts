@@ -10,5 +10,5 @@ export const curatedDiscussionPublic = pgView("curated_discussion_public", {
   tenantId: text("tenant_id").notNull(), slug: text("slug").notNull(), title: text("title").notNull(), kind: text("kind").$type<"torah" | "haftarah">().notNull(),
   revision: integer("revision").notNull(), updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(), position: integer("position").notNull(),
   ref: text("ref").notNull(), anchorRef: text("anchor_ref").notNull(), edition: text("edition"), translationId: uuid("translation_id"),
-  translationEdition: text("translation_edition"), translationBody: text("translation_body"),
+  selectedByName: text("selected_by_name").notNull(), translationEdition: text("translation_edition"), translationBody: text("translation_body"),
 }).existing();

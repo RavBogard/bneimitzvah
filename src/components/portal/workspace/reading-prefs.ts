@@ -68,7 +68,7 @@ function write(key: string, change: Partial<ReadingPrefs>, englishOnWide = false
   try { window.localStorage.setItem(key, JSON.stringify(chosen)); } catch { /* Preference still applies in this tab. */ }
   listeners.forEach(listener => listener());
   // The personal reader's own settings (no student scope) are kept by a signed-in account too (release 1.7 M3b).
-  if (key === scopeKey(null)) notePreferencesChanged();
+  if (key === scopeKey(null)) notePreferencesChanged((["colors", "translation", "size", "tikkunView"] as const).filter(field => change[field] !== undefined));
 }
 // The account's copy was written into this browser: show it.
 onPreferencesApplied(() => { cache.clear(); listeners.forEach(listener => listener()); });

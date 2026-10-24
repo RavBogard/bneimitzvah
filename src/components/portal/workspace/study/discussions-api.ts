@@ -47,7 +47,7 @@ function source(value: unknown): DiscussionSource {
 
 export function parseDiscussionsAnswer(value: unknown, passage: DiscussionPassage): DiscussionsAnswer {
   const row = object(value);
-  if (row.ref !== passage.ref || row.kind !== passage.kind || typeof row.complete !== "boolean" || !Array.isArray(row.discussions) || row.discussions.length > 8) return bad();
+  if (row.ref !== passage.ref || row.kind !== passage.kind || typeof row.complete !== "boolean" || row.truncated !== undefined && typeof row.truncated !== "boolean" || !Array.isArray(row.discussions) || row.discussions.length > 8) return bad();
   const productName = row.productName === null ? null : plain(row.productName, 120);
   const discussions = row.discussions.map((raw): Discussion => {
     const item = object(raw);
@@ -57,7 +57,7 @@ export function parseDiscussionsAnswer(value: unknown, passage: DiscussionPassag
       anchors: Object.freeze(item.anchors.map(anchor => typeof anchor === "string" && VERSE.test(anchor) && sources.some(entry => entry.anchorRef === anchor) ? anchor : bad())) });
   });
   if (new Set(discussions.map(item => item.slug)).size !== discussions.length || discussions.length > 0 && productName === null) return bad();
-  return Object.freeze({ discussions: Object.freeze(discussions), productName, complete: row.complete });
+  return Object.freeze({ discussions: Object.freeze(discussions), productName, complete: row.complete, truncated: row.truncated === true });
 }
 
 /** The discussions for a passage, or a rejection (any failure: the reader shows nothing). */

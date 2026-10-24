@@ -43,7 +43,7 @@ export const unavailableSource = async (): Promise<never> => { throw new SourceT
 /** The congregation's product name, as CRC's tenant row has it (the real runtime reads it with the shared reader). */
 export const syntheticProductName = async () => "CRC Torah";
 /** No curated discussions anywhere (1.7 M6), and a pinned source reader that reports upstream trouble. */
-export const noDiscussions = async () => Object.freeze({ rows: Object.freeze([]), productName: "", curator: "" });
+export const noDiscussions = async () => Object.freeze({ rows: Object.freeze([]), truncated: false, productName: "" });
 export const unavailablePinnedSource = async (): Promise<never> => { throw new SourceTextUnavailable("upstream"); };
 export const unavailableExtras = Object.freeze({ translations: unavailableTranslations, shelf: unavailableShelf, source: unavailableSource, productName: syntheticProductName,
   discussions: noDiscussions, pinnedSource: unavailablePinnedSource });

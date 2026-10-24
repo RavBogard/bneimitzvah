@@ -23,14 +23,14 @@ import { EN, HE, REFS, syntheticPinned } from "../helpers/discussions";
 // Synthetic text only: invented editions and commentators, numbered English, no real source text anywhere.
 const PASSAGE = { ref: "Genesis 12:1-3", kind: "torah" as const };
 const row = (slug: string, position: number, anchorRef: string, extra: Partial<PublicSourceRow> = {}): PublicSourceRow => ({ slug, title: `Synthetic ${slug}`, kind: "torah", revision: 1,
-  updatedAt: new Date("2026-10-24T00:00:00Z"), position, ref: REFS[position - 1] ?? REFS[0], anchorRef, edition: EN, translationId: null, translationEdition: null, translationBody: null, ...extra });
-const read = (rows: PublicSourceRow[], productName = "Synthetic Torah"): PublicDiscussionsRead => ({ productName, curator: "Rabbi Synthetic", rows });
+  updatedAt: new Date("2026-10-24T00:00:00Z"), position, ref: REFS[position - 1] ?? REFS[0], anchorRef, edition: EN, translationId: null, selectedByName: "Rabbi Synthetic", translationEdition: null, translationBody: null, ...extra });
+const read = (rows: PublicSourceRow[], productName = "Synthetic Torah", truncated = false): PublicDiscussionsRead => ({ productName, truncated, rows });
 const VERSES = ["Genesis 12:1", "Genesis 12:2", "Genesis 12:3"];
 
 /** The route's own answer, built by the server code over a synthetic Sefaria, as JSON the way the browser receives it. */
-async function served(rows: PublicSourceRow[], pinned = syntheticPinned(), productName = "Synthetic Torah") {
-  const { discussions, complete } = await publicDiscussionsAnswer(read(rows, productName), VERSES, pinned);
-  return JSON.parse(JSON.stringify({ ...PASSAGE, productName, discussions, complete }));
+async function served(rows: PublicSourceRow[], pinned = syntheticPinned(), productName = "Synthetic Torah", cut = false) {
+  const { discussions, complete, truncated } = await publicDiscussionsAnswer(read(rows, productName, cut), VERSES, pinned);
+  return JSON.parse(JSON.stringify({ ...PASSAGE, productName, discussions, complete, truncated }));
 }
 const ROWS = [row("first", 1, "Genesis 12:1"), row("first", 2, "Genesis 12:2", { ref: REFS[2], edition: null, translationId: "t", translationEdition: HE, translationBody: "Synthetic **translation** text.\n\n- one\n- two" }),
   row("second", 1, "Genesis 12:2")];
@@ -104,7 +104,7 @@ test("the marker is on anchor verses only, and says exactly what Daniel worded",
   expect(bare).toContain(">Compare</button>");
   // No answer, no discussion anywhere, or an answer with nothing anchored: no marker at all.
   expect(study(createElement(VerseActions, { verse: "Genesis 12:1" }), null)).not.toContain("Sources on this verse");
-  expect(discussionsView({ discussions: [], productName: "Synthetic Torah", complete: true })).toBeNull();
+  expect(discussionsView({ discussions: [], productName: "Synthetic Torah", complete: true, truncated: false })).toBeNull();
   expect(renderToStaticMarkup(createElement(VerseActions, { verse: "Genesis 12:1" }))).toBe("");
 });
 
@@ -119,7 +119,7 @@ test("the list is headed 'Sources for this reading' with each title and its sour
   expect(study(createElement(DiscussionList), null)).toBe("");
   expect(study(createElement(DiscussionList), view, "lein")).toBe("");
   expect(renderToStaticMarkup(createElement(DiscussionList))).toBe("");
-  expect(discussionsView({ discussions: [{ slug: "x", title: "x", kind: "torah", anchors: [], sources: [] }], productName: "Synthetic Torah", complete: true })).toBeNull();
+  expect(discussionsView({ discussions: [{ slug: "x", title: "x", kind: "torah", anchors: [], sources: [] }], productName: "Synthetic Torah", complete: true, truncated: false })).toBeNull();
 });
 
 test("the panel opens a discussion kind at the source's verse; the same request closes it; the list's request remembers where it came from", () => {
@@ -185,7 +185,7 @@ const he = (license: string, title = "Synthetic Hebrew") => ({ language: "he" as
 const en = (license: string, title = "Synthetic English") => ({ language: "en" as const, title, license, licenseLabel: license, credit: `${title}, via Sefaria (${license})`, url: "https://www.sefaria.org/y" });
 const text = (editions: ReturnType<typeof he | typeof en>[], hebrew = true, english = true) => ({ segments: [{ hebrew: hebrew ? [{ text: "synthetic-he" }] : null, english: english ? [{ text: "Synthetic English line." }] : null }], editions });
 const base = { position: 1, ref: "Synthetic Mishnah 1:14", anchorRef: "Genesis 12:1", sefariaUrl: "https://www.sefaria.org/z", selectedBy: "Selected by Rabbi Synthetic" };
-const answer = (...sources: DiscussionsAnswer["discussions"][number]["sources"][number][]): DiscussionsAnswer => ({ productName: "Synthetic Torah", complete: true,
+const answer = (...sources: DiscussionsAnswer["discussions"][number]["sources"][number][]): DiscussionsAnswer => ({ productName: "Synthetic Torah", complete: true, truncated: false,
   discussions: [{ slug: "q", title: "A synthetic question", kind: "torah", anchors: [...new Set(sources.map(s => s.anchorRef))], sources }] });
 const edition = (editions: ReturnType<typeof he | typeof en>[], extra = {}) => ({ ...base, kind: "edition" as const, edition: "Synthetic English", credit: "route credit", text: text(editions), ...extra });
 const translation = (editions: ReturnType<typeof he | typeof en>[] | null, body = "Synthetic translation.") => ({ ...base, kind: "translation" as const, translation: { body, originalEdition: "Synthetic Hebrew" },
@@ -271,4 +271,14 @@ test("print: the choice lives in the address and the loose record, off by defaul
   expect(formatFromRecord({ discussions: "yes" }).problems).toEqual(["format.discussions must be true or false"]);
   expect(describeFormat(on)).toContain("curated discussions' sources");
   expect(describeFormat(DEFAULT_FORMAT)).not.toContain("discussions");
+});
+
+test("a truncated answer is read as it is, and each source carries its own selector's name", async () => {
+  const rows = [row("first", 1, "Genesis 12:1", { selectedByName: "Rabbi One" }), row("second", 1, "Genesis 12:2", { selectedByName: "Rabbi Two" })];
+  const cut = parseDiscussionsAnswer(await served(rows, syntheticPinned(), "Synthetic Torah", true), PASSAGE);
+  expect(cut.truncated).toBe(true);
+  expect(cut.discussions.flatMap(d => d.sources.map(s => s.selectedBy))).toEqual(["Selected by Rabbi One", "Selected by Rabbi Two"]);
+  expect(parseDiscussionsAnswer(await served(rows), PASSAGE).truncated).toBe(false);
+  const bad = await served(rows); bad.truncated = "yes";
+  expect(() => parseDiscussionsAnswer(bad, PASSAGE)).toThrow();
 });

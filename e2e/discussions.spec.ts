@@ -20,7 +20,7 @@ const sources = (withText: boolean) => {
       sefariaUrl: sourceSefariaUrl(two, { language: "he", title: HE }), details, text: withText ? { segments: [{ hebrew: [{ text: "הוּ זַח" }], english: null }], editions: [edition(two, "he", HE, "Public Domain")] } : null },
   ];
 };
-const answer = (q: URLSearchParams, options: { none?: boolean; withText?: boolean }) => ({ ref: q.get("ref"), kind: q.get("kind"), productName: options.none ? null : PRODUCT, complete: options.withText !== false,
+const answer = (q: URLSearchParams, options: { none?: boolean; withText?: boolean }) => ({ ref: q.get("ref"), kind: q.get("kind"), productName: options.none ? null : PRODUCT, complete: options.withText !== false, truncated: false,
   discussions: options.none ? [] : [{ slug: "synthetic-question", title: "A synthetic question", kind: "torah", revision: 1, updatedAt: "2026-10-24T00:00:00.000Z", anchors: ["Genesis 1:2", "Genesis 1:3"], sources: sources(options.withText !== false) }] });
 async function mock(page: Page, options: { none?: boolean; withText?: boolean } = {}) {
   await page.route("**/api/public/**", route => {

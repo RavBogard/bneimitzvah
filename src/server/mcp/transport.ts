@@ -73,8 +73,8 @@ export async function answerRpc<Q extends PgQueryResultHKT>(body: unknown, input
   if (!Object.hasOwn(msg, "id")) return null; // A notification: nothing to answer.
   if (!validId(msg.id)) return rpcError(null, -32600, "Invalid Request");
   const id = msg.id, p = msg.params && typeof msg.params === "object" && !Array.isArray(msg.params) ? msg.params as Record<string, unknown> : {};
-  // Only the tools this connection's role and scopes allow exist for it.
-  const visible = input.tools.filter(t => t.roles.includes(input.ctx.actor.role) && input.ctx.actor.scopes.has(t.scope));
+  // Only the tools this connection's role, scopes and attendance allow exist for it.
+  const visible = input.tools.filter(t => t.roles.includes(input.ctx.actor.role) && input.ctx.actor.scopes.has(t.scope) && !(t.attendedOnly && input.ctx.actor.unattended));
   try {
     switch (msg.method) {
       case "initialize": {

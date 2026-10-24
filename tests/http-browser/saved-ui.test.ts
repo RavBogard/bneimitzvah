@@ -65,6 +65,8 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
     await signIn(tab, "pg-tutor@example.test");
     // The front door, signed in with an account that keeps saved readings, asks for its preferences.
     await expect.poll(() => prefs.includes("GET /api/saved/preferences")).toBe(true);
+    // Its answer marks this browser as signed in here (an opaque owner name, never an id or address).
+    await expect.poll(() => tab.evaluate(() => { try { return JSON.parse(localStorage.getItem("crc-torah:preferences-sync/v1") ?? "null")?.active === true; } catch { return false; } }), { timeout: 15_000 }).toBe(true);
     prefs.length = 0;
     const mine = tab.getByRole("region", { name: "My readings" });
     if (width === 360) await ui(mine.getByText("Save a reading from This week to see it here.", { exact: true })).toBeVisible();

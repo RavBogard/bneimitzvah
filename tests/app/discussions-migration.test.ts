@@ -98,13 +98,20 @@ test("as portal_runtime: tenants never meet, the public view shows published row
   const otherMember = (await f.owner(async () => (await f.client.query<{ id: string }>("select id from membership where tenant_id='other' limit 1")).rows[0])).id;
   const ids = { published: randomUUID(), withdrawn: randomUUID(), other: randomUUID(), translation: randomUUID() };
   await f.owner(async () => {
-    await f.client.query("insert into source_translation(id,tenant_id,original_ref,original_edition,body,selected_by,mutation_id,request_digest) values($1,'crc','Synthetic Mishnah 1:14','Synthetic Hebrew Edition','Synthetic translation.',$2,$3,$4)",
+    await f.client.query("insert into source_translation(id,tenant_id,original_ref,original_edition,body,selected_by,selected_by_name,mutation_id,request_digest) values($1,'crc','Synthetic Mishnah 1:14','Synthetic Hebrew Edition','Synthetic translation.',$2,'Synthetic Curator',$3,$4)",
       [ids.translation, f.adminMember.id, randomUUID(), DIGEST]);
     for (const [id, tenant, slug, member] of [[ids.published, "crc", "published-one", f.adminMember.id], [ids.withdrawn, "crc", "withdrawn-one", f.adminMember.id], [ids.other, "other", "other-one", otherMember]]) {
+      // A discussion and its first set in one transaction, as the service writes them.
+      await f.client.query("begin");
       await f.client.query("insert into curated_discussion(id,tenant_id,slug,title,kind,status,selected_by,mutation_id,request_digest) values($1,$2,$3,'Synthetic question','torah','published',$4,$5,$6)", [id, tenant, slug, member, randomUUID(), DIGEST]);
-      await f.client.query("insert into curated_discussion_source(tenant_id,discussion_id,revision,position,ref,anchor_ref,edition,selected_by) values($1,$2,1,1,'Synthetic Commentator on Genesis 12:1:1','Genesis 12:1','Synthetic English Edition',$3)", [tenant, id, member]);
+      await f.client.query("insert into curated_discussion_source(tenant_id,discussion_id,revision,position,ref,anchor_ref,edition,selected_by,selected_by_name) values($1,$2,1,1,'Synthetic Commentator on Genesis 12:1:1','Genesis 12:1','Synthetic English Edition',$3,'Synthetic Curator')", [tenant, id, member]);
+      if (id === ids.published) await f.client.query("insert into curated_discussion_source(tenant_id,discussion_id,revision,position,ref,anchor_ref,translation_id,selected_by,selected_by_name) values('crc',$1,1,2,'Synthetic Mishnah 1:14','Genesis 12:2',$2,$3,'Synthetic Curator')", [ids.published, ids.translation, f.adminMember.id]);
+      await f.client.query("commit");
     }
-    await f.client.query("insert into curated_discussion_source(tenant_id,discussion_id,revision,position,ref,anchor_ref,translation_id,selected_by) values('crc',$1,1,2,'Synthetic Mishnah 1:14','Genesis 12:2',$2,$3)", [ids.published, ids.translation, f.adminMember.id]);
+    // A later transaction can never add to a published set, even at its current revision (the owner included).
+    expect(await sqlState(f.client.query("insert into curated_discussion_source(tenant_id,discussion_id,revision,position,ref,anchor_ref,edition,selected_by,selected_by_name) values('crc',$1,1,3,'Synthetic Commentator on Genesis 12:2:1','Genesis 12:3','Synthetic English Edition',$2,'Synthetic Curator')", [ids.published, f.adminMember.id]))).toBe("23514");
+    // A selector's name is one plain line and never an address.
+    expect(await sqlState(f.client.query("insert into source_translation(tenant_id,original_ref,original_edition,body,selected_by,selected_by_name,mutation_id,request_digest) values('crc','Synthetic Mishnah 1:14','Synthetic Hebrew Edition','Synthetic.',$1,$2,$3,$4)", [f.adminMember.id, ["someone", "example.test"].join("@"), randomUUID(), DIGEST]))).toBe("23514");
     await f.client.query("update curated_discussion set status='withdrawn', revision=2 where id=$1", [ids.withdrawn]);
   });
   type Tx = Parameters<Parameters<typeof withTenantTransaction>[2]>[0];
@@ -120,10 +127,12 @@ test("as portal_runtime: tenants never meet, the public view shows published row
     { slug: "published-one", position: 1, anchor_ref: "Genesis 12:1", translation_body: null }, { slug: "published-one", position: 2, anchor_ref: "Genesis 12:2", translation_body: "Synthetic translation." }]);
   expect((await rows("other", "select slug from curated_discussion_public")).map(r => r.slug)).toEqual(["other-one"]);
   expect(await rows("other", "select id from source_translation")).toEqual([]);
-  const read = await as("crc", tx => publicDiscussionRows(tx as never, "crc", ["Genesis 12:1", "Genesis 12:2"], 8));
+  const { rows: read, truncated } = await as("crc", tx => publicDiscussionRows(tx as never, "crc", ["Genesis 12:1", "Genesis 12:2"], 8));
+  expect(truncated).toBe(false);
+  expect(read.map(row => row.selectedByName)).toEqual(["Synthetic Curator", "Synthetic Curator"]);
   expect(read.map(row => [row.slug, row.position])).toEqual([["published-one", 1], ["published-one", 2]]);
   expect(JSON.stringify(read)).not.toContain(f.adminMember.id);
-  expect(await as("crc", tx => publicDiscussionRows(tx as never, "other", ["Genesis 12:1"], 8))).toEqual([]);
+  expect(await as("crc", tx => publicDiscussionRows(tx as never, "other", ["Genesis 12:1"], 8))).toEqual({ rows: [], truncated: false });
   // A tenant cannot write into another's rows.
   expect(await state("crc", `insert into curated_discussion(tenant_id,slug,title,kind,status,selected_by,mutation_id,request_digest) values('other','x','X','torah','published','${otherMember}','${randomUUID()}','${DIGEST}')`)).toBe("42501");
 
@@ -142,12 +151,20 @@ test("as portal_runtime: tenants never meet, the public view shows published row
   expect(await state("crc", `update curated_discussion set status = 'published', revision = 3 where id = '${ids.withdrawn}'`)).toBe("23514");
   expect(await state("crc", `insert into curated_discussion(tenant_id,slug,title,kind,status,selected_by,mutation_id,request_digest,revision) values('crc','late','Late','torah','withdrawn','${f.adminMember.id}','${randomUUID()}','${DIGEST}',1)`)).toBe("23514");
   // Sources only for a published discussion's current revision; exactly one of edition or translation; no hidden HTML in a title.
-  expect(await state("crc", `insert into curated_discussion_source(tenant_id,discussion_id,revision,position,ref,anchor_ref,edition,selected_by) values('crc','${ids.published}',1,3,'Synthetic Commentator on Genesis 12:2:1','Genesis 12:2','Synthetic English Edition','${f.adminMember.id}')`)).toBe("23514");
-  expect(await state("crc", `insert into curated_discussion_source(tenant_id,discussion_id,revision,position,ref,anchor_ref,edition,selected_by) values('crc','${ids.withdrawn}',2,1,'Synthetic Commentator on Genesis 12:2:1','Genesis 12:2','Synthetic English Edition','${f.adminMember.id}')`)).toBe("23514");
-  expect(await state("crc", `insert into curated_discussion_source(tenant_id,discussion_id,revision,position,ref,anchor_ref,selected_by) values('crc','${ids.published}',2,1,'Synthetic Commentator on Genesis 12:2:1','Genesis 12:2','${f.adminMember.id}')`)).toBe("23514");
-  expect(await state("crc", `insert into curated_discussion_source(tenant_id,discussion_id,revision,position,ref,anchor_ref,translation_id,selected_by) values('crc','${ids.published}',2,1,'Synthetic Commentator on Genesis 12:2:1','Genesis 12:2','${ids.translation}','${f.adminMember.id}')`)).toBe("23503");
+  expect(await state("crc", `insert into curated_discussion_source(tenant_id,discussion_id,revision,position,ref,anchor_ref,edition,selected_by,selected_by_name) values('crc','${ids.published}',1,3,'Synthetic Commentator on Genesis 12:2:1','Genesis 12:2','Synthetic English Edition','${f.adminMember.id}','Synthetic Curator')`)).toBe("23514");
+  expect(await state("crc", `insert into curated_discussion_source(tenant_id,discussion_id,revision,position,ref,anchor_ref,edition,selected_by,selected_by_name) values('crc','${ids.withdrawn}',2,1,'Synthetic Commentator on Genesis 12:2:1','Genesis 12:2','Synthetic English Edition','${f.adminMember.id}','Synthetic Curator')`)).toBe("23514");
+  expect(await state("crc", `insert into curated_discussion_source(tenant_id,discussion_id,revision,position,ref,anchor_ref,selected_by,selected_by_name) values('crc','${ids.published}',2,1,'Synthetic Commentator on Genesis 12:2:1','Genesis 12:2','${f.adminMember.id}','Synthetic Curator')`)).toBe("23514");
+  // In the revising transaction itself: a translation is named only with its own original ref (the composite FK).
+  expect(await sqlState(as("crc", async tx => {
+    await tx.execute(sql.raw(`update curated_discussion set revision = 3, updated_at = now() where id = '${ids.published}'`));
+    await tx.execute(sql.raw(`insert into curated_discussion_source(tenant_id,discussion_id,revision,position,ref,anchor_ref,translation_id,selected_by,selected_by_name) values('crc','${ids.published}',3,1,'Synthetic Commentator on Genesis 12:2:1','Genesis 12:2','${ids.translation}','${f.adminMember.id}','Synthetic Curator')`));
+  }))).toBe("23503");
+  expect(await sqlState(as("crc", async tx => {
+    await tx.execute(sql.raw(`update curated_discussion set revision = 3, updated_at = now() where id = '${ids.published}'`));
+    await tx.execute(sql.raw(`insert into curated_discussion_source(tenant_id,discussion_id,revision,position,ref,anchor_ref,translation_id,selected_by,selected_by_name) values('crc','${ids.published}',3,1,'Synthetic Mishnah 1:14','Genesis 12:2','${ids.translation}','${f.adminMember.id}','Synthetic Curator')`));
+  }))).toBe("accepted");
   expect(await state("crc", `insert into curated_discussion(tenant_id,slug,title,kind,status,selected_by,mutation_id,request_digest) values('crc','tagged','<b>Bold</b>','torah','published','${f.adminMember.id}','${randomUUID()}','${DIGEST}')`)).toBe("23514");
-  expect(await state("crc", `insert into source_translation(tenant_id,original_ref,original_edition,body,selected_by,mutation_id,request_digest) values('crc','Synthetic Mishnah 1:14','Synthetic Hebrew Edition','<script>x</script>','${f.adminMember.id}','${randomUUID()}','${DIGEST}')`)).toBe("23514");
+  expect(await state("crc", `insert into source_translation(tenant_id,original_ref,original_edition,body,selected_by,selected_by_name,mutation_id,request_digest) values('crc','Synthetic Mishnah 1:14','Synthetic Hebrew Edition','<script>x</script>','${f.adminMember.id}','Synthetic Curator','${randomUUID()}','${DIGEST}')`)).toBe("23514");
   // Even the owner cannot rewrite or delete: the triggers hold.
   for (const statement of ["update source_translation set body = 'Changed.'", "delete from source_translation", "delete from curated_discussion_source", "delete from curated_discussion"])
     expect(await f.owner(() => sqlState(f.client.query(statement))), statement).toBe("23514");

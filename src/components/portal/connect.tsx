@@ -116,6 +116,7 @@ export function ConnectClaude() {
             <ul className="role-list">
               {account!.role === "admin" ? <li>See every student’s preparation summary</li> : <li>See your own students’ preparation summaries</li>}
               {account!.scopes.includes("portal:study") && <li>Draft, review and publish the study guides students read</li>}
+              {!unattended && <li>See, save and change your own saved readings, never anyone else’s</li>}
               {account!.scopes.includes("portal:roster") && !unattended && <li>Add students from Maven and set up their readings, tutors, service and sources. It never sends invitations.</li>}
             </ul>
             {account!.scopes.includes("portal:study") && <label className="field-help">
