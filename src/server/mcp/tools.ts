@@ -21,6 +21,7 @@ import { SCOPES } from "./oauth";
 import { createRosterTools } from "./roster-tools";
 import { createSetupTools } from "./setup-tools";
 import { createPrintTools } from "./print-tools";
+import { createStudyTools } from "./study-tools";
 import type { Calendar, Snapshot } from "../../lib/readings/proposals";
 import { createAnalyticsTools } from "./analytics-tools";
 
@@ -224,6 +225,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
     ...createRosterTools<Q>(),
     ...createSetupTools<Q>(),
     ...createPrintTools<Q>(),
+    ...createStudyTools<Q>(),
     ...createAnalyticsTools<Q>(),
   ] satisfies Tool<Q>[]);
 }

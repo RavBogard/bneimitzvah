@@ -43,8 +43,11 @@ export async function insertReading<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner
     name: value.name, readingDate: value.date, kind: value.kind, ranges: value.ranges, verseCount: value.verseCount }).returning();
   return row;
 }
-export async function updateReading<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, id: string, revision: number, value: { name: string; date: string | null }) {
-  const [row] = await tx.update(s.savedReading).set({ name: value.name, readingDate: value.date, revision: revision + 1, updatedAt: sql`now()` })
+/** Rename, re-date and, with `verses`, revise the ranges and their server-counted verses (0040). Child rows are never touched. */
+export async function updateReading<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, id: string, revision: number,
+  value: { name: string; date: string | null; verses?: { ranges: string; verseCount: number } }) {
+  const verses = value.verses ? { ranges: value.verses.ranges, verseCount: value.verses.verseCount } : {};
+  const [row] = await tx.update(s.savedReading).set({ name: value.name, readingDate: value.date, ...verses, revision: revision + 1, updatedAt: sql`now()` })
     .where(and(readingOwner(owner), eq(s.savedReading.id, id), eq(s.savedReading.revision, revision))).returning();
   return row ?? null;
 }

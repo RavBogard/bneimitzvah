@@ -82,7 +82,8 @@ test("0036 adds only the four saved tables, leaves existing rows and the audit l
       ...["INSERT", "SELECT"].map(p => ({ table_name: "saved_verse_mark", privilege_type: p })), ...["INSERT", "SELECT"].map(p => ({ table_name: "saved_verse_work", privilege_type: p })),
       ...["DELETE", "INSERT", "SELECT"].map(p => ({ table_name: "starred_comment", privilege_type: p }))]);
     const columnGrants = await client.query("select table_name, column_name from information_schema.column_privileges where grantee='portal_runtime' and privilege_type='UPDATE' and table_name = any($1) order by table_name, column_name", [TABLES]);
-    expect(columnGrants.rows).toEqual([...["name", "reading_date", "revision", "updated_at"].map(c => ({ table_name: "saved_reading", column_name: c })),
+    // After every migration: 0040 adds ranges and verse_count (a member revises their own reading's verses); nothing else widens.
+    expect(columnGrants.rows).toEqual([...["name", "ranges", "reading_date", "revision", "updated_at", "verse_count"].map(c => ({ table_name: "saved_reading", column_name: c })),
       ...["state", "updated_at", "version"].map(c => ({ table_name: "saved_verse_mark", column_name: c })), ...["text", "updated_at", "version"].map(c => ({ table_name: "saved_verse_work", column_name: c }))]);
     expect((await client.query("select count(*)::int as n from information_schema.table_privileges where grantee='PUBLIC' and table_name = any($1)", [TABLES])).rows).toEqual([{ n: 0 }]);
     // Every composite key and FK carries the tenant.
@@ -185,9 +186,14 @@ test("row security as portal_runtime: no owner sees nothing, one owner never rea
   expect(await sqlState(as("crc", A.id, tx => tx.execute(sql`insert into saved_verse_work(tenant_id,membership_id,saved_reading_id,verse_ref,stream,text,version) values('crc',${B.id},${seed.b},'Genesis 1:2','note','x',1)`)))).toBe("42501");
   expect(await sqlState(as("crc", A.id, tx => tx.execute(sql`insert into saved_verse_work(tenant_id,membership_id,saved_reading_id,verse_ref,stream,text,version) values('crc',${A.id},${seed.b},'Genesis 1:2','note','x',1)`)))).toBe("23503");
   expect(await sqlState(as("crc", A.id, tx => tx.execute(sql`insert into starred_comment(tenant_id,membership_id,user_id,work,verse_ref,comment_index) values('crc',${B.id},${f.identities.admin.id},'rashi','Genesis 1:2',1)`)))).toBe("42501");
+  // Since 0040 an owner may revise the ranges and verse count of their own reading only: another member's row is out of reach.
+  expect(await affected("crc", A.id, sql`update saved_reading set ranges = 'Genesis 1:1', verse_count = 1 where id = ${seed.b}`)).toBe(0);
+  for (const owner of [null, ""]) expect(await affected("crc", owner, sql`update saved_reading set ranges = 'Genesis 1:1', verse_count = 1`)).toBe(0);
+  expect(await affected("other", A.id, sql`update saved_reading set ranges = 'Genesis 1:1', verse_count = 1`)).toBe(0);
+  expect(await as("crc", B.id, async tx => (await run(tx, sql`select ranges, verse_count from saved_reading`)).rows)).toEqual([{ ranges: "Genesis 1:1-3", verse_count: 3 }]);
   // Ownership and identity columns never change, and child rows are never deleted directly.
-  for (const statement of ["update saved_reading set membership_id = membership_id", "update saved_reading set ranges = 'Genesis 1:1'", "update saved_reading set kind = 'haftarah'",
-    "update saved_reading set verse_count = 1", "update saved_verse_work set membership_id = membership_id", "update saved_verse_work set saved_reading_id = saved_reading_id",
+  for (const statement of ["update saved_reading set membership_id = membership_id", "update saved_reading set tenant_id = tenant_id", "update saved_reading set kind = 'haftarah'",
+    "update saved_reading set user_id = user_id", "update saved_reading set created_at = now()", "update saved_verse_work set membership_id = membership_id", "update saved_verse_work set saved_reading_id = saved_reading_id",
     "update saved_verse_work set stream = 'translation'", "update saved_verse_mark set verse_ref = verse_ref", "update starred_comment set work = work", "update starred_comment set membership_id = membership_id",
     "update starred_comment set comment_index = 2", "delete from saved_verse_work", "delete from saved_verse_mark", "truncate saved_reading cascade", "truncate starred_comment"])
     expect(await sqlState(as("crc", A.id, tx => tx.execute(sql.raw(statement)))), statement).toBe("42501");

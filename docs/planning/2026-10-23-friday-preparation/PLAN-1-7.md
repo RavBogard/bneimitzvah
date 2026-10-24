@@ -17,6 +17,8 @@ Reconciled against main at 4475fd6, with #57 (print) at 62432e0 and #56 (Learn 1
 - The consultant's "saving/recovery concern" was not reproduced. The closest evidence is `yours.tsx` dropping typed text on a conflict, and M3 removes that editor.
 - GATE: M1 builds the Study word card as a `"word"` kind of the verse panel, fed by the text page through a registered host, and reuses the existing word-details fetch (no new data source). The existing Word tools disclosure stays below the text for both lenses. The reading place line and chapter jump are Study only; the one-Tab-stop-per-verse arrows apply wherever words are buttons (Lein too), while a Lein tap still plays. Proceeded because it needs no wording beyond the minimal literal strings listed in the PR.
 - Migration numbers: 0039 is the page counter. M2's grant is 0040, M3b's preferences 0041, M6's curation 0042.
+- M2a contract: `ranges` on update is optional; a body carrying `verseCount` is refused (closed keyset). Ranges naming the other corpus than the stored reading's kind are a closed 400 (`invalid-request`): a reading's kind never changes. Hidden work and marks on dropped verses still count toward the per-member caps. 0040 is grant-only, with no drizzle snapshot (the schema does not change), as 0034 and 0035 had none.
+- `study_link` takes ref (up to 32 "; "-joined segments), parashah and passage, a Shabbat date, or a saved reading id (carried into the link only, as `print_sheet_link` does), plus an optional verse; it returns `/read?…&lens=study` and never a verse. Portion picks are left to ref.
 
 ## Acceptance checks against source
 

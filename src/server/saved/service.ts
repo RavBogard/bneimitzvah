@@ -61,7 +61,13 @@ export function createSavedService<Q extends PgQueryResultHKT>(input: { access: 
       return write(request, async (tx, owner) => {
         const current = await ownReading(tx, owner, value.id);
         if (current.revision !== value.revision) return { ok: false as const, code: "conflict" as const, current: readingView(current) };
-        const row = await data.updateReading(tx, owner, value.id, value.revision, { name: value.name, date: value.date });
+        // A reading's kind never changes: Torah ranges cannot revise a haftarah reading, nor the reverse. A closed 400 result,
+        // because inside the access callback a boundary error would read as 503.
+        if (value.ranges && value.ranges.kind !== current.kind) return { ok: false as const, code: "invalid-request" as const };
+        // The verse count is always the server's own expansion of the canonical ranges, never a client's number. Translations,
+        // notes and marks on verses a revision drops stay stored (keyed by reading and verse) and show again if the verse returns.
+        const verses = value.ranges ? { ranges: value.ranges.ranges, verseCount: value.ranges.verses.length } : undefined;
+        const row = await data.updateReading(tx, owner, value.id, value.revision, { name: value.name, date: value.date, verses });
         if (!row) throw new Error("Saved reading unavailable");
         return { ok: true as const, reading: readingView(row) };
       });
