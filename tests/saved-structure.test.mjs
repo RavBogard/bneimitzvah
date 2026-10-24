@@ -17,7 +17,8 @@ async function files(dir) {
   return out;
 }
 // The application and the operator scripts: an operator tool must not set the owner or read saved tables either.
-const sources = await Promise.all([...await files("src"), ...await files("scripts")].map(async path => ({ path, text: await readFile(join(root, path), "utf8") })));
+const sources = await Promise.all([...await files("src"), ...await files("scripts")].map(async path => ({ path, text: (await readFile(join(root, path), "utf8")).replace(/\r\n/g, "\n") })));
+// A Windows checkout (core.autocrlf) has CRLF line ends; the shape checks below read LF.
 assert.ok(sources.some(file => file.path.startsWith("scripts/")), "the scripts are scanned");
 const importsOf = text => [...text.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)].map(m => m[1]);
 
