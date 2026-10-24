@@ -93,7 +93,7 @@ test("actual SDK linked-child reads require exact live header; no context is acc
   const f = await fixture(), saved = await f.save();
   await f.owner(() => f.db.update(s.guardian).set({ practiceEnabled: true }).where(eq(s.guardian.id, f.guardians[0].id)));
   const entered = await f.runtime.practice.enter(f.request("/api/practice/enter", { body: { studentId: f.studentId } }), { studentId: f.studentId });
-  expect((await json(await f.call("?mode=child-practice", { who: "multi", handle: entered.handle }))).state).toBe("assigned");
+  expect(await json(await f.call("?mode=child-practice", { who: "multi", handle: entered.handle }))).toMatchObject({ state: "assigned", serviceStart: 1, units: [{ page: 1 }, { page: 3 }] });
   const unit = { mode: "child-practice", planId: saved.planId, planRevision: saved.revision, catalogIdentity: f.content.identity, unitId: f.content.first };
   expect((await json(await f.call("/unit", { who: "multi", handle: entered.handle, body: unit }))).state).toBe("assigned");
   await json(await f.call("?mode=child-practice", { who: "multi" }), 404);

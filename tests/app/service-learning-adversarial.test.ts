@@ -133,7 +133,8 @@ test("printed pages follow only the read student's own plan: siblings, a tutor a
   const review = await f.service.prepare(f.request(), { ...f.selection, studentId: sibling, selectedIds: [second] });
   if (!review.ok) throw new Error("Independent synthetic sibling preparation missing");
   await f.service.confirm(f.request(), { mode: "admin", studentId: sibling, binding: review.binding });
-  // The shared parent sees each child's own parts and pages, never the other's.
+  // The shared parent sees each child's own parts and pages, never the other's. Both share one catalog, so the
+  // service start is the same; the per-part pages are what show the plans stay separate.
   const own = await f.service.metadata(f.accessRequest("multi"), { mode: "parent", studentId: f.selection.studentId });
   expect(own).toEqual(expect.objectContaining({ serviceStart: 1, units: [expect.objectContaining({ id: first, page: 1 })] }));
   expect(await f.service.metadata(f.accessRequest("multi"), { mode: "parent", studentId: sibling }))
@@ -168,4 +169,11 @@ test("printed pages never cross tenants: another tenant without a catalog gets n
   // Neither tenant's readers can address the other tenant's student.
   for (const [request, studentId, mode] of [[f.accessRequest("learner"), other, "student"], [f.accessRequest("admin"), other, "admin"], [otherRequest(), f.selection.studentId, "student"]] as const)
     expect(await readOrDenied(() => f.service.metadata(request, { mode, studentId }))).toEqual({ denied: 404 });
+  // Even a plan row forged to name CRC's catalog (the database's composite foreign key forbids storing one) fails closed
+  // in the other tenant: its lifecycle is faked active, so the tenant-scoped catalog read is what refuses it.
+  const crcCatalogId = f.selection.catalogId, forged = f.create({
+    currentPlan: async (...args) => { const row = await data.currentPlan(...args); return row && row.tenantId === "other" ? { ...row, catalogId: crcCatalogId, catalogIdentity: f.selection.catalogIdentity } : row; },
+    lifecycle: async (tx, tenantId, catalogId) => { const row = await data.lifecycle(tx, tenantId, catalogId === crcCatalogId && tenantId === "other" ? foreignId : catalogId); return row && catalogId === crcCatalogId ? { ...row, catalogId: crcCatalogId } : row; },
+  });
+  await expect(forged.metadata(otherRequest(), { mode: "student", studentId: other })).rejects.toBeInstanceOf(AccessUnavailable);
 });
