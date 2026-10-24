@@ -199,10 +199,11 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
             return json(result.answer as unknown as JsonValue, result.complete ? 2592000 : 3600);
           }
           case "related": {
-            // A verse's links change slowly: the CDN keeps the shelf a week.
+            // The shelf is selected and ordered by code, so a deploy can change it, and this route has no deploy-keyed URL (one URL per verse):
+            // the CDN keeps it an hour, never longer, so an answer from before a deploy is gone within the hour (it was a week, and served stale).
             // With the name its change line needs ("Selected and ordered by {productName}", the CC BY note of changes).
             const shelf = await runtime.shelf(query.verse, signal), productName = await runtime.productName();
-            return json({ ...shelf, productName } as unknown as JsonValue, 604800);
+            return json({ ...shelf, productName } as unknown as JsonValue, 3600);
           }
           case "manifest": {
             const name = plainProductName(await runtime.productName());

@@ -259,10 +259,27 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   const release = (action: () => void) => { if (linkedIndex === null) { action(); return; } deferred.current = action; onVerseLeft(); };
   // The translate drill (Lein only, Daniel F4): a view state, never stored. `revealed` names the verse whose English is shown.
   const [drill, setDrill] = useState<{ revealed: string | null } | null>(null), [announce, setAnnounce] = useState("");
-  const drillHint = useRef<string | null>(null), drillToPage = useRef(false), drillFocus = useRef<"jps" | "reveal" | "toggle" | null>(null);
+  const drillHint = useRef<string | null>(null), drillToPage = useRef(false), drillFocus = useRef<"jps" | "reveal" | "toggle" | null>(null), drillScroll = useRef(false);
+  // Which verse the player's Play is set to after the drill moves on (a controlled target: inert until Play, and it holds the old verse's audio still).
+  // Any verse the reader chooses themselves clears it, so the player follows the verse that was last chosen either way.
+  const [drillTarget, setDrillTarget] = useState<{ index: number; generation: number } | null>(null), drillGeneration = useRef(0);
   const jpsRef = useRef<HTMLHeadingElement | null>(null), revealRef = useRef<HTMLButtonElement | null>(null), drillToggle = useRef<HTMLButtonElement | null>(null);
   const own = useOwnLayer();
-  useEffect(() => { const target = drillFocus.current; if (!target) return; drillFocus.current = null; (target === "jps" ? jpsRef : target === "reveal" ? revealRef : drillToggle).current?.focus({ preventScroll: target !== "toggle" }); });
+  useEffect(() => {
+    const target = drillFocus.current; if (!target) return; drillFocus.current = null;
+    const control = (target === "jps" ? jpsRef : target === "reveal" ? revealRef : drillToggle).current;
+    control?.focus({ preventScroll: target !== "toggle" });
+    // After Next verse the new verse's controls come into view: on a phone the verse text is taller than the screen, so Reveal would be below it.
+    if (target === "reveal" && drillScroll.current && control) {
+      drillScroll.current = false;
+      // Smooth only for a short way: a page of verses can be many screens tall, and a long smooth sweep is slow and dizzying.
+      try {
+        const panel = control.closest("[data-translate-drill]") ?? control, box = panel.getBoundingClientRect();
+        const near = box.top < innerHeight * 1.5 && box.bottom > -innerHeight * 0.5, reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        panel.scrollIntoView({ block: "nearest", behavior: reduced || !near ? "auto" : "smooth" });
+      } catch { /* Stay where the page is. */ }
+    }
+  });
 
   useEffect(() => () => { audio.stopAll(); }, [audio]);
   useEffect(() => {
@@ -305,12 +322,12 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     return result.references[at];
   }, [source, key, kind, page]);
   const hear = (at: number, word: ReadingSelection = "verse") => release(() => {
-    setFocus(at); playback.current?.select(at, word);
+    setFocus(at); setDrillTarget(null); playback.current?.select(at, word);
     if (word === "verse") tools.current?.selectVerse(at); else tools.current?.select(at, word);
   });
-  const chooseWord = (at: number, word: number) => release(() => { setFocus(at); if (listening) playMainVerseForWord(playback.current, tools.current, at, word); else tools.current?.select(at, word); });
-  const changeIndex = (next: number) => { if (next === index) return; audio.stopAll(); setLift(null); setFocus(null); setDrill(null); setOffset(0); onIndex(next); };
-  const changeOffset = (next: number) => { if (next === offset) return; if (linkedIndex !== null) onVerseLeft(); setOffset(next); };
+  const chooseWord = (at: number, word: number) => release(() => { setFocus(at); setDrillTarget(null); if (listening) playMainVerseForWord(playback.current, tools.current, at, word); else tools.current?.select(at, word); });
+  const changeIndex = (next: number) => { if (next === index) return; audio.stopAll(); setLift(null); setFocus(null); setDrill(null); setDrillTarget(null); setOffset(0); onIndex(next); };
+  const changeOffset = (next: number) => { if (next === offset) return; if (linkedIndex !== null) onVerseLeft(); setDrillTarget(null); setOffset(next); };
   const offsets = passage.pages.map(row => row.offset);
   const previousOffset = offsets[offsets.indexOf(offset) - 1], nextOffset = page?.nextOffset ?? null;
   // The haftarah's last verse takes the closing (sof haftarah) melody, as in the assigned reading.
@@ -319,7 +336,8 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   const start = useRef<() => void>(() => {}); start.current = () => { textAnchor.current?.scrollIntoView({ block: "start" }); if (listening && page) hear(0); else textAnchor.current?.focus(); };
   useEffect(() => { registerStart(page ? () => start.current() : null); return () => registerStart(null); }, [page, registerStart]);
 
-  // The drill follows the selected verse. Reveal, Next verse and End drill never start or stop audio themselves; Study ends it.
+  // The drill follows the selected verse. Reveal, Hide again and End drill never start or stop audio; Next verse stops the old verse's audio
+  // (Play is then set to the new verse) and starts nothing. Study ends the drill.
   const drillVerse = !study && drill && focus !== null ? page?.verses[focus] ?? null : null;
   useEffect(() => { if (study) setDrill(null); }, [study]);
   // Choosing another verse hides the English again: a reveal belongs to the verse it was made on.
@@ -329,6 +347,8 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     if (!page?.verses[at]) return;
     const ref = page.verses[at].ref;
     release(() => { setFocus(at); tools.current?.selectVerse(at); });
+    // Play follows the verse the drill is on, never the one last played; setting the target stops audio still playing the old verse and starts nothing.
+    setDrillTarget({ index: at, generation: ++drillGeneration.current }); drillScroll.current = true;
     setDrill({ revealed: null }); setAnnounce(DRILL_STRINGS.moved(/:([1-9]\d*)$/.exec(ref)?.[1] ?? ref)); drillFocus.current = "reveal";
     try { document.querySelector(`.study-verses [data-verse-ref="${CSS.escape(ref)}"]`)?.scrollIntoView({ block: "start" }); } catch { /* Stay where the page is. */ }
   };
@@ -360,7 +380,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     </div>
     {sources.length > 1 && <p className={`field-help ${styles.passageNote}`}><bdi dir="ltr">{displayRange(passage.ranges)}</bdi></p>}
     <div className="reading-passage-layout" ref={textAnchor} tabIndex={-1}>
-      <ReadingToolbar listeningEnabled={listening} tikkunAvailable={kind === "torah"} worksCorpus={corpus} onHear={listening && page ? () => hear(focus ?? 0) : undefined} />
+      <ReadingToolbar englishHidden={Boolean(drillVerse)} listeningEnabled={listening} tikkunAvailable={kind === "torah"} worksCorpus={corpus} onHear={listening && page ? () => hear(focus ?? 0) : undefined} />
       <section className="assigned-study" aria-label={kind === "torah" ? "Torah text" : "Haftarah text"} data-size={prefs.size}>
         {!page ? text?.key === textKey && text.error ? <div role="status"><h4>Text unavailable</h4><p>The verses didn’t load. Check your connection and try again.</p><button type="button" className="button-secondary" onClick={onRetry}>Reload text</button></div>
           : <p role="status">Loading the text…</p> : <>
@@ -372,7 +392,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
           </> : <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} englishHidden={drillVerse ? DRILL_STRINGS.hidden : undefined} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
             linked={linkedVerse(leinLink, page.verses)} onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} />}
           {listening && <ReadingPlayer key={`player:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} active={!lift} enabled={!lift} audio={{ coordinator: audio, slot: "proposed" }}
-            target={linkedOnPage !== null ? { index: linkedOnPage, generation: 0 } : undefined} register={registerPlayback} onActiveWord={setPlayingWord} load={loadShort} />}
+            target={drillTarget ?? (linkedOnPage !== null ? { index: linkedOnPage, generation: 0 } : undefined)} register={registerPlayback} onActiveWord={setPlayingWord} load={loadShort} />}
           <WordTools key={`tools:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} register={registerTools}
             readAids={(at, signal) => fetchPublicWordAids(source, page.offset + at, page.verses[at], signal)}
             readDetails={(at, word, signal) => fetchPublicWordDetails(source, page.offset + at, page.verses[at], word, signal)}
