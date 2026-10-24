@@ -9,6 +9,19 @@
 - GATE: 1.4 PR 3 (claude/accounts-study): the Yours row and stars on a member’s own saved reading, the translate drill in Lein only, admin-only re-approval of an ended member, the haftarah kadma v’azla lesson’s lead example, the shared product-name reader for notification emails, and Daniel’s two approved lines (the approver help line and the shelf’s change line) — proceeded because the plan and Daniel’s 2026-10-23 rulings settle each; no migration; decisions 50 to 54 in the 1.4 plan; unapproved proposed lines listed as open item 5.
 - GATE: filed Daniel's 2026-10-23 rulings from Cowork in MISSION and the two 1.5 plans (docs only, commit 85913c9) — proceeded because Daniel's answers are binding and the commit touches no code; `tests/never-in-repo.test.mjs` and `scripts/repo-policy.mjs` passed.
 
+**Daniel, 2026-10-23 late (popups, binding):**
+- v1.5.0 waits for the switch. I build everything, check torah's DNS on each pass, and ask Daniel to set `BETTER_AUTH_URL` once it resolves. Then the switch, then the tag. On 2026-10-23 torah.centralreform.org had no DNS record yet.
+- The six NEW offline strings from A1 ("This week’s reading", "Learn to lein", "Nothing is saved on this device yet.", "Saved readings were removed from this device.", "Saved until {date}", "Offline") are kept.
+- A2: a Member's 3 nearest upcoming saved readings go offline automatically, with no new controls. A student's confirmed reading always goes.
+- Neither the listening round nor the Android phone check blocks the v1.5.0 tag. Their fixes go in 1.5.x.
+- The code email's line 4 becomes "No one from {productName} will ever ask you for this code." This closes the first second-tenant item from #44.
+- While waiting on DNS, 1.6 and the reader print sheet may start. 1.6 merges only after v1.5.0.
+
+- GATE: PR #44 (typed sign-in code) merged as b1c8904 and deployed. Caps: after 3 codes per address an hour, emails are link-only; failed tries are capped at about 9 an hour; 6 codes per rolling 24 hours. Link-only line 3 reads "The link works once, for 5 minutes." This is a derivation of the approved line, logged in cutover plan §9 — proceeded because the adversarial auth review passed and CI was green. Open for the second-tenant gate: the code's database key has no tenant in it.
+- GATE: PR #52 (an approver's own request is refused; approved Members sync Learn to lein progress; a shared device's copy is cleared only for another account's refusal) merged as 4c41b08 and deployed — proceeded because CI was green and the auth change had its adversarial pass. No migration.
+- GATE: PR #51 (A1, the installable app, gated to the torah origin) squash-merged as 75a3312 and deployed. beitmitzvah serves no manifest link and registers no worker — proceeded because all four CI jobs were green, including the offline e2e tests on the phone project, and the adversarial pass's High (re-fetching on every open, about 42 requests) and two Mediums were fixed. A complete pack now renews at most every 12 hours. Accepted Lows are in plan §11. Real-device checks wait for the switch.
+
+
 ## Current return point — 2026-10-21 night: toward 1.0
 
 **Daniel, 2026-10-21 night:** "continue until we are feature complete and 1.0 released." Rulings the same evening: (1) the Bamidbar guide goes live now, labelled unreviewed until the MCP can record his review; (2) rewrite history to remove a student's details that a STATE line had exposed; (3) the tikkun uses the Culmus "Stam Ashkenaz CLM" face; (4) Maven reaches the portal through Cowork (Claude reads Maven with Daniel's existing connector and proposes roster changes through the portal MCP; the portal stores no Maven credential); (5) the roster Sheet is written by a free Google service account; (6) no translation picker in 1.0: the main text stays JPS 2023 (amends ruling 12's "translation picker across editions").
