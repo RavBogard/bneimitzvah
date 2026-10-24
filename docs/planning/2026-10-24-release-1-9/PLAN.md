@@ -75,7 +75,7 @@ Main at writing: `a9bbd6e`. Live: v1.8.0 (`7c13cac`), prod ledger 43 (newest mig
 | v1.8.1 | #71 and #72 merged and deployed | 1.8.1 defects (X1–X12) and AD-01 |
 | v1.8.2 | P1–P5 merged and deployed | the 1.8.2 defect set, plus F2 and F6 folded in |
 | v1.9.0 | N1–N25 merged, deployed and re-measured (N16's exit) | the 1.9 set |
-| v1.9.1 | N26 merged | MCP for members (G24, "later" in the REPORT) |
+| ~~v1.9.1~~ | cut | MCP for members cut (Daniel, 2026-10-24) |
 | v2.0.0 | F1, SC1–SC7 merged and deployed, and v1.9.0 already cut | the 2.0 set |
 
 Deploys happen at will as milestones merge (Daniel 2026-10-17 and 2026-10-23); tags mark sets. A 2.0 milestone that lands early ships under whatever version is current. If the 2.0 set finishes before the 1.9 set, v2.0.0 waits for v1.9.0 so versions stay in order. Hot fixes between tags are v1.8.x or v1.9.x patches. A deploy that breaks the live site is rolled back at once and fixed forward (MISSION item 6). Release check-ins: a short terminal note under 15 lines at v1.8.2, v1.9.0 and v2.0.0.
@@ -107,7 +107,7 @@ A builder who finishes a lane takes the next unblocked milestone from any lane, 
 | 1. Reading surface | P1 → P2 → P5 → N1 → N2 → N3 → N25 → N4 → N5 → N6 → N7 → N8 |
 | 2. Shell and people | P3 → N9 → N10 → N11 → N12 → N13 → N14 → N15 → N16 |
 | 3. Learn and the course | P4 → (merge #73, SC1) → SC2 → SC3 → N17 → N18 → N19 → SC7 → SC6 |
-| 4. Accounts and privacy | F1 (in progress) → N20 → SC4 → SC5 → N21 → N22 → N23 → N24 → N26 |
+| 4. Accounts and privacy | F1 (in progress) → N20 → SC4 → SC5 → N21 → N22 → N23 → N24 |
 
 **First milestones now:** lane 1 P1 (M, Sonnet), lane 2 P3 (S, Sonnet), lane 3 P4 (S, Sonnet), lane 4 F1 (M, Sonnet, in progress) then N20 (M, Opus).
 
@@ -387,7 +387,11 @@ all N1–N25 ─► N16's final re-measure ─► v1.9.0
 - **Adversarial review:** no private or signed-in route ever enters a pack; another account on the same device never sees the pack; nothing generated or unreleased is packed (G3); no licensed text enters the repo or fixtures.
 - **Exit tests:** installed on the beitmitzvah domain with the network cut, Noa's assigned reading opens; after sign-out it is gone; /offline is never empty.
 
-#### N26. MCP for members (M, Opus; adversarial: auth scope) — G24; tags v1.9.1
+#### N26. MCP for members — CUT (Daniel, 2026-10-24)
+
+- **Daniel, verbatim:** "No one but me and other staff/admin need mcp access". G24 and v1.9.1 are cut. The MCP stays staff and admin only; if any member, student or parent can connect today, closing that is a defect fix, not a feature.
+
+~~Original scope (kept for the record):~~
 
 - Open the link tools and owner-only saved tools to any member with saved readings, after a scope review. Never another person's work.
 
@@ -422,7 +426,7 @@ As written in `../2026-10-24-release-2-0/PLAN.md` (sizes, models, exit tests unc
 | N24 | Privacy and never-in-repo (decision 14) | Private routes in packs, shared devices, unreleased renders, licensed text |
 | N15 | Access and privacy | Hand-over authority, honoree names, family details |
 | N6 | The approval gate (decision 4) | Unapproved summaries on any surface, forged approval |
-| N26 | Auth scope | Any reach into another person's saved work |
+| ~~N26~~ | cut | — |
 | SC2, SC4, SC5 | 2.0 PLAN | As listed there |
 
 Lighter second-agent checks: P5 and N2 (font pins and provenance), N12 and N19 (RLS unchanged), N25 (MCP scope).
