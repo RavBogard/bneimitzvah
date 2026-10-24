@@ -206,7 +206,9 @@ it("on their own saved reading a member sees stored translation and note text re
   await drill.getByRole("button", { name: "Reveal", exact: true }).click();
   await ui(drill.getByRole("heading", { name: "JPS", exact: true })).toBeVisible();
   await ui(drill.getByText(/My translation|Synthetic own words|Write one|Yours/)).toHaveCount(0);
-  // Unstarring deletes the star.
+  // Unstarring deletes the star (in Study, where the comment and its star are).
+  await tab.getByRole("group", { name: "Reading lens", exact: true }).getByRole("button", { name: "Study", exact: true }).click();
+  await ui(tab.locator("[data-study-rows]")).toBeVisible();
   await tab.locator('[data-commentary-ref="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]').first().click();
   await ui(tab.locator('[data-commentary-ref="Genesis 1:1"] [data-star="rashi|Genesis 1:1|1"]').first()).toHaveAttribute("aria-pressed", "false");
   // Nothing was written or audited by the page: the two stored rows are untouched, and only the star was posted.
