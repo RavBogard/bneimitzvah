@@ -259,7 +259,7 @@ it("on a phone, Next verse brings Reveal into view, Play plays the verse the dri
   // While the drill hides the English, the button says so: not pressed, and not working, with its reason.
   await ui(english).toHaveAttribute("aria-pressed", "false"); await ui(english).toHaveAttribute("aria-disabled", "true");
   await ui(english).toHaveAccessibleDescription(/English is hidden while the translate drill is on/);
-  await english.click(); await ui(english).toHaveAttribute("aria-pressed", "false");
+  await english.click({ force: true }); await ui(english).toHaveAttribute("aria-pressed", "false"); // a click does nothing (Playwright treats aria-disabled as not enabled)
   const first = tab.getByRole("region", { name: "Translate drill on Genesis 1:1", exact: true });
   await first.getByRole("button", { name: "Reveal", exact: true }).click();
   await first.getByRole("button", { name: "Next verse", exact: true }).click();
