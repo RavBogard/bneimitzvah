@@ -33,7 +33,7 @@ function serviceCourseProblem(file, text) {
 // The siddur's builds never enter this repo (2.0 SC2): not the licensed app surface (`dist-app/`, the Beit Mitzvah book among it), and
 // not a public feed either. The service course reads the pinned public build from the database; a feed file here, by name, by
 // directory or by its shape inside an otherwise allowed data file, is refused.
-const SIDDUR_BUILD_PATH = /(?:^|\/)dist-app(?:\/|$)|(?:^|\/)[^/]*-feed\.json$|(?:^|\/)feeds\.json$/i;
+const SIDDUR_BUILD_PATH = /(?:^|\/)(?:dist-app|\.course-text)(?:\/|$)|(?:^|\/)[^/]*-feed\.json$|(?:^|\/)feeds\.json$|(?:^|\/)shirei-[^/]*\.pdf$/i;
 const SIDDUR_FEED_SHAPE = /"pageIndex"\s*:/;
 const SIDDUR_FEED_FIELDS = /"(?:units|printing|blockGranularity|sections)"\s*:/g;
 const LICENSED_LANE = /"lane"\s*:\s*"licensed"|-LICENSED"|"laneWhy"\s*:/;

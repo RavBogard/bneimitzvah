@@ -37,6 +37,17 @@ test("it imports a verified build once, refuses other bytes and a different acti
     // What it stored parses with the app's own reader.
     expect(parsePublicCourseFeed(new Uint8Array(rows[0].feed_bytes as Uint8Array), rows[0].pins).identity).toBe(rows[0].identity);
 
+    // A withdrawn build is never re-activated by re-running the import; only an explicit --reactivate brings it back.
+    await client.query("update course_text_lifecycle set state = 'withdrawn', revision = revision + 1");
+    await expect(importCourseText(client, { bytes: build.bytes, tenantId: "crc" }, build.pins)).rejects.toThrow("this build was withdrawn; pass --reactivate to make it active again");
+    expect((await client.query("select state, revision from course_text_lifecycle")).rows).toEqual([{ state: "withdrawn", revision: 2 }]);
+    expect(await importCourseText(client, { bytes: build.bytes, tenantId: "crc", reactivate: true }, build.pins)).toEqual({ changed: true, identity: courseTextIdentity(build.pins) });
+    expect((await client.query("select state, revision from course_text_lifecycle")).rows).toEqual([{ state: "active", revision: 3 }]);
+    // A superseded one is refused the same way.
+    await client.query("update course_text_lifecycle set state = 'superseded', revision = revision + 1");
+    await expect(importCourseText(client, { bytes: build.bytes, tenantId: "crc" }, build.pins)).rejects.toThrow("this build was superseded");
+    await client.query("update course_text_lifecycle set state = 'active', revision = revision + 1");
+
     const other = feedBytes({ ...syntheticFeedValue(), title: "Synthetic other build" });
     await expect(importCourseText(client, { bytes: other, tenantId: "crc" }, syntheticPins(other))).rejects.toThrow("a different build is active");
     expect((await client.query("select count(*)::int as n from course_text_catalog")).rows).toEqual([{ n: 1 }]);

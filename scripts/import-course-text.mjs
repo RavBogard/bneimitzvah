@@ -7,13 +7,15 @@ import pg from "pg";
 /**
  * Operator import of the service course's pinned PUBLIC text (2.0 SC2). Explicitly invoked, never imported by the app.
  *
- *   DATABASE_MIGRATION_URL=... node scripts/import-course-text.mjs --file <path to shabbat-shacharit-feed.json> --tenant crc
+ *   gh run download 35741258239 -R RavBogard/ShireiShabbat -n shabbat-shacharit-edfef85 -D .course-text
+ *   DATABASE_MIGRATION_URL=... node scripts/import-course-text.mjs --file .course-text/shabbat-shacharit-feed.json --tenant crc [--reactivate]
  *
- * The file is the feed from the producer's public-lane artifact named in src/server/service-course/pin.ts (download it with
- * `gh run download 35741258239 -R RavBogard/ShireiShabbat -n shabbat-shacharit-edfef85` into an ignored folder, never the repo).
+ * The file is the feed from the producer's public-lane artifact named in src/server/service-course/pin.ts. Download it into
+ * `.course-text/`, which git ignores and the repo policy refuses (the artifact also holds the volume's PDFs); never into the repo.
  * Its bytes must hash to the pin before any connection opens. One transaction: it stores the bytes with the exact pins and makes
  * them the congregation's active build for the volume; run again, it changes nothing; it refuses if a DIFFERENT build is active
- * (replacing a build is its own reviewed operation). It never touches service_catalog, and it prints only fixed messages.
+ * (replacing a build is its own reviewed operation). A build that was withdrawn or superseded is never made active again
+ * unless `--reactivate` is passed. It never touches service_catalog, and it prints only fixed messages.
  */
 // Kept equal to PUBLIC_COURSE_TEXT in src/server/service-course/pin.ts; tests/app/course-text-import.test.ts checks it.
 export const COURSE_TEXT_PIN = Object.freeze({
@@ -30,7 +32,7 @@ export class CourseTextImportRefused extends Error {
 }
 
 /** `client` is a direct migration-owner client (pg.Client or PGlite); `pin` defaults to the code pin and is overridden only by tests. */
-export async function importCourseText(client, { bytes, tenantId }, pin = COURSE_TEXT_PIN) {
+export async function importCourseText(client, { bytes, tenantId, reactivate = false }, pin = COURSE_TEXT_PIN) {
   if (!(bytes instanceof Uint8Array) || bytes.byteLength < 1 || bytes.byteLength > 2_097_152) throw new CourseTextImportRefused("feed size");
   if (sha256(bytes) !== pin.feedSha256) throw new CourseTextImportRefused("feed hash is not the pin");
   if (pin.lane !== "public" || /^(?:legacy|crc)-/.test(pin.volume) || pin.artifactName !== `${pin.volume}-${pin.artifactCommit.slice(0, 7)}`) throw new CourseTextImportRefused("pin is not a public build");
@@ -48,7 +50,9 @@ export async function importCourseText(client, { bytes, tenantId }, pin = COURSE
     if (!catalog.rows.length) catalog = await client.query("insert into course_text_catalog(tenant_id,volume,identity,feed_bytes,pins) values($1,$2,$3,$4,$5::jsonb) returning id",
       [tenantId, pin.volume, identity, Buffer.from(bytes), pins]);
     const id = catalog.rows[0].id;
-    const life = await client.query("select id from course_text_lifecycle where tenant_id = $1 and catalog_id = $2", [tenantId, id]);
+    const life = await client.query("select id, state from course_text_lifecycle where tenant_id = $1 and catalog_id = $2", [tenantId, id]);
+    // A build someone withdrew or superseded stays so: bringing it back is a deliberate act, never a side effect of re-running.
+    if (life.rows.length && !reactivate) throw new CourseTextImportRefused(`this build was ${life.rows[0].state}; pass --reactivate to make it active again`);
     if (life.rows.length) await client.query("update course_text_lifecycle set state = 'active', revision = revision + 1 where tenant_id = $1 and catalog_id = $2 and state <> 'active'", [tenantId, id]);
     else await client.query("insert into course_text_lifecycle(tenant_id,catalog_id,volume,state) values($1,$2,$3,'active')", [tenantId, id, pin.volume]);
     await client.query("commit");
@@ -70,7 +74,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     if (!["postgres:", "postgresql:"].includes(url.protocol) || url.hostname.includes("-pooler")) throw new CourseTextImportRefused("a direct migration connection is required");
     client = new pg.Client({ connectionString: value });
     await client.connect();
-    const result = await importCourseText(client, { bytes, tenantId });
+    const result = await importCourseText(client, { bytes, tenantId, reactivate: args.includes("--reactivate") });
     console.log(result.changed ? "Course text imported and active" : "Course text already active; nothing changed");
   } catch (error) {
     // Driver errors and configuration are never printed; a refusal names its fixed reason only.
