@@ -1,6 +1,6 @@
 /**
- * The one switch for search indexing (Daniel, 2026-10-23, F2): until the v1.5.0 tag every page, header and
- * robots.txt says noindex. At v1.5.0 this single constant becomes `true`; then exactly the three public routes
+ * The one switch for search indexing (Daniel, 2026-10-23, F2): until Daniel switches it on (his ruling of 2026-10-23, not a tag) every page, header and
+ * robots.txt says noindex. Flipping this single constant to `true` then makes exactly the three public routes
  * below become indexable and everything else (signed-in pages, workspaces, the API, learn lessons and review,
  * the front door) stays noindex. robots.ts, next.config.ts headers and each page's robots meta all read it here.
  * Dependency-free so next.config.ts can import it.

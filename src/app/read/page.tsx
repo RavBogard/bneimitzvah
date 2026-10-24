@@ -6,7 +6,7 @@ import { publicRobots } from "../../lib/site/indexing";
 import { readPublicProductName } from "../../server/public-site/names";
 import { publicMetadataBase } from "../../lib/site/origin";
 
-// Open to anyone (Daniel, 2026-10-22). Search engines only once PUBLIC_INDEXING is on (v1.5.0).
+// Open to anyone (Daniel, 2026-10-22). Search engines only once PUBLIC_INDEXING is on (Daniel decides when).
 // A static shell: the browser picks the Shabbat, so the CDN serves this page itself. It regenerates hourly so the product name stays current.
 export const revalidate = 3600;
 export async function generateMetadata(): Promise<Metadata> {

@@ -9,7 +9,7 @@ import { metadata as rootMetadata } from "../../src/app/layout";
 import ReadPage, { generateMetadata as readGenerateMetadata } from "../../src/app/read/page";
 import { PortalEntry } from "../../src/components/portal/entry";
 
-test("until beta every route says noindex: header, robots meta (root and public reading) and robots.txt", async () => {
+test("while indexing is off every route says noindex: header, robots meta (root and public reading) and robots.txt", async () => {
   const rules = await nextConfig.headers!();
   const all = rules.find(rule => rule.source === "/:path*");
   expect(all?.headers).toEqual([{ key: "X-Robots-Tag", value: "noindex, nofollow" }]);

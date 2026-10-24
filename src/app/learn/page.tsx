@@ -5,7 +5,7 @@ import { publicRobots } from "../../lib/site/indexing";
 import { readPublicProductName } from "../../server/public-site/names";
 import { publicMetadataBase } from "../../lib/site/origin";
 
-// Open to anyone and signed out first, like /read; search engines only once PUBLIC_INDEXING is on (v1.5.0).
+// Open to anyone and signed out first, like /read; search engines only once PUBLIC_INDEXING is on (Daniel decides when).
 export const revalidate = 3600;
 export async function generateMetadata(): Promise<Metadata> {
   return {
