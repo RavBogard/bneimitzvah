@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { detectPlatform } from "../../src/lib/offline/platform";
-import { NEW, PLAN } from "../../src/lib/offline/copy";
+import { APPROVED, NEW, PLAN } from "../../src/lib/offline/copy";
 
 // Where the installable app is live, and Daniel's exact wording (1.5 plan, 2026-10-23 rulings B4, F3, popup rulings).
 const base = { userAgent: "Mozilla/5.0 (Linux; Android 15; Pixel 7) Chrome/140 Mobile", platform: "Linux armv8l", maxTouchPoints: 5, matches: () => false, seam: null };
@@ -40,7 +40,7 @@ test("the strings are Daniel's, verbatim, with the congregation's productName", 
   expect(PLAN.androidMenu).toBe("In Chrome, open the menu and tap Install app or Add to Home screen.");
   expect(PLAN.pill("Fri 6 Nov")).toBe("Offline · saved until Fri 6 Nov");
   expect(PLAN.expiry("Synthetic Torah")).toBe("Saved readings stay on this device for 14 days after you last opened Synthetic Torah online. Open it with a connection to renew them. If the device runs low on space, it may remove them sooner.");
-  for (const value of [...Object.values(PLAN), ...Object.values(NEW)]) {
+  for (const value of [...Object.values(PLAN), ...Object.values(APPROVED), ...Object.values(NEW)]) {
     const text = typeof value === "function" ? value("CRC Torah") : value;
     expect(text, text).not.toMatch(/!|\bawesome\b|\byay\b/i);
   }
