@@ -48,6 +48,8 @@ async function isolatedNextProject() {
   if (!resolve(dir).startsWith(`${logRoot}${sep}`)) throw new Error("Isolated Next directory escaped workspace");
   try {
     await cp(join(source, "src"), join(dir, "src"), { recursive: true });
+    // The public pages read the product name through the public runtime, which reaches the chant engine's text module (src/server/study/word-aids.ts), so the engine is copied beside src.
+    await cp(join(source, "trope"), join(dir, "trope"), { recursive: true });
     for (const [family, font, license] of [["noto-serif-hebrew", "NotoSerifHebrew.ttf", "OFL.txt"], ["bricolage-grotesque", "BricolageGrotesque.ttf", "OFL.txt"], ["stam-ashkenaz-clm", "StamAshkenazCLM.ttf", "LICENSE.txt"]]) {
       const fontDirectory = join("public", "fonts", family);
       await mkdir(join(dir, fontDirectory), { recursive: true });

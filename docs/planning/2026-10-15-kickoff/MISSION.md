@@ -4,6 +4,14 @@ Filed 2026-10-15 from the kickoff interview in Cowork. This is the authority doc
 
 **Amended 2026-10-16:** Daniel's later rulings 27–59 in [PLAN-REVIEW.md](../2026-10-16-review/PLAN-REVIEW.md#1-rulings-from-this-session-daniel-binding-2026-10-16) are folded in below. Original numbering and dated decisions are retained; that review preserves the earlier wording and interview record. Its section 3 mechanisms remain proposals, subject to Astra's integration corrections and bounded design review. These requirements do not claim completed implementation.
 
+## Amended 2026-10-23, roadmap (Daniel, verbatim)
+
+"Second congregation moves to 2.5 also; web siddur integration into 1.x"
+
+- The second congregation moves from after 1.5 to 2.5, alongside 2.5's generated chant per trope system. D11, D-a and D-b stand, but on the 2.5 timeline. Provisioning it is still Daniel's gate, after the two-tenant isolation suite and its adversarial pass.
+- The web siddur integration (shirei-shabbat's web siddur, including its Beit Mitzvah volume) moves from 2.0 into 1.x. Claude's read: it is 1.7, after 1.6, and runs beside the print sheet and voice. The shirei-shabbat repos are read from, never written; their own CLAUDE.md rules win there. The service course with Daniel's teaching on each prayer (E2) stays in 2.0, since this ruling names only the integration.
+- Daniel, verbatim, same day: "All the voice work happens in 2.5". The voice generator (VOICE-BUILD-PLAN M0 to M8, with PR #22) doesn't start after 1.6. It starts in 2.5, after 2.0. This replaces the earlier "voice starts after the 1.6 activities" ordering. The order is 1.5, then 1.6 and the print sheet, then 1.7 (web siddur integration), then 2.0 (service course), then 2.5 (all voice work, generated chant per trope system, the second congregation).
+
 ## Daniel's rulings, 2026-10-23 (via Cowork)
 
 **Amended 2026-10-23.** Daniel answered Cowork's question batches A to F on 2026-10-23. His answers, verbatim and with the option labels he chose, are in [QUESTIONS.md](../2026-10-23-cowork-offload/QUESTIONS.md); the mapping to plan sections is in [HANDOFF-TO-CLAUDE-CODE.md](../2026-10-23-cowork-offload/HANDOFF-TO-CLAUDE-CODE.md). The bullets below record every ruling that changes this brief or a plan. They supersede any older MISSION text that says otherwise, and that older text is left as written. Rulings that only confirm plan text (A1, A2) or settle strings (A3, B4) live in QUESTIONS.md and in the two 1.5 plans' "Changes from Daniel's 2026-10-23 rulings" sections.

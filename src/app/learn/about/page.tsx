@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import { LearnAppBar } from "../../../components/learn/home";
 import styles from "../../../components/learn/learn.module.css";
+import { pageTitle } from "../../../lib/site/product-name";
+import { NOINDEX_META } from "../../../lib/site/indexing";
+import { readPublicProductName } from "../../../server/public-site/names";
+import { publicMetadataBase } from "../../../lib/site/origin";
 
-export const metadata: Metadata = {
-  title: "About | Learn to lein", referrer: "no-referrer",
-  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
-};
+export const revalidate = 3600;
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: pageTitle(await readPublicProductName(), "About", "Learn to lein"), metadataBase: publicMetadataBase(), referrer: "no-referrer", robots: NOINDEX_META };
+}
 // COPY.md, About.
 export default function AboutPage() {
   return <div className={`portal-shell ${styles.shell}`}>
