@@ -19,7 +19,7 @@ import { readIndex, sweep } from "../../src/lib/offline/pack-index";
 import { INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, packAssetAllowed, WINDOW_MS, type Pack } from "../../src/lib/offline/policy";
 import { publicReadingPath, publicShortPath, publicTextPath } from "../../src/components/portal/public-reading/urls";
 import { coursePassages } from "../../src/components/learn/verses-api";
-import { MELODIES } from "../../src/lib/learn/course";
+import { lookAlikeRefs, MELODIES } from "../../src/lib/learn/course";
 
 // The packer against the real public routes, with a synthetic calendar, synthetic text and one synthetic clip.
 const origin = "https://torah.centralreform.org", date = thisShabbat();
@@ -167,6 +167,8 @@ describe("the Learn to lein course pack (F3)", () => {
       const url = new URL(publicTextPath({ by: "ref", ref, kind }, kind, 0), origin);
       expect(pack.assets, ref).toContain(url.pathname + url.search);
     }
+    // 1.6: the look-alike verses travel in those same fixed passages, so the pack holds their text and clips too.
+    for (const kind of MELODIES) { const members = coursePassages(kind).flatMap(ref => ref.split("; ")); for (const ref of lookAlikeRefs(kind)) expect(members, ref).toContain(ref); }
     // The ref route is asked for the paging only; the course never requests it, so it is not stored.
     expect(pack.assets.some(asset => asset.startsWith("/api/public/reading"))).toBe(false);
     expect(pack.assets.every(packAssetAllowed)).toBe(true);

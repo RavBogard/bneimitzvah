@@ -19,14 +19,15 @@ function reaskAt(queue: readonly DrillItem[], from: number, item: DrillItem, rng
   for (let at = Math.min(start, queue.length); at <= queue.length; at++) if (!shares(queue[at - 1]) && !shares(queue[at])) return at;
   return queue.length;
 }
-export function answerRun(run: Run, right: boolean, rng: () => number): Run {
+/** `reask: "end"` (Quick ten) brings a miss back after the run's planned items rather than three to five items on. */
+export function answerRun(run: Run, right: boolean, rng: () => number, options: { reask?: "soon" | "end" } = {}): Run {
   const item = currentItem(run); if (!item) return run;
   const queue = [...run.queue], next = run.at + 1;
   const rightSet = new Set(run.right), missed = new Set(run.missed), misses = new Map(run.misses);
   if (right) rightSet.add(item.key);
   else {
     missed.add(item.key); const count = (misses.get(item.key) ?? 0) + 1; misses.set(item.key, count);
-    if (count <= REASKS) queue.splice(reaskAt(queue, next, item, rng), 0, item);
+    if (count <= REASKS) queue.splice(options.reask === "end" ? queue.length : reaskAt(queue, next, item, rng), 0, item);
   }
   return Object.freeze({ queue: Object.freeze(queue), at: next, right: rightSet, missed, misses });
 }

@@ -5,6 +5,8 @@ export async function answerRight(page: Page) {
   const main = page.locator("main");
   const choice = main.locator("button[class*=choice][data-right]").first();
   if (await choice.count()) return choice.click();
+  const look = main.locator("[data-look-answer]");
+  if (await look.count()) { const answer = await look.getAttribute("data-look-answer"); return main.locator(`button[data-look="${answer}"]`).click(); }
   const end = main.locator("[data-end-unit]");
   if (await end.count()) { const unit = await end.getAttribute("data-end-unit"); return main.locator(`[data-end-unit] [data-unit="${unit}"]`).click(); }
   const tap = main.locator("[data-target-phrase]");

@@ -3,8 +3,9 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { FamilyId } from "../../lib/trope/chart-catalog";
 import { familyName, type Melody, type TropeId } from "../../lib/learn/course";
 import { tropeLabel, tropeSample, isConjunctive } from "../../lib/learn/marks";
-import type { BuildItem, DrillItem, EndItem, NameItem, Phrase, Pools, SameItem, TapItem } from "../../lib/learn/pools";
+import { phraseAt, type BuildItem, type DrillItem, type EndItem, type HalfItem, type LookItem, type LookSide, type NameItem, type Phrase, type Pools, type SameItem, type TapItem } from "../../lib/learn/pools";
 import { LEADS_ON, type AnalysedVerse } from "../../lib/learn/verse";
+import { DRAFTED, lookTell } from "./activity-copy";
 import { AudioError, ContourMark, FamilyChip, icons, phraseRequest, phraseStyle, PlayTile, UnitsText } from "./bits";
 import { useLearnServices, usePlayerState } from "./services";
 import styles from "./learn.module.css";
@@ -183,5 +184,77 @@ export function BuildThePhrase({ item, pools, onAnswer }: DrillProps<BuildItem>)
     </button>)}</div>
     {done && <div className={styles.answer} data-answer><UnitsText verse={verse} units={item.phrase.words} look={() => "inked"} className={styles.phraseStandard} />
       <div className={styles.answerHead}><FamilyChip family={item.phrase.family} melody={item.phrase.kind} /><span className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></span></div></div>}
+  </>;
+}
+
+/** One look-alike word at Hebrew Large: the word alone, or (azla against geresh) with the word before it, muted. */
+function LookWord({ side, context, card }: { side: LookSide; context: LookItem["context"]; card: boolean }) {
+  const at = side.word.word, first = context === "previous-word" ? Math.max(0, at - 1) : at;
+  return <UnitsText as="span" verse={side.verse} units={[first, at]} className={styles.lookHebrew} card={card} unitClass={unit => unit < at ? styles.contextWord : undefined} />;
+}
+/** Same sign, different place: two words side by side, each with a look-alike sign. The tap is the answer and plays
+ * nothing; once answered, both show their mark names, the tell appears, the tile plays the tapped word then the other,
+ * and the words open their cards. */
+export function LookAlikes({ item, onAnswer }: DrillProps<LookItem>) {
+  const id = `look:${item.key}`, [tapped, setTapped] = useState<0 | 1 | null>(null), copy = DRAFTED.lookAlikes;
+  const answerSide = item.shown[item.answer], heard = item.mode === "hear" ? phraseAt(answerSide.verse, answerSide.word.word) : null;
+  useAutoplay(id, heard ? [request(heard)] : [], !!heard);
+  const tap = (n: 0 | 1) => { if (tapped !== null) return; setTapped(n); onAnswer(n === item.answer); };
+  const word = (side: LookSide) => phraseRequest(side.verse, [side.word.word, side.word.word]);
+  const both = tapped === null ? [] : [word(item.shown[tapped]), word(item.shown[tapped === 0 ? 1 : 0])];
+  return <>
+    <h2 className={styles.prompt}>{item.mode === "hear" ? copy.hearPrompt : copy.readPrompt(item.ask)}</h2>
+    {item.first && <p className={styles.lookIntro}>{copy.intro}</p>}
+    {heard && <div className={styles.playRow}><PlayTile id={id} requests={[request(heard)]} /></div>}
+    <div className={styles.lookPair} dir="rtl" data-look-answer={item.answer}>{item.shown.map((side, n) => {
+      const state = tapped === null ? undefined : n === item.answer ? "right" : n === tapped ? "chosen" : "other";
+      return tapped === null
+        ? <button key={n} type="button" className={`${styles.choice} ${styles.lookWord}`} data-look={n} aria-label={`Word ${n + 1}`} onClick={() => tap(n as 0 | 1)}>
+          <LookWord side={side} context={item.context} card={false} /></button>
+        : <div key={n} className={`${styles.choice} ${styles.lookWord}`} data-look={n} data-state={state} style={{ "--phrase-color": "var(--lake-tint)" } as CSSProperties}>
+          <LookWord side={side} context={item.context} card />
+          <span className={styles.lookMark} dir="ltr">{state === "right" && <span className={styles.choiceMark}>{icons.check}</span>}{side.word.mark}</span>
+        </div>;
+    })}</div>
+    <p role="status" className={styles.feedback}>{tapped !== null ? lookTell(answerSide) : ""}</p>
+    <AudioError id={[id, `${id}:words`]} />
+    {tapped !== null && <div className={styles.answerHead} data-answer>
+      <PlayTile id={`${id}:words`} requests={both} />
+      <span className={styles.ref}><bdi dir="ltr">{[...new Set(item.shown.map(side => side.verse.ref))].join(" · ")}</bdi></span>
+    </div>}
+  </>;
+}
+
+/** Which half of the verse: the verse uncoloured, a hairline gap after the rest; the recording plays from the verse's
+ * start through one phrase (ruling 2026-10-23), or the phrase alone. Before the rest, or after it? */
+export function WhichHalf({ item, pools, onAnswer }: DrillProps<HalfItem>) {
+  const id = `half:${item.key}`, [chosen, setChosen] = useState<"before" | "after" | null>(null), verse = verseOf(pools, item.target), copy = DRAFTED.whichHalf;
+  const [first, last] = item.target.words, leadIn = item.audio === "lead-in";
+  const requests = verse ? [leadIn ? phraseRequest(verse, [0, last]) : request(item.target)] : [];
+  useAutoplay(id, requests, !!verse);
+  if (!verse) return null;
+  const pick = (half: "before" | "after") => { if (chosen) return; setChosen(half); onAnswer(half === item.half); };
+  const restPhrase = verse.phrases.find(row => row.units[0] <= item.rest && item.rest <= row.units[1]);
+  const inHalf = (unit: number) => item.half === "before" ? unit <= item.rest : unit > item.rest;
+  const look = (unit: number) => chosen && restPhrase && unit >= restPhrase.units[0] && unit <= restPhrase.units[1] ? "inked" as const : "plain" as const;
+  const unitClass = (unit: number) => [unit >= first && unit <= last && (leadIn || chosen) ? styles.underlined : "", chosen && inHalf(unit) && look(unit) === "plain" ? styles.halfTint : ""].filter(Boolean).join(" ") || undefined;
+  const button = (half: "before" | "after", label: string) => <button type="button" className={styles.choice} disabled={!!chosen} aria-pressed={chosen === half}
+    data-state={!chosen ? undefined : half === item.half ? "right" : half === chosen ? "chosen" : "other"} style={{ "--phrase-color": "var(--lake-tint)" } as CSSProperties}
+    data-right={half === item.half || undefined} onClick={() => pick(half)}>
+    <span>{label}</span>{chosen && half === item.half && <span className={styles.choiceMark}>{icons.check}</span>}</button>;
+  return <>
+    <h2 className={styles.prompt}>{leadIn ? copy.promptLeadIn : copy.promptPhrase}</h2>
+    <div className={styles.playRow}><PlayTile id={id} requests={requests} /></div>
+    <AudioError id={id} />
+    <div className={styles.verseBox} data-half={item.half} data-rest-unit={item.rest}>
+      <p className={`${styles.hebrew} ${styles.phraseStandard}`} lang="he" dir="rtl">
+        <UnitsText as="span" verse={verse} units={[0, item.rest]} card={!!chosen} look={look} unitClass={unitClass} />
+        <span className={styles.halfGap} aria-hidden="true"> </span>
+        {item.rest < verse.units.length - 1 && <UnitsText as="span" verse={verse} units={[item.rest + 1, verse.units.length - 1]} card={!!chosen} look={look} unitClass={unitClass} />}
+      </p>
+    </div>
+    <div className={styles.pair}>{button("before", copy.before)}{button("after", copy.after)}</div>
+    <p role="status" className={styles.feedback}>{chosen ? item.half === "before" ? copy.tellBefore : copy.tellAfter : ""}</p>
+    {chosen && <div className={styles.answerHead} data-answer><span className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></span></div>}
   </>;
 }

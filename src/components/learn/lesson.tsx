@@ -1,14 +1,14 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { FamilyId } from "../../lib/trope/chart-catalog";
-import { drillSkill, isDrill, lessonById, presentGoal, type Drill, type Lesson, type Melody, type ThisWeek as ThisWeekActivity } from "../../lib/learn/course";
+import { ALWAYS_RUN, drillSkill, isDrill, lessonById, presentGoal, type Drill, type Lesson, type Melody, type ThisWeek as ThisWeekActivity } from "../../lib/learn/course";
 import { tropeLabel, tropeSample } from "../../lib/learn/marks";
-import { drillItems, itemCard, poolOf, seededRandom, type DrillItem, type Phrase } from "../../lib/learn/pools";
+import { drillItems, itemCard, phraseAt, poolOf, seededRandom, type DrillItem, type Phrase } from "../../lib/learn/pools";
 import { cardId, completeLesson, localDay, nextLesson, recordAnswer } from "../../lib/learn/progress";
 import { answerRun, currentItem, freshPace, mayStopEarly, pace, runDone, startRun, type LessonPace, type Run } from "../../lib/learn/run";
-import { lessonSources, useCourseVerses, type CourseVerses, type ExampleVerse } from "./course-data";
+import { lessonExtraRefs, lessonSources, useCourseVerses, type CourseVerses, type ExampleVerse } from "./course-data";
 import { AudioError, FamilyChip, icons, phraseRequest, PlayTile, revealAnswer, UnitsText } from "./bits";
-import { BuildThePhrase, HearAndName, SameOrDifferent, TapThePhrase, WhereDoesItEnd } from "./drills";
+import { BuildThePhrase, HearAndName, LookAlikes, SameOrDifferent, TapThePhrase, WhereDoesItEnd, WhichHalf } from "./drills";
 import { FirstVerse } from "./first-verse";
 import { ThisWeekSection } from "./this-week";
 import { LearnServices, useLearnServices, usePlayerState, useProgress } from "./services";
@@ -29,8 +29,8 @@ function LessonFlow({ id }: { id: string }) {
   const lesson = lessonById(id)!;
   const steps = useMemo(() => lessonSteps(lesson), [lesson]);
   const [at, setAt] = useState(0), [retry, setRetry] = useState(0), [paceState, setPace] = useState<LessonPace>(freshPace);
-  const sources = useMemo(() => lessonSources(lesson), [lesson]);
-  const data = useCourseVerses(steps[0].kind === "first-verse" ? [] : sources, retry);
+  const sources = useMemo(() => lessonSources(lesson), [lesson]), extra = useMemo(() => lessonExtraRefs(lesson).map(ref => ({ kind: lesson.melody, ref })), [lesson]);
+  const data = useCourseVerses(steps[0].kind === "first-verse" ? [] : sources, retry, extra);
   const { player } = useLearnServices();
   const { progress, update, until } = useProgress();
   const main = useRef<HTMLElement>(null), moved = useRef(new Set<string>());
@@ -38,13 +38,17 @@ function LessonFlow({ id }: { id: string }) {
   const step = steps[at];
   const onAnswered = useCallback((item: DrillItem, activity: Drill, right: boolean) => {
     setPace(value => pace(value, right));
-    const { family, melody } = itemCard(item), id = cardId(family, melody, drillSkill(activity));
+    // Look-alikes and which-half move no card: they teach marks and halves, not families.
+    const card = itemCard(item), skill = drillSkill(activity); if (!card || !skill) return;
+    const id = cardId(card.family, card.melody, skill);
     // A card goes up at most one box in a lesson, however often its family comes up right; a miss still drops it.
     if (right && moved.current.has(id)) return;
     moved.current.add(id);
     update(value => recordAnswer(value, id, right, localDay(Date.now()), { until }));
   }, [update, until]);
   const doneIndex = steps.length - 1;
+  /** Where eight right in a row goes from step `from`: past the other drills, but never past a look-alikes or which-half step not yet run. */
+  const afterEarlyStop = (from: number) => { const next = steps.findIndex((row, i) => i > from && row.kind === "drill" && ALWAYS_RUN.has(row.activity.type)); return next < 0 ? doneIndex : next; };
   return <div className={`portal-shell ${styles.shell}`}>
     <a className="skip-link" href="#lesson-main">Skip to the lesson</a>
     <header className={styles.bar}>
@@ -59,8 +63,8 @@ function LessonFlow({ id }: { id: string }) {
         : data.status === "error" || !(data.examples.get(lesson.id)?.length) ? <div role="status" className={styles.state}><p>The recording did not load. Try again.</p><button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>
         : step.kind === "hear" ? <HearIt lesson={lesson} examples={data.examples.get(lesson.id) ?? []} onNext={() => go(at + 1)} />
         : step.kind === "verses" ? <InVerses lesson={lesson} examples={data.examples.get(lesson.id) ?? []} onNext={() => go(at + 1)} />
-        : <DrillStep key={`${at}`} lesson={lesson} activity={step.activity} data={data} stopEarly={mayStopEarly(paceState)}
-          onAnswered={onAnswered} onDone={() => go(mayStopEarly(paceState) ? doneIndex : at + 1)} />}
+        : <DrillStep key={`${at}`} lesson={lesson} activity={step.activity} data={data} stopEarly={!ALWAYS_RUN.has(step.activity.type) && mayStopEarly(paceState)}
+          onAnswered={onAnswered} onDone={() => go(mayStopEarly(paceState) ? afterEarlyStop(at) : at + 1)} />}
     </main>
   </div>;
 }
@@ -161,13 +165,21 @@ function DrillStep({ lesson, activity, data, stopEarly, onAnswered, onDone }: { 
       : item.type === "same-or-different" ? <SameOrDifferent key={key} item={item} {...props} />
       : item.type === "where-does-it-end" ? <WhereDoesItEnd key={key} item={item} {...props} prompt={activity.type === "where-does-it-end" ? activity.params.prompt : undefined} />
       : item.type === "tap-the-phrase" ? <TapThePhrase key={key} item={item} {...props} />
+      : item.type === "look-alikes" ? <LookAlikes key={key} item={item} {...props} />
+      : item.type === "which-half" ? <WhichHalf key={key} item={item} {...props} />
       : <BuildThePhrase key={key} item={item} {...props} />}
     <Footer><button ref={nextButton} type="button" className="button-start" disabled={!answered} onClick={advance}>Next</button></Footer>
   </>;
 }
 function prefetch(audio: ReturnType<typeof useLearnServices>["audio"], item: DrillItem) {
+  if (item.type === "look-alikes") {
+    // Read mode plays nothing until the answer; hear mode plays the answer word's phrase.
+    const side = item.shown[item.answer], heard = item.mode === "hear" ? phraseAt(side.verse, side.word.word) : null;
+    return heard ? audio.phraseClip(phraseRequest(heard, heard.words), new AbortController().signal).catch(() => null) : Promise.resolve(null);
+  }
   const phrase = item.type === "hear-and-name" ? item.answer : item.type === "same-or-different" ? item.first : item.type === "build-the-phrase" ? item.phrase : item.target;
-  return audio.phraseClip(phraseRequest(phrase, phrase.words), new AbortController().signal).catch(() => null);
+  const words = item.type === "which-half" && item.audio === "lead-in" ? [0, phrase.words[1]] as const : phrase.words;
+  return audio.phraseClip(phraseRequest(phrase, words), new AbortController().signal).catch(() => null);
 }
 
 /** End of a lesson: a plain fact about what you can now hear, this week's reading, the next step. */

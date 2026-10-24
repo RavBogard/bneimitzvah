@@ -6,7 +6,7 @@ import { referenceRecord } from "../../lib/reference-audio/source";
 import { parseReferenceShortResolution, type ReferenceShortResolution } from "../../lib/reference-audio/short-resolution";
 import { expandReadingRanges } from "../../lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
-import { COURSE, type Melody } from "../../lib/learn/course";
+import { COURSE, lookAlikeRefs, type Melody } from "../../lib/learn/course";
 import type { LoadedVerse } from "../../lib/learn/phrase-audio";
 
 /**
@@ -47,7 +47,8 @@ export function coursePassages(kind: Melody): readonly string[] {
 function coursePassageOf(kind: Melody): ReadonlyMap<string, string> {
   let map = fixed.get(kind);
   if (!map) {
-    const refs = COURSE.lessons.filter(lesson => lesson.melody === kind).flatMap(lesson => lesson.examples.map(example => example.ref));
+    // 1.6: the look-alike words' verses join the same fixed passages, so the course pack holds them too.
+    const refs = [...COURSE.lessons.filter(lesson => lesson.melody === kind).flatMap(lesson => lesson.examples.map(example => example.ref)), ...lookAlikeRefs(kind)];
     const built = new Map<string, string>();
     for (const passage of passagesFor(refs, kind)) for (const member of passage.split("; ")) built.set(member, passage);
     map = built; fixed.set(kind, map);
