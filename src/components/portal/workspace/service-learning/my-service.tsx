@@ -11,6 +11,7 @@ import { serviceApi, type Catalog } from "./api";
 import { PortalRequestError } from "../../api";
 import { serviceSlotLine } from "../service-slot";
 import { useCongregation } from "../settings/links";
+import { siddurPageLink } from "../../../../lib/siddur/link";
 
 type Draft = Record<string, string>;
 export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode:ReadingMode; studentId: string; baseline: Assigned | null;onConnected?(connected:boolean):void }) {
@@ -65,7 +66,7 @@ export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode
     } catch(error) {popup?.close();if (currentScope === scopeRef.current)fail(error,"This resource is no longer available. Ask your tutor to review it."); }
   }
   function part(row: ConnectedService["rows"][number], full = false) {
-    const assigned = linked?.parts.find(part => part.rowId === row.rowId), key = `part-${row.rowId}`, requestKey = `request-${row.rowId}`;
+    const assigned = linked?.parts.find(part => part.rowId === row.rowId), siddurLink = row.liturgyRef ? siddurPageLink(congregation.links.siddurUrl, row.liturgyRef.book, row.liturgyRef.folio, row.liturgyRef.serviceViewId) : null, key = `part-${row.rowId}`, requestKey = `request-${row.rowId}`;
     const selectedUnit=drafts[key]?.catalogUnitId??assigned?.catalogUnitId??"";
     return <li key={row.rowId} className={styles.part}>
       <div className={styles.partHeading}><h4>{row.title}</h4>{assigned?.leads && full && <span>You lead</span>}</div>
@@ -78,7 +79,7 @@ export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode
       <div className={styles.actions}>
         {row.catalogUnitId && <button type="button" className="button-secondary" disabled={current?.busy} onClick={() => void openMaterial(row.rowId)}>Read {row.title}</button>}
         {!assigned?.resourceNeedsReview && row.resources.map(resource => <button key={resource.resourceId} type="button" className="button-secondary" disabled={current?.busy} onClick={() => void openResource(row.rowId, resource.resourceId)}>{resource.kind === "score" ? "Score" : "Listen"}: {resource.label}</button>)}
-        {row.liturgyRef && <a className="button-text" href={`https://siddur.centralreform.org/?${new URLSearchParams({book:row.liturgyRef.book,p:String(row.liturgyRef.folio),...(row.liturgyRef.serviceViewId?{service:row.liturgyRef.serviceViewId}:{})})}`} target="_blank" rel="noreferrer">Open in Siddur</a>}
+        {siddurLink && <a className="button-text" href={siddurLink} target="_blank" rel="noreferrer">Open in Siddur</a>}
       </div>
       {mode === "student" && assigned?.leads && <label className={styles.progress}>My progress<select aria-label={`Progress for ${row.title}`} value={assigned.progress} disabled={current?.busy} onChange={event => void mutate("progress", { rowId: row.rowId, expectedRevision: assigned.revision, progress: event.target.value })}><option value="not-started">Not started</option><option value="practicing">Practicing</option><option value="ready">Ready</option></select></label>}
       {!staff && <details><summary>Ask about this part</summary><form onSubmit={event => { event.preventDefault(); void mutate("request", { rowId: row.rowId, message: drafts[requestKey]?.message ?? "" }, requestKey); }}><label>What would you like to change?<textarea maxLength={2000} required value={drafts[requestKey]?.message ?? ""} onChange={event => draft(requestKey, "message", event.target.value)} /></label><button className="button-primary" disabled={current?.busy}>Send request</button></form></details>}
