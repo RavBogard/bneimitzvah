@@ -30,7 +30,6 @@ import { pageTitle } from "../../../lib/site/product-name";
 import { SaveReading } from "../saved/save-reading";
 import { SavedReadingPage } from "../saved/saved-reading";
 import { OfflineExpiryNote, OfflinePill } from "../offline/status";
-import { useOwnLayer } from "../workspace/study/own-layer";
 import { DRILL_STRINGS, drillNext, TranslateDrillPanel } from "./translate-drill";
 import styles from "./public-reading.module.css";
 import drillStyles from "./translate-drill.module.css";
@@ -92,7 +91,7 @@ export function Shell({ title, children, signedIn = false }: { title: string; ch
       <div className="reading-workspace reading-with-work"><section aria-labelledby="public-reading-title">
         {children}
         {!signedIn && <aside className={styles.signIn} aria-labelledby="public-sign-in-heading">
-          <h2 id="public-sign-in-heading">Preparing for your Beit Mitzvah?</h2>
+          <h2 id="public-sign-in-heading">Save this reading</h2>
           <p>Sign in to see your own verses, your tutor’s notes and your practice days. Everything on this page is open to anyone.</p>
           <a className="button-start" href="/sign-in">Sign in</a>
         </aside>}
@@ -261,7 +260,6 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   const [drill, setDrill] = useState<{ revealed: string | null } | null>(null), [announce, setAnnounce] = useState("");
   const drillHint = useRef<string | null>(null), drillToPage = useRef(false), drillFocus = useRef<"jps" | "reveal" | "toggle" | null>(null);
   const jpsRef = useRef<HTMLHeadingElement | null>(null), revealRef = useRef<HTMLButtonElement | null>(null), drillToggle = useRef<HTMLButtonElement | null>(null);
-  const own = useOwnLayer();
   useEffect(() => { const target = drillFocus.current; if (!target) return; drillFocus.current = null; (target === "jps" ? jpsRef : target === "reveal" ? revealRef : drillToggle).current?.focus({ preventScroll: target !== "toggle" }); });
 
   useEffect(() => () => { audio.stopAll(); }, [audio]);
@@ -344,12 +342,11 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   };
   const drillRestart = () => { if (!page) return; if (page.offset === 0) drillGo(0); else { drillToPage.current = true; changeOffset(offsets[0] ?? 0); } };
   const drillPanel = drillVerse && focus !== null && page && <TranslateDrillPanel verseRef={drillVerse.ref} english={drillVerse.english} revealed={drill?.revealed === drillVerse.ref}
-    hint={drillHint.current === drillVerse.ref} last={drillNext(focus, page.verses.length, nextOffset) === "last"} draft={own?.draft(drillVerse.ref) ?? { state: "none" }} announce={announce}
+    hint={drillHint.current === drillVerse.ref} last={drillNext(focus, page.verses.length, nextOffset) === "last"} announce={announce}
     jpsRef={jpsRef} revealRef={revealRef}
     onReveal={() => { setDrill({ revealed: drillVerse.ref }); setAnnounce(DRILL_STRINGS.shown); drillFocus.current = "jps"; }}
     onHide={() => { setDrill({ revealed: null }); setAnnounce(DRILL_STRINGS.hidden); drillFocus.current = "reveal"; }}
-    onNext={drillNextVerse} onRestart={drillRestart} onEnd={drillEnd}
-    onWriteOwn={own ? () => { const ref = drillVerse.ref; setDrill(null); own.writeOwn(ref); } : undefined} />;
+    onNext={drillNextVerse} onRestart={drillRestart} onEnd={drillEnd} />;
 
   return <VersePanelScope>
     <div className="reading-lens-row">

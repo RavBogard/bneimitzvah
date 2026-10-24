@@ -180,7 +180,7 @@ export function accountMailText(kind: AccountMailKind, origin: string, tenant: R
     ? { subject: `An account request for ${tenant.productName}`,
       text: `Someone has asked for a ${tenant.productName} account.\n\nReview account requests: ${link}\n\nYou receive this because you approve accounts for ${tenant.name}.` }
     : { subject: `Your ${tenant.productName} account is ready`,
-      text: `Your account request was approved. Sign in with this email address to save readings and keep your own translation and notes.\n\n${link}\n\nIf you did not ask for an account, you can ignore this email.` };
+      text: `Your account request was approved. Sign in with this email address to save readings. ${link}. If you did not ask for an account, you can ignore this email.` };
 }
 export function createAccountMailTransport(input: { origin: string; apiKey: string; from: string; fetch: typeof globalThis.fetch; enabled: boolean; timeoutMs?: number }) {
   const timeout = input.timeoutMs ?? 5000;

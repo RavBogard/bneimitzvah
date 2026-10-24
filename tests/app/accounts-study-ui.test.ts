@@ -5,8 +5,9 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { DRILL_STRINGS, drillNext, TranslateDrillPanel } from "../../src/components/portal/public-reading/translate-drill";
 import { StarButton, STAR_STRINGS, type OwnStars } from "../../src/components/portal/workspace/study/own-layer";
-import { YoursRowView, YOURS_STRINGS, type YoursField } from "../../src/components/portal/saved/yours";
+import { YoursRowView, YOURS_STRINGS } from "../../src/components/portal/saved/yours";
 import { conflictWork, fetchSavedStars, parseSavedStars, saveSavedWork, savedText, SavedRequestError, setSavedStar } from "../../src/components/portal/saved/api";
+import { Shell } from "../../src/components/portal/public-reading/view";
 import { APPROVER_HELP_LINE } from "../../src/components/portal/workspace/accounts/workspace";
 
 // Release 1.4 PR 3: the Yours row, stars and the translate drill. Synthetic text only.
@@ -27,7 +28,7 @@ describe("the translate drill", () => {
     expect(drillNext(2, 3, null)).toBe("last");
   });
   const panel = (props: Partial<Parameters<typeof TranslateDrillPanel>[0]> = {}) => renderToStaticMarkup(createElement(TranslateDrillPanel, {
-    verseRef: "Genesis 1:2", english: "Synthetic English two.", revealed: false, hint: false, last: false, draft: { state: "none" }, announce: "",
+    verseRef: "Genesis 1:2", english: "Synthetic English two.", revealed: false, hint: false, last: false, announce: "",
     onReveal: () => {}, onHide: () => {}, onNext: () => {}, onRestart: () => {}, onEnd: () => {}, ...props }));
   const plain = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   it("hides the English behind one line until Reveal, with the prompt and, on the first verse, the hint", () => {
@@ -47,12 +48,12 @@ describe("the translate drill", () => {
     expect(plain(last)).not.toContain("Next verse");
     expect(plain(panel({ revealed: true, english: null }))).toContain("No JPS translation is available for this verse.");
   });
-  it("shows a member's own translation beside JPS, or a way to write one, and nothing of the kind otherwise", () => {
-    expect(plain(panel({ revealed: true, draft: { state: "draft", text: "My synthetic words." } }))).toContain("JPS Synthetic English two. My translation My synthetic words. Compare it with what you said.");
-    const empty = panel({ revealed: true, draft: { state: "empty" }, onWriteOwn: () => {} });
-    expect(plain(empty)).toContain("No translation of this verse yet. Write one in Yours");
-    expect(empty).toMatch(/<button type="button"[^>]*>Write one in Yours<\/button>/);
-    expect(plain(panel({ revealed: true }))).not.toMatch(/My translation|Yours/);
+  it("reveals JPS only: no own translation and no way into Yours, whatever the account holds", () => {
+    const html = panel({ revealed: true });
+    expect(plain(html)).not.toMatch(/My translation|Yours|Write one|No translation of this verse/);
+    expect(Object.keys(DRILL_STRINGS)).not.toEqual(expect.arrayContaining(["mine"]));
+    expect(Object.keys(DRILL_STRINGS).filter(key => /^(mine|noDraft|noDraftLink)$/.test(key))).toEqual([]);
+    expect(html).not.toContain("<textarea");
   });
   it("lives in Lein's verse tools only: Study rows have no drill, and the drill stores nothing and never writes the English preference", () => {
     const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
@@ -79,19 +80,34 @@ describe("stars and the Yours row", () => {
     // Error lines keep the product’s "Try again"; the drill alone bans it. No line cheers.
     for (const value of Object.values(STAR_STRINGS)) expect(value).not.toMatch(/!|nice|great/i);
   });
-  const field = (value = "", notice: YoursField["notice"] = null): YoursField => ({ value, ready: true, busy: false, notice, onChange: () => {}, onSave: () => {} });
-  it("is a closed row that opens in place to My translation, My notes and their Save, never a dialog", () => {
-    const closed = renderToStaticMarkup(createElement(YoursRowView, { verseRef: "Genesis 1:2", open: false, onToggle: () => {}, translation: field(), note: field(), starred: null }));
-    expect(closed).toMatch(/aria-expanded="false"[^>]*>Yours<\/button>/); expect(closed).not.toContain("textarea");
-    const open = renderToStaticMarkup(createElement(YoursRowView, { verseRef: "Genesis 1:2", open: true, onToggle: () => {}, translation: field("Mine"), note: field("", { text: YOURS_STRINGS.saved, tone: "status" }), starred: null }));
+  it("is a closed row that opens in place to stored My translation and My notes as plain read-only text, never an editor or a dialog", () => {
+    const closed = renderToStaticMarkup(createElement(YoursRowView, { verseRef: "Genesis 1:2", open: false, onToggle: () => {}, translation: "Mine", note: "Kept", starred: null }));
+    expect(closed).toMatch(/aria-expanded="false"[^>]*>Yours<\/button>/); expect(closed).not.toContain("Mine"); expect(closed).not.toContain("Kept");
+    const open = renderToStaticMarkup(createElement(YoursRowView, { verseRef: "Genesis 1:2", open: true, onToggle: () => {}, translation: "Synthetic stored translation.", note: "Synthetic stored note.", starred: null }));
     expect(open).toContain('aria-label="Yours on Genesis 1:2"');
-    expect(open).toMatch(/<label[^>]*>My translation<\/label><textarea[^>]*>Mine<\/textarea>/);
-    expect(open).toMatch(/<label[^>]*>My notes<\/label>/);
-    expect((open.match(/>Save<\/button>/g) ?? []).length).toBe(2);
-    expect(open).toContain('role="status">Saved.</p>');
+    expect(open).toContain("Synthetic stored translation."); expect(open).toContain("Synthetic stored note.");
+    expect(open).toContain("My translation"); expect(open).toContain("My notes");
     expect(open).toContain(YOURS_STRINGS.privacy);
-    expect(open).not.toMatch(/dialog|aria-modal/);
+    expect(open).not.toMatch(/<textarea|<input|<form|<label|>Save<|dialog|aria-modal/);
+    // A stream with nothing stored shows neither its label nor an empty field.
+    const half = renderToStaticMarkup(createElement(YoursRowView, { verseRef: "Genesis 1:2", open: true, onToggle: () => {}, translation: undefined, note: "  ", starred: null }));
+    expect(half).not.toMatch(/My translation|My notes|<textarea/);
     for (const value of Object.values(YOURS_STRINGS)) expect(value).not.toMatch(/!|nice|great/i);
+  });
+  it("offers no way to write notes or translations: the editor sources and their writers are gone from the components", () => {
+    const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
+    const own = read("src/components/portal/workspace/study/own-layer.tsx"), yoursSource = read("src/components/portal/saved/yours.tsx"), drillSource = read("src/components/portal/public-reading/translate-drill.tsx");
+    for (const source of [own, yoursSource, drillSource, read("src/components/portal/saved/saved-reading.tsx"), read("src/components/portal/public-reading/view.tsx")])
+      expect(source).not.toMatch(/writeOwn|openStudy|saveSavedWork|savedText\(|<textarea|DrillDraft|noDraft/);
+    expect(yoursSource).not.toMatch(/YoursField|onSave|Write one in Yours/);
+  });
+  it("is Daniel's approved sign-in card heading on a public reading, with the body unchanged", () => {
+    const html = renderToStaticMarkup(createElement(Shell, { title: "Synthetic", children: null }));
+    expect(html).toMatch(/<h2 id="public-sign-in-heading">Save this reading<\/h2>/);
+    expect(html).toContain("Sign in to see your own verses, your tutor’s notes and your practice days. Everything on this page is open to anyone.");
+    expect(html).not.toContain("Preparing for your Beit Mitzvah?");
+    const signedIn = renderToStaticMarkup(createElement(Shell, { title: "Synthetic", children: null, signedIn: true }));
+    expect(signedIn).not.toContain("public-sign-in-heading");
   });
   it("keeps text the server would keep, and refuses what it would refuse before asking", () => {
     expect(savedText("a\r\nb")).toBe("a\nb"); expect(savedText("")).toBe("");

@@ -1,6 +1,5 @@
 "use client";
 import type { KeyboardEvent, Ref } from "react";
-import type { DrillDraft } from "../workspace/study/own-layer";
 import styles from "./translate-drill.module.css";
 
 /**
@@ -18,14 +17,11 @@ export const DRILL_STRINGS = Object.freeze({
   reveal: "Reveal",
   end: "End drill",
   jps: "JPS",
-  mine: "My translation",
   compare: "Compare it with what you said.",
   next: "Next verse",
   hide: "Hide again",
   last: "That is the last verse of this reading.",
   restart: "Start from the first verse",
-  noDraft: "No translation of this verse yet.",
-  noDraftLink: "Write one in Yours",
   noJps: "No JPS translation is available for this verse.",
   shown: "JPS translation shown.",
   moved: (verse: string) => `Verse ${verse}. English hidden.`,
@@ -40,13 +36,13 @@ export function drillNext(index: number, pageLength: number, nextOffset: number 
 
 /**
  * The drill on the selected verse in Lein (spec §3.4; Daniel F4: Lein only, never Study). Before the reveal the English
- * is hidden with a one-line placeholder; Reveal shows JPS and, for a member on a saved reading, their own translation.
+ * is hidden with a one-line placeholder; Reveal shows JPS only.
  * Nothing here plays or stops audio, stores anything or moves on its own; Escape inside it ends the drill.
  */
-export function TranslateDrillPanel({ verseRef, english, revealed, hint, last, draft, announce, jpsRef, revealRef, onReveal, onHide, onNext, onRestart, onEnd, onWriteOwn }: {
-  verseRef: string; english: string | null; revealed: boolean; hint: boolean; last: boolean; draft: DrillDraft; announce: string;
+export function TranslateDrillPanel({ verseRef, english, revealed, hint, last, announce, jpsRef, revealRef, onReveal, onHide, onNext, onRestart, onEnd }: {
+  verseRef: string; english: string | null; revealed: boolean; hint: boolean; last: boolean; announce: string;
   jpsRef?: Ref<HTMLHeadingElement>; revealRef?: Ref<HTMLButtonElement>;
-  onReveal(): void; onHide(): void; onNext(): void; onRestart(): void; onEnd(): void; onWriteOwn?(): void;
+  onReveal(): void; onHide(): void; onNext(): void; onRestart(): void; onEnd(): void;
 }) {
   const s = DRILL_STRINGS;
   const escape = (event: KeyboardEvent<HTMLElement>) => { if (event.key === "Escape") { event.stopPropagation(); onEnd(); } };
@@ -62,8 +58,6 @@ export function TranslateDrillPanel({ verseRef, english, revealed, hint, last, d
     </> : <>
       <h5 className={styles.label} ref={jpsRef} tabIndex={-1}>{s.jps}</h5>
       <p className={`study-english ${styles.english}`} lang="en" dir="ltr">{english ?? s.noJps}</p>
-      {draft.state === "draft" && <><h5 className={styles.label}>{s.mine}</h5><p className={styles.mine} dir="auto">{draft.text}</p></>}
-      {draft.state === "empty" && <p className={styles.line}>{s.noDraft} {onWriteOwn ? <button type="button" className={styles.inlineLink} onClick={onWriteOwn}>{s.noDraftLink}</button> : s.noDraftLink}</p>}
       <p className={styles.line}>{s.compare}</p>
       {last && <p className={styles.line}>{s.last}</p>}
       <div className={styles.actions}>

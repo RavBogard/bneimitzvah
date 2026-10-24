@@ -172,7 +172,7 @@ test("a saved reading opens with its name and date, keeps Still working and Got 
     await expect(page).toHaveTitle("My reading | CRC Torah");
     await expect(page.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
     await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "Preparing for your Beit Mitzvah?" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Save this reading" })).toHaveCount(0);
     await expect(page).toHaveURL(new RegExp(`/read\\?saved=${savedRow.id}$`));
     await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
     // Choosing a verse in Lein shows its mark; pressing again clears it.
