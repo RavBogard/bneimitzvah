@@ -44,12 +44,21 @@
 - GATE: PR #54 (four Low translate-drill fixes) squash-merged by Claude as ead6cb8 after its agent's watcher stalled. Deployed (success) — proceeded because all four CI jobs were green at d3f7596.
 - GATE: tagged and released v1.5.0 at ead6cb8 without the torah switch — proceeded because Daniel allowed it if DNS hadn't resolved. torah.centralreform.org still returned "Non-existent domain" on 2026-10-24. The switch becomes 1.5.x: when DNS resolves, Daniel sets BETTER_AUTH_URL, then the cutover runbook §4.3. There is no beta wording. The listening round (LISTENING-ROUND.md) and the Android check are Daniel's, whenever he likes; fixes go in 1.5.x.
 - **Daniel, 2026-10-23, verbatim:** "Approved. Get everything through 1.8 done and released". This is standing authority to finish and tag 1.6, 1.7 (Friday preparation, PLAN-1-7.md) and 1.8 (web siddur, docs/superpowers/plans/2026-10-23-web-siddur-integration.md), checking in only at tags and true blockers.
-- **Resume point, 2026-10-24.** v1.5.0 is released. In flight:
-  - #56 (1.6) is merging, then v1.6.0;
-  - #59 (1.8 M1, siddur link helper);
-  - #60 (1.7 M3, cuts and wording);
-  - #61 (1.7 M1, the Study word card).
-  - Next: M2 (migration 0040), M3b (0041), M4, M5, M6 (0042), then v1.7.0 and 1.7.x, then 1.8 M2–M4 and v1.8.0.
+- GATE: merged #56 (1.6, bc4afa4) and tagged v1.6.0, which also carries the Study word card (#61, 77c6b6b) — proceeded because CI was green. #61's only conflict with #54 was in view.tsx, and Claude resolved it by keeping both sides. A live check showed the card opening beside the verse.
+- GATE: production migration 0040_saved_reading_ranges (GRANT UPDATE (ranges, verse_count) ON saved_reading) was applied and verified before #62 merged (a88fbd4); the ledger is at 41. Proceeded because the check confirmed every precondition, and after the apply RLS, the policies, the table privileges, the row count and the tenant hashes were unchanged.
+- GATE: merged #60 (the 1.7 cuts, 4ea4eeb), #63 (1.8 page fields, 0de7e93, Opus review clean), #64 (1.8 visible links, 6dceef9), #68 (print appendix, f20d84f) and #67 (Choose verses, 84fa455) — proceeded because each was green apart from the known postgres browser-step flake, which passed on another run of the same commit. The 1.8 live link check is recorded in the 1.8 plan.
+- **Daniel, 2026-10-24 popups:**
+  - M6 credit: "Claude translation for {productName}".
+  - M6 labels: "Sources on this verse", "Sources for this reading", "Back to this verse".
+  - Print: discussions may join the appendix, under the licence filter.
+  - #67 wording: the 32-group sentence and the invalid-choice sentence are kept as drafted. The conflict sentence is "This reading was changed somewhere else. Your verses are still chosen. Save again to keep them."
+- GATE: tagged v1.7.0 at 84fa455. 1.8's siddur links went live inside it. M3b, M4 and M6 follow as 1.7.x, and v1.8.0 is tagged when they are done — proceeded because version numbers are Claude's to choose.
+- **Resume point, 2026-10-24 evening:**
+  - In flight: M3b (account preferences, migration 0041), M4 (owner-only MCP saved readings) and M6a (curated discussions server, migration 0042).
+  - Then M6b (the UI), then v1.8.0.
+  - Follow-ups:
+    - the "and/ he said" slash in dictionary glosses;
+    - the counter's Neon check around 2026-10-30.
 
 
 ## Current return point — 2026-10-21 night: toward 1.0
