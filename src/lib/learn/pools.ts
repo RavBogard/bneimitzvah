@@ -193,6 +193,7 @@ export function drillItems(activity: Drill, pools: Pools, context: DrillContext,
       for (const { pair, example } of lookAlikeExamples(activity, melody)) {
         const a = pools.verses.get(example.a.ref), b = pools.verses.get(example.b.ref);
         if (!a || !b || a.kind !== melody || b.kind !== melody || !lookAlikeMatches(a, example.a) || !lookAlikeMatches(b, example.b)) continue;
+        if (activity.params.mode === "hear" && a === b && phraseAt(a, example.a.word)?.words[0] === phraseAt(b, example.b.word)?.words[0]) continue;
         const list = byPair.get(pair.id) ?? []; byPair.set(pair.id, list);
         list.push({ id: pair.id, a: { word: example.a, verse: a }, b: { word: example.b, verse: b }, hard: example.hard });
       }

@@ -33,7 +33,7 @@ function LessonFlow({ id }: { id: string }) {
   const data = useCourseVerses(steps[0].kind === "first-verse" ? [] : sources, retry, extra);
   const { player } = useLearnServices();
   const { progress, update, until } = useProgress();
-  const main = useRef<HTMLElement>(null), moved = useRef(new Set<string>());
+  const main = useRef<HTMLElement>(null), moved = useRef(new Set<string>()), stopped = useRef(false);
   const go = useCallback((next: number) => { player.stop(); setAt(next); window.scrollTo({ top: 0 }); main.current?.focus({ preventScroll: true }); }, [player]);
   const step = steps[at];
   const onAnswered = useCallback((item: DrillItem, activity: Drill, right: boolean) => {
@@ -64,7 +64,7 @@ function LessonFlow({ id }: { id: string }) {
         : step.kind === "hear" ? <HearIt lesson={lesson} examples={data.examples.get(lesson.id) ?? []} onNext={() => go(at + 1)} />
         : step.kind === "verses" ? <InVerses lesson={lesson} examples={data.examples.get(lesson.id) ?? []} onNext={() => go(at + 1)} />
         : <DrillStep key={`${at}`} lesson={lesson} activity={step.activity} data={data} stopEarly={!ALWAYS_RUN.has(step.activity.type) && mayStopEarly(paceState)}
-          onAnswered={onAnswered} onDone={() => go(mayStopEarly(paceState) ? afterEarlyStop(at) : at + 1)} />}
+          onAnswered={onAnswered} onDone={() => { if (mayStopEarly(paceState)) stopped.current = true; go(stopped.current ? afterEarlyStop(at) : at + 1); }} />}
     </main>
   </div>;
 }
@@ -165,7 +165,7 @@ function DrillStep({ lesson, activity, data, stopEarly, onAnswered, onDone }: { 
       : item.type === "same-or-different" ? <SameOrDifferent key={key} item={item} {...props} />
       : item.type === "where-does-it-end" ? <WhereDoesItEnd key={key} item={item} {...props} prompt={activity.type === "where-does-it-end" ? activity.params.prompt : undefined} />
       : item.type === "tap-the-phrase" ? <TapThePhrase key={key} item={item} {...props} />
-      : item.type === "look-alikes" ? <LookAlikes key={key} item={item} {...props} />
+      : item.type === "look-alikes" ? <LookAlikes key={key} item={item} {...props} first={shown.n === 0} />
       : item.type === "which-half" ? <WhichHalf key={key} item={item} {...props} />
       : <BuildThePhrase key={key} item={item} {...props} />}
     <Footer><button ref={nextButton} type="button" className="button-start" disabled={!answered} onClick={advance}>Next</button></Footer>

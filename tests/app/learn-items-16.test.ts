@@ -55,6 +55,13 @@ describe("Same sign, different place: items", () => {
     const pools = buildPools(refs.map(ref => verse(ref, threePhrases())));
     expect(drillItems(activity, pools, { melody: "torah", focus: "zakef" }, seededRandom(1))).toEqual([]);
   });
+  it("never builds a hear-mode item whose two words sit in one phrase", () => {
+    const { pools } = lessonPools("torah-azla");
+    const hear = { type: "look-alikes", params: { pairs: ["kadma-azla"], items: 4, mode: "hear" } } as LookAlikes;
+    expect(drillItems(hear, pools, { melody: "torah", focus: "azla" }, seededRandom(1))).toEqual([]);
+    const read = { ...hear, params: { ...hear.params, mode: "read" } } as LookAlikes;
+    expect(drillItems(read, pools, { melody: "torah", focus: "azla" }, seededRandom(1)).length).toBeGreaterThan(0);
+  });
   it("plays the answer word's phrase in hear mode", () => {
     const value = verse("Genesis 4:4", [w(A.kadma, 0), w(A.mahpach, 1), w(A.pashta, 2), w(A.zakef, 3), w(A.tipcha, 4), end(5)]);
     expect(phraseAt(value, 2)).toMatchObject({ ref: "Genesis 4:4", family: "zakef", words: [0, 3] });

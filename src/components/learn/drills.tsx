@@ -195,7 +195,7 @@ function LookWord({ side, context, card }: { side: LookSide; context: LookItem["
 /** Same sign, different place: two words side by side, each with a look-alike sign. The tap is the answer and plays
  * nothing; once answered, both show their mark names, the tell appears, the tile plays the tapped word then the other,
  * and the words open their cards. */
-export function LookAlikes({ item, onAnswer }: DrillProps<LookItem>) {
+export function LookAlikes({ item, onAnswer, first = item.first }: DrillProps<LookItem> & { first?: boolean }) {
   const id = `look:${item.key}`, [tapped, setTapped] = useState<0 | 1 | null>(null), copy = DRAFTED.lookAlikes;
   const answerSide = item.shown[item.answer], heard = item.mode === "hear" ? phraseAt(answerSide.verse, answerSide.word.word) : null;
   useAutoplay(id, heard ? [request(heard)] : [], !!heard);
@@ -204,12 +204,12 @@ export function LookAlikes({ item, onAnswer }: DrillProps<LookItem>) {
   const both = tapped === null ? [] : [word(item.shown[tapped]), word(item.shown[tapped === 0 ? 1 : 0])];
   return <>
     <h2 className={styles.prompt}>{item.mode === "hear" ? copy.hearPrompt : copy.readPrompt(item.ask)}</h2>
-    {item.first && <p className={styles.lookIntro}>{copy.intro}</p>}
+    {first && <p className={styles.lookIntro}>{copy.intro}</p>}
     {heard && <div className={styles.playRow}><PlayTile id={id} requests={[request(heard)]} /></div>}
     <div className={styles.lookPair} dir="rtl" data-look-answer={item.answer}>{item.shown.map((side, n) => {
       const state = tapped === null ? undefined : n === item.answer ? "right" : n === tapped ? "chosen" : "other";
       return tapped === null
-        ? <button key={n} type="button" className={`${styles.choice} ${styles.lookWord}`} data-look={n} aria-label={`Word ${n + 1}`} onClick={() => tap(n as 0 | 1)}>
+        ? <button key={n} type="button" className={`${styles.choice} ${styles.lookWord}`} data-look={n} onClick={() => tap(n as 0 | 1)}>
           <LookWord side={side} context={item.context} card={false} /></button>
         : <div key={n} className={`${styles.choice} ${styles.lookWord}`} data-look={n} data-state={state} style={{ "--phrase-color": "var(--lake-tint)" } as CSSProperties}>
           <LookWord side={side} context={item.context} card />

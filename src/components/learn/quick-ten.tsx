@@ -10,6 +10,7 @@ import { DRAFTED, NEW } from "./activity-copy";
 import { icons, revealAnswer } from "./bits";
 import { useCourseVerses } from "./course-data";
 import { HearAndName } from "./drills";
+import { useWordCardOpen } from "./word-card";
 import { LearnServices, useLearnServices, usePlayerState, useProgress } from "./services";
 import styles from "./learn.module.css";
 
@@ -26,8 +27,9 @@ const copy = DRAFTED.quickTen;
 function QuickTen({ practice }: { practice: Practice }) {
   const { progress: loaded } = useProgress(), [retry, setRetry] = useState(0);
   // The families heard are fixed when the page opens, so the run does not change under the learner.
-  const families = useMemo(() => loaded ? heardFamilies(loaded, practice.melody) : [], [loaded === null]); // eslint-disable-line react-hooks/exhaustive-deps
   const open = !!loaded && practiceOpen(loaded, practice);
+  // Worked out when it first opens: a signed-in device may first show this browser's copy, then the account's.
+  const families = useMemo(() => open && loaded ? heardFamilies(loaded, practice.melody) : [], [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const lessons = useMemo(() => open ? COURSE.lessons.filter(lesson => lesson.melody === practice.melody && lesson.family && families.includes(lesson.family)) : [], [open, families, practice.melody]);
   const data = useCourseVerses(lessons, retry);
   const main = useRef<HTMLElement>(null);
@@ -46,7 +48,7 @@ function QuickTen({ practice }: { practice: Practice }) {
 
 function QuickTenRun({ practice, families, pools, frame, main, back }: { practice: Practice; families: readonly FamilyId[]; pools: Pools;
   frame(body: ReactNode, footer?: ReactNode): ReactElement; main: RefObject<HTMLElement | null>; back: ReactNode }) {
-  const { update, until } = useProgress(), { player } = useLearnServices(), state = usePlayerState();
+  const { update, until } = useProgress(), { player } = useLearnServices(), state = usePlayerState(), cardOpen = useWordCardOpen();
   const seed = useRef(Math.floor(Math.random() * 2 ** 31));
   const items = useMemo(() => drillItems(quickTenDrill(practice, families), pools, { melody: practice.melody, focus: null }, seededRandom(seed.current)), [practice, families, pools]);
   const [run, setRun] = useState<Run>(() => startRun(items)), [shown, setShown] = useState<{ item: DrillItem | null; n: number }>(() => ({ item: items[0] ?? null, n: 0 }));
@@ -60,7 +62,7 @@ function QuickTenRun({ practice, families, pools, frame, main, back }: { practic
   };
   // The next phrase follows on its own once the answer's playback (a miss plays two phrases) has finished and the
   // verse has been on screen for autoAdvanceMs. A replay the learner starts holds it.
-  const busy = state.status === "playing" || state.status === "loading";
+  const busy = state.status === "playing" || state.status === "loading" || cardOpen;
   useEffect(() => {
     if (!answered || finished || busy) return;
     const timer = setTimeout(advance, practice.activity.params.autoAdvanceMs);
@@ -83,5 +85,5 @@ function QuickTenRun({ practice, families, pools, frame, main, back }: { practic
     update(value => recordAnswer(value, id, right, localDay(Date.now()), { until }));
   };
   return frame(<HearAndName key={`${item.key}:${shown.n}`} item={item} pools={pools} melody={practice.melody} contrast={contrast} onAnswer={answer} />,
-    <button type="button" className={styles.stopLink} onClick={() => { player.stop(); setFinished(true); }}>{copy.stop}</button>);
+    <button ref={none} type="button" className={styles.stopLink} onClick={() => { player.stop(); setFinished(true); }}>{copy.stop}</button>);
 }

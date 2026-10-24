@@ -110,7 +110,7 @@ export function lookAlikeMatches(verse: AnalysedVerse, side: Pick<LookAlikeWord,
 export function markPlace(text: string, mark: LookAlikeMark): "doubled" | "near-end" | null {
   const value = clean(text);
   if (mark === "pashta") return (value.match(/֙/g) ?? []).length >= 2 ? "doubled" : null;
-  if (mark === "kadma") { const at = value.indexOf("֨"); return at >= 0 && (value.slice(at).match(/[א-ת]/g) ?? []).length <= 1 ? "near-end" : null; }
+  if (mark === "kadma") { const at = value.indexOf("֨"); return at >= 0 && (value.slice(at).match(/[א-ת]/g) ?? []).length === 1 ? "near-end" : null; }
   return null;
 }
 /** The reading-word span of units [first, last], for the recording's timeline. */

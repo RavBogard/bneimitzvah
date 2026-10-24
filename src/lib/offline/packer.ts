@@ -138,6 +138,12 @@ export async function renewPack(io: PackerIo, descriptor: PackDescriptor, signal
   return "saved";
 }
 
+/** Does a stored course pack hold the first text page of every fixed course passage this build asks for? */
+export function coursePackCurrent(pack: Pick<Pack, "assets">, origin: string): boolean {
+  const assets = new Set(pack.assets);
+  return MELODIES.every(kind => coursePassages(kind).every(ref => assets.has(assetKey(origin + publicTextPath({ by: "ref", ref, kind }, kind, 0)))));
+}
+
 type Locks = { request(name: string, options: { ifAvailable: boolean }, callback: (lock: unknown) => Promise<void>): Promise<void> };
 /**
  * Every online open of the installed app: sweep, drop last week's pack on rollover, then renew This week and the
@@ -154,7 +160,8 @@ export async function openOffline(io: PackerIo & { locks?: Locks | null }) {
       // A complete pack renewed in the last 12 hours is left alone, so moving between pages never re-asks the public routes
       // (their firewall allows 120 requests a minute per address). Decided here: renewal is at most twice a day.
       const current = fresh.packs.find(pack => pack.key === (name === "week" ? weekKey : "course"));
-      if (current && io.now() - current.renewedAt < RENEW_AFTER_MS && await inspectPack(cache, current, io.now(), io.origin) === "saved") continue;
+      // A course pack built from an older set of fixed passages (a release that moved them, 1.6) is renewed at once.
+      if (current && io.now() - current.renewedAt < RENEW_AFTER_MS && (name !== "course" || coursePackCurrent(current, io.origin)) && await inspectPack(cache, current, io.now(), io.origin) === "saved") continue;
       setOfflineState({ [name]: "saving" });
       try { await renewPack(io, descriptor, controller.signal); }
       catch (error) {

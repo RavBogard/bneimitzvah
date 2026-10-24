@@ -113,6 +113,22 @@ describe("the course validator refuses what 1.6 does not allow", () => {
     const empty = copy(); empty.practice = []; expectProblem(empty, /practice/);
     expect(practiceById("quick-ten-torah")!.activity.params).toEqual({ families: "heard", items: 10, choices: 3, autoAdvanceMs: 1500 });
     expect(practiceById("torah-zakef")).toBeNull();
+    const choices = copy(); choices.practice[0].activity.params.choices = 5; expectProblem(choices, /choices/);
+    const badId = copy(); badId.practice[0].id = "Quick Ten"; expectProblem(badId, /practice 0: id/);
+    const many = copy(); many.practice = [...many.practice, ...many.practice, many.practice[0]]; expectProblem(many, /^practice$/);
+  });
+  it("refuses the remaining malformed shapes: prototype keys, readingOnly on a listening pair, a non-boolean hard, bad word numbers, empty or long pair lists, stray which-half params", () => {
+    const proto = copy(); activity(proto, "torah-azla", "look-alikes").params = JSON.parse('{"pairs":["kadma-azla"],"items":2,"mode":"read","__proto__":{"x":1}}'); expectProblem(proto, /unknown params __proto__/);
+    const protoPair = copy(); protoPair.lookAlikes = JSON.parse(JSON.stringify(protoPair.lookAlikes).replace('"pashta-kadma":{', '"pashta-kadma":{"__proto__":{"x":1},')); expectProblem(protoPair, /unknown field/);
+    const reading = copy(); reading.lookAlikes["kadma-azla"].readingOnly = true; expectProblem(reading, /kadma-azla: readingOnly/);
+    const hard = copy(); hard.lookAlikes["pashta-kadma"].examples[0].hard = "yes"; expectProblem(hard, /shape/);
+    for (const word of [-1, 1.5, 121, "3"]) { const bad = copy(); bad.lookAlikes["mahpach-yetiv"].examples[0].a.word = word; expectProblem(bad, /shape/); }
+    const ref = copy(); ref.lookAlikes["mahpach-yetiv"].examples[0].a.ref = "Genesis 1"; expectProblem(ref, /shape/);
+    const nfd = copy(); nfd.lookAlikes["mahpach-yetiv"].examples[0].a.text = nfd.lookAlikes["mahpach-yetiv"].examples[0].a.text.normalize("NFD") + "\u05B0\u05B1".normalize("NFD").split("").reverse().join(""); expectProblem(nfd, /text/);
+    const none = copy(); activity(none, "torah-azla", "look-alikes").params.pairs = []; expectProblem(none, /pairs/);
+    const five = copy(); activity(five, "torah-azla", "look-alikes").params.pairs = ["pashta-kadma", "kadma-azla", "mahpach-yetiv", "azla-geresh", "pashta-kadma"]; expectProblem(five, /pairs/);
+    const stray = copy(); activity(stray, "torah-zakef", "which-half").params.speed = 2; expectProblem(stray, /unknown params speed/);
+    const families = copy(); activity(families, "torah-zakef", "which-half").params.families = []; expectProblem(families, /families/);
   });
 });
 
@@ -134,6 +150,8 @@ describe("look-alike words against a verse", () => {
     expect(markPlace("שָׁם֙", "pashta")).toBeNull();
     expect(markPlace("יִשָּׂ֨א", "kadma")).toBe("near-end");
     expect(markPlace("נָתַ֨תִּי", "kadma")).toBeNull();
+    // A kadma on the last letter is not "close to the end, but not on the last letter".
+    expect(markPlace("בָּא֨", "kadma")).toBeNull();
     const side = (text: string, mark: "pashta" | "kadma" | "geresh") => ({ word: { ref: "Genesis 1:2", word: 0, text, mark } });
     expect(lookTell(side("תֹ֙הוּ֙", "pashta"))).toBe(DRAFTED.lookAlikes.tells["pashta-doubled"]);
     expect(lookTell(side("יִשָּׂ֨א", "kadma"))).toBe(DRAFTED.lookAlikes.tells["kadma-near-end"]);
