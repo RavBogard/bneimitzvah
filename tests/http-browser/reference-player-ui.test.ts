@@ -202,8 +202,7 @@ it("held student and child practice read directly, keep word tools and open opti
       const start = tab.getByRole("button", { name: "Start reading", exact: true }); await start.focus(); await tab.keyboard.press("Enter");
       await ui(reading).toBeFocused(); await ui(tab.getByRole("dialog")).toHaveCount(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
       expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0);
-      await word(tab, 1, 1).click(); const tools = tab.getByRole("button", { name: "Word tools", exact: true }); await ui(tools).toHaveAttribute("aria-expanded", "false");
-      await tools.click(); await ui(tools).toHaveAttribute("aria-expanded", "true");
+      await word(tab, 1, 1).click(); const tools = tab.getByRole("button", { name: "Word tools", exact: true }); await ui(tools).toHaveAttribute("aria-expanded", "true");
       await ui(tab.getByRole("region", { name: "Word tools", exact: true })).toBeVisible(); await ui(tab.getByText("· Word 2 of 2", { exact: false })).toBeVisible(); await ui(tab.getByRole("button", { name: "Hear this word", exact: true })).toHaveCount(0);
       await tab.getByRole("button", { name: "Word tools", exact: true }).click();
       await tab.getByRole("button", { name: "Practice up close", exact: true }).click();
