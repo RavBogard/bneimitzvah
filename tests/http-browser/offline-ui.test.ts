@@ -88,14 +88,15 @@ const pack = (tab: Page) => tab.evaluate(async ([name, key]) => {
   const response = await (await caches.open(name)).match(key);
   return response ? await response.json() as { owner?: string | null; packs: { key: string; owner: string; descriptor: { type: string; ref?: string }; renewedAt: number; expiresAt: number; assets: string[] }[] } : null;
 }, [OFFLINE_CACHE, INDEX] as const);
-async function signIn(tab: Page, email: string) {
+/** `landing`: false for a student, whose sign-in lands on their workspace instead of the "You're signed in" page. */
+async function signIn(tab: Page, email: string, landing = true) {
   await tab.goto("/", { waitUntil: "domcontentloaded" });
   await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   await tab.getByLabel("Email address", { exact: true }).fill(email);
   await tab.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
   await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
   await openAuthMail(tab, fixture.takeMail(email));
-  await ui(tab.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
+  if (landing) await ui(tab.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
 }
 
 // Offline navigation (the shell, the pill, playback and expiry) is proven on the built server in e2e/installable.spec.ts:
@@ -145,7 +146,7 @@ it("A2: a student's own confirmed reading is packed under its owner, and another
   await fixture.ownerDb.insert(s.assignmentVerse).values(["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"].map((verseRef, index) => ({ tenantId: "crc", studentId: fixture.student.id, assignmentId: assignment.id, ordinal: index + 1, verseRef })));
   try {
     const { tab, seen } = await installed();
-    await signIn(tab, "pg-offline-student@example.test");
+    await signIn(tab, "pg-offline-student@example.test", false);
     await expect.poll(async () => (await pack(tab))?.packs.some(row => row.descriptor.type === "ref" && row.descriptor.ref === "Genesis 1:1-3") ?? false, { timeout: 150_000 }).toBe(true);
     const first = (await pack(tab))!;
     expect(first.owner).toMatch(/^[A-Za-z0-9_-]{43}$/);
