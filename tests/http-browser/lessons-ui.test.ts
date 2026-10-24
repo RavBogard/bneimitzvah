@@ -111,6 +111,13 @@ it("lets a tutor add, edit and delete lessons, keeps an unsaved note, shows a ch
   await ui(lessons(tutor).locator(".lesson-entry")).toHaveCount(1);
   await ui(sheet(tutor).getByLabel("What you worked on", { exact: true })).toHaveValue("Synthetic unsaved note.");
   await ui(sheet(tutor).getByLabel("What you worked on", { exact: true })).toBeEnabled();
+  // A note over the length limit is told so once, under the field, and Save puts the writer back in the field.
+  await write(tutor, "x".repeat(4100));
+  await ui(sheet(tutor).getByText("Too long to save. Shorten this note a little.", { exact: true })).toBeVisible();
+  await save(tutor);
+  await ui(sheet(tutor).getByLabel("What you worked on", { exact: true })).toBeFocused();
+  await ui(sheet(tutor).locator(".request-error").filter({ hasText: /\S/ })).toHaveCount(1);
+  await ui(sheet(tutor).getByText("This note is too long. Shorten it a little, then save.", { exact: true })).toHaveCount(0);
   await safe(() => sheet(tutor).getByRole("button", { name: "Close lesson note", exact: true }).click());
   await safe(() => prompt.getByRole("button", { name: "Discard note", exact: true }).click());
   await ui(sheet(tutor)).toBeHidden();
