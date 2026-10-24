@@ -8,7 +8,8 @@ import type { StudyVerse } from "./api";
 import { useOfflineWording } from "../../offline/status";
 import { PLAN as OFFLINE } from "../../../../lib/offline/copy";
 import styles from "./word-tools.module.css";
-export type WordToolsHandle = Pick<ReturnType<typeof createWordToolsSelection>, "select" | "selectVerse">;
+/** `reveal`: a tap on a word with nothing else to do opens the card and brings it into view, so the tap visibly does something. */
+export type WordToolsHandle = Pick<ReturnType<typeof createWordToolsSelection>, "select" | "selectVerse"> & { reveal(): void };
 const idle: WordToolsState = Object.freeze({ open: false, selection: null, aids: Object.freeze({ status: "idle" }), details: Object.freeze({ status: "idle" }) });
 function Grammar({ value }: { value: WordGrammar }) {
   if (value.status !== "ready") return <p>Grammar isn’t available for this word.</p>;
@@ -46,11 +47,12 @@ export function WordTools({ scopeKey, verses, register, readAids, readDetails, o
   const owner = useRef<ReturnType<typeof createWordToolsSelection> | null>(null), [state, setState] = useState<WordToolsState>(idle);
   // Taken once per mounted instance; a StrictMode effect replay reuses this instance's copy.
   const initialPlace = useRef<Readonly<{ ref: string; wordIndex: number }> | null | undefined>(undefined);
+  const [reveal, setReveal] = useState(0), section = useRef<HTMLElement | null>(null);
   const heading = useRef<HTMLHeadingElement | null>(null), focusWord = useRef<Readonly<{ ref: string; wordIndex: number }> | null>(null);
   useLayoutEffect(() => {
     let current = true;
     const tools = createWordToolsSelection({ verses, readAids: (verse, signal) => callbacks.current.readAids(verse, signal), readDetails: (verse, index, signal) => callbacks.current.readDetails(verse, index, signal), onState: value => { if (current) setState(value); } });
-    owner.current = tools; setState(tools.state); register({ select: tools.select, selectVerse: tools.selectVerse });
+    owner.current = tools; setState(tools.state); register({ select: tools.select, selectVerse: tools.selectVerse, reveal: () => { tools.open(); setReveal(count => count + 1); } });
     if (initialPlace.current === undefined) initialPlace.current = callbacks.current.takePlace?.() ?? null;
     const place = initialPlace.current, verse = place ? verses.findIndex(row => row.ref === place.ref) : -1;
     const count = verse >= 0 ? projectStudyVerse(verses[verse].ref, verses[verse].hebrew) : null;
@@ -62,12 +64,14 @@ export function WordTools({ scopeKey, verses, register, readAids, readDetails, o
     const target = focusWord.current, selection = state.selection; if (!target || !selection) return; focusWord.current = null;
     if (verses[selection.verse]?.ref === target.ref && selection.index === target.wordIndex) heading.current?.focus();
   }, [state.selection, verses]);
+  // The card sits after the whole passage: after a tap, scroll the page no further than it takes to show the card.
+  useEffect(() => { if (reveal > 0 && state.open) section.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" }); }, [reveal, state.open]);
   const go = onPlace ? (ref: string, wordIndex: number) => { focusWord.current = Object.freeze({ ref, wordIndex }); onPlace(ref, wordIndex); } : undefined;
   const selected = state.selection, verse = selected ? verses[selected.verse] : null, projection = verse ? projectStudyVerse(verse.ref, verse.hebrew) : null;
   const words = projection?.status === "ready" ? projection.projection.words : [];
   const previous = selected && (selected.index > 0 || verses.slice(0, selected.verse).some(row => projectStudyVerse(row.ref, row.hebrew).status === "ready"));
   const next = selected && (selected.index + 1 < words.length || verses.slice(selected.verse + 1).some(row => projectStudyVerse(row.ref, row.hebrew).status === "ready"));
-  return <section className={styles.tools} aria-label="Word tools">
+  return <section ref={section} className={styles.tools} aria-label="Word tools">
     <button type="button" className={styles.disclosure} aria-expanded={state.open} aria-controls={`${id}-panel`} onClick={() => state.open ? owner.current?.close() : owner.current?.open()}>Word tools</button>
     {state.open && <WordCard id={`${id}-panel`} state={state} verse={verse} headingRef={heading} onRetry={() => owner.current?.retry()} onPlace={go}
       actions={selected && <><button type="button" disabled={!previous} onClick={() => owner.current?.navigate(-1)}>Previous word</button><button type="button" disabled={!next} onClick={() => owner.current?.navigate(1)}>Next word</button>{onHear && <button type="button" onClick={() => onHear(selected.verse, selected.index)}>Hear this word</button>}</>} />}
