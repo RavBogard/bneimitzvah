@@ -4,7 +4,7 @@ import { NAMED_READINGS, namedReading, type NamedReading } from "../../lib/readi
 import { canonicalReadingRef } from "../../lib/readings/reading-ref";
 import { isSaturday, publicShabbat, shabbatOnOrAfter, thisShabbat } from "../../lib/readings/public-shabbat";
 import { PORTION_PICKS, portionRef, portionsOf, type PortionPick } from "../../lib/print/portions";
-import { describeFormat, formatFromRecord, FORMAT_VALUES } from "../../lib/print/sheet-format";
+import { COMMENTARY_CHOICES, describeFormat, formatFromRecord, FORMAT_VALUES } from "../../lib/print/sheet-format";
 import { printAddress, type PrintTarget } from "../../lib/print/print-address";
 import { publicPlans, PUBLIC_CALENDAR } from "../public-reading/service";
 import { SCOPES } from "./oauth";
@@ -49,7 +49,7 @@ export function createPrintTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
       date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "A Shabbat (YYYY-MM-DD; another day means the Shabbat on or after it), when no parashah, ref or saved reading is named. Defaults to this coming Shabbat." },
       portion: { type: "string", enum: [...PORTION_PICKS], description: "Part of that Shabbat's Torah reading: full (default), triennial, aliyah-1 to aliyah-7, or maftir." },
       savedReadingId: { type: "string", pattern: UUID_PATTERN, description: "One of the person's own saved readings, by id. This tool does not read saved readings; the sheet opens it from the person's account when they open the link signed in." },
-      format: { type: "object", description: `Optional; anything left out takes its default. ${Object.entries(FORMAT_VALUES).map(([key, values]) => `${key}: ${key === "numbers" ? "true or false (default true)" : values.join(" | ")}`).join("; ")}. Defaults: both languages, vowels and trope, standard size, aliyot marked, no notes column, US Letter portrait, normal spacing, JPS 2023.` },
+      format: { type: "object", description: `Optional; anything left out takes its default. ${Object.entries(FORMAT_VALUES).map(([key, values]) => `${key}: ${key === "numbers" ? "true or false (default true)" : values.join(" | ")}`).join("; ")}; commentary: a list of works to print on a new page after the reading, grouped by verse, from ${COMMENTARY_CHOICES.join(", ")} (default none). Commentary prints only editions whose stated licence is public domain, CC0, CC BY or CC BY-NC, each with its credit; the page says plainly when a work has none. Defaults: both languages, vowels and trope, standard size, aliyot marked, no notes column, US Letter portrait, normal spacing, JPS 2023, no commentary.` },
     } },
     handler: async (input, ctx) => {
       // The connection must still be live, as for every tool; nothing private is read here.
@@ -61,7 +61,8 @@ export function createPrintTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
       const outcome = await choose(input, ctx.signal, ctx.loadReading);
       if (!outcome.ok) return { ok: false, problems: [outcome.problem] };
       return { ok: true, link: `${ctx.actor.origin}${printAddress(outcome.target, format, { today: null })}`, reading: outcome.reading, format: describeFormat(format),
-        note: "The link carries no text. The page loads the Hebrew and the JPS 2023 English when it is opened, with the edition credit on every printed page; the format can still be changed there before printing." };
+        note: "The link carries no text. The page loads the Hebrew and the JPS 2023 English when it is opened, with the edition credit on every printed page; the format can still be changed there before printing."
+          + (format.commentary.length ? " Chosen commentary is loaded when the page opens and printed only from editions licensed for print; the page says so beside any work with none." : "") };
     },
   }] satisfies Tool<Q>[]);
 }
