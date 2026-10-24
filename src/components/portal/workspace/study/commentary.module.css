@@ -107,8 +107,8 @@ button.number[aria-pressed="true"] > span { background: var(--lake); color: #fff
 .action[aria-expanded="true"] { color: var(--color-ink); }
 .action:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
 .versePanel { direction: ltr; margin-block: 0 1rem; padding: 1rem 1.25rem 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); min-width: 0; }
-.panelHead { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-block-end: 0.5rem; }
-.panelHead h3 { margin: 0; font-size: 1rem; font-weight: 700; overflow-wrap: anywhere; }
+.panelHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 0.75rem; margin-block-end: 0.5rem; }
+.panelHead h3 { flex: 1 1 11rem; min-width: 0; margin: 0; font-size: 1rem; font-weight: 700; overflow-wrap: anywhere; }
 .panelHead h3:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
 .panelClose { flex: none; min-height: 44px; padding: 0 0.25rem; border: 0; background: transparent; color: var(--color-action); font: 600 0.875rem/1 "Bricolage Grotesque", system-ui, sans-serif; cursor: pointer; }
 .panelClose:hover { color: var(--color-action-hover); text-decoration: underline; text-underline-offset: 0.2em; }
@@ -124,6 +124,7 @@ button.number[aria-pressed="true"] > span { background: var(--lake); color: #fff
 .discussionItem + .discussionItem { box-shadow: inset 0 1px 0 var(--color-rule); }
 .discussionTitle { margin: 0; color: var(--color-ink); font-size: 0.9375rem; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
 .discussion + .discussion { margin-block-start: 0.5rem; }
+.discussion .panelSubheading { color: var(--color-ink); }
 .discussionSource { min-width: 0; }
 .discussionSegment + .discussionSegment { margin-block-start: 0.5rem; }
 .discussionTranslation { font-size: 0.9375rem; line-height: 1.65; overflow-wrap: break-word; }
