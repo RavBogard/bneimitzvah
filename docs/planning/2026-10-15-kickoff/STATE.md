@@ -55,11 +55,20 @@
 - GATE: tagged v1.7.0 at 84fa455. 1.8's siddur links went live inside it. M3b, M4 and M6 follow as 1.7.x, and v1.8.0 is tagged when they are done — proceeded because version numbers are Claude's to choose.
 - GATE: production migration 0041_account_preferences was applied and verified before #66 merged (687c402); the ledger is at 42. Proceeded because the check confirmed the SQL hash and every precondition, and after the apply RLS was forced, the owner_only policy, the privileges and the column UPDATE grant matched, nothing went to PUBLIC, and saved_reading and the tenant rows were unchanged. A smoke check returned 401 for /api/saved/preferences signed out.
 - GATE: merged #65 (M4, owner-only MCP saved readings, 834f6b0) — proceeded because CI was green, the Opus adversarial review gave PASS on the final head, and the restored connection, tenant and membership check in withConnectionOwner has its own test. Main, with #66 in, was merged locally first and the overlapping saved and MCP tests passed. The write tools sit under portal:read under Daniel's "Existing MCP users" ruling. The consent page gained one line: "See, save and change your own saved readings, never anyone else's". It goes to Daniel at the v1.8.0 check-in.
-- GATE: production migration 0041_account_preferences was applied and verified before #66 merged (687c402); the ledger is at 42. Proceeded because the check confirmed the SQL hash and every precondition, and after the apply RLS was forced, the owner_only policy, the privileges and the column UPDATE grant matched, nothing went to PUBLIC, and saved_reading and the tenant rows were unchanged. A smoke check returned 401 for /api/saved/preferences signed out.
-- GATE: merged #65 (M4, owner-only MCP saved readings, 834f6b0) — proceeded because CI was green, the Opus adversarial review gave PASS on the final head, and the restored connection, tenant and membership check in withConnectionOwner has its own test. Main, with #66 in, was merged locally first and the overlapping saved and MCP tests passed. The write tools sit under portal:read under Daniel's "Existing MCP users" ruling. The consent page gained one line: "See, save and change your own saved readings, never anyone else's". It goes to Daniel at the v1.8.0 check-in.
+- GATE: production migration 0042_curated_discussions (SQL SHA-256 7503d43b…) was applied before #69 merged (692585f); the ledger is at 43. Proceeded because the check confirmed every precondition. A verify pass after the apply confirmed:
+  - forced RLS and one tenant_isolation policy on each of the three tables;
+  - INSERT only at table level, and no DELETE or TRUNCATE;
+  - column UPDATE only on curated_discussion(title, status, revision, updated_at);
+  - no column SELECT on selected_by;
+  - the security_invoker, security_barrier view, with nothing granted to PUBLIC;
+  - the four triggers;
+  - empty tables, and unchanged counts for the older tables, tenants, hosts, audit events and students.
+  The apply's own output was filtered by mistake, so the full check list comes from that verify pass on the live database. The Opus adversarial review of #69 found no security blocker, and its fixes were in the merged head. Main, with #65, was merged locally first and the MCP, discussions, saved-structure and never-in-repo tests passed.
 - **Resume point, 2026-10-24 night:**
-  - In flight: M6a (#69, curated discussions server, migration 0042) and M6b (the discussions UI, based on #69).
-  - Then the 0042 operator, the merges, and v1.8.0.
+  - In flight: M6b (#70, the discussions UI), which is merging main after #69's squash.
+  - Then v1.8.0, with a check-in. Two things to ask Daniel there:
+    - whether the curator's own account name may appear after "Selected by";
+    - the M4 consent line.
   - Follow-ups:
     - the "and/ he said" slash in dictionary glosses;
     - the counter's Neon check around 2026-10-30;
