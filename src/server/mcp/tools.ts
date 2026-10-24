@@ -22,6 +22,7 @@ import { createRosterTools } from "./roster-tools";
 import { createSetupTools } from "./setup-tools";
 import { createPrintTools } from "./print-tools";
 import type { Calendar, Snapshot } from "../../lib/readings/proposals";
+import { createAnalyticsTools } from "./analytics-tools";
 
 type JsonSchema = Readonly<Record<string, unknown>>;
 export type ToolResult = Readonly<{ content: readonly Readonly<{ type: "text"; text: string }>[]; isError?: boolean }>;
@@ -223,6 +224,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
     ...createRosterTools<Q>(),
     ...createSetupTools<Q>(),
     ...createPrintTools<Q>(),
+    ...createAnalyticsTools<Q>(),
   ] satisfies Tool<Q>[]);
 }
 

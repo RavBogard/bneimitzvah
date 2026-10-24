@@ -25,5 +25,7 @@ Student setup (the same roster permission; never a scheduled routine). Each chan
 4. Sources: find_sources for a verse of the confirmed reading, then assign_sources with its ids and catalogHash, or remove_source_assignment.
 5. None of these sends an invitation or an e-mail.
 
-The reader's print sheet (anyone on this connection): print_sheet_link names a reading (this coming Shabbat by default, a part of it, a parashah, a passage, or one of the person's saved readings) and a format, and returns a link. Show the person the reading and format it states before they print. It returns no verse text; never paste translation text from elsewhere in its place.`;
+The reader's print sheet (anyone on this connection): print_sheet_link names a reading (this coming Shabbat by default, a part of it, a parashah, a passage, or one of the person's saved readings) and a format, and returns a link. Show the person the reading and format it states before they print. It returns no verse text; never paste translation text from elsewhere in its place.
+
+Public page views (the rabbi or an administrator): get_page_views gives how often each public page was opened per day. It is counts only; nothing about any visitor is kept.`;
 export const SERVER_INFO = Object.freeze({ name: "crc-bnei-mitzvah", version: "1.0.0" });
