@@ -9,7 +9,7 @@
 - GATE: 1.4 PR 3 (claude/accounts-study): the Yours row and stars on a member’s own saved reading, the translate drill in Lein only, admin-only re-approval of an ended member, the haftarah kadma v’azla lesson’s lead example, the shared product-name reader for notification emails, and Daniel’s two approved lines (the approver help line and the shelf’s change line) — proceeded because the plan and Daniel’s 2026-10-23 rulings settle each; no migration; decisions 50 to 54 in the 1.4 plan; unapproved proposed lines listed as open item 5.
 - GATE: filed Daniel's 2026-10-23 rulings from Cowork in MISSION and the two 1.5 plans (docs only, commit 85913c9) — proceeded because Daniel's answers are binding and the commit touches no code; `tests/never-in-repo.test.mjs` and `scripts/repo-policy.mjs` passed.
 
-**Daniel, 2026-10-23, roadmap (verbatim):** "Second congregation moves to 2.5 also; web siddur integration into 1.x". The second congregation is now 2.5. The web siddur integration is 1.7, after 1.6; the service course stays in 2.0. See MISSION's "Amended 2026-10-23, roadmap".
+**Daniel, 2026-10-23, roadmap (verbatim):** "Second congregation moves to 2.5 also; web siddur integration into 1.x". The second congregation is now 2.5. The web siddur integration is 1.7, after 1.6; the service course stays in 2.0. Then, verbatim: "All the voice work happens in 2.5". Voice M0 stays paused until 2.5, after 2.0. See MISSION's "Amended 2026-10-23, roadmap".
 
 **Daniel, 2026-10-23 late (popups, binding):**
 - v1.5.0 waits for the switch. I build everything, check torah's DNS on each pass, and ask Daniel to set `BETTER_AUTH_URL` once it resolves. Then the switch, then the tag. On 2026-10-23 torah.centralreform.org had no DNS record yet.

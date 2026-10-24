@@ -10,6 +10,7 @@ Filed 2026-10-15 from the kickoff interview in Cowork. This is the authority doc
 
 - The second congregation moves from after 1.5 to 2.5, alongside 2.5's generated chant per trope system. D11, D-a and D-b stand, but on the 2.5 timeline. Provisioning it is still Daniel's gate, after the two-tenant isolation suite and its adversarial pass.
 - The web siddur integration (shirei-shabbat's web siddur, including its Beit Mitzvah volume) moves from 2.0 into 1.x. Claude's read: it is 1.7, after 1.6, and runs beside the print sheet and voice. The shirei-shabbat repos are read from, never written; their own CLAUDE.md rules win there. The service course with Daniel's teaching on each prayer (E2) stays in 2.0, since this ruling names only the integration.
+- Daniel, verbatim, same day: "All the voice work happens in 2.5". The voice generator (VOICE-BUILD-PLAN M0 to M8, with PR #22) doesn't start after 1.6. It starts in 2.5, after 2.0. This replaces the earlier "voice starts after the 1.6 activities" ordering. The order is 1.5, then 1.6 and the print sheet, then 1.7 (web siddur integration), then 2.0 (service course), then 2.5 (all voice work, generated chant per trope system, the second congregation).
 
 ## Daniel's rulings, 2026-10-23 (via Cowork)
 
