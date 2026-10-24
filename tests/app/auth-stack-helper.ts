@@ -13,6 +13,7 @@ export async function authFixture() {
   const auth = createAuthStack(db, schema, {
     origin: "http://localhost:3000",
     secret: randomBytes(48).toString("base64url"),
+    codeSecret: randomBytes(48).toString("base64url"),
     google: { clientId: "synthetic-client", clientSecret: randomBytes(32).toString("base64url") },
     sendMagicLink: async (message) => { delivered.push(message); },
   });

@@ -11,7 +11,7 @@ import * as data from "../data/invitations";
 import type { InvitedRole } from "../data/invitations";
 import { createInvitationSecret, hashInvitationToken, INVITATION_LIFETIME_MS, normalizedInvitationEmail } from "./tokens";
 
-export type InvitationTransport = (message: Readonly<{ email: string; url: string }>) => Promise<void>;
+export type InvitationTransport = (message: Readonly<{ email: string; url: string; tenantId: string }>) => Promise<void>;
 export type InvitationDeliveryStatus = "pending" | "sent" | "failed";
 type Delivery = Readonly<{ inviteId: string; delivery: "sent" | "failed" | "unknown" }>;
 const REVIEW_LIFETIME_MS = 5 * 60_000;
@@ -94,7 +94,7 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
     try {
       // Issue/reissue committed before this call. Provider diagnostics and the
       // token stay private; crashes leave the durable initial state pending.
-      await input.transport({ email: pending.invitation.email, url: url.toString() });
+      await input.transport({ email: pending.invitation.email, url: url.toString(), tenantId: pending.actor.tenantId });
     } catch { outcome = "failed"; }
     try {
       await withTenantTransaction(input.db, { tenantId: pending.actor.tenantId }, (tx) => data.recordDeliveryOutcome(tx, pending.invitation, pending.actor, outcome));

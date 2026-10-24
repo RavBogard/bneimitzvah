@@ -7,5 +7,6 @@ import { createAuthStack } from "../src/server/auth/factory";
 export const auth = createAuthStack(drizzle(new PGlite()), {}, {
   origin: "http://localhost:3000",
   secret: randomBytes(48).toString("base64url"),
+  codeSecret: randomBytes(48).toString("base64url"),
   sendMagicLink: async () => { throw new Error("Schema generation cannot send mail"); },
 });

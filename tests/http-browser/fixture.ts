@@ -50,6 +50,8 @@ import { StudyUnavailable, type StudyRequest, type StudyPage } from "../../src/s
 import { createRelationshipService } from "../../src/server/relationships/service";
 import { createPendingInvitations } from "../../src/server/http/pending-invitations";
 import { createGoogleChallenges } from "../../src/server/http/google-challenge";
+import { createSignInCodeBindings } from "../../src/server/http/sign-in-code-binding";
+import { createSignInCodeCap } from "../../src/server/auth/sign-in-code-cap";
 import { projectMagicLink } from "../../src/server/mail/transport";
 import { resolveTenantHost } from "../../src/server/tenancy/resolve";
 import { parseCeremonyDate } from "../../src/lib/readings/ranges";
@@ -64,7 +66,7 @@ import { postgresAccessFixture } from "../postgres/access-fixture";
 import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
 
 const secret = () => randomBytes(48).toString("base64url");
-type Mail = { email: string; url: string };
+type Mail = { email: string; url: string; code?: string };
 
 export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; shortReferenceStudyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceShortManifestLoad?: (signal?: AbortSignal) => Promise<ShortSourceManifest>; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown>;musicBroker?:MusicBroker;referenceReviewGet?:ReferenceCatalogGet; commentaryLoad?: CommentaryReader; translationsLoad?: TranslationsReader; shelfLoad?: PublicRuntime["shelf"]; sourceLoad?: PublicRuntime["source"] } = {}) {
   const base = await postgresAccessFixture();
@@ -74,9 +76,13 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     const db = base.aDb;
     const deliveries: Mail[] = [];
     await base.ownerDb.insert(s.tenantHost).values({ host: `127.0.0.1:${BROWSER_PORT}`, tenantId: "crc", environment: "local", deployment: "http-browser", origin: BROWSER_ORIGIN });
-    const auth = createAuthStack(db, s, { origin: BROWSER_ORIGIN, secret: secret(),
+    // As in composition: one synthetic "email" carries the link and the typed code; nothing is sent anywhere.
+    const auth = createAuthStack(db, s, { origin: BROWSER_ORIGIN, secret: secret(), codeSecret: secret(),
       ...(options.google ? { google: { clientId: "synthetic-browser-client", clientSecret: secret() } } : {}),
-      sendMagicLink: async ({ email, url, token }) => { deliveries.push({ email, url: projectMagicLink(url, token, BROWSER_ORIGIN) }); } });
+      sendMagicLink: async ({ email, url, token }) => {
+        const code = await auth.api.createVerificationOTP({ body: { email, type: "sign-in" } });
+        deliveries.push({ email, url: projectMagicLink(url, token, BROWSER_ORIGIN), code });
+      } });
     const deployment = { environment: "local" as const, deployment: "http-browser" };
     const access = createAccessService({ db, auth, deployment });
     const practice = createPracticeService({ access });
@@ -108,6 +114,8 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     serviceEcosystem,
     serviceScheduler: createServiceScheduler({ db, broker:createMusicBroker(undefined) }),
       googleChallenges: createGoogleChallenges({ db, origin: BROWSER_ORIGIN, secret: secret() }),
+      signInCodes: createSignInCodeBindings({ origin: BROWSER_ORIGIN, secret: secret() }),
+      signInCodeCap: createSignInCodeCap({ db, secret: secret(), capped: () => undefined }),
       resolveHost: async request => {
         const host = await resolveTenantHost(db, request, deployment);
         if (host.origin !== BROWSER_ORIGIN) throw new Error("Host mismatch");
@@ -146,7 +154,13 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       if (index < 0) throw new Error("Expected synthetic mail was not captured");
       return deliveries.splice(index, 1)[0].url;
     }
-    return { ...base, runtime, withRuntime, publicRuntime, withPublicRuntime, takeMail, close: base.close };
+    /** A synthetic sign-in email's typed code (1.5); the link in the same email is discarded. */
+    function takeCode(email: string) {
+      const index = deliveries.findIndex(row => row.email === email && typeof row.code === "string");
+      if (index < 0) throw new Error("Expected synthetic sign-in code was not captured");
+      return deliveries.splice(index, 1)[0].code!;
+    }
+    return { ...base, runtime, withRuntime, publicRuntime, withPublicRuntime, takeMail, takeCode, close: base.close };
   } catch {
     await base.close().catch(() => undefined);
     throw new Error("Browser fixture setup failed; details withheld");

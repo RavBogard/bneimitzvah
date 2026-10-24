@@ -53,6 +53,11 @@ export function createLogger(sink: (line: string) => void = (line) => console.in
     mcpRequest(input: McpRequestInput) {
       try { sink(JSON.stringify(mcpRequestLine(input))); } catch { /* Logging cannot change the operation outcome. */ }
     },
+    /** One line each time the sign-in code cap holds (1.5): which cap only. Never an address, hash, code or request. */
+    signInCodeCapped(cap: unknown) {
+      if (cap !== "code" && cap !== "guess") return;
+      try { sink(JSON.stringify({ event: "sign-in.code-capped", cap })); } catch { /* Logging cannot change the operation outcome. */ }
+    },
     request() {
       const requestId = randomUUID();
       return Object.freeze({

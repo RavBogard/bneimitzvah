@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import type { HttpRuntime } from "../runtime/composition";
-import { AUTH_RATE_LIMIT_HEADER } from "../auth/factory";
+import { AUTH_RATE_LIMIT_HEADER, SIGN_IN_CODE } from "../auth/factory";
 import { mailbox } from "../runtime/config";
 import { AccessDenied } from "../access/errors";
 import { requireCookieMutation } from "./mutations";
@@ -15,6 +15,8 @@ const methods: Record<string, readonly string[]> = {
   "/api/auth/email/confirm": ["POST"], "/api/auth/google/challenge": ["POST"], "/api/invitations/open": ["POST"],
   // Redirect-mode Google (Decided here, 2026-10-21): for browsers where the GIS popup fails.
   "/api/auth/google/redirect": ["POST"], "/api/auth/callback/google": ["GET"],
+  // The typed sign-in code (1.5): the code only; the address comes from this device's sealed binding cookie.
+  "/api/auth/sign-in/code": ["POST"],
 };
 export function authRouteMethods(pathname: string): readonly string[] | null {
   return Object.hasOwn(methods, pathname) ? methods[pathname] : null;
@@ -84,8 +86,8 @@ function sdkHeaders(request: Request, origin: string, bucket = ""): Headers {
   headers.set(AUTH_RATE_LIMIT_HEADER, `2001:0db8:${namespace.match(/.{4}/g)!.join(":")}`);
   return headers;
 }
-function sdkRequest(request: Request, body: Record<string, unknown>, origin: string, url: string = request.url): Request {
-  const headers = sdkHeaders(request, origin);
+function sdkRequest(request: Request, body: Record<string, unknown>, origin: string, url: string = request.url, bucket = ""): Request {
+  const headers = sdkHeaders(request, origin, bucket);
   headers.set("content-type", "application/json");
   return new Request(url, { method: "POST", headers, body: JSON.stringify(body), signal: request.signal });
 }
@@ -140,6 +142,23 @@ async function googleCallback(request: Request, runtime: HttpRuntime): Promise<R
       return failed();
     } finally { discard(sdk); }
   } catch { return refuse(); }
+}
+/**
+ * Tries left on this address's outstanding code, after a wrong one. The SDK has already recreated the code with one
+ * more try used (better-auth 1.7.10 email-otp: identifier `sign-in-otp-<email>`, value `<hmac>:<tries>`). With none
+ * left, or no live code, the person is told to ask again, not to type a fourth time. This only reads: a spent row is
+ * left for the SDK, which consumes it and refuses it as too many attempts, so a newer code issued meanwhile is never
+ * removed here. Any doubt answers 0: a new email is the way back in.
+ */
+async function codeTriesLeft(runtime: HttpRuntime, email: string): Promise<number> {
+  const identifier = `sign-in-otp-${email}`;
+  try {
+    const context = await runtime.auth.$context;
+    const row = await context.internalAdapter.findVerificationValue(identifier);
+    const tries = row && row.expiresAt > new Date() && typeof row.value === "string" ? Number(row.value.slice(row.value.lastIndexOf(":") + 1)) : NaN;
+    const left = Number.isSafeInteger(tries) && tries >= 0 ? SIGN_IN_CODE.attempts - tries : 0;
+    return Math.max(left, 0);
+  } catch { return 0; }
 }
 const failure = () => privateJson({ error: "authentication" }, 400);
 function magicResponse(sdk: Response, runtime: HttpRuntime): Response {
@@ -198,7 +217,41 @@ export async function handleAuthRequest(request: Request, runtime: HttpRuntime):
     const sdk = await runtime.auth.handler(sdkRequest(request, { email: body.email, callbackURL: callback, newUserCallbackURL: callback, errorCallbackURL: "/sign-in" }, runtime.origin));
     try {
       const response = sdk.status === 429 ? privateJson({ error: "rate-limited" }, 429) : sdk.status >= 500 ? errorResponse(undefined) : privateJson({ requested: true });
-      return sdk.status === 200 && !sdk.headers.has("location") ? cookies(response, sdk, runtime.origin) : response;
+      if (sdk.status !== 200 || sdk.headers.has("location")) return response;
+      // The same answer for every address: the email went out with a code, and this device may type it.
+      response.headers.append("set-cookie", runtime.signInCodes.issue(body.email));
+      return cookies(response, sdk, runtime.origin);
+    } finally { discard(sdk); }
+  }
+  if (path === "/api/auth/sign-in/code") {
+    const body = closedObject(raw, ["code"]);
+    if (typeof body.code !== "string" || !/^\d{6}$/.test(body.code)) throw new HttpBoundaryError();
+    // 409: this device has no usable code (none asked for here, tampered, or past its 5 minutes). Ask again.
+    const expired = () => { const response = privateJson({ error: "expired" }, 409); response.headers.append("set-cookie", runtime.signInCodes.clear()); return response; };
+    const bound = runtime.signInCodes.read(request);
+    if (!bound) return expired();
+    // 9 failed tries for this address within the hour: every code is refused, right or wrong, until the hour passes,
+    // with the same answer as an expired code. The link in the email still works.
+    if (await runtime.signInCodeCap.guessesSpent(bound.email)) return expired();
+    const sdk = await runtime.auth.handler(sdkRequest(request, { email: bound.email, otp: body.code }, runtime.origin,
+      new URL("/api/auth/sign-in/email-otp", runtime.origin).href, `code:${bound.bucket}`));
+    try {
+      if (sdk.status === 429) return privateJson({ error: "rate-limited" }, 429);
+      if (sdk.status === 200 && !sdk.headers.has("location")) {
+        const response = cookies(privateJson({ ok: true, next: callback }), sdk, runtime.origin);
+        response.headers.append("set-cookie", runtime.signInCodes.clear());
+        return response;
+      }
+      if (sdk.status !== 400 && sdk.status !== 403) return errorResponse(undefined);
+      let reason: unknown;
+      try { const text = await sdk.text(); reason = text.length <= 4096 ? (JSON.parse(text) as { code?: unknown }).code : undefined; } catch { reason = undefined; }
+      // A wrong code keeps this device's binding while the code has tries left (the code counts them, not the
+      // binding); a spent, used or expired code does not.
+      if (reason === "INVALID_OTP") {
+        await runtime.signInCodeCap.recordGuess(bound.email);
+        return await codeTriesLeft(runtime, bound.email) > 0 && !await runtime.signInCodeCap.guessesSpent(bound.email) ? privateJson({ error: "code" }, 400) : expired();
+      }
+      return reason === "OTP_EXPIRED" || reason === "TOO_MANY_ATTEMPTS" ? expired() : errorResponse(undefined);
     } finally { discard(sdk); }
   }
   if (path === "/api/auth/email/confirm") {

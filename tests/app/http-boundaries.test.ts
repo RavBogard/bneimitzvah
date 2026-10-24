@@ -123,7 +123,7 @@ test("actual pinned SDK Google initiation produces supported database-state cook
   const network = vi.spyOn(globalThis, "fetch").mockImplementation(async () => { throw new Error("Provider I/O forbidden in synthetic test"); });
   try {
     for (const origin of ["http://localhost:3000", "https://bneimitzvah.centralreform.org"]) {
-      const auth = createAuthStack(f.db, authSchema, { origin, secret: randomBytes(48).toString("base64url"),
+      const auth = createAuthStack(f.db, authSchema, { origin, secret: randomBytes(48).toString("base64url"), codeSecret: randomBytes(48).toString("base64url"),
         google: { clientId: "synthetic-client", clientSecret: randomBytes(32).toString("hex") },
         sendMagicLink: async () => { throw new Error("Unexpected synthetic mail"); } });
       const sdk = await auth.handler(new Request(`${origin}/api/auth/sign-in/social`, { method: "POST", headers: { origin, "content-type": "application/json" },
