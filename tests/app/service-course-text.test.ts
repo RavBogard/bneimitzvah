@@ -7,7 +7,7 @@ import { PUBLIC_COURSE_TEXT, PUBLIC_COURSE_VOLUMES } from "../../src/server/serv
 import { CourseTextUnavailable } from "../../src/server/service-course/text";
 import { handlePublicReadingRequest, type PublicRuntime } from "../../src/server/http/public-reading";
 import { SERVICE_TEXT_UNITS, lessonById } from "../../src/lib/service-course/course";
-import { alignedTranslit, hebrewWords, parseServiceText, plainWord, REFUSED_UNIT, type ServiceText } from "../../src/lib/service-course/text";
+import { alignedTranslit, hebrewWords, parseServiceText, plainWord, REFUSED_UNIT, SERVICE_TEXT_BUILD, type ServiceText } from "../../src/lib/service-course/text";
 import { answerCheck, buildCheck, checkDone, currentCheck, letters, resolveKeyWords, seeded, startCheck, type CheckItem } from "../../src/lib/service-course/check";
 import { verseTargets } from "../../src/components/learn/service/text-api";
 import type { AnalysedVerse } from "../../src/lib/learn/verse";
@@ -26,6 +26,8 @@ describe("the pin", () => {
       artifactRepo: "RavBogard/ShireiShabbat", artifactCommit: "edfef85e1e06737d5fea1c33970f23961f599fc5", artifactRunId: "35741258239", artifactName: "shabbat-shacharit-edfef85", sourceGitSha: "edfef85" });
     expect(() => checkCourseTextPins({ ...PUBLIC_COURSE_TEXT })).not.toThrow();
     expect(PUBLIC_COURSE_VOLUMES).toEqual(["shabbat-shacharit"]);
+    // Every text URL names the pinned build, so a moved pin moves every URL and no cache pairs old lines with new word indices.
+    expect(SERVICE_TEXT_BUILD).toBe(PUBLIC_COURSE_TEXT.sourceGitSha);
     expect(JSON.stringify(PUBLIC_COURSE_TEXT)).not.toMatch(/LICENSED|dist-app|legacy|beit-mitzvah|licensed/i);
   });
   it("refuses every pin that names a licensed lane, volume, source or artifact, or is not exactly the eight keys", () => {
@@ -80,6 +82,8 @@ describe("the public-volume parser", () => {
     refused(feed => { feed.units[0].id = "shma.the-shma@legacy-beit-mitzvah"; });
     refused(feed => { feed.units[0].blocks[0].licensed = true; });
     refused(feed => { feed.units[0].blocks[0].type = "licensed"; });
+    refused(feed => { feed.units[1].blocks[3].he = syntheticWord(9); }); // Hebrew in an English block is refused, not shown
+    refused(feed => { feed.units[1].blocks[2].he = syntheticWord(9); }); // and in a rubric
     refused(feed => { feed.lane = "public"; });
     refused(feed => { feed.units.push({ ...feed.units[0] }); });
     const bytes = feedBytes(syntheticFeedValue());
@@ -204,7 +208,7 @@ describe("GET /api/public/service-text", () => {
   const answerOf = async (unit: string) => { const found = courseTextAnswer(feed, unit); if (!found) throw new CourseTextUnavailable("not-found"); return found; };
   it("answers a course unit with its lines, kept like a verse page, and the same for everyone", async () => {
     const { call, asked } = harness(answerOf);
-    const response = await call("/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit");
+    const response = await call("/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit&build=edfef85");
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("public, max-age=3600");
     expect(response.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=86400, stale-while-revalidate=86400");
@@ -217,32 +221,35 @@ describe("GET /api/public/service-text", () => {
   });
   it("refuses, before the database, a unit the course does not name, the Mi Shebeirach, a licensed id or any other query", async () => {
     const { call, opens } = harness(answerOf);
-    for (const path of ["/api/public/service-text?unit=torah.mi-shebeirach-healing%40shabbat-shacharit", "/api/public/service-text?unit=torah.mi-shebeirach-healing@shabbat-shacharit",
-      "/api/public/service-text?unit=shma.the-shma%40bm-shacharit", "/api/public/service-text?unit=shma.the-shma%40legacy-beit-mitzvah", "/api/public/service-text?unit=awakening.hodu%40shabbat-shacharit",
-      "/api/public/service-text?unit=", "/api/public/service-text", "/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit&lane=licensed",
+    for (const path of ["/api/public/service-text?unit=torah.mi-shebeirach-healing%40shabbat-shacharit&build=edfef85", "/api/public/service-text?unit=torah.mi-shebeirach-healing@shabbat-shacharit&build=edfef85",
+      "/api/public/service-text?unit=shma.the-shma%40bm-shacharit&build=edfef85", "/api/public/service-text?unit=shma.the-shma%40legacy-beit-mitzvah&build=edfef85", "/api/public/service-text?unit=awakening.hodu%40shabbat-shacharit&build=edfef85",
+      "/api/public/service-text?unit=&build=edfef85", "/api/public/service-text", "/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit",
+      // The build is the pinned one, by exact value, in its place: an old, licensed or reordered build key never opens the database.
+      "/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit&build=0000000", "/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit&build=edfef85-LICENSED",
+      "/api/public/service-text?build=edfef85&unit=shma.the-shma%40shabbat-shacharit", "/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit&lane=licensed",
       "/api/public/service-text?lane=licensed&unit=shma.the-shma%40shabbat-shacharit"]) {
       const response = await call(path);
       expect(response.status, path).toBe(400);
       expect(response.headers.get("cache-control"), path).toBe("no-store");
     }
     expect(opens()).toBe(0);
-    expect((await call("/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit", { method: "POST" })).status).toBe(405);
+    expect((await call("/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit&build=edfef85", { method: "POST" })).status).toBe(405);
   });
   it("is never kept when the build is missing, fails its pin or lacks the unit", async () => {
     const down = harness(async () => { throw new CourseTextUnavailable("unavailable"); });
-    const response = await down.call("/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit");
+    const response = await down.call("/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit&build=edfef85");
     expect(response.status).toBe(503); expect(response.headers.get("cache-control")).toBe("no-store");
     const missing = harness(async () => { throw new CourseTextUnavailable("not-found"); });
-    expect((await missing.call("/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit")).status).toBe(404);
+    expect((await missing.call("/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit&build=edfef85")).status).toBe(404);
     // A runtime that answers some other unit, or the Mi Shebeirach, is refused rather than served.
     const wrong = harness(async () => ({ ...(await answerOf("shma.barchu@shabbat-shacharit")) }));
-    expect((await wrong.call("/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit")).status).toBe(503);
+    expect((await wrong.call("/api/public/service-text?unit=shma.the-shma%40shabbat-shacharit&build=edfef85")).status).toBe(503);
   });
   it("names exactly the course's thirty units, and no response for any of them can carry a licensed or mixed unit", async () => {
     expect(SERVICE_TEXT_UNITS.size).toBe(30);
     const everything = harness(async unit => ({ unit, volume: "shabbat-shacharit", credit: { title: "Shirei Tfilah", licence: "CC BY-NC-SA 4.0" }, lines: [{ he: SHMA_WORDS.join(" ") }] }));
     for (const unit of SERVICE_TEXT_UNITS) {
-      const response = await everything.call(`/api/public/service-text?unit=${encodeURIComponent(unit)}`);
+      const response = await everything.call(`/api/public/service-text?unit=${encodeURIComponent(unit)}&build=edfef85`);
       expect(response.status, unit).toBe(200);
       expect(await response.text(), unit).not.toMatch(/legacy-beit-mitzvah|@bm-|mi-shebeirach|licensed/);
     }

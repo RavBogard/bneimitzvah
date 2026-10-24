@@ -12,7 +12,7 @@
  * build of this volume to pin (its sync run of b710706 failed), so the producer's public-lane artifact is the pinned build.
  *
  * No prayer text is in this file or anywhere in the repo: the bytes live only in the database (course_text_catalog),
- * imported by the house operator path and re-verified against this pin on every read.
+ * imported by scripts/import-course-text.mjs and checked against this pin on every read (the bytes are hashed again on each server instance's first read).
  */
 export const PUBLIC_COURSE_TEXT = Object.freeze({
   volume: "shabbat-shacharit",

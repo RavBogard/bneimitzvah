@@ -10,7 +10,7 @@ import type { ServiceText } from "../../lib/service-course/text";
 
 /**
  * The congregation's active public build of one volume, read inside its tenant transaction (forced row security), checked
- * against the code pin byte for byte and parsed. The stored pins must equal the code pin exactly and the bytes must hash to
+ * against the code pin and parsed. The stored pins must equal the code pin exactly and the bytes must hash to
  * it, so a row the operator path never should have written still shows nothing. Parsed builds are kept per instance by
  * identity: a stored build never changes (the table is immutable), so the parse runs once per instance, not per request.
  */
@@ -30,11 +30,15 @@ export async function readCourseText<Q extends PgQueryResultHKT>(tx: AccessTrans
   const [life] = await tx.select({ catalogId: s.courseTextLifecycle.catalogId }).from(s.courseTextLifecycle)
     .where(and(eq(s.courseTextLifecycle.tenantId, tenantId), eq(s.courseTextLifecycle.volume, volume), eq(s.courseTextLifecycle.state, "active")));
   if (!life) throw new CourseTextUnavailable("unavailable");
-  const [row] = await tx.select().from(s.courseTextCatalog)
-    .where(and(eq(s.courseTextCatalog.tenantId, tenantId), eq(s.courseTextCatalog.id, life.catalogId), eq(s.courseTextCatalog.volume, volume)));
-  if (!row || !samePins(row.pins, pin)) throw new CourseTextUnavailable("unavailable");
-  const kept = parsed.get(row.identity);
+  const where = and(eq(s.courseTextCatalog.tenantId, tenantId), eq(s.courseTextCatalog.id, life.catalogId), eq(s.courseTextCatalog.volume, volume));
+  const [head] = await tx.select({ identity: s.courseTextCatalog.identity, pins: s.courseTextCatalog.pins }).from(s.courseTextCatalog).where(where);
+  if (!head || !samePins(head.pins, pin)) throw new CourseTextUnavailable("unavailable");
+  // A parse is kept only after its bytes hashed to the code pin, under the identity that pin gives, so a kept parse is always the
+  // pinned build; the bytes are read and hashed again only when this instance has not parsed them yet.
+  const kept = parsed.get(head.identity);
   if (kept) return kept;
+  const [row] = await tx.select().from(s.courseTextCatalog).where(where);
+  if (!row || row.identity !== head.identity || !samePins(row.pins, pin)) throw new CourseTextUnavailable("unavailable");
   try {
     const bytes = new Uint8Array(row.feedBytes);
     if (createHash("sha256").update(bytes).digest("hex") !== pin.feedSha256) throw new CourseTextInvalid();

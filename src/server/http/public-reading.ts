@@ -18,7 +18,7 @@ import { versesFor } from "../discussions/validation";
 import type { PinnedSourceReader } from "../study/source-text";
 import { namedReading } from "../../lib/readings/named-readings";
 import { SERVICE_TEXT_UNITS } from "../../lib/service-course/course";
-import type { ServiceText } from "../../lib/service-course/text";
+import { SERVICE_TEXT_BUILD, type ServiceText } from "../../lib/service-course/text";
 import { CourseTextUnavailable } from "../service-course/text";
 import { REFUSED_COURSE_UNIT } from "../service-course/pin";
 
@@ -81,7 +81,7 @@ const exact: Readonly<Record<string, Route>> = Object.freeze({
   // Curated discussions (1.7 M6): a named reading from the list, or a canonical passage with its kind.
   "/api/public/discussions": { kind: "discussions", keysets: [["reading"], ["ref", "kind"]] },
   // The service course's Read step (2.0 SC2): one public unit the course names, by its stable id.
-  "/api/public/service-text": { kind: "service-text", keysets: [["unit"]] },
+  "/api/public/service-text": { kind: "service-text", keysets: [["unit", "build"]] },
 });
 /** Longest decoded value per key; a `ref` is bounded by READING_REF_LIMITS.chars, everything else by 80. */
 const valueLimit = (key: string) => key === "ref" ? READING_REF_LIMITS.chars : 80; // a source ref is bounded tighter (256 bytes) by its own check
@@ -173,7 +173,7 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
       || selected.kind === "source" && parseSourceRef(query.ref) === null
       || query.reading !== undefined && namedReading(query.reading) === null
       // A unit the course does not name, or the mixed Mi Shebeirach under any name, never opens the database (A2 discrepancy 13).
-      || selected.kind === "service-text" && (!SERVICE_TEXT_UNITS.has(query.unit) || REFUSED_COURSE_UNIT.test(query.unit))
+      || selected.kind === "service-text" && (!SERVICE_TEXT_UNITS.has(query.unit) || REFUSED_COURSE_UNIT.test(query.unit) || query.build !== SERVICE_TEXT_BUILD)
       || query.kind !== undefined && query.kind !== "torah" && query.kind !== "haftarah"
       || query.ref !== undefined && selected.kind !== "source" && canonicalReadingRef(query.ref, query.kind) === null
       || [query.offset, selected.kind === "translations" || selected.kind === "related" ? undefined : query.verse, query.word].some(value => value !== undefined && !/^(?:0|[1-9]\d{0,3})$/.test(value))) return failure(400);

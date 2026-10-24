@@ -6,7 +6,7 @@ import { referenceRecord } from "../../../lib/reference-audio/source";
 import { analyseVerse, type AnalysedVerse } from "../../../lib/learn/verse";
 import { unitWordParts, type WordCardTarget } from "../../../lib/learn/word-tap";
 import { letters } from "../../../lib/service-course/check";
-import { hebrewWords, parseServiceText, SERVICE_TEXT_LIMITS, type ServiceText } from "../../../lib/service-course/text";
+import { hebrewWords, parseServiceText, SERVICE_TEXT_BUILD, SERVICE_TEXT_LIMITS, type ServiceText } from "../../../lib/service-course/text";
 import type { TorahRef } from "../../../lib/service-course/course";
 
 /**
@@ -15,7 +15,7 @@ import type { TorahRef } from "../../../lib/service-course/course";
  * Same-origin GETs with no cookie, through the public reader's own fetch, which turns a 429 into its status (2.0 F1).
  */
 const bad = (): never => { throw new PortalRequestError(503); };
-export const serviceTextPath = (unit: string) => `/api/public/service-text?${new URLSearchParams([["unit", unit]]).toString()}`;
+export const serviceTextPath = (unit: string) => `/api/public/service-text?${new URLSearchParams([["unit", unit], ["build", SERVICE_TEXT_BUILD]]).toString()}`;
 export async function fetchServiceText(unit: string, signal: AbortSignal): Promise<ServiceText> {
   return parseServiceText(await getJson(serviceTextPath(unit), SERVICE_TEXT_LIMITS.answerBytes, signal), unit) ?? bad();
 }

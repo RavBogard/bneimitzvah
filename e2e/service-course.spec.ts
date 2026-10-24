@@ -25,7 +25,7 @@ async function serveText(page: Page, status = 200) {
   const asked: string[] = [];
   await page.route("**/api/public/service-text?**", async route => {
     const unit = new URL(route.request().url()).searchParams.get("unit") ?? "";
-    asked.push(unit);
+    asked.push(new URL(route.request().url()).searchParams.get("build") === "edfef85" ? unit : "wrong-build");
     if (status !== 200) return route.fulfill({ status, contentType: "application/json", headers: { "cache-control": "no-store" }, body: JSON.stringify({ error: "unavailable" }) });
     const body = unit === "shma.the-shma@shabbat-shacharit" ? shmaAnswer(unit) : answer(unit, Array.from({ length: 10 }, (_, i) => syntheticLine(i)));
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
@@ -312,7 +312,7 @@ test("the Mi Shebeirach never asks for text: its Read step is the siddur link al
   await expect(main.locator("p[lang='he']")).toHaveCount(0);
   expect(asked).toEqual([]);
   for (const unit of ["torah.mi-shebeirach-healing@shabbat-shacharit", "shma.the-shma@bm-shacharit", "shma.the-shma@legacy-beit-mitzvah"]) {
-    const response = await request.get(`/api/public/service-text?unit=${encodeURIComponent(unit)}`);
+    const response = await request.get(`/api/public/service-text?unit=${encodeURIComponent(unit)}&build=edfef85`);
     expect(response.status(), unit).toBe(400);
   }
 });

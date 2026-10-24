@@ -49,6 +49,7 @@ export function checkCourseTextPins(pins: unknown): CourseTextPins {
 export const courseTextIdentity = (pins: Pick<CourseTextPins, "feedSha256" | "volume">) => createHash("sha256").update(`course-text-v1\0${pins.volume}\0${pins.feedSha256}`).digest("hex");
 
 const BLOCK_TYPES = ["stanza", "trope", "english", "rubric", "chatimah", "seasonal", "display"];
+const LINE_TYPES = ["stanza", "trope", "chatimah", "seasonal", "display"];
 const BLOCK_KEYS = ["he", "bare", "tr", "en", "text", "footnote", "translates", "role", "label", "verse", "cue", "occasion", "gold", "folio", "phys", "marks"];
 const HEBREW_LETTER = /[\u05D0-\u05EA]/;
 type Spans = readonly unknown[];
@@ -77,6 +78,8 @@ function lines(value: unknown, budget: { blocks: number }): TextLine[] {
     const en = own(block, "en") ? (typeof block.en === "string" ? string(block.en) : spanText(block.en)) : undefined;
     const translates = own(block, "translates") ? array(block.translates, 64, 1).map(n => Number.isSafeInteger(n) && (n as number) >= 0 && (n as number) < raws.length ? n as number : invalid()) : undefined;
     if (translates && type !== "english") return invalid();
+    // Only a block of prayer text is a line: an English block or a rubric that carries Hebrew is refused, not shown.
+    if (typeof block.he === "string" && HEBREW_LETTER.test(block.he) && !LINE_TYPES.includes(type)) return invalid();
     const he = typeof block.he === "string" && HEBREW_LETTER.test(block.he) ? block.he.trim() : undefined;
     return { type, ...(he ? { he } : {}), ...(he && typeof block.tr === "string" && block.tr.trim() ? { tr: block.tr.trim() } : {}), ...(en && en.trim() ? { en: en.trim() } : {}), ...(translates ? { translates } : {}) };
   });

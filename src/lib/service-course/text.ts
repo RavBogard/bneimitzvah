@@ -13,6 +13,12 @@ export const SERVICE_TEXT_LIMITS = Object.freeze({ lines: 64, he: 4096, tr: 4096
  * with a placeholder. Neither is shown; the lesson links to the siddur page. The course file, the route and the parser all refuse it.
  */
 export const REFUSED_UNIT = /mi-shebeirach/;
+/**
+ * The pinned build's source sha, part of every text URL (`?unit=&build=`). A cached answer is the answer for one build: when the pin
+ * moves, so do the URLs, and no cache can pair an old build's lines with a new course file's word indices. Equal to the pin's
+ * `sourceGitSha` (src/server/service-course/pin.ts; a test checks it).
+ */
+export const SERVICE_TEXT_BUILD = "edfef85";
 
 const HEBREW_LETTER = /[\u05D0-\u05EA]/, LATIN_LETTER = /[A-Za-z]/;
 /**
