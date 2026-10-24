@@ -108,7 +108,7 @@ async function open(page: Page, sample: Sample, options: { width: number; size: 
 
 test.beforeEach(({}, testInfo) => { test.skip(testInfo.project.name !== "phone", "the tikkun columns are measured at fixed widths on the phone project"); });
 
-for (const [name, sample] of Object.entries(samples)) for (const width of [320, 360, 412, 1280]) for (const size of ["standard", "huge"] as const) {
+for (const [name, sample] of Object.entries(samples)) for (const width of [280, 320, 360, 412, 1280]) for (const size of ["standard", "huge"] as const) {
   test(`${name}: both tikkun columns hold the same words on every row at ${width}px, ${size} text`, async ({ page }) => {
     await open(page, sample, { width, size, colors: true });
     const result = await measure(page);
@@ -117,6 +117,22 @@ for (const [name, sample] of Object.entries(samples)) for (const width of [320, 
     for (const row of result.rows) expect(row.tikkun).toEqual(row.pointed);
     // Words never split across rows beyond a maqaf: every row of a column is a run of the reading in order.
     expect(result.rows.length).toBeGreaterThan(sample.last - sample.first);
+  });
+}
+
+// A browser or font that sets the letters a little wider than the one the page was designed on must still settle:
+// the rows and the type scale are measured, never assumed, and measuring never loops.
+for (const spacing of [0.02, 0.05, 0.09]) for (const width of [320, 412]) {
+  test(`both columns settle on the same rows when the letters are set ${spacing}em wider, at ${width}px`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", error => errors.push(error.message.slice(0, 120)));
+    await page.addInitScript(value => { document.addEventListener("DOMContentLoaded", () => { const style = document.createElement("style"); style.textContent = `.study-verses { letter-spacing: ${value}em; }`; document.head.append(style); }); }, spacing);
+    await open(page, samples.vayera, { width, size: "huge", colors: true });
+    const result = await measure(page);
+    expect(errors).toEqual([]);
+    expect(result.overflow).toEqual([]);
+    expect(result.scrollFits).toBe(true);
+    for (const row of result.rows) expect(row.tikkun).toEqual(row.pointed);
   });
 }
 

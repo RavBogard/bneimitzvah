@@ -25,6 +25,9 @@ export function useTikkunLayout(host: RefObject<HTMLElement | null>, atoms: read
   const [layout, setLayout] = useState<TikkunLayout>(UNMEASURED);
   const applied = useRef<TikkunLayout>(UNMEASURED);
   applied.current = layout;
+  // Measuring after a change of rows is a check, not a loop: type does not scale perfectly linearly (hinting), so a
+  // second look may nudge the scale, but only a few looks are allowed before the layout is taken as it is.
+  const passes = useRef(0);
   const active = atoms !== null && atoms.length > 0;
 
   const measure = useCallback((flush: boolean) => {
@@ -60,13 +63,19 @@ export function useTikkunLayout(host: RefObject<HTMLElement | null>, atoms: read
   }, [host, active, layout]);
 
   // Before paint: the first render shows every atom in one line so there is something to measure; this swaps in the rows.
-  useLayoutEffect(() => { if (active) measure(false); }, [active, measure, remeasureKey, layout]);
+  useLayoutEffect(() => { if (active) { passes.current = 0; measure(false); } }, [active, measure, remeasureKey]);
+  useLayoutEffect(() => { if (active && passes.current < 4) { passes.current++; measure(false); } }, [active, measure, layout]);
 
   useEffect(() => {
     const root = host.current;
     if (!active || !root) return;
-    const again = () => measure(true);
-    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(again);
+    const again = () => { passes.current = 0; measure(true); };
+    // Only a change of width matters (the rows change the height, which must not set the measuring off again).
+    let width = -1;
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(entries => {
+      const next = entries[entries.length - 1]?.contentRect.width ?? width;
+      if (next !== width) { const first = width < 0; width = next; if (!first) again(); }
+    });
     observer?.observe(root);
     const fonts = typeof document !== "undefined" ? document.fonts : undefined;
     fonts?.addEventListener?.("loadingdone", again);

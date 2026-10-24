@@ -71,7 +71,8 @@ export function fitScale(atoms: readonly AtomWidths[], columns: Columns, floor =
     if (atom.pointed > 0) scale = Math.min(scale, (columns.pointed - SLACK) / atom.pointed);
     if (atom.tikkun > 0) scale = Math.min(scale, (columns.tikkun - SLACK) / atom.tikkun);
   }
-  return scale >= 1 ? 1 : Math.max(floor, Math.floor(scale * 0.98 * 1000) / 1000);
+  // Steps of 2%, so a hair of measuring noise does not change the type size from one look to the next.
+  return scale >= 1 ? 1 : Math.max(floor, Math.floor(scale * 0.98 * 50) / 50);
 }
 
 export const sameRows = (a: readonly (readonly [number, number])[] | null, b: readonly (readonly [number, number])[]) =>
