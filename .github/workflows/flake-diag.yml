@@ -1,0 +1,46 @@
+name: flake-diag
+on:
+  push:
+    branches: [diag/practice-calendar-flake-evidence]
+permissions:
+  contents: read
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_DB: portal_rls_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d portal_rls_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install chromium firefox
+      - run: bash .github/scripts/ci-system-packages.sh "false" "chromium firefox" ffmpeg pulseaudio pulseaudio-utils
+      - name: repeat the calendar session review file
+        run: |
+          for i in 1 2 3 4 5 6 7 8; do
+            echo "=== attempt $i"
+            npx vitest run --config vitest.http-browser.config.mts tests/http-browser/zz-diag.test.ts 2>&1 | grep -vE "source map|map file|ENOENT|^\s+at " || true
+          done
+        env:
+          POSTGRES_TEST_DISPOSABLE: "1"
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGDATABASE: portal_rls_test
+          PGUSER: postgres
+          PGPASSWORD: disposable-ci-only
