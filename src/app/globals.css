@@ -99,6 +99,9 @@ p { max-width: 65ch; }
 button:disabled { cursor: wait; opacity: 0.6; }
 .button-text { display: block; width: fit-content; background: transparent; border: 0; color: var(--color-action); font-size: 0.9375rem; text-decoration: underline; text-underline-offset: 0.2em; padding: 0.75rem 0; margin-top: 0.5rem; min-height: 44px; }
 .button-text:hover { color: var(--color-action-hover); }
+/* The siddur page links sit in a wrapping row with a gap; each link is a block-level .button-text, so a dot between them would strand on its own line. */
+.siddur-blessings { display: flex; flex-wrap: wrap; gap: 0 1.25rem; }
+.siddur-blessings .button-text { margin-top: 0; }
 .google-button { width: 100%; }
 .form-divider { display: flex; align-items: center; gap: 1rem; color: var(--color-muted); font-size: 0.875rem; margin: 1.75rem 0; }
 .form-divider::before, .form-divider::after { content: ""; height: 1px; flex: 1; background: var(--color-rule); }

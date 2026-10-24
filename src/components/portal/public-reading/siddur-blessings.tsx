@@ -9,9 +9,8 @@ import { blessingsLinks, HAFTARAH_BLESSINGS_PAGES, TORAH_BLESSINGS_PAGE } from "
 export function SiddurBlessings({ torah, haftarah, siddurUrl = DEFAULT_SIDDUR_URL }: { torah: boolean; haftarah: boolean; siddurUrl?: string }) {
   const links = blessingsLinks(siddurUrl), torahLink = torah ? links.torah : null, haftarahLink = haftarah ? links.haftarah : null;
   if (!torahLink && !haftarahLink) return null;
-  return <p className="field-help" data-siddur-blessings="">
+  return <p className="field-help siddur-blessings" data-siddur-blessings="">
     {torahLink && <SiddurLink href={torahLink}>Torah blessings: siddur page {TORAH_BLESSINGS_PAGE}</SiddurLink>}
-    {torahLink && haftarahLink && " · "}
     {haftarahLink && <SiddurLink href={haftarahLink}>Haftarah blessings: siddur pages {HAFTARAH_BLESSINGS_PAGES.first}–{HAFTARAH_BLESSINGS_PAGES.last}</SiddurLink>}
   </p>;
 }
