@@ -42,7 +42,7 @@ export const SIGN_IN_CODE_LINES = Object.freeze({
   once: "The link and the code work once, for 5 minutes.",
   // A capped address's link-only email: Daniel's line 3 with the code taken out (a derivation, not new wording).
   linkOnce: "The link works once, for 5 minutes.",
-  never: (product: string) => `No one from CRC will ever ask you for this code. Don’t read it to anyone or type it anywhere but ${product}.`,
+  never: (product: string) => `No one from ${product} will ever ask you for this code. Don’t read it to anyone or type it anywhere but ${product}.`,
 });
 const CODE = /^\d{6}$/;
 const IGNORE = "If you did not request this message, you can ignore it.";

@@ -43,11 +43,13 @@ test("both mail kinds use the fixed Resend endpoint and plain text with no track
       expect(body.subject).toBe("Sign in to CRC Torah");
       expect(body.text).toBe([`Open this link to sign in:`, ``, url, ``, `Or enter this code in the CRC Torah app:`, code, ``,
         `The link and the code work once, for 5 minutes.`, ``,
-        `No one from CRC will ever ask you for this code. Don’t read it to anyone or type it anywhere but CRC Torah.`, ``,
+        `No one from CRC Torah will ever ask you for this code. Don’t read it to anyone or type it anywhere but CRC Torah.`, ``,
         `If you did not request this message, you can ignore it.`].join("\n"));
       expect(body.text.split("\n").filter((line: string) => line === code)).toHaveLength(1);
       expect(body.text.match(/\d{6,}/g)).toEqual([code]);
       expect(body.text.includes(SIGN_IN_CODE_LINES.never(productName))).toBe(true);
+      // Line 4 names the congregation's own product (Daniel, 2026-10-23), never a fixed "CRC".
+      expect(SIGN_IN_CODE_LINES.never("Synthetic Torah")).toBe("No one from Synthetic Torah will ever ask you for this code. Don’t read it to anyone or type it anywhere but Synthetic Torah.");
       // No WebOTP origin-bound line (`@host #code`): it is defined for SMS only.
       expect(body.text).not.toMatch(/@\S+\s+#\d/);
       expect(body.text.includes(`#${code}`)).toBe(false);
