@@ -53,6 +53,11 @@ test("the MCP reaches saved readings only through src/server/saved/mcp, imported
   const used = new Set([...narrow.matchAll(/\bdata\.(\w+)/g)].map(m => m[1]));
   const allowed = new Set(["lockOwnerWrites", "reading", "listReadings", "countReadings", "insertReading", "updateReading", "SavedReadingRow"]);
   for (const name of used) assert.ok(allowed.has(name), `saved/mcp.ts uses data.${name}`);
+  // Every other mention of `data` is `data.` and an allowed name: no indexing, casting, spreading or Object.* over the module.
+  const body = narrow.replace('import * as data from "../data/saved";', "").replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
+  for (const m of body.matchAll(/\bdata\b(?!-write")(\.(\w+))?/g)) assert.ok(m[2] && allowed.has(m[2]), `saved/mcp.ts uses data as ${JSON.stringify(m[0])}`);
+  // And its own imports are exactly these, so no helper file can carry a notes query into the bound transaction.
+  assert.deepEqual(importsOf(narrow).sort(), ["../access/errors", "../access/types", "../data/saved", "../mcp/service", "./access", "./service", "./validation", "drizzle-orm/pg-core", "node:crypto", "server-only"]);
   // withConnectionOwner binds from a connection id alone (withLive re-derives the person), so only this module may call it.
   const binders = sources.filter(file => file.path !== "src/server/saved/access.ts" && /\bwithConnectionOwner\b/.test(file.text)).map(file => file.path);
   assert.deepEqual(binders, ["src/server/saved/mcp.ts"]);
