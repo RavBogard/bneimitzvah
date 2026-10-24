@@ -3,8 +3,8 @@ import { identifier, type ReadingMode, type Selection } from "../api";
 import type { ServiceBlock, ServiceSpan, ServiceUnitMaterial, ServiceSectionHeading } from "../../../../lib/service-learning/types";
 
 export type ServicePlan = { id: string; revision: number; needsReview: boolean; catalogId: string; catalogIdentity: string; catalogState: "active" | "superseded" | "withdrawn" };
-export type UnitSummary = { id: string; name: string; caption?: string; section: ServiceSectionHeading };
-export type ServiceMetadata = { state: "no-plan" } | { state: "cleared" | "withdrawn"; plan: ServicePlan } | { state: "assigned"; plan: ServicePlan; units: UnitSummary[] };
+export type UnitSummary = { id: string; name: string; caption?: string; section: ServiceSectionHeading; /** Printed siddur page, when the server knows it. */ page?: number };
+export type ServiceMetadata = { state: "no-plan" } | { state: "cleared" | "withdrawn"; plan: ServicePlan } | { state: "assigned"; plan: ServicePlan; units: UnitSummary[]; /** Printed siddur page where the service starts, when the server knows it. */ serviceStart?: number };
 export type ServiceUnitResponse = { state: "withdrawn"; plan: ServicePlan } | { state: "assigned"; plan: ServicePlan; material: ServiceUnitMaterial };
 export type Catalog = { state: "unknown-slot" | "unavailable" } | { state: "available"; studentRevision: number; ceremonyDate: string; serviceSlot: "morning" | "havdalah"; expectedPlanRevision: number; catalogId: string; catalogIdentity: string; lifecycleRevision: number; units: UnitSummary[];
   /** The standard parts (blessings, Sh'ma and V'ahavta) to start from, only while the student has no plan. */ defaults: string[] };
@@ -33,7 +33,7 @@ function section(value: unknown): ServiceSectionHeading {
   return out;
 }
 function summaries(value: unknown): UnitSummary[] {
-  const result = array(value, 256).map(value => { const row = closed(value, ["id", "name", "section"], ["caption"]); return { id: unitId(row.id), name: nonempty(row.name, 16_384), section: section(row.section), ...(Object.hasOwn(row, "caption") ? { caption: string(row.caption) } : {}) }; });
+  const result = array(value, 256).map(value => { const row = closed(value, ["id", "name", "section"], ["caption", "page"]); return { id: unitId(row.id), name: nonempty(row.name, 16_384), section: section(row.section), ...(Object.hasOwn(row, "caption") ? { caption: string(row.caption) } : {}), ...(Object.hasOwn(row, "page") ? { page: integer(row.page) } : {}) }; });
   if (new Set(result.map(row => row.id)).size !== result.length) return bad(); return result;
 }
 function plan(value: unknown): ServicePlan {
@@ -42,11 +42,11 @@ function plan(value: unknown): ServicePlan {
   return { id: identifier(row.id), revision: integer(row.revision), needsReview: row.needsReview, catalogId: identifier(row.catalogId), catalogIdentity: digest(row.catalogIdentity), catalogState: row.catalogState as ServicePlan["catalogState"] };
 }
 export function parseServiceMetadata(value: unknown): ServiceMetadata {
-  const state = closed(value, ["state"], ["plan", "units"]).state;
+  const state = closed(value, ["state"], ["plan", "units", "serviceStart"]).state;
   if (state === "no-plan") { closed(value, ["state"]); return { state }; }
   if (state === "cleared" || state === "withdrawn") { const row = closed(value, ["state", "plan"]); return { state, plan: plan(row.plan) }; }
   if (state !== "assigned") return bad();
-  const row = closed(value, ["state", "plan", "units"]), result = { state, plan: plan(row.plan), units: summaries(row.units) } as const;
+  const row = closed(value, ["state", "plan", "units"], ["serviceStart"]), result = { state, plan: plan(row.plan), units: summaries(row.units), ...(Object.hasOwn(row, "serviceStart") ? { serviceStart: integer(row.serviceStart) } : {}) } as const;
   if (!result.units.length || result.plan.catalogState === "withdrawn") return bad(); return result;
 }
 export function parseCatalog(value: unknown): Catalog {

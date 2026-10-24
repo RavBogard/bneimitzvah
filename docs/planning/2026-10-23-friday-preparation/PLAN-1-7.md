@@ -15,6 +15,7 @@ Reconciled against main at 4475fd6, with #57 (print) at 62432e0 and #56 (Learn 1
 - Stars stay. Marks and notes on verses dropped from a revised reading are kept hidden and come back with the verse. Stored notes and translations show read-only to their owner; the editors are gone.
 - No quieter initial colour in Study: it contradicts the 2026-10-16 ruling that phrase colours are on by default.
 - The consultant's "saving/recovery concern" was not reproduced. The closest evidence is `yours.tsx` dropping typed text on a conflict, and M3 removes that editor.
+- GATE: M1 builds the Study word card as a `"word"` kind of the verse panel, fed by the text page through a registered host, and reuses the existing word-details fetch (no new data source). The existing Word tools disclosure stays below the text for both lenses. The reading place line and chapter jump are Study only; the one-Tab-stop-per-verse arrows apply wherever words are buttons (Lein too), while a Lein tap still plays. Proceeded because it needs no wording beyond the minimal literal strings listed in the PR.
 - Migration numbers: 0039 is the page counter. M2's grant is 0040, M3b's preferences 0041, M6's curation 0042.
 
 ## Acceptance checks against source

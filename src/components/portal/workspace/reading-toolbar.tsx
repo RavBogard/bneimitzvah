@@ -19,8 +19,10 @@ export function workCoverageNote(key: string): "Torah only" | "Prophets only" | 
 /** The Tikkun control appears only beside Torah text in Lein; a haftarah is read from a printed book, not a scroll,
  *  and Study is about meaning. In Study, Works chooses the commentaries shown under each verse (`worksCorpus`
  *  says which ones cover this text: the Women's Commentary covers the Torah only). */
-export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailable = false, worksCorpus = "torah" }: { onHear?(): void; listeningEnabled?: boolean; tikkunAvailable?: boolean; worksCorpus?: "torah" | "neviim" } = {}) {
-  const prefs = useReadingPrefs(), setReadingPrefs = useSetReadingPrefs(), lens = useStudyLens(), id = useId(), menu = `${id}-size`, tikkunMenu = `${id}-tikkun`, worksMenu = `${id}-works`;
+export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailable = false, worksCorpus = "torah", englishHidden = false }: { onHear?(): void; listeningEnabled?: boolean; tikkunAvailable?: boolean; worksCorpus?: "torah" | "neviim";
+  /** The translate drill is hiding the English: the button then reads not pressed and says why it does nothing, and the reader's own choice is kept. */
+  englishHidden?: boolean } = {}) {
+  const prefs = useReadingPrefs(), setReadingPrefs = useSetReadingPrefs(), lens = useStudyLens(), id = useId(), englishWhy = `${id}-english-why`, menu = `${id}-size`, tikkunMenu = `${id}-tikkun`, worksMenu = `${id}-works`;
   const size = textSizes.find(row => row.id === prefs.size)!, view = tikkunViews.find(row => row.id === prefs.tikkunView) ?? tikkunViews[0];
   const study = lens.available && lens.lens === "study";
   const covers = (work: string) => Boolean(COMMENTARY_WORKS[work]?.editions[worksCorpus]);
@@ -28,7 +30,12 @@ export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailab
   return <nav className="reading-toolbar" aria-label="Reading tools" data-lens={study ? "study" : "lein"}>
     <button type="button" className="toolbar-item" aria-pressed={prefs.colors} onClick={() => setReadingPrefs({ colors: !prefs.colors })}>{icons.colors}<span>Colors</span></button>
     {/* Study keeps its own English choice, which starts on; Lein's stays as the reader left it. */}
-    <button type="button" className="toolbar-item" aria-pressed={study ? lens.english : prefs.translation} onClick={() => study ? lens.setEnglish(!lens.english) : setReadingPrefs({ translation: !prefs.translation })}>{icons.translate}<span>English</span></button>
+    {/* aria-disabled, not disabled, so the button stays focusable and its reason is read. */}
+    <button type="button" className="toolbar-item" aria-pressed={englishHidden && !study ? false : study ? lens.english : prefs.translation} aria-disabled={englishHidden && !study ? true : undefined}
+      aria-describedby={englishHidden && !study ? englishWhy : undefined}
+      onClick={() => { if (englishHidden && !study) return; if (study) lens.setEnglish(!lens.english); else setReadingPrefs({ translation: !prefs.translation }); }}>{icons.translate}<span>English</span></button>
+    {/* Beside the button, not inside it, so the reason describes the button without becoming part of its name. */}
+    {englishHidden && !study && <span id={englishWhy} className="sr-only">English is hidden while the translate drill is on. End the drill to change it.</span>}
     {tikkunAvailable && !study && <>
       <button type="button" className="toolbar-item" popoverTarget={tikkunMenu} data-active={prefs.tikkunView !== "off"} aria-label={`Tikkun: ${view.label}`}>{icons.scroll}<span>Tikkun</span></button>
       <div id={tikkunMenu} popover="auto" className="toolbar-menu" role="group" aria-label="Tikkun view">

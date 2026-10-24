@@ -8,6 +8,7 @@ import { StarButton, STAR_STRINGS, type OwnStars } from "../../src/components/po
 import { YoursRowView, YOURS_STRINGS } from "../../src/components/portal/saved/yours";
 import { conflictWork, fetchSavedStars, parseSavedStars, saveSavedWork, savedText, SavedRequestError, setSavedStar } from "../../src/components/portal/saved/api";
 import { Shell } from "../../src/components/portal/public-reading/view";
+import { ReadingToolbar } from "../../src/components/portal/workspace/reading-toolbar";
 import { APPROVER_HELP_LINE } from "../../src/components/portal/workspace/accounts/workspace";
 
 // Release 1.4 PR 3: the Yours row, stars and the translate drill. Synthetic text only.
@@ -66,6 +67,29 @@ describe("the translate drill", () => {
     expect(view).not.toMatch(/setReadingPrefs|localStorage/);
     // The drill is built only where Study is off.
     expect(view).toMatch(/const drillVerse = !study && drill/);
+  });
+  it("brings the new verse's controls into view after Next verse, with reduced motion respected and focus still moved without a scroll of its own", () => {
+    const view = readFileSync(join(process.cwd(), "src/components/portal/public-reading/view.tsx"), "utf8");
+    expect(view).toMatch(/matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches/);
+    expect(view).toMatch(/scrollIntoView\(\{ block: "nearest", behavior: reduced \|\| !near \? "auto" : "smooth" \}\)/);
+    expect(view).toMatch(/focus\(\{ preventScroll: target !== "toggle" \}\)/);
+  });
+  it("points Play at the verse the drill moved to, and lets any verse the reader chooses take that back", () => {
+    const view = readFileSync(join(process.cwd(), "src/components/portal/public-reading/view.tsx"), "utf8");
+    expect(view).toContain("setDrillTarget({ index: at, generation: ++drillGeneration.current })");
+    expect(view).toContain("target={drillTarget ?? (linkedOnPage !== null");
+    for (const chosen of [/const hear = [^]*?setFocus\(at\); setDrillTarget\(null\)/, /const chooseWord = [^]*?setFocus\(at\); setDrillTarget\(null\)/, /const changeOffset = [^]*?setDrillTarget\(null\)/, /const changeIndex = [^]*?setDrillTarget\(null\)/])
+      expect(view).toMatch(chosen);
+  });
+  it("shows the toolbar's English button not pressed, and says why it does nothing, while the drill hides the English", () => {
+    type Props = NonNullable<Parameters<typeof ReadingToolbar>[0]>;
+    const english = (html: string) => /<button[^>]*>(?:(?!<\/button>).)*<span>English<\/span><\/button>(<span[^>]*sr-only[^>]*>[^<]*<\/span>)?/.exec(html)![0];
+    const off = english(renderToStaticMarkup(createElement<Props>(ReadingToolbar, {})));
+    expect(off).not.toContain("aria-disabled"); expect(off).not.toContain("aria-describedby");
+    const on = english(renderToStaticMarkup(createElement<Props>(ReadingToolbar, { englishHidden: true })));
+    expect(on).toContain('aria-pressed="false"'); expect(on).toContain('aria-disabled="true"'); expect(on).toMatch(/aria-describedby="[^"]+"/);
+    expect(on).toContain("English is hidden while the translate drill is on. End the drill to change it.");
+    expect(on).not.toContain(" disabled");
   });
 });
 
