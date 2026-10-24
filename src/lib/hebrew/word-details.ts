@@ -42,6 +42,8 @@ export function wordDetailsPlainText(value: unknown, bound: number): value is st
   return typeof value === "string" && value.length <= bound && value.isWellFormed() && value === value.normalize("NFC") && encoded(value) <= bound
     && !/[<>\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069\ufeff]/u.test(value);
 }
+/** The source marks a joined prefix with a slash and a space ("and/ he saw"); the reader sees plain words ("and he saw"). */
+export const cleanOccurrenceGloss = (gloss: string): string => gloss.replace(/(\S)\/\s+/g, "$1 ").replace(/\s+/g, " ").trim();
 export function wordDetailsHeadword(value: unknown): value is string {
   return wordDetailsPlainText(value, WORD_DETAILS_LIMITS.headwordBytes) && /[א-ת]/u.test(value) && !/[^א-ת\u0591-\u05c7\u034f\u200c\u200d/ \-]/u.test(value);
 }
@@ -128,7 +130,7 @@ export function parseStudyWordDetails(value: unknown, expected: WordDetailsBindi
     }
     let elsewhere: WordElsewhere | null | undefined;
     if (Object.hasOwn(value as object, "elsewhere")) { elsewhere = parseWordElsewhere(outer.elsewhere, identity, identities); if (!elsewhere) return null; }
-    const result: StudyWordDetails = Object.freeze({ ...identity, status: "ready", occurrence: Object.freeze({ gloss: occurrence.gloss as string | null, grammar }), dictionary: Object.freeze(entries), ...(elsewhere ? { elsewhere } : {}) });
+    const result: StudyWordDetails = Object.freeze({ ...identity, status: "ready", occurrence: Object.freeze({ gloss: occurrence.gloss === null ? null : cleanOccurrenceGloss(occurrence.gloss as string) || null, grammar }), dictionary: Object.freeze(entries), ...(elsewhere ? { elsewhere } : {}) });
     return encoded(JSON.stringify(result)) <= WORD_DETAILS_LIMITS.bytes ? result : null;
   } catch { return null; }
 }
