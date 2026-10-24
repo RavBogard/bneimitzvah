@@ -211,6 +211,8 @@ describe("explicit invitation service", () => {
       });
     }
     expect(f.delivered.length === 2).toBe(true);
+    // The transport is told the issuing admin's congregation, whose product name the email then uses.
+    expect(f.delivered.every(message => message.tenantId === "crc")).toBe(true);
   });
 
   it("records a transport outcome after actor logout/revocation without restoring any authority", async () => {

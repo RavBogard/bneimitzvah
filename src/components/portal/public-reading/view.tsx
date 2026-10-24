@@ -24,8 +24,12 @@ import { fetchPublicRefReading, fetchPublicShortPage, fetchPublicText, fetchPubl
   type PublicShortPage, type PublicSource, type PublicWeek } from "./api";
 import { parseReadAddress, readAddress, selectorKey, type ReadAddress, type ReadTarget } from "./urls";
 import { ReadingChooser } from "./reading-chooser";
+import { printAddress } from "../../../lib/print/print-address";
+import { useProductName } from "./product-name";
+import { pageTitle } from "../../../lib/site/product-name";
 import { SaveReading } from "../saved/save-reading";
 import { SavedReadingPage } from "../saved/saved-reading";
+import { OfflineExpiryNote, OfflinePill } from "../offline/status";
 import { useOwnLayer } from "../workspace/study/own-layer";
 import { DRILL_STRINGS, drillNext, TranslateDrillPanel } from "./translate-drill";
 import styles from "./public-reading.module.css";
@@ -64,7 +68,7 @@ export function PublicReading() {
 export const go = (address: string) => { try { window.location.assign(address); } catch { /* Stay. */ } };
 export function replaceAddress(address: string) { try { if (window.location.pathname + window.location.search !== address) window.history.replaceState(null, "", address); } catch { /* Address bar stays as it was. */ } }
 
-export const readTitle = (name: string) => `${name} | CRC Torah`;
+export const readTitle = (name: string, productName: string) => pageTitle(productName, name);
 /** The tab names what is shown. The page is one static shell whose metadata says "This week’s reading", and
  * Next writes that title again after hydration, so a single document.title write is lost; this keeps it. */
 export function useDocumentTitle(text: string) {
@@ -78,7 +82,7 @@ export function useDocumentTitle(text: string) {
 }
 /** `signedIn`: the page already verified the session (a member's own saved reading); public modes never ask, and offer Sign in. */
 export function Shell({ title, children, signedIn = false }: { title: string; children: ReactNode; signedIn?: boolean }) {
-  useDocumentTitle(readTitle(title));
+  useDocumentTitle(readTitle(title, useProductName()));
   return <div className="portal-shell">
     <a className="skip-link" href="#public-reading-main">Skip to the reading</a>
     <header className="portal-header app-bar"><a className="portal-brand" href="/">CRC Torah</a>
@@ -112,13 +116,15 @@ export function useChooser(initiallyOpen = false) {
   const panel = open ? <ReadingChooser id={id} study={lens.lens === "study"} onOpen={go} /> : null;
   return { button, panel };
 }
-/** Start reading: scroll to the text and, with recordings, play the first verse. `row(extra)` adds Save or Edit beside it. */
+/** Start reading: scroll to the text and, with recordings, play the first verse. `row(extra, print)` adds Save or Edit beside it,
+ * and Print, the reader's print sheet of the same reading (`print` is its /print address). */
 export function useStarter() {
   const starter = useRef<(() => void) | null>(null), [ready, setReady] = useState(false);
   const register = useCallback((value: (() => void) | null) => { starter.current = value; setReady(value !== null); }, []);
-  const row = (extra?: ReactNode) => <div className="hero-actions">
+  const row = (extra?: ReactNode, print?: string) => <div className="hero-actions">
     <button type="button" className="button-start" disabled={!ready} onClick={() => starter.current?.()}>Start reading</button>
     <a className="button-hero-secondary" href="/trope-chart">Trope chart</a>
+    {print && <a className="button-hero-secondary" href={print}>Print</a>}
     {extra}
   </div>;
   return { register, button: row(), row };
@@ -158,7 +164,7 @@ function WeekReading({ initial, verse }: { initial: Extract<ReadTarget, { mode: 
   const shown = sources[index]?.source.passage;
   return <Shell title={WEEK_TITLE}>
     <Hero eyebrow={isThisWeek ? "This Shabbat" : date ? "Shabbat" : "Torah and haftarah"} title={current ? current.parashah ?? "Shabbat reading" : week?.error ? "Reading unavailable" : "Loading the reading"}
-      meta={date && <><time dateTime={date}>{longDate(date)}</time>{current?.torah && <> · Torah <bdi dir="ltr">{displayRange(current.torah.ranges)}</bdi></>}{current?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(current.haftarah.ranges)}</bdi></>}</>}
+      meta={date && <><time dateTime={date}>{longDate(date)}</time>{current?.torah && <> · Torah <bdi dir="ltr">{displayRange(current.torah.ranges)}</bdi></>}{current?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(current.haftarah.ranges)}</bdi></>}<OfflinePill /></>}
       nav={<>
         <button type="button" className="button-hero-secondary" disabled={!date} onClick={() => date && change(addDays(date, -7))}>Previous week</button>
         {!isThisWeek && today && <button type="button" className="button-hero-secondary" onClick={() => change(today)}>This week</button>}
@@ -166,11 +172,12 @@ function WeekReading({ initial, verse }: { initial: Extract<ReadTarget, { mode: 
         <label className={styles.picker}><span>Find a date</span><input type="date" value={date ?? ""} onChange={event => { const value = event.target.value; if (/^\d{4}-\d{2}-\d{2}$/.test(value)) { try { change(shabbatOnOrAfter(value)); } catch { /* Ignore partial input. */ } } }} /></label>
         {chooser.button}
       </>}
-      actions={sources.length > 0 && starter.row(current && shown && <SaveReading passage={{ title: current.parashah, label: shown.kind === "torah" ? "Torah" : "Haftarah", kind: shown.kind, ranges: shown.ranges, date: current.date }} />)} />
+      actions={sources.length > 0 && starter.row(current && shown && <SaveReading passage={{ title: current.parashah, label: shown.kind === "torah" ? "Torah" : "Haftarah", kind: shown.kind, ranges: shown.ranges, date: current.date }} />, date && shown ? printAddress({ mode: "week", date, kind: shown.kind === "haftarah" ? "haftarah" : null, pick: "full" }, undefined, { today }) : undefined)} />
     {chooser.panel}
     {week?.error && <div className="workspace-state" role="status"><h2>{week.error === 400 ? "That date isn’t available" : "The reading didn’t load"}</h2>
       <p>{week.error === 400 ? "Choose a Shabbat within the next few years, or go back to this week." : "Check your connection and try again."}</p>
-      {week.error === 400 && today ? <button type="button" className="button-secondary" onClick={() => change(today)}>Go to this week</button> : <button type="button" className="button-secondary" onClick={() => setRetry(value => value + 1)}>Try again</button>}</div>}
+      {week.error === 400 && today ? <button type="button" className="button-secondary" onClick={() => change(today)}>Go to this week</button> : <button type="button" className="button-secondary" onClick={() => setRetry(value => value + 1)}>Try again</button>}
+      <OfflineExpiryNote /></div>}
     {current && !sources.length && <div className="workspace-state" role="status"><h2>No reading to show for this Shabbat</h2><p>The calendar lists no weekly Torah portion or haftarah here. Try the week before or after.</p></div>}
     {current && sources.length > 0 && <>
       {!current.torah && current.parashah && <p className="field-help">This Shabbat’s Torah reading isn’t shown here. The haftarah is below.</p>}
@@ -205,7 +212,8 @@ function ChosenReading({ target, verse }: { target: Extract<ReadTarget, { mode: 
     <Hero eyebrow={named ? GROUP_EYEBROW[named.group] : "Any reading"} title={loaded?.error ? "Reading unavailable" : title}
       meta={<>{passages.map((row, at) => <span key={at}>{at > 0 && " · "}{row.label} <bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</>}
       nav={<><button type="button" className="button-hero-secondary" onClick={() => go(readAddress({ mode: "week", date: null, kind: null }, { study: lens.lens === "study" }))}>This week</button>{chooser.button}</>}
-      actions={sources.length > 0 && starter.row(sources[index] && <SaveReading passage={{ title: named ? named.name : title, label: passages[index]?.label ?? null, kind: sources[index].source.passage.kind, ranges: sources[index].source.passage.ranges, date: null }} />)} />
+      actions={sources.length > 0 && starter.row(sources[index] && <SaveReading passage={{ title: named ? named.name : title, label: passages[index]?.label ?? null, kind: sources[index].source.passage.kind, ranges: sources[index].source.passage.ranges, date: null }} />,
+        printAddress(target.mode === "named" ? { mode: "named", slug: target.slug, passage: index + 1 } : target))} />
     {chooser.panel}
     {loaded?.error && <div className="workspace-state" role="status"><h2>{loaded.error === 400 ? "That reading isn’t available" : "The reading didn’t load"}</h2>
       <p>{loaded.error === 400 ? "Choose another reading, or go back to this week." : "Check your connection and try again."}</p>

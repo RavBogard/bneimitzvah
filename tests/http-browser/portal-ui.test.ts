@@ -122,7 +122,10 @@ it("restricts inline Google metadata to public safe queries and preserves privat
     await ui(handoff).toHaveAttribute("aria-disabled", "true"); await handoff.evaluate(node => (node as HTMLAnchorElement).click()); expect(new URL(tab.url()).pathname).toBe("/account");
   } finally { release(); }
   await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
-  await navigate(tab, "/sign-in?intent=foreign&token=synthetic"); await referrerPolicy(tab, "no-referrer"); await ui(tab.getByRole("link", { name: "Continue to Google sign-in", exact: true })).toHaveAttribute("href", "/sign-in"); expect(libraries).toBe(0);
+  await navigate(tab, "/sign-in?intent=foreign&token=synthetic"); await referrerPolicy(tab, "no-referrer");
+  // Within the code's 5 minutes this device reopens on the code form (1.5); Use a different email returns to the choices.
+  await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible(); await tab.getByRole("button", { name: "Use a different email", exact: true }).click();
+  await ui(tab.getByRole("link", { name: "Continue to Google sign-in", exact: true })).toHaveAttribute("href", "/sign-in"); expect(libraries).toBe(0);
   await tab.getByRole("link", { name: "Continue to Google sign-in", exact: true }).click(); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible(); await referrerPolicy(tab, "strict-origin-when-cross-origin");
   expect(await tab.locator('script[src="https://accounts.google.com/gsi/client"]').getAttribute("referrerpolicy")).toBe("strict-origin-when-cross-origin"); expect(new URL(tab.url()).search).toBe("");
 });
@@ -217,6 +220,47 @@ it("single-submits a real magic link, shows separate genuine roles without fake 
   await safe(() => tab.getByRole("button", { name: "Sign out", exact: true }).click());
   await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   expect((await api(tab, "/api/session")).status).toBe(401);
+});
+
+it("signs in with the typed code from the sign-in email, survives a relaunch, and ends a code after three wrong tries", async () => {
+  const email = "pg-tutor@example.test", tab = await page(true); await navigate(tab, "/sign-in");
+  const ask = async () => {
+    await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+    await safe(() => tab.getByLabel("Email address", { exact: true }).fill(email));
+    await safe(() => tab.getByRole("button", { name: "Email me a sign-in link", exact: true }).click());
+    await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
+    return fixture.takeCode(email);
+  };
+  const type = async (value: string) => {
+    const input = tab.getByLabel("Sign-in code", { exact: true });
+    expect(await input.getAttribute("inputmode")).toBe("numeric");
+    expect(await input.getAttribute("autocomplete")).toBe("one-time-code");
+    await safe(() => input.fill(value));
+    await safe(() => tab.getByRole("button", { name: "Sign in", exact: true }).click());
+  };
+  const first = await ask(), wrong = String((Number(first) + 1) % 1_000_000).padStart(6, "0");
+  // An installed app relaunched from Mail reopens on the code form: only a timestamp is stored, never the code or address.
+  await navigate(tab, "/sign-in");
+  await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
+  await clean(tab, [first, email]);
+  await type(wrong);
+  await ui(tab.locator(".request-error")).toHaveText("That code didn’t match. Check the email and try again.");
+  await ui(tab.getByLabel("Sign-in code", { exact: true })).toHaveValue("");
+  await type(wrong);
+  await ui(tab.locator(".request-error")).toHaveText("That code didn’t match. Check the email and try again.");
+  await type(wrong);
+  await ui(tab.locator(".request-error")).toHaveText("That code has expired or was used. Request a new email to get a new code.");
+  await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+  expect(await tab.evaluate(() => localStorage.getItem("crc.signin.code-requested-at"))).toBeNull();
+  await clean(tab, [first, email]);
+  const second = await ask();
+  await type(second);
+  await ui.poll(() => new URL(tab.url()).pathname).toBe("/");
+  await ui(tab.getByRole("list", { name: "Available roles", exact: true })).toBeVisible();
+  await clean(tab, [second, email]);
+  expect(await tab.evaluate(() => localStorage.getItem("crc.signin.code-requested-at"))).toBeNull();
+  await safe(() => tab.getByRole("button", { name: "Sign out", exact: true }).click());
+  await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
 });
 
 it("clears fragment history at both widths and waits for keyboard confirmation before sending a secret body", async () => {

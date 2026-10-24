@@ -88,7 +88,7 @@ export async function postgresAccessFixture(options: { migrationsFolder?: string
     if(options.migrationsFolder)await query(owner,`ALTER TABLE "session" ADD COLUMN IF NOT EXISTS "google_authenticated_at" timestamp`);
     const aDb=drizzle(aPool,{schema:s,logger:false});
     const bDb=drizzle(bPool,{schema:s,logger:false});
-    const authInput={origin:"http://localhost:3000",secret,sendMagicLink:async()=>{}};
+    const authInput={origin:"http://localhost:3000",secret,codeSecret:randomBytes(48).toString("base64url"),sendMagicLink:async()=>{}};
     const deliveries:{url:string}[]=[];
     const authA=createAuthStack(aDb,authSchema,{...authInput,sendMagicLink:async message=>{deliveries.push({url:message.url});}});
     const authB=createAuthStack(bDb,authSchema,authInput);

@@ -4,6 +4,29 @@ Filed 2026-10-15 from the kickoff interview in Cowork. This is the authority doc
 
 **Amended 2026-10-16:** Daniel's later rulings 27–59 in [PLAN-REVIEW.md](../2026-10-16-review/PLAN-REVIEW.md#1-rulings-from-this-session-daniel-binding-2026-10-16) are folded in below. Original numbering and dated decisions are retained; that review preserves the earlier wording and interview record. Its section 3 mechanisms remain proposals, subject to Astra's integration corrections and bounded design review. These requirements do not claim completed implementation.
 
+## Amended 2026-10-23, Friday preparation direction (Daniel, approved)
+
+Daniel approved the revised CRC Torah direction from an outside-consultant review: [PLAIN-LANGUAGE-PLAN.md](../2026-10-23-friday-preparation/PLAIN-LANGUAGE-PLAN.md), [CLAUDE-HANDOFF.md](../2026-10-23-friday-preparation/CLAUDE-HANDOFF.md) (scope and acceptance checks), [CONSULTANT-PLAN.md](../2026-10-23-friday-preparation/CONSULTANT-PLAN.md) (evidence). Daniel, verbatim: "The main clarification: custom READINGS are common; custom STUDY GUIDES are rare. Prioritize ordinary exploration and preparation entirely within the app, with Claude as another entrance into the same experience."
+
+- Selecting, saving, revising and reopening readings is straightforward; whole-portion context stays reachable. Word taps open meaning in Study and hearing in Lein. Original English commentary is easy to explore without losing your place. Sefaria and the read-only haftarah repo are interaction inspiration only.
+- Writing stays in Claude: My notes and My translation leave the normal personal reader; stored work is preserved within its author's authority. Print reuses the print-sheet work, with an optional commentary appendix after the reading. Occasional source-only curation goes through MCP and does not dominate the app.
+- Owner-authorized Claude access to a person's own preparation is authorized as a design goal. It does not authorize staff access to anyone's private work; the access contract and its structural guards change together, with the standing adversarial review.
+- Order (Claude's versioning): this follows the current commitments (1.5, 1.6 and the print sheet) as 1.7, possibly over several point releases. The web siddur integration moves from 1.7 to 1.8, still in 1.x. 2.0 and 2.5 are unchanged.
+- Daniel asked for a critical read rather than blind acceptance (2026-10-23). Claude's critique and his answers, binding:
+  - Notes and translation: "Cut as proposed" (Claude had recommended keeping them collapsed). My notes and My translation leave the reader; stored rows stay, reachable only to their owner. The Lein translate drill reveals JPS only.
+  - MCP access to one's own saved readings: "Existing MCP users (Recommended)". The first release covers Daniel and tutors, each reaching only their own saved readings; staff never reach another person's work. It is an auth change and gets the adversarial pass.
+  - Account request intro, Daniel: "All plus preferred commentaries, settings, etc". Claude's draft: "An account keeps your saved readings, your place in Learn to lein, your preferred commentaries and your settings. Everything else on {productName} is open without one." It ships only once each named thing really is kept by the account; any item that isn't comes out of the string.
+  - Approval email body: "Save readings (Recommended)": "Your account request was approved. Sign in with this email address to save readings. {origin}/. If you did not ask for an account, you can ignore this email."
+  - Claude's design calls (not Daniel's rulings): a Claude translation carries a fixed credit naming Claude as translator and the person who selected it. 1.7 ships in steps: word taps plus a source panel that keeps your place; choosing and revising a reading from the text plus the Claude link; the print appendix; MCP curation last. The consultant's "saving/recovery concern" is treated as unverified until reproduced.
+
+## Amended 2026-10-23, roadmap (Daniel, verbatim)
+
+"Second congregation moves to 2.5 also; web siddur integration into 1.x"
+
+- The second congregation moves from after 1.5 to 2.5, alongside 2.5's generated chant per trope system. D11, D-a and D-b stand, but on the 2.5 timeline. Provisioning it is still Daniel's gate, after the two-tenant isolation suite and its adversarial pass.
+- The web siddur integration (shirei-shabbat's web siddur, including its Beit Mitzvah volume) moves from 2.0 into 1.x. Claude's read: it is 1.7, after 1.6, and runs beside the print sheet and voice. The shirei-shabbat repos are read from, never written; their own CLAUDE.md rules win there. The service course with Daniel's teaching on each prayer (E2) stays in 2.0, since this ruling names only the integration.
+- Daniel, verbatim, same day: "All the voice work happens in 2.5". The voice generator (VOICE-BUILD-PLAN M0 to M8, with PR #22) doesn't start after 1.6. It starts in 2.5, after 2.0. This replaces the earlier "voice starts after the 1.6 activities" ordering. The order is 1.5, then 1.6 and the print sheet, then 1.7 (web siddur integration), then 2.0 (service course), then 2.5 (all voice work, generated chant per trope system, the second congregation).
+
 ## Daniel's rulings, 2026-10-23 (via Cowork)
 
 **Amended 2026-10-23.** Daniel answered Cowork's question batches A to F on 2026-10-23. His answers, verbatim and with the option labels he chose, are in [QUESTIONS.md](../2026-10-23-cowork-offload/QUESTIONS.md); the mapping to plan sections is in [HANDOFF-TO-CLAUDE-CODE.md](../2026-10-23-cowork-offload/HANDOFF-TO-CLAUDE-CODE.md). The bullets below record every ruling that changes this brief or a plan. They supersede any older MISSION text that says otherwise, and that older text is left as written. Rulings that only confirm plan text (A1, A2) or settle strings (A3, B4) live in QUESTIONS.md and in the two 1.5 plans' "Changes from Daniel's 2026-10-23 rulings" sections.

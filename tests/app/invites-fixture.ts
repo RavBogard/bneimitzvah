@@ -14,7 +14,7 @@ export async function invitesFixture() {
       identities[key] = { id: current.user.id, cookie, sessionId: current.session.id };
     });
   }
-  const delivered: { email: string; url: string }[] = [];
+  const delivered: { email: string; url: string; tenantId: string }[] = [];
   let shouldFail = false;
   let transportOutsideTransaction = false;
   let duringTransport: (() => Promise<void>) | undefined;

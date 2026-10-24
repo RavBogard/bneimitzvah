@@ -274,6 +274,13 @@
       "when": 1792783382502,
       "tag": "0038_account_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792809499928,
+      "tag": "0039_public_page_views",
+      "breakpoints": true
     }
   ]
 }

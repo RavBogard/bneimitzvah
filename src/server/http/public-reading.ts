@@ -12,6 +12,7 @@ import { parseCompareVerse } from "../../lib/readings/compare";
 import { parseSourceRef, type ShelfAnswer } from "../../lib/readings/shelf";
 import { SourceTextUnavailable, type SourceTextReader } from "../study/source-text";
 import { SourceMetadataUnavailable } from "../study/sources/metadata";
+import { plainProductName, webManifest } from "../../lib/offline/manifest";
 
 /**
  * Signed-out reading routes. A strict allowlist under /api/public/: GET only, a
@@ -45,9 +46,11 @@ export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Re
  * named by a Shabbat `date` (the weekly page) or, for "Any reading", by a canonical `ref` with its
  * `kind` (the 1.5 offline packer depends on these exact shapes).
  */
-type Route = Readonly<{ kind: "reading" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source"; keysets: readonly (readonly string[])[] }>;
+type Route = Readonly<{ kind: "reading" | "aliyot" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source" | "manifest"; keysets: readonly (readonly string[])[] }>;
 const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/reading": { kind: "reading", keysets: [["date"], ["ref", "kind"]] },
+  // The reader's print sheet (2026-10-23): a Shabbat's calendar aliyot, numbers and book names only.
+  "/api/public/aliyot": { kind: "aliyot", keysets: [["date"]] },
   "/api/public/text": { kind: "text", keysets: [["date", "kind", "offset"], ["ref", "kind", "offset"]] },
   "/api/public/word-aids": { kind: "word-aids", keysets: [["date", "kind", "verse"], ["ref", "kind", "verse"]] },
   "/api/public/word-details": { kind: "word-details", keysets: [["date", "kind", "verse", "word"], ["ref", "kind", "verse", "word"]] },
@@ -56,6 +59,8 @@ const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/translations": { kind: "translations", keysets: [["verse"]] },
   "/api/public/related": { kind: "related", keysets: [["verse"]] },
   "/api/public/source": { kind: "source", keysets: [["ref"]] },
+  // The installable app's manifest (1.5 A1): no query at all.
+  "/api/public/manifest": { kind: "manifest", keysets: [[]] },
 });
 /** Longest decoded value per key; a `ref` is bounded by READING_REF_LIMITS.chars, everything else by 80. */
 const valueLimit = (key: string) => key === "ref" ? READING_REF_LIMITS.chars : 80; // a source ref is bounded tighter (256 bytes) by its own check
@@ -153,6 +158,11 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
             return json({ date: week.date, parashah: week.parashah, torah: week.torah && passageView(week.torah), haftarah: week.haftarah && passageView(week.haftarah),
               fetchedAt: week.fetchedAt, listening: { pocketTorah: week.listening.pocketTorah } }, 3600);
           }
+          case "aliyot": {
+            const portions = await reading.portions(query.date, signal);
+            return json({ date: portions.date, parashah: portions.parashah, full: portions.full.map(row => ({ n: row.n, ref: row.ref })),
+              triennial: portions.triennial && { year: portions.triennial.year, aliyot: portions.triennial.aliyot.map(row => ({ n: row.n, ref: row.ref })) } }, 3600);
+          }
           // Every page body below is the weekly one with `ref` in place of `date`.
           case "text": {
             const kind = kindOf(query.kind), offset = count(query.offset);
@@ -194,6 +204,12 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
             // With the name its change line needs ("Selected and ordered by {productName}", the CC BY note of changes).
             const shelf = await runtime.shelf(query.verse, signal), productName = await runtime.productName();
             return json({ ...shelf, productName } as unknown as JsonValue, 3600);
+          }
+          case "manifest": {
+            const name = plainProductName(await runtime.productName());
+            if (!name) return failure(503);
+            return new Response(JSON.stringify(webManifest(name)), { status: 200, headers: { ...common, "content-type": "application/manifest+json; charset=utf-8",
+              "cache-control": "public, max-age=300", "vercel-cdn-cache-control": "public, s-maxage=3600" } });
           }
           case "source": {
             let text;

@@ -23,7 +23,9 @@ import { isPublicReadingPath, publicReadingRouteMethods, type PublicRuntimeScope
 import { claudeConnectionsRouteMethods } from "../../src/server/http/claude-connections";
 import { notificationsRouteMethods } from "../../src/server/http/notifications";
 import { savedRouteMethods } from "../../src/server/http/saved";
+import { offlineRouteMethods } from "../../src/server/http/offline";
 import { accountsRouteMethods } from "../../src/server/http/accounts";
+import { courseProgressRouteMethods } from "../../src/server/http/course-progress";
 import { closeNextDevelopment } from "./next-lifecycle";
 
 // Parallel local worktrees may choose their own loopback port; CI keeps the default.
@@ -46,6 +48,8 @@ async function isolatedNextProject() {
   if (!resolve(dir).startsWith(`${logRoot}${sep}`)) throw new Error("Isolated Next directory escaped workspace");
   try {
     await cp(join(source, "src"), join(dir, "src"), { recursive: true });
+    // The public pages read the product name through the public runtime, which reaches the chant engine's text module (src/server/study/word-aids.ts), so the engine is copied beside src.
+    await cp(join(source, "trope"), join(dir, "trope"), { recursive: true });
     for (const [family, font, license] of [["noto-serif-hebrew", "NotoSerifHebrew.ttf", "OFL.txt"], ["bricolage-grotesque", "BricolageGrotesque.ttf", "OFL.txt"], ["stam-ashkenaz-clm", "StamAshkenazCLM.ttf", "LICENSE.txt"]]) {
       const fontDirectory = join("public", "fonts", family);
       await mkdir(join(dir, fontDirectory), { recursive: true });
@@ -101,7 +105,8 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope, withPubl
   try { await app.prepare(); }
   catch { await closeNextDevelopment(() => app.close()); throw new Error("Isolated Next preparation failed"); }
   const nextHandler = app.getRequestHandler();
-  const dispatch = createHttpDispatcher(withRuntime, withPublic);
+  // The page-view beacon (1.5) counts nothing here: its scope answers the route's one empty 204 without a database.
+  const dispatch = createHttpDispatcher(withRuntime, withPublic, async () => new Response(null, { status: 204, headers: { "cache-control": "no-store" } }));
   const server = createServer(async (req, res) => {
     try {
       const request = safeRequest(req);
@@ -110,7 +115,7 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope, withPubl
       if (referenceReviewRouteMethods(pathname)
         // Signed-out reading: the dispatcher's exact allowlist serves its routes and refuses every other /api/public path.
         || publicReadingRouteMethods(pathname) || isPublicReadingPath(pathname)) { await send(res, await dispatch(request)); return; }
-      if (!serviceEcosystemRouteMethods(pathname) && !honoreeManagementRouteMethods(pathname) && !honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname) && !studyGuidesRouteMethods(pathname) && !congregationSettingsRouteMethods(pathname) && !claudeConnectionsRouteMethods(pathname) && !notificationsRouteMethods(pathname) && !savedRouteMethods(pathname) && !accountsRouteMethods(pathname)) { await nextHandler(req, res); return; }
+      if (!serviceEcosystemRouteMethods(pathname) && !honoreeManagementRouteMethods(pathname) && !honorsRouteMethods(pathname) && !sourceContentRouteMethods(pathname) && !sourceAssignmentsRouteMethods(pathname) && !authRouteMethods(pathname) && !portalRouteMethods(pathname) && !studentWorkRouteMethods(pathname) && !serviceLearningRouteMethods(pathname) && !progressRouteMethods(pathname) && !lessonLogRouteMethods(pathname) && !practiceCalendarRouteMethods(pathname) && !studyGuidesRouteMethods(pathname) && !congregationSettingsRouteMethods(pathname) && !claudeConnectionsRouteMethods(pathname) && !notificationsRouteMethods(pathname) && !savedRouteMethods(pathname) && !offlineRouteMethods(pathname) && !accountsRouteMethods(pathname) && !courseProgressRouteMethods(pathname)) { await nextHandler(req, res); return; }
       await send(res, await dispatch(request));
     } catch { if (!res.headersSent) await send(res, new Response(null, { status: 503 })); else res.destroy(); }
   });

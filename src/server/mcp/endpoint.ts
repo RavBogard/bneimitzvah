@@ -39,7 +39,7 @@ export function createMcpEndpoint<Q extends PgQueryResultHKT>(input: {
     register: mcp.register, authorize: mcp.authorize, describe: mcp.describe, approve: mcp.approve, deny: mcp.deny,
     token: mcp.token, revoke: mcp.revoke, authenticate: mcp.authenticate,
     answer: (body: unknown, actor: McpActor, signal: AbortSignal) => answerRpc(body, { tools, instructions: INSTRUCTIONS, serverInfo: SERVER_INFO, signal,
-      ctx: { actor, mcp, guides, loadText: input.loadText, related: input.related, db: input.db, readings, sources } }),
+      ctx: { actor, mcp, guides, loadText: input.loadText, related: input.related, loadReading: input.loadReading, db: input.db, readings, sources } }),
   });
 }
 export type McpEndpoint = ReturnType<typeof createMcpEndpoint>;

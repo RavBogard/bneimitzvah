@@ -14,6 +14,7 @@ import { handleRosterSheetRequest, rosterSheetRouteMethods } from "./roster-shee
 import { handleMcpRequest, mcpRouteMethods } from "./mcp";
 import { handleNotificationsRequest, notificationsRouteMethods } from "./notifications";
 import { handleSavedRequest, savedRouteMethods } from "./saved";
+import { handleOfflineRequest, offlineRouteMethods } from "./offline";
 import { accountsRouteMethods, handleAccountsRequest } from "./accounts";
 import { courseProgressRouteMethods, handleCourseProgressRequest } from "./course-progress";
 import { congregationSettingsRouteMethods, handleCongregationSettingsRequest } from "./congregation-settings";
@@ -25,7 +26,8 @@ import { finishReferenceReviewResponse, handleReferenceReviewRequest, referenceR
 import { errorResponse, HttpBoundaryError } from "./responses";
 import { finishHonoreeGuestResponse, finishHonoreeManagementResponse, handleHonoreeRequest, honoreeManagementRouteMethods } from "./honoree";
 import { handlePublicReadingRequest, isPublicReadingPath, type PublicRuntimeScope } from "./public-reading";
-import { createPublicRuntimeScope } from "../runtime/public-composition";
+import { createPageViewScope, createPublicRuntimeScope } from "../runtime/public-composition";
+import { handlePageViewRequest, isPageViewPath, type PageViewScope } from "./page-views";
 
 export type HttpRuntimeScope = (action: (runtime: HttpRuntime) => Promise<Response>) => Promise<Response>;
 function cookieBoundary(request: Request) {
@@ -40,7 +42,7 @@ function cookieBoundary(request: Request) {
     names.add(name);
   }
 }
-export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRuntimeScope(), withPublic: PublicRuntimeScope = createPublicRuntimeScope()) {
+export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRuntimeScope(), withPublic: PublicRuntimeScope = createPublicRuntimeScope(), withViews: PageViewScope = createPageViewScope()) {
   return async (request: Request): Promise<Response> => {
     // Google's redirect-mode return is a browser navigation: any failure, including an unavailable
     // runtime, lands on a page with a plain error rather than a JSON body.
@@ -50,6 +52,8 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
       googleReturn = url.pathname === "/api/auth/callback/google" && request.method === "GET";
       // Signed-out reading: its own allowlist and its own runtime, which has no auth stack.
       // Cookies are never interpreted here (Authorization is refused); nothing on this branch opens a session.
+      // The page-view beacon (1.5, "path and day only"): the same cookie-blind rules on a runtime smaller still; it always answers 204.
+      if (isPageViewPath(url.pathname)) return await handlePageViewRequest(request, withViews);
       if (isPublicReadingPath(url.pathname)) return await handlePublicReadingRequest(request, withPublic);
       if (url.pathname === "/api/honoree/read") {
         const denied = () => errorResponse(new HttpBoundaryError(404));
@@ -69,7 +73,7 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
         } catch { return denied(); }
       }
       const managementMethods = honoreeManagementRouteMethods(url.pathname);
-      const methods = managementMethods ?? referenceReviewRouteMethods(url.pathname) ?? serviceEcosystemRouteMethods(url.pathname) ?? honorsRouteMethods(url.pathname) ?? sourceContentRouteMethods(url.pathname) ?? sourceAssignmentsRouteMethods(url.pathname) ?? authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname) ?? serviceLearningRouteMethods(url.pathname) ?? progressRouteMethods(url.pathname) ?? studyGuidesRouteMethods(url.pathname) ?? congregationSettingsRouteMethods(url.pathname) ?? claudeConnectionsRouteMethods(url.pathname) ?? rosterSheetRouteMethods(url.pathname) ?? notificationsRouteMethods(url.pathname) ?? savedRouteMethods(url.pathname) ?? accountsRouteMethods(url.pathname) ?? courseProgressRouteMethods(url.pathname) ?? mcpRouteMethods(url.pathname) ?? lessonLogRouteMethods(url.pathname) ?? practiceCalendarRouteMethods(url.pathname) ?? recordingsRouteMethods(url.pathname);
+      const methods = managementMethods ?? referenceReviewRouteMethods(url.pathname) ?? serviceEcosystemRouteMethods(url.pathname) ?? honorsRouteMethods(url.pathname) ?? sourceContentRouteMethods(url.pathname) ?? sourceAssignmentsRouteMethods(url.pathname) ?? authRouteMethods(url.pathname) ?? portalRouteMethods(url.pathname) ?? studentWorkRouteMethods(url.pathname) ?? serviceLearningRouteMethods(url.pathname) ?? progressRouteMethods(url.pathname) ?? studyGuidesRouteMethods(url.pathname) ?? congregationSettingsRouteMethods(url.pathname) ?? claudeConnectionsRouteMethods(url.pathname) ?? rosterSheetRouteMethods(url.pathname) ?? notificationsRouteMethods(url.pathname) ?? savedRouteMethods(url.pathname) ?? offlineRouteMethods(url.pathname) ?? accountsRouteMethods(url.pathname) ?? courseProgressRouteMethods(url.pathname) ?? mcpRouteMethods(url.pathname) ?? lessonLogRouteMethods(url.pathname) ?? practiceCalendarRouteMethods(url.pathname) ?? recordingsRouteMethods(url.pathname);
       // No provider configuration or connection required to refuse unowned
       // endpoints (including private SDK session/profile/password APIs).
       if (!methods) throw new HttpBoundaryError(404);
@@ -96,7 +100,7 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
           await runtime.resolveHost(request);
           const referenceReviewResponse = await handleReferenceReviewRequest(request, runtime.referenceReview);
           if (referenceReviewResponse) return referenceReviewResponse;
-          return await handleServiceEcosystemRequest(request, runtime) ?? await handleHonorsRequest(request, runtime) ?? await handleSourceContentRequest(request, runtime) ?? await handleSourceAssignmentsRequest(request, runtime) ?? await handleAuthRequest(request, runtime) ?? await handleStudentWorkRequest(request, runtime) ?? await handleServiceLearningRequest(request, runtime) ?? await handleProgressRequest(request, runtime) ?? await handleStudyGuidesRequest(request, runtime) ?? await handleCongregationSettingsRequest(request, runtime) ?? await handleClaudeConnectionsRequest(request, runtime) ?? await handleRosterSheetRequest(request, runtime) ?? await handleNotificationsRequest(request, runtime) ?? await handleSavedRequest(request, runtime) ?? await handleAccountsRequest(request, runtime) ?? await handleCourseProgressRequest(request, runtime) ?? await handleMcpRequest(request, runtime) ?? await handleLessonLogRequest(request, runtime) ?? await handlePracticeCalendarRequest(request, runtime) ?? await handleRecordingsRequest(request, runtime) ?? await handlePortalRequest(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
+          return await handleServiceEcosystemRequest(request, runtime) ?? await handleHonorsRequest(request, runtime) ?? await handleSourceContentRequest(request, runtime) ?? await handleSourceAssignmentsRequest(request, runtime) ?? await handleAuthRequest(request, runtime) ?? await handleStudentWorkRequest(request, runtime) ?? await handleServiceLearningRequest(request, runtime) ?? await handleProgressRequest(request, runtime) ?? await handleStudyGuidesRequest(request, runtime) ?? await handleCongregationSettingsRequest(request, runtime) ?? await handleClaudeConnectionsRequest(request, runtime) ?? await handleRosterSheetRequest(request, runtime) ?? await handleNotificationsRequest(request, runtime) ?? await handleSavedRequest(request, runtime) ?? await handleOfflineRequest(request, runtime) ?? await handleAccountsRequest(request, runtime) ?? await handleCourseProgressRequest(request, runtime) ?? await handleMcpRequest(request, runtime) ?? await handleLessonLogRequest(request, runtime) ?? await handlePracticeCalendarRequest(request, runtime) ?? await handleRecordingsRequest(request, runtime) ?? await handlePortalRequest(request, runtime) ?? errorResponse(new HttpBoundaryError(404));
         } catch (error) {
           // Expected HTTP400/413/etc stay inside the scoped runtime callback;
           // otherwise its generic application-error boundary would make503.

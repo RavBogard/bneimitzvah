@@ -20,6 +20,9 @@ import type { createMcpAuthService, McpActor } from "./service";
 import { SCOPES } from "./oauth";
 import { createRosterTools } from "./roster-tools";
 import { createSetupTools } from "./setup-tools";
+import { createPrintTools } from "./print-tools";
+import type { Calendar, Snapshot } from "../../lib/readings/proposals";
+import { createAnalyticsTools } from "./analytics-tools";
 
 type JsonSchema = Readonly<Record<string, unknown>>;
 export type ToolResult = Readonly<{ content: readonly Readonly<{ type: "text"; text: string }>[]; isError?: boolean }>;
@@ -27,6 +30,8 @@ export type ToolContext<Q extends PgQueryResultHKT> = Readonly<{
   actor: McpActor; signal: AbortSignal;
   mcp: ReturnType<typeof createMcpAuthService<Q>>; guides: ReturnType<typeof createStudyGuideService<Q>>;
   loadText: (request: StudyRequest) => Promise<StudyPage>; related: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>;
+  /** The portal's calendar reader (Hebcal), for the print sheet tool's "this coming Shabbat". */
+  loadReading: (date: string, calendar: Calendar) => Promise<{ snapshot: Snapshot; fetchedAt: number }>;
   db: AccessDatabase<Q>;
   /** The portal's own reading and verse-source writes, run under a delegated (MCP) authority. */
   readings: ReturnType<typeof createReadingWork<Q>>; sources: ReturnType<typeof createDelegatedSourceAssignments<Q>>;
@@ -218,6 +223,8 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
     },
     ...createRosterTools<Q>(),
     ...createSetupTools<Q>(),
+    ...createPrintTools<Q>(),
+    ...createAnalyticsTools<Q>(),
   ] satisfies Tool<Q>[]);
 }
 

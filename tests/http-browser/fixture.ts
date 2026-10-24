@@ -1,6 +1,7 @@
 import { createHonoreeService } from "../../src/server/honoree/service";
 import { createNotificationDelivery, createNotificationPreferences } from "../../src/server/notifications/service";
 import { createSavedService } from "../../src/server/saved/service";
+import { createOfflineService } from "../../src/server/offline/service";
 import { createAccountsService } from "../../src/server/accounts/service";
 import { createCourseProgressService } from "../../src/server/course-progress/service";
 import { createCongregationSettingsService } from "../../src/server/settings/service";
@@ -28,6 +29,7 @@ import { createShortExplorationService } from "../../src/server/reference-audio/
 import { createPublicReadingService, PUBLIC_TENANT } from "../../src/server/public-reading/service";
 import { AccessDenied } from "../../src/server/access/errors";
 import type { PublicRuntime } from "../../src/server/http/public-reading";
+import { readProductName } from "../../src/server/data/product-name";
 import { CommentaryUnavailable, type CommentaryReader } from "../../src/server/study/commentary";
 import type { TranslationsReader } from "../../src/server/study/translations";
 import { unavailableShelf, unavailableSource, unavailableTranslations } from "../helpers/translations";
@@ -50,11 +52,12 @@ import { StudyUnavailable, type StudyRequest, type StudyPage } from "../../src/s
 import { createRelationshipService } from "../../src/server/relationships/service";
 import { createPendingInvitations } from "../../src/server/http/pending-invitations";
 import { createGoogleChallenges } from "../../src/server/http/google-challenge";
+import { createSignInCodeBindings } from "../../src/server/http/sign-in-code-binding";
+import { createSignInCodeCap } from "../../src/server/auth/sign-in-code-cap";
 import { projectMagicLink } from "../../src/server/mail/transport";
 import { resolveTenantHost } from "../../src/server/tenancy/resolve";
 import { parseCeremonyDate } from "../../src/lib/readings/ranges";
 import { withTenantTransaction } from "../../src/server/db/runtime";
-import { readProductName } from "../../src/server/data/product-name";
 import type { HttpRuntime } from "../../src/server/runtime/composition";
 import { createReferenceReviewService } from "../../src/server/reference-review/service";
 import { ReviewUnavailable } from "../../src/server/reference-review/batch-contract";
@@ -64,7 +67,7 @@ import { postgresAccessFixture } from "../postgres/access-fixture";
 import { BROWSER_ORIGIN, BROWSER_PORT } from "./server";
 
 const secret = () => randomBytes(48).toString("base64url");
-type Mail = { email: string; url: string };
+type Mail = { email: string; url: string; code?: string };
 
 export async function browserFixture(options: { google?: boolean; emptyReadingDate?: string; failInvitationDelivery?: () => boolean; studyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceCatalogLoad?: (signal?: AbortSignal) => Promise<ReferenceCatalog>; referenceStudentRelease?: boolean; shortReferenceStudyLoad?: (request: StudyRequest) => Promise<StudyPage>; referenceShortManifestLoad?: (signal?: AbortSignal) => Promise<ShortSourceManifest>; wordDetailsSource?: StepSourceLoader; relatedReader?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; sourceEditionReader?: (work: string, signal: AbortSignal) => Promise<SourceEditionCatalog>; sourceContentReader?: (selection: ContentSelection, signal: AbortSignal) => Promise<unknown>;musicBroker?:MusicBroker;referenceReviewGet?:ReferenceCatalogGet; commentaryLoad?: CommentaryReader; translationsLoad?: TranslationsReader; shelfLoad?: PublicRuntime["shelf"]; sourceLoad?: PublicRuntime["source"] } = {}) {
   const base = await postgresAccessFixture();
@@ -74,9 +77,13 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     const db = base.aDb;
     const deliveries: Mail[] = [];
     await base.ownerDb.insert(s.tenantHost).values({ host: `127.0.0.1:${BROWSER_PORT}`, tenantId: "crc", environment: "local", deployment: "http-browser", origin: BROWSER_ORIGIN });
-    const auth = createAuthStack(db, s, { origin: BROWSER_ORIGIN, secret: secret(),
+    // As in composition: one synthetic "email" carries the link and the typed code; nothing is sent anywhere.
+    const auth = createAuthStack(db, s, { origin: BROWSER_ORIGIN, secret: secret(), codeSecret: secret(),
       ...(options.google ? { google: { clientId: "synthetic-browser-client", clientSecret: secret() } } : {}),
-      sendMagicLink: async ({ email, url, token }) => { deliveries.push({ email, url: projectMagicLink(url, token, BROWSER_ORIGIN) }); } });
+      sendMagicLink: async ({ email, url, token }) => {
+        const code = await auth.api.createVerificationOTP({ body: { email, type: "sign-in" } });
+        deliveries.push({ email, url: projectMagicLink(url, token, BROWSER_ORIGIN), code });
+      } });
     const deployment = { environment: "local" as const, deployment: "http-browser" };
     const access = createAccessService({ db, auth, deployment });
     const practice = createPracticeService({ access });
@@ -91,7 +98,8 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     const explorationReading: Parameters<typeof createReadingExplorationService>[0]["loadReading"] = async (date, calendar) => ({ fetchedAt: Date.now(), snapshot: { date: parseCeremonyDate(date), calendar, classification: "regular", reading: { parashah: "Synthetic", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1, ref: "Genesis 1:1-6:8" }], triennial: null }, haftarah: null } });
     const pendingInvitations = createPendingInvitations({ secret: secret(), origin: BROWSER_ORIGIN, environment: "local" });
     const readingPreview=createReadingPreviewService({access,signingSecret:secret(),loadReading:async(date,calendar)=>({fetchedAt:Date.now(),snapshot:{date:parseCeremonyDate(date),calendar,classification:date===options.emptyReadingDate?"missing":"regular",reading:date===options.emptyReadingDate?null:{parashah:"Synthetic",type:"shabbat",summary:"",source:"Hebcal",aliyot:[{n:1,ref:"Genesis 1:1-6:8"},{n:"M",ref:"Numbers 28:9-10"}],triennial:null},haftarah:date===options.emptyReadingDate?null:"Isaiah 1:1-2"}}),loadText:options.studyLoad??(async()=>{throw new StudyUnavailable("upstream");})});
-    const runtime: HttpRuntime = { saved: createSavedService({ access }), accounts: createAccountsService({ db, access, throttleSecret: secret(), send: async () => "skipped" as const }), courseProgress: createCourseProgressService({ access }), notifications: createNotificationDelivery({ db: db, origin: BROWSER_ORIGIN, secret: secret(), enabled: false, send: async () => "rejected" as const }), notificationPreferences: createNotificationPreferences({ access: access, enabled: false }), rosterSheet: { configured: false, cron: async () => ({ ok: false as const, reason: "not-configured" as const }), now: async () => ({ ok: false as const, reason: "not-configured" as const }) }, mcp: null, honoree: createHonoreeService({ db, access, deployment, origin: BROWSER_ORIGIN, signingSecret: secret() }), honors: createHonorsService({ access }), congregationSettings: createCongregationSettingsService({ access }), claudeConnections: createClaudeConnectionsService({ access }), mavenLinks: createMavenLinkService({ access }), origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, readingPreview, progress: createProgressService({ access, practice }), haftarahSheets: createHaftarahSheets({ fetch: async () => { throw new Error("No haftarah library in tests"); } }), studyGuides: studyGuideWebSurface(createStudyGuideService({ access, practice, check: async ({ body }) => ({ ok: true as const, body }) })), lessonLog: createLessonLogService({ access, practice }), practiceCalendar: createPracticeCalendarService({ access, practice }), recordings: createStudentRecordingService({ access, practice }), portal: createPortalService({ access, practice, sessionBindingSecret: secret() }), relationships: createRelationshipService({ access }), pendingInvitations,
+    const saved = createSavedService({ access }), portal = createPortalService({ access, practice, sessionBindingSecret: secret() });
+    const runtime: HttpRuntime = { saved, offline: createOfflineService({ access, portal, saved, ownerSecret: secret() }), accounts: createAccountsService({ db, access, throttleSecret: secret(), send: async () => "skipped" as const }), courseProgress: createCourseProgressService({ access }), notifications: createNotificationDelivery({ db: db, origin: BROWSER_ORIGIN, secret: secret(), enabled: false, send: async () => "rejected" as const }), notificationPreferences: createNotificationPreferences({ access: access, enabled: false }), rosterSheet: { configured: false, cron: async () => ({ ok: false as const, reason: "not-configured" as const }), now: async () => ({ ok: false as const, reason: "not-configured" as const }) }, mcp: null, honoree: createHonoreeService({ db, access, deployment, origin: BROWSER_ORIGIN, signingSecret: secret() }), honors: createHonorsService({ access }), congregationSettings: createCongregationSettingsService({ access }), claudeConnections: createClaudeConnectionsService({ access }), mavenLinks: createMavenLinkService({ access }), origin: BROWSER_ORIGIN, auth, access, invitations, students, practice, readingPreview, progress: createProgressService({ access, practice }), haftarahSheets: createHaftarahSheets({ fetch: async () => { throw new Error("No haftarah library in tests"); } }), studyGuides: studyGuideWebSurface(createStudyGuideService({ access, practice, check: async ({ body }) => ({ ok: true as const, body }) })), lessonLog: createLessonLogService({ access, practice }), practiceCalendar: createPracticeCalendarService({ access, practice }), recordings: createStudentRecordingService({ access, practice }), portal, relationships: createRelationshipService({ access }), pendingInvitations,
       readingExploration: createReadingExplorationService({ access, practice, signingSecret: explorationSecret, loadReading: explorationReading, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }),
       shortExplorationAudio: createShortExplorationService({ access, practice, signingSecret: explorationSecret, loadReading: explorationReading, studentRelease: options.referenceStudentRelease === true,
         loadText: options.shortReferenceStudyLoad ?? options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), loadCatalog: options.referenceCatalogLoad ?? (async () => { throw new ReferenceUnavailable(); }), loadManifest: options.referenceShortManifestLoad ?? (async () => { throw new ReferenceUnavailable(); }) }),
@@ -108,6 +116,8 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
     serviceEcosystem,
     serviceScheduler: createServiceScheduler({ db, broker:createMusicBroker(undefined) }),
       googleChallenges: createGoogleChallenges({ db, origin: BROWSER_ORIGIN, secret: secret() }),
+      signInCodes: createSignInCodeBindings({ origin: BROWSER_ORIGIN, secret: secret() }),
+      signInCodeCap: createSignInCodeCap({ db, secret: secret(), capped: () => undefined }),
       resolveHost: async request => {
         const host = await resolveTenantHost(db, request, deployment);
         if (host.origin !== BROWSER_ORIGIN) throw new Error("Host mismatch");
@@ -146,7 +156,13 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       if (index < 0) throw new Error("Expected synthetic mail was not captured");
       return deliveries.splice(index, 1)[0].url;
     }
-    return { ...base, runtime, withRuntime, publicRuntime, withPublicRuntime, takeMail, close: base.close };
+    /** A synthetic sign-in email's typed code (1.5); the link in the same email is discarded. */
+    function takeCode(email: string) {
+      const index = deliveries.findIndex(row => row.email === email && typeof row.code === "string");
+      if (index < 0) throw new Error("Expected synthetic sign-in code was not captured");
+      return deliveries.splice(index, 1)[0].code!;
+    }
+    return { ...base, runtime, withRuntime, publicRuntime, withPublicRuntime, takeMail, takeCode, close: base.close };
   } catch {
     await base.close().catch(() => undefined);
     throw new Error("Browser fixture setup failed; details withheld");
