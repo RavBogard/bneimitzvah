@@ -31,6 +31,20 @@ it("keeps still-readable superseded material and preserves the needs-review flag
   expect(() => parseServiceMetadata({ state: "assigned", plan: { ...plan, catalogState: "retired" }, units })).toThrow();
 });
 
+it("accepts the siddur page and service start when present and when absent, and refuses malformed ones", () => {
+  const assigned = { state: "assigned", plan, units };
+  expect(parseServiceMetadata(assigned)).toEqual(assigned);
+  expect(parseServiceMetadata({ ...assigned, units: units.map(unit => ({ ...unit, page: 10 })), serviceStart: 33 })).toEqual({ ...assigned, units: units.map(unit => ({ ...unit, page: 10 })), serviceStart: 33 });
+  expect(parseServiceMetadata({ ...assigned, units: [{ ...units[0], page: 22 }, units[1]] })).toMatchObject({ units: [{ page: 22 }, { id: second }] });
+  for (const bad of [0, -1, 1.5, "10", null]) {
+    expect(() => parseServiceMetadata({ ...assigned, serviceStart: bad })).toThrow(PortalRequestError);
+    expect(() => parseServiceMetadata({ ...assigned, units: [{ ...units[0], page: bad }] })).toThrow(PortalRequestError);
+  }
+  expect(() => parseServiceMetadata({ ...assigned, extra: 1 })).toThrow(PortalRequestError);
+  expect(() => parseServiceMetadata({ state: "cleared", plan, serviceStart: 1 })).toThrow(PortalRequestError);
+  expect(parseCatalog({ ...catalog, units: units.map(unit => ({ ...unit, page: 7 })) })).toMatchObject({ state: "available", units: [{ page: 7 }, { page: 7 }] });
+});
+
 it("requires explicit known-slot catalog families, unique IDs and a closed authoritative context", () => {
   expect(parseCatalog(catalog)).toEqual(catalog);
   expect(parseCatalog({ state: "unknown-slot" })).toEqual({ state: "unknown-slot" });
