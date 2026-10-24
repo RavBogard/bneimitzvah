@@ -42,3 +42,15 @@ button.place:hover { background: var(--lake-tint); }
 .retry { padding: 0; border: 0; background: transparent; text-decoration: underline; min-height: 44px; }
 .compact .sections { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; }
 @media (max-width: 36rem) { .sections { grid-template-columns: minmax(0, 1fr); gap: 1rem; } .actions { gap: 0.4rem; } }
+
+/* The word card beside the verse in Study (word-panel.tsx): the word, its place, one plain sentence, the actions, and the dictionary details folded. */
+.wordPanel { min-width: 0; color: var(--color-ink); }
+.wordPanel .wordText { margin: 0; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 2rem; line-height: 1.7; }
+.wordPanel .wordPlace { margin: 0; font-size: 0.9375rem; color: var(--color-muted); }
+.wordPanel .sentence { margin: 0.5rem 0 0; line-height: 1.6; }
+.wordPanel .actions { margin-block: 0.75rem 0.5rem; }
+.wordPanel .actions button:focus-visible, .wordPanel .retry:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.fold summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; color: var(--color-action); font-weight: 600; }
+.fold summary:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.fold[open] summary { color: var(--color-ink); }
+.fold .panel { padding-block-start: 0.25rem; }

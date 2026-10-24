@@ -78,8 +78,9 @@ export function WordTools({ scopeKey, verses, register, readAids, readDetails, o
  * The word card: one selected word's meaning, syllables and stress, grammar, other places and dictionary senses.
  * Word tools on /read and the Learn word sheet both show it, from one createWordToolsSelection state.
  */
-export function WordCard({ id, state, verse, heading, headingId, headingRef, actions, showElsewhere = true, compact = false, className, onRetry, onPlace }: {
+export function WordCard({ id, state, verse, heading, headingId, headingRef, actions, showElsewhere = true, compact = false, bare = false, className, onRetry, onPlace }: {
   id?: string; state: WordToolsState; verse: StudyVerse | null;
+  /** The word panel in Study shows the word, its place and its actions itself and folds this card's details under its sentence. */ bare?: boolean;
   /** The heading's Hebrew, when the owner shows more than the selected word (a whole maqaf unit). */ heading?: ReactNode;
   headingId?: string; headingRef?: Ref<HTMLHeadingElement>; actions?: ReactNode;
   /** Other places only mean something across a passage; a one-verse owner leaves them out. */ showElsewhere?: boolean;
@@ -93,8 +94,8 @@ export function WordCard({ id, state, verse, heading, headingId, headingRef, act
   const details = state.details.status === "ready" && state.details.value.status === "ready" ? state.details.value : null;
   return <div id={id} className={[styles.panel, compact ? styles.compact : "", className ?? ""].filter(Boolean).join(" ")}>
     {!word || !verse || !selected ? <p>Word tools aren’t available for this passage.</p> : <>
-      <div className={styles.heading}><h4 id={headingId} className={styles.word} lang="he" dir="rtl" ref={headingRef} tabIndex={-1}>{heading ?? word.text}</h4><p><bdi>{verse.ref}</bdi> · Word {selected.index + 1} of {words.length}</p></div>
-      {actions && <div className={styles.actions}>{actions}</div>}
+      {!bare && <div className={styles.heading}><h4 id={headingId} className={styles.word} lang="he" dir="rtl" ref={headingRef} tabIndex={-1}>{heading ?? word.text}</h4><p><bdi>{verse.ref}</bdi> · Word {selected.index + 1} of {words.length}</p></div>}
+      {!bare && actions && <div className={styles.actions}>{actions}</div>}
       <div className={styles.sections}>
         <section aria-label="Meaning in this verse"><h5>Meaning in this verse</h5>{state.details.status === "loading" ? <p role="status">Loading word details…</p> : <p>{details?.occurrence.gloss || "An occurrence meaning isn’t available for this word."}</p>}</section>
         <section aria-label="Syllables and stress"><h5>Syllables and stress</h5>{state.aids.status === "loading" ? <p role="status">Loading word guide…</p> : aid?.status === "ready" ? <><div className={styles.syllables} lang="he" dir="rtl" role="group" aria-label="Hebrew syllables">{aid.syllables.map(part => <span key={part.start} data-stress={part.stress ?? "none"} role="group" aria-describedby={part.stress ? `${key}-${part.stress}` : undefined}>{word.text.slice(part.start, part.end)}</span>)}</div><p className={styles.note}><span id={`${key}-tonic`}>Solid underline: primary stress.</span> <span id={`${key}-secondary`}>Dotted underline: secondary stress.</span></p></> : <p>Syllables and stress aren’t available for this word.</p>}</section>

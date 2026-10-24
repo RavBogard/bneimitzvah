@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { useMemo, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { rovingTarget } from "./word-nav";
 import { colorStudyVerse, type AssignmentEnding, type ColorResult } from "../../../../lib/hebrew/study-annotations";
 import { projectStudyVerse, type DisplayPart, type StudyProjection } from "../../../../lib/hebrew/study-tokens";
 import { PHRASE_FAMILIES } from "../../../../lib/trope/chart-catalog";
@@ -30,7 +31,9 @@ export function useVerseColors(verse: StudyVerse, assignment: AssignmentEnding, 
   return useMemo(() => enabled ? colorStudyVerse(verse.ref, verse.hebrew, { kind, confirmed, verses: verses ? verses.split("\n") : [] }) : null, [enabled, verse, kind, confirmed, verses]);
 }
 
-export function StudyHebrew({ verse, colors, id, className = "", activeWord = null, onWordSelect, inline = false, wordAction = "word", toolsAvailable = true, linked = null }: { verse: StudyVerse; inline?: boolean; colors: Ready | null; id: string; className?: string; activeWord?: number | null; onWordSelect?(index: number): void; wordAction?: "word" | "verse" | "tools" | "phrase"; toolsAvailable?: boolean;
+export function StudyHebrew({ verse, colors, id, className = "", activeWord = null, onWordSelect, inline = false, wordAction = "word", toolsAvailable = true, linked = null }: { verse: StudyVerse; inline?: boolean; colors: Ready | null; id: string; className?: string; activeWord?: number | null;
+  /** `element` is the word that was chosen, so a card opened from it can hand focus back. */
+  onWordSelect?(index: number, element?: HTMLElement): void; wordAction?: "word" | "verse" | "tools" | "phrase" | "card"; toolsAvailable?: boolean;
   /** Words a commentary quotes, underlined while its comment is pointed at (the comment-to-word link). */
   linked?: DibburMatch | null }) {
   const projection = useMemo(() => {
@@ -40,6 +43,9 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
   }, [colors, verse.ref, verse.hebrew]);
   const Container = inline ? "span" : "p";
   const focusableWords = new Set<number>();
+  // One Tab stop per verse: the word the reader last landed on, else the first. Arrows move among the others.
+  const [stop, setStop] = useState<number | null>(null);
+  let first: number | null = null;
   const parts = (pieces: readonly DisplayPart[]) => pieces.map((part, index) => {
     const word = part.wordIndex === null ? null : colors?.words[part.wordIndex];
     const family = word?.family ? families.get(word.family) : null;
@@ -47,8 +53,10 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
     const quoted = linked !== null && part.wordIndex !== null && part.wordIndex >= linked.first && part.wordIndex <= linked.last;
     const firstPart = part.wordIndex !== null && !focusableWords.has(part.wordIndex);
     if (part.wordIndex !== null) focusableWords.add(part.wordIndex);
-    return <span key={index} role={onWordSelect && firstPart ? "button" : undefined} tabIndex={onWordSelect && firstPart ? 0 : undefined}
-      aria-label={onWordSelect && firstPart ? wordAction === "tools" ? `Select word ${part.wordIndex! + 1} of ${verse.ref} for tools` : wordAction === "phrase" ? `Focus phrase at word ${part.wordIndex! + 1} of ${verse.ref}` : wordAction === "verse" ? toolsAvailable ? `Hear whole verse ${verse.ref}; select word ${part.wordIndex! + 1} for tools` : `Hear whole verse ${verse.ref}` : `Hear word ${part.wordIndex! + 1} of ${verse.ref}` : undefined} data-word-index={part.wordIndex ?? undefined} data-family={family?.id} data-phrase={word?.phrase ?? undefined}
+    if (firstPart && first === null) first = part.wordIndex;
+    const tabStop = stop !== null && projection && stop < projection.words.length ? stop : first;
+    return <span key={index} role={onWordSelect && firstPart ? "button" : undefined} tabIndex={onWordSelect && firstPart ? part.wordIndex === tabStop ? 0 : -1 : undefined}
+      aria-label={onWordSelect && firstPart ? wordAction === "card" ? `Open word ${part.wordIndex! + 1} of ${verse.ref}` : wordAction === "tools" ? `Select word ${part.wordIndex! + 1} of ${verse.ref} for tools` : wordAction === "phrase" ? `Focus phrase at word ${part.wordIndex! + 1} of ${verse.ref}` : wordAction === "verse" ? toolsAvailable ? `Hear whole verse ${verse.ref}; select word ${part.wordIndex! + 1} for tools` : `Hear whole verse ${verse.ref}` : `Hear word ${part.wordIndex! + 1} of ${verse.ref}` : undefined} data-word-index={part.wordIndex ?? undefined} data-family={family?.id} data-phrase={word?.phrase ?? undefined}
       data-reference-active={active ? "true" : undefined} data-linked={quoted ? "true" : undefined} className={[family ? styles.word : "", active ? referenceStyles.activeWord : "", quoted ? styles.linked : ""].filter(Boolean).join(" ") || undefined} style={family ? { "--phrase-color": family.color, "--w": part.wordIndex } as CSSProperties : undefined}
       aria-describedby={!family || word?.phrase === null || word?.phrase === undefined ? undefined : `${id}-phrase-${word.phrase}`}>{part.text}</span>;
   });
@@ -58,15 +66,24 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
   const gap = (kind: "petuchah" | "setumah") => <span className="study-paragraph-gap"><span className={inline ? "sr-only" : undefined} lang="en" dir="ltr">[{kind === "petuchah" ? "open paragraph" : "closed paragraph"}]</span></span>;
   const sign = <span role="img" aria-label="Inverted nun, Masoretic sign">׆</span>;
   return <Container className={`study-hebrew ${hebrewStyles.hebrew} ${inline ? styles.inlineHebrew : ""} ${onWordSelect ? styles.playable : ""} ${className}`.trim()} lang="he" dir="rtl" onKeyDown={onWordSelect ? event => {
-    if (event.key !== "Enter" && event.key !== " ") return;
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-word-index][role="button"]') : null;
     if (!target || !event.currentTarget.contains(target)) return;
-    const index = Number(target.dataset.wordIndex); if (projection && Number.isSafeInteger(index) && index >= 0 && index < projection.words.length) { event.preventDefault(); event.stopPropagation(); onWordSelect(index); }
+    const index = Number(target.dataset.wordIndex);
+    if (event.key !== "Enter" && event.key !== " ") {
+      // Roving focus, right to left in Hebrew order: ArrowLeft reads on, ArrowRight goes back.
+      const words = [...event.currentTarget.querySelectorAll<HTMLElement>('[data-word-index][role="button"]')], to = rovingTarget(words.indexOf(target), words.length, event.key);
+      if (to === null || event.altKey || event.ctrlKey || event.metaKey) return;
+      event.preventDefault(); words[to]?.focus(); return;
+    }
+    if (projection && Number.isSafeInteger(index) && index >= 0 && index < projection.words.length) { event.preventDefault(); event.stopPropagation(); onWordSelect(index, target); }
+  } : undefined} onFocus={onWordSelect ? event => {
+    const target = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-word-index][role="button"]') : null;
+    const index = Number(target?.dataset.wordIndex); if (target && Number.isSafeInteger(index)) setStop(index);
   } : undefined} onClick={onWordSelect ? event => {
     if (window.getSelection()?.toString()) return;
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-word-index]") : null;
     if (!target || !event.currentTarget.contains(target)) return;
-    const index = Number(target.dataset.wordIndex); if (Number.isSafeInteger(index) && index >= 0 && projection && index < projection.words.length) onWordSelect(index);
+    const index = Number(target.dataset.wordIndex); if (Number.isSafeInteger(index) && index >= 0 && projection && index < projection.words.length) onWordSelect(index, event.currentTarget.querySelector<HTMLElement>(`[data-word-index="${index}"][role="button"]`) ?? target);
   } : undefined}>{projection ? projection.runs.map((run, index) => run.kind === "text" ? <span key={run.segment}>{parts(run.parts)}</span>
     : run.kind === "alternative" ? <span className="study-alternative" key={run.segment}>{alternative(run.written, parts(run.read))}</span>
       : run.kind === "gap" && trailing(index, projection.runs.length, run.kind) ? null : <span key={run.segment}>{run.kind === "gap" ? gap(run.break) : sign}</span>)
