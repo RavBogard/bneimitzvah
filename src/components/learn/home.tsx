@@ -2,6 +2,8 @@
 import type { CSSProperties } from "react";
 import { COURSE, familyColor, lessonMinutes, pathLessons, type Lesson, type Melody } from "../../lib/learn/course";
 import { courseDone, emptyProgress, heard, isDone, isUnlocked, localDay, nextLesson, reviewSummary, type Progress } from "../../lib/learn/progress";
+import { openPractice } from "../../lib/learn/practice";
+import { DRAFTED } from "./activity-copy";
 import { ContourMark, FamilyChip, icons } from "./bits";
 import { useProgress } from "./services";
 import styles from "./learn.module.css";
@@ -29,6 +31,14 @@ function PathList({ melody, progress, next }: { melody: Melody; progress: Progre
   </div>)}</>;
 }
 
+/** Quick ten's row, once three families are heard in a melody; with both melodies open, each row names its path. */
+export function QuickTenLinks({ progress }: { progress: Progress }) {
+  const open = openPractice(progress);
+  if (!open.length) return null;
+  return <div>{open.map(practice => <a key={practice.id} className={styles.review} href={`/learn/practice/${practice.id}`} data-practice={practice.id}>
+    <span>{DRAFTED.quickTen.homeRow}</span>{open.length > 1 && <span className={styles.practiceMelody}>{practice.melody === "torah" ? "Torah" : "Haftarah"}</span>}{icons.arrow}</a>)}</div>;
+}
+
 /** The course home: one next step, the review line when anything is due, the two paths, and what you can hear. */
 export function CourseHome() {
   const { progress: loaded, account, until } = useProgress();
@@ -52,6 +62,7 @@ export function CourseHome() {
               <div className={styles.nextAction}><a className="button-start" href={`/learn/${next.id}`} aria-describedby="learn-next">Start</a><span className={styles.minutes}>about {lessonMinutes(next)} minutes</span></div>
             </section>}
           {review && <a className={styles.review} href="/learn/review"><span>Review: {plural(review.phrases, "phrase", "phrases")}, about {plural(review.minutes, "minute", "minutes")}</span>{icons.arrow}</a>}
+          {ready && <QuickTenLinks progress={progress} />}
           <p className={styles.heard}>Can hear: {torah.heard} of {torah.of} Torah phrases · {haftarah.heard} of {haftarah.of} haftarah phrases</p>
           <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a></nav>
           {account.state !== "synced" && <p className={styles.saved}>Progress is saved on this device. Sign in to keep it.</p>}

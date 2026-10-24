@@ -83,6 +83,318 @@
       ]
     }
   },
+  "lookAlikes": {
+    "pashta-kadma": {
+      "title": "Pashta or kadma",
+      "marks": [
+        "pashta",
+        "kadma"
+      ],
+      "examples": [
+        {
+          "a": {
+            "ref": "Genesis 1:29",
+            "word": 8,
+            "text": "אֲשֶׁר֙",
+            "mark": "pashta"
+          },
+          "b": {
+            "ref": "Genesis 1:29",
+            "word": 3,
+            "text": "נָתַ֨תִּי",
+            "mark": "kadma"
+          },
+          "why": "Kadma plainly inside the word, on the stressed syllable."
+        },
+        {
+          "a": {
+            "ref": "Genesis 1:2",
+            "word": 2,
+            "text": "תֹ֙הוּ֙",
+            "mark": "pashta"
+          },
+          "b": {
+            "ref": "Exodus 40:18",
+            "word": 0,
+            "text": "וַיָּ֨קֶם",
+            "mark": "kadma"
+          },
+          "why": "The doubled pashta, against a kadma inside the word."
+        },
+        {
+          "a": {
+            "ref": "Genesis 22:2",
+            "word": 10,
+            "text": "שָׁם֙",
+            "mark": "pashta"
+          },
+          "b": {
+            "ref": "Numbers 6:25",
+            "word": 0,
+            "text": "יָאֵ֨ר",
+            "mark": "kadma"
+          },
+          "why": "A one-syllable pashta word against a kadma just before the last letter."
+        },
+        {
+          "a": {
+            "ref": "Numbers 6:26",
+            "word": 2,
+            "text": "פָּנָיו֙",
+            "mark": "pashta"
+          },
+          "b": {
+            "ref": "Numbers 6:26",
+            "word": 0,
+            "text": "יִשָּׂ֨א",
+            "mark": "kadma"
+          },
+          "why": "Same verse: pashta at the very end, kadma one letter short of it.",
+          "hard": true
+        },
+        {
+          "a": {
+            "ref": "Isaiah 43:21",
+            "word": 0,
+            "text": "עַם־זוּ֙",
+            "mark": "pashta"
+          },
+          "b": {
+            "ref": "Isaiah 54:11",
+            "word": 4,
+            "text": "הִנֵּ֨ה",
+            "mark": "kadma"
+          },
+          "why": "Pashta on the last letter against a kadma one letter short of it, in the haftarah tune."
+        }
+      ]
+    },
+    "mahpach-yetiv": {
+      "title": "Mahpach or yetiv",
+      "marks": [
+        "mahpach",
+        "yetiv"
+      ],
+      "examples": [
+        {
+          "a": {
+            "ref": "Leviticus 1:1",
+            "word": 2,
+            "text": "וַיְדַבֵּ֤ר",
+            "mark": "mahpach"
+          },
+          "b": {
+            "ref": "Genesis 6:9",
+            "word": 0,
+            "text": "אֵ֚לֶּה",
+            "mark": "yetiv"
+          },
+          "why": "The clearest shapes: mahpach under a middle letter, yetiv before the first."
+        },
+        {
+          "a": {
+            "ref": "Genesis 22:2",
+            "word": 9,
+            "text": "וְהַעֲלֵ֤הוּ",
+            "mark": "mahpach"
+          },
+          "b": {
+            "ref": "Genesis 22:2",
+            "word": 12,
+            "text": "עַ֚ל",
+            "mark": "yetiv"
+          },
+          "why": "Both in one verse."
+        },
+        {
+          "a": {
+            "ref": "Leviticus 19:16",
+            "word": 0,
+            "text": "לֹא־תֵלֵ֤ךְ",
+            "mark": "mahpach"
+          },
+          "b": {
+            "ref": "Genesis 6:9",
+            "word": 0,
+            "text": "אֵ֚לֶּה",
+            "mark": "yetiv"
+          },
+          "why": "Mahpach on a maqaf-joined pair."
+        },
+        {
+          "a": {
+            "ref": "Isaiah 49:15",
+            "word": 0,
+            "text": "הֲתִשְׁכַּ֤ח",
+            "mark": "mahpach"
+          },
+          "b": {
+            "ref": "Hosea 14:2",
+            "word": 0,
+            "text": "שׁ֚וּבָה",
+            "mark": "yetiv"
+          },
+          "why": "In the yetiv word the first letter is also the stressed one, so its place before the vowel is the only clue.",
+          "hard": true
+        }
+      ]
+    },
+    "kadma-azla": {
+      "title": "Kadma or azla",
+      "marks": [
+        "kadma",
+        "azla"
+      ],
+      "examples": [
+        {
+          "a": {
+            "ref": "Genesis 22:11",
+            "word": 0,
+            "text": "וַיִּקְרָ֨א",
+            "mark": "kadma"
+          },
+          "b": {
+            "ref": "Genesis 22:11",
+            "word": 1,
+            "text": "אֵלָ֜יו",
+            "mark": "azla"
+          },
+          "why": "Two strokes leaning opposite ways on neighbouring words."
+        },
+        {
+          "a": {
+            "ref": "Deuteronomy 34:5",
+            "word": 0,
+            "text": "וַיָּ֨מׇת",
+            "mark": "kadma"
+          },
+          "b": {
+            "ref": "Deuteronomy 34:5",
+            "word": 1,
+            "text": "שָׁ֜ם",
+            "mark": "azla"
+          },
+          "why": "Two strokes leaning opposite ways on neighbouring words."
+        },
+        {
+          "a": {
+            "ref": "Genesis 1:29",
+            "word": 3,
+            "text": "נָתַ֨תִּי",
+            "mark": "kadma"
+          },
+          "b": {
+            "ref": "Genesis 1:29",
+            "word": 4,
+            "text": "לָכֶ֜ם",
+            "mark": "azla"
+          },
+          "why": "Two strokes leaning opposite ways on neighbouring words."
+        },
+        {
+          "a": {
+            "ref": "Amos 9:12",
+            "word": 0,
+            "text": "לְמַ֨עַן",
+            "mark": "kadma"
+          },
+          "b": {
+            "ref": "Amos 9:12",
+            "word": 1,
+            "text": "יִֽירְשׁ֜וּ",
+            "mark": "azla"
+          },
+          "why": "Two strokes leaning opposite ways on neighbouring words, in the haftarah tune."
+        },
+        {
+          "a": {
+            "ref": "Isaiah 54:11",
+            "word": 4,
+            "text": "הִנֵּ֨ה",
+            "mark": "kadma"
+          },
+          "b": {
+            "ref": "Isaiah 54:11",
+            "word": 5,
+            "text": "אָנֹכִ֜י",
+            "mark": "azla"
+          },
+          "why": "Two strokes leaning opposite ways on neighbouring words, in the haftarah tune."
+        }
+      ]
+    },
+    "azla-geresh": {
+      "title": "Azla or geresh",
+      "marks": [
+        "azla",
+        "geresh"
+      ],
+      "context": "previous-word",
+      "readingOnly": true,
+      "examples": [
+        {
+          "a": {
+            "ref": "Genesis 22:11",
+            "word": 1,
+            "text": "אֵלָ֜יו",
+            "mark": "azla"
+          },
+          "b": {
+            "ref": "Deuteronomy 30:13",
+            "word": 5,
+            "text": "יַעֲבׇר־לָ֜נוּ",
+            "mark": "geresh"
+          },
+          "why": "The stroke after a kadma is azla; after a munach it is geresh."
+        },
+        {
+          "a": {
+            "ref": "Deuteronomy 34:5",
+            "word": 1,
+            "text": "שָׁ֜ם",
+            "mark": "azla"
+          },
+          "b": {
+            "ref": "Deuteronomy 6:10",
+            "word": 5,
+            "text": "אֶל־הָאָ֜רֶץ",
+            "mark": "geresh"
+          },
+          "why": "The stroke after a kadma is azla; after a revia it is geresh."
+        },
+        {
+          "a": {
+            "ref": "Amos 9:12",
+            "word": 1,
+            "text": "יִֽירְשׁ֜וּ",
+            "mark": "azla"
+          },
+          "b": {
+            "ref": "Isaiah 60:17",
+            "word": 1,
+            "text": "הַנְּחֹ֜שֶׁת",
+            "mark": "geresh"
+          },
+          "why": "The stroke after a kadma is azla; after a munach it is geresh."
+        },
+        {
+          "a": {
+            "ref": "Isaiah 54:11",
+            "word": 5,
+            "text": "אָנֹכִ֜י",
+            "mark": "azla"
+          },
+          "b": {
+            "ref": "I Kings 19:8",
+            "word": 3,
+            "text": "וַיֵּ֜לֶךְ",
+            "mark": "geresh"
+          },
+          "why": "The stroke after a kadma is azla; after an etnachta it is geresh."
+        }
+      ]
+    }
+  },
   "units": [
     {
       "id": "u0-how-a-verse-is-built",
@@ -171,6 +483,40 @@
       "lessons": [
         "haftarah-first-verse"
       ]
+    }
+  ],
+  "practice": [
+    {
+      "id": "quick-ten-torah",
+      "melody": "torah",
+      "title": "Quick ten",
+      "summary": "Ten phrases, one after another",
+      "unlockAfter": "torah-zakef",
+      "activity": {
+        "type": "quick-ten",
+        "params": {
+          "families": "heard",
+          "items": 10,
+          "choices": 3,
+          "autoAdvanceMs": 1500
+        }
+      }
+    },
+    {
+      "id": "quick-ten-haftarah",
+      "melody": "haftarah",
+      "title": "Quick ten",
+      "summary": "Ten phrases, one after another",
+      "unlockAfter": "haftarah-zakef",
+      "activity": {
+        "type": "quick-ten",
+        "params": {
+          "families": "heard",
+          "items": 10,
+          "choices": 3,
+          "autoAdvanceMs": 1500
+        }
+      }
     }
   ],
   "lessons": [
@@ -314,6 +660,29 @@
             "items": 4,
             "audio": true,
             "prompt": "Tap the word where the verse rests."
+          }
+        },
+        {
+          "type": "which-half",
+          "params": {
+            "families": [
+              "sof-pasuk",
+              "etnachta",
+              "zakef",
+              "revia",
+              "tevir",
+              "azla",
+              "segol",
+              "telisha-ketana",
+              "pazer",
+              "zakef-gadol"
+            ],
+            "items": 4,
+            "audio": "lead-in",
+            "verseWords": [
+              6,
+              18
+            ]
           }
         }
       ],
@@ -775,6 +1144,30 @@
               "munach-zakef-katan"
             ],
             "extraMarks": 1
+          }
+        },
+        {
+          "type": "look-alikes",
+          "params": {
+            "pairs": [
+              "mahpach-yetiv"
+            ],
+            "items": 3,
+            "mode": "read"
+          }
+        },
+        {
+          "type": "which-half",
+          "params": {
+            "families": [
+              "zakef"
+            ],
+            "items": 4,
+            "audio": "lead-in",
+            "verseWords": [
+              6,
+              18
+            ]
           }
         },
         {
@@ -1247,6 +1640,17 @@
               "kadma-geresh"
             ],
             "extraMarks": 2
+          }
+        },
+        {
+          "type": "look-alikes",
+          "params": {
+            "pairs": [
+              "pashta-kadma",
+              "kadma-azla"
+            ],
+            "items": 4,
+            "mode": "read"
           }
         },
         {
@@ -2446,6 +2850,20 @@
           }
         },
         {
+          "type": "which-half",
+          "params": {
+            "families": [
+              "zakef"
+            ],
+            "items": 4,
+            "audio": "lead-in",
+            "verseWords": [
+              6,
+              18
+            ]
+          }
+        },
+        {
           "type": "this-week",
           "params": {
             "family": "zakef",
@@ -2867,6 +3285,17 @@
               6,
               14
             ]
+          }
+        },
+        {
+          "type": "look-alikes",
+          "params": {
+            "pairs": [
+              "pashta-kadma",
+              "azla-geresh"
+            ],
+            "items": 3,
+            "mode": "read"
           }
         },
         {
@@ -3727,6 +4156,8 @@
   ],
   "notes": {
     "families": "Family ids and names follow src/lib/trope/chart-catalog.ts. confusedWith drives distractor weighting (ACTIVITIES.md, item generation rules).",
-    "items": "Each activity's items is the planned count; a lesson's drills may stop early once eight items in a row have been answered right with no miss, and missed items are re-asked until each is right once."
+    "items": "Each activity's items is the planned count; a lesson's drills may stop early once eight items in a row have been answered right with no miss, and missed items are re-asked until each is right once.",
+    "lookAlikes": "Look-alike pairs (ACTIVITIES.md #9). Each word's ref, word number (a maqaf-joined pair is one word), text and mark were checked against the engine on 2026-10-23; azla is the stroke after a kadma, geresh the same stroke with none before it. azla-geresh is reading only (Daniel, 2026-10-23).",
+    "practice": "Practice runs that are not lessons. Quick ten opens once its melody's third family is heard and answers the name cards, as hear-and-name does."
   }
 }

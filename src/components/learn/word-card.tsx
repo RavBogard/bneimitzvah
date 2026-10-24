@@ -17,9 +17,11 @@ import styles from "./learn.module.css";
  * It plays nothing.
  */
 type Opener = (target: WordCardTarget, trigger: HTMLElement | null) => void;
-const Context = createContext<Opener | null>(null);
+const Context = createContext<Opener | null>(null), OpenContext = createContext(false);
 /** The opener for word cards, or null outside a scope (the word is then plain text). */
 export const useWordCard = () => useContext(Context);
+/** Is a word card open on this page? Quick ten holds its next phrase while one is. */
+export const useWordCardOpen = () => useContext(OpenContext);
 type Open = Readonly<{ target: WordCardTarget; trigger: HTMLElement | null; n: number }>;
 const same = (a: WordCardTarget, b: WordCardTarget) => a.verse === b.verse && a.unit === b.unit && a.word === b.word;
 
@@ -34,7 +36,7 @@ export function WordCardScope({ children }: { children: ReactNode }) {
     setOpen(null);
     if (restore && shown.trigger?.isConnected) shown.trigger.focus({ preventScroll: true });
   }, []);
-  return <Context.Provider value={show}>{children}{open && <WordSheet key={open.n} target={open.target} trigger={open.trigger} onClose={close} />}</Context.Provider>;
+  return <Context.Provider value={show}><OpenContext.Provider value={open !== null}>{children}{open && <WordSheet key={open.n} target={open.target} trigger={open.trigger} onClose={close} />}</OpenContext.Provider></Context.Provider>;
 }
 
 export const WIDE_CARD_QUERY = "(min-width: 641px)";

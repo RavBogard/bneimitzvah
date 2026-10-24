@@ -75,7 +75,9 @@ describe("the worker's constants", () => {
     expect(Object.isFrozen(policy)).toBe(true);
     expect(policy).toMatchObject({ origin: ORIGIN, offlineCache: OFFLINE_CACHE, indexKey: INDEX_KEY, header: OFFLINE_HEADER, windowMs: 14 * DAY_MS, skewMs: SKEW_MS, shellLimits: SHELL_LIMITS,
       staticPath: STATIC_PATH.source, clipPath: CLIP_PATH.source, packDataPath: PACK_DATA_PATH.source, shellCache: "crc-shell-abc1234" });
-    expect(policy.shellPages).toEqual(expect.arrayContaining(["/read", "/offline", "/learn", "/learn/review", "/learn/about", "/learn/torah-sof-pasuk"]));
+    expect(policy.shellPages).toEqual(expect.arrayContaining(["/read", "/offline", "/learn", "/learn/review", "/learn/about", "/learn/torah-sof-pasuk",
+      // 1.6: Quick ten, one page per melody.
+      "/learn/practice/quick-ten-torah", "/learn/practice/quick-ten-haftarah"]));
     expect((await workerSource({ build: "x;alert(1)", enabled: true })).includes("alert")).toBe(false);
   });
   test("register no push, notification, sync or message listeners", async () => {
@@ -112,7 +114,8 @@ describe("routing is the complete allowlist", () => {
     online = false;
     expect(await (await w.request("/read?date=2026-10-31", { mode: "navigate" }))!.text()).toBe("<p>/read</p>");
     expect(await (await w.request("/learn/torah-sof-pasuk", { mode: "navigate" }))!.text()).toBe("<p>/learn/torah-sof-pasuk</p>");
-    for (const path of ["/", "/workspace/student", "/account", "/learn/not-a-lesson"]) expect(await (await w.request(path, { mode: "navigate" }))!.text(), path).toBe("<p>/offline</p>");
+    expect(await (await w.request("/learn/practice/quick-ten-torah", { mode: "navigate" }))!.text()).toBe("<p>/learn/practice/quick-ten-torah</p>");
+    for (const path of ["/", "/workspace/student", "/account", "/learn/not-a-lesson", "/learn/practice/not-a-run"]) expect(await (await w.request(path, { mode: "navigate" }))!.text(), path).toBe("<p>/offline</p>");
   });
 });
 

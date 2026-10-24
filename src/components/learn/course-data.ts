@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { FamilyId } from "../../lib/trope/chart-catalog";
-import { COURSE, isDrill, MELODIES, type Example, type Lesson, type Melody } from "../../lib/learn/course";
+import { COURSE, isDrill, lookAlikeExamples, MELODIES, type Example, type Lesson, type Melody } from "../../lib/learn/course";
 import { buildPools, type Pools } from "../../lib/learn/pools";
 import { analyseVerse, exampleMatches, type AnalysedVerse } from "../../lib/learn/verse";
 import { useLearnServices } from "./services";
@@ -11,7 +11,7 @@ export function lessonScope(lesson: Lesson): { families: Set<FamilyId>; melodies
   const families = new Set<FamilyId>(lesson.family ? [lesson.family] : []), melodies = new Set<Melody>([lesson.melody]);
   for (const activity of lesson.activities) {
     if (!isDrill(activity)) continue;
-    if (activity.type === "build-the-phrase") families.add(activity.params.family); else for (const family of activity.params.families) families.add(family);
+    if (activity.type === "build-the-phrase") families.add(activity.params.family); else if (activity.type !== "look-alikes") for (const family of activity.params.families) families.add(family);
     if (activity.type === "same-or-different" && activity.params.melodies) for (const melody of activity.params.melodies) melodies.add(melody);
   }
   return { families, melodies };
@@ -20,6 +20,10 @@ export function lessonScope(lesson: Lesson): { families: Set<FamilyId>; melodies
 export function lessonSources(lesson: Lesson): Lesson[] {
   const { families, melodies } = lessonScope(lesson);
   return COURSE.lessons.filter(row => row.id === lesson.id || row.family && families.has(row.family) && melodies.has(row.melody));
+}
+/** The verses a lesson's look-alikes show, beyond its sources' examples (1.6). */
+export function lessonExtraRefs(lesson: Lesson): string[] {
+  return [...new Set(lesson.activities.flatMap(activity => activity.type === "look-alikes" ? lookAlikeExamples(activity, lesson.melody).flatMap(({ example }) => [example.a.ref, example.b.ref]) : []))];
 }
 export type ExampleVerse = Readonly<{ example: Example; verse: AnalysedVerse }>;
 export type CourseVerses = Readonly<{ status: "loading" } | { status: "error" }
@@ -31,12 +35,12 @@ const verseKey = (kind: Melody, ref: string) => `${kind}:${ref}`;
  * knows: sof pasuk examples were chosen away from aliyah ends, end-of-haftarah examples are last
  * verses; anything else is unplaced, which keeps its sof pasuk out of that pool.
  */
-export function useCourseVerses(lessons: readonly Lesson[], retry = 0): CourseVerses {
+export function useCourseVerses(lessons: readonly Lesson[], retry = 0, extra: readonly Readonly<{ kind: Melody; ref: string }>[] = []): CourseVerses {
   const { loader, audio } = useLearnServices();
   const [state, setState] = useState<CourseVerses>({ status: "loading" });
-  const key = lessons.map(lesson => lesson.id).join(",");
+  const key = [...lessons.map(lesson => lesson.id), ...extra.map(row => verseKey(row.kind, row.ref))].join(",");
   useEffect(() => {
-    if (!lessons.length) { setState({ status: "ready", pools: buildPools([]), examples: new Map(), verses: new Map() }); return; }
+    if (!lessons.length && !extra.length) { setState({ status: "ready", pools: buildPools([]), examples: new Map(), verses: new Map() }); return; }
     const controller = new AbortController(), flags = new Map<string, { kind: Melody; ref: string; placed: boolean; final: boolean }>();
     for (const lesson of lessons) for (const example of lesson.examples) {
       const k = verseKey(lesson.melody, example.ref), flag = flags.get(k) ?? { kind: lesson.melody, ref: example.ref, placed: false, final: false };
@@ -44,6 +48,8 @@ export function useCourseVerses(lessons: readonly Lesson[], retry = 0): CourseVe
       if (lesson.family === "sof-haftarah") flag.final = true;
       flags.set(k, flag);
     }
+    // Verses shown for their words alone (the look-alikes) join unplaced: their sof pasuk stays out of that pool.
+    for (const row of extra) { const k = verseKey(row.kind, row.ref); if (!flags.has(k)) flags.set(k, { kind: row.kind, ref: row.ref, placed: false, final: false }); }
     setState({ status: "loading" });
     for (const melody of MELODIES) loader.preload([...flags.values()].filter(row => row.kind === melody).map(row => row.ref), melody);
     (async () => {

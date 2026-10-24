@@ -28,12 +28,25 @@ const word = (accent: string, n: number) => `${SYL[n % SYL.length]}${accent}${SY
 const ending = (n: number) => `${SYL[n % SYL.length]}ֽ${SYL[(n + 5) % SYL.length]}׃`;
 type Example = { ref: string; words: [number, number]; firstWord: string; lastWord: string; tropes?: string[]; phrases?: { family: string; words: [number, number] }[] };
 
-/** The invented text of one verse, consistent with every lessons.json example on it. */
+type LookWord = { ref: string; word: number; text: string };
+const TORAH_BOOKS = ["Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy"];
+/** The look-alike words (lessons.json lookAlikes, 1.6) placed on one verse: each a single word of lessons.json, at its own place. */
+function lookWords(ref: string, kind: string): LookWord[] {
+  const pairs = Object.values((course as unknown as { lookAlikes: Record<string, { examples: { a: LookWord; b: LookWord }[] }> }).lookAlikes);
+  const melody = (r: string) => TORAH_BOOKS.includes(r.replace(/ \d+:\d+$/, "")) ? "torah" : "haftarah";
+  return pairs.flatMap(pair => pair.examples.flatMap(example => [example.a, example.b])).filter(side => side.ref === ref && melody(side.ref) === kind);
+}
+// Signs that lead into a closing word: the invented word after one of them closes a zakef phrase, so the verse stays well formed.
+const LEADS = [CP.pashta, CP.yetiv, CP.mahpach, CP.kadma, CP.munach, CP.mercha];
+const leads = (text: string | undefined) => !!text && LEADS.some(cp => text.includes(cp)) && !text.includes(CP["zakef-katan"]) && !text.includes(CP.geresh);
+/** The invented text of one verse, consistent with every lessons.json example and look-alike word on it. */
 export function syntheticWords(ref: string, kind: string): string[] {
   const examples = (course.lessons as unknown as { melody: string; examples: Example[] }[]).filter(l => l.melody === kind).flatMap(l => l.examples).filter(e => e.ref === ref);
-  if (!examples.length) return [word(CP.mercha, 0), word(CP.tipcha, 1), word(CP.mercha, 2), word(CP.etnachta, 3), word(CP.munach, 4), word(CP["zakef-katan"], 5), word(CP.mercha, 6), word(CP.tipcha, 7), ending(8)];
+  const looks = lookWords(ref, kind);
+  if (!examples.length && !looks.length) return [word(CP.mercha, 0), word(CP.tipcha, 1), word(CP.mercha, 2), word(CP.etnachta, 3), word(CP.munach, 4), word(CP["zakef-katan"], 5), word(CP.mercha, 6), word(CP.tipcha, 7), ending(8)];
   const units = new Map<number, string>();
   for (const e of examples) { units.set(e.words[0], e.firstWord); units.set(e.words[1], e.lastWord); }
+  for (const l of looks) if (!units.has(l.word)) units.set(l.word, l.text);
   for (const e of examples) {
     for (let k = e.words[0] + 1; k < e.words[1]; k++) {
       if (units.has(k)) continue;
@@ -42,6 +55,8 @@ export function syntheticWords(ref: string, kind: string): string[] {
     }
     if (e.words[0] > 0 && !units.has(e.words[0] - 1)) units.set(e.words[0] - 1, word(CP["zakef-katan"], e.words[0] - 1));
   }
+  // A pashta, yetiv or mahpach look-alike word with no word after it gets a zakef to close on.
+  for (const l of looks) if (leads(l.text) && !units.has(l.word + 1) && !l.text.includes(CP.kadma)) units.set(l.word + 1, word(CP["zakef-katan"], l.word + 1));
   const count = Math.max(...units.keys()) + 1, out = Array.from({ length: count }, (_, k) => units.get(k) ?? word(CP.mercha, k));
   if (!out.at(-1)!.endsWith("׃")) out.push(word(CP.tipcha, count), ending(count + 1));
   return out;

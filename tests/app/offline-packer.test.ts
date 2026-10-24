@@ -14,12 +14,12 @@ import { thisShabbat } from "../../src/lib/readings/public-shabbat";
 import { syntheticResponse } from "../helpers/study";
 import { syntheticCommentaryFetch } from "../helpers/commentary";
 import { publicShortFixture, byteStream } from "./reference-public-short-fixture";
-import { askOwner, openOffline, ownerPackKey, PackStopped, parseOwnerAnswer, renewPack, type PackerIo } from "../../src/lib/offline/packer";
+import { askOwner, coursePackCurrent, openOffline, ownerPackKey, PackStopped, parseOwnerAnswer, renewPack, type PackerIo } from "../../src/lib/offline/packer";
 import { readIndex, sweep, writeIndex } from "../../src/lib/offline/pack-index";
 import { EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, packAssetAllowed, parsePackIndex, WINDOW_MS, type Pack } from "../../src/lib/offline/policy";
 import { publicReadingPath, publicShortPath, publicTextPath } from "../../src/components/portal/public-reading/urls";
 import { coursePassages } from "../../src/components/learn/verses-api";
-import { MELODIES } from "../../src/lib/learn/course";
+import { lookAlikeRefs, MELODIES } from "../../src/lib/learn/course";
 
 // The packer against the real public routes, with a synthetic calendar, synthetic text and one synthetic clip.
 const origin = "https://torah.centralreform.org", date = thisShabbat();
@@ -167,10 +167,22 @@ describe("the Learn to lein course pack (F3)", () => {
       const url = new URL(publicTextPath({ by: "ref", ref, kind }, kind, 0), origin);
       expect(pack.assets, ref).toContain(url.pathname + url.search);
     }
+    // 1.6: the look-alike verses travel in those same fixed passages, so the pack holds their text and clips too.
+    for (const kind of MELODIES) { const members = coursePassages(kind).flatMap(ref => ref.split("; ")); for (const ref of lookAlikeRefs(kind)) expect(members, ref).toContain(ref); }
     // The ref route is asked for the paging only; the course never requests it, so it is not stored.
     expect(pack.assets.some(asset => asset.startsWith("/api/public/reading"))).toBe(false);
     expect(pack.assets.every(packAssetAllowed)).toBe(true);
   });
+});
+
+test("a course pack from an older set of fixed passages is not current, so the next open renews it at once (1.6 moved them)", async () => {
+  const h = await harness();
+  expect(await renewPack(h.io, { type: "course" }, signal())).toBe("saved");
+  const pack = (await packs(h)).find(row => row.key === "course") as Pack;
+  expect(coursePackCurrent(pack, origin)).toBe(true);
+  // The pack a 1.5 build saved: its passages had no look-alike verses, so one passage key is missing.
+  const first = new URL(publicTextPath({ by: "ref", ref: coursePassages("haftarah")[0], kind: "haftarah" }, "haftarah", 0), origin);
+  expect(coursePackCurrent({ assets: pack.assets.filter(asset => asset !== first.pathname + first.search) }, origin)).toBe(false);
 });
 
 test("only PocketTorah short-v1 clips and the three public data routes can ever be pack assets (G3)", () => {

@@ -1,7 +1,7 @@
 import { colorStudyVerse } from "../hebrew/study-annotations";
 import type { HebrewSource } from "../hebrew/study-tokens";
 import type { FamilyId } from "../trope/chart-catalog";
-import type { Example, Melody, TropeId } from "./course";
+import type { Example, LookAlikeMark, LookAlikeWord, Melody, TropeId } from "./course";
 
 /**
  * One verse as the course sees it: the engine's units (a maqaf chain is one unit, as in lessons.json
@@ -95,6 +95,23 @@ export function exampleMatches(verse: AnalysedVerse, example: Example, family: F
   if (first !== 0 || last !== units.length - 1 || !example.phrases) return false;
   return example.phrases.length === verse.phrases.length && example.phrases.every((row, i) => row.family === verse.phrases[i].family
     && row.words[0] === verse.phrases[i].units[0] && row.words[1] === verse.phrases[i].units[1]);
+}
+/** Does a look-alike word still describe this verse? Its unit's text must be the engine's, and the unit must carry its
+ * mark: azla is the geresh stroke after a kadma, geresh the same stroke with no kadma on the word before. A word whose
+ * text has drifted is dropped, never shown. */
+export function lookAlikeMatches(verse: AnalysedVerse, side: Pick<LookAlikeWord, "word" | "text" | "mark">): boolean {
+  const unit = verse.units[side.word], before = verse.units[side.word - 1];
+  if (!unit || clean(unit.text) !== clean(side.text)) return false;
+  if (side.mark === "azla") return unit.accents.includes("geresh") && !!before?.accents.includes("kadma");
+  if (side.mark === "geresh") return unit.accents.includes("geresh") && !!before && !before.accents.includes("kadma");
+  return unit.accents.includes(side.mark);
+}
+/** Where a look-alike word's mark sits, for its tell: two pashtas on one word, or a kadma with one letter after it. */
+export function markPlace(text: string, mark: LookAlikeMark): "doubled" | "near-end" | null {
+  const value = clean(text);
+  if (mark === "pashta") return (value.match(/֙/g) ?? []).length >= 2 ? "doubled" : null;
+  if (mark === "kadma") { const at = value.indexOf("֨"); return at >= 0 && (value.slice(at).match(/[א-ת]/g) ?? []).length === 1 ? "near-end" : null; }
+  return null;
 }
 /** The reading-word span of units [first, last], for the recording's timeline. */
 export function unitWords(verse: AnalysedVerse, units: readonly [number, number]): readonly [number, number] | null {

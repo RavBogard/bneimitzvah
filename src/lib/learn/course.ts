@@ -37,19 +37,45 @@ export type BuildThePhrase = Readonly<{ type: "build-the-phrase"; params: Readon
 export type ThisWeek = Readonly<{ type: "this-week"; params: Readonly<{ family: FamilyId; kind?: Melody; show: number; find: number }> }>;
 export type FirstVerse = Readonly<{ type: "first-verse"; params: Readonly<{ kind: Melody; maxWords: number; steps: readonly FirstVerseStep[]; celebrate: boolean; openInLein: boolean }> }>;
 export type FirstVerseStep = "phrases" | "whole" | "along-0.75" | "along-1";
-export type Activity = HearAndName | SameOrDifferent | WhereDoesItEnd | TapThePhrase | BuildThePhrase | ThisWeek | FirstVerse;
+/** 1.6: Same sign, different place. Two words carrying look-alike signs; read them (or hear one) and tap. */
+export type LookAlikes = Readonly<{ type: "look-alikes"; params: Readonly<{ pairs: readonly LookAlikePairId[]; items: number; mode: "read" | "hear" }> }>;
+/** 1.6: Which half of the verse. The verse plays from its start up to one phrase (ruling 2026-10-23); before or after the rest? */
+export type WhichHalf = Readonly<{ type: "which-half"; params: Readonly<{ families: readonly FamilyId[]; items: number; audio: "lead-in" | "phrase"; verseWords: readonly [number, number] }> }>;
+/** 1.6: Quick ten. Hear-and-name items one after another, over the families heard; a practice run, never inside a lesson. */
+export type QuickTen = Readonly<{ type: "quick-ten"; params: Readonly<{ families: "heard"; items: number; choices: number; autoAdvanceMs: number }> }>;
+export type Activity = HearAndName | SameOrDifferent | WhereDoesItEnd | TapThePhrase | BuildThePhrase | LookAlikes | WhichHalf | ThisWeek | FirstVerse;
 /** The drills a lesson scores and repeats; this-week and first-verse are not scored. */
-export type Drill = HearAndName | SameOrDifferent | WhereDoesItEnd | TapThePhrase | BuildThePhrase;
-export const DRILL_TYPES = Object.freeze(["hear-and-name", "same-or-different", "where-does-it-end", "tap-the-phrase", "build-the-phrase"] as const);
+export type Drill = HearAndName | SameOrDifferent | WhereDoesItEnd | TapThePhrase | BuildThePhrase | LookAlikes | WhichHalf;
+export const DRILL_TYPES = Object.freeze(["hear-and-name", "same-or-different", "where-does-it-end", "tap-the-phrase", "build-the-phrase", "look-alikes", "which-half"] as const);
 export const isDrill = (activity: Activity): activity is Drill => (DRILL_TYPES as readonly string[]).includes(activity.type);
-/** Which review card a drill answers. */
-export const drillSkill = (activity: Drill): Skill => activity.type === "tap-the-phrase" ? "find" : activity.type === "where-does-it-end" ? "end" : "name";
+/** Which review card a drill answers. Look-alikes and which-half teach marks and halves, not families, so they answer none. */
+export const drillSkill = (activity: Drill): Skill | null => activity.type === "look-alikes" || activity.type === "which-half" ? null
+  : activity.type === "tap-the-phrase" ? "find" : activity.type === "where-does-it-end" ? "end" : "name";
+/** Drills that always run, even after eight right in a row has let a lesson's other drills go: each is the lesson's one look at its skill. */
+export const ALWAYS_RUN: ReadonlySet<Drill["type"]> = new Set<Drill["type"]>(["look-alikes", "which-half"]);
+
+/** The look-alike signs (ACTIVITIES.md #9). Azla and geresh are one stroke; the word before decides which it is. */
+export const LOOK_ALIKE_MARKS = Object.freeze(["pashta", "kadma", "mahpach", "yetiv", "azla", "geresh"] as const);
+export type LookAlikeMark = typeof LOOK_ALIKE_MARKS[number];
+export const LOOK_ALIKE_PAIRS = Object.freeze({
+  "pashta-kadma": ["pashta", "kadma"], "mahpach-yetiv": ["mahpach", "yetiv"], "kadma-azla": ["kadma", "azla"], "azla-geresh": ["azla", "geresh"],
+} as const satisfies Record<string, readonly [LookAlikeMark, LookAlikeMark]>);
+export type LookAlikePairId = keyof typeof LOOK_ALIKE_PAIRS;
+/** Daniel, 2026-10-23: azla against geresh is a reading-only item, with no listening version, now or later. */
+export const READING_ONLY_PAIRS: ReadonlySet<LookAlikePairId> = new Set<LookAlikePairId>(["azla-geresh"]);
+export type LookAlikeWord = Readonly<{ ref: string; word: number; text: string; mark: LookAlikeMark }>;
+export type LookAlikeExample = Readonly<{ a: LookAlikeWord; b: LookAlikeWord; melody: Melody; why: string; hard: boolean }>;
+export type LookAlikePair = Readonly<{ id: LookAlikePairId; title: string; marks: readonly [LookAlikeMark, LookAlikeMark]; context: "word" | "previous-word"; examples: readonly LookAlikeExample[] }>;
+export type Practice = Readonly<{ id: string; melody: Melody; title: string; summary: string; unlockAfter: string; activity: QuickTen }>;
+const TORAH_BOOKS = Object.freeze(["Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy"]);
+/** A verse's tune by its book: the five books are read in the Torah melody, every other book in the haftarah melody. */
+export const melodyOfRef = (ref: string): Melody => TORAH_BOOKS.includes(ref.replace(/ \d+:\d+$/, "")) ? "torah" : "haftarah";
 
 export type Lesson = Readonly<{ id: string; melody: Melody; family: FamilyId | null; accents: readonly TropeId[]; title: string; summary: string; goal: string;
   body: readonly string[]; listenFor: string; examples: readonly Example[]; activities: readonly Activity[]; prerequisites: readonly string[] }>;
 export type CourseUnit = Readonly<{ id: string; melody: Melody; title: string; summary: string; lessons: readonly string[] }>;
 export type Course = Readonly<{ schema: typeof COURSE_SCHEMA; families: Readonly<Record<FamilyId, Readonly<{ name: string; confusedWith: readonly FamilyId[] }>>>;
-  units: readonly CourseUnit[]; lessons: readonly Lesson[] }>;
+  units: readonly CourseUnit[]; lessons: readonly Lesson[]; lookAlikes: Readonly<Record<LookAlikePairId, LookAlikePair>>; practice: readonly Practice[] }>;
 
 export class CourseError extends Error {
   constructor(readonly problems: readonly string[]) { super(`Learn to lein course is invalid: ${problems.slice(0, 5).join("; ")}`); }
@@ -95,6 +121,7 @@ export function validateCourse(value: unknown): Course {
     if (!isObject(row) || !Array.isArray(row.confusedWith) || row.confusedWith.some(other => !FAMILY_IDS.includes(other as FamilyId) || other === id)) { fail(`family ${id}`); continue; }
     families[id] = { name: text(`family ${id}`, row.name, 40), confusedWith: row.confusedWith as FamilyId[] };
   }
+  const lookAlikes = parseLookAlikes(value.lookAlikes, fail, text);
   const lessons: Lesson[] = [];
   const ids = new Set<string>();
   if (!Array.isArray(value.lessons) || value.lessons.length < 1 || value.lessons.length > 64) throw new CourseError([...problems, "lessons"]);
@@ -144,7 +171,7 @@ export function validateCourse(value: unknown): Course {
       return out;
     }).filter((example): example is NonNullable<typeof example> => example !== null);
     const activities = Array.isArray(row.activities) && row.activities.length >= 1 && row.activities.length <= 8 ? row.activities.flatMap((activity, i) => {
-      const parsed = parseActivity(activity, family, melody, message => fail(`${where} activity ${i}: ${message}`));
+      const parsed = parseActivity(activity, family, melody, lookAlikes, message => fail(`${where} activity ${i}: ${message}`));
       return parsed ? [parsed] : [];
     }) : (fail(`${where}: activities`), []);
     for (const activity of activities) for (const [key, label] of [["label", "label"], ["prompt", "prompt"]] as const) {
@@ -182,16 +209,83 @@ export function validateCourse(value: unknown): Course {
   for (const id of byId.keys()) visit(id, []);
   const first = byId.get("haftarah-sof-pasuk");
   if (!first || !["torah-sof-pasuk", "torah-etnachta"].every(id => first.prerequisites.includes(id))) fail("haftarah-sof-pasuk must require the two Torah endings");
+  const practice = parsePractice(value.practice, byId, fail, text);
   for (const [where, field] of strings) for (const problem of toneProblems(field)) fail(`${where}: ${problem}`);
   if (problems.length) throw new CourseError(problems);
-  return Object.freeze({ schema: COURSE_SCHEMA, families: Object.freeze(families), units: Object.freeze(units), lessons: Object.freeze(lessons) });
+  return Object.freeze({ schema: COURSE_SCHEMA, families: Object.freeze(families), units: Object.freeze(units), lessons: Object.freeze(lessons),
+    lookAlikes: Object.freeze(lookAlikes), practice: Object.freeze(practice) });
+}
+
+type Text = (where: string, field: unknown, max?: number) => string;
+/** The codepoints a look-alike mark is written with (azla and geresh share one stroke, in either form). */
+const MARK_CODEPOINTS: Readonly<Record<LookAlikeMark, readonly string[]>> = Object.freeze({
+  pashta: ["֙"], kadma: ["֨"], mahpach: ["֤"], yetiv: ["֚"], azla: ["֜", "֝"], geresh: ["֜", "֝"] });
+const HEBREW_WORD = /^[֑-ׇא-ת׳״־]+$/;
+/** The look-alike pairs: exactly the four ids, each with its two marks and examples whose words carry them. */
+function parseLookAlikes(value: unknown, fail: (message: string) => void, text: Text): Record<LookAlikePairId, LookAlikePair> {
+  const out = {} as Record<LookAlikePairId, LookAlikePair>, ids = Object.keys(LOOK_ALIKE_PAIRS) as LookAlikePairId[];
+  if (!isObject(value) || Object.keys(value).length !== ids.length || ids.some(id => !Object.hasOwn(value, id))) { fail("lookAlikes are not the four pairs"); return out; }
+  for (const id of ids) {
+    const row = value[id], where = `lookAlikes ${id}`, marks = LOOK_ALIKE_PAIRS[id], context = id === "azla-geresh" ? "previous-word" : "word";
+    if (!isObject(row)) { fail(where); continue; }
+    if (Object.keys(row).some(key => !["title", "marks", "context", "readingOnly", "examples"].includes(key))) fail(`${where}: unknown field`);
+    if (!Array.isArray(row.marks) || row.marks.length !== 2 || row.marks[0] !== marks[0] || row.marks[1] !== marks[1]) fail(`${where}: marks`);
+    if ((row.context ?? "word") !== context) fail(`${where}: context`);
+    if (READING_ONLY_PAIRS.has(id) ? row.readingOnly !== true : row.readingOnly !== undefined) fail(`${where}: readingOnly`);
+    const word = (side: unknown, mark: LookAlikeMark, at: string): LookAlikeWord | null => {
+      if (!isObject(side) || Object.keys(side).length !== 4 || typeof side.ref !== "string" || !REF.test(side.ref) || !integer(side.word, 0, 120) || side.mark !== mark) { fail(`${at}: shape`); return null; }
+      const hebrew = text(`${at} text`, side.text, 80);
+      if (hebrew && (!HEBREW_WORD.test(hebrew) || !MARK_CODEPOINTS[mark].some(cp => hebrew.includes(cp)))) fail(`${at}: text does not carry ${mark}`);
+      return Object.freeze({ ref: side.ref, word: side.word as number, text: hebrew, mark });
+    };
+    const examples = !Array.isArray(row.examples) || row.examples.length < 1 || row.examples.length > 8 ? (fail(`${where}: examples`), []) : row.examples.flatMap((example, i) => {
+      const at = `${where} example ${i}`;
+      if (!isObject(example) || Object.keys(example).some(key => !["a", "b", "why", "hard"].includes(key)) || example.hard !== undefined && typeof example.hard !== "boolean") { fail(`${at}: shape`); return []; }
+      const a = word(example.a, marks[0], `${at} a`), b = word(example.b, marks[1], `${at} b`), why = text(`${at} why`, example.why, 240);
+      if (!a || !b) return [];
+      if (melodyOfRef(a.ref) !== melodyOfRef(b.ref)) fail(`${at}: the two words are in two melodies`);
+      if (a.ref === b.ref && a.word === b.word) fail(`${at}: one word twice`);
+      // Kadma and azla are neighbours: one example gives both. Azla and geresh are shown with the word before, so neither is a verse's first word.
+      if (id === "kadma-azla" && (a.ref !== b.ref || b.word !== a.word + 1)) fail(`${at}: azla is not the word after its kadma`);
+      if (id === "azla-geresh" && (a.word < 1 || b.word < 1)) fail(`${at}: no word before`);
+      return [Object.freeze({ a, b, melody: melodyOfRef(a.ref), why, hard: example.hard === true })];
+    });
+    out[id] = Object.freeze({ id, title: text(`${where} title`, row.title, 60), marks, context, examples: Object.freeze(examples) });
+  }
+  return out;
+}
+/** Practice runs that are not lessons (1.6: Quick ten, one per melody), each opening once its lesson is done. */
+function parsePractice(value: unknown, lessons: ReadonlyMap<string, Lesson>, fail: (message: string) => void, text: Text): Practice[] {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 4) { fail("practice"); return []; }
+  const seen = new Set<string>();
+  return value.flatMap((row, n) => {
+    if (!isObject(row) || typeof row.id !== "string" || !/^[a-z][a-z0-9-]{1,40}$/.test(row.id)) { fail(`practice ${n}: id`); return []; }
+    const where = `practice ${row.id}`;
+    if (seen.has(row.id) || lessons.has(row.id)) fail(`${where}: duplicate id`); seen.add(row.id);
+    if (value.filter(other => isObject(other) && other.melody === row.melody).length > 1) fail(`${where}: two practice runs in one melody`);
+    if (Object.keys(row).some(key => !["id", "melody", "title", "summary", "unlockAfter", "activity"].includes(key))) fail(`${where}: unknown field`);
+    if (!MELODIES.includes(row.melody as Melody)) fail(`${where}: melody`);
+    const melody = row.melody as Melody, after = typeof row.unlockAfter === "string" ? lessons.get(row.unlockAfter) : undefined;
+    if (!after || after.melody !== melody) fail(`${where}: unlockAfter`);
+    const activity = row.activity;
+    if (!isObject(activity) || Object.keys(activity).length !== 2 || activity.type !== "quick-ten" || !isObject(activity.params)) { fail(`${where}: only a quick-ten activity`); return []; }
+    const p = activity.params;
+    if (Object.keys(p).some(key => !["families", "items", "choices", "autoAdvanceMs"].includes(key))) fail(`${where}: unknown params`);
+    if (p.families !== "heard") fail(`${where}: families`);
+    // Quick ten is the one run longer than eight: ten items, never more.
+    const items = integer(p.items, 1, 10) ? p.items as number : (fail(`${where}: items`), 10);
+    const choices = integer(p.choices, 2, 4) ? p.choices as number : (fail(`${where}: choices`), 3);
+    const autoAdvanceMs = integer(p.autoAdvanceMs, 500, 4000) ? p.autoAdvanceMs as number : (fail(`${where}: autoAdvanceMs`), 1500);
+    return [Object.freeze({ id: row.id, melody, title: text(`${where} title`, row.title, 60), summary: text(`${where} summary`, row.summary, 60), unlockAfter: String(row.unlockAfter),
+      activity: Object.freeze({ type: "quick-ten" as const, params: Object.freeze({ families: "heard" as const, items, choices, autoAdvanceMs }) }) })];
+  });
 }
 
 function familyList(value: unknown, fail: (message: string) => void, melody: Melody): FamilyId[] {
   if (!Array.isArray(value) || !value.length || value.length > FAMILY_IDS.length || new Set(value).size !== value.length || value.some(id => !MELODY_FAMILIES[melody].includes(id as FamilyId))) { fail("families"); return []; }
   return value as FamilyId[];
 }
-function parseActivity(value: unknown, family: FamilyId | null, melody: Melody, fail: (message: string) => void): Activity | null {
+function parseActivity(value: unknown, family: FamilyId | null, melody: Melody, lookAlikes: Readonly<Partial<Record<LookAlikePairId, LookAlikePair>>>, fail: (message: string) => void): Activity | null {
   if (!isObject(value) || typeof value.type !== "string" || !isObject(value.params)) { fail("shape"); return null; }
   const p = value.params, keys = Object.keys(p);
   const only = (allowed: string[]) => { const extra = keys.filter(key => !allowed.includes(key)); if (extra.length) fail(`unknown params ${extra.join(", ")}`); };
@@ -243,6 +337,26 @@ function parseActivity(value: unknown, family: FamilyId | null, melody: Melody, 
       const extraMarks = p.extraMarks === undefined ? 1 : integer(p.extraMarks, 0, 3) ? p.extraMarks as number : (fail("extraMarks"), 1);
       return { type: "build-the-phrase", params: { family: p.family as FamilyId, items: items(), patterns, extraMarks } };
     }
+    case "look-alikes": {
+      only(["pairs", "items", "mode"]);
+      const mode = p.mode === undefined ? "read" : p.mode === "read" || p.mode === "hear" ? p.mode : (fail("mode"), "read");
+      const pairs = Array.isArray(p.pairs) && p.pairs.length >= 1 && p.pairs.length <= 4 && new Set(p.pairs).size === p.pairs.length ? p.pairs.flatMap(id => {
+        const pair = typeof id === "string" && Object.hasOwn(LOOK_ALIKE_PAIRS, id) ? lookAlikes[id as LookAlikePairId] : undefined;
+        if (!pair) { fail(`pair ${String(id)}`); return []; }
+        if (mode === "hear" && READING_ONLY_PAIRS.has(pair.id)) fail(`pair ${pair.id} is reading only`);
+        if (!pair.examples.some(example => example.melody === melody)) fail(`pair ${pair.id} has no ${melody} example`);
+        return [pair.id];
+      }) : (fail("pairs"), []);
+      return { type: "look-alikes", params: { pairs, items: items(), mode } };
+    }
+    case "which-half": {
+      only(["families", "items", "audio", "verseWords"]);
+      const families = familyList(p.families, fail, melody);
+      // The etnachta phrase and the verse's ending are trivially one half or the other; some other family must be asked.
+      if (families.every(id => id === "etnachta" || id === "sof-pasuk" || id === "sof-haftarah")) fail("families");
+      const audio = p.audio === undefined ? "lead-in" : p.audio === "lead-in" || p.audio === "phrase" ? p.audio : (fail("audio"), "lead-in");
+      return { type: "which-half", params: { families, items: items(), audio, verseWords: words([6, 18]) } };
+    }
     case "this-week": {
       only(["family", "kind", "show", "find"]);
       if (!MELODY_FAMILIES[melody].includes(p.family as FamilyId) || family !== null && p.family !== family) fail("family");
@@ -268,6 +382,12 @@ export const lessonById = (id: string): Lesson | null => BY_ID.get(id) ?? null;
 /** A path's lessons in teaching order (unit order, then the unit's own order). */
 export const pathLessons = (melody: Melody): Lesson[] => COURSE.units.filter(unit => unit.melody === melody).flatMap(unit => unit.lessons.map(id => BY_ID.get(id)!));
 export const unitOf = (id: string): CourseUnit | null => COURSE.units.find(unit => unit.lessons.includes(id)) ?? null;
+export const practiceById = (id: string): Practice | null => COURSE.practice.find(row => row.id === id) ?? null;
+/** A look-alikes activity's examples in one melody, pair by pair. */
+export const lookAlikeExamples = (activity: LookAlikes, melody: Melody): { pair: LookAlikePair; example: LookAlikeExample }[] =>
+  activity.params.pairs.flatMap(id => COURSE.lookAlikes[id].examples.filter(example => example.melody === melody).map(example => ({ pair: COURSE.lookAlikes[id], example })));
+/** Every verse the look-alike pairs name, in one melody: they join the course's fixed passages, so the course pack holds them. */
+export const lookAlikeRefs = (melody: Melody): string[] => [...new Set(Object.values(COURSE.lookAlikes).flatMap(pair => pair.examples.filter(example => example.melody === melody).flatMap(example => [example.a.ref, example.b.ref])))];
 export const familyName = (id: FamilyId): string => PHRASE_FAMILIES.find(family => family.id === id)!.label;
 export const familyColor = (id: FamilyId): string => PHRASE_FAMILIES.find(family => family.id === id)!.color;
 /** About how long a lesson takes: half a minute to hear, a minute in verses, ten seconds a drill item; 3 to 5 minutes. */

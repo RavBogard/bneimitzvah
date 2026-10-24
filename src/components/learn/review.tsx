@@ -7,6 +7,7 @@ import { comesBack, composeReview, emptyProgress, isDone, localDay, recordAnswer
 import { answerRun, currentItem, runDone, startRun, type Run } from "../../lib/learn/run";
 import { useCourseVerses } from "./course-data";
 import { icons, revealAnswer } from "./bits";
+import { QuickTenLinks } from "./home";
 import { HearAndName, SameOrDifferent, TapThePhrase, WhereDoesItEnd } from "./drills";
 import { LearnServices, useLearnServices, useProgress } from "./services";
 import styles from "./learn.module.css";
@@ -44,7 +45,8 @@ function Review() {
     <main className={styles.lesson}>{body}</main>{footer && <div className={styles.footer}><div className={styles.footerInner}>{footer}</div></div>}
   </div>;
   if (!loaded) return frame(<p role="status" className={styles.state}>Loading the review…</p>);
-  if (!plan?.length) return frame(<p className={styles.doneLine}>Nothing to review yet. Finish a lesson and its phrases come back here.</p>, <a className={styles.backLink} href="/learn">Back to the path</a>);
+  if (!plan?.length) return frame(<><p className={styles.doneLine}>Nothing to review yet. Finish a lesson and its phrases come back here.</p><QuickTenLinks progress={progress} /></>,
+    <a className={styles.backLink} href="/learn">Back to the path</a>);
   if (data.status === "loading") return frame(<p role="status" className={styles.state}>Loading the review…</p>);
   if (data.status === "error" || !data.pools.families.size) return frame(<div role="status" className={styles.state}><p>The recording did not load. Try again.</p>
     <button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>, <a className={styles.backLink} href="/learn">Back to the path</a>);
@@ -59,7 +61,8 @@ function ReviewRun({ slots, pools, progress, seed, today, until, update, frame }
   const { player } = useLearnServices();
   if (finished || !shown.item) {
     const back = comesBack(progress, slots.map(slot => slot.card), today);
-    return frame(<div className={styles.doneHead}><p className={styles.doneLine}>{back ? "weekday" in back ? `Done. These come back on ${back.weekday}.` : "Done. These come back next week." : "Done."}</p></div>,
+    return frame(<><div className={styles.doneHead}><p className={styles.doneLine}>{back ? "weekday" in back ? `Done. These come back on ${back.weekday}.` : "Done. These come back next week." : "Done."}</p></div>
+      <QuickTenLinks progress={progress} /></>,
       <a className={styles.backLink} href="/learn">Back to the path</a>);
   }
   const item = shown.item, slot = slotOf.get(item.key)!;

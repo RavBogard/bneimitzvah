@@ -42,7 +42,7 @@ describe("which page a beacon names", () => {
   it("is a fixed list from the code, each path within the table's own check, so no request can add a path", () => {
     const paths = publicPageViewPaths();
     expect(new Set(paths).size).toBe(paths.length);
-    expect(paths.length).toBe(6 + NAMED_READINGS.length + COURSE.lessons.length);
+    expect(paths.length).toBe(6 + NAMED_READINGS.length + COURSE.lessons.length + COURSE.practice.length);
     expect(paths.length).toBeLessThan(200);
     // "any" is the Any-reading bucket, never a reading; "about" and "review" are pages, never lessons.
     expect(NAMED_READINGS.some(r => r.slug === "any")).toBe(false);
@@ -53,6 +53,9 @@ describe("which page a beacon names", () => {
     }
     for (const reading of NAMED_READINGS) expect(normalizePublicPagePath(`/read?reading=${reading.slug}`)).toBe(`/read/${reading.slug}`);
     for (const lesson of COURSE.lessons) expect(normalizePublicPagePath(`/learn/${lesson.id}`)).toBe(`/learn/${lesson.id}`);
+    for (const practice of COURSE.practice) expect(normalizePublicPagePath(`/learn/practice/${practice.id}`)).toBe(`/learn/practice/${practice.id}`);
+    expect(normalizePublicPagePath("/learn/practice/not-a-run")).toBeNull();
+    expect(normalizePublicPagePath("/learn/practice/torah-zakef")).toBeNull();
   });
 });
 
@@ -243,7 +246,7 @@ describe("where the beacon is mounted", () => {
       expect(await readFile(layout, "utf8")).toMatch(/<PageViewBeacon \/>/);
     // Every page those layouts wrap is one of the public pages; a signed-in page added under them must be placed elsewhere.
     expect(all.filter(f => /^src\/app\/(read|learn|trope-chart)\//.test(f) && /\/page\.tsx$/.test(f)).sort()).toEqual([
-      "src/app/learn/[lesson]/page.tsx", "src/app/learn/about/page.tsx", "src/app/learn/page.tsx", "src/app/learn/review/page.tsx", "src/app/read/page.tsx", "src/app/trope-chart/page.tsx"]);
+      "src/app/learn/[lesson]/page.tsx", "src/app/learn/about/page.tsx", "src/app/learn/page.tsx", "src/app/learn/practice/[id]/page.tsx", "src/app/learn/review/page.tsx", "src/app/read/page.tsx", "src/app/trope-chart/page.tsx"]);
     // Nothing under the signed-in workspace, the account page, sign-in, connect or the root layout imports it.
     for (const file of all.filter(f => /^src\/app\/(workspace|account|sign-in|connect|invitations|unsubscribe|offline)\//.test(f) || f === "src/app/layout.tsx" || f === "src/app/page.tsx"))
       expect(await readFile(file, "utf8"), file).not.toMatch(/PageViewBeacon|page-view-beacon|api\/public\/view/);
