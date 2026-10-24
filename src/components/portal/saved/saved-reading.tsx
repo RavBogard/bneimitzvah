@@ -3,6 +3,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNod
 import { useStudyLens } from "../workspace/study-lens";
 import { fetchPublicRefReading, refSource } from "../public-reading/api";
 import { readAddress } from "../public-reading/urls";
+import { printAddress } from "../../../lib/print/print-address";
 import { displayRange, go, Hero, longDate, PassageReading, replaceAddress, Shell, useChooser, useStarter, type LabelledSource } from "../public-reading/view";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { expandReadingRanges } from "../../../lib/readings/ranges";
@@ -208,7 +209,7 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
     <Hero eyebrow="My reading" title={reading ? reading.name : header.status === "loading" ? "Loading your reading" : "Reading unavailable"}
       meta={reading && <>{reading.date && <><time dateTime={reading.date}>{longDate(reading.date)}</time> · </>}{kindName(reading.kind)} <bdi dir="ltr">{displayRange([reading.ranges])}</bdi></>}
       nav={<><button type="button" className="button-hero-secondary" onClick={() => go(readAddress({ mode: "week", date: null, kind: null }, { study: lens.lens === "study" }))}>This week</button>{chooser.button}</>}
-      actions={reading && starter.row(editButton)} />
+      actions={reading && starter.row(editButton, printAddress({ mode: "saved", id: reading.id }))} />
     {chooser.panel}
     {reading && <SavedReadingEdit step={edit} panelId={editId} name={draft.name} date={draft.date} notice={editNotice}
       onName={value => setDraft(current => ({ ...current, name: value }))} onDate={value => setDraft(current => ({ ...current, date: value }))}

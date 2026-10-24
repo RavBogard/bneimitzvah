@@ -1,0 +1,144 @@
+/*
+ * The reader's print sheet. On screen: the settings beside a paper preview at real type size. In print: only the paper.
+ * Type is set in points so the preview and the page agree; --he-size and --en-size come from the chosen size step.
+ */
+
+/* ---------- The page around the paper (screen only) ---------- */
+.layout { display: grid; grid-template-columns: minmax(17rem, 22rem) minmax(0, 1fr); gap: 2rem; align-items: start; margin-top: 0.5rem; }
+.settings { position: sticky; top: 1.5rem; display: grid; gap: 1.125rem; padding: 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.settings h2 { margin: 0; font-size: 1.125rem; font-weight: 700; letter-spacing: -0.01em; }
+.group { display: grid; gap: 0.5rem; min-width: 0; margin: 0; padding: 0; border: 0; }
+.group > legend, .group > .label { padding: 0; font-size: 0.9375rem; font-weight: 600; }
+.group > legend { margin-bottom: 0.5rem; }
+/* A segmented choice made of real radio buttons: the lake pill marks the chosen one. */
+.track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0.25rem; width: 100%; padding: 0.25rem; border-radius: 999px; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.track label { position: relative; display: inline-flex; align-items: center; justify-content: center; text-align: center; min-height: 40px; padding: 0 0.5rem; border-radius: 999px; font-size: 0.9375rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.track label:hover { background: var(--color-hover); }
+.track[data-stack] { grid-auto-flow: row; border-radius: 22px; }
+.track[data-stack] label { justify-content: flex-start; text-align: start; }
+.track input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.track label:has(input:checked) { background: var(--lake); color: #fff; }
+.track label:has(input:focus-visible) { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.track label:has(input:disabled) { opacity: 0.55; cursor: not-allowed; }
+.check { display: flex; align-items: center; gap: 0.75rem; min-height: 44px; font-weight: 600; cursor: pointer; }
+.check input { inline-size: 1.375rem; block-size: 1.375rem; margin: 0; accent-color: var(--lake); }
+.help { margin: 0; color: var(--color-muted); font-size: 0.875rem; }
+.select { width: 100%; min-height: 48px; padding: 0 0.875rem; border: 0; border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); box-shadow: inset 0 0 0 1px var(--color-control-rule); font: inherit; }
+.select:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.weeks { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+.status { margin: 0.75rem 0 0; color: var(--color-muted); }
+.status:empty { display: none; }
+.printButton { gap: 0.5rem; display: inline-flex; align-items: center; justify-content: center; }
+.printButton svg { flex: none; }
+.mine { display: grid; gap: 0.5rem; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--color-rule); }
+.mine h3 { margin: 0; font-size: 1rem; font-weight: 650; }
+.mineList { display: grid; gap: 0.25rem; margin: 0; padding: 0; list-style: none; }
+.mineList button { display: grid; gap: 0.125rem; width: 100%; min-height: 48px; padding: 0.5rem 0.75rem; border: 0; border-radius: var(--radius-control); background: transparent; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.mineList button:hover { background: var(--color-hover); }
+.mineName { font-weight: 650; overflow-wrap: anywhere; }
+.mineMeta { color: var(--color-muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+
+/* The paper: white in either theme, as it will print, with the page's own proportions. */
+.paperFrame { min-width: 0; overflow-x: auto; }
+.paper { width: 100%; max-width: 8.5in; margin-inline: auto; min-height: 6in; padding: 0.5in 0.55in 0.6in; background: #fff; color: #13202f; border-radius: 4px; box-shadow: 0 1px 2px rgb(19 32 47 / 0.08), 0 10px 32px rgb(19 32 47 / 0.12); }
+.paper[data-paper="a4"] { max-width: 210mm; padding: 12.7mm 14mm 15mm; }
+.paper[data-orientation="landscape"] { max-width: 11in; }
+.paper[data-paper="a4"][data-orientation="landscape"] { max-width: 297mm; }
+.loading { color: #4b5a6b; font-family: "Bricolage Grotesque", system-ui, sans-serif; }
+
+@media (max-width: 1000px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .settings { position: static; }
+}
+@media (max-width: 640px) {
+  .settings { padding: 1rem; }
+  .paper { padding: 1.25rem 1rem; border-radius: 2px; }
+}
+
+/* ---------- The document ---------- */
+.sheet {
+  --ink: #13202f; --muted: #4b5a6b; --rule: #c5d3e3; --hair: #dde6f0; --accent: #154680; --settled: #1e6b47;
+  --he-lh: 1.85; --en-lh: 1.4; --row-pad: 3pt; --he-weight: 400; --en-weight: 400;
+  color: var(--ink); font-family: "Bricolage Grotesque", system-ui, sans-serif; font-size: var(--en-size); font-optical-sizing: auto;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.sheet[data-spacing="standing"] { --he-lh: 2.15; --en-lh: 1.6; --row-pad: 6pt; --he-weight: 520; --en-weight: 450; }
+.table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
+.sheet[data-show="english"][data-notes="none"] .table { width: min(100%, 40em); }
+
+/* Columns. The verse number sits between the languages; the notes column, when shown, at the right edge. */
+.col-number { width: 2.75em; }
+.col-english { width: 39%; }
+.col-notes { width: 20%; }
+.sheet[data-show="hebrew"] .col-notes { width: 24%; }
+.sheet[data-show="english"] .col-notes { width: 30%; }
+.sheet[data-show="english"] .col-english, .sheet[data-show="hebrew"] .col-hebrew { width: auto; }
+.sheet[data-orientation="landscape"][data-show="both"] .col-english { width: 40%; }
+.sheet[data-show="both"]:not([data-notes="none"]) .col-english { width: 30%; }
+.sheet[data-orientation="landscape"][data-show="both"]:not([data-notes="none"]) .col-english { width: 34%; }
+
+.verse > td { vertical-align: top; padding-block: var(--row-pad); border-bottom: 0.5pt solid var(--hair); }
+.verse[data-paragraph="petuchah"] > td { padding-bottom: calc(var(--row-pad) + 0.6em); }
+/* The first English line and the verse number share the first Hebrew line's middle. */
+.english, .number { padding-top: calc(var(--row-pad) + (var(--he-size) * var(--he-lh) - var(--en-size) * var(--en-lh)) / 2) !important; }
+.sheet[data-show="english"] .english, .sheet[data-show="english"] .number { padding-top: var(--row-pad) !important; }
+.sheet[data-show="hebrew"] .number { padding-top: calc(var(--row-pad) + (var(--he-size) * var(--he-lh) - var(--en-size) * 1.4) / 2) !important; }
+
+.hebrew { padding-inline: 0.5em 0; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", "Times New Roman", serif; font-size: var(--he-size); font-weight: var(--he-weight);
+  line-height: var(--he-lh); font-synthesis: none; font-feature-settings: "mark", "mkmk"; text-align: right; text-wrap: pretty; overflow-wrap: anywhere; }
+.sheet[data-show="hebrew"] .hebrew { padding-inline: 0; }
+.english { padding-inline: 0 0.75em; font-weight: var(--en-weight); line-height: var(--en-lh); text-align: left; hyphens: auto; text-wrap: pretty; overflow-wrap: anywhere; }
+.sheet[data-show="english"] .english { padding-inline: 0.25em 0; }
+.number { padding-inline: 0; text-align: center; color: var(--muted); font-size: 0.78em; font-weight: 650; line-height: var(--en-lh); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sheet[data-show="hebrew"] .number { text-align: right; padding-inline-start: 0.5em; }
+.missing { color: var(--muted); font-style: italic; }
+.alternative .written { color: var(--muted); }
+.read { white-space: nowrap; }
+.qere { font-family: "Bricolage Grotesque", system-ui, sans-serif; font-size: 0.42em; font-weight: 600; color: var(--muted); vertical-align: 0.35em; }
+.paragraph { color: var(--muted); font-size: 0.8em; }
+
+/* The notes column: ruled for writing, or left blank, with a hairline beside the text. */
+.notes { border-bottom: 0.5pt solid var(--hair); border-inline-start: 0.5pt solid var(--rule); }
+.sheet[data-notes="lined"] .notes { background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(1.6 * var(--en-size) - 0.5pt), #b7c6d8 calc(1.6 * var(--en-size) - 0.5pt), #b7c6d8 calc(1.6 * var(--en-size))); background-clip: content-box; padding: var(--row-pad) 0 var(--row-pad) 0.6em; }
+
+/* An aliyah begins: a strong rule and its name at the right, above the Hebrew where the reader starts. */
+.aliyah > td { padding: 0.9em 0 0.15em; border-bottom: 1.25pt solid var(--ink); text-align: right; }
+.sheet[data-show="english"] .aliyah > td { text-align: left; }
+.aliyah span { font-size: 0.92em; font-weight: 750; letter-spacing: 0.01em; color: var(--settled); }
+.aliyah[data-aliyah-start="first"] > td { padding-top: 0.25em; }
+/* The reading skips: the new place, quietly, so the reader turns the scroll. */
+.jump > td { padding: 0.75em 0 0.2em; text-align: right; color: var(--muted); font-size: 0.85em; font-weight: 650; border-bottom: 0.5pt dashed var(--rule); }
+.sheet[data-show="english"] .jump > td { text-align: left; }
+
+/* The running head and the credit, repeated on every printed page. */
+.head { padding: 0 0 6pt; }
+.headRow { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.75em; padding-bottom: 4pt; border-bottom: 1pt solid var(--ink); }
+.headRow p { margin: 0; }
+.title { font-size: 11pt; font-weight: 750; letter-spacing: -0.01em; color: var(--accent); }
+.passage { font-size: 9.5pt; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.date { margin-inline-start: auto !important; font-size: 9pt; color: var(--muted); font-variant-numeric: tabular-nums; }
+.foot { padding: 7pt 0 0; }
+.footRow { display: flex; align-items: flex-end; justify-content: space-between; gap: 1em; padding-top: 4pt; border-top: 0.5pt solid var(--rule); font-size: 7.25pt; line-height: 1.35; color: var(--muted); }
+.footRow p { margin: 0; }
+.credits { flex: 1; min-width: 0; }
+.product { flex: none; font-weight: 650; color: var(--ink); }
+
+/* ---------- Print ---------- */
+@media print {
+  :global(body):has(.root) > :not(.root) { display: none !important; }
+  :global(body):has(.root) { background: #fff !important; }
+  .root { page: reader-sheet; }
+  .root, .root :global(.portal-shell), .root :global(.workspace-main) { display: block; max-width: none; min-height: 0; margin: 0; padding: 0; background: #fff; }
+  .screenOnly { display: none !important; }
+  .layout { display: block; margin: 0; }
+  .paperFrame { overflow: visible; }
+  .paper, .paper[data-paper], .paper[data-orientation] { max-width: none; width: auto; min-height: 0; margin: 0; padding: 0; border-radius: 0; box-shadow: none; }
+  /* A verse stays on one page, except at Large and Huge, where one verse can fill half a page: there it may continue overleaf. */
+  .verse, .aliyah, .jump { break-inside: avoid; }
+  .sheet[data-size="large"] .verse, .sheet[data-size="huge"] .verse { break-inside: auto; }
+  .aliyah, .jump { break-after: avoid; }
+  .sheet[data-aliyot="page"] .aliyah[data-aliyah-start="later"], .sheet[data-aliyot="page"] .jump[data-aliyah-next] { break-before: page; }
+  /* A skip just before an aliyah starts the new page itself, so it stays with its verse. */
+  .sheet[data-aliyot="page"] .jump[data-aliyah-next] + .aliyah { break-before: auto; }
+  .hebrew { color: #000; }
+}

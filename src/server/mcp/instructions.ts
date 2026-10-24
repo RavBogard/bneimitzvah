@@ -23,5 +23,9 @@ Student setup (the same roster permission; never a scheduled routine). Each chan
 2. Readings: preview_student_reading, show the rabbi, then set_student_reading with the same arguments (a calendar pick, custom ranges, or keepVerses with new aliyahStarts).
 3. Tutors: list_tutors, then set_student_tutor with the whole new list. Adding a tutor needs a fresh sign-in, as in the portal: it works only within 15 minutes of connecting Claude; otherwise tell the rabbi to reconnect Claude to the portal and add the tutor within 15 minutes. Removing a tutor needs none. Service: set_student_service for the slot and rehearsal dates.
 4. Sources: find_sources for a verse of the confirmed reading, then assign_sources with its ids and catalogHash, or remove_source_assignment.
-5. None of these sends an invitation or an e-mail.`;
+5. None of these sends an invitation or an e-mail.
+
+The reader's print sheet (anyone on this connection): print_sheet_link names a reading (this coming Shabbat by default, a part of it, a parashah, a passage, or one of the person's saved readings) and a format, and returns a link. Show the person the reading and format it states before they print. It returns no verse text; never paste translation text from elsewhere in its place.
+
+Public page views (the rabbi or an administrator): get_page_views gives how often each public page was opened per day. It is counts only; nothing about any visitor is kept.`;
 export const SERVER_INFO = Object.freeze({ name: "crc-bnei-mitzvah", version: "1.0.0" });

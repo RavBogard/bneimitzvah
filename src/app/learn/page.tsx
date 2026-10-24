@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
 import { CourseHome } from "../../components/learn/home";
+import { pageTitle } from "../../lib/site/product-name";
+import { publicRobots } from "../../lib/site/indexing";
+import { readPublicProductName } from "../../server/public-site/names";
+import { publicMetadataBase } from "../../lib/site/origin";
 
-// Open to anyone and signed out first, like /read; not for search engines until beta.
-export const metadata: Metadata = {
-  title: "Learn to lein | CRC Torah",
-  description: "Hear the phrases, then lein a verse of this week's reading.",
-  referrer: "no-referrer",
-  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
-};
+// Open to anyone and signed out first, like /read; search engines only once PUBLIC_INDEXING is on (Daniel decides when).
+export const revalidate = 3600;
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: pageTitle(await readPublicProductName(), "Learn to lein"),
+    description: "Hear the phrases, then lein a verse of this week's reading.",
+    metadataBase: publicMetadataBase(), referrer: "no-referrer",
+    robots: publicRobots(),
+  };
+}
 export default function LearnPage() { return <CourseHome />; }

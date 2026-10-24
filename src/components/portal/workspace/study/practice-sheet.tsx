@@ -14,8 +14,10 @@ import styles from "./practice-sheet.module.css";
 // The practice sheet is the family's "booklet of their portion": the whole
 // assigned reading, a verse per line, vowels and trope, aliyah markers, and an
 // optional tikkun column. Browser print CSS only; nothing is rendered on a server.
-// English is never on the sheet: the reference translation is licensed for the
-// portal's study view, not for print copies.
+// It is Hebrew only by design: this is the student's chanting sheet. Printing JPS 2023
+// is licensed (Daniel, 2026-10-23: "JPS 2023 is fine in print", with the edition and its
+// credit on each printed page); English in print is the reader's print sheet's job
+// (/print, src/components/portal/print), which carries that credit on every page.
 
 const MAX_PAGES = 10; // studyPlan bounds an assignment to 1,000 verses, 100 per page.
 const displayRange = (ranges: readonly string[]) => ranges.join("; ").replace(/(\d)-(\d)/g, "$1–$2");

@@ -21,3 +21,4 @@ export * from "./notification-schema";
 export * from "./saved-schema";
 export * from "./accounts-schema";
 export * from "./course-progress-schema";
+export * from "./page-view-schema";

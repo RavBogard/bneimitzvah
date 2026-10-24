@@ -4,7 +4,8 @@
  *
  * PLAN strings are Daniel's wording from the 1.5 plan's 2026-10-23 rulings (B4, popup rulings) and its §3.5
  * and §3.9 text; the Android fallback is the research report's sentence, approved verbatim by Daniel on
- * 2026-10-23. NEW strings are labels the plan does not word; each is listed in the PR for Daniel.
+ * 2026-10-23. APPROVED strings were A1's NEW labels, approved by Daniel on 2026-10-23 ("Keep all"). NEW strings
+ * are labels no ruling words yet; each is listed in its PR for Daniel.
  */
 export const PLAN = Object.freeze({
   installHint: (productName: string) => `Install ${productName} on this device to keep this week’s reading and recordings for use offline (up to about 40 MB).`,
@@ -24,8 +25,8 @@ export const PLAN = Object.freeze({
   open: "Open",
 });
 
-/** Wording the plan does not give. Each is one named constant, flagged for Daniel. */
-export const NEW = Object.freeze({
+/** A1's six labels, first flagged as NEW; Daniel approved them all on 2026-10-23 ("Keep all"). */
+export const APPROVED = Object.freeze({
   /** /offline: the label of the This week pack in the saved list (the reader's own page title). */
   weekLabel: "This week’s reading",
   /** /offline: the label of the course pack (the front door's own door title). */
@@ -39,3 +40,6 @@ export const NEW = Object.freeze({
   /** The offline pill when the device is offline and no saved reading is live. */
   offline: "Offline",
 });
+
+/** Wording no ruling gives yet. Each is one named constant, flagged for Daniel. A2 added none. */
+export const NEW = Object.freeze({});

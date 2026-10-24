@@ -1,0 +1,100 @@
+import { Fragment, type CSSProperties, type ReactNode } from "react";
+import type { StudyVerse } from "../workspace/study/api";
+import type { StudyChapter } from "../workspace/study/credits";
+import { SHEET_TYPE, type SheetFormat } from "../../../lib/print/sheet-format";
+import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
+import { sheetHebrew } from "./hebrew";
+import styles from "./print.module.css";
+
+/**
+ * The reader's print sheet as a document: one table, so the running head (thead) and the edition credit (tfoot)
+ * repeat on every printed page in every engine that prints tables, and each verse is one row, so its English sits
+ * beside its Hebrew and a verse never splits across a page. Hebrew is on the right. Pure, so its layout is testable
+ * without a browser; the page around it loads the text and owns printing.
+ */
+export type SheetText = Readonly<{ verses: readonly StudyVerse[]; chapters: readonly StudyChapter[] }>;
+export type SheetHeading = Readonly<{ title: string; passage: string; date: string | null }>;
+
+const VERSE = /^(.*) ([1-9]\d*):([1-9]\d*)$/;
+const parts = (ref: string) => { const m = VERSE.exec(ref); return m ? { book: m[1], chapter: Number(m[2]), verse: Number(m[3]) } : null; };
+const longDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
+const PARAGRAPH = { petuchah: "פ", setumah: "ס" } as const;
+
+/** What sits above a verse: a jump in the reading (its new reference) and the aliyah that begins there. */
+function breaks(verses: readonly StudyVerse[], markers: ReadonlyMap<string, string>) {
+  return verses.map((verse, index) => {
+    const here = parts(verse.ref), before = index > 0 ? parts(verses[index - 1].ref) : null;
+    const lastOfChapter = before !== null && before.verse === TANAKH_VERSE_COUNTS[before.book]?.[before.chapter - 1];
+    const jump = index > 0 && here && before && !(here.book === before.book && (here.chapter === before.chapter && here.verse === before.verse + 1 || here.chapter === before.chapter + 1 && here.verse === 1 && lastOfChapter));
+    const label = here && (index === 0 || jump || before && (before.book !== here.book || before.chapter !== here.chapter)) ? `${here.chapter}:${here.verse}` : here ? String(here.verse) : verse.ref;
+    const n = markers.get(verse.ref);
+    return { jump: jump ? verse.ref : null, aliyah: n === undefined ? null : n === "M" ? "Maftir" : `Aliyah ${n}`, label };
+  });
+}
+
+function Hebrew({ verse, script }: { verse: StudyVerse; script: SheetFormat["script"] }) {
+  const segments = verse.hebrew.segments, last = segments.length - 1;
+  return <>{segments.map((segment, index) => {
+    if (segment.kind === "text") return <Fragment key={index}>{sheetHebrew(segment.text, script)}</Fragment>;
+    if (segment.kind === "alternative") return <span key={index} className={styles.alternative}>
+      <span className={styles.written}>{sheetHebrew(segment.written, script)}</span> <span className={styles.read}>[<span className={styles.qere} lang="en" dir="ltr">read / qere:</span> {sheetHebrew(segment.read, script)}]</span>
+    </span>;
+    if (segment.kind === "gap") return index === last && verse.hebrew.paragraphAfter ? null : <span key={index} className={styles.paragraph}> {PARAGRAPH[segment.break]} </span>;
+    return <span key={index} role="img" aria-label="Inverted nun, Masoretic sign">׆</span>;
+  })}{verse.hebrew.paragraphAfter && <span className={styles.paragraph}> {PARAGRAPH[verse.hebrew.paragraphAfter]}</span>}</>;
+}
+
+/** The credit for every edition printed: required on every page and never optional (Daniel, 2026-10-23). */
+export function sheetCredits(text: SheetText, format: SheetFormat): string[] {
+  const editions = new Map(text.chapters.flatMap(chapter => chapter.editions).map(edition => [edition.key, edition]));
+  const lines: string[] = [], hebrew = editions.get("mam"), english = editions.get("jps2023");
+  if (format.show !== "english" && hebrew) lines.push(`Hebrew: ${hebrew.versionTitle}, ${hebrew.creator} (CC BY-SA 4.0).`);
+  if (format.show !== "hebrew" && english && text.verses.some(verse => verse.english !== null)) lines.push(`English: ${english.versionTitle}, ${english.creator} (CC BY-NC 4.0).`);
+  return lines;
+}
+
+export function PrintDocument({ heading, text, markers, format, productName }: {
+  heading: SheetHeading; text: SheetText; markers: ReadonlyMap<string, string>; format: SheetFormat; productName: string;
+}) {
+  const type = SHEET_TYPE[format.size], rows = breaks(text.verses, markers), credits = sheetCredits(text, format);
+  const hebrew = format.show !== "english", english = format.show !== "hebrew", notes = format.notes !== "none", numbers = format.numbers;
+  const columns = (english ? 1 : 0) + (hebrew ? 1 : 0) + (numbers ? 1 : 0) + (notes ? 1 : 0);
+  const style = { "--he-size": `${type.hebrew}pt`, "--en-size": `${type.english}pt` } as CSSProperties;
+  const number = (label: string) => numbers ? <td className={styles.number}><bdi dir="ltr">{label}</bdi></td> : null;
+  const notesCell = notes ? <td className={styles.notes} aria-hidden="true" /> : null;
+  const englishCell = (verse: StudyVerse) => <td className={styles.english} lang="en" dir="ltr">{verse.english ?? <span className={styles.missing}>English reference unavailable for this verse.</span>}</td>;
+  const hebrewCell = (verse: StudyVerse) => <td className={styles.hebrew} lang="he" dir="rtl"><Hebrew verse={verse} script={format.script} /></td>;
+  // Column order, left to right: English, the verse number between the two languages, Hebrew, then the notes column at the
+  // right edge, beside where each Hebrew verse begins. With one language the number sits where that language's lines begin.
+  const verseCells = (verse: StudyVerse, label: string) => format.show === "both" ? <>{englishCell(verse)}{number(label)}{hebrewCell(verse)}{notesCell}</>
+    : format.show === "hebrew" ? <>{hebrewCell(verse)}{number(label)}{notesCell}</> : <>{number(label)}{englishCell(verse)}{notesCell}</>;
+  const cols = format.show === "both" ? ["english", ...(numbers ? ["number"] : []), "hebrew"] : format.show === "hebrew" ? ["hebrew", ...(numbers ? ["number"] : [])] : [...(numbers ? ["number"] : []), "english"];
+  return <article className={styles.sheet} style={style} data-print-sheet-document data-show={format.show} data-size={format.size} data-spacing={format.spacing}
+    data-notes={format.notes} data-numbers={numbers ? "on" : "off"} data-aliyot={format.aliyot} data-orientation={format.orientation}>
+    <table className={styles.table}>
+      <colgroup>{[...cols, ...(notes ? ["notes"] : [])].map(col => <col key={col} className={styles[`col-${col}`]} />)}</colgroup>
+      <thead><tr><td colSpan={columns} className={styles.head}>
+        <div className={styles.headRow}>
+          <p className={styles.title}><bdi>{heading.title}</bdi></p>
+          <p className={styles.passage}><bdi dir="ltr">{heading.passage}</bdi></p>
+          {heading.date && <p className={styles.date}><time dateTime={heading.date}>{longDate(heading.date)}</time></p>}
+        </div>
+      </td></tr></thead>
+      <tfoot><tr><td colSpan={columns} className={styles.foot}>
+        <div className={styles.footRow}>
+          <div className={styles.credits}>{credits.map(line => <p key={line}>{line}</p>)}</div>
+          <p className={styles.product}>{productName}</p>
+        </div>
+      </td></tr></tfoot>
+      <tbody>{text.verses.map((verse, index) => {
+        const row = rows[index], first = index === 0;
+        const extra: ReactNode[] = [];
+        if (row.jump) extra.push(<tr key={`${verse.ref}-jump`} className={styles.jump} data-aliyah-next={row.aliyah && !first ? "" : undefined}><td colSpan={columns}><bdi dir="ltr">{row.jump}</bdi></td></tr>);
+        if (row.aliyah) extra.push(<tr key={`${verse.ref}-aliyah`} className={styles.aliyah} data-aliyah-start={first ? "first" : "later"}><td colSpan={columns}><span>{row.aliyah}</span></td></tr>);
+        return <Fragment key={verse.ref}>{extra}
+          <tr className={styles.verse} data-verse-ref={verse.ref} data-paragraph={verse.hebrew.paragraphAfter ?? undefined}>{verseCells(verse, row.label)}</tr>
+        </Fragment>;
+      })}</tbody>
+    </table>
+  </article>;
+}
