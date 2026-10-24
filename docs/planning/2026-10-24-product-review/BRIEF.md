@@ -27,6 +27,11 @@ The live product is v1.8.0 (7c13cac) at https://beitmitzvah.centralreform.org. T
 - **Devices:** phone first for everyone. Laptop and tablet are secondary.
 - **Visual changes:** a full redesign is welcome if the review supports it.
 - **Earlier rulings** (no streaks, no recording the learner, no daily goal, the tone rules): the review is free to argue for reversing any of them, with evidence. Daniel decides.
+- **A study and learning companion, not a source-sheet builder** (Daniel, 2026-10-24, during the review):
+  - Members, students and staff do not collect, keep or assemble their own sources. Findings that propose this are out of scope.
+  - The only source-sheet work is a rabbi curating sources for b'nei mitzvah students.
+  - The model is the right-hand column of Chabad's Torah in depth, the curated insights beside the text, not its summary column on the left. The curated discussions (1.8 M6) are where this already lives.
+  - The aim is a curated experience that brings the best texts to the surface.
 - **Out of scope:**
   - 2.0 (the service course and siddur work) is with Cowork. Notes on it go to `C:/Users/dsbog/cowork-offload/2.0/` and are not reviewed here.
   - Voice and chant audio (2.5): only the experience of listening is reviewed, such as where audio is missing or where it should be. No judgments of audio quality. These findings go in a separate 2.5 list.
