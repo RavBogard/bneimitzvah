@@ -1,5 +1,7 @@
 import { commentaryCandidates, commentaryChapterOfVerse, type CommentaryComment, type CommentaryEdition, type CommentaryRun } from "../readings/commentary";
 import type { SheetShow } from "./sheet-format";
+import type { DiscussionSource, DiscussionsAnswer } from "../discussions/answer";
+import { claudeTranslationCredit } from "../discussions/labels";
 
 /**
  * The print sheet's commentary appendix (1.7 M5). Pure: the page fetches each chosen work's chapters through the same store Study
@@ -61,7 +63,7 @@ function chosen(comment: AppendixComment, show: SheetShow): AppendixComment {
  * given, and each work's comments followed by its credits. A language prints only when the edition served for it is licensed for print;
  * a comment left with nothing to print is dropped, and a verse or work left with nothing is not listed.
  */
-export function buildAppendix(refs: readonly string[], sources: readonly AppendixSource[], show: SheetShow): readonly AppendixGroup[] {
+export function buildAppendix(refs: readonly string[], sources: readonly AppendixSource[], show: SheetShow, discussions?: DiscussionsAnswer | null): readonly AppendixGroup[] {
   const groups: AppendixGroup[] = [];
   for (const ref of refs) {
     const works: AppendixWork[] = [];
@@ -78,7 +80,64 @@ export function buildAppendix(refs: readonly string[], sources: readonly Appendi
       const shown = printable.filter(edition => comments.some(comment => edition.language === "he" ? comment.hebrew : comment.english));
       if (comments.length) works.push({ work: source.work, label: source.label, comments, credits: [...new Set(shown.map(edition => edition.credit))] });
     }
+    if (discussions) works.push(...discussionWorks(ref, discussions, show));
     if (works.length) groups.push({ ref, works });
   }
   return groups;
+}
+
+/** A translation's markdown-lite text as runs: ** is bold, * and _ are italic, a list marker stays as the text it is; nothing is ever markup. */
+function runsOf(line: string): readonly CommentaryRun[] {
+  const runs: CommentaryRun[] = [], pattern = /\*\*([^*\n]+)\*\*|\*([^*\n]+)\*|(?<![\p{L}\p{N}])_([^_\n]+)_(?![\p{L}\p{N}])/gu;
+  let last = 0;
+  for (const match of line.matchAll(pattern)) {
+    if (match.index > last) runs.push({ text: line.slice(last, match.index) });
+    runs.push(match[1] !== undefined ? { text: match[1], bold: true } : { text: match[2] ?? match[3] ?? "", italic: true });
+    last = match.index + match[0].length;
+  }
+  if (last < line.length) runs.push({ text: line.slice(last) });
+  return runs.filter(run => run.text);
+}
+/** One printed paragraph per paragraph of the translation, and one per list line (numbers stay; bullets print as a bullet). */
+export function translationParagraphs(body: string): readonly (readonly CommentaryRun[])[] {
+  return body.replace(/\r\n?/g, "\n").split(/\n{2,}/).flatMap(block => block.split("\n").map(line => line.trim()).filter(Boolean).map(line => runsOf(line.replace(/^[-*]\s+/, "\u2022 "))))
+    .filter(runs => runs.length);
+}
+
+/**
+ * What one discussion source prints, or null. A Sefaria edition prints each language only when its edition's stated licence passes the
+ * same filter as commentary, with that edition's credit (and nothing at all when Sefaria's text did not load). A Claude translation is
+ * our own text and always prints, with "Claude translation for {productName}"; its Hebrew or Aramaic original prints beside it under
+ * the filter. On a Hebrew-only sheet a translation gives way to an original that printed. "Selected by" is a screen detail and never prints.
+ */
+export function printableSource(source: DiscussionSource, productName: string, show: SheetShow): { comments: readonly AppendixComment[]; credits: readonly string[] } | null {
+  const printable = (source.text?.editions ?? []).filter(edition => isPrintableLicense(edition.license));
+  const hebrew = printable.some(edition => edition.language === "he"), english = printable.some(edition => edition.language === "en");
+  const segments = (source.text?.segments ?? []).map(segment => ({ hebrew: hebrew ? segment.hebrew : null, english: english && source.kind === "edition" ? segment.english : null })).filter(segment => segment.hebrew || segment.english);
+  if (source.kind === "edition") {
+    const comments = segments.map(segment => chosen(segment, show));
+    const shown = printable.filter(edition => comments.some(comment => edition.language === "he" ? comment.hebrew : comment.english));
+    return comments.length ? { comments, credits: [...new Set(shown.map(edition => edition.credit))] } : null;
+  }
+  const original = segments.filter(segment => segment.hebrew).map(segment => ({ hebrew: segment.hebrew, english: null }));
+  const body = show === "hebrew" && original.length ? [] : translationParagraphs(source.translation.body).map(runs => ({ hebrew: null, english: runs }));
+  const comments = [...original, ...body];
+  if (!comments.length) return null;
+  const credits = [...(body.length ? [claudeTranslationCredit(productName)] : []), ...(original.length ? printable.filter(edition => edition.language === "he").map(edition => edition.credit) : [])];
+  return { comments, credits: [...new Set(credits)] };
+}
+
+/**
+ * The discussions anchored on one verse, as appendix works: each source is one block headed with its discussion's title and its own
+ * reference, in the discussion's order, after the verse's commentary. A source with nothing printable is not listed.
+ */
+export function discussionWorks(ref: string, discussions: DiscussionsAnswer, show: SheetShow): readonly AppendixWork[] {
+  const works: AppendixWork[] = [];
+  if (!discussions.productName) return works;
+  for (const discussion of discussions.discussions) for (const source of discussion.sources) {
+    if (source.anchorRef !== ref) continue;
+    const printed = printableSource(source, discussions.productName, show);
+    if (printed) works.push({ work: `discussion:${discussion.slug}:${source.position}`, label: `${discussion.title}: ${source.ref}`, comments: printed.comments, credits: printed.credits });
+  }
+  return works;
 }

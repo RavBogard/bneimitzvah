@@ -26,6 +26,8 @@ export type WordPanelHost = Readonly<{
   onHear?(verse: number, index: number): void;
   /** A reader opened or stepped to a word of this verse (the signed-in reading records the visit). */
   onVisit?(ref: string): void;
+  /** Brings a verse of the reading to the reader, loading the text page that holds it first (a source in "Sources for this reading" opens at its verse). */
+  reveal?(ref: string): void;
 }>;
 
 const idle: WordToolsState = Object.freeze({ open: false, selection: null, aids: Object.freeze({ status: "idle" }), details: Object.freeze({ status: "idle" }) });

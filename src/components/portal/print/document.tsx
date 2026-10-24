@@ -5,6 +5,7 @@ import type { AppendixGroup } from "../../../lib/print/appendix";
 import type { CommentaryRun } from "../../../lib/readings/commentary";
 import { SHEET_TYPE, type SheetFormat } from "../../../lib/print/sheet-format";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
+import { DISCUSSION_LABELS } from "../../../lib/discussions/labels";
 import { sheetHebrew } from "./hebrew";
 import styles from "./print.module.css";
 
@@ -61,10 +62,10 @@ function Runs({ runs }: { runs: readonly CommentaryRun[] }) {
 }
 
 /** The commentary appendix: it starts on a new printed page, grouped by verse, each work's comments followed by its credit. */
-function Appendix({ groups, heading }: { groups: readonly AppendixGroup[]; heading: SheetHeading }) {
-  return <section className={styles.appendix} data-print-appendix aria-label="Commentary">
+function Appendix({ groups, heading, title }: { groups: readonly AppendixGroup[]; heading: SheetHeading; title: string }) {
+  return <section className={styles.appendix} data-print-appendix aria-label={title}>
     <div className={styles.headRow}>
-      <p className={styles.title}>Commentary</p>
+      <p className={styles.title}>{title}</p>
       <p className={styles.passage}><bdi>{heading.title}</bdi> <bdi dir="ltr">{heading.passage}</bdi></p>
     </div>
     {groups.map(group => <section key={group.ref} className={styles.commentGroup} data-appendix-ref={group.ref}>
@@ -126,6 +127,6 @@ export function PrintDocument({ heading, text, markers, format, productName, app
         </Fragment>;
       })}</tbody>
     </table>
-    {appendix.length > 0 && <Appendix groups={appendix} heading={heading} />}
+    {appendix.length > 0 && <Appendix groups={appendix} heading={heading} title={format.commentary.length || !format.discussions ? "Commentary" : DISCUSSION_LABELS.list} />}
   </article>;
 }

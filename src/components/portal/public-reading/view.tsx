@@ -14,7 +14,7 @@ import { LensSwitch } from "../workspace/lens-switch";
 import { LENS_STORAGE, lensFromSearch, StudyLensScope, useStudyLens, type Lens } from "../workspace/study-lens";
 import { StudyRows } from "../workspace/study/study-rows";
 import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi, workStatuses } from "../workspace/study/commentary-view";
-import { VersePanelColumn, VersePanelScope, WordPanelSource } from "../workspace/study/verse-panel";
+import { DiscussionList, VersePanelColumn, VersePanelScope, WordPanelSource } from "../workspace/study/verse-panel";
 import type { WordPanelHost } from "../workspace/study/word-panel";
 import { ReadingPlace, scrollToVerse } from "../workspace/study/reading-place";
 import { pageOffsetFor } from "../workspace/study/reading-place-model";
@@ -316,6 +316,8 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     return () => { document.removeEventListener("visibilitychange", background); window.removeEventListener("pagehide", leave); };
   }, [audio]);
   const textKey = JSON.stringify([key, kind, offset]);
+  // This passage's own canonical ref, which is how its curated discussions are asked for (the same for a Shabbat, a named reading or any passage).
+  const discussionRef = passage.ranges.join("; "), discussionPassage = useMemo(() => ({ ref: discussionRef, kind }), [discussionRef, kind]);
   useEffect(() => {
     const controller = new AbortController();
     audio.stopAll(); setText({ key: textKey }); setPlayingWord(null);
@@ -369,7 +371,8 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     readAids: (at, signal) => fetchPublicWordAids(source, page.offset + at, page.verses[at], signal),
     readDetails: (at, word, signal) => fetchPublicWordDetails(source, page.offset + at, page.verses[at], word, signal),
     onHear: listening ? (at, word) => hear(at, word) : undefined,
-    onVisit: ref => { const at = page.verses.findIndex(row => row.ref === ref); if (at >= 0) release(() => setFocus(at)); } } : null;
+    onVisit: ref => { const at = page.verses.findIndex(row => row.ref === ref); if (at >= 0) release(() => setFocus(at)); },
+    reveal: ref => jumpTo(ref) } : null;
   // The chapter jump: a verse on this text page is scrolled to; one on another page loads that page first.
   const pendingJump = useRef<string | null>(null);
   const jumpTo = (ref: string) => release(() => {
@@ -415,7 +418,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     onHide={() => { setDrill({ revealed: null }); setAnnounce(DRILL_STRINGS.hidden); drillFocus.current = "reveal"; }}
     onNext={drillNextVerse} onRestart={drillRestart} onEnd={drillEnd} />;
 
-  return <VersePanelScope>
+  return <VersePanelScope passage={discussionPassage}>
     <WordPanelSource host={wordHost} />
     <div className="reading-lens-row">
       {sources.length > 1 && <div className="study-kind-choice" role="group" aria-label="Reading text selection">
@@ -424,6 +427,8 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
       <LensSwitch onChange={() => leinLink.clear()} />
     </div>
     {(choice.button || choice.extra) && <div className={styles.chooseRow}>{choice.button}{choice.extra}</div>}
+    {/* Curated discussions (1.7 M6b): under the reading's header, in Study, only where this passage has any. */}
+    <DiscussionList />
     {sources.length > 1 && <p className={`field-help ${styles.passageNote}`}><bdi dir="ltr">{displayRange(passage.ranges)}</bdi></p>}
     <div className="reading-passage-layout" ref={textAnchor} tabIndex={-1}>
       <ReadingToolbar englishHidden={Boolean(drillVerse)} listeningEnabled={listening} tikkunAvailable={kind === "torah"} worksCorpus={corpus} onHear={listening && page ? () => hear(focus ?? 0) : undefined} />

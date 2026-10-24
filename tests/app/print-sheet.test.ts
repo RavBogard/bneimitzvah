@@ -33,7 +33,7 @@ const regular = (date: string): Snapshot => ({ date: parseCeremonyDate(date), ca
 
 test("the format lives in the address: defaults are left out, every field round-trips, unknown values fall back", () => {
   expect(formatEntries(DEFAULT_FORMAT)).toEqual([]);
-  const custom: SheetFormat = { show: "hebrew", script: "vowels", size: "huge", aliyot: "page", numbers: false, notes: "lined", paper: "a4", orientation: "landscape", spacing: "standing", edition: "jps2023", commentary: ["rashi", "womens", "ramban"] };
+  const custom: SheetFormat = { show: "hebrew", script: "vowels", size: "huge", aliyot: "page", numbers: false, notes: "lined", paper: "a4", orientation: "landscape", spacing: "standing", edition: "jps2023", commentary: ["rashi", "womens", "ramban"], discussions: false };
   const entries = formatEntries(custom);
   expect(entries.map(([key]) => key)).toEqual(["show", "script", "size", "aliyot", "numbers", "notes", "paper", "orient", "spacing", "comm"]);
   expect(entries.at(-1)).toEqual(["comm", "rashi,womens,ramban"]);
