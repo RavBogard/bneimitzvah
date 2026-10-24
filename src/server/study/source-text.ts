@@ -34,7 +34,8 @@ function segmentsOf(text: unknown): readonly string[] | null {
   if (!text.every(item => typeof item === "string")) return upstream();
   return text as string[];
 }
-export function projectSourceText(payload: unknown, ref: string): SourceText {
+/** `asked`: the version parameters the request named, whose "not here" warnings are expected (Sefaria keys a warning by its parameter). */
+export function projectSourceText(payload: unknown, ref: string, asked: readonly string[] = ["hebrew", "english"]): SourceText {
   if (object(payload) && typeof payload.ref === "string" && payload.ref !== ref) return unsupported(); // Sefaria renamed it: open its own page
   if (!object(payload) || payload.ref !== ref || !Array.isArray(payload.versions) || payload.versions.length > SOURCE_TEXT_LIMITS.versions
     || payload.warnings !== undefined && !Array.isArray(payload.warnings)) return upstream();
@@ -42,7 +43,7 @@ export function projectSourceText(payload: unknown, ref: string): SourceText {
   for (const warning of (payload.warnings ?? []) as unknown[]) {
     if (!object(warning) || Object.keys(warning).length !== 1) return upstream();
     const [key] = Object.keys(warning), detail = warning[key];
-    if (key !== "hebrew" && key !== "english" || !object(detail) || ![101, 102, 103, 104].includes(detail.warning_code as number)) return upstream();
+    if (!asked.includes(key) || !object(detail) || ![101, 102, 103, 104].includes(detail.warning_code as number)) return upstream();
   }
   const picked: Partial<Record<"he" | "en", { title: string; license: string; segments: readonly string[] }>> = {};
   for (const version of payload.versions as unknown[]) {
@@ -91,5 +92,36 @@ export function createSefariaSourceReader(input: { fetch: typeof globalThis.fetc
     if (row.status === 404 || row.status === 400) throw new SourceTextUnavailable("not-found");
     if (row.status !== 200) throw new SourceTextUnavailable("upstream");
     return projectSourceText(row.json, ref);
+  };
+}
+
+/**
+ * A curated discussion's source (1.7 M6) in the one edition the rabbi chose: the shelf's own bounded Sefaria projection, with
+ * that edition pinned by its version title. An English edition comes with Sefaria's default Hebrew beside it; a Hebrew or
+ * Aramaic original (the edition a Claude translation was made from) comes alone. If Sefaria does not return the pinned edition
+ * by that exact title with text at that exact ref, the answer is "unsupported": never a substitute edition.
+ */
+export type PinnedEdition = Readonly<{ language: "he" | "en"; title: string }>;
+export type PinnedSourceReader = (ref: string, edition: PinnedEdition, signal?: AbortSignal) => Promise<SourceText>;
+const versionParameter = (edition: PinnedEdition) => `${edition.language === "he" ? "hebrew" : "english"}|${edition.title}`;
+export function createSefariaPinnedSourceReader(input: { fetch: typeof globalThis.fetch }): PinnedSourceReader {
+  return async function read(value: string, edition: PinnedEdition, signal?: AbortSignal): Promise<SourceText> {
+    const ref = parseSourceRef(value), title = plainCredit(edition?.title, EDITION_TEXT_LIMITS.title);
+    if (!ref || !title || title !== edition.title || edition.language !== "he" && edition.language !== "en") throw new SourceTextUnavailable("invalid-request");
+    const asked = edition.language === "en" ? ["hebrew", versionParameter(edition)] : [versionParameter(edition)];
+    const url = new URL(`${SEFARIA_ORIGIN}/api/v3/texts/${encodeURIComponent(ref)}`);
+    for (const parameter of asked) url.searchParams.append("version", parameter);
+    url.searchParams.set("fill_in_missing_segments", "0"); url.searchParams.set("return_format", "default");
+    let row: Readonly<{ status: number; json: unknown }>;
+    try { row = await fetchSefariaJson(input.fetch, url, { deadlineMs: SOURCE_TEXT_LIMITS.requestMs, maxBytes: SOURCE_TEXT_LIMITS.upstreamBytes }, signal); }
+    catch { throw new SourceTextUnavailable("upstream"); }
+    if (row.status === 404 && isNoTextAnswer(row.json)) throw new SourceTextUnavailable("unsupported");
+    if (row.status === 404 || row.status === 400) throw new SourceTextUnavailable("not-found");
+    if (row.status !== 200) throw new SourceTextUnavailable("upstream");
+    const text = projectSourceText(row.json, ref, asked);
+    // The pinned edition itself, by its exact title, with text at this ref; nothing in a language that was not asked for.
+    if (!text.editions.some(found => found.language === edition.language && found.title === edition.title)) throw new SourceTextUnavailable("unsupported");
+    if (edition.language === "he" && text.editions.some(found => found.language === "en")) throw new SourceTextUnavailable("upstream");
+    return text;
   };
 }

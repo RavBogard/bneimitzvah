@@ -24,6 +24,8 @@ import { createPrintTools } from "./print-tools";
 import { createStudyTools } from "./study-tools";
 import type { Calendar, Snapshot } from "../../lib/readings/proposals";
 import { createAnalyticsTools } from "./analytics-tools";
+import { createDiscussionTools } from "./discussion-tools";
+import type { DiscussionService } from "../discussions/service";
 
 type JsonSchema = Readonly<Record<string, unknown>>;
 export type ToolResult = Readonly<{ content: readonly Readonly<{ type: "text"; text: string }>[]; isError?: boolean }>;
@@ -36,6 +38,8 @@ export type ToolContext<Q extends PgQueryResultHKT> = Readonly<{
   db: AccessDatabase<Q>;
   /** The portal's own reading and verse-source writes, run under a delegated (MCP) authority. */
   readings: ReturnType<typeof createReadingWork<Q>>; sources: ReturnType<typeof createDelegatedSourceAssignments<Q>>;
+  /** Curated discussions and Claude translations (1.7 M6): admin, attended only. */
+  discussions: DiscussionService<Q>;
 }>;
 export type Tool<Q extends PgQueryResultHKT> = Readonly<{
   name: string; description: string; inputSchema: JsonSchema; annotations: Readonly<Record<string, unknown>>;
@@ -227,6 +231,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
     ...createPrintTools<Q>(),
     ...createStudyTools<Q>(),
     ...createAnalyticsTools<Q>(),
+    ...createDiscussionTools<Q>(),
   ] satisfies Tool<Q>[]);
 }
 
