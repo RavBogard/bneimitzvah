@@ -56,8 +56,17 @@ function material(feed: ServiceFeed, value: FeedUnit): ServiceUnitMaterial {
     ...(feed.blockGranularity ? { blockGranularity: feed.blockGranularity } : {}) };
 }
 const bounded = <T>(value: T): T => { if (Buffer.byteLength(JSON.stringify(value)) > 256 * 1024) throw new AccessUnavailable(); return value; };
-const summary = (feed: ServiceFeed, unit: FeedUnit) => ({ id: unit.id, name: unit.name,
-  ...(unit.caption !== undefined ? { caption: unit.caption } : {}), section: section(feed, unit.section) });
+// The printed page of the pinned catalog's own unit (bounded by the served book's page count), never an
+// internal typeset folio. An absent page or page 0 is unknown, so no page is sent.
+const printedPage = (unit: FeedUnit) => unit.printedFolio !== undefined && unit.printedFolio >= 1 ? unit.printedFolio : undefined;
+const summary = (feed: ServiceFeed, unit: FeedUnit) => { const page = printedPage(unit); return { id: unit.id, name: unit.name,
+  ...(unit.caption !== undefined ? { caption: unit.caption } : {}), section: section(feed, unit.section), ...(page !== undefined ? { page } : {}) }; };
+// The catalog records no explicit service start, so a service's first page is the least printed page among the pinned
+// catalog's units for that service family (Beit Mitzvah volume: Shabbat morning 1, Shabbat evening with Havdalah 33).
+function serviceStart(feed: ServiceFeed, slot: "morning" | "havdalah"): number | undefined {
+  const pages = serviceUnitsForSlot(feed, slot).map(printedPage).filter((page): page is number => page !== undefined);
+  return pages.length ? Math.min(...pages) : undefined;
+}
 
 async function readStoredFeed<Q extends PgQueryResultHKT>(data: typeof stored, tx: AccessTransaction<Q>, tenantId: string, catalogId: string, check: () => void) {
   const row = await data.catalog(tx, tenantId, catalogId); check(); if (!row) throw new AccessUnavailable();
@@ -121,7 +130,8 @@ export function createServiceLearningService<Q extends PgQueryResultHKT>(input: 
       const selected = canonical(loaded, value.selected, value.plan.reviewedSlot);
       if (loaded.identity !== value.plan.catalogIdentity || digest(selected) !== digest(value.selected)) throw new AccessUnavailable();
       const units = selected.map(id => summary(loaded, loaded.units.find(unit => unit.id === id)!));
-      const result = bounded({ state: "assigned" as const, plan, units }); live(actor); return result;
+      const start = serviceStart(loaded, value.plan.reviewedSlot);
+      const result = bounded({ state: "assigned" as const, plan, units, ...(start !== undefined ? { serviceStart: start } : {}) }); live(actor); return result;
     });
   }
   async function unit(request: AccessRequest, selection: ReadSelection & { planId: string; planRevision: number; catalogIdentity: string; unitId: string }) {

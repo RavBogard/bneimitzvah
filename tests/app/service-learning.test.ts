@@ -16,7 +16,7 @@ import * as s from "../../src/server/db/index";
 const opened: Awaited<ReturnType<typeof accessFixture>>[] = [];
 afterEach(async () => { vi.restoreAllMocks(); await Promise.all(opened.splice(0).map(f => f.client.close())); });
 const secret = "synthetic-service-plan-review-secret-value";
-async function fixture(options: { standard?: boolean } = {}) {
+async function fixture(options: { standard?: boolean; firstPage?: number | false } = {}) {
   const f = await accessFixture(); opened.push(f); const content = syntheticServiceCatalog("one", options);
   const catalogId = randomUUID();
   await f.owner(async () => {
@@ -92,6 +92,35 @@ test("selected material preserves credits/Unicode, excludes unrelated/front/comp
     for (const excluded of [f.content.hidden, "Unselected synthetic front", "omitted-synthetic", '"tr"', '"bare"', '"folio"', '"phys"', '"printedFolio"', '"folios"']) expect(json.includes(excluded)).toBe(false);
   }
   expect(await denied(() => f.serviceLearning.unit(f.request("learner"), { mode: "student", studentId: f.selection.studentId, planId: saved.planId, planRevision: 1, catalogIdentity: f.content.identity, unitId: f.content.hidden }), 404)).toBe(true);
+});
+
+test("metadata carries each assigned part's printed page and the service's first page from the pinned catalog, for every reader of the student", async () => {
+  const f = await fixture({ firstPage: 5 }); await f.save();
+  // Morning units sit on pages 5 (first), 6 (hidden) and 7 (second); the evening unit on 8.
+  for (const [who, mode] of [["admin", "admin"], ["multi", "tutor"], ["multi", "parent"], ["learner", "student"]] as const)
+    expect(await f.serviceLearning.metadata(f.request(who), { mode, studentId: f.selection.studentId })).toMatchObject({ state: "assigned", serviceStart: 5,
+      units: [{ id: f.content.first, page: 5 }, { id: f.content.second, page: 7 }] });
+  const available = await f.serviceLearning.catalog(f.mutation(), { mode: "admin", studentId: f.selection.studentId });
+  expect(available.state === "available" && available.units.map(unit => [unit.id, unit.page])).toEqual([[f.content.first, 5], [f.content.hidden, 6], [f.content.second, 7]]);
+  // An evening (Havdalah) plan starts at the evening service's own first page, not the morning's.
+  await f.owner(() => f.db.update(s.student).set({ serviceSlot: "havdalah" }).where(eq(s.student.id, f.selection.studentId)));
+  const evening = await f.serviceLearning.prepare(f.mutation(), { ...f.selection, expectedPlanRevision: 1, selectedIds: [f.content.evening] }); if (!evening.ok) throw new Error("Synthetic evening review unavailable");
+  await f.serviceLearning.confirm(f.mutation(), { mode: "admin", studentId: f.selection.studentId, binding: evening.binding });
+  expect(await f.serviceLearning.metadata(f.request("learner"), { mode: "student", studentId: f.selection.studentId })).toMatchObject({ state: "assigned", serviceStart: 8, units: [{ id: f.content.evening, page: 8 }] });
+});
+
+test("a catalog without printed pages sends no page and no service start, and no other state carries either", async () => {
+  const f = await fixture({ firstPage: false });
+  const none = await f.serviceLearning.metadata(f.request("learner"), { mode: "student", studentId: f.selection.studentId });
+  expect(none).toEqual({ state: "no-plan" });
+  await f.save();
+  const meta = await f.serviceLearning.metadata(f.request("learner"), { mode: "student", studentId: f.selection.studentId }), json = JSON.stringify(meta);
+  expect(meta.state).toBe("assigned"); expect(json).not.toContain('"page"'); expect(json).not.toContain("serviceStart");
+  expect(JSON.stringify(await f.serviceLearning.catalog(f.mutation(), { mode: "admin", studentId: f.selection.studentId }))).not.toContain('"page"');
+  const cleared = await f.serviceLearning.prepare(f.mutation(), { ...f.selection, expectedPlanRevision: 1, selectedIds: [] }); if (!cleared.ok) throw new Error("Synthetic clear unavailable");
+  await f.serviceLearning.confirm(f.mutation(), { mode: "admin", studentId: f.selection.studentId, binding: cleared.binding });
+  const after = JSON.stringify(await f.serviceLearning.metadata(f.request("learner"), { mode: "student", studentId: f.selection.studentId }));
+  expect(after).toContain('"cleared"'); expect(after).not.toContain('"page"'); expect(after).not.toContain("serviceStart");
 });
 
 test("staff-only Origin capability, exact tenant/relationship and duplicate/foreign/slot/size boundaries fail closed", async () => {
