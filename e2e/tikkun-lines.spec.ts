@@ -155,6 +155,24 @@ test("the columns still agree with Colors off, and keep their tap and screen rea
   expect(await page.locator(".study-verses").first().evaluate(node => [...node.querySelectorAll("[data-tikkun-ref]")].some(cell => cell.textContent!.includes(String.fromCodePoint(0x05be))))).toBe(false);
 });
 
+test("the scroll column is set in the Stam face alone, every glyph from the custom font, with consonants only", async ({ page }) => {
+  await open(page, samples.lech, { width: 1280, size: "standard", colors: true });
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("DOM.enable"); await cdp.send("CSS.enable");
+  const dom = await cdp.send("DOM.getDocument", { depth: -1 });
+  const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: dom.root.nodeId, selector: '[data-tikkun-ref="Genesis 12:1"] [data-tikkun-word]' });
+  const { fonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId });
+  await cdp.detach();
+  expect(fonts.some(font => font.isCustomFont && font.familyName === "Stam Ashkenaz CLM" && font.glyphCount > 0)).toBe(true);
+  expect(fonts.every(font => font.isCustomFont)).toBe(true);
+  const cells = await page.locator(".study-verses [data-tikkun-ref]").evaluateAll(nodes => nodes.map(node => ({ font: getComputedStyle(node).fontFamily, text: node.textContent ?? "" })));
+  for (const cell of cells) {
+    expect(cell.font.startsWith('"CRC Stam Ashkenaz"')).toBe(true);
+    expect([...cell.text].every(char => char === " " || (char.codePointAt(0)! >= 0x05d0 && char.codePointAt(0)! <= 0x05ea))).toBe(true);
+  }
+});
+
 test("the columns re-flow together when the text size changes", async ({ page }) => {
   await open(page, samples.vayera, { width: 360, size: "standard", colors: true });
   const before = await measure(page);
