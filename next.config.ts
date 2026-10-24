@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   // Let the alias gate drop path/query before any cross-origin navigation.
   // Pinned Next still normalizes repeated slashes before proxy on the same host.
   skipTrailingSlashRedirect: true,
+  // The installable app's rollback flag (1.5 A1): "false" stops the page registering a worker or packing,
+  // and makes /sw.js the tombstone that removes an installed worker and its caches.
+  env: { PORTAL_OFFLINE_ENABLED: process.env.PORTAL_OFFLINE_ENABLED ?? "" },
+  // /sw.js is prerendered from this file; traced too, so a runtime render could never serve a 500 instead of the worker.
+  outputFileTracingIncludes: { "/sw.js": ["./src/offline/service-worker.js"] },
   // Auth/invitation query strings must not enter framework request logs.
   // Fetch URL logging remains disabled (no fetches logging configuration).
   logging: { incomingRequests: false },

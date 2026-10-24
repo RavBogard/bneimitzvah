@@ -12,6 +12,7 @@ import { parseCompareVerse } from "../../lib/readings/compare";
 import { parseSourceRef, type ShelfAnswer } from "../../lib/readings/shelf";
 import { SourceTextUnavailable, type SourceTextReader } from "../study/source-text";
 import { SourceMetadataUnavailable } from "../study/sources/metadata";
+import { plainProductName, webManifest } from "../../lib/offline/manifest";
 
 /**
  * Signed-out reading routes. A strict allowlist under /api/public/: GET only, a
@@ -45,7 +46,7 @@ export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Re
  * named by a Shabbat `date` (the weekly page) or, for "Any reading", by a canonical `ref` with its
  * `kind` (the 1.5 offline packer depends on these exact shapes).
  */
-type Route = Readonly<{ kind: "reading" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source"; keysets: readonly (readonly string[])[] }>;
+type Route = Readonly<{ kind: "reading" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source" | "manifest"; keysets: readonly (readonly string[])[] }>;
 const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/reading": { kind: "reading", keysets: [["date"], ["ref", "kind"]] },
   "/api/public/text": { kind: "text", keysets: [["date", "kind", "offset"], ["ref", "kind", "offset"]] },
@@ -56,6 +57,8 @@ const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/translations": { kind: "translations", keysets: [["verse"]] },
   "/api/public/related": { kind: "related", keysets: [["verse"]] },
   "/api/public/source": { kind: "source", keysets: [["ref"]] },
+  // The installable app's manifest (1.5 A1): no query at all.
+  "/api/public/manifest": { kind: "manifest", keysets: [[]] },
 });
 /** Longest decoded value per key; a `ref` is bounded by READING_REF_LIMITS.chars, everything else by 80. */
 const valueLimit = (key: string) => key === "ref" ? READING_REF_LIMITS.chars : 80; // a source ref is bounded tighter (256 bytes) by its own check
@@ -193,6 +196,12 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
             // With the name its change line needs ("Selected and ordered by {productName}", the CC BY note of changes).
             const shelf = await runtime.shelf(query.verse, signal), productName = await runtime.productName();
             return json({ ...shelf, productName } as unknown as JsonValue, 604800);
+          }
+          case "manifest": {
+            const name = plainProductName(await runtime.productName());
+            if (!name) return failure(503);
+            return new Response(JSON.stringify(webManifest(name)), { status: 200, headers: { ...common, "content-type": "application/manifest+json; charset=utf-8",
+              "cache-control": "public, max-age=300", "vercel-cdn-cache-control": "public, s-maxage=3600" } });
           }
           case "source": {
             let text;

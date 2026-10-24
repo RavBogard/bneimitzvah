@@ -28,6 +28,7 @@ import { createShortExplorationService } from "../../src/server/reference-audio/
 import { createPublicReadingService, PUBLIC_TENANT } from "../../src/server/public-reading/service";
 import { AccessDenied } from "../../src/server/access/errors";
 import type { PublicRuntime } from "../../src/server/http/public-reading";
+import { readProductName } from "../../src/server/data/product-name";
 import { CommentaryUnavailable, type CommentaryReader } from "../../src/server/study/commentary";
 import type { TranslationsReader } from "../../src/server/study/translations";
 import { unavailableShelf, unavailableSource, unavailableTranslations } from "../helpers/translations";
@@ -56,7 +57,6 @@ import { projectMagicLink } from "../../src/server/mail/transport";
 import { resolveTenantHost } from "../../src/server/tenancy/resolve";
 import { parseCeremonyDate } from "../../src/lib/readings/ranges";
 import { withTenantTransaction } from "../../src/server/db/runtime";
-import { readProductName } from "../../src/server/data/product-name";
 import type { HttpRuntime } from "../../src/server/runtime/composition";
 import { createReferenceReviewService } from "../../src/server/reference-review/service";
 import { ReviewUnavailable } from "../../src/server/reference-review/batch-contract";

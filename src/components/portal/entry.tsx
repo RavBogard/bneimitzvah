@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { parseAcceptance, parseAcknowledgement, parseAuthResult, parseInvitation, parseSession, PortalRequestError, requestPortal, roleNames,
   type InvitationReview, type SessionSummary } from "./api";
 import { GoogleSignIn } from "./google-sign-in";
@@ -8,6 +8,7 @@ import type { GoogleIntent } from "./sign-in-boundary";
 import { forgetPendingRequest } from "./pending-request";
 import { FrontDoor, type FrontDoorAccount } from "./front-door/front-door";
 import { AccountRequest } from "./account-request";
+import { purgeOffline } from "../../lib/offline/pack-index";
 
 export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "accepted" | "uncertain" }
   | { kind: "signed-in"; summary: SessionSummary } | { kind: "invitation"; review: InvitationReview };
@@ -44,7 +45,7 @@ const roleTasks: Record<SessionSummary["roles"][number], string> = { student: "y
 const failure = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
 
 /** `frontDoor` puts this same entry task inside the CRC Torah home's Beit Mitzvah door; invitation entry never gets doors. */
-export function PortalEntry({ invitation = false, authenticationError = false, autoEnterStudent = true, inlineGoogle = false, googleIntent, frontDoor = false }: { invitation?: boolean; authenticationError?: boolean; autoEnterStudent?: boolean; inlineGoogle?: boolean; googleIntent?: GoogleIntent; frontDoor?: boolean }) {
+export function PortalEntry({ invitation = false, authenticationError = false, autoEnterStudent = true, inlineGoogle = false, googleIntent, frontDoor = false, after }: { invitation?: boolean; authenticationError?: boolean; autoEnterStudent?: boolean; inlineGoogle?: boolean; googleIntent?: GoogleIntent; frontDoor?: boolean; after?: ReactNode }) {
   const [view, setView] = useState<View>({ kind: "loading" });
   const [pending, setPending] = useState<Action | null>(null), [message, setMessage] = useState("");
   const [email, setEmail] = useState(""), [linkRequested, setLinkRequested] = useState(false), [code, setCode] = useState("");
@@ -102,6 +103,8 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         window.location.replace(next);
         return;
       } else if (kind === "sign-out") {
+        // Saved readings leave the device before the session does (1.5 A1, §3.4). This never throws.
+        await purgeOffline();
         parseAcknowledgement(await requestPortal("/api/auth/sign-out", {}), "ok");
         forgetPendingRequest(); // A Connect Claude request never outlives the account that started it.
         setAuthGeneration(value => value + 1);
@@ -190,6 +193,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         {view.kind === "invalid-invitation" && <><p>This invitation may have changed, expired, already been accepted, or belong to another account. No new access has been added by this request.</p><p>Open the latest invitation email, or ask the congregation for a new invitation.</p><button type="button" className="button-primary" onClick={retry}>{message ? "Review invitation again" : "Check invitation again"}</button><a className="button-text" href="/">Check my access</a></>}
         {view.kind === "uncertain" && <><p>The request was interrupted. Your invitation may have been accepted. Check your access before trying again.</p><a className="button-primary" href="/">Check my access</a><button type="button" className="button-text" onClick={retry}>Review invitation again</button></>}
         {view.kind === "forbidden" && <><p>This account can’t use the requested access right now. Ask the congregation for help, or sign in with a different account.</p><button type="button" className="button-secondary" disabled={pending !== null} onClick={() => void action("sign-out")}>{pending === "sign-out" ? "Signing out…" : "Sign out"}</button></>}
+        {after}
       </section>;
   if (doors) {
     return <FrontDoor account={frontDoorAccount(view)} onSignIn={() => heading.current?.focus({ preventScroll: true })}>{task}</FrontDoor>;

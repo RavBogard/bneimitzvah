@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/neon-serverless";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import * as schema from "../db/index";
 import { withTenantTransaction } from "../db/runtime";
+import { readProductName } from "../data/product-name";
 import type { AccessDatabase } from "../access/types";
 import { AccessDenied } from "../access/errors";
 import { createPersistentReadingCache } from "../data/reading-cache";
@@ -21,7 +22,6 @@ import { budgetedStepSource, createPublicReadingService, PUBLIC_TENANT } from ".
 import { createStepSource } from "../study/lexical/source";
 import type { PublicRuntime, PublicRuntimeScope } from "../http/public-reading";
 import { createLogger } from "../logging/logger";
-import { readProductName } from "../data/product-name";
 import { loadRuntimeConfig, type RuntimeConfig } from "./config";
 import { RuntimeUnavailable } from "./errors";
 import { sharedStudyTasks } from "./composition";
@@ -36,7 +36,8 @@ const publicStepSource = budgetedStepSource(createStepSource());
  * can open, read or refresh a session or reach a people table by any path. The
  * database handle serves only the exact host lookup, CRC's product name and the two global,
  * non-tenant public text caches (Hebcal calendar and Sefaria chapters) that the
- * signed-in reading already fills.
+ * signed-in reading already fills, plus the public tenant's own productName for the web app manifest
+ * (1.5 A1, E1): one column of the one tenant this runtime ever serves, read only after resolveTenant.
  */
 export function composePublicRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch, env: Environment): PublicRuntime {
   const loadReading = createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS });

@@ -26,6 +26,7 @@ import { parseReadAddress, readAddress, selectorKey, type ReadAddress, type Read
 import { ReadingChooser } from "./reading-chooser";
 import { SaveReading } from "../saved/save-reading";
 import { SavedReadingPage } from "../saved/saved-reading";
+import { OfflineExpiryNote, OfflinePill } from "../offline/status";
 import { useOwnLayer } from "../workspace/study/own-layer";
 import { DRILL_STRINGS, drillNext, TranslateDrillPanel } from "./translate-drill";
 import styles from "./public-reading.module.css";
@@ -158,7 +159,7 @@ function WeekReading({ initial, verse }: { initial: Extract<ReadTarget, { mode: 
   const shown = sources[index]?.source.passage;
   return <Shell title={WEEK_TITLE}>
     <Hero eyebrow={isThisWeek ? "This Shabbat" : date ? "Shabbat" : "Torah and haftarah"} title={current ? current.parashah ?? "Shabbat reading" : week?.error ? "Reading unavailable" : "Loading the reading"}
-      meta={date && <><time dateTime={date}>{longDate(date)}</time>{current?.torah && <> · Torah <bdi dir="ltr">{displayRange(current.torah.ranges)}</bdi></>}{current?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(current.haftarah.ranges)}</bdi></>}</>}
+      meta={date && <><time dateTime={date}>{longDate(date)}</time>{current?.torah && <> · Torah <bdi dir="ltr">{displayRange(current.torah.ranges)}</bdi></>}{current?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(current.haftarah.ranges)}</bdi></>}<OfflinePill /></>}
       nav={<>
         <button type="button" className="button-hero-secondary" disabled={!date} onClick={() => date && change(addDays(date, -7))}>Previous week</button>
         {!isThisWeek && today && <button type="button" className="button-hero-secondary" onClick={() => change(today)}>This week</button>}
@@ -170,7 +171,8 @@ function WeekReading({ initial, verse }: { initial: Extract<ReadTarget, { mode: 
     {chooser.panel}
     {week?.error && <div className="workspace-state" role="status"><h2>{week.error === 400 ? "That date isn’t available" : "The reading didn’t load"}</h2>
       <p>{week.error === 400 ? "Choose a Shabbat within the next few years, or go back to this week." : "Check your connection and try again."}</p>
-      {week.error === 400 && today ? <button type="button" className="button-secondary" onClick={() => change(today)}>Go to this week</button> : <button type="button" className="button-secondary" onClick={() => setRetry(value => value + 1)}>Try again</button>}</div>}
+      {week.error === 400 && today ? <button type="button" className="button-secondary" onClick={() => change(today)}>Go to this week</button> : <button type="button" className="button-secondary" onClick={() => setRetry(value => value + 1)}>Try again</button>}
+      <OfflineExpiryNote /></div>}
     {current && !sources.length && <div className="workspace-state" role="status"><h2>No reading to show for this Shabbat</h2><p>The calendar lists no weekly Torah portion or haftarah here. Try the week before or after.</p></div>}
     {current && sources.length > 0 && <>
       {!current.torah && current.parashah && <p className="field-help">This Shabbat’s Torah reading isn’t shown here. The haftarah is below.</p>}

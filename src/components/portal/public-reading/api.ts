@@ -7,6 +7,7 @@ import { parseStudyWordAids, type StudyWordAids } from "../../../lib/hebrew/word
 import { parseStudyWordDetails, type StudyWordDetails } from "../../../lib/hebrew/word-details";
 import { isSaturday } from "../../../lib/readings/public-shabbat";
 import { canonicalReadingRef } from "../../../lib/readings/reading-ref";
+import { noteResponse } from "../../../lib/offline/signal";
 import { publicReadingPath, publicShortPath, publicTextPath, publicWordAidsPath, publicWordDetailsPath, type ReadingSelector } from "./urls";
 
 /**
@@ -29,6 +30,7 @@ export async function getJson(path: string, cap: number, signal: AbortSignal): P
   try {
     const response = await fetch(path, { headers: { accept: "application/json" }, signal: controller.signal, credentials: "omit", mode: "same-origin", redirect: "error", referrerPolicy: "no-referrer" });
     if (!response.ok) { try { void response.body?.cancel().catch(() => {}); } catch {} throw new PortalRequestError([400, 404, 429, 503].includes(response.status) ? response.status : 503); }
+    noteResponse(response);
     if (response.redirected || response.url !== origin + path || response.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json" || !response.body) return bad();
     reader = response.body.getReader();
     const bytes = new Uint8Array(cap); let size = 0;
@@ -62,7 +64,12 @@ function passage(value: unknown, kind: StudyKind): PublicPassage | null {
 }
 export async function fetchPublicWeek(date: string, signal: AbortSignal): Promise<PublicWeek> {
   if (!isSaturday(date)) return bad();
-  const row = referenceRecord(await getJson(publicReadingPath({ by: "date", date }), 256 * 1024, signal), ["date", "parashah", "torah", "haftarah", "fetchedAt", "listening"]);
+  return parsePublicWeek(await getJson(publicReadingPath({ by: "date", date }), 256 * 1024, signal), date);
+}
+/** A week's body, strictly (the reader and the offline packer parse one thing). */
+export function parsePublicWeek(value: unknown, date: string): PublicWeek {
+  if (!isSaturday(date)) return bad();
+  const row = referenceRecord(value, ["date", "parashah", "torah", "haftarah", "fetchedAt", "listening"]);
   if (!row || row.date !== date || (row.parashah !== null && (typeof row.parashah !== "string" || row.parashah.length > 160)) || !Number.isSafeInteger(row.fetchedAt)) return bad();
   return Object.freeze({ date, parashah: row.parashah as string | null, torah: passage(row.torah, "torah"), haftarah: passage(row.haftarah, "haftarah"),
     fetchedAt: Number(row.fetchedAt), listening: listeningOf(row.listening) });
@@ -75,8 +82,12 @@ function listeningOf(value: unknown): Readonly<{ pocketTorah: boolean }> {
 /** "Any reading": the passage a canonical ref names, paged exactly as a week's. */
 export type PublicRefReading = Readonly<{ ref: string; kind: StudyKind; passage: PublicPassage; listening: Readonly<{ pocketTorah: boolean }> }>;
 export async function fetchPublicRefReading(ref: string, kind: StudyKind, signal: AbortSignal): Promise<PublicRefReading> {
+  if (!canonicalReadingRef(ref, kind)) throw new PortalRequestError(400);
+  return parsePublicRefReading(await getJson(publicReadingPath({ by: "ref", ref, kind }), 256 * 1024, signal), ref, kind);
+}
+export function parsePublicRefReading(body: unknown, ref: string, kind: StudyKind): PublicRefReading {
   const canonical = canonicalReadingRef(ref, kind); if (!canonical) throw new PortalRequestError(400);
-  const row = referenceRecord(await getJson(publicReadingPath({ by: "ref", ref, kind }), 256 * 1024, signal), ["ref", "kind", "passage", "listening"]);
+  const row = referenceRecord(body, ["ref", "kind", "passage", "listening"]);
   if (!row || row.ref !== ref || row.kind !== kind) return bad();
   const value = passage(row.passage, kind);
   if (!value || value.ranges.join("; ") !== ref || value.verseCount !== canonical.verses.length) return bad();
@@ -97,10 +108,13 @@ const selectorKeys = (selector: ReadingSelector) => selector.by === "date" ? "da
 
 export async function fetchPublicText(source: PublicSource, offset: number, signal: AbortSignal): Promise<StudyPage> {
   const { passage: value, selector } = source, kind = value.kind; if (!value.pages.some(page => page.offset === offset)) return bad();
-  const row = referenceRecord(await getJson(publicTextPath(selector, kind, offset), 2 * 1024 * 1024, signal),
-    ["kind", selectorKeys(selector), "offset", "nextOffset", "totalVerses", "translation", "verses", "chapters"]);
+  return parsePublicTextPage(await getJson(publicTextPath(selector, kind, offset), 2 * 1024 * 1024, signal), source, offset);
+}
+export function parsePublicTextPage(value: unknown, source: PublicSource, offset: number): StudyPage {
+  const { passage, selector } = source, kind = passage.kind; if (!passage.pages.some(page => page.offset === offset)) return bad();
+  const row = referenceRecord(value, ["kind", selectorKeys(selector), "offset", "nextOffset", "totalVerses", "translation", "verses", "chapters"]);
   if (!row || row.kind !== kind || !echoes(row, selector)) return bad();
-  return parseStudyContent(row, studyRangePlan(value.ranges, kind, offset), offset, value.verseCount);
+  return parseStudyContent(row, studyRangePlan(passage.ranges, kind, offset), offset, passage.verseCount);
 }
 async function verseBinding(verse: StudyVerse) {
   const projection = projectStudyVerse(verse.ref, verse.hebrew);
@@ -126,8 +140,13 @@ export async function fetchPublicWordDetails(source: PublicSource, index: number
 }
 export async function fetchPublicShortPage(source: PublicSource, offset: number, signal: AbortSignal): Promise<PublicShortPage> {
   const { passage: value, selector } = source, kind = value.kind; if (!source.listening || !value.pages.some(page => page.offset === offset)) return bad();
+  return parsePublicShortPage(await getJson(publicShortPath(selector, kind, offset), 1024 * 1024, signal), source, offset);
+}
+/** A short-reference page, strictly: every clip is a parsed PocketTorah short-v1 source or none (G3). */
+export function parsePublicShortPage(body: unknown, source: PublicSource, offset: number): PublicShortPage {
+  const { passage: value, selector } = source, kind = value.kind; if (!source.listening || !value.pages.some(page => page.offset === offset)) return bad();
   const plan = studyRangePlan(value.ranges, kind, offset);
-  const row = referenceRecord(await getJson(publicShortPath(selector, kind, offset), 1024 * 1024, signal), ["kind", selectorKeys(selector), "page"]);
+  const row = referenceRecord(body, ["kind", selectorKeys(selector), "page"]);
   if (!row || row.kind !== kind || !echoes(row, selector)) return bad();
   const page = referenceRecord(row.page, ["offset", "nextOffset", "totalVerses", "references"]);
   if (!page || page.offset !== offset || page.nextOffset !== plan.nextOffset || page.totalVerses !== value.verseCount || !Array.isArray(page.references) || page.references.length !== plan.refs.length) return bad();
