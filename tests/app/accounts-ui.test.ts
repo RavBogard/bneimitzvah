@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -14,7 +15,9 @@ describe("asking for an account, on screen", () => {
   it("offers the form with the person's name filled in, and an optional purpose", () => {
     const form = view({ status: "ready", state: "requestable", suggestedName: "Ruth", productName: "CRC Torah" });
     expect(form).toContain(">Ask for an account</h3>");
-    expect(form).toContain('An account keeps your own readings, translation and notes. Everything else on <bdi dir="auto">CRC Torah</bdi> is open without one.');
+    // Release 1.7 M3b: true now that the account keeps preferred commentaries and reading settings too.
+    expect(form).toContain('An account keeps your saved readings, your place in Learn to lein, your preferred commentaries and your settings. Everything else on <bdi dir="auto">CRC Torah</bdi> is open without one.');
+    expect(form).not.toMatch(/translation and notes/);
     expect(form).toContain('<label for="req-name">Your name</label>');
     expect(form).toContain('value="Ruth"');
     expect(form).toContain("What would you like to work on? <span class=\"field-help\">(optional)</span>");
@@ -34,6 +37,11 @@ describe("asking for an account, on screen", () => {
     for (const state of ["requestable", "pending", "member"] as const) expect(view({ status: "ready", state, suggestedName: "", productName: "CRC Torah" })).not.toMatch(/!/);
     // Each congregation's own product name (Daniel, E1).
     expect(view({ status: "ready", state: "requestable", suggestedName: "", productName: "Synthetic Torah" })).toContain('Everything else on <bdi dir="auto">Synthetic Torah</bdi> is open without one.');
+  });
+  it("the staff accounts page names the same things an account keeps", () => {
+    const source = readFileSync("src/components/portal/workspace/accounts/workspace.tsx", "utf8");
+    expect(source).toContain('An account keeps a person’s saved readings, place in Learn to lein, preferred commentaries and settings. Everything else on <bdi dir="auto">{productName}</bdi> is open without one.');
+    expect(source).not.toMatch(/translation and notes/);
   });
   it("reads the server's answers strictly", () => {
     expect(parseRequestView(200, { ok: true, state: "pending", suggestedName: "", productName: "CRC Torah" })).toEqual({ status: "ready", state: "pending", suggestedName: "", productName: "CRC Torah" });

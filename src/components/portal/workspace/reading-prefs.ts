@@ -1,5 +1,6 @@
 "use client";
 import { createContext, createElement, useCallback, useContext, useSyncExternalStore, type ReactNode } from "react";
+import { notePreferencesChanged, onPreferencesApplied } from "./account-preferences";
 
 // Display preferences only: no student text, identity or progress is stored.
 // Daniel (2026-10-16): phrase colors are on by default and the choice is
@@ -66,7 +67,11 @@ function write(key: string, change: Partial<ReadingPrefs>, englishOnWide = false
   cache.set(cacheKey(key, englishOnWide), value);
   try { window.localStorage.setItem(key, JSON.stringify(chosen)); } catch { /* Preference still applies in this tab. */ }
   listeners.forEach(listener => listener());
+  // The personal reader's own settings (no student scope) are kept by a signed-in account too (release 1.7 M3b).
+  if (key === scopeKey(null)) notePreferencesChanged();
 }
+// The account's copy was written into this browser: show it.
+onPreferencesApplied(() => { cache.clear(); listeners.forEach(listener => listener()); });
 function subscribe(listener: () => void) {
   listeners.add(listener);
   const storage = (event: StorageEvent) => { if (event.key?.startsWith(PREFIX)) { for (const flag of [true, false]) cache.delete(cacheKey(event.key, flag)); listener(); } };

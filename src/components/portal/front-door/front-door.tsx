@@ -6,6 +6,7 @@ import { fetchPublicWeek, type PublicWeek } from "../public-reading/api";
 import { MyReadings } from "../saved/my-readings";
 import { InstallHint } from "../offline/install-hint";
 import { SavedLine } from "../offline/status";
+import { startAccountPreferences } from "../workspace/account-preferences";
 import styles from "./front-door.module.css";
 
 /** What the app bar offers on the right: nothing while access is being checked or when a signed-in account is refused, Sign in, or the signed-in account (named by its role when it has exactly one). `saved`: the account keeps saved readings, so My readings shows. */
@@ -56,7 +57,9 @@ function ThisWeek() {
  * whole so every entry state and behaviour stays in PortalEntry) and the Learn to lein door.
  */
 export function FrontDoor({ account, onSignIn, children }: { account: FrontDoorAccount; onSignIn: () => void; children: ReactNode }) {
-  const door = useRef<HTMLElement>(null);
+  const door = useRef<HTMLElement>(null), keeps = account?.kind === "account" && account.saved;
+  // An account that keeps saved readings keeps this browser's preferred commentaries and reading settings too (release 1.7 M3b).
+  useEffect(() => { if (keeps) startAccountPreferences(true); }, [keeps]);
   return <div className="portal-shell">
     <a className="skip-link" href="#front-door-main">Skip to main content</a>
     <header className="portal-header app-bar">

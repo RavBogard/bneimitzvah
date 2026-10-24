@@ -1,5 +1,7 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
+import { parsePreferences, serializePreferences } from "../../lib/account-preferences/document";
 import { AccessDenied } from "../access/errors";
 import type { createAccessService } from "../access/service";
 import type { AccessRequest, AccessTransaction } from "../access/types";
@@ -21,6 +23,19 @@ const readingView = (row: data.SavedReadingRow) => ({ id: row.id, name: row.name
 const workView = (row: data.WorkRow) => ({ text: row.text, version: row.version, updatedAt: row.updatedAt.toISOString() });
 const markView = (row: data.MarkRow) => ({ state: row.state, version: row.version, updatedAt: row.updatedAt.toISOString() });
 const starView = (row: data.StarRow) => ({ work: row.work, verseRef: row.verseRef, comment: row.commentIndex });
+
+/**
+ * An opaque, stable name for this member's account, so a browser can tell whose preferences it holds (a shared device
+ * never copies one member's choices up into another's account). A hash, not an id, returned only to the member themself.
+ */
+export const preferencesOwnerName = (owner: Pick<SavedOwner, "tenantId" | "membershipId">) =>
+  createHash("sha256").update(`account-preferences-owner/v1:${owner.tenantId}:${owner.membershipId}`).digest("hex").slice(0, 32);
+/** A stored document re-read with the same strict parser; a row that no longer parses is refused, never served. */
+function preferencesView(owner: SavedOwner, row: data.PreferenceRow | null) {
+  const preferences = row ? parsePreferences(row.preferences) : null;
+  if (row && !preferences) throw new Error("Preferences unavailable");
+  return { ok: true as const, owner: preferencesOwnerName(owner), preferences, revision: row?.revision ?? 0 };
+}
 
 /** A stored reading re-expanded from its own canonical ranges; a row that no longer agrees is refused, never served. */
 function versesOf(row: data.SavedReadingRow) {
@@ -153,6 +168,29 @@ export function createSavedService<Q extends PgQueryResultHKT>(input: { access: 
         if (await data.countStars(tx, owner) >= SAVED_CAPS.stars) return limit;
         if (!await data.insertStar(tx, owner, value.work, value.verseRef, value.comment)) throw new Error("Saved star unavailable");
         return { ok: true as const, star };
+      });
+    },
+    /**
+     * The member's own reading preferences (release 1.7 M3b): `preferences` null and revision 0 when the account
+     * keeps none yet. 401 signed out, 403 not eligible: the browser keeps its own copy then.
+     */
+    async preferences(request: Request) {
+      return withSavedOwner(request, "read", async (tx, owner) => preferencesView(owner, await data.preferenceRow(tx, owner)));
+    },
+    /**
+     * Replace the document under its revision. A stale revision (another device wrote first, or a first copy-up found
+     * one already there), or an owner name that is not this member's (the browser read another account), is a 409
+     * conflict carrying the member's own current document; the browser decides what to resend.
+     */
+    async putPreferences(request: Request, supplied: unknown) {
+      const value = validate.preferencesPut(supplied), document = JSON.parse(serializePreferences(value.preferences));
+      return write(request, async (tx, owner) => {
+        const current = await data.preferenceRow(tx, owner);
+        if (value.owner !== preferencesOwnerName(owner) || (current?.revision ?? 0) !== value.expectedRevision)
+          return { ok: false as const, code: "conflict" as const, current: preferencesView(owner, current) };
+        const row = current ? await data.updatePreferences(tx, owner, value.expectedRevision, document) : await data.insertPreferences(tx, owner, document);
+        if (!row) throw new Error("Preferences unavailable");
+        return preferencesView(owner, row);
       });
     },
   });

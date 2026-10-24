@@ -1,6 +1,7 @@
 "use client";
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { COMMENTARY_WORKS } from "../../../lib/readings/commentary";
+import { notePreferencesChanged, onPreferencesApplied, startAccountPreferences } from "./account-preferences";
 
 /**
  * The reading's two lenses (spec 2026-10-22 §3.1): Lein, the continuous passage
@@ -64,9 +65,21 @@ export function StudyLensScope({ storageKey, query = null, children }: { storage
     const remembered = readRememberedLens(browserStorage(), storageKey);
     setChoice({ lens: initialLens({ query, remember: storageKey !== null, remembered: remembered.lens }), works: remembered.works ?? DEFAULT_WORKS, english: remembered.english ?? true });
   }, [storageKey, query]);
+  // The personal reader's commentaries and Study English are kept by a signed-in account too (release 1.7 M3b). When the
+  // account's copy arrives it is already in this browser: read it again, keeping the lens this page opened in.
+  useEffect(() => {
+    if (storageKey !== LENS_STORAGE.weekly) return;
+    const stop = onPreferencesApplied(() => {
+      const remembered = readRememberedLens(browserStorage(), storageKey);
+      setChoice(current => ({ lens: current.lens, works: remembered.works ?? DEFAULT_WORKS, english: remembered.english ?? true }));
+    });
+    startAccountPreferences(false);
+    return stop;
+  }, [storageKey]);
   const update = useCallback((change: Partial<LensChoice>) => setChoice(current => {
     const next = { lens: change.lens ?? current.lens, works: change.works ? normalizeWorks(change.works) : current.works, english: change.english ?? current.english };
     rememberLens(browserStorage(), storageKey, next);
+    if (storageKey === LENS_STORAGE.weekly && (next.english !== current.english || next.works.join() !== current.works.join())) notePreferencesChanged();
     return next;
   }), [storageKey]);
   const value = useMemo<LensContext>(() => ({ ...choice, available: true, setLens: lens => update({ lens }), setWorks: works => update({ works }), setEnglish: english => update({ english }) }), [choice, update]);

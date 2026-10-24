@@ -2,8 +2,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 
 /**
- * Asking for an account (release 1.4, plan section 5). An account keeps a person's own readings, translation and
- * notes; everything else is open without one. A request waits for an approver and ends in one email.
+ * Asking for an account (release 1.4, plan section 5). An account keeps a person's saved readings, place in Learn to
+ * lein, preferred commentaries and settings (release 1.7 M3b); everything else is open without one. A request waits
+ * for an approver and ends in one email.
  */
 export type RequestState = "requestable" | "pending" | "member";
 export type RequestView = Readonly<{ status: "loading" } | { status: "failed" } | { status: "ready"; state: RequestState; suggestedName: string; productName: string }>;
@@ -57,7 +58,7 @@ export function AccountRequestView({ view, level, name, purpose, problem, sendin
   if (view.state === "pending") return <div className="account-request" data-request-state="pending"><Heading>Your request is in</Heading>
     <p role="status">You’ll get one email when it’s approved.</p></div>;
   return <div className="account-request" data-request-state="requestable"><Heading id={`${formId}-title`}>Ask for an account</Heading>
-    <p>An account keeps your own readings, translation and notes. Everything else on <bdi dir="auto">{view.productName}</bdi> is open without one.</p>
+    <p>An account keeps your saved readings, your place in Learn to lein, your preferred commentaries and your settings. Everything else on <bdi dir="auto">{view.productName}</bdi> is open without one.</p>
     <form aria-labelledby={`${formId}-title`} onSubmit={event => { event.preventDefault(); onSubmit(); }}>
       <label htmlFor={`${formId}-name`}>Your name</label>
       <input id={`${formId}-name`} name="name" value={name} maxLength={80} required autoComplete="name" disabled={sending} onChange={event => onName(event.target.value)} />

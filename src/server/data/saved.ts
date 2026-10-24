@@ -133,3 +133,21 @@ export async function insertStar<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: S
 export async function deleteStar<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, work: string, verseRef: string, comment: number) {
   await tx.delete(s.starredComment).where(oneStar(owner, work, verseRef, comment));
 }
+
+// Release 1.7 M3b: the member's own reading preferences, one document per member, replaced under its revision.
+const preferenceOwner = (owner: SavedOwner) => and(eq(s.accountPreference.tenantId, owner.tenantId), eq(s.accountPreference.membershipId, owner.membershipId));
+export type PreferenceRow = typeof s.accountPreference.$inferSelect;
+export async function preferenceRow<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner) {
+  const [row] = await tx.select().from(s.accountPreference).where(preferenceOwner(owner)).limit(1);
+  return row ?? null;
+}
+export async function insertPreferences<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, preferences: unknown) {
+  const [row] = await tx.insert(s.accountPreference).values({ tenantId: owner.tenantId, membershipId: owner.membershipId, userId: owner.userId, preferences, revision: 1 })
+    .onConflictDoNothing().returning();
+  return row ?? null;
+}
+export async function updatePreferences<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, expectedRevision: number, preferences: unknown) {
+  const [row] = await tx.update(s.accountPreference).set({ preferences, revision: expectedRevision + 1, updatedAt: sql`now()` })
+    .where(and(preferenceOwner(owner), eq(s.accountPreference.revision, expectedRevision))).returning();
+  return row ?? null;
+}

@@ -4,6 +4,7 @@ import { HttpBoundaryError } from "../http/responses";
 import { commentaryChapterOfVerse, commentaryWork } from "../../lib/readings/commentary";
 import { parseCeremonyDate } from "../../lib/readings/ranges";
 import { canonicalReadingRef, READING_REF_LIMITS } from "../../lib/readings/reading-ref";
+import { parsePreferences, type Preferences } from "../../lib/account-preferences/document";
 
 /**
  * The saved layer's request shapes. Every failure is a closed 400; nothing a caller sent is echoed.
@@ -110,4 +111,20 @@ export function star(value: unknown): StarInput {
   const verseRef = verse(row.verseRef);
   if (!commentaryChapterOfVerse(row.work, verseRef)) return invalid();
   return Object.freeze({ work: row.work, verseRef, comment: integer(row.comment, 1, 60), starred: row.starred });
+}
+
+/** The highest revision a request may name; the stored revision is one more after the write. */
+export const PREFERENCES_REVISION_MAX = 2147483646;
+export type PreferencesPutInput = Readonly<{ preferences: Preferences; expectedRevision: number; owner: string }>;
+/**
+ * Replace the member's own preferences document (release 1.7 M3b). `expectedRevision` is the revision last seen,
+ * 0 when the account has none yet; `owner` is the opaque owner name that browser last read, so a session that became
+ * another account meanwhile writes nothing. The document goes through the shared strict parser: allow-listed fields
+ * and values only.
+ */
+export function preferencesPut(value: unknown): PreferencesPutInput {
+  const row = closedObject(value, ["preferences", "expectedRevision", "owner"]);
+  const preferences = parsePreferences(row.preferences) ?? invalid();
+  if (typeof row.owner !== "string" || !/^[a-f0-9]{32}$/.test(row.owner)) return invalid();
+  return Object.freeze({ preferences, expectedRevision: integer(row.expectedRevision, 0, PREFERENCES_REVISION_MAX), owner: row.owner });
 }

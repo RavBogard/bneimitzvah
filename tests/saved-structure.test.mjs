@@ -21,9 +21,10 @@ const sources = await Promise.all([...await files("src"), ...await files("script
 assert.ok(sources.some(file => file.path.startsWith("scripts/")), "the scripts are scanned");
 const importsOf = text => [...text.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)].map(m => m[1]);
 
-test("only src/server/saved/access.ts and the 0036 migration name app.saved_owner", () => {
+test("only src/server/saved/access.ts and the 0036 and 0041 migrations name app.saved_owner", () => {
   const naming = sources.filter(file => file.text.includes("app.saved_owner")).map(file => file.path).sort();
-  assert.deepEqual(naming, ["src/server/db/migrations/0036_saved_layer.sql", "src/server/saved/access.ts"]);
+  // 0041 (release 1.7 M3b) puts the member's own preferences on the same owner binding; its own test pins its one policy.
+  assert.deepEqual(naming, ["src/server/db/migrations/0036_saved_layer.sql", "src/server/db/migrations/0041_account_preferences.sql", "src/server/saved/access.ts"]);
   const access = sources.find(file => file.path === "src/server/saved/access.ts").text;
   assert.equal(access.match(/set_config\('app\.saved_owner'/g)?.length, 1, "the owner is set in exactly one statement");
   assert.match(access, /savedEligibility\(tx, identity\.tenantId, identity\.membership\.id\)[\s\S]*set_config\('app\.saved_owner', \$\{identity\.membership\.id\}, true\)/,
@@ -39,10 +40,12 @@ test("the saved data module is imported only from src/server/saved/*", () => {
 test("no code outside the saved layer names the saved tables, and the MCP never imports a saved module", () => {
   const allowed = new Set(["src/server/db/saved-schema.ts", "src/server/data/saved.ts", "src/server/db/migrations/0036_saved_layer.sql", "src/server/db/migrations/meta/0036_snapshot.json",
     // 0040 lets the owner revise their own reading's ranges (release 1.7 "Change verses"); its own test pins it to that one grant.
-    "src/server/db/migrations/0040_saved_reading_ranges.sql"]);
+    "src/server/db/migrations/0040_saved_reading_ranges.sql",
+    // 0041 adds the member's own preferences to the saved layer (release 1.7 M3b).
+    "src/server/db/migrations/0041_account_preferences.sql"]);
   for (const file of sources) {
     if (allowed.has(file.path) || /^src\/server\/db\/migrations\/meta\/\d{4}_snapshot\.json$/.test(file.path) && Number(file.path.match(/(\d{4})_snapshot/)[1]) > 36) continue;
-    assert.doesNotMatch(file.text, /\b(savedReading|savedVerseWork|savedVerseMark|starredComment)\b|\b(saved_reading|saved_verse_work|saved_verse_mark|starred_comment)\b/, `${file.path} names a saved table`);
+    assert.doesNotMatch(file.text, /\b(savedReading|savedVerseWork|savedVerseMark|starredComment|accountPreference)\b|\b(saved_reading|saved_verse_work|saved_verse_mark|starred_comment|account_preference)\b/, `${file.path} names a saved table`);
   }
   for (const file of sources.filter(file => file.path.startsWith("src/server/mcp/"))) {
     for (const spec of importsOf(file.text)) assert.doesNotMatch(spec, /saved/, `${file.path} imports ${spec}`);

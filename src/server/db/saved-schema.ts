@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, date, foreignKey, index, integer, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { check, date, foreignKey, index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { membership, tenant } from "./tenant-schema";
 
 /**
@@ -86,4 +86,26 @@ export const starredComment = pgTable("starred_comment", {
   check("starred_comment_ref", sql`${t.verseRef} ~ ${sql.raw(`'${verseRef}'`)}`),
   check("starred_comment_index", sql`${t.commentIndex} between 1 and 60`),
   check("starred_comment_instant", sql`isfinite(${t.createdAt})`),
+]);
+
+/**
+ * Release 1.7 M3b: a member's own reading preferences (preferred commentaries and reading settings), one small
+ * `version: 1` document per member, checked first by src/lib/account-preferences/document.ts. On the saved layer's
+ * owner binding: the same forced owner_only policy on the saved owner setting, so only the member's own request reads it.
+ */
+export const accountPreference = pgTable("account_preference", {
+  tenantId: tenantId(), membershipId: uuid("membership_id").notNull(), userId: text("user_id").notNull(),
+  preferences: jsonb("preferences").notNull(), revision: integer("revision").default(1).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(), updatedAt: updatedAt(),
+}, t => [
+  primaryKey({ name: "account_preference_key", columns: [t.tenantId, t.membershipId] }),
+  foreignKey({ name: "account_preference_member_fk", columns: [t.tenantId, t.membershipId, t.userId], foreignColumns: [membership.tenantId, membership.id, membership.userId] }),
+  // The outline and the size: an object, version 1, only the allow-listed fields, at most 1024 bytes.
+  check("account_preference_document", sql`jsonb_typeof(${t.preferences}) = 'object' and coalesce(${t.preferences}->'version' = '1'::jsonb, false) and (${t.preferences} - array['version','works','studyEnglish','colors','translation','size','tikkunView']) = '{}'::jsonb and octet_length(${t.preferences}::text) <= 1024`),
+  // works, when present: an array of at most three work keys. CASE keeps jsonb_array_length off anything that is not an array.
+  check("account_preference_works", sql`case when ${t.preferences}->'works' is null then true when jsonb_typeof(${t.preferences}->'works') <> 'array' then false else jsonb_array_length(${t.preferences}->'works') <= 3 and not jsonb_path_exists(${t.preferences}->'works', '$[*] ? (@.type() != "string" || !(@ like_regex "^[a-z][a-z0-9-]{0,31}$"))') end`),
+  // Every other field, when present, is a boolean or one of its few names. coalesce: an absent field makes the test NULL.
+  check("account_preference_values", sql`coalesce(jsonb_typeof(${t.preferences}->'studyEnglish') = 'boolean', true) and coalesce(jsonb_typeof(${t.preferences}->'colors') = 'boolean', true) and coalesce(jsonb_typeof(${t.preferences}->'translation') = 'boolean', true) and coalesce(jsonb_typeof(${t.preferences}->'size') = 'string' and ${t.preferences}->>'size' in ('small','standard','large','huge'), true) and coalesce(jsonb_typeof(${t.preferences}->'tikkunView') = 'string' and ${t.preferences}->>'tikkunView' in ('off','beside','only'), true)`),
+  check("account_preference_revision", sql`${t.revision} > 0`),
+  check("account_preference_instants", sql`isfinite(${t.createdAt}) and isfinite(${t.updatedAt})`),
 ]);
