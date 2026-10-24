@@ -1,3 +1,5 @@
+import { COMMENTARY_WORKS } from "../readings/commentary";
+
 /**
  * The reader's print sheet format (spec 2026-10-23-reader-print-sheet-design.md): a small closed record that
  * lives in the page address, so a link reproduces the sheet exactly, and that the MCP print tool builds.
@@ -18,10 +20,24 @@ export type SheetEdition = "jps2023";
 export type SheetFormat = Readonly<{
   show: SheetShow; script: SheetScript; size: SheetSize; aliyot: SheetAliyot; numbers: boolean; notes: SheetNotes;
   paper: SheetPaper; orientation: SheetOrientation; spacing: SheetSpacing; edition: SheetEdition;
+  /** The commentary works printed after the reading (registry order, no repeats); none by default. Which editions print is the licence filter's (appendix.ts). */
+  commentary: readonly string[];
 }>;
+type EnumField = Exclude<keyof SheetFormat, "commentary">;
 
+const NO_WORKS: readonly string[] = Object.freeze([]);
 export const DEFAULT_FORMAT: SheetFormat = Object.freeze({ show: "both", script: "full", size: "standard", aliyot: "marked", numbers: true, notes: "none",
-  paper: "letter", orientation: "portrait", spacing: "normal", edition: "jps2023" });
+  paper: "letter", orientation: "portrait", spacing: "normal", edition: "jps2023", commentary: NO_WORKS });
+
+/** The registered commentary works, in registry order: the only values `commentary` takes. */
+export const COMMENTARY_CHOICES: readonly string[] = Object.freeze(Object.keys(COMMENTARY_WORKS));
+/** The address key for the commentary works (comma-joined, e.g. `comm=rashi,womens`). */
+export const COMMENTARY_PARAM = "comm";
+/** Registered works only, in registry order, without repeats. */
+export function normalizeCommentary(value: readonly unknown[]): readonly string[] {
+  const picked = COMMENTARY_CHOICES.filter(work => value.includes(work));
+  return picked.length ? Object.freeze(picked) : NO_WORKS;
+}
 
 /** Each field's address key and allowed values, in the order the address writes them. */
 const FIELDS = Object.freeze([
@@ -36,10 +52,11 @@ const FIELDS = Object.freeze([
   ["spacing", "spacing", ["normal", "standing"]],
   ["edition", "en", ["jps2023"]],
 ] as const);
-export const FORMAT_KEYS: readonly string[] = Object.freeze(FIELDS.map(field => field[1]));
-export const FORMAT_VALUES: Readonly<Record<keyof SheetFormat, readonly string[]>> = Object.freeze(Object.fromEntries(FIELDS.map(([field, , values]) => [field, values])) as unknown as Record<keyof SheetFormat, readonly string[]>);
+export const FORMAT_KEYS: readonly string[] = Object.freeze([...FIELDS.map(field => field[1]), COMMENTARY_PARAM]);
+/** The values each enumerated field takes (commentary is a list of works: COMMENTARY_CHOICES). */
+export const FORMAT_VALUES: Readonly<Record<EnumField, readonly string[]>> = Object.freeze(Object.fromEntries(FIELDS.map(([field, , values]) => [field, values])) as unknown as Record<EnumField, readonly string[]>);
 
-const valueOf = (format: SheetFormat, field: keyof SheetFormat) => field === "numbers" ? (format.numbers ? "on" : "off") : String(format[field]);
+const valueOf = (format: SheetFormat, field: EnumField) => field === "numbers" ? (format.numbers ? "on" : "off") : String(format[field]);
 
 /** A format from address parameters: unknown or malformed values fall back to the default for that field. */
 export function parseFormat(params: URLSearchParams): SheetFormat {
@@ -49,6 +66,7 @@ export function parseFormat(params: URLSearchParams): SheetFormat {
     if (raw === null || !(values as readonly string[]).includes(raw)) continue;
     out[field] = field === "numbers" ? raw === "on" : raw;
   }
+  out.commentary = normalizeCommentary((params.get(COMMENTARY_PARAM) ?? "").split(",").slice(0, COMMENTARY_CHOICES.length * 2));
   return Object.freeze(out as SheetFormat);
 }
 
@@ -58,6 +76,11 @@ export function formatFromRecord(value: unknown): { format: SheetFormat; problem
   if (value === undefined) return { format: DEFAULT_FORMAT, problems };
   if (!value || typeof value !== "object" || Array.isArray(value)) return { format: DEFAULT_FORMAT, problems: ["format must be an object"] };
   for (const [key, raw] of Object.entries(value)) {
+    if (key === "commentary") {
+      if (Array.isArray(raw) && raw.length <= COMMENTARY_CHOICES.length * 2 && raw.every(work => typeof work === "string" && COMMENTARY_CHOICES.includes(work))) out.commentary = normalizeCommentary(raw);
+      else problems.push(`format.commentary must be a list of works from ${COMMENTARY_CHOICES.join(", ")}`);
+      continue;
+    }
     const field = FIELDS.find(row => row[0] === key);
     if (!field) { problems.push(`unknown format field ${key.slice(0, 40)}`); continue; }
     if (field[0] === "numbers") { if (typeof raw === "boolean") out.numbers = raw; else problems.push("format.numbers must be true or false"); continue; }
@@ -69,7 +92,9 @@ export function formatFromRecord(value: unknown): { format: SheetFormat; problem
 
 /** The address parameters for a format: only the fields that differ from the default, in fixed order. */
 export function formatEntries(format: SheetFormat): [string, string][] {
-  return FIELDS.flatMap(([field, key]) => valueOf(format, field) === valueOf(DEFAULT_FORMAT, field) ? [] : [[key, valueOf(format, field)] as [string, string]]);
+  const entries = FIELDS.flatMap(([field, key]) => valueOf(format, field) === valueOf(DEFAULT_FORMAT, field) ? [] : [[key, valueOf(format, field)] as [string, string]]);
+  const works = normalizeCommentary(format.commentary);
+  return works.length ? [...entries, [COMMENTARY_PARAM, works.join(",")]] : entries;
 }
 
 /** Print sizes in points: the Hebrew is always larger than the English, and Huge is the large-print step. */
@@ -88,5 +113,6 @@ export function describeFormat(format: SheetFormat): string {
     format.notes === "none" ? "no notes column" : `a ${format.notes} notes column`,
     `${format.paper === "letter" ? "US Letter" : "A4"} ${format.orientation}`];
   if (format.spacing === "standing") parts.push("extra spacing for reading standing");
+  if (format.commentary.length) parts.push(`commentary on a new page after the reading (${format.commentary.map(work => COMMENTARY_WORKS[work]?.title ?? work).join(", ")}; only editions licensed for print)`);
   return `${parts.join(", ")}.`;
 }

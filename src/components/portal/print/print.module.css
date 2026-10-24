@@ -23,6 +23,10 @@
 .check { display: flex; align-items: center; gap: 0.75rem; min-height: 44px; font-weight: 600; cursor: pointer; }
 .check input { inline-size: 1.375rem; block-size: 1.375rem; margin: 0; accent-color: var(--lake); }
 .help { margin: 0; color: var(--color-muted); font-size: 0.875rem; }
+.workChoice { display: grid; gap: 0.125rem; }
+.workChoice .help { margin-inline-start: 2.125rem; }
+.workChoice .help button { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
+.check:has(input:disabled) { opacity: 0.6; cursor: not-allowed; }
 .select { width: 100%; min-height: 48px; padding: 0 0.875rem; border: 0; border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); box-shadow: inset 0 0 0 1px var(--color-control-rule); font: inherit; }
 .select:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
 .weeks { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
@@ -123,8 +127,31 @@
 .credits { flex: 1; min-width: 0; }
 .product { flex: none; font-weight: 650; color: var(--ink); }
 
+/* ---------- The commentary appendix ---------- */
+/* On screen the appendix follows the reading after a dashed rule (the page break it will have on paper). */
+.appendix { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--rule); }
+.commentGroup { margin-top: 0.9em; }
+.groupRef { margin: 0 0 0.2em; padding-bottom: 0.15em; border-bottom: 0.5pt solid var(--rule); font-size: 0.95em; font-weight: 750; color: var(--accent); font-variant-numeric: tabular-nums; }
+.workBlock { margin: 0.35em 0 0.7em; }
+.workName { margin: 0.4em 0 0.1em; font-size: 0.8em; font-weight: 750; letter-spacing: 0.03em; color: var(--settled); }
+.comment { margin: 0.35em 0 0; }
+.comment p { margin: 0; max-width: none; }
+.commentHebrew { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", "Times New Roman", serif; font-size: calc(var(--he-size) * 0.8); font-weight: var(--he-weight); line-height: 1.7;
+  font-synthesis: none; font-feature-settings: "mark", "mkmk"; text-align: right; text-wrap: pretty; overflow-wrap: anywhere; }
+.comment .commentHebrew + .commentEnglish { margin-top: 0.2em; }
+.commentEnglish { font-weight: var(--en-weight); line-height: var(--en-lh); text-align: left; hyphens: auto; text-wrap: pretty; overflow-wrap: anywhere; }
+.commentCredit { margin-top: 0.4em; font-size: 7.25pt; line-height: 1.35; color: var(--muted); }
+.commentCredit p { margin: 0; max-width: none; }
+.commentCredit:empty { display: none; }
+
 /* ---------- Print ---------- */
 @media print {
+  /* The appendix starts on a new page; a verse heading and a work's name stay with the comment after them, and a long comment may run over. */
+  .appendix { margin: 0; padding: 0; border-top: 0; break-before: page; }
+  .groupRef, .workName { break-after: avoid; }
+  .comment p { orphans: 3; widows: 3; }
+  .commentCredit { break-before: avoid; break-inside: avoid; }
+  .commentHebrew { color: #000; }
   :global(body):has(.root) > :not(.root) { display: none !important; }
   :global(body):has(.root) { background: #fff !important; }
   .root { page: reader-sheet; }
