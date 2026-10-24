@@ -474,6 +474,12 @@ Each stays off until answered. Source IDs point to the lens findings.
 - **N23:** "Tue Oct 20 · Torah 23:1–23:9 · marked 23:4 Got it" (TP-02); "Often mixed up: tevir and etnachta" and "Your tutor sees which phrases you can hear." (LD-10); "Practised 3 of last 7 days · Last lesson Oct 17 · 2 verses still working" (TP-11); "Student (with parent): got it" (TP-20).
 - **P4 (G19):** "one more try".
 
+**Answered (Daniel, 2026-10-24 popups): tier B is approved and ships, with these changes.**
+
+- N11, N17, N14, N15, N16, N4/N5/N7, N8, N22, N23: "Keep all". N23's lines still wait for its adversarial privacy review before anything shows.
+- N13: "Keep, with name fix". The app stores no pronouns, so lines about a child use the child's name. The tier A line becomes "Sit down with Noa and tap Practice with Noa to go through Noa's verses together." TP-03 becomes "Sit with Noa for each verse. Tap Got it only when Noa reads it without stopping."
+- N18, N19, P4: "Keep, drop the tally". The run-through summary is "Practise verses 3 and 8 again." with no "Clean: 7 of 9". The help line is "Help: Colors → Marks only → Tikkun", spelled Colors as the app spells it. P4's "one more try" ships.
+
 ### Tier C: gaps (no draft anywhere; not invented here)
 
 - **N23:** the student's full disclosure of what the tutor sees (per-day verses and mark changes, beyond the Learn line); the parent's count line.
@@ -493,7 +499,7 @@ Each stays off until answered. Source IDs point to the lens findings.
 
 ## Open items that wait on Daniel
 
-1. **The tier B string batch** (about 60 drafted strings above), as one popup batch. Recommended: send it now, so N11, N13, N14 and N17–N19 are not held.
+1. ~~The tier B string batch~~: answered 2026-10-24 (see Tier B).
 2. **The tier C gaps**, drafted by Claude into the same batch once each milestone's screen exists.
 3. **Taamey Frank CLM**, only if N2 finds its licence differs from Stam Ashkenaz CLM's GPL v2 with font exception, or if a subset or WOFF2 of it is wanted later.
 4. **Still open from before:** the beta word; the pilot kit; licence questions for any evening or Havdalah prayer whose text is only in a licensed lane (SC7); DNS for torah.centralreform.org (waiting on others).
