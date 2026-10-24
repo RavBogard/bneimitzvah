@@ -13,6 +13,7 @@ import type { HttpRuntime } from "../../src/server/runtime/composition";
 import type { RelatedSourceCatalog } from "../../src/server/study/sources/metadata";
 import type { Calendar, Snapshot } from "../../src/lib/readings/proposals";
 import { parseCeremonyDate } from "../../src/lib/readings/ranges";
+import { SourceTextUnavailable, type PinnedSourceReader } from "../../src/server/study/source-text";
 
 // The portal MCP driven end to end through the HTTP dispatcher: register, Google-confirmed consent,
 // token exchange and JSON-RPC tool calls. Callers mock server-only and close fixtures after each test.
@@ -27,11 +28,12 @@ export const syntheticReading = async (date: string, calendar: Calendar): Promis
     triennial: { year: 1, aliyot: [{ n: 1, ref: "Genesis 1:1-3" }] } }, haftarah: "Isaiah 1:1-3" } });
 
 /** `now` is the MCP clock (Date.now when omitted), for plan-token expiry; `related` and `loadReading` stand in for Sefaria and Hebcal. */
-export async function mcpFixture(enabled = true, now?: () => number, outside: { related?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; loadReading?: typeof syntheticReading } = {}) {
+export async function mcpFixture(enabled = true, now?: () => number, outside: { related?: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>; loadReading?: typeof syntheticReading; pinnedSource?: PinnedSourceReader } = {}) {
   const f = await accessFixture(); opened.push(f);
   const deployment = { environment: "test" as const, deployment: "suite" };
   const mcp = enabled ? createMcpEndpoint({ db: f.db, access: f.service, practice: createPracticeService({ access: f.service }), secret: randomBytes(48).toString("base64url"),
-    loadText: async () => { throw new Error("no network"); }, related: outside.related ?? (async () => { throw new Error("no network"); }), loadReading: outside.loadReading ?? syntheticReading, now }) : null;
+    loadText: async () => { throw new Error("no network"); }, related: outside.related ?? (async () => { throw new Error("no network"); }), loadReading: outside.loadReading ?? syntheticReading, now,
+    pinnedSource: outside.pinnedSource ?? (async () => { throw new SourceTextUnavailable("upstream"); }) }) : null;
   // The staff Claude connections page and the roster's Maven link (release 1.1) share this dispatcher, so a test can end a
   // connection from the portal and watch its bearer stop working.
   const runtime = { origin: ORIGIN, mcp, resolveHost: (request: Request) => resolveTenantHost(f.db, request, deployment),

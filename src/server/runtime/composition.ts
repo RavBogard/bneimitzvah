@@ -50,6 +50,7 @@ import { createStudyGuideService, studyGuideWebSurface } from "../study-guides/s
 import { createRosterSheetService } from "../roster-sheet/service";
 import { parseServiceAccount, type ServiceAccount } from "../roster-sheet/google";
 import { createMcpEndpoint, type McpEndpoint } from "../mcp/endpoint";
+import { createSefariaPinnedSourceReader } from "../study/source-text";
 import { createGuideChecker } from "../study-guides/citations";
 import { createHaftarahSheets } from "../study-guides/haftarah-sheets";
 // The runtime is composed per request; the public haftarah index cache must outlive it.
@@ -213,7 +214,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     config: sheetAccount && config.rosterSheet ? { account: sheetAccount, sheetId: config.rosterSheet.sheetId } : null });
   // Portal MCP: the full study service (writes too) behind live, grant-bound connection authority.
   // Null until enabled by configuration; then its routes exist at all.
-  const mcp: McpEndpoint | null = config.mcpEnabled ? createMcpEndpoint({ db, access, practice, secret: purposeSecret(config, "portal-mcp"), loadText, related: sourceMetadata.related, loadReading }) : null;
+  const mcp: McpEndpoint | null = config.mcpEnabled ? createMcpEndpoint({ db, access, practice, secret: purposeSecret(config, "portal-mcp"), loadText, related: sourceMetadata.related, loadReading, pinnedSource: createSefariaPinnedSourceReader({ fetch }) }) : null;
   // Approved material is loaded within the existing RLS transaction.
   const honoree = createHonoreeService({ db, access, deployment: config.deployment, origin: config.origin, signingSecret: config.authSecret, projectMaterial: loadHonoreeMaterial });
   const studySources = createStudySourceDiscoveryService({ access, practice, loadText, related: createSefariaMetadataReader({ fetch }).related });
