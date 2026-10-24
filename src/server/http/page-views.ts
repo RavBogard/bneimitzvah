@@ -1,5 +1,4 @@
 import "server-only";
-import { after } from "next/server";
 import { readJsonBody } from "./body";
 import { PAGE_VIEW_ROUTE } from "../../lib/site/page-view-route";
 import { normalizePublicPagePath } from "../../lib/site/page-views";
@@ -35,8 +34,12 @@ const done = () => new Response(null, { status: 204, headers: { "cache-control":
  * test dispatcher, the isolated browser server) after() refuses, and the count is simply awaited before the 204.
  */
 export type Defer = (task: () => Promise<void>) => Promise<void>;
-export const afterResponse: Defer = task => {
-  try { after(task); return Promise.resolve(); } catch { return task(); }
+export const afterResponse: Defer = async task => {
+  // Loaded on use, as runtime/composition.ts does: a static next/server import would enter the isolated browser harness's graph.
+  let after: ((work: () => Promise<void>) => void) | undefined;
+  try { ({ after } = await import("next/server")); } catch { after = undefined; }
+  try { if (after) { after(task); return; } } catch { /* Outside a Next request scope: count before answering. */ }
+  await task();
 };
 
 /** The UTC calendar day of `at`, as YYYY-MM-DD. */
