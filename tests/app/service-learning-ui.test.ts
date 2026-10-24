@@ -99,3 +99,17 @@ it("bounds private material bodies before parsing and never accepts source-selec
   await expect(serviceApi.metadata("student", student, new AbortController().signal)).rejects.toMatchObject({ status: 503 });
   expect(fetch).toHaveBeenCalledTimes(1);
 });
+
+it("draws a siddur link on a part only when it has a page and the siddur is the recognised reader, with the approved wording", async () => {
+  const { createElement } = await import("react"), { renderToStaticMarkup } = await import("react-dom/server");
+  const { SiddurPageLink } = await import("../../src/components/portal/siddur-link"), { DEFAULT_SIDDUR_URL } = await import("../../src/server/settings/validation");
+  const render = (siddurUrl: string, page: number | undefined, block = false, text = "Open in the siddur, page 11") => renderToStaticMarkup(createElement(SiddurPageLink, { siddurUrl, page, block, children: text }));
+  const link = render(DEFAULT_SIDDUR_URL, 11);
+  expect(link).toContain(">Open in the siddur, page 11</a>");
+  expect(link).toContain(`href="${new URL(DEFAULT_SIDDUR_URL).origin}/?book=legacy-beit-mitzvah&amp;p=11"`);
+  expect(link).toContain('target="_blank"');
+  expect(link).toMatch(/rel="[^"]*noopener/);
+  expect(render(DEFAULT_SIDDUR_URL, 33, true, "Your whole service in the siddur, from page 33")).toMatch(/^<p><a [^>]*>Your whole service in the siddur, from page 33<\/a><\/p>$/);
+  for (const page of [undefined, 0, -1, 1.5, 10_000]) expect(render(DEFAULT_SIDDUR_URL, page)).toBe("");
+  for (const other of ["https://example.org/", "http://siddur.example.com/", "not a url", ""]) expect(render(other, 11)).toBe("");
+});

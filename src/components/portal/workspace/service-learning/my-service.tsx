@@ -12,6 +12,7 @@ import { PortalRequestError } from "../../api";
 import { serviceSlotLine } from "../service-slot";
 import { useCongregation } from "../settings/links";
 import { siddurPageLink } from "../../../../lib/siddur/link";
+import { SiddurLink } from "../../siddur-link";
 
 type Draft = Record<string, string>;
 export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode:ReadingMode; studentId: string; baseline: Assigned | null;onConnected?(connected:boolean):void }) {
@@ -79,7 +80,7 @@ export function MyServicePanel({ mode, studentId, baseline,onConnected }: { mode
       <div className={styles.actions}>
         {row.catalogUnitId && <button type="button" className="button-secondary" disabled={current?.busy} onClick={() => void openMaterial(row.rowId)}>Read {row.title}</button>}
         {!assigned?.resourceNeedsReview && row.resources.map(resource => <button key={resource.resourceId} type="button" className="button-secondary" disabled={current?.busy} onClick={() => void openResource(row.rowId, resource.resourceId)}>{resource.kind === "score" ? "Score" : "Listen"}: {resource.label}</button>)}
-        {siddurLink && <a className="button-text" href={siddurLink} target="_blank" rel="noreferrer">Open in Siddur</a>}
+        {siddurLink && row.liturgyRef && <SiddurLink href={siddurLink}>Open in the siddur, page {row.liturgyRef.folio}</SiddurLink>}
       </div>
       {mode === "student" && assigned?.leads && <label className={styles.progress}>My progress<select aria-label={`Progress for ${row.title}`} value={assigned.progress} disabled={current?.busy} onChange={event => void mutate("progress", { rowId: row.rowId, expectedRevision: assigned.revision, progress: event.target.value })}><option value="not-started">Not started</option><option value="practicing">Practicing</option><option value="ready">Ready</option></select></label>}
       {!staff && <details><summary>Ask about this part</summary><form onSubmit={event => { event.preventDefault(); void mutate("request", { rowId: row.rowId, message: drafts[requestKey]?.message ?? "" }, requestKey); }}><label>What would you like to change?<textarea maxLength={2000} required value={drafts[requestKey]?.message ?? ""} onChange={event => draft(requestKey, "message", event.target.value)} /></label><button className="button-primary" disabled={current?.busy}>Send request</button></form></details>}
