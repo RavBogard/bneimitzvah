@@ -25,6 +25,24 @@
 - GATE: PR #44 (typed sign-in code) merged as b1c8904 and deployed. Caps: after 3 codes per address an hour, emails are link-only; failed tries are capped at about 9 an hour; 6 codes per rolling 24 hours. Link-only line 3 reads "The link works once, for 5 minutes." This is a derivation of the approved line, logged in cutover plan §9 — proceeded because the adversarial auth review passed and CI was green. Open for the second-tenant gate: the code's database key has no tenant in it.
 - GATE: PR #52 (an approver's own request is refused; approved Members sync Learn to lein progress; a shared device's copy is cleared only for another account's refusal) merged as 4c41b08 and deployed — proceeded because CI was green and the auth change had its adversarial pass. No migration.
 - GATE: PR #51 (A1, the installable app, gated to the torah origin) squash-merged as 75a3312 and deployed. beitmitzvah serves no manifest link and registers no worker — proceeded because all four CI jobs were green, including the offline e2e tests on the phone project, and the adversarial pass's High (re-fetching on every open, about 42 requests) and two Mediums were fixed. A complete pack now renews at most every 12 hours. Accepted Lows are in plan §11. Real-device checks wait for the switch.
+- GATE: PR #53 merged and deployed — proceeded because CI was green on all four jobs.
+- GATE: PR #55 merged and deployed. It adds productName in public tab titles, plain share cards and the sitemap. PUBLIC_INDEXING stays false — proceeded because CI was green and indexing waits for Daniel's beta word.
+- GATE: PR #58 (the cookieless page-view counter) merged as 48838ed, with production migration 0039_public_page_views applied first (ledger 40). The live POST /api/public/view returns 204 — proceeded because CI was green and Daniel chose "Ship it, watch the bill (Recommended)". Check Neon usage around 2026-10-30, and pull the counter if it heads past $10/month.
+- GATE: PR #57 (the reader print sheet at /print) merged as 07d2bca and deployed. /print returns 200 with noindex — proceeded because CI was green and the strings follow Daniel's rulings:
+  - new wording "Keep all";
+  - the print link from both MCP and a site UI anyone can use ("Both. There should also be a UI in the site that anyone can use");
+  - no CC BY-SA change note ("No note");
+  - which-half underline "Hide until answered".
+  - Follow-ups: saved named formats; opening a parashah's aliyot by name; Safari, phone and physical print checks; the student's own aliyah cuts on the workspace Print link.
+- GATE: PR #54 (four Low translate-drill fixes) squash-merged by Claude as ead6cb8 after its agent's watcher stalled. Deployed (success) — proceeded because all four CI jobs were green at d3f7596.
+- GATE: tagged and released v1.5.0 at ead6cb8 without the torah switch — proceeded because Daniel allowed it if DNS hadn't resolved. torah.centralreform.org still returned "Non-existent domain" on 2026-10-24. The switch becomes 1.5.x: when DNS resolves, Daniel sets BETTER_AUTH_URL, then the cutover runbook §4.3. There is no beta wording. The listening round (LISTENING-ROUND.md) and the Android check are Daniel's, whenever he likes; fixes go in 1.5.x.
+- **Daniel, 2026-10-23, verbatim:** "Approved. Get everything through 1.8 done and released". This is standing authority to finish and tag 1.6, 1.7 (Friday preparation, PLAN-1-7.md) and 1.8 (web siddur, docs/superpowers/plans/2026-10-23-web-siddur-integration.md), checking in only at tags and true blockers.
+- **Resume point, 2026-10-24.** v1.5.0 is released. In flight:
+  - #56 (1.6) is merging, then v1.6.0;
+  - #59 (1.8 M1, siddur link helper);
+  - #60 (1.7 M3, cuts and wording);
+  - #61 (1.7 M1, the Study word card).
+  - Next: M2 (migration 0040), M3b (0041), M4, M5, M6 (0042), then v1.7.0 and 1.7.x, then 1.8 M2–M4 and v1.8.0.
 
 
 ## Current return point — 2026-10-21 night: toward 1.0

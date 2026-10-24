@@ -72,7 +72,7 @@ test("the related and source routes: closed queries checked before the runtime, 
     productName: async () => "Synthetic Portal" }) satisfies PublicRuntime;
   const call = (path: string) => handlePublicReadingRequest(new Request(`https://beitmitzvah.centralreform.org${path}`), async action => { opened++; return action(runtime()); });
   const related = await call("/api/public/related?verse=Genesis+12%3A1");
-  expect(related.status).toBe(200); expect(related.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=604800");
+  expect(related.status).toBe(200); expect(related.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=3600");
   const shelfBody = await related.json();
   expect(shelfBody.groups).toHaveLength(6); expect(shelfBody.productName).toBe("Synthetic Portal");
   expect(parseShelfAnswer(shelfBody, "Genesis 12:1").productName).toBe("Synthetic Portal");
