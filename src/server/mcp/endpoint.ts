@@ -15,6 +15,8 @@ import { INSTRUCTIONS, SERVER_INFO } from "./instructions";
 import { createMcpAuthService, type McpActor } from "./service";
 import { createTools } from "./tools";
 import { answerRpc } from "./transport";
+import { createDiscussionService } from "../discussions/service";
+import { createSefariaPinnedSourceReader, type PinnedSourceReader } from "../study/source-text";
 
 /**
  * The composed portal MCP, closed over its database: the HTTP layer sees only the OAuth steps,
@@ -25,6 +27,8 @@ export function createMcpEndpoint<Q extends PgQueryResultHKT>(input: {
   loadText: (request: StudyRequest) => Promise<StudyPage>; related: (ref: string, signal: AbortSignal) => Promise<RelatedSourceCatalog>;
   /** The portal's calendar reader (Hebcal), for the reading tools. */
   loadReading: (date: string, calendar: Calendar) => Promise<{ snapshot: Snapshot; fetchedAt: number }>;
+  /** One Sefaria passage in one named edition, for the curated discussion checks (1.7 M6); live Sefaria when omitted. */
+  pinnedSource?: PinnedSourceReader;
   /** The clock, for tests; Date.now otherwise. */
   now?: () => number;
 }) {
@@ -34,12 +38,13 @@ export function createMcpEndpoint<Q extends PgQueryResultHKT>(input: {
   const readings = createReadingWork<Q>({ loadReading: input.loadReading, now: input.now,
     signingSecret: createHmac("sha256", input.secret).update("portal-mcp:reading-preparations/v1").digest("base64url") });
   const sources = createDelegatedSourceAssignments<Q>({ related: input.related });
+  const discussions = createDiscussionService<Q>({ pinned: input.pinnedSource ?? createSefariaPinnedSourceReader({ fetch: (...args) => globalThis.fetch(...args) }) });
   const tools = createTools<Q>();
   return Object.freeze({
     register: mcp.register, authorize: mcp.authorize, describe: mcp.describe, approve: mcp.approve, deny: mcp.deny,
     token: mcp.token, revoke: mcp.revoke, authenticate: mcp.authenticate,
     answer: (body: unknown, actor: McpActor, signal: AbortSignal) => answerRpc(body, { tools, instructions: INSTRUCTIONS, serverInfo: SERVER_INFO, signal,
-      ctx: { actor, mcp, guides, loadText: input.loadText, related: input.related, loadReading: input.loadReading, db: input.db, readings, sources } }),
+      ctx: { actor, mcp, guides, loadText: input.loadText, related: input.related, loadReading: input.loadReading, db: input.db, readings, sources, discussions } }),
   });
 }
 export type McpEndpoint = ReturnType<typeof createMcpEndpoint>;

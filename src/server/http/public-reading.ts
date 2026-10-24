@@ -13,6 +13,10 @@ import { parseSourceRef, type ShelfAnswer } from "../../lib/readings/shelf";
 import { SourceTextUnavailable, type SourceTextReader } from "../study/source-text";
 import { SourceMetadataUnavailable } from "../study/sources/metadata";
 import { plainProductName, webManifest } from "../../lib/offline/manifest";
+import { publicDiscussionsAnswer, type PublicDiscussionsRead } from "../discussions/public";
+import { versesFor } from "../discussions/validation";
+import type { PinnedSourceReader } from "../study/source-text";
+import { namedReading } from "../../lib/readings/named-readings";
 
 /**
  * Signed-out reading routes. A strict allowlist under /api/public/: GET only, a
@@ -38,6 +42,10 @@ export type PublicRuntime = Readonly<{
   source: SourceTextReader;
   /** The congregation's product name, from the one shared reader (data/product-name.ts), for the shelf's change line. */
   productName(): Promise<string>;
+  /** Curated discussions (1.7 M6): published rows anchored in these verses, read through curated_discussion_public only, with the names their credits need. */
+  discussions(verses: readonly string[]): Promise<PublicDiscussionsRead>;
+  /** One Sefaria passage in one pinned edition (the Study lens's source reader, pinned), for a discussion's source text. */
+  pinnedSource: PinnedSourceReader;
 }>;
 export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Response>) => Promise<Response>;
 
@@ -46,7 +54,7 @@ export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Re
  * named by a Shabbat `date` (the weekly page) or, for "Any reading", by a canonical `ref` with its
  * `kind` (the 1.5 offline packer depends on these exact shapes).
  */
-type Route = Readonly<{ kind: "reading" | "aliyot" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source" | "manifest"; keysets: readonly (readonly string[])[] }>;
+type Route = Readonly<{ kind: "reading" | "aliyot" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source" | "manifest" | "discussions"; keysets: readonly (readonly string[])[] }>;
 const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/reading": { kind: "reading", keysets: [["date"], ["ref", "kind"]] },
   // The reader's print sheet (2026-10-23): a Shabbat's calendar aliyot, numbers and book names only.
@@ -61,6 +69,8 @@ const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/source": { kind: "source", keysets: [["ref"]] },
   // The installable app's manifest (1.5 A1): no query at all.
   "/api/public/manifest": { kind: "manifest", keysets: [[]] },
+  // Curated discussions (1.7 M6): a named reading from the list, or a canonical passage with its kind.
+  "/api/public/discussions": { kind: "discussions", keysets: [["reading"], ["ref", "kind"]] },
 });
 /** Longest decoded value per key; a `ref` is bounded by READING_REF_LIMITS.chars, everything else by 80. */
 const valueLimit = (key: string) => key === "ref" ? READING_REF_LIMITS.chars : 80; // a source ref is bounded tighter (256 bytes) by its own check
@@ -139,6 +149,7 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
     if (query.date !== undefined && publicShabbat(query.date) === null || selected.kind === "commentary" && parseCommentaryChapter(query.work, query.chapter) === null
       || (selected.kind === "translations" || selected.kind === "related") && parseCompareVerse(query.verse) === null
       || selected.kind === "source" && parseSourceRef(query.ref) === null
+      || query.reading !== undefined && namedReading(query.reading) === null
       || query.kind !== undefined && query.kind !== "torah" && query.kind !== "haftarah"
       || query.ref !== undefined && selected.kind !== "source" && canonicalReadingRef(query.ref, query.kind) === null
       || [query.offset, selected.kind === "translations" || selected.kind === "related" ? undefined : query.verse, query.word].some(value => value !== undefined && !/^(?:0|[1-9]\d{0,3})$/.test(value))) return failure(400);
@@ -204,6 +215,20 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
             // With the name its change line needs ("Selected and ordered by {productName}", the CC BY note of changes).
             const shelf = await runtime.shelf(query.verse, signal), productName = await runtime.productName();
             return json({ ...shelf, productName } as unknown as JsonValue, 3600);
+          }
+          case "discussions": {
+            // The same answer signed in or out (no session is ever read here). Published only, never a curator. A discussion
+            // changes when the rabbi revises or withdraws it, so the CDN keeps five minutes and may serve stale while it asks
+            // again; an answer missing any source's text is kept a minute only.
+            const verses = query.reading !== undefined ? versesFor({ reading: namedReading(query.reading)! }) : versesFor({ ref: query.ref, kind: kindOf(query.kind) });
+            if (!verses.length) return failure(400);
+            const read = await runtime.discussions(verses);
+            const { discussions, complete, truncated } = await publicDiscussionsAnswer(read, verses, runtime.pinnedSource, signal);
+            const body = JSON.stringify({ ...(query.reading !== undefined ? { reading: query.reading } : { ref: query.ref, kind: query.kind }),
+              productName: read.productName || null, discussions, complete, truncated });
+            if (Buffer.byteLength(body) > 2 * 1024 * 1024) return failure(503);
+            return new Response(body, { status: 200, headers: { ...common, "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=60",
+              "vercel-cdn-cache-control": complete ? "public, s-maxage=300, stale-while-revalidate=3600" : "public, s-maxage=60, stale-while-revalidate=60" } });
           }
           case "manifest": {
             const name = plainProductName(await runtime.productName());

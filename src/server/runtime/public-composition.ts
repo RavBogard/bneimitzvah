@@ -13,7 +13,8 @@ import { createPersistentStudyCache } from "../data/study-cache";
 import { createSefariaStudyReader } from "../study/sefaria";
 import { createSefariaCommentaryReader } from "../study/commentary";
 import { createSefariaTranslationsReader } from "../study/translations";
-import { createSefariaSourceReader } from "../study/source-text";
+import { createSefariaPinnedSourceReader, createSefariaSourceReader } from "../study/source-text";
+import { memoPinnedSource, readPublicDiscussions } from "../discussions/public";
 import { createSefariaMetadataReader } from "../study/sources/sefaria-metadata";
 import { createHebcalReader } from "../../lib/readings/proposals";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
@@ -31,6 +32,9 @@ import { sharedStudyTasks } from "./composition";
 type Environment = Readonly<Record<string, string | undefined>>;
 // One per server instance, apart from the signed-in loader; construction performs no I/O.
 const publicStepSource = budgetedStepSource(createStepSource());
+// Curated discussions (1.7 M6): pinned Sefaria reads are kept a few hours per instance, so distinct passage URLs (each a
+// CDN miss of its own) do not each fan out to Sefaria again for the same sources.
+const publicPinnedSource = memoPinnedSource(createSefariaPinnedSourceReader({ fetch: (...args) => globalThis.fetch(...args) }));
 
 /**
  * The signed-out runtime. Deliberately NOT composeRuntime: no auth stack, access
@@ -40,6 +44,8 @@ const publicStepSource = budgetedStepSource(createStepSource());
  * non-tenant public text caches (Hebcal calendar and Sefaria chapters) that the
  * signed-in reading already fills, plus the public tenant's own productName for the web app manifest
  * (1.5 A1, E1): one column of the one tenant this runtime ever serves, read only after resolveTenant.
+ * Since 1.7 M6 it also reads that tenant's published curated discussions, only through the
+ * curated_discussion_public view, each source with its selector's stored display name for "Selected by".
  */
 export function composePublicRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>, fetch: typeof globalThis.fetch, env: Environment): PublicRuntime {
   const loadReading = createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS });
@@ -62,6 +68,10 @@ export function composePublicRuntime<Q extends PgQueryResultHKT>(config: Runtime
     shelf: (verse: string, signal?: AbortSignal) => shelfLinks.shelfLinks(verse, signal ?? new AbortController().signal),
     source: createSefariaSourceReader({ fetch }),
     productName: () => withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => readProductName(tx, PUBLIC_TENANT)),
+    // Curated discussions (1.7 M6): the public tenant's published rows through curated_discussion_public, read only after
+    // resolveTenant, plus its product name for the translation credit. No people table is read.
+    discussions: (verses: readonly string[]) => withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => readPublicDiscussions(tx, PUBLIC_TENANT, verses)),
+    pinnedSource: publicPinnedSource,
   });
 }
 
