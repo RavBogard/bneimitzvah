@@ -379,12 +379,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const confirmAuthority = useCallback(async (mode: ReadingMode, id: string, generation: number, route: number) => {
     const turn = sequence.current, request = new AbortController(), timer = setTimeout(() => request.abort(), 20_000);
     let status: number | null = null;
-    try { await readVerified(mode, id, request.signal); } catch (error) { if (!request.signal.aborted) status = statusOf(error); }
+    // Only a confirmed reading keeps the refusal local. Unconfirmed (timeout, 5xx) fails closed
+    // into the bounded re-check; a stale 409 means a newer check already owns this view.
+    try { await readVerified(mode, id, request.signal); } catch (error) { status = request.signal.aborted ? 503 : statusOf(error); }
     finally { clearTimeout(timer); }
-    if (status === null || ![401, 403, 404].includes(status)) return;
-    if (turn !== sequence.current || generation !== practice.generation || route !== routeRevision.current) return;
-    deny(status, mode, id);
-  }, [practice, readVerified, deny]);
+    if (status === null || status === 409 || turn !== sequence.current || route !== routeRevision.current) return;
+    // A child-practice refusal was already invalidated by read(); still clear unsent work.
+    if (generation !== practice.generation) { clearWork(); return; }
+    deny([401, 403, 404].includes(status) ? status : 403, mode, id);
+  }, [practice, readVerified, deny, clearWork]);
   /** `refreshOnDenied`: true clears on 401/403/404; false keeps 403/404 local; "confirm" keeps
    *  403/404 local only once the authority-bearing reading is confirmed. A 401 always clears. */
   const serviceRead = useCallback(async <T,>(mode: ReadingMode, id: string, signal: AbortSignal, action: (selection?: typeof practice.selection) => Promise<T>, refreshOnDenied: boolean | "confirm" = true): Promise<T> => {
@@ -568,7 +571,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     <main id="workspace-main" className="workspace-main">
       {(checking || !summary) && <section className="workspace-state" aria-live="polite"><h1>{failure === null ? "Checking your access" : failure === 401 ? "Sign in to continue" : failure === 403 || failure === 404 ? "Access has changed" : "Workspace unavailable"}</h1>
         <p>{failure === null ? "Your student information is hidden until access has been checked." : failure === 401 ? "Use the account on your invitation." : failure === 403 || failure === 404 ? "The requested access is not available. Your previous student view has been cleared." : "We couldn’t load the workspace. Please try again shortly."}</p>
-        {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={refresh}>Check access again</button>}</section>
+        {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={() => { denials.current = []; refresh(); }}>Check access again</button>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
         <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readExploration, readExplorationPage, readReference, createShortReferenceOwner, createShortExplorationOwner, readWordAids, readWordDetails, createSources, createSourceContent, readWork, readProgress, readGuide, readServiceMetadata,readMyService,readMyServiceMaterial,requestMyService,readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, registerQuiet, concealed: checking || failure !== null }}>

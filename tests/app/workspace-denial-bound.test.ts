@@ -91,6 +91,15 @@ test.each([401, 403, 404])("an optional short-reference refusal still clears and
   expect(life.clear).toHaveBeenCalled(); expect(life.pause).toHaveBeenCalledTimes(1); expect(render()!.concealed).toBe(true);
 });
 
+test("an unconfirmed reading (503) fails closed into the bounded re-check", async () => {
+  const { workspace, life } = await setup(); host.shortPage.mockRejectedValue(new PortalRequestError(403)); host.reading.mockRejectedValueOnce(new PortalRequestError(503));
+  const held = new Promise(() => undefined);
+  host.portal.mockResolvedValueOnce(session).mockResolvedValueOnce(session).mockImplementationOnce(() => held);
+  await expect(shortRead(workspace)).rejects.toMatchObject({ status: 403 });
+  await flush();
+  expect(life.clear).toHaveBeenCalled(); expect(render()!.concealed).toBe(true);
+});
+
 test("a confirming session that has ended (401 from the session check) clears and conceals", async () => {
   const { workspace, life } = await setup(); host.shortPage.mockRejectedValue(new PortalRequestError(403));
   const held = new Promise(() => undefined);
