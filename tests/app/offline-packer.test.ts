@@ -290,5 +290,20 @@ describe("owner packs (A2): the person's own readings, and the purge on an accou
       expect(parsePackIndex(value), JSON.stringify(value)).toEqual(EMPTY_INDEX);
     // An A1 index (no owner) still reads.
     expect(parsePackIndex({ format: 1, packs: [] })).toEqual({ format: 1, owner: null, packs: [] });
+    // A canonical ref may be up to 1000 characters: a long one must not make the stored index unreadable (review finding).
+    const long = Array.from({ length: 30 }, (_, index) => `Deuteronomy ${index + 1}:1-2`).join("; ");
+    expect(long.length).toBeGreaterThan(400);
+    expect(parsePackIndex({ format: 1, owner: A, packs: [{ ...pack, descriptor: { type: "ref", kind: "torah", ref: long } }] }).packs).toHaveLength(1);
+    expect(parsePackIndex({ format: 1, owner: A, packs: [{ ...pack, descriptor: { type: "ref", kind: "torah", ref: "x".repeat(1001) } }] })).toEqual(EMPTY_INDEX);
+    expect(parseOwnerAnswer(200, { owner: A, packs: [{ kind: "torah", ref: long, name: null }] }).state).toBe("owner");
+  });
+  test("a member's name is counted in code points, as the saved layer counts it (review finding)", () => {
+    const emoji = String.fromCodePoint(0x1f4dc).repeat(80);
+    expect(emoji.length).toBe(160);
+    expect(parseOwnerAnswer(200, { owner: A, packs: [{ kind: "torah", ref: "Genesis 1:1-5", name: emoji }] }).state).toBe("owner");
+    expect(parseOwnerAnswer(200, { owner: A, packs: [{ kind: "torah", ref: "Genesis 1:1-5", name: emoji + "x" }] }).state).toBe("unknown");
+    // The label it becomes still fits the stored index.
+    const pack = { key: "ref:torah:0", owner: A, label: emoji, descriptor: { type: "ref", kind: "torah", ref: "Genesis 1:1-5" }, assets: [], bytes: 0, renewedAt: 1, expiresAt: 2, format: 1 };
+    expect(parsePackIndex({ format: 1, owner: A, packs: [pack] }).packs).toHaveLength(1);
   });
 });

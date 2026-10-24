@@ -60,8 +60,10 @@ export function packAssetAllowed(asset: string): boolean {
 export const OFFLINE_PACKS_PATH = "/api/offline/packs";
 /** The opaque, per-person owner key the endpoint returns (an HMAC, base64url). */
 export const OWNER_KEY = /^[A-Za-z0-9_-]{43}$/;
-/** An owner pack's ref: a canonical reading ref (the packer checks it canonically), bounded and plain. */
-const PACK_REF = /^[A-Za-z0-9 :;,.-]{1,400}$/;
+/** An owner pack's ref: a canonical reading ref (the packer checks it canonically), plain, and no longer than a canonical
+ * ref may be (READING_REF_LIMITS.chars, 1000). One rule for the stored index, the endpoint's answer and the packer. */
+const PACK_REF = /^[A-Za-z0-9 :;,.-]{1,1000}$/;
+export const packRefAllowed = (ref: unknown): ref is string => typeof ref === "string" && PACK_REF.test(ref);
 
 export type PackDescriptor = Readonly<{ type: "week"; date: string } | { type: "course" } | { type: "ref"; kind: "torah" | "haftarah"; ref: string }>;
 /** `owner` is "public" (This week, the course) or the owner key of the person whose own reading it is. */
@@ -85,7 +87,7 @@ function descriptorOf(value: unknown): PackDescriptor | null {
   const row = value as Record<string, unknown>;
   if (row.type === "course" && Object.keys(row).length === 1) return Object.freeze({ type: "course" });
   if (row.type === "week" && Object.keys(row).length === 2 && typeof row.date === "string" && DATE.test(row.date)) return Object.freeze({ type: "week", date: row.date });
-  if (row.type === "ref" && Object.keys(row).length === 3 && (row.kind === "torah" || row.kind === "haftarah") && typeof row.ref === "string" && PACK_REF.test(row.ref))
+  if (row.type === "ref" && Object.keys(row).length === 3 && (row.kind === "torah" || row.kind === "haftarah") && packRefAllowed(row.ref))
     return Object.freeze({ type: "ref", kind: row.kind, ref: row.ref });
   return null;
 }

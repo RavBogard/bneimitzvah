@@ -133,35 +133,43 @@ it("a lesson finished while the installed app is offline reaches the account whe
   }), { timeout: 30_000 }).toContain("torah-sof-pasuk");
 }, 300_000);
 
-it("A2: a student's own confirmed reading is packed under its owner, and another account on the device removes it with every pack", async () => {
+it("A2: a student's own confirmed reading is packed under its owner, and another account on the device purges every pack", async () => {
   // A synthetic student account linked to the fixture's student, with a confirmed Torah reading inside the synthetic catalog.
   const learner = await fixture.signIn("pg-offline-student");
   const [member] = await fixture.ownerDb.insert(s.membership).values({ tenantId: "crc", userId: learner.id }).returning();
   const [grant] = await fixture.ownerDb.insert(s.roleGrant).values({ tenantId: "crc", membershipId: member.id, role: "student" }).returning();
-  await fixture.ownerDb.insert(s.studentIdentity).values({ tenantId: "crc", studentId: fixture.student.id, roleGrantId: grant.id });
+  const [link] = await fixture.ownerDb.insert(s.studentIdentity).values({ tenantId: "crc", studentId: fixture.student.id, roleGrantId: grant.id }).returning();
   const [admin] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.userId, fixture.admin.id));
   const [assignment] = await fixture.ownerDb.insert(s.assignment).values({ tenantId: "crc", studentId: fixture.student.id, kind: "torah", basis: "custom", status: "confirmed",
     ref: "Genesis 1:1-3", setByMembershipId: admin.id, proposalSnapshot: { needsReview: false, confirmationDate: "2026-10-01" } }).returning();
   await fixture.ownerDb.insert(s.assignmentVerse).values(["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"].map((verseRef, index) => ({ tenantId: "crc", studentId: fixture.student.id, assignmentId: assignment.id, ordinal: index + 1, verseRef })));
   try {
-    const { context, tab, seen } = await installed();
+    const { tab, seen } = await installed();
     await signIn(tab, "pg-offline-student@example.test");
     await expect.poll(async () => (await pack(tab))?.packs.some(row => row.descriptor.type === "ref" && row.descriptor.ref === "Genesis 1:1-3") ?? false, { timeout: 150_000 }).toBe(true);
-    const first = await pack(tab);
-    expect(first?.owner).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    const own = first!.packs.find(row => row.descriptor.type === "ref")!;
-    expect(own.owner).toBe(first!.owner);
+    const first = (await pack(tab))!;
+    expect(first.owner).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    const own = first.packs.find(row => row.descriptor.type === "ref")!, week = first.packs.find(row => row.key.startsWith("week:"))!;
+    expect(own.owner).toBe(first.owner);
     expect(own.assets.every(asset => asset.startsWith("/api/public/") || asset.startsWith("/reference-audio/short-v1/"))).toBe(true);
     // The private endpoint is never answered by the worker.
     expect(seen.fromWorker.filter(path => path.startsWith("/api/") && !path.startsWith("/api/public/"))).toEqual([]);
-    // Another account signs in on this device without a sign-out here (the session went away elsewhere).
-    await context.clearCookies();
-    await signIn(tab, "pg-admin@example.test");
-    await expect.poll(async () => { const index = await pack(tab); return index ? index.owner !== first!.owner && index.owner !== null && !index.packs.some(row => row.owner === first!.owner) : false; },
-      { timeout: 150_000 }).toBe(true);
-    expect((await pack(tab))!.packs.some(row => row.descriptor.type === "ref")).toBe(false);
+    // Another account signs in on this device with no sign-out in between: its session replaces this one's.
+    await fixture.ownerDb.delete(rateLimit);
+    expect(await tab.evaluate(async email => (await fetch("/api/auth/sign-in/magic-link", { method: "POST", credentials: "same-origin", cache: "no-store",
+      headers: { accept: "application/json", "content-type": "application/json" }, body: JSON.stringify({ email }) })).status, "pg-admin@example.test")).toBe(200);
+    await openAuthMail(tab, fixture.takeMail("pg-admin@example.test"));
+    await tab.goto("/read", { waitUntil: "domcontentloaded" });
+    // Every pack went, This week too, and was packed again for the new owner (inside 12 hours nothing else re-fetches it).
+    await expect.poll(async () => { const index = await pack(tab); return index !== null && index.owner !== null && index.owner !== first.owner
+      && index.packs.some(row => row.key === week.key && row.renewedAt > week.renewedAt); }, { timeout: 150_000 }).toBe(true);
+    const after = (await pack(tab))!;
+    expect(after.packs.some(row => row.descriptor.type === "ref" || row.owner === first.owner)).toBe(false);
   } finally {
     await fixture.ownerDb.delete(s.assignmentVerse).where(eq(s.assignmentVerse.assignmentId, assignment.id));
     await fixture.ownerDb.delete(s.assignment).where(eq(s.assignment.id, assignment.id));
+    await fixture.ownerDb.delete(s.studentIdentity).where(eq(s.studentIdentity.id, link.id));
+    await fixture.ownerDb.delete(s.roleGrant).where(eq(s.roleGrant.id, grant.id));
+    await fixture.ownerDb.delete(s.membership).where(eq(s.membership.id, member.id));
   }
 }, 300_000);

@@ -6,7 +6,7 @@ import type { ShortReferenceSource } from "../reference-audio/short-source";
 import { coursePassages } from "../../components/learn/verses-api";
 import { parsePublicRefReading, parsePublicShortPage, parsePublicTextPage, parsePublicWeek, refSource, weekSource, type PublicSource } from "../../components/portal/public-reading/api";
 import { publicReadingPath, publicShortPath, publicTextPath } from "../../components/portal/public-reading/urls";
-import { BUDGET, OFFLINE_CACHE, OFFLINE_PACKS_PATH, OWNER_KEY, RENEW_AFTER_MS, OFFLINE_HEADER, PACK_CONCURRENCY, packAssetAllowed, WINDOW_MS, type Pack, type PackDescriptor } from "./policy";
+import { BUDGET, OFFLINE_CACHE, OFFLINE_PACKS_PATH, OWNER_KEY, RENEW_AFTER_MS, OFFLINE_HEADER, PACK_CONCURRENCY, packAssetAllowed, packRefAllowed, WINDOW_MS, type Pack, type PackDescriptor } from "./policy";
 import { assetKey, inspectPack, packingStarted, purgeGeneration, readIndex, refreshOfflineState, setOfflineState, sweep, trackPacking, writeIndex, type PackState } from "./pack-index";
 
 /**
@@ -46,10 +46,11 @@ export function parseOwnerAnswer(status: number, body: unknown): OwnerAnswer {
   for (const raw of row.packs) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return UNKNOWN;
     const p = raw as Record<string, unknown>;
-    if (Object.keys(p).sort().join() !== "kind,name,ref" || (p.kind !== "torah" && p.kind !== "haftarah") || typeof p.ref !== "string") return UNKNOWN;
+    if (Object.keys(p).sort().join() !== "kind,name,ref" || (p.kind !== "torah" && p.kind !== "haftarah") || !packRefAllowed(p.ref)) return UNKNOWN;
     const canonical = canonicalReadingRef(p.ref, p.kind);
     if (!canonical || canonical.ref !== p.ref) return UNKNOWN;
-    if (p.name !== null && (typeof p.name !== "string" || p.name.length < 1 || p.name.length > 80 || /[\u0000-\u001f\u007f-\u009f]/.test(p.name))) return UNKNOWN;
+    // Counted in code points, as the saved layer counts a reading's name (1 to 80).
+    if (p.name !== null && (typeof p.name !== "string" || p.name.length < 1 || Array.from(p.name).length > 80 || /[\u0000-\u001f\u007f-\u009f]/.test(p.name))) return UNKNOWN;
     packs.push(Object.freeze({ kind: p.kind, ref: p.ref, name: p.name as string | null }));
   }
   return Object.freeze({ state: "owner", owner: row.owner, packs: Object.freeze(packs) });
@@ -138,7 +139,7 @@ async function planCourse(io: PackerIo, signal: AbortSignal, generation: number)
 
 /** One of this person's own readings, by ref: the reading route (the reader asks it), and every page and clip. */
 async function planRef(io: PackerIo, kind: "torah" | "haftarah", ref: string, signal: AbortSignal, generation: number): Promise<Plan> {
-  const canonical = canonicalReadingRef(ref, kind);
+  const canonical = packRefAllowed(ref) ? canonicalReadingRef(ref, kind) : null;
   if (!canonical || canonical.ref !== ref) throw new PackStopped("failed");
   const plan: Plan = { label: "", json: new Map(), clips: new Map(), bytes: 0 };
   const body = await fetchJson(io, publicReadingPath({ by: "ref", ref, kind }), signal, plan, generation);
