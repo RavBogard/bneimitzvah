@@ -264,7 +264,12 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     // After Next verse the new verse's controls come into view: on a phone the verse text is taller than the screen, so Reveal would be below it.
     if (target === "reveal" && drillScroll.current && control) {
       drillScroll.current = false;
-      try { (control.closest("[data-translate-drill]") ?? control).scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); } catch { /* Stay where the page is. */ }
+      // Smooth only for a short way: a page of verses can be many screens tall, and a long smooth sweep is slow and dizzying.
+      try {
+        const panel = control.closest("[data-translate-drill]") ?? control, box = panel.getBoundingClientRect();
+        const near = box.top < innerHeight * 1.5 && box.bottom > -innerHeight * 0.5, reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        panel.scrollIntoView({ block: "nearest", behavior: reduced || !near ? "auto" : "smooth" });
+      } catch { /* Stay where the page is. */ }
     }
   });
 

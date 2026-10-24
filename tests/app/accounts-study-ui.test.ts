@@ -69,7 +69,8 @@ describe("the translate drill", () => {
   });
   it("brings the new verse's controls into view after Next verse, with reduced motion respected and focus still moved without a scroll of its own", () => {
     const view = readFileSync(join(process.cwd(), "src/components/portal/public-reading/view.tsx"), "utf8");
-    expect(view).toMatch(/scrollIntoView\(\{ block: "nearest", behavior: matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches \? "auto" : "smooth" \}\)/);
+    expect(view).toMatch(/matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches/);
+    expect(view).toMatch(/scrollIntoView\(\{ block: "nearest", behavior: reduced \|\| !near \? "auto" : "smooth" \}\)/);
     expect(view).toMatch(/focus\(\{ preventScroll: target !== "toggle" \}\)/);
   });
   it("points Play at the verse the drill moved to, and lets any verse the reader chooses take that back", () => {
