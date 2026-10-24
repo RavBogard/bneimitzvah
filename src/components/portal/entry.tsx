@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { parseAcceptance, parseAcknowledgement, parseInvitation, parseSession, PortalRequestError, requestPortal, roleNames,
+import { parseAcceptance, parseAcknowledgement, parseAuthResult, parseInvitation, parseSession, PortalRequestError, requestPortal, roleNames,
   type InvitationReview, type SessionSummary } from "./api";
 import { GoogleSignIn } from "./google-sign-in";
 import type { GoogleIntent } from "./sign-in-boundary";
@@ -18,7 +18,28 @@ export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invi
  */
 export const frontDoorAccount = (view: View): FrontDoorAccount => view.kind === "loading" || view.kind === "forbidden" ? null
   : view.kind === "signed-in" ? { kind: "account", role: view.summary.roles.length === 1 ? roleNames[view.summary.roles[0]] : null, saved: view.summary.saved } : { kind: "sign-in" };
-type Action = "google" | "email" | "accept" | "sign-out";
+type Action = "google" | "email" | "code" | "accept" | "sign-out";
+/**
+ * Only when this device last asked for a sign-in email, never the code or the address: an installed app that
+ * relaunches while the person was in Mail reopens on the code form for the code's 5 minutes (1.5, plan §2.4).
+ */
+const CODE_REQUESTED_AT = "crc.signin.code-requested-at", CODE_WINDOW_MS = 300_000;
+function codeRequested(): boolean {
+  try { const at = Number(window.localStorage.getItem(CODE_REQUESTED_AT)), age = Date.now() - at; return Number.isSafeInteger(at) && at > 0 && age >= 0 && age < CODE_WINDOW_MS; }
+  catch { return false; }
+}
+function rememberCodeRequest(on: boolean) {
+  try { if (on) window.localStorage.setItem(CODE_REQUESTED_AT, String(Date.now())); else window.localStorage.removeItem(CODE_REQUESTED_AT); } catch { /* Storage blocked: the form still shows in this tab. */ }
+}
+/** The code form's words. DRAFT, awaiting Daniel's wording (1.5 popup); the behaviour does not depend on them. */
+export const SIGN_IN_CODE_COPY = Object.freeze({
+  sent: "If this address can sign in, an email with a sign-in link and a 6-digit code will arrive shortly.",
+  label: "Sign-in code",
+  help: "Open the link in the email, or type its code here. The code works on this device for 5 minutes.",
+  submit: "Sign in", pending: "Signing in…",
+  wrong: "That code didn’t match. Check the email and try again.",
+  expired: "That code has expired or was used. Request a new email to get a new code.",
+});
 const rolePath = (role: SessionSummary["roles"][number]) => role === "admin" ? "/workspace/admin/students" : `/workspace/${role}`;
 const roleTasks: Record<SessionSummary["roles"][number], string> = { student: "your assigned reading", parent: "your child’s preparation and practice", tutor: "the students you teach", admin: "students, people and setup" };
 const failure = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
@@ -27,7 +48,7 @@ const failure = (error: unknown) => error instanceof PortalRequestError ? error.
 export function PortalEntry({ invitation = false, authenticationError = false, autoEnterStudent = true, inlineGoogle = false, googleIntent, frontDoor = false, after }: { invitation?: boolean; authenticationError?: boolean; autoEnterStudent?: boolean; inlineGoogle?: boolean; googleIntent?: GoogleIntent; frontDoor?: boolean; after?: ReactNode }) {
   const [view, setView] = useState<View>({ kind: "loading" });
   const [pending, setPending] = useState<Action | null>(null), [message, setMessage] = useState("");
-  const [email, setEmail] = useState(""), [linkRequested, setLinkRequested] = useState(false);
+  const [email, setEmail] = useState(""), [linkRequested, setLinkRequested] = useState(false), [code, setCode] = useState("");
   const [attemptedSignIn, setAttemptedSignIn] = useState(false);
   const [authGeneration, setAuthGeneration] = useState(0);
   const gate = useRef<Action | null>(null), generation = useRef(0), controller = useRef<AbortController | null>(null);
@@ -38,10 +59,11 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
     const turn = ++generation.current;
     controller.current?.abort();
     const request = new AbortController(); controller.current = request;
-    setView({ kind: "loading" }); setMessage(""); setLinkRequested(false);
+    setView({ kind: "loading" }); setMessage(""); setLinkRequested(codeRequested()); setCode("");
     void requestPortal(invitation ? "/api/invitations/pending" : "/api/session", undefined, request.signal)
       .then(value => {
         const next: View = invitation ? { kind: "invitation", review: parseInvitation(value) } : { kind: "signed-in", summary: parseSession(value) };
+        if (next.kind === "signed-in") rememberCodeRequest(false);
         if (autoEnterStudent && turn === generation.current && next.kind === "signed-in" && next.summary.roles.length === 1 && next.summary.roles[0] === "student") { window.location.replace("/workspace/student"); return; }
         if (turn === generation.current) setView(next);
       }).catch(error => {
@@ -68,18 +90,25 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
     // React state alone cannot prevent two submissions in the same event turn.
     if (gate.current) return;
     gate.current = kind; setPending(kind); setMessage("");
-    if (kind === "email") setAttemptedSignIn(true);
+    if (kind === "email" || kind === "code") setAttemptedSignIn(true);
     try {
       if (kind === "email") {
         parseAcknowledgement(await requestPortal("/api/auth/sign-in/magic-link", { email: email.trim() }), "requested");
-        setEmail(""); setLinkRequested(true); focusNext.current = true;
+        setEmail(""); setCode(""); setLinkRequested(true); rememberCodeRequest(true); focusNext.current = true;
+      } else if (kind === "code") {
+        // The code goes only in this POST body; the input is cleared whatever the answer.
+        const typed = code; setCode("");
+        const next = parseAuthResult(await requestPortal("/api/auth/sign-in/code", { code: typed }));
+        rememberCodeRequest(false);
+        window.location.replace(next);
+        return;
       } else if (kind === "sign-out") {
         // Saved readings leave the device before the session does (1.5 A1, §3.4). This never throws.
         await purgeOffline();
         parseAcknowledgement(await requestPortal("/api/auth/sign-out", {}), "ok");
         forgetPendingRequest(); // A Connect Claude request never outlives the account that started it.
         setAuthGeneration(value => value + 1);
-        setEmail(""); setLinkRequested(false); setView({ kind: "sign-in" }); focusNext.current = true;
+        setEmail(""); setLinkRequested(false); rememberCodeRequest(false); setView({ kind: "sign-in" }); focusNext.current = true;
       } else {
         if (view.kind !== "invitation") return;
         // The raw invitation lives only in its HttpOnly pending cookie. The
@@ -93,16 +122,20 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         setView({ kind: status === 401 ? "sign-in" : status === 403 ? "forbidden" : status === 404 ? "invalid-invitation" : "uncertain" });
         if (status === 404) setMessage("The invitation review changed or expired. Review the current invitation before accepting.");
         focusNext.current = true;
+      } else if (kind === "code" && (status === 400 || status === 409)) {
+        if (status === 409) { setLinkRequested(false); rememberCodeRequest(false); focusNext.current = true; }
+        setMessage(status === 400 ? SIGN_IN_CODE_COPY.wrong : SIGN_IN_CODE_COPY.expired);
       } else if (kind === "sign-out" && status === 401) {
         setView({ kind: "sign-in" }); focusNext.current = true;
       } else setMessage(status === 429 ? "Too many sign-in requests. Wait a minute, then try again."
         : kind === "sign-out" ? "We couldn’t sign you out. Try again before leaving a shared device."
-          : "Sign-in could not be started. Please try again shortly.");
+          : kind === "code" ? "Sign-in could not be completed. Please try again shortly." : "Sign-in could not be started. Please try again shortly.");
     } finally {
       gate.current = null; setPending(null);
     }
   }
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); void action("email"); }
+  function submitCode(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (/^\d{6}$/.test(code)) void action("code"); }
   const title = view.kind === "loading" ? "Checking your access" : view.kind === "unavailable" ? "Sign-in is unavailable" : view.kind === "sign-in" ? linkRequested ? "Check your email" : "Sign in"
     : view.kind === "signed-in" ? autoEnterStudent ? "You’re signed in" : "Your account" : view.kind === "invitation" ? "Review your invitation" : view.kind === "accepted" ? "Invitation accepted"
       : view.kind === "invalid-invitation" ? "Invitation unavailable" : view.kind === "uncertain" ? "We couldn’t confirm the result" : "Access is unavailable";
@@ -114,7 +147,15 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         {message && <p className="request-error" role="alert">{message}</p>}
         {view.kind === "loading" && <p role="status">One moment while we check your access.</p>}
         {view.kind === "unavailable" && <><p>The portal isn’t ready to sign you in right now. Your reading remains private.</p><p>Please try again shortly. If this continues, ask your tutor or the congregation for help.</p><button type="button" className="button-primary" onClick={retry}>Try again</button></>}
-        {view.kind === "sign-in" && (linkRequested ? <><p role="status">If this address can sign in, an email link will arrive shortly. Open the link on this device to continue.</p><p>Don’t see it? Check your spam folder, or wait a minute before requesting another link.</p><button type="button" className="button-secondary" onClick={() => { focusNext.current = true; setLinkRequested(false); setMessage(""); }}>Use a different email</button></>
+        {view.kind === "sign-in" && (linkRequested ? <><p role="status">{SIGN_IN_CODE_COPY.sent}</p>
+            <form method="post" onSubmit={submitCode}>
+              <label htmlFor="entry-code">{SIGN_IN_CODE_COPY.label}</label>
+              <input id="entry-code" name="code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" minLength={6} maxLength={6} required spellCheck={false}
+                value={code} onChange={event => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} disabled={pending !== null} aria-describedby="entry-code-help" />
+              <p className="field-help" id="entry-code-help">{SIGN_IN_CODE_COPY.help}</p>
+              <button type="submit" className="button-primary" disabled={pending !== null}>{pending === "code" ? SIGN_IN_CODE_COPY.pending : SIGN_IN_CODE_COPY.submit}</button>
+            </form>
+            <p>Don’t see it? Check your spam folder, or wait a minute before requesting another link.</p><button type="button" className="button-secondary" disabled={pending !== null} onClick={() => { focusNext.current = true; setLinkRequested(false); setCode(""); rememberCodeRequest(false); setMessage(""); }}>Use a different email</button></>
           : <><p>{invitation ? "Sign in with the email address that received this invitation." : "Use Google, or get a sign-in link by email. No password needed."}</p>
             {inlineGoogle ? <GoogleSignIn key={authGeneration} intent={googleIntent} disabled={pending !== null} onBegin={() => {
               if (gate.current) return false;

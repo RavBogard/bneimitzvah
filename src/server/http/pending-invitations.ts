@@ -96,7 +96,7 @@ export function createPendingInvitations(input: { secret: string; origin: string
     hasPendingForSignIn(request: Request): boolean {
       try {
         const { url } = requestUrl(request, []);
-        if (request.method !== "POST" || !["/api/auth/sign-in/magic-link", "/api/auth/email/confirm", "/api/auth/google/challenge", "/api/auth/google/redirect"].includes(url.pathname)) return false;
+        if (request.method !== "POST" || !["/api/auth/sign-in/magic-link", "/api/auth/sign-in/code", "/api/auth/email/confirm", "/api/auth/google/challenge", "/api/auth/google/redirect"].includes(url.pathname)) return false;
         unseal(request); return true;
       } catch { return false; }
     },

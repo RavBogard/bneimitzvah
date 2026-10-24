@@ -32,6 +32,45 @@ export function projectMagicLink(urlValue: string, token: string, origin: string
   } catch { throw new RuntimeUnavailable(); }
 }
 
+/**
+ * The sign-in email's code lines, Daniel's wording (2026-10-23, offload A3). The code goes alone on the line after
+ * its label, as plain digits, and is the only 6-digit number in the email (what Mail and Gmail detect). No WebOTP
+ * `@host #code` line: that format is defined for SMS only.
+ */
+export const SIGN_IN_CODE_LINES = Object.freeze({
+  code: (product: string) => `Or enter this code in the ${product} app:`,
+  once: "The link and the code work once, for 5 minutes.",
+  // A capped address's link-only email: Daniel's line 3 with the code taken out (a derivation, not new wording).
+  linkOnce: "The link works once, for 5 minutes.",
+  never: (product: string) => `No one from CRC will ever ask you for this code. Don’t read it to anyone or type it anywhere but ${product}.`,
+});
+const CODE = /^\d{6}$/;
+const IGNORE = "If you did not request this message, you can ignore it.";
+// A congregation's product name (tenant.product_name, E1) as these emails accept it: a plain name with no number of
+// any kind, so no name can add a code-like run or a digit to a subject. A refused name sends nothing.
+export const mailProductName = (value: unknown): value is string => plainName(value) && !/[\p{N}\p{Cf}\p{Cc}]/u.test(value as string);
+function bodyOf(kind: Kind, link: string, code: string | null | undefined, product: string): string {
+  // An invitation carries no code; its random token may hold digits by chance, so only the sign-in email is counted.
+  if (kind === "invitation") return `Open this link to review your invitation:\n\n${link}\n\n${IGNORE}`;
+  // The code is in the body only, never the subject (lock screens, provider subject logs). A capped address (null
+  // code) gets the link only: line 2 (the label and the code) is left out and line 3 names only the link; lines 1, 4
+  // and 5 are unchanged.
+  const codeLines = code === null ? "" : `${SIGN_IN_CODE_LINES.code(product)}\n${code}\n\n`;
+  const once = code === null ? SIGN_IN_CODE_LINES.linkOnce : SIGN_IN_CODE_LINES.once;
+  const body = `Open this link to sign in:\n\n${link}\n\n${codeLines}${once}\n\n${SIGN_IN_CODE_LINES.never(product)}\n\n${IGNORE}`;
+  // Fail closed rather than send an email a phone could misread: no number but ASCII digits, and the code is the
+  // only run of 6 or more of them (none at all when link-only; the sign-in token is letters only).
+  const runs = body.match(/\p{N}{6,}/gu) ?? [];
+  if (/(?![0-9])\p{N}/u.test(body) || (code === null ? runs.length !== 0 : runs.length !== 1 || runs[0] !== code)) throw 0;
+  return body;
+}
+function subjectOf(kind: Kind, product: string): string {
+  const subject = kind === "invitation" ? `Your Beit Mitzvah invitation from ${product}` : `Sign in to ${product}`;
+  // No number in a subject: a lock screen or Gmail card must never offer one as the code.
+  if (/\p{N}/u.test(subject)) throw 0;
+  return subject;
+}
+
 // Plain-text transactional mail only. Tracking must also be disabled on the
 // sending domain in Resend; their API has no per-message tracking override.
 export function createMailTransport(input: { origin: string; apiKey: string; from: string; fetch: typeof globalThis.fetch; timeoutMs?: number }) {
@@ -42,19 +81,22 @@ export function createMailTransport(input: { origin: string; apiKey: string; fro
       || !mailbox(input.from) || !/^re_[A-Za-z0-9_-]{8,256}$/.test(input.apiKey)
       || !Number.isInteger(timeout) || timeout < 1 || timeout > 10000) throw 0;
   } catch { throw new RuntimeUnavailable(); }
-  return async (kind: Kind, message: Readonly<{ email: string; url: string }>): Promise<void> => {
+  return async (kind: Kind, message: Readonly<{ email: string; url: string; productName: string; code?: string | null }>): Promise<void> => {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      if (!mailbox(input.from) || !mailbox(message.email)) throw 0;
+      if (!mailbox(input.from) || !mailbox(message.email) || !mailProductName(message.productName)) throw 0;
+      // A sign-in email carries its code, or an explicit null when the address is capped (link only); an invitation
+      // never carries one.
+      if (kind === "magic-link" ? message.code !== null && (typeof message.code !== "string" || !CODE.test(message.code)) : message.code !== undefined) throw 0;
       const link = canonicalLink(message.url, input.origin, kind);
       await Promise.race([
         (async () => {
           const response = await input.fetch("https://api.resend.com/emails", {
             method: "POST", redirect: "error", credentials: "omit", signal: controller.signal,
             headers: { authorization: `Bearer ${input.apiKey}`, "content-type": "application/json" },
-            body: JSON.stringify({ from: input.from, to: [message.email], subject: kind === "invitation" ? "Your Beit Mitzvah invitation from CRC Torah" : "Sign in to CRC Torah",
-              text: `Open this link to ${kind === "invitation" ? "review your invitation" : "sign in"}:\n\n${link}\n\nIf you did not request this message, you can ignore it.` }),
+            body: JSON.stringify({ from: input.from, to: [message.email], subject: subjectOf(kind, message.productName),
+              text: bodyOf(kind, link, message.code, message.productName) }),
           });
           // No provider body/header/ID escapes, even on errors; do not buffer it.
           try {

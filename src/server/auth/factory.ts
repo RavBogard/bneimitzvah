@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
-import { magicLink } from "better-auth/plugins";
+import { createHmac } from "node:crypto";
+import { emailOTP, magicLink } from "better-auth/plugins";
 
 // Only the private HTTP adapter constructs this header. Never trust a caller's
 // value or mount the unprojected SDK handler as an application route.
@@ -11,7 +12,13 @@ export type AuthStackInput = {
   secret: string;
   google?: { clientId: string; clientSecret: string };
   sendMagicLink: (message: { email: string; url: string; token: string }) => Promise<void>;
+  /** Purpose key for the typed sign-in code at rest (an HMAC, never plain SHA-256: a 6-digit hash is trivially reversed). */
+  codeSecret: string;
 };
+/** The typed sign-in code (1.5): 6 digits, 5 minutes like the link, 3 tries per issued code. */
+export const SIGN_IN_CODE = Object.freeze({ digits: 6, expiresIn: 300, attempts: 3 });
+/** Sign-up parity: a code signs in exactly the addresses a link does (both create the account on first use). */
+export const SIGN_IN_DISABLE_SIGN_UP = false;
 
 // No environment access, singleton, app handler, test bypass or mail sender here.
 // Callers must first resolve an exact trusted origin and supply a private transport.
@@ -24,6 +31,7 @@ export function createAuthStack(
   if (origin.origin !== input.origin || !["http:", "https:"].includes(origin.protocol)) {
     throw new Error("Invalid authentication origin");
   }
+  if (typeof input.codeSecret !== "string" || input.codeSecret.length < 32) throw new Error("Invalid sign-in code secret");
   return betterAuth({
     appName: "CRC Torah",
     baseURL: input.origin,
@@ -62,6 +70,11 @@ export function createAuthStack(
     // Provider/adapter diagnostics can contain identities or credentials. The app's
     // eventual allowlisted logger must never forward arbitrary library messages.
     logger: { disabled: true },
-    plugins: [magicLink({ expiresIn: 300, storeToken: "hashed", sendMagicLink: input.sendMagicLink })],
+    plugins: [magicLink({ expiresIn: 300, storeToken: "hashed", disableSignUp: SIGN_IN_DISABLE_SIGN_UP, sendMagicLink: input.sendMagicLink }),
+      // Codes are created server-side inside the magic-link email (createVerificationOTP) and checked only through the
+      // portal's /api/auth/sign-in/code route; every other email-otp endpoint is unreachable (the dispatcher routes an allowlist).
+      emailOTP({ otpLength: SIGN_IN_CODE.digits, expiresIn: SIGN_IN_CODE.expiresIn, allowedAttempts: SIGN_IN_CODE.attempts, disableSignUp: SIGN_IN_DISABLE_SIGN_UP,
+        storeOTP: { hash: async otp => createHmac("sha256", input.codeSecret).update(`sign-in-code:v1:${otp}`).digest("base64url") },
+        sendVerificationOTP: async () => { throw new Error("Unused: sign-in codes travel inside the magic-link email"); } })],
   });
 }

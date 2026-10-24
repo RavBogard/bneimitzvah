@@ -30,6 +30,8 @@ import { createReadingPreviewService } from "../../src/server/students/preview";
 import { createStudentService } from "../../src/server/students/service";
 import { createPendingInvitations } from "../../src/server/http/pending-invitations";
 import { createGoogleChallenges } from "../../src/server/http/google-challenge";
+import { createSignInCodeBindings } from "../../src/server/http/sign-in-code-binding";
+import { createSignInCodeCap } from "../../src/server/auth/sign-in-code-cap";
 import { handlePortalRequest } from "../../src/server/http/portal";
 import { resolveTenantHost } from "../../src/server/tenancy/resolve";
 import type { HttpRuntime } from "../../src/server/runtime/composition";
@@ -86,6 +88,8 @@ export async function portalRoutesFixture() {
     serviceEcosystem: createServiceEcosystemService({ access:f.service,practice,broker:createMusicBroker(undefined) }),
     serviceScheduler: createServiceScheduler({ db:f.db, broker:createMusicBroker(undefined) }),
     googleChallenges: createGoogleChallenges({ db: f.db, origin: "http://localhost:3000", secret: randomBytes(48).toString("base64url") }),
+    signInCodes: createSignInCodeBindings({ origin: "http://localhost:3000", secret: randomBytes(48).toString("base64url") }),
+    signInCodeCap: createSignInCodeCap({ db: f.db, secret: randomBytes(48).toString("base64url"), capped: () => undefined }),
     resolveHost: request => resolveTenantHost(f.db, request, { environment: "test", deployment: "suite" }) };
   function request(path: string, options: { who?: keyof typeof identities | "anonymous"; method?: string; body?: unknown; handle?: string; pending?: string;
     headers?: Record<string, string>; origin?: string } = {}) {

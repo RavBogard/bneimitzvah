@@ -115,6 +115,9 @@ test("composed real auth stack sends only synthetic mail to injected transport a
   const db = drizzle(f.client, { schema });
   const config = loadRuntimeConfig(env());
   await db.insert(schema.tenantHost).values({ host: "localhost:3000", origin: config.origin, tenantId: "crc", environment: "local", deployment: config.deployment.deployment });
+  // Compose as production does: a restricted nonowner login acting as portal_runtime. The sign-in email reads the
+  // congregation's product name in a tenant transaction, which refuses any elevated role.
+  await f.client.exec("CREATE ROLE runtime_login LOGIN; GRANT portal_runtime TO runtime_login; SET SESSION AUTHORIZATION runtime_login; SET ROLE portal_runtime");
   let mailCalls = 0;
   const runtime = composeRuntime(config, db, async (url, options) => {
     if (String(url) !== "https://api.resend.com/emails") throw new Error("Unexpected test provider");
