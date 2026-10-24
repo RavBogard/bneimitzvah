@@ -10,7 +10,7 @@ import { closeMcpFixtures, mcpFixture } from "./mcp-fixture";
 import { loadRuntimeConfig } from "../../src/server/runtime/config";
 import { composePageViewRuntime } from "../../src/server/runtime/public-composition";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
-import type { PageViewRuntime } from "../../src/server/http/page-views";
+import { handlePageViewRequest, type PageViewRuntime } from "../../src/server/http/page-views";
 import { normalizePublicPagePath, publicPageViewPaths, READ_ANY_PATH } from "../../src/lib/site/page-views";
 import { PAGE_VIEW_ROUTE } from "../../src/lib/site/page-view-route";
 import { NAMED_READINGS } from "../../src/lib/readings/named-readings";
@@ -122,6 +122,20 @@ describe("the beacon route", () => {
     expect(ok.calls.map(c => c.path)).toEqual(["/trope-chart"]);
   });
 
+  it("sends the 204 before the database is touched: the count runs after the response", async () => {
+    const calls: string[] = [], tasks: (() => Promise<void>)[] = [];
+    const scope = async (action: (runtime: PageViewRuntime) => Promise<Response>) => { calls.push("scope"); return action({ async resolveTenant() { calls.push("host"); }, async countPageView(path) { calls.push(path); } }); };
+    const response = await handlePageViewRequest(beacon({ page: "/learn" }), scope, () => new Date(), async task => { tasks.push(task); });
+    await expectQuiet(response);
+    expect(calls).toEqual([]);
+    expect(tasks).toHaveLength(1);
+    await tasks[0]();
+    expect(calls).toEqual(["scope", "host", "/learn"]);
+    // A refused request schedules nothing at all.
+    await expectQuiet(await handlePageViewRequest(beacon({ page: "/workspace" }), scope, () => new Date(), async task => { tasks.push(task); }));
+    expect(tasks).toHaveLength(1);
+  });
+
   it("logs nothing at all, whatever it is sent", async () => {
     const spies = (["log", "info", "warn", "error", "debug"] as const).map(name => vi.spyOn(console, name).mockImplementation(() => undefined));
     const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true), err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
@@ -227,6 +241,9 @@ describe("where the beacon is mounted", () => {
     expect(using.sort()).toEqual(["src/app/learn/layout.tsx", "src/app/read/layout.tsx", "src/app/trope-chart/layout.tsx", "src/components/site/page-view-beacon.tsx"]);
     for (const layout of ["src/app/read/layout.tsx", "src/app/learn/layout.tsx", "src/app/trope-chart/layout.tsx"])
       expect(await readFile(layout, "utf8")).toMatch(/<PageViewBeacon \/>/);
+    // Every page those layouts wrap is one of the public pages; a signed-in page added under them must be placed elsewhere.
+    expect(all.filter(f => /^src\/app\/(read|learn|trope-chart)\//.test(f) && /\/page\.tsx$/.test(f)).sort()).toEqual([
+      "src/app/learn/[lesson]/page.tsx", "src/app/learn/about/page.tsx", "src/app/learn/page.tsx", "src/app/learn/review/page.tsx", "src/app/read/page.tsx", "src/app/trope-chart/page.tsx"]);
     // Nothing under the signed-in workspace, the account page, sign-in, connect or the root layout imports it.
     for (const file of all.filter(f => /^src\/app\/(workspace|account|sign-in|connect|invitations|unsubscribe|offline)\//.test(f) || f === "src/app/layout.tsx" || f === "src/app/page.tsx"))
       expect(await readFile(file, "utf8"), file).not.toMatch(/PageViewBeacon|page-view-beacon|api\/public\/view/);
@@ -234,6 +251,7 @@ describe("where the beacon is mounted", () => {
   it("sends no cookie, no referrer and keeps nothing on the device", async () => {
     const source = await readFile("src/components/site/page-view-beacon.tsx", "utf8");
     expect(source).toContain(`credentials: "omit"`); expect(source).toContain(`referrerPolicy: "no-referrer"`);
+    expect(source).toContain(`if (params.has("saved")) return;`);
     expect(source).not.toMatch(/localStorage|sessionStorage|indexedDB|document\.cookie|navigator\.sendBeacon|userAgent/);
   });
 });

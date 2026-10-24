@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { readJsonBody } from "./body";
 import { PAGE_VIEW_ROUTE } from "../../lib/site/page-view-route";
 import { normalizePublicPagePath } from "../../lib/site/page-views";
@@ -13,6 +14,7 @@ import { normalizePublicPagePath } from "../../lib/site/page-views";
  * agent or referrer, and never logs. Abuse limits: POST only, no query, a 1 KiB JSON body, same-origin only (Origin must be
  * the page's own; Sec-Fetch-Site, when sent, must say same-origin), and the allow-list, checked before any database opens,
  * so a request can raise a count but never add a path. The firewall's /api/public/ rate limit covers this route too.
+ * The 204 goes out before the database is touched: the count is written after the response (Next's after()).
  */
 export const isPageViewPath = (pathname: string) => pathname === PAGE_VIEW_ROUTE;
 
@@ -28,10 +30,19 @@ export type PageViewScope = (action: (runtime: PageViewRuntime) => Promise<Respo
 const done = () => new Response(null, { status: 204, headers: { "cache-control": "no-store", "vercel-cdn-cache-control": "no-store",
   "x-robots-tag": "noindex, nofollow", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer" } });
 
+/**
+ * Runs the count after the response has been sent, inside the request's own lifetime. Outside a Next request scope (the
+ * test dispatcher, the isolated browser server) after() refuses, and the count is simply awaited before the 204.
+ */
+export type Defer = (task: () => Promise<void>) => Promise<void>;
+export const afterResponse: Defer = task => {
+  try { after(task); return Promise.resolve(); } catch { return task(); }
+};
+
 /** The UTC calendar day of `at`, as YYYY-MM-DD. */
 export const utcDay = (at: Date) => at.toISOString().slice(0, 10);
 
-export async function handlePageViewRequest(request: Request, withViews: PageViewScope, now: () => Date = () => new Date()): Promise<Response> {
+export async function handlePageViewRequest(request: Request, withViews: PageViewScope, now: () => Date = () => new Date(), defer: Defer = afterResponse): Promise<Response> {
   try {
     if (request.method !== "POST" || request.url.length > 2048) return done();
     const url = new URL(request.url);
@@ -43,12 +54,15 @@ export async function handlePageViewRequest(request: Request, withViews: PageVie
     const path = normalizePublicPagePath((body as { page: unknown }).page);
     if (path === null) return done();
     const day = utcDay(now());
-    return await withViews(async runtime => {
+    await defer(async () => {
       try {
-        await runtime.resolveTenant(request);
-        await runtime.countPageView(path, day);
+        await withViews(async runtime => {
+          await runtime.resolveTenant(request);
+          await runtime.countPageView(path, day);
+          return done();
+        });
       } catch { /* Nothing about a failure leaves this route. */ }
-      return done();
     });
+    return done();
   } catch { return done(); }
 }

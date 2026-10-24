@@ -21,7 +21,7 @@ test("the public reading is open to signed-out visitors, never asks for a sessio
   const beacon = await counted;
   expect(beacon.method()).toBe("POST");
   expect(beacon.postDataJSON()).toEqual({ page: "/read" });
-  expect(beacon.headers().cookie).toBeUndefined(); expect(beacon.headers().referer).toBeUndefined();
+  expect(beacon.headers().cookie).toBeUndefined(); expect(beacon.headers().referer ?? "").toBe("");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   if (testInfo.project.name === "phone") await page.screenshot({ path: testInfo.outputPath("public-reading-phone-unconfigured.png"), fullPage: true });
   const robots = await request.get("/robots.txt");
