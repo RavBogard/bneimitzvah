@@ -15,6 +15,10 @@ next-env.d.ts
 .vercel/
 .codex-remote-attachments/
 .local-data/
+# The service course's pinned public-text artifact (2.0 SC2): the feed and the volume's PDFs, downloaded for the operator import only.
+.course-text/
+*-feed.json
+shirei-*.pdf
 
 # local caches (Sefaria, STEP, OSHB, Hebcal)
 .cache/

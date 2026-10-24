@@ -32,6 +32,8 @@ export const COPY = Object.freeze({
     about: "About this prayer", // step.about
     where: "Where it is in the service", // step.where
     read: "Read it", // step.read
+    words: "Key words", // step.words
+    check: "Check", // step.check
   }),
   about: Object.freeze({
     moment: "This part of the service has no prayer text to read. It is here so you know what happens and when.", // about.moment
@@ -45,6 +47,29 @@ export const COPY = Object.freeze({
   }),
   read: Object.freeze({
     inSiddur: "This prayer’s text is in the siddur.", // read.inSiddur
+    instruction: "Read each line aloud at your own pace. Tap a word to see what it means.", // read.instruction
+    instructionNoCard: "Read each line aloud at your own pace.", // read.instruction.nocard
+    translitShow: "Show transliteration", // read.translit.show
+    translitHide: "Hide transliteration", // read.translit.hide
+    englishShow: "Show English", // read.english.show
+    englishHide: "Hide English", // read.english.hide
+    siddurNote: "Your siddur may print this prayer a little differently. Read it there too.", // read.siddurNote
+    credit: "Text: {volume}, {licence}.", // read.credit
+  }),
+  words: Object.freeze({
+    instruction: "A few words to know in this prayer. Tap one for more.", // words.instruction
+    more: "More about this word", // words.more
+  }),
+  check: Object.freeze({
+    instruction: "A few questions on what you just read. Answer before you look.", // check.instruction
+    whichSays: "Which word says {translit}?", // check.whichSays
+    whichMeans: "Which word means {gloss}?", // check.whichMeans
+    whatMeans: "What does this word mean?", // check.whatMeans
+    right: "Yes. {word} is {translit}.", // check.right
+    rightMeaning: "Yes. {word} means {gloss}.", // check.rightMeaning
+    miss: "That one is {translit}.", // check.miss
+    missMeaning: "That one means {gloss}.", // check.missMeaning
+    again: "This one comes back in a moment.", // check.again
   }),
   done: Object.freeze({
     word: "Done", // step.done
@@ -55,6 +80,9 @@ export const COPY = Object.freeze({
   }),
   state: Object.freeze({
     homeLoading: "Loading the course…", // st.home.loading
+    lessonLoading: "Loading the lesson…", // st.lesson.loading
+    textError: "The prayer text did not load. Try again.", // st.text.error
+    retry: "Try again", // st.retry
     notFound: "This lesson isn’t in the course.", // st.notfound
     tenantOff: "The service course isn’t available here yet.", // st.tenant.off
   }),

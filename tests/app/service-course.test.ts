@@ -4,7 +4,7 @@ vi.mock("server-only", () => ({}));
 import rawCourse from "../../src/lib/service-course/course.json";
 import rawCrc from "../../src/lib/service-course/tenants/crc.json";
 import { COPY, emphasised, fill, typographic } from "../../src/lib/service-course/copy";
-import { CRC_TENANT, CourseError, SERVICE_COURSE, TENANTS, hebrewOutsideAlphabet, homeUnits, lessonById, lessonMinutes, lessonOpen, mapSections, pageOf, presentGoal,
+import { CRC_TENANT, CourseError, SERVICE_COURSE, SERVICE_TEXT_UNITS, TENANTS, hebrewOutsideAlphabet, homeUnits, lessonById, lessonMinutes, lessonOpen, mapSections, pageOf, presentGoal,
   sectionLessons, serviceNeighbours, serviceOrder, teachingOf, validateServiceCourse } from "../../src/lib/service-course/course";
 import { PROGRESS_KEY, browserProgressStore, completeLesson, courseDone, emptyProgress, isDone, lessonAfter, nextLesson, parseProgress, serializeProgress } from "../../src/lib/service-course/progress";
 import { siddurPageLink } from "../../src/lib/siddur/link";
@@ -34,9 +34,21 @@ describe("the real course files", () => {
     expect(serviceOrder()).toHaveLength(37);
     expect(TENANTS).toHaveLength(1);
   });
-  it("keep recordings off and the fluency strand closed in this slice, and hold no prayer text to read yet", () => {
+  it("keep recordings off and the fluency strand closed, and name public units to read by id only (2.0 SC2)", () => {
     expect(SERVICE_COURSE.features).toEqual({ recordings: false, fluency: false });
-    expect(SERVICE_COURSE.lessons.every(lesson => lesson.hear === null && !lesson.read && lesson.keyWords.length === 0 && !lesson.check)).toBe(true);
+    expect(SERVICE_COURSE.lessons.every(lesson => lesson.hear === null)).toBe(true);
+    // 30 of the 37 morning lessons read public text (A4 2.1); the moments, P'sukei D'zimrah and the mixed Mi Shebeirach link to the siddur.
+    const reading = SERVICE_COURSE.lessons.filter(lesson => lesson.read).map(lesson => lesson.id);
+    expect(reading).toHaveLength(30);
+    expect(SERVICE_COURSE.lessons.filter(lesson => lesson.kind === "prayer" && !lesson.read).map(lesson => lesson.id).sort()).toEqual(["mi-shebeirach", "psukei-dzimrah"]);
+    expect(SERVICE_TEXT_UNITS.size).toBe(30);
+    for (const unit of SERVICE_TEXT_UNITS) { expect(unit).toMatch(/@shabbat-(?:shacharit|maariv)$/); expect(unit).not.toMatch(/mi-shebeirach|legacy|bm-/); }
+    for (const lesson of SERVICE_COURSE.lessons.filter(row => row.read)) {
+      expect(lesson.keyWords.length, lesson.id).toBeGreaterThanOrEqual(3); expect(lesson.keyWords.length, lesson.id).toBeLessThanOrEqual(6);
+      expect(lesson.check?.items, lesson.id).toBeGreaterThanOrEqual(3);
+    }
+    expect(lessonById("shma")!.read).toEqual({ unit: "shma.the-shma@shabbat-shacharit", blocks: [0, 1], torahRef: { ref: "Deuteronomy 6:4", kind: "torah", block: 0, words: [0, 5] } });
+    expect(lessonById("shma")!.goal).toBe("After this you can read the Sh’ma’s first line and say what its key words mean.");
     expect(SERVICE_COURSE.lessons.filter(lesson => lessonOpen(lesson))).toHaveLength(37);
     expect(homeUnits().map(unit => unit.id)).toEqual(["leads", "waking", "shma", "amidah", "torah", "closing"]);
   });
@@ -59,7 +71,7 @@ describe("the real course files", () => {
     expect(serviceNeighbours("shma")).toMatchObject({ before: { id: "ahavah-rabbah" }, after: { id: "vahavta" } });
     expect(serviceNeighbours("modeh-ani").before).toBeNull(); expect(serviceNeighbours("closing-blessing").after).toBeNull();
   });
-  it("estimate a lesson at three to six minutes", () => { for (const lesson of SERVICE_COURSE.lessons) expect(lessonMinutes(lesson)).toBeGreaterThanOrEqual(3); expect(lessonMinutes(lessonById("shma")!)).toBe(3); });
+  it("estimate a lesson at three to six minutes", () => { for (const lesson of SERVICE_COURSE.lessons) expect(lessonMinutes(lesson)).toBeGreaterThanOrEqual(3); expect(lessonMinutes(lessonById("shma")!)).toBe(5); expect(lessonMinutes(lessonById("psukei-dzimrah")!)).toBe(3); });
 });
 
 describe("the congregation file", () => {
@@ -163,7 +175,14 @@ describe("the validator, rule by rule (A4 5.3)", () => {
   it("rule 5: a read names a public unit of the Shabbat morning or evening volume, never a licensed one", () => {
     const shma = (course: Json) => course.lessons.find((lesson: Json) => lesson.id === "shma");
     expect(problemsOf(course => { shma(course).read = { unit: "shma.the-shma@shabbat-shacharit", blocks: [0, 1] }; })).toEqual([]);
-    expect(problemsOf(course => { shma(course).read = { unit: "shma.the-shma@shabbat-maariv", blocks: [0, 1], torahRef: { ref: "Deuteronomy 6:4", kind: "torah", words: [0, 5] } }; })).toEqual([]);
+    expect(problemsOf(course => { shma(course).read = { unit: "shma.the-shma@shabbat-maariv", blocks: [0, 1], torahRef: { ref: "Deuteronomy 6:4", kind: "torah", block: 0, words: [0, 5] } }; })).toEqual([]);
+    // The mixed Mi Shebeirach, under any suffix or prefix, is refused as a read (A2 discrepancy 13).
+    for (const unit of ["torah.mi-shebeirach-healing@shabbat-shacharit", "torah.mi-shebeirach@shabbat-maariv", "concluding.mi-shebeirach-healing@shabbat-maariv"]) {
+      expect(has(problemsOf(course => { shma(course).read = { unit, blocks: [0, 1] }; }), "read unit is refused"), unit).toBe(true);
+    }
+    expect(has(problemsOf(course => { shma(course).read = { unit: "shma.the-shma@shabbat-shacharit", blocks: [0, 1], torahRef: { ref: "Deuteronomy 6:4", kind: "torah", block: 3, words: [0, 5] } }; }), "torahRef")).toBe(true);
+    expect(has(problemsOf(course => { shma(course).read = { unit: "shma.the-shma@shabbat-shacharit", blocks: [0, 1], torahRef: { ref: "Deuteronomy 6:4-5", kind: "torah", block: 0, words: [0, 5] } }; }), "torahRef")).toBe(true);
+    expect(has(problemsOf(course => { shma(course).read = { unit: "shma.the-shma@shabbat-shacharit", blocks: [0, 1], torahRef: { ref: "Deuteronomy 6:4", kind: "torah", words: [0, 5] } }; }), "torahRef")).toBe(true);
     expect(has(problemsOf(course => { shma(course).read = { unit: "shma.the-shma@legacy-beit-mitzvah", blocks: [0, 1] }; }), "read unit")).toBe(true);
     expect(has(problemsOf(course => { shma(course).read = { unit: "shma.the-shma@bm-shacharit", blocks: [0, 1] }; }), "read unit")).toBe(true);
     expect(has(problemsOf(course => { shma(course).read = { unit: "shma.the-shma@shabbat-shacharit", blocks: [3, 1] }; }), "read blocks")).toBe(true);
@@ -172,11 +191,18 @@ describe("the validator, rule by rule (A4 5.3)", () => {
   it("rule 6: key words sit inside the read blocks, at most six, with a bounded gloss; a moment has no read, key words or check", () => {
     const base = { unit: "shma.the-shma@shabbat-shacharit", blocks: [0, 1] };
     const lesson = (course: Json) => course.lessons.find((row: Json) => row.id === "shma");
-    expect(problemsOf(course => { lesson(course).read = base; lesson(course).keyWords = [{ block: 0, word: 0, gloss: "hear, listen", root: "sh-m-a" }]; lesson(course).check = { items: 5 }; })).toEqual([]);
+    const three = [{ block: 0, word: 0, gloss: "hear, listen", root: "sh-m-a" }, { block: 0, word: 3, gloss: "our God" }, { block: 0, word: 5, gloss: "one", check: false }];
+    expect(problemsOf(course => { lesson(course).read = base; lesson(course).keyWords = three; lesson(course).check = { items: 5 }; })).toEqual([]);
+    // A read brings three to six key words and a check; no gloss or word twice.
+    expect(has(problemsOf(course => { lesson(course).read = base; lesson(course).keyWords = three.slice(0, 2); }), "three to six key words")).toBe(true);
+    expect(has(problemsOf(course => { lesson(course).read = base; lesson(course).keyWords = three; delete lesson(course).check; }), "three to six key words")).toBe(true);
+    expect(has(problemsOf(course => { lesson(course).read = base; lesson(course).keyWords = [...three, { block: 1, word: 0, gloss: "one" }]; }), "share a gloss")).toBe(true);
+    expect(has(problemsOf(course => { lesson(course).read = base; lesson(course).keyWords = [...three, { block: 0, word: 0, gloss: "another" }]; }), "listed twice")).toBe(true);
+    expect(has(problemsOf(course => { lesson(course).read = base; lesson(course).keyWords = three.map(word => ({ ...word, check: "no" })); }), "keyWord")).toBe(true);
     expect(has(problemsOf(course => { lesson(course).read = base; lesson(course).keyWords = [{ block: 4, word: 0, gloss: "hear" }]; }), "outside the read blocks")).toBe(true);
     expect(has(problemsOf(course => { lesson(course).read = base; lesson(course).keyWords = Array.from({ length: 7 }, (_, i) => ({ block: 0, word: i, gloss: "a" })); }), "keyWords")).toBe(true);
     expect(has(problemsOf(course => { lesson(course).read = base; lesson(course).keyWords = [{ block: 0, word: 0, gloss: "x".repeat(61) }]; }), "keyWord 0: text")).toBe(true);
-    expect(has(problemsOf(course => { lesson(course).keyWords = [{ block: 0, word: 0, gloss: "hear" }]; }), "need a read")).toBe(true);
+    expect(has(problemsOf(course => { delete lesson(course).read; delete lesson(course).check; lesson(course).keyWords = [{ block: 0, word: 0, gloss: "hear" }]; }), "need a read")).toBe(true);
     expect(has(problemsOf(course => { const moment = course.lessons.find((row: Json) => row.id === "torah-reading"); moment.read = base; }), "a moment lesson has no read")).toBe(true);
     expect(has(problemsOf(course => { lesson(course).read = base; lesson(course).check = { items: 9 }; }), "check")).toBe(true);
   });

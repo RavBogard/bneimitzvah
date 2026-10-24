@@ -117,6 +117,23 @@ test("the service course data files are allowed by exact path, with Hebrew only 
   assert.ok(entryProblems(tenant, JSON.stringify({ token: "vercel_blob_" + "rw_" + "syntheticMetadataToken" })).includes("credential pattern"));
 });
 
+test("no siddur build reaches the repo: not dist-app, not a feed by name, and not a feed's shape or a licensed lane inside an allowed data file (2.0 SC2)", () => {
+  for (const path of ["dist-app/legacy-beit-mitzvah-feed.json", "nested/dist-app/books.json", "DIST-APP/x.md", "src/lib/service-course/shabbat-shacharit-feed.json", "tests/fixtures/portal/feeds.json", "x/legacy-beit-mitzvah-feed.json",
+    ".course-text/shabbat-shacharit-feed.json", ".course-text/shirei-shabbat-shacharit.pdf", "docs/shirei-shabbat-shacharit-print-letter.pdf", ".COURSE-TEXT/notes.md"]) {
+    assert.ok(entryProblems(path, "{}").includes("siddur build artifact"), path);
+  }
+  const feed = JSON.stringify({ schemaVersion: 1, volume: "shabbat-shacharit", printing: {}, units: [], pageIndex: {} });
+  for (const allowed of ["tests/fixtures/portal/synthetic.json", "trope/data/synthetic.json", "src/server/db/migrations/meta/0099_snapshot.json"]) {
+    assert.ok(entryProblems(allowed, feed).includes("siddur feed content"), allowed);
+    assert.ok(entryProblems(allowed, JSON.stringify({ source: { lane: "licensed" } })).includes("licensed siddur lane marker"), allowed);
+    assert.ok(entryProblems(allowed, JSON.stringify({ sourceGitSha: "edfef85-LICENSED" })).includes("licensed siddur lane marker"), allowed);
+    assert.ok(entryProblems(allowed, JSON.stringify({ laneWhy: "x" })).includes("licensed siddur lane marker"), allowed);
+  }
+  // Code that names the fields is code, not a feed; a lone pageIndex key is not a feed's shape.
+  assert.ok(!entryProblems("src/server/service-course/public-feed.ts", `object(x, ["printing", "units", "pageIndex"])`).some(problem => /siddur/.test(problem)));
+  assert.ok(!entryProblems("tests/fixtures/portal/synthetic.json", JSON.stringify({ pageIndex: 1 })).some(problem => /siddur/.test(problem)));
+});
+
 test("only exact design token metadata is allowed while credential, email and binary checks remain active", () => {
   const path = ".impeccable/design.json";
   const tokens = JSON.stringify({ colors: { paper: "#fffdf8", ink: "#252520" }, fonts: { body: "system-ui" }, tokens: { space: 8 } });
