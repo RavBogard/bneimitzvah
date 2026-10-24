@@ -5,8 +5,15 @@ import { PrintChart } from "../../components/portal/trope-chart/print";
 import { accentLabel, accentSample, CHART_ACCENTS, ENDING_SAMPLE, LEGARMEH_SAMPLE, PHRASE_FAMILIES, type ChartAccent } from "../../lib/trope/chart-catalog";
 import hebrew from "../../styles/hebrew-font.module.css";
 import styles from "./chart.module.css";
+import { pageTitle } from "../../lib/site/product-name";
+import { publicRobots } from "../../lib/site/indexing";
+import { readPublicProductName } from "../../server/public-site/names";
+import { publicMetadataBase } from "../../lib/site/origin";
 
-export const metadata: Metadata = { title: "Trope chart | CRC Torah" };
+export const revalidate = 3600;
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: pageTitle(await readPublicProductName(), "Trope chart"), metadataBase: publicMetadataBase(), referrer: "no-referrer", robots: publicRobots() };
+}
 function Mark({ accent }: { accent: ChartAccent }) {
   return <li className={styles.mark} data-chart-accent={accent.codepoint}>
     <span className={`${styles.sample} ${hebrew.hebrew}`} lang="he" dir="rtl" aria-label={`${accentLabel(accent)} on a sample letter`}>{accentSample(accent)}</span>

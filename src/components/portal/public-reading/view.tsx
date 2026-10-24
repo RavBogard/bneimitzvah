@@ -24,6 +24,8 @@ import { fetchPublicRefReading, fetchPublicShortPage, fetchPublicText, fetchPubl
   type PublicShortPage, type PublicSource, type PublicWeek } from "./api";
 import { parseReadAddress, readAddress, selectorKey, type ReadAddress, type ReadTarget } from "./urls";
 import { ReadingChooser } from "./reading-chooser";
+import { useProductName } from "./product-name";
+import { pageTitle } from "../../../lib/site/product-name";
 import { SaveReading } from "../saved/save-reading";
 import { SavedReadingPage } from "../saved/saved-reading";
 import { OfflineExpiryNote, OfflinePill } from "../offline/status";
@@ -65,7 +67,7 @@ export function PublicReading() {
 export const go = (address: string) => { try { window.location.assign(address); } catch { /* Stay. */ } };
 export function replaceAddress(address: string) { try { if (window.location.pathname + window.location.search !== address) window.history.replaceState(null, "", address); } catch { /* Address bar stays as it was. */ } }
 
-export const readTitle = (name: string) => `${name} | CRC Torah`;
+export const readTitle = (name: string, productName: string) => pageTitle(productName, name);
 /** The tab names what is shown. The page is one static shell whose metadata says "This week’s reading", and
  * Next writes that title again after hydration, so a single document.title write is lost; this keeps it. */
 export function useDocumentTitle(text: string) {
@@ -79,7 +81,7 @@ export function useDocumentTitle(text: string) {
 }
 /** `signedIn`: the page already verified the session (a member's own saved reading); public modes never ask, and offer Sign in. */
 export function Shell({ title, children, signedIn = false }: { title: string; children: ReactNode; signedIn?: boolean }) {
-  useDocumentTitle(readTitle(title));
+  useDocumentTitle(readTitle(title, useProductName()));
   return <div className="portal-shell">
     <a className="skip-link" href="#public-reading-main">Skip to the reading</a>
     <header className="portal-header app-bar"><a className="portal-brand" href="/">CRC Torah</a>

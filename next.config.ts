@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { noindexHeaderRule } from "./src/lib/site/indexing";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -18,9 +19,10 @@ const nextConfig: NextConfig = {
   async headers() {
     // Pages only: API, discovery and the reviewed landing handlers (honoree, e-mail and invitation
     // links) set their own exact CSP and frame headers.
-    // Until beta (Daniel, 2026-10-22) nothing is indexed: this header, the root layout's robots
-    // meta and /robots.txt all say so. The public reading API sets the header itself as well.
-    return [{ source: "/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+    // Until PUBLIC_INDEXING is switched on (src/lib/site/indexing.ts; Daniel decides when, 2026-10-23) nothing is indexed: this header, the
+    // root layout's robots meta and /robots.txt all say so. Then only /read, /learn and /trope-chart lose it.
+    // The public reading API sets the header itself as well.
+    return [noindexHeaderRule(),
       { source: "/((?!api/|\\.well-known/|honoree|auth/email|invitations/open).*)", headers: [{ key: "X-Frame-Options", value: "DENY" }] },
       { source: "/connect{/}?", headers: [{ key: "Content-Security-Policy", value: "frame-ancestors 'none'" }] }];
   },
