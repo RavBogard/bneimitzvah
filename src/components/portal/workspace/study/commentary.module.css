@@ -20,6 +20,10 @@
 button.number { cursor: pointer; }
 button.number:hover > span { background: var(--lake); color: #fff; }
 button.number:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+/* Choose verses: a chosen verse fills its number and carries a check; a verse of the whole portion that belongs to the selection is marked the same way. Neither is colour alone. */
+button.number[aria-pressed="true"] > span { background: var(--lake); color: #fff; }
+.number > span svg { margin-inline-end: 0.125rem; }
+.row[data-verse-picked], .row[data-verse-marked] { margin-inline: -0.75rem; padding-inline: calc(0.75rem - 4px) 0.75rem; border-inline-start: 4px solid var(--lake); background: var(--lake-tint); }
 .verseSide { min-width: 0; }
 /* A paragraph break inside the verse keeps its space; its name is read to screen readers and given in the note below. */
 .hebrew :global(.study-paragraph-gap) > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { browserPlatform } from "../../../lib/offline/platform";
 import { CACHE_FAMILY, MANIFEST_PATH, REOPEN_MS } from "../../../lib/offline/policy";
-import { refreshOfflineState, setOfflineState } from "../../../lib/offline/pack-index";
+import { packingIdle, refreshOfflineState, setOfflineState } from "../../../lib/offline/pack-index";
 
 /**
  * The installable app's page side (§3.1), mounted once in the root layout. On any origin but torah (and the
@@ -59,7 +59,16 @@ async function open() {
   } catch { await refreshOfflineState(); }
 }
 
-let started = false;
+let started = false, packing = false;
+/**
+ * A saved reading's verses were revised (1.7): ask again which readings this device keeps, so the old passage goes and the revised one is
+ * packed now rather than at the next open. Only the installed app keeps packs, and only while online; anywhere else this does nothing.
+ */
+export function refreshOfflinePacks() {
+  if (!packing || (typeof navigator !== "undefined" && navigator.onLine === false)) return;
+  // After the pack in progress, never in its place: a second open would cut it short.
+  void packingIdle().then(open);
+}
 export function startOfflineRuntime() {
   if (started) return; started = true;
   const platform = browserPlatform();
@@ -73,6 +82,7 @@ export function startOfflineRuntime() {
     try { await navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }); } catch { return; }
     void navigator.serviceWorker.ready.then(() => setOfflineState({ shell: true }), () => {});
     await keepPersisted();
+    packing = true;
     await open();
     let hiddenAt = 0;
     document.addEventListener("visibilitychange", () => {

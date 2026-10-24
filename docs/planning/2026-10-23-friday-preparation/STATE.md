@@ -22,3 +22,12 @@ The plan links current source, Sefaria API documentation, public desktop/phone-w
 Next: the active Claude coding stream reads [CLAUDE-HANDOFF.md](CLAUDE-HANDOFF.md) after current commitments, reconciles against integrated source, and designs common custom readings and independent in-app exploration. Keep occasional curation later in priority. Exact gestures, panel composition, initial source density, and appendix grouping remain recommendations. Reuse the plan; do not repeat the mission interview. The older 2026-10-18 handoff now points here and marks its setup/ownership instructions historical.
 
 Only consultation planning documents were added or updated. No application code, kickoff mission/state files, active implementation plans, branches, tests, or deployment settings were changed. The handoff was prepared for Daniel to give Claude; no message was sent to another task.
+
+
+## M2b Choose verses (UI)
+
+GATE: Choose verses, Change verses and Whole portion built as one mode of the reading text (verse numbers toggle, words inert while choosing) -- proceeded because the labels are the approved plan's and the rest are minimal literal strings listed in the PR.
+
+GATE: Change verses on a saved reading opens the whole portion (or the chapters the selection spans) so verses can be added as well as dropped; where neither exists the reading's own verses are the only choices -- proceeded because it is routine design inside the plan.
+
+GATE: a selection address is `/read?ref=<portion>&kind=..&mark=<selection>`; the way back is `/read?ref=<selection>`; a saved reading keeps the view in page state and its address stays `?saved=<id>` -- proceeded because it adds one optional query key and no server change.

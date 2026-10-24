@@ -1,6 +1,8 @@
 import { Fragment, type CSSProperties, type ReactNode } from "react";
 import type { StudyVerse } from "../workspace/study/api";
 import type { StudyChapter } from "../workspace/study/credits";
+import type { AppendixGroup } from "../../../lib/print/appendix";
+import type { CommentaryRun } from "../../../lib/readings/commentary";
 import { SHEET_TYPE, type SheetFormat } from "../../../lib/print/sheet-format";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { sheetHebrew } from "./hebrew";
@@ -53,8 +55,36 @@ export function sheetCredits(text: SheetText, format: SheetFormat): string[] {
   return lines;
 }
 
-export function PrintDocument({ heading, text, markers, format, productName }: {
+/** Text only: bold and italic runs become <strong> and <em>; nothing is ever markup. */
+function Runs({ runs }: { runs: readonly CommentaryRun[] }) {
+  return <>{runs.map((run, index) => run.bold ? <strong key={index}>{run.text}</strong> : run.italic ? <em key={index}>{run.text}</em> : <Fragment key={index}>{run.text}</Fragment>)}</>;
+}
+
+/** The commentary appendix: it starts on a new printed page, grouped by verse, each work's comments followed by its credit. */
+function Appendix({ groups, heading }: { groups: readonly AppendixGroup[]; heading: SheetHeading }) {
+  return <section className={styles.appendix} data-print-appendix aria-label="Commentary">
+    <div className={styles.headRow}>
+      <p className={styles.title}>Commentary</p>
+      <p className={styles.passage}><bdi>{heading.title}</bdi> <bdi dir="ltr">{heading.passage}</bdi></p>
+    </div>
+    {groups.map(group => <section key={group.ref} className={styles.commentGroup} data-appendix-ref={group.ref}>
+      <h2 className={styles.groupRef}><bdi dir="ltr">{group.ref}</bdi></h2>
+      {group.works.map(work => <div key={work.work} className={styles.workBlock} data-appendix-work={work.work}>
+        <h3 className={styles.workName}><bdi>{work.label}</bdi></h3>
+        {work.comments.map((comment, index) => <div key={index} className={styles.comment}>
+          {comment.hebrew && <p className={styles.commentHebrew} lang="he" dir="rtl"><Runs runs={comment.hebrew} /></p>}
+          {comment.english && <p className={styles.commentEnglish} lang="en" dir="ltr"><Runs runs={comment.english} /></p>}
+        </div>)}
+        <div className={styles.commentCredit}>{work.credits.map(line => <p key={line}>{line}</p>)}</div>
+      </div>)}
+    </section>)}
+  </section>;
+}
+
+export function PrintDocument({ heading, text, markers, format, productName, appendix = [] }: {
   heading: SheetHeading; text: SheetText; markers: ReadonlyMap<string, string>; format: SheetFormat; productName: string;
+  /** The commentary appendix (appendix.ts), already licence-filtered; empty prints nothing. */
+  appendix?: readonly AppendixGroup[];
 }) {
   const type = SHEET_TYPE[format.size], rows = breaks(text.verses, markers), credits = sheetCredits(text, format);
   const hebrew = format.show !== "english", english = format.show !== "hebrew", notes = format.notes !== "none", numbers = format.numbers;
@@ -96,5 +126,6 @@ export function PrintDocument({ heading, text, markers, format, productName }: {
         </Fragment>;
       })}</tbody>
     </table>
+    {appendix.length > 0 && <Appendix groups={appendix} heading={heading} />}
   </article>;
 }

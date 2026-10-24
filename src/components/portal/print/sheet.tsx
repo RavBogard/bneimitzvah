@@ -17,7 +17,11 @@ import { expandReadingRanges } from "../../../lib/readings/ranges";
 import { pageTitle } from "../../../lib/site/product-name";
 import { aliyahStartsIn, portionRef, PORTION_PICKS, type PortionPick, type WeekPortions } from "../../../lib/print/portions";
 import { parsePrintAddress, printAddress, printTargetFromRead, type PrintTarget } from "../../../lib/print/print-address";
-import { DEFAULT_FORMAT, type SheetFormat } from "../../../lib/print/sheet-format";
+import { COMMENTARY_CHOICES, DEFAULT_FORMAT, normalizeCommentary, type SheetFormat } from "../../../lib/print/sheet-format";
+import { appendixChapters, buildAppendix, printableCoverage, type AppendixGroup } from "../../../lib/print/appendix";
+import { createCommentaryChapterStore } from "../workspace/study/commentary-api";
+import { commentarySummary } from "../workspace/study/commentary-text";
+import { workLabel } from "../workspace/reading-toolbar";
 import { fetchPublicAliyot } from "./api";
 import { PrintDocument, type SheetHeading, type SheetText } from "./document";
 import styles from "./print.module.css";
@@ -113,6 +117,28 @@ function pageRule(format: SheetFormat) {
   return `@page reader-sheet { size: ${size}; margin: ${margin}; @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 8pt "Bricolage Grotesque", system-ui, sans-serif; color: #4b5a6b; } }`;
 }
 
+type WorkProgress = Readonly<{ work: string; status: "none" | "loading" | "failed" | "ready" }>;
+/**
+ * The chosen commentary works for a loaded reading, fetched through the same chapter store Study uses (public route, same cache,
+ * nothing new) and filtered for print (appendix.ts). Only works that can print on this reading are fetched. `retry` asks again.
+ */
+function useAppendix(sheet: Sheet | null, format: SheetFormat) {
+  const refs = useMemo(() => sheet ? sheet.text.verses.map(verse => verse.ref) : [], [sheet]);
+  const works = useMemo(() => format.commentary.filter(work => printableCoverage(work, refs) === "printable"), [format.commentary, refs]);
+  const [attempt, setAttempt] = useState(0), [version, setVersion] = useState(0);
+  const stores = useMemo(() => new Map(works.map(work => [work, createCommentaryChapterStore(work)] as const)), [works, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const cleanups = [...stores].map(([work, store]) => store.load(appendixChapters(work, refs), () => setVersion(value => value + 1)));
+    return () => { for (const cleanup of cleanups) cleanup(); };
+  }, [stores, refs]);
+  return useMemo(() => {
+    const sources = [...stores].map(([work, store]) => ({ work, label: workLabel(work), forVerse: (ref: string) => store.forVerse(ref) }));
+    const progress: WorkProgress[] = sources.map(source => ({ work: source.work, status: commentarySummary(refs.map(ref => source.forVerse(ref))) }));
+    const groups: readonly AppendixGroup[] = format.commentary.length ? buildAppendix(refs, sources, format.show) : [];
+    return { groups, progress, retry: () => setAttempt(value => value + 1) };
+  }, [stores, refs, format.commentary, format.show, version]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
 /**
  * The reader's print sheet (Daniel, 2026-10-23): a reading laid out for the Torah table, Hebrew and English side by side,
  * in the format the address names. With no address it is this coming Shabbat's Torah reading in the default format.
@@ -142,6 +168,9 @@ export function PrintSheetPage() {
   const current = load && load.key === key ? load : null;
   const sheet = current?.status === "ready" ? current.sheet : null;
   const week = sheet?.week ?? (current?.status === "empty" ? current.week : null);
+  const appendix = useAppendix(sheet, format);
+  // Printing waits for the commentary: a sheet printed before (or without) a chosen work would silently lack it.
+  const commentaryPending = appendix.progress.some(row => row.status === "loading" || row.status === "failed");
   // A saved reading's own name stays on the page; the tab title (and so history and a saved PDF's name) says "My reading", as /read does.
   useDocumentTitle(pageTitle(productName, ...(target?.mode === "saved" ? ["My reading"] : sheet ? [sheet.heading.title] : []), "Print"));
 
@@ -150,7 +179,7 @@ export function PrintSheetPage() {
   const weekTarget = (date: string, kind: "torah" | "haftarah" | null = null, pick: PortionPick = "full"): PrintTarget => ({ mode: "week", date, kind, pick });
   const shownDate = target?.mode === "week" ? target.date ?? today : null;
   async function print() {
-    if (gate.current || !sheet) return;
+    if (gate.current || !sheet || commentaryPending) return;
     gate.current = true; setPrinting("preparing");
     try { await fontsReady(); setPrinting("idle"); window.print(); }
     catch { setPrinting("error"); }
@@ -172,7 +201,7 @@ export function PrintSheetPage() {
           <button type="button" className="button-hero-secondary" onClick={() => open(weekTarget(addDays(shownDate, 7)))}>Next week</button>
         </nav>}
         <div className="hero-actions">
-          <button type="button" className={`button-start ${styles.printButton}`} disabled={!sheet || printing === "preparing"} onClick={() => void print()}>{icons.print}<span>Print</span></button>
+          <button type="button" className={`button-start ${styles.printButton}`} disabled={!sheet || printing === "preparing" || commentaryPending} onClick={() => void print()}>{icons.print}<span>Print</span></button>
           <button type="button" className="button-hero-secondary" aria-expanded={chooser} aria-controls={chooserId} onClick={() => setChooser(value => !value)}>Choose a reading</button>
           {target?.mode !== "week" && today && <button type="button" className="button-hero-secondary" onClick={() => open(weekTarget(today))}>This week</button>}
         </div>
@@ -204,16 +233,43 @@ export function PrintSheetPage() {
             <label className={styles.check}><input type="checkbox" checked={format.spacing === "standing"} onChange={event => set("spacing", event.currentTarget.checked ? "standing" : "normal")} /> Stand-up spacing</label>
             <p className={styles.help}>More room between lines and darker Hebrew, for a sheet read standing at the Torah.</p>
           </div>
+          {sheet && <CommentaryChoices format={format} refs={sheet.text.verses.map(verse => verse.ref)} progress={appendix.progress} retry={appendix.retry}
+            onChange={commentary => setFormat(current => Object.freeze({ ...current, commentary }))} />}
         </form>
         <div className={styles.paperFrame}>
           <div id="print-sheet-paper" className={styles.paper} data-paper={format.paper} data-orientation={format.orientation} tabIndex={-1}>
-            {sheet ? <PrintDocument heading={sheet.heading} text={sheet.text} markers={sheet.markers} format={format} productName={productName} />
+            {sheet ? <PrintDocument heading={sheet.heading} text={sheet.text} markers={sheet.markers} format={format} productName={productName} appendix={appendix.groups} />
               : <Status load={current} unavailable={target === null} onRetry={() => setRetry(value => value + 1)} onThisWeek={today ? () => open(weekTarget(today)) : undefined} />}
           </div>
         </div>
       </div>
     </main>
   </div>;
+}
+
+/**
+ * "Commentary": one checkbox per work that covers this reading (the works Study offers), off by default. A work with no edition licensed
+ * for print says so beside it and is never printed; it stays on screen in Study.
+ */
+function CommentaryChoices({ format, refs, progress, retry, onChange }: {
+  format: SheetFormat; refs: readonly string[]; progress: readonly WorkProgress[]; retry(): void; onChange(works: readonly string[]): void;
+}) {
+  const offered = useMemo(() => COMMENTARY_CHOICES.flatMap(work => { const coverage = printableCoverage(work, refs); return coverage === "uncovered" ? [] : [{ work, printable: coverage === "printable" }]; }), [refs]);
+  if (!offered.length) return null;
+  return <fieldset className={styles.group}>
+    <legend>Commentary</legend>
+    <p className={styles.help}>Add commentary after the reading</p>
+    {offered.map(({ work, printable }) => {
+      const on = printable && format.commentary.includes(work), status = on ? progress.find(row => row.work === work)?.status : undefined;
+      return <div key={work} className={styles.workChoice}>
+        <label className={styles.check}><input type="checkbox" checked={on} disabled={!printable}
+          onChange={event => onChange(normalizeCommentary(event.currentTarget.checked ? [...format.commentary, work] : format.commentary.filter(row => row !== work)))} /> {workLabel(work)}</label>
+        {!printable && <p className={styles.help}>Not available for print</p>}
+        {status === "loading" && <p className={styles.help} role="status">Loading {workLabel(work)}…</p>}
+        {status === "failed" && <p className={styles.help} role="status">{workLabel(work)} isn’t available right now. <button type="button" onClick={retry}>Try again</button></p>}
+      </div>;
+    })}
+  </fieldset>;
 }
 
 function Status({ load, unavailable, onRetry, onThisWeek }: { load: Load | null; unavailable: boolean; onRetry(): void; onThisWeek?: () => void }): ReactNode {

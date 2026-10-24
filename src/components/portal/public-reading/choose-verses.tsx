@@ -1,0 +1,117 @@
+"use client";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import type { VerseChoiceView } from "../workspace/study/verse-choice";
+import { countLine, countSelected, extendSelection, fitsGroups, selectionFromRanges, selectionLine, selectionRanges, toggleVerse, SELECTION_MAX_GROUPS } from "../../../lib/readings/verse-selection";
+import styles from "./choose-verses.module.css";
+
+/** The words of Choose verses. "Choose verses", "Change verses" and "Whole portion" are the approved plan's; the rest are the plainest literal labels. */
+export const CHOOSE_STRINGS = Object.freeze({
+  choose: "Choose verses",
+  change: "Change verses",
+  wholePortion: "Whole portion",
+  backToSelection: "Back to selection",
+  range: "Select range",
+  clear: "Clear",
+  cancel: "Cancel",
+  done: "Done",
+  save: "Save",
+  none: "No verses chosen",
+  tooMany: `A reading can hold at most ${SELECTION_MAX_GROUPS} separate groups of verses.`,
+  rangeFrom: "Choose the last verse of the range.",
+});
+
+/** What a page tells the reader about choosing: how it starts, what Save does, and the links that go with it. */
+export type ChoosePlan = Readonly<{
+  /** The button's label: "Choose verses" for a new selection, "Change verses" on a saved reading. */
+  label: typeof CHOOSE_STRINGS.choose | typeof CHOOSE_STRINGS.change;
+  /** Groups chosen when the mode opens ("; "-split ranges); empty for a new selection. */
+  start: readonly string[];
+  /** Groups marked in the text while not choosing (a whole portion showing its selection). */
+  marked?: readonly string[];
+  /** Open already choosing (the saved reading's Change verses, once its whole portion is on screen). */
+  autoStart?: boolean;
+  /** The page takes the button itself (it must first show the whole portion); choosing starts when it comes back with autoStart. */
+  onBegin?(): void;
+  /** Choosing ended without a save (Cancel). */
+  onClose?(): void;
+  /** What Save is: the existing save flow for a new reading, the confirm for a revision. `saved` tells the bar to say Done. */
+  save(selection: ChosenSelection, saved: () => void): ReactNode;
+  /** Whole portion, Back to selection: shown beside the button, never while choosing (they leave the page). */
+  extra?: ReactNode;
+  /** Told when choosing starts and ends, so the page can put away its own Save of the whole passage while the bar's Save is the one. */
+  onChoosing?(choosing: boolean): void;
+  /** The verse the reader is on, as it changes, so a whole portion (or the way back) opens at the same place. */
+  onPlace?(ref: string | null): void;
+}>;
+export type ChosenSelection = Readonly<{ kind: "torah" | "haftarah"; ranges: readonly string[]; count: number; line: string }>;
+
+/**
+ * The selection state of one passage on screen. `order` is the passage's verses in its own order. Choosing is a mode:
+ * entered by the button, left by Cancel (or Done after a save); while it lasts the text's verse numbers toggle.
+ */
+export function useVerseChoice(plan: ChoosePlan | undefined, order: readonly string[], kind: "torah" | "haftarah") {
+  const [choosing, setChoosing] = useState(Boolean(plan?.autoStart));
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => plan?.autoStart ? selectionFromRanges(plan.start, kind) ?? new Set() : new Set());
+  const [anchor, setAnchor] = useState<string | null>(null), [rangeMode, setRangeMode] = useState(false), [note, setNote] = useState(""), [saved, setSaved] = useState(false);
+  const opener = useRef<HTMLButtonElement | null>(null), bar = useRef<HTMLElement | null>(null), restore = useRef(false), entered = useRef(false);
+  const markedKey = plan?.marked?.join("; ") ?? "";
+  const marked = useMemo(() => plan?.marked?.length ? selectionFromRanges(plan.marked, kind) ?? new Set<string>() : new Set<string>(), [markedKey, kind]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const ranges = useMemo(() => selectionRanges(order, selected), [order, selected]);
+  const count = countSelected(order, selected);
+  const change = (next: ReadonlySet<string>) => { setSelected(next); setSaved(false); };
+  const onToggle = useCallback((ref: string, shift: boolean) => {
+    setNote("");
+    const extend = (shift || rangeMode) && anchor !== null && anchor !== ref;
+    const next = extend ? extendSelection(order, selected, anchor, ref) : toggleVerse(selected, ref);
+    if (!fitsGroups(order, next)) { setNote(CHOOSE_STRINGS.tooMany); return; }
+    change(next); setAnchor(ref); setRangeMode(false);
+  }, [order, selected, anchor, rangeMode]);
+
+  const begin = () => {
+    if (!plan) return;
+    if (plan.onBegin) { plan.onBegin(); return; }
+    change(selectionFromRanges(plan.start, kind) ?? new Set()); setAnchor(null); setRangeMode(false); setNote(""); setChoosing(true);
+  };
+  const leave = () => { restore.current = true; setChoosing(false); setRangeMode(false); setNote(""); plan?.onClose?.(); };
+  useEffect(() => { if (choosing && !entered.current) { entered.current = true; bar.current?.focus({ preventScroll: true }); } if (!choosing) entered.current = false; }, [choosing]);
+  useEffect(() => { if (!choosing && restore.current) { restore.current = false; opener.current?.focus(); } });
+
+  const told = useRef(plan?.onChoosing); told.current = plan?.onChoosing;
+  useEffect(() => { told.current?.(choosing); return () => told.current?.(false); }, [choosing]);
+  const view: VerseChoiceView | undefined = plan ? { choosing, selected, marked, onToggle } : undefined;
+  const button = plan && !choosing ? <button type="button" ref={opener} className="button-secondary" onClick={begin}>{plan.label}</button> : null;
+  const live = rangeMode && anchor !== null ? `${countLine(count, ranges)}. ${CHOOSE_STRINGS.rangeFrom}` : countLine(count, ranges);
+  const barView = plan && choosing ? <ChooseBar barRef={bar} label={plan.label} line={live} note={note} rangeMode={rangeMode} canRange={anchor !== null} empty={count < 1} saved={saved}
+    onRange={() => setRangeMode(value => !value)} onClear={() => { change(new Set()); setAnchor(null); setRangeMode(false); setNote(""); }} onCancel={leave}
+    save={count > 0 ? plan.save({ kind, ranges, count, line: selectionLine(ranges) }, () => setSaved(true)) : null} /> : null;
+  return { view, button, extra: plan && !choosing ? plan.extra : null, bar: barView, choosing };
+}
+
+/** A link between a selection and its whole portion. It opens at the verse the reader is on: `href(place)` is the address with that verse, `base` the one without (new tab, copied link). */
+export function PlaceLink({ base, href, place, children }: { base: string; href(place: string | null): string; place: { current: string | null }; children: ReactNode }) {
+  return <a className="button-secondary" href={base} onClick={event => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    try { window.location.assign(href(place.current)); } catch { /* Stay. */ }
+  }}>{children}</a>;
+}
+
+/** The bar that stays in view while choosing: the live count and references, range, clear, save and cancel. */
+function ChooseBar({ barRef, label, line, note, rangeMode, canRange, empty, saved, onRange, onClear, onCancel, save }: {
+  barRef: { current: HTMLElement | null }; label: string; line: string; note: string; rangeMode: boolean; canRange: boolean; empty: boolean; saved: boolean;
+  onRange(): void; onClear(): void; onCancel(): void; save: ReactNode;
+}) {
+  const id = useId();
+  return <section ref={barRef} tabIndex={-1} className={styles.bar} aria-labelledby={`${id}-name`} data-choose-bar="">
+    <h2 id={`${id}-name`} className={styles.name}>{label}</h2>
+    <p className={styles.line} role="status" aria-live="polite" aria-atomic="true" data-choose-line=""><bdi dir="ltr">{line}</bdi></p>
+    {note && <p className={styles.note} role="alert">{note}</p>}
+    <div className={styles.actions}>
+      <button type="button" className="button-secondary" aria-pressed={rangeMode} disabled={!canRange} onClick={onRange}>{CHOOSE_STRINGS.range}</button>
+      <button type="button" className="button-secondary" disabled={empty} onClick={onClear}>{CHOOSE_STRINGS.clear}</button>
+      {save}
+      <button type="button" className="button-secondary" onClick={onCancel}>{saved ? CHOOSE_STRINGS.done : CHOOSE_STRINGS.cancel}</button>
+    </div>
+  </section>;
+}

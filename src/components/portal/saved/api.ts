@@ -143,8 +143,9 @@ function change<T>(status: number, value: unknown, key: string, parse: (item: un
   try { const parsed = status === 200 && row?.ok === true ? parse(row[key]) : null; return parsed === null ? { ok: false, code: "unavailable" } : { ok: true, value: parsed }; }
   catch { return { ok: false, code: "unavailable" }; }
 }
-export async function updateSavedReading(input: { id: string; revision: number; name: string; date: string | null }, signal?: AbortSignal): Promise<ChangeResult<SavedReading>> {
-  const { status, value } = await request("/api/saved/readings/update", { id: input.id, revision: input.revision, name: input.name, date: input.date }, signal);
+/** Rename and re-date a reading and, with `ranges` ("; "-joined groups, at most 32), revise its verses; the server recounts them. Left out, the verses stay as saved. */
+export async function updateSavedReading(input: { id: string; revision: number; name: string; date: string | null; ranges?: string }, signal?: AbortSignal): Promise<ChangeResult<SavedReading>> {
+  const { status, value } = await request("/api/saved/readings/update", { id: input.id, revision: input.revision, name: input.name, date: input.date, ...input.ranges === undefined ? {} : { ranges: input.ranges } }, signal);
   return change(status, value, "reading", parseSavedReading);
 }
 export async function removeSavedReading(input: { id: string; revision: number }, signal?: AbortSignal): Promise<ChangeResult<string>> {
