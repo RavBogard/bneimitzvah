@@ -246,6 +246,38 @@ it("the translate drill, signed out, in Lein only: hides every verse's English a
   }
 });
 
+it("on a phone, Next verse brings Reveal into view, Play plays the verse the drill is on, and the English button reads what is on screen", async () => {
+  const { tab } = await visitor(true);
+  await tab.goto("/read", { waitUntil: "domcontentloaded" });
+  await ui(reading(tab).getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
+  const english = tab.getByRole("navigation", { name: "Reading tools", exact: true }).getByRole("button", { name: /^English/ });
+  await english.click(); await ui(english).toHaveAttribute("aria-pressed", "true");
+  const player = tab.getByRole("region", { name: "Reading playback", exact: true });
+  await word(tab, "Genesis 1:1", 1).click(); await playing(tab);
+  await player.getByRole("button", { name: "Pause", exact: true }).click();
+  await tab.getByRole("button", { name: "Translate drill", exact: true }).click();
+  // While the drill hides the English, the button says so: not pressed, and not working, with its reason.
+  await ui(english).toHaveAttribute("aria-pressed", "false"); await ui(english).toHaveAttribute("aria-disabled", "true");
+  await ui(english).toHaveAccessibleDescription(/English is hidden while the translate drill is on/);
+  await english.click(); await ui(english).toHaveAttribute("aria-pressed", "false");
+  const first = tab.getByRole("region", { name: "Translate drill on Genesis 1:1", exact: true });
+  await first.getByRole("button", { name: "Reveal", exact: true }).click();
+  await first.getByRole("button", { name: "Next verse", exact: true }).click();
+  const reveal = tab.getByRole("region", { name: "Translate drill on Genesis 1:2", exact: true }).getByRole("button", { name: "Reveal", exact: true });
+  await ui(reveal).toBeFocused();
+  // Reveal is on the screen (the scroll may still be settling), not below it.
+  await expect.poll(() => reveal.evaluate(node => { const box = node.getBoundingClientRect(); return box.top >= 0 && box.bottom <= innerHeight; })).toBe(true);
+  // Play is set to the new verse and plays it; nothing played on its own.
+  expect(await tab.evaluate(() => window.publicAudios.every(media => media.paused))).toBe(true);
+  await ui(player.getByText("Genesis 1:2 · Whole verse", { exact: true })).toBeVisible();
+  await player.getByRole("button", { name: "Play", exact: true }).click(); await playing(tab);
+  await ui(player.getByText("Genesis 1:2 · Whole verse", { exact: true })).toBeVisible();
+  await player.getByRole("button", { name: "Pause", exact: true }).click();
+  // Ending the drill gives the English button its own state back.
+  await tab.getByRole("button", { name: "End drill", exact: true }).click();
+  await ui(english).toHaveAttribute("aria-pressed", "true"); await ui(english).not.toHaveAttribute("aria-disabled", "true");
+});
+
 it("ending the drill on the verse it began shows Rashi as it was left", async () => {
   const { tab } = await visitor(false);
   await tab.goto("/read", { waitUntil: "domcontentloaded" });
