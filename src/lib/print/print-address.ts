@@ -1,5 +1,8 @@
 import { parseReadAddress, readAddress, type ReadTarget } from "../../components/portal/public-reading/urls";
 import { isPortionPick, type PortionPick } from "./portions";
+import { TANAKH_VERSE_COUNTS } from "../readings/catalog";
+import { hebcalRef } from "../readings/leyning.mjs";
+import { canonicalReadingRef, joinReadingRef } from "../readings/reading-ref";
 import { DEFAULT_FORMAT, formatEntries, parseFormat, type SheetFormat } from "./sheet-format";
 
 /**
@@ -36,4 +39,22 @@ export function printAddress(target: PrintTarget, format: SheetFormat = DEFAULT_
 export function printTargetFromRead(address: string): PrintTarget | null {
   const search = address.includes("?") ? address.slice(address.indexOf("?")) : "";
   return parsePrintAddress(search).target;
+}
+
+/**
+ * A reading's ordered verse list as one canonical ref (Hebcal's form, contiguous runs joined by "; "), so an assigned reading,
+ * whatever form its stored ranges take, opens on the print sheet; null when the verses cannot be named that way.
+ */
+export function refFromVerses(verses: readonly string[], kind: "torah" | "haftarah"): string | null {
+  const parts = verses.map(ref => { const m = /^(.+) ([1-9]\d*):([1-9]\d*)$/.exec(ref); return m ? { book: m[1], chapter: Number(m[2]), verse: Number(m[3]) } : null; });
+  if (!parts.length || parts.some(part => part === null)) return null;
+  const runs: { book: string; from: [number, number]; to: [number, number] }[] = [];
+  for (const part of parts as { book: string; chapter: number; verse: number }[]) {
+    const run = runs.at(-1), count = run ? TANAKH_VERSE_COUNTS[run.book]?.[run.to[0] - 1] : undefined;
+    const follows = run !== undefined && run.book === part.book && (part.chapter === run.to[0] && part.verse === run.to[1] + 1 || part.chapter === run.to[0] + 1 && part.verse === 1 && run.to[1] === count);
+    if (follows) run.to = [part.chapter, part.verse]; else runs.push({ book: part.book, from: [part.chapter, part.verse], to: [part.chapter, part.verse] });
+  }
+  const ref = joinReadingRef(runs.map(run => hebcalRef({ k: run.book, b: run.from.join(":"), e: run.to.join(":") })));
+  const canonical = canonicalReadingRef(ref, kind);
+  return canonical && canonical.verses.length === verses.length && canonical.verses.every((verse, index) => verse === verses[index]) ? canonical.ref : null;
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { type Assigned, type Reading, type ReadingMode, type Student } from "./api";
 import { statusOf, useWorkspace, useWorkspaceModal, WorkspaceLink } from "./provider";
+import { printAddress, refFromVerses } from "../../../lib/print/print-address";
 import { PortalRequestError } from "../api";
 import type { DeparturePurpose } from "./departure-guards";
 import { quietReadingAuthority } from "./quiet-refresh";
@@ -288,6 +289,10 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const openPrint = () => { audio.stopAll(); setPrinting(true); }, printDisabled = !authorizedReading || concealed || Boolean(current?.loading);
   // On a learner's phone the first verse stays above the fold: the action moves under the reading, beside the trope chart.
   const printAction = readings.length > 0 && <button type="button" className="button-hero-secondary reading-print-action" data-learner={learner ? "" : undefined} disabled={printDisabled} onClick={openPrint}>Print practice sheet</button>;
+  // The reader's print sheet of the same verses (Daniel, 2026-10-23: a way in from wherever a person works on a reading). The link names
+  // only the verses, never the student; the sheet loads them from the public routes. Leaving goes through the departure review.
+  const printSheetRef = selectedReading ? refFromVerses(selectedReading.verses, selectedReading.kind) : null;
+  const printSheetAction = printSheetRef && selectedReading && <WorkspaceLink className="button-hero-secondary reading-print-sheet" href={printAddress({ mode: "ref", ref: printSheetRef, kind: selectedReading.kind })}>Print</WorkspaceLink>;
   const practiceAction = mode !== "parent" && readings.length > 0 && <button type="button" className="button-hero-secondary reading-practice-action" disabled={!practiceReady || concealed || current?.loading} onClick={openPractice}>{exploring ? "Practice assigned Haftarah up close" : "Practice up close"}</button>;
   const tabKeys = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     const index = pageTabs.findIndex(([value]) => value === tab);
@@ -316,13 +321,14 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
         <RehearsalDates student={student} />
         {mode === "parent" && <p className="hero-meta">Read-only overview. Choose Practice with <bdi dir="auto">{student.firstName}</bdi> to mark verses together.</p>}
         {exploring || readings.length === 0 ? <div className="reading-empty"><h3 className="hero-reference hero-reference-empty">{exploring ? "Explore the full Torah portion" : "No reading has been assigned yet"}</h3><p className="hero-meta">{exploring ? "Read the portion while you and your tutor choose your verses." : staff ? "Choose the verses this student will read." : "Your tutor or rabbi will add your verses here."}</p>
-          <div className="hero-actions">{mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : `Practice with ${student.firstName}`}</button>}{staff && <button type="button" className="button-hero-secondary" onClick={openSheet}>Assign verses</button>}{exploring && <button type="button" className="button-start" disabled={!proposedReady || concealed || current?.loading} onClick={startReading}>Start reading</button>}{practiceAction}{printAction}{!tabbed && <a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a>}</div></div> : <>
+          <div className="hero-actions">{mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : `Practice with ${student.firstName}`}</button>}{staff && <button type="button" className="button-hero-secondary" onClick={openSheet}>Assign verses</button>}{exploring && <button type="button" className="button-start" disabled={!proposedReady || concealed || current?.loading} onClick={startReading}>Start reading</button>}{practiceAction}{printAction}{printSheetAction}{!tabbed && <a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a>}</div></div> : <>
           {readings.length > 1 ? <AssignedReadingSummaries readings={readings} selectedKind={selectedReading.kind} marked={marked} /> : <><h3 className="hero-reference">{displayRange(selectedReading.ranges)}</h3>
           <p className="hero-meta">{selectedReading.kind === "torah" ? "Torah" : "Haftarah"} · {selectedReading.verses.length} {selectedReading.verses.length === 1 ? "verse" : "verses"}{marked && <span className="hero-marked"> · {marked}</span>}</p></>}
           <div className="hero-actions">
             <button type="button" className="button-start" disabled={!practiceReady || concealed || current?.loading} onClick={startReading}>Start reading</button>
             {practiceAction}
             {printAction}
+            {printSheetAction}
             {mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : `Practice with ${student.firstName}`}</button>}
             {staff && <><button type="button" className="button-hero-secondary" onClick={openSheet}>Change verses</button><WorkspaceLink className="button-hero-secondary" href="/trope-chart">Trope chart</WorkspaceLink></>}
             {readings.length < 2 && !tabbed && <a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a>}

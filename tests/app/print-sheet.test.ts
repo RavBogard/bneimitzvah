@@ -3,7 +3,7 @@ vi.mock("server-only", () => ({}));
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DEFAULT_FORMAT, describeFormat, formatEntries, formatFromRecord, parseFormat, SHEET_TYPE, type SheetFormat } from "../../src/lib/print/sheet-format";
-import { parsePrintAddress, printAddress, printTargetFromRead, PRINT_PATH } from "../../src/lib/print/print-address";
+import { parsePrintAddress, printAddress, printTargetFromRead, PRINT_PATH, refFromVerses } from "../../src/lib/print/print-address";
 import { aliyahStartsIn, parsePortions, portionRef, portionsOf, type WeekPortions } from "../../src/lib/print/portions";
 import { sheetHebrew } from "../../src/components/portal/print/hebrew";
 import { PrintDocument, sheetCredits, type SheetText } from "../../src/components/portal/print/document";
@@ -183,4 +183,15 @@ test("review fixes: a skip to a later chapter's first verse is marked, and the m
     full: [{ n: "1", ref: "Genesis 1:1-3" }, { n: "7", ref: "Genesis 1:4-6" }, { n: "M", ref: "Genesis 1:4-6" }] };
   expect(aliyahStartsIn(shared, "full", ["Genesis 1:4"]).get("Genesis 1:4")).toBe("7");
   expect(aliyahStartsIn(shared, "maftir", ["Genesis 1:4"]).get("Genesis 1:4")).toBe("M");
+});
+
+test("an assigned reading's verses open on the sheet as one canonical ref, whatever form its ranges were stored in", () => {
+  const genesis = (from: number, to: number, chapter = 1) => Array.from({ length: to - from + 1 }, (_, i) => `Genesis ${chapter}:${from + i}`);
+  expect(refFromVerses(genesis(1, 25), "torah")).toBe("Genesis 1:1-25");
+  expect(refFromVerses([...genesis(30, 31), ...genesis(1, 2, 2)], "torah")).toBe("Genesis 1:30-2:2");
+  expect(refFromVerses([...genesis(1, 3), ...genesis(5, 6)], "torah")).toBe("Genesis 1:1-3; Genesis 1:5-6");
+  expect(refFromVerses(["Isaiah 27:6", "Isaiah 29:22"], "haftarah")).toBe("Isaiah 27:6; Isaiah 29:22");
+  expect(refFromVerses(["Genesis 1:1"], "haftarah")).toBeNull();
+  expect(refFromVerses([], "torah")).toBeNull();
+  expect(refFromVerses(["not a verse"], "torah")).toBeNull();
 });

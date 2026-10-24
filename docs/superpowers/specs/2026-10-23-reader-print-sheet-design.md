@@ -10,6 +10,10 @@ Status: designed and built, 2026-10-23 (branch `claude/print-sheet`). This repla
 - **Outdated comment:** the "English is never on the sheet" comment in `practice-sheet.tsx` is corrected.
 - **English edition (MISSION ruling 12, amended 2026-10-21):** the main text is JPS 2023 only; there is no translation picker. The sheet therefore prints JPS 2023 and names it; the format record carries the edition (`en=jps2023`) so another edition can be added later without changing addresses.
 - **Indexing (2026-10-23):** signed-in pages and this route stay noindex; no "beta" wording.
+- **Wording (Daniel, 2026-10-23, on PR #57):** "Keep all". Every `/print` label, the help line and the Print link on `/read` ship as written.
+- **Where it lives (Daniel, 2026-10-23):** "Both. There should also be a UI in the site that anyone can use." The rabbi and tutors keep `print_sheet_link`; `/print` works for anyone, signed out included; the Print link stays on `/read`, and the signed-in reading (student, child practice, parent, tutor, rabbi) gains a Print link, beside Print practice sheet, that opens the sheet for the verses on screen.
+- **Credit (Daniel, 2026-10-23):** "No note". The printed credit lines stay the same in every Hebrew mode (vowels and trope, vowels only, letters only); no change note is added.
+- **iPhone and Safari printing (Daniel, 2026-10-23):** a follow-up for the pilot phone check.
 
 ## What it is
 
@@ -60,6 +64,7 @@ Margins: Letter 0.5in top, 0.55in sides, 0.6in bottom; A4 12.7mm, 14mm, 15mm. En
 
 ## Out of scope, follow-ups
 
+- The workspace Print link opens the assigned verses as a passage, so the student's own aliyah cut points are not marked on the reader's sheet (the practice sheet keeps them).
 - Saved named formats ("my Shabbat sheet") as account data: this needs a migration and a write tool; for now a format is the link.
 - Calendar aliyot for a catalog parashah opened by name (the catalog keeps only whole ranges): extend `scripts/named-readings-extract.mjs` to keep each parashah's aliyot.
 - Another English edition in print: needs a chapter-level route for that edition, and a ruling, since the main text is JPS 2023 only.
@@ -68,7 +73,4 @@ Margins: Letter 0.5in top, 0.55in sides, 0.6in bottom; A4 12.7mm, 14mm, 15mm. En
 
 ## Open items that wait on Daniel
 
-1. The new on-screen and printed wording (listed in the PR under "New strings for Daniel").
-2. Whether tutors should have `print_sheet_link` (built for the rabbi and tutors, since it reads nothing private; the MCP tool-list tests now record that).
-3. Licence wording: the printed credit names each edition and its licence but not the edition's change note or licence URL (the practice sheet's precedent). CC BY-SA asks that changes be indicated, and the vowels-only and letters-only scripts change the Hebrew further. Is the current line enough, or should the sheet print a short change note?
-4. The credit on every page relies on the browser repeating the table's head and foot when it prints. Chromium does; Safari and iPhone printing are unverified. If WebKit does not repeat them, the credit needs a fallback before the sheet is used from an iPhone.
+None. The wording, the tutors' tool, the credit and the Safari question were answered on 2026-10-23 (Settled decisions above). At the pilot phone check: confirm that Safari and iPhone printing repeat the table's head and foot (the credit on every page); if WebKit does not, the credit needs a fallback before the sheet is used from an iPhone.
