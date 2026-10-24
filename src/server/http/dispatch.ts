@@ -25,7 +25,8 @@ import { finishReferenceReviewResponse, handleReferenceReviewRequest, referenceR
 import { errorResponse, HttpBoundaryError } from "./responses";
 import { finishHonoreeGuestResponse, finishHonoreeManagementResponse, handleHonoreeRequest, honoreeManagementRouteMethods } from "./honoree";
 import { handlePublicReadingRequest, isPublicReadingPath, type PublicRuntimeScope } from "./public-reading";
-import { createPublicRuntimeScope } from "../runtime/public-composition";
+import { createPageViewScope, createPublicRuntimeScope } from "../runtime/public-composition";
+import { handlePageViewRequest, isPageViewPath, type PageViewScope } from "./page-views";
 
 export type HttpRuntimeScope = (action: (runtime: HttpRuntime) => Promise<Response>) => Promise<Response>;
 function cookieBoundary(request: Request) {
@@ -40,7 +41,7 @@ function cookieBoundary(request: Request) {
     names.add(name);
   }
 }
-export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRuntimeScope(), withPublic: PublicRuntimeScope = createPublicRuntimeScope()) {
+export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRuntimeScope(), withPublic: PublicRuntimeScope = createPublicRuntimeScope(), withViews: PageViewScope = createPageViewScope()) {
   return async (request: Request): Promise<Response> => {
     // Google's redirect-mode return is a browser navigation: any failure, including an unavailable
     // runtime, lands on a page with a plain error rather than a JSON body.
@@ -50,6 +51,8 @@ export function createHttpDispatcher(withRuntime: HttpRuntimeScope = createRunti
       googleReturn = url.pathname === "/api/auth/callback/google" && request.method === "GET";
       // Signed-out reading: its own allowlist and its own runtime, which has no auth stack.
       // Cookies are never interpreted here (Authorization is refused); nothing on this branch opens a session.
+      // The page-view beacon (1.5, "path and day only"): the same cookie-blind rules on a runtime smaller still; it always answers 204.
+      if (isPageViewPath(url.pathname)) return await handlePageViewRequest(request, withViews);
       if (isPublicReadingPath(url.pathname)) return await handlePublicReadingRequest(request, withPublic);
       if (url.pathname === "/api/honoree/read") {
         const denied = () => errorResponse(new HttpBoundaryError(404));

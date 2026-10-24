@@ -104,7 +104,8 @@ export async function startBrowserServer(withRuntime: HttpRuntimeScope, withPubl
   try { await app.prepare(); }
   catch { await closeNextDevelopment(() => app.close()); throw new Error("Isolated Next preparation failed"); }
   const nextHandler = app.getRequestHandler();
-  const dispatch = createHttpDispatcher(withRuntime, withPublic);
+  // The page-view beacon (1.5) counts nothing here: its scope answers the route's one empty 204 without a database.
+  const dispatch = createHttpDispatcher(withRuntime, withPublic, async () => new Response(null, { status: 204, headers: { "cache-control": "no-store" } }));
   const server = createServer(async (req, res) => {
     try {
       const request = safeRequest(req);

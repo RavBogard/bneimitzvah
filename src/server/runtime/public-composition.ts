@@ -1,10 +1,11 @@
 import "server-only";
 import { Pool } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
+import { drizzle, type NeonDatabase } from "drizzle-orm/neon-serverless";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import * as schema from "../db/index";
 import { withTenantTransaction } from "../db/runtime";
 import { readProductName } from "../data/product-name";
+import { countPublicPageView } from "../data/page-views";
 import type { AccessDatabase } from "../access/types";
 import { AccessDenied } from "../access/errors";
 import { createPersistentReadingCache } from "../data/reading-cache";
@@ -21,6 +22,7 @@ import { createRuntimeShortMetadata } from "../reference-audio/runtime-short-met
 import { budgetedStepSource, createPublicReadingService, PUBLIC_TENANT } from "../public-reading/service";
 import { createStepSource } from "../study/lexical/source";
 import type { PublicRuntime, PublicRuntimeScope } from "../http/public-reading";
+import type { PageViewRuntime, PageViewScope } from "../http/page-views";
 import { createLogger } from "../logging/logger";
 import { loadRuntimeConfig, type RuntimeConfig } from "./config";
 import { RuntimeUnavailable } from "./errors";
@@ -63,7 +65,29 @@ export function composePublicRuntime<Q extends PgQueryResultHKT>(config: Runtime
   });
 }
 
+/**
+ * The page-view counter's runtime (1.5, "path and day only"): smaller still than the public one. The exact host lookup,
+ * then one upsert of that congregation's count for an allow-listed path and day. Nothing about the visitor reaches it.
+ */
+export function composePageViewRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig, db: AccessDatabase<Q>): PageViewRuntime {
+  return Object.freeze({
+    async resolveTenant(request: Request) {
+      const resolved = await resolveTenantHost(db, { url: request.url, headers: request.headers }, config.deployment);
+      if (resolved.origin !== config.origin || resolved.tenantId !== PUBLIC_TENANT) throw new AccessDenied(404);
+    },
+    countPageView: (path: string, day: string) => withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => countPublicPageView(tx, PUBLIC_TENANT, day, path)),
+  });
+}
+
 export function createPublicRuntimeScope(env: () => Environment = () => process.env): PublicRuntimeScope {
+  return publicScope(env, (config, db, values) => composePublicRuntime(config, db, globalThis.fetch, values));
+}
+export function createPageViewScope(env: () => Environment = () => process.env): PageViewScope {
+  return publicScope(env, (config, db) => composePageViewRuntime(config, db));
+}
+
+/** One short-lived pool per request for a signed-out runtime, after the restricted-role preflight; failures are one closed 503. */
+function publicScope<R>(env: () => Environment, compose: (config: RuntimeConfig, db: NeonDatabase<typeof schema>, values: Environment) => R): (action: (runtime: R) => Promise<Response>) => Promise<Response> {
   return async action => {
     const log = createLogger().request();
     let pool: Pool | undefined;
@@ -75,7 +99,7 @@ export function createPublicRuntimeScope(env: () => Environment = () => process.
       const db = drizzle(pool, { schema, logger: false });
       // Same restricted, non-owner role check the signed-in runtime runs first.
       await withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, async () => undefined);
-      return await action(composePublicRuntime(config, db, globalThis.fetch, values));
+      return await action(compose(config, db, values));
     } catch {
       log.emit("runtime.unavailable", 503);
       throw new RuntimeUnavailable();
