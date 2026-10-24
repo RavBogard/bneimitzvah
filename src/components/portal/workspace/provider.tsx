@@ -86,6 +86,10 @@ export function useWorkspaceModal(dialog: RefObject<HTMLDialogElement | null>, o
   return open && !concealed;
 }
 export const statusOf = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
+/** A refusal clears the view and re-checks access. If the re-checked view keeps being refused,
+ *  automatic re-checks stop: the workspace stays concealed until the person asks to check again,
+ *  so a persistent refusal can never become a request loop. */
+export const DENIAL_REFRESH_LIMIT = 3, DENIAL_REFRESH_WINDOW_MS = 60_000;
 const isParentPath = (path: string) => path === rolePaths.parent || path.startsWith("/workspace/practice/");
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
@@ -175,6 +179,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       clearWork(); practice.invalidate(); binding.current = null; setSummary(null); setContext(null); setChecking(false); setFailure(statusOf(error));
     });
   }, [practice, clearWork, router]);
+  const denials = useRef<number[]>([]);
+  // Every automatic clear-and-re-check after a 401/403/404 goes through here.
+  const refreshAfterDenial = useCallback((status: number) => {
+    clearWork();
+    const now = Date.now(), recent = denials.current.filter(at => now - at < DENIAL_REFRESH_WINDOW_MS);
+    recent.push(now); denials.current = recent;
+    if (recent.length <= DENIAL_REFRESH_LIMIT) { refresh(); return; }
+    // Same concealment as a failed access check, without starting another one.
+    quiet.current?.cancel(); sequence.current++; sessionAbort.current?.abort(); checkingRef.current = true;
+    practice.invalidate(); binding.current = null; setSummary(null); setContext(null); setChecking(false); setFailure(status === 401 ? 401 : 403);
+  }, [practice, clearWork, refresh]);
 
   useEffect(() => {
     const visible = () => {
@@ -352,7 +367,30 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       throw error;
     }
   }, [practice, router, clearWork]);
-  const serviceRead = useCallback(async <T,>(mode: ReadingMode, id: string, signal: AbortSignal, action: (selection?: typeof practice.selection) => Promise<T>, refreshOnDenied = true): Promise<T> => {
+  const deny = useCallback((status: number, mode: ReadingMode, id: string) => {
+    if (status !== 401 && mode === "child-practice" && currentPath.current === `/workspace/practice/${id}`) {
+      clearWork(); practice.invalidate(); setContext(null); setNotice("Practice access changed. Choose an available child again."); setEpoch(value => value + 1); router.replace("/workspace/parent");
+    } else refreshAfterDenial(status);
+  }, [practice, clearWork, router, refreshAfterDenial]);
+  // Optional material (reference-audio metadata) can be refused for reasons of its own. Such a
+  // refusal is not proof that the student view is gone: re-read the authority-bearing reading
+  // under fresh session checks first. A 401/403/404 there clears exactly as before; a
+  // successful read keeps the refusal local to the optional feature.
+  const confirmAuthority = useCallback(async (mode: ReadingMode, id: string, generation: number, route: number) => {
+    const turn = sequence.current, request = new AbortController(), timer = setTimeout(() => request.abort(), 20_000);
+    let status: number | null = null;
+    // Only a confirmed reading keeps the refusal local. Unconfirmed (timeout, 5xx) fails closed
+    // into the bounded re-check; a stale 409 means a newer check already owns this view.
+    try { await readVerified(mode, id, request.signal); } catch (error) { status = request.signal.aborted ? 503 : statusOf(error); }
+    finally { clearTimeout(timer); }
+    if (status === null || status === 409 || turn !== sequence.current || route !== routeRevision.current) return;
+    // A child-practice refusal was already invalidated by read(); still clear unsent work.
+    if (generation !== practice.generation) { clearWork(); return; }
+    deny([401, 403, 404].includes(status) ? status : 403, mode, id);
+  }, [practice, readVerified, deny, clearWork]);
+  /** `refreshOnDenied`: true clears on 401/403/404; false keeps 403/404 local; "confirm" keeps
+   *  403/404 local only once the authority-bearing reading is confirmed. A 401 always clears. */
+  const serviceRead = useCallback(async <T,>(mode: ReadingMode, id: string, signal: AbortSignal, action: (selection?: typeof practice.selection) => Promise<T>, refreshOnDenied: boolean | "confirm" = true): Promise<T> => {
     const generation = practice.generation, active = practice.selection, route = routeRevision.current;
     if (mode === "child-practice" && (!active || active.context.studentId !== id)) throw new PortalRequestError(404);
     const check = () => { if (signal.aborted || generation !== practice.generation || route !== routeRevision.current || mode === "child-practice" && (practice.selection?.handle !== active?.handle || practice.selection?.context.id !== active?.context.id)) throw new PortalRequestError(409); };
@@ -362,13 +400,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       check(); await verifyWorkSession(signal); check(); return value;
     } catch (error) {
       const current = !signal.aborted && generation === practice.generation && route === routeRevision.current, status = statusOf(error);
-      if (current && status === 401) { clearWork(); refresh(); }
-      else if (refreshOnDenied && current && mode === "child-practice" && currentPath.current === `/workspace/practice/${id}` && [403, 404].includes(status)) {
-        clearWork(); practice.invalidate(); setContext(null); setNotice("Practice access changed. Choose an available child again."); setEpoch(value => value + 1); router.replace("/workspace/parent");
-      } else if (refreshOnDenied && current && [403, 404].includes(status)) { clearWork(); refresh(); }
+      if (current && status === 401) deny(401, mode, id);
+      else if (refreshOnDenied === "confirm" && current && [403, 404].includes(status)) void confirmAuthority(mode, id, generation, route);
+      else if (refreshOnDenied && current && [403, 404].includes(status)) deny(status, mode, id);
       throw error;
     }
-  }, [practice, verifyWorkSession, clearWork, router, refresh]);
+  }, [practice, verifyWorkSession, deny, confirmAuthority]);
   const readServiceMetadata = useCallback((mode: ReadingMode, id: string, signal: AbortSignal) => serviceRead(mode, id, signal, selection => serviceApi.metadata(mode, id, signal, selection ?? undefined)), [serviceRead]);
   const readMyService=useCallback((mode:ReadingMode,id:string,signal:AbortSignal)=>serviceRead(mode,id,signal,selection=>readMyServiceApi(mode,id,signal,selection??undefined)),[serviceRead]);
   const readMyServiceMaterial=useCallback((mode:ReadingMode,id:string,rowId:string,signal:AbortSignal)=>serviceRead(mode,id,signal,selection=>readMyServiceMaterialApi(mode,id,rowId,signal,selection??undefined)),[serviceRead]);
@@ -381,7 +418,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const selected = practice.selection;
     if (baseline.mode === "child-practice" && (!selected || selected.context.studentId !== baseline.student.id || selected.context.id !== baseline.context?.id
       || selected.context.authorityRevision !== baseline.context.authorityRevision || selected.context.expiresAt !== baseline.context.expiresAt)) return Promise.reject(new PortalRequestError(409));
-    return serviceRead(baseline.mode, baseline.student.id, signal, selection => fetchReferenceAudio(baseline, kind, offset, signal, selection ?? undefined));
+    return serviceRead(baseline.mode, baseline.student.id, signal, selection => fetchReferenceAudio(baseline, kind, offset, signal, selection ?? undefined), "confirm");
   }, [practice, serviceRead]);
   const createShortReferenceOwner = useCallback((baseline: Assigned, kind: StudyKind, offset: number, viewLive: () => boolean) => {
     const base = structuredClone(baseline), baseKey = JSON.stringify(base), sessionBinding = binding.current, capturedEpoch = currentEpoch.current;
@@ -400,7 +437,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         const page = await serviceRead(value.mode, value.student.id, signal, async actual => {
           check(); if (!sameSelection(actual)) throw new PortalRequestError(409);
           const result = await fetchShortReferencePage(value, selectedKind, pageOffset, signal, actual ?? undefined); check(); return result;
-        });
+        }, "confirm");
         check(); return page;
       },
     });
@@ -423,7 +460,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         const page = await serviceRead(value.mode, value.student.id, signal, async actual => {
           check(); if (!sameSelection(actual)) throw new PortalRequestError(409);
           const result = await fetchShortExplorationPage(value, currentPrepared, currentPage, signal, actual ?? undefined); check(); return result;
-        });
+        }, "confirm");
         check(); return page;
       },
     });
@@ -460,7 +497,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       clearWork();
       if (base.mode === "child-practice" && currentPath.current === `/workspace/practice/${base.student.id}`) {
         practice.invalidate(); setContext(null); setNotice("Practice access changed. Choose an available child again."); setEpoch(value => value + 1); router.replace("/workspace/parent");
-      } else refresh();
+      } else refreshAfterDenial(statusOf(error));
     };
     async function run<T>(signal: AbortSignal, action: () => Promise<T>, mutation: boolean): Promise<T> {
       let dispatched = false;
@@ -482,7 +519,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return Object.freeze({ ref: client.ref, canEdit: client.canEdit,
       read: signal => run(signal, () => client.read(signal), false), discover: (paging, signal) => run(signal, () => client.discover(paging, signal), false),
       write: (intent, signal) => run(signal, () => client.write(intent, signal), true), receipt: (intent, signal) => run(signal, () => client.receipt(intent, signal), true) });
-  }, [practice, clearWork, refresh, router]);
+  }, [practice, clearWork, refreshAfterDenial, router]);
   const createSourceContent = useCallback((baseline: Assigned, kind: StudyKind, offset: number, target: SourceContentTarget): SourceContentClient => {
     const base = structuredClone(baseline), selected = practice.selection, captured = selected ? structuredClone(selected) : undefined;
     const generation = practice.generation, route = routeRevision.current, turn = sequence.current, session = binding.current;
@@ -496,7 +533,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       clearWork();
       if (base.mode === "child-practice" && currentPath.current === `/workspace/practice/${base.student.id}`) {
         practice.invalidate(); setContext(null); setNotice("Practice access changed. Choose an available child again."); setEpoch(value => value + 1); router.replace("/workspace/parent");
-      } else refresh();
+      } else refreshAfterDenial(statusOf(error));
     };
     async function run<T>(signal: AbortSignal, action: (signal: AbortSignal) => Promise<T>): Promise<T> {
       const budget = createSourceContentBudget(signal);
@@ -513,7 +550,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       editions: (page: EditionPageRequest, signal: AbortSignal) => { const request = captureEditionPage(page); return run(signal, phase => client.editions(request, phase)); },
       text: (choice: EditionChoice, signal: AbortSignal) => { const request = captureEditionChoice(choice); return run(signal, phase => client.text(request, phase)); }
     });
-  }, [practice, clearWork, refresh, router]);
+  }, [practice, clearWork, refreshAfterDenial, router]);
   const readServiceUnit = useCallback((mode: ReadingMode, id: string, plan: ServicePlan, unitId: string, signal: AbortSignal) => serviceRead(mode, id, signal, selection => serviceApi.unit(mode, id, plan, unitId, signal, selection ?? undefined)), [serviceRead]);
   // Lesson notes share the service path: fresh session checks around each request, and the same access-failure handling.
   const readLessons = useCallback((mode: ReadingMode, id: string, operation: LessonOperation, signal: AbortSignal) => serviceRead(mode, id, signal, selection => fetchLessons(mode, id, operation, signal, selection ?? undefined)), [serviceRead]);
@@ -521,7 +558,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   // Material/link 403/404 refusals stay local; a current session 401 always clears
   // and conceals the whole workspace through the existing access-check path.
   const readPracticeCalendar = useCallback((mode: ReadingMode, id: string, operation: PracticeOperation, signal: AbortSignal) => serviceRead(mode, id, signal, selection => fetchPracticeCalendar(mode, id, operation, signal, selection ?? undefined), false), [serviceRead]);
-  const serviceAuthorityFailed = useCallback((status: number) => { if ([401, 403, 404].includes(status)) { clearWork(); refresh(); } }, [clearWork, refresh]);
+  const serviceAuthorityFailed = useCallback((status: number) => { if ([401, 403, 404].includes(status)) refreshAfterDenial(status); }, [refreshAfterDenial]);
   const verifyServiceSession = useCallback(async (signal: AbortSignal) => { try { await verifyWorkSession(signal); } catch (error) { if (!signal.aborted) serviceAuthorityFailed(statusOf(error)); throw error; } }, [verifyWorkSession, serviceAuthorityFailed]);
   const controlledLink = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -534,7 +571,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     <main id="workspace-main" className="workspace-main">
       {(checking || !summary) && <section className="workspace-state" aria-live="polite"><h1>{failure === null ? "Checking your access" : failure === 401 ? "Sign in to continue" : failure === 403 || failure === 404 ? "Access has changed" : "Workspace unavailable"}</h1>
         <p>{failure === null ? "Your student information is hidden until access has been checked." : failure === 401 ? "Use the account on your invitation." : failure === 403 || failure === 404 ? "The requested access is not available. Your previous student view has been cleared." : "We couldn’t load the workspace. Please try again shortly."}</p>
-        {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={refresh}>Check access again</button>}</section>
+        {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={() => { denials.current = []; refresh(); }}>Check access again</button>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
         <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readExploration, readExplorationPage, readReference, createShortReferenceOwner, createShortExplorationOwner, readWordAids, readWordDetails, createSources, createSourceContent, readWork, readProgress, readGuide, readServiceMetadata,readMyService,readMyServiceMaterial,requestMyService,readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, registerQuiet, concealed: checking || failure !== null }}>
