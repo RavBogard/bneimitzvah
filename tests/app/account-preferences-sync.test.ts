@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BROWSER_PREFERENCE_KEYS, browserPreferences, createPreferencesSync, parseRemotePreferences, PREFERENCES_PATHS, PREFERENCES_SYNC_KEY, writeBrowserPreferences }
   from "../../src/components/portal/workspace/account-preferences";
 import { LENS_STORAGE } from "../../src/components/portal/workspace/study-lens";
-import { readRememberedLens, normalizeWorks, DEFAULT_WORKS } from "../../src/components/portal/workspace/study-lens";
+import { readRememberedLens, rememberLens, normalizeWorks, DEFAULT_WORKS } from "../../src/components/portal/workspace/study-lens";
 import { parseReadingPrefs, scopeKey } from "../../src/components/portal/workspace/reading-prefs";
 import { parsePreferences, type Preferences } from "../../src/lib/account-preferences/document";
 
@@ -14,7 +14,7 @@ function memoryStorage(initial: Record<string, unknown> = {}) {
   return { map, getItem: (key: string) => map.get(key) ?? null, setItem: (key: string, value: string) => { map.set(key, value); }, removeItem: (key: string) => { map.delete(key); },
     json: (key: string) => { const raw = map.get(key); return raw === undefined ? undefined : JSON.parse(raw); } };
 }
-type Server = { owner: string; preferences: Preferences | null; revision: number; status?: number };
+type Server = { owner: string; preferences: Preferences | null; revision: number; status?: number; onGet?: () => void };
 function harness(server: Server, initial: Record<string, unknown> = {}) {
   const storage = memoryStorage(initial), calls: { method: string; path: string; body?: Record<string, unknown> }[] = [];
   let timer: (() => void) | null = null, applied = 0;
@@ -24,7 +24,7 @@ function harness(server: Server, initial: Record<string, unknown> = {}) {
     const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : undefined;
     calls.push({ method: init?.method ?? "GET", path, ...body ? { body } : {} });
     if (server.status) return respond(server.status, { error: "x" });
-    if (path === PREFERENCES_PATHS.get) return respond(200, view());
+    if (path === PREFERENCES_PATHS.get) { server.onGet?.(); return respond(200, view()); }
     if (body!.owner !== server.owner || body!.expectedRevision !== server.revision) return respond(409, { ok: false, code: "conflict", current: view() });
     server.preferences = parsePreferences(body!.preferences); server.revision += 1;
     return respond(200, view());
@@ -200,5 +200,52 @@ describe("changes while signed in", () => {
     h.sync.changed(); await h.tick();
     expect(server.preferences).toEqual({ version: 1 });
     expect(h.sync.account).toBe("unknown");
+  });
+});
+
+describe("choices made before the account answers (adversarial review)", () => {
+  it("a choice made while the first answer is on its way is laid over the account's copy and sent, never reverted", async () => {
+    const server: Server = { owner: A, preferences: { version: 1, works: ["rashi", "womens"] }, revision: 3 };
+    const h = harness(server, { [PREFERENCES_SYNC_KEY]: marker(A, 3) });
+    server.onGet = () => {
+      // The person turns every commentary off before the account's copy arrives.
+      h.storage.setItem(LENS_STORAGE.weekly, JSON.stringify({ lens: "study", works: [] }));
+      h.sync.changed(["works"]);
+    };
+    await h.sync.start(false);
+    expect(server.preferences).toEqual({ version: 1, works: [] });
+    expect(readRememberedLens(h.storage, LENS_STORAGE.weekly).works).toEqual([]);
+    expect(h.storage.json(PREFERENCES_SYNC_KEY)).toEqual(marker(A, 4));
+  });
+
+  it("a choice made offline is kept marked and sent at the next start", async () => {
+    const server: Server = { owner: A, preferences: { version: 1, size: "small" }, revision: 2, status: 503 };
+    const h = harness(server, { [PREFERENCES_SYNC_KEY]: marker(A, 2) });
+    await h.sync.start(false);
+    h.storage.setItem(scopeKey(null), JSON.stringify({ size: "huge" }));
+    h.sync.changed(["size"]);
+    expect(h.storage.json(PREFERENCES_SYNC_KEY)).toEqual(marker(A, 2, ["size"]));
+    delete server.status;
+    await h.sync.start(false);
+    expect(server.preferences).toEqual({ version: 1, size: "huge" });
+    expect(h.storage.json(scopeKey(null))).toEqual({ size: "huge" });
+  });
+
+  it("an undone change sends nothing", async () => {
+    const server: Server = { owner: A, preferences: { version: 1, colors: false }, revision: 1 };
+    const h = harness(server, { [scopeKey(null)]: { colors: false }, [PREFERENCES_SYNC_KEY]: marker(A, 1) });
+    await h.sync.start(false);
+    h.sync.changed(["colors"]); await h.tick();
+    expect(h.calls.map(call => call.method)).toEqual(["GET"]);
+    expect(h.storage.json(PREFERENCES_SYNC_KEY)).toEqual(marker(A, 1));
+  });
+
+  it("a lens switch alone remembers only the lens, so a first sign-in never uploads today's defaults", () => {
+    const storage = memoryStorage();
+    rememberLens(storage, LENS_STORAGE.weekly, { lens: "study", works: DEFAULT_WORKS, english: true }, { works: false, english: false });
+    expect(storage.json(LENS_STORAGE.weekly)).toEqual({ lens: "study" });
+    expect(browserPreferences(storage)).toEqual({ version: 1 });
+    rememberLens(storage, LENS_STORAGE.weekly, { lens: "study", works: [], english: true }, { works: true, english: false });
+    expect(browserPreferences(storage)).toEqual({ version: 1, works: [] });
   });
 });

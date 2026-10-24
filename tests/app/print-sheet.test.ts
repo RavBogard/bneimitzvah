@@ -33,10 +33,19 @@ const regular = (date: string): Snapshot => ({ date: parseCeremonyDate(date), ca
 
 test("the format lives in the address: defaults are left out, every field round-trips, unknown values fall back", () => {
   expect(formatEntries(DEFAULT_FORMAT)).toEqual([]);
-  const custom: SheetFormat = { show: "hebrew", script: "vowels", size: "huge", aliyot: "page", numbers: false, notes: "lined", paper: "a4", orientation: "landscape", spacing: "standing", edition: "jps2023" };
+  const custom: SheetFormat = { show: "hebrew", script: "vowels", size: "huge", aliyot: "page", numbers: false, notes: "lined", paper: "a4", orientation: "landscape", spacing: "standing", edition: "jps2023", commentary: ["rashi", "womens", "ramban"] };
   const entries = formatEntries(custom);
-  expect(entries.map(([key]) => key)).toEqual(["show", "script", "size", "aliyot", "numbers", "notes", "paper", "orient", "spacing"]);
+  expect(entries.map(([key]) => key)).toEqual(["show", "script", "size", "aliyot", "numbers", "notes", "paper", "orient", "spacing", "comm"]);
+  expect(entries.at(-1)).toEqual(["comm", "rashi,womens,ramban"]);
   expect(parseFormat(new URLSearchParams(entries))).toEqual(custom);
+  // Commentary is off by default; the address names works in registry order, once each, registered works only.
+  expect(parseFormat(new URLSearchParams("comm=womens,nonsense,rashi,rashi")).commentary).toEqual(["rashi", "womens"]);
+  expect(parseFormat(new URLSearchParams("comm=")).commentary).toEqual([]);
+  expect(formatEntries({ ...DEFAULT_FORMAT, commentary: ["womens", "rashi"] })).toEqual([["comm", "rashi,womens"]]);
+  expect(formatFromRecord({ commentary: ["womens", "rashi"] })).toEqual({ format: { ...DEFAULT_FORMAT, commentary: ["rashi", "womens"] }, problems: [] });
+  expect(formatFromRecord({ commentary: ["rashi", "not-a-work"] }).problems[0]).toContain("format.commentary must be a list of works from rashi, womens");
+  expect(formatFromRecord({ commentary: "rashi" }).problems).toHaveLength(1);
+  expect(describeFormat({ ...DEFAULT_FORMAT, commentary: ["rashi"] })).toContain("commentary on a new page after the reading (Rashi; only editions licensed for print)");
   expect(parseFormat(new URLSearchParams("show=klingon&size=&numbers=maybe&en=other&paper=A4"))).toEqual(DEFAULT_FORMAT);
   // Every size step sets the Hebrew larger than the English; Huge is large print.
   for (const step of Object.values(SHEET_TYPE)) expect(step.hebrew).toBeGreaterThan(step.english);

@@ -62,6 +62,19 @@ describe("print_sheet_link", () => {
     expect(saved.reading.statement).toContain("this tool cannot see its name or verses");
   });
 
+  it("carries the commentary appendix in the link, off by default, and refuses an unknown work", async () => {
+    const { call } = await setup();
+    expect(target((await call({})).json().link).format.commentary).toEqual([]);
+    const result = (await call({ format: { commentary: ["womens", "rashi"], size: "large" } })).json();
+    expect(target(result.link).format).toEqual({ ...DEFAULT_FORMAT, size: "large", commentary: ["rashi", "womens"] });
+    expect(new URL(result.link).searchParams.get("comm")).toBe("rashi,womens");
+    expect(result.format).toContain("commentary on a new page after the reading (Rashi, The Torah: A Women's Commentary; only editions licensed for print)");
+    expect(result.note).toContain("printed only from editions licensed for print");
+    const refused = (await call({ format: { commentary: ["rashi", "made-up"] } })).json();
+    expect(refused.ok).toBe(false);
+    expect(refused.problems.join(" ")).toContain("format.commentary must be a list of works");
+  });
+
   it("refuses what it cannot name plainly, writing nothing and guessing nothing", async () => {
     const { call } = await setup();
     const problems = async (args: Record<string, unknown>) => { const r = (await call(args)).json(); expect(r.ok).toBe(false); return r.problems.join(" "); };

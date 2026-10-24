@@ -7,6 +7,7 @@ import { createHttpDispatcher } from "../../src/server/http/dispatch";
 import { preferencesPut } from "../../src/server/saved/validation";
 import { preferencesOwnerName } from "../../src/server/saved/service";
 import { HttpBoundaryError } from "../../src/server/http/responses";
+import { PREFERENCE_WORKS } from "../../src/lib/account-preferences/document";
 
 // Release 1.7 M3b: the account keeps a member's own preferred commentaries and reading settings, through the real
 // dispatcher, cookie session, Origin check and the saved layer's owner-only binding. Synthetic people only.
@@ -78,6 +79,20 @@ describe("account preferences: who may use them", () => {
     expect((await t.put("multi", { version: 1, works: [] }, 1)).json).toMatchObject({ ok: true, preferences: { version: 1, works: [] }, revision: 2 });
     expect((await t.put("multi", { version: 1, works: ["rashi"] }, 1)).status).toBe(409);
     expect((await t.get("multi")).json).toMatchObject({ preferences: { version: 1, works: [] }, revision: 2 });
+  });
+});
+
+describe("account preferences: a stored commentary later removed from the registry", () => {
+  it("is dropped when read, so the member is never locked out of their own preferences, and their next write replaces the row", async () => {
+    const t = await setup();
+    expect((await t.put("multi", { version: 1, works: ["rashi"], colors: false }, 0)).status).toBe(200);
+    await t.f.owner(async () => t.f.db.update(s.accountPreference).set({ preferences: { version: 1, works: ["rashi", "retired-work"], colors: false } }));
+    expect((await t.get("multi")).json).toMatchObject({ ok: true, preferences: { version: 1, works: ["rashi"], colors: false }, revision: 1 });
+    expect((await t.put("multi", { version: 1, works: [], colors: false }, 1)).json).toMatchObject({ preferences: { version: 1, works: [] }, revision: 2 });
+  });
+  it("every registered work key fits the 0041 CHECK's key pattern, so the app never sends what the table refuses", () => {
+    for (const work of PREFERENCE_WORKS) expect(work).toMatch(/^[a-z][a-z0-9-]{0,31}$/);
+    expect(PREFERENCE_WORKS.length).toBeGreaterThanOrEqual(2);
   });
 });
 
