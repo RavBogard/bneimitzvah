@@ -1,0 +1,80 @@
+/**
+ * Every learner-facing string of the service course that is not lesson data, one constant per id of
+ * `A7-STRINGS.md` (Daniel approved all of them, "Keep all", 2026-10-24). Apostrophes are the typographic one, as
+ * the app ships them. Titles, summaries and goals live in `course.json` beside the lessons they name; the
+ * approved teachings live in the congregation file. Nothing here quotes the siddur: page numbers only.
+ * The tone rule (no exclamation point, emoji, streak, badge, score or pep talk) is tested over this whole object.
+ */
+export const COPY = Object.freeze({
+  home: Object.freeze({
+    title: "Learn the service", // home.title
+    intro: "Each prayer in the Shabbat morning service: what it is, how to read it, and where it is in the siddur.", // home.intro
+    nextLabel: "Next", // home.next.label
+    start: "Start", // home.next.start
+    minutes: "about {n} minutes", // home.next.minutes
+    allHeading: "The whole service", // home.all.heading
+    done: "Done. Review when you like.", // home.done
+    saved: "Progress is saved on this device. Sign in to keep it.", // home.saved
+    about: "About", // home.about
+    lein: "Learn to lein", // home.lein
+    dotDone: ", done", // home.state.dot.done
+    dotNext: ", next", // home.state.dot.next
+    eveningLater: "Saturday evening and Havdalah come next.", // home.evening.later
+    nav: "Course", // aria-label of the link row (Learn to lein uses the same word)
+  }),
+  frame: Object.freeze({
+    close: "Back to the course", // frame.close
+    skip: "Skip to the lesson", // frame.skip
+    rail: "Step {n} of {total}", // frame.rail
+    next: "Next", // frame.next
+  }),
+  step: Object.freeze({
+    about: "About this prayer", // step.about
+    where: "Where it is in the service", // step.where
+    read: "Read it", // step.read
+  }),
+  about: Object.freeze({
+    moment: "This part of the service has no prayer text to read. It is here so you know what happens and when.", // about.moment
+  }),
+  where: Object.freeze({
+    line: "{prayer} comes after {before} and before {after}.", // where.line
+    first: "{prayer} opens the service.", // where.first
+    last: "{prayer} closes the service.", // where.last
+    section: "Part of {section}.", // where.section
+    page: "In your siddur it is on page {page}.", // where.page
+  }),
+  read: Object.freeze({
+    inSiddur: "This prayer’s text is in the siddur.", // read.inSiddur
+  }),
+  done: Object.freeze({
+    word: "Done", // step.done
+    siddur: "Open in the siddur, page {page}", // done.siddur, the approved 1.8 string
+    nextName: "Next: {lesson}", // done.nextName
+    startNext: "Start next lesson", // done.startNext
+    back: "Back to the course", // done.back
+  }),
+  state: Object.freeze({
+    homeLoading: "Loading the course…", // st.home.loading
+    notFound: "This lesson isn’t in the course.", // st.notfound
+    tenantOff: "The service course isn’t available here yet.", // st.tenant.off
+  }),
+  aboutPage: Object.freeze({
+    title: "About this course", // ab.title
+    p1: "Each lesson teaches one prayer: what it is, where it sits in the service, how to read it, and a few words to know. The teaching on each prayer is by Rabbi Daniel Bogard.", // ab.p1
+    p2: "The Hebrew here comes from Shirei Tfilah, a public siddur. Your own siddur may differ in places, so each lesson links to its page there.", // ab.p2
+    p3: "Nothing here records you. Progress stays on this device unless you sign in.", // ab.p3
+  }),
+});
+
+/** Fills `{name}` placeholders. A missing value leaves nothing behind rather than the braces. */
+export const fill = (template: string, values: Readonly<Record<string, string | number>>) => template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));
+
+/** Typographic apostrophes and quotes for text kept verbatim in the data files (the approved teachings). */
+export function typographic(text: string): string {
+  return text.replace(/(?<=[A-Za-z0-9])'/g, "’").replace(/(^|[\s(—])"/g, "$1“").replace(/"/g, "”");
+}
+
+/** A string with `*emphasis*` marks as segments, so a teaching's transliterated words can be set in italics without raw HTML. */
+export function emphasised(text: string): readonly { em: boolean; text: string }[] {
+  return text.split(/(\*[^*]+\*)/).filter(Boolean).map(part => part.startsWith("*") && part.endsWith("*") && part.length > 2 ? { em: true, text: part.slice(1, -1) } : { em: false, text: part });
+}

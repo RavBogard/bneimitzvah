@@ -1,0 +1,837 @@
+{
+  "schema": "service-course/v1",
+  "features": {
+    "recordings": false,
+    "fluency": false
+  },
+  "units": [
+    {
+      "id": "reading",
+      "title": "Reading Hebrew",
+      "summary": "Letters, vowels and syllables, then whole lines from the prayers. Start here if Hebrew letters are new to you, or skip ahead.",
+      "phase": "morning",
+      "map": false,
+      "lessons": [
+        "f1",
+        "f2",
+        "f3",
+        "f4",
+        "f5",
+        "f6"
+      ]
+    },
+    {
+      "id": "leads",
+      "title": "The parts every student leads",
+      "summary": "The Sh’ma, the V’ahavta, and the blessings before and after the Torah and haftarah readings. Most students lead all six.",
+      "phase": "morning",
+      "map": false,
+      "lessons": [
+        "shma",
+        "vahavta",
+        "torah-before",
+        "torah-after",
+        "haftarah-before",
+        "haftarah-after"
+      ]
+    },
+    {
+      "id": "waking",
+      "title": "Morning blessings",
+      "summary": "From waking up to the call to prayer: Modeh Ani, the tallit, Mah Tovu, the morning blessings and the verses of song.",
+      "phase": "morning",
+      "map": true,
+      "lessons": [
+        "modeh-ani",
+        "tallit",
+        "mah-tovu",
+        "hineih-mah-tov",
+        "birchot-hashachar",
+        "psukei-dzimrah",
+        "chatzi-kaddish"
+      ]
+    },
+    {
+      "id": "shma",
+      "title": "The Sh’ma and its blessings",
+      "summary": "Bar’chu calls us together. Two blessings lead to the Sh’ma, and Mi Chamochah carries us toward the Amidah.",
+      "phase": "morning",
+      "map": true,
+      "lessons": [
+        "barchu",
+        "yotzeir-or",
+        "ahavah-rabbah",
+        "mi-chamochah"
+      ]
+    },
+    {
+      "id": "amidah",
+      "title": "The Amidah",
+      "summary": "The standing prayer: seven blessings on Shabbat, from our ancestors to peace, then a moment of silence.",
+      "phase": "morning",
+      "map": true,
+      "lessons": [
+        "tfilah",
+        "avot-vimahot",
+        "gvurot",
+        "kdushah",
+        "vshamru",
+        "avodah",
+        "hodaah",
+        "sim-shalom",
+        "oseh-shalom"
+      ]
+    },
+    {
+      "id": "torah",
+      "title": "The Torah service",
+      "summary": "Taking out the Torah, the readings, the healing prayer, and returning the scroll to the ark.",
+      "phase": "morning",
+      "map": true,
+      "lessons": [
+        "torah-service",
+        "torah-reading",
+        "mi-shebeirach",
+        "haftarah-reading",
+        "commentary",
+        "eitz-chayim"
+      ]
+    },
+    {
+      "id": "closing",
+      "title": "Closing the service",
+      "summary": "Aleinu, the Mourner’s Kaddish, Adon Olam and the blessings that send us out.",
+      "phase": "morning",
+      "map": true,
+      "lessons": [
+        "aleinu",
+        "mourners-kaddish",
+        "adon-olam",
+        "parents-blessing",
+        "closing-blessing"
+      ]
+    }
+  ],
+  "lessons": [
+    {
+      "id": "f1",
+      "kind": "fluency",
+      "title": "Letters, part one",
+      "summary": "The first eleven letters, and the ones that look alike.",
+      "goal": "After this you can TODO(A7 has no goal for f1; Daniel to approve wording)",
+      "section": "reading",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "f2",
+      "kind": "fluency",
+      "title": "Letters, part two",
+      "summary": "The other eleven letters and the five final forms.",
+      "goal": "After this you can name every Hebrew letter, including the final forms.",
+      "section": "reading",
+      "keyWords": [],
+      "prerequisites": [
+        "f1"
+      ],
+      "hear": null
+    },
+    {
+      "id": "f3",
+      "kind": "fluency",
+      "title": "Vowels",
+      "summary": "The marks under and over letters, and their sounds.",
+      "goal": "After this you can TODO(A7 has no goal for f3; Daniel to approve wording)",
+      "section": "reading",
+      "keyWords": [],
+      "prerequisites": [
+        "f2"
+      ],
+      "hear": null
+    },
+    {
+      "id": "f4",
+      "kind": "fluency",
+      "title": "Dots that change a letter",
+      "summary": "Bet and vet, kaf and chaf, shin and sin.",
+      "goal": "After this you can TODO(A7 has no goal for f4; Daniel to approve wording)",
+      "section": "reading",
+      "keyWords": [],
+      "prerequisites": [
+        "f3"
+      ],
+      "hear": null
+    },
+    {
+      "id": "f5",
+      "kind": "fluency",
+      "title": "Reading words",
+      "summary": "Words from the prayers, one syllable at a time.",
+      "goal": "After this you can TODO(A7 has no goal for f5; Daniel to approve wording)",
+      "section": "reading",
+      "keyWords": [],
+      "prerequisites": [
+        "f4"
+      ],
+      "hear": null
+    },
+    {
+      "id": "f6",
+      "kind": "fluency",
+      "title": "Reading lines",
+      "summary": "Whole lines from Bar’chu, the Sh’ma and a blessing.",
+      "goal": "After this you can read a whole line of a prayer on your own.",
+      "section": "reading",
+      "keyWords": [],
+      "prerequisites": [
+        "f5"
+      ],
+      "hear": null
+    },
+    {
+      "id": "modeh-ani",
+      "kind": "prayer",
+      "title": "Modeh Ani",
+      "summary": "Thanks on waking, before anything else.",
+      "goal": "After this you can read Modeh Ani and say what its key words mean.",
+      "section": "waking",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "tallit",
+      "kind": "prayer",
+      "title": "The tallit blessing",
+      "summary": "The blessing for the fringes on the prayer shawl.",
+      "goal": "After this you can read The tallit blessing and say what its key words mean.",
+      "section": "waking",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "mah-tovu",
+      "kind": "prayer",
+      "title": "Mah Tovu",
+      "summary": "A prayer of arrival, borrowed from a hired prophet.",
+      "goal": "After this you can read Mah Tovu and say what its key words mean.",
+      "section": "waking",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "hineih-mah-tov",
+      "kind": "prayer",
+      "title": "Hineih Mah Tov",
+      "summary": "How good it is to be here together.",
+      "goal": "After this you can read Hineih Mah Tov and say what its key words mean.",
+      "section": "waking",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "birchot-hashachar",
+      "kind": "prayer",
+      "title": "Birchot Hashachar",
+      "summary": "Blessings for the ordinary gifts of a morning.",
+      "goal": "After this you can read Birchot Hashachar and say what its key words mean.",
+      "section": "waking",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "psukei-dzimrah",
+      "kind": "prayer",
+      "title": "P’sukei D’zimrah",
+      "summary": "Psalms and praise that carry us toward Bar’chu.",
+      "goal": "After this you can read P’sukei D’zimrah and say what its key words mean.",
+      "section": "waking",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "chatzi-kaddish",
+      "kind": "prayer",
+      "title": "Reader’s Kaddish",
+      "summary": "A short Kaddish that marks the end of a section.",
+      "goal": "After this you can read Reader’s Kaddish and say what its key words mean.",
+      "section": "waking",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "barchu",
+      "kind": "prayer",
+      "title": "Bar’chu",
+      "summary": "The call to prayer: a room becomes a community.",
+      "goal": "After this you can read Bar’chu and say what its key words mean.",
+      "section": "shma",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "yotzeir-or",
+      "kind": "prayer",
+      "title": "Yotzeir Or",
+      "summary": "Morning light, and how small we are.",
+      "goal": "After this you can read Yotzeir Or and say what its key words mean.",
+      "section": "shma",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "ahavah-rabbah",
+      "kind": "prayer",
+      "title": "Ahavah Rabbah",
+      "summary": "Love that comes before we are asked to love.",
+      "goal": "After this you can read Ahavah Rabbah and say what its key words mean.",
+      "section": "shma",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "shma",
+      "kind": "prayer",
+      "title": "Sh’ma",
+      "summary": "All of existence is one, and we stand inside it.",
+      "goal": "After this you can read Sh’ma and say what its key words mean.",
+      "section": "shma",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "vahavta",
+      "kind": "prayer",
+      "title": "V’ahavta",
+      "summary": "What that oneness asks of us: love as practice.",
+      "goal": "After this you can read V’ahavta and say what its key words mean.",
+      "section": "shma",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "mi-chamochah",
+      "kind": "prayer",
+      "title": "Mi Chamochah",
+      "summary": "The song at the sea, and a redemption unfinished.",
+      "goal": "After this you can read Mi Chamochah and say what its key words mean.",
+      "section": "shma",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "tfilah",
+      "kind": "prayer",
+      "title": "T’filah",
+      "summary": "The Amidah opens: we ask for the words to pray.",
+      "goal": "After this you can read T’filah and say what its key words mean.",
+      "section": "amidah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "avot-vimahot",
+      "kind": "prayer",
+      "title": "Avot v’Imahot",
+      "summary": "The first blessing begins with names.",
+      "goal": "After this you can read Avot v’Imahot and say what its key words mean.",
+      "section": "amidah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "gvurot",
+      "kind": "prayer",
+      "title": "G’vurot",
+      "summary": "The power that holds up those who fall.",
+      "goal": "After this you can read G’vurot and say what its key words mean.",
+      "section": "amidah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "kdushah",
+      "kind": "prayer",
+      "title": "K’dushah",
+      "summary": "Holiness, borrowed from the song of the angels.",
+      "goal": "After this you can read K’dushah and say what its key words mean.",
+      "section": "amidah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "vshamru",
+      "kind": "prayer",
+      "title": "V’shamru",
+      "summary": "Keeping Shabbat, a sign for every generation.",
+      "goal": "After this you can read V’shamru and say what its key words mean.",
+      "section": "amidah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "avodah",
+      "kind": "prayer",
+      "title": "Avodah",
+      "summary": "What service means after the Temple.",
+      "goal": "After this you can read Avodah and say what its key words mean.",
+      "section": "amidah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "hodaah",
+      "kind": "prayer",
+      "title": "Hoda’ah",
+      "summary": "Thanks for the miracles of every day.",
+      "goal": "After this you can read Hoda’ah and say what its key words mean.",
+      "section": "amidah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "sim-shalom",
+      "kind": "prayer",
+      "title": "Sim Shalom",
+      "summary": "The Amidah ends by asking for peace.",
+      "goal": "After this you can read Sim Shalom and say what its key words mean.",
+      "section": "amidah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "oseh-shalom",
+      "kind": "prayer",
+      "title": "Silent meditation and Oseh Shalom",
+      "summary": "Our own words in silence, then peace.",
+      "goal": "After this you can read Silent meditation and Oseh Shalom and say what its key words mean.",
+      "section": "amidah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "torah-service",
+      "kind": "moment",
+      "title": "Taking out the Torah",
+      "summary": "The ark opens and the scroll comes out.",
+      "goal": "After this you can say what happens at this point in the service.",
+      "section": "torah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "torah-before",
+      "kind": "prayer",
+      "title": "Blessing before the Torah reading",
+      "summary": "The blessing said before each Torah reading.",
+      "goal": "After this you can read Blessing before the Torah reading and say what its key words mean.",
+      "section": "torah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "torah-reading",
+      "kind": "moment",
+      "title": "Reading of the Torah",
+      "summary": "The reading itself, from the scroll.",
+      "goal": "After this you can say what happens at this point in the service.",
+      "section": "torah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "torah-after",
+      "kind": "prayer",
+      "title": "Blessing after the Torah reading",
+      "summary": "The blessing said after each Torah reading.",
+      "goal": "After this you can read Blessing after the Torah reading and say what its key words mean.",
+      "section": "torah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "mi-shebeirach",
+      "kind": "prayer",
+      "title": "Mi Shebeirach",
+      "summary": "A prayer for healing, for those we name.",
+      "goal": "After this you can read Mi Shebeirach and say what its key words mean.",
+      "section": "torah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "haftarah-before",
+      "kind": "prayer",
+      "title": "Blessing before the haftarah",
+      "summary": "The blessing said before the prophets are read.",
+      "goal": "After this you can read Blessing before the haftarah and say what its key words mean.",
+      "section": "torah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "haftarah-reading",
+      "kind": "moment",
+      "title": "Reading of the haftarah",
+      "summary": "A reading from the prophets.",
+      "goal": "After this you can say what happens at this point in the service.",
+      "section": "torah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "haftarah-after",
+      "kind": "prayer",
+      "title": "Blessings after the haftarah",
+      "summary": "The blessings said after the haftarah.",
+      "goal": "After this you can read Blessings after the haftarah and say what its key words mean.",
+      "section": "torah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "commentary",
+      "kind": "moment",
+      "title": "Commentary and presentation",
+      "summary": "Your words on the reading, and the community’s.",
+      "goal": "After this you can say what happens at this point in the service.",
+      "section": "torah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "eitz-chayim",
+      "kind": "prayer",
+      "title": "Returning the Torah",
+      "summary": "The scroll goes back, and Eitz Chayim.",
+      "goal": "After this you can read Returning the Torah and say what its key words mean.",
+      "section": "torah",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "aleinu",
+      "kind": "prayer",
+      "title": "Aleinu",
+      "summary": "It is upon us: the close of every service.",
+      "goal": "After this you can read Aleinu and say what its key words mean.",
+      "section": "closing",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "mourners-kaddish",
+      "kind": "prayer",
+      "title": "Mourner’s Kaddish",
+      "summary": "Praise said by those who remember.",
+      "goal": "After this you can read Mourner’s Kaddish and say what its key words mean.",
+      "section": "closing",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "adon-olam",
+      "kind": "prayer",
+      "title": "Adon Olam",
+      "summary": "A song about everything, sung at the end.",
+      "goal": "After this you can read Adon Olam and say what its key words mean.",
+      "section": "closing",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "parents-blessing",
+      "kind": "moment",
+      "title": "Parent’s blessing",
+      "summary": "A parent blesses their child.",
+      "goal": "After this you can say what happens at this point in the service.",
+      "section": "closing",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    },
+    {
+      "id": "closing-blessing",
+      "kind": "prayer",
+      "title": "Closing blessing",
+      "summary": "Birkat Kohanim, a blessing we give each other.",
+      "goal": "After this you can read Closing blessing and say what its key words mean.",
+      "section": "closing",
+      "keyWords": [],
+      "prerequisites": [],
+      "hear": null
+    }
+  ],
+  "service": [
+    "modeh-ani",
+    "tallit",
+    "mah-tovu",
+    "hineih-mah-tov",
+    "birchot-hashachar",
+    "psukei-dzimrah",
+    "chatzi-kaddish",
+    "barchu",
+    "yotzeir-or",
+    "ahavah-rabbah",
+    "shma",
+    "vahavta",
+    "mi-chamochah",
+    "tfilah",
+    "avot-vimahot",
+    "gvurot",
+    "kdushah",
+    "vshamru",
+    "avodah",
+    "hodaah",
+    "sim-shalom",
+    "oseh-shalom",
+    "torah-service",
+    "torah-before",
+    "torah-reading",
+    "torah-after",
+    "mi-shebeirach",
+    "haftarah-before",
+    "haftarah-reading",
+    "haftarah-after",
+    "commentary",
+    "eitz-chayim",
+    "aleinu",
+    "mourners-kaddish",
+    "adon-olam",
+    "parents-blessing",
+    "closing-blessing"
+  ],
+  "alphabet": {
+    "letters": [
+      {
+        "id": "alef",
+        "name": "Alef",
+        "char": "א"
+      },
+      {
+        "id": "bet",
+        "name": "Bet/Vet",
+        "char": "ב"
+      },
+      {
+        "id": "gimel",
+        "name": "Gimel",
+        "char": "ג"
+      },
+      {
+        "id": "dalet",
+        "name": "Dalet",
+        "char": "ד"
+      },
+      {
+        "id": "hei",
+        "name": "Hei",
+        "char": "ה"
+      },
+      {
+        "id": "vav",
+        "name": "Vav",
+        "char": "ו"
+      },
+      {
+        "id": "zayin",
+        "name": "Zayin",
+        "char": "ז"
+      },
+      {
+        "id": "chet",
+        "name": "Chet",
+        "char": "ח"
+      },
+      {
+        "id": "tet",
+        "name": "Tet",
+        "char": "ט"
+      },
+      {
+        "id": "yod",
+        "name": "Yod",
+        "char": "י"
+      },
+      {
+        "id": "kaf",
+        "name": "Kaf/Chaf",
+        "char": "כ"
+      },
+      {
+        "id": "lamed",
+        "name": "Lamed",
+        "char": "ל"
+      },
+      {
+        "id": "mem",
+        "name": "Mem",
+        "char": "מ"
+      },
+      {
+        "id": "nun",
+        "name": "Nun",
+        "char": "נ"
+      },
+      {
+        "id": "samech",
+        "name": "Samech",
+        "char": "ס"
+      },
+      {
+        "id": "ayin",
+        "name": "Ayin",
+        "char": "ע"
+      },
+      {
+        "id": "pei",
+        "name": "Pei/Fei",
+        "char": "פ"
+      },
+      {
+        "id": "tzadi",
+        "name": "Tzadi",
+        "char": "צ"
+      },
+      {
+        "id": "kuf",
+        "name": "Kuf",
+        "char": "ק"
+      },
+      {
+        "id": "reish",
+        "name": "Reish",
+        "char": "ר"
+      },
+      {
+        "id": "shin",
+        "name": "Shin/Sin",
+        "char": "ש"
+      },
+      {
+        "id": "tav",
+        "name": "Tav",
+        "char": "ת"
+      }
+    ],
+    "finals": [
+      {
+        "id": "final-chaf",
+        "name": "Final Chaf",
+        "char": "ך"
+      },
+      {
+        "id": "final-mem",
+        "name": "Final Mem",
+        "char": "ם"
+      },
+      {
+        "id": "final-nun",
+        "name": "Final Nun",
+        "char": "ן"
+      },
+      {
+        "id": "final-fei",
+        "name": "Final Fei",
+        "char": "ף"
+      },
+      {
+        "id": "final-tzadi",
+        "name": "Final Tzadi",
+        "char": "ץ"
+      }
+    ],
+    "marks": [
+      {
+        "id": "kamatz",
+        "name": "Kamatz",
+        "mark": "ָ"
+      },
+      {
+        "id": "patach",
+        "name": "Patach",
+        "mark": "ַ"
+      },
+      {
+        "id": "segol",
+        "name": "Segol",
+        "mark": "ֶ"
+      },
+      {
+        "id": "tzere",
+        "name": "Tzere",
+        "mark": "ֵ"
+      },
+      {
+        "id": "chirik",
+        "name": "Chirik",
+        "mark": "ִ"
+      },
+      {
+        "id": "cholam",
+        "name": "Cholam",
+        "mark": "ֹ"
+      },
+      {
+        "id": "kubutz",
+        "name": "Kubutz",
+        "mark": "ֻ"
+      },
+      {
+        "id": "shva",
+        "name": "Sh’va",
+        "mark": "ְ"
+      },
+      {
+        "id": "dagesh",
+        "name": "Dagesh",
+        "mark": "ּ"
+      },
+      {
+        "id": "shin-dot",
+        "name": "Shin dot",
+        "mark": "ׁ"
+      },
+      {
+        "id": "sin-dot",
+        "name": "Sin dot",
+        "mark": "ׂ"
+      }
+    ]
+  }
+}
