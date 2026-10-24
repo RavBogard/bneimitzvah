@@ -6,6 +6,7 @@ import * as s from "../../src/server/db/index";
 import { AccessDenied } from "../../src/server/access/errors";
 import { createMcpAuthService, type McpActor } from "../../src/server/mcp/service";
 import { createMcpSavedReadings } from "../../src/server/saved/mcp";
+import { withConnectionOwner } from "../../src/server/saved/access";
 import { parseReadAddress } from "../../src/components/portal/public-reading/urls";
 import { parsePrintAddress } from "../../src/lib/print/print-address";
 import { closeMcpFixtures, mcpFixture, ORIGIN } from "./mcp-fixture";
@@ -151,7 +152,7 @@ describe("saved readings over the MCP", () => {
     // The binding itself re-reads the connection: an actor that says "attended" for a routine's connection is still refused.
     const [connection] = await t.f.owner(() => t.f.db.select().from(s.mcpConnection).where(eq(s.mcpConnection.unattended, true)));
     const mcp = createMcpAuthService({ db: t.f.db, access: t.f.service, secret: randomBytes(48).toString("base64url") });
-    const claimed = { tenantId: "crc", origin: ORIGIN, connectionId: connection.id, unattended: false, expiresAt: Date.now() + 600_000 } as unknown as McpActor;
+    const claimed = { tenantId: "crc", origin: ORIGIN, connectionId: connection.id, membershipId: connection.membershipId, unattended: false, expiresAt: Date.now() + 600_000 } as unknown as McpActor;
     const saved = createMcpSavedReadings(mcp), signal = new AbortController().signal;
     await expect(saved.list(claimed, signal)).rejects.toMatchObject({ status: 403 });
     await expect(saved.create(claimed, signal, { name: "Routine", ranges: "Genesis 1:1", mutationId: randomUUID() })).rejects.toBeInstanceOf(AccessDenied);
@@ -167,8 +168,22 @@ describe("saved readings over the MCP", () => {
     expect((await t.rpc(tutor, "tools/call", { name: "list_saved_readings", arguments: {} })).status).toBe(401);
     // Directly, with the connection's id: the re-locked grant is gone, so nothing is bound.
     const mcp = createMcpAuthService({ db: t.f.db, access: t.f.service, secret: randomBytes(48).toString("base64url") });
-    const actor = { tenantId: "crc", origin: ORIGIN, connectionId: connection.id, unattended: false, expiresAt: Date.now() + 600_000 } as unknown as McpActor;
+    const actor = { tenantId: "crc", origin: ORIGIN, connectionId: connection.id, membershipId: connection.membershipId, unattended: false, expiresAt: Date.now() + 600_000 } as unknown as McpActor;
     await expect(createMcpSavedReadings(mcp).list(actor, new AbortController().signal)).rejects.toMatchObject({ status: 401 });
+  });
+
+  it("refuses a live record for another connection, congregation or person before anything is bound", async () => {
+    const actor = { tenantId: "crc", origin: ORIGIN, connectionId: randomUUID(), membershipId: randomUUID(), userId: "user", role: "admin", unattended: false, expiresAt: Date.now() + 600_000 } as unknown as McpActor;
+    const signal = new AbortController().signal;
+    for (const change of [{ connectionId: randomUUID() }, { tenantId: "other" }, { membershipId: randomUUID() }, { unattended: true }, { role: "parent" }, {}]) {
+      const bound: string[] = [];
+      // A stand-in withLive that hands over a chosen live record; the transaction is never touched before the refusal.
+      const tx = { select: () => { bound.push("tx"); throw new Error("bound"); }, execute: () => { bound.push("tx"); throw new Error("bound"); } };
+      const mcp = { withLive: async (_a: McpActor, _i: unknown, action: (tx: never, live: McpActor, alive: () => void) => Promise<unknown>) => action(tx as never, { ...actor, ...change } as McpActor, () => undefined) };
+      const outcome = await withConnectionOwner(mcp as never, actor, "read", signal, async () => { bound.push("action"); return "ran"; }).then(value => value, error => error);
+      if (Object.keys(change).length === 0) expect(bound, "an agreeing record reaches the binding").toEqual(["tx"]);
+      else { expect(outcome, JSON.stringify(change)).toBeInstanceOf(AccessDenied); expect((outcome as AccessDenied).status).toBe(403); expect(bound, JSON.stringify(change)).toEqual([]); }
+    }
   });
 
   it("keeps the per-person cap, and a timed-out or aborted call writes nothing", async () => {
@@ -179,7 +194,7 @@ describe("saved readings over the MCP", () => {
     expect((await call(admin, "create_saved_reading", { name: "Over", ranges: "Genesis 1:1", mutationId: randomUUID() })).json()).toMatchObject({ ok: false, code: "limit" });
     const [connection] = await t.f.owner(() => t.f.db.select().from(s.mcpConnection).where(eq(s.mcpConnection.role, "admin")));
     const mcp = createMcpAuthService({ db: t.f.db, access: t.f.service, secret: randomBytes(48).toString("base64url") });
-    const actor = { tenantId: "crc", origin: ORIGIN, connectionId: connection.id, unattended: false, expiresAt: Date.now() + 600_000 } as unknown as McpActor;
+    const actor = { tenantId: "crc", origin: ORIGIN, connectionId: connection.id, membershipId: connection.membershipId, unattended: false, expiresAt: Date.now() + 600_000 } as unknown as McpActor;
     const aborted = new AbortController(); aborted.abort();
     const listed = (await call(admin, "list_saved_readings")).json();
     const first = listed.readings[0];

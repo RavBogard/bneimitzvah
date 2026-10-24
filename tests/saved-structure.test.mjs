@@ -38,7 +38,7 @@ test("only src/server/saved/access.ts and the 0036 migration name app.saved_owne
   assert.equal(access.match(/bindOwner[<(]/g)?.length, 3, "declared once and called only by the two entrances");
   // The MCP entrance refuses a scheduled routine and any role but admin or tutor before binding, from the re-locked connection.
   const mcp = access.slice(access.indexOf("export async function withConnectionOwner"));
-  assert.match(mcp, /if \(actor\.unattended\) throw new AccessDenied\(403\);[\s\S]*mcp\.withLive\(actor, intent, async \(tx, live, alive\) => \{\s*if \(live\.unattended[\s\S]*live\.role !== "admin" && live\.role !== "tutor"\) throw new AccessDenied\(403\);\s*await bindOwner/);
+  assert.match(mcp, /if \(actor\.unattended\) throw new AccessDenied\(403\);[\s\S]*mcp\.withLive\(actor, intent, async \(tx, live, alive\) => \{[\s\S]*?if \(live\.unattended \|\| live\.connectionId !== actor\.connectionId \|\| live\.tenantId !== actor\.tenantId \|\| live\.membershipId !== actor\.membershipId\) throw new AccessDenied\(403\);\s*if \(live\.role !== "admin" && live\.role !== "tutor"\) throw new AccessDenied\(403\);\s*await bindOwner/);
 });
 
 test("the MCP reaches saved readings only through src/server/saved/mcp, imported only by src/server/mcp/saved-tools.ts", () => {

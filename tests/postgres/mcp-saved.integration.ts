@@ -31,7 +31,7 @@ async function fixture() {
       authorityRevision: member.authorityRevision, scope: "portal:read", unattended, clientName: "Claude", clientHash: createHash("sha256").update(id).digest("hex"),
       redirectUri: "https://claude.ai/api/mcp/auth_callback", createdAt: new Date(at), expiresAt: new Date(at + 24 * 3600_000) });
     // Only what the binding never trusts: withLive re-derives the person, role, grant and attendance from this row.
-    return { tenantId: "crc", origin, connectionId: id, unattended: false, expiresAt: at + 3600_000 } as unknown as McpActor;
+    return { tenantId: "crc", origin, connectionId: id, membershipId: member.id, unattended: false, expiresAt: at + 3600_000 } as unknown as McpActor;
   }
   return { ...f, savedA, savedB, connection, signal: new AbortController().signal };
 }
