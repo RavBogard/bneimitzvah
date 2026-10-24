@@ -32,7 +32,7 @@ import type { PublicRuntime } from "../../src/server/http/public-reading";
 import { readProductName } from "../../src/server/data/product-name";
 import { CommentaryUnavailable, type CommentaryReader } from "../../src/server/study/commentary";
 import type { TranslationsReader } from "../../src/server/study/translations";
-import { unavailablePinnedSource, unavailableShelf, unavailableSource, unavailableTranslations } from "../helpers/translations";
+import { unavailablePinnedSource, unavailableShelf, unavailableSource, unavailableTranslations, unavailableServiceText } from "../helpers/translations";
 import { readPublicDiscussions } from "../../src/server/discussions/public";
 import type { ReferenceCatalog } from "../../src/server/reference-audio/catalog";
 import { ReferenceUnavailable } from "../../src/server/reference-audio/catalog";
@@ -149,6 +149,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       productName: () => withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => readProductName(tx, PUBLIC_TENANT)),
       discussions: (verses: readonly string[]) => withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => readPublicDiscussions(tx, PUBLIC_TENANT, verses)),
       pinnedSource: unavailablePinnedSource,
+      serviceText: unavailableServiceText,
     });
     async function withPublicRuntime(action: (runtime: PublicRuntime) => Promise<Response>) {
       await withTenantTransaction(db, { tenantId: "crc" }, async () => undefined);

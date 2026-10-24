@@ -1,6 +1,7 @@
 import rawCourse from "./course.json";
 import rawCrc from "./tenants/crc.json";
 import { toneProblems } from "../learn/tone";
+import { REFUSED_UNIT } from "./text";
 
 /**
  * The service course (Learn the service, release 2.0): units, lessons and per-congregation files, parsed and
@@ -14,7 +15,8 @@ import { toneProblems } from "../learn/tone";
 export const SERVICE_COURSE_SCHEMA = "service-course/v1" as const;
 export type LessonKind = "fluency" | "prayer" | "moment";
 export type KeyWord = Readonly<{ block: number; word: number; gloss: string; root?: string; check?: boolean }>;
-export type TorahRef = Readonly<{ ref: string; kind: "torah" | "haftarah"; words: readonly [number, number] }>;
+/** A line of the Read that is one Bible verse (or part of one): its words open the real word card for that verse (A4 7). */
+export type TorahRef = Readonly<{ ref: string; kind: "torah" | "haftarah"; block: number; words: readonly [number, number] }>;
 /** The public volume's unit a Read step shows (SC2). Unit ids and block indices only, never text. */
 export type Read = Readonly<{ unit: string; blocks: readonly [number, number]; torahRef?: TorahRef }>;
 export type Lesson = Readonly<{ id: string; kind: LessonKind; title: string; summary: string; goal: string; section: string; read?: Read;
@@ -36,7 +38,7 @@ export class CourseError extends Error {
 
 const LESSON_ID = /^[a-z][a-z0-9-]{1,40}$/, UNIT_ID = /^[a-z][a-z0-9-]{1,30}$/, TENANT_ID = /^[a-z][a-z0-9-]{1,30}$/;
 const PUBLIC_UNIT = /^[a-z0-9-]+\.[a-z0-9-]+@(?:shabbat-shacharit|shabbat-maariv)$/, BM_UNIT = /^[a-z0-9-]+\.[a-z0-9-]+$/, SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/, DATE = /^\d{4}-\d{2}-\d{2}$/;
-const HEBREW = /[֐-׿]/;
+const HEBREW = /[\u0590-\u05FF]/;
 export const COURSE_LIMITS = Object.freeze({ lessons: 96, title: 60, unitSummary: 160, lessonSummary: 60, goal: 240, gloss: 60, root: 12, keyWords: 6, teachingWords: Object.freeze({ min: 60, max: 200 }) });
 const isObject = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
 const integer = (value: unknown, min: number, max: number): value is number => Number.isSafeInteger(value) && (value as number) >= min && (value as number) <= max;
@@ -64,6 +66,8 @@ function parseRead(value: unknown, where: string, fail: Fail): Read | undefined 
   if (!isObject(value)) { fail(`${where}: read`); return undefined; }
   exactKeys(value, ["unit", "blocks", "torahRef"], where, fail);
   if (typeof value.unit !== "string" || !PUBLIC_UNIT.test(value.unit)) fail(`${where}: read unit`);
+  // The mixed Mi Shebeirach is never read, whatever its suffix (A2 discrepancy 13): the lesson links to the siddur instead.
+  else if (REFUSED_UNIT.test(value.unit)) fail(`${where}: read unit is refused`);
   const blocks = value.blocks;
   if (!Array.isArray(blocks) || blocks.length !== 2 || !integer(blocks[0], 0, 255) || !integer(blocks[1], 0, 255) || blocks[0] > blocks[1]) fail(`${where}: read blocks`);
   let torahRef: TorahRef | undefined;
@@ -71,11 +75,13 @@ function parseRead(value: unknown, where: string, fail: Fail): Read | undefined 
     const ref = value.torahRef;
     if (!isObject(ref)) fail(`${where}: torahRef`);
     else {
-      exactKeys(ref, ["ref", "kind", "words"], `${where} torahRef`, fail);
+      exactKeys(ref, ["ref", "kind", "block", "words"], `${where} torahRef`, fail);
       const words = ref.words;
-      if (typeof ref.ref !== "string" || !/^(?:I{1,2} )?[A-Z][a-z]+(?: [A-Z][a-z]+)* [1-9]\d{0,2}:[1-9]\d{0,2}(?:-[1-9]\d{0,2})?$/.test(ref.ref) || (ref.kind !== "torah" && ref.kind !== "haftarah")
+      // One verse: the card is a verse's card. The line's words are found inside that verse by their letters at runtime (A4 7).
+      if (typeof ref.ref !== "string" || !/^(?:I{1,2} )?[A-Z][a-z]+(?: [A-Z][a-z]+)* [1-9]\d{0,2}:[1-9]\d{0,2}$/.test(ref.ref) || (ref.kind !== "torah" && ref.kind !== "haftarah")
+        || !integer(ref.block, 0, 255) || (Array.isArray(blocks) && (ref.block < blocks[0] || ref.block > blocks[1]))
         || !Array.isArray(words) || words.length !== 2 || !integer(words[0], 0, 400) || !integer(words[1], 0, 400) || words[0] > words[1]) fail(`${where}: torahRef`);
-      else torahRef = Object.freeze({ ref: ref.ref, kind: ref.kind, words: Object.freeze([words[0], words[1]] as const) });
+      else torahRef = Object.freeze({ ref: ref.ref, kind: ref.kind, block: ref.block as number, words: Object.freeze([words[0], words[1]] as const) });
     }
   }
   if (typeof value.unit !== "string" || !Array.isArray(blocks)) return undefined;
@@ -96,8 +102,8 @@ function parseAlphabet(value: unknown, fail: Fail, text: (where: string, field: 
       return [Object.freeze({ id: row.id, name: text(`alphabet ${row.id}`, row.name, 24), [key]: row[key] }) as T];
     });
   };
-  return Object.freeze({ letters: Object.freeze(rows<Letter>(value.letters, "letters", "char", /^[א-ת]$/)), finals: Object.freeze(rows<Letter>(value.finals, "finals", "char", /^[ךםןףץ]$/)),
-    marks: Object.freeze(rows<Mark>(value.marks, "marks", "mark", /^[ְ-ּׁׂ]$/)) });
+  return Object.freeze({ letters: Object.freeze(rows<Letter>(value.letters, "letters", "char", /^[\u05D0-\u05EA]$/)), finals: Object.freeze(rows<Letter>(value.finals, "finals", "char", /^[\u05DA\u05DD\u05DF\u05E3\u05E5]$/)),
+    marks: Object.freeze(rows<Mark>(value.marks, "marks", "mark", /^[\u05B0-\u05BC\u05C1\u05C2]$/)) });
 }
 
 /**
@@ -158,6 +164,10 @@ export function validateServiceCourse(courseValue: unknown, tenantValues: readon
     }
     if (kind === "moment" && (read || keyWords.length || check)) fail(`${where}: a moment lesson has no read, keyWords or check`);
     if ((keyWords.length || check) && !read) fail(`${where}: keyWords and check need a read`);
+    // A Read step brings three to six key words and a Check (A4 3.1); each gloss once, so a meaning item never offers two right answers.
+    if (read && (keyWords.length < 3 || !check)) fail(`${where}: a read needs three to six key words and a check`);
+    if (new Set(keyWords.map(word => word.gloss)).size !== keyWords.length) fail(`${where}: two key words share a gloss`);
+    if (new Set(keyWords.map(word => `${word.block}:${word.word}`)).size !== keyWords.length) fail(`${where}: a key word is listed twice`);
     // Rule 7: the 2.1 slot.
     if (row.hear !== null && !(recordings && isObject(row.hear))) fail(`${where}: hear must be null while recordings is false`);
     const prerequisites = Array.isArray(row.prerequisites) && row.prerequisites.every(id => typeof id === "string") ? row.prerequisites as string[] : (fail(`${where}: prerequisites`), []);
@@ -289,5 +299,10 @@ export const pageOf = (tenant: Tenant, id: string, slot: "morning" | "havdalah" 
   const pages = tenant.lessons[id]?.pages;
   return (slot === "havdalah" ? pages?.evening : pages?.morning) ?? pages?.morning;
 };
+/**
+ * The public units a Read step may ask `/api/public/service-text` for: exactly the units course.json names, nothing else. The
+ * route refuses any other unit before it opens the database, so the public text it serves is the course's and only the course's.
+ */
+export const SERVICE_TEXT_UNITS: ReadonlySet<string> = new Set(SERVICE_COURSE.lessons.flatMap(lesson => lesson.read ? [lesson.read.unit] : []));
 /** About how long a lesson takes: the teaching and the map, plus a minute to read and a minute for its words; 3 to 6. */
 export const lessonMinutes = (lesson: Lesson): number => Math.min(6, 3 + (lesson.read ? 1 : 0) + (lesson.keyWords.length >= 4 ? 1 : 0));

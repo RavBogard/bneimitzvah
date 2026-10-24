@@ -3,19 +3,25 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { CRC_TENANT, lessonById, lessonOpen, mapSections, presentGoal, sectionLessons, serviceNeighbours, teachingOf, unitById, type Lesson } from "../../../lib/service-course/course";
 import { COPY, emphasised, fill, typographic } from "../../../lib/service-course/copy";
 import { completeLesson, lessonAfter } from "../../../lib/service-course/progress";
+import type { CheckItem } from "../../../lib/service-course/check";
+import { WordCardScope } from "../word-card";
 import learn from "../learn.module.css";
 import styles from "./service.module.css";
 import { icons, LessonSiddurLink } from "./bits";
 import { useServiceProgress } from "./progress";
+import { CheckStep, KeyWordsStep, LessonWords, ReadStep, useCheckItems, useLessonText, type TextState } from "./read";
 
 /**
- * The steps of a lesson (A4 3.2). A prayer is About, Where, Read and Done; a moment has no prayer text, so no Read.
- * This slice's Read step is the siddur link alone: a prayer's own text, key words and check arrive with the public
- * text (SC2), and the "Hear it" step stays out while the course's `recordings` flag is false.
+ * The steps of a lesson (A4 3.2). A prayer with public text is About, Where, Read, Key words, Check and Done; a prayer without it
+ * (P'sukei D'zimrah, and the mixed Mi Shebeirach) reads only the siddur link; a moment has no Read. Key words drop out when the
+ * lesson has none, and Check when the loaded text gives fewer than three items, so the rail shows a step fewer. The "Hear it" step
+ * stays out while the course's `recordings` flag is false.
  */
-export type StepKind = "about" | "where" | "read" | "done";
-export function lessonSteps(lesson: Lesson): StepKind[] {
-  return lesson.kind === "prayer" ? ["about", "where", "read", "done"] : ["about", "where", "done"];
+export type StepKind = "about" | "where" | "read" | "words" | "check" | "done";
+export function lessonSteps(lesson: Lesson, checkItems: number | null = null): StepKind[] {
+  if (lesson.kind !== "prayer") return ["about", "where", "done"];
+  if (!lesson.read) return ["about", "where", "read", "done"];
+  return ["about", "where", "read", ...(lesson.keyWords.length ? ["words" as const] : []), ...(checkItems === null || checkItems >= 3 ? ["check" as const] : []), "done"];
 }
 
 function Footer({ children }: { children: ReactNode }) {
@@ -26,29 +32,40 @@ function Footer({ children }: { children: ReactNode }) {
 export function ServiceLesson({ id }: { id: string }) {
   const lesson = lessonById(id);
   if (!lesson || !lessonOpen(lesson)) return <p role="status">{COPY.state.notFound}</p>;
-  return <LessonFlow lesson={lesson} />;
+  return <WordCardScope><LessonFlow lesson={lesson} /></WordCardScope>;
 }
 function LessonFlow({ lesson }: { lesson: Lesson }) {
-  const steps = useMemo(() => lessonSteps(lesson), [lesson]);
+  const { state, retry } = useLessonText(lesson);
+  const text = state.status === "ready" ? state.text : null;
+  // One seed per visit: the Check's order is fixed while the lesson is open and different the next time.
+  const [seed] = useState(() => Math.floor(Math.random() * 2 ** 31));
+  const items = useCheckItems(lesson, text, seed);
+  const steps = useMemo(() => lessonSteps(lesson, items ? items.length : null), [lesson, items]);
   const [at, setAt] = useState(0);
   const { progress, update } = useServiceProgress();
   const main = useRef<HTMLElement>(null);
   const go = useCallback((next: number) => { setAt(next); window.scrollTo({ top: 0 }); main.current?.focus({ preventScroll: true }); }, []);
-  const step = steps[at];
-  const next = () => go(Math.min(steps.length - 1, at + 1));
+  const index = Math.min(at, steps.length - 1), step = steps[index];
+  const next = () => go(Math.min(steps.length - 1, index + 1));
+  const forward = (disabled = false) => <Footer><button type="button" className="button-start" disabled={disabled} onClick={next}>{COPY.frame.next}</button></Footer>;
   return <div className={`portal-shell ${learn.shell}`}>
     <a className="skip-link" href="#lesson-main">{COPY.frame.skip}</a>
     <header className={learn.bar}>
       <a className={learn.close} href="/learn/service" aria-label={COPY.frame.close}>{icons.close}</a>
       <p className={learn.barTitle}>{lesson.title}</p>
-      <ol className={learn.rail} aria-label={fill(COPY.frame.rail, { n: at + 1, total: steps.length })}>{steps.map((_, i) => <li key={i} data-state={i < at ? "past" : i === at ? "current" : undefined} />)}</ol>
+      <ol className={learn.rail} aria-label={fill(COPY.frame.rail, { n: index + 1, total: steps.length })}>{steps.map((_, i) => <li key={i} data-state={i < index ? "past" : i === index ? "current" : undefined} />)}</ol>
     </header>
-    <main id="lesson-main" ref={main} tabIndex={-1} className={learn.lesson} data-step={step} data-lesson={lesson.id}>
-      {step === "about" ? <><About lesson={lesson} /><Footer><button type="button" className="button-start" onClick={next}>{COPY.frame.next}</button></Footer></>
-        : step === "where" ? <><Where lesson={lesson} /><Footer><button type="button" className="button-start" onClick={next}>{COPY.frame.next}</button></Footer></>
-        : step === "read" ? <><Read lesson={lesson} /><Footer><button type="button" className="button-start" onClick={next}>{COPY.frame.next}</button></Footer></>
-        : <Done lesson={lesson} complete={() => update(value => completeLesson(value, lesson, Date.now()))}
-          nextId={progress ? lessonAfter(completeLesson(progress, lesson, Date.now()), lesson.id, CRC_TENANT)?.id ?? null : null} />}
+    <main id="lesson-main" ref={main} tabIndex={-1} className={learn.lesson} data-step={step} data-lesson={lesson.id} data-text={lesson.read ? state.status : undefined}>
+      <LessonWords lesson={lesson} text={text}>
+        {step === "about" ? <><About lesson={lesson} />{forward()}</>
+          : step === "where" ? <><Where lesson={lesson} />{forward()}</>
+          : step === "read" ? lesson.read ? <><ReadStep lesson={lesson} state={state} onRetry={retry} />{forward(!text)}</> : <><SiddurOnly lesson={lesson} />{forward()}</>
+          : step === "words" && text ? <><KeyWordsStep lesson={lesson} text={text} />{forward()}</>
+          : step === "check" && items ? <CheckStep key={seed} items={items as readonly CheckItem[]} seed={seed} onFinish={next} footer={children => <Footer>{children}</Footer>} />
+          : step === "done" ? <Done lesson={lesson} state={state} complete={() => update(value => completeLesson(value, lesson, Date.now()))}
+            nextId={progress ? lessonAfter(completeLesson(progress, lesson, Date.now()), lesson.id, CRC_TENANT)?.id ?? null : null} />
+          : <p role="status" className={styles.note}>{COPY.state.lessonLoading}</p>}
+      </LessonWords>
     </main>
   </div>;
 }
@@ -90,8 +107,8 @@ function Where({ lesson }: { lesson: Lesson }) {
   </>;
 }
 
-/** Step 3, for a prayer whose text is not shown here: where to read it, and the link. */
-function Read({ lesson }: { lesson: Lesson }) {
+/** Step 3, for a prayer whose text is not shown here (P'sukei D'zimrah; the mixed Mi Shebeirach): where to read it, and the link. */
+function SiddurOnly({ lesson }: { lesson: Lesson }) {
   return <>
     <h1 className={styles.stepTitle}>{COPY.step.read}</h1>
     <p>{COPY.read.inSiddur}</p>
@@ -99,9 +116,13 @@ function Read({ lesson }: { lesson: Lesson }) {
   </>;
 }
 
-/** End of a lesson: what you can now do, where it is in the siddur, the next step. Done marks the lesson when it opens. */
-function Done({ lesson, complete, nextId }: { lesson: Lesson; complete(): void; nextId: string | null }) {
-  useEffect(() => { complete(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+/**
+ * End of a lesson: what you can now do, where it is in the siddur, the next step. Done marks the lesson when it opens, and a lesson
+ * with a Read only once its text has loaded (A4 3.2: a prayer whose text failed is never marked done).
+ */
+function Done({ lesson, state, complete, nextId }: { lesson: Lesson; state: TextState; complete(): void; nextId: string | null }) {
+  const ready = !lesson.read || state.status === "ready";
+  useEffect(() => { if (ready) complete(); }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
   const next = nextId ? lessonById(nextId) : null;
   return <>
     <div className={learn.doneHead}><h1 className={learn.doneTitle}>{lesson.title}</h1><p className={learn.doneWord}>{COPY.done.word}</p></div>

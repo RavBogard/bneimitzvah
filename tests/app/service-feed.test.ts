@@ -115,7 +115,7 @@ test.each([
   ["missing page locator", (v: Fixture) => { v.feed.pageIndex["1"] = []; }],
   ["out of range folio", (v: Fixture) => { v.feed.units[0].folios = [SERVICE_FEED_LIMITS.pages + 1]; }],
   ["unknown block", (v: Fixture) => { v.feed.units[0].blocks[0].type = "html"; }],
-  ["contradictory verse label", (v: Fixture) => { v.feed.units[0].blocks[0].verse = "Other"; }],
+  ["contradictory verse label", (v: Fixture) => { (v.feed.units[0].blocks[0] as { verse?: string }).verse = "Other"; }],
   ["unknown structure", (v: Fixture) => { v.feed.units[0].renderStructure.kind = "new-renderer"; }],
   ["bad group count", (v: Fixture) => { v.feed.units[0].renderStructure.groups = [3]; }],
   ["unknown render", (v: Fixture) => { v.feed.units[0].render = "html"; }],

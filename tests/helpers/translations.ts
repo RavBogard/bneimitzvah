@@ -2,6 +2,7 @@ import { TranslationsUnavailable, type TranslationsReader } from "../../src/serv
 import { JPS2023 } from "../../src/server/study/versions";
 import { SourceMetadataUnavailable } from "../../src/server/study/sources/metadata";
 import { SourceTextUnavailable } from "../../src/server/study/source-text";
+import { CourseTextUnavailable } from "../../src/server/service-course/text";
 
 // Invented edition titles and numbered English only: never a translation's words, never a publisher's name.
 /** A public runtime's Compare reader that always reports upstream trouble (for tests that do not use Compare). */
@@ -45,5 +46,7 @@ export const syntheticProductName = async () => "CRC Torah";
 /** No curated discussions anywhere (1.7 M6), and a pinned source reader that reports upstream trouble. */
 export const noDiscussions = async () => Object.freeze({ rows: Object.freeze([]), truncated: false, productName: "" });
 export const unavailablePinnedSource = async (): Promise<never> => { throw new SourceTextUnavailable("upstream"); };
+/** The service course's public text (2.0 SC2), not stored: every unit is unavailable. */
+export const unavailableServiceText = async (): Promise<never> => { throw new CourseTextUnavailable("unavailable"); };
 export const unavailableExtras = Object.freeze({ translations: unavailableTranslations, shelf: unavailableShelf, source: unavailableSource, productName: syntheticProductName,
-  discussions: noDiscussions, pinnedSource: unavailablePinnedSource });
+  discussions: noDiscussions, pinnedSource: unavailablePinnedSource, serviceText: unavailableServiceText });

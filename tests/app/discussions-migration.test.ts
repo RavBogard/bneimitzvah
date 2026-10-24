@@ -37,7 +37,11 @@ test("0042 adds only the three discussion tables and the public view, forced and
       .map(async t => [t, (await client.query(`select * from ${t} order by 1`)).rows])));
     const policies = async () => (await client.query("select tablename, policyname, cmd, roles::text[] as roles, qual, with_check from pg_policies where tablename <> all($1) order by 1, 2", [TABLES])).rows;
     const before = { rows: await capture(), policies: await policies() };
-    await migrate(db, { migrationsFolder: folder }); await migrate(db, { migrationsFolder: folder });
+    // Through 0042 only: a later migration's own tables and policies (0043's, for one) are that migration's test to account for.
+    const through = join(isolation.home, "through"), throughEntries = journal.entries.slice(0, own + 1);
+    await mkdir(join(through, "meta"), { recursive: true }); await writeFile(join(through, "meta/_journal.json"), JSON.stringify({ ...journal, entries: throughEntries }));
+    for (const e of throughEntries) await copyFile(join(folder, e.tag + ".sql"), join(through, e.tag + ".sql"));
+    await migrate(db, { migrationsFolder: through }); await migrate(db, { migrationsFolder: through });
     const after = await capture();
     for (const table of Object.keys(before.rows)) expect(priorColumns(after[table], before.rows[table])).toEqual(before.rows[table]);
     expect(await policies()).toEqual(before.policies);

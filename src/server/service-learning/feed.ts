@@ -101,6 +101,12 @@ function parse(bytes: Uint8Array, max: number): unknown {
   }
   try { return JSON.parse(text); } catch { return invalid(); }
 }
+/**
+ * The same bounded pre-parse scanner, unchanged, for the service course's public-volume parser (2.0 SC2,
+ * src/server/service-course/public-feed.ts): one scanner for both lanes, so neither can drift looser than the other.
+ * Throws ServiceFeedInvalid on anything it refuses.
+ */
+export const parseBoundedServiceJson = (bytes: Uint8Array, max: number): unknown => parse(bytes, max);
 function spans(value: unknown): ServiceSpan[] {
   return array(value, 512).map(raw => {
     const entry = object(raw, [], ["t", "em", "strong", "footnote"]), keys = Object.keys(entry);

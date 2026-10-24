@@ -17,6 +17,10 @@ import { publicDiscussionsAnswer, type PublicDiscussionsRead } from "../discussi
 import { versesFor } from "../discussions/validation";
 import type { PinnedSourceReader } from "../study/source-text";
 import { namedReading } from "../../lib/readings/named-readings";
+import { SERVICE_TEXT_UNITS } from "../../lib/service-course/course";
+import type { ServiceText } from "../../lib/service-course/text";
+import { CourseTextUnavailable } from "../service-course/text";
+import { REFUSED_COURSE_UNIT } from "../service-course/pin";
 
 /**
  * Signed-out reading routes. A strict allowlist under /api/public/: GET only, a
@@ -46,6 +50,11 @@ export type PublicRuntime = Readonly<{
   discussions(verses: readonly string[]): Promise<PublicDiscussionsRead>;
   /** One Sefaria passage in one pinned edition (the Study lens's source reader, pinned), for a discussion's source text. */
   pinnedSource: PinnedSourceReader;
+  /**
+   * The service course (2.0 SC2): one unit of the congregation's pinned PUBLIC build of its public volume, as lines of Hebrew
+   * with their transliteration and English. Never the licensed Beit Mitzvah catalog, which this runtime cannot read at all.
+   */
+  serviceText(unit: string): Promise<ServiceText>;
 }>;
 export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Response>) => Promise<Response>;
 
@@ -54,7 +63,7 @@ export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Re
  * named by a Shabbat `date` (the weekly page) or, for "Any reading", by a canonical `ref` with its
  * `kind` (the 1.5 offline packer depends on these exact shapes).
  */
-type Route = Readonly<{ kind: "reading" | "aliyot" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source" | "manifest" | "discussions"; keysets: readonly (readonly string[])[] }>;
+type Route = Readonly<{ kind: "reading" | "aliyot" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source" | "manifest" | "discussions" | "service-text"; keysets: readonly (readonly string[])[] }>;
 const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/reading": { kind: "reading", keysets: [["date"], ["ref", "kind"]] },
   // The reader's print sheet (2026-10-23): a Shabbat's calendar aliyot, numbers and book names only.
@@ -71,6 +80,8 @@ const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/manifest": { kind: "manifest", keysets: [[]] },
   // Curated discussions (1.7 M6): a named reading from the list, or a canonical passage with its kind.
   "/api/public/discussions": { kind: "discussions", keysets: [["reading"], ["ref", "kind"]] },
+  // The service course's Read step (2.0 SC2): one public unit the course names, by its stable id.
+  "/api/public/service-text": { kind: "service-text", keysets: [["unit"]] },
 });
 /** Longest decoded value per key; a `ref` is bounded by READING_REF_LIMITS.chars, everything else by 80. */
 const valueLimit = (key: string) => key === "ref" ? READING_REF_LIMITS.chars : 80; // a source ref is bounded tighter (256 bytes) by its own check
@@ -116,6 +127,7 @@ function statusOf(error: unknown): keyof typeof messages {
     if (error instanceof TranslationsUnavailable) return error.code === "invalid-request" ? 400 : 503;
     if (error instanceof SourceTextUnavailable) return error.code === "invalid-request" ? 400 : error.code === "not-found" || error.code === "unsupported" ? 404 : 503;
     if (error instanceof SourceMetadataUnavailable) return 503;
+    if (error instanceof CourseTextUnavailable) return error.code === "not-found" ? 404 : 503;
     if (error instanceof HttpBoundaryError) return error.status === 404 ? 404 : error.status === 405 ? 405 : 400;
     if (error instanceof AccessDenied) return 404;
   } catch { /* Hostile accessors never shape a response. */ }
@@ -160,6 +172,8 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
       || (selected.kind === "translations" || selected.kind === "related") && parseCompareVerse(query.verse) === null
       || selected.kind === "source" && parseSourceRef(query.ref) === null
       || query.reading !== undefined && namedReading(query.reading) === null
+      // A unit the course does not name, or the mixed Mi Shebeirach under any name, never opens the database (A2 discrepancy 13).
+      || selected.kind === "service-text" && (!SERVICE_TEXT_UNITS.has(query.unit) || REFUSED_COURSE_UNIT.test(query.unit))
       || query.kind !== undefined && query.kind !== "torah" && query.kind !== "haftarah"
       || query.ref !== undefined && selected.kind !== "source" && canonicalReadingRef(query.ref, query.kind) === null
       || [query.offset, selected.kind === "translations" || selected.kind === "related" ? undefined : query.verse, query.word].some(value => value !== undefined && !/^(?:0|[1-9]\d{0,3})$/.test(value))) return failure(400);
@@ -245,6 +259,14 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
             if (!name) return failure(503);
             return new Response(JSON.stringify(webManifest(name)), { status: 200, headers: { ...common, "content-type": "application/manifest+json; charset=utf-8",
               "cache-control": "public, max-age=300", "vercel-cdn-cache-control": "public, s-maxage=3600" } });
+          }
+          case "service-text": {
+            // A pinned public build does not change under a reader: kept like a verse page (F1). A build the congregation has not
+            // stored, or one that fails its pin, is a 503 with no-store, so nothing but the pinned public text is ever kept.
+            const answer = await runtime.serviceText(query.unit);
+            if (answer.unit !== query.unit || REFUSED_COURSE_UNIT.test(answer.unit)) return failure(503);
+            return json({ unit: answer.unit, volume: answer.volume, credit: { title: answer.credit.title, licence: answer.credit.licence },
+              lines: answer.lines.map(line => ({ he: line.he, ...(line.tr !== undefined ? { tr: line.tr } : {}), ...(line.en !== undefined ? { en: line.en } : {}) })) }, 86400, KEPT);
           }
           case "source": {
             let text;

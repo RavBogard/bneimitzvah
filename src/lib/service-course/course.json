@@ -196,7 +196,52 @@
       "summary": "Thanks on waking, before anything else.",
       "goal": "After this you can read Modeh Ani and say what its key words mean.",
       "section": "waking",
-      "keyWords": [],
+      "read": {
+        "unit": "awakening.modeh-ani@shabbat-shacharit",
+        "blocks": [
+          0,
+          0
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "grateful, thankful",
+          "root": "y-d-h"
+        },
+        {
+          "block": 0,
+          "word": 3,
+          "gloss": "I"
+        },
+        {
+          "block": 0,
+          "word": 4,
+          "gloss": "before you"
+        },
+        {
+          "block": 0,
+          "word": 6,
+          "gloss": "living",
+          "root": "ch-y-h"
+        },
+        {
+          "block": 0,
+          "word": 10,
+          "gloss": "my soul, my breath",
+          "root": "n-sh-m"
+        },
+        {
+          "block": 0,
+          "word": 13,
+          "gloss": "your faithfulness",
+          "root": "a-m-n"
+        }
+      ],
+      "check": {
+        "items": 5
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -207,7 +252,53 @@
       "summary": "The blessing for the fringes on the prayer shawl.",
       "goal": "After this you can read The tallit blessing and say what its key words mean.",
       "section": "waking",
-      "keyWords": [],
+      "read": {
+        "unit": "front.tallit@shabbat-shacharit",
+        "blocks": [
+          0,
+          0
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "blessed",
+          "root": "b-r-ch"
+        },
+        {
+          "block": 0,
+          "word": 2,
+          "gloss": "God’s name, said as Adonai",
+          "check": false
+        },
+        {
+          "block": 0,
+          "word": 5,
+          "gloss": "the world, the universe",
+          "root": "a-l-m"
+        },
+        {
+          "block": 0,
+          "word": 7,
+          "gloss": "who made us holy",
+          "root": "k-d-sh"
+        },
+        {
+          "block": 0,
+          "word": 8,
+          "gloss": "through commandments, mitzvot",
+          "root": "tz-v-h"
+        },
+        {
+          "block": 0,
+          "word": 11,
+          "gloss": "in fringes, tzitzit"
+        }
+      ],
+      "check": {
+        "items": 5
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -218,7 +309,60 @@
       "summary": "A prayer of arrival, borrowed from a hired prophet.",
       "goal": "After this you can read Mah Tovu and say what its key words mean.",
       "section": "waking",
-      "keyWords": [],
+      "read": {
+        "unit": "awakening.mah-tovu@shabbat-shacharit",
+        "blocks": [
+          0,
+          1
+        ],
+        "torahRef": {
+          "ref": "Numbers 24:5",
+          "kind": "torah",
+          "block": 0,
+          "words": [
+            0,
+            5
+          ]
+        }
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "how"
+        },
+        {
+          "block": 0,
+          "word": 1,
+          "gloss": "good",
+          "root": "t-v-v"
+        },
+        {
+          "block": 0,
+          "word": 2,
+          "gloss": "your tents"
+        },
+        {
+          "block": 0,
+          "word": 4,
+          "gloss": "your dwelling places",
+          "root": "sh-ch-n"
+        },
+        {
+          "block": 1,
+          "word": 2,
+          "gloss": "your love, your kindness",
+          "root": "ch-s-d"
+        },
+        {
+          "block": 1,
+          "word": 4,
+          "gloss": "your house"
+        }
+      ],
+      "check": {
+        "items": 5
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -229,7 +373,50 @@
       "summary": "How good it is to be here together.",
       "goal": "After this you can read Hineih Mah Tov and say what its key words mean.",
       "section": "waking",
-      "keyWords": [],
+      "read": {
+        "unit": "awakening.hineh-mah-tov@shabbat-shacharit",
+        "blocks": [
+          0,
+          0
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 3,
+          "gloss": "look, here is"
+        },
+        {
+          "block": 0,
+          "word": 5,
+          "gloss": "good",
+          "root": "t-v-v"
+        },
+        {
+          "block": 0,
+          "word": 7,
+          "gloss": "pleasant, sweet"
+        },
+        {
+          "block": 0,
+          "word": 8,
+          "gloss": "sitting, dwelling",
+          "root": "y-sh-v"
+        },
+        {
+          "block": 0,
+          "word": 9,
+          "gloss": "siblings, kin"
+        },
+        {
+          "block": 0,
+          "word": 11,
+          "gloss": "together"
+        }
+      ],
+      "check": {
+        "items": 5
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -240,7 +427,51 @@
       "summary": "Blessings for the ordinary gifts of a morning.",
       "goal": "After this you can read Birchot Hashachar and say what its key words mean.",
       "section": "waking",
-      "keyWords": [],
+      "read": {
+        "unit": "awakening.birchot-hashachar@shabbat-shacharit",
+        "blocks": [
+          0,
+          7
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "blessed",
+          "root": "b-r-ch"
+        },
+        {
+          "block": 1,
+          "word": 6,
+          "gloss": "who made me",
+          "root": "a-s-h"
+        },
+        {
+          "block": 1,
+          "word": 7,
+          "gloss": "in the image of"
+        },
+        {
+          "block": 2,
+          "word": 10,
+          "gloss": "free"
+        },
+        {
+          "block": 4,
+          "word": 6,
+          "gloss": "who opens",
+          "root": "p-k-ch"
+        },
+        {
+          "block": 4,
+          "word": 7,
+          "gloss": "the blind"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -262,7 +493,53 @@
       "summary": "A short Kaddish that marks the end of a section.",
       "goal": "After this you can read Reader’s Kaddish and say what its key words mean.",
       "section": "waking",
-      "keyWords": [],
+      "read": {
+        "unit": "psukei.chatzi-kaddish@shabbat-shacharit",
+        "blocks": [
+          0,
+          1
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "may it grow great",
+          "root": "g-d-l"
+        },
+        {
+          "block": 0,
+          "word": 1,
+          "gloss": "and be made holy",
+          "root": "k-d-sh"
+        },
+        {
+          "block": 0,
+          "word": 2,
+          "gloss": "its name, God’s name"
+        },
+        {
+          "block": 0,
+          "word": 5,
+          "gloss": "in the world (Aramaic)",
+          "root": "a-l-m"
+        },
+        {
+          "block": 0,
+          "word": 10,
+          "gloss": "its reign",
+          "root": "m-l-ch"
+        },
+        {
+          "block": 1,
+          "word": 3,
+          "gloss": "blessed",
+          "root": "b-r-ch"
+        }
+      ],
+      "check": {
+        "items": 5
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -273,7 +550,52 @@
       "summary": "The call to prayer: a room becomes a community.",
       "goal": "After this you can read Bar’chu and say what its key words mean.",
       "section": "shma",
-      "keyWords": [],
+      "read": {
+        "unit": "shma.barchu@shabbat-shacharit",
+        "blocks": [
+          0,
+          1
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "bless (said to everyone)",
+          "root": "b-r-ch"
+        },
+        {
+          "block": 0,
+          "word": 2,
+          "gloss": "God’s name, said as Adonai",
+          "check": false
+        },
+        {
+          "block": 0,
+          "word": 3,
+          "gloss": "the one who is blessed",
+          "root": "b-r-ch"
+        },
+        {
+          "block": 1,
+          "word": 0,
+          "gloss": "blessed",
+          "root": "b-r-ch"
+        },
+        {
+          "block": 1,
+          "word": 3,
+          "gloss": "forever"
+        },
+        {
+          "block": 1,
+          "word": 4,
+          "gloss": "and ever"
+        }
+      ],
+      "check": {
+        "items": 4
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -284,7 +606,51 @@
       "summary": "Morning light, and how small we are.",
       "goal": "After this you can read Yotzeir Or and say what its key words mean.",
       "section": "shma",
-      "keyWords": [],
+      "read": {
+        "unit": "shma.yotzer-or@shabbat-shacharit",
+        "blocks": [
+          0,
+          0
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 6,
+          "gloss": "who forms, who shapes",
+          "root": "y-tz-r"
+        },
+        {
+          "block": 0,
+          "word": 7,
+          "gloss": "light"
+        },
+        {
+          "block": 0,
+          "word": 8,
+          "gloss": "and creates",
+          "root": "b-r-a"
+        },
+        {
+          "block": 0,
+          "word": 9,
+          "gloss": "darkness"
+        },
+        {
+          "block": 0,
+          "word": 11,
+          "gloss": "peace, wholeness",
+          "root": "sh-l-m"
+        },
+        {
+          "block": 0,
+          "word": 14,
+          "gloss": "everything, all things"
+        }
+      ],
+      "check": {
+        "items": 5
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -295,7 +661,52 @@
       "summary": "Love that comes before we are asked to love.",
       "goal": "After this you can read Ahavah Rabbah and say what its key words mean.",
       "section": "shma",
-      "keyWords": [],
+      "read": {
+        "unit": "shma.ahavah-rabbah@shabbat-shacharit",
+        "blocks": [
+          0,
+          0
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "love",
+          "root": "a-h-v"
+        },
+        {
+          "block": 0,
+          "word": 1,
+          "gloss": "great, abundant"
+        },
+        {
+          "block": 0,
+          "word": 2,
+          "gloss": "you have loved us",
+          "root": "a-h-v"
+        },
+        {
+          "block": 0,
+          "word": 5,
+          "gloss": "tenderness, compassion",
+          "root": "ch-m-l"
+        },
+        {
+          "block": 0,
+          "word": 13,
+          "gloss": "our ancestors"
+        },
+        {
+          "block": 0,
+          "word": 21,
+          "gloss": "and teach us",
+          "root": "l-m-d"
+        }
+      ],
+      "check": {
+        "items": 5
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -304,9 +715,57 @@
       "kind": "prayer",
       "title": "Sh’ma",
       "summary": "All of existence is one, and we stand inside it.",
-      "goal": "After this you can read Sh’ma and say what its key words mean.",
+      "goal": "After this you can read the Sh’ma’s first line and say what its key words mean.",
       "section": "shma",
-      "keyWords": [],
+      "read": {
+        "unit": "shma.the-shma@shabbat-shacharit",
+        "blocks": [
+          0,
+          1
+        ],
+        "torahRef": {
+          "ref": "Deuteronomy 6:4",
+          "kind": "torah",
+          "block": 0,
+          "words": [
+            0,
+            5
+          ]
+        }
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "hear, listen",
+          "root": "sh-m-a"
+        },
+        {
+          "block": 0,
+          "word": 1,
+          "gloss": "Israel, the Jewish people"
+        },
+        {
+          "block": 0,
+          "word": 2,
+          "gloss": "God’s name, said as Adonai",
+          "check": false
+        },
+        {
+          "block": 0,
+          "word": 3,
+          "gloss": "our God"
+        },
+        {
+          "block": 0,
+          "word": 5,
+          "gloss": "one",
+          "root": "e-ch-d"
+        }
+      ],
+      "check": {
+        "items": 5
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -317,7 +776,60 @@
       "summary": "What that oneness asks of us: love as practice.",
       "goal": "After this you can read V’ahavta and say what its key words mean.",
       "section": "shma",
-      "keyWords": [],
+      "read": {
+        "unit": "shma.vahavta-tzitzit@shabbat-shacharit",
+        "blocks": [
+          0,
+          1
+        ],
+        "torahRef": {
+          "ref": "Deuteronomy 6:5",
+          "kind": "torah",
+          "block": 0,
+          "words": [
+            0,
+            9
+          ]
+        }
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "and you shall love",
+          "root": "a-h-v"
+        },
+        {
+          "block": 0,
+          "word": 5,
+          "gloss": "your heart",
+          "root": "l-v-v"
+        },
+        {
+          "block": 0,
+          "word": 7,
+          "gloss": "your soul, your being",
+          "root": "n-f-sh"
+        },
+        {
+          "block": 0,
+          "word": 9,
+          "gloss": "your strength, your all"
+        },
+        {
+          "block": 0,
+          "word": 20,
+          "gloss": "to your children"
+        },
+        {
+          "block": 1,
+          "word": 10,
+          "gloss": "doorposts, mezuzot"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -328,7 +840,59 @@
       "summary": "The song at the sea, and a redemption unfinished.",
       "goal": "After this you can read Mi Chamochah and say what its key words mean.",
       "section": "shma",
-      "keyWords": [],
+      "read": {
+        "unit": "shma.mi-chamocha@shabbat-shacharit",
+        "blocks": [
+          6,
+          8
+        ],
+        "torahRef": {
+          "ref": "Exodus 15:11",
+          "kind": "torah",
+          "block": 6,
+          "words": [
+            0,
+            11
+          ]
+        }
+      },
+      "keyWords": [
+        {
+          "block": 6,
+          "word": 0,
+          "gloss": "who"
+        },
+        {
+          "block": 6,
+          "word": 1,
+          "gloss": "like you"
+        },
+        {
+          "block": 6,
+          "word": 2,
+          "gloss": "among the mighty"
+        },
+        {
+          "block": 6,
+          "word": 7,
+          "gloss": "in holiness",
+          "root": "k-d-sh"
+        },
+        {
+          "block": 6,
+          "word": 11,
+          "gloss": "wonder"
+        },
+        {
+          "block": 8,
+          "word": 1,
+          "gloss": "will reign",
+          "root": "m-l-ch"
+        }
+      ],
+      "check": {
+        "items": 5
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -339,7 +903,51 @@
       "summary": "The Amidah opens: we ask for the words to pray.",
       "goal": "After this you can read T’filah and say what its key words mean.",
       "section": "amidah",
-      "keyWords": [],
+      "read": {
+        "unit": "amidah.we-open-our-lips@shabbat-maariv",
+        "blocks": [
+          0,
+          0
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "my Lord, said as Adonai"
+        },
+        {
+          "block": 0,
+          "word": 1,
+          "gloss": "my lips"
+        },
+        {
+          "block": 0,
+          "word": 2,
+          "gloss": "open",
+          "root": "p-t-ch"
+        },
+        {
+          "block": 0,
+          "word": 3,
+          "gloss": "and my mouth"
+        },
+        {
+          "block": 0,
+          "word": 4,
+          "gloss": "will tell",
+          "root": "n-g-d"
+        },
+        {
+          "block": 0,
+          "word": 5,
+          "gloss": "your praise",
+          "root": "h-l-l"
+        }
+      ],
+      "check": {
+        "items": 5
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -350,7 +958,51 @@
       "summary": "The first blessing begins with names.",
       "goal": "After this you can read Avot v’Imahot and say what its key words mean.",
       "section": "amidah",
-      "keyWords": [],
+      "read": {
+        "unit": "amidah.avot-vimahot@shabbat-maariv",
+        "blocks": [
+          0,
+          4
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 5,
+          "gloss": "our fathers, our ancestors"
+        },
+        {
+          "block": 0,
+          "word": 6,
+          "gloss": "and our mothers"
+        },
+        {
+          "block": 1,
+          "word": 0,
+          "gloss": "God of"
+        },
+        {
+          "block": 3,
+          "word": 1,
+          "gloss": "the great",
+          "root": "g-d-l"
+        },
+        {
+          "block": 4,
+          "word": 7,
+          "gloss": "shield",
+          "root": "g-n-n"
+        },
+        {
+          "block": 4,
+          "word": 9,
+          "gloss": "and help of",
+          "root": "a-z-r"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -361,7 +1013,53 @@
       "summary": "The power that holds up those who fall.",
       "goal": "After this you can read G’vurot and say what its key words mean.",
       "section": "amidah",
-      "keyWords": [],
+      "read": {
+        "unit": "amidah.gvurot@shabbat-maariv",
+        "blocks": [
+          0,
+          3
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 1,
+          "gloss": "mighty",
+          "root": "g-b-r"
+        },
+        {
+          "block": 0,
+          "word": 4,
+          "gloss": "who gives life to",
+          "root": "ch-y-h"
+        },
+        {
+          "block": 0,
+          "word": 5,
+          "gloss": "all, or the dead: the text offers both"
+        },
+        {
+          "block": 0,
+          "word": 8,
+          "gloss": "to save",
+          "root": "y-sh-a"
+        },
+        {
+          "block": 3,
+          "word": 7,
+          "gloss": "who holds up",
+          "root": "s-m-ch"
+        },
+        {
+          "block": 3,
+          "word": 8,
+          "gloss": "those who fall",
+          "root": "n-f-l"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -372,7 +1070,60 @@
       "summary": "Holiness, borrowed from the song of the angels.",
       "goal": "After this you can read K’dushah and say what its key words mean.",
       "section": "amidah",
-      "keyWords": [],
+      "read": {
+        "unit": "amidah.kdushah@shabbat-shacharit",
+        "blocks": [
+          0,
+          3
+        ],
+        "torahRef": {
+          "ref": "Isaiah 6:3",
+          "kind": "haftarah",
+          "block": 1,
+          "words": [
+            0,
+            8
+          ]
+        }
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "we make holy",
+          "root": "k-d-sh"
+        },
+        {
+          "block": 0,
+          "word": 2,
+          "gloss": "your name"
+        },
+        {
+          "block": 1,
+          "word": 0,
+          "gloss": "holy",
+          "root": "k-d-sh"
+        },
+        {
+          "block": 1,
+          "word": 4,
+          "gloss": "of hosts, of all that is"
+        },
+        {
+          "block": 1,
+          "word": 5,
+          "gloss": "the fullness of"
+        },
+        {
+          "block": 1,
+          "word": 8,
+          "gloss": "glory, presence",
+          "root": "k-v-d"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -383,7 +1134,61 @@
       "summary": "Keeping Shabbat, a sign for every generation.",
       "goal": "After this you can read V’shamru and say what its key words mean.",
       "section": "amidah",
-      "keyWords": [],
+      "read": {
+        "unit": "amidah.kdushat-hayom@shabbat-shacharit",
+        "blocks": [
+          1,
+          2
+        ],
+        "torahRef": {
+          "ref": "Exodus 31:16",
+          "kind": "torah",
+          "block": 1,
+          "words": [
+            0,
+            10
+          ]
+        }
+      },
+      "keyWords": [
+        {
+          "block": 1,
+          "word": 0,
+          "gloss": "and they shall keep",
+          "root": "sh-m-r"
+        },
+        {
+          "block": 1,
+          "word": 4,
+          "gloss": "the Shabbat",
+          "root": "sh-b-t"
+        },
+        {
+          "block": 1,
+          "word": 9,
+          "gloss": "a covenant"
+        },
+        {
+          "block": 2,
+          "word": 4,
+          "gloss": "a sign"
+        },
+        {
+          "block": 2,
+          "word": 18,
+          "gloss": "rested",
+          "root": "sh-b-t"
+        },
+        {
+          "block": 2,
+          "word": 19,
+          "gloss": "and was refreshed",
+          "root": "n-f-sh"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -394,7 +1199,52 @@
       "summary": "What service means after the Temple.",
       "goal": "After this you can read Avodah and say what its key words mean.",
       "section": "amidah",
-      "keyWords": [],
+      "read": {
+        "unit": "amidah.avodah@shabbat-maariv",
+        "blocks": [
+          0,
+          1
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "take pleasure in",
+          "root": "r-tz-h"
+        },
+        {
+          "block": 0,
+          "word": 3,
+          "gloss": "in your people"
+        },
+        {
+          "block": 0,
+          "word": 5,
+          "gloss": "and in their prayer",
+          "root": "p-l-l"
+        },
+        {
+          "block": 0,
+          "word": 11,
+          "gloss": "always"
+        },
+        {
+          "block": 0,
+          "word": 12,
+          "gloss": "the service of",
+          "root": "a-v-d"
+        },
+        {
+          "block": 1,
+          "word": 9,
+          "gloss": "God’s presence",
+          "root": "sh-ch-n"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -405,7 +1255,52 @@
       "summary": "Thanks for the miracles of every day.",
       "goal": "After this you can read Hoda’ah and say what its key words mean.",
       "section": "amidah",
-      "keyWords": [],
+      "read": {
+        "unit": "amidah.modim@shabbat-maariv",
+        "blocks": [
+          0,
+          1
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "we give thanks",
+          "root": "y-d-h"
+        },
+        {
+          "block": 0,
+          "word": 12,
+          "gloss": "rock"
+        },
+        {
+          "block": 0,
+          "word": 13,
+          "gloss": "of our lives",
+          "root": "ch-y-h"
+        },
+        {
+          "block": 0,
+          "word": 33,
+          "gloss": "your miracles"
+        },
+        {
+          "block": 1,
+          "word": 0,
+          "gloss": "the good one",
+          "root": "t-v-v"
+        },
+        {
+          "block": 1,
+          "word": 4,
+          "gloss": "your mercies",
+          "root": "r-ch-m"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -416,7 +1311,51 @@
       "summary": "The Amidah ends by asking for peace.",
       "goal": "After this you can read Sim Shalom and say what its key words mean.",
       "section": "amidah",
-      "keyWords": [],
+      "read": {
+        "unit": "amidah.sim-shalom@shabbat-shacharit",
+        "blocks": [
+          0,
+          1
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "grant, place"
+        },
+        {
+          "block": 0,
+          "word": 1,
+          "gloss": "peace",
+          "root": "sh-l-m"
+        },
+        {
+          "block": 0,
+          "word": 3,
+          "gloss": "and blessing",
+          "root": "b-r-ch"
+        },
+        {
+          "block": 0,
+          "word": 5,
+          "gloss": "and kindness",
+          "root": "ch-s-d"
+        },
+        {
+          "block": 0,
+          "word": 16,
+          "gloss": "in the light of"
+        },
+        {
+          "block": 0,
+          "word": 17,
+          "gloss": "your face"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -427,7 +1366,50 @@
       "summary": "Our own words in silence, then peace.",
       "goal": "After this you can read Silent meditation and Oseh Shalom and say what its key words mean.",
       "section": "amidah",
-      "keyWords": [],
+      "read": {
+        "unit": "amidah.elohai-ntzor@shabbat-maariv",
+        "blocks": [
+          2,
+          3
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 2,
+          "word": 2,
+          "gloss": "the words of"
+        },
+        {
+          "block": 2,
+          "word": 5,
+          "gloss": "my heart"
+        },
+        {
+          "block": 3,
+          "word": 0,
+          "gloss": "who makes",
+          "root": "a-s-h"
+        },
+        {
+          "block": 3,
+          "word": 1,
+          "gloss": "peace",
+          "root": "sh-l-m"
+        },
+        {
+          "block": 3,
+          "word": 2,
+          "gloss": "in the heights"
+        },
+        {
+          "block": 3,
+          "word": 13,
+          "gloss": "the world"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -449,7 +1431,52 @@
       "summary": "The blessing said before each Torah reading.",
       "goal": "After this you can read Blessing before the Torah reading and say what its key words mean.",
       "section": "torah",
-      "keyWords": [],
+      "read": {
+        "unit": "torah.blessing-before-the-torah@shabbat-shacharit",
+        "blocks": [
+          0,
+          2
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "bless (said to everyone)",
+          "root": "b-r-ch"
+        },
+        {
+          "block": 2,
+          "word": 7,
+          "gloss": "who chose",
+          "root": "b-ch-r"
+        },
+        {
+          "block": 2,
+          "word": 10,
+          "gloss": "the peoples"
+        },
+        {
+          "block": 2,
+          "word": 11,
+          "gloss": "and gave",
+          "root": "n-t-n"
+        },
+        {
+          "block": 2,
+          "word": 14,
+          "gloss": "God’s Torah, God’s teaching"
+        },
+        {
+          "block": 2,
+          "word": 18,
+          "gloss": "who gives",
+          "root": "n-t-n"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -471,7 +1498,52 @@
       "summary": "The blessing said after each Torah reading.",
       "goal": "After this you can read Blessing after the Torah reading and say what its key words mean.",
       "section": "torah",
-      "keyWords": [],
+      "read": {
+        "unit": "torah.blessing-after-the-torah@shabbat-shacharit",
+        "blocks": [
+          0,
+          0
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 7,
+          "gloss": "who gave",
+          "root": "n-t-n"
+        },
+        {
+          "block": 0,
+          "word": 9,
+          "gloss": "a Torah of"
+        },
+        {
+          "block": 0,
+          "word": 10,
+          "gloss": "truth",
+          "root": "a-m-t"
+        },
+        {
+          "block": 0,
+          "word": 11,
+          "gloss": "and the life of",
+          "root": "ch-y-h"
+        },
+        {
+          "block": 0,
+          "word": 13,
+          "gloss": "planted",
+          "root": "n-t-a"
+        },
+        {
+          "block": 0,
+          "word": 14,
+          "gloss": "within us"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -493,7 +1565,53 @@
       "summary": "The blessing said before the prophets are read.",
       "goal": "After this you can read Blessing before the haftarah and say what its key words mean.",
       "section": "torah",
-      "keyWords": [],
+      "read": {
+        "unit": "torah.blessing-before-the-haftarah@shabbat-shacharit",
+        "blocks": [
+          0,
+          1
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 7,
+          "gloss": "who chose",
+          "root": "b-ch-r"
+        },
+        {
+          "block": 0,
+          "word": 8,
+          "gloss": "prophets",
+          "root": "n-v-a"
+        },
+        {
+          "block": 0,
+          "word": 9,
+          "gloss": "good",
+          "root": "t-v-v"
+        },
+        {
+          "block": 0,
+          "word": 13,
+          "gloss": "in truth",
+          "root": "a-m-t"
+        },
+        {
+          "block": 1,
+          "word": 4,
+          "gloss": "the Torah"
+        },
+        {
+          "block": 1,
+          "word": 11,
+          "gloss": "and justice",
+          "root": "tz-d-k"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -515,7 +1633,52 @@
       "summary": "The blessings said after the haftarah.",
       "goal": "After this you can read Blessings after the haftarah and say what its key words mean.",
       "section": "torah",
-      "keyWords": [],
+      "read": {
+        "unit": "torah.blessings-after-the-haftarah@shabbat-shacharit",
+        "blocks": [
+          0,
+          0
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 6,
+          "gloss": "rock"
+        },
+        {
+          "block": 0,
+          "word": 8,
+          "gloss": "the worlds, all time",
+          "root": "a-l-m"
+        },
+        {
+          "block": 0,
+          "word": 9,
+          "gloss": "just, righteous",
+          "root": "tz-d-k"
+        },
+        {
+          "block": 0,
+          "word": 11,
+          "gloss": "the generations"
+        },
+        {
+          "block": 0,
+          "word": 13,
+          "gloss": "the faithful",
+          "root": "a-m-n"
+        },
+        {
+          "block": 0,
+          "word": 19,
+          "gloss": "God’s words",
+          "root": "d-b-r"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -537,7 +1700,53 @@
       "summary": "The scroll goes back, and Eitz Chayim.",
       "goal": "After this you can read Returning the Torah and say what its key words mean.",
       "section": "torah",
-      "keyWords": [],
+      "read": {
+        "unit": "torah.eitz-chayim@shabbat-shacharit",
+        "blocks": [
+          3,
+          4
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 3,
+          "word": 0,
+          "gloss": "tree"
+        },
+        {
+          "block": 3,
+          "word": 1,
+          "gloss": "life",
+          "root": "ch-y-h"
+        },
+        {
+          "block": 3,
+          "word": 3,
+          "gloss": "to those who hold on",
+          "root": "ch-z-k"
+        },
+        {
+          "block": 3,
+          "word": 12,
+          "gloss": "peace",
+          "root": "sh-l-m"
+        },
+        {
+          "block": 4,
+          "word": 0,
+          "gloss": "turn us back",
+          "root": "sh-v-v"
+        },
+        {
+          "block": 4,
+          "word": 4,
+          "gloss": "make new",
+          "root": "ch-d-sh"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -548,7 +1757,51 @@
       "summary": "It is upon us: the close of every service.",
       "goal": "After this you can read Aleinu and say what its key words mean.",
       "section": "closing",
-      "keyWords": [],
+      "read": {
+        "unit": "concluding.aleinu@shabbat-maariv",
+        "blocks": [
+          0,
+          0
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "it is upon us"
+        },
+        {
+          "block": 0,
+          "word": 1,
+          "gloss": "to praise",
+          "root": "sh-b-ch"
+        },
+        {
+          "block": 0,
+          "word": 3,
+          "gloss": "all, everything"
+        },
+        {
+          "block": 0,
+          "word": 7,
+          "gloss": "creation, the beginning"
+        },
+        {
+          "block": 0,
+          "word": 24,
+          "gloss": "bend the knee",
+          "root": "k-r-a"
+        },
+        {
+          "block": 0,
+          "word": 26,
+          "gloss": "and give thanks",
+          "root": "y-d-h"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -559,7 +1812,52 @@
       "summary": "Praise said by those who remember.",
       "goal": "After this you can read Mourner’s Kaddish and say what its key words mean.",
       "section": "closing",
-      "keyWords": [],
+      "read": {
+        "unit": "concluding.mourners-kaddish@shabbat-maariv",
+        "blocks": [
+          0,
+          1
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "may it grow great",
+          "root": "g-d-l"
+        },
+        {
+          "block": 0,
+          "word": 1,
+          "gloss": "and be made holy",
+          "root": "k-d-sh"
+        },
+        {
+          "block": 0,
+          "word": 2,
+          "gloss": "its name, God’s name"
+        },
+        {
+          "block": 0,
+          "word": 10,
+          "gloss": "its reign",
+          "root": "m-l-ch"
+        },
+        {
+          "block": 0,
+          "word": 20,
+          "gloss": "and say"
+        },
+        {
+          "block": 1,
+          "word": 3,
+          "gloss": "blessed",
+          "root": "b-r-ch"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -570,7 +1868,51 @@
       "summary": "A song about everything, sung at the end.",
       "goal": "After this you can read Adon Olam and say what its key words mean.",
       "section": "closing",
-      "keyWords": [],
+      "read": {
+        "unit": "concluding.adon-olam@shabbat-maariv",
+        "blocks": [
+          0,
+          1
+        ]
+      },
+      "keyWords": [
+        {
+          "block": 0,
+          "word": 0,
+          "gloss": "master, sovereign"
+        },
+        {
+          "block": 0,
+          "word": 1,
+          "gloss": "of the world, of all time",
+          "root": "a-l-m"
+        },
+        {
+          "block": 0,
+          "word": 3,
+          "gloss": "reigned",
+          "root": "m-l-ch"
+        },
+        {
+          "block": 0,
+          "word": 4,
+          "gloss": "before"
+        },
+        {
+          "block": 0,
+          "word": 7,
+          "gloss": "was created",
+          "root": "b-r-a"
+        },
+        {
+          "block": 1,
+          "word": 3,
+          "gloss": "alone"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     },
@@ -592,7 +1934,61 @@
       "summary": "Birkat Kohanim, a blessing we give each other.",
       "goal": "After this you can read Closing blessing and say what its key words mean.",
       "section": "closing",
-      "keyWords": [],
+      "read": {
+        "unit": "concluding.birkat-kohanim@shabbat-shacharit",
+        "blocks": [
+          1,
+          3
+        ],
+        "torahRef": {
+          "ref": "Numbers 6:24",
+          "kind": "torah",
+          "block": 1,
+          "words": [
+            0,
+            2
+          ]
+        }
+      },
+      "keyWords": [
+        {
+          "block": 1,
+          "word": 0,
+          "gloss": "may (God) bless you",
+          "root": "b-r-ch"
+        },
+        {
+          "block": 1,
+          "word": 2,
+          "gloss": "and keep you",
+          "root": "sh-m-r"
+        },
+        {
+          "block": 2,
+          "word": 0,
+          "gloss": "may (God) shine"
+        },
+        {
+          "block": 2,
+          "word": 2,
+          "gloss": "face"
+        },
+        {
+          "block": 2,
+          "word": 4,
+          "gloss": "and be gracious to you",
+          "root": "ch-n-n"
+        },
+        {
+          "block": 3,
+          "word": 6,
+          "gloss": "peace",
+          "root": "sh-l-m"
+        }
+      ],
+      "check": {
+        "items": 6
+      },
       "prerequisites": [],
       "hear": null
     }

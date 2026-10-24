@@ -30,6 +30,17 @@ function serviceCourseProblem(file, text) {
   }
   return hebrew(JSON.stringify(value)) || hebrew(text) ? "Hebrew in a service course congregation file" : undefined;
 }
+// The siddur's builds never enter this repo (2.0 SC2): not the licensed app surface (`dist-app/`, the Beit Mitzvah book among it), and
+// not a public feed either. The service course reads the pinned public build from the database; a feed file here, by name, by
+// directory or by its shape inside an otherwise allowed data file, is refused.
+const SIDDUR_BUILD_PATH = /(?:^|\/)dist-app(?:\/|$)|(?:^|\/)[^/]*-feed\.json$|(?:^|\/)feeds\.json$/i;
+const SIDDUR_FEED_SHAPE = /"pageIndex"\s*:/;
+const SIDDUR_FEED_FIELDS = /"(?:units|printing|blockGranularity|sections)"\s*:/g;
+const LICENSED_LANE = /"lane"\s*:\s*"licensed"|-LICENSED"|"laneWhy"\s*:/;
+function siddurFeedProblem(text) {
+  if (LICENSED_LANE.test(text)) return "licensed siddur lane marker";
+  if (SIDDUR_FEED_SHAPE.test(text) && new Set([...text.matchAll(SIDDUR_FEED_FIELDS)].map(match => match[0].replace(/\s/g, ""))).size >= 2) return "siddur feed content";
+}
 const CONFIGS = new Set(["package.json", "package-lock.json", "tsconfig.json", ".impeccable/config.json", ".impeccable/design.json", COURSE_DATA]);
 const DRIZZLE_METADATA = /^src\/server\/db\/migrations\/meta\/(?:_journal|[0-9]{4}_snapshot)\.json$/;
 function reviewedServiceCron(text) {
@@ -98,6 +109,8 @@ export function entryProblems(path, content = "") {
   const data = DATA.has(extname(file).toLowerCase());
   const migrationMetadata = DRIZZLE_METADATA.test(file);
   if (MEDIA.test(file)) problems.push("audio, video, or model artifact");
+  if (SIDDUR_BUILD_PATH.test(file)) problems.push("siddur build artifact");
+  if (data) { const problem = siddurFeedProblem(text); if (problem) problems.push(problem); }
   if (FONT_FILE.test(file)) problems.push(reviewedFontAsset(path)?.kind === "font" ? "font asset requires exact byte verification" : "unlisted font asset");
   if (KEYS.test(file) || /\.local\.json$/i.test(file)) problems.push("credential/config file");
   if (/(?:^|\/)\.env[^/]*$/i.test(file) && file !== ".env.example") problems.push("environment file");

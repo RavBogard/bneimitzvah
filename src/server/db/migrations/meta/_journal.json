@@ -302,6 +302,13 @@
       "when": 1792857559084,
       "tag": "0042_curated_discussions",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792878255830,
+      "tag": "0043_course_text_catalog",
+      "breakpoints": true
     }
   ]
 }
