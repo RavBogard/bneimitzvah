@@ -27,5 +27,7 @@ Student setup (the same roster permission; never a scheduled routine). Each chan
 
 The reader's print sheet (anyone on this connection): print_sheet_link names a reading (this coming Shabbat by default, a part of it, a parashah, a passage, or one of the person's saved readings) and a format, and returns a link. Show the person the reading and format it states before they print. It returns no verse text; never paste translation text from elsewhere in its place.
 
+Study links (anyone on this connection): study_link names a selection (a passage of one or more segments joined by "; ", a parashah, a Shabbat, or one of the person's saved readings) and returns a link that opens it in Study on the reader. Show the person the reading it states. It returns no verse text.
+
 Public page views (the rabbi or an administrator): get_page_views gives how often each public page was opened per day. It is counts only; nothing about any visitor is kept.`;
 export const SERVER_INFO = Object.freeze({ name: "crc-bnei-mitzvah", version: "1.0.0" });

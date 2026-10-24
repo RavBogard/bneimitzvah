@@ -126,7 +126,9 @@ test("real PostgreSQL: owner_only keeps every saved row to its own member, casca
         // Pointing your own child row at another member's reading fails the (tenant, reading, member) FK.
         await rejects(client, "INSERT INTO saved_verse_work (tenant_id,membership_id,saved_reading_id,verse_ref,stream,text,version) VALUES ('crc',$1,$2,'Genesis 1:2','note','x',1)", [a.member, b.reading], "23503");
         // Ownership and identity never change; child rows are never deleted directly.
-        for (const statement of ["UPDATE saved_reading SET membership_id = membership_id", "UPDATE saved_reading SET tenant_id = tenant_id", "UPDATE saved_reading SET ranges = ranges",
+        // Since 0040 the owner may revise their own reading's ranges and verse count; another member's reading is out of reach.
+        assert.equal((await query(client, "UPDATE saved_reading SET ranges='Genesis 1:1', verse_count=1 WHERE id=$1", [b.reading])).rowCount, 0);
+        for (const statement of ["UPDATE saved_reading SET membership_id = membership_id", "UPDATE saved_reading SET tenant_id = tenant_id", "UPDATE saved_reading SET kind = kind",
           "UPDATE saved_verse_work SET membership_id = membership_id", "UPDATE saved_verse_mark SET membership_id = membership_id", "UPDATE starred_comment SET membership_id = membership_id",
           "UPDATE saved_verse_work SET saved_reading_id = saved_reading_id", "UPDATE starred_comment SET comment_index = 2", "DELETE FROM saved_verse_work", "DELETE FROM saved_verse_mark", "TRUNCATE saved_reading CASCADE", "TRUNCATE starred_comment"])
           await rejects(client, statement, [], "42501");

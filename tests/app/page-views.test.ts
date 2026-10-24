@@ -220,7 +220,7 @@ describe("get_page_views through the portal MCP", () => {
     const t = await seeded();
     await t.google("multi");
     const tutor = (await t.connect("multi")).access_token as string;
-    expect((await t.rpc(tutor, "tools/list")).body.result.tools.map((x: { name: string }) => x.name).sort()).toEqual(["get_student", "list_students", "print_sheet_link"]);
+    expect((await t.rpc(tutor, "tools/list")).body.result.tools.map((x: { name: string }) => x.name).sort()).toEqual(["get_student", "list_students", "print_sheet_link", "study_link"]);
     expect((await t.rpc(tutor, "tools/call", { name: "get_page_views", arguments: { start: "2026-10-20", end: "2026-10-21" } })).body.error.code).toBe(-32602);
   });
 });

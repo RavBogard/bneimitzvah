@@ -120,7 +120,7 @@ describe("portal MCP", () => {
     const tokens = await t.connect("multi", { scope: "portal:read portal:study" });
     expect(tokens.scope).toBe("portal:read");
     const names = (await t.rpc(tokens.access_token, "tools/list")).body.result.tools.map((x: { name: string }) => x.name);
-    expect(names.sort()).toEqual(["get_student", "list_students", "print_sheet_link"]);
+    expect(names.sort()).toEqual(["get_student", "list_students", "print_sheet_link", "study_link"]);
     expect((await t.call(tokens.access_token, "list_students")).json().students.map((x: { name: string }) => x.name)).toEqual(["Synthetic Sibling A"]);
     expect((await t.call(tokens.access_token, "get_student", { studentId: t.f.students[1].id })).isError).toBe(true);
     const hidden = await t.rpc(tokens.access_token, "tools/call", { name: "save_guide", arguments: {} });

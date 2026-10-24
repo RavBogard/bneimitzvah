@@ -16,6 +16,8 @@ Reconciled against main at 4475fd6, with #57 (print) at 62432e0 and #56 (Learn 1
 - No quieter initial colour in Study: it contradicts the 2026-10-16 ruling that phrase colours are on by default.
 - The consultant's "saving/recovery concern" was not reproduced. The closest evidence is `yours.tsx` dropping typed text on a conflict, and M3 removes that editor.
 - Migration numbers: 0039 is the page counter. M2's grant is 0040, M3b's preferences 0041, M6's curation 0042.
+- M2a contract: `ranges` on update is optional; a body carrying `verseCount` is refused (closed keyset). Ranges naming the other corpus than the stored reading's kind are a closed 400 (`invalid-request`): a reading's kind never changes. Hidden work and marks on dropped verses still count toward the per-member caps. 0040 is grant-only, with no drizzle snapshot (the schema does not change), as 0034 and 0035 had none.
+- `study_link` takes ref (up to 32 "; "-joined segments), parashah and passage, a Shabbat date, or a saved reading id (carried into the link only, as `print_sheet_link` does), plus an optional verse; it returns `/read?…&lens=study` and never a verse. Portion picks are left to ref.
 
 ## Acceptance checks against source
 

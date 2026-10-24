@@ -143,6 +143,70 @@ describe("the saved layer: readings, work, marks and stars", () => {
     expect(left).toEqual({ work: 0, marks: 0 });
   });
 
+  it("revises a reading's verses under its revision: the server counts the verses, and work on a dropped verse waits for it to return", async () => {
+    const t = await setup();
+    const id = (await t.create("multi", "Genesis 1:1-5", "torah", "Mine", null)).json.reading.id as string;
+    const update = (body: Record<string, unknown>, who: Who = "multi") => t.call("/api/saved/readings/update", who, { id, name: "Mine", date: null, ...body });
+    const stored = () => t.f.owner(async () => (await t.f.db.select().from(s.savedReading).where(eq(s.savedReading.id, id)))[0]);
+    const refs = async () => (await t.call(`/api/saved/reading?id=${id}`, "multi")).json.verses.map((v: { ref: string }) => v.ref);
+    await t.call("/api/saved/work", "multi", { readingId: id, verseRef: "Genesis 1:5", stream: "translation", expectedVersion: 0, text: "Day one." });
+    await t.call("/api/saved/work", "multi", { readingId: id, verseRef: "Genesis 1:5", stream: "note", expectedVersion: 0, text: "Evening first." });
+    await t.call("/api/saved/mark", "multi", { readingId: id, verseRef: "Genesis 1:5", expectedVersion: 0, state: "got-it" });
+    await t.call("/api/saved/work", "multi", { readingId: id, verseRef: "Genesis 1:2", stream: "note", expectedVersion: 0, text: "Kept." });
+    expect((await t.call("/api/saved/star", "multi", { work: "rashi", verseRef: "Genesis 1:5", comment: 1, starred: true })).status).toBe(200);
+
+    // Two separated groups; the count is the server's own expansion.
+    const revised = await update({ revision: 1, ranges: "Genesis 1:1-3; Genesis 2:1-3" });
+    expect(revised.json).toMatchObject({ ok: true, reading: { ranges: "Genesis 1:1-3; Genesis 2:1-3", verseCount: 6, revision: 2, kind: "torah", name: "Mine" } });
+    expect(await stored()).toMatchObject({ ranges: "Genesis 1:1-3; Genesis 2:1-3", verseCount: 6, revision: 2, kind: "torah" });
+    expect(await refs()).toEqual(["Genesis 1:1", "Genesis 1:2", "Genesis 1:3", "Genesis 2:1", "Genesis 2:2", "Genesis 2:3"]);
+    expect((await t.call(`/api/saved/reading?id=${id}`, "multi")).json.verses[1].note).toMatchObject({ text: "Kept.", version: 1 });
+    // The dropped verse's translation, note and mark stay stored but out of reach; its star belongs to the member and stays listed.
+    const kept = await t.f.owner(async () => ({ work: (await t.f.db.select().from(s.savedVerseWork).where(eq(s.savedVerseWork.savedReadingId, id))).length,
+      marks: (await t.f.db.select().from(s.savedVerseMark).where(eq(s.savedVerseMark.savedReadingId, id))).length }));
+    expect(kept).toEqual({ work: 3, marks: 1 });
+    expect((await t.call("/api/saved/work", "multi", { readingId: id, verseRef: "Genesis 1:5", stream: "note", expectedVersion: 1, text: "Hidden." })).status).toBe(404);
+    expect((await t.call("/api/saved/mark", "multi", { readingId: id, verseRef: "Genesis 1:5", expectedVersion: 1, state: "working" })).status).toBe(404);
+    expect((await t.call("/api/saved/stars", "multi")).json.stars).toEqual([{ work: "rashi", verseRef: "Genesis 1:5", comment: 1 }]);
+
+    // A client never supplies the count, and a stale revision is a conflict that changes nothing.
+    expect((await update({ revision: 2, ranges: "Genesis 1:1", verseCount: 1 })).status).toBe(400);
+    const stale = await update({ revision: 1, ranges: "Genesis 1:1" });
+    expect(stale.status).toBe(409);
+    expect(stale.json).toMatchObject({ ok: false, code: "conflict", current: { ranges: "Genesis 1:1-3; Genesis 2:1-3", verseCount: 6, revision: 2 } });
+    // Another member's revision is the same 404 as a missing reading.
+    for (const who of ["admin", "parentOnly"] as const) expect((await update({ revision: 2, ranges: "Genesis 1:1" }, who)).status).toBe(404);
+    expect(await stored()).toMatchObject({ ranges: "Genesis 1:1-3; Genesis 2:1-3", verseCount: 6, revision: 2 });
+
+    // The verse returns, and with it everything written on it, versions intact.
+    expect((await update({ revision: 2, ranges: "Genesis 1:1-5" })).json).toMatchObject({ ok: true, reading: { ranges: "Genesis 1:1-5", verseCount: 5, revision: 3 } });
+    const back = (await t.call(`/api/saved/reading?id=${id}`, "multi")).json.verses[4];
+    expect(back).toMatchObject({ ref: "Genesis 1:5", translation: { text: "Day one.", version: 1 }, note: { text: "Evening first.", version: 1 }, mark: { state: "got-it", version: 1 } });
+    // A rename without ranges keeps the verses.
+    expect((await update({ revision: 3, name: "Renamed" })).json).toMatchObject({ ok: true, reading: { name: "Renamed", ranges: "Genesis 1:1-5", verseCount: 5, revision: 4 } });
+  });
+
+  it("holds a revision's ranges to the create contract and to the reading's own kind", async () => {
+    const t = await setup();
+    const id = (await t.create("multi", "Genesis 1:1-5")).json.reading.id as string;
+    const update = (ranges: unknown) => t.call("/api/saved/readings/update", "multi", { id, revision: 1, name: "R", date: null, ranges });
+    const refused = ["Genesis 12:1-12:5", "Genesis 1:1;Genesis 1:2", "Genesis 1:1; ", " Genesis 1:1", "Genesis 1:40", "Genesis 1:1-50:26", "Genesis 1:1-3; Genesis 1:2-4",
+      "Genesis 2:1; Genesis 1:1", "Genesis 1:1; Exodus 1:1", "Psalms 1:1-6", "genesis 1:1", Array(33).fill(0).map((_, i) => `Genesis ${i + 1}:1`).join("; "), "Genesis 1:1".padEnd(1001, "0"), "",
+      null, 42, ["Genesis 1:1"], { ref: "Genesis 1:1" }];
+    for (const ranges of refused) expect((await update(ranges)).status, JSON.stringify(ranges)).toBe(400);
+    // A Torah reading never takes Prophets ranges, nor a haftarah reading Torah ranges: a closed 400, nothing written.
+    const kind = await update("Isaiah 1:1-3");
+    expect(kind.status).toBe(400); expect(kind.json).toEqual({ ok: false, code: "invalid-request" });
+    const haftarah = (await t.create("multi", "Isaiah 40:1-11", "haftarah")).json.reading.id as string;
+    expect((await t.call("/api/saved/readings/update", "multi", { id: haftarah, revision: 1, name: "H", date: null, ranges: "Genesis 1:1" })).status).toBe(400);
+    expect((await t.call("/api/saved/readings/update", "multi", { id: haftarah, revision: 1, name: "H", date: null, ranges: "Isaiah 40:1-3; Isaiah 41:1" })).json)
+      .toMatchObject({ ok: true, reading: { kind: "haftarah", ranges: "Isaiah 40:1-3; Isaiah 41:1", verseCount: 4, revision: 2 } });
+    expect((await t.call("/api/saved/readings", "multi")).json.readings.find((r: { id: string }) => r.id === id)).toMatchObject({ ranges: "Genesis 1:1-5", verseCount: 5, revision: 1 });
+    // Exactly 32 groups is the limit, and the count follows the groups.
+    const exactly32 = Array.from({ length: 32 }, (_, i) => `Genesis ${i + 1}:1`).join("; ");
+    expect((await update(exactly32)).json).toMatchObject({ ok: true, reading: { ranges: exactly32, verseCount: 32, revision: 2 } });
+  });
+
   it("keeps translation, notes and marks under optimistic versions, inside the reading only", async () => {
     const t = await setup();
     const id = (await t.create("multi", "Genesis 1:1-5")).json.reading.id as string;

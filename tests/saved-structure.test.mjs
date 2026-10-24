@@ -37,7 +37,9 @@ test("the saved data module is imported only from src/server/saved/*", () => {
 });
 
 test("no code outside the saved layer names the saved tables, and the MCP never imports a saved module", () => {
-  const allowed = new Set(["src/server/db/saved-schema.ts", "src/server/data/saved.ts", "src/server/db/migrations/0036_saved_layer.sql", "src/server/db/migrations/meta/0036_snapshot.json"]);
+  const allowed = new Set(["src/server/db/saved-schema.ts", "src/server/data/saved.ts", "src/server/db/migrations/0036_saved_layer.sql", "src/server/db/migrations/meta/0036_snapshot.json",
+    // 0040 lets the owner revise their own reading's ranges (release 1.7 "Change verses"); its own test pins it to that one grant.
+    "src/server/db/migrations/0040_saved_reading_ranges.sql"]);
   for (const file of sources) {
     if (allowed.has(file.path) || /^src\/server\/db\/migrations\/meta\/\d{4}_snapshot\.json$/.test(file.path) && Number(file.path.match(/(\d{4})_snapshot/)[1]) > 36) continue;
     assert.doesNotMatch(file.text, /\b(savedReading|savedVerseWork|savedVerseMark|starredComment)\b|\b(saved_reading|saved_verse_work|saved_verse_mark|starred_comment)\b/, `${file.path} names a saved table`);

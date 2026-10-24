@@ -74,10 +74,18 @@ export function create(value: unknown): CreateInput {
   const readingKind = kind(row.kind), parsed = savedRanges(row.ranges, readingKind);
   return Object.freeze({ name: name(row.name), date: readingDate(row.date), kind: readingKind, ranges: parsed.ranges, verses: Object.freeze(parsed.verses) });
 }
-export type UpdateInput = Readonly<{ id: string; revision: number; name: string; date: string | null }>;
+/** Revised verses: the same 1.3 contract as create. The kind is the corpus the ranges name; the service holds it to the stored reading's. */
+export type RevisedRanges = Readonly<{ ranges: string; kind: SavedKind; verses: readonly string[] }>;
+export function revisedRanges(value: unknown): RevisedRanges {
+  const ref = canonicalReadingRef(value, "torah") ?? canonicalReadingRef(value, "haftarah");
+  return ref ? Object.freeze({ ranges: ref.ref, kind: ref.kind, verses: Object.freeze([...ref.verses]) }) : invalid();
+}
+export type UpdateInput = Readonly<{ id: string; revision: number; name: string; date: string | null; ranges: RevisedRanges | null }>;
+/** Rename and re-date, and optionally revise the verses (release 1.7 "Change verses"). A client's verse count is never accepted. */
 export function update(value: unknown): UpdateInput {
-  const row = closedObject(value, ["id", "revision", "name", "date"]);
-  return Object.freeze({ id: uuid(row.id), revision: integer(row.revision, 1, 2147483646), name: name(row.name), date: readingDate(row.date) });
+  const row = closedObject(value, ["id", "revision", "name", "date"], ["ranges"]);
+  return Object.freeze({ id: uuid(row.id), revision: integer(row.revision, 1, 2147483646), name: name(row.name), date: readingDate(row.date),
+    ranges: Object.hasOwn(row, "ranges") ? revisedRanges(row.ranges) : null });
 }
 export type RemoveInput = Readonly<{ id: string; revision: number }>;
 export function remove(value: unknown): RemoveInput {

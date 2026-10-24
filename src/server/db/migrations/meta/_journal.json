@@ -281,6 +281,13 @@
       "when": 1792809499928,
       "tag": "0039_public_page_views",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1792843629302,
+      "tag": "0040_saved_reading_ranges",
+      "breakpoints": true
     }
   ]
 }

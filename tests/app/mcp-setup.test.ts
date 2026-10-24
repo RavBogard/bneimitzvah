@@ -71,7 +71,7 @@ describe("student setup through the portal MCP", () => {
     const tutor = await t.connect("multi", { scope: ALL });
     expect(tutor.scope).toBe("portal:read");
     // Tutors get none of the setup tools: only their students and the read-only print sheet link.
-    expect(await names(tutor.access_token)).toEqual(["list_students", "get_student", "print_sheet_link"]);
+    expect(await names(tutor.access_token)).toEqual(["list_students", "get_student", "print_sheet_link", "study_link"]);
     for (const token of [study, readOnly, routine.access_token, tutor.access_token]) for (const name of SETUP) {
       expect(await names(token)).not.toContain(name);
       expect((await t.rpc(token, "tools/call", { name, arguments: { studentId: t.f.students[0].id } })).body.error.code).toBe(-32602);
