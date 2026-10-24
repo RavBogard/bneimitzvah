@@ -58,6 +58,17 @@ export function parsePreferences(value: unknown): Preferences | null {
   return new TextEncoder().encode(serializePreferences(result)).byteLength <= PREFERENCES_MAX_BYTES ? result : null;
 }
 
+/**
+ * A stored document, read leniently in one respect only: a commentary later removed from the registry (or past a
+ * lowered limit) is dropped from `works` rather than locking the member out of their own preferences. Everything else
+ * is the strict parser; requests are always parsed strictly.
+ */
+export function parseStoredPreferences(value: unknown): Preferences | null {
+  if (plain(value) && Array.isArray(value.works) && value.works.every(work => typeof work === "string"))
+    return parsePreferences({ ...value, works: PREFERENCE_WORKS.filter(work => (value.works as string[]).includes(work)).slice(0, PREFERENCE_MAX_WORKS) });
+  return parsePreferences(value);
+}
+
 /** One canonical text for a document: fields in PREFERENCE_FIELDS order, so two equal documents serialize the same. */
 export function serializePreferences(value: Preferences): string {
   const out: Record<string, unknown> = { version: value.version };

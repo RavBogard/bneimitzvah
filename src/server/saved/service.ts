@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
-import { parsePreferences, serializePreferences } from "../../lib/account-preferences/document";
+import { parseStoredPreferences, serializePreferences } from "../../lib/account-preferences/document";
 import { AccessDenied } from "../access/errors";
 import type { createAccessService } from "../access/service";
 import type { AccessRequest, AccessTransaction } from "../access/types";
@@ -32,7 +32,7 @@ export const preferencesOwnerName = (owner: Pick<SavedOwner, "tenantId" | "membe
   createHash("sha256").update(`account-preferences-owner/v1:${owner.tenantId}:${owner.membershipId}`).digest("hex").slice(0, 32);
 /** A stored document re-read with the same strict parser; a row that no longer parses is refused, never served. */
 function preferencesView(owner: SavedOwner, row: data.PreferenceRow | null) {
-  const preferences = row ? parsePreferences(row.preferences) : null;
+  const preferences = row ? parseStoredPreferences(row.preferences) : null;
   if (row && !preferences) throw new Error("Preferences unavailable");
   return { ok: true as const, owner: preferencesOwnerName(owner), preferences, revision: row?.revision ?? 0 };
 }
