@@ -237,7 +237,8 @@ export function WhichHalf({ item, pools, onAnswer }: DrillProps<HalfItem>) {
   const restPhrase = verse.phrases.find(row => row.units[0] <= item.rest && item.rest <= row.units[1]);
   const inHalf = (unit: number) => item.half === "before" ? unit <= item.rest : unit > item.rest;
   const look = (unit: number) => chosen && restPhrase && unit >= restPhrase.units[0] && unit <= restPhrase.units[1] ? "inked" as const : "plain" as const;
-  const unitClass = (unit: number) => [unit >= first && unit <= last && (leadIn || chosen) ? styles.underlined : "", chosen && inHalf(unit) && look(unit) === "plain" ? styles.halfTint : ""].filter(Boolean).join(" ") || undefined;
+  // Daniel, 2026-10-23 ("Hide until answered"): nothing marks the phrase until the answer, so the half is chosen by ear.
+  const unitClass = (unit: number) => [unit >= first && unit <= last && chosen ? styles.underlined : "", chosen && inHalf(unit) && look(unit) === "plain" ? styles.halfTint : ""].filter(Boolean).join(" ") || undefined;
   const button = (half: "before" | "after", label: string) => <button type="button" className={styles.choice} disabled={!!chosen} aria-pressed={chosen === half}
     data-state={!chosen ? undefined : half === item.half ? "right" : half === chosen ? "chosen" : "other"} style={{ "--phrase-color": "var(--lake-tint)" } as CSSProperties}
     data-right={half === item.half || undefined} onClick={() => pick(half)}>
@@ -246,7 +247,7 @@ export function WhichHalf({ item, pools, onAnswer }: DrillProps<HalfItem>) {
     <h2 className={styles.prompt}>{leadIn ? copy.promptLeadIn : copy.promptPhrase}</h2>
     <div className={styles.playRow}><PlayTile id={id} requests={requests} /></div>
     <AudioError id={id} />
-    <div className={styles.verseBox} data-half={item.half} data-rest-unit={item.rest}>
+    <div className={styles.verseBox} data-half={chosen ? item.half : undefined} data-rest-unit={item.rest}>
       <p className={`${styles.hebrew} ${styles.phraseStandard}`} lang="he" dir="rtl">
         <UnitsText as="span" verse={verse} units={[0, item.rest]} card={!!chosen} look={look} unitClass={unitClass} />
         <span className={styles.halfGap} aria-hidden="true"> </span>

@@ -43,7 +43,7 @@ export const DRAFTED = Object.freeze({
   }),
 });
 
-/** NEW in 1.6: strings neither the draft nor the existing Learn screens had. Listed in the PR for Daniel. */
+/** NEW in 1.6: strings neither the draft nor the existing Learn screens had. Approved by Daniel on PR #56, 2026-10-23. */
 export const NEW = Object.freeze({
   /** Quick ten's loading line, in the shape of "Loading the lesson…" and "Loading the review…". */
   quickTenLoading: "Loading the phrases…",

@@ -93,7 +93,7 @@ test("azla or geresh shows each word with the word before it, and is reading onl
   }
 });
 
-test("which half of the verse: the verse plays from its start up to the phrase, and the half takes its tint after the answer", async ({ page }, testInfo) => {
+test("which half of the verse: the verse plays from its start up to the phrase, nothing marks the phrase until the answer, then it is underlined and its half takes its tint", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const routes = syntheticCourseRoutes(); await routes.install(page); await seed(page, introDone); await phoneWidth(page, testInfo);
   await page.goto("/learn/haftarah-zakef");
@@ -101,13 +101,17 @@ test("which half of the verse: the verse plays from its start up to the phrase, 
   const before = await plays(page);
   await drillUntil(page, /^The verse plays up to one phrase\. Is that phrase before the rest, or after it\?$/);
   await expect.poll(() => plays(page)).toBeGreaterThan(before);
-  await expect(page.locator("main [data-rest-unit] [class*=underlined]").first()).toBeVisible();
+  // Hide until answered (Daniel, 2026-10-23): no underline, no half, nothing in the verse's accessible text that names the phrase.
+  await expect(page.locator("main [data-rest-unit] [class*=underlined]")).toHaveCount(0);
+  await expect(page.locator("main [data-half]")).toHaveCount(0);
+  await expect(page.locator("main [data-rest-unit] [aria-label], main [data-rest-unit] [role=button]")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Before the rest" })).toBeVisible();
   await expect(page.getByRole("button", { name: "After the rest" })).toBeVisible();
   if (testInfo.project.name === "phone") expect(await noHorizontalScroll(page)).toBe(true);
   await shot(page, testInfo, "which-half-question");
+  await page.locator("main button[class*=choice]:not([data-right])").click();
   const half = await page.locator("main [data-half]").getAttribute("data-half");
-  await page.getByRole("button", { name: half === "before" ? "After the rest" : "Before the rest" }).click();
+  await expect(page.locator("main [data-rest-unit] [class*=underlined]").first()).toBeVisible();
   await expect(page.getByRole("status").filter({ hasText: half === "before" ? "Before the rest: this phrase is in the first half." : "After the rest: this phrase is in the second half, on the way to the ending." })).toBeVisible();
   await expect(page.locator("main [data-rest-unit] [class*=halfTint]").first()).toBeVisible();
   await expect(page.locator("main [data-rest-unit] [data-family=etnachta]").first()).toBeVisible();
