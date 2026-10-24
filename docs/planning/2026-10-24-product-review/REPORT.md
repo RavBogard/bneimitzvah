@@ -917,3 +917,5 @@ Status shorthand: **1.8.1** = PR #71; **#72** = AD-01 PR; **F1–F6** = 2.0 plan
 15. **Holiday readings:** Daniel verbatim: "We observe 2 days". The two-day list is correct for CRC; F-SITE-REVIEW finding 8 is closed with no change.
 
 **Update to decision 9 (2026-10-24, later):** the research found one complete modern Rashi English with a stated open licence: "Rashi Chumash, Metsudah Publications, 2009" on Sefaria, labelled CC-BY, with no confirmation from Metsudah itself. Daniel chose "Make Metsudah the default": Metsudah 2009 shows first on screen, credited as Sefaria serves it, with the 1929 Rosenbaum-Silbermann as the alternative; Metsudah stays out of print until Sefaria or Metsudah confirms the CC-BY in writing.
+
+**Licence ruling on Metsudah (Daniel, 2026-10-24, verbatim):** "Sefaria feeds it via their mcp. We don't need a special liscense". Metsudah 2009 is treated like any other Sefaria text under its stated licence (CC-BY): on screen with its credit, and in print under the existing appendix licence filter, with no written confirmation required.
