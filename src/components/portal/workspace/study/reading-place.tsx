@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { chapterOf, readingChapters, topVisible } from "./reading-place-model";
 import { useOpenPanelVerse } from "./verse-panel";
 import styles from "./commentary.module.css";
@@ -14,7 +14,7 @@ export function scrollToVerse(ref: string): void {
  * follows scrolling and an open word card, and a chapter jump over every chapter of the loaded reading.
  * `refs` is the whole reading, so a chapter on another text page is offered too; `onJump` takes the chapter's first verse.
  */
-export function ReadingPlace({ refs, pageKey, onJump }: { refs: readonly string[]; pageKey: string; onJump(ref: string): void }) {
+export function ReadingPlace({ refs, pageKey, onJump, onHere }: { refs: readonly string[]; pageKey: string; onJump(ref: string): void; onHere?(ref: string): void }) {
   const chapters = useMemo(() => readingChapters(refs), [refs]);
   const [here, setHere] = useState<string | null>(null), openVerse = useOpenPanelVerse();
   // The verse nearest the top of the screen, from what is on screen after the page's verses render; the top fifth counts, so the line is not late.
@@ -31,6 +31,10 @@ export function ReadingPlace({ refs, pageKey, onJump }: { refs: readonly string[
     return () => watch.disconnect();
   }, [pageKey]);
   useEffect(() => { if (openVerse) setHere(openVerse); }, [openVerse]);
+  // Told to the page as it changes (Choose verses opens the whole portion at this verse, and back).
+  const told = useRef(onHere); told.current = onHere;
+  const current = here ?? refs[0] ?? null;
+  useEffect(() => { if (current) told.current?.(current); }, [current]);
   if (!refs.length) return null;
   const shown = here ?? refs[0], chapter = chapterOf(shown);
   return <div className={styles.place} data-reading-place="">

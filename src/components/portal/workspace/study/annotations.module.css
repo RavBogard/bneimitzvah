@@ -14,6 +14,12 @@
 .verseNumber { display: inline; vertical-align: super; font: 600 0.875rem/1.8 "Bricolage Grotesque", sans-serif; color: var(--lake-deep); background: transparent; border: 0; padding: 0.35rem; cursor: pointer; border-radius: var(--radius-control); }
 .verseNumber:hover { background: var(--lake-tint); }
 .verseNumber:focus-visible, .playable [data-word-index]:focus-visible { outline: 3px solid var(--marigold); outline-offset: 3px; }
+/* Choose verses: the verse number is a 44px toggle; a chosen verse carries a check as well as the filled number, so it never depends on colour. */
+.chooseNumber { display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; min-width: 44px; min-height: 44px; vertical-align: middle; border: 1px solid var(--color-control-rule); border-radius: 999px; background: var(--color-surface); }
+.chooseNumber[aria-pressed="true"] { border-color: var(--lake); background: var(--lake); color: #fff; }
+.chooseNumber:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.flowVerse[data-verse-picked], .flowVerse[data-verse-marked] { background: var(--lake-tint); box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.verseNumber svg { vertical-align: -0.1em; margin-inline-end: 0.2em; }
 .playable [data-word-index] { cursor: pointer; border-radius: 0.18em; }
 .playable [data-word-index]:hover { text-decoration: underline; text-underline-offset: 0.15em; }
 .closedGap { display: inline-block; inline-size: 4.5em; }

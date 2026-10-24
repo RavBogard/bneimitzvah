@@ -33,12 +33,13 @@ export const selectorKey = (selector: ReadingSelector) => selector.by === "date"
  * - `/read?reading=<slug>` (a named reading from the catalog), optionally `&passage=<n>` (1-based);
  * - `/read?ref=<canonical ref>&kind=torah|haftarah` (any passage);
  * - `/read?saved=<id>` (a member's own saved reading: its passage comes from the member's account, never the address).
+ * A `ref` address may add `&mark=<canonical ref>`: the verses of a selection, marked in the whole portion it came from (1.7).
  * Any of them may add `&verse=<n>` (1-based, within the passage shown: that verse opens selected, in the
  * player when recordings are on) and `&lens=study`.
  */
 export type ReadTarget = Readonly<{ mode: "week"; date: string | null; kind: StudyKind | null }>
   | Readonly<{ mode: "named"; slug: string; passage: number }>
-  | Readonly<{ mode: "ref"; ref: string; kind: StudyKind }>
+  | Readonly<{ mode: "ref"; ref: string; kind: StudyKind; mark?: string }>
   | Readonly<{ mode: "saved"; id: string }>;
 export type ReadAddress = Readonly<{ target: ReadTarget | null; verse: number | null; study: boolean }>;
 export const READ_VERSE_MAX = 1000;
@@ -60,7 +61,10 @@ export function parseReadAddress(search: string): ReadAddress {
   }
   if (ref !== null) {
     const kind = kindOf(params.get("kind")), canonical = kind && canonicalReadingRef(ref, kind);
-    return { target: canonical ? { mode: "ref", ref: canonical.ref, kind: canonical.kind } : null, verse, study };
+    // The marked selection must itself be a valid passage of the same kind inside this one; anything else is simply not marked.
+    const markParam = params.get("mark"), marked = canonical && markParam !== null ? canonicalReadingRef(markParam, canonical.kind) : null;
+    const inside = canonical && marked && marked.verses.every(item => canonical.verses.includes(item));
+    return { target: canonical ? { mode: "ref", ref: canonical.ref, kind: canonical.kind, ...inside ? { mark: marked.ref } : {} } : null, verse, study };
   }
   const date = params.get("date");
   let shabbat: string | null = null;
@@ -78,7 +82,7 @@ export function readAddress(target: ReadTarget, options: { today?: string | null
     entries.push(["reading", target.slug]);
     if (target.passage !== 1) entries.push(["passage", String(target.passage)]);
   } else if (target.mode === "saved") entries.push(["saved", target.id]);
-  else entries.push(["ref", target.ref], ["kind", target.kind]);
+  else entries.push(["ref", target.ref], ["kind", target.kind], ...target.mark ? [["mark", target.mark] as [string, string]] : []);
   if (options.verse) entries.push(["verse", String(options.verse)]);
   if (options.study) entries.push(["lens", "study"]);
   return entries.length ? `/read?${query(entries)}` : "/read";

@@ -27,6 +27,9 @@ import { fetchPublicRefReading, fetchPublicShortPage, fetchPublicText, fetchPubl
   type PublicShortPage, type PublicSource, type PublicWeek } from "./api";
 import { parseReadAddress, readAddress, selectorKey, type ReadAddress, type ReadTarget } from "./urls";
 import { ReadingChooser } from "./reading-chooser";
+import { CHOOSE_STRINGS, PlaceLink, useVerseChoice, type ChoosePlan } from "./choose-verses";
+import { canonicalReadingRef } from "../../../lib/readings/reading-ref";
+import { positionInRef, selectionPlace, wholePortionFor } from "../../../lib/readings/verse-selection";
 import { printAddress } from "../../../lib/print/print-address";
 import { useProductName } from "./product-name";
 import { pageTitle } from "../../../lib/site/product-name";
@@ -164,6 +167,9 @@ function WeekReading({ initial, verse }: { initial: Extract<ReadTarget, { mode: 
   const change = (next: string) => { if (next !== date) { setDate(next); setKind(null); setLinked(null); } };
   const index = Math.max(0, sources.findIndex(row => row.source.passage.kind === kind)), isThisWeek = date !== null && date === today;
   const shown = sources[index]?.source.passage;
+  // Choose verses: the Shabbat's own passage is the whole portion already, so a selection from it only needs Save.
+  const choosePlan: ChoosePlan | undefined = current ? { label: CHOOSE_STRINGS.choose, start: [],
+    save: (selection, saved) => <SaveReading passage={{ title: current.parashah, label: selection.line, kind: selection.kind, ranges: selection.ranges, date: current.date }} onSaved={saved} /> } : undefined;
   return <Shell title={WEEK_TITLE}>
     <Hero eyebrow={isThisWeek ? "This Shabbat" : date ? "Shabbat" : "Torah and haftarah"} title={current ? current.parashah ?? "Shabbat reading" : week?.error ? "Reading unavailable" : "Loading the reading"}
       meta={date && <><time dateTime={date}>{longDate(date)}</time>{current?.torah && <> · Torah <bdi dir="ltr">{displayRange(current.torah.ranges)}</bdi></>}{current?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(current.haftarah.ranges)}</bdi></>}<OfflinePill /></>}
@@ -184,7 +190,7 @@ function WeekReading({ initial, verse }: { initial: Extract<ReadTarget, { mode: 
     {current && sources.length > 0 && <>
       {!current.torah && current.parashah && <p className="field-help">This Shabbat’s Torah reading isn’t shown here. The haftarah is below.</p>}
       <PassageReading key={current.date} sources={sources} index={index} onIndex={next => { setKind(sources[next].source.passage.kind); setLinked(null); }}
-        verse={linked} onVerseLeft={() => setLinked(null)} registerStart={starter.register} retry={retry} onRetry={() => setRetry(value => value + 1)} />
+        verse={linked} onVerseLeft={() => setLinked(null)} registerStart={starter.register} retry={retry} onRetry={() => setRetry(value => value + 1)} choose={choosePlan} />
     </>}
   </Shell>;
 }
@@ -196,6 +202,7 @@ function ChosenReading({ target, verse }: { target: Extract<ReadTarget, { mode: 
   const title = named ? named.name : target.mode === "ref" ? displayRange([target.ref]) : "Reading";
   const [index, setIndex] = useState(target.mode === "named" ? Math.min(target.passage, passages.length) - 1 : 0), [linked, setLinked] = useState(verse);
   const [loaded, setLoaded] = useState<{ sources?: readonly LabelledSource[]; error?: number } | null>(null), [retry, setRetry] = useState(0);
+  const place = useRef<string | null>(null), study = lens.lens === "study";
   useEffect(() => {
     const address: ReadTarget = target.mode === "named" ? { mode: "named", slug: target.slug, passage: index + 1 } : target;
     replaceAddress(readAddress(address, { verse: linked, study: lens.lens === "study" }));
@@ -210,6 +217,21 @@ function ChosenReading({ target, verse }: { target: Extract<ReadTarget, { mode: 
     return () => controller.abort();
   }, [passages, retry]);
   const sources = loaded?.sources ?? [];
+  // Choose verses. A selection (an address with `mark`) is shown inside its whole portion with its verses marked, and the way back is one link;
+  // any other passage of a parashah or haftarah offers its whole portion the same way. A named reading is whole already.
+  const refTarget = target.mode === "ref" ? target : null;
+  const portion = useMemo(() => {
+    if (!refTarget || refTarget.mark) return null;
+    const canonical = canonicalReadingRef(refTarget.ref, refTarget.kind), found = canonical && wholePortionFor(refTarget.kind, canonical.verses);
+    return found && found.ref !== refTarget.ref ? found : null;
+  }, [refTarget]);
+  const links = refTarget?.mark ? <PlaceLink place={place} base={readAddress({ mode: "ref", ref: refTarget.mark, kind: refTarget.kind }, { study })}
+      href={at => readAddress({ mode: "ref", ref: refTarget.mark!, kind: refTarget.kind }, { study, verse: selectionPlace(refTarget.mark!, refTarget.ref, refTarget.kind, at) })}>{CHOOSE_STRINGS.backToSelection}</PlaceLink>
+    : portion && refTarget ? <PlaceLink place={place} base={readAddress({ mode: "ref", ref: portion.ref, kind: portion.kind, mark: refTarget.ref }, { study })}
+      href={at => readAddress({ mode: "ref", ref: portion.ref, kind: portion.kind, mark: refTarget.ref }, { study, verse: positionInRef(portion.ref, portion.kind, at) })}>{CHOOSE_STRINGS.wholePortion}</PlaceLink> : null;
+  const choosePlan: ChoosePlan | undefined = sources.length > 0 ? { label: CHOOSE_STRINGS.choose, start: refTarget?.mark ? refTarget.mark.split("; ") : [], marked: refTarget?.mark ? refTarget.mark.split("; ") : undefined,
+    extra: links, onPlace: ref => { place.current = ref; },
+    save: (selection, saved) => <SaveReading passage={{ title, label: selection.line, kind: selection.kind, ranges: selection.ranges, date: null }} onSaved={saved} /> } : undefined;
   return <Shell title={title}>
     <Hero eyebrow={named ? GROUP_EYEBROW[named.group] : "Any reading"} title={loaded?.error ? "Reading unavailable" : title}
       meta={<>{passages.map((row, at) => <span key={at}>{at > 0 && " · "}{row.label} <bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</>}
@@ -221,7 +243,7 @@ function ChosenReading({ target, verse }: { target: Extract<ReadTarget, { mode: 
       <p>{loaded.error === 400 ? "Choose another reading, or go back to this week." : "Check your connection and try again."}</p>
       {loaded.error !== 400 && <button type="button" className="button-secondary" onClick={() => setRetry(value => value + 1)}>Try again</button>}</div>}
     {sources.length > 0 && <PassageReading key={sources.map(row => selectorKey(row.source.selector)).join("|")} sources={sources} index={index}
-      onIndex={next => { setIndex(next); setLinked(null); }} verse={linked} onVerseLeft={() => setLinked(null)} registerStart={starter.register} retry={retry} onRetry={() => setRetry(value => value + 1)} />}
+      onIndex={next => { setIndex(next); setLinked(null); }} verse={linked} onVerseLeft={() => setLinked(null)} registerStart={starter.register} retry={retry} onRetry={() => setRetry(value => value + 1)} choose={choosePlan} />}
   </Shell>;
 }
 
@@ -231,14 +253,17 @@ function ChosenReading({ target, verse }: { target: Extract<ReadTarget, { mode: 
  * `verse` (1-based in the passage shown) opens that verse selected: Word tools on it, and in the player
  * when recordings are on, ready to play. Any other choice lets it go (`onVerseLeft`).
  */
-export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, registerStart, retry, onRetry, verseExtra }: {
+export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, registerStart, retry, onRetry, verseExtra, choose }: {
   sources: readonly LabelledSource[]; index: number; onIndex(index: number): void; verse: number | null; onVerseLeft(): void;
   registerStart(start: (() => void) | null): void; retry: number; onRetry(): void;
   /** In Lein, shown under the selected verse before Up close (a saved reading's Working and Got it marks). */
   verseExtra?: (ref: string) => ReactNode;
+  /** Choose verses (1.7): how choosing starts and saves on this page; absent, the reading has no choosing. */
+  choose?: ChoosePlan;
 }) {
   const source = (sources[index] ?? sources[0]).source, passage = source.passage, kind = passage.kind, listening = source.listening, key = selectorKey(source.selector);
   const allVerses = useMemo(() => { try { return expandReadingRanges(passage.ranges, kind, TANAKH_VERSE_COUNTS); } catch { return []; } }, [passage, kind]);
+  const choice = useVerseChoice(choose, allVerses, kind);
   const linkedIndex = verse !== null && verse <= passage.verseCount ? verse - 1 : null;
   const pageOf = (position: number) => passage.pages.filter(row => row.offset <= position).at(-1)?.offset ?? 0;
   const [offset, setOffset] = useState(() => linkedIndex !== null ? pageOf(linkedIndex) : 0);
@@ -301,6 +326,9 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   // Commentary follows the text, never in its way: Rashi loads after the verses (for Lein's "Rashi (n)" too),
   // the Women's Commentary only when Study shows it on a Torah text.
   const refs = useMemo(() => page?.verses.map(row => row.ref) ?? [], [page]);
+  // The verse the reader is on, told to the page so a whole portion (and the way back) opens at the same place.
+  const onPlace = useRef(choose?.onPlace); onPlace.current = choose?.onPlace;
+  useEffect(() => { const ref = focus !== null && page?.verses[focus] ? page.verses[focus].ref : null; if (ref) onPlace.current?.(ref); }, [focus, page]);
   const corpus = kind === "torah" ? "torah" : "neviim";
   const { rashi, works } = useReadingWorks(refs, { ready: Boolean(page), study, chosen: lens.works, corpus });
   const leinLink = useCommentLink(), clearLink = leinLink.clear;
@@ -393,6 +421,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
       </div>}
       <LensSwitch onChange={() => leinLink.clear()} />
     </div>
+    {(choice.button || choice.extra) && <div className={styles.chooseRow}>{choice.button}{choice.extra}</div>}
     {sources.length > 1 && <p className={`field-help ${styles.passageNote}`}><bdi dir="ltr">{displayRange(passage.ranges)}</bdi></p>}
     <div className="reading-passage-layout" ref={textAnchor} tabIndex={-1}>
       <ReadingToolbar englishHidden={Boolean(drillVerse)} listeningEnabled={listening} tikkunAvailable={kind === "torah"} worksCorpus={corpus} onHear={listening && page ? () => hear(focus ?? 0) : undefined} />
@@ -401,12 +430,12 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
           : <p role="status">Loading the text…</p> : <>
           {study ? <>
             <CommentaryStatus works={workStatuses(works, corpus)} />
-            <ReadingPlace refs={allVerses} pageKey={textKey} onJump={jumpTo} />
+            <ReadingPlace refs={allVerses} pageKey={textKey} onJump={jumpTo} onHere={choose?.onPlace ? ref => onPlace.current?.(ref) : undefined} />
             <StudyRows verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={lens.english}
               works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))}
-              onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} />
+              onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} choice={choice.view} />
           </> : <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} englishHidden={drillVerse ? DRILL_STRINGS.hidden : undefined} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
-            linked={linkedVerse(leinLink, page.verses)} onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} />}
+            linked={linkedVerse(leinLink, page.verses)} onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} choice={choice.view} />}
           {listening && <ReadingPlayer key={`player:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} active={!lift} enabled={!lift} audio={{ coordinator: audio, slot: "proposed" }}
             target={drillTarget ?? (linkedOnPage !== null ? { index: linkedOnPage, generation: 0 } : undefined)} register={registerPlayback} onActiveWord={setPlayingWord} load={loadShort} />}
           <WordTools key={`tools:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} register={registerTools}
@@ -436,6 +465,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
               <button type="button" className="button-secondary" disabled={nextOffset === null} onClick={() => nextOffset !== null && changeOffset(nextOffset)}>Next text page</button></nav></>}
           {study && <CommentaryCredits works={works} refs={refs} />}
           <div className="study-more"><StudyCredits chapters={page.chapters} summary="About this text" /><a href="/trope-chart">Trope chart</a></div>
+          {choice.bar}
           {lift && page.verses[lift.index] && <LiftedLine learner verses={page.verses} assignment={assignment} index={lift.index} total={page.totalVerses} offset={page.offset}
             reference={listening ? { audio, active: true, navigation: lift.navigation, scopeKey: JSON.stringify([scopeKey, lift.opening]), load: loadShort } : undefined}
             onIndex={at => setLift(value => value && { index: at, opening: value.opening, navigation: value.navigation + 1 })} onClose={() => { audio.stopAll(); setLift(null); }} />}

@@ -53,7 +53,7 @@ export function SaveReadingView({ step, problem, name, date, panelId, savedId = 
  * signed out it offers sign-in, an account without saved readings is pointed to /account, and a
  * member gets an inline form pre-filled with the passage's name and its Shabbat.
  */
-export function SaveReading({ passage }: { passage: SavablePassage }) {
+export function SaveReading({ passage, onSaved }: { passage: SavablePassage; onSaved?(): void }) {
   const [step, setStep] = useState<SaveStep>("idle"), [problem, setProblem] = useState<SaveProblem>(null), [savedId, setSavedId] = useState<string | null>(null);
   const [name, setName] = useState(() => suggestedName(passage)), [date, setDate] = useState(passage.date ?? "");
   const panelId = useId(), live = useRef<AbortController | null>(null);
@@ -76,7 +76,7 @@ export function SaveReading({ passage }: { passage: SavablePassage }) {
     const controller = begin(); setStep("saving"); setProblem(null);
     createSavedReading({ name: trimmed, date: date || null, kind: passage.kind, ranges: passage.ranges.join("; ") }, controller.signal).then(result => {
       if (controller.signal.aborted) return;
-      if (result.ok) { setSavedId(result.reading.id); setStep("saved"); return; }
+      if (result.ok) { setSavedId(result.reading.id); setStep("saved"); onSaved?.(); return; }
       if (result.code === "signed-out" || result.code === "not-eligible") { setStep(result.code); return; }
       setStep("form"); setProblem(result.code);
     });
