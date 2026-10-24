@@ -35,6 +35,7 @@ import { SavedReadingPage } from "../saved/saved-reading";
 import { OfflineExpiryNote, OfflinePill } from "../offline/status";
 import { useOwnLayer } from "../workspace/study/own-layer";
 import { DRILL_STRINGS, drillNext, TranslateDrillPanel } from "./translate-drill";
+import { SiddurBlessings } from "./siddur-blessings";
 import styles from "./public-reading.module.css";
 import drillStyles from "./translate-drill.module.css";
 
@@ -184,6 +185,7 @@ function WeekReading({ initial, verse }: { initial: Extract<ReadTarget, { mode: 
     {current && !sources.length && <div className="workspace-state" role="status"><h2>No reading to show for this Shabbat</h2><p>The calendar lists no weekly Torah portion or haftarah here. Try the week before or after.</p></div>}
     {current && sources.length > 0 && <>
       {!current.torah && current.parashah && <p className="field-help">This Shabbat’s Torah reading isn’t shown here. The haftarah is below.</p>}
+      <SiddurBlessings torah={Boolean(current.torah)} haftarah={Boolean(current.haftarah)} />
       <PassageReading key={current.date} sources={sources} index={index} onIndex={next => { setKind(sources[next].source.passage.kind); setLinked(null); }}
         verse={linked} onVerseLeft={() => setLinked(null)} registerStart={starter.register} retry={retry} onRetry={() => setRetry(value => value + 1)} />
     </>}
