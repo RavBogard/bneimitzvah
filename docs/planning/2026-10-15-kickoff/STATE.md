@@ -67,9 +67,9 @@
 - GATE: merged #70 (M6b, the discussions UI, 7c13cac) and tagged v1.8.0 there. Proceeded because CI was green on the merge with main and the live /read check was clean: Lech-Lecha, the siddur blessing links, commentary loading and no console errors. 1.5 through 1.8 are now all released.
 - **Resume point, 2026-10-24 night (after v1.8.0):**
   - Nothing in flight.
-  - Asked Daniel at the check-in:
-    - whether the curator's own account name may appear after "Selected by";
-    - the M4 consent line.
+  - Daniel, at the v1.8.0 check-in:
+    - "Selected by" shows the curating admin's own account name ("Admin's own name");
+    - the M4 consent line is kept as is.
   - Next on the roadmap: 2.0, which waits on Cowork's handoff (docs/planning/2026-10-24-release-2-0).
   - Waiting on others: DNS for torah.centralreform.org, then §4.3 of the cutover runbook.
   - Follow-ups:
