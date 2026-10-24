@@ -12,8 +12,8 @@ import type { Tool } from "./tools";
  * A reading opened in Study on /read, from Claude (release 1.7 M2, PLAN-1-7 acceptance check 2). One read-only tool: it names a
  * selection in /read's own grammar (a canonical ref of up to 32 "; "-joined segments, a parashah from the reading list, a Shabbat
  * from the calendar, or one of the person's own saved readings by id) and returns the /read link with `lens=study`. It never
- * loads, returns or logs a verse: the page fetches the text when the link is opened. Saved readings stay out of the MCP
- * (saved-structure test): a saved reading's id is only carried into the link, and the page opens it from the member's account.
+ * loads, returns or logs a verse: the page fetches the text when the link is opened. This tool never reads a saved reading
+ * (only saved-tools.ts may, saved-structure test): a saved reading's id is only carried into the link, and the page opens it from the member's account.
  */
 const UUID_PATTERN = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
 const display = (ref: string) => ref.replace(/(\d)-(\d)/g, "$1–$2");

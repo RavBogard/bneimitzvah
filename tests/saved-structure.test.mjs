@@ -26,8 +26,32 @@ test("only src/server/saved/access.ts and the 0036 migration name app.saved_owne
   assert.deepEqual(naming, ["src/server/db/migrations/0036_saved_layer.sql", "src/server/saved/access.ts"]);
   const access = sources.find(file => file.path === "src/server/saved/access.ts").text;
   assert.equal(access.match(/set_config\('app\.saved_owner'/g)?.length, 1, "the owner is set in exactly one statement");
-  assert.match(access, /savedEligibility\(tx, identity\.tenantId, identity\.membership\.id\)[\s\S]*set_config\('app\.saved_owner', \$\{identity\.membership\.id\}, true\)/,
-    "the owner is the verified membership, set transaction-locally, after the eligibility check");
+  // The one statement lives in a private bindOwner, after the tenant and eligibility checks; both entrances call it with a verified membership.
+  const bind = access.match(/\nasync function bindOwner[\s\S]*?\n\}\n/)?.[0];
+  assert.ok(bind, "bindOwner is a module-private function");
+  assert.doesNotMatch(access, /export[^\n]*bindOwner|export\s*\{[^}]*bindOwner/, "bindOwner is never exported");
+  assert.match(bind, /current_setting\('app\.tenant_id', true\)[\s\S]*scope\.tenant !== owner\.tenantId[\s\S]*savedEligibility\(tx, owner\.tenantId, owner\.membershipId\)[\s\S]*set_config\('app\.saved_owner', \$\{owner\.membershipId\}, true\)/,
+    "the owner is set transaction-locally, after the tenant and eligibility checks");
+  const calls = [...access.matchAll(/await bindOwner\(tx, \{ tenantId: ([\w.]+), membershipId: ([\w.]+) \}\)/g)].map(m => `${m[1]} ${m[2]}`);
+  assert.deepEqual(calls, ["identity.tenantId identity.membership.id", "live.tenantId live.membershipId"], "the cookie session's own membership, then the MCP connection's own");
+  assert.equal(access.match(/bindOwner[<(]/g)?.length, 3, "declared once and called only by the two entrances");
+  // The MCP entrance refuses a scheduled routine and any role but admin or tutor before binding, from the re-locked connection.
+  const mcp = access.slice(access.indexOf("export async function withConnectionOwner"));
+  assert.match(mcp, /if \(actor\.unattended\) throw new AccessDenied\(403\);[\s\S]*mcp\.withLive\(actor, intent, async \(tx, live, alive\) => \{\s*if \(live\.unattended[\s\S]*live\.role !== "admin" && live\.role !== "tutor"\) throw new AccessDenied\(403\);\s*await bindOwner/);
+});
+
+test("the MCP reaches saved readings only through src/server/saved/mcp, imported only by src/server/mcp/saved-tools.ts", () => {
+  const importers = sources.filter(file => importsOf(file.text).some(spec => /(^|\/)saved\/mcp$/.test(spec))).map(file => file.path);
+  assert.deepEqual(importers, ["src/server/mcp/saved-tools.ts"]);
+  const narrow = sources.find(file => file.path === "src/server/saved/mcp.ts").text;
+  // It reads readings and nothing a member writes on a verse: no work, mark or star query, and no cookie-session entrance.
+  assert.doesNotMatch(narrow, /data\.(workForVerses|marksForVerses|workRow|markRow|listStars|starRow|insertWork|updateWork|insertMark|updateMark|insertStar|deleteStar|deleteReading)\b/);
+  assert.doesNotMatch(narrow, /createSavedAccess|createSavedService|withSavedOwner|set_config/);
+  assert.equal(narrow.match(/withConnectionOwner<Q, T>\(mcp, actor, "(read|data-write)", signal/g)?.length, 2, "every call is bound to the connection's own owner");
+  // No tool input names an owner: the schemas take no member, owner, user, student or tenant.
+  const tools = sources.find(file => file.path === "src/server/mcp/saved-tools.ts").text;
+  assert.doesNotMatch(tools, /\b(membershipId|memberId|ownerId|userId|studentId|tenantId|owner|member)\s*:/);
+  assert.equal(tools.match(/attendedOnly: true/g)?.length, 1, "the four tools share one attended-only base");
 });
 
 test("the saved data module is imported only from src/server/saved/*", () => {
@@ -36,7 +60,7 @@ test("the saved data module is imported only from src/server/saved/*", () => {
   for (const path of importers) assert.match(path, /^src\/server\/saved\//, `${path} must not import data/saved`);
 });
 
-test("no code outside the saved layer names the saved tables, and the MCP never imports a saved module", () => {
+test("no code outside the saved layer names the saved tables, and the MCP imports no saved module but saved/mcp in saved-tools.ts", () => {
   const allowed = new Set(["src/server/db/saved-schema.ts", "src/server/data/saved.ts", "src/server/db/migrations/0036_saved_layer.sql", "src/server/db/migrations/meta/0036_snapshot.json",
     // 0040 lets the owner revise their own reading's ranges (release 1.7 "Change verses"); its own test pins it to that one grant.
     "src/server/db/migrations/0040_saved_reading_ranges.sql"]);
@@ -44,14 +68,16 @@ test("no code outside the saved layer names the saved tables, and the MCP never 
     if (allowed.has(file.path) || /^src\/server\/db\/migrations\/meta\/\d{4}_snapshot\.json$/.test(file.path) && Number(file.path.match(/(\d{4})_snapshot/)[1]) > 36) continue;
     assert.doesNotMatch(file.text, /\b(savedReading|savedVerseWork|savedVerseMark|starredComment)\b|\b(saved_reading|saved_verse_work|saved_verse_mark|starred_comment)\b/, `${file.path} names a saved table`);
   }
+  // Release 1.7 M4: the one exception is saved-tools.ts importing ../saved/mcp, and tools.ts registering saved-tools.ts.
+  const allowedImports = new Map([["src/server/mcp/saved-tools.ts", ["../saved/mcp"]], ["src/server/mcp/tools.ts", ["./saved-tools"]]]);
   for (const file of sources.filter(file => file.path.startsWith("src/server/mcp/"))) {
-    for (const spec of importsOf(file.text)) assert.doesNotMatch(spec, /saved/, `${file.path} imports ${spec}`);
+    for (const spec of importsOf(file.text)) if (!(allowedImports.get(file.path) ?? []).includes(spec)) assert.doesNotMatch(spec, /saved/, `${file.path} imports ${spec}`);
     // MCP handlers receive the runtime's services; none may reach the saved service through it.
     assert.doesNotMatch(file.text, /\.saved\b|runtime\.saved|\bsaved\s*:/, `${file.path} reaches the saved service`);
   }
   // Staff-facing services that run without a member's own request never reach the saved service either.
   for (const file of sources.filter(file => /^src\/server\/(mcp|notifications|roster-sheet|relationships|students|study-guides|connections|settings|invitations)\//.test(file.path)))
-    for (const spec of importsOf(file.text)) assert.doesNotMatch(spec, /(^|\/)saved(\/|$)/, `${file.path} imports ${spec}`);
+    for (const spec of importsOf(file.text)) if (!(allowedImports.get(file.path) ?? []).includes(spec)) assert.doesNotMatch(spec, /(^|\/)saved(\/|$)/, `${file.path} imports ${spec}`);
 });
 
 test("saved-layer writes record no audit rows, and its routes are never public or cacheable", () => {

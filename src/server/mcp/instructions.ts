@@ -29,5 +29,7 @@ The reader's print sheet (anyone on this connection): print_sheet_link names a r
 
 Study links (anyone on this connection): study_link names a selection (a passage of one or more segments joined by "; ", a parashah, a Shabbat, or one of the person's saved readings) and returns a link that opens it in Study on the reader. Show the person the reading it states. It returns no verse text.
 
+Your own saved readings (anyone on this connection the person approved for themselves; never a scheduled routine): list_saved_readings, open_saved_reading, create_saved_reading and revise_saved_reading reach only the saved readings of the person this connection acts for, never anyone else's, staff included. They carry a reading's name, date and verses with its Study and print links, never verse text, notes or translations. Create or change one only when the person asks; show them the reading each result states. Create takes a fresh mutationId; revise takes the revision from your last read, and on a conflict show the person how it stands now.
+
 Public page views (the rabbi or an administrator): get_page_views gives how often each public page was opened per day. It is counts only; nothing about any visitor is kept.`;
 export const SERVER_INFO = Object.freeze({ name: "crc-bnei-mitzvah", version: "1.0.0" });

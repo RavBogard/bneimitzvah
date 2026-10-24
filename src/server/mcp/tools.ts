@@ -22,6 +22,7 @@ import { createRosterTools } from "./roster-tools";
 import { createSetupTools } from "./setup-tools";
 import { createPrintTools } from "./print-tools";
 import { createStudyTools } from "./study-tools";
+import { createSavedTools } from "./saved-tools";
 import type { Calendar, Snapshot } from "../../lib/readings/proposals";
 import { createAnalyticsTools } from "./analytics-tools";
 
@@ -41,6 +42,8 @@ export type Tool<Q extends PgQueryResultHKT> = Readonly<{
   name: string; description: string; inputSchema: JsonSchema; annotations: Readonly<Record<string, unknown>>;
   /** Who sees the tool at all: the study tools are the rabbi's (an admin grant) alone. */
   roles: readonly ("admin" | "tutor")[]; scope: string; deadlineMs?: number;
+  /** Only on a connection the person approved for themselves: a scheduled routine (unattended) never sees the tool. */
+  attendedOnly?: true;
   handler: (input: Record<string, unknown>, ctx: ToolContext<Q>) => Promise<unknown>;
 }>;
 
@@ -226,6 +229,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
     ...createSetupTools<Q>(),
     ...createPrintTools<Q>(),
     ...createStudyTools<Q>(),
+    ...createSavedTools<Q>(),
     ...createAnalyticsTools<Q>(),
   ] satisfies Tool<Q>[]);
 }

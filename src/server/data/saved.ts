@@ -38,8 +38,9 @@ export async function reading<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: Save
   const [row] = await tx.select().from(s.savedReading).where(and(readingOwner(owner), eq(s.savedReading.id, id))).limit(1);
   return row ?? null;
 }
-export async function insertReading<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, value: { name: string; date: string | null; kind: SavedKind; ranges: string; verseCount: number }) {
-  const [row] = await tx.insert(s.savedReading).values({ tenantId: owner.tenantId, membershipId: owner.membershipId, userId: owner.userId,
+/** `id` is given only by the MCP create, which derives it from the owner and the caller's mutationId (src/server/saved/mcp.ts). */
+export async function insertReading<Q extends PgQueryResultHKT>(tx: Tx<Q>, owner: SavedOwner, value: { id?: string; name: string; date: string | null; kind: SavedKind; ranges: string; verseCount: number }) {
+  const [row] = await tx.insert(s.savedReading).values({ ...(value.id ? { id: value.id } : {}), tenantId: owner.tenantId, membershipId: owner.membershipId, userId: owner.userId,
     name: value.name, readingDate: value.date, kind: value.kind, ranges: value.ranges, verseCount: value.verseCount }).returning();
   return row;
 }
