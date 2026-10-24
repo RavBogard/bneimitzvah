@@ -120,7 +120,8 @@ describe("portal MCP", () => {
     const tokens = await t.connect("multi", { scope: "portal:read portal:study" });
     expect(tokens.scope).toBe("portal:read");
     const names = (await t.rpc(tokens.access_token, "tools/list")).body.result.tools.map((x: { name: string }) => x.name);
-    expect(names.sort()).toEqual(["get_student", "list_students", "print_sheet_link", "study_link"]);
+    // The tutor's own saved readings (release 1.7 M4) are theirs alone; nothing else of anyone's.
+    expect(names.sort()).toEqual(["create_saved_reading", "get_student", "list_saved_readings", "list_students", "open_saved_reading", "print_sheet_link", "revise_saved_reading", "study_link"]);
     expect((await t.call(tokens.access_token, "list_students")).json().students.map((x: { name: string }) => x.name)).toEqual(["Synthetic Sibling A"]);
     expect((await t.call(tokens.access_token, "get_student", { studentId: t.f.students[1].id })).isError).toBe(true);
     const hidden = await t.rpc(tokens.access_token, "tools/call", { name: "save_guide", arguments: {} });

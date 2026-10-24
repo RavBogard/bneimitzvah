@@ -51,14 +51,19 @@ describe("staff blindness canary", () => {
     expect(await (await dispatch(new Request(`${ORIGIN}/api/saved/readings`, { headers: { cookie: f.identities.multi.cookie } }))).text()).toContain(CANARY);
   }, 180_000);
 
-  it("no MCP tool, attended or not, returns a member's saved words", async () => {
+  it("no MCP tool, attended or not, returns a member's saved words, or anyone's reading but the connected person's own", async () => {
     const t = await mcpFixture();
-    // Saved rows for the connected admin themself and for a tutor-and-parent member.
-    await t.f.owner(async () => {
-      for (const [member, user] of [[t.f.adminMember.id, t.f.identities.admin.id], [t.f.multiMember.id, t.f.identities.multi.id]]) {
-        const [reading] = await t.f.db.insert(s.savedReading).values({ tenantId: "crc", membershipId: member, userId: user, name: `Mine ${CANARY}`, kind: "torah", ranges: "Genesis 1:1-3", verseCount: 3 }).returning();
-        await t.f.db.insert(s.savedVerseWork).values({ tenantId: "crc", membershipId: member, savedReadingId: reading.id, verseRef: "Genesis 1:1", stream: "note", text: `note ${CANARY}`, version: 1 });
+    // Saved rows for the connected admin themself and for a tutor-and-parent member. Since release 1.7 M4 the admin's own
+    // reading names are theirs to see over the MCP (OWN); every note and translation, and the other member's reading, stay CANARY.
+    const OWN = `own-${randomUUID()}`;
+    const others = await t.f.owner(async () => {
+      const ids: string[] = [];
+      for (const [member, user, name] of [[t.f.adminMember.id, t.f.identities.admin.id, `Mine ${OWN}`], [t.f.multiMember.id, t.f.identities.multi.id, `Mine ${CANARY}`]]) {
+        const [reading] = await t.f.db.insert(s.savedReading).values({ tenantId: "crc", membershipId: member, userId: user, name, kind: "torah", ranges: "Genesis 1:1-3", verseCount: 3 }).returning();
+        for (const stream of ["note", "translation"] as const) await t.f.db.insert(s.savedVerseWork).values({ tenantId: "crc", membershipId: member, savedReadingId: reading.id, verseRef: "Genesis 1:1", stream, text: `${stream} ${CANARY}`, version: 1 });
+        if (member === t.f.multiMember.id) ids.push(reading.id);
       }
+      return ids;
     });
     await t.google("admin");
     const tokens = await t.connect("admin");
@@ -71,6 +76,8 @@ describe("staff blindness canary", () => {
       const args: Record<string, unknown> = {};
       for (const [key, schema] of Object.entries(tool.inputSchema.properties ?? {})) {
         if (/studentId$/.test(key)) args[key] = student;
+        // A guessed id: the other member's saved reading.
+        else if (key === "id" || /[rR]eadingId$/.test(key)) args[key] = others[0];
         else if (key === "kind") args[key] = "torah";
         else if (schema.enum?.length) args[key] = schema.enum[0];
         else if (/mutationId$/.test(key)) args[key] = randomUUID();
@@ -85,5 +92,9 @@ describe("staff blindness canary", () => {
     }
     expect(answered).toBeGreaterThan(5);
     for (const method of ["resources/list", "prompts/list", "initialize"]) expect(JSON.stringify((await t.rpc(tokens.access_token, method, { protocolVersion: "2025-06-18" })).body)).not.toContain(CANARY);
+    // The admin's own reading is findable where it now belongs, the admin's own list, still without its notes or translations.
+    const own = JSON.stringify((await t.rpc(tokens.access_token, "tools/call", { name: "list_saved_readings", arguments: {} })).body);
+    expect(own).toContain(OWN);
+    expect(own).not.toContain(CANARY);
   }, 180_000);
 });

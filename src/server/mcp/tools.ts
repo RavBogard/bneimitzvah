@@ -22,6 +22,7 @@ import { createRosterTools } from "./roster-tools";
 import { createSetupTools } from "./setup-tools";
 import { createPrintTools } from "./print-tools";
 import { createStudyTools } from "./study-tools";
+import { createSavedTools } from "./saved-tools";
 import type { Calendar, Snapshot } from "../../lib/readings/proposals";
 import { createAnalyticsTools } from "./analytics-tools";
 
@@ -41,6 +42,8 @@ export type Tool<Q extends PgQueryResultHKT> = Readonly<{
   name: string; description: string; inputSchema: JsonSchema; annotations: Readonly<Record<string, unknown>>;
   /** Who sees the tool at all: the study tools are the rabbi's (an admin grant) alone. */
   roles: readonly ("admin" | "tutor")[]; scope: string; deadlineMs?: number;
+  /** Only on a connection the person approved for themselves: a scheduled routine (unattended) never sees the tool. */
+  attendedOnly?: true;
   handler: (input: Record<string, unknown>, ctx: ToolContext<Q>) => Promise<unknown>;
 }>;
 
@@ -92,7 +95,8 @@ function rabbiAuthority<Q extends PgQueryResultHKT>(ctx: ToolContext<Q>): RabbiA
     run: action => ctx.mcp.withLive(ctx.actor, "data-write", async (tx, actor, alive) => {
       if (actor.role !== "admin") throw new AccessDenied(403);
       const rabbi = await lockRabbi(tx, actor.tenantId, actor.membershipId, { roleGrantId: actor.roleGrantId, roleGrantRevision: actor.roleGrantRevision, authorityRevision: actor.authorityRevision });
-      // An unattended routine's consent can never mark work reviewed (S25); a read-only consent cannot write at all.
+      // An unattended routine's consent can never mark work reviewed (S25); a read-only consent cannot write study work. (Since 1.7 M4 it can
+      // write the person's own saved readings, saved-tools.ts: the person's own rows only, never deleted, revision-checked.)
       const writer = Object.freeze({ tenantId: actor.tenantId, ...rabbi, channel: "mcp" as const, mayReview: !actor.unattended && actor.scopes.has(SCOPES.study) });
       const live = () => { alive(); if (ctx.signal.aborted) throw new AccessDenied(401); };
       return action(tx, writer, live);
@@ -226,6 +230,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
     ...createSetupTools<Q>(),
     ...createPrintTools<Q>(),
     ...createStudyTools<Q>(),
+    ...createSavedTools<Q>(),
     ...createAnalyticsTools<Q>(),
   ] satisfies Tool<Q>[]);
 }

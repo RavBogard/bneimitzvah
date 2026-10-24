@@ -14,8 +14,8 @@ import type { Tool } from "./tools";
  * The reader's print sheet from Claude (Daniel, 2026-10-23: "selectable and creatable from the MCP"). One read-only tool:
  * it names a reading and a format and returns the sheet's link, with a plain statement of both to check before printing.
  * It never loads, returns or logs a verse: the sheet's Hebrew and its licensed English are fetched by the browser when the
- * link is opened, so no translation text passes through a tool result. Saved readings stay out of the MCP (saved-structure
- * test): a saved reading's id is only carried into the link, and the page opens it from the signed-in member's own account.
+ * link is opened, so no translation text passes through a tool result. This tool never reads a saved reading (only saved-tools.ts
+ * may, saved-structure test): a saved reading's id is only carried into the link, and the page opens it from the signed-in member's own account.
  */
 const UUID_PATTERN = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
 const display = (ref: string) => ref.replace(/(\d)-(\d)/g, "$1–$2");
