@@ -895,3 +895,23 @@ Status shorthand: **1.8.1** = PR #71; **#72** = AD-01 PR; **F1–F6** = 2.0 plan
 - Benchmarks come from public page fetches. Chabad on a phone, Sefaria's reader UI and current TropeTrainer features are unverified.
 - ST-13's focus part, HB-15's language and face part, DP-17, ST-16's offline-pack claim and R-11 and R-15 were not re-walked.
 - Effort sizes are relative estimates, not schedules.
+
+---
+
+## 6. Daniel's decisions (2026-10-24 popups, binding)
+
+1. **Tab bar and Today:** "Yes, tab bar + Today". Bottom tab bar for signed-in roles; student Today · Reading · Learn · Account; a Today screen with one next step.
+2. **Aliyot:** "Page by aliyah". Aliyah 1–7, Maftir and triennial in Lein and Study with a picker; one aliyah per page. Amends the Passage First Rule.
+3. **Visual system:** "Yes, full system". Six type steps, 17 px body, one Button, the reading tools docked at the bottom. Keeps the Song session colours and fonts. Amends DESIGN.md's phone toolbar rule.
+4. **Portion summary:** "Claude drafts, you approve". Claude drafts through MCP; nothing shows until Daniel approves; credit "Rabbi Daniel Bogard" once approved.
+5. **Curated insights column:** "Sources only". Rabbi-curated sources beside the verses (Chabad Torah in depth right-hand column), built on the 1.8 curated discussions. No "Think about it" questions. Members collect nothing.
+6. **Hear yourself:** "Revisit with 2.5". The no-recording ruling stands until the 2.5 listening work.
+7. **Practice visibility:** "Wider view". The assigned tutor sees which verses were practised each day and which marks changed, plus Learn's "Can hear" line and the most-confused pair; parents see counts only; the student is told what the tutor sees; no durations or scores. Adversarial privacy review before release. Widens ruling 45.
+8. **Google sign-in script:** "Load only on sign-in". Our own "Continue with Google" button; Google's code loads only when chosen.
+9. **Rashi English:** Daniel verbatim: "Keep the current one, but let's see if there is a modern one that is available with a license that works for us". Keep the 1929 translation, named with its date in the credit; research a modern Rashi English with a workable licence and bring it back as a licence question.
+10. **Qamats qatan:** "Note now + adopt font". Word-card note "This vowel says o (qamats katan)." and switch the reading text to Taamey Frank CLM (Culmus, GPL with font exception).
+11. **New wording batch (section 3, item 11):** "Keep all".
+12. **Invitations:** "7 days, clearer email". Parent invitations last 7 days; the email names the congregation, the role and the expiry, never the child; staff get "Copy link".
+13. **After the ceremony:** "'Ceremony done' state". The student keeps Learn and Study sign-in and leaves the active roster; Disable stays for mistakes and warns "This can't be undone here".
+14. **Install and offline:** "Work on both". torah.centralreform.org stays the intended main address; install and offline also work on beitmitzvah.centralreform.org now; the student's assigned reading is saved for offline.
+15. **Holiday readings:** Daniel verbatim: "We observe 2 days". The two-day list is correct for CRC; F-SITE-REVIEW finding 8 is closed with no change.
