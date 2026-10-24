@@ -60,6 +60,12 @@ Context given: CRC Music holds band charts behind the band app, with no public p
    - **Daniel, 2026-10-24:** "We will develop and find and create the dvar guide next. I'll tell code your work is done"
    - **Resulting decision:** the D'var Torah guide is the next piece of work, to be found or written; B2's stage list is provisional until then. Cowork's 2.0 handoff is complete.
 
+## Ruling: no D'var Torah in the app (2026-10-24), replaces Q1, Q14, Q15, Q19
+
+**Daniel, 2026-10-24, verbatim:** "No dvar Torah guide.. that all happens with the rabbi not in the app. Cut all related pieces. The app is just for study"
+
+**Resulting decision:** D'var Torah is out of the app entirely: no guide, no stages, no doc link, no tracking, no notices. The d'var is worked on with the rabbi outside the app. Track B is cut. [Inferred from "the app is just for study": family logistics (Track E) also stay out of the app; E's "portal" items move to the office's tools or paper.]
+
 ## Batch 3b: questions raised by G (asked 2026-10-24)
 
 16. **Which part list is the student's path** (A4 Q3). **Daniel:** "Tutor's service plan (Recommended)". Falls back to the six default parts when there is no plan.

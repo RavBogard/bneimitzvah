@@ -20,18 +20,18 @@ Daniel replaced "quote only, never write teaching" (2026-10-24, verbatim in `QUE
 | A5 melodies | decided: no melody link or audio in 2.0; Daniel records and handles hosting in **2.1** | `A5-MELODIES.md`, `A5-RECORDING-LIST.md` (7 sittings, ~77 min) | none for 2.0 |
 | Batch 2 | answered 2026-10-24 | `QUESTIONS-2.0.md` | fluency strand yes; transliteration on request; credit "Rabbi Daniel Bogard" (overrides MISSION's generated-text label for approved teachings) |
 | A6 licensing | decided: course open to all, licensed text never shown, siddur link instead | — | write-up |
-| B1 D'var Torah | decided: shared Google Doc, app tracks stages (2026-10-24) | `B1-DVAR-TORAH-OPTIONS.md` | B2 needs the binder or current guide |
+| B1 D'var Torah | cut 2026-10-24 | `B1-DVAR-TORAH-OPTIONS.md` (record only) | none; not built |
 | C1 beta | decided: "beta when I say so" (2026-10-24) | `C1-BETA-DEFINITION.md` | none |
-| B2, B3 | drafted; binder still needed for B2 and for CRC's stage list | `B2-PRACTICE.md`, `B3-DESIGN.md`, `B3-STRINGS.md` | Parents' view decided (stages and dates, never the link). B3 Q2 and Q3 decided (Batch 3b): no focus line; rabbi owns feedback and final |
+| B2, B3 | cut 2026-10-24 | `B2-PRACTICE.md`, `B2-CRC-CURRENT.md`, `B3-DESIGN.md`, `B3-STRINGS.md` (record only) | none; not built ("The app is just for study") |
 | C2, C3 | drafted | `C2-PILOT-KIT/`, `C3-FEEDBACK.md` | none recorded |
 | D notifications | decided: "None yet" (2026-10-24) | `D-NOTIFICATIONS.md` (design for later) | none; nothing switches on at 2.0 |
-| E family logistics | waiting on Daniel (the binder) | — | binder not supplied; outline only, no build |
+| E family logistics | outline done, nothing in the app [Inferred] | `E-FAMILY-LOGISTICS.md` | none; no build |
 | F site review | done | `F-SITE-REVIEW.md` | finding 8 (holiday readings, Q13) and 16 (Rashi English) are Daniel's |
-| G plan | done (2026-10-24) | `G-PLAN-2.0.md` | 17 milestones (5 S, 8 M, 4 L); adversarial: SC2, SC4, SC5, DV1; G no longer blocked (SC2 and SC4 unblocked by Batch 3b); remaining open questions listed there |
+| G plan | done (2026-10-24) | `G-PLAN-2.0.md` | 14 milestones (4 S, 6 M, 4 L; was 17 before the D'var cut); adversarial: SC2, SC4, SC5; G no longer blocked (SC2 and SC4 unblocked by Batch 3b); remaining open questions listed there |
 | Hand-back | done for A, A6, B, C, D, F (2026-10-24) | `HANDOFF-TO-CLAUDE-CODE.md` (this folder; `../HANDOFF-TO-CLAUDE-CODE.md` untouched) | strings await Batch 4 except the 49 approved teachings and previously approved strings |
 | H 2.5 notes | not started | — | only if Daniel opens 2.5 |
 | Batch 3 | answered 2026-10-24 | `QUESTIONS-2.0.md` | Q11 none yet; Q12 per-part finished mark; Q13 glosses Claude drafts, live; Q14 parents see stages and dates. Q15 binder not yet supplied |
-| Questions | Batch 3b answered 2026-10-24 (Q16 path = tutor's service plan, default six as fallback; Q17 approved teachings may live in the public repo; Q18 parents don't see the finished mark; Q19 rabbi owns D'var feedback and final, no focus line) | `QUESTIONS-2.0.md` | none open in 2.0 except the binder, Batch 4 copy sign-off, pilot kit, evening-only prayer text |
+| Questions | Batch 3b answered 2026-10-24 (Q16 path = tutor's service plan, default six as fallback; Q17 approved teachings may live in the public repo; Q18 parents don't see the finished mark; Q19 rabbi owns D'var feedback and final, no focus line). **Ruling 2026-10-24: "No dvar Torah guide.. that all happens with the rabbi not in the app. Cut all related pieces. The app is just for study"; Track B cut, Q14 and Q19 moot** | `QUESTIONS-2.0.md` | none open in 2.0 except Batch 4 copy sign-off, pilot kit, evening-only prayer text |
 
 ## For Claude Code when building
 
@@ -49,7 +49,7 @@ Daniel replaced "quote only, never write teaching" (2026-10-24, verbatim in `QUE
 6. **Service-learning code already exists** (`src/lib/service-learning/`, `src/server/service-learning/`, migration 0015, `DEFAULT_SERVICE_PARTS`).
 7. **R1:** `RavBogard/shirei-tfilah` is the curated public mirror of `shireishabbat`, about a month behind.
 8. **Beta/indexing docs are stale** (MISSION L36/L52 vs STATE L30).
-9. **Students cannot use Claude** for D'var Torah (MCPD L13; 18+ consumer terms).
+9. **D'var Torah is not in the app** (Daniel, 2026-10-24); Track B is cut.
 10. **Brief path error:** the learn-to-lein spec is at `docs/superpowers/plans/2026-10-22-learn-to-lein.md`.
 
 ## Next session

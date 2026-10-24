@@ -1,6 +1,6 @@
 # 2.0 hand-back to Claude Code
 
-2026-10-24. One section per track that is done or decided, in the format of `COWORK-HANDOFF-2.0.md` §5. Build order, sizes, migrations and reviews are in `G-PLAN-2.0.md` (milestone ids SC, DV, F, G0 below refer to it). Daniel's answers are verbatim from `QUESTIONS-2.0.md`. **[Inferred]** marks anything not ruled or read in code. This file is separate from `../HANDOFF-TO-CLAUDE-CODE.md` (the 1.x hand-back), which is unchanged.
+2026-10-24. One section per track that is done or decided, in the format of `COWORK-HANDOFF-2.0.md` §5. Build order, sizes, migrations and reviews are in `G-PLAN-2.0.md` (milestone ids SC, F, G0 below refer to it). Daniel's answers are verbatim from `QUESTIONS-2.0.md`. **[Inferred]** marks anything not ruled or read in code. This file is separate from `../HANDOFF-TO-CLAUDE-CODE.md` (the 1.x hand-back), which is unchanged.
 
 **Strings, for every track.** Unless a line says otherwise, the strings files are **drafts awaiting Daniel's Batch 4 keep or edit** (Batch 4 has not been asked). Already approved, and to be shipped exactly: the 49 approved teachings; the credit "Rabbi Daniel Bogard"; the 1.8 siddur strings ("Open in the siddur, page {page}", "Your whole service in the siddur, from page {page}", "Torah blessings: siddur page 22", "Haftarah blessings: siddur pages 23–24"); and every string A7 marks **Reuse** (they already ship). Key-word glosses go live without Batch 4 (Batch 3 Q13).
 
@@ -71,27 +71,9 @@
 
 ---
 
-## Track B. D'var Torah
+## Track B — cut
 
-**Decided**
-- Daniel, 2026-10-24: "it will be a shared Google doc." (Batch 1 Q1). Model (c): the student drafts in a Google Doc shared with the tutor and rabbi; the app tracks stages, dates and the link. No drafting in the app or in Claude.
-- Daniel, 2026-10-24: "Stages and dates (Recommended)" (Batch 3 Q14). Parents see stages and dates, never the link.
-- Daniel, 2026-10-24 (Batch 3b Q19): "Rabbi owns feedback and final (Recommended)". Tutors may mark feedback given; only a rabbi approves the final text; no free-text focus line is stored.
-- Students can't use Claude for it anyway: "Parents and students cannot consent" (MCPD L13), and Claude's consumer terms are 18+ (B1).
-
-**What to build**
-- `B3-DESIGN.md`: §1 what the app never does, §2 stages and who marks what, §3 the link (accepted shapes, refusals, no network check, privacy), §4 the table, §5 deadlines, §6 screens, §7 settings, §9 no MCP access.
-- G-PLAN milestones DV1–DV3. DV1 is the adversarial slice (the D'var link table). Its migration is proposed as `0046_dvar_torah_progress.sql` [Inferred — check latest]; B3 §4.3's "0043" collides with the course's migration and is superseded by G-PLAN's table.
-- Retire the reserved `dvar_torah_draft` name in MISSION and REVIEW (G0), citing the 2026-10-24 ruling.
-- B3 §8 notices are not built (Track D).
-- Stage defaults are B2's placeholders (`B2-PRACTICE.md` §6), stored as settings. CRC's own list replaces them as data when the binder arrives.
-
-**Strings**
-- `B3-STRINGS.md`: student and child practice, tutor, rabbi, parent, settings, errors (`D-ERR-*`). Drafts for Batch 4.
-
-**Still open**
-- Nothing on B3 Q2 or Q3: decided (no focus line; the rabbi owns feedback and final). Build `marks` with no free text.
-- The binder: CRC's stage list and dates.
+Daniel, 2026-10-24: "No dvar Torah guide.. that all happens with the rabbi not in the app. Cut all related pieces. The app is just for study". D'var Torah is out of the app entirely: no guide, stages, doc link, tracking or notices. Build nothing from `B1`–`B3`; they are kept for the record only.
 
 ---
 
@@ -138,7 +120,7 @@
 ## Track F. Site fixes from the walk-through
 
 **Decided**
-- No ruling needed: these are fixes to the live site, folded into 2.0 as "anything the beta teaches us" (SPEC §6). F-SITE-REVIEW's walk was signed out, on an emulated phone, with no audio heard; the real-device checks still stand.
+- No ruling needed: these are fixes to the live site, folded into 2.0. F-SITE-REVIEW's walk was signed out, on an emulated phone, with no audio heard; the real-device checks still stand.
 
 **What to build**
 - `F-SITE-REVIEW.md`, findings 1–27 and the accessibility table, as grouped in G-PLAN F1–F6. The top five ("Top 5 for 2.0"): the rate limit and an honest 429 (1); dark mode (2, 4); asking for an account (3); Choose verses ranges and print (5, 9); the word card in Lein and Hebrew names for screen readers (6, 7).
@@ -157,5 +139,5 @@
 
 ## Not done here
 
-- **Track E, family logistics:** waiting on the binder; outline only, no build.
+- **Track E, family logistics:** outline done; nothing in the app ("The app is just for study"; [Inferred]). No build.
 - **Track H, 2.5 notes:** not started; asked only if Daniel opens 2.5.
