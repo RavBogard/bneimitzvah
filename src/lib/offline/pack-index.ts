@@ -7,9 +7,10 @@ import { EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, packLive, WINDOW_MS, parsePackIn
  * together.
  */
 export type PackState = "saving" | "saved" | "partial" | "no-space" | null;
-/** `shell`: the worker is active, so its app shell is installed. */
-export type OfflineState = Readonly<{ week: PackState; course: PackState; savedUntil: number | null; shell: boolean }>;
-const EMPTY_STATE: OfflineState = Object.freeze({ week: null, course: null, savedUntil: null, shell: false });
+/** `shell`: the worker is active, so its app shell is installed. `ownerChecked`: this page load has asked the private
+ * endpoint whose readings this device keeps (A2), so the owner packs it lists are this account's. */
+export type OfflineState = Readonly<{ week: PackState; course: PackState; savedUntil: number | null; shell: boolean; ownerChecked: boolean }>;
+const EMPTY_STATE: OfflineState = Object.freeze({ week: null, course: null, savedUntil: null, shell: false, ownerChecked: false });
 
 let state: OfflineState = EMPTY_STATE;
 const listeners = new Set<() => void>();
@@ -46,15 +47,19 @@ export async function writeIndex(cache: Cache, index: PackIndex) {
   await cache.put(INDEX_KEY, new Response(JSON.stringify(index), { headers: { "content-type": "application/json" } }));
 }
 
-/** Expired packs go, then every cached asset no live pack lists (the worker drops only what expired packs held). */
-export async function sweep(cache: Cache, now: number, keep: (pack: Pack) => boolean = () => true): Promise<PackIndex> {
-  const index = await readIndex(cache), packs = index.packs.filter(pack => packLive(pack, now) && keep(pack));
+/**
+ * Expired packs go, then every cached asset no live pack lists (the worker drops only what expired packs held).
+ * `owner` replaces the index's owner (A2); a pack of any other owner goes with it. Left out, the owner stays.
+ */
+export async function sweep(cache: Cache, now: number, keep: (pack: Pack) => boolean = () => true, owner?: string | null): Promise<PackIndex> {
+  const index = await readIndex(cache), nextOwner = owner === undefined ? index.owner : owner;
+  const packs = index.packs.filter(pack => packLive(pack, now) && keep(pack) && (pack.owner === "public" || pack.owner === nextOwner));
   const listed = new Set(packs.flatMap(pack => pack.assets));
   for (const request of await cache.keys()) {
     const key = assetKey(request.url);
     if (key !== INDEX_KEY && !listed.has(key)) await cache.delete(request);
   }
-  const next: PackIndex = Object.freeze({ format: 1, packs: Object.freeze(packs) });
+  const next: PackIndex = Object.freeze({ format: 1, owner: nextOwner, packs: Object.freeze(packs) });
   await writeIndex(cache, next);
   return next;
 }

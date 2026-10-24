@@ -166,6 +166,38 @@ describe("packed assets are served only from a live pack", () => {
   });
 });
 
+describe("owner packs (A2) are served exactly like public ones, only under their own index owner", () => {
+  const A = "A".repeat(43), B = "B".repeat(43), REF = "/api/public/text?ref=Genesis+1%3A1-5&kind=torah&offset=0";
+  const ownPack = (owner: string) => ({ key: "ref:torah:0123456789abcdef", owner, label: "", descriptor: { type: "ref", kind: "torah", ref: "Genesis 1:1-5" }, assets: [REF, CLIP],
+    bytes: 1, renewedAt: Date.now(), expiresAt: Date.now() + WINDOW_MS, format: 1 });
+  async function index(caches: FakeCaches, value: unknown) {
+    await seed(caches, [], { [REF]: json({ own: true }) });
+    await (await caches.open(OFFLINE_CACHE)).put(INDEX_KEY, new Response(JSON.stringify(value), { headers: { "content-type": "application/json" } }));
+  }
+  test("a person's own reading is served offline when its owner is the index's owner", async () => {
+    const w = await load(); await index(w.caches, { format: 1, owner: A, packs: [ownPack(A), pack(Date.now(), [DATA])] });
+    expect(await (await w.request(REF))!.json()).toEqual({ own: true });
+    expect((await w.request(CLIP))!.headers.get(OFFLINE_HEADER)).toBe("1");
+    expect((await w.request(DATA))!.headers.get(OFFLINE_HEADER)).toBe("1");
+  });
+  test("another owner's pack, or an owner pack with no index owner, makes the whole index unreadable: nothing is served", async () => {
+    for (const value of [{ format: 1, owner: B, packs: [ownPack(A), pack(Date.now(), [DATA])] }, { format: 1, packs: [ownPack(A), pack(Date.now(), [DATA])] }, { format: 1, owner: "x", packs: [pack(Date.now(), [DATA])] }]) {
+      const w = await load(); await index(w.caches, value);
+      await expect(w.request(REF), JSON.stringify(value.owner)).rejects.toThrow();
+      await expect(w.request(DATA), JSON.stringify(value.owner)).rejects.toThrow();
+    }
+  });
+  test("the activate sweep keeps the index owner, so the page still reads the index", async () => {
+    const caches = new FakeCaches(ORIGIN);
+    await index(caches, { format: 1, owner: A, packs: [ownPack(A), pack(Date.now() - 20 * DAY_MS, [DATA])] });
+    const w = await load({ caches });
+    await w.lifecycle("activate");
+    const stored = await (await (await caches.open(OFFLINE_CACHE)).match(INDEX_KEY))!.json();
+    expect(stored.owner).toBe(A);
+    expect(stored.packs.map((row: { key: string }) => row.key)).toEqual(["ref:torah:0123456789abcdef"]);
+  });
+});
+
 describe("install, activate and the tombstone", () => {
   test("install keeps the static pages (no cookie), the manifest, and the build files and fonts they name", async () => {
     const requests: Request[] = [];

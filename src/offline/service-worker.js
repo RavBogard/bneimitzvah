@@ -13,6 +13,7 @@ const STATIC_PATH = new RegExp(POLICY.staticPath);
 const STATIC_UNSAFE = new RegExp(POLICY.staticUnsafe, "i");
 const CLIP_PATH = new RegExp(POLICY.clipPath);
 const PACK_DATA_PATH = new RegExp(POLICY.packDataPath);
+const OWNER_KEY = new RegExp(POLICY.ownerKey);
 const OWN_ORIGIN = self.location.origin;
 const LOOPBACK = /^http:\/\/(?:127\.0\.0\.1|localhost)(?::\d{1,5})?$/;
 /** Off (the tombstone) when PORTAL_OFFLINE_ENABLED is "false", or anywhere but the torah origin and loopback. */
@@ -33,11 +34,14 @@ async function readIndex(cache) {
     if (!response) return null;
     const value = await response.json();
     if (!value || value.format !== 1 || !Array.isArray(value.packs)) return null;
+    const owner = value.owner === undefined || value.owner === null ? null : typeof value.owner === "string" && OWNER_KEY.test(value.owner) ? value.owner : undefined;
+    if (owner === undefined) return null;
     for (const pack of value.packs) {
-      if (!pack || pack.owner !== "public" || pack.format !== 1 || !Array.isArray(pack.assets) || !pack.assets.every(asset => typeof asset === "string")
+      // A public pack, or one of the index's own owner (A2: a person's own reading, still public text and clips).
+      if (!pack || !(pack.owner === "public" || (owner !== null && pack.owner === owner)) || pack.format !== 1 || !Array.isArray(pack.assets) || !pack.assets.every(asset => typeof asset === "string")
         || !Number.isSafeInteger(pack.renewedAt) || !Number.isSafeInteger(pack.expiresAt)) return null;
     }
-    return value;
+    return { format: 1, owner, packs: value.packs };
   } catch { return null; }
 }
 async function withLock(action) {
@@ -56,7 +60,7 @@ async function sweep(now) {
     if (!dropped.length) return;
     const keep = new Set(kept.flatMap(pack => pack.assets));
     for (const asset of new Set(dropped.flatMap(pack => pack.assets))) if (!keep.has(asset)) await cache.delete(asset);
-    await cache.put(POLICY.indexKey, new Response(JSON.stringify({ format: 1, packs: kept }), { headers: { "content-type": "application/json" } }));
+    await cache.put(POLICY.indexKey, new Response(JSON.stringify({ format: 1, owner: index.owner, packs: kept }), { headers: { "content-type": "application/json" } }));
   });
 }
 
