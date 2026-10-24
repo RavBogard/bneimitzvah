@@ -14,14 +14,14 @@ function rig(server: { owner?: string; progress?: Progress | null; version?: num
   const storage = new MemoryStorage(), store = browserProgressStore(() => storage as unknown as Storage);
   if (local) store.save(local);
   if (marker !== undefined) storage.setItem(SYNC_KEY, typeof marker === "string" ? marker : JSON.stringify(marker));
-  const state = { owner: server.owner ?? A, progress: server.progress ?? null, version: server.version ?? 0, status: server.status ?? 200, until: server.until ?? null, conflictOnce: false, before: null as null | ((path: string) => void) };
+  const state = { owner: server.owner ?? A, progress: server.progress ?? null, version: server.version ?? 0, status: server.status ?? 200, until: server.until ?? null, conflictOnce: false, before: null as null | ((path: string) => void), refusal: { error: "x" } as unknown };
   const calls: { path: string; body: any }[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
   const reply = (status: number, value: unknown) => new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
   const view = () => ({ ok: true, owner: state.owner, progress: state.progress, version: state.version, until: state.until });
   const fetcher = (async (path: string, init?: RequestInit) => {
     const body = init?.body ? JSON.parse(String(init.body)) : undefined; calls.push({ path, body });
     state.before?.(path);
-    if (state.status !== 200) return reply(state.status, { error: "x" });
+    if (state.status !== 200) return reply(state.status, state.refusal);
     if (path === "/api/learn/progress") return reply(200, view());
     if (path === "/api/learn/progress/merge") { state.progress = state.progress ? mergeProgress(state.progress, parseProgress(body.progress)!) : parseProgress(body.progress); state.version++; return reply(200, view()); }
     if (path === "/api/learn/progress/put") {
@@ -144,6 +144,43 @@ describe("signed-in progress in the browser", () => {
     expect(clean.store.load()).toEqual(emptyProgress());
     expect(clean.marker()).toBeNull();
     const dirty = rig({ status: 401 }, { owner: A, version: 3, dirty: true }, doc({ "intro-phrases": T1 }));
+    await dirty.sync.start();
+    expect(dirty.store.load()).toEqual(doc({ "intro-phrases": T1 }));
+    expect(dirty.marker()).toEqual({ owner: A, version: 3, dirty: true });
+  });
+  it("never clears the device when its own account is refused, or on any other failure, even after a clean sync", async () => {
+    for (const status of [403, 404, 409, 429, 500, 503]) {
+      const local = doc({ "intro-phrases": T1 }), r = rig({ status }, { owner: A, version: 3, dirty: false }, local);
+      r.state.refusal = status === 403 ? { error: "forbidden", owner: A } : { error: "x" };
+      await r.sync.start();
+      expect(r.store.load(), String(status)).toEqual(local);
+      expect(r.marker(), String(status)).toEqual({ owner: A, version: 3, dirty: false });
+      expect(r.seen.progress, String(status)).toEqual([]);
+    }
+    // A membership ended mid-session: the write is refused, the change stays here and stays unsent.
+    const r = rig({ progress: doc({ "intro-phrases": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "intro-phrases": T1 }));
+    await r.sync.start();
+    expect(r.sync.account.state).toBe("synced");
+    const changed = doc({ "intro-phrases": T1, "torah-zakef": T2 });
+    r.store.save(changed); r.sync.changed(); r.state.status = 403; r.state.refusal = { error: "forbidden", owner: A };
+    r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
+    expect(r.calls.at(-1)?.path).toBe("/api/learn/progress/put");
+    expect(r.sync.account.state).toBe("not-eligible");
+    expect(r.store.load()).toEqual(changed);
+    expect(r.marker()).toEqual({ owner: A, version: 3, dirty: true });
+  });
+  it("treats a refusal naming another account, or none, as the next person at a shared device: a clean copy is cleared", async () => {
+    for (const refusal of [{ error: "forbidden", owner: B }, { error: "forbidden" }, { error: "forbidden", owner: A, extra: 1 }, { error: "forbidden", owner: "A".repeat(32) }]) {
+      const r = rig({ status: 403 }, { owner: A, version: 3, dirty: false }, doc({ "intro-phrases": T1 }));
+      r.state.refusal = refusal;
+      await r.sync.start();
+      expect(r.sync.account.state).toBe("not-eligible");
+      expect(r.store.load(), JSON.stringify(refusal)).toEqual(emptyProgress());
+      expect(r.marker()).toBeNull();
+    }
+    // Unsent changes stay for their account whoever is refused.
+    const dirty = rig({ status: 403 }, { owner: A, version: 3, dirty: true }, doc({ "intro-phrases": T1 }));
+    dirty.state.refusal = { error: "forbidden", owner: B };
     await dirty.sync.start();
     expect(dirty.store.load()).toEqual(doc({ "intro-phrases": T1 }));
     expect(dirty.marker()).toEqual({ owner: A, version: 3, dirty: true });

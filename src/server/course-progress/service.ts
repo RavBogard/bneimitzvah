@@ -1,21 +1,14 @@
 import "server-only";
-import { createHash } from "node:crypto";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
 import type { AccessRequest, AccessTransaction } from "../access/types";
 import * as data from "../data/course-progress";
 import { mergeProgress, parseProgress, type Progress } from "../../lib/learn/progress";
-import { createCourseProgressAccess, type CourseOwner } from "./access";
+import { courseOwnerName, createCourseProgressAccess, type CourseOwner } from "./access";
 import * as validate from "./validation";
 
 type Request = AccessRequest & { method?: string };
-/**
- * An opaque, stable name for this member's account, so a browser can tell whose progress it holds (a
- * shared device must never fold one member's progress into another's). It is a hash, not an id, and it
- * is only ever returned to the member themself.
- */
-export const courseOwnerName = (owner: Pick<CourseOwner, "tenantId" | "membershipId">) =>
-  createHash("sha256").update(`learn-progress-owner/v1:${owner.tenantId}:${owner.membershipId}`).digest("hex").slice(0, 32);
+export { courseOwnerName };
 /** A stored document re-read with the same parser; a row that no longer parses is refused, never served. */
 function stored(row: data.CourseProgressRow): Progress {
   const value = parseProgress(row.progress);

@@ -8,6 +8,8 @@ import { accountsApi, type AccountRequest, type ApproverMode, type ApproversView
 export const APPROVER_HELP_LINE = "Anyone who asks in good faith can have an account, member or not. Decline only spam or abuse.";
 /** Proposed wording, not yet approved by Daniel: a designated tutor approving someone an admin ended (Decided here, 2026-10-23). */
 export const ADMIN_REAPPROVAL_LINE = "An admin ended this person’s membership, so only an admin can approve them again. The request is kept.";
+/** Proposed wording, not yet approved by Daniel: an approver's own request is approved by another approver (Decided here, 2026-10-23). */
+export const OWN_REQUEST_LINE = "This is your own request, so another approver needs to approve it. You can decline it yourself.";
 const initial = (name: string) => Array.from(name.trim())[0]?.toLocaleUpperCase() ?? "A";
 const day = (value: string) => new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
 type Message = { text: string; tone: "status" | "alert"; signIn?: boolean } | null;
@@ -55,7 +57,7 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
   const approve = (row: AccountRequest) => act(async () => {
     const result = await accountsApi.approve(mode, row.id);
     return result.ok ? { text: `${row.name} now has an account. They’ll get one email saying so.`, tone: "status" }
-      : { text: result.code === "admin-only" ? ADMIN_REAPPROVAL_LINE : "That person’s account is turned off here, so it can’t be approved. The request is kept.", tone: "alert" };
+      : { text: result.code === "admin-only" ? ADMIN_REAPPROVAL_LINE : result.code === "own-request" ? OWN_REQUEST_LINE : "That person’s account is turned off here, so it can’t be approved. The request is kept.", tone: "alert" };
   }, "approve the request");
   const decline = (row: AccountRequest) => act(async () => { await accountsApi.decline(mode, row.id); return { text: "Request declined. Nothing was sent.", tone: "status" }; }, "decline the request");
   const end = (row: Member) => act(async () => { await accountsApi.endMember(row.id); return { text: `${row.name}’s membership has ended.`, tone: "status" }; }, "end the membership");

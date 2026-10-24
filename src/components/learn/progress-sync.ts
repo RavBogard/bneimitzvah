@@ -9,9 +9,12 @@ import { emptyProgress, mergeProgress, parseProgress, serializeProgress, type Pr
  * - A change made while a request is out is never overwritten by its answer: it is merged in and sent next.
  * - A browser holding another account's progress (a shared device) takes this account's from the server and
  *   never folds the other's into it.
- * - Signed out (or without a live grant) after a clean sync, the device is cleared: the account holds it all,
- *   and the next person at a shared device starts fresh. Unsent changes are kept for that account.
- * Signed out, or with no live grant, nothing leaves the browser.
+ * - Signed out (a 401) after a clean sync, the device is cleared: the account holds it all, and the next person
+ *   at a shared device starts fresh. Unsent changes are kept for that account. A refusal (a 403) clears nothing
+ *   when it names this browser's own account (the learner may still be working here); one that names another
+ *   account, or none, is the next person at a shared device and is treated like a sign-out. Any other failure
+ *   clears nothing.
+ * Signed out, or refused, nothing leaves the browser.
  */
 export const SYNC_KEY = "crc-torah:learn-sync/v1";
 export type Account = Readonly<{ state: "unknown" | "signed-out" | "not-eligible" } | { state: "synced"; until: string | null }>;
@@ -42,6 +45,13 @@ export function parseRemote(value: unknown): Remote | null {
   const progress = row.progress === null ? null : parseProgress(row.progress);
   if (row.progress !== null && !progress || (progress === null) !== (row.version === 0)) return null;
   return { owner: row.owner, progress, version: row.version as number, until: row.until as string | null };
+}
+
+/** The owner a 403 names (the refused membership's own), strictly; anything else names nobody. */
+function refusedOwner(value: unknown): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+  return Object.keys(row).length === 2 && row.error === "forbidden" && typeof row.owner === "string" && OWNER.test(row.owner) ? row.owner : null;
 }
 
 export type SyncIo = Readonly<{
@@ -77,17 +87,20 @@ export function createProgressSync(io: SyncIo) {
     io.onProgress(progress); setAccount({ state: "synced", until: remote.until });
     if (moved) queueMicrotask(() => { void push(); });
   }
-  /** Signed out or refused: after a clean sync the device is cleared (the account has it all); unsent changes stay. */
-  function refused(status: number) {
+  /**
+   * Signed out, or refused as someone else: after a clean sync the device is cleared (the account has it all);
+   * unsent changes stay. Refused as this browser's own account (403 naming it): nothing is cleared.
+   */
+  function refused(status: number, value: unknown) {
     if (status !== 401 && status !== 403) return;
     const marker = readMarker(io.storage());
-    if (marker && !marker.dirty) { io.store.save(emptyProgress()); dropMarker(io.storage()); io.onProgress(emptyProgress()); }
+    if (marker && !marker.dirty && !(status === 403 && refusedOwner(value) === marker.owner)) { io.store.save(emptyProgress()); dropMarker(io.storage()); io.onProgress(emptyProgress()); }
     setAccount({ state: status === 401 ? "signed-out" : "not-eligible" });
   }
   async function merge(progress: Progress) {
     const answer = await call("/api/learn/progress/merge", { progress });
     const remote = answer.status === 200 ? parseRemote(answer.value) : null;
-    if (remote) settle(remote, progress); else refused(answer.status);
+    if (remote) settle(remote, progress); else refused(answer.status, answer.value);
   }
   async function push() {
     if (writing) { again = true; return; }
@@ -101,7 +114,7 @@ export function createProgressSync(io: SyncIo) {
       if (remote) settle(remote, progress);
       // Another device wrote first: merge what this browser has now, including anything made since.
       else if (answer.status === 409) await merge(io.store.load());
-      else refused(answer.status);
+      else refused(answer.status, answer.value);
     } finally { writing = false; if (again) { again = false; void push(); } }
   }
   return Object.freeze({
@@ -109,7 +122,7 @@ export function createProgressSync(io: SyncIo) {
     /** Once per page: learn whose this browser's progress is, and bring the two copies together. */
     async start() {
       const answer = await call("/api/learn/progress");
-      if (answer.status !== 200) { refused(answer.status); return; }
+      if (answer.status !== 200) { refused(answer.status, answer.value); return; }
       const remote = parseRemote(answer.value); if (!remote) return;
       const marker = readMarker(io.storage());
       // First sign-in in this browser: merge its progress into the account's.

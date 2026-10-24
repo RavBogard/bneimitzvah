@@ -3,6 +3,7 @@ import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AccessTransaction } from "../access/types";
 import type { CourseOwner } from "../course-progress/access";
+import { memberEligible } from "../access/eligibility";
 import * as s from "../db/index";
 
 /**
@@ -15,12 +16,13 @@ type Tx<Q extends PgQueryResultHKT> = AccessTransaction<Q>;
 
 /**
  * Share-locks one live grant of this membership, any role: a student keeps course progress too (the
- * known-date cap is for them). A concurrent revocation waits for this request.
+ * known-date cap is for them). Without one, the shared member rule decides (src/server/access/eligibility.ts),
+ * so an approved Member with no role keeps it as well. A concurrent revocation or end of membership waits.
  */
 export async function courseEligibility<Q extends PgQueryResultHKT>(tx: Tx<Q>, tenantId: string, membershipId: string) {
   const [grant] = await tx.select({ id: s.roleGrant.id }).from(s.roleGrant).where(and(eq(s.roleGrant.tenantId, tenantId), eq(s.roleGrant.membershipId, membershipId),
     isNull(s.roleGrant.revokedAt))).orderBy(asc(s.roleGrant.role), asc(s.roleGrant.id)).limit(1).for("share");
-  return grant !== undefined;
+  return grant !== undefined || memberEligible(tx, tenantId, membershipId);
 }
 
 /** One member's writes run one at a time, so a merge never loses a concurrent write. */
