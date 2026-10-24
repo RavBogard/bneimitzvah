@@ -149,7 +149,7 @@ function useToday() { const [today, setToday] = useState<string | null>(null); u
 function WeekReading({ initial, verse }: { initial: Extract<ReadTarget, { mode: "week" }>; verse: number | null }) {
   const today = useToday(), [date, setDate] = useState<string | null>(null), lens = useStudyLens(), chooser = useChooser(), starter = useStarter();
   const [week, setWeek] = useState<{ date: string; value?: PublicWeek; error?: number } | null>(null), [retry, setRetry] = useState(0);
-  const [kind, setKind] = useState<StudyKind | null>(initial.kind), [linked, setLinked] = useState(verse);
+  const [kind, setKind] = useState<StudyKind | null>(initial.kind), [linked, setLinked] = useState(verse), [choosing, setChoosing] = useState(false);
   useEffect(() => { if (today) setDate(current => current ?? initial.date ?? today); }, [today, initial.date]);
   // One Shabbat at a time; its address is shareable (and this week's Lein is plain /read).
   useEffect(() => { if (date && today) replaceAddress(readAddress({ mode: "week", date, kind: kind === "haftarah" ? "haftarah" : null }, { today, verse: linked, study: lens.lens === "study" })); },
@@ -168,7 +168,7 @@ function WeekReading({ initial, verse }: { initial: Extract<ReadTarget, { mode: 
   const index = Math.max(0, sources.findIndex(row => row.source.passage.kind === kind)), isThisWeek = date !== null && date === today;
   const shown = sources[index]?.source.passage;
   // Choose verses: the Shabbat's own passage is the whole portion already, so a selection from it only needs Save.
-  const choosePlan: ChoosePlan | undefined = current ? { label: CHOOSE_STRINGS.choose, start: [],
+  const choosePlan: ChoosePlan | undefined = current ? { label: CHOOSE_STRINGS.choose, start: [], onChoosing: setChoosing,
     save: (selection, saved) => <SaveReading passage={{ title: current.parashah, label: selection.line, kind: selection.kind, ranges: selection.ranges, date: current.date }} onSaved={saved} /> } : undefined;
   return <Shell title={WEEK_TITLE}>
     <Hero eyebrow={isThisWeek ? "This Shabbat" : date ? "Shabbat" : "Torah and haftarah"} title={current ? current.parashah ?? "Shabbat reading" : week?.error ? "Reading unavailable" : "Loading the reading"}
@@ -180,7 +180,7 @@ function WeekReading({ initial, verse }: { initial: Extract<ReadTarget, { mode: 
         <label className={styles.picker}><span>Find a date</span><input type="date" value={date ?? ""} onChange={event => { const value = event.target.value; if (/^\d{4}-\d{2}-\d{2}$/.test(value)) { try { change(shabbatOnOrAfter(value)); } catch { /* Ignore partial input. */ } } }} /></label>
         {chooser.button}
       </>}
-      actions={sources.length > 0 && starter.row(current && shown && <SaveReading passage={{ title: current.parashah, label: shown.kind === "torah" ? "Torah" : "Haftarah", kind: shown.kind, ranges: shown.ranges, date: current.date }} />, date && shown ? printAddress({ mode: "week", date, kind: shown.kind === "haftarah" ? "haftarah" : null, pick: "full" }, undefined, { today }) : undefined)} />
+      actions={sources.length > 0 && starter.row(current && shown && !choosing && <SaveReading passage={{ title: current.parashah, label: shown.kind === "torah" ? "Torah" : "Haftarah", kind: shown.kind, ranges: shown.ranges, date: current.date }} />, date && shown ? printAddress({ mode: "week", date, kind: shown.kind === "haftarah" ? "haftarah" : null, pick: "full" }, undefined, { today }) : undefined)} />
     {chooser.panel}
     {week?.error && <div className="workspace-state" role="status"><h2>{week.error === 400 ? "That date isn’t available" : "The reading didn’t load"}</h2>
       <p>{week.error === 400 ? "Choose a Shabbat within the next few years, or go back to this week." : "Check your connection and try again."}</p>
@@ -202,7 +202,7 @@ function ChosenReading({ target, verse }: { target: Extract<ReadTarget, { mode: 
   const title = named ? named.name : target.mode === "ref" ? displayRange([target.ref]) : "Reading";
   const [index, setIndex] = useState(target.mode === "named" ? Math.min(target.passage, passages.length) - 1 : 0), [linked, setLinked] = useState(verse);
   const [loaded, setLoaded] = useState<{ sources?: readonly LabelledSource[]; error?: number } | null>(null), [retry, setRetry] = useState(0);
-  const place = useRef<string | null>(null), study = lens.lens === "study";
+  const place = useRef<string | null>(null), study = lens.lens === "study", [choosing, setChoosing] = useState(false);
   useEffect(() => {
     const address: ReadTarget = target.mode === "named" ? { mode: "named", slug: target.slug, passage: index + 1 } : target;
     replaceAddress(readAddress(address, { verse: linked, study: lens.lens === "study" }));
@@ -230,13 +230,13 @@ function ChosenReading({ target, verse }: { target: Extract<ReadTarget, { mode: 
     : portion && refTarget ? <PlaceLink place={place} base={readAddress({ mode: "ref", ref: portion.ref, kind: portion.kind, mark: refTarget.ref }, { study })}
       href={at => readAddress({ mode: "ref", ref: portion.ref, kind: portion.kind, mark: refTarget.ref }, { study, verse: positionInRef(portion.ref, portion.kind, at) })}>{CHOOSE_STRINGS.wholePortion}</PlaceLink> : null;
   const choosePlan: ChoosePlan | undefined = sources.length > 0 ? { label: CHOOSE_STRINGS.choose, start: refTarget?.mark ? refTarget.mark.split("; ") : [], marked: refTarget?.mark ? refTarget.mark.split("; ") : undefined,
-    extra: links, onPlace: ref => { place.current = ref; },
+    extra: links, onPlace: ref => { place.current = ref; }, onChoosing: setChoosing,
     save: (selection, saved) => <SaveReading passage={{ title, label: selection.line, kind: selection.kind, ranges: selection.ranges, date: null }} onSaved={saved} /> } : undefined;
   return <Shell title={title}>
     <Hero eyebrow={named ? GROUP_EYEBROW[named.group] : "Any reading"} title={loaded?.error ? "Reading unavailable" : title}
       meta={<>{passages.map((row, at) => <span key={at}>{at > 0 && " · "}{row.label} <bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</>}
       nav={<><button type="button" className="button-hero-secondary" onClick={() => go(readAddress({ mode: "week", date: null, kind: null }, { study: lens.lens === "study" }))}>This week</button>{chooser.button}</>}
-      actions={sources.length > 0 && starter.row(sources[index] && <SaveReading passage={{ title: named ? named.name : title, label: passages[index]?.label ?? null, kind: sources[index].source.passage.kind, ranges: sources[index].source.passage.ranges, date: null }} />,
+      actions={sources.length > 0 && starter.row(sources[index] && !choosing && <SaveReading passage={{ title: named ? named.name : title, label: passages[index]?.label ?? null, kind: sources[index].source.passage.kind, ranges: sources[index].source.passage.ranges, date: null }} />,
         printAddress(target.mode === "named" ? { mode: "named", slug: target.slug, passage: index + 1 } : target))} />
     {chooser.panel}
     {loaded?.error && <div className="workspace-state" role="status"><h2>{loaded.error === 400 ? "That reading isn’t available" : "The reading didn’t load"}</h2>

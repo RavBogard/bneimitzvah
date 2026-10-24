@@ -38,6 +38,8 @@ export type ChoosePlan = Readonly<{
   save(selection: ChosenSelection, saved: () => void): ReactNode;
   /** Whole portion, Back to selection: shown beside the button, never while choosing (they leave the page). */
   extra?: ReactNode;
+  /** Told when choosing starts and ends, so the page can put away its own Save of the whole passage while the bar's Save is the one. */
+  onChoosing?(choosing: boolean): void;
   /** The verse the reader is on, as it changes, so a whole portion (or the way back) opens at the same place. */
   onPlace?(ref: string | null): void;
 }>;
@@ -75,6 +77,8 @@ export function useVerseChoice(plan: ChoosePlan | undefined, order: readonly str
   useEffect(() => { if (choosing && !entered.current) { entered.current = true; bar.current?.focus({ preventScroll: true }); } if (!choosing) entered.current = false; }, [choosing]);
   useEffect(() => { if (!choosing && restore.current) { restore.current = false; opener.current?.focus(); } });
 
+  const told = useRef(plan?.onChoosing); told.current = plan?.onChoosing;
+  useEffect(() => { told.current?.(choosing); return () => told.current?.(false); }, [choosing]);
   const view: VerseChoiceView | undefined = plan ? { choosing, selected, marked, onToggle } : undefined;
   const button = plan && !choosing ? <button type="button" ref={opener} className="button-secondary" onClick={begin}>{plan.label}</button> : null;
   const live = rangeMode && anchor !== null ? `${countLine(count, ranges)}. ${CHOOSE_STRINGS.rangeFrom}` : countLine(count, ranges);

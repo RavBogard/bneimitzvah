@@ -2,10 +2,10 @@
 import { useEffect, useState } from "react";
 import type { ChosenSelection } from "../public-reading/choose-verses";
 
-/** The words of a revision's answers. Proposed wording, not yet approved by Daniel, kept here so each swaps in one place. */
+/** The words of a revision's answers. The conflict sentence is Daniel's (2026-10-24); the invalid one is kept as approved. Kept here so each swaps in one place. */
 export const CHANGE_STRINGS = Object.freeze({
   save: "Save",
-  conflict: "This reading changed elsewhere. Your choice is kept; Save uses what’s saved now.",
+  conflict: "This reading was changed somewhere else. Your verses are still chosen. Save again to keep them.",
   invalid: "Those verses can’t be saved. Check the choice and try again.",
   failed: "The change didn’t save. Try again.",
 });

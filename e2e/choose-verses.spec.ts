@@ -51,14 +51,22 @@ test("choose verses from the text, separated groups with the live count, then sa
   // Not choosing: a word still plays in Lein, and nothing offers a selection.
   await expect(bar(page)).toHaveCount(0);
   await expect(page.locator(".study-verses [data-word-index][role=\"button\"]").first()).toBeVisible();
+  // The hero Save (whole passage) is there until choosing starts.
+  const anySave = page.getByRole("button", { name: "Save", exact: true });
+  await expect(anySave).toHaveCount(1);
+  await expect(bar(page)).toHaveCount(0);
   await page.getByRole("button", { name: "Choose verses", exact: true }).click();
   await expect(bar(page)).toBeFocused();
+  await expect(anySave).toHaveCount(0);
   await expect(line(page)).toHaveText("No verses chosen");
   // Words are not buttons while choosing, so a tap on one does nothing.
   await expect(page.locator(".study-verses [data-word-index][role=\"button\"]")).toHaveCount(0);
   await verse(page, 1).click();
   await expect(verse(page, 1)).toHaveAttribute("aria-pressed", "true");
   await expect(line(page)).toHaveText("1 verse: Deuteronomy 31:1");
+  // Only the bar's Save shows while choosing.
+  await expect(anySave).toHaveCount(1);
+  await expect(bar(page).getByRole("button", { name: "Save", exact: true })).toHaveCount(1);
   // Shift-click takes in everything from the last verse chosen; Select range does the same without a keyboard.
   await verse(page, 3).click({ modifiers: ["Shift"] });
   await expect(line(page)).toHaveText("3 verses: Deuteronomy 31:1–3");
@@ -89,6 +97,7 @@ test("choose verses from the text, separated groups with the live count, then sa
   // Done leaves choosing, and the words are exactly as they were.
   await bar(page).getByRole("button", { name: "Done", exact: true }).click();
   await expect(bar(page)).toHaveCount(0);
+  await expect(anySave).toHaveCount(1);
   await expect(page.getByRole("button", { name: "Choose verses", exact: true })).toBeFocused();
   await expect(page.locator(".study-verses [data-word-index][role=\"button\"]").first()).toBeVisible();
 });
@@ -140,7 +149,7 @@ test("Change verses on a saved reading starts in the whole portion with its vers
     await expect(line(page)).toHaveText("6 verses: Deuteronomy 31:1–3; 31:8–10");
     answer = { status: 409, body: { ok: false, code: "conflict", current: readingOf(base.ranges, 5) } };
     await bar(page).getByRole("button", { name: "Save", exact: true }).click();
-    await expect(bar(page).getByRole("alert")).toContainText("This reading changed elsewhere");
+    await expect(bar(page).getByRole("alert")).toContainText("This reading was changed somewhere else. Your verses are still chosen. Save again to keep them.");
     await expect(line(page)).toHaveText("6 verses: Deuteronomy 31:1–3; 31:8–10");
     expect(updates.at(-1)).toEqual({ id: base.id, revision: 1, name: "Synthetic selection", date: null, ranges: "Deuteronomy 31:1-3; Deuteronomy 31:8-10" });
     if (width === 360 && test.info().project.name === "phone") await page.screenshot({ path: test.info().outputPath("change-verses-360.png"), fullPage: false });
