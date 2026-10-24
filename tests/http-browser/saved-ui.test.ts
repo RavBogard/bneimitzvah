@@ -31,14 +31,16 @@ afterAll(async () => {
 
 async function visitor(width: number) {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: { width, height: 900 }, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
-  const seen: string[] = [];
+  // Saved readings are asked for only when the member asks; the account's preferences (release 1.7 M3b) are counted apart.
+  const seen: string[] = [], prefs: string[] = [];
   await context.route("**/*", async route => {
     const url = new URL(route.request().url());
     if (url.origin !== BROWSER_ORIGIN) return route.abort();
-    if (url.pathname.startsWith("/api/saved/")) seen.push(`${route.request().method()} ${url.pathname}`);
+    if (url.pathname.startsWith("/api/saved/preferences")) prefs.push(`${route.request().method()} ${url.pathname}`);
+    else if (url.pathname.startsWith("/api/saved/")) seen.push(`${route.request().method()} ${url.pathname}`);
     return route.continue();
   });
-  return { tab: await context.newPage(), seen };
+  return { tab: await context.newPage(), seen, prefs };
 }
 async function signIn(tab: Page, email: string) {
   await tab.goto("/", { waitUntil: "domcontentloaded" });
@@ -53,12 +55,19 @@ const noHorizontalScroll = (tab: Page) => tab.evaluate(() => document.documentEl
 
 it("a tutor-and-parent saves this week's Torah from /read and finds it under My readings; the reading itself never asks first", async () => {
   for (const width of [360, 1280]) {
-    const { tab, seen } = await visitor(width);
+    const { tab, seen, prefs } = await visitor(width);
     await tab.goto("/read", { waitUntil: "domcontentloaded" });
     await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
     await tab.getByRole("button", { name: "Save", exact: true }).click();
     await ui(tab.getByRole("link", { name: "Sign in to save readings", exact: true })).toBeVisible();
+    // Signed out in a browser that never signed in here, /read never asks about the account.
+    expect(prefs).toEqual([]);
     await signIn(tab, "pg-tutor@example.test");
+    // The front door, signed in with an account that keeps saved readings, asks for its preferences.
+    await expect.poll(() => prefs.includes("GET /api/saved/preferences")).toBe(true);
+    // Its answer marks this browser as signed in here (an opaque owner name, never an id or address).
+    await expect.poll(() => tab.evaluate(() => { try { return JSON.parse(localStorage.getItem("crc-torah:preferences-sync/v1") ?? "null")?.active === true; } catch { return false; } }), { timeout: 15_000 }).toBe(true);
+    prefs.length = 0;
     const mine = tab.getByRole("region", { name: "My readings" });
     if (width === 360) await ui(mine.getByText("Save a reading from This week to see it here.", { exact: true })).toBeVisible();
     seen.length = 0;
@@ -66,6 +75,8 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
     await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
     await ui(tab.locator(".study-verses")).toBeVisible();
     expect(seen).toEqual([]);
+    // Having signed in here, /read asks for the account's preferences, and only that.
+    await expect.poll(() => prefs).toEqual(["GET /api/saved/preferences"]);
     await tab.getByRole("button", { name: "Save", exact: true }).click();
     const form = tab.getByRole("form", { name: "Save this reading" });
     await ui(form.getByLabel("Name")).toHaveValue("Synthetic portion · Torah");
@@ -87,16 +98,19 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
 }, 240_000);
 
 it("an account without saved readings is pointed to /account, and its front door has no My readings", async () => {
-  const { tab, seen } = await visitor(390);
+  const { tab, seen, prefs } = await visitor(390);
   await signIn(tab, "saved-ui-recipient@example.test");
   await ui(tab.getByRole("heading", { level: 2, name: "Beit Mitzvah", exact: true })).toBeVisible();
   await ui(tab.locator("[data-my-readings]")).toHaveCount(0);
   expect(seen).toEqual([]);
+  // An account that keeps no saved readings keeps no preferences either: neither the front door nor /read asks.
+  expect(prefs).toEqual([]);
   await tab.goto("/read", { waitUntil: "domcontentloaded" });
   await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
   await tab.getByRole("button", { name: "Save", exact: true }).click();
   await ui(tab.getByRole("link", { name: "Ask for an account to save readings", exact: true })).toHaveAttribute("href", "/account");
   await ui(tab.getByRole("form", { name: "Save this reading" })).toHaveCount(0);
+  expect(prefs).toEqual([]);
 }, 120_000);
 
 it("the member opens the saved reading from My readings, marks a verse that stays marked after a reload, renames it and removes it", async () => {

@@ -1,6 +1,7 @@
 "use client";
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { COMMENTARY_WORKS } from "../../../lib/readings/commentary";
+import { notePreferencesChanged, onPreferencesApplied, startAccountPreferences } from "./account-preferences";
 
 /**
  * The reading's two lenses (spec 2026-10-22 §3.1): Lein, the continuous passage
@@ -40,9 +41,16 @@ export function readRememberedLens(storage: Storage | null, key: string | null):
       ...typeof value.english === "boolean" ? { english: value.english } : {} };
   } catch { return {}; }
 }
-export function rememberLens(storage: Storage | null, key: string | null, choice: LensChoice) {
+/**
+ * `chosen`: which of works and English the person has chosen (by default both). One not chosen is left out, so a lens
+ * switch alone never turns today's default commentaries into a remembered choice (release 1.7 M3b: the account keeps
+ * only real choices).
+ */
+export function rememberLens(storage: Storage | null, key: string | null, choice: LensChoice, chosen: Readonly<{ works: boolean; english: boolean }> = { works: true, english: true }) {
   if (!storage || !key) return;
-  try { storage.setItem(key, JSON.stringify({ lens: choice.lens, works: [...choice.works], english: choice.english })); } catch { /* The choice still applies on this page. */ }
+  try {
+    storage.setItem(key, JSON.stringify({ lens: choice.lens, ...chosen.works ? { works: [...choice.works] } : {}, ...chosen.english ? { english: choice.english } : {} }));
+  } catch { /* The choice still applies on this page. */ }
 }
 /** The lens a reading opens in: the link's, else (only when remembering) the last one used, else Lein. */
 export function initialLens(input: { query: Lens | null; remember: boolean; remembered: Lens | undefined }): Lens {
@@ -64,9 +72,23 @@ export function StudyLensScope({ storageKey, query = null, children }: { storage
     const remembered = readRememberedLens(browserStorage(), storageKey);
     setChoice({ lens: initialLens({ query, remember: storageKey !== null, remembered: remembered.lens }), works: remembered.works ?? DEFAULT_WORKS, english: remembered.english ?? true });
   }, [storageKey, query]);
+  // The personal reader's commentaries and Study English are kept by a signed-in account too (release 1.7 M3b). When the
+  // account's copy arrives it is already in this browser: read it again, keeping the lens this page opened in.
+  useEffect(() => {
+    if (storageKey !== LENS_STORAGE.weekly) return;
+    const stop = onPreferencesApplied(() => {
+      const remembered = readRememberedLens(browserStorage(), storageKey);
+      setChoice(current => ({ lens: current.lens, works: remembered.works ?? DEFAULT_WORKS, english: remembered.english ?? true }));
+    });
+    startAccountPreferences(false);
+    return stop;
+  }, [storageKey]);
   const update = useCallback((change: Partial<LensChoice>) => setChoice(current => {
     const next = { lens: change.lens ?? current.lens, works: change.works ? normalizeWorks(change.works) : current.works, english: change.english ?? current.english };
-    rememberLens(browserStorage(), storageKey, next);
+    const prior = readRememberedLens(browserStorage(), storageKey);
+    rememberLens(browserStorage(), storageKey, next, { works: change.works !== undefined || prior.works !== undefined, english: change.english !== undefined || prior.english !== undefined });
+    if (storageKey === LENS_STORAGE.weekly && (change.works !== undefined || change.english !== undefined))
+      notePreferencesChanged([...change.works !== undefined ? ["works" as const] : [], ...change.english !== undefined ? ["studyEnglish" as const] : []]);
     return next;
   }), [storageKey]);
   const value = useMemo<LensContext>(() => ({ ...choice, available: true, setLens: lens => update({ lens }), setWorks: works => update({ works }), setEnglish: english => update({ english }) }), [choice, update]);

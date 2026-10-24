@@ -25,7 +25,7 @@ test("a signed-in account with no role asks for one on the front door and on /ac
     });
     await page.goto(path);
     await expect(page.getByRole("heading", { name: "Ask for an account", exact: true })).toBeVisible();
-    await expect(page.getByText("An account keeps your own readings, translation and notes. Everything else on CRC Torah is open without one.", { exact: true })).toBeVisible();
+    await expect(page.getByText("An account keeps your saved readings, your place in Learn to lein, your preferred commentaries and your settings. Everything else on CRC Torah is open without one.", { exact: true })).toBeVisible();
     await expect(page.getByLabel("Your name")).toHaveValue("Ruth Synthetic");
     await expect(page.getByText("No congregation role is linked")).toHaveCount(0);
     await page.getByLabel("What would you like to work on? (optional)").fill("Learning\nthe haftarah");

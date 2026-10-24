@@ -34,7 +34,11 @@ test("0039 adds only the public_page_view_day table, leaves every existing row u
     const capture = async () => Object.fromEntries(await Promise.all(existing.map(async t => [t, (await client.query(`select * from ${t} order by 1`)).rows])));
     const policiesBefore = (await client.query("select tablename, policyname, qual, with_check from pg_policies order by 1, 2")).rows;
     const before = await capture();
-    await migrate(db, { migrationsFolder: folder }); await migrate(db, { migrationsFolder: folder });
+    // Through 0039 only: a later migration's own tables and policies (0041's, for one) are that migration's test to account for.
+    const through = join(isolation.home, "through"), throughEntries = journal.entries.slice(0, own + 1);
+    await mkdir(join(through, "meta"), { recursive: true }); await writeFile(join(through, "meta/_journal.json"), JSON.stringify({ ...journal, entries: throughEntries }));
+    for (const e of throughEntries) await copyFile(join(folder, e.tag + ".sql"), join(through, e.tag + ".sql"));
+    await migrate(db, { migrationsFolder: through }); await migrate(db, { migrationsFolder: through });
     const after = await capture();
     for (const table of Object.keys(before)) expect(priorColumns(after[table], before[table])).toEqual(before[table]);
     expect((await client.query(`select count(*)::int as n from ${TABLE}`)).rows).toEqual([{ n: 0 }]);

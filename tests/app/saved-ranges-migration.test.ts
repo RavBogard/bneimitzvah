@@ -41,7 +41,11 @@ test("0040 only grants UPDATE on saved_reading's ranges and verse_count, leaves 
       "select table_name, column_name, privilege_type from information_schema.column_privileges where grantee in ('portal_runtime','PUBLIC') order by 1, 2, 3")).rows;
     const rls = async () => (await client.query("select relname, relrowsecurity, relforcerowsecurity from pg_class where relkind='r' and relnamespace = 'public'::regnamespace order by 1")).rows;
     const before = { rows: await capture(), policies: await policies(), tables: await tableGrants(), columns: await columnGrants(), rls: await rls() };
-    await migrate(db, { migrationsFolder: folder }); await migrate(db, { migrationsFolder: folder });
+    // Through 0040 only: a later migration (0041's own table and policy, for one) is that migration's test to account for.
+    const through = join(isolation.home, "through"), throughEntries = journal.entries.slice(0, own + 1);
+    await mkdir(join(through, "meta"), { recursive: true }); await writeFile(join(through, "meta/_journal.json"), JSON.stringify({ ...journal, entries: throughEntries }));
+    for (const e of throughEntries) await copyFile(join(folder, e.tag + ".sql"), join(through, e.tag + ".sql"));
+    await migrate(db, { migrationsFolder: through }); await migrate(db, { migrationsFolder: through });
     expect(await capture()).toEqual(before.rows);
     expect(await policies()).toEqual(before.policies);
     expect(await tableGrants()).toEqual(before.tables);

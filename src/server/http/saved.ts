@@ -13,6 +13,8 @@ import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from ".
 const routes = {
   "/api/saved/readings": ["GET"], "/api/saved/readings/create": ["POST"], "/api/saved/readings/update": ["POST"], "/api/saved/readings/remove": ["POST"],
   "/api/saved/reading": ["GET"], "/api/saved/work": ["POST"], "/api/saved/mark": ["POST"], "/api/saved/stars": ["GET"], "/api/saved/star": ["POST"],
+  // Release 1.7 M3b: the member's own preferred commentaries and reading settings.
+  "/api/saved/preferences": ["GET"], "/api/saved/preferences/put": ["POST"],
 } as const;
 type Path = keyof typeof routes;
 export function savedRouteMethods(pathname: string): readonly string[] | null {
@@ -36,7 +38,7 @@ export async function handleSavedRequest(request: Request, runtime: HttpRuntime)
         result = await saved.reading(request, query.get("id"), offset(query.get("offset")));
       } else {
         uniqueQuery(request.url, []);
-        result = path === "/api/saved/stars" ? await saved.stars(request) : await saved.list(request);
+        result = path === "/api/saved/stars" ? await saved.stars(request) : path === "/api/saved/preferences" ? await saved.preferences(request) : await saved.list(request);
       }
     } else {
       uniqueQuery(request.url, []);
@@ -47,6 +49,7 @@ export async function handleSavedRequest(request: Request, runtime: HttpRuntime)
         : path === "/api/saved/readings/remove" ? await saved.remove(request, body)
         : path === "/api/saved/work" ? await saved.work(request, body)
         : path === "/api/saved/mark" ? await saved.mark(request, body)
+        : path === "/api/saved/preferences/put" ? await saved.putPreferences(request, body)
         : await saved.star(request, body);
     }
     return privateJson(result as unknown as JsonValue, result.ok ? 200 : result.code === "invalid-request" ? 400 : 409);

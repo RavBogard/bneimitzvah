@@ -288,6 +288,13 @@
       "when": 1792843629302,
       "tag": "0040_saved_reading_ranges",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792848753392,
+      "tag": "0041_account_preferences",
+      "breakpoints": true
     }
   ]
 }
