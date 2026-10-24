@@ -8,7 +8,8 @@ import { refreshOfflineState, setOfflineState } from "../../../lib/offline/pack-
  * The installable app's page side (§3.1), mounted once in the root layout. On any origin but torah (and the
  * loopback test seam) it does nothing at all: no manifest link, no worker, no pack. On torah it links the
  * manifest and the Apple touch icon; in the installed app it also registers /sw.js, keeps storage persistent
- * (persisted() on every open, persist() again when it is false), and renews the packs on every online open.
+ * (persisted() on every open, persist() again when it is false), and renews the packs on every online open,
+ * first asking the private /api/offline/packs whose own readings this device keeps (A2).
  */
 const ENABLED = process.env.PORTAL_OFFLINE_ENABLED !== "false";
 
@@ -50,9 +51,10 @@ async function open() {
   await refreshOfflineState();
   if (navigator.onLine === false) return;
   try {
-    const { openOffline } = await import("../../../lib/offline/packer");
+    const { askOwner, openOffline } = await import("../../../lib/offline/packer");
     const locks = (navigator as Navigator & { locks?: Parameters<typeof openOffline>[0]["locks"] }).locks ?? null;
-    await openOffline({ origin: location.origin, fetch: (input, init) => fetch(input, init), caches, now: () => Date.now(), locks,
+    const io = { origin: location.origin, fetch: ((input, init) => fetch(input, init)) as typeof fetch };
+    await openOffline({ ...io, caches, now: () => Date.now(), locks, owner: signal => askOwner(io, signal),
       estimate: async () => navigator.storage?.estimate ? navigator.storage.estimate() : {} });
   } catch { await refreshOfflineState(); }
 }

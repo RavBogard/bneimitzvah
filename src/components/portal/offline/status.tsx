@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { NEW, PLAN } from "../../../lib/offline/copy";
+import { APPROVED, PLAN } from "../../../lib/offline/copy";
 import { offlineState, subscribeOfflineState, type OfflineState } from "../../../lib/offline/pack-index";
 import { servedOffline, subscribeOffline } from "../../../lib/offline/signal";
 import { plainProductName } from "../../../lib/offline/manifest";
@@ -57,7 +57,7 @@ export const savedDate = (time: number) => new Intl.DateTimeFormat("en-GB", { we
 export function OfflinePill() {
   const offline = useServedOffline(), { savedUntil } = useOfflinePacks(), platform = usePlatform();
   if (!offline || !platform?.origin) return null;
-  return <span className={styles.pill} data-offline-pill>{savedUntil ? PLAN.pill(savedDate(savedUntil)) : NEW.offline}</span>;
+  return <span className={styles.pill} data-offline-pill>{savedUntil ? PLAN.pill(savedDate(savedUntil)) : APPROVED.offline}</span>;
 }
 
 /** The front door's muted line under This week, in the installed app. */

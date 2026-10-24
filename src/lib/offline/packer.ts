@@ -6,7 +6,7 @@ import type { ShortReferenceSource } from "../reference-audio/short-source";
 import { coursePassages } from "../../components/learn/verses-api";
 import { parsePublicRefReading, parsePublicShortPage, parsePublicTextPage, parsePublicWeek, refSource, weekSource, type PublicSource } from "../../components/portal/public-reading/api";
 import { publicReadingPath, publicShortPath, publicTextPath } from "../../components/portal/public-reading/urls";
-import { BUDGET, OFFLINE_CACHE, RENEW_AFTER_MS, OFFLINE_HEADER, PACK_CONCURRENCY, packAssetAllowed, WINDOW_MS, type Pack, type PackDescriptor } from "./policy";
+import { BUDGET, OFFLINE_CACHE, OFFLINE_PACKS_PATH, OWNER_KEY, RENEW_AFTER_MS, OFFLINE_HEADER, PACK_CONCURRENCY, packAssetAllowed, packRefAllowed, WINDOW_MS, type Pack, type PackDescriptor } from "./policy";
 import { assetKey, inspectPack, packingStarted, purgeGeneration, readIndex, refreshOfflineState, setOfflineState, sweep, trackPacking, writeIndex, type PackState } from "./pack-index";
 
 /**
@@ -17,13 +17,63 @@ import { assetKey, inspectPack, packingStarted, purgeGeneration, readIndex, refr
  * A clip is stored only after its size and SHA-256 match its parsed PocketTorah short-v1 source; the original
  * network response is stored, so its URL and attribution headers survive. A pack's renewedAt moves only when every
  * step succeeded; a 429 stops packing until the next open.
+ *
+ * A2 adds owner packs: the signed-in person's own readings, named (descriptors only) by the private
+ * /api/offline/packs, and fetched exactly like the public packs, from the public ref routes with no cookie. Each
+ * open asks the endpoint first: another owner than the device's means every pack goes (the sign-out purge); 401
+ * or 403 means the owner packs go and the public ones stay; anything else changes nothing.
  */
 export class PackStopped extends Error { constructor(readonly reason: "rate-limited" | "no-space" | "purged" | "failed") { super(reason); } }
 export type PackerIo = Readonly<{
   origin: string; fetch: typeof fetch; caches: CacheStorage; now(): number;
   estimate(): Promise<{ usage?: number; quota?: number }>;
   digest?: Parameters<typeof downloadShortReferenceAudio>[2]["digest"];
+  /** Whose own readings this device may keep (A2). Left out, the owner packs are left as they are. */
+  owner?: (signal: AbortSignal) => Promise<OwnerAnswer>;
 }>;
+export type OwnerPack = Readonly<{ kind: "torah" | "haftarah"; ref: string; name: string | null }>;
+export type OwnerAnswer = Readonly<{ state: "owner"; owner: string; packs: readonly OwnerPack[] }> | Readonly<{ state: "signed-out" }> | Readonly<{ state: "unknown" }>;
+const UNKNOWN: OwnerAnswer = Object.freeze({ state: "unknown" });
+const OWNER_PACKS = 8;
+
+/** The endpoint's answer, strictly: 401 or 403 is signed out; a 200 that is not exactly the closed shape changes nothing. */
+export function parseOwnerAnswer(status: number, body: unknown): OwnerAnswer {
+  if (status === 401 || status === 403) return Object.freeze({ state: "signed-out" });
+  if (status !== 200 || !body || typeof body !== "object" || Array.isArray(body)) return UNKNOWN;
+  const row = body as Record<string, unknown>;
+  if (Object.keys(row).sort().join() !== "owner,packs" || typeof row.owner !== "string" || !OWNER_KEY.test(row.owner) || !Array.isArray(row.packs) || row.packs.length > OWNER_PACKS) return UNKNOWN;
+  const packs: OwnerPack[] = [];
+  for (const raw of row.packs) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return UNKNOWN;
+    const p = raw as Record<string, unknown>;
+    if (Object.keys(p).sort().join() !== "kind,name,ref" || (p.kind !== "torah" && p.kind !== "haftarah") || !packRefAllowed(p.ref)) return UNKNOWN;
+    const canonical = canonicalReadingRef(p.ref, p.kind);
+    if (!canonical || canonical.ref !== p.ref) return UNKNOWN;
+    // Counted in code points, as the saved layer counts a reading's name (1 to 80).
+    if (p.name !== null && (typeof p.name !== "string" || p.name.length < 1 || Array.from(p.name).length > 80 || /[\u0000-\u001f\u007f-\u009f]/.test(p.name))) return UNKNOWN;
+    packs.push(Object.freeze({ kind: p.kind, ref: p.ref, name: p.name as string | null }));
+  }
+  return Object.freeze({ state: "owner", owner: row.owner, packs: Object.freeze(packs) });
+}
+/** Asks the private endpoint with the session cookie, never stored (no-store, and the worker does not handle it). */
+export async function askOwner(io: Pick<PackerIo, "origin" | "fetch">, signal: AbortSignal): Promise<OwnerAnswer> {
+  const url = io.origin + OFFLINE_PACKS_PATH;
+  try {
+    const response = await io.fetch(url, { headers: { accept: "application/json" }, credentials: "same-origin", mode: "same-origin", redirect: "error", referrerPolicy: "no-referrer", cache: "no-store", signal });
+    if (response.status !== 200) { void response.body?.cancel().catch(() => {}); return parseOwnerAnswer(response.status, null); }
+    if (response.redirected || response.url !== url || response.headers.get(OFFLINE_HEADER) !== null || response.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/json") return UNKNOWN;
+    const text = await response.text();
+    if (text.length > 64 * 1024) return UNKNOWN;
+    return parseOwnerAnswer(200, JSON.parse(text));
+  } catch { return UNKNOWN; }
+}
+/** A short, stable key for an owner pack (the index caps keys at 64 characters): FNV-1a over kind and ref, twice. */
+export function ownerPackKey(kind: "torah" | "haftarah", ref: string): string {
+  const text = `${kind}:${ref}`;
+  let a = 0x811c9dc5, b = 0x01000193 ^ text.length;
+  for (let i = 0; i < text.length; i++) { const c = text.charCodeAt(i); a = Math.imul(a ^ c, 0x01000193) >>> 0; b = Math.imul(b ^ c, 0x0100019d) >>> 0; }
+  return `ref:${kind}:${a.toString(16).padStart(8, "0")}${b.toString(16).padStart(8, "0")}`;
+}
 type Plan = { label: string; json: Map<string, Response>; clips: Map<string, ShortReferenceSource>; bytes: number };
 
 const JSON_LIMIT = 2 * 1024 * 1024;
@@ -87,6 +137,16 @@ async function planCourse(io: PackerIo, signal: AbortSignal, generation: number)
   return plan;
 }
 
+/** One of this person's own readings, by ref: the reading route (the reader asks it), and every page and clip. */
+async function planRef(io: PackerIo, kind: "torah" | "haftarah", ref: string, signal: AbortSignal, generation: number): Promise<Plan> {
+  const canonical = packRefAllowed(ref) ? canonicalReadingRef(ref, kind) : null;
+  if (!canonical || canonical.ref !== ref) throw new PackStopped("failed");
+  const plan: Plan = { label: "", json: new Map(), clips: new Map(), bytes: 0 };
+  const body = await fetchJson(io, publicReadingPath({ by: "ref", ref, kind }), signal, plan, generation);
+  await passage(io, refSource(parsed(() => parsePublicRefReading(body, ref, kind))), signal, plan, generation);
+  return plan;
+}
+
 async function pool<T>(items: readonly T[], work: (item: T) => Promise<void>) {
   let next = 0, failure: unknown = null;
   await Promise.all(Array.from({ length: Math.min(PACK_CONCURRENCY, items.length) }, async () => {
@@ -95,10 +155,12 @@ async function pool<T>(items: readonly T[], work: (item: T) => Promise<void>) {
   if (failure !== null) throw failure;
 }
 
-/** Builds or renews one pack. Resolves to the state the pack is in afterwards. */
-export async function renewPack(io: PackerIo, descriptor: PackDescriptor, signal: AbortSignal): Promise<PackState> {
+/** Builds or renews one pack. Resolves to the state the pack is in afterwards. An owner pack names its owner and label. */
+export async function renewPack(io: PackerIo, descriptor: PackDescriptor, signal: AbortSignal, own?: Readonly<{ owner: string; label: string }>): Promise<PackState> {
   const generation = purgeGeneration(), now = io.now();
-  const plan = descriptor.type === "week" ? await planWeek(io, descriptor.date, signal, generation) : await planCourse(io, signal, generation);
+  if ((descriptor.type === "ref") !== (own !== undefined) || (own && !OWNER_KEY.test(own.owner))) throw new PackStopped("failed");
+  const plan = descriptor.type === "week" ? await planWeek(io, descriptor.date, signal, generation)
+    : descriptor.type === "ref" ? await planRef(io, descriptor.kind, descriptor.ref, signal, generation) : await planCourse(io, signal, generation);
   if (purgeGeneration() !== generation || signal.aborted) throw new PackStopped("purged");
   const cache = await io.caches.open(OFFLINE_CACHE);
   const missing: ShortReferenceSource[] = [];
@@ -130,11 +192,13 @@ export async function renewPack(io: PackerIo, descriptor: PackDescriptor, signal
   const assets = [...plan.json.keys(), ...plan.clips.keys()];
   if (!assets.every(packAssetAllowed)) throw new PackStopped("failed");
   if (purgeGeneration() !== generation || signal.aborted) throw new PackStopped("purged");
-  const key = descriptor.type === "week" ? `week:${descriptor.date}` : "course";
-  const pack: Pack = Object.freeze({ key, owner: "public", label: plan.label, descriptor, assets: Object.freeze(assets),
+  const key = descriptor.type === "week" ? `week:${descriptor.date}` : descriptor.type === "ref" ? ownerPackKey(descriptor.kind, descriptor.ref) : "course";
+  const pack: Pack = Object.freeze({ key, owner: own ? own.owner : "public", label: own ? own.label : plan.label, descriptor, assets: Object.freeze(assets),
     bytes: plan.bytes + [...plan.clips.values()].reduce((sum, source) => sum + source.bytes, 0), renewedAt: now, expiresAt: now + WINDOW_MS, format: 1 });
   const index = await readIndex(cache);
-  await writeIndex(cache, Object.freeze({ format: 1, packs: Object.freeze([...index.packs.filter(row => row.key !== key), pack]) }));
+  // An owner pack joins only its own owner's index: an account switch since this pack began means it is not kept.
+  if (own && index.owner !== own.owner) throw new PackStopped("purged");
+  await writeIndex(cache, Object.freeze({ format: 1, owner: index.owner, packs: Object.freeze([...index.packs.filter(row => row.key !== key), pack]) }));
   return "saved";
 }
 
@@ -146,19 +210,37 @@ type Locks = { request(name: string, options: { ifAvailable: boolean }, callback
 export async function openOffline(io: PackerIo & { locks?: Locks | null }) {
   const controller = packingStarted(), date = thisShabbat(io.now()), weekKey = `week:${date}`;
   const run = async () => {
-    const cache = await io.caches.open(OFFLINE_CACHE);
-    await sweep(cache, io.now(), pack => pack.descriptor.type !== "week" || pack.key === weekKey);
+    let cache = await io.caches.open(OFFLINE_CACHE);
+    // A2: whose own readings this device keeps, asked before anything is packed.
+    const answer = io.owner ? await io.owner(controller.signal).catch(() => UNKNOWN) : UNKNOWN;
+    if (purgeGeneration() !== generation || controller.signal.aborted) return;
+    const before = await readIndex(cache);
+    if (answer.state === "owner" && before.owner !== null && before.owner !== answer.owner) {
+      // Another account's packs: everything goes, the public packs too, exactly as at a sign-out; then this owner's are packed.
+      await io.caches.delete(OFFLINE_CACHE);
+      setOfflineState({ week: null, course: null, savedUntil: null });
+      cache = await io.caches.open(OFFLINE_CACHE);
+    }
+    const listed = new Set(answer.state === "owner" ? answer.packs.map(pack => ownerPackKey(pack.kind, pack.ref)) : []);
+    await sweep(cache, io.now(), pack => (pack.descriptor.type !== "week" || pack.key === weekKey) && (pack.owner === "public" || answer.state === "unknown" || listed.has(pack.key)),
+      answer.state === "owner" ? answer.owner : answer.state === "signed-out" ? null : undefined);
+    if (answer.state !== "unknown") setOfflineState({ ownerChecked: true });
     await refreshOfflineState(io.now(), weekKey);
     const fresh = await readIndex(cache);
-    for (const [name, descriptor] of [["week", { type: "week", date }], ["course", { type: "course" }]] as const) {
+    type Job = Readonly<{ key: string; descriptor: PackDescriptor; state?: "week" | "course"; own?: Readonly<{ owner: string; label: string }> }>;
+    const own: Job[] = answer.state === "owner" ? answer.packs.map(pack => ({ key: ownerPackKey(pack.kind, pack.ref), descriptor: Object.freeze({ type: "ref" as const, kind: pack.kind, ref: pack.ref }),
+      own: Object.freeze({ owner: answer.owner, label: pack.name ?? "" }) })) : [];
+    // This week first, then the person's own readings, then the course.
+    const jobs: Job[] = [{ key: weekKey, descriptor: { type: "week", date }, state: "week" }, ...own, { key: "course", descriptor: { type: "course" }, state: "course" }];
+    for (const job of jobs) {
       // A complete pack renewed in the last 12 hours is left alone, so moving between pages never re-asks the public routes
       // (their firewall allows 120 requests a minute per address). Decided here: renewal is at most twice a day.
-      const current = fresh.packs.find(pack => pack.key === (name === "week" ? weekKey : "course"));
-      if (current && io.now() - current.renewedAt < RENEW_AFTER_MS && await inspectPack(cache, current, io.now(), io.origin) === "saved") continue;
-      setOfflineState({ [name]: "saving" });
-      try { await renewPack(io, descriptor, controller.signal); }
+      const current = fresh.packs.find(pack => pack.key === job.key);
+      if (current && (!job.own || current.label === job.own.label) && io.now() - current.renewedAt < RENEW_AFTER_MS && await inspectPack(cache, current, io.now(), io.origin) === "saved") continue;
+      if (job.state) setOfflineState({ [job.state]: "saving" });
+      try { await renewPack(io, job.descriptor, controller.signal, job.own); }
       catch (error) {
-        if (error instanceof PackStopped && error.reason === "no-space") setOfflineState({ [name]: "no-space" });
+        if (error instanceof PackStopped && error.reason === "no-space" && job.state) setOfflineState({ [job.state]: "no-space" });
         if (error instanceof PackStopped && (error.reason === "rate-limited" || error.reason === "purged")) break;
       }
       finally { await refreshOfflineState(io.now(), weekKey); }
