@@ -4,6 +4,9 @@ import { AccessDenied } from "../access/errors";
 import { lockRabbi } from "../study-guides/authority";
 import { versesFor, type CuratorAuthority } from "../discussions/service";
 import { VERSE_REF } from "../study-guides/validation";
+import { selectorName } from "../discussions/validation";
+import { eq } from "drizzle-orm";
+import * as s from "../db/index";
 import { findNamedReading } from "./print-tools";
 import { SCOPES } from "./oauth";
 import type { Tool, ToolContext } from "./tools";
@@ -37,7 +40,8 @@ function curatorAuthority<Q extends PgQueryResultHKT>(ctx: ToolContext<Q>, inten
     run: action => ctx.mcp.withLive(ctx.actor, intent, async (tx, actor, alive) => {
       if (actor.role !== "admin" || actor.unattended) throw new AccessDenied(403);
       const rabbi = await lockRabbi(tx, actor.tenantId, actor.membershipId, { roleGrantId: actor.roleGrantId, roleGrantRevision: actor.roleGrantRevision, authorityRevision: actor.authorityRevision });
-      const writer = Object.freeze({ tenantId: actor.tenantId, membershipId: rabbi.membershipId, userId: rabbi.userId });
+      const [account] = await tx.select({ name: s.user.name }).from(s.user).where(eq(s.user.id, rabbi.userId)).limit(1);
+      const writer = Object.freeze({ tenantId: actor.tenantId, membershipId: rabbi.membershipId, userId: rabbi.userId, displayName: selectorName(account?.name) });
       return action(tx, writer, () => { alive(); if (ctx.signal.aborted) throw new AccessDenied(401); });
     }),
   };
@@ -81,7 +85,7 @@ export function createDiscussionTools<Q extends PgQueryResultHKT>(): readonly To
     },
     {
       name: "withdraw_discussion", roles: ["admin"], scope: SCOPES.study, annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
-      description: "Withdraw a discussion: it disappears from the verses and the reading list for everyone. Its record is kept and it cannot be republished; add a new one instead. Only when the rabbi asks.",
+      description: "Withdraw a discussion: within about five minutes it disappears from the verses and the reading list for everyone (cached pages refresh). Its record is kept and it cannot be republished; add a new one instead. Only when the rabbi asks.",
       inputSchema: closed({ slug, revision }, ["slug", "revision"]),
       handler: async (input, ctx) => refusal(ctx, true) ?? outcome(await ctx.discussions.withdrawDiscussion(curatorAuthority(ctx, "data-write"), input)),
     },

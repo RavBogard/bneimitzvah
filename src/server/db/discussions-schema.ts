@@ -8,7 +8,8 @@ import { membership, tenant } from "./tenant-schema";
  * original sources, each anchored to one verse; there is no introduction, essay or synthesis column anywhere. The database
  * stores references and our own translations, never Sefaria text. `selected_by` is the curating membership: the runtime
  * may insert it but never read it back (migration 0042 grants SELECT on every other column only), so no read path,
- * public or staff, can return it. Row security, grants, triggers and the public view are hand-written in 0042.
+ * public or staff, can return it. `selected_by_name` is the selector's display name as it was when they selected the
+ * source (their account name, never an address), shown as "Selected by {name}". Row security, grants, triggers and the public view are hand-written in 0042.
  */
 const tenantId = () => text("tenant_id").notNull().references(() => tenant.id);
 const createdAt = () => timestamp("created_at", { withTimezone: true }).defaultNow().notNull();
@@ -19,9 +20,11 @@ const VERSE = "^[A-Za-z ]+ [1-9][0-9]*:[1-9][0-9]*$";
 export const sourceTranslation = pgTable("source_translation", {
   id: uuid("id").defaultRandom().primaryKey(), tenantId: tenantId(),
   originalRef: text("original_ref").notNull(), originalEdition: text("original_edition").notNull(), body: text("body").notNull(),
-  selectedBy: uuid("selected_by").notNull(), mutationId: uuid("mutation_id").notNull(), requestDigest: text("request_digest").notNull(), createdAt: createdAt(),
+  selectedBy: uuid("selected_by").notNull(), selectedByName: text("selected_by_name").notNull(),
+  mutationId: uuid("mutation_id").notNull(), requestDigest: text("request_digest").notNull(), createdAt: createdAt(),
 }, t => [
   unique("source_translation_receipt_key").on(t.tenantId, t.mutationId),
+  check("source_translation_selector_name", sql`public.portal_source_plain(${t.selectedByName}, 480) and char_length(${t.selectedByName}) <= 120 and strpos(${t.selectedByName}, '@') = 0`),
   // A discussion source may name a translation only together with the translation's own original reference.
   unique("source_translation_ref_key").on(t.tenantId, t.id, t.originalRef),
   foreignKey({ name: "source_translation_selector_fk", columns: [t.tenantId, t.selectedBy], foreignColumns: [membership.tenantId, membership.id] }),
@@ -61,8 +64,9 @@ export const curatedDiscussion = pgTable("curated_discussion", {
 export const curatedDiscussionSource = pgTable("curated_discussion_source", {
   tenantId: tenantId(), discussionId: uuid("discussion_id").notNull(), revision: integer("revision").notNull(), position: integer("position").notNull(),
   ref: text("ref").notNull(), anchorRef: text("anchor_ref").notNull(), edition: text("edition"), translationId: uuid("translation_id"),
-  selectedBy: uuid("selected_by").notNull(), createdAt: createdAt(),
+  selectedBy: uuid("selected_by").notNull(), selectedByName: text("selected_by_name").notNull(), createdAt: createdAt(),
 }, t => [
+  check("curated_discussion_source_selector_name", sql`public.portal_source_plain(${t.selectedByName}, 480) and char_length(${t.selectedByName}) <= 120 and strpos(${t.selectedByName}, '@') = 0`),
   primaryKey({ name: "curated_discussion_source_key", columns: [t.tenantId, t.discussionId, t.revision, t.position] }),
   index("curated_discussion_source_anchor_idx").on(t.tenantId, t.anchorRef),
   foreignKey({ name: "curated_discussion_source_discussion_fk", columns: [t.tenantId, t.discussionId], foreignColumns: [curatedDiscussion.tenantId, curatedDiscussion.id] }),

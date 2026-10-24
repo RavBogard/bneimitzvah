@@ -10,15 +10,15 @@ import type { DiscussionKind, SourceInput } from "./validation";
  * Curated discussion rows (migration 0042). Every select names its columns: the runtime holds no SELECT grant on
  * `selected_by`, so a `select *` or a bare `returning()` would be refused by the database itself.
  */
-export type CuratorWriter = Readonly<{ tenantId: string; membershipId: string; userId: string }>;
+export type CuratorWriter = Readonly<{ tenantId: string; membershipId: string; userId: string; displayName: string }>;
 export type DiscussionRow = Readonly<{ id: string; slug: string; title: string; kind: DiscussionKind; status: "published" | "withdrawn"; revision: number;
   mutationId: string; requestDigest: string; createdAt: Date; updatedAt: Date }>;
-export type SourceRow = Readonly<{ position: number; ref: string; anchorRef: string; edition: string | null; translationId: string | null }>;
+export type SourceRow = Readonly<{ position: number; ref: string; anchorRef: string; edition: string | null; translationId: string | null; selectedByName: string }>;
 
 const d = s.curatedDiscussion, src = s.curatedDiscussionSource, tr = s.sourceTranslation;
 const discussionColumns = { id: d.id, slug: d.slug, title: d.title, kind: d.kind, status: d.status, revision: d.revision, mutationId: d.mutationId,
   requestDigest: d.requestDigest, createdAt: d.createdAt, updatedAt: d.updatedAt };
-const sourceColumns = { position: src.position, ref: src.ref, anchorRef: src.anchorRef, edition: src.edition, translationId: src.translationId };
+const sourceColumns = { position: src.position, ref: src.ref, anchorRef: src.anchorRef, edition: src.edition, translationId: src.translationId, selectedByName: src.selectedByName };
 
 export async function discussionReceipt<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, mutationId: string): Promise<DiscussionRow | null> {
   const [row] = await tx.select(discussionColumns).from(d).where(and(eq(d.tenantId, tenantId), eq(d.mutationId, mutationId))).limit(1);
@@ -47,12 +47,12 @@ export async function insertDiscussion<Q extends PgQueryResultHKT>(tx: AccessTra
 }
 export async function insertSources<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, writer: CuratorWriter, discussionId: string, revision: number, sources: readonly SourceInput[]) {
   await tx.insert(src).values(sources.map((source, i) => ({ tenantId: writer.tenantId, discussionId, revision, position: i + 1, ref: source.ref, anchorRef: source.anchorRef,
-    edition: source.edition ?? null, translationId: source.translationId ?? null, selectedBy: writer.membershipId })));
+    edition: source.edition ?? null, translationId: source.translationId ?? null, selectedBy: writer.membershipId, selectedByName: writer.displayName })));
 }
 /** One more revision under the expected one: a new title, or a withdrawal. Returns null when the revision moved. */
 export async function bumpDiscussion<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, id: string, expected: number, change: { title?: string; withdraw?: true }) {
   const [row] = await tx.update(d).set({ ...(change.title !== undefined ? { title: change.title } : {}), ...(change.withdraw ? { status: "withdrawn" as const } : {}),
-    revision: expected + 1, updatedAt: new Date() }).where(and(eq(d.tenantId, tenantId), eq(d.id, id), eq(d.revision, expected), eq(d.status, "published")))
+    revision: expected + 1, updatedAt: sql`now()` }).where(and(eq(d.tenantId, tenantId), eq(d.id, id), eq(d.revision, expected), eq(d.status, "published")))
     .returning({ revision: d.revision, status: d.status });
   return row ?? null;
 }
@@ -78,23 +78,29 @@ export async function translationsById<Q extends PgQueryResultHKT>(tx: AccessTra
 }
 export async function insertTranslation<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, writer: CuratorWriter, value: { originalRef: string; originalEdition: string; body: string; mutationId: string; requestDigest: string }) {
   const [row] = await tx.insert(tr).values({ tenantId: writer.tenantId, originalRef: value.originalRef, originalEdition: value.originalEdition, body: value.body,
-    selectedBy: writer.membershipId, mutationId: value.mutationId, requestDigest: value.requestDigest }).onConflictDoNothing().returning({ id: tr.id });
+    selectedBy: writer.membershipId, selectedByName: writer.displayName, mutationId: value.mutationId, requestDigest: value.requestDigest }).onConflictDoNothing().returning({ id: tr.id });
   return row ?? null;
 }
 
 export type PublicSourceRow = Readonly<{ slug: string; title: string; kind: DiscussionKind; revision: number; updatedAt: Date; position: number; ref: string; anchorRef: string;
-  edition: string | null; translationId: string | null; translationEdition: string | null; translationBody: string | null }>;
+  edition: string | null; translationId: string | null; selectedByName: string; translationEdition: string | null; translationBody: string | null }>;
 /**
  * The public read, through curated_discussion_public only: the published discussions with any current source anchored in
- * `verses` (at most `limit` of them), with every source of each, in order. Never a curator, never a withdrawn discussion.
+ * `verses`, with every source of each, in order. At most `limit` discussions, chosen in reading order (the one whose first
+ * anchor comes earliest in `verses` first, then by slug); `truncated` says more were anchored here. Never a curator id,
+ * never a withdrawn discussion.
  */
-export async function publicDiscussionRows<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, verses: readonly string[], limit: number): Promise<PublicSourceRow[]> {
-  if (!verses.length) return [];
-  const v = curatedDiscussionPublic;
-  const slugs = (await tx.selectDistinct({ slug: v.slug }).from(v).where(and(eq(v.tenantId, tenantId), inArray(v.anchorRef, [...verses])))
-    .orderBy(asc(v.slug)).limit(limit)).map(row => row.slug);
-  if (!slugs.length) return [];
-  return tx.select({ slug: v.slug, title: v.title, kind: v.kind, revision: v.revision, updatedAt: v.updatedAt, position: v.position, ref: v.ref, anchorRef: v.anchorRef,
-    edition: v.edition, translationId: v.translationId, translationEdition: v.translationEdition, translationBody: v.translationBody })
+export async function publicDiscussionRows<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, verses: readonly string[], limit: number): Promise<{ rows: PublicSourceRow[]; truncated: boolean }> {
+  if (!verses.length) return { rows: [], truncated: false };
+  const v = curatedDiscussionPublic, order = new Map(verses.map((verse, i) => [verse, i]));
+  const anchored = await tx.selectDistinct({ slug: v.slug, anchorRef: v.anchorRef }).from(v).where(and(eq(v.tenantId, tenantId), inArray(v.anchorRef, [...verses]))).limit(5000);
+  const first = new Map<string, number>();
+  for (const row of anchored) first.set(row.slug, Math.min(first.get(row.slug) ?? Number.MAX_SAFE_INTEGER, order.get(row.anchorRef) ?? Number.MAX_SAFE_INTEGER));
+  const ranked = [...first].sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([slug]) => slug);
+  const slugs = ranked.slice(0, limit);
+  if (!slugs.length) return { rows: [], truncated: false };
+  const rows = await tx.select({ slug: v.slug, title: v.title, kind: v.kind, revision: v.revision, updatedAt: v.updatedAt, position: v.position, ref: v.ref, anchorRef: v.anchorRef,
+    edition: v.edition, translationId: v.translationId, selectedByName: v.selectedByName, translationEdition: v.translationEdition, translationBody: v.translationBody })
     .from(v).where(and(eq(v.tenantId, tenantId), inArray(v.slug, slugs))).orderBy(asc(v.slug), asc(v.position));
+  return { rows, truncated: ranked.length > limit };
 }

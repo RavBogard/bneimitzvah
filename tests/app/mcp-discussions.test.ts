@@ -68,7 +68,7 @@ describe("curated discussion tools", () => {
     const mutationId = randomUUID(), args = { title: "What does it mean to go forth?", kind: "torah", sources: [source(0), source(1, "Genesis 12:2")], mutationId };
     const added = await json("add_discussion", args);
     expect(added).toEqual({ ok: true, replayed: false, slug: "what-does-it-mean-to-go-forth", revision: 1 });
-    expect(await json("add_discussion", args)).toEqual({ ok: true, replayed: true, slug: added.slug, revision: 1 });
+    expect(await json("add_discussion", args)).toEqual({ ok: true, replayed: true, slug: added.slug, revision: 1, status: "published" });
     expect(await rows("curated_discussion")).toEqual({ n: 1 });
     expect(await rows("curated_discussion_source")).toEqual({ n: 2 });
     expect(pinned.calls.filter(call => call.startsWith(REFS[0])).every(call => call.endsWith(`|en|${EN}`))).toBe(true);
@@ -104,8 +104,14 @@ describe("curated discussion tools", () => {
   });
 
   it("revises under the current revision only, withdraws for good, and lists withdrawn ones with their current sources", async () => {
-    const { json, texts } = await setup();
-    const added = await json("add_discussion", { title: "A synthetic question", kind: "torah", sources: [source(0)], mutationId: randomUUID() });
+    const { json, texts, t } = await setup();
+    // The person who selects is named from their own account name, kept with each source; an address never is.
+    const rename = (name: string) => t.f.owner(() => t.f.client.query("update \"user\" set name = $1 where id = $2", [name, t.f.identities.admin.id]));
+    await rename(["synthetic-admin", "example.test"].join("@"));
+    const firstMutation = randomUUID(), firstArgs = { title: "A synthetic question", kind: "torah", sources: [source(0)], mutationId: firstMutation };
+    const added = await json("add_discussion", firstArgs);
+    expect((await json("list_discussions", { verse: "Genesis 12:1" })).discussions[0].sources[0].selectedBy).toBe("Portal member");
+    await rename("Synthetic Selector");
     expect(await json("revise_discussion", { slug: added.slug, revision: 2, title: "Changed" })).toMatchObject({ ok: false, code: "conflict" });
     expect(await json("revise_discussion", { slug: added.slug, revision: 1, title: "A synthetic question" })).toMatchObject({ ok: false, code: "no-change" });
     expect(await json("revise_discussion", { slug: added.slug, revision: 1 })).toMatchObject({ ok: false, code: "invalid" });
@@ -119,7 +125,11 @@ describe("curated discussion tools", () => {
     expect(listed.ok).toBe(true);
     expect(listed.discussions).toHaveLength(1);
     expect(listed.discussions[0]).toMatchObject({ slug: added.slug, title: "A clearer synthetic question", kind: "torah", status: "published", revision: 3,
-      sources: [{ position: 1, ref: REFS[1], anchorRef: "Genesis 12:2", edition: EN }, { position: 2, ref: REFS[0], anchorRef: "Genesis 12:1", edition: EN }] });
+      sources: [{ position: 1, ref: REFS[1], anchorRef: "Genesis 12:2", edition: EN, selectedBy: "Synthetic Selector" }, { position: 2, ref: REFS[0], anchorRef: "Genesis 12:1", edition: EN, selectedBy: "Synthetic Selector" }] });
+    const before = await json("list_discussions", { verse: "Genesis 12:1" });
+    expect(before.discussions[0].revision).toBe(3);
+    // A replayed add reports the discussion as it stands now, not revision 1.
+    expect(await json("add_discussion", firstArgs)).toEqual({ ok: true, replayed: true, slug: added.slug, revision: 3, status: "published" });
     expect(await json("withdraw_discussion", { slug: added.slug, revision: 2 })).toMatchObject({ ok: false, code: "conflict" });
     expect(await json("withdraw_discussion", { slug: added.slug, revision: 3 })).toEqual({ ok: true, slug: added.slug, revision: 4, status: "withdrawn" });
     expect(await json("withdraw_discussion", { slug: added.slug, revision: 4 })).toMatchObject({ ok: false, code: "withdrawn" });

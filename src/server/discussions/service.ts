@@ -4,7 +4,6 @@ import type { AccessTransaction } from "../access/types";
 import { canonical } from "../study-guides/service";
 import { createHash } from "node:crypto";
 import { readProductName } from "../data/product-name";
-import { curatorName } from "./curator";
 import { SourceTextUnavailable, type PinnedSourceReader } from "../study/source-text";
 import { claudeTranslationCredit } from "../../lib/discussions/labels";
 import * as data from "./data";
@@ -76,7 +75,7 @@ async function translationProblems<Q extends PgQueryResultHKT>(tx: AccessTransac
 }
 const sameSources = (rows: readonly data.SourceRow[], sources: readonly SourceInput[]) => rows.length === sources.length
   && rows.every((row, i) => row.ref === sources[i].ref && row.anchorRef === sources[i].anchorRef && row.edition === (sources[i].edition ?? null) && row.translationId === (sources[i].translationId ?? null));
-const sourceView = (row: data.SourceRow) => Object.freeze({ position: row.position, ref: row.ref, anchorRef: row.anchorRef,
+const sourceView = (row: data.SourceRow) => Object.freeze({ position: row.position, ref: row.ref, anchorRef: row.anchorRef, selectedBy: row.selectedByName,
   ...(row.edition !== null ? { edition: row.edition } : { translationId: row.translationId }) });
 
 export { versesFor } from "./validation";
@@ -116,7 +115,7 @@ export function createDiscussionService<Q extends PgQueryResultHKT>(input: { pin
     if (!checked.ok) return fail("invalid", checked.problems);
     const value = checked.value, mutationId = rawMutation.toLowerCase(), requestDigest = digest(["curated-discussion/v1", value]);
     const replay = (row: data.DiscussionRow) => row.requestDigest === requestDigest
-      ? Object.freeze({ ok: true as const, replayed: true, slug: row.slug, revision: 1 }) : fail("conflict");
+      ? Object.freeze({ ok: true as const, replayed: true, slug: row.slug, revision: row.revision, status: row.status }) : fail("conflict");
     const guard = async (tx: AccessTransaction<Q>, writer: CuratorWriter) => {
       const prior = await data.discussionReceipt(tx, writer.tenantId, mutationId); if (prior) return replay(prior);
       const problems = await translationProblems(tx, writer.tenantId, value.sources);
@@ -205,12 +204,12 @@ export function createDiscussionService<Q extends PgQueryResultHKT>(input: { pin
   /** Everything anchored in the verses, withdrawn included, with each current source set: the rabbi's working list. */
   async function listDiscussions(authority: CuratorAuthority<Q>, verses: readonly string[]) {
     return authority.run(async (tx, writer) => {
-      const rows = await data.discussionsAnchoredIn(tx, writer.tenantId, verses, LIST_LIMIT + 1), name = await curatorName(tx, writer.tenantId);
+      const rows = await data.discussionsAnchoredIn(tx, writer.tenantId, verses, LIST_LIMIT + 1);
       const discussions = [];
       for (const row of rows.slice(0, LIST_LIMIT)) {
         const sources = await data.currentSources(tx, writer.tenantId, row.id);
         discussions.push(Object.freeze({ slug: row.slug, title: row.title, kind: row.kind, status: row.status, revision: row.revision,
-          createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(), selectedBy: name, sources: Object.freeze(sources.map(sourceView)) }));
+          createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(), sources: Object.freeze(sources.map(sourceView)) }));
       }
       return Object.freeze({ discussions: Object.freeze(discussions), truncated: rows.length > LIST_LIMIT });
     });

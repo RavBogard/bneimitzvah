@@ -49,8 +49,11 @@ test("real PostgreSQL: curated discussions are tenant-isolated, publicly readabl
     const ids = {};
     for (const [slug, tenant, member, withdrawn] of [["kept", "crc", members.a.member, false], ["gone", "crc", members.a.member, true], ["elsewhere", "test-other", members.x.member, false]]) {
       const id = randomUUID(); ids[slug] = id;
+      // A discussion and its first set in one transaction, as the service writes them.
+      await query(owner, "BEGIN");
       await query(owner, "INSERT INTO curated_discussion (id,tenant_id,slug,title,kind,status,selected_by,mutation_id,request_digest) VALUES ($1,$2,$3,'Synthetic question','torah','published',$4,$5,$6)", [id, tenant, slug, member, randomUUID(), DIGEST]);
-      await query(owner, "INSERT INTO curated_discussion_source (tenant_id,discussion_id,revision,position,ref,anchor_ref,edition,selected_by) VALUES ($1,$2,1,1,'Synthetic Commentator on Genesis 12:1:1','Genesis 12:1','Synthetic English Edition',$3)", [tenant, id, member]);
+      await query(owner, "INSERT INTO curated_discussion_source (tenant_id,discussion_id,revision,position,ref,anchor_ref,edition,selected_by,selected_by_name) VALUES ($1,$2,1,1,'Synthetic Commentator on Genesis 12:1:1','Genesis 12:1','Synthetic English Edition',$3,'Synthetic Curator')", [tenant, id, member]);
+      await query(owner, "COMMIT");
       if (withdrawn) await query(owner, "UPDATE curated_discussion SET status='withdrawn', revision=2 WHERE id=$1", [id]);
     }
 
@@ -75,6 +78,9 @@ test("real PostgreSQL: curated discussions are tenant-isolated, publicly readabl
           "UPDATE curated_discussion_source SET ref = 'x'", "UPDATE source_translation SET body = 'x'"]) await rejects(client, statement, [], "42501");
         await rejects(client, "INSERT INTO curated_discussion (tenant_id,slug,title,kind,status,selected_by,mutation_id,request_digest) VALUES ('test-other','x','X','torah','published',$1,$2,$3)", [members.x.member, randomUUID(), DIGEST], "42501");
         await rejects(client, "UPDATE curated_discussion SET status = 'published', revision = 3 WHERE id = $1", [ids.gone], "23514");
+        // A later transaction never adds to a published set, even at its current revision.
+        await rejects(client, "INSERT INTO curated_discussion_source (tenant_id,discussion_id,revision,position,ref,anchor_ref,edition,selected_by,selected_by_name) VALUES ('crc',$1,1,2,'Synthetic Commentator on Genesis 12:2:1','Genesis 12:2','Synthetic English Edition',$2,'Synthetic Curator')", [ids.kept, members.a.member], "23514");
+        assert.deepEqual((await query(client, "SELECT selected_by_name FROM curated_discussion_public")).rows, [{ selected_by_name: "Synthetic Curator" }]);
         assert.equal((await query(client, "UPDATE curated_discussion SET title = 'Revised', revision = 2, updated_at = now() WHERE id = $1", [ids.kept])).rowCount, 1);
         assert.equal((await query(client, "UPDATE curated_discussion SET title = 'Elsewhere', revision = 2 WHERE id = $1", [ids.elsewhere])).rowCount, 0);
         await query(client, "ROLLBACK");

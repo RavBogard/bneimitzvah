@@ -1,5 +1,5 @@
 {
-  "id": "fc526474-9717-4f50-87e5-1111e8730739",
+  "id": "cece1765-6a3f-4b0a-bbfd-236b26ca516a",
   "prevId": "7527a5eb-2b89-4e3a-b553-5b7997c9d1b5",
   "version": "7",
   "dialect": "postgresql",
@@ -1294,6 +1294,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "selected_by_name": {
+          "name": "selected_by_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1401,6 +1407,10 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "curated_discussion_source_selector_name": {
+          "name": "curated_discussion_source_selector_name",
+          "value": "public.portal_source_plain(\"curated_discussion_source\".\"selected_by_name\", 480) and char_length(\"curated_discussion_source\".\"selected_by_name\") <= 120 and strpos(\"curated_discussion_source\".\"selected_by_name\", '@') = 0"
+        },
         "curated_discussion_source_position": {
           "name": "curated_discussion_source_position",
           "value": "\"curated_discussion_source\".\"position\" between 1 and 24"
@@ -1470,6 +1480,12 @@
         "selected_by": {
           "name": "selected_by",
           "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "selected_by_name": {
+          "name": "selected_by_name",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -1546,6 +1562,10 @@
       },
       "policies": {},
       "checkConstraints": {
+        "source_translation_selector_name": {
+          "name": "source_translation_selector_name",
+          "value": "public.portal_source_plain(\"source_translation\".\"selected_by_name\", 480) and char_length(\"source_translation\".\"selected_by_name\") <= 120 and strpos(\"source_translation\".\"selected_by_name\", '@') = 0"
+        },
         "source_translation_ref": {
           "name": "source_translation_ref",
           "value": "public.portal_source_plain(\"source_translation\".\"original_ref\", 256)"
