@@ -16,6 +16,7 @@ import { StepSourceUnavailable } from "../study/lexical/step";
 import { StudyUnavailable, type StudyPage, type StudyRequest } from "../study/types";
 import { ReferenceUnavailable, resolveReference, type ReferenceCatalog } from "../reference-audio/catalog";
 import { findShortSource, readShortSourceEntry, type ShortSourceManifest } from "../reference-audio/short-source-manifest";
+import { portionsOf, type WeekPortions } from "../../lib/print/portions";
 
 /**
  * Signed-out reading (Daniel, 2026-10-22: show the text, trope, translation,
@@ -168,6 +169,10 @@ export function createPublicReadingService(input: {
       return Object.freeze({ date: loaded.date, parashah: loaded.snapshot.reading?.parashah ?? null,
         torah: plans.torah ? view(plans.torah) : null, haftarah: plans.haftarah ? view(plans.haftarah) : null, fetchedAt: loaded.fetchedAt,
         listening: listening() });
+    },
+    /** The reader's print sheet: the Shabbat's calendar aliyot (full kriyah and triennial), numbers only. */
+    async portions(date: string, signal?: AbortSignal): Promise<WeekPortions> {
+      return portionsOf((await snapshot(date, signal)).snapshot);
     },
     async text(kind: PublicKind, date: string, offset: number, signal?: AbortSignal): Promise<StudyPage> {
       const value = await byDate(kind, date, signal); pageOffset(value, offset);

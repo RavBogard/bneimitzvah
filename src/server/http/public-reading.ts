@@ -46,9 +46,11 @@ export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Re
  * named by a Shabbat `date` (the weekly page) or, for "Any reading", by a canonical `ref` with its
  * `kind` (the 1.5 offline packer depends on these exact shapes).
  */
-type Route = Readonly<{ kind: "reading" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source" | "manifest"; keysets: readonly (readonly string[])[] }>;
+type Route = Readonly<{ kind: "reading" | "aliyot" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source" | "manifest"; keysets: readonly (readonly string[])[] }>;
 const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/reading": { kind: "reading", keysets: [["date"], ["ref", "kind"]] },
+  // The reader's print sheet (2026-10-23): a Shabbat's calendar aliyot, numbers and book names only.
+  "/api/public/aliyot": { kind: "aliyot", keysets: [["date"]] },
   "/api/public/text": { kind: "text", keysets: [["date", "kind", "offset"], ["ref", "kind", "offset"]] },
   "/api/public/word-aids": { kind: "word-aids", keysets: [["date", "kind", "verse"], ["ref", "kind", "verse"]] },
   "/api/public/word-details": { kind: "word-details", keysets: [["date", "kind", "verse", "word"], ["ref", "kind", "verse", "word"]] },
@@ -155,6 +157,11 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
             const week = await reading.week(query.date, signal);
             return json({ date: week.date, parashah: week.parashah, torah: week.torah && passageView(week.torah), haftarah: week.haftarah && passageView(week.haftarah),
               fetchedAt: week.fetchedAt, listening: { pocketTorah: week.listening.pocketTorah } }, 3600);
+          }
+          case "aliyot": {
+            const portions = await reading.portions(query.date, signal);
+            return json({ date: portions.date, parashah: portions.parashah, full: portions.full.map(row => ({ n: row.n, ref: row.ref })),
+              triennial: portions.triennial && { year: portions.triennial.year, aliyot: portions.triennial.aliyot.map(row => ({ n: row.n, ref: row.ref })) } }, 3600);
           }
           // Every page body below is the weekly one with `ref` in place of `date`.
           case "text": {
