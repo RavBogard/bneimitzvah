@@ -4,7 +4,8 @@ import type { AssignmentEnding } from "../../../../lib/hebrew/study-annotations"
 import { Apparatus, PhraseLegend, StudyHebrew, useVerseColors } from "./annotations";
 import { useCommentLink, VerseCommentary, type WorkState } from "./commentary-view";
 import type { StudyVerse } from "./api";
-import { InlineVersePanel, VerseActions } from "./verse-panel";
+import { InlineVersePanel, useWordCardOpener, VerseActions } from "./verse-panel";
+import { tapWord } from "./word-nav";
 import { useOwnLayer } from "./own-layer";
 import styles from "./commentary.module.css";
 
@@ -21,13 +22,15 @@ function StudyRow({ verse, assignment, id, onVerse, onWord, activeWord, listenin
 }) {
   const prefs = useReadingPrefs(), result = useVerseColors(verse, assignment, prefs.colors), colors = result?.status === "ready" ? result : null;
   const link = useCommentLink(), number = /:([1-9]\d*)$/.exec(verse.ref)?.[1] ?? verse.ref, own = useOwnLayer();
+  // In Study a tap on a word opens its card beside the verse; where there is no card (no text page registered, or words have no tools) it does what it did.
+  const opener = useWordCardOpener(), card = toolsAvailable ? opener : null;
   return <>
     {label && <p className="student-aliyah">{label}</p>}
     <article className={styles.row} data-verse-ref={verse.ref} aria-label={verse.ref}>
       <div className={styles.verseHebrew}>
         {onVerse ? <button type="button" className={styles.number} onClick={onVerse} aria-label={`Hear ${verse.ref}`} title={verse.ref}><span>{number}</span></button>
           : <span className={styles.number} title={verse.ref}><span>{number}</span></span>}
-        <StudyHebrew verse={verse} colors={colors} id={id} className={styles.hebrew} activeWord={activeWord} onWordSelect={onWord} wordAction={listening ? "verse" : "tools"} toolsAvailable={toolsAvailable} linked={link.marked} />
+        <StudyHebrew verse={verse} colors={colors} id={id} className={styles.hebrew} activeWord={activeWord} onWordSelect={card || onWord ? (word, element) => tapWord({ openCard: card, play: chosen => onWord?.(chosen) }, verse.ref, word, element ?? null) : undefined} wordAction={card ? "card" : listening ? "verse" : "tools"} toolsAvailable={toolsAvailable} linked={link.marked} />
         {colors && <div className="sr-only"><PhraseLegend colors={colors} id={id} verseRef={verse.ref} /></div>}
         {/* Masoretic apparatus stays out of the Hebrew line, in small muted type under it. */}
         <div className={styles.apparatus}><Apparatus verse={verse} learner /></div>

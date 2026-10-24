@@ -16,7 +16,10 @@ import { useStudyLens } from "../study-lens";
 import { LensSwitch } from "../lens-switch";
 import { StudyRows } from "./study-rows";
 import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi, workStatuses } from "./commentary-view";
-import { VersePanelColumn, VersePanelScope } from "./verse-panel";
+import { VersePanelColumn, VersePanelScope, WordPanelSource } from "./verse-panel";
+import type { WordPanelHost } from "./word-panel";
+import { ReadingPlace, scrollToVerse } from "./reading-place";
+import { pageOffsetFor } from "./reading-place-model";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
 import { PortalRequestError } from "../../api";
 import { watchReadingAudioDeadline } from "./reading-player-intent";
@@ -64,6 +67,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const selection = useRef<{ kind: StudyKind; offset: number; assignmentKey: string } | null>(null);
   // A word place chosen on another text page; bound to the load turn that shows it.
   const pendingPlace = useRef<{ kind: StudyKind; offset: number; turn: number; ref: string; wordIndex: number } | null>(null);
+  // A chapter chosen on another text page: scrolled to once that page is on screen.
+  const pendingJump = useRef<string | null>(null);
   const [state, setState] = useState<{ binding: string; kind?: StudyKind; page?: StudyPage; error?: number; loading?: boolean }>({ binding: "" });
   const key = baseline ? studyBinding(baseline) : "";
   const clear = useCallback(() => { stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.dispose(); shortMetadata.current = null; modalRequest.current?.abort(); modalOwner.current?.dispose(); modalOwner.current = null; generation.current++; controller.current?.abort(); setLift(null); setState({ binding: "", loading: true }); }, [stopAudio]);
@@ -114,6 +119,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     } catch { /* Authority state has already cleared text and metadata. */ }
   }
   const livePage = key && state.binding === key && !state.loading ? state.page : undefined;
+  useEffect(() => { const ref = pendingJump.current; if (ref && livePage?.verses.some(row => row.ref === ref)) { pendingJump.current = null; scrollToVerse(ref); } }, [livePage]);
   const listeningEnabled = baseline?.referenceListeningEnabled === true;
   const textReady = Boolean(livePage && !concealed), canHear = textReady && active && listeningEnabled;
   const shortView = useRef({ baseline, page: livePage, kind: state.kind, active, concealed, lift });
@@ -205,7 +211,34 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const offsets = [0]; if (assignment && current?.page) { let next: number | null = 0; while (next !== null) { const page = studyPlan(baseline, kind, next); next = page.nextOffset; if (next !== null) offsets.push(next); } }
   const previous = current?.page ? offsets[offsets.indexOf(current.page.offset) - 1] : undefined;
   const single = current?.page ? previous === undefined && current.page.nextOffset === null : false;
+  // Study's word card (1.7): the verse panel reads word details through the same authority checks as Word tools.
+  const wordScope = JSON.stringify([summary.sessionBinding, epoch, key, kind, current?.page?.offset, generation.current]);
+  const wordHost: WordPanelHost | null = study && !concealed && active && current?.page && !current.loading ? {
+    scopeKey: wordScope, verses: current.page.verses,
+    readAids: async (index, signal) => {
+      const value = baseline, page = current.page!, turn = generation.current;
+      if (signal.aborted || metadata.current !== value || page !== livePage || !page.verses[index]) throw new PortalRequestError(409);
+      const result = await readWordAids(value, kind, page.offset + index, page.verses[index], signal);
+      if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
+      return result;
+    },
+    readDetails: async (index, word, signal) => {
+      const value = baseline, page = current.page!, turn = generation.current;
+      if (signal.aborted || metadata.current !== value || page !== livePage || !page.verses[index]) throw new PortalRequestError(409);
+      const result = await readWordDetails(value, kind, page.offset + index, page.verses[index], word, signal);
+      if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
+      return result;
+    },
+    onHear: listeningEnabled ? (index, word) => hear(current.page!, index, word) : undefined,
+    onVisit: ref => onVisit?.(kind, ref),
+  } : null;
+  const jumpTo = (ref: string) => {
+    if (current?.page?.verses.some(row => row.ref === ref)) { scrollToVerse(ref); return; }
+    const target = pageOffsetFor(offsets, assignment!.verses, ref);
+    if (target !== null && target !== current?.page?.offset) { pendingJump.current = ref; void explicitLoad(kind, target); }
+  };
   return <section className="assigned-study" aria-label="Assigned text" data-size={prefs.size}>
+    <WordPanelSource host={wordHost} />
     {/* On a learner's phone the switch waits under the passage, so the first verse stays above the fold. */}
     {(baseline.readings.length > 1 || lens.available) && <div className="reading-lens-row" data-learner={learner ? "" : undefined}>
       {baseline.readings.length > 1 && <div className="study-kind-choice" role="group" aria-label="Reading text selection">{baseline.readings.map(row => <button key={row.kind} className="button-secondary" aria-label={row.kind === "torah" ? "Torah text" : "Haftarah text"} aria-pressed={kind === row.kind} disabled={current?.loading} onClick={() => void explicitLoad(row.kind, 0)}>{row.kind === "torah" ? "Torah" : "Haftarah"}</button>)}{serviceHref && <a className="button-secondary service-entry" href={serviceHref}>Service parts</a>}</div>}
@@ -218,6 +251,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     </div> : current.page && <>
       {study ? <>
         <CommentaryStatus works={workStatuses(works, corpus)} />
+        <ReadingPlace refs={assignment!.verses} pageKey={wordScope} onJump={jumpTo} />
         <StudyRows verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled} showEnglish={lens.english}
           sections={aliyahSections(kind, assignment!, current.page.verses)} works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))}
           onVerse={listeningEnabled ? index => hear(current.page!, index) : undefined} onWord={(index, word) => { if (listeningEnabled) playMainVerseForWord(playback.current, tools.current, index, word); else tools.current?.select(index, word); onVisit?.(kind, current.page!.verses[index].ref); }} />

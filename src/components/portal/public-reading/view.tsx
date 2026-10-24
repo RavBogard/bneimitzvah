@@ -14,7 +14,10 @@ import { LensSwitch } from "../workspace/lens-switch";
 import { LENS_STORAGE, lensFromSearch, StudyLensScope, useStudyLens, type Lens } from "../workspace/study-lens";
 import { StudyRows } from "../workspace/study/study-rows";
 import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi, workStatuses } from "../workspace/study/commentary-view";
-import { VersePanelColumn, VersePanelScope } from "../workspace/study/verse-panel";
+import { VersePanelColumn, VersePanelScope, WordPanelSource } from "../workspace/study/verse-panel";
+import type { WordPanelHost } from "../workspace/study/word-panel";
+import { ReadingPlace, scrollToVerse } from "../workspace/study/reading-place";
+import { pageOffsetFor } from "../workspace/study/reading-place-model";
 import { namedReading, type NamedReading } from "../../../lib/readings/named-readings";
 import { useReadingPrefs } from "../workspace/reading-prefs";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
@@ -326,13 +329,27 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     if (word === "verse") tools.current?.selectVerse(at); else tools.current?.select(at, word);
   });
   const chooseWord = (at: number, word: number) => release(() => { setFocus(at); setDrillTarget(null); if (listening) playMainVerseForWord(playback.current, tools.current, at, word); else tools.current?.select(at, word); });
-  const changeIndex = (next: number) => { if (next === index) return; audio.stopAll(); setLift(null); setFocus(null); setDrill(null); setDrillTarget(null); setOffset(0); onIndex(next); };
+  const changeIndex = (next: number) => { if (next === index) return; pendingJump.current = null; audio.stopAll(); setLift(null); setFocus(null); setDrill(null); setDrillTarget(null); setOffset(0); onIndex(next); };
   const changeOffset = (next: number) => { if (next === offset) return; if (linkedIndex !== null) onVerseLeft(); setDrillTarget(null); setOffset(next); };
   const offsets = passage.pages.map(row => row.offset);
   const previousOffset = offsets[offsets.indexOf(offset) - 1], nextOffset = page?.nextOffset ?? null;
   // The haftarah's last verse takes the closing (sof haftarah) melody, as in the assigned reading.
   const assignment = useMemo(() => ({ kind, confirmed: kind === "haftarah", verses: allVerses }), [kind, allVerses]);
   const scopeKey = textKey;
+  // Study's word card (1.7): the text page tells the verse panel how to read word details; a tap in Lein never reaches it.
+  const wordHost: WordPanelHost | null = page && study ? { scopeKey, verses: page.verses,
+    readAids: (at, signal) => fetchPublicWordAids(source, page.offset + at, page.verses[at], signal),
+    readDetails: (at, word, signal) => fetchPublicWordDetails(source, page.offset + at, page.verses[at], word, signal),
+    onHear: listening ? (at, word) => hear(at, word) : undefined,
+    onVisit: ref => { const at = page.verses.findIndex(row => row.ref === ref); if (at >= 0) release(() => setFocus(at)); } } : null;
+  // The chapter jump: a verse on this text page is scrolled to; one on another page loads that page first.
+  const pendingJump = useRef<string | null>(null);
+  const jumpTo = (ref: string) => release(() => {
+    if (page?.verses.some(row => row.ref === ref)) { scrollToVerse(ref); return; }
+    const target = pageOffsetFor(offsets, allVerses, ref);
+    if (target !== null && target !== offset) { pendingJump.current = ref; changeOffset(target); }
+  });
+  useEffect(() => { const ref = pendingJump.current; if (page && ref && page.verses.some(row => row.ref === ref)) { pendingJump.current = null; scrollToVerse(ref); } }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
   const start = useRef<() => void>(() => {}); start.current = () => { textAnchor.current?.scrollIntoView({ block: "start" }); if (listening && page) hear(0); else textAnchor.current?.focus(); };
   useEffect(() => { registerStart(page ? () => start.current() : null); return () => registerStart(null); }, [page, registerStart]);
 
@@ -372,6 +389,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     onWriteOwn={own ? () => { const ref = drillVerse.ref; setDrill(null); own.writeOwn(ref); } : undefined} />;
 
   return <VersePanelScope>
+    <WordPanelSource host={wordHost} />
     <div className="reading-lens-row">
       {sources.length > 1 && <div className="study-kind-choice" role="group" aria-label="Reading text selection">
         {sources.map((row, at) => <button key={at} type="button" className="button-secondary" aria-pressed={at === index} onClick={() => changeIndex(at)}>{row.label}</button>)}
@@ -386,6 +404,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
           : <p role="status">Loading the text…</p> : <>
           {study ? <>
             <CommentaryStatus works={workStatuses(works, corpus)} />
+            <ReadingPlace refs={allVerses} pageKey={textKey} onJump={jumpTo} />
             <StudyRows verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={lens.english}
               works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))}
               onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} />
