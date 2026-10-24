@@ -1,4 +1,4 @@
-import { parseCatalog } from "../../src/components/portal/workspace/service-learning/api";
+import { parseCatalog, parseServiceMetadata } from "../../src/components/portal/workspace/service-learning/api";
 import { afterEach, expect, test, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { randomUUID } from "node:crypto";
@@ -43,6 +43,7 @@ test("actual SDK staff review signs exact expiry and confirms independent select
   const catalog = await json(await f.call("/catalog", { body: { mode: "admin" } }));
   expect(catalog).toMatchObject({ state: "available", studentRevision: 1, expectedPlanRevision: 0, ceremonyDate: "2027-01-02", serviceSlot: "morning", catalogId: f.catalogId, catalogIdentity: f.content.identity });
   expect(catalog.units.map((u: { id: string }) => u.id)).toEqual([f.content.first, f.content.hidden, f.content.second]);
+  expect(catalog.units.map((u: { page?: number }) => u.page)).toEqual([1, 2, 3]);
   // The wire shape is the one the staff editor parses, standard-part defaults included (none in this synthetic feed).
   expect(catalog.defaults).toEqual([]); expect(parseCatalog(catalog)).toMatchObject({ state: "available", defaults: [] });
   const review = await json(await f.call("/prepare", { body: f.selection }));
@@ -55,6 +56,9 @@ test("actual SDK staff review signs exact expiry and confirms independent select
   expect(Object.keys(saved).sort()).toEqual(["ok", "planId", "revision", "cleared"].sort()); expect(saved).toMatchObject({ ok: true, revision: 1, cleared: false });
   for (const [who, mode] of [["admin", "admin"], ["multi", "tutor"], ["multi", "parent"], ["learner", "student"]] as const) {
     const meta = await json(await f.call(`?mode=${mode}`, { who })); expect(meta.units.map((u: { id: string }) => u.id)).toEqual([f.content.first, f.content.second]);
+    // Each part's printed page and the service's first page reach the wire, and the portal's strict parser accepts them.
+    expect(meta.units.map((u: { page?: number }) => u.page)).toEqual([1, 3]); expect(meta.serviceStart).toBe(1);
+    expect(parseServiceMetadata(meta)).toMatchObject({ state: "assigned", serviceStart: 1, units: [{ page: 1 }, { page: 3 }] });
     const unit = await json(await f.call("/unit", { who, body: { mode, planId: saved.planId, planRevision: saved.revision, catalogIdentity: f.content.identity, unitId: f.content.first } }));
     expect(unit.material.unit.blocks[0].he).toBe("א֑ב\u200f");
     expect(unit.material.unit.blocks[0].en).toEqual([{ t: "Synthetic translation 0" }, { footnote: [{ t: "Synthetic credit" }] }]);

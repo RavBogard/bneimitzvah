@@ -36,6 +36,7 @@ Link into the live siddur at the printed page; don't embed it or copy it.
 2. **M2 (Opus, with a second-agent review), server fields.**
    - `service-learning/service.ts`: `summary()` adds `page`, and `metadata()` adds `serviceStart`.
    - Tests: `service-learning.test.ts` and `service-learning-adversarial.test.ts` (no page across students or tenants).
+   - Decided here (M2): `page` is the pinned catalog unit's `printedFolio` (the served book's printed page, never an internal typeset folio), sent only when it is 1 or more. The catalog has no explicit service start, so `serviceStart` is the least printed page among the catalog's units for the plan's reviewed service family; checked against the live feed (numbers only): morning 1 to 31, evening with Havdalah 33 to 63, Sh'ma 10, V'ahavta 11, Torah blessing 22. The staff catalog view carries `page` too. Gating links on the congregation's `siddurUrl` stays in the client's link helper (M3).
 3. **M3 (Sonnet), the visible links.**
    - `panel.tsx`: a link on each part and the whole-service link at the top.
    - `my-service.tsx`: the new wording.

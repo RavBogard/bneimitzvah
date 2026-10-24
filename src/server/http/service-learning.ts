@@ -73,8 +73,8 @@ export function material(value: ServiceUnitMaterial): JsonValue {
 type Service = HttpRuntime["serviceLearning"];
 type Plan = NonNullable<Awaited<ReturnType<Service["metadata"]>> extends infer R ? R extends { plan: infer P } ? P : never : never>;
 const plan = (value: Plan) => pick(value, ["id", "revision", "needsReview", "catalogId", "catalogIdentity", "catalogState"]);
-type Summary = { id: string; name: string; caption?: string; section: ServiceSectionHeading };
-const summary = (value: Summary) => ({ ...pick(value, ["id", "name", "caption"]), section: section(value.section) });
+type Summary = { id: string; name: string; caption?: string; section: ServiceSectionHeading; page?: number };
+const summary = (value: Summary) => ({ ...pick(value, ["id", "name", "caption"]), section: section(value.section), ...pick(value, ["page"]) });
 
 export async function handleServiceLearningRequest(request: Request, runtime: HttpRuntime): Promise<Response | null> {
   const found = route(new URL(request.url).pathname); if (!found) return null;
@@ -88,7 +88,7 @@ export async function handleServiceLearningRequest(request: Request, runtime: Ht
     if (found.operation === "metadata") {
       const result = await runtime.serviceLearning.metadata(request, { studentId, mode: mode(query.get("mode"), false) });
       if (result.state === "stale") return privateJson({ ok: false, code: "stale-revision" }, 409);
-      output = result.state === "no-plan" ? { state: result.state } : result.state === "assigned" ? { state: result.state, plan: plan(result.plan), units: result.units.map(summary) } : { state: result.state, plan: plan(result.plan) };
+      output = result.state === "no-plan" ? { state: result.state } : result.state === "assigned" ? { state: result.state, plan: plan(result.plan), units: result.units.map(summary), ...pick(result, ["serviceStart"]) } : { state: result.state, plan: plan(result.plan) };
     } else {
       requireCookieMutation(request, runtime.origin);
       const operation = found.operation;

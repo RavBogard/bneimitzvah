@@ -121,3 +121,51 @@ test.each(["query", "artifact"])("unknown %s read failures expose only the fixed
     expect(error).not.toHaveProperty("cause"); expect(JSON.stringify(error)).not.toContain(marker);
   }
 });
+
+async function readOrDenied(operation: () => Promise<unknown>) {
+  try { return await operation(); } catch (error) { if (error instanceof AccessDenied) return { denied: error.status }; throw error; }
+}
+
+test("printed pages follow only the read student's own plan: siblings, a tutor and a linked learner never see another student's parts or pages", async () => {
+  const f = await fixture(); await f.save();
+  const sibling = f.students[1].id, { first, second } = syntheticServiceCatalog();
+  await f.owner(() => f.db.update(s.student).set({ serviceSlot: "morning" }).where(eq(s.student.id, sibling)));
+  const review = await f.service.prepare(f.request(), { ...f.selection, studentId: sibling, selectedIds: [second] });
+  if (!review.ok) throw new Error("Independent synthetic sibling preparation missing");
+  await f.service.confirm(f.request(), { mode: "admin", studentId: sibling, binding: review.binding });
+  // The shared parent sees each child's own parts and pages, never the other's.
+  const own = await f.service.metadata(f.accessRequest("multi"), { mode: "parent", studentId: f.selection.studentId });
+  expect(own).toEqual(expect.objectContaining({ serviceStart: 1, units: [expect.objectContaining({ id: first, page: 1 })] }));
+  expect(await f.service.metadata(f.accessRequest("multi"), { mode: "parent", studentId: sibling }))
+    .toEqual(expect.objectContaining({ serviceStart: 1, units: [expect.objectContaining({ id: second, page: 3 })] }));
+  // The learner linked to the first child, and the tutor assigned only to it, cannot read the sibling at all.
+  expect(await readOrDenied(() => f.service.metadata(f.accessRequest("learner"), { mode: "student", studentId: sibling }))).toEqual({ denied: 404 });
+  expect(await readOrDenied(() => f.service.metadata(f.accessRequest("multi"), { mode: "tutor", studentId: sibling }))).toEqual({ denied: 404 });
+  // An unrelated student with no plan has no page fields.
+  expect(await f.service.metadata(f.accessRequest("admin"), { mode: "admin", studentId: f.students[2].id })).toEqual({ state: "no-plan" });
+});
+
+test("printed pages never cross tenants: another tenant without a catalog gets no page fields, and with its own catalog gets only its own pages", async () => {
+  const f = await fixture(); await f.save();
+  const other = f.students[3].id, otherRequest = () => f.accessRequest("multi", "http://localhost:3101");
+  await f.owner(() => f.db.update(s.student).set({ serviceSlot: "morning" }).where(eq(s.student.id, other)));
+  // No siddur catalog in the other tenant: its student has no plan and no page fields, though CRC has both.
+  expect(await f.service.metadata(otherRequest(), { mode: "student", studentId: other })).toEqual({ state: "no-plan" });
+  // The other tenant gets its own catalog on distinct pages, and its own plan.
+  const foreign = syntheticServiceCatalog("two", { firstPage: 40 }), foreignId = randomUUID();
+  await f.owner(async () => {
+    const [member] = await f.db.select().from(s.membership).where(eq(s.membership.tenantId, "other"));
+    await f.db.insert(s.serviceCatalog).values({ id: foreignId, tenantId: "other", identity: foreign.identity, feedBytes: foreign.feedBytes, provenanceBytes: foreign.provenanceBytes, pins: foreign.pins });
+    await f.db.insert(s.serviceCatalogLifecycle).values({ tenantId: "other", catalogId: foreignId, state: "active" });
+    await f.db.insert(s.studentServicePlan).values({ tenantId: "other", studentId: other, catalogId: foreignId, catalogIdentity: foreign.identity,
+      selectedIds: [foreign.first, foreign.second], reviewedDate: "2027-01-02", reviewedSlot: "morning", setByMembershipId: member.id });
+  });
+  expect(await f.service.metadata(otherRequest(), { mode: "student", studentId: other })).toEqual(expect.objectContaining({ state: "assigned", serviceStart: 40,
+    units: [expect.objectContaining({ id: foreign.first, page: 40 }), expect.objectContaining({ id: foreign.second, page: 42 })] }));
+  const ours = await f.service.metadata(f.accessRequest("learner"), { mode: "student", studentId: f.selection.studentId });
+  expect(ours).toEqual(expect.objectContaining({ state: "assigned", serviceStart: 1, units: [expect.objectContaining({ id: f.selection.selectedIds[0], page: 1 })] }));
+  expect(JSON.stringify(ours)).not.toMatch(/"page":4\d|"serviceStart":4\d/);
+  // Neither tenant's readers can address the other tenant's student.
+  for (const [request, studentId, mode] of [[f.accessRequest("learner"), other, "student"], [f.accessRequest("admin"), other, "admin"], [otherRequest(), f.selection.studentId, "student"]] as const)
+    expect(await readOrDenied(() => f.service.metadata(request, { mode, studentId }))).toEqual({ denied: 404 });
+});
