@@ -53,13 +53,25 @@ export function packAssetAllowed(asset: string): boolean {
   return PACK_DATA_PATH.test(path) && search.length > 1;
 }
 
-export type PackDescriptor = Readonly<{ type: "week"; date: string } | { type: "course" }>;
+/**
+ * A2: the private endpoint that names the signed-in person's own readings (descriptors only). The worker never
+ * handles it; the page asks it with the session cookie and no-store on every online open of the installed app.
+ */
+export const OFFLINE_PACKS_PATH = "/api/offline/packs";
+/** The opaque, per-person owner key the endpoint returns (an HMAC, base64url). */
+export const OWNER_KEY = /^[A-Za-z0-9_-]{43}$/;
+/** An owner pack's ref: a canonical reading ref (the packer checks it canonically), bounded and plain. */
+const PACK_REF = /^[A-Za-z0-9 :;,.-]{1,400}$/;
+
+export type PackDescriptor = Readonly<{ type: "week"; date: string } | { type: "course" } | { type: "ref"; kind: "torah" | "haftarah"; ref: string }>;
+/** `owner` is "public" (This week, the course) or the owner key of the person whose own reading it is. */
 export type Pack = Readonly<{
-  key: string; owner: "public"; label: string; descriptor: PackDescriptor; assets: readonly string[];
+  key: string; owner: string; label: string; descriptor: PackDescriptor; assets: readonly string[];
   bytes: number; renewedAt: number; expiresAt: number; format: 1;
 }>;
-export type PackIndex = Readonly<{ format: 1; packs: readonly Pack[] }>;
-export const EMPTY_INDEX: PackIndex = Object.freeze({ format: 1, packs: Object.freeze([]) });
+/** `owner`: the last owner the private endpoint named on this device, or null (signed out, or never asked). */
+export type PackIndex = Readonly<{ format: 1; owner: string | null; packs: readonly Pack[] }>;
+export const EMPTY_INDEX: PackIndex = Object.freeze({ format: 1, owner: null, packs: Object.freeze([]) });
 
 /** A pack is served only inside renewedAt − 5 min ≤ now < expiresAt, and never past 14 days from renewedAt. */
 export function packLive(pack: Pick<Pack, "renewedAt" | "expiresAt">, now: number): boolean {
@@ -73,6 +85,8 @@ function descriptorOf(value: unknown): PackDescriptor | null {
   const row = value as Record<string, unknown>;
   if (row.type === "course" && Object.keys(row).length === 1) return Object.freeze({ type: "course" });
   if (row.type === "week" && Object.keys(row).length === 2 && typeof row.date === "string" && DATE.test(row.date)) return Object.freeze({ type: "week", date: row.date });
+  if (row.type === "ref" && Object.keys(row).length === 3 && (row.kind === "torah" || row.kind === "haftarah") && typeof row.ref === "string" && PACK_REF.test(row.ref))
+    return Object.freeze({ type: "ref", kind: row.kind, ref: row.ref });
   return null;
 }
 /** The stored index, strictly: anything unexpected is an empty index (and the sweep then clears the cache). */
@@ -81,17 +95,22 @@ export function parsePackIndex(value: unknown): PackIndex {
     if (!value || typeof value !== "object" || Array.isArray(value)) return EMPTY_INDEX;
     const row = value as Record<string, unknown>;
     if (row.format !== 1 || !Array.isArray(row.packs) || row.packs.length > 16) return EMPTY_INDEX;
+    // An A1 index has no owner; anything else that is not an owner key is no index at all.
+    const owner = row.owner === undefined || row.owner === null ? null : typeof row.owner === "string" && OWNER_KEY.test(row.owner) ? row.owner : undefined;
+    if (owner === undefined) return EMPTY_INDEX;
     const packs: Pack[] = [];
     for (const raw of row.packs) {
       if (!raw || typeof raw !== "object" || Array.isArray(raw)) return EMPTY_INDEX;
       const p = raw as Record<string, unknown>, descriptor = descriptorOf(p.descriptor);
-      if (typeof p.key !== "string" || p.key.length > 64 || p.owner !== "public" || typeof p.label !== "string" || p.label.length > 160 || !descriptor
+      // A public pack is This week or the course; an owner pack is a ref of the index's own owner, and only that.
+      const ownerOk = p.owner === "public" ? descriptor?.type !== "ref" : owner !== null && p.owner === owner && descriptor?.type === "ref";
+      if (typeof p.key !== "string" || p.key.length > 64 || !ownerOk || typeof p.label !== "string" || p.label.length > 160 || !descriptor
         || !Array.isArray(p.assets) || p.assets.length > 4000 || !p.assets.every(packAssetAllowed) || !Number.isSafeInteger(p.bytes) || (p.bytes as number) < 0
         || !Number.isSafeInteger(p.renewedAt) || !Number.isSafeInteger(p.expiresAt) || p.format !== 1) return EMPTY_INDEX;
-      packs.push(Object.freeze({ key: p.key, owner: "public", label: p.label, descriptor, assets: Object.freeze([...(p.assets as string[])]),
+      packs.push(Object.freeze({ key: p.key, owner: p.owner as string, label: p.label, descriptor, assets: Object.freeze([...(p.assets as string[])]),
         bytes: p.bytes as number, renewedAt: p.renewedAt as number, expiresAt: p.expiresAt as number, format: 1 }));
     }
-    return Object.freeze({ format: 1, packs: Object.freeze(packs) });
+    return Object.freeze({ format: 1, owner, packs: Object.freeze(packs) });
   } catch { return EMPTY_INDEX; }
 }
 
@@ -104,7 +123,7 @@ export function workerPolicy(input: { build: string; enabled: boolean; shellPage
     shellCache: SHELL_CACHE_PREFIX + (/^[a-z0-9]{1,64}$/i.test(input.build) ? input.build : "dev"), shellPrefix: SHELL_CACHE_PREFIX,
     offlineCache: OFFLINE_CACHE, family: CACHE_FAMILY, indexKey: INDEX_KEY, header: OFFLINE_HEADER, windowMs: WINDOW_MS, skewMs: SKEW_MS,
     shellPages: Object.freeze([...input.shellPages]), shellAssets: [MANIFEST_PATH], shellLimits: SHELL_LIMITS, manifestPath: MANIFEST_PATH,
-    staticPath: STATIC_PATH.source, staticUnsafe: STATIC_UNSAFE.source, clipPath: CLIP_PATH.source, packDataPath: PACK_DATA_PATH.source,
+    staticPath: STATIC_PATH.source, staticUnsafe: STATIC_UNSAFE.source, clipPath: CLIP_PATH.source, packDataPath: PACK_DATA_PATH.source, ownerKey: OWNER_KEY.source,
   });
 }
 export type WorkerPolicy = ReturnType<typeof workerPolicy>;

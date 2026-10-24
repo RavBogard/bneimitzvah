@@ -19,6 +19,8 @@ import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from 
 import { syntheticCourseRoutes } from "../../e2e/learn-synthetic";
 import { finishLesson } from "../../e2e/learn-drill";
 import { rateLimit } from "../../src/server/db/auth-schema";
+import * as s from "../../src/server/db/index";
+import { eq } from "drizzle-orm";
 vi.mock("server-only", () => ({}));
 declare global { interface Window { offlineAudios: HTMLAudioElement[] } }
 
@@ -84,7 +86,7 @@ async function installed(options: { course?: boolean } = {}) {
 const pack = (tab: Page) => tab.evaluate(async ([name, key]) => {
   if (!await caches.has(name)) return null;
   const response = await (await caches.open(name)).match(key);
-  return response ? await response.json() as { packs: { key: string; renewedAt: number; expiresAt: number; assets: string[] }[] } : null;
+  return response ? await response.json() as { owner?: string | null; packs: { key: string; owner: string; descriptor: { type: string; ref?: string }; renewedAt: number; expiresAt: number; assets: string[] }[] } : null;
 }, [OFFLINE_CACHE, INDEX] as const);
 async function signIn(tab: Page, email: string) {
   await tab.goto("/", { waitUntil: "domcontentloaded" });
@@ -129,4 +131,37 @@ it("a lesson finished while the installed app is offline reaches the account whe
     const body = await response.json() as { progress?: { lessons?: Record<string, unknown> } | null };
     return Object.keys(body.progress?.lessons ?? {});
   }), { timeout: 30_000 }).toContain("torah-sof-pasuk");
+}, 300_000);
+
+it("A2: a student's own confirmed reading is packed under its owner, and another account on the device removes it with every pack", async () => {
+  // A synthetic student account linked to the fixture's student, with a confirmed Torah reading inside the synthetic catalog.
+  const learner = await fixture.signIn("pg-offline-student");
+  const [member] = await fixture.ownerDb.insert(s.membership).values({ tenantId: "crc", userId: learner.id }).returning();
+  const [grant] = await fixture.ownerDb.insert(s.roleGrant).values({ tenantId: "crc", membershipId: member.id, role: "student" }).returning();
+  await fixture.ownerDb.insert(s.studentIdentity).values({ tenantId: "crc", studentId: fixture.student.id, roleGrantId: grant.id });
+  const [admin] = await fixture.ownerDb.select().from(s.membership).where(eq(s.membership.userId, fixture.admin.id));
+  const [assignment] = await fixture.ownerDb.insert(s.assignment).values({ tenantId: "crc", studentId: fixture.student.id, kind: "torah", basis: "custom", status: "confirmed",
+    ref: "Genesis 1:1-3", setByMembershipId: admin.id, proposalSnapshot: { needsReview: false, confirmationDate: "2026-10-01" } }).returning();
+  await fixture.ownerDb.insert(s.assignmentVerse).values(["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"].map((verseRef, index) => ({ tenantId: "crc", studentId: fixture.student.id, assignmentId: assignment.id, ordinal: index + 1, verseRef })));
+  try {
+    const { context, tab, seen } = await installed();
+    await signIn(tab, "pg-offline-student@example.test");
+    await expect.poll(async () => (await pack(tab))?.packs.some(row => row.descriptor.type === "ref" && row.descriptor.ref === "Genesis 1:1-3") ?? false, { timeout: 150_000 }).toBe(true);
+    const first = await pack(tab);
+    expect(first?.owner).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    const own = first!.packs.find(row => row.descriptor.type === "ref")!;
+    expect(own.owner).toBe(first!.owner);
+    expect(own.assets.every(asset => asset.startsWith("/api/public/") || asset.startsWith("/reference-audio/short-v1/"))).toBe(true);
+    // The private endpoint is never answered by the worker.
+    expect(seen.fromWorker.filter(path => path.startsWith("/api/") && !path.startsWith("/api/public/"))).toEqual([]);
+    // Another account signs in on this device without a sign-out here (the session went away elsewhere).
+    await context.clearCookies();
+    await signIn(tab, "pg-admin@example.test");
+    await expect.poll(async () => { const index = await pack(tab); return index ? index.owner !== first!.owner && index.owner !== null && !index.packs.some(row => row.owner === first!.owner) : false; },
+      { timeout: 150_000 }).toBe(true);
+    expect((await pack(tab))!.packs.some(row => row.descriptor.type === "ref")).toBe(false);
+  } finally {
+    await fixture.ownerDb.delete(s.assignmentVerse).where(eq(s.assignmentVerse.assignmentId, assignment.id));
+    await fixture.ownerDb.delete(s.assignment).where(eq(s.assignment.id, assignment.id));
+  }
 }, 300_000);

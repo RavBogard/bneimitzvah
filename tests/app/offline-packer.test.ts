@@ -14,9 +14,9 @@ import { thisShabbat } from "../../src/lib/readings/public-shabbat";
 import { syntheticResponse } from "../helpers/study";
 import { syntheticCommentaryFetch } from "../helpers/commentary";
 import { publicShortFixture, byteStream } from "./reference-public-short-fixture";
-import { openOffline, PackStopped, renewPack, type PackerIo } from "../../src/lib/offline/packer";
-import { readIndex, sweep } from "../../src/lib/offline/pack-index";
-import { INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, packAssetAllowed, WINDOW_MS, type Pack } from "../../src/lib/offline/policy";
+import { askOwner, openOffline, ownerPackKey, PackStopped, parseOwnerAnswer, renewPack, type PackerIo } from "../../src/lib/offline/packer";
+import { readIndex, sweep, writeIndex } from "../../src/lib/offline/pack-index";
+import { EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, packAssetAllowed, parsePackIndex, WINDOW_MS, type Pack } from "../../src/lib/offline/policy";
 import { publicReadingPath, publicShortPath, publicTextPath } from "../../src/components/portal/public-reading/urls";
 import { coursePassages } from "../../src/components/learn/verses-api";
 import { MELODIES } from "../../src/lib/learn/course";
@@ -180,4 +180,115 @@ test("only PocketTorah short-v1 clips and the three public data routes can ever 
     "/reference-audio/voice/alto.mp3", "/api/public/reference/finkel/media/" + "a".repeat(64) + ".mp3", "/api/public/word-aids?date=2026-10-24&kind=torah&verse=0", "/api/public/commentary?work=rashi&chapter=Genesis+1",
     "/api/students/s1/recordings", "/api/session", "/api/learn/progress", "/api/public/reading", "//evil.test/api/public/reading?date=1", "https://evil.test/x", "/api/public/text?x=1#y"])
     expect(packAssetAllowed(asset), asset).toBe(false);
+});
+
+describe("owner packs (A2): the person's own readings, and the purge on an account switch or a sign-out", () => {
+  const A = "A".repeat(43), B = "B".repeat(43);
+  const own = (owner: string, list: { kind: "torah" | "haftarah"; ref: string; name: string | null }[]) => async () => ({ state: "owner" as const, owner, packs: list });
+  const reading = { kind: "haftarah" as const, ref: "Isaiah 1:1-3", name: null };
+  const keys = async (h: Awaited<ReturnType<typeof harness>>) => (await packs(h)).map(row => row.key).sort();
+  const index = async (h: Awaited<ReturnType<typeof harness>>) => readIndex((await offline(h)) as unknown as Cache);
+
+  test("packs a ref the way /read?ref= asks for it, from the public routes with no cookie, under its owner", async () => {
+    const h = await harness();
+    // The index has no owner, so the pack is not kept: an owner pack joins only its own owner's index.
+    await expect(renewPack(h.io, { type: "ref", kind: "torah", ref: "Genesis 1:1-2:3" }, signal(), { owner: A, label: "" })).rejects.toEqual(new PackStopped("purged"));
+    expect(await packs(h)).toEqual([]);
+    await writeIndex((await offline(h)) as unknown as Cache, { format: 1, owner: A, packs: [] });
+    expect(await renewPack(h.io, { type: "ref", kind: "torah", ref: "Genesis 1:1-2:3" }, signal(), { owner: A, label: "" })).toBe("saved");
+    const [pack] = await packs(h), selector = { by: "ref" as const, ref: "Genesis 1:1-2:3", kind: "torah" as const };
+    expect(pack).toMatchObject({ key: ownerPackKey("torah", "Genesis 1:1-2:3"), owner: A, label: "", descriptor: { type: "ref", kind: "torah", ref: "Genesis 1:1-2:3" } });
+    expect([...pack.assets].sort()).toEqual([publicReadingPath(selector), publicTextPath(selector, "torah", 0), publicShortPath(selector, "torah", 0), h.source.source.path]
+      .map(path => new URL(path, origin)).map(url => url.pathname + url.search).sort());
+    expect(h.requests.every(row => row.init.credentials === "omit" && /\/api\/public\/|\/reference-audio\/short-v1\//.test(row.url))).toBe(true);
+    // An owner pack needs its owner, and a public pack must not name one.
+    await expect(renewPack(h.io, { type: "ref", kind: "torah", ref: "Genesis 1:1-2:3" }, signal())).rejects.toEqual(new PackStopped("failed"));
+    await expect(renewPack(h.io, { type: "week", date }, signal(), { owner: A, label: "" })).rejects.toEqual(new PackStopped("failed"));
+    await expect(renewPack(h.io, { type: "ref", kind: "torah", ref: "Genesis 1:1-2:3" }, signal(), { owner: "not-a-key", label: "" })).rejects.toEqual(new PackStopped("failed"));
+    await expect(renewPack(h.io, { type: "ref", kind: "torah", ref: "Genesis 2:3-1:1" }, signal(), { owner: A, label: "" })).rejects.toEqual(new PackStopped("failed"));
+  });
+
+  test("an open asks whose readings these are, then packs This week, the person's own readings and the course", async () => {
+    const h = await harness();
+    await openOffline({ ...h.io, owner: own(A, [reading, { kind: "torah", ref: "Genesis 1:1-5", name: "Mine" }]) });
+    expect(await keys(h)).toEqual(["course", ownerPackKey("haftarah", "Isaiah 1:1-3"), ownerPackKey("torah", "Genesis 1:1-5"), `week:${date}`].sort());
+    const stored = await index(h);
+    expect(stored.owner).toBe(A);
+    expect(stored.packs.find(row => row.key === ownerPackKey("torah", "Genesis 1:1-5"))).toMatchObject({ owner: A, label: "Mine" });
+    expect(stored.packs.filter(row => row.descriptor.type !== "ref").every(row => row.owner === "public")).toBe(true);
+  });
+
+  test("another account on this device: every pack goes, the public ones too, before the new owner's are packed", async () => {
+    const h = await harness();
+    await openOffline({ ...h.io, owner: own(A, [reading]) });
+    const clips = () => h.requests.filter(row => row.url.endsWith(".mp3")).length, first = clips();
+    await openOffline({ ...h.io, owner: own(B, [{ kind: "torah", ref: "Genesis 1:1-5", name: null }]) });
+    const stored = await index(h);
+    expect(stored.owner).toBe(B);
+    expect(stored.packs.some(row => row.owner === A)).toBe(false);
+    expect(await keys(h)).toEqual(["course", ownerPackKey("torah", "Genesis 1:1-5"), `week:${date}`].sort());
+    // The public packs were deleted and fetched again: the clip came over the network a second time.
+    expect(clips()).toBeGreaterThan(first);
+  });
+
+  test("signed out (401 or 403): the owner packs go and the public ones stay; an unknown answer changes nothing", async () => {
+    const h = await harness();
+    await openOffline({ ...h.io, owner: own(A, [reading]) });
+    const count = h.requests.length;
+    await openOffline({ ...h.io, owner: async () => ({ state: "unknown" as const }) });
+    expect(await keys(h)).toContain(ownerPackKey("haftarah", "Isaiah 1:1-3"));
+    expect((await index(h)).owner).toBe(A);
+    await openOffline({ ...h.io, owner: async () => { throw new Error("Synthetic network failure"); } });
+    expect(await keys(h)).toContain(ownerPackKey("haftarah", "Isaiah 1:1-3"));
+    await openOffline({ ...h.io, owner: async () => ({ state: "signed-out" as const }) });
+    expect(await keys(h)).toEqual(["course", `week:${date}`].sort());
+    expect((await index(h)).owner).toBeNull();
+    // The public packs were kept, not fetched again (they are inside their 12 hours).
+    expect(h.requests.length).toBe(count);
+    // A later sign-in as anyone packs their readings without a purge: nothing private was left.
+    await openOffline({ ...h.io, owner: own(B, [reading]) });
+    expect(await keys(h)).toContain(ownerPackKey("haftarah", "Isaiah 1:1-3"));
+    expect((await packs(h)).find(row => row.descriptor.type === "ref")?.owner).toBe(B);
+  });
+
+  test("a reading the endpoint no longer names is dropped at the next open; a renamed one is renewed", async () => {
+    const h = await harness();
+    await openOffline({ ...h.io, owner: own(A, [reading, { kind: "torah", ref: "Genesis 1:1-5", name: "Old" }]) });
+    await openOffline({ ...h.io, owner: own(A, [{ kind: "torah", ref: "Genesis 1:1-5", name: "New" }]) });
+    expect(await keys(h)).toEqual(["course", ownerPackKey("torah", "Genesis 1:1-5"), `week:${date}`].sort());
+    expect((await packs(h)).find(row => row.descriptor.type === "ref")?.label).toBe("New");
+  });
+
+  test("the endpoint's answer is read strictly, and asked with the cookie, never stored", async () => {
+    const ok = { owner: A, packs: [{ kind: "torah", ref: "Genesis 1:1-5", name: null }] };
+    expect(parseOwnerAnswer(200, ok)).toEqual({ state: "owner", ...ok });
+    expect(parseOwnerAnswer(403, null)).toEqual({ state: "signed-out" });
+    for (const status of [404, 409, 429, 500, 503]) expect(parseOwnerAnswer(status, ok)).toEqual({ state: "unknown" });
+    const bell = String.fromCharCode(7);
+    for (const body of [null, [], { ...ok, extra: 1 }, { owner: "short", packs: [] }, { owner: A, packs: Array.from({ length: 9 }, () => ok.packs[0]) },
+      { owner: A, packs: [{ kind: "torah", ref: "Genesis 1:5-1", name: null }] }, { owner: A, packs: [{ kind: "torah", ref: "genesis 1:1-5", name: null }] },
+      { owner: A, packs: [{ kind: "haftarah", ref: "Genesis 1:1-5", name: null }] }, { owner: A, packs: [{ kind: "torah", ref: "Genesis 1:1-5", name: "" }] },
+      { owner: A, packs: [{ kind: "torah", ref: "Genesis 1:1-5", name: "x" + bell }] }, { owner: A, packs: [{ kind: "torah", ref: "Genesis 1:1-5" }] }])
+      expect(parseOwnerAnswer(200, body), JSON.stringify(body)).toEqual({ state: "unknown" });
+    const seen: RequestInit[] = [];
+    const answering = (headers: Record<string, string>) => (async (url: string, init: RequestInit) => {
+      seen.push(init); const response = new Response(JSON.stringify(ok), { headers: { "content-type": "application/json", ...headers } });
+      Object.defineProperty(response, "url", { value: url }); return response;
+    }) as unknown as typeof fetch;
+    expect(await askOwner({ origin, fetch: answering({}) }, signal())).toEqual({ state: "owner", ...ok });
+    expect(seen[0]).toMatchObject({ credentials: "same-origin", cache: "no-store", redirect: "error", mode: "same-origin" });
+    // A saved copy from a worker is no answer.
+    expect(await askOwner({ origin, fetch: answering({ [OFFLINE_HEADER]: "1" }) }, signal())).toEqual({ state: "unknown" });
+    expect(await askOwner({ origin, fetch: (async () => { throw new TypeError("offline"); }) as unknown as typeof fetch }, signal())).toEqual({ state: "unknown" });
+  });
+
+  test("the stored index holds owner packs only of its own owner", () => {
+    const pack = { key: "ref:torah:0", owner: A, label: "", descriptor: { type: "ref", kind: "torah", ref: "Genesis 1:1-5" }, assets: [], bytes: 0, renewedAt: 1, expiresAt: 2, format: 1 };
+    expect(parsePackIndex({ format: 1, owner: A, packs: [pack] }).packs).toHaveLength(1);
+    for (const value of [{ format: 1, owner: B, packs: [pack] }, { format: 1, owner: null, packs: [pack] }, { format: 1, packs: [pack] }, { format: 1, owner: "x", packs: [] },
+      { format: 1, owner: A, packs: [{ ...pack, owner: "public" }] }, { format: 1, owner: A, packs: [{ ...pack, descriptor: { type: "week", date: "2026-10-24" } }] }])
+      expect(parsePackIndex(value), JSON.stringify(value)).toEqual(EMPTY_INDEX);
+    // An A1 index (no owner) still reads.
+    expect(parsePackIndex({ format: 1, packs: [] })).toEqual({ format: 1, owner: null, packs: [] });
+  });
 });
