@@ -68,7 +68,7 @@ export async function withConnectionOwner<Q extends PgQueryResultHKT, T>(mcp: Pi
   if (intent !== "read" && intent !== "data-write") throw new AccessDenied(403);
   if (actor.unattended) throw new AccessDenied(403);
   return mcp.withLive(actor, intent, async (tx, live, alive) => {
-    if (live.unattended || live.connectionId !== actor.connectionId || live.tenantId !== actor.tenantId) throw new AccessDenied(403);
+    if (live.unattended) throw new AccessDenied(403);
     if (live.role !== "admin" && live.role !== "tutor") throw new AccessDenied(403);
     await bindOwner(tx, { tenantId: live.tenantId, membershipId: live.membershipId });
     const owner: SavedOwner = Object.freeze({ tenantId: live.tenantId, membershipId: live.membershipId, userId: live.userId, sessionExpiresAt: live.expiresAt });

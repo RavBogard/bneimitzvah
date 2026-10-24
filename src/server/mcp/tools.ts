@@ -95,7 +95,8 @@ function rabbiAuthority<Q extends PgQueryResultHKT>(ctx: ToolContext<Q>): RabbiA
     run: action => ctx.mcp.withLive(ctx.actor, "data-write", async (tx, actor, alive) => {
       if (actor.role !== "admin") throw new AccessDenied(403);
       const rabbi = await lockRabbi(tx, actor.tenantId, actor.membershipId, { roleGrantId: actor.roleGrantId, roleGrantRevision: actor.roleGrantRevision, authorityRevision: actor.authorityRevision });
-      // An unattended routine's consent can never mark work reviewed (S25); a read-only consent cannot write at all.
+      // An unattended routine's consent can never mark work reviewed (S25); a read-only consent cannot write study work. (Since 1.7 M4 it can
+      // write the person's own saved readings, saved-tools.ts: the person's own rows only, never deleted, revision-checked.)
       const writer = Object.freeze({ tenantId: actor.tenantId, ...rabbi, channel: "mcp" as const, mayReview: !actor.unattended && actor.scopes.has(SCOPES.study) });
       const live = () => { alive(); if (ctx.signal.aborted) throw new AccessDenied(401); };
       return action(tx, writer, live);

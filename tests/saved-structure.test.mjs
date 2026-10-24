@@ -46,7 +46,18 @@ test("the MCP reaches saved readings only through src/server/saved/mcp, imported
   assert.deepEqual(importers, ["src/server/mcp/saved-tools.ts"]);
   const narrow = sources.find(file => file.path === "src/server/saved/mcp.ts").text;
   // It reads readings and nothing a member writes on a verse: no work, mark or star query, and no cookie-session entrance.
-  assert.doesNotMatch(narrow, /data\.(workForVerses|marksForVerses|workRow|markRow|listStars|starRow|insertWork|updateWork|insertMark|updateMark|insertStar|deleteStar|deleteReading)\b/);
+  // An allowlist, not a blocklist: the data module only as `* as data`, never destructured, and only the reading queries.
+  assert.deepEqual(importsOf(narrow).filter(spec => /data\/saved$/.test(spec)), ["../data/saved"]);
+  assert.match(narrow, /import \* as data from "\.\.\/data\/saved";/);
+  assert.doesNotMatch(narrow, /import\s*(type\s*)?\{[^}]*\}\s*from\s*"\.\.\/data\/saved"|=\s*data\s*;|=\s*data\b(?!\.)/, "data is never destructured or aliased");
+  const used = new Set([...narrow.matchAll(/\bdata\.(\w+)/g)].map(m => m[1]));
+  const allowed = new Set(["lockOwnerWrites", "reading", "listReadings", "countReadings", "insertReading", "updateReading", "SavedReadingRow"]);
+  for (const name of used) assert.ok(allowed.has(name), `saved/mcp.ts uses data.${name}`);
+  // withConnectionOwner binds from a connection id alone (withLive re-derives the person), so only this module may call it.
+  const binders = sources.filter(file => file.path !== "src/server/saved/access.ts" && /\bwithConnectionOwner\b/.test(file.text)).map(file => file.path);
+  assert.deepEqual(binders, ["src/server/saved/mcp.ts"]);
+  const accessImporters = sources.filter(file => importsOf(file.text).some(spec => /(^|\/)saved\/access$|^\.\/access$/.test(spec) && (file.path.startsWith("src/server/saved/") || /saved\/access$/.test(spec)))).map(file => file.path).sort();
+  assert.deepEqual(accessImporters, ["src/server/data/saved.ts", "src/server/saved/mcp.ts", "src/server/saved/service.ts"]);
   assert.doesNotMatch(narrow, /createSavedAccess|createSavedService|withSavedOwner|set_config/);
   assert.equal(narrow.match(/withConnectionOwner<Q, T>\(mcp, actor, "(read|data-write)", signal/g)?.length, 2, "every call is bound to the connection's own owner");
   // No tool input names an owner: the schemas take no member, owner, user, student or tenant.

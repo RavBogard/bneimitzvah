@@ -31,6 +31,7 @@ const HINTS: Readonly<Record<string, string>> = Object.freeze({
   conflict: "The reading changed since your last read (in the portal or another conversation): current is how it stands now. Show the person, then resend with its revision if they still want the change.",
   limit: "The person already keeps the most saved readings an account may hold. They can remove one in the portal first.",
   "no-change": "Name at least one of name, date or ranges to change.",
+  "mutation-reused": "That mutationId already made a different reading. Use a fresh random UUID for each new reading; resend the same one only to repeat the same create.",
   invalid: "Fix the listed problems and resend.",
 });
 const answer = (origin: string, outcome: McpSavedOutcome) => {
@@ -63,13 +64,13 @@ export function createSavedTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
     },
     {
       ...base, name: "create_saved_reading", annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-      description: "Save a new reading to your own account, only when the person asks for it: a name, the verses (ranges) and an optional date. kind is optional; without it the ranges say which. Pass a fresh mutationId: resending the same one returns the reading it made (replayed: true) instead of saving twice. Show the person the reading it states.",
+      description: "Save a new reading to your own account, only when the person asks for it: a name, the verses (ranges) and an optional date. kind is optional; without it the ranges say which. Pass a fresh mutationId: resending the same create returns the reading it made (replayed: true) instead of saving twice; a mutationId reused for a different reading is refused. Show the person the reading it states.",
       inputSchema: closed({ name, ranges, kind: { type: "string", enum: ["torah", "haftarah"], description: "Optional: torah or haftarah. Without it, the corpus the ranges name." }, date,
         mutationId: { type: "string", pattern: MCP_SAVED_UUID_PATTERN, description: "A fresh random UUID for this create; resending it returns the same reading instead of saving a second." } }, ["name", "ranges", "mutationId"]),
       handler: async (input, ctx) => ctx.actor.unattended ? ROUTINE : answer(ctx.actor.origin, await own(ctx).create(ctx.actor, ctx.signal, input)),
     },
     {
-      ...base, name: "revise_saved_reading", annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+      ...base, name: "revise_saved_reading", annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
       description: "Change one of your own saved readings, only when the person asks: its name, its date (null clears it) or its verses (ranges, within the same corpus; the verse count is recounted). Anything left out stays as it is. Pass the revision from your last read; on conflict, current shows how it stands now. The person's own work on verses a revision drops is kept and returns with the verse.",
       inputSchema: closed({ id, revision: { type: "integer", minimum: 1, maximum: 2147483646, description: "The reading's revision from your last read." }, name, date, ranges }, ["id", "revision"]),
       handler: async (input, ctx) => ctx.actor.unattended ? ROUTINE : answer(ctx.actor.origin, await own(ctx).revise(ctx.actor, ctx.signal, input)),

@@ -18,7 +18,8 @@ import * as validate from "./validation";
 type Mcp<Q extends PgQueryResultHKT> = Pick<ReturnType<typeof createMcpAuthService<Q>>, "withLive">;
 export type McpSavedReading = Readonly<{ id: string; name: string; date: string | null; kind: "torah" | "haftarah"; ranges: string; verseCount: number; revision: number; createdAt: string; updatedAt: string }>;
 export type McpSavedOutcome = Readonly<{ ok: true; reading: McpSavedReading; replayed?: boolean }> | Readonly<{ ok: false; code: "invalid"; problems: readonly string[] }>
-  | Readonly<{ ok: false; code: "limit" }> | Readonly<{ ok: false; code: "conflict"; current: McpSavedReading }> | Readonly<{ ok: false; code: "no-change" }>;
+  | Readonly<{ ok: false; code: "limit" }> | Readonly<{ ok: false; code: "conflict"; current: McpSavedReading }> | Readonly<{ ok: false; code: "no-change" }>
+  | Readonly<{ ok: false; code: "mutation-reused" }>;
 
 export const MCP_SAVED_UUID_PATTERN = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
 export const MCP_SAVED_LIMIT = SAVED_CAPS.readings;
@@ -89,7 +90,13 @@ export function createMcpSavedReadings<Q extends PgQueryResultHKT>(mcp: Mcp<Q>) 
       return write(actor, signal, async (tx, owner) => {
         const id = createdId(owner, mutationId);
         const existing = await data.reading(tx, owner, id);
-        if (existing) return Object.freeze({ ok: true as const, reading: view(existing), replayed: true });
+        if (existing) {
+          // A resend replays. The same mutationId sent with a different reading is refused while the first is unrevised; once the
+          // person has revised it, the stored reading is the answer. (A reading the person removed in the portal is made again.)
+          const same = existing.name === name && existing.readingDate === date && existing.kind === ranges.kind && existing.ranges === ranges.ranges;
+          if (!same && existing.revision === 1) return Object.freeze({ ok: false as const, code: "mutation-reused" as const });
+          return Object.freeze({ ok: true as const, reading: view(existing), replayed: true });
+        }
         if (await data.countReadings(tx, owner) >= SAVED_CAPS.readings) return Object.freeze({ ok: false as const, code: "limit" as const });
         const row = await data.insertReading(tx, owner, { id, name, date, kind: ranges.kind, ranges: ranges.ranges, verseCount: ranges.verses.length });
         if (!row) throw new Error("Saved reading unavailable");

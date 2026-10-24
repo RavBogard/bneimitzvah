@@ -67,6 +67,9 @@ describe("saved readings over the MCP", () => {
     const again = (await call(admin, "create_saved_reading", body)).json();
     expect(again).toMatchObject({ ok: true, replayed: true, reading: { id: made.reading.id } });
     expect((await call(admin, "list_saved_readings")).json().total).toBe(2);
+    // The same mutationId with a different reading is refused, not silently answered with the first.
+    expect((await call(admin, "create_saved_reading", { ...body, name: "Something else" })).json()).toMatchObject({ ok: false, code: "mutation-reused" });
+    expect((await call(admin, "list_saved_readings")).json().total).toBe(2);
     expect((await call(admin, "create_saved_reading", { name: "Isaiah", ranges: "Isaiah 40:1-11", mutationId: randomUUID() })).json().reading).toMatchObject({ kind: "haftarah", verseCount: 11 });
     expect((await call(admin, "create_saved_reading", { name: "Isaiah", ranges: "Isaiah 40:1-11", kind: "torah", mutationId: randomUUID() })).json()).toMatchObject({ ok: false, code: "invalid" });
     // The row is the connection's own person's, whatever anyone sent.
@@ -138,6 +141,8 @@ describe("saved readings over the MCP", () => {
     const routine = (await t.connect("admin", { unattended: true })).access_token as string;
     const names = async (token: string) => (await t.rpc(token, "tools/list")).body.result.tools.map((x: { name: string }) => x.name);
     expect(await names(admin)).toEqual(expect.arrayContaining(SAVED));
+    const annotations = Object.fromEntries(((await t.rpc(admin, "tools/list")).body.result.tools as { name: string; annotations: Record<string, boolean> }[]).map(tool => [tool.name, tool.annotations]));
+    expect(SAVED.map(name => [annotations[name].readOnlyHint, annotations[name].destructiveHint])).toEqual([[true, false], [true, false], [false, false], [false, true]]);
     const listed = await names(routine);
     for (const name of SAVED) {
       expect(listed).not.toContain(name);
