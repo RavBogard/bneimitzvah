@@ -7,7 +7,7 @@ import { printAddress } from "../../../lib/print/print-address";
 import { displayRange, go, Hero, longDate, PassageReading, replaceAddress, Shell, useChooser, useStarter, type LabelledSource } from "../public-reading/view";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { expandReadingRanges } from "../../../lib/readings/ranges";
-import { conflictMark, fetchSavedPage, parseSavedReading, removeSavedReading, setSavedMark, updateSavedReading, type SavedMark, type SavedPage, type SavedReading, type SavedWork, type WorkStream } from "./api";
+import { conflictMark, fetchSavedPage, parseSavedReading, removeSavedReading, setSavedMark, updateSavedReading, type SavedMark, type SavedPage, type SavedReading } from "./api";
 import { OwnLayerScope } from "../workspace/study/own-layer";
 import { useSavedOwnLayer, type VerseWork } from "./yours";
 import styles from "./saved.module.css";
@@ -80,7 +80,7 @@ export function SavedVerseMarks({ verseRef, mark, pending, notice, onChoose, onS
  * /read?saved=<id>: a member's own saved reading. The passage comes from the account (never the address), so the
  * same text, recordings and tools open on it; above it the reading's name and date with Edit, and in Lein each
  * selected verse carries its Still working / Got it mark. In Study each verse has its closed Yours row and each inline comment its
- * star (PR 3), and the translate drill reveals the member's own translation. A tab coming back revalidates quietly and stays mounted.
+ * star (PR 3), and stored notes and translations show read-only under Yours. A tab coming back revalidates quietly and stays mounted.
  */
 export function SavedReadingPage({ id, verse }: { id: string; verse: number | null }) {
   const lens = useStudyLens(), chooser = useChooser(), starter = useStarter(), editId = useId();
@@ -101,7 +101,7 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
       // The first page's marks come with it; later pages load when one of their verses is chosen.
       loadedPages.current = new Set([0]);
       setMarks(new Map(page.verses.map(row => [row.ref, row.mark])));
-      // Merged, not replaced: a quiet revalidation must not blank the own texts of verses on later pages (an open Yours row, the drill).
+      // Merged, not replaced: a quiet revalidation must not blank the own texts of verses on later pages (an open Yours row).
       setWork(current => { const next = new Map(current); for (const row of page.verses) next.set(row.ref, workOf(row)); return next; });
     } catch { if (!signal.aborted && !quiet) setHeader({ status: "failed" }); }
   }, [id]);
@@ -158,11 +158,7 @@ export function SavedReadingPage({ id, verse }: { id: string; verse: number | nu
       if (result.code === "signed-out" || result.code === "not-eligible" || result.code === "missing") setRetry(value => value + 1);
     });
   };
-  const putWork = useCallback((ref: string, stream: WorkStream, value: SavedWork | null) => setWork(current => {
-    const next = new Map(current), row = next.get(ref) ?? { translation: null, note: null };
-    next.set(ref, stream === "translation" ? { ...row, translation: value } : { ...row, note: value }); return next;
-  }), []);
-  const own = useSavedOwnLayer({ readingId: id, active: header.status === "ready", work, putWork, ensure: ensureMarks, refused: () => setRetry(value => value + 1), openStudy: () => lens.setLens("study") });
+  const own = useSavedOwnLayer({ readingId: id, active: header.status === "ready", work, ensure: ensureMarks, refused: () => setRetry(value => value + 1) });
   const verseExtra = (ref: string): ReactNode =>
     <SavedVerseMarks key={ref} onShow={ensureMarks} verseRef={ref} mark={marks.has(ref) ? marks.get(ref) : undefined} pending={pending === ref} notice={markNotice?.ref === ref ? markNotice.text : ""} onChoose={state => choose(ref, state)} />;
 

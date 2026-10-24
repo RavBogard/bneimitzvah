@@ -33,8 +33,8 @@ import { pageTitle } from "../../../lib/site/product-name";
 import { SaveReading } from "../saved/save-reading";
 import { SavedReadingPage } from "../saved/saved-reading";
 import { OfflineExpiryNote, OfflinePill } from "../offline/status";
-import { useOwnLayer } from "../workspace/study/own-layer";
 import { DRILL_STRINGS, drillNext, TranslateDrillPanel } from "./translate-drill";
+import { SiddurBlessings } from "./siddur-blessings";
 import styles from "./public-reading.module.css";
 import drillStyles from "./translate-drill.module.css";
 
@@ -95,7 +95,7 @@ export function Shell({ title, children, signedIn = false }: { title: string; ch
       <div className="reading-workspace reading-with-work"><section aria-labelledby="public-reading-title">
         {children}
         {!signedIn && <aside className={styles.signIn} aria-labelledby="public-sign-in-heading">
-          <h2 id="public-sign-in-heading">Preparing for your Beit Mitzvah?</h2>
+          <h2 id="public-sign-in-heading">Save this reading</h2>
           <p>Sign in to see your own verses, your tutor’s notes and your practice days. Everything on this page is open to anyone.</p>
           <a className="button-start" href="/sign-in">Sign in</a>
         </aside>}
@@ -184,6 +184,7 @@ function WeekReading({ initial, verse }: { initial: Extract<ReadTarget, { mode: 
     {current && !sources.length && <div className="workspace-state" role="status"><h2>No reading to show for this Shabbat</h2><p>The calendar lists no weekly Torah portion or haftarah here. Try the week before or after.</p></div>}
     {current && sources.length > 0 && <>
       {!current.torah && current.parashah && <p className="field-help">This Shabbat’s Torah reading isn’t shown here. The haftarah is below.</p>}
+      <SiddurBlessings torah={Boolean(current.torah)} haftarah={Boolean(current.haftarah)} />
       <PassageReading key={current.date} sources={sources} index={index} onIndex={next => { setKind(sources[next].source.passage.kind); setLinked(null); }}
         verse={linked} onVerseLeft={() => setLinked(null)} registerStart={starter.register} retry={retry} onRetry={() => setRetry(value => value + 1)} />
     </>}
@@ -267,7 +268,6 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   // Any verse the reader chooses themselves clears it, so the player follows the verse that was last chosen either way.
   const [drillTarget, setDrillTarget] = useState<{ index: number; generation: number } | null>(null), drillGeneration = useRef(0);
   const jpsRef = useRef<HTMLHeadingElement | null>(null), revealRef = useRef<HTMLButtonElement | null>(null), drillToggle = useRef<HTMLButtonElement | null>(null);
-  const own = useOwnLayer();
   useEffect(() => {
     const target = drillFocus.current; if (!target) return; drillFocus.current = null;
     const control = (target === "jps" ? jpsRef : target === "reveal" ? revealRef : drillToggle).current;
@@ -381,12 +381,11 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   };
   const drillRestart = () => { if (!page) return; if (page.offset === 0) drillGo(0); else { drillToPage.current = true; changeOffset(offsets[0] ?? 0); } };
   const drillPanel = drillVerse && focus !== null && page && <TranslateDrillPanel verseRef={drillVerse.ref} english={drillVerse.english} revealed={drill?.revealed === drillVerse.ref}
-    hint={drillHint.current === drillVerse.ref} last={drillNext(focus, page.verses.length, nextOffset) === "last"} draft={own?.draft(drillVerse.ref) ?? { state: "none" }} announce={announce}
+    hint={drillHint.current === drillVerse.ref} last={drillNext(focus, page.verses.length, nextOffset) === "last"} announce={announce}
     jpsRef={jpsRef} revealRef={revealRef}
     onReveal={() => { setDrill({ revealed: drillVerse.ref }); setAnnounce(DRILL_STRINGS.shown); drillFocus.current = "jps"; }}
     onHide={() => { setDrill({ revealed: null }); setAnnounce(DRILL_STRINGS.hidden); drillFocus.current = "reveal"; }}
-    onNext={drillNextVerse} onRestart={drillRestart} onEnd={drillEnd}
-    onWriteOwn={own ? () => { const ref = drillVerse.ref; setDrill(null); own.writeOwn(ref); } : undefined} />;
+    onNext={drillNextVerse} onRestart={drillRestart} onEnd={drillEnd} />;
 
   return <VersePanelScope>
     <WordPanelSource host={wordHost} />

@@ -5,8 +5,8 @@ import type { WorkState } from "./commentary-view";
 import styles from "./commentary.module.css";
 
 /**
- * A member's own layer over a reading (accounts plan §5, Study, PR 3): the Yours row under each Study verse, a star on
- * each inline comment, and the member's own translation at the translate drill's reveal. It is provided only on the
+ * A member's own layer over a reading (accounts plan §5, Study, PR 3): the Yours row under each Study verse (stored
+ * notes and translations, read-only since 1.7) and a star on each inline comment. It is provided only on the
  * member's own saved reading, after the account has answered for itself, so public readings and the student workspace
  * never ask about an account and never show any of it. Nothing here is read by staff: the rows are owner-only (RLS).
  */
@@ -15,18 +15,12 @@ export type StarKey = Readonly<{ work: string; verseRef: string; comment: number
 export const starKey = (key: StarKey) => `${key.work}|${key.verseRef}|${key.comment}`;
 /** The server keeps comments 1 to 60 of a verse; later ones have no star. */
 export const STAR_COMMENT_LIMIT = 60;
-/** The drill's view of the member's own translation: nothing to show, none yet, or the draft. */
-export type DrillDraft = Readonly<{ state: "none" } | { state: "empty" } | { state: "draft"; text: string }>;
 export type OwnStars = Readonly<{ starred(key: StarKey): boolean; pending(key: StarKey): boolean; notice(key: StarKey): string; toggle(key: StarKey): void }>;
 export type OwnLayer = Readonly<{
   /** Null until the member's stars have loaded: no star shows in a state it might not have. */
   stars: OwnStars | null;
-  /** Study: the verse's Yours row, closed by default. */
+  /** Study: the verse's Yours row, closed by default; it shows stored text read-only. */
   yours(verse: StudyVerse, works: readonly WorkState[]): ReactNode;
-  /** The translate drill's reveal: the member's own translation of this verse. */
-  draft(ref: string): DrillDraft;
-  /** "Write one in Yours": opens this verse's Yours row in Study. */
-  writeOwn(ref: string): void;
 }>;
 const Context = createContext<OwnLayer | null>(null);
 export const OwnLayerScope = Context.Provider;

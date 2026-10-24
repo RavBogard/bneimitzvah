@@ -8,6 +8,8 @@ import type { ServiceUnitMaterial } from "../../../../lib/service-learning/types
 import type { ServiceMetadata, ServicePlan } from "./api";
 import { ServicePlanEditor } from "./editor";
 import { MyServicePanel } from "./my-service";
+import { useCongregation } from "../settings/links";
+import { SiddurPageLink } from "../../siddur-link";
 
 export type ServiceReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
 export function ServiceLearningPanel({ id, mode, studentId, baseline, register, reloadReading, onDepartureActive, onVisit }: {
@@ -20,6 +22,7 @@ export function ServiceLearningPanel({ id, mode, studentId, baseline, register, 
   const scope = JSON.stringify([summary.sessionBinding, epoch, mode, studentId]), scopeRef = useRef(scope); scopeRef.current = scope;
   const [state, setState] = useState<{ scope: string; metadata?: ServiceMetadata; material?: ServiceUnitMaterial; selected?: string; loading?: boolean; unitLoading?: boolean; error?: number }>({ scope });
   const metadata = useRef<ServiceMetadata | null>(null), choice = useRef<string | null>(null), generation = useRef(0), request = useRef<AbortController | null>(null);
+  const congregation = useCongregation(Boolean(baseline));
   const [connectedScope,setConnectedScope]=useState<string|null>(null);
   const connected=connectedScope===scope,connectionChanged=useCallback((value:boolean)=>setConnectedScope(value?scope:null),[scope]);
   const clear = useCallback(() => { generation.current++; request.current?.abort(); request.current = null; metadata.current = null; setState({ scope: scopeRef.current, loading: true }); }, []);
@@ -64,6 +67,7 @@ export function ServiceLearningPanel({ id, mode, studentId, baseline, register, 
   async function confirmed() { await reloadReading(); if (!metadata.current) throw new Error("Service plan reload unavailable"); return metadata.current; }
   return <section id={id} className="service-learning-panel" aria-labelledby={`${id}-heading`}>
     <h2 id={`${id}-heading`} tabIndex={-1}>Service parts</h2>
+    {assigned?.state === "assigned" && <SiddurPageLink siddurUrl={congregation.links.siddurUrl} page={assigned.serviceStart} block>Your whole service in the siddur, from page {assigned.serviceStart}</SiddurPageLink>}
     <MyServicePanel mode={mode} studentId={studentId} baseline={baseline} onConnected={connectionChanged} />
     <details className="service-additional-practice" open={!connected}><summary>{connected?"Additional practice":"Assigned service material"}</summary>
     {!current || current.loading ? <p role="status">Checking assigned service parts…</p> : current.error ? <div role="status"><p>{current.error === 409 ? "The service plan changed. Reload it before choosing a part." : [401, 403, 404].includes(current.error) ? "Service parts are no longer available in this view." : "Service parts are unavailable. Your scripture reading is separate."}</p><button className="button-secondary" onClick={() => void reloadReading().catch(() => undefined)}>Reload service parts</button></div> : assigned && <>
@@ -73,7 +77,7 @@ export function ServiceLearningPanel({ id, mode, studentId, baseline, register, 
       {assigned.state !== "no-plan" && assigned.plan.needsReview && <p className="reading-review">Service parts need review with your tutor or rabbi. The ceremony date or service may have changed.</p>}
       {assigned.state === "assigned" && <>
         <p>Choose an assigned part to read. Only the chosen part opens here.</p>
-        <ul className="service-part-choices">{assigned.units.map(unit => <li key={unit.id}><button type="button" className="button-secondary" aria-pressed={current.selected === unit.id} onClick={() => void select(unit.id)}>{unit.name}</button></li>)}</ul>
+        <ul className="service-part-choices">{assigned.units.map(unit => <li key={unit.id}><button type="button" className="button-secondary" aria-pressed={current.selected === unit.id} onClick={() => void select(unit.id)}>{unit.name}</button><SiddurPageLink siddurUrl={congregation.links.siddurUrl} page={unit.page}>Open in the siddur, page {unit.page}</SiddurPageLink></li>)}</ul>
         {current.unitLoading && <p role="status">Loading the selected service part…</p>}
         {current.material && <ServiceUnitView key={JSON.stringify([scope, assigned.plan.id, assigned.plan.revision, assigned.plan.catalogIdentity, current.selected])} material={current.material} />}
       </>}

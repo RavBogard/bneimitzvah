@@ -29,7 +29,7 @@ describe("the account mail transport", () => {
     expect(request.body).toEqual({ from: "torah@example.test", to: ["approver@example.test"], subject: "An account request for CRC Torah",
       text: "Someone has asked for a CRC Torah account.\n\nReview account requests: https://torah.centralreform.org/workspace/accounts\n\nYou receive this because you approve accounts for Central Reform Congregation." });
     expect(approval.body).toEqual({ from: "torah@example.test", to: ["member@example.test"], subject: "Your CRC Torah account is ready",
-      text: "Your account request was approved. Sign in with this email address to save readings and keep your own translation and notes.\n\nhttps://torah.centralreform.org/\n\nIf you did not ask for an account, you can ignore this email." });
+      text: "Your account request was approved. Sign in with this email address to save readings. https://torah.centralreform.org/. If you did not ask for an account, you can ignore this email." });
     expect(accountMailText("account-request", ORIGIN, tenant).text.match(/https?:\/\/\S+/g)).toEqual([`${ORIGIN}/workspace/accounts`]);
   });
   it("names each congregation's own product, never CRC Torah by default (Daniel, E1)", () => {
