@@ -90,10 +90,11 @@ test("a failed Compare is one quiet line with Try again, and the reading is unto
 test("Esc with a modal open closes the modal, never the Compare panel under it", async ({ page }) => {
   await mock(page);
   await page.goto("/read?lens=study");
+  // In Study a tap on a word opens its word card and selects the verse (which offers Up close); Compare then replaces the card.
+  await row(page, "Genesis 1:2").locator('[data-word-index="0"]').first().click();
   await compare(page, "Genesis 1:1").click();
   await expect(panel(page).getByText("Synthetic rendering one of Genesis 1:1.")).toBeVisible();
   // Up close is a modal dialog over the page.
-  await row(page, "Genesis 1:2").locator('[data-word-index="0"]').first().click();
   await page.getByRole("button", { name: "View Genesis 1:2 up close", exact: true }).click();
   const lift = page.locator("dialog.lift");
   await expect(lift).toBeVisible();
