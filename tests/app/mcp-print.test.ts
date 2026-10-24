@@ -50,6 +50,11 @@ describe("print_sheet_link", () => {
     expect(target(named.link).target).toEqual({ mode: "named", slug: "lech-lecha", passage: 1 });
     expect(named.reading.statement).toBe("Lech-Lecha, Torah: Genesis 12:1–17:27 (126 verses).");
     expect(target((await call({ parashah: "noach", kind: "haftarah" })).json().link).target).toEqual({ mode: "named", slug: "noach", passage: 2 });
+    const second = (await call({ parashah: "noach", passage: 2 })).json();
+    expect(target(second.link).target).toEqual({ mode: "named", slug: "noach", passage: 2 });
+    expect(second.reading.kind).toBe("haftarah");
+    expect((await call({ parashah: "noach", passage: 9 })).json().problems[0]).toContain("has 2 passages");
+    expect((await call({ ref: "Genesis 1:1-5", passage: 1 })).json().problems[0]).toContain("passage applies only with parashah");
     const ref = (await call({ ref: "Isaiah 40:1-11", kind: "haftarah" })).json();
     expect(target(ref.link).target).toEqual({ mode: "ref", ref: "Isaiah 40:1-11", kind: "haftarah" });
     const id = "0f0e0d0c-0b0a-4908-8706-050403020100", saved = (await call({ savedReadingId: id })).json();

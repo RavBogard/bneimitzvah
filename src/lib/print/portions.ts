@@ -87,7 +87,9 @@ export function portionRef(portions: WeekPortions, pick: PortionPick): string | 
  * first verse is not printed has no marker; the maftir is marked where it begins inside the printed verses.
  */
 export function aliyahStartsIn(portions: WeekPortions, pick: PortionPick, verses: readonly string[]): ReadonlyMap<string, string> {
-  const set = pick === "triennial" ? portions.triennial?.aliyot ?? [] : portions.full, printed = new Set(verses), out = new Map<string, string>();
+  const all = pick === "triennial" ? portions.triennial?.aliyot ?? [] : portions.full, printed = new Set(verses), out = new Map<string, string>();
+  // Printing the maftir alone, its label wins where it begins on the same verse as an aliyah.
+  const set = pick === "maftir" ? [...all.filter(row => row.n === "M"), ...all.filter(row => row.n !== "M")] : all;
   for (const row of set) {
     const first = canonicalReadingRef(row.ref, "torah")?.verses[0];
     if (first && printed.has(first) && !out.has(first)) out.set(first, row.n);

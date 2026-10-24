@@ -173,3 +173,14 @@ test("/print is never for search engines, even with indexing on, and its title e
   expect(noindexHeaderRule(true).source).not.toContain("print");
   vi.doUnmock("../../src/server/public-site/names"); vi.doUnmock("../../src/lib/site/indexing"); vi.resetModules();
 });
+
+test("review fixes: a skip to a later chapter's first verse is marked, and the maftir keeps its own label", () => {
+  const html = render({}, [verse("Genesis 1:1", 1), verse("Genesis 1:31", 2), verse("Genesis 2:1", 3), verse("Genesis 2:2", 4), verse("Genesis 3:1", 5)]);
+  expect(html).toContain(">Genesis 1:31<"); // 1:1 to 1:31 skips
+  expect(html).not.toContain(">Genesis 2:1<"); // 1:31 is Genesis 1's last verse: 2:1 follows on
+  expect(html).toContain(">Genesis 3:1<"); // Genesis 2 has 25 verses: 2:2 to 3:1 skips
+  const shared: WeekPortions = { date: thisShabbat(), parashah: "Synthetic portion", triennial: null,
+    full: [{ n: "1", ref: "Genesis 1:1-3" }, { n: "7", ref: "Genesis 1:4-6" }, { n: "M", ref: "Genesis 1:4-6" }] };
+  expect(aliyahStartsIn(shared, "full", ["Genesis 1:4"]).get("Genesis 1:4")).toBe("7");
+  expect(aliyahStartsIn(shared, "maftir", ["Genesis 1:4"]).get("Genesis 1:4")).toBe("M");
+});

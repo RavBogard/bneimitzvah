@@ -21,6 +21,8 @@ import { DEFAULT_FORMAT, type SheetFormat } from "../../../lib/print/sheet-forma
 import { fetchPublicAliyot } from "./api";
 import { PrintDocument, type SheetHeading, type SheetText } from "./document";
 import styles from "./print.module.css";
+// The Hebrew face's @font-face, which the sheet's own type needs whatever else the page loads.
+import "../../../styles/hebrew-font.module.css";
 
 const MAX_PAGES = 10; // A passage is at most 1,000 verses, 100 to a text page.
 const kindName = (kind: "torah" | "haftarah") => kind === "torah" ? "Torah" : "Haftarah";
@@ -57,6 +59,8 @@ async function loadSheet(target: PrintTarget, today: string, signal: AbortSignal
     const kind = target.kind ?? (value.torah ? "torah" : "haftarah");
     // The aliyot only mark the sheet; a calendar that does not answer leaves it unmarked, never unprinted.
     const portions = kind === "torah" && value.torah ? await fetchPublicAliyot(date, signal).catch(error => { if (signal.aborted) throw error; return null; }) : null;
+    // A part of the reading needs the calendar's aliyot: without them the sheet says it did not load, never prints the whole parashah instead.
+    if (target.pick !== "full" && !portions) throw new PortalRequestError(503);
     const ref = target.pick !== "full" && portions ? portionRef(portions, target.pick) : null, pick: PortionPick = ref ? target.pick : "full";
     const week: Week = Object.freeze({ date, torah: value.torah !== null, haftarah: value.haftarah !== null, kind, portions, pick });
     const source = ref ? refSource(await fetchPublicRefReading(ref, "torah", signal)) : weekSource(value, kind);
@@ -84,12 +88,10 @@ async function loadSheet(target: PrintTarget, today: string, signal: AbortSignal
   return { heading: { title: saved.name, passage: `${kindName(saved.kind)} ${displayRange([saved.ranges])}`, date: saved.date }, text: await loadText(source, signal), markers: new Map(), week: null };
 }
 
-const faces = ['400 32px "CRC Noto Serif Hebrew"', '400 16px "Bricolage Grotesque"'];
+/** Printing waits for the Hebrew face, as the practice sheet does: a fallback serif would misplace the trope. */
 async function fontsReady() {
-  for (const face of faces) {
-    const loaded = await document.fonts.load(face, face.includes("Hebrew") ? "אבג" : "Aa");
-    if (!loaded.length || !loaded.every(font => font.status === "loaded")) throw new Error("Sheet font unavailable");
-  }
+  const loaded = await document.fonts.load('400 32px "CRC Noto Serif Hebrew"', "אבג");
+  if (!loaded.length || !loaded.every(font => font.status === "loaded")) throw new Error("Sheet font unavailable");
 }
 
 /** One choice of several, as a row of pills made of real radio buttons. */
@@ -176,10 +178,10 @@ export function PrintSheetPage() {
         </div>
         <p role="status" className={styles.status}>{printing === "preparing" ? "Getting the Hebrew ready to print…" : printing === "error" ? "The Hebrew lettering didn’t load. Reload the page, then print again." : ""}</p>
       </header>
-      {chooser && <div id={chooserId} className={styles.screenOnly}>
+      <div id={chooserId} className={styles.screenOnly} hidden={!chooser}>{chooser && <>
         <ReadingChooser id={`${chooserId}-panel`} study={false} onOpen={address => { const next = printTargetFromRead(address); if (next) open(next); }} />
         <MyReadings onOpen={reading => open({ mode: "saved", id: reading.id })} />
-      </div>}
+      </>}</div>
       <div className={styles.layout}>
         <form className={`${styles.settings} ${styles.screenOnly}`} aria-labelledby={`${chooserId}-settings`} onSubmit={event => event.preventDefault()}>
           <h2 id={`${chooserId}-settings`}>Sheet</h2>

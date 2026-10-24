@@ -45,6 +45,7 @@ export function createPrintTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
       parashah: { type: "string", maxLength: 80, description: "A parashah, special Shabbat, festival or fast from the portal's reading list, e.g. \"Noach\", \"Lech Lecha\" or \"Shabbat Shekalim\"." },
       ref: { type: "string", maxLength: 1000, description: "Any Torah or Prophets passage in Hebcal's form, segments joined by \"; \", e.g. \"Genesis 12:1-13\" or \"Isaiah 40:1-11\". Pass kind haftarah for the Prophets." },
       kind: { type: "string", enum: ["torah", "haftarah"], description: "Torah (the default) or haftarah." },
+      passage: { type: "integer", minimum: 1, maximum: 64, description: "With parashah only: which passage of a reading that has several (a festival's second Torah reading or its maftir), counting from 1 in the reading list's order. Overrides kind." },
       date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "A Shabbat (YYYY-MM-DD; another day means the Shabbat on or after it), when no parashah, ref or saved reading is named. Defaults to this coming Shabbat." },
       portion: { type: "string", enum: [...PORTION_PICKS], description: "Part of that Shabbat's Torah reading: full (default), triennial, aliyah-1 to aliyah-7, or maftir." },
       savedReadingId: { type: "string", pattern: UUID_PATTERN, description: "One of the person's own saved readings, by id. This tool does not read saved readings; the sheet opens it from the person's account when they open the link signed in." },
@@ -74,6 +75,7 @@ async function choose(input: Record<string, unknown>, signal: AbortSignal, loadR
     return { ok: true, target: { mode: "saved", id: (input.savedReadingId as string).toLowerCase() },
       reading: { statement: "One of your own saved readings. It opens from your account when you follow the link signed in; this tool cannot see its name or verses." } };
   }
+  if (input.passage !== undefined && input.parashah === undefined) return refuse("passage applies only with parashah.");
   if (input.ref !== undefined || input.parashah !== undefined) {
     const extra = weekOnly("date") ?? weekOnly("portion");
     if (extra) return refuse(extra);
@@ -86,11 +88,12 @@ async function choose(input: Record<string, unknown>, signal: AbortSignal, loadR
   if (input.parashah !== undefined) {
     const reading = findNamedReading(input.parashah as string);
     if (!reading) return refuse("No reading by that name in the portal's list. Use the parashah's usual English spelling (\"Bereshit\", \"Lech-Lecha\"), or give a ref.");
-    const at = reading.passages.findIndex(row => row.kind === kind);
+    const at = input.passage !== undefined ? (input.passage as number) - 1 : reading.passages.findIndex(row => row.kind === kind);
+    if (input.passage !== undefined && !reading.passages[at]) return refuse(`${reading.name} has ${reading.passages.length} passage${reading.passages.length === 1 ? "" : "s"} in the portal's list: ${reading.passages.map((row, index) => `${index + 1} ${row.label}`).join(", ")}.`);
     if (at < 0) return refuse(`The portal's list has no ${kind} passage for ${reading.name}.`);
     const passage = reading.passages[at], verses = canonicalReadingRef(passage.ref, passage.kind)?.verses.length ?? 0;
     return { ok: true, target: { mode: "named", slug: reading.slug, passage: at + 1 },
-      reading: { name: reading.name, kind, passage: display(passage.ref), verses, statement: `${reading.name}, ${passage.label}: ${display(passage.ref)} (${verses} verses).` } };
+      reading: { name: reading.name, kind: passage.kind, passage: display(passage.ref), verses, statement: `${reading.name}, ${passage.label}: ${display(passage.ref)} (${verses} verses).` } };
   }
   // A Shabbat from the calendar: this coming one unless a date is given.
   let date: string;

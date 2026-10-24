@@ -59,7 +59,7 @@ export function formatFromRecord(value: unknown): { format: SheetFormat; problem
   if (!value || typeof value !== "object" || Array.isArray(value)) return { format: DEFAULT_FORMAT, problems: ["format must be an object"] };
   for (const [key, raw] of Object.entries(value)) {
     const field = FIELDS.find(row => row[0] === key);
-    if (!field) { problems.push(`unknown format field ${key}`); continue; }
+    if (!field) { problems.push(`unknown format field ${key.slice(0, 40)}`); continue; }
     if (field[0] === "numbers") { if (typeof raw === "boolean") out.numbers = raw; else problems.push("format.numbers must be true or false"); continue; }
     if (typeof raw !== "string" || !(field[2] as readonly string[]).includes(raw)) { problems.push(`format.${key} must be one of ${field[2].join(", ")}`); continue; }
     out[field[0]] = raw;

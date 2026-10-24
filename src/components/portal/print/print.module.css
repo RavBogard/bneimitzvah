@@ -137,6 +137,8 @@
   .verse, .aliyah, .jump { break-inside: avoid; }
   .sheet[data-size="large"] .verse, .sheet[data-size="huge"] .verse { break-inside: auto; }
   .aliyah, .jump { break-after: avoid; }
-  .sheet[data-aliyot="page"] .aliyah[data-aliyah-start="later"] { break-before: page; }
+  .sheet[data-aliyot="page"] .aliyah[data-aliyah-start="later"], .sheet[data-aliyot="page"] .jump[data-aliyah-next] { break-before: page; }
+  /* A skip just before an aliyah starts the new page itself, so it stays with its verse. */
+  .sheet[data-aliyot="page"] .jump[data-aliyah-next] + .aliyah { break-before: auto; }
   .hebrew { color: #000; }
 }

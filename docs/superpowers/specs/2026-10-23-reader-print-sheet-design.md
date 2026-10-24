@@ -69,4 +69,6 @@ Margins: Letter 0.5in top, 0.55in sides, 0.6in bottom; A4 12.7mm, 14mm, 15mm. En
 ## Open items that wait on Daniel
 
 1. The new on-screen and printed wording (listed in the PR under "New strings for Daniel").
-2. Whether tutors should have `print_sheet_link` (built for the rabbi and tutors, since it reads nothing private).
+2. Whether tutors should have `print_sheet_link` (built for the rabbi and tutors, since it reads nothing private; the MCP tool-list tests now record that).
+3. Licence wording: the printed credit names each edition and its licence but not the edition's change note or licence URL (the practice sheet's precedent). CC BY-SA asks that changes be indicated, and the vowels-only and letters-only scripts change the Hebrew further. Is the current line enough, or should the sheet print a short change note?
+4. The credit on every page relies on the browser repeating the table's head and foot when it prints. Chromium does; Safari and iPhone printing are unverified. If WebKit does not repeat them, the credit needs a fallback before the sheet is used from an iPhone.

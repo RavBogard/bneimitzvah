@@ -2,6 +2,7 @@ import { Fragment, type CSSProperties, type ReactNode } from "react";
 import type { StudyVerse } from "../workspace/study/api";
 import type { StudyChapter } from "../workspace/study/credits";
 import { SHEET_TYPE, type SheetFormat } from "../../../lib/print/sheet-format";
+import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { sheetHebrew } from "./hebrew";
 import styles from "./print.module.css";
 
@@ -23,7 +24,8 @@ const PARAGRAPH = { petuchah: "פ", setumah: "ס" } as const;
 function breaks(verses: readonly StudyVerse[], markers: ReadonlyMap<string, string>) {
   return verses.map((verse, index) => {
     const here = parts(verse.ref), before = index > 0 ? parts(verses[index - 1].ref) : null;
-    const jump = index > 0 && here && before && !(here.book === before.book && (here.chapter === before.chapter && here.verse === before.verse + 1 || here.chapter === before.chapter + 1 && here.verse === 1));
+    const lastOfChapter = before !== null && before.verse === TANAKH_VERSE_COUNTS[before.book]?.[before.chapter - 1];
+    const jump = index > 0 && here && before && !(here.book === before.book && (here.chapter === before.chapter && here.verse === before.verse + 1 || here.chapter === before.chapter + 1 && here.verse === 1 && lastOfChapter));
     const label = here && (index === 0 || jump || before && (before.book !== here.book || before.chapter !== here.chapter)) ? `${here.chapter}:${here.verse}` : here ? String(here.verse) : verse.ref;
     const n = markers.get(verse.ref);
     return { jump: jump ? verse.ref : null, aliyah: n === undefined ? null : n === "M" ? "Maftir" : `Aliyah ${n}`, label };
@@ -87,7 +89,7 @@ export function PrintDocument({ heading, text, markers, format, productName }: {
       <tbody>{text.verses.map((verse, index) => {
         const row = rows[index], first = index === 0;
         const extra: ReactNode[] = [];
-        if (row.jump) extra.push(<tr key={`${verse.ref}-jump`} className={styles.jump}><td colSpan={columns}><bdi dir="ltr">{row.jump}</bdi></td></tr>);
+        if (row.jump) extra.push(<tr key={`${verse.ref}-jump`} className={styles.jump} data-aliyah-next={row.aliyah && !first ? "" : undefined}><td colSpan={columns}><bdi dir="ltr">{row.jump}</bdi></td></tr>);
         if (row.aliyah) extra.push(<tr key={`${verse.ref}-aliyah`} className={styles.aliyah} data-aliyah-start={first ? "first" : "later"}><td colSpan={columns}><span>{row.aliyah}</span></td></tr>);
         return <Fragment key={verse.ref}>{extra}
           <tr className={styles.verse} data-verse-ref={verse.ref} data-paragraph={verse.hebrew.paragraphAfter ?? undefined}>{verseCells(verse, row.label)}</tr>
