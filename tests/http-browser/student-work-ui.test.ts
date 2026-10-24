@@ -224,7 +224,13 @@ it("supports composition and byte validation, clear without repeated empty versi
   let current = (await head(tab, "Genesis 1:11"))!.version; for (let i = 0; i < 22; i++) { const result = await append(tab, "Genesis 1:11", `Synthetic history ${i}`, current); expect(result.status === 200).toBe(true); current++; }
   await click(tab, "Refresh reading"); await loaded(tab); const historyPanel = await tools(tab, "Genesis 1:11"); await safe(() => historyPanel.locator(".work-history > summary").click()); await ui(historyPanel.locator(".work-history li")).toHaveCount(20);
   await safe(() => historyPanel.getByRole("button", { name: "Older versions", exact: true }).click()); await ui(historyPanel.locator(".work-history li")).toHaveCount(4);
-  expect(await tab.evaluate(() => localStorage.length === 0 && sessionStorage.length === 0)).toBe(true);
+  // The student workspace app bar hosts Learn to lein, whose device-only progress and sync outline (lesson ids, review boxes and dates, no student text) is the one
+  // thing it may keep in this browser; everything the student wrote, saved or cleared above must still never touch web storage.
+  expect(await tab.evaluate(() => {
+    const own = new Set(["crc-torah:learn-progress/v1", "crc-torah:learn-sync/v1"]), texts = ["Synthetic", "😀", "שָׁלוֹם"];
+    const entries = [localStorage, sessionStorage].flatMap(store => Object.keys(store).map(key => [store === localStorage && own.has(key), key, store.getItem(key) ?? ""] as const));
+    return sessionStorage.length === 0 && entries.every(([allowed, key, value]) => allowed && !texts.some(text => key.includes(text) || value.includes(text)));
+  })).toBe(true);
 });
 
 it("guards controlled leave, explicit reload barriers and quiet retained reading through text outage", async () => {
