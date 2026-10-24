@@ -9,13 +9,11 @@
 .label:focus { outline: none; }
 .label:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
 .english:global(.study-english) { margin: 0; font: 400 1rem/1.7 "Bricolage Grotesque", system-ui, sans-serif; }
-.mine { margin: 0; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; margin-top: 0.5rem; }
 .actions > :global(.button-primary) { width: auto; }
-.quiet, .inlineLink { min-height: 44px; margin: 0; padding: 0; border: 0; background: transparent; color: var(--color-action); font: 600 0.9375rem/1 "Bricolage Grotesque", system-ui, sans-serif; cursor: pointer; }
-.inlineLink { display: inline-flex; align-items: center; font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 0.2em; }
-.quiet:hover, .inlineLink:hover { color: var(--color-action-hover); text-decoration: underline; text-underline-offset: 0.2em; }
-.quiet:focus-visible, .inlineLink:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.quiet { min-height: 44px; margin: 0; padding: 0; border: 0; background: transparent; color: var(--color-action); font: 600 0.9375rem/1 "Bricolage Grotesque", system-ui, sans-serif; cursor: pointer; }
+.quiet:hover { color: var(--color-action-hover); text-decoration: underline; text-underline-offset: 0.2em; }
+.quiet:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
 @media (max-width: 640px) {
   .drill { padding: 1rem; }
   /* One row on a phone when it fits, the primary action first; a longer primary takes its own line. */
