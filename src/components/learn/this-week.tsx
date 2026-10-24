@@ -4,6 +4,7 @@ import { familyName, type Lesson, type ThisWeek } from "../../lib/learn/course";
 import { buildPools, poolOf, type Phrase } from "../../lib/learn/pools";
 import type { AnalysedVerse } from "../../lib/learn/verse";
 import { AudioError, FamilyChip, phraseRequest, PlayTile, UnitsText } from "./bits";
+import { RATE_LIMITED_MESSAGE } from "../portal/public-reading/rate-limited";
 import type { ExampleVerse } from "./course-data";
 import { useWeekVerses } from "./week-data";
 import styles from "./learn.module.css";
@@ -22,7 +23,7 @@ export function ThisWeekSection({ activity, lesson, fallback = [] }: { activity:
   }, [pools, family, kind, activity.params.show]);
   const heading = <h2 className={styles.sectionTitle}>In this week's reading</h2>;
   if (week.status === "loading") return <section className={styles.week}>{heading}<p role="status" className={styles.muted}>Loading the reading…</p></section>;
-  if (week.status === "error") return <section className={styles.week}>{heading}<p role="status">The reading didn’t load. Check your connection and try again.</p>
+  if (week.status === "error") return <section className={styles.week}>{heading}<p role="status">{week.rateLimited ? RATE_LIMITED_MESSAGE : "The reading didn’t load. Check your connection and try again."}</p>
     <button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></section>;
   if (week.status === "none" || !week.recorded) {
     if (kind === "haftarah") return <section className={styles.week}>{heading}<p>No recording for this haftarah yet.</p></section>;

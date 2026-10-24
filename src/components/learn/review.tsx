@@ -6,7 +6,7 @@ import { drillItems, itemRefs, poolOf, seededRandom, type DrillItem, type Phrase
 import { comesBack, composeReview, emptyProgress, isDone, localDay, recordAnswer, type Progress, type ReviewSlot } from "../../lib/learn/progress";
 import { answerRun, currentItem, runDone, startRun, type Run } from "../../lib/learn/run";
 import { useCourseVerses } from "./course-data";
-import { icons, revealAnswer } from "./bits";
+import { icons, LoadFailure, revealAnswer } from "./bits";
 import { QuickTenLinks } from "./home";
 import { HearAndName, SameOrDifferent, TapThePhrase, WhereDoesItEnd } from "./drills";
 import { LearnServices, useLearnServices, useProgress } from "./services";
@@ -48,8 +48,7 @@ function Review() {
   if (!plan?.length) return frame(<><p className={styles.doneLine}>Nothing to review yet. Finish a lesson and its phrases come back here.</p><QuickTenLinks progress={progress} /></>,
     <a className={styles.backLink} href="/learn">Back to the path</a>);
   if (data.status === "loading") return frame(<p role="status" className={styles.state}>Loading the review…</p>);
-  if (data.status === "error" || !data.pools.families.size) return frame(<div role="status" className={styles.state}><p>The recording did not load. Try again.</p>
-    <button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>, <a className={styles.backLink} href="/learn">Back to the path</a>);
+  if (data.status === "error" || !data.pools.families.size) return frame(<LoadFailure rateLimited={data.status === "error" && data.rateLimited} onRetry={() => setRetry(n => n + 1)} />, <a className={styles.backLink} href="/learn">Back to the path</a>);
   return <ReviewRun slots={plan} pools={data.pools} progress={progress} seed={seed.current} today={today} until={until} update={update} frame={frame} />;
 }
 function ReviewRun({ slots, pools, progress, seed, today, until, update, frame }: { slots: ReviewSlot[]; pools: Pools; progress: Progress; seed: number; today: string; until: string | null;

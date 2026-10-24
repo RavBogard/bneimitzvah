@@ -37,7 +37,7 @@ test("a common word in a long ref gets a cacheable partial answer, the same ever
     const verses = expandReadingRanges([ref], "torah", TANAKH_VERSE_COUNTS, 1000).length, h = harness();
     const response = await h.call(ref);
     expect(response.status, ref).toBe(200);
-    expect(response.headers.get("vercel-cdn-cache-control"), ref).toBe("public, s-maxage=86400");
+    expect(response.headers.get("vercel-cdn-cache-control"), ref).toBe("public, s-maxage=86400, stale-while-revalidate=86400");
     const { elsewhere } = (await response.json()).wordDetails;
     expect(elsewhere.status, ref).toBe("ready");
     // The first page plus at most the budget of further pages; only a reading longer than that is partial.

@@ -4,6 +4,7 @@ import type { FamilyId } from "../../lib/trope/chart-catalog";
 import { COURSE, isDrill, lookAlikeExamples, MELODIES, type Example, type Lesson, type Melody } from "../../lib/learn/course";
 import { buildPools, type Pools } from "../../lib/learn/pools";
 import { analyseVerse, exampleMatches, type AnalysedVerse } from "../../lib/learn/verse";
+import { isRateLimited } from "../portal/public-reading/rate-limited";
 import { useLearnServices } from "./services";
 
 /** The families a lesson's drills use, and the melodies they are heard in. */
@@ -26,7 +27,7 @@ export function lessonExtraRefs(lesson: Lesson): string[] {
   return [...new Set(lesson.activities.flatMap(activity => activity.type === "look-alikes" ? lookAlikeExamples(activity, lesson.melody).flatMap(({ example }) => [example.a.ref, example.b.ref]) : []))];
 }
 export type ExampleVerse = Readonly<{ example: Example; verse: AnalysedVerse }>;
-export type CourseVerses = Readonly<{ status: "loading" } | { status: "error" }
+export type CourseVerses = Readonly<{ status: "loading" } | { status: "error"; rateLimited?: boolean }
   | { status: "ready"; pools: Pools; examples: ReadonlyMap<string, readonly ExampleVerse[]>; verses: ReadonlyMap<string, AnalysedVerse> }>;
 const verseKey = (kind: Melody, ref: string) => `${kind}:${ref}`;
 
@@ -54,17 +55,18 @@ export function useCourseVerses(lessons: readonly Lesson[], retry = 0, extra: re
     for (const melody of MELODIES) loader.preload([...flags.values()].filter(row => row.kind === melody).map(row => row.ref), melody);
     (async () => {
       const analysed = new Map<string, AnalysedVerse>();
-      let failures = 0;
+      let failures = 0, limited = false;
       await Promise.all([...flags.entries()].map(async ([k, flag]) => {
         try {
           const loaded = await loader.load(flag.ref, flag.kind, controller.signal);
           const wordReady = await audio.wordReady(flag.ref, flag.kind, controller.signal);
           const verse = analyseVerse({ ref: flag.ref, kind: flag.kind, hebrew: loaded.hebrew, final: flag.final, endsRecording: flag.placed && !flag.final ? false : null, wordReady });
           if (verse) analysed.set(k, verse);
-        } catch { failures++; }
+        } catch (error) { failures++; if (isRateLimited(error)) limited = true; }
       }));
       if (controller.signal.aborted) return;
-      if (!analysed.size && failures) { setState({ status: "error" }); return; }
+      // A rate limit on any verse is told as one (2.0 F1): a lesson missing some of its verses would otherwise blame the recording.
+      if (limited || !analysed.size && failures) { setState(limited ? { status: "error", rateLimited: true } : { status: "error" }); return; }
       const examples = new Map<string, ExampleVerse[]>();
       for (const lesson of lessons) examples.set(lesson.id, lesson.examples.flatMap(example => {
         const verse = analysed.get(verseKey(lesson.melody, example.ref));

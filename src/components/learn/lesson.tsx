@@ -7,7 +7,7 @@ import { drillItems, itemCard, phraseAt, poolOf, seededRandom, type DrillItem, t
 import { cardId, completeLesson, localDay, nextLesson, recordAnswer } from "../../lib/learn/progress";
 import { answerRun, currentItem, freshPace, mayStopEarly, pace, runDone, startRun, type LessonPace, type Run } from "../../lib/learn/run";
 import { lessonExtraRefs, lessonSources, useCourseVerses, type CourseVerses, type ExampleVerse } from "./course-data";
-import { AudioError, FamilyChip, icons, phraseRequest, PlayTile, revealAnswer, UnitsText } from "./bits";
+import { AudioError, FamilyChip, icons, LoadFailure, phraseRequest, PlayTile, revealAnswer, UnitsText } from "./bits";
 import { BuildThePhrase, HearAndName, LookAlikes, SameOrDifferent, TapThePhrase, WhereDoesItEnd, WhichHalf } from "./drills";
 import { FirstVerse } from "./first-verse";
 import { ThisWeekSection } from "./this-week";
@@ -60,7 +60,7 @@ function LessonFlow({ id }: { id: string }) {
       {step.kind === "first-verse" ? <FirstVerse lesson={lesson} onDone={() => go(doneIndex)} />
         : step.kind === "done" ? <Done lesson={lesson} fallback={data.status === "ready" ? data.examples.get(lesson.id) ?? [] : []} complete={() => update(value => completeLesson(value, lesson, Date.now(), until))} nextId={progress ? nextLesson(completeLesson(progress, lesson, Date.now()))?.id ?? null : null} />
         : data.status === "loading" ? <p role="status" className={styles.state}>Loading the lesson…</p>
-        : data.status === "error" || !(data.examples.get(lesson.id)?.length) ? <div role="status" className={styles.state}><p>The recording did not load. Try again.</p><button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></div>
+        : data.status === "error" || !(data.examples.get(lesson.id)?.length) ? <LoadFailure rateLimited={data.status === "error" && data.rateLimited} onRetry={() => setRetry(n => n + 1)} />
         : step.kind === "hear" ? <HearIt lesson={lesson} examples={data.examples.get(lesson.id) ?? []} onNext={() => go(at + 1)} />
         : step.kind === "verses" ? <InVerses lesson={lesson} examples={data.examples.get(lesson.id) ?? []} onNext={() => go(at + 1)} />
         : <DrillStep key={`${at}`} lesson={lesson} activity={step.activity} data={data} stopEarly={!ALWAYS_RUN.has(step.activity.type) && mayStopEarly(paceState)}

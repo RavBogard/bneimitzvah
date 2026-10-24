@@ -4,6 +4,7 @@ import type { Melody } from "../../lib/learn/course";
 import { analyseVerse, type AnalysedVerse } from "../../lib/learn/verse";
 import { addDays, thisShabbat } from "../../lib/readings/public-shabbat";
 import { fetchPublicWeek } from "../portal/public-reading/api";
+import { isRateLimited } from "../portal/public-reading/rate-limited";
 import { useLearnServices } from "./services";
 
 /**
@@ -12,7 +13,7 @@ import { useLearnServices } from "./services";
  * Shabbat) moves to the coming Shabbat. A verse ends its recording when the next verse comes from
  * another recording, or the passage ends.
  */
-export type WeekVerses = Readonly<{ status: "loading" } | { status: "error" } | { status: "none" }
+export type WeekVerses = Readonly<{ status: "loading" } | { status: "error"; rateLimited?: boolean } | { status: "none" }
   | { status: "ready"; date: string; shifted: boolean; verses: readonly AnalysedVerse[]; recorded: boolean; refs: readonly string[] }>;
 
 export function useWeekVerses(kind: Melody, retry = 0): WeekVerses {
@@ -34,7 +35,7 @@ export function useWeekVerses(kind: Melody, retry = 0): WeekVerses {
         return analyseVerse({ ref: verse.ref, kind, hebrew: verse.hebrew, final: kind === "haftarah" && last, endsRecording, wordReady, passage: { ref, index: i, count: loaded.length } });
       }))).filter((verse): verse is AnalysedVerse => verse !== null);
       if (!signal.aborted) setState({ status: "ready", date, shifted, verses, recorded: verses.some(verse => verse.wordReady), refs: loaded.map(verse => verse.ref) });
-    })().catch(() => { if (!signal.aborted) setState({ status: "error" }); });
+    })().catch(error => { if (!signal.aborted) setState(isRateLimited(error) ? { status: "error", rateLimited: true } : { status: "error" }); });
     return () => controller.abort();
   }, [kind, retry, loader, audio]);
   return state;

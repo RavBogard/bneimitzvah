@@ -270,8 +270,10 @@ test("every route also answers a canonical ref, signed-out, cacheable per route,
       expect(response.status, path).toBe(200);
       expect(response.headers.get("x-robots-tag"), path).toBe("noindex, nofollow");
       expect(response.headers.get("set-cookie"), path).toBeNull();
-      expect(response.headers.get("cache-control"), path).toBe("public, max-age=300");
-      expect(response.headers.get("vercel-cdn-cache-control"), path).toBe(`public, s-maxage=${path.startsWith("/api/public/reading?") ? 3600 : 86400}`);
+      // The reading itself can move with a deploy: five minutes in the browser. A page, a word and a clip set cannot change under a reader: an hour, and stale for a day (2.0 F1).
+      const reading = path.startsWith("/api/public/reading?");
+      expect(response.headers.get("cache-control"), path).toBe(reading ? "public, max-age=300" : "public, max-age=3600");
+      expect(response.headers.get("vercel-cdn-cache-control"), path).toBe(reading ? "public, s-maxage=3600" : "public, s-maxage=86400, stale-while-revalidate=86400");
       const body = await response.json();
       expect(body.ref, path).toBe(ref); expect(body.kind, path).toBe(kind); expect(body.date, path).toBeUndefined();
       expect([...keys(body)].filter(key => PEOPLE.test(key)), path).toEqual([]);

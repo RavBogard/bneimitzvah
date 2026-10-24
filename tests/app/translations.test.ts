@@ -102,7 +102,7 @@ test("the public route: closed query, checked before the runtime, cached thirty 
   const runtime = () => ({ resolveTenant: async () => undefined, reading: {} as PublicRuntime["reading"], commentary: async () => { throw new Error("unused"); }, ...unavailableExtras, translations: reader }) satisfies PublicRuntime;
   const call = (query: string) => handlePublicReadingRequest(new Request(`https://beitmitzvah.centralreform.org/api/public/translations${query}`), async action => { opened++; return action(runtime()); });
   const whole = await call("?verse=Genesis+12%3A1");
-  expect(whole.status).toBe(200); expect(whole.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=2592000"); expect(whole.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+  expect(whole.status).toBe(200); expect(whole.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=2592000, stale-while-revalidate=86400"); expect(whole.headers.get("x-robots-tag")).toBe("noindex, nofollow");
   expect((await whole.json()).translations).toHaveLength(2);
   reader = createSefariaTranslationsReader({ fetch: syntheticTranslationsFetch({ english: ref => textsAnswer(ref, [englishVersion("Synthetic Edition One")]), targum: () => new Response("x", { status: 500 }) }).fetch });
   expect((await call("?verse=Genesis+12%3A1")).headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=3600");

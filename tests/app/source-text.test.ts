@@ -77,7 +77,7 @@ test("the related and source routes: closed queries checked before the runtime, 
   expect(shelfBody.groups).toHaveLength(6); expect(shelfBody.productName).toBe("Synthetic Portal");
   expect(parseShelfAnswer(shelfBody, "Genesis 12:1").productName).toBe("Synthetic Portal");
   const text = await call(`/api/public/source?${new URLSearchParams([["ref", ref]])}`);
-  expect(text.status).toBe(200); expect(text.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=2592000");
+  expect(text.status).toBe(200); expect(text.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=2592000, stale-while-revalidate=86400");
   // A 404 that is not Sefaria's own "no text" is not kept.
   source = createSefariaSourceReader({ fetch: (async () => new Response(JSON.stringify({ error: "x" }), { status: 404, headers: { "content-type": "application/json" } })) as typeof globalThis.fetch });
   const missing = await call(`/api/public/source?${new URLSearchParams([["ref", ref]])}`);

@@ -184,7 +184,7 @@ test("the public commentary route serves a canonical, CDN-cacheable chapter and 
   const scope = async (action: (r: PublicRuntime) => Promise<Response>) => { opened++; return action(runtime); };
   const response = await handlePublicReadingRequest(new Request(origin + path), scope);
   expect(response.status).toBe(200);
-  expect(response.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=2592000");
+  expect(response.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=2592000, stale-while-revalidate=86400");
   expect(response.headers.get("content-type")).toBe("application/json; charset=utf-8");
   expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow"); expect(response.headers.get("set-cookie")).toBeNull();
   const body = await response.json();
@@ -362,7 +362,7 @@ test("the Women's Commentary: a complex, English-only, Torah-only index whose pa
   const commentary = createSefariaCommentaryReader({ fetch: syntheticCommentaryFetch({ commented: { 1: 4 }, text: (_c, _v, c) => paragraphs[c] }) as typeof globalThis.fetch });
   const runtime = { resolveTenant: async () => undefined, reading: {} as PublicRuntime["reading"], commentary, ...unavailableExtras } satisfies PublicRuntime;
   const response = await handlePublicReadingRequest(new Request("https://beitmitzvah.centralreform.org/api/public/commentary?work=womens&chapter=Genesis+12"), async action => action(runtime));
-  expect(response.status).toBe(200); expect(response.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=2592000");
+  expect(response.status).toBe(200); expect(response.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=2592000, stale-while-revalidate=86400");
   const body = await response.json();
   expect(parseCommentaryResponse(body, "womens", "Genesis 12").verses["1"].comments.map(item => item.english![0].text)).toEqual(["The Synthetic Title", "SYNTHETIC SECTION HEADING (12:1–9)", "Synthetic lead", "1–3."]);
   const refused = await handlePublicReadingRequest(new Request("https://beitmitzvah.centralreform.org/api/public/commentary?work=womens&chapter=Isaiah+40"), async action => action(runtime));

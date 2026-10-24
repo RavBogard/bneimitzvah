@@ -4,7 +4,7 @@ import type { FirstVerse as FirstVerseActivity, Lesson } from "../../lib/learn/c
 import type { AnalysedVerse } from "../../lib/learn/verse";
 import { firstVerseCandidates } from "../../lib/learn/first-verse";
 import { leinHref } from "./lein-link";
-import { AudioError, FamilyChip, phraseRequest, PlayTile, UnitsText } from "./bits";
+import { AudioError, FamilyChip, LoadFailure, phraseRequest, PlayTile, UnitsText } from "./bits";
 import { useCourseVerses } from "./course-data";
 import { useLearnServices, usePlayerState, useProgress } from "./services";
 import { useWeekVerses } from "./week-data";
@@ -27,7 +27,7 @@ export function FirstVerse({ lesson, onDone }: { lesson: Lesson; onDone(): void 
   if (!settled) return <p role="status" className={styles.state}>Loading the reading…</p>;
   if (week.status === "none" && kind === "haftarah" && !fallback.length) return <p>No recording for this haftarah yet.</p>;
   const verse = candidates[choice % Math.max(1, candidates.length)];
-  if (!verse) return <div role="status" className={styles.state}><p>The recording did not load. Try again.</p><button type="button" className="button-secondary" onClick={() => window.location.reload()}>Try again</button></div>;
+  if (!verse) return <LoadFailure rateLimited={week.status === "error" && week.rateLimited || fallbackData.status === "error" && fallbackData.rateLimited} onRetry={() => window.location.reload()} />;
   const date = week.status === "ready" ? week.date : null;
   const whole = phraseRequest(verse, [0, verse.units.length - 1]), current = verse.phrases[phrase];
   const id = `first:${verse.ref}:${step}:${phrase}`;
