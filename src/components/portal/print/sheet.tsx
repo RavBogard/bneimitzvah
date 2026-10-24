@@ -20,6 +20,9 @@ import { parsePrintAddress, printAddress, printTargetFromRead, type PrintTarget 
 import { COMMENTARY_CHOICES, DEFAULT_FORMAT, normalizeCommentary, type SheetFormat } from "../../../lib/print/sheet-format";
 import { appendixChapters, buildAppendix, printableCoverage, type AppendixGroup } from "../../../lib/print/appendix";
 import { createCommentaryChapterStore } from "../workspace/study/commentary-api";
+import { fetchDiscussions, type DiscussionPassage } from "../workspace/study/discussions-api";
+import { DISCUSSION_LABELS } from "../../../lib/discussions/labels";
+import type { DiscussionsAnswer } from "../../../lib/discussions/answer";
 import { commentarySummary } from "../workspace/study/commentary-text";
 import { workLabel } from "../workspace/reading-toolbar";
 import { fetchPublicAliyot } from "./api";
@@ -37,7 +40,9 @@ const PICK_LABELS: Readonly<Record<PortionPick, string>> = Object.freeze({ full:
 
 /** What a Shabbat offers the reading controls: which texts it has, and its calendar aliyot when they loaded. */
 type Week = Readonly<{ date: string; torah: boolean; haftarah: boolean; kind: "torah" | "haftarah"; portions: WeekPortions | null; pick: PortionPick }>;
-type Sheet = Readonly<{ heading: SheetHeading; text: SheetText; markers: ReadonlyMap<string, string>; week: Week | null }>;
+type Sheet = Readonly<{ heading: SheetHeading; text: SheetText; markers: ReadonlyMap<string, string>; week: Week | null;
+  /** The passage printed, as its curated discussions are asked for. */
+  passage: DiscussionPassage }>;
 type Load = Readonly<{ key: string } & ({ status: "loading" } | { status: "ready"; sheet: Sheet } | { status: "failed"; code: number; week: Week | null }
   | { status: "saved"; state: "signed-out" | "not-eligible" | "missing" | "failed" } | { status: "empty"; week: Week })>;
 
@@ -54,6 +59,7 @@ async function loadText(source: PublicSource, signal: AbortSignal): Promise<Shee
   }
   return Object.freeze({ verses: Object.freeze(verses), chapters: Object.freeze(chapters) });
 }
+const passageOf = (source: PublicSource): DiscussionPassage => ({ ref: source.passage.ranges.join("; "), kind: source.passage.kind });
 const versesOf = (source: PublicSource) => { try { return expandReadingRanges(source.passage.ranges, source.passage.kind, TANAKH_VERSE_COUNTS); } catch { return []; } };
 
 /** Everything the sheet shows for a reading: its heading, every verse, and where its aliyot begin. Public routes only, except a member's own saved reading. */
@@ -71,17 +77,17 @@ async function loadSheet(target: PrintTarget, today: string, signal: AbortSignal
     if (!source) throw new NoReading(week);
     const text = await loadText(source, signal);
     return { heading: { title: value.parashah ?? "Shabbat reading", passage: `${kindName(kind)} ${displayRange(source.passage.ranges)}`, date }, text, week,
-      markers: portions ? aliyahStartsIn(portions, pick, versesOf(source)) : new Map() };
+      markers: portions ? aliyahStartsIn(portions, pick, versesOf(source)) : new Map(), passage: passageOf(source) };
   }
   if (target.mode === "named") {
     const reading = namedReading(target.slug), passage = reading?.passages[target.passage - 1];
     if (!reading || !passage) throw new PortalRequestError(400);
     const source = refSource(await fetchPublicRefReading(passage.ref, passage.kind, signal));
-    return { heading: { title: reading.name, passage: `${passage.label} ${displayRange([passage.ref])}`, date: null }, text: await loadText(source, signal), markers: new Map(), week: null };
+    return { heading: { title: reading.name, passage: `${passage.label} ${displayRange([passage.ref])}`, date: null }, text: await loadText(source, signal), markers: new Map(), week: null, passage: passageOf(source) };
   }
   if (target.mode === "ref") {
     const source = refSource(await fetchPublicRefReading(target.ref, target.kind, signal));
-    return { heading: { title: displayRange([target.ref]), passage: kindName(target.kind), date: null }, text: await loadText(source, signal), markers: new Map(), week: null };
+    return { heading: { title: displayRange([target.ref]), passage: kindName(target.kind), date: null }, text: await loadText(source, signal), markers: new Map(), week: null, passage: passageOf(source) };
   }
   // A member's own saved reading: its passage comes from the account, the text from the public routes.
   const list = await fetchSavedReadings(signal);
@@ -89,7 +95,7 @@ async function loadSheet(target: PrintTarget, today: string, signal: AbortSignal
   const saved = list.readings.find(row => row.id === target.id);
   if (!saved) throw new SavedUnavailable("missing");
   const source = refSource(await fetchPublicRefReading(saved.ranges, saved.kind, signal));
-  return { heading: { title: saved.name, passage: `${kindName(saved.kind)} ${displayRange([saved.ranges])}`, date: saved.date }, text: await loadText(source, signal), markers: new Map(), week: null };
+  return { heading: { title: saved.name, passage: `${kindName(saved.kind)} ${displayRange([saved.ranges])}`, date: saved.date }, text: await loadText(source, signal), markers: new Map(), week: null, passage: passageOf(source) };
 }
 
 /** Printing waits for the Hebrew face, as the practice sheet does: a fallback serif would misplace the trope. */
@@ -122,7 +128,7 @@ type WorkProgress = Readonly<{ work: string; status: "none" | "loading" | "faile
  * The chosen commentary works for a loaded reading, fetched through the same chapter store Study uses (public route, same cache,
  * nothing new) and filtered for print (appendix.ts). Only works that can print on this reading are fetched. `retry` asks again.
  */
-function useAppendix(sheet: Sheet | null, format: SheetFormat) {
+function useAppendix(sheet: Sheet | null, format: SheetFormat, discussions: DiscussionsAnswer | null) {
   const refs = useMemo(() => sheet ? sheet.text.verses.map(verse => verse.ref) : [], [sheet]);
   const works = useMemo(() => format.commentary.filter(work => printableCoverage(work, refs) === "printable"), [format.commentary, refs]);
   const [attempt, setAttempt] = useState(0), [version, setVersion] = useState(0);
@@ -134,9 +140,28 @@ function useAppendix(sheet: Sheet | null, format: SheetFormat) {
   return useMemo(() => {
     const sources = [...stores].map(([work, store]) => ({ work, label: workLabel(work), forVerse: (ref: string) => store.forVerse(ref) }));
     const progress: WorkProgress[] = sources.map(source => ({ work: source.work, status: commentarySummary(refs.map(ref => source.forVerse(ref))) }));
-    const groups: readonly AppendixGroup[] = format.commentary.length ? buildAppendix(refs, sources, format.show) : [];
+    const included = format.discussions ? discussions : null;
+    const groups: readonly AppendixGroup[] = format.commentary.length || included ? buildAppendix(refs, sources, format.show, included) : [];
     return { groups, progress, retry: () => setAttempt(value => value + 1) };
-  }, [stores, refs, format.commentary, format.show, version]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stores, refs, format.commentary, format.show, format.discussions, discussions, version]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/**
+ * The printed passage's curated discussions (public route, the same answer signed in or out), asked for once the sheet loads so the sheet can offer
+ * them only where the reading has any. They join the appendix only when the format says so; `answer` is null when there is nothing to offer.
+ */
+function useSheetDiscussions(sheet: Sheet | null) {
+  const passage = sheet?.passage ?? null, key = passage ? JSON.stringify([passage.ref, passage.kind]) : null;
+  const [attempt, setAttempt] = useState(0), [state, setState] = useState<{ key: string; answer?: DiscussionsAnswer } | null>(null);
+  useEffect(() => {
+    if (!passage || !key) return;
+    const controller = new AbortController();
+    fetchDiscussions(passage, controller.signal).then(answer => { if (!controller.signal.aborted) setState({ key, answer }); }, () => { if (!controller.signal.aborted) setState({ key }); });
+    return () => controller.abort();
+  }, [key, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
+  const current = state?.key === key ? state : null;
+  return { answer: current?.answer?.discussions.length && current.answer.productName ? current.answer : null, status: !key ? "none" as const : !current ? "loading" as const : current.answer ? "ready" as const : "failed" as const,
+    retry: () => { setState(null); setAttempt(value => value + 1); } };
 }
 
 /**
@@ -168,9 +193,10 @@ export function PrintSheetPage() {
   const current = load && load.key === key ? load : null;
   const sheet = current?.status === "ready" ? current.sheet : null;
   const week = sheet?.week ?? (current?.status === "empty" ? current.week : null);
-  const appendix = useAppendix(sheet, format);
-  // Printing waits for the commentary: a sheet printed before (or without) a chosen work would silently lack it.
-  const commentaryPending = appendix.progress.some(row => row.status === "loading" || row.status === "failed");
+  const discussions = useSheetDiscussions(sheet);
+  const appendix = useAppendix(sheet, format, discussions.answer);
+  // Printing waits for the commentary and the discussions chosen: a sheet printed before (or without) one would silently lack it.
+  const commentaryPending = appendix.progress.some(row => row.status === "loading" || row.status === "failed") || format.discussions && (discussions.status === "loading" || discussions.status === "failed");
   // A saved reading's own name stays on the page; the tab title (and so history and a saved PDF's name) says "My reading", as /read does.
   useDocumentTitle(pageTitle(productName, ...(target?.mode === "saved" ? ["My reading"] : sheet ? [sheet.heading.title] : []), "Print"));
 
@@ -235,6 +261,8 @@ export function PrintSheetPage() {
           </div>
           {sheet && <CommentaryChoices format={format} refs={sheet.text.verses.map(verse => verse.ref)} progress={appendix.progress} retry={appendix.retry}
             onChange={commentary => setFormat(current => Object.freeze({ ...current, commentary }))} />}
+          {sheet && <DiscussionChoice on={format.discussions} offered={discussions.answer !== null} status={discussions.status} retry={discussions.retry}
+            onChange={value => setFormat(current => Object.freeze({ ...current, discussions: value }))} />}
         </form>
         <div className={styles.paperFrame}>
           <div id="print-sheet-paper" className={styles.paper} data-paper={format.paper} data-orientation={format.orientation} tabIndex={-1}>
@@ -270,6 +298,19 @@ function CommentaryChoices({ format, refs, progress, retry, onChange }: {
       </div>;
     })}
   </fieldset>;
+}
+
+/**
+ * "Sources for this reading", offered where the reading has curated discussions (and while a link that asks for them is waiting on them),
+ * off by default. They print in the same appendix, only from editions licensed for print, and Claude translations with their credit.
+ */
+function DiscussionChoice({ on, offered, status, retry, onChange }: { on: boolean; offered: boolean; status: "none" | "loading" | "ready" | "failed"; retry(): void; onChange(value: boolean): void }) {
+  if (!offered && !(on && (status === "loading" || status === "failed"))) return null;
+  return <div className={styles.group}>
+    <label className={styles.check}><input type="checkbox" checked={on} disabled={!offered} onChange={event => onChange(event.currentTarget.checked)} /> {DISCUSSION_LABELS.list}</label>
+    {on && status === "loading" && <p className={styles.help} role="status">Loading {DISCUSSION_LABELS.list}…</p>}
+    {on && status === "failed" && <p className={styles.help} role="status">{DISCUSSION_LABELS.list} isn’t available right now. <button type="button" onClick={retry}>Try again</button></p>}
+  </div>;
 }
 
 function Status({ load, unavailable, onRetry, onThisWeek }: { load: Load | null; unavailable: boolean; onRetry(): void; onThisWeek?: () => void }): ReactNode {

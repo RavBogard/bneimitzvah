@@ -231,6 +231,7 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
     },
     onHear: listeningEnabled ? (index, word) => hear(current.page!, index, word) : undefined,
     onVisit: ref => onVisit?.(kind, ref),
+    reveal: ref => jumpTo(ref),
   } : null;
   const jumpTo = (ref: string) => {
     if (current?.page?.verses.some(row => row.ref === ref)) { scrollToVerse(ref); return; }

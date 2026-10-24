@@ -4,3 +4,13 @@
  */
 export const claudeTranslationCredit = (productName: string) => `Claude translation for ${productName}`;
 export const selectedByDetail = (name: string) => `Selected by ${name}`;
+
+/**
+ * The reader's labels for curated discussions (Daniel, 2026-10-24 popups), exact and behind one name each: the marker beside a
+ * verse, the heading of a reading's list, and the way back from a source to its verse. Nothing else in the reader says these words.
+ */
+export const DISCUSSION_LABELS = Object.freeze({
+  marker: "Sources on this verse",
+  list: "Sources for this reading",
+  back: "Back to this verse",
+});

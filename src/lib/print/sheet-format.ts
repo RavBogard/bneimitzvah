@@ -22,12 +22,14 @@ export type SheetFormat = Readonly<{
   paper: SheetPaper; orientation: SheetOrientation; spacing: SheetSpacing; edition: SheetEdition;
   /** The commentary works printed after the reading (registry order, no repeats); none by default. Which editions print is the licence filter's (appendix.ts). */
   commentary: readonly string[];
+  /** Curated discussions' sources (1.7 M6b) printed in the same appendix, grouped by verse under each discussion's title; off by default. Sefaria editions pass the same licence filter (appendix.ts). */
+  discussions: boolean;
 }>;
 type EnumField = Exclude<keyof SheetFormat, "commentary">;
 
 const NO_WORKS: readonly string[] = Object.freeze([]);
 export const DEFAULT_FORMAT: SheetFormat = Object.freeze({ show: "both", script: "full", size: "standard", aliyot: "marked", numbers: true, notes: "none",
-  paper: "letter", orientation: "portrait", spacing: "normal", edition: "jps2023", commentary: NO_WORKS });
+  paper: "letter", orientation: "portrait", spacing: "normal", edition: "jps2023", commentary: NO_WORKS, discussions: false });
 
 /** The registered commentary works, in registry order: the only values `commentary` takes. */
 export const COMMENTARY_CHOICES: readonly string[] = Object.freeze(Object.keys(COMMENTARY_WORKS));
@@ -51,12 +53,15 @@ const FIELDS = Object.freeze([
   ["orientation", "orient", ["portrait", "landscape"]],
   ["spacing", "spacing", ["normal", "standing"]],
   ["edition", "en", ["jps2023"]],
+  ["discussions", "disc", ["on", "off"]],
 ] as const);
+/** The two-valued fields kept as booleans: on or off in the address, true or false in the record. */
+const FLAGS: readonly EnumField[] = ["numbers", "discussions"];
 export const FORMAT_KEYS: readonly string[] = Object.freeze([...FIELDS.map(field => field[1]), COMMENTARY_PARAM]);
 /** The values each enumerated field takes (commentary is a list of works: COMMENTARY_CHOICES). */
 export const FORMAT_VALUES: Readonly<Record<EnumField, readonly string[]>> = Object.freeze(Object.fromEntries(FIELDS.map(([field, , values]) => [field, values])) as unknown as Record<EnumField, readonly string[]>);
 
-const valueOf = (format: SheetFormat, field: EnumField) => field === "numbers" ? (format.numbers ? "on" : "off") : String(format[field]);
+const valueOf = (format: SheetFormat, field: EnumField) => FLAGS.includes(field) ? (format[field] ? "on" : "off") : String(format[field]);
 
 /** A format from address parameters: unknown or malformed values fall back to the default for that field. */
 export function parseFormat(params: URLSearchParams): SheetFormat {
@@ -64,7 +69,7 @@ export function parseFormat(params: URLSearchParams): SheetFormat {
   for (const [field, key, values] of FIELDS) {
     const raw = params.get(key);
     if (raw === null || !(values as readonly string[]).includes(raw)) continue;
-    out[field] = field === "numbers" ? raw === "on" : raw;
+    out[field] = FLAGS.includes(field) ? raw === "on" : raw;
   }
   out.commentary = normalizeCommentary((params.get(COMMENTARY_PARAM) ?? "").split(",").slice(0, COMMENTARY_CHOICES.length * 2));
   return Object.freeze(out as SheetFormat);
@@ -83,7 +88,7 @@ export function formatFromRecord(value: unknown): { format: SheetFormat; problem
     }
     const field = FIELDS.find(row => row[0] === key);
     if (!field) { problems.push(`unknown format field ${key.slice(0, 40)}`); continue; }
-    if (field[0] === "numbers") { if (typeof raw === "boolean") out.numbers = raw; else problems.push("format.numbers must be true or false"); continue; }
+    if (FLAGS.includes(field[0])) { if (typeof raw === "boolean") out[field[0]] = raw; else problems.push(`format.${field[0]} must be true or false`); continue; }
     if (typeof raw !== "string" || !(field[2] as readonly string[]).includes(raw)) { problems.push(`format.${key} must be one of ${field[2].join(", ")}`); continue; }
     out[field[0]] = raw;
   }
@@ -113,6 +118,7 @@ export function describeFormat(format: SheetFormat): string {
     format.notes === "none" ? "no notes column" : `a ${format.notes} notes column`,
     `${format.paper === "letter" ? "US Letter" : "A4"} ${format.orientation}`];
   if (format.spacing === "standing") parts.push("extra spacing for reading standing");
+  if (format.discussions) parts.push("curated discussions' sources on the same pages (only editions licensed for print, and Claude translations with their credit)");
   if (format.commentary.length) parts.push(`commentary on a new page after the reading (${format.commentary.map(work => COMMENTARY_WORKS[work]?.title ?? work).join(", ")}; only editions licensed for print)`);
   return `${parts.join(", ")}.`;
 }
