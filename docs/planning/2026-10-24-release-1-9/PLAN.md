@@ -77,6 +77,7 @@ Main at writing: `a9bbd6e`. Live: v1.8.0 (`7c13cac`), prod ledger 43 (newest mig
 - **N6.5 Shape.** A summary is guide-rules prose (no links, HTML or hidden characters), at most 4 KB; the outline is exactly seven plain lines, aliyot 1–7 (no maftir line). Parashiyot only (combined ones included); special Shabbatot, festivals and fasts have none.
 - **N6.6 One public read.** `readApprovedPortionSummary` (through the security-invoker `portion_summary_public` view, approved rows only) behind `GET /api/public/portion-summary?reading=<slug>`, the same answer signed in or out; a change reaches every cache within about ten minutes (CDN 300 s, stale 60 s, browser 60 s). Until N7 renders it, an approval is public data no page shows, so the tools say it "will show once the reading page displays summaries" and never claim readers see it. /read, Study, print and the offline pack all read this one route (N7 renders it; N24 owns adding it to `PACK_DATA_PATH`, so until then no pack can hold it). The membership and grant ids (`drafted_by`, `approved_by`, `approved_grant_id`) are never readable by the runtime.
 - **N6.7 Insights column needs no migration.** M6's `curated_discussion_source.anchor_ref` already anchors every source to one verse, and `/api/public/discussions?reading=` already returns a parashah's published sources in reading order; N7 builds the column on that unchanged. M6 is admin-only to write, so nothing a member writes can reach it.
+- **P4.1 The word card's CC BY change notice stays.** F-SITE 15 asked to drop "Normalized into selected-word facts". That sentence is the change notice CC BY 4.0 requires for the adapted dictionary data, so it is kept. Removing it would be a licence question for Daniel, and keeping it needs no ruling.
 
 ## Versions and tags
 
@@ -158,7 +159,7 @@ all N1–N25 ─► N16's final re-measure ─► v1.9.0
 
 ### P2. Public reader layout (S, Sonnet) — lane 1
 
-- **Covers:** D3 (/read and Study layout shift), D4 (/read "Find a date" row at 200% text), D10 (Start reading focus on /read).
+- **Covers:** D3 (/read and Study layout shift), D4 (/read "Find a date" row at 200% text), D10 (Start reading focus on /read), and two F6 findings P4 left because they live in `public-reading/*`: F-SITE 11 (the haftarah blessings label, approved as "page 23, after Mi Shebeirach") and F-SITE 25 (/read focus after navigation, with D10).
 - **Files:** `public-reading/view.tsx` (the signed-out aside at ~100 moves after the reading or into a fixed slot; reserve the reading block's height), the date row's styles.
 - **Depends on:** #71 merged.
 - **Exit tests:** `S/visual/cls.cjs` (copy the script into the repo's e2e or a scratch run) reads below 0.1 on /read and Study at 4× CPU; at a 200% root font on a Pixel 7, /read is no wider than the viewport; after "Start reading", `document.activeElement` is the reading heading or first verse.
@@ -177,6 +178,12 @@ all N1–N25 ─► N16's final re-measure ─► v1.9.0
 - **Strings:** F6's own lines are approved (Batch 4 "Keep all"). G19's "one more try" is tier B and stays off.
 - **Depends on:** #71 merged. Coordinate with #73 (see "Overlap").
 - **Exit tests:** each Learn page has one h1 and no skipped level; every chart family is a link to its lesson; each F6 finding re-walked and closed, or recorded as left with its reason; a wrong drill choice is not the most prominent button.
+- **Done (#80, 8f3c7c5).** Closed D12, D23, G19's visual part, and F-SITE 10, 12 (already held), 20 and 22, plus most of 14, 21 and 23. What it left, and where it goes:
+  - F-SITE 11 and 25 are in `public-reading/*`, so they move to P2.
+  - F-SITE 19 (sign-in label and header drift) moves to N20's follow-up.
+  - F-SITE 15: the "Normalized into selected-word facts" sentence is the CC BY 4.0 change notice, so it stays (Decided here P4.1). The dropped maqaf in "This word elsewhere" belongs to the word-details contract and goes with N1.
+  - Tier C gaps (no approved draft): an "Other signs" heading for the poetic accents (14); the "3 of 10" position text (23); an announcement for Build the phrase (22); a "new tab" label (27).
+  - Device check: the faded Hear it button before any tap needs iPhone Safari (23), so it waits for the pilot.
 
 ### P5. Bricolage as a WOFF2 subset (S, Sonnet; second-agent repository-protection review) — lane 1
 
