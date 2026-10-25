@@ -51,6 +51,25 @@ export function serializeProgress(progress: Progress): string | null {
   return new TextEncoder().encode(text).length <= PROGRESS_LIMITS.bytes ? text : null;
 }
 
+/**
+ * Two copies of one learner's progress (the browser's and the account's) made one, for the first sign-in and for a conflict
+ * between devices (2.0 SC4), by Learn to lein's rule: every lesson either copy finished, with its earliest done; every card at the
+ * higher box of the two, with that copy's due date (on a tie, the sooner due).
+ */
+export function mergeProgress(a: Progress, b: Progress): Progress {
+  const lessons: Record<string, { done: string }> = {}, cards: Record<string, Card> = {};
+  for (const source of [a, b]) for (const [id, entry] of Object.entries(source.lessons)) {
+    const known = lessons[id];
+    lessons[id] = Object.freeze({ done: !known || Date.parse(entry.done) < Date.parse(known.done) ? entry.done : known.done });
+  }
+  for (const source of [a, b]) for (const [id, card] of Object.entries(source.cards)) {
+    const known = cards[id];
+    cards[id] = !known || card.box > known.box || card.box === known.box && card.due < known.due ? card : known;
+  }
+  const sorted = <T,>(value: Record<string, T>) => Object.freeze(Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]])));
+  return Object.freeze({ schema: PROGRESS_SCHEMA, lessons: sorted(lessons), cards: sorted(cards) });
+}
+
 export const isDone = (progress: Progress, id: string) => Object.hasOwn(progress.lessons, id);
 /**
  * Marks a lesson done. Done is done: a second visit keeps the first instant. The lesson's review cards enter box 1 with it (2.0 SC3),
@@ -79,6 +98,11 @@ export function lessonAfter(progress: Progress, id: string, tenant: Tenant = CRC
   const at = order.findIndex(lesson => lesson.id === id);
   for (const lesson of at < 0 ? [] : order.slice(at + 1)) if (!isDone(progress, lesson.id)) return lesson;
   return nextLesson(progress, tenant);
+}
+/** The first of the learner's own parts not yet done (2.0 SC4), or null when the path is empty or all done. */
+export function nextOnPath(progress: Progress, path: readonly string[]): Lesson | null {
+  for (const id of path) { const lesson = lessonById(id); if (lesson && lesson.kind !== "fluency" && !isDone(progress, id)) return lesson; }
+  return null;
 }
 /** Every prayer and moment of the service is done. */
 export const courseDone = (progress: Progress) => serviceOrder().every(lesson => isDone(progress, lesson.id));

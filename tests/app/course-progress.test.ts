@@ -42,7 +42,20 @@ async function setup() {
   });
   const dispatch = createHttpDispatcher(async action => action(f.runtime));
   const cookie = (who: Who) => who === "anonymous" ? "" : who in extra ? extra[who].cookie : f.identities[who as "admin"].cookie;
+  // Every write names the account it is for: the caller's own, read first, unless the test names one itself.
+  const owners = new Map<Who, string | null>();
+  const ownerOf = async (who: Who) => {
+    if (!owners.has(who)) {
+      const h = new Headers(); if (cookie(who)) h.set("cookie", cookie(who));
+      const value = await (await dispatch(new Request(`${ORIGIN}/api/learn/progress`, { headers: h }))).json() as { owner?: unknown };
+      owners.set(who, typeof value.owner === "string" ? value.owner : null);
+    }
+    return owners.get(who)!;
+  };
   const call = async (path: string, who: Who, body?: unknown, headers: Record<string, string> = {}, raw?: string) => {
+    if (path.startsWith("/api/learn/progress/") && body && typeof body === "object" && !Array.isArray(body) && !("owner" in body)) {
+      const owner = await ownerOf(who); if (owner) body = { ...body, owner };
+    }
     const h = new Headers(headers), c = cookie(who);
     if (c && !h.has("cookie")) h.set("cookie", c);
     if (body !== undefined || raw !== undefined) { if (!h.has("origin")) h.set("origin", ORIGIN); if (!h.has("content-type")) h.set("content-type", "application/json"); }
@@ -51,7 +64,7 @@ async function setup() {
     expect(response.headers.get("cdn-cache-control"), path).toBeNull();
     return { status: response.status, json: await response.json() as Record<string, any> }; // eslint-disable-line @typescript-eslint/no-explicit-any
   };
-  return { f, call };
+  return { f, call, ownerOf };
 }
 
 describe("signed-in course progress", () => {
@@ -76,6 +89,42 @@ describe("signed-in course progress", () => {
     expect(second.json.progress).toEqual(doc({ "intro-phrases": "2026-10-01T10:00:00.000Z", "torah-sof-pasuk": "2026-10-21T10:00:00.000Z" },
       { "etnachta:torah:name": [2, "2026-10-25"], "sof-pasuk:torah:name": [3, "2026-10-30"] }));
     expect((await t.call("/api/learn/progress", "learner")).json).toMatchObject({ version: 2, progress: second.json.progress });
+  });
+
+  it("refuses a write named for another account, on put and on merge, naming only the signed-in account and changing nothing", async () => {
+    const t = await setup();
+    const kept = doc({ "intro-phrases": "2026-10-20T10:00:00.000Z" });
+    await t.call("/api/learn/progress/merge", "learner", { progress: kept });
+    const learner = await t.ownerOf("learner"), multi = await t.ownerOf("multi");
+    expect(learner).toMatch(/^[a-f0-9]{32}$/);
+    expect(learner).not.toBe(multi);
+    // A tab still holding the learner's progress writes after another account signed in on the same browser,
+    // with a version that matches the other account's and with one that does not.
+    const other = doc({ "torah-sof-pasuk": "2026-10-21T10:00:00.000Z" });
+    for (const [path, body] of [["/api/learn/progress/put", { progress: other, expectedVersion: 0, owner: learner }],
+      ["/api/learn/progress/put", { progress: other, expectedVersion: 1, owner: learner }],
+      ["/api/learn/progress/merge", { progress: other, owner: learner }]] as const) {
+      const refused = await t.call(path, "multi", body);
+      expect(refused.status, path).toBe(403);
+      expect(refused.json, path).toEqual({ error: "forbidden", owner: multi });
+    }
+    expect((await t.call("/api/learn/progress", "multi")).json).toMatchObject({ progress: null, version: 0 });
+    expect((await t.call("/api/learn/progress", "learner")).json).toMatchObject({ version: 1, progress: kept });
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.courseProgressTable)).length)).toBe(1);
+  });
+
+  it("refuses a missing or malformed owner with a closed 400 on put and on merge, as a browser on an older bundle sends", async () => {
+    const t = await setup();
+    const learner = (await t.ownerOf("learner"))!;
+    for (const owner of [undefined, null, "", "x".repeat(32), learner.toUpperCase(), learner.slice(1), `${learner}0`, 7]) {
+      const merge = owner === undefined ? { progress: doc() } : { progress: doc(), owner };
+      const put = owner === undefined ? { progress: doc(), expectedVersion: 0 } : { progress: doc(), expectedVersion: 0, owner };
+      const merged = await t.call("/api/learn/progress/merge", "learner", undefined, {}, JSON.stringify(merge));
+      expect(merged.status, String(owner)).toBe(400);
+      expect(JSON.stringify(merged.json)).not.toContain(learner);
+      expect((await t.call("/api/learn/progress/put", "learner", undefined, {}, JSON.stringify(put))).status, String(owner)).toBe(400);
+    }
+    expect(await t.f.owner(async () => (await t.f.db.select().from(s.courseProgressTable)).length)).toBe(0);
   });
 
   it("replaces the document under its version and answers a stale version with the current one", async () => {
