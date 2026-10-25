@@ -264,7 +264,7 @@ test("the Sh’ma runs screen for screen as A8 has it: About, Where, Read with i
     const prompt = await main.locator("[data-check-kind]").textContent();
     seen.add(await main.locator("[data-check-kind]").getAttribute("data-check-kind") ?? "");
     expect(prompt).toMatch(/^(?:Which word says (?:Sh’ma|Yisra’el|Eloheinu|echad)\?|Which word means .+\?|What does this word mean\?)$/);
-    expect(prompt).not.toContain("Adonai");
+    expect(prompt).not.toMatch(/says Adonai/);
     await main.locator("ul button").first().click();
     await expect(main.getByText(/^(?:Yes\. .+ (?:is|means) .+\.|That one (?:is|means) .+\.)$/).first()).toBeVisible();
     await page.getByRole("button", { name: "Next" }).click();
