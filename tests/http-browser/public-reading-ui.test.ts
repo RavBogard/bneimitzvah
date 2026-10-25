@@ -123,7 +123,7 @@ it("the public API answers the visitor directly, with noindex and no cookie, and
   await tab.goto("/read", { waitUntil: "domcontentloaded" });
   await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
   const result = await tab.evaluate(async () => {
-    const date = document.querySelector(".reading-hero time")!.getAttribute("datetime");
+    const date = document.querySelector("main header time")!.getAttribute("datetime");
     const week = await fetch(`/api/public/reading?date=${date}`, { credentials: "omit" });
     const finkel = await fetch(`/api/public/reference/finkel/media/${"0".repeat(64)}.mp3`, { credentials: "omit" });
     const session = await fetch("/api/public/session", { credentials: "omit" });
