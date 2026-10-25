@@ -5,6 +5,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { expect, test } from "vitest";
 import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
+import { priorColumns } from "../helpers/prior-columns";
 
 test("0018 upgrades and replays without altering lesson heads or existing student authority, and exposes only protected empty practice tables", async () => {
   const isolated = await isolatedEnv(), client = new PGlite();
@@ -24,7 +25,8 @@ test("0018 upgrades and replays without altering lesson heads or existing studen
     const query = "select l.*,m.authority_revision,s.ceremony_date from lesson_log l join membership m on m.id=l.creator_membership_id join student s on s.id=l.student_id";
     const before = (await client.query(query)).rows;
     await migrate(db, { migrationsFolder: folder }); await migrate(db, { migrationsFolder: folder });
-    expect((await client.query(query)).rows).toEqual(before);
+    // Later additive columns (0047 before_next) are nullable; every value 0018 found is unchanged.
+    expect(priorColumns((await client.query(query)).rows, before)).toEqual(before);
     for (const table of ["practice_day", "practice_event"]) {
       expect((await client.query(`select count(*)::integer as count from ${table}`)).rows).toEqual([{ count: 0 }]);
       expect((await client.query("select relrowsecurity,relforcerowsecurity from pg_class where relname=$1", [table])).rows).toEqual([{ relrowsecurity: true, relforcerowsecurity: true }]);

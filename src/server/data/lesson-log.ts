@@ -21,7 +21,7 @@ export function safeDisplayName(value: string) {
 export function view(actor: LessonLogActor, row: LessonLogRow, name: string): LessonLogEntry {
   if (row.deleted) throw new Error("Lesson unavailable");
   const editable = canChange(actor, row);
-  return { entryId: row.entryId, lessonDate: row.lessonDate, summary: row.summary, version: row.version, displayName: safeDisplayName(name), canEdit: editable, canDelete: editable };
+  return { entryId: row.entryId, lessonDate: row.lessonDate, summary: row.summary, beforeNext: row.beforeNext ?? null, version: row.version, displayName: safeDisplayName(name), canEdit: editable, canDelete: editable };
 }
 export async function page<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: LessonLogActor, before: LessonLogCursor | undefined) {
   return tx.select({ row: t, name: s.user.name }).from(t).innerJoin(s.user, eq(s.user.id, t.creatorUserId))
@@ -32,10 +32,10 @@ export async function lock<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>,
   const [row] = await tx.select().from(t).where(key(actor, entryId)).for("update"); return row ?? null;
 }
 export async function insert<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: LessonLogActor, write: LessonLogCreate) {
-  const [row] = await tx.insert(t).values({ ...write, tenantId: actor.tenantId, studentId: actor.studentId, creatorMembershipId: actor.membershipId, creatorUserId: actor.userId, version: 1, deleted: false }).onConflictDoNothing().returning();
+  const [row] = await tx.insert(t).values({ entryId: write.entryId, lessonDate: write.lessonDate, summary: write.summary, beforeNext: write.beforeNext ?? null, tenantId: actor.tenantId, studentId: actor.studentId, creatorMembershipId: actor.membershipId, creatorUserId: actor.userId, version: 1, deleted: false }).onConflictDoNothing().returning();
   return row ?? null;
 }
-export async function change<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: LessonLogActor, row: LessonLogRow, values: { summary: string; lessonDate?: string; deleted?: boolean }) {
+export async function change<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: LessonLogActor, row: LessonLogRow, values: { summary: string; beforeNext: string | null; lessonDate?: string; deleted?: boolean }) {
   const [changed] = await tx.update(t).set({ ...values, version: row.version + 1 }).where(and(key(actor, row.entryId), eq(t.version, row.version), eq(t.deleted, false))).returning();
   return changed ?? null;
 }

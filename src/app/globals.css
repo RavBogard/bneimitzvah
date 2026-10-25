@@ -798,6 +798,9 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .lesson-edit:hover { background: var(--color-hover); }
 .lesson-summary { margin: 0.25rem 0 0; max-width: 40rem; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 1.0625rem; line-height: 1.6; }
 .lesson-by { margin: 0.375rem 0 0; color: var(--color-muted); font-size: 0.875rem; }
+.lesson-before-next { margin: 0.5rem 0 0; max-width: 40rem; padding: 0.625rem 0.875rem; border-radius: var(--radius-control); background: var(--lake-tint); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+.lesson-before-next-label { font-weight: 700; }
+.lesson-field .field-help { margin: 0; font-weight: 400; }
 .lesson-more { margin-top: 1.25rem; }
 .lesson-sheet .lesson-form { padding: 0 1.25rem max(3rem, env(safe-area-inset-bottom)); }
 .lesson-form > h2 { margin: 0 0 0.25rem; font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }

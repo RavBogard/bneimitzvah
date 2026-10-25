@@ -27,10 +27,10 @@ export async function handleLessonLogRequest(request: Request, runtime: HttpRunt
     } else {
       requireCookieMutation(request, runtime.origin);
       const fields = found.action === "delete" ? ["mode", "expectedVersion"] : found.action === "edit" ? ["mode", "expectedVersion", "lessonDate", "summary"] : ["mode", "entryId", "lessonDate", "summary"];
-      const row = closedObject(await readJsonBody(request), fields), selection = validate.selection({ mode: row.mode, studentId: found.studentId });
+      const row = closedObject(await readJsonBody(request), fields, found.action === "delete" ? [] : ["beforeNext"]), selection = validate.selection({ mode: row.mode, studentId: found.studentId });
       result = found.action === "delete" ? await runtime.lessonLog.remove(request, selection, validate.remove({ entryId: found.entryId, expectedVersion: row.expectedVersion }))
-        : found.action === "edit" ? await runtime.lessonLog.edit(request, selection, validate.edit({ entryId: found.entryId, expectedVersion: row.expectedVersion, lessonDate: row.lessonDate, summary: row.summary }))
-        : await runtime.lessonLog.create(request, selection, validate.create({ entryId: row.entryId, lessonDate: row.lessonDate, summary: row.summary }));
+        : found.action === "edit" ? await runtime.lessonLog.edit(request, selection, validate.edit({ entryId: found.entryId, expectedVersion: row.expectedVersion, lessonDate: row.lessonDate, summary: row.summary, ...("beforeNext" in row ? { beforeNext: row.beforeNext } : {}) }))
+        : await runtime.lessonLog.create(request, selection, validate.create({ entryId: row.entryId, lessonDate: row.lessonDate, summary: row.summary, ...("beforeNext" in row ? { beforeNext: row.beforeNext } : {}) }));
     }
     if (Buffer.byteLength(JSON.stringify(result)) > 512 * 1024) throw new Error("Lesson unavailable");
     return privateJson(result as unknown as JsonValue, result.ok ? 200 : 409);
