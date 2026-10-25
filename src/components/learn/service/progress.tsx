@@ -26,18 +26,27 @@ function progressHub() {
   document.addEventListener("visibilitychange", hide); window.addEventListener("pagehide", () => made.sync.flush());
   // Back online: the account's copy and this device's meet again.
   window.addEventListener("online", () => { void made.sync.start(); });
-  // Another tab saved: show what it saved.
-  window.addEventListener("storage", event => { if (event.key === null || event.key === PROGRESS_KEY || event.key === SYNC_KEY) set({ progress: store.load() }); });
+  // Another tab saved: show what it saved, unless another account owns the device now (then this tab is frozen).
+  window.addEventListener("storage", event => { if ((event.key === null || event.key === PROGRESS_KEY || event.key === SYNC_KEY) && made.sync.writable) set({ progress: store.load() }); });
   return made;
+}
+/**
+ * One local change: the stored copy is the working copy (another tab may have saved since this one last read it). A tab another
+ * account has taken the device from saves nothing, so whoever uses that tab next cannot write into the other account's copy.
+ */
+export function writeLocal(store: ProgressStore, sync: Pick<ProgressSync, "writable" | "changed">, change: (value: Progress) => Progress): Progress | null {
+  if (!sync.writable) return null;
+  const next = change(store.load());
+  store.save(next); sync.changed();
+  return next;
 }
 export function useServiceProgress() {
   const { progress, account } = useSyncExternalStore(listener => { const h = progressHub(); h.listeners.add(listener); return () => { h.listeners.delete(listener); }; }, () => progressHub().state, () => UNLOADED);
   const update = useCallback((change: (value: Progress) => Progress) => {
-    // The stored copy is the working copy: another tab may have saved since this one last read it.
-    const h = progressHub(), next = change(h.store.load());
-    h.store.save(next); h.state = Object.freeze({ ...h.state, progress: next });
+    const h = progressHub(), next = writeLocal(h.store, h.sync, change);
+    if (!next) return;
+    h.state = Object.freeze({ ...h.state, progress: next });
     for (const listener of h.listeners) listener();
-    h.sync.changed();
   }, []);
   return { progress, account, update, fresh: emptyProgress };
 }

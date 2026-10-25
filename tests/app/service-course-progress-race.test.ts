@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { browserProgressStore, emptyProgress, mergeProgress, parseProgress, PROGRESS_KEY, type Progress } from "../../src/lib/service-course/progress";
 import { createProgressSync, SYNC_KEY, type SyncIo } from "../../src/components/learn/service/progress-sync";
+import { writeLocal } from "../../src/components/learn/service/progress";
 
 // 2.0 SC4 review (as #102 for Learn to lein): two tabs share one browser's storage. Tab 1's request for A is still out when A signs
 // out and B signs in and opens the course in tab 2. Whatever tab 1's answer says, B's copy on the device must never be folded into
@@ -102,5 +103,27 @@ describe("two tabs, one browser, an account switch while a request is out", () =
     expect(sync.account.state).toBe("signed-out");
     expect(b.storage.getItem(PROGRESS_KEY)).not.toBeNull();
     expect(emptyProgress().schema).toBe("service-course-progress/v1");
+  });
+
+  it("freezes a tab another account took the device from: it saves nothing more and marks nothing until its next start", async () => {
+    const b = browser();
+    b.store.save(doc({ shma: T1 })); b.storage.setItem(SYNC_KEY, JSON.stringify({ owner: A, version: 3, dirty: false }));
+    const t1 = b.tab(); await t1.sync.start(); expect(t1.sync.writable).toBe(true);
+    b.store.save(doc({ shma: T1, vahavta: T1 })); t1.sync.changed();
+    b.switchToB(); t1.timers.shift()!(); await tick();
+    expect(t1.sync.writable).toBe(false);
+    // Someone now using tab 1 (B, at the same browser) finishes a lesson there: B's copy on the device is untouched.
+    const before = b.storage.getItem(PROGRESS_KEY), marker = b.marker();
+    expect(writeLocal(b.store, t1.sync, value => ({ ...value, lessons: { ...value.lessons, aleinu: { done: T2 } } }))).toBeNull();
+    t1.sync.changed();
+    expect(b.storage.getItem(PROGRESS_KEY)).toBe(before);
+    expect(b.marker()).toEqual(marker);
+    expect(t1.timers).toHaveLength(0);
+    // Its next start learns the session is B's, and the tab works again, for B.
+    await t1.sync.start(); await tick();
+    expect(t1.sync.writable).toBe(true);
+    expect(writeLocal(b.store, t1.sync, value => ({ ...value, lessons: { ...value.lessons, aleinu: { done: T2 } } }))).not.toBeNull();
+    expect(lessons(b.store.load())).toEqual(["aleinu", "barchu"]);
+    expect(b.marker()).toMatchObject({ owner: B, dirty: true });
   });
 });

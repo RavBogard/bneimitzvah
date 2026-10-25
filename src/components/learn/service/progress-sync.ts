@@ -81,6 +81,9 @@ function webLock<T>(name: string, action: () => Promise<T>): Promise<T> {
 }
 export function createProgressSync(io: SyncIo) {
   let account: Account = { state: "unknown" }, owner: string | null = null, pending: unknown = null, writing = false, again = false;
+  // Set once another tab has taken the device over (or the server named another account): this tab then neither saves to the shared
+  // copy nor shows what other tabs save, until its next start learns whose session this is.
+  let frozen = false;
   const setAccount = (next: Account) => { account = next; io.onAccount(next); };
   async function call(path: string, body?: unknown): Promise<{ status: number; value: unknown }> {
     try {
@@ -110,7 +113,7 @@ export function createProgressSync(io: SyncIo) {
     return marker ? marker.owner === owner : expected === null;
   }
   /** Another tab took the device over while a request was out: write nothing, and stop writing from this tab. */
-  function displaced() { setAccount({ state: "not-eligible" }); }
+  function displaced() { frozen = true; setAccount({ state: "not-eligible" }); }
   /**
    * The server answered `remote` to a request that carried `sent` (null when nothing was sent), when the device's marker named
    * `expected` (null for none). Whatever the learner changed in this browser meanwhile is folded in and left to send, never
@@ -139,7 +142,9 @@ export function createProgressSync(io: SyncIo) {
     setAccount({ state: status === 401 ? "signed-out" : "not-eligible" });
   }
   /** An answer for another account than the one this browser writes for: treated as that account's refusal, never folded in. */
-  function otherAccount(name: string) { refused(403, { error: "forbidden", owner: name }); }
+  function otherAccount(name: string) { frozen = true; refused(403, { error: "forbidden", owner: name }); }
+  /** Whether this tab may save to the shared copy: not frozen, and the marker names no other account than the one it writes for. */
+  function writable() { if (frozen) return false; const marker = readMarker(io.storage()); return !(owner !== null && marker !== null && marker.owner !== owner); }
   /** Fold `progress` into the account's; `expected` is the marker's owner when it was read (null on a first sign-in). */
   async function merge(progress: Progress, expected: string | null) {
     if (owner === null) return;
@@ -149,11 +154,15 @@ export function createProgressSync(io: SyncIo) {
   }
   async function push() {
     if (writing) { again = true; return; }
-    const marker = readMarker(io.storage());
-    if (!marker || marker.owner !== owner || !marker.dirty || account.state !== "synced") return;
     writing = true;
     try {
-      const progress = io.store.load();
+      // The marker and the copy it describes are read together, under the lock.
+      const read = await locked(async () => {
+        const marker = readMarker(io.storage());
+        return !marker || marker.owner !== owner || !marker.dirty || account.state !== "synced" ? null : { marker, progress: io.store.load() };
+      });
+      if (!read) return;
+      const { marker, progress } = read;
       const answer = await call("/api/learn/service/progress/put", { progress, expectedVersion: marker.version, owner });
       const remote = answer.status === 200 ? parseRemote(answer.value) : null;
       if (remote) await settle(remote, progress, marker.owner);
@@ -161,21 +170,25 @@ export function createProgressSync(io: SyncIo) {
       else if (answer.status === 409) {
         const current = answer.value && typeof answer.value === "object" ? parseRemote((answer.value as { current?: unknown }).current) : null;
         if (current && current.owner !== owner) otherAccount(current.owner);
-        else if (!stillOurs(marker.owner)) displaced();
-        else await merge(io.store.load(), marker.owner);
+        else {
+          const now = await locked(async () => stillOurs(marker.owner) ? io.store.load() : null);
+          if (now) await merge(now, marker.owner); else displaced();
+        }
       }
       else refused(answer.status, answer.value);
     } finally { writing = false; if (again) { again = false; void push(); } }
   }
   return Object.freeze({
     get account() { return account; },
+    /** False once another tab owns the device: the page then saves nothing to the shared copy and applies nothing from it. */
+    get writable() { return writable(); },
     /** Once per page: learn whose this browser's progress is, and bring the two copies together. */
     async start() {
       const answer = await call("/api/learn/service/progress");
       if (answer.status !== 200) { refused(answer.status, answer.value); return; }
       const remote = parseRemote(answer.value); if (!remote) return;
       // The account signed in now is the one this page writes for, until the next start.
-      owner = remote.owner;
+      owner = remote.owner; frozen = false;
       const marker = readMarker(io.storage());
       // First sign-in in this browser: merge its progress into the account's.
       if (!marker) { await merge(io.store.load(), null); return; }
@@ -191,6 +204,7 @@ export function createProgressSync(io: SyncIo) {
     },
     /** After every local save: mark it, and write it back shortly when this browser is synced. */
     changed() {
+      if (!writable()) return;
       const marker = readMarker(io.storage());
       if (marker && !marker.dirty) writeMarker(io.storage(), { ...marker, dirty: true });
       if (account.state !== "synced") return;
