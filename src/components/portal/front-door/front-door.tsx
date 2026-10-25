@@ -89,6 +89,6 @@ export function FrontDoor({ account, onSignIn, children }: { account: FrontDoorA
       </div>
       <InstallHint place="front-door" />
     </main>
-    <footer className="portal-footer"><span>Central Reform Congregation</span><span>Your account and reading stay private.</span></footer>
+    <div className="portal-footer"><span>Central Reform Congregation</span><span>Your account and reading stay private.</span></div>
   </div>;
 }

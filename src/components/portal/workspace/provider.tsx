@@ -581,7 +581,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           {children}
         </WorkspaceContext.Provider></div>}
     </main>
-    <footer className="portal-footer"><span>Central Reform Congregation</span></footer>
+    <div className="portal-footer"><span>Central Reform Congregation</span></div>
   </div>;
 }
 

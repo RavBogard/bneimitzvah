@@ -54,6 +54,8 @@ test("exact legacy, explicit-kind and full headers retain values while malformed
   for(const patch of [{notes:"x".repeat(4097)},{tutor:"bad\u0000name"},{hebrew_name:"bad\nname"},{parent2_email:"bad\n@example.test"},{parentEmail:""},{ownEmail:"second@example.test"},{ceremonyDate:"2027-02-29"},{service_slot:"afternoon"}]){
     const rejected=parseStudentCsv(csv(values(patch)));expect(rejected.rows).toEqual([]);expect(rejected.issues).toEqual([{row:2,code:"invalid-row"}]);
   }
+  // A blank service_slot (also spaces only) imports as unknown, like the other optional columns.
+  for(const blank of ["","  "]){const imported=parseStudentCsv(csv(values({service_slot:blank})));expect(imported.issues).toEqual([]);expect(imported.rows).toHaveLength(1);expect(imported.rows[0].serviceSlot).toBe("unknown");}
   expect(parseStudentCsv(full+"\n"+cells([...values(),"extra"])).issues).toEqual([{row:2,code:"invalid-columns"}]);
 });
 
