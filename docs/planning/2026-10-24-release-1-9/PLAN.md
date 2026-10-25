@@ -87,6 +87,12 @@ Main at writing: `a9bbd6e`. Live: v1.8.0 (`7c13cac`), prod ledger 43 (newest mig
   - (6) Guided verse practice uses the approved LD-03 "Your turn" lines.
   - (7) A first-verse lesson counts as visited without "Same as the reader".
   - (8) N19a: the starter is Gen 1:1 (parts 0–2 and 3–6), with Ex 25:8 as the prepared alternative.
+    - #84 merged (1e1c4c3) without making the switch. Its first-verse lesson takes this week's shortest Torah verse that has a ready recording (12 words or fewer). If none qualifies it falls back to Gen 1:1, then Num 6:26, then Deut 6:4.
+    - Making Gen 1:1 the fixed starter is N19a's remaining work:
+      - a course-verse source option in the validator;
+      - `first-verse.tsx` taking the course verse ahead of this week's;
+      - Ex 25:8 in the offline pack and its snapshot;
+      - new wording for the lesson's title, summary, goal and body, which now say "this week's reading". This wording is tier C, drafted by Cowork in its 1.9 handoff T3.
   - /learn/prepare joins the public page-view count.
 
 ## Versions and tags
@@ -384,6 +390,13 @@ Astra's chanting curriculum (`docs/planning/2026-10-24-chanting-program-review/`
 - **F3:** the route to the request form on /, /sign-in and /account before sign-in; hidden from a signed-in student (G20).
 - **Adversarial review:** open redirect, state tampering, CSRF on the Google redirect, the script loading before the button is chosen, no tracking beacon on the front door, no third-party request on / signed out.
 - **Exit tests:** signed out, / and /read make no request to `accounts.google.com`; Save → sign in → back on the same reading with the same selection; `?return=//evil.example` and `?return=https://…` land on the default page.
+- **Decided while building N20 (2026-10-24):**
+  - "Continue with Google" on /, /sign-in and /account's sign-in is our own button on the existing redirect path (`GoogleContinue`); nothing from Google loads on those pages. The GIS popup stays only on /connect, which needs its in-page request; its popup tests moved there.
+  - The return address (`src/lib/site/return-address.ts`) returns only to `/`, `/account` and `/read` (with the query URLSearchParams writes); anything else is the default landing. It travels in /sign-in's `return`, sealed in the code binding with the address, and in the SDK's stored Google state (re-checked on the way back). The email link and a failed Google return keep their fixed landings.
+  - Save's way back adds a one-shot `save=1` (and `choose=` for a selection) to the reading's address; the reader opens choosing with those verses and asks for the account once, as if Save were pressed. The way back also carries the verse the reader is on ("your place").
+  - /read still never asks for a session on its own: a local hint (`crc-torah:signed-in/v1`, set when the portal sees a session, cleared on sign-out or a 401) decides whether Save or "Sign in to save" shows first. It grants nothing.
+  - The front door holds the signed-out sign-in's measured height while access is checked, and the app bar holds its link's height (D3's / part).
+  - G20 hides the account request from any account with a student role. F3's route is an "Ask for an account" link to `/sign-in?return=/account`.
 
 #### SC4, SC5 (2.0) — see the 2.0 PLAN; here for order
 

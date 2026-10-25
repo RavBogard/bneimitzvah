@@ -41,6 +41,8 @@ async function minSize(page: Page, locators: ReturnType<Page["getByRole"]>[]) {
 }
 
 test("choose verses from the text, separated groups with the live count, then save the selection as a new reading", async ({ page }) => {
+  // This browser was seen signed in, so Save asks when pressed (N20); signed out from the start it is Sign in to save (sign-in-return.spec.ts).
+  await page.addInitScript(() => { try { localStorage.setItem("crc-torah:signed-in/v1", "1"); } catch { /* none */ } });
   await openRoutes(page);
   const posted: unknown[] = [];
   await page.route("**/api/saved/readings", route => json(route, 200, { ok: true, readings: [] }));

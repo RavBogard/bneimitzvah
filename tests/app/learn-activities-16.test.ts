@@ -17,7 +17,8 @@ const activity = (value: Record<string, any>, id: string, type: string) => lesso
 describe("1.6 placements (learn-next-activities.md)", () => {
   it("adds look-alikes, which-half and Quick ten where the draft places them, inside the 22-item lesson bound", () => {
     const types = (id: string) => lessonById(id)!.activities.map(row => row.type);
-    expect(types("intro-phrases")).toContain("which-half");
+    // N17a: the opening lesson has no drills at all; its which-half went with the re-order.
+    expect(types("intro-phrases")).toEqual([]);
     expect(types("torah-zakef")).toEqual(expect.arrayContaining(["look-alikes", "which-half"]));
     expect(types("torah-azla")).toContain("look-alikes");
     expect(types("haftarah-zakef")).toContain("which-half");
@@ -36,7 +37,7 @@ describe("1.6 placements (learn-next-activities.md)", () => {
     expect(COURSE.practice.map(row => [row.id, row.melody, row.unlockAfter, row.activity.params.items])).toEqual([["quick-ten-torah", "torah", "torah-zakef", 10], ["quick-ten-haftarah", "haftarah", "haftarah-zakef", 10]]);
   });
   it("gives look-alikes and which-half no review card and lets them run after an early stop", () => {
-    for (const id of ["torah-zakef", "torah-azla", "intro-phrases"]) for (const a of lessonById(id)!.activities.filter(isDrill)) {
+    for (const id of ["torah-zakef", "torah-azla"]) for (const a of lessonById(id)!.activities.filter(isDrill)) {
       if (a.type === "look-alikes" || a.type === "which-half") { expect(drillSkill(a)).toBeNull(); expect(ALWAYS_RUN.has(a.type)).toBe(true); }
       else expect(ALWAYS_RUN.has(a.type)).toBe(false);
     }

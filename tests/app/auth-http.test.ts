@@ -376,6 +376,38 @@ test("redirect-mode Google: closed destinations, same-origin POST, Google's URL 
   }
 });
 
+test("redirect-mode Google carries a checked return address only in its own stored state and lands there; anything else is refused or the plain error (N20)", async () => {
+  for (const origin of ["http://localhost:3000", "https://bneimitzvah.centralreform.org"]) {
+    const f = await fixture(origin); googleTokenEndpoint();
+    // Refused before the SDK: any scheme, host, backslash, encoded host, fragment, control, other page or shape, and a return beside a fixed word.
+    for (const value of ["//evil.example", "//evil.example/read", "https://evil.example/read", "/\\evil.example", "/%2F%2Fevil.example", "javascript:alert(1)", "/read#x",
+      "/read?x=%00", "/read\n", "/sign-in", "/connect", "/workspace/admin", "/learn", ["/read"], 1, null, ""])
+      expect((await f.dispatch(f.request("/api/auth/google/redirect", { return: value }))).status, JSON.stringify(value)).toBe(400);
+    for (const body of [{ next: "account", return: "/read" }, { next: "connect", return: "/read" }]) expect((await f.dispatch(f.request("/api/auth/google/redirect", body))).status).toBe(400);
+    expect(f.sdk.mock.calls.length).toBe(0);
+    const back = "/read?date=2026-10-31&kind=haftarah&verse=3&lens=study&choose=Isaiah+54%3A1-5&save=1";
+    const started = await startGoogle(f, { return: back });
+    // Google's address holds only the opaque state; the return stays in the portal's stored state.
+    expect(started.google.href).not.toContain("2026-10-31"); expect(started.setCookies.join("\n")).not.toContain("2026-10-31");
+    const landed = await f.dispatch(f.request(callbackPath(started.state), undefined, { cookie: started.cookie }));
+    expect(landed.status).toBe(303); expect(landed.headers.get("location")).toBe(back);
+    expect((await f.dispatch(f.request("/api/session", undefined, { cookie: cookieOf(landed) }))).status).toBe(200);
+    // Single use, and a return in another browser (no signed state cookie) is consumed and lands on the plain error, never the address.
+    expect((await f.dispatch(f.request(callbackPath(started.state), undefined, { cookie: started.cookie }))).headers.get("location")).toBe("/sign-in?error=authentication");
+    const foreign = await startGoogle(f, { return: back });
+    expect((await f.dispatch(f.request(callbackPath(foreign.state)))).headers.get("location")).toBe("/sign-in?error=authentication");
+    // The SDK naming any address the validator refuses lands on the plain error with no session.
+    for (const location of ["/read#x", "/read?x=%00", "//evil.example/read", "/read/../workspace/admin", "/read?x=`1`", "/sign-in?return=/read", "/account?x=1"]) {
+      const next = await startGoogle(f, { return: "/read" });
+      f.sdk.mockImplementationOnce(async () => new Response(null, { status: 302, headers: { location, "set-cookie": `${origin.startsWith("https:") ? "__Secure-" : ""}better-auth.session_token=synthetic; Path=/; HttpOnly; SameSite=Lax${origin.startsWith("https:") ? "; Secure" : ""}` } }));
+      const projected = await f.dispatch(f.request(callbackPath(next.state), undefined, { cookie: next.cookie }));
+      expect(projected.headers.get("location"), location).toBe("/sign-in?error=authentication");
+      expect(projected.headers.getSetCookie().some(value => value.includes("session_token"))).toBe(false);
+    }
+    vi.unstubAllGlobals();
+  }
+});
+
 test("redirect-mode Google spends the popup challenge budget, keeps each return in its own SDK bucket, and needs a configured provider", async () => {
   const f = await fixture(); googleTokenEndpoint();
   const first = await f.dispatch(f.request("/api/auth/google/redirect", {}));

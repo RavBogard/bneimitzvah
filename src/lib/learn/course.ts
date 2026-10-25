@@ -170,7 +170,8 @@ export function validateCourse(value: unknown): Course {
       if (!family && !out.phrases) fail(`${at}: a whole-verse example needs phrases`);
       return out;
     }).filter((example): example is NonNullable<typeof example> => example !== null);
-    const activities = Array.isArray(row.activities) && row.activities.length >= 1 && row.activities.length <= 8 ? row.activities.flatMap((activity, i) => {
+    // An orientation lesson (no family) may have no activities at all: it is Hear it and In verses, then Done (N17a).
+    const activities = Array.isArray(row.activities) && row.activities.length >= (family === null ? 0 : 1) && row.activities.length <= 8 ? row.activities.flatMap((activity, i) => {
       const parsed = parseActivity(activity, family, melody, lookAlikes, message => fail(`${where} activity ${i}: ${message}`));
       return parsed ? [parsed] : [];
     }) : (fail(`${where}: activities`), []);

@@ -58,8 +58,9 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
     const { tab, seen, prefs } = await visitor(width);
     await tab.goto("/read", { waitUntil: "domcontentloaded" });
     await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
-    await tab.getByRole("button", { name: "Save", exact: true }).click();
-    await ui(tab.getByRole("link", { name: "Sign in to save readings", exact: true })).toBeVisible();
+    // Never signed in here: Save is Sign in to save from the start (F4, N20), and nothing was asked.
+    await ui(tab.getByRole("link", { name: "Sign in to save", exact: true })).toBeVisible();
+    await ui(tab.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
     // Signed out in a browser that never signed in here, /read never asks about the account.
     expect(prefs).toEqual([]);
     await signIn(tab, "pg-tutor@example.test");
@@ -96,6 +97,38 @@ it("a tutor-and-parent saves this week's Torah from /read and finds it under My 
   expect(new Set(rows.map(row => row.membershipId)).size).toBe(1);
   expect((await fixture.ownerDb.select().from(s.auditEvent).where(eq(s.auditEvent.targetType, "saved_reading"))).length).toBe(0);
 }, 240_000);
+
+it("Save, then sign in with the emailed code, comes back to the same reading with the same selection, offers Save, and saves those verses (N20)", async () => {
+  const { tab, seen } = await visitor(390);
+  await tab.goto("/read?lens=study", { waitUntil: "domcontentloaded" });
+  await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
+  await tab.getByRole("button", { name: "Choose verses", exact: true }).click();
+  await tab.getByRole("button", { name: "Select Genesis 1:2", exact: true }).click();
+  await tab.getByRole("button", { name: "Select Genesis 1:4", exact: true }).click({ modifiers: ["Shift"] });
+  const bar = tab.locator("[data-choose-bar]"), line = bar.locator("[data-choose-line]");
+  await ui(line).toHaveText("3 verses: Genesis 1:2–4");
+  await bar.getByRole("link", { name: "Sign in to save", exact: true }).click();
+  await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+  expect(new URL(tab.url()).pathname).toBe("/sign-in");
+  // The real round trip: the return address is sealed with the address on this device, and the code's answer is that page.
+  await tab.getByLabel("Email address", { exact: true }).fill("pg-tutor@example.test");
+  await tab.getByRole("button", { name: "Email me a sign-in link", exact: true }).click();
+  await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible();
+  await tab.getByLabel("Sign-in code", { exact: true }).fill(fixture.takeCode("pg-tutor@example.test"));
+  await tab.getByRole("button", { name: "Sign in", exact: true }).click();
+  await ui(tab.getByRole("heading", { level: 1, name: "Synthetic portion", exact: true })).toBeVisible();
+  await ui(line).toHaveText("3 verses: Genesis 1:2–4");
+  const form = tab.getByRole("form", { name: "Save this reading" });
+  await ui(form.getByLabel("Name")).toHaveValue("Synthetic portion · Genesis 1:2–4");
+  const url = new URL(tab.url());
+  expect(url.pathname).toBe("/read"); expect(url.searchParams.get("lens")).toBe("study"); expect(url.searchParams.has("save") || url.searchParams.has("choose")).toBe(false);
+  await form.getByRole("button", { name: "Save reading", exact: true }).click();
+  await ui(tab.getByRole("status").filter({ hasText: "Saved to My readings." })).toBeVisible();
+  expect(seen).toContain("POST /api/saved/readings/create");
+  const rows = await fixture.ownerDb.select().from(s.savedReading).where(eq(s.savedReading.name, "Synthetic portion · Genesis 1:2–4"));
+  expect(rows.map(row => [row.kind, row.ranges, row.verseCount])).toEqual([["torah", "Genesis 1:2-4", 3]]);
+  await fixture.ownerDb.delete(s.savedReading).where(inArray(s.savedReading.id, rows.map(row => row.id)));
+}, 120_000);
 
 it("an account without saved readings is pointed to /account, and its front door has no My readings", async () => {
   const { tab, seen, prefs } = await visitor(390);

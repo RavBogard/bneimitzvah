@@ -1,0 +1,39 @@
+# Parallel implementation return
+
+24 October 2026. Daniel authorized implementation alongside Claude's 1.9/2.0 work, followed by later integration. The first pushed commit `3a9f844` covered first-reading preparation and highlighting; it did not finish the approved overhaul. This continuation implements the broader instructional structure in the same managed worktree, `C:/Users/dsbog/.codex/worktrees/chanting-curriculum/bneimitzvah`, branch `codex/chanting-curriculum`. Astra directs architecture/review; two bounded Sol assignments implement. Claude's checkout and the old parked highlighting worktree remain untouched.
+
+## Implemented teaching
+
+- All 22 ordinary lessons, including orientation and both melodic libraries, offer phrase production immediately after teaching: model, echo after playback, independent attempt with playback stopped, comparison and word/tune/uncertainty repair. Examples and written cues remain available; familiar work is bypassable.
+- Orientation has no recognition, endpoint or halves exam. Legacy same/different definitions remain compatible catalogue data, but neither lesson progression nor review generates those uncurated acoustic-equivalence questions.
+- Recognition is optional. Replayable authored anchors teach alternatives; untaught/unavailable alternatives are omitted. Initial naming retrieves those exact visible phrases rather than incidental variants. Each model identifies its actual ending mark. No question quota gates chanting. Review does not manufacture unknown alternatives or say Done when filtering leaves no supported question.
+- Each melody's two ending lessons lead to an early first-verse recommendation, before the rest of the family catalogue. Stable IDs and stored progress stay compatible. Completion describes participation; the home count says family lessons visited rather than asserting competence.
+- Both first-verse lessons use whole/part models, words, echo, independent attempts, comparison, targeted repair, complete-phrase joins, recovery and a whole-verse attempt. Repair can choose any word or part. Daniel's explicit result rule remains: only “Same as the reader” reveals “You can lein this verse,” qualified as learner self-comparison. A known comparison-recording failure blocks that response until successful retry; speed changes, leaving and returning do not clear the failure.
+- `/learn/prepare` supplies a public passage task: this week's Torah/haftarah or a validated public reference; manageable contiguous selection; verse preparation; complete phrases around adjacent-verse boundaries; silent passage attempts; comparison and direct verse/boundary repair; a chosen recovery point; fewer color cues and an exact-section Lein/Tikkun link; a public return link and different-material preparation. Missing models do not silently bridge omissions or produce success. Separate verse models are labelled as separate, with a gap, rather than a natural continuous transition.
+- An arbitrary excerpt's end is not declared the end of a haftarah or recording. The original requested reading stays reachable when models are missing.
+- Optional starting suggestions cover new chanting, learning by ear, rusty signs and direct reading work. They are reversible, collapsed after the main action, signed-out and available for either melody. No level or entrance exam is stored. Basic pointed-Hebrew decoding is assumed.
+- Learn word outlines follow canonical timing and actual media time, including maqaf parts, speed, pause/resume, buffering, gaps and replaced clips. Duplicate visible references bind to their own control/part. The reader's active word also uses an outline without replacing instructional colors.
+
+## Ownership and integration
+
+Core: `guided-preparation.tsx`, `first-verse.tsx`, `sound-practice.tsx`, `passage-preparation.tsx`, `learning-start.tsx`, `player.ts`, `bits.tsx`, Learn styles, the new prepare page and preparation/recommendation/sound helpers. Narrow shared changes: `lesson.tsx`, `home.tsx`, `review.tsx`, playback bindings in `drills.tsx`/`this-week.tsx`, and one selector in `study/reference-player.module.css`.
+
+Reconcile these hunks with P4/N17a/N18/N19a; do not build the same teaching/player mechanics twice. P4 owns universal path/chart links. Claude's N17 owns assigned-reading context and its specific first-phrase row; the new passage route accepts public references only. N19 owns persistent private verse review. A public return URL saves text context, not a learner's step or self-comparison. No auth, server, schema, service-course, recording, generated-audio or dependency changes are included.
+
+The single-active-PR rule for Learn remains. PR #80 was open at the last coordination check, so this stays a branch for later reconciliation rather than a competing Learn PR. No merge or deployment. Daniel's specific N19a choice (“Claude shortlists, you pick”) remains a content dependency: generic preparation mechanics do not choose his final starter or musical cues.
+
+## Verification
+
+Continuation: all 128 Learn unit tests in 17 files, formal route/type checking and production build passed. The first sound test run had an incorrect exact-count assertion: one exemplar per family can legitimately shorten a run under the existing no-consecutive-reference rule. The corrected assertion requires supported questions and verifies each answer belongs to the displayed models.
+
+Production browser coverage: 76 Learn cases passed across desktop/tablet/phone, with two existing device-specific skips; two affected installed/offline course cases also passed. The initial passage-browser run exposed nested-select test locators; accessible snapshots showed correctly named controls. Locators were corrected to combobox roles. Legacy exercise entry and home-copy assertions were updated to the new flow while retaining wrong-answer/retry, word-card, hidden-answer, target-size and progress checks.
+
+Bounded desktop/phone light/dark visual review found passage Hebrew inheriting body size. It now uses the established 2rem standard. A fresh production build and all 18 passage cases passed afterward, including Hebrew size, overflow, heading focus and hidden skip-link checks. The skip link seen in a full-page image was an off-viewport capture artifact; its viewport bounds and actual focus behavior passed. The sound finish action is secondary. No further visual redesign was added. Staged repository policy passed all three checks; final staging is rechecked before commit.
+
+Earlier commit: Node suite 458 passed/1 skipped; production Learn cases passed on desktop/tablet/phone; staged policy passed. The earlier full app run had 3,123 passed/1 skipped/1 failure. That metadata regression was fixed by separating card-only `data-part` from playback word metadata, preserving the existing test; all Learn tests then passed. Complete app checks run in CI on the final committed tree. Logs/screenshots remain ignored.
+
+## Remaining evidence and release work
+
+The review covers all 24 lesson specifications, eight practice recipes and seven passage/independence tasks. The branch now implements the shared instructional mechanisms beyond the first-verse slice. Actual recordings/cues have not been independently auditioned here. Synthetic browser media checks controls, timing wiring and navigation, not audibility or teaching quality. Starter selection/cue QA, reconciliation with Claude, final-tree CI and existing release gates remain.
+
+The app supports preparation and learner comparison; it does not assess a voice or establish readiness. Exact position, delayed-return history and demonstrated mastery are not persisted by the new flow. No pilot or efficacy study started. The approved validation plan remains necessary before claiming the program reliably takes beginners to independent chanting.

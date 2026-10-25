@@ -16,6 +16,8 @@ async function week(page: Page) {
     torah: { kind: "torah", ranges: ["Genesis 6:9-11:32"], verseCount: 153, pages: [{ offset: 0, first: "Genesis 6:9", last: "Genesis 10:11" }, { offset: 100, first: "Genesis 10:12", last: "Genesis 11:32" }] },
     haftarah: { kind: "haftarah", ranges: ["Isaiah 54:1-55:5"], verseCount: 22, pages: [{ offset: 0, first: "Isaiah 54:1", last: "Isaiah 55:5" }] } }));
 }
+/** This browser was seen signed in (the front door sets it), so Save asks when pressed rather than starting on Sign in to save (N20). */
+const seenSignedIn = (page: Page) => page.addInitScript(() => { try { localStorage.setItem("crc-torah:signed-in/v1", "1"); } catch { /* none */ } });
 async function minSize(page: Page, names: string[]) {
   for (const name of names) {
     const box = await page.getByRole("button", { name, exact: true }).or(page.getByRole("link", { name, exact: true })).first().boundingBox();
@@ -29,7 +31,13 @@ test("Save on /read asks about the account only when pressed, and answers signed
   await week(page);
   let answer = { status: 401, body: { error: "authentication-required" } as unknown };
   await page.route("**/api/saved/readings", route => json(route, answer.status, answer.body));
+  // A browser never seen signed in here starts on Sign in to save (F4), still without asking.
   await page.goto("/read?date=2026-10-24");
+  await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Sign in to save", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save", exact: true })).toHaveCount(0);
+  expect(saved).toEqual([]);
+  await seenSignedIn(page); await page.reload();
   await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
   const save = page.getByRole("button", { name: "Save", exact: true });
   await expect(save).toBeVisible();
@@ -37,9 +45,17 @@ test("Save on /read asks about the account only when pressed, and answers signed
   expect(saved).toEqual([]);
   await expect(page.getByRole("banner").getByRole("link", { name: "Sign in", exact: true })).toBeVisible();
   await save.click();
-  await expect(page.getByRole("link", { name: "Sign in to save readings", exact: true })).toHaveAttribute("href", "/sign-in");
+  // Signed out after all: Save becomes Sign in to save, which comes back to this reading and offers Save there.
+  const signIn = page.getByRole("link", { name: "Sign in to save", exact: true });
+  await expect(signIn).toBeVisible();
+  // Its address is filled in when the link is used (focus, pointer or click).
+  await signIn.focus();
+  // The reading's own address (this week's is plain /read) with the save offer.
+  const back = new URLSearchParams((await signIn.getAttribute("href"))!.replace(/^\/sign-in\?/, "")).get("return") ?? "";
+  expect(back).toMatch(/^\/read\?(date=2026-10-24&)?save=1$/);
   expect(saved).toEqual(["/api/saved/readings"]);
   answer = { status: 403, body: { error: "forbidden" } };
+  await seenSignedIn(page); await page.reload();
   await save.click();
   await expect(page.getByRole("link", { name: "Ask for an account to save readings", exact: true })).toHaveAttribute("href", "/account");
   await expect(page.getByRole("form", { name: "Save this reading" })).toHaveCount(0);
@@ -47,6 +63,7 @@ test("Save on /read asks about the account only when pressed, and answers signed
 });
 
 test("a member saves the passage on screen with its name and Shabbat filled in, at 360px and on desktop", async ({ page }) => {
+  await seenSignedIn(page);
   for (const width of [360, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.unrouteAll({ behavior: "ignoreErrors" });

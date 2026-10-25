@@ -9,6 +9,7 @@ import { routeUnitTap, unitWordParts } from "../../lib/learn/word-tap";
 import { usePlayerState, useLearnServices } from "./services";
 import { RATE_LIMITED_MESSAGE } from "../portal/public-reading/rate-limited";
 import { useWordCard } from "./word-card";
+import { activeLessonWord, type PlaybackBinding } from "./player";
 import styles from "./learn.module.css";
 
 const svg = (children: ReactNode, size = 22) => <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>;
@@ -46,11 +47,13 @@ export type UnitLook = "plain" | "inked" | "pull";
  * opens the word's card (a maqaf unit opens on the word tapped). `card={false}` keeps the words plain, for Hebrew
  * that sits inside another answer target. A tap never plays.
  */
-export function UnitsText({ verse, units, look = () => "plain", className = "", onUnit, unitLabel, unitClass, as = "p", wipe, card = true }: {
+export function UnitsText({ verse, units, look = () => "plain", className = "", onUnit, unitLabel, unitClass, as = "p", wipe, card = true, playback = [] }: {
   verse: AnalysedVerse; units?: readonly [number, number]; look?: (unit: number) => UnitLook; className?: string; as?: "p" | "span";
   /** The ink pull's stagger step for a unit (in 70 ms steps); the default is its place in the range. */ wipe?(unit: number): number;
   onUnit?(unit: number): void; unitLabel?(unit: number): string; unitClass?(unit: number): string | undefined; card?: boolean;
+  /** The tile and optional comparison part that own this visible example. */ playback?: readonly PlaybackBinding[];
 }) {
+  const active = activeLessonWord(usePlayerState(), verse, playback);
   const [first, last] = units ?? [0, verse.units.length - 1], Tag = as, opener = useWordCard(), openCard = !onUnit && card && opener ? opener : undefined;
   const tap = (unit: number, part: number | null, trigger: HTMLElement) => routeUnitTap({ verse, onAnswer: onUnit, openCard }, unit, part, trigger);
   const key = (event: KeyboardEvent<HTMLElement>, unit: number) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); tap(unit, null, event.currentTarget); } };
@@ -60,13 +63,14 @@ export function UnitsText({ verse, units, look = () => "plain", className = "", 
   };
   return <Tag className={`${styles.hebrew} ${className}`} lang="he" dir="rtl">
     {verse.units.slice(first, last + 1).map((unit, k) => {
-      const mode = look(unit.index), extra = unitClass?.(unit.index), target = !!onUnit || !!openCard, parts = openCard ? unitWordParts(unit) : null;
+      const mode = look(unit.index), extra = unitClass?.(unit.index), target = !!onUnit || !!openCard, parts = unitWordParts(unit);
       const classes = [styles.unit, mode === "inked" ? styles.inked : mode === "pull" ? styles.pull : "", target ? styles.target : "", extra ?? ""].filter(Boolean).join(" ");
       return <span key={unit.index}>{k > 0 && " "}<span className={classes} style={mode !== "plain" ? phraseStyle(unit.family, wipe ? wipe(unit.index) : k) : undefined} data-unit={unit.index} data-family={mode !== "plain" ? unit.family : undefined}
+        data-playback-active={!parts && active === unit.words[0] ? "" : undefined}
         data-tap={target ? onUnit ? "answer" : "card" : undefined} data-word-card={openCard ? "" : undefined}
         {...(target ? { role: "button", tabIndex: 0, "aria-label": onUnit ? unitLabel?.(unit.index) : undefined, "aria-haspopup": openCard ? "dialog" as const : undefined,
           onClick: (event: MouseEvent<HTMLElement>) => click(event, unit.index), onKeyDown: (event: KeyboardEvent<HTMLElement>) => key(event, unit.index) } : {})}>
-        {parts ? parts.map((part, n) => <span key={n} data-part={n}>{part.text}</span>) : unit.text}</span>{unit.legarmeh && " ׀"}</span>;
+        {parts ? parts.map((part, n) => <span key={n} data-part={openCard ? n : undefined} data-reading-word={part.word} data-playback-active={active === part.word ? "" : undefined}>{part.text}</span>) : unit.text}</span>{unit.legarmeh && " ׀"}</span>;
     })}
   </Tag>;
 }
@@ -74,9 +78,9 @@ export function UnitsText({ verse, units, look = () => "plain", className = "", 
 /** The play tile: plays the phrase cuts in turn; tapping again replays from the start. */
 export function PlayTile({ id, requests, label = "Hear it", iconOnly = false, rate, onPlayed }: { id: string; requests: readonly PhraseRequest[]; label?: string; iconOnly?: boolean; rate?: number; onPlayed?(): void }) {
   const { player } = useLearnServices(), state = usePlayerState();
-  const mine = state.id === id, playing = mine && state.status === "playing", loading = mine && state.status === "loading";
+  const mine = state.id === id, playing = mine && state.status === "playing", loading = mine && state.status === "loading", paused = mine && state.status === "paused";
   return <button type="button" className={`${styles.play}${iconOnly ? ` ${styles.playIcon}` : ""}`} data-state={playing ? "playing" : loading ? "loading" : "idle"} aria-label={iconOnly ? label : undefined}
-    disabled={!requests.length} onClick={() => { if (playing) player.stop(); else void player.play(id, requests, { rate }).then(done => { if (done) onPlayed?.(); }); }}>
+    disabled={!requests.length} onClick={() => { if (playing) player.stop(); else if (paused) void player.resume(); else void player.play(id, requests, { rate }).then(done => { if (done) onPlayed?.(); }); }}>
     {playing ? icons.stop : icons.play}{!iconOnly && <span>{label}</span>}
   </button>;
 }

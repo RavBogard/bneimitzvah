@@ -15,7 +15,9 @@ import type { Melody } from "./course";
  */
 export type PhraseRequest = Readonly<{ ref: string; kind: Melody; words: readonly [number, number] }>;
 export type LoadedVerse = Readonly<{ ref: string; kind: Melody; hebrew: HebrewSource; short: ReferenceShortResolution | null }>;
-export type PhraseClip = Readonly<{ blob: Blob; frames: number; sampleRate: number; seconds: number; key: string }>;
+/** Canonical reading-word intervals, in the cut WAV's media seconds. */
+export type PhraseWord = Readonly<{ word: number; start: number; end: number }>;
+export type PhraseClip = Readonly<{ blob: Blob; frames: number; sampleRate: number; seconds: number; key: string; words: readonly PhraseWord[] }>;
 export class PhraseUnavailable extends Error { constructor() { super("Phrase recording unavailable"); } }
 const unavailable = (): never => { throw new PhraseUnavailable(); };
 
@@ -92,12 +94,18 @@ export function createPhraseAudio(io: PhraseAudioIo) {
       const a = referenceWordLoop(data.timeline, first[0]), b = referenceWordLoop(data.timeline, last[1]);
       const range = a && b ? shortSourceRange(data.source, { start: a.start, end: b.end }) : null;
       if (!range) return unavailable();
-      const key = `${data.source.sha256}:${range.firstFrame}:${range.endFrame}`, known = clips.get(key);
+      const key = `${kind}:${ref}:${words.join(":")}:${data.source.sha256}:${range.firstFrame}:${range.endFrame}`, known = clips.get(key);
       if (known) return known;
       const value = await audio(data.source, signal);
       if (signal.aborted) return unavailable();
       const blob = shortWordWav(value, data.source, range.firstFrame, range.endFrame), frames = range.endFrame - range.firstFrame;
-      const clip = Object.freeze({ blob, frames, sampleRate: data.source.sampleRate, seconds: frames / data.source.sampleRate, key });
+      // Enclosing frame rounding can put the WAV's beginning just before the measured onset.
+      const origin = (data.source.origin.firstFrame + range.firstFrame) / data.source.sampleRate;
+      const timedWords = Array.from({ length: last[1] - first[0] + 1 }, (_, offset) => {
+        const word = first[0] + offset, timing = referenceWordLoop(data.timeline, word)!;
+        return Object.freeze({ word, start: timing.start - origin, end: timing.end - origin });
+      });
+      const clip = Object.freeze({ blob, frames, sampleRate: data.source.sampleRate, seconds: frames / data.source.sampleRate, key, words: Object.freeze(timedWords) });
       clips.set(key, clip); return clip;
     },
     clear() { timed.clear(); bytes.clear(); decoded.clear(); clips.clear(); },

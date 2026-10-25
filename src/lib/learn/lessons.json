@@ -640,52 +640,7 @@
           ]
         }
       ],
-      "activities": [
-        {
-          "type": "same-or-different",
-          "params": {
-            "families": [
-              "sof-pasuk",
-              "etnachta"
-            ],
-            "items": 4
-          }
-        },
-        {
-          "type": "where-does-it-end",
-          "params": {
-            "families": [
-              "etnachta"
-            ],
-            "items": 4,
-            "audio": true,
-            "prompt": "Tap the word where the verse rests."
-          }
-        },
-        {
-          "type": "which-half",
-          "params": {
-            "families": [
-              "sof-pasuk",
-              "etnachta",
-              "zakef",
-              "revia",
-              "tevir",
-              "azla",
-              "segol",
-              "telisha-ketana",
-              "pazer",
-              "zakef-gadol"
-            ],
-            "items": 4,
-            "audio": "lead-in",
-            "verseWords": [
-              6,
-              18
-            ]
-          }
-        }
-      ],
+      "activities": [],
       "prerequisites": []
     },
     {
@@ -797,16 +752,6 @@
         }
       ],
       "activities": [
-        {
-          "type": "same-or-different",
-          "params": {
-            "families": [
-              "sof-pasuk",
-              "etnachta"
-            ],
-            "items": 4
-          }
-        },
         {
           "type": "hear-and-name",
           "params": {
@@ -952,16 +897,6 @@
         }
       ],
       "activities": [
-        {
-          "type": "same-or-different",
-          "params": {
-            "families": [
-              "sof-pasuk",
-              "etnachta"
-            ],
-            "items": 4
-          }
-        },
         {
           "type": "hear-and-name",
           "params": {

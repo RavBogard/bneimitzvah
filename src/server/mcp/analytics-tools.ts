@@ -25,7 +25,7 @@ function calendarDay(value: string): number | null {
 export function createAnalyticsTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
   return Object.freeze([{
     name: "get_page_views", roles: ["admin"], scope: SCOPES.read, annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-    description: `How often the public pages were opened, per page per day (UTC), for this congregation: /read (this week's reading), /read/<slug> (a named reading, e.g. /read/noach), /read/any ("Any reading"), /learn, /learn/<lesson>, /learn/about, /learn/review, /learn/practice/<id> (Quick ten) and /trope-chart. Counts only: nothing about who visited is kept. start and end are inclusive dates, at most ${PAGE_VIEW_MAX_DAYS} days apart. Days with no views are absent.`,
+    description: `How often the public pages were opened, per page per day (UTC), for this congregation: /read (this week's reading), /read/<slug> (a named reading, e.g. /read/noach), /read/any ("Any reading"), /learn, /learn/<lesson>, /learn/about, /learn/review, /learn/prepare (Prepare a passage), /learn/practice/<id> (Quick ten) and /trope-chart. Counts only: nothing about who visited is kept. start and end are inclusive dates, at most ${PAGE_VIEW_MAX_DAYS} days apart. Days with no views are absent.`,
     inputSchema: closed({ start: date("First day, YYYY-MM-DD (UTC)."), end: date("Last day, YYYY-MM-DD (UTC), on or after start.") }, ["start", "end"]),
     handler: async (input, ctx) => {
       if (ctx.actor.role !== "admin") throw new AccessDenied(403);

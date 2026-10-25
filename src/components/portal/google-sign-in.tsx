@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { parseAuthResult, parseGoogleChallenge, parseGoogleRedirect, requestPortal, type GoogleChallenge } from "./api";
 import { createGoogleAttemptScope, type GoogleIntent, type AuthDestination } from "./sign-in-boundary";
+import { returnAddress } from "../../lib/site/return-address";
+import { markSignInPending } from "./signed-in-hint";
 
 type GoogleIdentity = {
   initialize(options: { client_id: string; nonce: string; ux_mode: "popup"; auto_select: false; callback: (result: { credential?: unknown }) => void }): void;
@@ -23,7 +25,41 @@ function loadIdentity(): Promise<GoogleIdentity> {
   return library;
 }
 
-const SIGN_IN_WAITING = "Continue in the Google window. If it did not open, cancel and use email below.";
+/**
+ * Our own "Continue with Google" (decision 8, N20): a plain button on the redirect path. Nothing from Google loads,
+ * and nothing is asked of Google, until it is pressed; then the portal hands over Google's authorization address and
+ * this tab goes there. Google comes back to the portal's callback, which lands on `returnTo` (a checked return
+ * address), on Account for `next: "account"`, or on the default. A failure leaves the button to try again.
+ */
+export function GoogleContinue({ disabled, next, returnTo, onBegin, onFinish }: {
+  disabled: boolean; next?: "account"; returnTo?: string | null; onBegin: () => boolean; onFinish: () => void;
+}) {
+  const [phase, setPhase] = useState<"ready" | "leaving" | "failed">("ready"), leaving = useRef(false);
+  const finish = useRef(onFinish); finish.current = onFinish;
+  useEffect(() => {
+    // Back from Google with the back button restores this page from the cache: let it try again.
+    const restored = (event: PageTransitionEvent) => { if (event.persisted && leaving.current) { leaving.current = false; setPhase("ready"); finish.current(); } };
+    window.addEventListener("pageshow", restored);
+    return () => window.removeEventListener("pageshow", restored);
+  }, []);
+  function start() {
+    if (leaving.current || disabled || !onBegin()) return;
+    leaving.current = true; setPhase("leaving");
+    const back = returnAddress(returnTo);
+    void requestPortal("/api/auth/google/redirect", next ? { next } : back ? { return: back } : {}).then(parseGoogleRedirect)
+      .then(url => { markSignInPending(); window.location.assign(url); })
+      .catch(() => { leaving.current = false; setPhase("failed"); finish.current(); });
+  }
+  return <div className="google-continue">
+    <button type="button" className="button-secondary google-button" disabled={disabled || phase === "leaving"} onClick={start}>
+      <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" /><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" /><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" /><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" /></svg>
+      <span>{phase === "leaving" ? "Opening Google…" : "Continue with Google"}</span>
+    </button>
+    {phase === "failed" && <p className="field-help" role="status">{SIGN_IN_FAILURE}</p>}
+  </div>;
+}
+
+const SIGN_IN_WAITING ="Continue in the Google window. If it did not open, cancel and use email below.";
 const SIGN_IN_FAILURE = "Google sign-in is unavailable or this attempt ended. You can use email below.";
 
 /**
