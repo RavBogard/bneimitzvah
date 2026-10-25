@@ -87,7 +87,7 @@ test("/read opens in Lein; the switch opens Study verse rows with Rashi inline, 
   await first.getByRole("button", { name: "Hebrew", exact: true }).first().click();
   await expect(first.getByText("חִי כָּל", { exact: false }).first()).toBeVisible();
   // Credit at the work's foot: edition, licence, via Sefaria, linked.
-  await expect(page.getByText(/via Sefaria \(public domain\)/).first()).toBeVisible();
+  await expect(page.getByText(/Metsudah Publications, 2009, via Sefaria \(CC BY\)/).first()).toBeVisible();
   await page.reload();
   await expect(page.getByRole("button", { name: "Study", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(rows(page)).toHaveCount(3);

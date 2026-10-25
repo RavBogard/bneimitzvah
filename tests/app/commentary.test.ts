@@ -8,6 +8,7 @@ import { COMMENTARY_LIMITS, COMMENTARY_WORKS, commentaryCandidates, commentaryCh
 import { sefariaRuns } from "../../src/server/study/sefaria-runs";
 import { commentaryRequestUrl, CommentaryUnavailable, createSefariaCommentaryReader, validateCommentaryPayload } from "../../src/server/study/commentary";
 import { handlePublicReadingRequest, type PublicRuntime } from "../../src/server/http/public-reading";
+import { CommentaryCredits } from "../../src/components/portal/workspace/study/commentary-view";
 import { createCommentaryChapterStore, parseCommentaryResponse } from "../../src/components/portal/workspace/study/commentary-api";
 import { useCommentaryChapters } from "../../src/components/portal/workspace/study/use-commentary";
 import { TANAKH_VERSE_COUNTS } from "../../src/lib/readings/catalog";
@@ -25,9 +26,12 @@ test("the registry holds Rashi and the Women's Commentary, with their verified p
   const rashi = COMMENTARY_WORKS.rashi;
   expect(rashi).toMatchObject({ key: "rashi", title: "Rashi", hebrewTitle: "רש״י", index: "Rashi on {book}" });
   const titles = (corpus: "torah" | "neviim", language: "he" | "en") => rashi.editions[corpus]![language]!.map(item => `${item.title} | ${item.license}`);
-  expect(titles("torah", "he")).toEqual(["Pentateuch with Rashi's commentary by M. Rosenbaum and A.M. Silbermann, 1929-1934 | Public Domain",
+  expect(titles("torah", "he")).toEqual(["Rashi Chumash, Metsudah Publications, 2009 | CC-BY", "Pentateuch with Rashi's commentary by M. Rosenbaum and A.M. Silbermann, 1929-1934 | Public Domain",
     "Pentateuch with Rashi's commentary by M. Rosenbaum and A.M. Silbermann -- corrected vocalization | Public Domain", "On Your Way | Public Domain"]);
-  expect(titles("torah", "en")).toEqual(["Pentateuch with Rashi's commentary by M. Rosenbaum and A.M. Silbermann, 1929-1934 | Public Domain"]);
+  // 1.9 N1 (decision 9): Metsudah 2009 first, credited as Sefaria serves it, with the 1929 edition as the alternative.
+  expect(titles("torah", "en")).toEqual(["Rashi Chumash, Metsudah Publications, 2009 | CC-BY", "Pentateuch with Rashi's commentary by M. Rosenbaum and A.M. Silbermann, 1929-1934 | Public Domain"]);
+  expect(rashi.editions.torah!.en![0].credit).toBe("Rashi Chumash, Metsudah Publications, 2009, via Sefaria (CC BY). Markup and footnotes removed; spacing normalized.");
+  expect(rashi.editions.torah!.he![0].credit).toBe(rashi.editions.torah!.en![0].credit);
   expect(titles("neviim", "he")).toEqual(["Vocalized Edition | CC0", "On Your Way | Public Domain", "On Your Way -- new | Public Domain"]);
   expect(titles("neviim", "en")).toEqual(["The Judaica Press complete Tanach with Rashi, translated by A. J. Rosenberg | CC-BY",
     "The Metsudah Tanach series, Lakewood, N.J | CC-BY", "The Book of Joshua, Metsudah Publications, 1997 | CC-BY"]);
@@ -92,8 +96,8 @@ test("a valid chapter pairs Hebrew and English comments by segment, omits uncomm
     english: [{ text: "SYNTHETIC LEMMA", bold: true }, { text: " — synthetic comment. 3.2" }] });
   expect(result.work).toBe("rashi"); expect(result.chapter).toBe("Genesis 1");
   expect(result.editions).toEqual([
-    { language: "he", title: commentaryCandidates(genesis()).he[0].title, license: "Public Domain", credit: commentaryCandidates(genesis()).he[0].credit, url: commentaryEditionUrl(genesis(), commentaryCandidates(genesis()).he[0]) },
-    { language: "en", title: commentaryCandidates(genesis()).en[0].title, license: "Public Domain", credit: commentaryCandidates(genesis()).en[0].credit, url: commentaryEditionUrl(genesis(), commentaryCandidates(genesis()).en[0]) }]);
+    { language: "he", title: commentaryCandidates(genesis()).he[0].title, license: "CC-BY", credit: commentaryCandidates(genesis()).he[0].credit, url: commentaryEditionUrl(genesis(), commentaryCandidates(genesis()).he[0]) },
+    { language: "en", title: commentaryCandidates(genesis()).en[0].title, license: "CC-BY", credit: commentaryCandidates(genesis()).en[0].credit, url: commentaryEditionUrl(genesis(), commentaryCandidates(genesis()).en[0]) }]);
   // Sefaria pads some chapters with empty slots past the last verse.
   expect(validateCommentaryPayload(syntheticCommentaryPayload("rashi", "Genesis 1", { padding: 400 }), genesis())).toEqual(result);
   // Text in a slot past the last verse (a work's own versification) is shape-checked and left out, never fatal.
@@ -106,15 +110,38 @@ test("a valid chapter pairs Hebrew and English comments by segment, omits uncomm
   expect(Object.keys(validateCommentaryPayload(short, genesis()).verses)).toEqual(["1", "3"]);
 });
 
+test("Study's Rashi on Genesis 18:1 shows Metsudah 2009 first with its credit, and the 1929 edition is one link away", () => {
+  const gen18 = chapter("rashi", "Genesis 18"), torah = commentaryCandidates(gen18);
+  // Synthetic payload: both editions present with text in Genesis 18:1, Metsudah pinned first in both languages.
+  const served = validateCommentaryPayload(syntheticCommentaryPayload("rashi", "Genesis 18", { present: [...torah.he.slice(0, 2), ...torah.en], commented: { 1: 1 } }), gen18);
+  expect(served.editions.map(item => `${item.language}:${item.title}:${item.license}`)).toEqual(
+    ["he:Rashi Chumash, Metsudah Publications, 2009:CC-BY", "en:Rashi Chumash, Metsudah Publications, 2009:CC-BY"]);
+  const state = { status: "ready" as const, comments: served.verses["1"].comments, editions: served.editions, sefariaUrl: commentarySefariaUrl(gen18, 1) };
+  const markup = renderToStaticMarkup(createElement(CommentaryCredits, { works: [{ work: "rashi", lookup: { forVerse: () => state } }], refs: ["Genesis 18:1"] }));
+  expect(markup).toContain("Hebrew and English: <a");
+  expect(markup).toContain("Rashi Chumash, Metsudah Publications, 2009, via Sefaria (CC BY).");
+  expect(markup).not.toContain("Silbermann");
+  expect(markup).toContain('href="https://www.sefaria.org/Rashi_on_Genesis.18?vhe=Rashi_Chumash%2C_Metsudah_Publications%2C_2009&amp;lang=bi"');
+  // The alternative is the next pinned English edition, with its own Sefaria link.
+  expect(torah.en[1].title).toContain("Silbermann, 1929-1934");
+  expect(commentaryEditionUrl(gen18, torah.en[1])).toContain("https://www.sefaria.org/Rashi_on_Genesis.18?ven=Pentateuch_with_Rashi");
+});
+
 test("missing editions fall back in preference order, per language, and a chapter with none is empty rather than an error", () => {
   const torah = commentaryCandidates(genesis()), neviim = commentaryCandidates(samuel());
-  const fallback = validateCommentaryPayload(syntheticCommentaryPayload("rashi", "Genesis 1", { present: [torah.he[2], torah.en[0]] }), genesis());
-  expect(fallback.editions.map(item => item.title)).toEqual(["On Your Way", torah.en[0].title]);
+  const fallback = validateCommentaryPayload(syntheticCommentaryPayload("rashi", "Genesis 1", { present: [torah.he[3], torah.en[1]] }), genesis());
+  expect(fallback.editions.map(item => item.title)).toEqual(["On Your Way", torah.en[1].title]);
+  // Metsudah missing from a chapter: the 1929 edition answers in both languages, which is the alternative.
+  const alternative = validateCommentaryPayload(syntheticCommentaryPayload("rashi", "Genesis 1", { present: [torah.he[1], torah.en[1]] }), genesis());
+  expect(alternative.editions.map(item => `${item.language}:${item.title}:${item.license}`)).toEqual([`he:${torah.he[1].title}:Public Domain`, `en:${torah.en[1].title}:Public Domain`]);
+  // Both present: Metsudah wins in both languages.
+  const both = validateCommentaryPayload(syntheticCommentaryPayload("rashi", "Genesis 1", { present: [...torah.he.slice(0, 2), ...torah.en] }), genesis());
+  expect(both.editions.map(item => `${item.language}:${item.title}`)).toEqual([`he:${torah.he[0].title}`, `en:${torah.en[0].title}`]);
   const metsudah = validateCommentaryPayload(syntheticCommentaryPayload("rashi", "I Samuel 20", { present: [neviim.he[0], neviim.en[1]] }), samuel());
   expect(metsudah.editions.map(item => `${item.language}:${item.title}:${item.license}`)).toEqual(["he:Vocalized Edition:CC0", "en:The Metsudah Tanach series, Lakewood, N.J:CC-BY"]);
   // A preferred edition that is present but has nothing in this chapter yields to the next.
-  const emptyFirst = syntheticCommentaryPayload("rashi", "Genesis 1", { present: [torah.he[0], torah.he[2], torah.en[0]],
-    text: (candidate, verse, c) => candidate === torah.he[0] ? "" : candidate.language === "he" ? "<b>אָב.</b> גַּד" : `Synthetic ${verse}.${c}` });
+  const emptyFirst = syntheticCommentaryPayload("rashi", "Genesis 1", { present: [torah.he[1], torah.he[3], torah.en[1]],
+    text: (candidate, verse, c) => candidate === torah.he[1] ? "" : candidate.language === "he" ? "<b>אָב.</b> גַּד" : `Synthetic ${verse}.${c}` });
   expect(validateCommentaryPayload(emptyFirst, genesis()).editions[0].title).toBe("On Your Way");
   // Hebrew only: English is null on every comment and only the Hebrew edition is named.
   const hebrewOnly = validateCommentaryPayload(syntheticCommentaryPayload("rashi", "I Samuel 20", { present: [neviim.he[0]] }), samuel());
