@@ -10,6 +10,7 @@ import { DRAFTED } from "./activity-copy";
 import { ContourMark, FamilyChip, icons } from "./bits";
 import { firstVerseOf, useOwnReading, type OwnReading } from "./own-reading";
 import { useProgress } from "./services";
+import { useVerseReview } from "./own-verses";
 import { LearningStart } from "./learning-start";
 import styles from "./learn.module.css";
 
@@ -64,6 +65,8 @@ export function CourseHome() {
   const haftarahOpen = isUnlocked(progress, pathLessons("haftarah")[0]);
   // 1.9 N17: a student whose own reading is a haftarah sees that path first; the order of the two paths is otherwise unchanged.
   const own = useOwnReading(), mine = own.status === "ready" ? own : null, haftarahFirst = !!mine?.haftarah && !mine.torah;
+  // 1.9 N19: opening Learn brings the student's Got it and Solid verses into their own verse cards.
+  useVerseReview(!!mine);
   const paths = (["torah", "haftarah"] as const).map(melody => melody === "torah"
     ? <section key="torah" aria-labelledby="path-torah"><div className={styles.pathHead}><h2 id="path-torah">Torah</h2></div><PathList melody="torah" progress={progress} next={next} after={<FirstPhraseRow own={own} melody="torah" />} /></section>
     : <section key="haftarah" aria-labelledby="path-haftarah"><div className={styles.pathHead}><h2 id="path-haftarah">Haftarah</h2>{!haftarahOpen && <span className={styles.pathNote}>Best after The two endings.</span>}</div>
@@ -85,6 +88,8 @@ export function CourseHome() {
               <div className={styles.nextAction}><a className="button-start" href={`/learn/${next.id}`} aria-describedby="learn-next">Start</a><span className={styles.minutes}>about {lessonMinutes(next)} minutes</span></div>
             </section>}
           {review && <a className={styles.review} href="/learn/review"><span>{reviewLine(review)}</span>{icons.arrow}</a>}
+          {/* 1.9 N19: a student with their own reading runs through it, no audio and colours off. */}
+          {mine && <a className={styles.review} href="/learn/run-through" data-run-through><span>Run-through</span>{icons.arrow}</a>}
           {ready && <QuickTenLinks progress={progress} />}
           <LearningStart />
           <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a>{mine && <a href="/workspace/student">Back to my reading</a>}</nav>

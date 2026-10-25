@@ -42,6 +42,9 @@ export function LiftProgress({ store, kind, verseRef }: { store: ProgressStore; 
       {(["not-started", "working", "solid"] as const).map(state => <button key={state} type="button" className="lift-mark" data-state={state} aria-pressed={assessment === state} aria-disabled={pending || undefined}
         onClick={() => { if (!pending && assessment !== state) choose(state, assessment, "not-started"); }}>{state === "solid" && check}{assessmentLabels[state]}</button>)}
     </div> : null}
+    {/* 1.9 N19, LD-09 (tier A): what each mark means. The tutor's line names the child, never a pronoun. */}
+    {stream === "self-check" ? <p className="lift-progress-note" role="note" data-criterion="got-it">Got it means you chanted this verse twice without the recording and it matched the reader.</p>
+      : stream === "assessment" && store.studentName ? <p className="lift-progress-note" role="note" data-criterion="solid">{`Solid means ${store.studentName} chanted it to you without help.`}</p> : null}
     <p className="lift-progress-note" role="status">{notice}</p>
     {!notice && <p className="lift-progress-note">{stream === "assessment" ? `Student: ${selfLabels[self].toLowerCase()}`
       : stream === "self-check" ? assessment !== "not-started" ? `Your tutor: ${assessmentLabels[assessment].toLowerCase()}` : ""

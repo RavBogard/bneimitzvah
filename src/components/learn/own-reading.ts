@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { Melody } from "../../lib/learn/course";
-import { workspaceApi, type Reading } from "../portal/workspace/api";
+import { workspaceApi, type Assigned, type Reading } from "../portal/workspace/api";
 import { signedInHint } from "../portal/signed-in-hint";
 import { useProgress } from "./services";
 
@@ -18,14 +18,29 @@ export type OwnReading = Readonly<{ status: "pending" } | { status: "none" } | (
 
 /** How long a page waits for the progress check to say whether this browser is signed in: longer when it was last seen signed in. */
 const GRACE_MS = 2000, GRACE_SIGNED_IN_MS = 4000;
-let cached: Promise<OwnReadings | null> | null = null;
+let cached: Promise<OwnReadings | null> | null = null, assignedCache: Promise<Assigned | null> | null = null;
+
+/**
+ * The student's own assignment, once per page, as the student's own Reading screen reads it. 1.9 N19's verse cards take the
+ * student's own Got it and Solid marks from it (through the same workspace progress API), so nothing new is asked.
+ */
+export function ownAssigned(): Promise<Assigned | null> {
+  assignedCache ??= (async () => {
+    try {
+      const students = await workspaceApi.students("student");
+      return students.length === 1 ? await workspaceApi.reading("student", students[0].id) : null;
+    } catch { return null; }
+  })();
+  return assignedCache;
+}
+/** The reading Learn uses in a melody: one the office has not flagged for review. */
+export const usableReading = (assigned: Assigned, kind: Melody): Reading | null => assigned.readings.find(reading => reading.kind === kind && !reading.needsReview) ?? null;
 
 async function fetchOwn(): Promise<OwnReadings | null> {
   try {
-    const students = await workspaceApi.students("student");
-    if (students.length !== 1) return null;
-    const assigned = await workspaceApi.reading("student", students[0].id);
-    const pick = (kind: Melody) => assigned.readings.find(reading => reading.kind === kind && !reading.needsReview) ?? null;
+    const assigned = await ownAssigned();
+    if (!assigned) return null;
+    const pick = (kind: Melody) => usableReading(assigned, kind);
     const torah = pick("torah"), haftarah = pick("haftarah");
     return torah || haftarah ? { torah, haftarah } : null;
   } catch { return null; }
@@ -37,7 +52,7 @@ export function useOwnReading(): OwnReading {
   const [answer, setAnswer] = useState<{ value: OwnReadings | null } | null>(null);
   useEffect(() => { setHint(signedInHint()); setOffline(typeof navigator !== "undefined" && navigator.onLine === false); }, []);
   useEffect(() => {
-    if (state !== "synced") { cached = null; setAnswer(null); return; }
+    if (state !== "synced") { cached = null; assignedCache = null; setAnswer(null); return; }
     let live = true;
     cached ??= fetchOwn();
     void cached.then(value => { if (live) setAnswer({ value }); });

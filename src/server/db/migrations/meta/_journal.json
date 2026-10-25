@@ -316,6 +316,13 @@
       "when": 1792884778970,
       "tag": "0044_portion_summary",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1792923011638,
+      "tag": "0048_verse_review",
+      "breakpoints": true
     }
   ]
 }
