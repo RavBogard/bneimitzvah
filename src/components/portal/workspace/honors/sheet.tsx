@@ -38,7 +38,7 @@ export function HonorsNote() {
 }
 export function HonorsEntry({ studentId, name, mode = "parent" }: { studentId: string; name: string; mode?: "parent" | "student" }) {
   const [open, setOpen] = useState(false), { busy, context } = useWorkspace(), origin = useRef<HTMLButtonElement>(null);
-  return <><section className={styles.entry} aria-label="Family honors"><div><h2>Family honors</h2><p>Choose the people who will take part in the ceremony.</p></div><button ref={origin} type="button" className="button-secondary" disabled={busy || !!context} onClick={() => setOpen(true)}>Family honors</button></section>
+  return <><section className={styles.entry} aria-label="Family honors"><div><h2 id="family-honors" tabIndex={-1}>Family honors</h2><p>Choose the people who will take part in the ceremony.</p></div><button ref={origin} type="button" className="button-secondary" disabled={busy || !!context} onClick={() => setOpen(true)}>Family honors</button></section>
     {open && <HonorsSheet studentId={studentId} name={name} mode={mode} onClose={() => { setOpen(false); origin.current?.focus(); }} />}</>;
 }
 export function HonorsSheet({ studentId, name, mode, onClose }: { studentId: string; name: string; mode: "parent" | "admin" | "student"; onClose(): void }) {

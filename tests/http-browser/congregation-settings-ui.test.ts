@@ -44,9 +44,10 @@ beforeAll(async () => {
 }, 120_000);
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
-it("an admin opens Congregation settings from the admin nav, fixes a refused link, saves, and is told when someone else saved first", async () => {
+it("an admin opens Congregation settings from More, fixes a refused link, saves, and is told when someone else saved first", async () => {
   const tab = await page("admin"); await navigate(tab, "/workspace/admin/students");
-  await safe(() => tab.getByRole("navigation", { name: "Admin", exact: true }).getByRole("link", { name: "Settings", exact: true }).click());
+  await safe(() => tab.getByRole("navigation", { name: "Workspace", exact: true }).getByRole("link", { name: "More", exact: true }).click());
+  await safe(() => main(tab).getByRole("link", { name: "Settings", exact: true }).click());
   await ui(tab.getByRole("heading", { name: "Congregation settings", level: 1, exact: true })).toBeVisible();
   await ui(tab.getByLabel("Name on study guides", { exact: true })).toHaveValue("");
   await ui(main(tab).getByText("Left blank, guides use “the rabbi”.", { exact: false })).toBeVisible();

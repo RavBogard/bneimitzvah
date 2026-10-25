@@ -51,11 +51,12 @@ async function page(role: "admin" | "tutor" | "student", mobile = false) {
   }
   return tab;
 }
-async function workspace(tab: Page, role: "admin" | "tutor" | "student" | "parent") {
+async function workspace(tab: Page, role: "admin" | "tutor" | "student" | "parent", view: "service" | "reading" = "service") {
   await safe(() => tab.goto(role === "admin" ? `/workspace/admin/students/${fixture.student.id}/reading` : `/workspace/${role}`, { waitUntil: "domcontentloaded" }));
   if (role === "tutor" || role === "parent") await safe(() => tab.getByLabel(role === "parent" ? "Child" : "Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
-  // Staff reach service parts through the tab beside the reading.
-  if (role === "tutor" || role === "admin") await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
+  // Everyone reaches service parts through the tab beside the reading (1.9 N10); a test about the reading itself stays on it.
+  if (view === "reading") return;
+  await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
   await ui(panel(tab).getByRole("heading", { name: "Service parts", exact: true })).toBeVisible();
   await ui(panel(tab).getByText("Checking assigned service parts…", { exact: true })).toBeHidden();
 }
@@ -123,9 +124,9 @@ it("keeps the saved plan unchanged through staff selection and authoritative rev
 });
 
 it("preserves first-Hebrew phone geometry and offers read-only student/parent selection, exact credits and keyboard notes", async () => {
-  const learner = await page("student", true); await workspace(learner, "student"); await firstHebrew(learner);
+  const learner = await page("student", true); await workspace(learner, "student", "reading"); await firstHebrew(learner);
   await ui(learner.getByRole("button", { name: "Torah text", exact: true })).toBeVisible(); await ui(learner.getByRole("button", { name: "Haftarah text", exact: true })).toBeVisible();
-  await safe(() => learner.getByRole("link", { name: "Service parts", exact: true }).click());
+  await safe(() => learner.getByRole("tab", { name: "Service parts", exact: true }).click());
   expect(await panel(learner).getByRole("heading", { name: "Set service parts", exact: true }).count()).toBe(0);
   await click(learner, "Synthetic part 0");
   const unit = panel(learner).locator(".service-unit"); await ui(unit).toContainText("Synthetic translation 0");
@@ -143,8 +144,9 @@ it("preserves first-Hebrew phone geometry and offers read-only student/parent se
 it("keeps service reading and its local retry available when scripture text returns503", async () => {
   scriptureUnavailable = true;
   try {
-    const tab = await page("student"); await workspace(tab, "student");
+    const tab = await page("student"); await workspace(tab, "student", "reading");
     await ui(tab.getByRole("heading", { name: "Text unavailable", exact: true })).toBeVisible();
+    await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
     let reads = 0; await tab.route("**/service-plan/unit", async route => { if (++reads === 1) await route.fulfill({ status: 503, contentType: "application/json", body: "{}" }); else await route.continue(); });
     await click(tab, "Synthetic part 0"); await ui(panel(tab).getByText("Service parts are unavailable. Your scripture reading is separate.", { exact: true })).toBeVisible();
     await click(tab, "Reload service parts");
@@ -404,12 +406,12 @@ it("keeps old authorized parts readable with needs-review when the slot becomes 
 it("reads service-only student plans without scripture assignments and preserves single-kind phone access before removal", async () => {
   const [haftarah] = await fixture.ownerDb.select().from(s.assignment).where(eq(s.assignment.kind, "haftarah"));
   await fixture.ownerDb.delete(s.assignmentVerse).where(eq(s.assignmentVerse.assignmentId, haftarah.id)); await fixture.ownerDb.delete(s.assignment).where(eq(s.assignment.id, haftarah.id));
-  const tab = await page("student", true); await workspace(tab, "student"); await firstHebrew(tab);
-  expect(await tab.getByRole("link", { name: "Service parts", exact: true }).count()).toBe(1);
+  const tab = await page("student", true); await workspace(tab, "student", "reading"); await firstHebrew(tab);
+  expect(await tab.getByRole("tab", { name: "Service parts", exact: true }).count()).toBe(1);
   await fixture.ownerDb.delete(s.assignmentVerse).where(eq(s.assignmentVerse.studentId, fixture.student.id)); await fixture.ownerDb.delete(s.assignment).where(eq(s.assignment.studentId, fixture.student.id));
   await click(tab, "Refresh reading");
   await ui(tab.getByRole("heading", { name: "Explore the full Torah portion", exact: true })).toBeVisible();
-  await safe(() => tab.getByRole("link", { name: "Service parts", exact: true }).click()); await click(tab, "Synthetic part 0");
+  await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click()); await click(tab, "Synthetic part 0");
   await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
   await captures(tab, "service-only");
 });
@@ -422,4 +424,19 @@ it("retains superseded source readability but removes withdrawn material on auth
   await click(tab, "Refresh reading");
   await ui(panel(tab).getByText("The assigned service material has been withdrawn. Ask your tutor or rabbi about a replacement.", { exact: true })).toBeVisible();
   expect(await panel(tab).locator(".service-unit, .service-part-choices").count()).toBe(0);
+});
+
+it("remembers the view in ?tab= for a student and keeps it on a reload", async () => {
+  const tab = await page("student"); await workspace(tab, "student", "reading");
+  const nav = tab.getByRole("navigation", { name: "Workspace", exact: true });
+  await ui(nav.getByRole("link", { name: "Today", exact: true })).toHaveAttribute("aria-current", "page");
+  await safe(() => tab.getByRole("tab", { name: "Lessons", exact: true }).click());
+  await ui(tab.getByRole("tab", { name: "Lessons", exact: true })).toHaveAttribute("aria-selected", "true");
+  expect(new URL(tab.url()).searchParams.get("tab")).toBe("lessons");
+  await safe(() => tab.reload({ waitUntil: "domcontentloaded" }));
+  await ui(tab.getByRole("tab", { name: "Lessons", exact: true })).toHaveAttribute("aria-selected", "true");
+  await ui(nav.getByRole("link", { name: "Reading", exact: true })).toHaveAttribute("aria-current", "page");
+  // The reading's own tab writes the address too, and Today is the home without one.
+  await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click());
+  expect(new URL(tab.url()).searchParams.get("tab")).toBe("reading");
 });

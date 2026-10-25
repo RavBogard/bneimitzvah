@@ -469,7 +469,6 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .study-kind-choice .button-secondary { min-height: 44px; border: 0; border-radius: 999px; background: transparent; padding-inline: 1.25rem; }
 .study-kind-choice .button-secondary:hover { background: var(--color-hover); }
 .study-kind-choice [aria-pressed="true"], .study-kind-choice [aria-pressed="true"]:hover { background: var(--lake); color: #fff; border-color: transparent; }
-.study-kind-choice .service-entry { text-decoration: none; }
 /* The text choice (Torah / Haftarah) and the lens (Lein / Study) share one row above the passage; on a phone they wrap. */
 .reading-lens-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-block: 1rem; }
 .reading-lens-row > .study-kind-choice { margin: 0; }
@@ -800,10 +799,6 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 
 /* Admin (Phase 3): the same inks, restrained. One nav across the admin areas,
    a quiet list of students, and details in a sheet over the list. */
-.admin-nav { display: flex; gap: 1.5rem; margin: -0.5rem 0 1.75rem; border-bottom: 1px solid var(--color-rule); overflow-x: auto; scrollbar-width: none; }
-.admin-nav a { display: inline-flex; align-items: center; min-height: 48px; margin-bottom: -1px; border-bottom: 3px solid transparent; color: var(--color-muted); font-size: 1.0625rem; font-weight: 650; text-decoration: none; white-space: nowrap; }
-.admin-nav a:hover { color: var(--color-ink); }
-.admin-nav a[aria-current] { color: var(--color-ink); border-bottom-color: var(--lake); }
 .admin-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
 .admin-head h1 { margin: 0; }
 .admin-head-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }

@@ -95,6 +95,17 @@ Main at writing: `a9bbd6e`. Live: v1.8.0 (`7c13cac`), prod ledger 43 (newest mig
       - new wording for the lesson's title, summary, goal and body, which now say "this week's reading". This wording is tier C, drafted by Cowork in its 1.9 handoff T3.
   - /learn/prepare joins the public page-view count.
 
+### N10 (tab bar and role shells), decided while building
+
+- **N10.1 Interim destinations.** Until N11 (Today) and N14 (This week) build their own screens, those tabs open the role's current home, and tabs that share a home tell themselves apart by `?tab=`. Student: Today is `/workspace/student`, Reading is the same page at `?tab=reading`. Parent: Today `/workspace/parent`; Practice returns to the open child (`/workspace/practice/{id}`) or opens `?tab=reading`, where "Practice with {child}" lives; Honors is `?tab=honors`, which brings the family honors heading into focus once a child is chosen. Tutor: This week `/workspace/tutor`; Students `/workspace/tutor?tab=reading`; Lessons stays on the open student at `?tab=lessons` (or opens the list, whose cards carry the view). Admin: This week `/workspace/admin/students`; Students the same list at `?tab=students`. N11 and N14 replace the home each "This week" and "Today" tab opens, and the `?tab=` alias on the list pages can then go.
+- **N10.2 One `?tab=`.** On a student's page `?tab=reading|service|lessons` is the view, for all four roles (student, parent, tutor, admin; child practice too). It is written in place with the History API (no request, no history entry), a reload keeps it, and none means Reading. The staff tablist and its panels are reused as they were, now for everyone; the learner's "Service parts" jump link (about 20,000 px) is gone.
+- **N10.3 People and More.** Admin People opens a three-link strip (Invitations, Tutors, Accounts) that sits on those three pages; More is a new page, `/workspace/more`, listing the destinations that have no tab: Settings, Email settings, Claude connections, Recording review and, moved here from the Students header, "Update staff Sheet". A tutor's More lists Email settings and Claude connections, and Account requests when the tutor approves them. The seven-area `admin-nav` is deleted (D21 closed: nothing is off-screen).
+- **N10.4 Account.** `/account` is outside `/workspace`, so its signed-in view carries the same tab bar; signed out it has none. Learn is a way out to the public `/learn`, which has no tab bar (decision 1), so it is never the current tab.
+- **N10.5 Shared pages and role.** A page that is one role's (`/workspace/student`, `parent` or `practice`, `tutor`, `admin`) shows that role's tabs. Account, Email, Claude, More and `/workspace` keep the role last used in the tab (role name only, in session storage), else the highest role.
+- **N10.6 The section chip row is a slot.** N3's chip component does not exist yet, so the Reading bar has a marked slot beside the Reading, Service parts, Lessons tabs in `reading.tsx`; N3 places its chip row there (the sticky bar is N3's).
+- **N10.7 Skip link and landmark.** The bar is `<nav aria-label="Workspace">` with a second skip link ahead of the page, "Skip to workspace tabs", that lands on it. Both strings are wording gaps (see the report); they are read by assistive technology only.
+- **N10.8 Keyboard.** The bar hides only while a text field has focus and the visible viewport has lost more than the larger of 120 px and 15 percent of the window; in the 1000 px rail it never hides.
+
 ## Versions and tags
 
 | Tag | When | Contents |

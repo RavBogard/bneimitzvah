@@ -1,7 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
-import { AdminNav } from "../admin-nav";
 import { connectionsApi, type Connection, type ConnectionAccess, type ConnectionsView } from "./api";
 
 const accessNames: Record<ConnectionAccess, string> = { read: "Read", study: "Study guides", roster: "Roster" };
@@ -72,7 +71,7 @@ function ConnectionsPage({ admin }: { admin: boolean }) {
     </li>;
   };
 
-  return <section className="role-workspace admin-workspace connections-workspace">{admin && <AdminNav />}
+  return <section className="role-workspace admin-workspace connections-workspace">
     <div className="admin-head"><h1>Claude connections</h1></div>
     <p className="people-student">Claude reaches the portal as the person who connected it, with that person’s access. Ending a connection stops it at once; to use Claude again, connect it again from Claude.</p>
     {message && <p className={message.tone === "alert" ? "request-error roster-message" : "workspace-notice roster-message"} role={message.tone}>{message.text}</p>}

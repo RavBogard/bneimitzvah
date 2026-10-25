@@ -24,6 +24,9 @@ import { ReadingPrefsScope } from "./reading-prefs";
 import { LENS_STORAGE, StudyLensScope } from "./study-lens";
 import { DiscussionList, VersePanelColumn, VersePanelScope } from "./study/verse-panel";
 import { ProgressStore } from "./progress/store";
+import { useSearchParams } from "next/navigation";
+import { parseReadingTab } from "../shell/tabs";
+import { writeTabParam } from "../shell/tab-param";
 import { GuideStore } from "./study/guide-store";
 import { GuideCard, GuideVerseNotes } from "./study/guide-card";
 import { GuideWalk } from "./study/guide-walk";
@@ -239,10 +242,13 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
     origin?.focus(); sheetOrigin.current = null;
   }, [sheetOpen]);
   const openSheet = (event: { currentTarget: HTMLElement }) => { sheetOrigin.current = event.currentTarget; setSheetOpen(true); };
-  // Staff switch between the reading, service parts and lessons as tabs. All stay mounted,
-  // so reloads, access checks and unsent work behave exactly as on one long page.
-  const tabbed = staff, [tab, setTab] = useState<PageTab>("reading");
-  useLayoutEffect(() => { setTab("reading"); }, [studentId]);
+  // Every role switches between the reading, service parts and lessons as tabs (1.9 N10). All stay mounted,
+  // so reloads, access checks and unsent work behave exactly as on one long page. The view is the address's ?tab=,
+  // so a reload keeps it; with none, the reading shows. Choosing the view already showing writes nothing.
+  const tabbed = true, search = useSearchParams(), tab: PageTab = parseReadingTab(search.get("tab")) ?? "reading";
+  const tabNow = useRef(tab); tabNow.current = tab;
+  // A chosen tab writes the address even when that view is the default; the program's own moves write only when they change what shows.
+  const setTab = useCallback((value: PageTab, chosen = false) => { const shown = chosen ? parseReadingTab(new URLSearchParams(window.location.search).get("tab")) : tabNow.current; if (value !== shown) { tabNow.current = value; writeTabParam(value); } }, []);
   useLayoutEffect(() => { if (tabbed && tab !== "reading") audio.stopAll(); }, [audio, tabbed, tab]);
   // The tabs exist only once the student has loaded; until then (or after a failed load) both panels show.
   const tabsShown = tabbed && Boolean(student);
@@ -297,13 +303,13 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   const printSheetHref = printSheetRef && selectedReading ? printAddress({ mode: "ref", ref: printSheetRef, kind: selectedReading.kind }) : null;
   // Curated discussions are public, asked for by the passage's own canonical ref and nothing about the reader (the same as the print link above).
   const discussionPassage = student && authorizedReading && !concealed && !exploring && selectedReading && printSheetRef ? { ref: printSheetRef, kind: selectedReading.kind } : null;
-  const printSheetAction = printSheetHref && <WorkspaceLink className="button-hero-secondary reading-print-sheet" data-learner={learner ? "" : undefined} href={printSheetHref}>Print</WorkspaceLink>;
+  const printSheetAction = printSheetHref && <WorkspaceLink className="button-hero-secondary reading-print-sheet" data-learner={learner ? "" : undefined} href={printSheetHref}>Print the whole reading</WorkspaceLink>;
   const practiceAction = mode !== "parent" && readings.length > 0 && <button type="button" className="button-hero-secondary reading-practice-action" disabled={!practiceReady || concealed || current?.loading} onClick={openPractice}>{exploring ? "Practice assigned Haftarah up close" : "Practice up close"}</button>;
   const tabKeys = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     const index = pageTabs.findIndex(([value]) => value === tab);
     const next = event.key === "ArrowRight" ? (index + 1) % pageTabs.length : event.key === "ArrowLeft" ? (index + pageTabs.length - 1) % pageTabs.length : event.key === "Home" ? 0 : event.key === "End" ? pageTabs.length - 1 : -1;
     if (next < 0) return;
-    event.preventDefault(); setTab(pageTabs[next][0]); document.getElementById(tabId(pageTabs[next][0]))?.focus();
+    event.preventDefault(); setTab(pageTabs[next][0], true); document.getElementById(tabId(pageTabs[next][0]))?.focus();
   };
   const countdown = student ? ceremonyCountdown(student.ceremonyDate) : null, marked = useProgressSummary(progress, selectedReading?.kind);
   // Learners (students, child practice, parents) always open in Lein; staff open in the lens they last used.
@@ -326,7 +332,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
         <RehearsalDates student={student} />
         {mode === "parent" && <p className="hero-meta">Read-only overview. Choose Practice with <bdi dir="auto">{student.firstName}</bdi> to mark verses together.</p>}
         {exploring || readings.length === 0 ? <div className="reading-empty"><h3 className="hero-reference hero-reference-empty">{exploring ? "Explore the full Torah portion" : "No reading has been assigned yet"}</h3><p className="hero-meta">{exploring ? "Read the portion while you and your tutor choose your verses." : staff ? "Choose the verses this student will read." : "Your tutor or rabbi will add your verses here."}</p>
-          <div className="hero-actions">{mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : `Practice with ${student.firstName}`}</button>}{staff && <button type="button" className="button-hero-secondary" onClick={openSheet}>Assign verses</button>}{exploring && <button type="button" className="button-start" disabled={!proposedReady || concealed || current?.loading} onClick={startReading}>Start reading</button>}{practiceAction}{printAction}{printSheetAction}{mode === "student" && <LearnReviewAction />}{!tabbed && <a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a>}</div></div> : <>
+          <div className="hero-actions">{mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : `Practice with ${student.firstName}`}</button>}{staff && <button type="button" className="button-hero-secondary" onClick={openSheet}>Assign verses</button>}{exploring && <button type="button" className="button-start" disabled={!proposedReady || concealed || current?.loading} onClick={startReading}>Start reading</button>}{practiceAction}{printAction}{printSheetAction}{mode === "student" && <LearnReviewAction />}</div></div> : <>
           {readings.length > 1 ? <AssignedReadingSummaries readings={readings} selectedKind={selectedReading.kind} marked={marked} /> : <><h3 className="hero-reference">{displayRange(selectedReading.ranges)}</h3>
           <p className="hero-meta">{selectedReading.kind === "torah" ? "Torah" : "Haftarah"} · {selectedReading.verses.length} {selectedReading.verses.length === 1 ? "verse" : "verses"}{marked && <span className="hero-marked"> · {marked}</span>}</p></>}
           <div className="hero-actions">
@@ -337,17 +343,17 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
             {mode === "student" && <LearnReviewAction />}
             {mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : `Practice with ${student.firstName}`}</button>}
             {staff && <><button type="button" className="button-hero-secondary" onClick={openSheet}>Change verses</button><WorkspaceLink className="button-hero-secondary" href="/trope-chart">Trope chart</WorkspaceLink></>}
-            {readings.length < 2 && !tabbed && <a className="button-hero-secondary service-entry" href={`#${serviceId}`}>Service parts</a>}
           </div></>}
         {!staff && <PracticeDays calendar={calendar} />}
       </header>
       {mode === "parent" && <ParentStudySummary store={parentSummary} baseline={authorizedReading ?? null} scope={parentScope} concealed={concealed} notice={congregation.consentNotice} />}
       {!learner && readings.length > 0 && <AssignmentContext row={selectedReading} current />}
-      {tabbed && <div role="tablist" aria-label="Student page" className="page-tabs" onKeyDown={tabKeys}>{pageTabs.map(([value, label]) => <button key={value} type="button" role="tab" id={tabId(value)} aria-controls={panelId(value)} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1} className="page-tab" onClick={() => setTab(value)}>{label}</button>)}</div>}</> : <>
+      {/* 1.9 N10 slot: N3's section chip row (aliyot, or the tutor's sections) joins this row in a sticky bar once that component exists. */}
+      {tabbed && <div role="tablist" aria-label="Student page" className="page-tabs" onKeyDown={tabKeys}>{pageTabs.map(([value, label]) => <button key={value} type="button" role="tab" id={tabId(value)} aria-controls={panelId(value)} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1} className="page-tab" onClick={() => setTab(value, true)}>{label}</button>)}</div>}</> : <>
       <h2 id="reading-heading"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
       <div className="reading-student-context"><p className="reading-date">Ceremony date: <time dateTime={student.ceremonyDate}>{student.ceremonyDate}</time></p>
       <button className="button-text" aria-label="Refresh reading" onClick={() => setRetry(value => value + 1)}>Refresh</button>
-      {readings.length < 2 && <a className="button-text service-entry" href={`#${serviceId}`}>Service parts</a>}</div>
+</div>
       {current?.loading && <p role="status">Checking the current assignment…</p>}
       {readings.length === 0 ? <div className="reading-empty"><h3>No reading has been assigned yet</h3><p>Your tutor or rabbi will confirm the verses here.</p></div>
         : <AssignmentContext row={selectedReading} current />}</>}</>}
@@ -357,7 +363,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
         {exploring && readings.length > 0 && <header><h3>Assigned Haftarah</h3><p className="reading-reference">{displayRange(readings[0].ranges)}</p>
           {listeningEnabled && <button type="button" className="button-secondary" disabled={!hearReady || concealed || current?.loading} onClick={() => lift.current?.(0)}>Hear Haftarah</button>}</header>}
         <AssignedStudyText audio={audio} stopAudio={audio.stopAll} baseline={current?.value ?? null} register={registerStudy} reloadMetadata={load} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} onKindChange={setSelectedKind}
-        guardDeparture={guardReading} serviceHref={tabbed ? undefined : `#${serviceId}`} renderGuide={(kind, verseRef) => <GuideVerseNotes store={guide} kind={kind} verseRef={verseRef} />} renderWork={(kind, verseRef) => <VerseTools coordinator={work} kind={kind} verseRef={verseRef} />} renderActiveWork={() => work.active && <VerseTools coordinator={work} kind={work.active.kind} verseRef={work.active.ref} />}
+        guardDeparture={guardReading} renderGuide={(kind, verseRef) => <GuideVerseNotes store={guide} kind={kind} verseRef={verseRef} />} renderWork={(kind, verseRef) => <VerseTools coordinator={work} kind={kind} verseRef={verseRef} />} renderActiveWork={() => work.active && <VerseTools coordinator={work} kind={work.active.kind} verseRef={work.active.ref} />}
         onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} onPrint={learner && !printDisabled ? openPrint : undefined} printSheetHref={learner ? printSheetHref ?? undefined : undefined} learner={learner} songSession={song} liftHandle={lift} practiceHandle={practice} textStartHandle={textStart} verseLookupHandle={verseLookup} onPracticeReady={setPracticeReady} onHearReady={setHearReady} active={!tabbed || tab === "reading"}
         onShown={(kind, offset, length) => progress.ensure(kind, offset, length)} renderMark={(kind, verseRef) => <VerseMark store={progress} kind={kind} verseRef={verseRef} />} renderLiftControls={(kind, verseRef) => <LiftProgress store={progress} kind={kind} verseRef={verseRef} />} onVisit={(kind, verseRef) => calendar.visitVerse(kind, verseRef)} /><VersePanelColumn /></div></VersePanelScope>
       {student && authorizedReading && !concealed && !exploring && selectedReading && <div className={`guide-place guide-place-narrow`}><GuideCard store={guide} kind={selectedReading.kind} firstName={student.firstName} learner={learner} onStudy={() => setWalking(true)} /></div>}

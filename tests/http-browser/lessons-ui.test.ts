@@ -165,11 +165,14 @@ it("lets a tutor add, edit and delete lessons, keeps an unsaved note, shows a ch
 
   // The family reads the same list, with nothing to change.
   const parent = await page("tutor", true); await workspace(parent, "parent");
+  // Everyone has the Lessons tab beside the reading (1.9 N10).
+  await safe(() => parent.getByRole("tab", { name: "Lessons", exact: true }).click());
   await ui(lessons(parent).getByRole("heading", { name: "Lesson notes", exact: true })).toBeVisible();
   await ui(entry(parent, "Synthetic lesson: all three verses.")).toBeVisible();
   expect(await lessons(parent).getByRole("button").count()).toBe(0);
   const parentRows = await stored(parent, "parent"); expect(parentRows.map(row => [row.canEdit, row.canDelete])).toEqual([[false, false]]);
   const student = await page("student", true); await workspace(student, "student");
+  await safe(() => student.getByRole("tab", { name: "Lessons", exact: true }).click());
   await ui(entry(student, "Synthetic lesson: all three verses.")).toBeVisible();
   expect(await lessons(student).getByRole("button").count()).toBe(0);
   await safe(() => lessons(student).scrollIntoViewIfNeeded());

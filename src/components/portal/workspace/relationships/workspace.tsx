@@ -3,7 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNo
 import { RequireRole, statusOf, useWorkspace, useWorkspaceModal, WorkspaceLink } from "../provider";
 import { ceremonyCountdown } from "../reading";
 import { icons } from "../study/lift";
-import { AdminNav } from "../admin-nav";
+import { PeopleNav } from "../../shell/people-nav";
 import { identityLabels, makeReview, relationshipApi, type Action, type Relationships, type Review, type Tutor } from "./api";
 import { AccessReview } from "./review";
 
@@ -98,7 +98,7 @@ function Access({ studentId }: { studentId?: string }) {
     <div className="people-actions">{actions}</div>
   </li>;
   const calm = message === "Saved. Access is up to date." || message === "Access reloaded.";
-  return <section className="role-workspace access-workspace admin-workspace"><AdminNav />{studentId && <div className="admin-crumbs"><WorkspaceLink href={`/workspace/admin/students/${studentId}/reading`}>Student page</WorkspaceLink></div>}
+  return <section className="role-workspace access-workspace admin-workspace">{!studentId && <PeopleNav />}{studentId && <div className="admin-crumbs"><WorkspaceLink href={`/workspace/admin/students/${studentId}/reading`}>Student page</WorkspaceLink></div>}
     <div className="admin-head"><div><h1 ref={pageHeading} tabIndex={-1}>{studentId ? "People and access" : "Tutors"}</h1>
       {data ? <p className="people-student"><bdi dir="auto">{data.student.firstName} {data.student.lastName}</bdi> · <time dateTime={data.student.ceremonyDate}>{ceremonyCountdown(data.student.ceremonyDate).label}</time>{data.student.disabled && <span className="roster-chip">Disabled</span>}</p>
         : !studentId && <p className="people-student">Tutors join by invitation. Assign them to students from each student’s People page.</p>}</div>
