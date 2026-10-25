@@ -96,6 +96,8 @@
 .number { padding-inline: 0; text-align: center; color: var(--muted); font-size: 0.78em; font-weight: 650; line-height: var(--en-lh); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .sheet[data-show="hebrew"] .number { text-align: right; padding-inline-start: 0.5em; }
 .missing { color: var(--muted); font-style: italic; }
+.chain { display: inline-block; max-inline-size: 100%; }
+.inlineHebrew { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", "Times New Roman", serif; font-size: 1.1em; font-synthesis: none; font-feature-settings: "mark", "mkmk"; unicode-bidi: isolate; }
 .alternative .written { color: var(--muted); }
 .read { white-space: nowrap; }
 .qere { font-family: "Bricolage Grotesque", system-ui, sans-serif; font-size: 0.42em; font-weight: 600; color: var(--muted); vertical-align: 0.35em; }

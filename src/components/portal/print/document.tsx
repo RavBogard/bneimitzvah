@@ -7,6 +7,7 @@ import { SHEET_TYPE, type SheetFormat } from "../../../lib/print/sheet-format";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { DISCUSSION_LABELS } from "../../../lib/discussions/labels";
 import { sheetHebrew } from "./hebrew";
+import { hebrewRuns, maqafChains } from "../../../lib/hebrew/mixed-runs";
 import styles from "./print.module.css";
 
 /**
@@ -35,12 +36,15 @@ function breaks(verses: readonly StudyVerse[], markers: ReadonlyMap<string, stri
   });
 }
 
+/** A maqaf joins words into one chanted unit: a chain is set in a no-break span so a printed line never ends on a maqaf. */
+const chained = (text: string): ReactNode => maqafChains(text).map((run, index) => run.chain ? <span key={index} className={styles.chain}>{run.text}</span> : run.text);
+
 function Hebrew({ verse, script }: { verse: StudyVerse; script: SheetFormat["script"] }) {
   const segments = verse.hebrew.segments, last = segments.length - 1;
   return <>{segments.map((segment, index) => {
-    if (segment.kind === "text") return <Fragment key={index}>{sheetHebrew(segment.text, script)}</Fragment>;
+    if (segment.kind === "text") return <Fragment key={index}>{chained(sheetHebrew(segment.text, script))}</Fragment>;
     if (segment.kind === "alternative") return <span key={index} className={styles.alternative}>
-      <span className={styles.written}>{sheetHebrew(segment.written, script)}</span> <span className={styles.read}>[<span className={styles.qere} lang="en" dir="ltr">read / qere:</span> {sheetHebrew(segment.read, script)}]</span>
+      <span className={styles.written}>{chained(sheetHebrew(segment.written, script))}</span> <span className={styles.read}>[<span className={styles.qere} lang="en" dir="ltr">read / qere:</span> {chained(sheetHebrew(segment.read, script))}]</span>
     </span>;
     if (segment.kind === "gap") return index === last && verse.hebrew.paragraphAfter ? null : <span key={index} className={styles.paragraph}> {PARAGRAPH[segment.break]} </span>;
     return <span key={index} role="img" aria-label="Inverted nun, Masoretic sign">׆</span>;
@@ -56,9 +60,12 @@ export function sheetCredits(text: SheetText, format: SheetFormat): string[] {
   return lines;
 }
 
-/** Text only: bold and italic runs become <strong> and <em>; nothing is ever markup. */
-function Runs({ runs }: { runs: readonly CommentaryRun[] }) {
-  return <>{runs.map((run, index) => run.bold ? <strong key={index}>{run.text}</strong> : run.italic ? <em key={index}>{run.text}</em> : <Fragment key={index}>{run.text}</Fragment>)}</>;
+/** Hebrew quoted inside English: its own language and the Hebrew face (the English face has no Hebrew glyphs, so a quoted word lost letters on paper). */
+const inEnglish = (text: string): ReactNode => hebrewRuns(text).map((run, index) => run.hebrew ? <span key={index} lang="he" dir="rtl" className={styles.inlineHebrew}>{chained(run.text)}</span> : run.text);
+/** Text only: bold and italic runs become <strong> and <em>; nothing is ever markup. `mixed` is for English text that quotes Hebrew. */
+function Runs({ runs, mixed = false }: { runs: readonly CommentaryRun[]; mixed?: boolean }) {
+  const text = (value: string) => mixed ? inEnglish(value) : chained(value);
+  return <>{runs.map((run, index) => run.bold ? <strong key={index}>{text(run.text)}</strong> : run.italic ? <em key={index}>{text(run.text)}</em> : <Fragment key={index}>{text(run.text)}</Fragment>)}</>;
 }
 
 /** The commentary appendix: it starts on a new printed page, grouped by verse, each work's comments followed by its credit. */
@@ -74,7 +81,7 @@ function Appendix({ groups, heading, title }: { groups: readonly AppendixGroup[]
         <h3 className={styles.workName}><bdi>{work.label}</bdi></h3>
         {work.comments.map((comment, index) => <div key={index} className={styles.comment}>
           {comment.hebrew && <p className={styles.commentHebrew} lang="he" dir="rtl"><Runs runs={comment.hebrew} /></p>}
-          {comment.english && <p className={styles.commentEnglish} lang="en" dir="ltr"><Runs runs={comment.english} /></p>}
+          {comment.english && <p className={styles.commentEnglish} lang="en" dir="ltr"><Runs runs={comment.english} mixed /></p>}
         </div>)}
         <div className={styles.commentCredit}>{work.credits.map(line => <p key={line}>{line}</p>)}</div>
       </div>)}

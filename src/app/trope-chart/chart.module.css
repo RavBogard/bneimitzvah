@@ -52,3 +52,5 @@
   .sources p + p { margin-top: 3pt; }
   .sources a { color: inherit; text-decoration: none; }
 }
+/* Dark mode: a sample sits on its family colour, a light pastel, so its sign is the fixed dark ink the phrase fills use everywhere (the page ink is near white on dark and vanished). */
+.family .sample { color: var(--on-ink); }

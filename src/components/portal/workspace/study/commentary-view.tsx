@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useCallback, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { matchDibbur, type DibburMatch } from "../../../../lib/hebrew/dibbur";
+import { hebrewRuns } from "../../../../lib/hebrew/mixed-runs";
 import { projectStudyVerse } from "../../../../lib/hebrew/study-tokens";
 import { COMMENTARY_WORKS, commentaryChapterOfVerse, commentarySefariaUrl, type CommentaryComment, type CommentaryCorpus, type CommentaryEdition, type CommentaryRun } from "../../../../lib/readings/commentary";
 import { createCommentaryChapterStore, type CommentaryVerseState } from "./commentary-api";
@@ -14,9 +15,12 @@ import { PLAN as OFFLINE } from "../../../../lib/offline/copy";
 import { StarButton, useOwnLayer } from "./own-layer";
 import styles from "./commentary.module.css";
 
-/** Text only: bold and italic runs become <strong> and <em>; nothing is ever markup. */
-export function Runs({ runs }: { runs: readonly CommentaryRun[] }) {
-  return <>{runs.map((run, index) => run.bold ? <strong key={index}>{run.text}</strong> : run.italic ? <em key={index}>{run.text}</em> : <Fragment key={index}>{run.text}</Fragment>)}</>;
+/** Hebrew quoted inside English text: its own language and face, so a screen reader says it in Hebrew and the English face never has to draw it. */
+const inEnglish = (text: string): ReactNode => hebrewRuns(text).map((run, index) => run.hebrew ? <span key={index} lang="he" dir="rtl" className={styles.hebrewInEnglish}>{run.text}</span> : run.text);
+/** Text only: bold and italic runs become <strong> and <em>; nothing is ever markup. `mixed` is for English text that quotes Hebrew. */
+export function Runs({ runs, mixed = false }: { runs: readonly CommentaryRun[]; mixed?: boolean }) {
+  const text = (value: string) => mixed ? inEnglish(value) : value;
+  return <>{runs.map((run, index) => run.bold ? <strong key={index}>{text(run.text)}</strong> : run.italic ? <em key={index}>{text(run.text)}</em> : <Fragment key={index}>{text(run.text)}</Fragment>)}</>;
 }
 /** The verse's words as the reader sees them, for the comment-to-word link; empty when the verse can't be split into words. */
 export function verseWords(verse: StudyVerse): readonly string[] {
@@ -94,7 +98,7 @@ export function CommentaryEntry({ comment, words, verseRef, onLink, pinned, lang
     onClick={match ? event => { if ((event.target as Element).closest("a, button") || window.getSelection()?.toString()) return; onLink?.("pin", pinned ? null : match); } : undefined}>
     {leadsInHebrew
       ? <p ref={body} id={`${id}-text`} lang={language} dir="rtl" className={`${styles.text} ${styles.hebrewText} ${expanded ? "" : styles.clamped}`}>{match ? <>{lead}{parts.hebrew && " "}{parts.hebrew && <Runs runs={parts.hebrew} />}</> : hebrewText}</p>
-      : <p ref={body} id={`${id}-text`} lang="en" dir="ltr" className={`${styles.text} ${expanded ? "" : styles.clamped}`}>{lead}{lead && " "}{lemma}{lemma && english && " "}{english && <Runs runs={english} />}</p>}
+      : <p ref={body} id={`${id}-text`} lang="en" dir="ltr" className={`${styles.text} ${expanded ? "" : styles.clamped}`}>{lead}{lead && " "}{lemma}{lemma && english && " "}{english && <Runs runs={english} mixed />}</p>}
     {hebrew && hasHebrew && <p id={`${id}-hebrew`} lang={language} dir="rtl" className={`${styles.text} ${styles.hebrewText}`}>{hebrewText}</p>}
     {(overflows || expanded || hasHebrew || star) && <div className={styles.controls}>
       {star}

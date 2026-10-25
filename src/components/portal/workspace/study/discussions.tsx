@@ -37,7 +37,7 @@ export function DiscussionsSource({ passage, active, children }: { passage: Disc
 function Segments({ text, only }: { text: DiscussionText; only?: "hebrew" }) {
   return <>{text.segments.map((segment, index) => <div key={index} className={styles.discussionSegment}>
     {segment.hebrew && <p className={`${styles.compareText} ${styles.aramaic}`} lang="he" dir="rtl"><Runs runs={segment.hebrew} /></p>}
-    {only !== "hebrew" && segment.english && <p className={styles.compareText} lang="en" dir="ltr"><Runs runs={segment.english} /></p>}
+    {only !== "hebrew" && segment.english && <p className={styles.compareText} lang="en" dir="ltr"><Runs runs={segment.english} mixed /></p>}
   </div>)}</>;
 }
 const languageName = (language: "he" | "en") => language === "he" ? "Hebrew" : "English";

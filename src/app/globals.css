@@ -222,6 +222,7 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .study-credits { border-top: 1px solid var(--color-rule); padding-top: 1rem; }
 .study-credits section { margin-block: 1.5rem; }
 .study-credits li { overflow-wrap: anywhere; margin-block: 0.5rem; }
+.study-credits a { display: inline-block; min-height: 24px; }
 
 /* Student work follows the verse on small screens and sits beside it on wide screens. */
 .reading-workspace.reading-with-work { grid-template-columns: minmax(0, 1fr); }
@@ -539,7 +540,11 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .lift-ref { font-size: 1rem; font-weight: 650; opacity: 0.85; letter-spacing: 0; }
 .lift-hebrew.study-hebrew { font-size: calc(var(--hebrew-size, 2rem) * 1.6 * var(--lift-fit, 1)); line-height: 1.9; text-align: center; margin: 0; max-width: 22ch; }
 .lift-hebrew [data-family] { background: linear-gradient(var(--phrase-color), var(--phrase-color)) right / 100% 100% no-repeat; }
-.lift-phrasing [data-word-index] { opacity: 0.32; transition: opacity 240ms var(--ease-settle); }
+/* Practice up close: the words outside the phrase being practised step back by losing their fill, never by fading the letters
+   (an opacity of 0.32 left them at 1.9 to 2.5:1). They keep a solid light ink, at least 4.5:1 on the lake sheet in both themes;
+   the current phrase takes the family fill and dark ink back (the rule lift.tsx writes for it). */
+.lift-phrasing [data-word-index] { color: #dbe8f6; transition: color 240ms var(--ease-settle); }
+.lift-phrasing [data-family] { background: transparent; }
 @keyframes ink-pull { from { background-size: 0% 100%; } to { background-size: 100% 100%; } }
 .lift-english { max-width: 40ch; text-align: center; font-size: 1.125rem; line-height: 1.5; opacity: 0.92; }
 .lift .study-apparatus { border-top-color: rgb(255 255 255 / 0.3); text-align: center; }
@@ -592,7 +597,9 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .study-verses-with-work > li > .student-aliyah { justify-self: start; width: fit-content; }
 
 /* Finish-review fixes: apparatus stays out of the lifted line, tools sit beside the verses on desktop. */
-.study-alternative { unicode-bidi: isolate; white-space: nowrap; }
+/* A ketiv and its qere may wrap between their words; only the label and a maqaf chain are kept whole (a nowrap box here pushed the qere off the left edge). */
+.study-alternative { unicode-bidi: isolate; }
+.study-qere-label { white-space: nowrap; }
 .lift .study-qere-label, .lift .study-read-alternative { font: 600 0.875rem/1 "Bricolage Grotesque", sans-serif; vertical-align: super; }
 .lift .study-alternative [data-word-index] { font: inherit; }
 .lift .study-read-alternative [data-word-index] { font-family: "CRC Noto Serif Hebrew", serif; font-size: calc(var(--hebrew-size, 2rem) * 0.9); font-weight: 400; vertical-align: baseline; }
@@ -1010,3 +1017,11 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .accounts-add-row { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 .accounts-add select { flex: 1 1 14rem; min-width: 0; min-height: 48px; padding: 0 0.875rem; border: 1px solid var(--color-control-rule); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); font: inherit; }
 .account-request-row .people-actions .field-help { flex-basis: 100%; margin: 0; }
+
+/* Forced colours (Windows contrast themes): the system keeps text and borders, so what is on has to be said in system colours.
+   A pressed, current or selected control takes Highlight; every button keeps an edge, including "Start reading". */
+@media (forced-colors: active) {
+  .button-primary, .button-secondary, .button-start, .button-hero-secondary, .toolbar-item, .lift-icon, .lift-step, .verse-lift, .study-kind-choice .button-secondary { border: 1px solid ButtonText; }
+  :is(button, a)[aria-pressed="true"], :is(button, a, [role="tab"])[aria-selected="true"], a[aria-current="page"], .toolbar-item[data-active="true"] {
+    forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+}

@@ -13,7 +13,11 @@
 .flowEnglishHidden { color: var(--color-muted); font-style: italic; }
 .verseNumber { display: inline; vertical-align: super; font: 600 0.875rem/1.8 "Bricolage Grotesque", sans-serif; color: var(--lake-deep); background: transparent; border: 0; padding: 0.35rem; cursor: pointer; border-radius: var(--radius-control); }
 .verseNumber:hover { background: var(--lake-tint); }
-.verseNumber:focus-visible, .playable [data-word-index]:focus-visible { outline: 3px solid var(--marigold); outline-offset: 3px; }
+/* Keyboard focus on a word or a verse number: the ring colour of the whole app (lake-deep on light, marigold on dark; at least 3:1 on the page and on every phrase fill),
+   with a halo of the surface colour between the ring and the word so the ring never sits on a neighbour's fill. */
+.verseNumber:focus-visible, .playable [data-word-index]:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; box-shadow: 0 0 0 2px var(--color-surface); }
+/* Dark mode: the verse number takes the action blue that reads on the night canvas (lake-deep is 1.9:1 there). */
+@media (prefers-color-scheme: dark) { .verseNumber { color: var(--color-action); } }
 /* Choose verses: the verse number is a 44px toggle; a chosen verse carries a check as well as the filled number, so it never depends on colour. */
 .chooseNumber { display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; min-width: 44px; min-height: 44px; vertical-align: middle; border: 1px solid var(--color-control-rule); border-radius: 999px; background: var(--color-surface); }
 .chooseNumber[aria-pressed="true"] { border-color: var(--lake); background: var(--lake); color: #fff; }
@@ -21,7 +25,10 @@
 .flowVerse[data-verse-picked], .flowVerse[data-verse-marked] { background: var(--lake-tint); box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .verseNumber svg { vertical-align: -0.1em; margin-inline-end: 0.2em; }
 .playable [data-word-index] { cursor: pointer; border-radius: 0.18em; }
-.playable [data-word-index]:hover { text-decoration: underline; text-underline-offset: 0.15em; }
+/* A hover underline only where there is a hover (on touch it would stay after a tap), set below the lowest vowels like .linked. */
+@media (hover: hover) { .playable [data-word-index]:hover { text-decoration: underline; text-underline-offset: 0.5em; text-decoration-skip-ink: none; } }
+/* A maqaf phrase is one chanted unit and moves to the next line whole. It is an inline block no wider than the line, so a phrase wider than the whole line (320px at Huge) still wraps inside itself instead of reaching past the screen. */
+.chain { display: inline-block; max-inline-size: 100%; }
 .closedGap { display: inline-block; inline-size: 4.5em; }
 .flowHebrew { display: inline; }
 /* S16: on wide screens each verse becomes a row, Hebrew on the left and its English beside it. */
