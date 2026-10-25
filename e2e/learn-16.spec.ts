@@ -130,7 +130,7 @@ test("Quick ten opens after three phrases, runs one phrase after another with no
   await shot(page, testInfo, "quick-ten-home");
   await row.click();
   await expect(page).toHaveURL(/\/learn\/practice\/quick-ten-torah$/);
-  await expect(page).toHaveTitle("Quick ten | Learn to lein");
+  await expect(page).toHaveTitle("Quick ten | Learn to lein | CRC Torah");
   await expect(page.getByRole("heading", { name: "Which phrase is this?" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Next", exact: true })).toHaveCount(0);
   await expect(page.locator("main button[class*=choice]")).toHaveCount(3);
