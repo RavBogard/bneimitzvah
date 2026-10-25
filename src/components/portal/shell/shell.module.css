@@ -1,0 +1,56 @@
+/* 1.9 N10: the signed-in shell. A bottom tab bar on a phone, a left rail from 1000px. It spends the N9 tokens and writes no colour,
+   size or radius of its own. Every target is at least 44px; the label is always shown beside its icon. The page keeps the bar's
+   measured height (--shell-bar-h, set from the bar itself so larger text is included) clear at its foot, so the bar covers nothing. */
+
+.bar { position: fixed; inset: auto 0 0 0; z-index: 20; background: var(--color-surface); box-shadow: inset 0 1px 0 var(--color-rule); padding-bottom: env(safe-area-inset-bottom); }
+.bar:focus { outline: none; }
+/* Only while the on-screen keyboard is open, and only in the bottom layout. */
+.bar[data-hidden] { display: none; }
+.list { display: flex; margin: 0; padding: 0; list-style: none; }
+.item { flex: 1 1 0; min-width: 0; margin: 0; }
+.tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.125rem; width: 100%; min-height: 4rem; min-width: 44px; padding: 0.375rem 0.25rem; color: var(--color-muted); font-size: var(--text-caption); font-weight: var(--weight-semibold); line-height: 1.2; text-align: center; text-decoration: none; transition: color 160ms var(--ease-settle); }
+.tab:hover { color: var(--color-ink); background: var(--color-hover); }
+.tab[aria-current="page"] { color: var(--color-action); font-weight: var(--weight-strong); }
+.icon { flex: none; width: 24px; height: 24px; padding: 2px 14px; box-sizing: content-box; border-radius: var(--radius-pill); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tab[aria-current="page"] .icon { background: var(--lake-tint); }
+.label { display: block; max-width: 100%; overflow-wrap: anywhere; }
+
+/* The page clears the bar's height at its foot. */
+:global(.portal-shell):has(> .bar:not([data-hidden])) { padding-bottom: var(--shell-bar-h, 4rem); }
+:global(.portal-shell):has(> .bar:not([data-hidden])) :global(.skip-link) { z-index: 30; }
+
+/* From 1000px the same four tabs are a rail at the left edge, with the page beside it. */
+@media (min-width: 1000px) {
+  .bar { inset: 0 auto 0 0; width: 11rem; padding: 1rem 0.75rem; box-shadow: inset -1px 0 0 var(--color-rule); overflow-y: auto; }
+  .bar[data-hidden] { display: block; }
+  .list { flex-direction: column; gap: 0.25rem; }
+  .tab { flex-direction: row; justify-content: flex-start; gap: 0.75rem; min-height: 48px; padding: 0.5rem 0.75rem; border-radius: var(--radius-pill); font-size: var(--text-callout); text-align: start; }
+  .icon { padding: 0; }
+  .tab[aria-current="page"] { background: var(--lake-tint); }
+  .tab[aria-current="page"] .icon { background: transparent; }
+  :global(.portal-shell):has(> .bar:not([data-hidden])), :global(.portal-shell):has(> .bar) { padding-bottom: 0; padding-inline-start: calc(11rem + 2rem); }
+}
+
+/* A sub-navigation inside one area (People: Invitations, Tutors, Accounts): links in the segmented pill track. */
+.subnav { display: flex; flex-wrap: wrap; width: fit-content; max-width: 100%; gap: 0.25rem; margin: 0 0 1.5rem; padding: 0.25rem; border-radius: var(--radius-pill); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.sublink { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 1.25rem; border-radius: var(--radius-pill); color: var(--color-ink); font-size: var(--text-body); font-weight: var(--weight-semibold); text-decoration: none; }
+.sublink:hover { background: var(--color-hover); color: var(--color-ink); }
+.sublink[aria-current="page"] { background: var(--color-action-fill); color: #fff; }
+
+/* More: the one action that is not a link. */
+.moreAction { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin: 1.5rem 0 0; }
+
+@media (prefers-reduced-motion: reduce) { .tab { transition: none; } }
+@media print { .bar { display: none; } :global(.portal-shell):has(> .bar) { padding-bottom: 0; padding-inline-start: 0; } }
+
+/* Forced colours: the system keeps text and edges, so the current tab is said with an edge and a system colour. */
+@media (forced-colors: active) {
+  .bar { border: 0 solid CanvasText; border-top-width: 1px; }
+  .tab[aria-current="page"] { forced-color-adjust: none; color: Highlight; border-top: 3px solid Highlight; }
+  .tab[aria-current="page"] .icon { background: transparent; }
+  .sublink[aria-current="page"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+}
+@media (forced-colors: active) and (min-width: 1000px) {
+  .bar { border-width: 0 1px 0 0; }
+  .tab[aria-current="page"] { border-top: 0; border-inline-start: 3px solid Highlight; }
+}

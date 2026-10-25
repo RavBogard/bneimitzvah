@@ -2,7 +2,8 @@
 import { AccountRequestsLine } from "./accounts/workspace";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { parseReadingTab } from "../shell/tabs";
 import Link from "next/link";
 import { workspaceApi, type Student } from "./api";
 import { RequireRole, rolePaths, statusOf, useWorkspace, WorkspaceLink } from "./provider";
@@ -30,6 +31,8 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
   const [rows, setRows] = useState<Student[]>([]), [selected, setSelected] = useState<string | null>(null), [error, setError] = useState(false), [loading, setLoading] = useState(true), [more, setMore] = useState(false);
   const [retry, setRetry] = useState(0), gate = useRef(false), sequence = useRef(0);
   const [paging, setPaging] = useState(false);
+  // ?tab= is the view of a student's page (Reading, Service parts, Lessons); a tutor's student cards open that same view. "honors" brings a parent to Family honors.
+  const tabParam = useSearchParams().get("tab"), viewTab = parseReadingTab(tabParam), honorsView = mode === "parent" && tabParam === "honors";
   const abort = useRef<AbortController | null>(null), rowsRef = useRef(rows), selectedRef = useRef(selected);
   rowsRef.current = rows; selectedRef.current = selected;
   const ordered = useMemo(() => sortStudentsByCeremony(rows), [rows]), strip = useRef<HTMLUListElement | null>(null);
@@ -40,6 +43,11 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
     const frame = list.getBoundingClientRect(), box = chip.getBoundingClientRect();
     if (box.left < frame.left) list.scrollLeft -= frame.left - box.left; else if (box.right > frame.right) list.scrollLeft += box.right - frame.right;
   }, [selected, ordered]);
+  useEffect(() => {
+    if (!honorsView || loading || !selected) return;
+    const heading = document.getElementById("family-honors");
+    heading?.focus({ preventScroll: true }); heading?.scrollIntoView({ block: "start" });
+  }, [honorsView, loading, selected]);
   const reconcileStudent = useCallback((current: Student) => { setRows(previous => reconcileSelectedStudent(previous, selectedRef.current, current)); }, []);
   const load = useCallback(async (preserve = true) => {
     abort.current?.abort(); const request = new AbortController(), turn = ++sequence.current; abort.current = request;
@@ -94,7 +102,7 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
     {loading ? <p role="status">Loading available students…</p> : error ? <div role="alert"><p>Students couldn’t be loaded. No previous selection is being shown.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload students</button></div>
       : !rows.length ? <p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p>
         : <>{(mode !== "student" || rows.length !== 1) && <><ul ref={strip} className={`student-cards${focused || selected ? " student-cards-compact" : ""}`} aria-label={mode === "parent" ? "Child" : "Student"}>{ordered.map(row => <li key={row.id}>
-            {mode === "tutor" ? <WorkspaceLink href={`/workspace/tutor/${row.id}`} className="student-card" data-student-id={row.id} aria-current={selected === row.id ? "page" : undefined}><StudentCardBody row={row} /></WorkspaceLink>
+            {mode === "tutor" ? <WorkspaceLink href={`/workspace/tutor/${row.id}${viewTab ? `?tab=${viewTab}` : ""}`} className="student-card" data-student-id={row.id} aria-current={selected === row.id ? "page" : undefined}><StudentCardBody row={row} /></WorkspaceLink>
               : <button type="button" className="student-card" data-student-id={row.id} aria-pressed={selected === row.id} onClick={() => { void guardDeparture().then(leave => { if (leave) setSelected(row.id); }); }}><StudentCardBody row={row} /></button>}
           </li>)}</ul>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
           {focused && !selected && <div className="workspace-state"><h2>Student not found</h2><p>This student isn’t in your list. Choose one of your students above.</p></div>}

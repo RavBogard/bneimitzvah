@@ -69,7 +69,7 @@ it("reports only explicit service choices with exact bindings and never manufact
   const tab = await page("student"), seen = traffic(tab);
   const response = tab.waitForResponse(r => new URL(r.url()).pathname.endsWith("/practice-calendar") && r.status() === 200);
   await safe(() => tab.goto("/workspace/student", { waitUntil: "domcontentloaded" })); const { serverDay } = await (await response).json();
-  await ready(tab); await ui(tab.getByRole("button", { name: "Synthetic part 0", exact: true })).toBeVisible(); expect(seen.posts).toHaveLength(0);
+  await ready(tab); await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click()); await ui(tab.getByRole("button", { name: "Synthetic part 0", exact: true })).toBeVisible(); expect(seen.posts).toHaveLength(0);
   await click(tab, "Synthetic part 0"); await ui(tab.locator(".service-unit")).toContainText("Synthetic translation 0"); await ui.poll(() => seen.posts.length).toBe(1); await marked(tab, true);
   expect(seen.posts[0]).toEqual({ context: null, body: { mode: "student", eventId: expect.stringMatching(/^[0-9a-f-]{36}$/), expectedDay: serverDay, action: "visit", target: { type: "service-unit", catalogId, catalogIdentity: content.identity, planId: plans.get(fixture.student.id)!.id, planRevision: 1, unitId: content.first } } });
   await click(tab, "Synthetic part 0"); await ui(tab.locator(".service-unit")).toContainText("Synthetic translation 0"); expect(seen.posts).toHaveLength(1);
@@ -101,7 +101,7 @@ it("drops a held service visit acknowledgement after a real child-context switch
   const tab = await page("parent"), seen = traffic(tab);
   await tab.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click();
   await ui(tab.getByRole("button", { name: "Practice with Synthetic", exact: true })).toBeVisible(); expect(await week(tab).count()).toBe(0); expect(seen.posts).toHaveLength(0);
-  await click(tab, "Practice with Synthetic"); await ready(tab);
+  await click(tab, "Practice with Synthetic"); await ready(tab); await safe(() => tab.getByRole("tab", { name: "Service parts", exact: true }).click());
   let release!: () => void, complete!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; }), completed = new Promise<void>(resolve => { complete = resolve; });
   const hold = async (route: Route) => { try { const response = await route.fetch(); expect(response.status()).toBe(200); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); } finally { complete(); } };
   const target = `**/api/students/${fixture.student.id}/practice-events`; await tab.route(target, hold);

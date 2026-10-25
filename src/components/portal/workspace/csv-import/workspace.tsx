@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "../provider";
-import { AdminNav } from "../admin-nav";
 import { workspaceApi, type RosterStudent } from "../api";
 import { checkCsvSize, CSV_HEADER, CSV_ADULT_HEADER, CSV_FULL_HEADER, CSV_FULL_ADULT_HEADER, csvApi, REVIEW_TTL, type Preview } from "./api";
 import { CSV_TEMPLATE, draftProblem, rowHints } from "./hints";
@@ -87,7 +86,7 @@ function Import() {
     catch { if (alive.current) setMessage("The roster could not be checked. Try reloading it or check account access."); }
   }
   const locked = pending || loading || Boolean(blocked) || !roster, hints = review ? rowHints(review.csv) : new Map<number, string>();
-  return <section className="role-workspace csv-workspace admin-workspace"><AdminNav /><div className="admin-crumbs"><WorkspaceLink href="/workspace/admin/students">All students</WorkspaceLink></div><h1>Import students</h1>
+  return <section className="role-workspace csv-workspace admin-workspace"><div className="admin-crumbs"><WorkspaceLink href="/workspace/admin/students">All students</WorkspaceLink></div><h1>Import students</h1>
     <p className="people-student">Add many students at once from a spreadsheet. Importing sends nothing: nobody is invited or given access, and no reading or tutor is assigned.</p>
     {message && <p className={blocked || !receipt ? "request-error" : "workspace-notice"} role={blocked ? "alert" : "status"}>{message}</p>}
     {blocked === "unknown" && !checkedRoster && <button className="button-primary admin-pill csv-check" disabled={pending || loading} onClick={() => void reload()}>Check what saved</button>}

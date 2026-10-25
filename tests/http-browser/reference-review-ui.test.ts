@@ -90,7 +90,7 @@ it("requires an explicit discard for unsaved checks before reload or workspace n
   const page = await tab(); await page.getByRole("group", { name: "Privacy", exact: true }).getByLabel("Pass", { exact: true }).check();
   await page.getByRole("button", { name: "Reload review", exact: true }).click(); await ui(page.getByRole("region", { name: "Unsaved review checks" })).toBeVisible();
   await page.getByRole("button", { name: "Keep reviewing", exact: true }).click(); await ui(page.getByRole("group", { name: "Privacy", exact: true }).getByLabel("Pass", { exact: true })).toBeChecked();
-  await page.getByRole("navigation", { name: "Admin", exact: true }).getByRole("link", { name: "Students", exact: true }).click();
+  await page.getByRole("navigation", { name: "Workspace", exact: true }).getByRole("link", { name: "Students", exact: true }).click();
   await ui(page.getByRole("region", { name: "Unsaved review checks" })).toBeVisible(); expect(new URL(page.url()).pathname).toBe(path);
   await page.getByRole("button", { name: "Discard checks and continue", exact: true }).click(); await ui(page.getByRole("heading", { name: "Students", exact: true })).toBeVisible();
 });

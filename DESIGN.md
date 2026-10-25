@@ -322,6 +322,7 @@ A white pill track with a hairline and 0.25rem padding; transparent 44px pill it
 ### Navigation
 - **App bar:** a full-bleed lake band 60px tall with the brand in white 750 and an Account pill on the right; night-lake in dark mode.
 - **Role nav:** the segmented pill track; the current role is a lake pill.
+- **Tab bar (1.9 N10, decision 1):** four labelled tabs per signed-in role on a phone, fixed at the foot of the screen: surface fill, a hairline above, a 24px icon over a 13px 600 label, every target at least 64px tall and 44px wide, the current tab in the action colour with a lake-tint pill behind its icon. It steps out of the way only while a text field has focus and the on-screen keyboard is open. From 1000px it is an 11rem left rail with the icon beside the label. The page keeps the bar's measured height clear at its foot (`--shell-bar-h`), so the bar never covers content, and the bar is hidden in print. Public /read, /learn, /trope-chart and /print have none. Student: Today, Reading, Learn, Account. Parent: Today, Practice, Honors, Account. Tutor: This week, Students, Lessons, More. Admin: This week, Students, People, More.
 - **Footer:** centered muted 0.8125rem line, no rule.
 
 ### Reading toolbar

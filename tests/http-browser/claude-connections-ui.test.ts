@@ -50,10 +50,11 @@ beforeAll(async () => {
 }, 120_000);
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
-it("an admin opens Claude connections from the admin nav, sees every staff connection in plain words, and ends a tutor's", async () => {
+it("an admin opens Claude connections from More, sees every staff connection in plain words, and ends a tutor's", async () => {
   const mine = await connect("admin", "portal:read portal:study portal:roster"), theirs = await connect("tutor", "portal:read");
   const tab = await page("admin"); await navigate(tab, "/workspace/admin/students");
-  await safe(() => tab.getByRole("navigation", { name: "Admin", exact: true }).getByRole("link", { name: "Claude", exact: true }).click());
+  await safe(() => tab.getByRole("navigation", { name: "Workspace", exact: true }).getByRole("link", { name: "More", exact: true }).click());
+  await safe(() => main(tab).getByRole("link", { name: /^Claude connections/ }).click());
   await ui(tab.getByRole("heading", { name: "Claude connections", level: 1, exact: true })).toBeVisible();
   const own = main(tab).getByRole("region", { name: "Your connections", exact: true }), staff = main(tab).getByRole("region", { name: "Other staff", exact: true });
   await ui(own.getByRole("listitem")).toHaveCount(1);
@@ -91,7 +92,7 @@ it("fits a phone, and a tutor finds the page from the account page and sees only
   await ui(tutor.getByRole("heading", { name: "Claude connections", level: 1, exact: true })).toBeVisible();
   await ui(main(tutor).getByRole("region", { name: "Your connections", exact: true }).getByRole("listitem")).toHaveCount(1);
   expect(await main(tutor).getByRole("region", { name: "Other staff", exact: true }).count()).toBe(0);
-  expect(await tutor.getByRole("navigation", { name: "Admin", exact: true }).count()).toBe(0);
+  expect(await tutor.getByRole("navigation", { name: "People", exact: true }).count()).toBe(0);
   await capture(tutor, "claude-connections-tutor-mobile");
   // The tutor cannot end the admin's connection, even by asking the API directly.
   expect((await api(tutor, "/api/staff/claude-connections/revoke", { connectionId: mine.id })).status).toBe(404);

@@ -50,10 +50,10 @@ beforeAll(async () => {
 }, 120_000);
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await cleanupBrowser?.(); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
-it("moves between admin areas, finds a student, and adds one in a sheet that returns focus", async () => {
+it("moves between the areas of the tab bar, finds a student, and adds one in a sheet that returns focus", async () => {
   const tab = await page(); await navigate(tab, "/workspace/admin/students");
-  const nav = tab.getByRole("navigation", { name: "Admin", exact: true });
-  await ui(nav.getByRole("link", { name: "Students", exact: true })).toHaveAttribute("aria-current", "page");
+  const nav = tab.getByRole("navigation", { name: "Workspace", exact: true });
+  await ui(nav.getByRole("link", { name: "This week", exact: true })).toHaveAttribute("aria-current", "page");
   await ui(roster(tab).getByRole("listitem")).toHaveCount(2);
   await ui(tab.getByText("2 students", { exact: true })).toBeVisible();
   // Search narrows the list by name; a miss says so.
@@ -111,11 +111,13 @@ it("moves between admin areas, finds a student, and adds one in a sheet that ret
   await safe(() => tab.getByRole("button", { name: "Reload roster", exact: true }).first().click());
   await ui(add).toBeEnabled(); await ui(tab.locator("#workspace-main").getByRole("alert")).toHaveCount(0);
   await ui(roster(tab).getByRole("listitem")).toHaveCount(4); // The save had landed; the reload shows it once.
-  // Other admin areas carry the same nav.
-  await safe(() => nav.getByRole("link", { name: "Invitations", exact: true }).click());
+  // People holds Invitations and Tutors, one tap apart.
+  const people = tab.getByRole("navigation", { name: "People", exact: true });
+  await safe(() => nav.getByRole("link", { name: "People", exact: true }).click());
   await ui(tab.getByRole("heading", { name: "Invitations", level: 1, exact: true })).toBeVisible();
-  await ui(nav.getByRole("link", { name: "Invitations", exact: true })).toHaveAttribute("aria-current", "page");
-  await safe(() => nav.getByRole("link", { name: "Tutors", exact: true }).click());
+  await ui(nav.getByRole("link", { name: "People", exact: true })).toHaveAttribute("aria-current", "page");
+  await ui(people.getByRole("link", { name: "Invitations", exact: true })).toHaveAttribute("aria-current", "page");
+  await safe(() => people.getByRole("link", { name: "Tutors", exact: true }).click());
   await ui(tab.getByRole("heading", { name: "Tutors", level: 1, exact: true })).toBeVisible();
 });
 
@@ -124,7 +126,7 @@ it("opens a student's page with the staff tabs and verse sheet, and links to the
     const tab = await page(mobile); await navigate(tab, "/workspace/admin/students");
     await safe(() => roster(tab).getByRole("link", { name: /^Synthetic Learner/ }).click());
     await ui(tab.getByRole("heading", { name: "Synthetic Learner", level: 2, exact: true })).toBeVisible();
-    await ui(tab.getByRole("navigation", { name: "Admin", exact: true }).getByRole("link", { name: "Students", exact: true })).toHaveAttribute("aria-current", "location");
+    await ui(tab.getByRole("navigation", { name: "Workspace", exact: true }).getByRole("link", { name: "Students", exact: true })).toHaveAttribute("aria-current", "page");
     const tabs = tab.getByRole("tablist", { name: "Student page", exact: true });
     await ui(tabs.getByRole("tab")).toHaveText(["Reading", "Service parts", "Lessons"]);
     await ui(tab.getByRole("button", { name: /^(Assign|Change) verses$/ })).toBeVisible();

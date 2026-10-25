@@ -3,7 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { workspaceApi, type RosterStudent } from "../api";
 import { RequireRole, statusOf, useWorkspace, useWorkspaceModal, WorkspaceLink } from "../provider";
 import { icons } from "../study/lift";
-import { AdminNav } from "../admin-nav";
+import { PeopleNav } from "../../shell/people-nav";
 import { invitationApi, invitationTargetFingerprint, issueReview, INVITATION_PAGE_SIZE, type InviteDraft, type Invitation, type Receipt } from "./api";
 import { InvitationForm } from "./form";
 import { InvitationList } from "./list";
@@ -123,7 +123,7 @@ function Invitations() {
   const mailText = outcome?.receipt && (outcome.receipt.delivery === "sent" ? "The email went to the mail service. We can’t see whether it reached their inbox."
     : outcome.receipt.delivery === "failed" ? "The email failed to send. Nothing is resent automatically; use Send again if you want to try once more."
     : "We couldn’t confirm whether the email went out. Nothing is resent automatically.");
-  return <section className="role-workspace invitation-workspace admin-workspace"><AdminNav />
+  return <section className="role-workspace invitation-workspace admin-workspace"><PeopleNav />
     <div className="admin-head"><h1 ref={pageHeading} tabIndex={-1}>Invitations</h1>{!blocked && <button type="button" className="hero-icon roster-reload" aria-label="Reload invitations" disabled={pending || loading} onClick={() => void reloadExplicitly()}><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></button>}</div>
     <InvitationForm draft={draft} change={change} students={snapshot?.students ?? []} ready={Boolean(snapshot && !loading && !failure)} pending={pending} blocked={blocked} review={openIssue} />
     {message && !review && <p className={blocked ? "request-error roster-message" : "workspace-notice roster-message"} role={blocked ? "alert" : "status"}>{message}</p>}

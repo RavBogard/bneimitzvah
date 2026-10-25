@@ -14,7 +14,7 @@ const fits = (page: Page) => page.evaluate(() => document.documentElement.scroll
 
 const SIGNED_IN = [
   "/workspace", "/workspace/student", "/workspace/parent", "/workspace/tutor", `/workspace/tutor/${ID_A}`,
-  "/workspace/accounts", "/workspace/claude", "/workspace/email", "/workspace/admin/invitations", "/workspace/admin/reference-review",
+  "/workspace/accounts", "/workspace/claude", "/workspace/email", "/workspace/more", "/workspace/admin/invitations", "/workspace/admin/reference-review",
   "/workspace/admin/settings", "/workspace/admin/students", "/workspace/admin/students/import", `/workspace/admin/students/${ID_A}/reading`,
   `/workspace/admin/students/${ID_A}/access`, "/workspace/admin/tutors", "/account", "/connect", "/invitations/accept",
 ];
