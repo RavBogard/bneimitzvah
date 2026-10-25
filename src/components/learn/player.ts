@@ -1,62 +1,99 @@
 import { shortSilentPrime } from "../../lib/reference-audio/short-playback";
-import type { PhraseAudio, PhraseRequest } from "../../lib/learn/phrase-audio";
+import type { PhraseAudio, PhraseClip, PhraseRequest } from "../../lib/learn/phrase-audio";
 
-/**
- * One audio element per course page. A play is a list of phrase cuts played in turn (two phrases for
- * same-or-different, the right then the chosen family after a miss). The element is primed with 10 ms
- * of silence inside the tap, as the Lein player does, so a phone lets the real clip play when it arrives.
- */
-export type PlayerState = Readonly<{ id: string | null; status: "idle" | "loading" | "playing" | "error"; seconds: number; part: number }>;
+/** One media element per course page. Word outlines follow its clock, never elapsed wall time. */
+export type PlayerState = Readonly<{ id: string | null; status: "idle" | "loading" | "playing" | "paused" | "error"; seconds: number; part: number;
+  current?: Readonly<{ ref: string; kind: PhraseRequest["kind"]; word: number }> | null }>;
 const IDLE: PlayerState = Object.freeze({ id: null, status: "idle", seconds: 0, part: 0 });
 export const PLAY_GAP_MS = 450;
-
+export type PlaybackBinding = string | Readonly<{ id: string; part: number }>;
+/** Bind the visible example as well as the verse: two examples can show the same words. */
+export function activeLessonWord(state: PlayerState, verse: Pick<PhraseRequest, "ref" | "kind">, bindings: readonly PlaybackBinding[]): number | null {
+  return state.status === "playing" && state.current?.ref === verse.ref && state.current.kind === verse.kind
+    && bindings.some(binding => typeof binding === "string" ? binding === state.id : binding.id === state.id && binding.part === state.part)
+    ? state.current.word : null;
+}
 export function createClipPlayer(audio: PhraseAudio, make: () => HTMLAudioElement = () => new Audio()) {
   let media: HTMLAudioElement | null = null, url: string | null = null, turn = 0, state = IDLE, controller = new AbortController();
   const listeners = new Set<() => void>();
   const publish = (next: PlayerState) => { state = Object.freeze(next); for (const listener of listeners) listener(); };
-  const element = () => { if (!media) { try { media = make(); media.preload = "auto"; } catch { media = null; } } return media; };
   const release = () => { if (url) { URL.revokeObjectURL(url); url = null; } };
-  function attach(blob: Blob) { const node = element(); if (!node) throw new Error("No audio"); release(); url = URL.createObjectURL(blob); node.src = url; return node; }
-  function halt() { turn++; controller.abort(); controller = new AbortController(); const node = media; if (node) { node.pause(); } }
-  const ended = (node: HTMLAudioElement, mine: number) => new Promise<void>(resolve => {
-    const done = () => { node.removeEventListener("ended", done); node.removeEventListener("pause", paused); resolve(); };
-    const paused = () => { if (turn !== mine || node.ended) done(); };
-    node.addEventListener("ended", done); node.addEventListener("pause", paused);
-  });
+  function attach(blob: Blob) {
+    if (!media) { media = make(); media.preload = "auto"; }
+    media.pause(); release(); url = URL.createObjectURL(blob); media.src = url; return media;
+  }
+  function halt() { turn++; controller.abort(); controller = new AbortController(); media?.pause(); }
+  function follow(node: HTMLAudioElement, clip: PhraseClip, request: PhraseRequest, id: string, part: number, mine: number, signal: AbortSignal, rate: number) {
+    let ready = false, sounding = true, frame: number | null = null, settled = false;
+    let resolve!: () => void, reject!: (error: Error) => void;
+    const finished = new Promise<void>((yes, no) => { resolve = yes; reject = no; });
+    void finished.catch(() => {});
+    const sample = () => {
+      if (!ready || settled || turn !== mine || signal.aborted) return;
+      const at = node.currentTime, status = node.paused && !node.ended ? "paused" : "playing";
+      const word = sounding && !node.paused && !node.ended && !node.seeking && Number.isFinite(at)
+        ? clip.words.find(row => row.start <= at && at < row.end)?.word ?? null : null;
+      if (state.status !== status || (state.current?.word ?? null) !== word || state.id !== id || state.part !== part) {
+        publish({ id, status, seconds: clip.seconds / rate, part, current: word === null ? null : { ref: request.ref, kind: request.kind, word } });
+      }
+    };
+    const tick = () => { frame = null; sample(); if (!settled && typeof requestAnimationFrame === "function") frame = requestAnimationFrame(tick); };
+    const playing = () => { sounding = true; sample(); }, waiting = () => { sounding = false; sample(); };
+    const cleanup = () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+      for (const [event, handler] of events) node.removeEventListener(event, handler);
+      signal.removeEventListener("abort", abort);
+    };
+    const finish = (error?: Error) => {
+      if (settled) return; settled = true; cleanup();
+      if (turn === mine && ready) publish({ id, status: "loading", seconds: 0, part, current: null });
+      if (error) reject(error); else resolve();
+    };
+    const done = () => finish(), failed = () => finish(new Error("Media playback failed")), abort = () => finish();
+    const events: [string, () => void][] = [["timeupdate", sample], ["playing", playing], ["waiting", waiting], ["seeking", waiting], ["seeked", playing], ["pause", waiting], ["ended", done], ["error", failed]];
+    for (const [event, handler] of events) node.addEventListener(event, handler);
+    signal.addEventListener("abort", abort, { once: true });
+    return { finished, start() { if (settled || turn !== mine || signal.aborted) return; ready = true; sample(); tick(); }, cancel: done };
+  }
   return Object.freeze({
     get state() { return state; },
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
-    /** Plays the cuts in order. Resolves when they have all played, or quietly when replaced or stopped. */
     async play(id: string, requests: readonly PhraseRequest[], options: { rate?: number } = {}): Promise<boolean> {
       halt(); const mine = turn, signal = controller.signal;
       publish({ id, status: "loading", seconds: 0, part: 0 });
-      // Inside the tap: unlock the element with silence before any network wait.
-      try { const node = attach(shortSilentPrime()); void node.play().catch(() => {}); } catch { /* No element; the clip below reports the error. */ }
+      try { const node = attach(shortSilentPrime()); void node.play().catch(() => {}); } catch { /* The real clip reports unavailable media. */ }
       try {
         for (const [part, request] of requests.entries()) {
           const clip = await audio.phraseClip(request, signal);
           if (turn !== mine) return false;
-          const node = attach(clip.blob), rate = options.rate ?? 1;
+          const rate = options.rate ?? 1;
+          if (![0.5, 0.75, 1, 1.25].includes(rate)) throw new Error("Unsupported rate");
+          const node = attach(clip.blob);
           if (typeof node.preservesPitch === "boolean") node.preservesPitch = true;
           node.playbackRate = rate; node.defaultPlaybackRate = rate;
-          const finished = ended(node, mine);
-          await node.play();
+          const tracking = follow(node, clip, request, id, part, mine, signal, rate);
+          try { await Promise.race([node.play(), tracking.finished]); tracking.start(); await tracking.finished; } finally { tracking.cancel(); }
           if (turn !== mine) return false;
-          publish({ id, status: "playing", seconds: clip.seconds / rate, part });
-          await finished;
-          if (turn !== mine) return false;
-          if (part < requests.length - 1) await new Promise(resolve => setTimeout(resolve, PLAY_GAP_MS));
+          if (part < requests.length - 1) await new Promise<void>(resolve => {
+            const done = () => { clearTimeout(timer); signal.removeEventListener("abort", done); resolve(); };
+            const timer = setTimeout(done, PLAY_GAP_MS); signal.addEventListener("abort", done, { once: true });
+          });
           if (turn !== mine) return false;
         }
         publish(IDLE); return true;
       } catch (error) {
-        // A browser that wants another tap is not a failed recording: the tile simply waits.
-        if (turn === mine) publish(error instanceof DOMException && error.name === "NotAllowedError" ? IDLE : { id, status: "error", seconds: 0, part: 0 });
+        if (turn === mine) { media?.pause(); publish(error instanceof DOMException && error.name === "NotAllowedError" ? IDLE : { id, status: "error", seconds: 0, part: 0 }); }
         return false;
       }
     },
+    pause() { media?.pause(); },
+    async resume() {
+      if (state.status !== "paused") return;
+      const mine = turn, { id, part } = state;
+      try { await media?.play(); } catch { if (turn === mine) { halt(); publish({ id, status: "error", seconds: 0, part }); } }
+    },
     stop() { halt(); if (state.status !== "idle") publish(IDLE); },
-    dispose() { halt(); release(); listeners.clear(); if (media) { media.removeAttribute("src"); media.load(); } media = null; },
+    dispose() { halt(); publish(IDLE); release(); listeners.clear(); if (media) { media.removeAttribute("src"); media.load(); } media = null; },
   });
 }
 export type ClipPlayer = ReturnType<typeof createClipPlayer>;

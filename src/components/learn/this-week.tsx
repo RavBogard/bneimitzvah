@@ -41,7 +41,7 @@ function Row({ verse, words, family }: { verse: AnalysedVerse; words: readonly [
   const id = `week:${verse.ref}:${words[0]}`;
   return <li className={styles.verseRow}>
     <PlayTile id={id} iconOnly label={`Hear ${verse.ref}`} requests={[phraseRequest(verse, words)]} />
-    <div><UnitsText verse={verse} units={words} className={styles.phraseStandard} look={() => "inked"} />
+    <div><UnitsText playback={[id]} verse={verse} units={words} className={styles.phraseStandard} look={() => "inked"} />
       <p className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi>{family && <span className="sr-only">, {familyName(family)}</span>}</p><AudioError id={id} /></div>
   </li>;
 }

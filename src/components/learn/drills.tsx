@@ -24,7 +24,7 @@ function useAutoplay(id: string, requests: Parameters<ReturnType<typeof useLearn
 }
 function Answer({ verse, phrase, id }: { verse: AnalysedVerse; phrase: Phrase; id: string }) {
   return <div className={styles.answer} data-answer>
-    <UnitsText verse={verse} className={styles.phraseStandard} look={unit => unit >= phrase.words[0] && unit <= phrase.words[1] ? "inked" : "plain"} />
+    <UnitsText playback={[id, `${id}:compare`, `${id}:verse`]} verse={verse} className={styles.phraseStandard} look={unit => unit >= phrase.words[0] && unit <= phrase.words[1] ? "inked" : "plain"} />
     <div className={styles.answerHead}><span className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></span><FamilyChip family={phrase.family} melody={phrase.kind} />
       <PlayTile id={`${id}:verse`} requests={[phraseRequest(verse, [0, verse.units.length - 1])]} label="Whole verse" /></div>
   </div>;
@@ -79,7 +79,7 @@ export function SameOrDifferent({ item, pools, onAnswer }: DrillProps<SameItem>)
     {chosen !== null && <div className={styles.answer} data-answer><div className={styles.pairList}>{[item.first, item.second].map((phrase, n) => {
       const verse = verseOf(pools, phrase);
       return <div key={n} className={styles.pairRow}><span className={styles.number} aria-hidden="true">{n + 1}</span>
-        {verse && <UnitsText verse={verse} units={phrase.words} look={() => "inked"} className={styles.phraseStandard} />}
+        {verse && <UnitsText playback={[{ id, part: n }]} verse={verse} units={phrase.words} look={() => "inked"} className={styles.phraseStandard} />}
         <FamilyChip family={phrase.family} melody={phrase.kind} />{item.by === "melody" && <span className={styles.muted}>{melodyName(phrase.kind)}</span>}
         <span className={styles.ref}><bdi dir="ltr">{phrase.ref}</bdi></span></div>;
     })}</div></div>}
@@ -111,7 +111,7 @@ export function WhereDoesItEnd({ item, pools, prompt, onAnswer }: DrillProps<End
     {item.audio && <div className={styles.playRow}><PlayTile id={id} requests={[request(item.target)]} /></div>}
     <AudioError id={id} />
     <div className={styles.verseBox} data-end-unit={last}>
-      <UnitsText verse={verse} className={styles.phraseStandard} onUnit={tapped === null ? tap : undefined}
+      <UnitsText playback={[id]} verse={verse} className={styles.phraseStandard} onUnit={tapped === null ? tap : undefined}
         unitLabel={unit => `Word ${unit + 1}${unit === first ? ", the phrase starts here" : ""}`}
         look={unit => tapped !== null && unit >= first && unit <= last ? "inked" : "plain"}
         unitClass={unit => [unit === first ? styles.start : "", tapped !== null && unit === tapped && !right ? styles.missed : ""].filter(Boolean).join(" ") || undefined} />
@@ -143,8 +143,8 @@ export function TapThePhrase({ item, pools, onAnswer }: DrillProps<TapItem>) {
         return <span key={index}>{index > 0 && <span className={styles.phraseGap} aria-hidden="true"> </span>}
           {tapped === null ? <span className={styles.target} role="button" tabIndex={0} data-phrase-target={index} aria-label={`Phrase ${index + 1}`} onClick={() => tap(index)}
             onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); tap(index); } }}>
-            <UnitsText as="span" verse={verse} units={phrase.units} card={false} />
-          </span> : <span className={wrong ? styles.missed : undefined} data-phrase-target={index}><UnitsText as="span" verse={verse} units={phrase.units} look={() => shown ? "inked" : "plain"} /></span>}</span>;
+            <UnitsText playback={[id, `${id}:compare`]} as="span" verse={verse} units={phrase.units} card={false} />
+          </span> : <span className={wrong ? styles.missed : undefined} data-phrase-target={index}><UnitsText playback={[id, `${id}:compare`]} as="span" verse={verse} units={phrase.units} look={() => shown ? "inked" : "plain"} /></span>}</span>;
       })}</p>
     </div>
     <p role="status" className={styles.feedback}>{tapped !== null && tapped !== target && chosenFamily ? `That one is ${familyName(item.target.family)}. Here is ${familyName(chosenFamily)} for comparison.` : ""}</p>
@@ -182,15 +182,15 @@ export function BuildThePhrase({ item, pools, onAnswer }: DrillProps<BuildItem>)
       disabled={done || placed.includes(tile)} data-miss={miss?.tile === tile ? "true" : undefined} data-order={marks.indexOf(trope)} onClick={() => tap(tile)} aria-label={tropeLabel(trope)}>
       <span className={`${styles.hebrew} ${styles.tileSample}`} lang="he" dir="rtl" aria-hidden="true">{tropeSample(trope)}</span><span className={styles.tileName} aria-hidden="true">{tropeLabel(trope)}</span>
     </button>)}</div>
-    {done && <div className={styles.answer} data-answer><UnitsText verse={verse} units={item.phrase.words} look={() => "inked"} className={styles.phraseStandard} />
+    {done && <div className={styles.answer} data-answer><UnitsText playback={[id, `${id}:word`, `${id}:all`]} verse={verse} units={item.phrase.words} look={() => "inked"} className={styles.phraseStandard} />
       <div className={styles.answerHead}><FamilyChip family={item.phrase.family} melody={item.phrase.kind} /><span className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></span></div></div>}
   </>;
 }
 
 /** One look-alike word at Hebrew Large: the word alone, or (azla against geresh) with the word before it, muted. */
-function LookWord({ side, context, card }: { side: LookSide; context: LookItem["context"]; card: boolean }) {
+function LookWord({ side, context, card, playback }: { playback: import("./player").PlaybackBinding[]; side: LookSide; context: LookItem["context"]; card: boolean }) {
   const at = side.word.word, first = context === "previous-word" ? Math.max(0, at - 1) : at;
-  return <UnitsText as="span" verse={side.verse} units={[first, at]} className={styles.lookHebrew} card={card} unitClass={unit => unit < at ? styles.contextWord : undefined} />;
+  return <UnitsText playback={playback} as="span" verse={side.verse} units={[first, at]} className={styles.lookHebrew} card={card} unitClass={unit => unit < at ? styles.contextWord : undefined} />;
 }
 /** Same sign, different place: two words side by side, each with a look-alike sign. The tap is the answer and plays
  * nothing; once answered, both show their mark names, the tell appears, the tile plays the tapped word then the other,
@@ -210,9 +210,9 @@ export function LookAlikes({ item, onAnswer, first = item.first }: DrillProps<Lo
       const state = tapped === null ? undefined : n === item.answer ? "right" : n === tapped ? "chosen" : "other";
       return tapped === null
         ? <button key={n} type="button" className={`${styles.choice} ${styles.lookWord}`} data-look={n} onClick={() => tap(n as 0 | 1)}>
-          <LookWord side={side} context={item.context} card={false} /></button>
+          <LookWord playback={n === item.answer ? [id] : []} side={side} context={item.context} card={false} /></button>
         : <div key={n} className={`${styles.choice} ${styles.lookWord}`} data-look={n} data-state={state} style={{ "--phrase-color": "var(--lake-tint)" } as CSSProperties}>
-          <LookWord side={side} context={item.context} card />
+          <LookWord playback={[...(n === item.answer ? [id] : []), { id: `${id}:words`, part: n === tapped ? 0 : 1 }]} side={side} context={item.context} card />
           <span className={styles.lookMark} dir="ltr">{state === "right" && <span className={styles.choiceMark}>{icons.check}</span>}{side.word.mark}</span>
         </div>;
     })}</div>
@@ -249,9 +249,9 @@ export function WhichHalf({ item, pools, onAnswer }: DrillProps<HalfItem>) {
     <AudioError id={id} />
     <div className={styles.verseBox} data-half={chosen ? item.half : undefined} data-rest-unit={item.rest}>
       <p className={`${styles.hebrew} ${styles.phraseStandard}`} lang="he" dir="rtl">
-        <UnitsText as="span" verse={verse} units={[0, item.rest]} card={!!chosen} look={look} unitClass={unitClass} />
+        <UnitsText playback={[id]} as="span" verse={verse} units={[0, item.rest]} card={!!chosen} look={look} unitClass={unitClass} />
         <span className={styles.halfGap} aria-hidden="true"> </span>
-        {item.rest < verse.units.length - 1 && <UnitsText as="span" verse={verse} units={[item.rest + 1, verse.units.length - 1]} card={!!chosen} look={look} unitClass={unitClass} />}
+        {item.rest < verse.units.length - 1 && <UnitsText playback={[id]} as="span" verse={verse} units={[item.rest + 1, verse.units.length - 1]} card={!!chosen} look={look} unitClass={unitClass} />}
       </p>
     </div>
     <div className={styles.pair}>{button("before", copy.before)}{button("after", copy.after)}</div>

@@ -12,4 +12,4 @@
 .options select:disabled { opacity: 0.45; }
 .credit { margin: 0; font-size: 0.875rem; color: inherit; }
 .credit summary, .credit a { color: inherit; }
-.activeWord[data-reference-active] { background: var(--marigold); color: var(--on-ink); outline: 2px solid var(--color-ink); outline-offset: 2px; border-radius: 0.18em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.activeWord[data-reference-active] { outline: 2px solid var(--color-ink); outline-offset: 2px; border-radius: 0.18em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }

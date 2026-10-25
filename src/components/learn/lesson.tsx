@@ -7,6 +7,7 @@ import { drillItems, itemCard, phraseAt, poolOf, seededRandom, type DrillItem, t
 import { cardId, completeLesson, localDay, nextLesson, recordAnswer } from "../../lib/learn/progress";
 import { answerRun, currentItem, freshPace, mayStopEarly, pace, runDone, startRun, type LessonPace, type Run } from "../../lib/learn/run";
 import { lessonExtraRefs, lessonSources, useCourseVerses, type CourseVerses, type ExampleVerse } from "./course-data";
+import { PRACTICED_VERSE } from "../../lib/learn/preparation";
 import { AudioError, FamilyChip, icons, LoadFailure, phraseRequest, PlayTile, revealAnswer, UnitsText } from "./bits";
 import { BuildThePhrase, HearAndName, LookAlikes, SameOrDifferent, TapThePhrase, WhereDoesItEnd, WhichHalf } from "./drills";
 import { FirstVerse } from "./first-verse";
@@ -90,7 +91,7 @@ function HearIt({ lesson, examples, onNext }: { lesson: Lesson; examples: readon
   return <>
     <div className={styles.stage}>
       {lesson.family && <FamilyChipLive id={id} family={lesson.family} melody={lesson.melody} />}
-      {first && words && <UnitsText verse={first.verse} units={words} className={styles.phraseLarge} look={() => "inked"} />}
+      {first && words && <UnitsText playback={[id]} verse={first.verse} units={words} className={styles.phraseLarge} look={() => "inked"} />}
       {first && !lesson.family && <Legend verse={first.verse} melody={lesson.melody} />}
       <PlayTile id={id} requests={requests} onPlayed={() => setHeard(true)} />
       <AudioError id={id} />
@@ -117,7 +118,7 @@ function InVerses({ lesson, examples, onNext }: { lesson: Lesson; examples: read
       return <li key={id} className={styles.verseRow}>
         <PlayTile id={id} iconOnly label={`Hear ${example.ref}`} requests={[phraseRequest(verse, example.words)]} />
         <div>
-          <UnitsText verse={verse} units={example.words} className={styles.phraseStandard} look={() => "inked"} />
+          <UnitsText playback={[id]} verse={verse} units={example.words} className={styles.phraseStandard} look={() => "inked"} />
           <p className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></p>
           <p className={styles.why}>{example.why}</p>
           <AudioError id={id} />
@@ -189,7 +190,7 @@ function Done({ lesson, complete, nextId, fallback }: { lesson: Lesson; complete
   const week = lesson.activities.find((activity): activity is ThisWeekActivity => activity.type === "this-week");
   return <>
     <div className={styles.doneHead}><h1 className={styles.doneTitle}>{lesson.title}</h1><p className={styles.doneWord}>Done</p></div>
-    <p className={styles.doneLine}>{presentGoal(lesson.goal)}</p>
+    <p className={styles.doneLine}>{lesson.activities.some(activity => activity.type === "first-verse") ? PRACTICED_VERSE : presentGoal(lesson.goal)}</p>
     {week && <ThisWeekSection activity={week} lesson={lesson} fallback={fallback} />}
     {next && <p className={styles.nextName}>Next: {next.title}</p>}
     <Footer>

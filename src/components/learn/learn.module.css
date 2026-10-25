@@ -289,3 +289,19 @@ a.stepLink:hover { background: var(--color-hover); color: var(--color-ink); }
 .cardMark { background: color-mix(in srgb, var(--marigold) 45%, transparent); color: inherit; border-radius: 0.18em; padding-inline: 0.06em; }
 @media (prefers-color-scheme: dark) { .cardScrim { background: rgb(0 0 0 / 0.5); } }
 @media (prefers-reduced-motion: reduce) { .card { animation: none; } }
+
+/* Playback marks sit around the ink; phrase colors continue to teach the phrase. */
+.hebrew [data-playback-active] { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 0.18em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.preparation { display: grid; gap: var(--space-lg, 1.5rem); }
+.preparation > p { margin: 0; max-width: 65ch; }
+.preparation .stage { padding-block: 1rem; }
+.preparationActions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.preparationActions > button, .preparationActions > a { min-height: 48px; }
+.preparationSpeed { display: flex; align-items: center; gap: 0.75rem; }
+.preparation select { min-height: 44px; padding: 0.4rem 0.75rem; color: inherit; background: var(--color-surface, var(--surface)); border: 1px solid var(--color-control-rule, var(--control-rule)); border-radius: 0.5rem; font: inherit; }
+.preparationRepair { display: grid; justify-items: start; gap: 1rem; }
+.preparationHelp { max-width: 65ch; }
+.preparationHelp summary, .preparationRepair summary { padding-block: 0.75rem; cursor: pointer; }
+.preparationHelp label { display: block; margin-block: 0.75rem; }
+.preparationHelp p { margin-block: 1rem; }
+@media (max-width: 480px) { .preparationActions { align-items: stretch; } .preparationActions > button, .preparationActions > a { width: 100%; } }
