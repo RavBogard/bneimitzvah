@@ -1,12 +1,14 @@
 "use client";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { COURSE, familyColor, lessonMinutes, pathLessons, type Lesson, type Melody } from "../../lib/learn/course";
 import { courseDone, emptyProgress, isDone, isUnlocked, localDay, reviewSummary, type Progress } from "../../lib/learn/progress";
 import { recommendedLesson } from "../../lib/learn/recommendation";
 import { reviewLine } from "../../lib/learn/review-line";
+import { preparationHref } from "../../lib/learn/passage-preparation";
 import { openPractice } from "../../lib/learn/practice";
 import { DRAFTED } from "./activity-copy";
 import { ContourMark, FamilyChip, icons } from "./bits";
+import { firstVerseOf, useOwnReading, type OwnReading } from "./own-reading";
 import { useProgress } from "./services";
 import { LearningStart } from "./learning-start";
 import styles from "./learn.module.css";
@@ -15,7 +17,9 @@ export function LearnAppBar() {
   return <header className="portal-header app-bar"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a></header>;
 }
 
-function PathList({ melody, progress, next }: { melody: Melody; progress: Progress; next: Lesson | null }) {
+/** The unit each path's "First phrase of your verse" row follows: the endings (the haftarah path opens with them inside its first unit). */
+const ENDINGS_UNIT: Record<Melody, string> = { torah: "u1-the-two-endings", haftarah: "u5-haftarah-same-phrases-new-tune" };
+function PathList({ melody, progress, next, after }: { melody: Melody; progress: Progress; next: Lesson | null; after?: ReactNode }) {
   const units = COURSE.units.filter(unit => unit.melody === melody);
   return <>{units.map(unit => <div key={unit.id}>
     {!(unit.lessons.length === 1 && COURSE.lessons.find(row => row.id === unit.lessons[0])?.title === unit.title) && <h3 className={styles.unitTitle}>{unit.title}</h3>}
@@ -29,7 +33,19 @@ function PathList({ melody, progress, next }: { melody: Melody; progress: Progre
       // Every lesson is a link: the order is advice (as "Best after The two endings." is), and Next still names one lesson.
       return <li key={id} className={styles.step}><a className={styles.stepLink} data-state={state} href={`/learn/${id}`}>{dot}<span>{title}{status}</span>{mark}</a></li>;
     })}</ol>
+    {unit.id === ENDINGS_UNIT[melody] && after}
   </div>)}</>;
+}
+
+/**
+ * 1.9 N17: a signed-in student's first phrase, a path row like Quick ten after the endings. It opens the existing passage preparation
+ * on the first verse of their own assigned reading, so it adds no lesson and no progress key. Signed-out visitors and everyone
+ * without an assignment see no row (the signed-out wording is not approved).
+ */
+export function FirstPhraseRow({ own, melody }: { own: OwnReading; melody: Melody }) {
+  const reading = own.status === "ready" ? own[melody] : null;
+  if (!reading) return null;
+  return <a className={styles.review} href={preparationHref(firstVerseOf(reading), melody)} data-first-phrase={melody}><span>First phrase of your verse</span>{icons.arrow}</a>;
 }
 
 /** Quick ten's row, once three families are heard in a melody; with both melodies open, each row names its path. */
@@ -46,6 +62,13 @@ export function CourseHome() {
   const progress = loaded ?? emptyProgress(), ready = loaded !== null;
   const next = recommendedLesson(progress), review = ready ? reviewSummary(progress, localDay(Date.now()), until) : null;
   const haftarahOpen = isUnlocked(progress, pathLessons("haftarah")[0]);
+  // 1.9 N17: a student whose own reading is a haftarah sees that path first; the order of the two paths is otherwise unchanged.
+  const own = useOwnReading(), mine = own.status === "ready" ? own : null, haftarahFirst = !!mine?.haftarah && !mine.torah;
+  const paths = (["torah", "haftarah"] as const).map(melody => melody === "torah"
+    ? <section key="torah" aria-labelledby="path-torah"><div className={styles.pathHead}><h2 id="path-torah">Torah</h2></div><PathList melody="torah" progress={progress} next={next} after={<FirstPhraseRow own={own} melody="torah" />} /></section>
+    : <section key="haftarah" aria-labelledby="path-haftarah"><div className={styles.pathHead}><h2 id="path-haftarah">Haftarah</h2>{!haftarahOpen && <span className={styles.pathNote}>Best after The two endings.</span>}</div>
+      <PathList melody="haftarah" progress={progress} next={next} after={<FirstPhraseRow own={own} melody="haftarah" />} /></section>);
+  if (haftarahFirst) paths.reverse();
   return <div className={`portal-shell ${styles.shell}`}>
     <a className="skip-link" href="#learn-main">Skip to the course</a>
     <LearnAppBar />
@@ -64,14 +87,10 @@ export function CourseHome() {
           {review && <a className={styles.review} href="/learn/review"><span>{reviewLine(review)}</span>{icons.arrow}</a>}
           {ready && <QuickTenLinks progress={progress} />}
           <LearningStart />
-          <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a></nav>
+          <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a>{mine && <a href="/workspace/student">Back to my reading</a>}</nav>
           {account.state !== "synced" && <p className={styles.saved}>Progress is saved on this device. <a href="/sign-in">Sign in</a> to keep it.</p>}
         </div>
-        <div className={styles.paths}>
-          <section aria-labelledby="path-torah"><div className={styles.pathHead}><h2 id="path-torah">Torah</h2></div><PathList melody="torah" progress={progress} next={next} /></section>
-          <section aria-labelledby="path-haftarah"><div className={styles.pathHead}><h2 id="path-haftarah">Haftarah</h2>{!haftarahOpen && <span className={styles.pathNote}>Best after The two endings.</span>}</div>
-            <PathList melody="haftarah" progress={progress} next={next} /></section>
-        </div>
+        <div className={styles.paths}>{paths}</div>
       </div>
     </main>
   </div>;

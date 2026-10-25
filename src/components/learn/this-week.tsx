@@ -6,14 +6,14 @@ import type { AnalysedVerse } from "../../lib/learn/verse";
 import { AudioError, FamilyChip, phraseRequest, PlayTile, UnitsText } from "./bits";
 import { RATE_LIMITED_MESSAGE } from "../portal/public-reading/rate-limited";
 import type { ExampleVerse } from "./course-data";
-import { useWeekVerses } from "./week-data";
+import { useReadingVerses } from "./week-data";
 import styles from "./learn.module.css";
 
 const READER_VERSES = 60, COUNT: Record<number, string> = { 1: "one", 2: "two", 3: "three", 4: "four", 5: "five" };
 /** Rows of the family in this Shabbat's reading, then "Find three more." in a small reader (ACTIVITIES.md 6). */
 export function ThisWeekSection({ activity, lesson, fallback = [] }: { activity: ThisWeek; lesson: Lesson; fallback?: readonly ExampleVerse[] }) {
   const kind = activity.params.kind ?? lesson.melody, family = activity.params.family;
-  const [retry, setRetry] = useState(0), week = useWeekVerses(kind, retry);
+  const [retry, setRetry] = useState(0), week = useReadingVerses(kind, retry);
   const pools = useMemo(() => week.status === "ready" ? buildPools(week.verses) : null, [week]);
   const rows = useMemo(() => {
     if (!pools) return [];
@@ -21,7 +21,10 @@ export function ThisWeekSection({ activity, lesson, fallback = [] }: { activity:
     for (const phrase of poolOf(pools, family, kind)) if (!seen.has(phrase.ref) && out.length < activity.params.show) { seen.add(phrase.ref); out.push(phrase); }
     return out;
   }, [pools, family, kind, activity.params.show]);
-  const heading = <h2 className={styles.sectionTitle}>In this week's reading</h2>;
+  // A signed-in student's own assigned reading (1.9 N17): its heading is "In your reading", and it shows nothing when the reading has no such phrase.
+  const own = week.status === "ready" && week.source === "own", title = own ? "In your reading" : "In this week's reading";
+  const heading = <h2 className={styles.sectionTitle}>{title}</h2>;
+  if (own && !rows.length) return null;
   if (week.status === "loading") return <section className={styles.week}>{heading}<p role="status" className={styles.muted}>Loading the reading…</p></section>;
   if (week.status === "error") return <section className={styles.week}>{heading}<p role="status">{week.rateLimited ? RATE_LIMITED_MESSAGE : "The reading didn't load. Check your connection and try again."}</p>
     <button type="button" className="button-secondary" onClick={() => setRetry(n => n + 1)}>Try again</button></section>;
@@ -31,7 +34,7 @@ export function ThisWeekSection({ activity, lesson, fallback = [] }: { activity:
       <ul className={styles.weekRows}>{fallback.slice(0, activity.params.show).map(row => <Row key={row.example.ref} verse={row.verse} words={row.example.words} family={family} />)}</ul></>}</section>;
   }
   return <section className={styles.week} aria-labelledby="this-week-heading">
-    <h2 id="this-week-heading" className={styles.sectionTitle}>In this week's reading</h2>
+    <h2 id="this-week-heading" className={styles.sectionTitle}>{title}</h2>
     {week.shifted && <p className={styles.muted}>Showing the coming Shabbat.</p>}
     {rows.length > 0 && <ul className={styles.weekRows}>{rows.map(phrase => <Row key={phrase.ref} verse={week.verses.find(verse => verse.ref === phrase.ref)!} words={phrase.words} family={family} />)}</ul>}
     {activity.params.find > 0 && <Finder verses={week.verses.filter(verse => verse.wordReady).slice(0, READER_VERSES)} family={family} need={activity.params.find} skip={new Set(rows.map(row => `${row.ref}#${row.words[0]}`))} />}
