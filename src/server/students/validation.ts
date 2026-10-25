@@ -90,7 +90,7 @@ export function parseStudentCsv(csv:unknown):CsvParse{
     try{
       if(record.some((cell,index)=>header[index]!=="notes" && /[\x00-\x1f\x7f-\x9f]/.test(cell)))throw new AccessDenied(403);
       const raw=Object.fromEntries(header.map((key,i)=>[key,record[i]]));
-      const student=studentInput({...raw,...(full?{serviceSlot:raw.service_slot.trim(),hebrewName:raw.hebrew_name,secondParentEmail:raw.parent2_email}:{})});
+      const student=studentInput({...raw,...(full?{serviceSlot:raw.service_slot.trim()||"unknown",hebrewName:raw.hebrew_name,secondParentEmail:raw.parent2_email}:{})});
       const importMetadata:StudentImportMetadata|undefined=full?{version:1,parent1Name:optionalText(raw.parent1_name,400),householdPhone:optionalText(raw.household_phone,100),parent2Name:optionalText(raw.parent2_name,400),
         parashahLabel:optionalText(raw.parashah,400),tutorName:optionalText(raw.tutor,400),tutorMatch:null,adminNotes:optionalText(raw.notes,4096,true)}:undefined;
       rows.push({...student,...(importMetadata?{importMetadata}:{})});rowNumbers.push(index+2);

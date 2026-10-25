@@ -8,6 +8,9 @@ import { identityLabels, makeReview, relationshipApi, type Action, type Relation
 import { AccessReview } from "./review";
 
 type Snapshot = { relationships: Relationships | null; tutors: Tutor[] };
+/** A roster button's visible words, and its accessible name, which begins with them (WCAG 2.5.3) and then says whom it removes. */
+export const removeText = (firstName: string) => `Remove from ${firstName}`;
+export const removeLabel = (firstName: string, name: string) => `${removeText(firstName)}: ${name}`;
 export function AdminAccessWorkspace({ studentId }: { studentId?: string }) { return <RequireRole role="admin"><Access key={studentId ?? "tutors"} studentId={studentId} /></RequireRole>; }
 function Access({ studentId }: { studentId?: string }) {
   const { registerReload } = useWorkspace();
@@ -88,7 +91,7 @@ function Access({ studentId }: { studentId?: string }) {
   // Row actions say whose access they change, so the visible verb is never ambiguous to a screen reader.
   const act = (label: string, name: string, action: Action, danger = false, off = false) => <button className={`roster-action${danger ? " people-danger" : ""}`} aria-label={`${label} ${name}`} disabled={disabled || off} onClick={open(action)}>{label}</button>;
   // Removing someone from this student is the ordinary row action; it names the student so its scope is visible before the review.
-  const remove = (name: string, action: Action) => <button className="roster-action" aria-label={`Remove ${name} from ${data!.student.firstName}`} disabled={disabled} onClick={open(action)}>{`Remove from ${data!.student.firstName}`}</button>;
+  const remove = (name: string, action: Action) => <button className="roster-action" aria-label={removeLabel(data!.student.firstName, name)} disabled={disabled} onClick={open(action)}>{removeText(data!.student.firstName)}</button>;
   const person = (name: string, status: ReactNode, actions: ReactNode, key: string) => <li key={key} className="people-row">
     <span className="people-avatar" aria-hidden="true">{initial(name)}</span>
     <div className="people-body"><h3><bdi dir="auto">{name}</bdi></h3><p className="people-status">{status}</p></div>
