@@ -29,7 +29,8 @@ const ACCENT_ALIASES: Readonly<Record<string, TropeId>> = Object.freeze({ merkha
 export type ExamplePhrase = Readonly<{ family: FamilyId; words: readonly [number, number] }>;
 export type Example = Readonly<{ ref: string; words: readonly [number, number]; firstWord: string; lastWord: string; why: string;
   tropes?: readonly TropeId[]; phrases?: readonly ExamplePhrase[] }>;
-export type HearAndName = Readonly<{ type: "hear-and-name"; params: Readonly<{ families: readonly FamilyId[]; items: number; choices: number; weight: Readonly<Partial<Record<FamilyId, number>>>; label?: string }> }>;
+/** `mode: "read"` (N18, mark to sound): the phrase is shown as text and no recording plays until the learner has picked a tune. */
+export type HearAndName = Readonly<{ type: "hear-and-name"; params: Readonly<{ families: readonly FamilyId[]; items: number; choices: number; weight: Readonly<Partial<Record<FamilyId, number>>>; label?: string; mode?: "read" }> }>;
 export type SameOrDifferent = Readonly<{ type: "same-or-different"; params: Readonly<{ families: readonly FamilyId[]; items: number; melodies?: readonly Melody[]; label?: string }> }>;
 export type WhereDoesItEnd = Readonly<{ type: "where-does-it-end"; params: Readonly<{ families: readonly FamilyId[]; items: number; audio: boolean; prompt?: string; verseWords: readonly [number, number] }> }>;
 export type TapThePhrase = Readonly<{ type: "tap-the-phrase"; params: Readonly<{ families: readonly FamilyId[]; items: number; verseWords: readonly [number, number] }> }>;
@@ -299,7 +300,8 @@ function parseActivity(value: unknown, family: FamilyId | null, melody: Melody, 
   };
   switch (value.type) {
     case "hear-and-name": {
-      only(["families", "items", "choices", "weight", "label"]);
+      only(["families", "items", "choices", "weight", "label", "mode"]);
+      if (p.mode !== undefined && p.mode !== "read") fail("mode");
       const families = familyList(p.families, fail, melody), choices = p.choices === undefined ? Math.min(families.length, 2) : integer(p.choices, 2, 4) ? p.choices as number : (fail("choices"), 2);
       if (choices > families.length) fail("more choices than families");
       const weight: Partial<Record<FamilyId, number>> = {};
@@ -307,7 +309,7 @@ function parseActivity(value: unknown, family: FamilyId | null, melody: Melody, 
         if (!isObject(p.weight)) fail("weight");
         else for (const [id, w] of Object.entries(p.weight)) { if (!families.includes(id as FamilyId) || !integer(w, 1, 4)) fail(`weight ${id}`); else weight[id as FamilyId] = w; }
       }
-      return { type: "hear-and-name", params: { families, items: items(), choices, weight, ...(p.label !== undefined ? { label: String(p.label) } : {}) } };
+      return { type: "hear-and-name", params: { families, items: items(), choices, weight, ...(p.label !== undefined ? { label: String(p.label) } : {}), ...(p.mode === "read" ? { mode: "read" as const } : {}) } };
     }
     case "same-or-different": {
       only(["families", "items", "melodies", "label"]);

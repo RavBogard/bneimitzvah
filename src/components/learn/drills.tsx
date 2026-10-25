@@ -5,6 +5,7 @@ import { familyName, type Melody, type TropeId } from "../../lib/learn/course";
 import { tropeLabel, tropeSample, isConjunctive } from "../../lib/learn/marks";
 import { phraseAt, type BuildItem, type DrillItem, type EndItem, type HalfItem, type LookItem, type LookSide, type NameItem, type Phrase, type Pools, type SameItem, type TapItem } from "../../lib/learn/pools";
 import { LEADS_ON, type AnalysedVerse } from "../../lib/learn/verse";
+import { lessonOfFamily } from "../../lib/learn/production";
 import { DRAFTED, lookTell } from "./activity-copy";
 import { AudioError, ContourMark, FamilyChip, icons, phraseRequest, phraseStyle, PlayTile, UnitsText } from "./bits";
 import { useLearnServices, usePlayerState } from "./services";
@@ -24,7 +25,8 @@ function useAutoplay(id: string, requests: Parameters<ReturnType<typeof useLearn
 }
 function Answer({ verse, phrase, id }: { verse: AnalysedVerse; phrase: Phrase; id: string }) {
   return <div className={styles.answer} data-answer>
-    <UnitsText playback={[id, `${id}:compare`, `${id}:verse`]} verse={verse} className={styles.phraseStandard} look={unit => unit >= phrase.words[0] && unit <= phrase.words[1] ? "inked" : "plain"} />
+    <UnitsText playback={[id, `${id}:compare`, `${id}:verse`]} verse={verse} className={styles.phraseStandard} look={unit => unit >= phrase.words[0] && unit <= phrase.words[1] ? "inked" : "plain"}
+      unitClass={unit => unit === phrase.words[1] ? styles.underlined : undefined} />
     <div className={styles.answerHead}><span className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></span><FamilyChip family={phrase.family} melody={phrase.kind} />
       <PlayTile id={`${id}:verse`} requests={[phraseRequest(verse, [0, verse.units.length - 1])]} label="Whole verse" /></div>
   </div>;
@@ -33,17 +35,24 @@ function Answer({ verse, phrase, id }: { verse: AnalysedVerse; phrase: Phrase; i
 /** Hear and name: a phrase plays; two to four family chips; the right one takes its colour. */
 export function HearAndName({ item, pools, melody, contrast, onAnswer }: DrillProps<NameItem>) {
   const { player } = useLearnServices(), id = `name:${item.key}`, [chosen, setChosen] = useState<FamilyId | null>(null), [compared, setCompared] = useState(false);
-  const verse = verseOf(pools, item.answer);
-  useAutoplay(id, [request(item.answer)]);
+  const verse = verseOf(pools, item.answer), read = item.read === true;
+  // Read mode (N18, mark to sound): the phrase is text only, and the recording first sounds as the check after the pick.
+  useAutoplay(id, [request(item.answer)], !read);
   const pick = (family: FamilyId) => {
     if (chosen) return; setChosen(family);
     const right = family === item.answer.family;
     if (!right) { const other = contrast(family, [item.answer.ref]); setCompared(!!other); void player.play(`${id}:compare`, other ? [request(item.answer), request(other)] : [request(item.answer)]); }
+    else if (read) void player.play(id, [request(item.answer)]);
     onAnswer(right);
   };
+  const lesson = chosen && read && chosen !== item.answer.family ? lessonOfFamily(item.answer.family, item.answer.kind) : null;
   return <>
-    <h2 className={styles.prompt}>Which phrase is this?</h2>
-    <div className={styles.playRow}><PlayTile id={id} requests={[request(item.answer)]} /></div>
+    <h2 className={styles.prompt}>{read ? "Read it, then pick the tune" : "Which phrase is this?"}</h2>
+    {read ? <>
+      {verse && <div className={styles.verseBox}><UnitsText playback={[id, `${id}:compare`]} verse={verse} units={item.answer.words} className={styles.phraseStandard} card={!!chosen} /></div>}
+      <p className={styles.listen}>Sing it (in your head or out loud), then check.</p>
+      {chosen && <div className={styles.playRow}><PlayTile id={id} requests={[request(item.answer)]} /></div>}
+    </> : <div className={styles.playRow}><PlayTile id={id} requests={[request(item.answer)]} /></div>}
     <AudioError id={[id, `${id}:compare`]} />
     <ul className={styles.choices}>{item.choices.map(family => {
       const state = !chosen ? undefined : family === item.answer.family ? "right" : family === chosen ? "chosen" : "other";
@@ -52,8 +61,9 @@ export function HearAndName({ item, pools, melody, contrast, onAnswer }: DrillPr
         <ContourMark family={family} melody={melody} /><span>{familyName(family)}</span>{state === "right" && <span className={styles.choiceMark}>{icons.check}</span>}{state === "chosen" && <span className={styles.choiceMark}>{icons.wrong}</span>}
       </button></li>;
     })}</ul>
-    <p role="status" className={styles.feedback}>{chosen && chosen !== item.answer.family ? compared ? `That one is ${familyName(item.answer.family)}. Here is ${familyName(chosen)} for comparison.` : `That one is ${familyName(item.answer.family)}.`
+    <p role="status" className={styles.feedback}>{chosen && read && <><span data-read-result>{chosen === item.answer.family ? "Same" : "Not quite"}</span><br /></>}{chosen && chosen !== item.answer.family ? compared ? `That one is ${familyName(item.answer.family)}. Here is ${familyName(chosen)} for comparison.` : `That one is ${familyName(item.answer.family)}.`
       : chosen ? <span className="sr-only">{familyName(item.answer.family)}</span> : ""}</p>
+    {lesson && <p className={styles.muted}><a href={`/learn/${lesson.id}`}>More about {familyName(item.answer.family)}</a></p>}
     {chosen && verse && <Answer verse={verse} phrase={item.answer} id={id} />}
   </>;
 }
@@ -98,7 +108,8 @@ export function wrongEndLine(verse: AnalysedVerse, unit: number): string {
   return `That's a ${tropeLabel(trope)}.`;
 }
 /** Where does the phrase end: the phrase plays from a marked word and stops at its end; tap that word. The tap is
- * the answer and plays nothing; once answered, a tapped word opens its card. */
+ * the answer and plays nothing; once answered, a tapped word opens its card. From zakef on (N18) nothing plays before the
+ * answer: the ending is found from its mark, and the phrase has a tile only once answered. The closing word is underlined in the answer. */
 export function WhereDoesItEnd({ item, pools, prompt, onAnswer }: DrillProps<EndItem>) {
   const id = `end:${item.key}`, [tapped, setTapped] = useState<number | null>(null), verse = verseOf(pools, item.target);
   useAutoplay(id, [request(item.target)], item.audio);
@@ -116,10 +127,12 @@ export function WhereDoesItEnd({ item, pools, prompt, onAnswer }: DrillProps<End
       <UnitsText playback={[id]} verse={verse} className={styles.phraseStandard} onUnit={tapped === null ? tap : undefined}
         unitLabel={unit => `Word ${unit + 1}${unit === first ? ", the phrase starts here" : ""}`}
         look={unit => tapped !== null && unit >= first && unit <= last ? "inked" : "plain"}
-        unitClass={unit => [unit === first ? styles.start : "", tapped !== null && unit === tapped && !right ? styles.missed : ""].filter(Boolean).join(" ") || undefined} />
+        unitClass={unit => [unit === first ? styles.start : "", tapped !== null && unit === last ? styles.underlined : "", tapped !== null && unit === tapped && !right ? styles.missed : ""].filter(Boolean).join(" ") || undefined} />
     </div>
     <p role="status" className={styles.feedback}>{tapped !== null && !right ? wrongEndLine(verse, tapped) : ""}</p>
-    {tapped !== null && <div className={styles.answerHead} data-answer><FamilyChip family={item.target.family} melody={item.target.kind} /><span className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></span></div>}
+    {tapped !== null && <div className={styles.answerHead} data-answer><FamilyChip family={item.target.family} melody={item.target.kind} /><span className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></span>
+      {/* N18: with no recording first, the phrase is heard only now, from this tile. */}
+      {!item.audio && <PlayTile id={id} requests={[request(item.target)]} />}</div>}
   </>;
 }
 
