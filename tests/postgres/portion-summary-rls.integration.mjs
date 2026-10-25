@@ -70,7 +70,8 @@ test("real PostgreSQL: portion summaries are tenant-isolated, public only when a
         assert.deepEqual((await query(client, "SELECT reading_key FROM portion_summary_public")).rows, []);
         for (const statement of ["SELECT drafted_by FROM portion_summary", "SELECT approved_by FROM portion_summary", "SELECT approved_grant_id FROM portion_summary", "SELECT * FROM portion_summary",
           "DELETE FROM portion_summary", "TRUNCATE portion_summary", "UPDATE portion_summary SET summary = 'Changed.'"]) await rejects(client, statement, [], "42501");
-        await rejects(client, ...draft("test-other", "vayera", 1, people.x.member), "42501");
+        // Another congregation's row: the trigger finds no live admin grant there under this setting before row security is asked.
+        await rejects(client, ...draft("test-other", "vayera", 1, people.x.member), "23514");
         await rejects(client, ...approve(people.tutor, "vayera", 1, "tutor"), "23514");
         await rejects(client, ...approve(people.tutor, "vayera", 1), "23514");
         await rejects(client, ...draft("crc", "noach", 1, people.tutor.member), "23514");
@@ -88,7 +89,7 @@ test("real PostgreSQL: portion summaries are tenant-isolated, public only when a
         assert.equal((await query(client, "UPDATE portion_summary SET status = 'withdrawn', withdrawn_at = now() WHERE reading_key = 'vayera'")).rowCount, 0);
         assert.equal((await query(client, ...approve(people.x, "vayera", 1))).rowCount, 0);
         await query(client, "ROLLBACK");
-      } finally { client.release(); }
+      } finally { await client.query("ROLLBACK").catch(() => {}); client.release(); }
     });
 
     await t.test("a revoked admin grant approves nothing", async () => {
@@ -100,7 +101,7 @@ test("real PostgreSQL: portion summaries are tenant-isolated, public only when a
         await rejects(client, ...approve(people.rabbi, "noach", 1), "23514");
         await rejects(client, ...draft("crc", "noach", 2, people.rabbi.member), "23514");
         await query(client, "ROLLBACK");
-      } finally { client.release(); }
+      } finally { await client.query("ROLLBACK").catch(() => {}); client.release(); }
     });
   } finally {
     await pool?.end();
