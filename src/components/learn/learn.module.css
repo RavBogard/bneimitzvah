@@ -60,7 +60,6 @@
 .review svg { flex: none; color: var(--color-action); }
 .practiceMelody { margin-inline-start: auto; color: var(--color-muted); font-size: 0.9375rem; font-weight: 600; }
 .practiceMelody + svg { margin-inline-start: -0.5rem; }
-.heard { margin-top: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .links { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; margin-top: 0.75rem; }
 .links a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
 .saved { margin-top: 0.75rem; color: var(--color-muted); font-size: 0.875rem; }

@@ -23,7 +23,7 @@ test("a sound lesson teaches echo and independent production, permits specific r
   await page.getByRole("button", { name: "Return to the whole phrase", exact: true }).click(); await stage(page, "model");
   await page.getByRole("button", { name: "Try this familiar phrase directly", exact: true }).click();
   await page.getByRole("button", { name: "Compare with the reader", exact: true }).click();
-  await page.getByRole("button", { name: "I’m not sure", exact: true }).click(); await stage(page, "unsure");
+  await page.getByRole("button", { name: "I'm not sure", exact: true }).click(); await stage(page, "unsure");
   await expect(page.getByRole("button", { name: "Hear the first word", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Finish this practice", exact: true }).click();
   await expect(page.locator("main")).toHaveAttribute("data-step", "done");

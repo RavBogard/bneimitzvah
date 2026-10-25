@@ -25,8 +25,8 @@ export function reviewItems(slots: readonly ReviewSlot[], pools: Pools, progress
     const known = [...new Set([slot.family, ...learned(progress, slot.melody)])].filter(family => MELODY_FAMILIES[slot.melody].includes(family));
     // With one family done, the second choice is a family it is confused with that the learner has been taught; with none, the naming slot is skipped, never filled with an untaught family.
     const partner = known.length > 1 ? null : COURSE.families[slot.family].confusedWith.find(other => MELODY_FAMILIES[slot.melody].includes(other) && taught(progress, slot.melody).includes(other));
-    const name: Drill | null = n % 3 === 2 && known.length > 1 ? { type: "same-or-different", params: { families: known, items: 1 } }
-      : known.length > 1 || partner ? { type: "hear-and-name", params: { families: known.length > 1 ? known : [slot.family, partner!], items: 1, choices: Math.min(3, Math.max(2, known.length)), weight: {} } } : null;
+    // Daniel 2026-10-24: no same-or-different anywhere in Learn; recognition is naming on families the learner has heard.
+    const name: Drill | null = known.length > 1 || partner ? { type: "hear-and-name", params: { families: known.length > 1 ? known : [slot.family, partner!], items: 1, choices: Math.min(3, Math.max(2, known.length)), weight: {} } } : null;
     const own: Drill[] = slot.skill === "find" ? [{ type: "tap-the-phrase", params: { families: [slot.family], items: 1, verseWords: [5, 16] } }]
       : slot.skill === "end" ? [{ type: "where-does-it-end", params: { families: [slot.family], items: 1, audio: true, verseWords: [5, 16] } }] : [];
     const choices: Drill[] = name ? [...own, name] : own;

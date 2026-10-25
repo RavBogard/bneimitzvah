@@ -8,12 +8,12 @@ import styles from "./learn.module.css";
 
 const prompts: Record<PreparationStage, string> = {
   model: "Listen once and follow the words.", words: "Read these words aloud. Open any word you want help with.",
-  echo: "Listen to this phrase. When it stops, chant it back.", attempt: "Try it without the recording.",
+  echo: "Listen to this phrase. When it stops, chant it back.", attempt: "Your turn",
   check: "Replay it and follow the words. What would help?", "word-repair": "Choose a word to work on.",
   "tune-repair": "Listen to the ending. Try the ending, then the whole phrase.",
   unsure: "Listen to a smaller part, then return to the phrase.", "join-model": "Now connect the two parts. Listen across the join, then try it.",
   "join-attempt": "Connect the parts without the recording.", "join-check": "How did the join feel?",
-  "whole-attempt": "Chant the whole verse without the recording.", "whole-check": "Then listen and choose what to work on.", "choose-part": "Choose a part to practise.",
+  "whole-attempt": "Your turn", "whole-check": "Your turn", "choose-part": "Choose a part to practise.",
   recover: "If you lose your place, return to a part you know, find the next words, and continue.", summary: "A verse practised",
 };
 /** A learner-paced preparation loop. Only explicit model buttons start sound; attempts always stop it. */
@@ -55,11 +55,11 @@ export function GuidedPreparation({ verse, lein, onDone, onAnother }: { verse: A
   const repairChoices = <div className={styles.preparationActions}>
     <button type="button" className="button-secondary" onClick={() => stage("word-repair")}>Work on a word</button>
     <button type="button" className="button-secondary" onClick={() => chooseRepair("tune-repair")}>Work on the tune</button>
-    <button type="button" className="button-secondary" onClick={() => chooseRepair("unsure")}>I’m not sure</button>
+    <button type="button" className="button-secondary" onClick={() => chooseRepair("unsure")}>I'm not sure</button>
   </div>;
   return <section className={styles.preparation} data-preparation-stage={state.stage}>
     <h2 ref={heading} tabIndex={-1} className={styles.sectionTitle}>{prompts[state.stage]}</h2>
-    {state.stage === "model" && <p>You’ll learn this verse in short parts, then try it without the recording.</p>}
+    {state.stage === "model" && <p>You'll learn this verse in short parts, then try it without the recording.</p>}
     {!wholeStage && !joinStage && <p className={styles.muted}>Part {state.part + 1} of {parts.length}</p>}
     {joinStage && <p className={styles.muted}>Parts {state.join + 1} and {state.join + 2}</p>}
     {state.stage !== "summary" && <div className={styles.stage}>
@@ -74,7 +74,9 @@ export function GuidedPreparation({ verse, lein, onDone, onAnother }: { verse: A
     </div>}
     {showModel && <label className={styles.preparationSpeed}>Model speed <select value={rate} onChange={event => { player.stop(); setRate(Number(event.target.value)); }}>
       {[0.5, 0.75, 1].map(speed => <option key={speed} value={speed}>{speed}×</option>)}</select></label>}
-    {independent && <p>The recording is off. Use a comfortable voice. When you’re ready, open the model to compare.</p>}
+    {/* LD-03, as on main: the Your turn line, the same wherever Learn asks for an attempt without the recording. */}
+    {(state.stage === "attempt" || state.stage === "whole-attempt") && <p>Chant it without the recording. Then hear the reader.</p>}
+    {state.stage === "join-attempt" && <p>The recording is off. Use a comfortable voice, and open the model to compare when you're ready.</p>}
     {state.stage === "words" && <p>Take the words at your own pace. Open a word for syllables and stress.</p>}
     {state.stage === "echo" && <p>Use a comfortable voice. Follow the tune and the words.</p>}
     {(state.stage === "check" || state.stage === "whole-check") && repairChoices}
@@ -92,7 +94,7 @@ export function GuidedPreparation({ verse, lein, onDone, onAnother }: { verse: A
       <details><summary>See the mark for this ending</summary><FamilyChip family={verse.units[part[1]].family} melody={verse.kind} /><p>Follow this ending in the phrase above. The name is optional for this practice.</p></details>
     </div>}
     {state.stage === "unsure" && <div className={styles.preparationRepair}>
-      <p>You don’t have to decide what was wrong. Start with one word, replay the phrase, and try it again. A tutor or another experienced reader can help if you want.</p>
+      <p>You don't have to decide what was wrong: start with one word, replay the phrase and try it again. A tutor or another experienced reader can help if you want.</p>
       {play([part[0], part[0]], "Hear the first word", "smaller")}
     </div>}
     {state.stage === "join-check" && <div className={styles.preparationActions}>
@@ -106,9 +108,9 @@ export function GuidedPreparation({ verse, lein, onDone, onAnother }: { verse: A
       <button type="button" className="button-secondary" onClick={() => stage("whole-attempt")}>Try the whole verse again</button>
     </div>}
     {state.stage === "whole-check" && comparisonFailed && <p>The comparison recording needs a successful retry. Replay the whole verse, work on a part, or return later.</p>}
-    {state.stage === "recover" && <p>Choose a familiar part below. Try from there, then connect it to the next part. This is a practice strategy; ask your congregation about public-reading customs.</p>}
+    {state.stage === "recover" && <p>Choose a familiar part below, try from there, then connect it to the next part. This is a practice strategy; ask your congregation about public-reading customs.</p>}
     {state.stage === "summary" ? <>
-      {state.selfComparison === "same" && <><p>You can lein this verse.</p><p>Based on your comparison with the reader. This app hasn’t assessed your voice.</p></>}
+      {state.selfComparison === "same" && <p>You can lein this verse.</p>}
       {/* Daniel 2026-10-24, answer 1 ("Keep ours, gated"): the only ending line is "You can lein this verse.", after "Same as the reader". */}
       <p>Return later: try the part you prepared before replay. Revisit anything uncertain.</p>
       <div className={styles.preparationActions}>
@@ -134,7 +136,7 @@ export function GuidedPreparation({ verse, lein, onDone, onAnother }: { verse: A
         <label>Practise part <select value={state.part} onChange={event => go({ type: "part", part: Number(event.target.value) })}>{parts.map((_, n) => <option key={n} value={n}>Part {n + 1}</option>)}</select></label>
         <button type="button" className={styles.textButton} onClick={() => go({ type: "part", part: state.part })}>Open this part</button>
         <label><input type="checkbox" checked={colors} onChange={event => setColors(event.target.checked)} /> Show phrase colors</label>
-        <p>Try familiar words with less help. In Lein, the Tikkun menu offers pointed text, side by side, or letters only. Open the pointed text wherever you need it.</p>
+        <p>Try familiar words with less help. In Lein, the Tikkun menu offers pointed text, side by side or letters only, with the pointed text there whenever you need it.</p>
         {lein && <a href={lein}>Practise this verse in Lein</a>}
         <button type="button" className={styles.textButton} onClick={() => stage("recover")}>Find a starting point after a stumble</button>
       </details>

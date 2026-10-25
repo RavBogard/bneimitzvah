@@ -45,7 +45,7 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
   await expect(page.getByText("Hear a phrase, chant it yourself, then connect it to a reading. Return to words, sounds and joins whenever you need help.", { exact: true })).toBeVisible();
   const next = page.locator("[data-next]");
   await expect(next).toHaveAttribute("data-next", "torah-sof-pasuk");
-  await expect(page.getByText("Can hear: 0 of 10 Torah phrases · 0 of 11 haftarah phrases")).toBeVisible();
+  await expect(page.getByText(/Can hear:|lessons visited/)).toHaveCount(0); // Daniel 2026-10-24: the home shows no count
   await expect(page.getByText("Progress is saved on this device. Sign in to keep it.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in");
   // Every lesson on both paths is a link (the order is advice), while Next still recommends one.
@@ -128,9 +128,9 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
   await page.getByRole("link", { name: "Back to the path" }).last().click();
   await expect(page).toHaveURL(/\/learn$/);
   await expect(page.locator("[data-next]")).toHaveAttribute("data-next", "torah-etnachta");
-  await expect(page.getByText("Can hear: 1 of 10 Torah phrases · 0 of 11 haftarah phrases")).toBeVisible();
+  await expect(page.getByText(/Can hear:|lessons visited/)).toHaveCount(0); // Daniel 2026-10-24: the home shows no count
   await page.reload();
-  await expect(page.getByText("Can hear: 1 of 10 Torah phrases · 0 of 11 haftarah phrases")).toBeVisible();
+  await expect(page.getByText(/Can hear:|lessons visited/)).toHaveCount(0); // Daniel 2026-10-24: the home shows no count
   await expect(page.locator('a[href="/learn/torah-sof-pasuk"] [data-state=done]')).toBeVisible();
   // Nothing is due today; the review line appears only when a phrase is.
   await expect(page.getByRole("link", { name: /^Review:/ })).toHaveCount(0);
@@ -232,7 +232,7 @@ test("a corrupt saved value means a fresh start, never an error", async ({ page 
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.goto("/learn");
   await expect(page.locator("[data-next]")).toHaveAttribute("data-next", "intro-phrases");
-  await expect(page.getByText("Can hear: 0 of 10 Torah phrases · 0 of 11 haftarah phrases")).toBeVisible();
+  await expect(page.getByText(/Can hear:|lessons visited/)).toHaveCount(0); // Daniel 2026-10-24: the home shows no count
   await expect(page.getByText("Best after The two endings.")).toBeVisible();
   await page.goto("/learn/review");
   await expect(page.getByText("Nothing to review yet. Finish a lesson and its phrases come back here.")).toBeVisible();

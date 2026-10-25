@@ -41,7 +41,7 @@ test("a learner can repair a word or an uncertain tune, join parts, return later
   await page.getByRole("button", { name: "Return to the whole phrase", exact: true }).click(); await at(page, "echo");
   await page.getByRole("button", { name: "Try without the recording", exact: true }).click();
   await page.getByRole("button", { name: "Compare with the model", exact: true }).click();
-  await page.getByRole("button", { name: "I’m not sure", exact: true }).click(); await at(page, "unsure");
+  await page.getByRole("button", { name: "I'm not sure", exact: true }).click(); await at(page, "unsure");
   await expect(page.getByRole("button", { name: "Hear the first word", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Return to the whole phrase", exact: true }).click();
   // Each actual phrase is prepared before the complete adjacent phrases are joined.
@@ -58,7 +58,7 @@ test("a learner can repair a word or an uncertain tune, join parts, return later
   await page.getByRole("button", { name: "Compare the join", exact: true }).click(); await at(page, "join-check");
   await page.getByRole("button", { name: "Return later", exact: true }).click(); await at(page, "summary");
   await expect(page.getByText("Return later: try the part you prepared before replay.", { exact: false })).toBeVisible();
-  await expect(page.getByText("You’ve practised preparing a verse", { exact: false })).toHaveCount(0); // Daniel, answer 1: our ending only, gated
+  await expect(page.getByText("You've practised preparing a verse", { exact: false })).toHaveCount(0); // Daniel, answer 1: our ending only, gated
   await expect(page.getByText("You can lein this verse.", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Try this verse before replay", exact: true }).click(); await at(page, "whole-attempt");
   expect(await plays(page)).toBe(0);
@@ -122,7 +122,7 @@ test("the first-verse result is only a temporary explicit learner comparison", a
   await page.getByRole("button", { name: "Compare the whole verse", exact: true }).click();
   await page.getByRole("button", { name: "Same as the reader", exact: true }).click(); await at(page, "summary");
   await expect(result).toBeVisible();
-  await expect(page.getByText("Based on your comparison with the reader.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Based on your comparison with the reader.", { exact: false })).toHaveCount(0); // the approved line stands alone
   expect(await plays(page)).toBe(0);
   await page.getByRole("button", { name: "Finish practice", exact: true }).click();
   await expect(page.locator("main")).toHaveAttribute("data-step", "done"); await expect(result).toHaveCount(0);

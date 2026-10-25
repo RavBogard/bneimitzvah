@@ -66,13 +66,9 @@ describe("sound production before optional recognition", () => {
     const slots = [{ card: "sof-pasuk:torah:name" as const, family: "sof-pasuk" as const, melody: "torah" as const, skill: "name" as const }];
     expect(reviewItems(slots, pools, done("torah-sof-pasuk"), 4)).toEqual([]);
     const items = reviewItems([...slots, ...slots, ...slots], pools, done("torah-sof-pasuk", "torah-etnachta"), 4);
-    // Review keeps its one-in-three same-or-different (CHANTING-RECONCILIATION.md section 5), but only ever between taught families.
-    expect(items.length).toBeGreaterThan(0);
-    for (const { item } of items) {
-      expect(["hear-and-name", "same-or-different"]).toContain(item.type);
-      const named = item.type === "hear-and-name" ? item.choices : item.type === "same-or-different" ? [item.first.family, item.second.family] : [];
-      for (const family of named) expect(["sof-pasuk", "etnachta"]).toContain(family);
-    }
+    // Daniel 2026-10-24: no same-or-different anywhere, review included; naming uses only taught families.
+    expect(items.length).toBeGreaterThan(0); expect(items.every(row => row.item.type === "hear-and-name")).toBe(true);
+    for (const { item } of items) if (item.type === "hear-and-name") for (const family of item.choices) expect(["sof-pasuk", "etnachta"]).toContain(family);
   });
 });
 

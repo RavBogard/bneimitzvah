@@ -1,7 +1,7 @@
 "use client";
 import type { CSSProperties } from "react";
 import { COURSE, familyColor, lessonMinutes, pathLessons, type Lesson, type Melody } from "../../lib/learn/course";
-import { courseDone, emptyProgress, heard, isDone, isUnlocked, localDay, reviewSummary, type Progress } from "../../lib/learn/progress";
+import { courseDone, emptyProgress, isDone, isUnlocked, localDay, reviewSummary, type Progress } from "../../lib/learn/progress";
 import { recommendedLesson } from "../../lib/learn/recommendation";
 import { reviewLine } from "../../lib/learn/review-line";
 import { openPractice } from "../../lib/learn/practice";
@@ -45,7 +45,6 @@ export function CourseHome() {
   const { progress: loaded, account, until } = useProgress();
   const progress = loaded ?? emptyProgress(), ready = loaded !== null;
   const next = recommendedLesson(progress), review = ready ? reviewSummary(progress, localDay(Date.now()), until) : null;
-  const torah = heard(progress, "torah"), haftarah = heard(progress, "haftarah");
   const haftarahOpen = isUnlocked(progress, pathLessons("haftarah")[0]);
   return <div className={`portal-shell ${styles.shell}`}>
     <a className="skip-link" href="#learn-main">Skip to the course</a>
@@ -65,7 +64,6 @@ export function CourseHome() {
           {review && <a className={styles.review} href="/learn/review"><span>{reviewLine(review)}</span>{icons.arrow}</a>}
           {ready && <QuickTenLinks progress={progress} />}
           <LearningStart />
-          <p className={styles.heard}>Can hear: {torah.heard} of {torah.of} Torah phrases · {haftarah.heard} of {haftarah.of} haftarah phrases</p>
           <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a></nav>
           {account.state !== "synced" && <p className={styles.saved}>Progress is saved on this device. <a href="/sign-in">Sign in</a> to keep it.</p>}
         </div>

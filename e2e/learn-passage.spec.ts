@@ -39,7 +39,7 @@ test("a signed-out visitor chooses contiguous verses, practices their boundary a
   await page.getByRole("button", { name: "Prepare this section", exact: true }).click();
   await stage(page, "preview");
   await readableScore(page);
-  await page.getByRole("button", { name: "Hear the section’s verse models", exact: true }).click();
+  await page.getByRole("button", { name: "Hear the section's verse models", exact: true }).click();
   await expect.poll(() => plays(page)).toBeGreaterThan(0);
   await page.getByRole("button", { name: "Try the whole section without the recording", exact: true }).click();
   await stage(page, "attempt");
@@ -60,7 +60,7 @@ test("a signed-out visitor chooses contiguous verses, practices their boundary a
   await stage(page, "boundary-attempt");
   await expect(page.getByRole("button", { name: /^Hear / })).toHaveCount(0);
   await page.getByRole("button", { name: "Compare this boundary", exact: true }).click();
-  await page.getByRole("button", { name: "Revisit the new verse’s opening", exact: true }).click();
+  await page.getByRole("button", { name: "Revisit the new verse's opening", exact: true }).click();
   await stage(page, "verse");
   await expect(page.locator("[data-preparation-stage]")).toHaveAttribute("data-preparation-stage", "model");
 });
@@ -86,7 +86,7 @@ test("comparison offers exact verse repair, recovery and an honest public return
   const link = page.getByRole("link", { name: "Return later to Genesis 12:1-2", exact: true });
   const target = new URL((await link.getAttribute("href"))!, "https://example.test");
   expect(target.searchParams.get("ref")).toBe("Genesis 12:1-2");
-  await expect(page.getByText("This link reopens the public text. It doesn’t save your practice step.", { exact: true })).toBeVisible();
+  await expect(page.getByText("This link reopens the public text. It doesn't save your practice step.", { exact: true })).toBeVisible();
   await page.getByText("Use fewer cues or try Tikkun", { exact: true }).click();
   const lein = new URL((await page.getByRole("link", { name: "Open this exact section in Lein / Tikkun" }).getAttribute("href"))!, "https://example.test");
   expect(lein.searchParams.get("ref")).toBe("Genesis 12:1-2");
@@ -125,7 +125,7 @@ test("an excerpt in haftarah stays usable without completing Torah; phone layout
 test("a passage whose models fail keeps the requested public reading and never reports a listening success", async ({ page }) => {
   await page.route("**/api/public/reference/short?**", route => route.fulfill({ status: 503, contentType: "application/json", body: "{}" }));
   await page.goto("/learn/prepare?ref=Genesis+12%3A1-3&kind=torah");
-  await expect(page.getByText("A practice recording isn’t available for this passage yet.", { exact: false })).toBeVisible();
+  await expect(page.getByText("A practice recording isn't available for this passage yet.", { exact: false })).toBeVisible();
   const href = await page.getByRole("link", { name: "Read this passage in Lein", exact: true }).getAttribute("href");
   expect(new URL(href!, "https://example.test").searchParams.get("ref")).toBe("Genesis 12:1-3");
   await expect(page.getByRole("button", { name: "Prepare this section", exact: true })).toHaveCount(0);
