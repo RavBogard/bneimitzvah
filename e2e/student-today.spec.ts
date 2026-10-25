@@ -137,6 +137,7 @@ test.describe("at 390x844", () => {
     await expect(dots.locator(".practice-day-done")).toHaveCount(3);
     const text = (await dots.textContent()) ?? "", section = (await today(page).locator("section").filter({ has: page.locator(".practice-week") }).textContent()) ?? "";
     expect(text).not.toMatch(/\d/);
+    expect(text).toContain("practised"); expect(text).not.toContain("practiced");
     expect(section).not.toMatch(/streak|in a row|total|\bof\b.*\bdays\b/i);
     await expect(today(page).getByText("Days you practised · a day fills when you open your reading up close", { exact: true })).toBeVisible();
   });

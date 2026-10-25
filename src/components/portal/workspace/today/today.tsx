@@ -167,7 +167,7 @@ function NextCard({ row, started, dates }: { row: ReturnType<typeof readingRows>
         <li key={day.date} className={`practice-day${day.practised ? " practice-day-done" : ""}${day.today ? " practice-day-today" : ""}`}>
           <span aria-hidden="true" className="practice-day-letter">{weekdayLetters[day.weekday]}</span>
           <span className="practice-day-dot" aria-hidden="true" />
-          <span className="sr-only">{weekdayNames[day.weekday]}{day.today ? ", today" : ""}: {day.practised ? "practiced" : "not practiced"}</span>
+          <span className="sr-only">{weekdayNames[day.weekday]}{day.today ? ", today" : ""}: {day.practised ? "practised" : "not practised"}</span>
         </li>)}</ol>
       <p id={caption} className={styles.caption}>Days you practised · a day fills when you open your reading up close</p>
     </div> : dates.status === "unavailable" ? <p className={styles.caption}>Practice days couldn’t be loaded.</p> : null}
