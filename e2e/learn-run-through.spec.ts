@@ -3,7 +3,7 @@ import { syntheticCourseRoutes } from "./learn-synthetic";
 
 // 1.9 N19: the Run-through and the student's own verse cards. Every account answer is a route fulfilment with a synthetic
 // student ("Noa", example.test, no real data); the reading's text is the synthetic course data. Nothing may play.
-const OWNER = "a".repeat(32), STUDENT = "11111111-1111-4111-8111-111111111111", READING = "22222222-2222-4222-8222-222222222222";
+const OWNER = "a".repeat(32), VERSE_OWNER = "c".repeat(32), STUDENT = "11111111-1111-4111-8111-111111111111", READING = "22222222-2222-4222-8222-222222222222";
 const VERSES = ["Genesis 23:1", "Genesis 23:2", "Genesis 23:3"];
 const json = (route: Route, body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 
@@ -17,10 +17,11 @@ async function signIn(page: Page, puts: unknown[]) {
   let version = 0;
   await page.route("**/api/learn/verses**", async route => {
     const url = new URL(route.request().url());
-    if (url.pathname === "/api/learn/verses") return json(route, { ok: true, review: null, version: 0, until: "2027-03-06" });
-    const body = route.request().postDataJSON() as { review: unknown; expectedVersion: number }; puts.push(body);
-    if (body.expectedVersion !== version) return json(route, { ok: false, code: "conflict", current: { ok: true, review: null, version, until: "2027-03-06" } }, 409);
-    version++; return json(route, { ok: true, review: body.review, version, until: "2027-03-06" });
+    if (url.pathname === "/api/learn/verses") return json(route, { ok: true, owner: VERSE_OWNER, review: null, version: 0, until: "2027-03-06" });
+    const body = route.request().postDataJSON() as { review: unknown; expectedVersion: number; expectedOwner: string }; puts.push(body);
+    if (body.expectedOwner !== VERSE_OWNER) return json(route, { error: "forbidden" }, 403);
+    if (body.expectedVersion !== version) return json(route, { ok: false, code: "conflict", current: { ok: true, owner: VERSE_OWNER, review: null, version, until: "2027-03-06" } }, 409);
+    version++; return json(route, { ok: true, owner: VERSE_OWNER, review: body.review, version, until: "2027-03-06" });
   });
   const student = { id: STUDENT, firstName: "Noa", lastName: "Fixture", ceremonyDate: "2027-03-06", revision: 1 };
   await page.route("**/api/students?**", route => json(route, { students: [student] }));

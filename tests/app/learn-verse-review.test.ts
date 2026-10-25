@@ -62,6 +62,9 @@ describe("Got it and Solid verses as review cards", () => {
     const far = parseVerseReview(doc({ [NOA]: [5, addDays(until, 30)] }))!;
     expect(dueVerses(far, addDays(until, -2), until)).toEqual([]);
     expect(dueVerses(far, addDays(until, -1), until)).toEqual([NOA]);
+    // After the ceremony nothing is asked, even a card marked Got it on the day itself.
+    const onTheDay = addVerseCards(emptyVerseReview(), [NOA], until, until);
+    for (const day of [addDays(until, 1), addDays(until, 30)]) { expect(dueVerses(onTheDay, day, until)).toEqual([]); expect(dueVerses(far, day, until)).toEqual([]); }
   });
   it("keeps an existing card in place when the same verse is marked again", () => {
     const review = parseVerseReview(doc({ [NOA]: [4, "2026-12-01"] }))!;
@@ -75,7 +78,8 @@ describe("a verse result", () => {
     expect(fresh.cards[NOA]).toEqual({ box: 0, due: D });
     expect(dueVerses(fresh, D)).toEqual([NOA]);
     const settled = parseVerseReview(doc({ [NOA]: [3, "2026-12-01"] }))!;
-    expect(recordVerse(settled, NOA, false, D).cards[NOA]).toEqual({ box: 1, due: addDays(D, 1) });
+    expect(recordVerse(settled, NOA, false, D).cards[NOA]).toEqual({ box: 1, due: D });
+    expect(dueVerses(recordVerse(settled, NOA, false, D), D)).toEqual([NOA]);
   });
   it("moves a card up on Clean only when it is due, and only once per run", () => {
     const early = parseVerseReview(doc({ [NOA]: [2, addDays(D, 2)] }))!;

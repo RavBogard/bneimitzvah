@@ -89,11 +89,16 @@ export function recordVerse(review: VerseReview, id: VerseCardId, clean: boolean
   if (clean && (!card || options.moved?.has(id) || !isVerseDue(card, today, options.until))) return review;
   if (!card && Object.keys(review.cards).length >= VERSE_REVIEW_LIMITS.cards) return review;
   options.moved?.add(id);
-  const next = card ? answerCard(card, clean, today, options.until) : Object.freeze({ box: 0, due: today });
+  // A stumble comes back today whatever box it lands in; Clean takes the next box's gap, capped by the ceremony.
+  const next = card && clean ? answerCard(card, true, today, options.until) : Object.freeze({ box: card ? Math.max(0, card.box - 2) : 0, due: today });
   return Object.freeze({ schema: VERSE_REVIEW_SCHEMA, cards: sorted({ ...review.cards, [id]: next }) });
 }
-/** The verse cards a review asks today, in reading order. Before a known date no card is later than the day before it. */
+/**
+ * The verse cards a review asks today, in reading order. Before a known date no card is later than the day before it, and
+ * after the date none is asked at all: the reading has been read.
+ */
 export function dueVerses(review: VerseReview, today: string, until?: string | null): VerseCardId[] {
+  if (until && realDate(until) && today > until) return [];
   return Object.entries(review.cards).filter(([, card]) => isVerseDue(card, today, until)).map(([id]) => id as VerseCardId).sort(compareVerseIds);
 }
 /** Two copies of one student's cards (a conflict between devices): each card at the higher box, on a tie the sooner due. */

@@ -44,6 +44,9 @@ export function useVerseReview(enabled = true): { state: VerseState; update(chan
   const state = useSyncExternalStore(listener => { const hub = verseHub(); hub.listeners.add(listener); return () => { hub.listeners.delete(listener); }; },
     () => shared?.state ?? UNKNOWN, () => UNKNOWN);
   useEffect(() => { if (signedIn) void verseHub().sync.start(); }, [signedIn]);
+  // Signed out, or no longer eligible: the cards held in this page are dropped, and a later sign-in reads its own afresh.
+  const gone = account.state === "signed-out" || account.state === "not-eligible";
+  useEffect(() => { if (gone && shared) { shared.seeded = false; shared.sync.reset(); } }, [gone]);
   // Once per page, when the cards are in: every Got it or Solid verse not yet a card becomes one.
   useEffect(() => {
     const hub = shared; if (!hub || state.status !== "ready" || hub.seeded) return;

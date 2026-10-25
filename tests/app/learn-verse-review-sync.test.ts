@@ -17,29 +17,56 @@ function harness(answers: Response[]) {
   return { sync, calls, states, tick };
 }
 
+const A = "a".repeat(32), B = "b".repeat(32);
+const ok = (owner: string, review: unknown, version: number, until: string | null = null) => ({ ok: true, owner, review, version, until });
 describe("the verse cards in the browser", () => {
-  it("reads the account's cards, writes a change under the version last seen, and keeps nothing on the device", async () => {
+  it("reads the account's cards, writes a change under the version and owner last seen, and keeps nothing on the device", async () => {
     for (const path of ["src/components/learn/verse-review-sync.ts", "src/components/learn/own-verses.ts", "src/components/learn/verse-run.tsx", "src/components/learn/run-through.tsx"])
       expect(readFileSync(new URL(`../../${path}`, import.meta.url), "utf8"), path).not.toMatch(/localStorage|sessionStorage|indexedDB|caches\.|document\.cookie/);
-    const h = harness([json({ ok: true, review: null, version: 0, until: "2027-01-02" }), json({ ok: true, review: doc({ [NOA]: [1, "2026-11-03"] }), version: 1, until: "2027-01-02" })]);
+    const h = harness([json(ok(A, null, 0, "2027-01-02")), json(ok(A, doc({ [NOA]: [1, "2026-11-03"] }), 1, "2027-01-02"))]);
     await h.sync.start();
     expect(h.sync.state).toEqual({ status: "ready", review: emptyVerseReview(), until: "2027-01-02" });
     h.sync.update(review => addVerseCards(review, [NOA], D, "2027-01-02"));
     await h.tick();
     expect(h.calls.map(call => call.path)).toEqual(["/api/learn/verses", "/api/learn/verses/put"]);
-    expect(h.calls[1].body).toEqual({ review: doc({ [NOA]: [1, "2026-11-03"] }), expectedVersion: 0 });
+    expect(h.calls[1].body).toEqual({ review: doc({ [NOA]: [1, "2026-11-03"] }), expectedVersion: 0, expectedOwner: A });
     expect(h.sync.state).toMatchObject({ status: "ready", review: doc({ [NOA]: [1, "2026-11-03"] }) });
-
   });
   it("merges a stale write with the other device's cards, each at the higher box, and writes again", async () => {
     const theirs = doc({ [SECOND]: [3, "2026-11-10"] });
-    const h = harness([json({ ok: true, review: null, version: 0, until: null }), json({ ok: false, code: "conflict", current: { ok: true, review: theirs, version: 4, until: null } }, 409),
-      json({ ok: true, review: doc({ [NOA]: [0, D], [SECOND]: [3, "2026-11-10"] }), version: 5, until: null })]);
+    const h = harness([json(ok(A, null, 0)), json({ ok: false, code: "conflict", current: ok(A, theirs, 4) }, 409), json(ok(A, doc({ [NOA]: [0, D], [SECOND]: [3, "2026-11-10"] }), 5))]);
     await h.sync.start();
     h.sync.update(review => recordVerse(review, NOA, false, D));
     await h.tick();
     expect(h.calls.map(call => call.path)).toEqual(["/api/learn/verses", "/api/learn/verses/put", "/api/learn/verses/put"]);
-    expect(h.calls[2].body).toEqual({ review: doc({ [NOA]: [0, D], [SECOND]: [3, "2026-11-10"] }), expectedVersion: 4 });
+    expect(h.calls[2].body).toEqual({ review: doc({ [NOA]: [0, D], [SECOND]: [3, "2026-11-10"] }), expectedVersion: 4, expectedOwner: A });
+  });
+  it("never folds one student's cards into another's: an answer for someone else drops the cards and sends nothing more", async () => {
+    // Sibling A's page stays open; B signs in in another tab. The server answers for B (a conflict carrying B's cards, or a refusal).
+    for (const answer of [json({ ok: false, code: "conflict", current: ok(B, doc({ [SECOND]: [2, D] }), 3) }, 409), json(ok(B, doc({ [NOA]: [0, D] }), 1)), json({ error: "forbidden" }, 403)]) {
+      const h = harness([json(ok(A, null, 0)), answer]);
+      await h.sync.start();
+      h.sync.update(review => recordVerse(review, NOA, false, D));
+      await h.tick();
+      expect(h.sync.state).toEqual({ status: "unavailable" });
+      h.sync.update(review => recordVerse(review, SECOND, false, D)); h.sync.flush();
+      await h.tick();
+      expect(h.calls.map(call => call.path)).toEqual(["/api/learn/verses", "/api/learn/verses/put"]);
+      expect((h.calls[1].body as { expectedOwner: string }).expectedOwner).toBe(A);
+    }
+  });
+  it("drops what it holds on sign-out and reads afresh, for the new owner, on the next start", async () => {
+    const h = harness([json(ok(A, doc({ [NOA]: [2, D] }), 1)), json(ok(B, null, 0))]);
+    await h.sync.start();
+    h.sync.update(review => recordVerse(review, SECOND, false, D));
+    h.sync.reset();
+    expect(h.sync.state).toEqual({ status: "unknown" });
+    await h.tick();
+    await h.sync.start();
+    expect(h.sync.state).toEqual({ status: "ready", review: emptyVerseReview(), until: null });
+    h.sync.update(review => recordVerse(review, NOA, false, D)); await h.tick();
+    expect(h.calls.map(call => call.path)).toEqual(["/api/learn/verses", "/api/learn/verses", "/api/learn/verses/put"]);
+    expect(h.calls[2].body).toEqual({ review: doc({ [NOA]: [0, D] }), expectedVersion: 0, expectedOwner: B });
   });
   it("is unavailable to anyone the server refuses, and then sends nothing", async () => {
     for (const status of [401, 403]) {
@@ -52,9 +79,9 @@ describe("the verse cards in the browser", () => {
     }
   });
   it("parses the account's answer strictly", () => {
-    expect(parseVerseRemote({ ok: true, review: null, version: 0, until: null })).toEqual({ review: null, version: 0, until: null });
-    for (const bad of [{ ok: true, review: null, version: 1, until: null }, { ok: true, review: doc({}), version: 0, until: null }, { ok: true, review: null, version: 0, until: null, owner: "x" },
-      { ok: true, review: { schema: "learn-progress/v1", cards: {} }, version: 1, until: null }, { ok: true, review: null, version: 0, until: "soon" }]) expect(parseVerseRemote(bad), JSON.stringify(bad)).toBeNull();
+    expect(parseVerseRemote(ok(A, null, 0))).toEqual({ owner: A, review: null, version: 0, until: null });
+    for (const bad of [ok(A, null, 1), ok(A, doc({}), 0), { ok: true, review: null, version: 0, until: null }, ok("x", null, 0), { ...ok(A, null, 0), extra: 1 },
+      ok(A, { schema: "learn-progress/v1", cards: {} }, 1), ok(A, null, 0, "soon")]) expect(parseVerseRemote(bad), JSON.stringify(bad)).toBeNull();
   });
 });
 

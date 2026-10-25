@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
@@ -9,6 +10,13 @@ import { verseReviewEligibility } from "../data/verse-review";
 /** The verified owner of a student's verse cards, fixed for one request. */
 export type VerseReviewOwner = Readonly<{ tenantId: string; membershipId: string; userId: string; sessionExpiresAt: number }>;
 export type VerseReviewIntent = "read" | "data-write";
+/**
+ * An opaque, stable name for this student's account in its own namespace (never Learn progress's name for the same member),
+ * so an open page can tell that the person signed in has changed under it, and a write meant for one student is refused
+ * for another. A hash, not an id, and only ever returned to the student themself.
+ */
+export const verseReviewOwnerName = (owner: Pick<VerseReviewOwner, "tenantId" | "membershipId">) =>
+  createHash("sha256").update(`learn-verses-owner/v1:${owner.tenantId}:${owner.membershipId}`).digest("hex").slice(0, 32);
 
 /**
  * The only place that sets app.verse_review_owner (a structural test holds this), on Learn's progress model
