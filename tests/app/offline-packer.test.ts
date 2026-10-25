@@ -21,8 +21,9 @@ import { publicReadingPath, publicShortPath, publicTextPath } from "../../src/co
 import { coursePassages } from "../../src/components/learn/verses-api";
 import { lookAlikeRefs, MELODIES } from "../../src/lib/learn/course";
 
+// The packer reads its own clock (io.now), so the week under test is derived from the same fixed instant, never the wall clock.
 // The packer against the real public routes, with a synthetic calendar, synthetic text and one synthetic clip.
-const origin = "https://torah.centralreform.org", date = thisShabbat();
+const origin = "https://torah.centralreform.org", NOW = Date.parse("2026-10-21T15:00:00Z"), date = thisShabbat(NOW);
 class FakeCache {
   entries = new Map<string, Response>();
   async match(input: RequestInfo) { const hit = this.entries.get(new URL(typeof input === "string" ? input : input.url, origin).href); return hit?.clone(); }
@@ -56,7 +57,7 @@ async function harness(options: { pocketTorah?: boolean } = {}) {
     return response;
   }) as unknown as typeof globalThis.fetch;
   const caches = new FakeCaches();
-  let now = Date.parse("2026-10-21T15:00:00Z"), quota = 10 ** 9;
+  let now = NOW, quota = 10 ** 9;
   const io: PackerIo = { origin, fetch, caches: caches as unknown as CacheStorage, now: () => now, estimate: async () => ({ usage: 0, quota }) };
   return { io, caches, requests, fetch, source, setNow: (value: number) => { now = value; }, setQuota: (value: number) => { quota = value; },
     setClip: (value: Uint8Array) => { clipBody = value; }, setStatus: (value: (url: string) => number | null) => { status = value; }, setMarked: (value: boolean) => { marked = value; } };
@@ -71,7 +72,7 @@ describe("This week", () => {
     expect(await renewPack(h.io, { type: "week", date }, signal())).toBe("saved");
     const [pack] = await packs(h), week = { by: "date" as const, date };
     const torah = { by: "ref" as const, ref: "Genesis 1:1-2:3", kind: "torah" as const }, haftarah = { by: "ref" as const, ref: "Isaiah 1:1-3", kind: "haftarah" as const };
-    expect(pack).toMatchObject({ key: `week:${date}`, owner: "public", label: "Synthetic portion", descriptor: { type: "week", date }, format: 1, renewedAt: Date.parse("2026-10-21T15:00:00Z") });
+    expect(pack).toMatchObject({ key: `week:${date}`, owner: "public", label: "Synthetic portion", descriptor: { type: "week", date }, format: 1, renewedAt: NOW });
     expect(pack.expiresAt - pack.renewedAt).toBe(WINDOW_MS);
     expect([...pack.assets].sort()).toEqual([publicReadingPath(week), publicTextPath(week, "torah", 0), publicShortPath(week, "torah", 0), publicTextPath(torah, "torah", 0), publicShortPath(torah, "torah", 0),
       publicTextPath(week, "haftarah", 0), publicShortPath(week, "haftarah", 0), publicTextPath(haftarah, "haftarah", 0), publicShortPath(haftarah, "haftarah", 0), h.source.source.path]
@@ -113,7 +114,7 @@ describe("This week", () => {
     expect(clipFetches()).toBe(2); expect((await offline(h)).entries.has(origin + h.source.source.path)).toBe(true);
   });
   test("renewedAt moves only when every step worked; a 429 stops; the worker's own saved answer is no renewal", async () => {
-    const h = await harness(), first = Date.parse("2026-10-21T15:00:00Z");
+    const h = await harness(), first = NOW;
     await renewPack(h.io, { type: "week", date }, signal());
     h.setNow(first + 3 * 86_400_000);
     h.setStatus(url => url.includes("kind=haftarah") && url.includes("/text") ? 503 : null);
@@ -129,7 +130,7 @@ describe("This week", () => {
     expect((await packs(h))[0].renewedAt).toBe(first + 3 * 86_400_000);
   });
   test("an open within 12 hours of a complete renewal asks the public routes nothing (their firewall limit); after that it renews", async () => {
-    const h = await harness(), first = Date.parse("2026-10-21T15:00:00Z");
+    const h = await harness(), first = NOW;
     await openOffline({ ...h.io, origin });
     const count = h.requests.length;
     expect((await packs(h)).map(row => row.key).sort()).toEqual(["course", `week:${thisShabbat(first)}`].sort());
@@ -142,7 +143,7 @@ describe("This week", () => {
     expect((await packs(h)).every(row => row.renewedAt === first + 13 * 3_600_000)).toBe(true);
   });
   test("the sweep drops expired packs, last week's pack and every asset no live pack lists", async () => {
-    const h = await harness(), now = Date.parse("2026-10-21T15:00:00Z");
+    const h = await harness(), now = NOW;
     await renewPack(h.io, { type: "week", date }, signal());
     const cache = (await h.caches.open(OFFLINE_CACHE)) as unknown as Cache;
     await cache.put(origin + "/api/public/text?date=2026-01-03&kind=torah&offset=0", new Response("{}"));
