@@ -18,6 +18,10 @@ import { emptyProgress, mergeProgress, parseProgress, serializeProgress, type Pr
  * - Every put and merge names the account the browser holds progress for, and the server refuses another (a 403
  *   naming the signed-in account). An answer naming another account, a 409's included, is never settled or merged:
  *   another tab may have switched accounts while this one held the first account's changes, which stay here unsent.
+ * - An answer to a write is settled only while the marker still names this tab's account (or, on a first sign-in, no
+ *   account): another tab may have taken the browser for another account while the write was out, and that account's
+ *   copy is never folded into this one. Where the browser has Web Locks, the read-check-write runs under one lock
+ *   shared by every tab, so no other tab's settle lands between the check and the save.
  */
 export const SYNC_KEY = "crc-torah:learn-sync/v1";
 export type Account = Readonly<{ state: "unknown" | "signed-out" | "not-eligible" } | { state: "synced"; until: string | null }>;
@@ -57,14 +61,35 @@ function refusedOwner(value: unknown): string | null {
   return Object.keys(row).length === 2 && row.error === "forbidden" && typeof row.owner === "string" && OWNER.test(row.owner) ? row.owner : null;
 }
 
+/** The part of the Web Locks API the sync uses; `null` means the browser has none. */
+export type SyncLocks = Readonly<{ request(name: string, callback: () => unknown): Promise<unknown> }>;
 export type SyncIo = Readonly<{
   fetch: typeof fetch; storage(): Storage | null; store: ProgressStore;
   onProgress(progress: Progress): void; onAccount(account: Account): void;
   timer?: (callback: () => void, ms: number) => unknown; clearTimer?: (handle: unknown) => void;
+  /** Defaults to `navigator.locks` where it exists. */
+  locks?: SyncLocks | null;
 }>;
+function browserLocks(): SyncLocks | null {
+  try { const locks = (globalThis as { navigator?: { locks?: SyncLocks } }).navigator?.locks; return locks && typeof locks.request === "function" ? locks : null; } catch { return null; }
+}
 export function createProgressSync(io: SyncIo) {
   let account: Account = { state: "unknown" }, owner: string | null = null, pending: unknown = null, writing = false, again = false;
   const setAccount = (next: Account) => { account = next; io.onAccount(next); };
+  const locks = io.locks === undefined ? browserLocks() : io.locks;
+  /**
+   * Runs a synchronous read-check-write of the shared copy under the lock every tab takes, where the browser has one;
+   * without it (or if the lock is refused before it runs) the marker re-check inside `action` is the only guard.
+   */
+  async function exclusive(action: () => void): Promise<void> {
+    let ran = false;
+    const run = () => { if (!ran) { ran = true; action(); } };
+    if (!locks) { run(); return; }
+    try { await locks.request(SYNC_KEY, run); } catch { /* Fall through to the unlocked run below. */ }
+    run();
+  }
+  /** Whether the shared marker still lets this tab write for its account: it names that account, or (a first sign-in) nobody. */
+  const stillOurs = () => { const marker = readMarker(io.storage()); return owner !== null && (!marker || marker.owner === owner); };
   async function call(path: string, body?: unknown): Promise<{ status: number; value: unknown }> {
     try {
       // keepalive lets the last write leave as the page hides; the body is bounded well under its 64 KB.
@@ -82,13 +107,18 @@ export function createProgressSync(io: SyncIo) {
    * learner changed in this browser meanwhile is folded in and left to send, never overwritten; otherwise the
    * server's copy becomes the browser's. The marker is written only once the copy is saved.
    */
-  function settle(remote: Remote, sent: Progress | null) {
-    if (remote.owner !== owner) { otherAccount(remote.owner); return; }
-    const server = remote.progress ?? emptyProgress(), now = io.store.load(), moved = sent !== null && !same(now, sent);
-    const progress = moved ? mergeProgress(server, now) : server;
-    if (!io.store.save(progress) || !writeMarker(io.storage(), { owner: remote.owner, version: remote.version, dirty: moved })) { setAccount({ state: "unknown" }); return; }
-    io.onProgress(progress); setAccount({ state: "synced", until: remote.until });
-    if (moved) queueMicrotask(() => { void push(); });
+  function settle(remote: Remote, sent: Progress | null): Promise<void> {
+    return exclusive(() => {
+      if (remote.owner !== owner) { otherAccount(remote.owner); return; }
+      // The answer to a write: if another tab took this browser for another account meanwhile, the copy here is that
+      // account's. Fold nothing, save nothing, and stop writing from this tab.
+      if (sent !== null && !stillOurs()) { setAccount({ state: "not-eligible" }); return; }
+      const server = remote.progress ?? emptyProgress(), now = io.store.load(), moved = sent !== null && !same(now, sent);
+      const progress = moved ? mergeProgress(server, now) : server;
+      if (!io.store.save(progress) || !writeMarker(io.storage(), { owner: remote.owner, version: remote.version, dirty: moved })) { setAccount({ state: "unknown" }); return; }
+      io.onProgress(progress); setAccount({ state: "synced", until: remote.until });
+      if (moved) queueMicrotask(() => { void push(); });
+    });
   }
   /**
    * Signed out, or refused as someone else: after a clean sync the device is cleared (the account has it all);
@@ -97,16 +127,22 @@ export function createProgressSync(io: SyncIo) {
   function refused(status: number, value: unknown) {
     if (status !== 401 && status !== 403) return;
     const marker = readMarker(io.storage());
-    if (marker && !marker.dirty && !(status === 403 && refusedOwner(value) === marker.owner)) { io.store.save(emptyProgress()); dropMarker(io.storage()); io.onProgress(emptyProgress()); }
+    // The marker goes only once the empty copy is saved, so a failed save never leaves a copy no marker accounts for.
+    if (marker && !marker.dirty && !(status === 403 && refusedOwner(value) === marker.owner) && io.store.save(emptyProgress())) { dropMarker(io.storage()); io.onProgress(emptyProgress()); }
     setAccount({ state: status === 401 ? "signed-out" : "not-eligible" });
   }
   /** An answer for another account than the one this browser writes for: treated as that account's refusal, never folded in. */
   function otherAccount(name: string) { refused(403, { error: "forbidden", owner: name }); }
-  async function merge(progress: Progress) {
+  /** Merges the copy this browser holds now; `load` reads it only after the marker is checked, under the lock where there is one. */
+  async function merge(load: () => Progress) {
     if (owner === null) return;
-    const answer = await call("/api/learn/progress/merge", { progress, owner });
+    let progress: Progress | null = null;
+    await exclusive(() => { if (stillOurs()) progress = load(); else setAccount({ state: "not-eligible" }); });
+    if (progress === null) return;
+    const sent: Progress = progress;
+    const answer = await call("/api/learn/progress/merge", { progress: sent, owner });
     const remote = answer.status === 200 ? parseRemote(answer.value) : null;
-    if (remote) settle(remote, progress); else refused(answer.status, answer.value);
+    if (remote) await settle(remote, sent); else refused(answer.status, answer.value);
   }
   async function push() {
     if (writing) { again = true; return; }
@@ -117,11 +153,12 @@ export function createProgressSync(io: SyncIo) {
       const progress = io.store.load();
       const answer = await call("/api/learn/progress/put", { progress, expectedVersion: marker.version, owner });
       const remote = answer.status === 200 ? parseRemote(answer.value) : null;
-      if (remote) settle(remote, progress);
-      // Another device wrote first: merge what this browser has now, including anything made since, unless the answer is another account's.
+      if (remote) await settle(remote, progress);
+      // Another device wrote first: merge what this browser has now, including anything made since, unless the answer is another
+      // account's or another tab has since taken this browser for another account (merge re-checks the marker).
       else if (answer.status === 409) {
         const current = answer.value && typeof answer.value === "object" ? parseRemote((answer.value as { current?: unknown }).current) : null;
-        if (current && current.owner !== owner) otherAccount(current.owner); else await merge(io.store.load());
+        if (current && current.owner !== owner) otherAccount(current.owner); else await merge(() => io.store.load());
       }
       else refused(answer.status, answer.value);
     } finally { writing = false; if (again) { again = false; void push(); } }
@@ -137,16 +174,16 @@ export function createProgressSync(io: SyncIo) {
       owner = remote.owner;
       const marker = readMarker(io.storage());
       // First sign-in in this browser: merge its progress into the account's.
-      if (!marker) { await merge(io.store.load()); return; }
+      if (!marker) { await merge(() => io.store.load()); return; }
       // Another account's copy (a shared device): take this account's, fold nothing in.
-      if (marker.owner !== remote.owner) { settle(remote, null); return; }
+      if (marker.owner !== remote.owner) { await settle(remote, null); return; }
       if (marker.dirty) {
         if (marker.version === remote.version) { setAccount({ state: "synced", until: remote.until }); await push(); }
-        else await merge(io.store.load());
+        else await merge(() => io.store.load());
         return;
       }
       // Nothing unsent: the account's copy is the truth, whichever version this browser last saw.
-      settle(remote, null);
+      await settle(remote, null);
     },
     /** After every local save: mark it, and write it back shortly when this browser is synced. */
     changed() {
