@@ -54,6 +54,7 @@ const failure = (error: unknown) => error instanceof PortalRequestError ? error.
  */
 export function PortalEntry({ invitation = false, authenticationError = false, autoEnterStudent = true, inlineGoogle = false, googleIntent, frontDoor = false, after, returnTo = null }: { invitation?: boolean; authenticationError?: boolean; autoEnterStudent?: boolean; inlineGoogle?: boolean; googleIntent?: GoogleIntent; frontDoor?: boolean; after?: ReactNode; returnTo?: string | null }) {
   const back = invitation ? null : returnAddress(returnTo);
+  const resumesSave = back !== null && new URLSearchParams(back.slice(back.indexOf("?") + 1 || back.length)).get("save") === "1";
   const [view, setView] = useState<View>({ kind: "loading" });
   const [pending, setPending] = useState<Action | null>(null), [message, setMessage] = useState("");
   const [email, setEmail] = useState(""), [linkRequested, setLinkRequested] = useState(false), [code, setCode] = useState("");
@@ -72,8 +73,9 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
       .then(value => {
         const next: View = invitation ? { kind: "invitation", review: parseInvitation(value) } : { kind: "signed-in", summary: parseSession(value) };
         if (next.kind === "signed-in") { rememberCodeRequest(false); rememberSignedIn(true); }
-        // Signed in already: go back to the page that sent the person here (never this same page again).
-        if (back && turn === generation.current && next.kind === "signed-in" && back !== window.location.pathname + window.location.search) { window.location.replace(back); return; }
+        // Signed in already: only Save's way back (`save=1`) goes straight back to its reading; any other visitor who is
+        // already signed in sees the roles and Account here, as before (a member's Sign in on /read must still reach them).
+        if (resumesSave && turn === generation.current && next.kind === "signed-in" && back !== window.location.pathname + window.location.search) { window.location.replace(back!); return; }
         if (autoEnterStudent && turn === generation.current && next.kind === "signed-in" && next.summary.roles.length === 1 && next.summary.roles[0] === "student") { window.location.replace("/workspace/student"); return; }
         if (turn === generation.current) setView(next);
       }).catch(error => {
@@ -82,7 +84,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         if (status === 401 && !invitation) rememberSignedIn(false);
         setView({ kind: status === 401 ? "sign-in" : status === 403 ? "forbidden" : invitation && status === 404 ? "invalid-invitation" : "unavailable" });
       });
-  }, [invitation, autoEnterStudent, back]);
+  }, [invitation, autoEnterStudent, back, resumesSave]);
 
   useEffect(() => {
     refresh();

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { parseAuthResult, parseGoogleChallenge, parseGoogleRedirect, requestPortal, type GoogleChallenge } from "./api";
 import { createGoogleAttemptScope, type GoogleIntent, type AuthDestination } from "./sign-in-boundary";
 import { returnAddress } from "../../lib/site/return-address";
+import { markSignInPending } from "./signed-in-hint";
 
 type GoogleIdentity = {
   initialize(options: { client_id: string; nonce: string; ux_mode: "popup"; auto_select: false; callback: (result: { credential?: unknown }) => void }): void;
@@ -46,7 +47,7 @@ export function GoogleContinue({ disabled, next, returnTo, onBegin, onFinish }: 
     leaving.current = true; setPhase("leaving");
     const back = returnAddress(returnTo);
     void requestPortal("/api/auth/google/redirect", next ? { next } : back ? { return: back } : {}).then(parseGoogleRedirect)
-      .then(url => window.location.assign(url))
+      .then(url => { markSignInPending(); window.location.assign(url); })
       .catch(() => { leaving.current = false; setPhase("failed"); finish.current(); });
   }
   return <div className="google-continue">

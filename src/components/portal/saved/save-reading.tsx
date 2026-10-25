@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createSavedReading, fetchSavedReadings, type SavedKind } from "./api";
-import { rememberSignedIn, signedInHint } from "../signed-in-hint";
+import { rememberSignedIn, signedInHint, signInPending } from "../signed-in-hint";
 import { ReturnSignInLink } from "../return-sign-in-link";
 import { savedReadingHref } from "./my-readings";
 import styles from "./saved.module.css";
@@ -82,8 +82,9 @@ export function SaveReading({ passage, onSaved, back, offer }: { passage: Savabl
     if (step === "form") { setStep("idle"); setProblem(null); return; }
     check();
   };
-  // Back from "Sign in to save": ask straight away; the first answer spends the offer.
-  useEffect(() => { if (offer?.current) check(offer); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Back from "Sign in to save": ask straight away; the first answer spends the offer. Back from a Google sign-in that
+  // went straight to this reading (no offer, no hint yet): ask once, so a session that is here shows Save.
+  useEffect(() => { if (offer?.current) check(offer); else if (!signedInHint() && signInPending()) check(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const onSubmit = () => {
     const trimmed = name.trim(), length = Array.from(trimmed).length;
     if (length < 1 || length > 80 || (date && !/^\d{4}-\d{2}-\d{2}$/.test(date))) { setProblem("invalid"); return; }

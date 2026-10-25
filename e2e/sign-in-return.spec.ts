@@ -126,6 +126,35 @@ test("Save, then sign in, comes back to the same reading with the same selection
   expect(codes).toEqual([{ code: "123456" }]);
 });
 
+test("already signed in, /sign-in with a return still shows the roles and Account; only Save's way back goes straight to its reading", async ({ page }) => {
+  await openRoutes(page);
+  await page.route("**/api/session", route => json(route, 200, { membershipAvailable: true, roles: ["tutor"], saved: true, approver: false, sessionBinding: "A".repeat(43) }));
+  await page.goto(`/sign-in?return=${encodeURIComponent("/read?date=2026-10-31")}`);
+  await expect(page.getByRole("heading", { name: "You’re signed in", exact: true })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Available roles" }).getByRole("link", { name: "Tutor", exact: true })).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe("/sign-in");
+  await page.goto(`/sign-in?return=${encodeURIComponent("/read?date=2026-10-31&save=1")}`);
+  await expect(page).toHaveURL(/\/read\?date=2026-10-31/);
+  await expect(page.getByRole("heading", { level: 1, name: "Vayeilech", exact: true })).toBeVisible();
+});
+
+test("back from a Google sign-in straight onto a reading, Save asks once and shows Save for the session that is there", async ({ page }) => {
+  await openRoutes(page);
+  let signedIn = false;
+  await page.route("**/api/session", route => signedIn ? json(route, 200, { membershipAvailable: true, roles: [], saved: true, approver: false, sessionBinding: "A".repeat(43) }) : json(route, 401, { error: "authentication-required" }));
+  await page.route("**/api/saved/readings", route => signedIn ? json(route, 200, { ok: true, readings: [] }) : json(route, 401, { error: "authentication-required" }));
+  await page.route("**/api/auth/google/redirect", route => json(route, 200, { url: "https://accounts.google.com/o/oauth2/v2/auth?client_id=synthetic&state=synthetic" }));
+  // A synthetic Google that signs in and sends the tab straight back to the reading (the portal's callback is tested in tests/app).
+  await page.route("https://accounts.google.com/**", route => { signedIn = true; return route.fulfill({ status: 302, headers: { location: `${ORIGIN}/read?date=2026-10-31` } }); });
+  await page.goto(`/sign-in?return=${encodeURIComponent("/read?date=2026-10-31")}`);
+  await page.getByRole("button", { name: "Continue with Google", exact: true }).click();
+  await expect(page).toHaveURL(`${ORIGIN}/read?date=2026-10-31`);
+  await expect(page.getByRole("heading", { level: 1, name: "Vayeilech", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Sign in to save", exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem("crc-torah:signed-in/v1"))).toBe("1");
+});
+
 test("a return address that names another site, or anything but one of our pages, is dropped: sign-in lands on the default page", async ({ page }) => {
   await signedOut(page); await openRoutes(page);
   for (const evil of ["//evil.example", "https://evil.example/read", "/\\evil.example", "/%2F%2Fevil.example/", "javascript:alert(1)"]) {
