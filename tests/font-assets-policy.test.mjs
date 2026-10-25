@@ -16,6 +16,9 @@ const brandLicensePath = "public/fonts/bricolage-grotesque/OFL.txt";
 const stamFontPath = "public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.ttf";
 const stamLicensePath = "public/fonts/stam-ashkenaz-clm/LICENSE.txt";
 const stamSourcePath = "public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.sfd";
+const taameyFontPath = "public/fonts/taamey-frank-clm/TaameyFrankCLM.ttf";
+const taameyLicensePath = "public/fonts/taamey-frank-clm/LICENSE.txt";
+const taameySourcePath = "public/fonts/taamey-frank-clm/TaameyFrankCLM.sfd";
 const familyAssets = family => FONT_ASSETS.filter(asset => asset.family === family);
 async function officialPair(family = "noto-serif-hebrew") {
   const result = new Map();
@@ -36,8 +39,17 @@ async function fixture(action) {
 }
 
 test("font manifest is a fixed immutable pair and byte comparison has no repository override", () => {
-  assert.equal(FONT_ASSETS.length, 8);
-  assert.deepEqual(FONT_ASSETS.map(asset => [asset.family, asset.kind]), [["noto-serif-hebrew", "font"], ["noto-serif-hebrew", "license"], ["bricolage-grotesque", "font"], ["bricolage-grotesque", "font"], ["bricolage-grotesque", "license"], ["stam-ashkenaz-clm", "font"], ["stam-ashkenaz-clm", "license"], ["stam-ashkenaz-clm", "source"]]);
+  assert.equal(FONT_ASSETS.length, 11);
+  assert.deepEqual(FONT_ASSETS.map(asset => [asset.family, asset.kind]), [["noto-serif-hebrew", "font"], ["noto-serif-hebrew", "license"], ["bricolage-grotesque", "font"], ["bricolage-grotesque", "font"], ["bricolage-grotesque", "license"], ["stam-ashkenaz-clm", "font"], ["stam-ashkenaz-clm", "license"], ["stam-ashkenaz-clm", "source"], ["taamey-frank-clm", "font"], ["taamey-frank-clm", "license"], ["taamey-frank-clm", "source"]]);
+  assert.deepEqual(FONT_ASSETS.map(asset => asset.path), [fontPath, licensePath, brandFontPath, brandSubsetPath, brandLicensePath, stamFontPath, stamLicensePath, stamSourcePath, taameyFontPath, taameyLicensePath, taameySourcePath]);
+  assert.equal(reviewedFontAsset(taameyFontPath).sha256, "f558d3564d385a6a512ce938705f47236e71457e8aa4ad9eaf6cebc3e17b991c");
+  assert.equal(reviewedFontAsset(taameyFontPath).size, 105076);
+  assert.equal(reviewedFontAsset(taameySourcePath).sha256, "0679128225b0a522d8def9490444c28d6add1a897d26743e5669379fc5d95fe7");
+  assert.equal(reviewedFontAsset(taameySourcePath).size, 566990);
+  // Taamey Frank ships the same Culmus GNU-GPL text as Stam, never its own address-bearing upstream LICENSE.
+  assert.equal(reviewedFontAsset(taameyLicensePath).sha256, "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643");
+  assert.equal(reviewedFontAsset(taameyLicensePath).sha256, reviewedFontAsset(stamLicensePath).sha256);
+  assert.equal(reviewedFontAsset(taameyLicensePath).size, 18092);
   assert.equal(reviewedFontAsset("public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.ttf").sha256, "18aec29cd0f3e2f31049224712e740468fc893344289ceb1c86b02b619854ca6");
   assert.equal(reviewedFontAsset("public/fonts/stam-ashkenaz-clm/LICENSE.txt").sha256, "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643");
   assert.equal(reviewedFontAsset(brandFontPath).sha256, "413e7357809ddd12fd80a96a8a396de0e401638d4acd3cb3e37532f0472ac682");
@@ -201,6 +213,7 @@ test("exact-path byte attributes preserve real font and OFL through autocrlf che
   const rules = attributes.split(/\r?\n/).filter(line => line && !line.startsWith("#"));
   assert.deepEqual(rules, [
     `/${fontPath} -text`, `/${licensePath} -text`, `/${brandFontPath} -text`, `/${brandSubsetPath} -text`, `/${brandLicensePath} -text`, `/${stamFontPath} -text`, `/${stamLicensePath} -text`, `/${stamSourcePath} -text`,
+    `/${taameyFontPath} -text`, `/${taameyLicensePath} -text`, `/${taameySourcePath} -text`,
     "/src/server/db/migrations/** text eol=lf",
     "/scripts/db-migrate.mjs text eol=lf",
     "/scripts/release-migrate*.mjs text eol=lf",
@@ -301,5 +314,60 @@ test("the pinned Stam Ashkenaz source is accepted only byte for byte, and is req
     assert.ok(result.findings.includes(`${stamSourcePath}: non-synthetic email address`), "an unverified source loses the exception");
     await rm(join(root, stamSourcePath)); result = await inspectRepository(root, env);
     assert.ok(result.findings.includes(`${stamSourcePath}: required paired font asset missing`));
+  });
+});
+
+test("the Taamey Frank CLM family passes the whole policy alone and survives autocrlf checkout byte for byte", async () => {
+  const family = await officialPair("taamey-frank-clm"), attributes = await readFile(new URL("../.gitattributes", import.meta.url), "utf8");
+  await fixture(async ({ root, env, git, put }) => {
+    git("config", "core.autocrlf", "true"); await put(".gitattributes", attributes);
+    for (const [path, bytes] of family) await put(path, bytes);
+    assert.deepEqual((await inspectRepository(root, env)).findings, []);
+    git("add", ".gitattributes", taameyFontPath, taameyLicensePath, taameySourcePath);
+    const declared = git("check-attr", "text", "--", taameyFontPath, taameyLicensePath, taameySourcePath).toString("utf8");
+    for (const path of family.keys()) assert.ok(declared.includes(`${path}: text: unset`));
+    for (const path of family.keys()) await rm(join(root, path));
+    git("checkout-index", "--force", "--", taameyFontPath, taameyLicensePath, taameySourcePath);
+    for (const asset of familyAssets("taamey-frank-clm")) {
+      assert.ok(matchesAssetPin(await readFile(join(root, asset.path)), asset), "checked-out bytes must match the original official pin");
+      assert.ok(matchesAssetPin(git("show", `:${asset.path}`), asset), "indexed bytes must match the original official pin");
+    }
+    assert.deepEqual((await inspectRepository(root, env)).findings, []);
+    for (const path of [taameyLicensePath, taameySourcePath]) {
+      await rm(join(root, path)); git("rm", "--cached", "--quiet", path);
+      const result = await inspectRepository(root, env);
+      assert.ok(result.findings.includes(`${path}: required paired font asset missing`));
+      assert.ok(result.findings.includes(`${path} (index): required paired font asset missing`));
+      await put(path, family.get(path)); git("add", path);
+    }
+    assert.deepEqual((await inspectRepository(root, env)).findings, []);
+  });
+});
+
+test("the Taamey Frank CLM font and source are accepted only byte for byte, and never borrow Stam's notice", async () => {
+  const family = await officialPair("taamey-frank-clm"), stam = await officialPair("stam-ashkenaz-clm");
+  // Unpinned, the same upstream source is refused like any file carrying an author address.
+  assert.ok(entryProblems("public/fonts/taamey-frank-clm/Other.sfd", family.get(taameySourcePath).toString("utf8")).includes("non-synthetic email address"));
+  // Only the reviewed Medium face at its exact path is accepted: not the upstream file names, the Bold faces (transparent trope) or a converted copy.
+  for (const path of ["public/fonts/taamey-frank-clm/TaameyFrankCLM-Medium.ttf", "public/fonts/taamey-frank-clm/TaameyFrankCLM-Bold.ttf", "public/fonts/taamey-frank-clm/TaameyFrankCLM.woff2", taameyFontPath.toLowerCase()]) {
+    assert.equal(reviewedFontAsset(path), null);
+    assert.ok(entryProblems(path).includes("unlisted font asset"));
+  }
+  await fixture(async ({ root, env, put }) => {
+    for (const [path, bytes] of family) await put(path, bytes);
+    assert.deepEqual((await inspectRepository(root, env)).findings, []);
+    for (const path of [taameyFontPath, taameySourcePath, taameyLicensePath]) {
+      const altered = Buffer.from(family.get(path)); altered[altered.length - 1] ^= 1; await put(path, altered);
+      assert.ok((await inspectRepository(root, env)).findings.includes(`${path}: reviewed font asset integrity mismatch`));
+      await put(path, family.get(path));
+    }
+    const altered = Buffer.from(family.get(taameySourcePath)); altered[0] ^= 1; await put(taameySourcePath, altered);
+    assert.ok((await inspectRepository(root, env)).findings.includes(`${taameySourcePath}: non-synthetic email address`), "an unverified source loses the exception");
+    await put(taameySourcePath, family.get(taameySourcePath));
+    // Identical GPL bytes at Stam's path do not stand in for Taamey's own notice.
+    await rm(join(root, taameyLicensePath)); await put(stamLicensePath, stam.get(stamLicensePath));
+    const result = await inspectRepository(root, env);
+    assert.ok(result.findings.includes(`${taameyLicensePath}: required paired font asset missing`));
+    assert.ok(result.findings.includes(`${stamFontPath}: required paired font asset missing`));
   });
 });

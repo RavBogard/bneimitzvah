@@ -24,6 +24,12 @@ export const FONT_ASSETS = Object.freeze([
     sha256: "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643" }),
   Object.freeze({ path: "public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.sfd", family: "stam-ashkenaz-clm", kind: "source", size: 59723,
     sha256: "ff23748b1b9df2bb1f5e26b8928342eee87ead160bdff535a505aed0f7294c45" }),
+  Object.freeze({ path: "public/fonts/taamey-frank-clm/TaameyFrankCLM.ttf", family: "taamey-frank-clm", kind: "font", size: 105076,
+    sha256: "f558d3564d385a6a512ce938705f47236e71457e8aa4ad9eaf6cebc3e17b991c" }),
+  Object.freeze({ path: "public/fonts/taamey-frank-clm/LICENSE.txt", family: "taamey-frank-clm", kind: "license", size: 18092,
+    sha256: "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643" }),
+  Object.freeze({ path: "public/fonts/taamey-frank-clm/TaameyFrankCLM.sfd", family: "taamey-frank-clm", kind: "source", size: 566990,
+    sha256: "0679128225b0a522d8def9490444c28d6add1a897d26743e5669379fc5d95fe7" }),
 ]);
 
 // Deliberately no path normalization or case folding at the trust boundary.

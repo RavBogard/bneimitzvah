@@ -249,6 +249,9 @@ all N1–N25 ─► N16's final re-measure ─► v1.9.0
 - Vendor as Stam was (Decided here 4): the original TTF, the GPL text as `LICENSE.txt`, the `.sfd` source from the matching source archive, exact pins and hashes in `scripts/font-assets.mjs`, `.gitattributes` entries, and a PROVENANCE section quoting the exception.
 - Check before the switch: the cmap covers U+0591–U+05C7 including U+05C7 (qamats qatan) and a visibly distinct qamats qatan glyph; `mark`/`mkmk` stacking renders Gen 18 and Gen 24:30–36 correctly in Chrome and Safari (page PDFs).
 - **Exit tests:** repo-policy font tests green; PROVENANCE matches the bytes; a short rendering note with screenshots in this folder. No product surface uses the face yet (N8 switches it).
+- **Done (1.9 N2).** Downloaded 2026-10-25: `TaameyFrankCLM.zip`, 705,731 bytes, SHA-256 `3b1674c4…97925`. Its Medium TTF, Medium SFD and `LICENSE` match T6's hashes exactly; the licence and name-table notice are GPL v2 with the Stam exception word for word, so no licence question arose. Vendored under `public/fonts/taamey-frank-clm/` with pins, `.gitattributes` and PROVENANCE; rendering note in `N2-RENDERING.md`. Decided here:
+  - The screenshots are not in this folder, as the exit test asked: the repository policy refuses binary files outside the pinned fonts ("unreviewed binary content"), and that rule is not loosened for evidence. They are in `bneimitzvah-review-output/n2-taamey-rendering-2026-10-25/` and the note describes them.
+  - "Safari" was checked with Playwright's WebKit on Windows; N8's switch gets one look on a real Apple device.
 
 #### N3. Aliyot, the picker and paging by aliyah (L, Sonnet) — decision 2; G1 (reader parts), G14, F4
 
