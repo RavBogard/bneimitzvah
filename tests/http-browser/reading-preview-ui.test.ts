@@ -344,7 +344,7 @@ it("shows recorded student boundaries and page continuation, distinguishing unre
   await click(staff, "Review assignment"); await ui(staff.getByRole("button", { name: "Save assignment", exact: true })).toBeEnabled();
   await click(staff, "Save assignment");
   await ui(staff.getByText("Saved. The current reading above shows what the student will see.", { exact: true })).toBeVisible();
-  const learner = await page("student"); await safe(() => learner.goto("/workspace/student", { waitUntil: "domcontentloaded" }));
+  const learner = await page("student"); await safe(() => learner.goto("/workspace/student?tab=reading", { waitUntil: "domcontentloaded" }));
   const study = learner.locator(".assigned-study");
   // Release 1.9 N3: one recorded aliyah is a page. Aliyah 1 opens (it ends inside the server's first page of 100 verses, so only its own 98 show);
   // "Next section" opens Aliyah 2 on a page of its own, which begins where the aliyah does.

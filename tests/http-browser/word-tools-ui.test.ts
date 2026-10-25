@@ -62,7 +62,7 @@ async function page(mobile = false, who: "admin" | "tutor" | "student" = "admin"
   });
   const tab = await context.newPage(); tab.on("console", message => { if (message.text().includes("Encountered two children with the same key")) duplicateKeyWarnings++; }); await tab.goto("/", { waitUntil: "domcontentloaded" });
   if (!authenticated) { const email = `pg-${who}@example.test`; expect(await api(tab, "/api/auth/sign-in/magic-link", { email })).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); }
-  await tab.goto((who === "student" ? "/workspace/student" : `/workspace/${who === "admin" ? "admin/students" : "tutor"}/${fixture.student.id}${who === "admin" ? "/reading" : ""}`), { waitUntil: "domcontentloaded" });
+  await tab.goto((who === "student" ? "/workspace/student?tab=reading" : `/workspace/${who === "admin" ? "admin/students" : "tutor"}/${fixture.student.id}${who === "admin" ? "/reading" : ""}`), { waitUntil: "domcontentloaded" });
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
   return { tab, state, hold() { state.held = { release, started }; return state.held; } };
 }

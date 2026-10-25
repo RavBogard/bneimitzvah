@@ -61,7 +61,7 @@ async function page() {
   tab.on("requestfailed",request=>{const read=requests.get(request);if(read){read.terminal=["net::ERR_ABORTED","NS_BINDING_ABORTED"].includes(request.failure()?.errorText??"")?"aborted":"failed";read.terminalMs=Math.round(performance.now()-read.started);}});
   await safe(() => tab.goto("/", { waitUntil: "domcontentloaded" }));
   expect(await tab.evaluate(async () => (await fetch("/api/auth/sign-in/magic-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "pg-tutor@example.test" }) })).status)).toBe(200);
-  await openAuthMail(tab, fixture.takeMail("pg-tutor@example.test")); await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" });
+  await openAuthMail(tab, fixture.takeMail("pg-tutor@example.test")); await tab.goto("/workspace/student?tab=reading", { waitUntil: "domcontentloaded" });
   await ready(tab); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 1:1"]')).toBeVisible(); await tab.waitForLoadState("networkidle"); return tab;
 }
 async function globallyGone(tab: Page) {

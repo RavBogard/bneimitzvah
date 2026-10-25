@@ -140,7 +140,7 @@ it("keeps compact equal reading summaries and verse-bound English without changi
   const captures: { file: string; sha256: string; width: number; height: number }[] = [], captureRoot = join(process.cwd(), ".local-logs", "reading-companion-captures-v1");
   if (process.env.READING_COMPANION_CAPTURE === "1") await mkdir(captureRoot);
   for (const mobile of [false, true]) {
-    const tab = await page("student", mobile); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
+    const tab = await page("student", mobile); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
     // Held students intentionally do not prepare reference metadata; real text/colors are ready.
     await colorVerse(tab, "Genesis 1:1");
     const summaries = tab.getByRole("group", { name: "Assigned readings", exact: true });
@@ -202,7 +202,7 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   await navigate(tutor, `/workspace/tutor/${fixture.student.id}`); await loaded(tutor, "Genesis 1:1");
   await safe(() => tutor.getByRole("link", { name: "Parent", exact: true }).click()); await safe(() => tutor.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await loaded(tutor, "Genesis 1:1");
   expect(await tutor.getByRole("heading", { name: "Set the assigned reading", exact: true }).count()).toBe(0);
-  const learner = await page("student", true); await navigate(learner, "/workspace/student"); await loaded(learner, "Genesis 1:1"); expect(await learner.getByLabel("Student", { exact: true }).count()).toBe(0);
+  const learner = await page("student", true); await navigate(learner, "/workspace/student?tab=reading"); await loaded(learner, "Genesis 1:1"); expect(await learner.getByLabel("Student", { exact: true }).count()).toBe(0);
   studentTab = learner;
   expect(await learner.getByText("Aliyah boundaries have not been recorded for this assignment.", { exact: true }).count()).toBe(0);
   expect(await learner.locator(".student-aliyah").count()).toBe(0);
@@ -335,7 +335,7 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
 });
 
 it("retains optional close-up during a quiet unchanged access check without requiring it for Start", async () => {
-  const tab = await page("student", true); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1"); await click(tab, "Start reading");
+  const tab = await page("student", true); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1"); await click(tab, "Start reading");
   await ui(tab.locator(".study-verses")).toBeFocused(); await heldReading(tab);
   await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0); await ui(tab.getByRole("dialog")).toHaveCount(0);
   await click(tab, "View Genesis 1:1 up close"); const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
@@ -352,7 +352,7 @@ it("retains optional close-up during a quiet unchanged access check without requ
 });
 
 it("keeps unsent typing and an unknown save intact while phrase controls change", async () => {
-  const tab = await page("student"); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
+  const tab = await page("student"); await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab, "Genesis 1:1");
   const panel = tab.locator('.study-verse-detail[data-verse-ref="Genesis 1:1"] .verse-work'); await safe(() => panel.locator("summary").click());
   const field = panel.getByRole("textbox"); await ui(field).toBeVisible();
   let release!: () => void, committed = false, writes = 0; const gate = new Promise<void>(resolve => { release = resolve; });

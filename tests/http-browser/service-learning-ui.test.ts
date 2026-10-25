@@ -52,7 +52,7 @@ async function page(role: "admin" | "tutor" | "student", mobile = false) {
   return tab;
 }
 async function workspace(tab: Page, role: "admin" | "tutor" | "student" | "parent", view: "service" | "reading" = "service") {
-  await safe(() => tab.goto(role === "admin" ? `/workspace/admin/students/${fixture.student.id}/reading` : `/workspace/${role}`, { waitUntil: "domcontentloaded" }));
+  await safe(() => tab.goto(role === "admin" ? `/workspace/admin/students/${fixture.student.id}/reading` : `/workspace/${role}${role === "student" ? "?tab=reading" : ""}`, { waitUntil: "domcontentloaded" }));
   if (role === "tutor" || role === "parent") await safe(() => tab.getByLabel(role === "parent" ? "Child" : "Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   // Everyone reaches service parts through the tab beside the reading (1.9 N10); a test about the reading itself stays on it.
   if (view === "reading") return;

@@ -61,7 +61,7 @@ async function singleRecovery(panel: Locator, message: string) {
     return ids.length === 2 && elements.every(element => element && element.textContent?.trim()) && elements.filter(element => element?.getAttribute("role") === "status").length === 1;
   })).toBe(true);
 }
-async function learner(tab: Page) { await navigate(tab, "/workspace/student"); await loaded(tab); }
+async function learner(tab: Page) { await navigate(tab, "/workspace/student?tab=reading"); await loaded(tab); }
 async function staff(tab: Page) { await navigate(tab, `/workspace/admin/students/${fixture.student.id}/reading`); await loaded(tab); }
 async function selection(tab: Page, mode: "student" | "admin" = "student") {
   const reading = await api(tab, `/api/students/${fixture.student.id}/reading?mode=${mode}`); expect(reading.status === 200).toBe(true); const row = reading.data.readings.find((r: { kind: string }) => r.kind === "torah");

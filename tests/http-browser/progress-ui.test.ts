@@ -33,7 +33,7 @@ async function page(role: "tutor" | "student", mobile = false) {
   return tab;
 }
 async function workspace(tab: Page, role: "tutor" | "student") {
-  await safe(() => tab.goto(`/workspace/${role}`, { waitUntil: "domcontentloaded" }));
+  await safe(() => tab.goto(`/workspace/${role}${role === "student" ? "?tab=reading" : ""}`, { waitUntil: "domcontentloaded" }));
   if (role === "tutor") await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();
 }
