@@ -87,6 +87,12 @@ Main at writing: `a9bbd6e`. Live: v1.8.0 (`7c13cac`), prod ledger 43 (newest mig
   - (6) Guided verse practice uses the approved LD-03 "Your turn" lines.
   - (7) A first-verse lesson counts as visited without "Same as the reader".
   - (8) N19a: the starter is Gen 1:1 (parts 0–2 and 3–6), with Ex 25:8 as the prepared alternative.
+    - #84 merged (1e1c4c3) without making the switch. Its first-verse lesson takes this week's shortest Torah verse that has a ready recording (12 words or fewer). If none qualifies it falls back to Gen 1:1, then Num 6:26, then Deut 6:4.
+    - Making Gen 1:1 the fixed starter is N19a's remaining work:
+      - a course-verse source option in the validator;
+      - `first-verse.tsx` taking the course verse ahead of this week's;
+      - Ex 25:8 in the offline pack and its snapshot;
+      - new wording for the lesson's title, summary, goal and body, which now say "this week's reading". This wording is tier C, drafted by Cowork in its 1.9 handoff T3.
   - /learn/prepare joins the public page-view count.
 
 ## Versions and tags
