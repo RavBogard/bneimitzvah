@@ -30,7 +30,9 @@
   @page { size: auto; margin: 12mm; }
   .shell[data-chart-page] { padding: 0; margin: 0; min-height: 0; max-width: none; }
   .header { padding: 0 0 5pt; margin: 0 0 8pt; }
-  .header :global(.portal-brand) { font-size: 10pt; }
+  /* On paper the bar is plain: no fill, no ink-heavy band. */
+  .shell .header:global(.app-bar) { background: none; box-shadow: none; clip-path: none; min-height: 0; color: inherit; padding: 0 0 5pt; border-bottom: 1px solid #000; }
+  .shell .header :global(.portal-brand) { font-size: 10pt; color: inherit; }
   .back, .shell :global(.skip-link), .introduction [data-chart-print-controls] { display: none; }
   .main { padding: 0; }
   .title { font-size: 20pt; line-height: 1.15; margin-bottom: 3pt; }
