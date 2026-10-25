@@ -18,15 +18,24 @@ function version(value: unknown): number {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > COURSE_VERSION_MAX) return invalid();
   return value;
 }
-export type PutInput = Readonly<{ progress: Progress; expectedVersion: number }>;
-/** Replace the member's document: `expectedVersion` is the version last seen, 0 when there is none yet. */
-export function put(value: unknown): PutInput {
-  const row = closedObject(value, ["progress", "expectedVersion"]);
-  return Object.freeze({ progress: progress(row.progress), expectedVersion: version(row.expectedVersion) });
+/**
+ * The owner name the browser believes it writes for (access.ts `courseOwnerName`). Required: a browser still running
+ * a bundle from before it was asked for sends none and gets this closed 400, which that bundle treats as a failure
+ * that clears nothing, so its unsent progress stays on the device until a reload brings the current bundle.
+ */
+function ownerName(value: unknown): string {
+  if (typeof value !== "string" || !/^[a-f0-9]{32}$/.test(value)) return invalid();
+  return value;
 }
-export type MergeInput = Readonly<{ progress: Progress }>;
-/** Fold a browser's progress into the account's (first sign-in, or a conflict between devices). */
+export type PutInput = Readonly<{ progress: Progress; expectedVersion: number; owner: string }>;
+/** Replace the member's document: `expectedVersion` is the version last seen, 0 when there is none yet; `owner` whose it is. */
+export function put(value: unknown): PutInput {
+  const row = closedObject(value, ["progress", "expectedVersion", "owner"]);
+  return Object.freeze({ progress: progress(row.progress), expectedVersion: version(row.expectedVersion), owner: ownerName(row.owner) });
+}
+export type MergeInput = Readonly<{ progress: Progress; owner: string }>;
+/** Fold a browser's progress into the account's (first sign-in, or a conflict between devices); `owner` is whose it is. */
 export function merge(value: unknown): MergeInput {
-  const row = closedObject(value, ["progress"]);
-  return Object.freeze({ progress: progress(row.progress) });
+  const row = closedObject(value, ["progress", "owner"]);
+  return Object.freeze({ progress: progress(row.progress), owner: ownerName(row.owner) });
 }

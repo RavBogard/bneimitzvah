@@ -15,6 +15,9 @@ import { emptyProgress, mergeProgress, parseProgress, serializeProgress, type Pr
  *   account, or none, is the next person at a shared device and is treated like a sign-out. Any other failure
  *   clears nothing.
  * Signed out, or refused, nothing leaves the browser.
+ * - Every put and merge names the account the browser holds progress for, and the server refuses another (a 403
+ *   naming the signed-in account). An answer naming another account, a 409's included, is never settled or merged:
+ *   another tab may have switched accounts while this one held the first account's changes, which stay here unsent.
  */
 export const SYNC_KEY = "crc-torah:learn-sync/v1";
 export type Account = Readonly<{ state: "unknown" | "signed-out" | "not-eligible" } | { state: "synced"; until: string | null }>;
@@ -80,9 +83,9 @@ export function createProgressSync(io: SyncIo) {
    * server's copy becomes the browser's. The marker is written only once the copy is saved.
    */
   function settle(remote: Remote, sent: Progress | null) {
+    if (remote.owner !== owner) { otherAccount(remote.owner); return; }
     const server = remote.progress ?? emptyProgress(), now = io.store.load(), moved = sent !== null && !same(now, sent);
     const progress = moved ? mergeProgress(server, now) : server;
-    owner = remote.owner;
     if (!io.store.save(progress) || !writeMarker(io.storage(), { owner: remote.owner, version: remote.version, dirty: moved })) { setAccount({ state: "unknown" }); return; }
     io.onProgress(progress); setAccount({ state: "synced", until: remote.until });
     if (moved) queueMicrotask(() => { void push(); });
@@ -97,8 +100,11 @@ export function createProgressSync(io: SyncIo) {
     if (marker && !marker.dirty && !(status === 403 && refusedOwner(value) === marker.owner)) { io.store.save(emptyProgress()); dropMarker(io.storage()); io.onProgress(emptyProgress()); }
     setAccount({ state: status === 401 ? "signed-out" : "not-eligible" });
   }
+  /** An answer for another account than the one this browser writes for: treated as that account's refusal, never folded in. */
+  function otherAccount(name: string) { refused(403, { error: "forbidden", owner: name }); }
   async function merge(progress: Progress) {
-    const answer = await call("/api/learn/progress/merge", { progress });
+    if (owner === null) return;
+    const answer = await call("/api/learn/progress/merge", { progress, owner });
     const remote = answer.status === 200 ? parseRemote(answer.value) : null;
     if (remote) settle(remote, progress); else refused(answer.status, answer.value);
   }
@@ -109,11 +115,14 @@ export function createProgressSync(io: SyncIo) {
     writing = true;
     try {
       const progress = io.store.load();
-      const answer = await call("/api/learn/progress/put", { progress, expectedVersion: marker.version });
+      const answer = await call("/api/learn/progress/put", { progress, expectedVersion: marker.version, owner });
       const remote = answer.status === 200 ? parseRemote(answer.value) : null;
       if (remote) settle(remote, progress);
-      // Another device wrote first: merge what this browser has now, including anything made since.
-      else if (answer.status === 409) await merge(io.store.load());
+      // Another device wrote first: merge what this browser has now, including anything made since, unless the answer is another account's.
+      else if (answer.status === 409) {
+        const current = answer.value && typeof answer.value === "object" ? parseRemote((answer.value as { current?: unknown }).current) : null;
+        if (current && current.owner !== owner) otherAccount(current.owner); else await merge(io.store.load());
+      }
       else refused(answer.status, answer.value);
     } finally { writing = false; if (again) { again = false; void push(); } }
   }
@@ -124,12 +133,13 @@ export function createProgressSync(io: SyncIo) {
       const answer = await call("/api/learn/progress");
       if (answer.status !== 200) { refused(answer.status, answer.value); return; }
       const remote = parseRemote(answer.value); if (!remote) return;
+      // The account signed in now is the one this page writes for, until the next start.
+      owner = remote.owner;
       const marker = readMarker(io.storage());
       // First sign-in in this browser: merge its progress into the account's.
-      if (!marker) { owner = remote.owner; await merge(io.store.load()); return; }
+      if (!marker) { await merge(io.store.load()); return; }
       // Another account's copy (a shared device): take this account's, fold nothing in.
       if (marker.owner !== remote.owner) { settle(remote, null); return; }
-      owner = remote.owner;
       if (marker.dirty) {
         if (marker.version === remote.version) { setAccount({ state: "synced", until: remote.until }); await push(); }
         else await merge(io.store.load());
