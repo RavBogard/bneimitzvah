@@ -25,7 +25,7 @@ test("0018 upgrades and replays without altering lesson heads or existing studen
     const query = "select l.*,m.authority_revision,s.ceremony_date from lesson_log l join membership m on m.id=l.creator_membership_id join student s on s.id=l.student_id";
     const before = (await client.query(query)).rows;
     await migrate(db, { migrationsFolder: folder }); await migrate(db, { migrationsFolder: folder });
-    // Later additive columns (0047 before_next) are nullable; every value 0018 found is unchanged.
+    // Later additive columns (0045 before_next) are nullable; every value 0018 found is unchanged.
     expect(priorColumns((await client.query(query)).rows, before)).toEqual(before);
     for (const table of ["practice_day", "practice_event"]) {
       expect((await client.query(`select count(*)::integer as count from ${table}`)).rows).toEqual([{ count: 0 }]);

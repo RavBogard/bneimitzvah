@@ -12,18 +12,18 @@ import { priorColumns } from "../helpers/prior-columns";
 import { accessFixture } from "./access-fixture";
 import { withTenantTransaction } from "../../src/server/db/runtime";
 
-// Release 1.9 N12: the optional "Before next time" line, migration 0047 on lesson_log. Synthetic text only.
+// Release 1.9 N12: the optional "Before next time" line, migration 0045 on lesson_log. Synthetic text only.
 // One column on the note's own table: the same forced tenant_isolation policy and table grants, so the same readers.
-const TAG = "0047_lesson_note_before_next", TABLE = "lesson_log";
+const TAG = "0045_lesson_note_before_next", TABLE = "lesson_log";
 const opened: { client: { close(): Promise<void> } }[] = [];
 afterEach(async () => { await Promise.all(opened.splice(0).map(f => f.client.close())); });
 
-test("0047 adds only the nullable before_next column and its CHECK to lesson_log, keeps every note, policy and table grant, adds only the column UPDATE grant, and replays", async () => {
+test("0045 adds only the nullable before_next column and its CHECK to lesson_log, keeps every note, policy and table grant, adds only the column UPDATE grant, and replays", async () => {
   const isolation = await isolatedEnv(), client = new PGlite();
   try {
     const folder = "src/server/db/migrations", journal = JSON.parse(await readFile(join(folder, "meta/_journal.json"), "utf8"));
     const own = journal.entries.findIndex((e: { tag: string }) => e.tag === TAG);
-    // Numbered 0047 after SC4 (0045) and SC5 (0046); its position is whatever main holds when it merges, and every check is relative.
+    // 0045, merged before SC4 (which renumbers after it); every check below is relative to the entry before it.
     expect(own).toBeGreaterThan(0);
     expect(journal.entries[own]).toMatchObject({ idx: own, tag: TAG });
     expect(journal.entries[own].when).toBeGreaterThan(journal.entries[own - 1].when);
@@ -74,9 +74,9 @@ test("0047 adds only the nullable before_next column and its CHECK to lesson_log
 
     // The generated snapshot adds the one column and the one CHECK to lesson_log and changes nothing else.
     const snapshots = (await readdir(join(folder, "meta"))).filter(name => /^\d{4}_snapshot\.json$/.test(name)).sort();
-    const at = snapshots.indexOf("0047_snapshot.json");
+    const at = snapshots.indexOf("0045_snapshot.json");
     expect(snapshots[at - 1]).toBe(`${journal.entries[own - 1].tag.slice(0, 4)}_snapshot.json`);
-    const previous = JSON.parse(await readFile(join(folder, "meta", snapshots[at - 1]), "utf8")), current = JSON.parse(await readFile(join(folder, "meta/0047_snapshot.json"), "utf8"));
+    const previous = JSON.parse(await readFile(join(folder, "meta", snapshots[at - 1]), "utf8")), current = JSON.parse(await readFile(join(folder, "meta/0045_snapshot.json"), "utf8"));
     expect(current.prevId).toBe(previous.id);
     const expected = structuredClone(previous.tables), log = expected[`public.${TABLE}`];
     expect(log.columns.before_next).toBeUndefined();

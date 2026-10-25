@@ -6,7 +6,7 @@ export const lessonLog = pgTable("lesson_log", {
   tenantId: text("tenant_id").notNull().references(() => tenant.id), studentId: uuid("student_id").notNull(), entryId: uuid("entry_id").notNull(),
   creatorMembershipId: uuid("creator_membership_id").notNull(), creatorUserId: text("creator_user_id").notNull(),
   lessonDate: date("lesson_date").notNull(), summary: text("summary").notNull(),
-  // Release 1.9 N12 (0047): the optional "Before next time" line. The note's own readers, nothing more; a tombstone clears it.
+  // Release 1.9 N12 (0045): the optional "Before next time" line. The note's own readers, nothing more; a tombstone clears it.
   beforeNext: text("before_next"), version: integer("version").notNull(), deleted: boolean("deleted").default(false).notNull(),
 }, t => [
   primaryKey({ name: "lesson_log_key", columns: [t.tenantId, t.studentId, t.entryId] }),

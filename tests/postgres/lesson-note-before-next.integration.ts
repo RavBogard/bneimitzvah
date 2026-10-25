@@ -10,7 +10,7 @@ import { withTenantTransaction } from "../../src/server/db/runtime";
 import { postgresAccessFixture } from "./access-fixture";
 import { query } from "./disposable.mjs";
 
-// Release 1.9 N12 on a real server: the "Before next time" line (0047) is read by exactly the note's readers. Every read below
+// Release 1.9 N12 on a real server: the "Before next time" line (0045) is read by exactly the note's readers. Every read below
 // runs as a NOBYPASSRLS login holding portal_runtime, under lesson_log's forced tenant_isolation policy. Synthetic people only.
 type Base = Awaited<ReturnType<typeof postgresAccessFixture>>;
 const fixtures: Base[] = [];
@@ -78,7 +78,7 @@ test("row security and grants on the real server: the column is as private as th
   expect(await rows("crc", sql`select before_next from lesson_log`)).toEqual([{ before_next: LINE }]);
   // Another congregation cannot write a line onto this one's note.
   expect(await withTenantTransaction(f.bDb, { tenantId: "other" }, async tx => ((await tx.execute(sql`update lesson_log set before_next = 'Synthetic intrusion', version = version + 1`)) as unknown as { rowCount: number }).rowCount)).toBe(0);
-  // One policy, the same as before 0047, forced; the column's privileges are exactly the summary's.
+  // One policy, the same as before 0045, forced; the column's privileges are exactly the summary's.
   const catalog = await query<Record<string, unknown>>(f.owner, `select
       (select count(*)::int from pg_policies where tablename = 'lesson_log') as policies,
       (select string_agg(policyname || ':' || cmd, ',') from pg_policies where tablename = 'lesson_log') as policy,

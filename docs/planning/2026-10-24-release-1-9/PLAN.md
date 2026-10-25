@@ -351,10 +351,10 @@ all N1–N25 ─► N16's final re-measure ─► v1.9.0
 
 #### N12. "Before next time" on lesson notes (S, Opus) — G3
 
-- Migration (proposed `0047_lesson_note_before_next.sql`): an optional bounded text column on the lesson note, same readers and RLS as the note; tutor input with the if-then prompt; the student sees it on Today.
+- Migration (`0045_lesson_note_before_next.sql`; proposed as 0047, renumbered to merge before SC4): an optional bounded text column on the lesson note, same readers and RLS as the note; tutor input with the if-then prompt; the student sees it on Today.
 - **Check:** RLS and readers unchanged (a second agent confirms; not a widening).
 - **Exit tests:** saved and shown to the student and parent who already read the note; nobody else reads it; too long is refused with one error (as X11).
-- **Built (1.9 N12, migration `0047_lesson_note_before_next`, not yet applied to production).** One nullable `before_next` column on `lesson_log` with a CHECK, plus `GRANT UPDATE (before_next)`; no new policy, table grant or trigger, so the readers are the note's own. Decided here:
+- **Built (1.9 N12, migration `0045_lesson_note_before_next`, not yet applied to production).** One nullable `before_next` column on `lesson_log` with a CHECK, plus `GRANT UPDATE (before_next)`; no new policy, table grant or trigger, so the readers are the note's own. Decided here:
   - The line is at most 1024 UTF-8 bytes (server, CHECK and form agree); blank is no line (stored null). Too long is one error, the existing "Too long to save. Shorten this note a little." under the field, and Save returns the writer to the field (as X11).
   - An edit that leaves `beforeNext` out keeps the saved line (a page from before this release never erases it); null or blank clears it; a deleted note keeps neither summary nor line. A create replay with a different line is a conflict.
   - The student (and child practice) reads the newest note's line as "Before your next lesson: {text}", in the Lessons view where the newest note already is; older notes, staff and the parent read "Before next time: {text}", the field's own approved label. The parent sees it in the "Latest saved lesson" card and in the list. N11's Today renders the same `latest.beforeNext` from the lesson snapshot when it is built.

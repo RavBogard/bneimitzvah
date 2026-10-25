@@ -31,6 +31,6 @@ test("0017 upgrades and replays while preserving assignment identity, progress m
     expect((await client.query("select relrowsecurity,relforcerowsecurity from pg_class where relname='lesson_log'")).rows).toEqual([{ relrowsecurity: true, relforcerowsecurity: true }]);
     expect((await client.query("select * from information_schema.table_privileges where grantee='PUBLIC' and table_name='lesson_log'")).rows).toHaveLength(0);
     expect((await client.query("select privilege_type from information_schema.table_privileges where grantee='portal_runtime' and table_name='lesson_log' order by privilege_type")).rows).toEqual([{ privilege_type: "INSERT" }, { privilege_type: "SELECT" }]);
-    expect((await client.query("select column_name from information_schema.column_privileges where grantee='portal_runtime' and table_name='lesson_log' and privilege_type='UPDATE' order by column_name")).rows).toEqual(["before_next", "deleted", "lesson_date", "summary", "version"].map(column_name => ({ column_name }))); // 0047 (N12) adds before_next, the one new column.
+    expect((await client.query("select column_name from information_schema.column_privileges where grantee='portal_runtime' and table_name='lesson_log' and privilege_type='UPDATE' order by column_name")).rows).toEqual(["before_next", "deleted", "lesson_date", "summary", "version"].map(column_name => ({ column_name }))); // 0045 (N12) adds before_next, the one new column.
   } finally { await client.close(); await isolated.cleanup(); }
 });
