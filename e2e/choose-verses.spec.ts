@@ -60,7 +60,7 @@ test("choose verses from the text, separated groups with the live count, then sa
   await page.getByRole("button", { name: "Choose verses", exact: true }).click();
   await expect(bar(page)).toBeFocused();
   await expect(anySave).toHaveCount(0);
-  await expect(line(page)).toHaveText("No verses chosen");
+  await expect(line(page)).toHaveText("Tap verse numbers to choose them.");
   // Words are not buttons while choosing, so a tap on one does nothing.
   await expect(page.locator(".study-verses [data-word-index][role=\"button\"]")).toHaveCount(0);
   await verse(page, 1).click();

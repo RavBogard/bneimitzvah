@@ -88,9 +88,18 @@ a.row:hover, button.row:hover { background: var(--color-hover); color: inherit; 
 .info { color: var(--info-ink); box-shadow: inset 0 0 0 1px var(--info-ink); }
 .danger { color: var(--danger-ink); box-shadow: inset 0 0 0 1px var(--danger-ink); }
 
+/* ---- SectionTabs: the section chip row, a tablist of pills that scrolls sideways ---- */
+.tabsBar { min-width: 0; margin-block: 0.5rem; }
+.tabsSticky { position: sticky; top: 0; z-index: 4; margin-block: 0; padding-block: 0.5rem; background: var(--color-canvas); border-bottom: 1px solid var(--color-rule); }
+.tabs { display: flex; gap: 0.5rem; padding: 0.25rem; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin: 0; padding: 0 1rem; border: 0; border-radius: var(--radius-pill); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); color: var(--color-ink); font-family: inherit; font-size: var(--text-callout); font-weight: var(--weight-semibold); line-height: 1.2; white-space: nowrap; cursor: pointer; transition: background-color 160ms var(--ease-settle), color 160ms var(--ease-settle); }
+.tab:hover { background: var(--color-hover); }
+.tab[aria-selected="true"], .tab[aria-selected="true"]:hover { background: var(--color-action-fill); box-shadow: none; color: #fff; }
+
 @media (prefers-reduced-motion: reduce) {
   .sheet[open] { animation: none; }
-  .button, .row, .segment { transition: none; }
+  .button, .row, .segment, .tab { transition: none; }
 }
 
 /* Forced colours: the system keeps text and borders, so edges and the selected segment are said in system colours. */
@@ -99,5 +108,7 @@ a.row:hover, button.row:hover { background: var(--color-hover); color: inherit; 
   .button { border-color: ButtonText; }
   .segment { border: 1px solid transparent; }
   .segment:has(input:checked) { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+  .tab { border: 1px solid ButtonText; }
+  .tab[aria-selected="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
   .handle { background: CanvasText; }
 }

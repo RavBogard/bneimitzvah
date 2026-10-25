@@ -21,10 +21,10 @@ const sources = await Promise.all([...await files("src"), ...await files("script
 assert.ok(sources.some(file => file.path.startsWith("scripts/")), "the scripts are scanned");
 const importsOf = text => [...text.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)].map(m => m[1]);
 const text = path => { const file = sources.find(item => item.path === path); assert.ok(file, path); return file.text; };
-const MIGRATION = "src/server/db/migrations/0045_service_course_progress.sql";
+const MIGRATION = "src/server/db/migrations/0046_service_course_progress.sql";
 const ACCESS = "src/server/service-course/progress-access.ts", DATA = "src/server/data/service-course-progress.ts";
 
-test("only progress-access.ts and the 0045 migration name app.service_course_owner, and it is set once, after eligibility", () => {
+test("only progress-access.ts and the 0046 migration name app.service_course_owner, and it is set once, after eligibility", () => {
   const naming = sources.filter(file => file.text.includes("app.service_course_owner")).map(file => file.path).sort();
   assert.deepEqual(naming, [MIGRATION, ACCESS]);
   const access = text(ACCESS);

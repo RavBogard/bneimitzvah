@@ -1,0 +1,3 @@
+/* The end of a section (1.9 N3): the way on, and the next section's first verse, faint (two lines at most, set in the reading's own step). */
+.next { display: grid; justify-items: start; gap: 0.5rem; margin-block: 1.5rem 1rem; }
+.preview { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; width: 100%; margin: 0; overflow: hidden; opacity: 0.5; font-size: var(--hebrew-size, 2rem); line-height: 1.6; pointer-events: none; user-select: none; }

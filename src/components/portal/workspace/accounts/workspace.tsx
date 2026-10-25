@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
-import { AdminNav } from "../admin-nav";
+import { PeopleNav } from "../../shell/people-nav";
 import { accountsApi, type AccountRequest, type ApproverMode, type ApproversView, type Member } from "./api";
 
 /** Daniel's approved approver help line (F1, wording approved 2026-10-23). */
@@ -78,7 +78,7 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
     } finally { gate.current = false; if (alive.current) setPending(false); }
   }
 
-  return <section className="role-workspace admin-workspace accounts-workspace">{admin && <AdminNav />}
+  return <section className="role-workspace admin-workspace accounts-workspace">{admin && <PeopleNav />}
     <div className="admin-head"><h1>Accounts</h1></div>
     {productName && <p className="people-note">An account keeps a person’s saved readings, place in Learn to lein, preferred commentaries and settings. Everything else on <bdi dir="auto">{productName}</bdi> is open without one.</p>}
     {message && <p className={message.tone === "alert" ? "request-error roster-message" : "workspace-notice roster-message"} role={message.tone}>{message.text}</p>}

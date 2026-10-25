@@ -14,18 +14,18 @@ import { withTenantTransaction } from "../../src/server/db/runtime";
 
 // Release 2.0 SC4: the service course's signed-in progress, a copy of Learn to lein's 0037 (course-progress-migration.test.ts)
 // with its own table and owner setting (A4 6.2, migration A).
-const TAG = "0045_service_course_progress", TABLE = "service_course_progress";
+const TAG = "0046_service_course_progress", TABLE = "service_course_progress";
 const opened: { client: { close(): Promise<void> } }[] = [];
 afterEach(async () => { await Promise.all(opened.splice(0).map(f => f.client.close())); });
 const doc = (extra: Record<string, unknown> = {}) => JSON.stringify({ schema: "service-course-progress/v1", lessons: {}, cards: {}, ...extra });
 
-test("0045 adds only the service_course_progress table, leaves existing rows and the audit list unchanged, and replays", async () => {
+test("0046 adds only the service_course_progress table, leaves existing rows and the audit list unchanged, and replays", async () => {
   const isolation = await isolatedEnv(), client = new PGlite();
   try {
     const folder = "src/server/db/migrations", journal = JSON.parse(await readFile(join(folder, "meta/_journal.json"), "utf8"));
     const own = journal.entries.findIndex((e: { tag: string }) => e.tag === TAG);
-    expect(journal.entries[own]).toMatchObject({ idx: 45, tag: TAG });
-    expect(journal.entries[own].when).toBeGreaterThan(journal.entries.find((e: { tag: string }) => e.tag === "0044_portion_summary").when);
+    expect(journal.entries[own]).toMatchObject({ idx: 46, tag: TAG });
+    expect(journal.entries[own].when).toBeGreaterThan(journal.entries.find((e: { tag: string }) => e.tag === "0045_lesson_note_before_next").when);
     const entries = journal.entries.slice(0, own), prior = join(isolation.home, "prior");
     await mkdir(join(prior, "meta"), { recursive: true }); await writeFile(join(prior, "meta/_journal.json"), JSON.stringify({ ...journal, entries }));
     for (const e of entries) await copyFile(join(folder, e.tag + ".sql"), join(prior, e.tag + ".sql"));
@@ -36,7 +36,7 @@ test("0045 adds only the service_course_progress table, leaves existing rows and
     await client.query("insert into role_grant(id,tenant_id,membership_id,role) values($1,'crc',$2,'student')", [randomUUID(), member]);
     // Learn to lein's own document for the same member: the new table leaves it exactly as it was.
     await client.query("insert into course_progress(tenant_id,membership_id,user_id,progress) values('crc',$1,'course-existing',$2::jsonb)", [member, JSON.stringify({ schema: "learn-progress/v1", lessons: {}, cards: {} })]);
-    const capture = async () => Object.fromEntries(await Promise.all(["student", "membership", "role_grant", "audit_event", "tenant", "saved_reading", "course_progress"].map(async t => [t, (await client.query(`select * from ${t} order by 1`)).rows])));
+    const capture = async () => Object.fromEntries(await Promise.all(["student", "membership", "role_grant", "audit_event", "tenant", "saved_reading", "course_progress", "lesson_log"].map(async t => [t, (await client.query(`select * from ${t} order by 1`)).rows])));
     const before = await capture();
     await migrate(db, { migrationsFolder: folder }); await migrate(db, { migrationsFolder: folder });
     const after = await capture();
@@ -45,10 +45,10 @@ test("0045 adds only the service_course_progress table, leaves existing rows and
 
     // The generated snapshot adds the one table and changes nothing else.
     const snapshots = (await readdir(join(folder, "meta"))).filter(name => /^\d{4}_snapshot\.json$/.test(name)).sort();
-    // A later migration adds its own snapshot; 0045's is compared with the one just before it.
-    const at = snapshots.indexOf("0045_snapshot.json");
+    // A later migration adds its own snapshot; 0046's is compared with the one just before it.
+    const at = snapshots.indexOf("0046_snapshot.json");
     expect(at).toBeGreaterThan(0);
-    const previous = JSON.parse(await readFile(join(folder, "meta", snapshots[at - 1]), "utf8")), current = JSON.parse(await readFile(join(folder, "meta/0045_snapshot.json"), "utf8"));
+    const previous = JSON.parse(await readFile(join(folder, "meta", snapshots[at - 1]), "utf8")), current = JSON.parse(await readFile(join(folder, "meta/0046_snapshot.json"), "utf8"));
     expect(current.prevId).toBe(previous.id);
     const expected = structuredClone(previous.tables);
     expected[`public.${TABLE}`] = current.tables[`public.${TABLE}`];

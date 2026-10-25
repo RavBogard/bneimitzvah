@@ -32,8 +32,9 @@ vi.mock("../../src/components/portal/workspace/provider", () => ({
 }));
 vi.mock("../../src/components/portal/workspace/study/lift", () => ({ icons: { close: null } }));
 import { LessonLog } from "../../src/components/portal/workspace/lessons/panel";
+import { renderToStaticMarkup } from "react-dom/server";
 const register = (value: LessonReload) => { host.reload = value; return unregister; };
-function render(mode: "parent" | "tutor" = "tutor", studentId = "synthetic-student") { host.cursor = 0; const tree = LessonLog({ mode, studentId, register, tabbed: true }); host.effects.splice(0).forEach(effect => effect()); return tree; }
+function render(mode: "parent" | "tutor" | "student" = "tutor", studentId = "synthetic-student") { host.cursor = 0; const tree = LessonLog({ mode, studentId, register, tabbed: true }); host.effects.splice(0).forEach(effect => effect()); return tree; }
 function find(node: ReactNode, predicate: (props: Record<string, unknown>) => boolean): ReactElement<Record<string, any>> | undefined {
   if (Array.isArray(node)) { for (const child of node) { const found = find(child, predicate); if (found) return found; } return; }
   if (!node || typeof node !== "object" || !("props" in node)) return;
@@ -83,4 +84,70 @@ test("replaced lesson reads cannot publish a held old child's saved note", async
   resolve({ entries: [saved("2026-10-20", "Synthetic old child note")], nextCursor: null }); await old; render("parent", "synthetic-sibling");
   expect(seen.mock.calls.some(([value]) => value.lesson.status === "ready" && value.lesson.latest?.summary === "Synthetic old child note")).toBe(false);
   expect(seen.mock.lastCall![0]).toMatchObject({ lesson: { status: "ready", latest: { summary: "Synthetic new child note" } } });
+});
+
+// Release 1.9 N12: "Before next time" on the tutor's note, and where the student and parent see it.
+/** Every visible error line in the open note: the X11 rule is one, under the field that is too long. */
+function errors(node: ReactNode, found: string[] = []): string[] {
+  if (Array.isArray(node)) { for (const child of node) errors(child, found); return found; }
+  if (!node || typeof node !== "object" || !("props" in node)) return found;
+  const props = (node as ReactElement<Record<string, any>>).props;
+  if (typeof props.className === "string" && props.className.split(" ").includes("request-error")) { const text = [props.children].flat().join(""); if (text.trim()) found.push(text); }
+  errors(props.children, found); return found;
+}
+async function openNote(summary = "Synthetic lesson: verse one.") {
+  await host.reload!.reload({ ...parentBaseline(), mode: "tutor" }, new AbortController().signal); render();
+  find(render(), props => props.className === "button-primary lesson-add")!.props.onClick({ currentTarget: {} });
+  find(render(), props => props.rows === 8)!.props.onChange({ target: { value: summary } });
+}
+const nextField = (tree: ReactNode) => find(tree, props => props.id === "synthetic-lesson-next")!;
+const submit = async () => { find(render(), props => props.className === "lesson-form")!.props.onSubmit({ preventDefault() {} }); await flush(); };
+
+test("the tutor's note offers Before next time with the if-then prompt, and sends the line, or null when it is left blank", async () => {
+  render(); await openNote();
+  const tree = render(), field = nextField(tree);
+  expect(find(tree, props => props.htmlFor === "synthetic-lesson-next")!.props.children).toBe("Before next time");
+  expect(field.props["aria-describedby"]).toBe("synthetic-lesson-next-help");
+  expect(find(tree, props => props.id === "synthetic-lesson-next-help")!.props.children).toBe("When ___, I will ___");
+  field.props.onChange({ target: { value: "When I finish dinner on Tuesday, I will chant verse two.\r\n" } });
+  await submit();
+  const create = host.reader.mock.calls.find(call => call[2].type === "create")![2];
+  expect(create).toMatchObject({ type: "create", summary: "Synthetic lesson: verse one.", beforeNext: "When I finish dinner on Tuesday, I will chant verse two.\n" });
+  host.reader.mockClear(); render(); await openNote("Synthetic second lesson.");
+  nextField(render()).props.onChange({ target: { value: "  \n " } }); await submit();
+  expect(host.reader.mock.calls.find(call => call[2].type === "create")![2]).toMatchObject({ summary: "Synthetic second lesson.", beforeNext: null });
+});
+
+test("a Before next time line over the limit shows one error, under its field, and Save sends nothing (as X11)", async () => {
+  render(); await openNote();
+  nextField(render()).props.onChange({ target: { value: "x".repeat(1025) } });
+  expect(errors(render())).toEqual(["Too long to save. Shorten this note a little."]);
+  host.reader.mockClear(); await submit();
+  expect(host.reader.mock.calls.filter(call => call[2].type !== "page")).toHaveLength(0);
+  expect(errors(render())).toEqual(["Too long to save. Shorten this note a little."]);
+  // Both fields too long: still one line each, and nothing from Save on top of them.
+  find(render(), props => props.rows === 8)!.props.onChange({ target: { value: "x".repeat(4100) } }); await submit();
+  expect(errors(render())).toEqual(["Too long to save. Shorten this note a little.", "Too long to save. Shorten this note a little."]);
+  expect(host.reader.mock.calls.filter(call => call[2].type !== "page")).toHaveLength(0);
+  // Back within the limit: the error goes and the line saves.
+  find(render(), props => props.rows === 8)!.props.onChange({ target: { value: "Synthetic lesson." } });
+  nextField(render()).props.onChange({ target: { value: "x".repeat(1024) } });
+  expect(errors(render())).toEqual([]);
+  await submit(); expect(host.reader.mock.calls.find(call => call[2].type === "create")![2]).toMatchObject({ beforeNext: "x".repeat(1024) });
+});
+
+test("the student reads the newest note's line as Before your next lesson, older lines and the parent's by the field's own name, escaped", async () => {
+  const newest = { ...saved("2026-10-22", "Synthetic newest note"), beforeNext: "When I wake up on Sunday, I will sing <i>the blessing</i>." };
+  const older = { ...saved("2026-10-15", "Synthetic older note"), beforeNext: "When school ends, I will review verse one." };
+  const none = saved("2026-10-08", "Synthetic note without a line");
+  for (const mode of ["student", "parent", "tutor"] as const) {
+    host.reader.mockReset().mockResolvedValue({ entries: [newest, older, { ...none, beforeNext: null }], nextCursor: null });
+    render(mode); await host.reload!.reload({ ...parentBaseline(), mode }, new AbortController().signal);
+    const markup = renderToStaticMarkup(render(mode) as ReactElement);
+    expect(markup).toContain("When I wake up on Sunday, I will sing &lt;i&gt;the blessing&lt;/i&gt;."); expect(markup).not.toContain("<i>");
+    expect(markup).toContain("When school ends, I will review verse one.");
+    expect(markup.match(/Before your next lesson:/g)?.length ?? 0, mode).toBe(mode === "student" ? 1 : 0);
+    expect(markup.match(/Before next time:/g)?.length ?? 0, mode).toBe(mode === "student" ? 1 : 2);
+    if (mode === "student") expect(markup.indexOf("Before your next lesson:")).toBeLessThan(markup.indexOf("Synthetic older note"));
+  }
 });

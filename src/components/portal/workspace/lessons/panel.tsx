@@ -5,12 +5,12 @@ import type { Assigned, ReadingMode } from "../api";
 import { statusOf, useWorkspace, useWorkspaceModal } from "../provider";
 import { icons } from "../study/lift";
 import type { LessonLogEntry } from "../../../../lib/lesson-log/types";
-import { LessonError, summaryBytes, summaryLimit, type LessonOperation, type LessonPage } from "./api";
+import { beforeNextLimit, beforeNextValue, LessonError, summaryBytes, summaryLimit, type LessonOperation, type LessonPage } from "./api";
 
-export type LessonSummarySnapshot = { scope: string; baseline: Assigned | null; generation: number; lesson: { status: "loading" } | { status: "unavailable" } | { status: "ready"; latest: Pick<LessonLogEntry, "lessonDate" | "displayName" | "summary"> | null } };
+export type LessonSummarySnapshot = { scope: string; baseline: Assigned | null; generation: number; lesson: { status: "loading" } | { status: "unavailable" } | { status: "ready"; latest: Pick<LessonLogEntry, "lessonDate" | "displayName" | "summary" | "beforeNext"> | null } };
 export type LessonReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void>; snapshot?(publish: (value: LessonSummarySnapshot) => void): void };
 /** An open note: a new lesson (no base) or an edit of the saved version it started from. */
-type Draft = { entryId: string; base: LessonLogEntry | null; lessonDate: string; summary: string; changedElsewhere?: boolean; uncertain?: boolean };
+type Draft = { entryId: string; base: LessonLogEntry | null; lessonDate: string; summary: string; beforeNext: string; changedElsewhere?: boolean; uncertain?: boolean };
 type List = { scope: string; page?: LessonPage; loading?: boolean; more?: boolean; error?: number };
 
 const today = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; };
@@ -21,7 +21,13 @@ export function lessonDay(date: string) {
   return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", ...(year !== new Date().getFullYear() ? { year: "numeric" } : {}), timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
 }
 const authority = (status: number) => [401, 403, 404].includes(status);
-const dirtyDraft = (draft: Draft | null) => Boolean(draft && (draft.base ? draft.summary !== draft.base.summary || draft.lessonDate !== draft.base.lessonDate : draft.summary.trim()));
+const dirtyDraft = (draft: Draft | null) => Boolean(draft && (draft.base
+  ? draft.summary !== draft.base.summary || draft.lessonDate !== draft.base.lessonDate || beforeNextValue(draft.beforeNext) !== draft.base.beforeNext
+  : draft.summary.trim() || draft.beforeNext.trim()));
+/** The newest note's "Before next time" line (N12). A learner reads it as theirs; everyone else, and every older note, by its field name. */
+export function BeforeNext({ text, own }: { text: string; own: boolean }) {
+  return <p className="lesson-before-next"><span className="lesson-before-next-label">{own ? "Before your next lesson:" : "Before next time:"}</span> <bdi dir="auto">{text}</bdi></p>;
+}
 
 export function LessonLog({ mode, studentId, register, tabbed }: { mode: ReadingMode; studentId: string; register(value: LessonReload): () => void; tabbed: boolean }) {
   const { summary, epoch, readLessons, registerWork, registerDeparture } = useWorkspace();
@@ -38,7 +44,7 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
   const listGeneration = useRef(0), listRequest = useRef<AbortController | null>(null);
   const generation = useRef(0), writeRequest = useRef<AbortController | null>(null), task = useRef<Promise<void> | null>(null), departure = useRef<((leave: boolean) => void) | null>(null);
   const sheet = useRef<HTMLDialogElement>(null), prompt = useRef<HTMLDialogElement>(null), origin = useRef<HTMLElement | null>(null);
-  const field = useRef<HTMLTextAreaElement>(null), keepIt = useRef<HTMLButtonElement>(null), deleteButton = useRef<HTMLButtonElement>(null), confirmWasOpen = useRef(false);
+  const field = useRef<HTMLTextAreaElement>(null), nextField = useRef<HTMLTextAreaElement>(null), keepIt = useRef<HTMLButtonElement>(null), deleteButton = useRef<HTMLButtonElement>(null), confirmWasOpen = useRef(false);
 
   const publish = useCallback((lesson: LessonSummarySnapshot["lesson"], turn = listGeneration.current) => {
     if (turn !== listGeneration.current) return;
@@ -135,7 +141,7 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
   function open(base: LessonLogEntry | null, event: { currentTarget: HTMLElement }) {
     if (paused || draftRef.current) return;
     origin.current = event.currentTarget; setNotice(""); setListNotice(""); setConfirmDelete(false);
-    setDraft(base ? { entryId: base.entryId, base, lessonDate: base.lessonDate, summary: base.summary } : { entryId: crypto.randomUUID(), base: null, lessonDate: today(), summary: "" });
+    setDraft(base ? { entryId: base.entryId, base, lessonDate: base.lessonDate, summary: base.summary, beforeNext: base.beforeNext ?? "" } : { entryId: crypto.randomUUID(), base: null, lessonDate: today(), summary: "", beforeNext: "" });
   }
   async function close() {
     if (pending || !draftRef.current) return;
@@ -143,7 +149,7 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
     if (departure.current) return;
     setLeaving(true); await new Promise<boolean>(resolve => { departure.current = resolve; });
   }
-  function edit(change: Partial<Pick<Draft, "lessonDate" | "summary">>) { const current = draftRef.current; if (current) setDraft({ ...current, ...change }); setConfirmDelete(false); }
+  function edit(change: Partial<Pick<Draft, "lessonDate" | "summary" | "beforeNext">>) { const current = draftRef.current; if (current) setDraft({ ...current, ...change }); setConfirmDelete(false); }
 
   async function run(operation: LessonOperation, settle: (outcome: { saved: boolean; status: number; conflict: boolean }) => Promise<void>) {
     if (pending || paused) return;
@@ -161,15 +167,16 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
   }
   async function save() {
     const current = draftRef.current; if (!current) return;
-    const text = current.summary.replace(/\r\n?|[\x0b\x0c]/g, "\n");
+    const text = current.summary.replace(/\r\n?|[\x0b\x0c]/g, "\n"), next = beforeNextValue(current.beforeNext.replace(/[\x0b\x0c]/g, "\n"));
     if (!validDate(current.lessonDate)) { setNotice("Choose the date of the lesson."); return; }
     if (!text.trim()) { setNotice("Write a few words about the lesson first."); return; }
-    if (/[\x00-\x08\x0e-\x1f\x7f-\x9f]/.test(text)) { setNotice("This note has a hidden character that can’t be saved. Retype the part you pasted."); return; }
+    if (/[\x00-\x08\x0e-\x1f\x7f-\x9f]/.test(text) || next && /[\x00-\x08\x0e-\x1f\x7f-\x9f]/.test(next)) { setNotice("This note has a hidden character that can’t be saved. Retype the part you pasted."); return; }
     // The live hint under the field already says it is too long: say it once there, and take the writer to the field.
     if (summaryBytes(text) > summaryLimit) { setNotice(""); field.current?.focus(); return; }
+    if (next && summaryBytes(next) > beforeNextLimit) { setNotice(""); nextField.current?.focus(); return; }
     const operation: LessonOperation = current.base
-      ? { type: "edit", entryId: current.entryId, expectedVersion: current.base.version, lessonDate: current.lessonDate, summary: text }
-      : { type: "create", entryId: current.entryId, lessonDate: current.lessonDate, summary: text };
+      ? { type: "edit", entryId: current.entryId, expectedVersion: current.base.version, lessonDate: current.lessonDate, summary: text, beforeNext: next }
+      : { type: "create", entryId: current.entryId, lessonDate: current.lessonDate, summary: text, beforeNext: next };
     await run(operation, async ({ saved, status, conflict }) => {
       const done = (message: string) => { setDraft(null); setListNotice(message); };
       if (saved) { done(current.base ? "Lesson updated." : "Lesson added."); await refresh(); return; }
@@ -179,7 +186,7 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
       const page = await refresh(), found = page?.entries.find(entry => entry.entryId === current.entryId);
       if (!page) { setNotice(conflict ? "This lesson changed somewhere else, and the latest version couldn’t be loaded. Try again in a moment." : "Couldn’t check whether that saved. Try again in a moment."); return; }
       const latest = draftRef.current; if (!latest || latest.entryId !== current.entryId) return;
-      if (found && found.summary === text && found.lessonDate === current.lessonDate && (!current.base || found.version > current.base.version)) { done(current.base ? "Lesson updated." : "Lesson added."); return; }
+      if (found && found.summary === text && found.beforeNext === next && found.lessonDate === current.lessonDate && (!current.base || found.version > current.base.version)) { done(current.base ? "Lesson updated." : "Lesson added."); return; }
       if (found && current.base && found.version === current.base.version && !conflict) { setNotice("That change may not have saved. Try saving again."); return; }
       if (found) { setDraft({ ...latest, base: found, changedElsewhere: true, uncertain: false }); setNotice(latest.uncertain ? "Your earlier save went through. That version is shown below. Save to replace it with your text." : "This lesson was changed somewhere else. Its latest version is shown below. Save to replace it with your text."); return; }
       // Only the newest page was read; a lesson with an older date may be further down, so its id is kept.
@@ -228,9 +235,9 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
     if (scope !== scopeRef.current) return;
     const latest = current?.page?.entries[0];
     publish(paused || !current || current.loading ? { status: "loading" } : current.error ? { status: "unavailable" }
-      : { status: "ready", latest: latest ? { lessonDate: latest.lessonDate, displayName: latest.displayName, summary: latest.summary } : null }, projectionTurn);
+      : { status: "ready", latest: latest ? { lessonDate: latest.lessonDate, displayName: latest.displayName, summary: latest.summary, beforeNext: latest.beforeNext } : null }, projectionTurn);
   }, [current, paused, scope, publish, projectionTurn]);
-  const bytes = draft ? summaryBytes(draft.summary) : 0, title = staff ? "Lessons" : "Lesson notes";
+  const bytes = draft ? summaryBytes(draft.summary) : 0, nextBytes = draft ? summaryBytes(beforeNextValue(draft.beforeNext) ?? "") : 0, learner = mode === "student" || mode === "child-practice", title = staff ? "Lessons" : "Lesson notes";
   return <section className={`lesson-log${tabbed ? " lesson-log-tabbed" : ""}`} aria-labelledby={`${id}-heading`} aria-busy={current?.loading || undefined}>
     <div className="lesson-log-head"><h2 id={`${id}-heading`}>{title}</h2>
       {staff && tabbed && <p className="lesson-log-lede">Notes after each lesson. The student and their family can read them.</p>}
@@ -240,10 +247,11 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
       : current.error ? <div className="lesson-log-empty"><p>{title} couldn’t be loaded.</p><button type="button" className="button-secondary" onClick={() => void retry()}>Try again</button></div>
       : !entries.length ? <div className="lesson-log-empty"><p className="lesson-log-empty-title">No lessons yet</p>
         <p>{staff ? "After each lesson, write a few lines about what you worked on. The student and their family can read them here." : mode === "student" ? "After each lesson, your tutor’s notes show up here." : "After each lesson, the tutor’s notes show up here."}</p></div>
-      : <ol className="lesson-entries">{entries.map(entry => { const day = lessonDay(entry.lessonDate); return <li key={entry.entryId} className="lesson-entry">
+      : <ol className="lesson-entries">{entries.map((entry, index) => { const day = lessonDay(entry.lessonDate); return <li key={entry.entryId} className="lesson-entry">
         <div className="lesson-entry-head"><h3><time dateTime={entry.lessonDate}>{day}</time></h3>
           {entry.canEdit && <button type="button" className="lesson-edit" aria-label={`Edit lesson from ${day}: ${Array.from(entry.summary.trim().split("\n")[0]).slice(0, 40).join("")}`} disabled={busy || Boolean(draft)} onClick={event => open(entry, event)}>Edit</button>}</div>
         <p className="lesson-summary" dir="auto">{entry.summary}</p>
+        {entry.beforeNext && <BeforeNext text={entry.beforeNext} own={learner && index === 0} />}
         <p className="lesson-by"><bdi dir="auto">{entry.displayName}</bdi></p>
       </li>; })}</ol>}
     {current?.page?.nextCursor && <button type="button" className="button-secondary lesson-more" disabled={current.more} onClick={() => void more()}>{current.more ? "Loading…" : "Show earlier lessons"}</button>}
@@ -256,8 +264,11 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
         <div className="lesson-field"><label htmlFor={`${id}-date`}>Lesson date</label><input id={`${id}-date`} type="date" required value={draft.lessonDate} disabled={busy} onChange={event => edit({ lessonDate: event.target.value })} /></div>
         <div className="lesson-field"><label htmlFor={`${id}-summary`}>What you worked on</label><textarea ref={field} id={`${id}-summary`} rows={8} required dir="auto" value={draft.summary} disabled={busy} onChange={event => edit({ summary: event.target.value })} /></div>
         {bytes > summaryLimit * 0.9 && <p className={bytes > summaryLimit ? "request-error" : "field-help"} aria-live="polite">{bytes > summaryLimit ? "Too long to save. Shorten this note a little." : "Nearly at the length limit."}</p>}
+        <div className="lesson-field"><label htmlFor={`${id}-next`}>Before next time</label><p id={`${id}-next-help`} className="field-help">When ___, I will ___</p>
+          <textarea ref={nextField} id={`${id}-next`} rows={3} dir="auto" aria-describedby={`${id}-next-help`} value={draft.beforeNext} disabled={busy} onChange={event => edit({ beforeNext: event.target.value })} /></div>
+        {nextBytes > beforeNextLimit * 0.9 && <p className={nextBytes > beforeNextLimit ? "request-error" : "field-help"} aria-live="polite">{nextBytes > beforeNextLimit ? "Too long to save. Shorten this note a little." : "Nearly at the length limit."}</p>}
         <p className="lesson-form-notice request-error" role="status">{notice}</p>
-        {draft.changedElsewhere && draft.base && <div className="lesson-latest"><p className="lesson-latest-title">Latest saved version · <time dateTime={draft.base.lessonDate}>{lessonDay(draft.base.lessonDate)}</time></p><p className="lesson-summary" dir="auto">{draft.base.summary}</p></div>}
+        {draft.changedElsewhere && draft.base && <div className="lesson-latest"><p className="lesson-latest-title">Latest saved version · <time dateTime={draft.base.lessonDate}>{lessonDay(draft.base.lessonDate)}</time></p><p className="lesson-summary" dir="auto">{draft.base.summary}</p>{draft.base.beforeNext && <BeforeNext text={draft.base.beforeNext} own={false} />}</div>}
         {confirmDelete ? <div className="lesson-delete-confirm" role="group" aria-labelledby={`${id}-delete-question`}>
           <p id={`${id}-delete-question`}>Delete this lesson note? It can’t be brought back.</p>
           <div className="lesson-form-actions"><button type="button" className="button-primary lesson-delete-go" disabled={busy} onClick={() => void remove()}>{pending === "delete" ? "Deleting…" : "Delete"}</button>

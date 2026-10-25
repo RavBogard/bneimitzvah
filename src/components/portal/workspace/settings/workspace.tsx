@@ -1,7 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "../provider";
-import { AdminNav } from "../admin-nav";
 import { validateSettings, SETTINGS_LIMITS, type CongregationSettings, type NotificationSettings, type ServiceSetting } from "../../../../server/settings/validation";
 import { settingsApi, type SettingsView } from "./api";
 import { resetCongregationRead } from "./links";
@@ -119,7 +118,7 @@ function CongregationSettingsPage() {
   const textArea = (name: Field, rows: number, maxLength: number) => draft && <textarea id={`settings-${name}`} rows={rows} value={draft[name]} maxLength={maxLength}
     aria-invalid={invalid.has(name) || undefined} aria-describedby={errorId(name)} disabled={locked} onChange={event => change(name, event.target.value)} />;
 
-  return <section className="role-workspace admin-workspace settings-workspace"><AdminNav />
+  return <section className="role-workspace admin-workspace settings-workspace">
     <div className="admin-head"><h1>Congregation settings</h1></div>
     {loading && !view ? <p role="status">Loading settings…</p>
       : failure || !view || !draft ? <div className="admin-state" role="alert"><p>The settings couldn’t be loaded.</p><button type="button" className="button-secondary admin-pill" onClick={() => void reload()}>Reload</button></div>

@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PortalRequestError } from "../api";
 import { RATE_LIMITED_MESSAGE } from "./rate-limited";
-import type { StudyKind, StudyPage } from "../workspace/study/api";
+import type { StudyKind, StudyPage, StudyVerse } from "../workspace/study/api";
 import { FlowingStudyText } from "../workspace/study/annotations";
 import { StudyCredits } from "../workspace/study/credits";
 import { ReadingPlayer, playMainVerseForWord, type ReadingPlayerHandle } from "../workspace/study/reading-player";
@@ -18,11 +18,16 @@ import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useRe
 import { DiscussionList, VersePanelColumn, VersePanelScope, WordPanelSource } from "../workspace/study/verse-panel";
 import type { WordPanelHost } from "../workspace/study/word-panel";
 import { ReadingPlace, scrollToVerse } from "../workspace/study/reading-place";
-import { pageOffsetFor } from "../workspace/study/reading-place-model";
 import { namedReading, type NamedReading } from "../../../lib/readings/named-readings";
 import { useReadingPrefs } from "../workspace/reading-prefs";
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { expandReadingRanges } from "../../../lib/readings/ranges";
+import { labelsIn, pickOfSection, sectionIndexAt, sectionOfPick, sectionsOf, type Section, type SectionRow } from "../../../lib/readings/sections";
+import { PORTION_LABELS, portionPicks, portionRef, type PortionPick, type WeekPortions } from "../../../lib/print/portions";
+import { fetchPublicAliyot } from "../print/api";
+import { PortionPicker } from "./portion-picker";
+import { SectionTabs } from "../../ui";
+import { NextSection } from "../workspace/study/next-section";
 import { addDays, shabbatOnOrAfter, thisShabbat } from "../../../lib/readings/public-shabbat";
 import { fetchPublicRefReading, fetchPublicShortPage, fetchPublicText, fetchPublicWeek, fetchPublicWordAids, fetchPublicWordDetails, refSource, weekSource,
   type PublicShortPage, type PublicSource, type PublicWeek } from "./api";
@@ -54,6 +59,9 @@ const GROUP_EYEBROW: Readonly<Record<NamedReading["group"], string>> = { parasha
 export function readingAddress(date: string, today: string, lens: Lens): string {
   return readAddress({ mode: "week", date, kind: null }, { today, study: lens === "study" });
 }
+/** A text page: the verses [start, end) of the passage, one section of it (`section` is its index in the sections) or one of the server's pages (-1). */
+type PageWindow = Readonly<{ start: number; end: number; section: number }>;
+const NO_SECTIONS: readonly Section[] = Object.freeze([]), NO_LABELS: readonly { index: number; label: string }[] = Object.freeze([]);
 /** One passage the page can show, under the label its passage button carries. */
 export type LabelledSource = Readonly<{ label: string; source: PublicSource }>;
 
@@ -66,7 +74,7 @@ export function PublicReading() {
   useEffect(() => { setQuery(lensFromSearch(window.location.search)); setAddress(parseReadAddress(window.location.search)); setBack(parseSaveReturn(window.location.search)); }, []);
   return <StudyLensScope storageKey={LENS_STORAGE.weekly} query={query}>
     {!address ? <Shell title={WEEK_TITLE} settled={false}><Hero eyebrow="Torah and haftarah" title="Loading the reading" meta={<MetaReserve />} nav={<WeekNavReserve />} actions={<ActionsReserve />} /><ReadingBlock /></Shell>
-      : address.target?.mode === "week" ? <WeekReading initial={address.target} verse={address.verse} saveReturn={back} />
+      : address.target?.mode === "week" ? <WeekReading initial={address.target} verse={address.verse} saveReturn={back} pick={address.pick} />
         : address.target?.mode === "saved" ? <SavedReadingPage id={address.target.id} verse={address.verse} />
         : address.target ? <ChosenReading target={address.target} verse={address.verse} saveReturn={back} />
           : <Unavailable />}
@@ -202,14 +210,40 @@ function Unavailable() {
 function useToday() { const [today, setToday] = useState<string | null>(null); useEffect(() => { setToday(thisShabbat()); }, []); return today; }
 
 /** A Shabbat's parashah and haftarah, by date, with week-by-week browsing. */
-function WeekReading({ initial, verse, saveReturn }: { initial: Extract<ReadTarget, { mode: "week" }>; verse: number | null; saveReturn: SaveReturn }) {
+function WeekReading({ initial, verse, saveReturn, pick: initialPick }: { initial: Extract<ReadTarget, { mode: "week" }>; verse: number | null; saveReturn: SaveReturn; pick?: PortionPick }) {
   const today = useToday(), [date, setDate] = useState<string | null>(null), lens = useStudyLens(), chooser = useChooser(), starter = useStarter();
   const [week, setWeek] = useState<{ date: string; value?: PublicWeek; error?: number } | null>(null), [retry, setRetry] = useState(0);
   const [kind, setKind] = useState<StudyKind | null>(initial.kind), [linked, setLinked] = useState(verse), [choosing, setChoosing] = useState(false);
+  const [pick, setPick] = useState<PortionPick>(initialPick ?? "full");
   useEffect(() => { if (today) setDate(current => current ?? initial.date ?? today); }, [today, initial.date]);
+  // The Shabbat's calendar aliyot (N3), asked for beside the reading: a week without them (a festival Saturday, or the answer did not come) is read as before, Full only.
+  const [aliyot, setAliyot] = useState<{ date: string; value: WeekPortions | null; failed?: boolean } | null>(null);
+  useEffect(() => {
+    if (!date) return;
+    const controller = new AbortController();
+    fetchPublicAliyot(date, controller.signal).then(value => { if (!controller.signal.aborted) setAliyot({ date, value }); },
+      () => { if (!controller.signal.aborted) setAliyot({ date, value: null, failed: true }); });
+    return () => controller.abort();
+  }, [date, retry]);
+  const portions = aliyot?.date === date ? aliyot.value : null, aliyotSettled = aliyot?.date === date;
+  const offered = portionPicks(portions), effectivePick: PortionPick = kind === "haftarah" || !offered.includes(pick) ? "full" : pick;
+  // The triennial reading is its own passage: fetched by its ref, and read in sections like the full portion.
+  const triennialRef = effectivePick === "triennial" && portions ? portionRef(portions, "triennial") : null;
+  const [triennial, setTriennial] = useState<{ ref: string; source?: PublicSource; error?: number } | null>(null);
+  useEffect(() => {
+    if (!triennialRef) { setTriennial(null); return; }
+    const controller = new AbortController();
+    setTriennial({ ref: triennialRef });
+    fetchPublicRefReading(triennialRef, "torah", controller.signal).then(value => { if (!controller.signal.aborted) setTriennial({ ref: triennialRef, source: refSource(value) }); },
+      error => { if (!controller.signal.aborted) setTriennial({ ref: triennialRef, error: statusOf(error) }); });
+    return () => controller.abort();
+  }, [triennialRef, retry]);
+  const triennialNow = triennialRef && triennial?.ref === triennialRef ? triennial : null;
+  // What the address says: the pick once the calendar has answered that it can be had; while it has not answered, or could not, the asked-for pick is kept so a reload can honour it.
+  const addressPick: PortionPick = kind === "haftarah" || (aliyotSettled && !aliyot?.failed && !offered.includes(pick)) ? "full" : pick;
   // One Shabbat at a time; its address is shareable (and this week's Lein is plain /read).
-  useEffect(() => { if (date && today) replaceAddress(readAddress({ mode: "week", date, kind: kind === "haftarah" ? "haftarah" : null }, { today, verse: linked, study: lens.lens === "study" })); },
-    [date, today, kind, linked, lens.lens]);
+  useEffect(() => { if (date && today) replaceAddress(readAddress({ mode: "week", date, kind: kind === "haftarah" ? "haftarah" : null }, { today, verse: linked, study: lens.lens === "study", pick: addressPick })); },
+    [date, today, kind, linked, lens.lens, addressPick]);
   useEffect(() => {
     if (!date) return;
     const controller = new AbortController();
@@ -219,11 +253,18 @@ function WeekReading({ initial, verse, saveReturn }: { initial: Extract<ReadTarg
     return () => controller.abort();
   }, [date, retry]);
   const current = week?.value && week.date === date ? week.value : null;
-  const sources = useMemo(() => current ? (["torah", "haftarah"] as const).flatMap(row => { const source = weekSource(current, row); return source ? [{ label: row === "torah" ? "Torah" : "Haftarah", source }] : []; }) : [], [current]);
-  const change = (next: string) => { if (next !== date) { setDate(next); setKind(null); setLinked(null); } };
+  const triennialSource = triennialNow?.source;
+  const sources = useMemo(() => current ? (["torah", "haftarah"] as const).flatMap(row => { const source = row === "torah" && triennialSource ? triennialSource : weekSource(current, row); return source ? [{ label: row === "torah" ? "Torah" : "Haftarah", source }] : []; }) : [], [current, triennialSource]);
+  const change = (next: string) => { if (next !== date) { setDate(next); setKind(null); setLinked(null); setPick("full"); } };
   const index = Math.max(0, sources.findIndex(row => row.source.passage.kind === kind)), isThisWeek = date !== null && date === today;
   const shown = sources[index]?.source.passage;
-  const back = useReturn(saveReturn, at => date && today ? readAddress({ mode: "week", date, kind: kind === "haftarah" ? "haftarah" : null }, { today, verse: at ?? linked, study: lens.lens === "study" }) : null, shown);
+  // The sections the Torah is read in: the full portion's aliyot, or the triennial reading's own.
+  const division = triennialSource ? "triennial" : "full";
+  const sectionRows = useMemo(() => portions ? division === "triennial" ? portions.triennial?.aliyot : portions.full : undefined, [portions, division]);
+  // The reader is ready to be shown once the aliyot have answered (so the first page is a section, never one that is then replaced) and the triennial text, if asked for, is here.
+  const ready = (!current?.torah || aliyotSettled) && (!triennialRef || Boolean(triennialNow && (triennialNow.source || triennialNow.error)));
+  const picked = effectivePick !== "full" && effectivePick !== "triennial" && portions ? portionRef(portions, effectivePick) : null;
+  const back = useReturn(saveReturn, at => date && today ? readAddress({ mode: "week", date, kind: kind === "haftarah" ? "haftarah" : null }, { today, verse: at ?? linked, study: lens.lens === "study", pick: addressPick }) : null, shown);
   // Choose verses: the Shabbat's own passage is the whole portion already, so a selection from it only needs Save.
   // Back from "Sign in to save" with a selection, choosing opens with it.
   const choosePlan: ChoosePlan | undefined = current ? { label: CHOOSE_STRINGS.choose, start: saveReturn.choose ?? [], autoStart: Boolean(saveReturn.choose), onChoosing: setChoosing, onPlace: ref => { back.place.current = ref; },
@@ -240,7 +281,7 @@ function WeekReading({ initial, verse, saveReturn }: { initial: Extract<ReadTarg
         <label className={styles.picker}><span>Find a date</span><input type="date" value={date ?? ""} onChange={event => { const value = event.target.value; if (/^\d{4}-\d{2}-\d{2}$/.test(value)) { try { change(shabbatOnOrAfter(value)); } catch { /* Ignore partial input. */ } } }} /></label>
         {chooser.button}
       </>}
-      actions={sources.length > 0 ? starter.row(current && shown && !choosing && <SaveReading passage={{ title: current.parashah, label: shown.kind === "torah" ? "Torah" : "Haftarah", kind: shown.kind, ranges: shown.ranges, date: current.date }} back={back.forSave()} offer={back.passageOffer} />, date && shown ? printAddress({ mode: "week", date, kind: shown.kind === "haftarah" ? "haftarah" : null, pick: "full" }, undefined, { today }) : undefined) : !current && !week?.error ? <ActionsReserve /> : null} />
+      actions={sources.length > 0 ? starter.row(current && shown && !choosing && <SaveReading passage={{ title: current.parashah, label: effectivePick !== "full" ? PORTION_LABELS[effectivePick] : shown.kind === "torah" ? "Torah" : "Haftarah", kind: shown.kind, ranges: picked ? picked.split("; ") : shown.ranges, date: current.date }} back={back.forSave()} offer={back.passageOffer} />, date && shown ? printAddress({ mode: "week", date, kind: shown.kind === "haftarah" ? "haftarah" : null, pick: effectivePick }, undefined, { today }) : undefined) : !current && !week?.error ? <ActionsReserve /> : null} />
     {chooser.panel}
     <ReadingBlock reserve={!week?.error && !(current && !sources.length)}>
     {week?.error && <div className="workspace-state" role="status"><h2>{week.error === 400 ? "That date isn’t available" : "The reading didn’t load"}</h2>
@@ -251,8 +292,14 @@ function WeekReading({ initial, verse, saveReturn }: { initial: Extract<ReadTarg
     {current && sources.length > 0 && <>
       {!current.torah && current.parashah && <p className="field-help">This Shabbat’s Torah reading isn’t shown here. The haftarah is below.</p>}
       <SiddurBlessings torah={Boolean(current.torah)} haftarah={Boolean(current.haftarah)} />
-      <PassageReading key={current.date} sources={sources} index={index} onIndex={next => { setKind(sources[next].source.passage.kind); setLinked(null); }}
-        verse={linked} onVerseLeft={() => setLinked(null)} registerStart={starter.register} retry={retry} onRetry={() => setRetry(value => value + 1)} choose={choosePlan} />
+      {triennialNow?.error ? <div className="workspace-state" role="status"><h2>The reading didn’t load</h2>
+        <p>{triennialNow.error === 429 ? RATE_LIMITED_MESSAGE : "Check your connection and try again."}</p>
+        <button type="button" className="button-secondary" onClick={() => setRetry(value => value + 1)}>Try again</button></div>
+        : !ready ? <p role="status">Loading the text…</p>
+          : <PassageReading key={`${current.date}|${division}`} sources={sources} index={index} onIndex={next => { setKind(sources[next].source.passage.kind); setLinked(null); }}
+            verse={linked} onVerseLeft={() => setLinked(null)} registerStart={starter.register} retry={retry} onRetry={() => setRetry(value => value + 1)} choose={choosePlan}
+            sectionRows={sectionRows} section={sectionOfPick(effectivePick)} onSection={n => { if (division === "full") { setPick(pickOfSection("full", n)); setLinked(null); } }}
+            portion={shown?.kind === "torah" ? <PortionPicker portions={portions} pick={effectivePick} onPick={next => { setPick(next); setLinked(null); }} /> : undefined} />}
     </>}
     </ReadingBlock>
   </Shell>;
@@ -322,21 +369,40 @@ function ChosenReading({ target, verse, saveReturn }: { target: Extract<ReadTarg
  * `verse` (1-based in the passage shown) opens that verse selected: Word tools on it, and in the player
  * when recordings are on, ready to play. Any other choice lets it go (`onVerseLeft`).
  */
-export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, registerStart, retry, onRetry, verseExtra, choose }: {
+export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, registerStart, retry, onRetry, verseExtra, choose, sectionRows, section, onSection, portion }: {
   sources: readonly LabelledSource[]; index: number; onIndex(index: number): void; verse: number | null; onVerseLeft(): void;
   registerStart(start: (() => void) | null): void; retry: number; onRetry(): void;
   /** In Lein, shown under the selected verse before Up close (a saved reading's Working and Got it marks). */
   verseExtra?: (ref: string) => ReactNode;
   /** Choose verses (1.7): how choosing starts and saves on this page; absent, the reading has no choosing. */
   choose?: ChoosePlan;
+  /** The calendar's aliyot for the Torah shown (1.9 N3, decision 2): the text pages by aliyah, with a chip for each. Absent, or for a haftarah, the text pages as the server cuts it. */
+  sectionRows?: readonly SectionRow[];
+  /** The section (an aliyah's `n`) the reading is open on, and told when the reader moves to another. */
+  section?: string | null; onSection?(n: string): void;
+  /** The Portion control, shown with Choose verses. */
+  portion?: ReactNode;
 }) {
   const source = (sources[index] ?? sources[0]).source, passage = source.passage, kind = passage.kind, listening = source.listening, key = selectorKey(source.selector);
   const allVerses = useMemo(() => { try { return expandReadingRanges(passage.ranges, kind, TANAKH_VERSE_COUNTS); } catch { return []; } }, [passage, kind]);
   const choice = useVerseChoice(choose, allVerses, kind);
   const linkedIndex = verse !== null && verse <= passage.verseCount ? verse - 1 : null;
-  const pageOf = (position: number) => passage.pages.filter(row => row.offset <= position).at(-1)?.offset ?? 0;
-  const [offset, setOffset] = useState(() => linkedIndex !== null ? pageOf(linkedIndex) : 0);
-  const [text, setText] = useState<{ key: string; page?: StudyPage; error?: number } | null>(null);
+  // What a text page is: one section when the calendar gives aliyot (the text flows inside it), else one of the server's pages.
+  const sections = useMemo(() => kind === "torah" && sectionRows ? sectionsOf(sectionRows, allVerses) : NO_SECTIONS, [kind, sectionRows, allVerses]);
+  const windows = useMemo<readonly PageWindow[]>(() => sections.length ? sections.map((row, at) => ({ start: row.start, end: row.end, section: at }))
+    : passage.pages.map((row, at) => ({ start: row.offset, end: passage.pages[at + 1]?.offset ?? passage.verseCount, section: -1 })), [sections, passage]);
+  const windowAt = (position: number) => Math.max(0, sections.length ? sectionIndexAt(sections, position) : windows.findIndex(row => position >= row.start && position < row.end));
+  const [win, setWin] = useState(() => { const asked = section ? sections.findIndex(row => row.n === section) : -1; return asked >= 0 ? asked : linkedIndex !== null ? windowAt(linkedIndex) : 0; });
+  // Told another section (a pick from the Portion control) after the page is open: go to it; told none (the whole portion): back to the first.
+  const askedSection = useRef(section);
+  useEffect(() => {
+    if (askedSection.current === section) return;
+    askedSection.current = section;
+    const at = section ? sections.findIndex(row => row.n === section) : 0;
+    if (at >= 0) setWin(current => current === at ? current : at);
+  }, [section, sections]);
+  const range = windows[win] ?? windows[0], nextWin = win + 1 < windows.length ? win + 1 : null;
+  const [text, setText] = useState<{ key: string; page?: StudyPage; preview?: StudyVerse | null; error?: number } | null>(null);
   const [playingWord, setPlayingWord] = useState<{ verse: number; index: number } | null>(null);
   const [focus, setFocus] = useState<number | null>(null), [lift, setLift] = useState<{ index: number; opening: number; navigation: number } | null>(null);
   // One coordinator for the page's lifetime (as in the signed-in reading): it is stopped, never disposed,
@@ -346,7 +412,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   const audio = audioRef.current;
   const playback = useRef<ReadingPlayerHandle | null>(null), registerPlayback = useCallback((value: ReadingPlayerHandle | null) => { playback.current = value; }, []);
   const tools = useRef<WordToolsHandle | null>(null), registerTools = useCallback((value: WordToolsHandle | null) => { tools.current = value; }, []);
-  const shortPages = useRef(new Map<string, Promise<PublicShortPage>>()), pendingPlace = useRef<{ key: string; ref: string; wordIndex: number } | null>(null);
+  const shortPages = useRef(new Map<string, Promise<PublicShortPage>>()), serverPages = useRef(new Map<string, Promise<StudyPage>>()), pendingPlace = useRef<{ key: string; ref: string; wordIndex: number } | null>(null);
   const textAnchor = useRef<HTMLDivElement | null>(null), openings = useRef(0), group = useId(), prefs = useReadingPrefs(), lens = useStudyLens(), study = lens.lens === "study";
   // A deep-linked verse is shown selected in the player without playing; the first other choice releases it,
   // and that choice runs after the release so the player is never suspended under it.
@@ -382,17 +448,40 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     document.addEventListener("visibilitychange", background); window.addEventListener("pagehide", leave);
     return () => { document.removeEventListener("visibilitychange", background); window.removeEventListener("pagehide", leave); };
   }, [audio]);
-  const textKey = JSON.stringify([key, kind, offset]);
+  const keyOf = (at: PageWindow | undefined) => JSON.stringify([key, kind, at?.start ?? 0, at?.end ?? 0]);
+  const textKey = keyOf(range);
   // This passage's own canonical ref, which is how its curated discussions are asked for (the same for a Shabbat, a named reading or any passage).
   const discussionRef = passage.ranges.join("; "), discussionPassage = useMemo(() => ({ ref: discussionRef, kind }), [discussionRef, kind]);
   useEffect(() => {
-    const controller = new AbortController();
+    let live = true;
     audio.stopAll(); setText({ key: textKey }); setPlayingWord(null);
-    fetchPublicText(source, offset, controller.signal).then(page => { if (!controller.signal.aborted) setText({ key: textKey, page }); },
-      error => { if (!controller.signal.aborted) setText({ key: textKey, error: statusOf(error) }); });
-    return () => controller.abort();
-  }, [source, offset, textKey, retry, audio]);
-  const page = text?.key === textKey ? text.page : undefined;
+    // The server's pages are the unit of fetching and caching; a section is cut from the one or two pages it lies on, and the next section's first verse comes along to be previewed.
+    const fetchPage = (offset: number) => {
+      const id = JSON.stringify([key, kind, offset]);
+      let work = serverPages.current.get(id);
+      if (!work) { work = fetchPublicText(source, offset, new AbortController().signal); serverPages.current.set(id, work); void work.catch(() => serverPages.current.delete(id)); }
+      return work;
+    };
+    const compose = async (): Promise<{ page: StudyPage; preview: StudyVerse | null }> => {
+      if (!sections.length) return { page: await fetchPage(range.start), preview: null };
+      const next = nextWin === null ? null : windows[nextWin];
+      const lying = (from: number, to: number) => passage.pages.filter((row, at) => row.offset < to && (passage.pages[at + 1]?.offset ?? passage.verseCount) > from).map(row => row.offset);
+      const loaded = await Promise.all([...new Set([...lying(range.start, range.end), ...next ? lying(next.start, next.start + 1) : []])].map(fetchPage));
+      const verseAt = (position: number) => { const found = loaded.find(row => position >= row.offset && position < row.offset + row.verses.length); return found?.verses[position - found.offset] ?? null; };
+      const verses: StudyVerse[] = [];
+      for (let position = range.start; position < range.end; position++) { const row = verseAt(position); if (!row) throw new PortalRequestError(503); verses.push(row); }
+      const touched = new Set(verses.map(row => row.ref.replace(/:[1-9]\d*$/, ""))), chapters: StudyPage["chapters"] = [];
+      for (const row of [...loaded].sort((a, b) => a.offset - b.offset)) for (const chapter of row.chapters) if (touched.has(chapter.ref) && !chapters.some(item => item.ref === chapter.ref)) chapters.push(chapter);
+      const translated = verses.filter(row => row.english !== null).length;
+      return { page: { offset: range.start, nextOffset: null, totalVerses: passage.verseCount, verses, chapters,
+        translation: { key: "jps2023", status: translated === verses.length ? "available" : translated === 0 ? "unavailable" : "partial" } }, preview: next ? verseAt(next.start) : null };
+    };
+    compose().then(result => { if (live) setText({ key: textKey, ...result }); }, error => { if (live) setText({ key: textKey, error: statusOf(error) }); });
+    return () => { live = false; };
+  }, [source, key, kind, passage, sections, windows, range, nextWin, textKey, retry, audio]);
+  const page = text?.key === textKey ? text.page : undefined, preview = text?.key === textKey ? text.preview ?? null : null;
+  // Print's labels ("Aliyah 4", "Maftir") above the verse where a section begins on this page, in either lens.
+  const labels = useMemo(() => page && sections.length ? labelsIn(sections, range.section, page.offset, page.offset + page.verses.length) : NO_LABELS, [page, sections, range.section]);
   const linkedOnPage = page && linkedIndex !== null && linkedIndex >= page.offset && linkedIndex < page.offset + page.verses.length ? linkedIndex - page.offset : null;
   // Commentary follows the text, never in its way: Rashi loads after the verses (for Lein's "Rashi (n)" too),
   // the Women's Commentary only when Study shows it on a Torah text.
@@ -415,21 +504,30 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
 
   const loadShort = useCallback(async (at: number, signal: AbortSignal) => {
     if (!page || !page.verses[at]) throw new PortalRequestError(409);
-    const shortKey = JSON.stringify([key, kind, page.offset]);
+    // Recordings come by the server's pages, whatever the text page is: the verse's place in the whole passage finds its page and its place on it.
+    const position = page.offset + at, served = passage.pages.filter(row => row.offset <= position).at(-1);
+    if (!served) throw new PortalRequestError(409);
+    const shortKey = JSON.stringify([key, kind, served.offset]);
     let work = shortPages.current.get(shortKey);
-    if (!work) { work = fetchPublicShortPage(source, page.offset, new AbortController().signal); shortPages.current.set(shortKey, work); void work.catch(() => shortPages.current.delete(shortKey)); }
+    if (!work) { work = fetchPublicShortPage(source, served.offset, new AbortController().signal); shortPages.current.set(shortKey, work); void work.catch(() => shortPages.current.delete(shortKey)); }
     const result = await work; if (signal.aborted) throw new PortalRequestError(409);
-    return result.references[at];
-  }, [source, key, kind, page]);
+    return result.references[position - served.offset];
+  }, [source, key, kind, page, passage]);
   const hear = (at: number, word: ReadingSelection = "verse") => release(() => {
     setFocus(at); setDrillTarget(null); playback.current?.select(at, word);
     if (word === "verse") tools.current?.selectVerse(at); else tools.current?.select(at, word);
   });
   const chooseWord = (at: number, word: number) => release(() => { setFocus(at); setDrillTarget(null); if (listening) playMainVerseForWord(playback.current, tools.current, at, word); else { tools.current?.select(at, word); tools.current?.reveal(); } });
-  const changeIndex = (next: number) => { if (next === index) return; pendingJump.current = null; audio.stopAll(); setLift(null); setFocus(null); setDrill(null); setDrillTarget(null); setOffset(0); onIndex(next); };
-  const changeOffset = (next: number) => { if (next === offset) return; if (linkedIndex !== null) onVerseLeft(); setDrillTarget(null); setOffset(next); };
-  const offsets = passage.pages.map(row => row.offset);
-  const previousOffset = offsets[offsets.indexOf(offset) - 1], nextOffset = page?.nextOffset ?? null;
+  const changeIndex = (next: number) => { if (next === index) return; pendingJump.current = null; audio.stopAll(); setLift(null); setFocus(null); setDrill(null); setDrillTarget(null); setWin(0); onIndex(next); };
+  // To another text page. A section is told to the page (it names the address), even when it is the one already open.
+  const changeWin = (next: number) => {
+    const target = windows[next]; if (!target) return;
+    if (target.section >= 0) onSection?.(sections[target.section].n);
+    if (next === win) return;
+    if (linkedIndex !== null) onVerseLeft();
+    setDrillTarget(null); setWin(next);
+  };
+  const previousWin = win > 0 ? win - 1 : undefined, nextStart = nextWin === null ? null : windows[nextWin].start;
   // The haftarah's last verse takes the closing (sof haftarah) melody, as in the assigned reading.
   const assignment = useMemo(() => ({ kind, confirmed: kind === "haftarah", verses: allVerses }), [kind, allVerses]);
   const scopeKey = textKey;
@@ -444,8 +542,8 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   const pendingJump = useRef<string | null>(null);
   const jumpTo = (ref: string) => release(() => {
     if (page?.verses.some(row => row.ref === ref)) { scrollToVerse(ref); return; }
-    const target = pageOffsetFor(offsets, allVerses, ref);
-    if (target !== null && target !== offset) { pendingJump.current = ref; changeOffset(target); }
+    const position = allVerses.indexOf(ref), target = position < 0 ? -1 : windowAt(position);
+    if (target >= 0 && target !== win) { pendingJump.current = ref; changeWin(target); }
   });
   useEffect(() => { const ref = pendingJump.current; if (page && ref && page.verses.some(row => row.ref === ref)) { pendingJump.current = null; scrollToVerse(ref); } }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
   // Focus follows the reader into the text (D10, F-SITE 25): to the first verse's own button when verses can be heard, else to the labelled
@@ -457,7 +555,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     target.focus({ preventScroll: true });
   };
   const start = useRef<() => void>(() => {}); start.current = () => { if (listening && page) hear(0); focusReading(); };
-  const pagerFocus = useRef(false), pagerTo = (next: number) => { pagerFocus.current = true; changeOffset(next); };
+  const pagerFocus = useRef(false), pagerTo = (next: number) => { pagerFocus.current = true; changeWin(next); };
   useEffect(() => { if (page && pagerFocus.current) { pagerFocus.current = false; focusReading(); } }); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { registerStart(page ? () => start.current() : null); return () => registerStart(null); }, [page, registerStart]);
 
@@ -483,13 +581,13 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   const drillEnd = () => { setDrill(null); setAnnounce(""); drillFocus.current = "toggle"; };
   const drillNextVerse = () => {
     if (!page || focus === null) return;
-    const step = drillNext(focus, page.verses.length, nextOffset);
+    const step = drillNext(focus, page.verses.length, nextStart);
     if (step === "on-page") drillGo(focus + 1);
-    else if (step === "next-page" && nextOffset !== null) { drillToPage.current = true; changeOffset(nextOffset); }
+    else if (step === "next-page" && nextWin !== null) { drillToPage.current = true; changeWin(nextWin); }
   };
-  const drillRestart = () => { if (!page) return; if (page.offset === 0) drillGo(0); else { drillToPage.current = true; changeOffset(offsets[0] ?? 0); } };
+  const drillRestart = () => { if (!page) return; if (win === 0) drillGo(0); else { drillToPage.current = true; changeWin(0); } };
   const drillPanel = drillVerse && focus !== null && page && <TranslateDrillPanel verseRef={drillVerse.ref} english={drillVerse.english} revealed={drill?.revealed === drillVerse.ref}
-    hint={drillHint.current === drillVerse.ref} last={drillNext(focus, page.verses.length, nextOffset) === "last"} announce={announce}
+    hint={drillHint.current === drillVerse.ref} last={drillNext(focus, page.verses.length, nextStart) === "last"} announce={announce}
     jpsRef={jpsRef} revealRef={revealRef}
     onReveal={() => { setDrill({ revealed: drillVerse.ref }); setAnnounce(DRILL_STRINGS.shown); drillFocus.current = "jps"; }}
     onHide={() => { setDrill({ revealed: null }); setAnnounce(DRILL_STRINGS.hidden); drillFocus.current = "reveal"; }}
@@ -503,11 +601,14 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
       </div>}
       <LensSwitch onChange={() => leinLink.clear()} />
     </div>
-    {(choice.button || choice.extra) && <div className={styles.chooseRow}>{choice.button}{choice.extra}</div>}
+    {(choice.button || choice.extra || portion) && <div className={styles.chooseRow}>{portion}{choice.button}{choice.extra}</div>}
     {/* Curated discussions (1.7 M6b): under the reading's header, in Study, only where this passage has any. */}
     <DiscussionList />
     {sources.length > 1 && <p className={`field-help ${styles.passageNote}`}><bdi dir="ltr">{displayRange(passage.ranges)}</bdi></p>}
-    <div className="reading-passage-layout" ref={textAnchor} tabIndex={-1}>
+    {/* The section chips (N3): a tab for each aliyah, in the sticky bar above the text. The page below changes with the tab, so one panel serves them all. */}
+    {sections.length > 0 && <SectionTabs sticky label="Reading sections" panelId={`${group}-section`} current={sections[range.section]?.n ?? null}
+      tabs={sections.map(row => ({ id: row.n, label: row.label }))} onSelect={n => changeWin(sections.findIndex(row => row.n === n))} />}
+    <div className="reading-passage-layout" id={sections.length > 0 ? `${group}-section` : undefined} role={sections.length > 0 ? "tabpanel" : undefined} aria-label={sections.length > 0 ? sections[range.section]?.label : undefined} ref={textAnchor} tabIndex={-1}>
       <ReadingToolbar englishHidden={Boolean(drillVerse)} listeningEnabled={listening} tikkunAvailable={kind === "torah"} worksCorpus={corpus} onHear={listening && page ? () => hear(focus ?? 0) : undefined} />
       <section className="assigned-study" aria-label={kind === "torah" ? "Torah text" : "Haftarah text"} data-size={prefs.size}>
         {!page ? text?.key === textKey && text.error ? <div role="status"><h4>Text unavailable</h4><p>{text.error === 429 ? RATE_LIMITED_MESSAGE : "The verses didn’t load. Check your connection and try again."}</p><button type="button" className="button-secondary" onClick={onRetry}>Reload text</button></div>
@@ -515,11 +616,13 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
           {study ? <>
             <CommentaryStatus works={workStatuses(works, corpus)} />
             <ReadingPlace refs={allVerses} pageKey={textKey} onJump={jumpTo} onHere={choose?.onPlace ? ref => onPlace.current?.(ref) : undefined} />
-            <StudyRows verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={lens.english}
+            <StudyRows verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={lens.english} sections={labels}
               works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))}
               onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} choice={choice.view} />
           </> : <FlowingStudyText verses={page.verses} assignment={assignment} group={group} activeWord={playingWord} listening={listening} showEnglish={prefs.translation} englishHidden={drillVerse ? DRILL_STRINGS.hidden : undefined} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
-            linked={linkedVerse(leinLink, page.verses)} onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} choice={choice.view} />}
+            sections={labels} linked={linkedVerse(leinLink, page.verses)} onVerse={listening ? at => hear(at) : undefined} onWord={chooseWord} choice={choice.view} />}
+          {/* The end of the section (N3): the next one's first verse, faint, and the way on. */}
+          {sections.length > 0 && nextWin !== null && <NextSection onNext={() => pagerTo(nextWin)} preview={preview} />}
           {listening && <ReadingPlayer key={`player:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} active={!lift} enabled={!lift} audio={{ coordinator: audio, slot: "proposed" }}
             target={drillTarget ?? (linkedOnPage !== null ? { index: linkedOnPage, generation: 0 } : undefined)} register={registerPlayback} onActiveWord={setPlayingWord} load={loadShort} />}
           <WordTools key={`tools:${scopeKey}`} scopeKey={scopeKey} verses={page.verses} register={registerTools}
@@ -529,8 +632,8 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
             onPlace={(ref, wordIndex) => {
               const here = page.verses.findIndex(row => row.ref === ref), position = allVerses.indexOf(ref);
               if (here >= 0) { tools.current?.select(here, wordIndex); return; }
-              const target = offsets.filter(value => value <= position).at(-1);
-              if (position >= 0 && target !== undefined && target !== page.offset) { pendingPlace.current = { key: JSON.stringify([key, kind, target]), ref, wordIndex }; changeOffset(target); }
+              const target = position < 0 ? -1 : windowAt(position);
+              if (target >= 0 && target !== win) { pendingPlace.current = { key: keyOf(windows[target]), ref, wordIndex }; changeWin(target); }
             }}
             takePlace={() => { const place = pendingPlace.current; pendingPlace.current = null; return place && place.key === scopeKey ? { ref: place.ref, wordIndex: place.wordIndex } : null; }} />
           {/* While the drill is on, Rashi (whose English carries a translation) is closed away; ending it shows Rashi as it was. */}
@@ -543,10 +646,10 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
           {/* Up close shows the English too, so it waits while the drill is on. */}
           {!drillVerse && focus !== null && page.verses[focus] && <p className={styles.upClose}><button type="button" className="button-secondary" onClick={() => release(() => setLift({ index: focus, opening: ++openings.current, navigation: 0 }))}>{/* One span: the button is a flex box, which would drop the spaces between separate text items. */}<span>View <bdi dir="ltr">{page.verses[focus].ref}</bdi> up close</span></button>
             <span className="field-help">Up close shows each phrase of trope by name.</span></p>}
-          {(previousOffset !== undefined || nextOffset !== null) && <>
+          {sections.length === 0 && (previousWin !== undefined || nextWin !== null) && <>
             <p className="study-page-position">Verses {page.offset + 1}–{page.offset + page.verses.length} of {page.totalVerses}</p>
-            <nav className="study-pages" aria-label="Text pages"><button type="button" className="button-secondary" disabled={previousOffset === undefined} onClick={() => previousOffset !== undefined && pagerTo(previousOffset)}>Previous text page</button>
-              <button type="button" className="button-secondary" disabled={nextOffset === null} onClick={() => nextOffset !== null && pagerTo(nextOffset)}>Next text page</button></nav></>}
+            <nav className="study-pages" aria-label="Text pages"><button type="button" className="button-secondary" disabled={previousWin === undefined} onClick={() => previousWin !== undefined && pagerTo(previousWin)}>Previous text page</button>
+              <button type="button" className="button-secondary" disabled={nextWin === null} onClick={() => nextWin !== null && pagerTo(nextWin)}>Next text page</button></nav></>}
           {study && <CommentaryCredits works={works} refs={refs} />}
           <div className="study-more"><StudyCredits chapters={page.chapters} summary="About this text" /><a href="/trope-chart">Trope chart</a></div>
           {choice.bar}

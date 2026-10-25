@@ -11,6 +11,7 @@ import { forgetPendingRequest } from "./pending-request";
 import { FrontDoor, type FrontDoorAccount } from "./front-door/front-door";
 import { AccountRequest } from "./account-request";
 import { purgeOffline } from "../../lib/offline/pack-index";
+import { TabBar, TabSkipLink } from "./shell/tab-bar";
 
 export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "uncertain" }
   | { kind: "accepted"; role: SessionSummary["roles"][number] }
@@ -214,8 +215,11 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
     return <FrontDoor account={frontDoorAccount(view)} onSignIn={() => heading.current?.focus({ preventScroll: true })}>{task}</FrontDoor>;
   }
 
+  // Signed in on Account (1.9 N10): the same tab bar the workspace has, so Account is a tab and not a dead end.
+  const shellRoles = !invitation && !autoEnterStudent && view.kind === "signed-in" ? view.summary.roles : [];
   return <div className="portal-shell">
     <a className="skip-link" href="#portal-main">Skip to sign-in and access</a>
+    <TabSkipLink roles={shellRoles} />
     <header className="portal-header app-bar"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a><span>Central Reform Congregation</span></header>
     <main id="portal-main" className="entry-layout">
       <div className="entry-introduction">
@@ -227,5 +231,6 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
       {task}
     </main>
     <div className="portal-footer"><span>Learning at Central Reform Congregation</span><span>Your account and reading stay private.</span></div>
+    <TabBar roles={shellRoles} />
   </div>;
 }

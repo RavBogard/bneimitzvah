@@ -78,7 +78,7 @@ describe("the translate drill", () => {
     const view = readFileSync(join(process.cwd(), "src/components/portal/public-reading/view.tsx"), "utf8");
     expect(view).toContain("setDrillTarget({ index: at, generation: ++drillGeneration.current })");
     expect(view).toContain("target={drillTarget ?? (linkedOnPage !== null");
-    for (const chosen of [/const hear = [^]*?setFocus\(at\); setDrillTarget\(null\)/, /const chooseWord = [^]*?setFocus\(at\); setDrillTarget\(null\)/, /const changeOffset = [^]*?setDrillTarget\(null\)/, /const changeIndex = [^]*?setDrillTarget\(null\)/])
+    for (const chosen of [/const hear = [^]*?setFocus\(at\); setDrillTarget\(null\)/, /const chooseWord = [^]*?setFocus\(at\); setDrillTarget\(null\)/, /const changeWin = [^]*?setDrillTarget\(null\)/, /const changeIndex = [^]*?setDrillTarget\(null\)/])
       expect(view).toMatch(chosen);
   });
   it("shows the toolbar's English button not pressed, and says why it does nothing, while the drill hides the English", () => {

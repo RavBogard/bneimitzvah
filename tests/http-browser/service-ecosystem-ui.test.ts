@@ -52,7 +52,7 @@ async function page(role:"student"|"admin"|"parent"){
   await tab.evaluate(async email=>{const response=await fetch("/api/auth/sign-in/magic-link",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email})});if(!response.ok)throw new Error("Synthetic sign-in unavailable");},email);
   await openAuthMail(tab,fixture.takeMail(email));await tab.goto(role==="student"?"/workspace/student":role==="parent"?"/workspace/parent":`/workspace/admin/students/${fixture.student.id}/reading`,{waitUntil:"domcontentloaded"});
   if(role==="parent"){await tab.locator(`button.student-card[data-student-id="${fixture.student.id}"]`).click();await tab.getByRole("button",{name:"Practice with Synthetic",exact:true}).click();await ui(tab.getByRole("button",{name:"Return to parent view",exact:true})).toBeVisible();}
-  if(role==="admin")await tab.getByRole("tab",{name:"Service parts",exact:true}).click();
+  await tab.getByRole("tab",{name:"Service parts",exact:true}).click();
   await ui(tab.locator("[data-my-service]").getByRole("heading",{name:"My service",exact:true})).toBeVisible();return tab;
 }
 async function captures(tab:Page){

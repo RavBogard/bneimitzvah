@@ -346,11 +346,16 @@ it("shows recorded student boundaries and page continuation, distinguishing unre
   await ui(staff.getByText("Saved. The current reading above shows what the student will see.", { exact: true })).toBeVisible();
   const learner = await page("student"); await safe(() => learner.goto("/workspace/student", { waitUntil: "domcontentloaded" }));
   const study = learner.locator(".assigned-study");
+  // Release 1.9 N3: one recorded aliyah is a page. Aliyah 1 opens (it ends inside the server's first page of 100 verses, so only its own 98 show);
+  // "Next section" opens Aliyah 2 on a page of its own, which begins where the aliyah does.
   await ui(study.getByText("Aliyah 1 starts here", { exact: true })).toBeVisible();
+  expect(await study.getByText("Aliyah 2 starts here", { exact: true }).count()).toBe(0);
+  await ui(learner.getByRole("tab", { name: "Aliyah 1", exact: true })).toHaveAttribute("aria-selected", "true");
+  await click(learner, "Next section");
   await ui(study.getByText("Aliyah 2 starts here", { exact: true })).toBeVisible();
-  await click(learner, "Next text page");
-  await ui(study.getByText("Aliyah 2 · continued from the previous text page", { exact: true })).toBeVisible();
-  expect(await study.getByText(/Aliyah \d starts here/).count()).toBe(0);
+  await ui(learner.getByRole("tab", { name: "Aliyah 2", exact: true })).toHaveAttribute("aria-selected", "true");
+  expect(await study.getByText(/Aliyah \d starts here/).count()).toBe(1);
+  expect(await study.getByText(/continued from the previous text page/).count()).toBe(0);
   await assertDesktopStudyColumns(learner);
   await captures(learner, "student-markers", ".assigned-study");
   const [assignment] = await fixture.ownerDb.select().from(s.assignment).where(eq(s.assignment.studentId, fixture.student.id));

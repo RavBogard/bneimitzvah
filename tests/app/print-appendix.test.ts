@@ -157,3 +157,18 @@ test("the document prints the appendix on its own section after the reading, wit
   expect(first.indexOf("Synthetic English comment 1.")).toBeLessThan(first.indexOf("Synthetic EN, via Sefaria (CC-BY)."));
   expect(html).toContain('lang="he" dir="rtl"');
 });
+
+test("Metsudah 2009, the first Torah edition of Rashi, prints under the ordinary licence filter with its Sefaria credit, and a non-open licence is still refused", () => {
+  const chapter = parseCommentaryChapter("rashi", "Genesis 18")!, torah = commentaryCandidates(chapter);
+  const served = (license?: CommentaryLicense): readonly CommentaryEdition[] => [torah.he[0], torah.en[0]].map(row =>
+    ({ language: row.language, title: row.title, license: license ?? row.license, credit: row.credit, url: "https://www.sefaria.org/Synthetic" }));
+  expect(torah.en[0].title).toBe("Rashi Chumash, Metsudah Publications, 2009");
+  const groups = buildAppendix(["Genesis 18:1"], [source("rashi", { "Genesis 18:1": ready([comment(1)], served()) })], "both");
+  expect(groups[0].works[0].credits).toEqual(["Rashi Chumash, Metsudah Publications, 2009, via Sefaria (CC BY). Markup and footnotes removed; spacing normalized."]);
+  const html = render(groups);
+  expect(html).toContain("Synthetic English comment 1.");
+  expect(html).toContain("Rashi Chumash, Metsudah Publications, 2009, via Sefaria (CC BY).");
+  // The same edition served under a licence that does not pass prints nothing and credits nothing.
+  for (const blocked of ["CC-BY-SA", "unknown"] as const)
+    expect(buildAppendix(["Genesis 18:1"], [source("rashi", { "Genesis 18:1": ready([comment(1)], served(blocked)) })], "both"), blocked).toEqual([]);
+});

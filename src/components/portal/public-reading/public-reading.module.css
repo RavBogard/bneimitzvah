@@ -28,6 +28,9 @@
 .custom { min-width: 0; }
 .credit { margin: 0; color: var(--color-muted); font-size: 0.875rem; }
 .passageNote { margin-block: 0.5rem 0; }
+/* The Portion control: print's words, in a label and a native select. */
+.portion { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; min-height: 48px; max-width: 100%; color: var(--color-muted); font-weight: 600; }
+.portion select { display: inline-block; width: auto; max-width: 100%; min-height: 44px; }
 /* Choose verses and Whole portion, under the lens row. */
 .chooseRow { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; margin-block: 0.5rem 1rem; }
 @media (max-width: 640px) {

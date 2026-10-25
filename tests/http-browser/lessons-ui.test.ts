@@ -49,7 +49,7 @@ async function write(tab: Page, text: string, date?: string) {
   await safe(() => sheet(tab).getByLabel("What you worked on", { exact: true }).fill(text));
 }
 const save = (tab: Page) => safe(() => sheet(tab).getByRole("button", { name: "Save lesson", exact: true }).click());
-type Entry = { entryId: string; lessonDate: string; summary: string; version: number; canEdit: boolean; canDelete: boolean };
+type Entry = { entryId: string; lessonDate: string; summary: string; beforeNext: string | null; version: number; canEdit: boolean; canDelete: boolean };
 async function stored(tab: Page, mode = "tutor") {
   const result = await api(tab, `/api/students/${fixture.student.id}/lesson-log?mode=${mode}`); expect(result.status).toBe(200);
   return result.data.entries as Entry[];
@@ -165,11 +165,14 @@ it("lets a tutor add, edit and delete lessons, keeps an unsaved note, shows a ch
 
   // The family reads the same list, with nothing to change.
   const parent = await page("tutor", true); await workspace(parent, "parent");
+  // Everyone has the Lessons tab beside the reading (1.9 N10).
+  await safe(() => parent.getByRole("tab", { name: "Lessons", exact: true }).click());
   await ui(lessons(parent).getByRole("heading", { name: "Lesson notes", exact: true })).toBeVisible();
   await ui(entry(parent, "Synthetic lesson: all three verses.")).toBeVisible();
   expect(await lessons(parent).getByRole("button").count()).toBe(0);
   const parentRows = await stored(parent, "parent"); expect(parentRows.map(row => [row.canEdit, row.canDelete])).toEqual([[false, false]]);
   const student = await page("student", true); await workspace(student, "student");
+  await safe(() => student.getByRole("tab", { name: "Lessons", exact: true }).click());
   await ui(entry(student, "Synthetic lesson: all three verses.")).toBeVisible();
   expect(await lessons(student).getByRole("button").count()).toBe(0);
   await safe(() => lessons(student).scrollIntoViewIfNeeded());
@@ -198,3 +201,37 @@ it("checks what really saved when a save's answer is lost, so retrying never add
   expect(rows.filter(row => row.summary === "Synthetic lesson with a lost answer.").map(row => row.version)).toEqual([1]);
   expect(rows.length).toBe(before + 1);
 }, 120_000);
+
+// Release 1.9 N12: "Before next time" travels with the note to the readers it already had, and too long is said once.
+it("lets a tutor add Before next time with the if-then prompt, says too long once, and shows the line to the student and the parent", async () => {
+  const line = "When I get home on Tuesday, I will chant verse two with the recording.";
+  const tutor = await page("tutor"); await workspace(tutor, "tutor"); await lessonTab(tutor);
+  await safe(() => lessons(tutor).getByRole("button", { name: "Add lesson note", exact: true }).click());
+  await write(tutor, "Synthetic newest lesson with a next step.", "2030-01-07");
+  const field = sheet(tutor).getByLabel("Before next time", { exact: true });
+  await ui(field).toHaveAccessibleDescription("When ___, I will ___");
+  await safe(() => field.fill("x".repeat(1100)));
+  await ui(sheet(tutor).getByText("Too long to save. Shorten this note a little.", { exact: true })).toBeVisible();
+  await save(tutor);
+  await ui(field).toBeFocused();
+  await ui(sheet(tutor).locator(".request-error").filter({ hasText: /\S/ })).toHaveCount(1);
+  await safe(() => field.fill(line));
+  await ui(sheet(tutor).locator(".request-error").filter({ hasText: /\S/ })).toHaveCount(0);
+  await save(tutor);
+  await ui(lessons(tutor).locator(".lesson-log-notice[role=status]")).toHaveText("Lesson added.");
+  await ui(entry(tutor, "Synthetic newest lesson with a next step.")).toContainText(`Before next time: ${line}`);
+  const rows = await stored(tutor);
+  expect(rows[0]).toMatchObject({ summary: "Synthetic newest lesson with a next step.", beforeNext: line });
+
+  const student = await page("student", true); await workspace(student, "student");
+  await safe(() => student.getByRole("tab", { name: "Lessons", exact: true }).click());
+  await ui(entry(student, "Synthetic newest lesson with a next step.").locator(".lesson-before-next")).toHaveText(`Before your next lesson: ${line}`);
+  await ui(lessons(student).getByText("Before your next lesson:", { exact: true })).toHaveCount(1);
+  await capture(student, "student-before-next-mobile");
+
+  const parent = await page("tutor", true); await workspace(parent, "parent");
+  await ui(parent.locator(".parent-study-summary .lesson-before-next")).toHaveText(`Before next time: ${line}`);
+  await safe(() => parent.getByRole("tab", { name: "Lessons", exact: true }).click());
+  await ui(entry(parent, "Synthetic newest lesson with a next step.").locator(".lesson-before-next")).toHaveText(`Before next time: ${line}`);
+  expect((await stored(parent, "parent"))[0]).toMatchObject({ beforeNext: line, canEdit: false });
+}, 180_000);

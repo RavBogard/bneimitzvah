@@ -1,6 +1,5 @@
 "use client";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { AdminNav } from "../admin-nav";
 import { RequireRole, statusOf, useWorkspace } from "../provider";
 import { REVIEW_CHECKS, reviewApi, type Batch, type Check, type Checks, type Detail, type Entry } from "./api";
 import styles from "./review.module.css";
@@ -126,7 +125,7 @@ function Review() {
     catch (error) { if (mounted.current && !controller.signal.aborted) fail(error, true); }
     finally { gate.current = false; if (mounted.current) setPending(false); }
   }
-  return <section className={`role-workspace admin-workspace ${styles.page}`}><AdminNav />
+  return <section className={`role-workspace admin-workspace ${styles.page}`}>
     <div className="admin-head"><h1>Recording review</h1><button type="button" className="button-secondary" disabled={pending || audioPending} onClick={() => switchView(() => void load().catch(() => undefined))}>Reload review</button></div>
     <p className={styles.intro}>Listen beside the Hebrew and record each check. This private review does not enable student playback.</p>
     {message && <p role={failed ? "alert" : "status"} className={failed ? "request-error" : "workspace-notice"}>{message}</p>}

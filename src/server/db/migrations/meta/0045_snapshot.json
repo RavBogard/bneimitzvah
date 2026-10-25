@@ -1,5 +1,5 @@
 {
-  "id": "e1b125d8-6d46-4597-9866-1d917db8828a",
+  "id": "26c87a6f-9756-42a1-9488-5953c3855487",
   "prevId": "8b71516c-78f0-4d81-b552-1e5f03c8fe4e",
   "version": "7",
   "dialect": "postgresql",
@@ -3254,6 +3254,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "before_next": {
+          "name": "before_next",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "version": {
           "name": "version",
           "type": "integer",
@@ -3336,6 +3342,10 @@
         "lesson_log_date": {
           "name": "lesson_log_date",
           "value": "\"lesson_log\".\"lesson_date\" between date '0001-01-01' and date '9999-12-31'"
+        },
+        "lesson_log_before_next": {
+          "name": "lesson_log_before_next",
+          "value": "(\"lesson_log\".\"deleted\" and \"lesson_log\".\"before_next\" is null) or (not \"lesson_log\".\"deleted\" and (\"lesson_log\".\"before_next\" is null or (length(trim(\"lesson_log\".\"before_next\")) > 0 and octet_length(\"lesson_log\".\"before_next\") <= 1024)))"
         },
         "lesson_log_summary": {
           "name": "lesson_log_summary",
@@ -6465,116 +6475,6 @@
         "starred_comment_instant": {
           "name": "starred_comment_instant",
           "value": "isfinite(\"starred_comment\".\"created_at\")"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.service_course_progress": {
-      "name": "service_course_progress",
-      "schema": "",
-      "columns": {
-        "tenant_id": {
-          "name": "tenant_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "membership_id": {
-          "name": "membership_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "progress": {
-          "name": "progress",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "service_course_progress_tenant_id_tenant_id_fk": {
-          "name": "service_course_progress_tenant_id_tenant_id_fk",
-          "tableFrom": "service_course_progress",
-          "tableTo": "tenant",
-          "columnsFrom": [
-            "tenant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "service_course_progress_member_fk": {
-          "name": "service_course_progress_member_fk",
-          "tableFrom": "service_course_progress",
-          "tableTo": "membership",
-          "columnsFrom": [
-            "tenant_id",
-            "membership_id",
-            "user_id"
-          ],
-          "columnsTo": [
-            "tenant_id",
-            "id",
-            "user_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "service_course_progress_key": {
-          "name": "service_course_progress_key",
-          "columns": [
-            "tenant_id",
-            "membership_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "service_course_progress_document": {
-          "name": "service_course_progress_document",
-          "value": "jsonb_typeof(\"service_course_progress\".\"progress\") = 'object' and coalesce(\"service_course_progress\".\"progress\"->>'schema' = 'service-course-progress/v1' and jsonb_typeof(\"service_course_progress\".\"progress\"->'lessons') = 'object' and jsonb_typeof(\"service_course_progress\".\"progress\"->'cards') = 'object', false) and octet_length(\"service_course_progress\".\"progress\"::text) <= 98304"
-        },
-        "service_course_progress_version": {
-          "name": "service_course_progress_version",
-          "value": "\"service_course_progress\".\"version\" > 0"
-        },
-        "service_course_progress_instants": {
-          "name": "service_course_progress_instants",
-          "value": "isfinite(\"service_course_progress\".\"created_at\") and isfinite(\"service_course_progress\".\"updated_at\")"
         }
       },
       "isRLSEnabled": false

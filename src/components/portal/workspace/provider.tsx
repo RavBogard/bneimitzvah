@@ -29,6 +29,7 @@ import { fetchLessons, type LessonOperation, type LessonResult } from "./lessons
 import { fetchPracticeCalendar, type PracticeAck, type PracticeDates, type PracticeOperation } from "./practice-calendar/api";
 import { reloadWorkspaceScopes, type ReloadRegistration } from "./reload-barrier";
 import { createQuietRefresh } from "./quiet-refresh";
+import { TabBar, TabSkipLink } from "../shell/tab-bar";
 
 import { fetchShortExplorationPage, checkShortExplorationExpectation } from "./study/short-exploration-api";
 import { createShortExplorationOwner as composeShortExplorationOwner, type ShortExplorationOwner } from "./study/short-exploration-owner";
@@ -565,8 +566,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     event.preventDefault(); void guardDeparture().then(leave => { if (leave) { clearWork(); router.push(href); } });
   };
 
+  // The tab bar belongs to a checked, signed-in workspace; it never shows over the access check.
+  const shellShown = Boolean(summary) && !checking && failure === null;
   return <div className="portal-shell workspace-shell">
     <a className="skip-link" href="#workspace-main">Skip to workspace</a>
+    {shellShown && <TabSkipLink roles={summary!.roles} />}
     <header className="portal-header app-bar"><Link className="portal-brand" href="/" onClick={event => controlledLink(event, "/")}>CRC Torah</Link>{pathname === rolePaths.student && <Link className="app-bar-learn" href="/learn" onClick={event => controlledLink(event, "/learn")}>Learn to lein</Link>}<Link className="app-bar-account" href="/account" onClick={event => controlledLink(event, "/account")} aria-label="Account and sign out"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M5 20c1.2-3.6 3.8-5.5 7-5.5s5.8 1.9 7 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg><span>Account</span></Link></header>
     <main id="workspace-main" className="workspace-main">
       {(checking || !summary) && <section className="workspace-state" aria-live="polite"><h1>{failure === null ? "Checking your access" : failure === 401 ? "Sign in to continue" : failure === 403 || failure === 404 ? "Access has changed" : "Workspace unavailable"}</h1>
@@ -582,6 +586,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         </WorkspaceContext.Provider></div>}
     </main>
     <div className="portal-footer"><span>Central Reform Congregation</span></div>
+    {shellShown && <TabBar roles={summary!.roles} practiceStudentId={context?.studentId ?? null} onNavigate={controlledLink} />}
   </div>;
 }
 

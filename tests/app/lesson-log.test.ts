@@ -36,7 +36,7 @@ test("lesson HTTP reads are private and write-free without assignments, while cr
   const mutate = (suffix: string, body: unknown) => dispatch(f.request(f.path + suffix, { body }));
   const created = await mutate("", { ...f.body, summary: "Synthetic first line\r\nSynthetic second line" }); expect(created.status).toBe(200);
   const first = (await created.json()).entry;
-  expect(Object.keys(first).sort()).toEqual(["entryId", "lessonDate", "summary", "version", "displayName", "canEdit", "canDelete"].sort());
+  expect(Object.keys(first).sort()).toEqual(["entryId", "lessonDate", "summary", "beforeNext", "version", "displayName", "canEdit", "canDelete"].sort());
   expect(first).toMatchObject({ entryId: f.body.entryId, summary: "Synthetic first line\nSynthetic second line", version: 1, canEdit: true, canDelete: true });
   const edit = { mode: "tutor", expectedVersion: 1, lessonDate: "9999-12-31", summary: "Synthetic corrected lesson" };
   expect((await mutate(`/${first.entryId}/edit`, edit)).status).toBe(200);

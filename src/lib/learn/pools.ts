@@ -1,5 +1,6 @@
 import type { FamilyId } from "../trope/chart-catalog";
 import { COURSE, lookAlikeExamples, MELODY_FAMILIES, TROPE_IDS, type Drill, type LookAlikeMark, type LookAlikePairId, type LookAlikeWord, type Melody, type TropeId } from "./course";
+import { fromZakef } from "./production";
 import { isSpecialMelody, lookAlikeMatches, type AnalysedVerse } from "./verse";
 
 /**
@@ -59,7 +60,8 @@ function weighted<T>(values: readonly T[], weight: (value: T) => number, rng: ()
   return values.at(-1)!;
 }
 
-export type NameItem = Readonly<{ type: "hear-and-name"; key: string; answer: Phrase; choices: readonly FamilyId[] }>;
+/** `read` (N18): the phrase is on screen as text and nothing plays until the tune is picked. */
+export type NameItem = Readonly<{ type: "hear-and-name"; key: string; answer: Phrase; choices: readonly FamilyId[]; read?: boolean }>;
 export type SameItem = Readonly<{ type: "same-or-different"; key: string; first: Phrase; second: Phrase; same: boolean; by: "family" | "melody" }>;
 export type EndItem = Readonly<{ type: "where-does-it-end"; key: string; target: Phrase; audio: boolean }>;
 export type TapItem = Readonly<{ type: "tap-the-phrase"; key: string; target: Phrase }>;
@@ -136,12 +138,12 @@ export function drillItems(activity: Drill, pools: Pools, context: DrillContext,
   const key = (type: string, ...parts: string[]) => `${type}:${out.length}:${parts.join("|")}`;
   switch (activity.type) {
     case "hear-and-name": {
-      const { families, items, choices, weight } = activity.params;
+      const { families, items, choices, weight, mode } = activity.params;
       for (const family of answerPlan(families, context.focus, items, family => poolOf(pools, family, melody).length > 0, rng)) {
         const answer = picks.pick(poolOf(pools, family, melody)); if (!answer) continue;
         const rest = families.filter(other => other !== family), chosen: FamilyId[] = [family], score = distractorWeight(family, weight);
         while (chosen.length < Math.min(choices, families.length) && rest.length) { const next = weighted(rest, score, rng); chosen.push(next); rest.splice(rest.indexOf(next), 1); }
-        push({ type: "hear-and-name", key: key("name", phraseKey(answer)), answer, choices: Object.freeze(shuffle(chosen, rng)) });
+        push({ type: "hear-and-name", key: key("name", phraseKey(answer)), answer, choices: Object.freeze(shuffle(chosen, rng)), ...(mode === "read" ? { read: true } : {}) });
       }
       break;
     }
@@ -182,7 +184,7 @@ export function drillItems(activity: Drill, pools: Pools, context: DrillContext,
       for (const family of answerPlan(families, context.focus, items, family => poolOf(pools, family, melody).some(fits), rng)) {
         const target = picks.pick(poolOf(pools, family, melody).filter(fits)); if (!target) continue;
         push(activity.type === "tap-the-phrase" ? { type: "tap-the-phrase", key: key("tap", phraseKey(target)), target }
-          : { type: "where-does-it-end", key: key("end", phraseKey(target)), target, audio: activity.params.audio });
+          : { type: "where-does-it-end", key: key("end", phraseKey(target)), target, audio: activity.params.audio && !fromZakef(target.family, melody) });
       }
       break;
     }

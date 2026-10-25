@@ -1106,6 +1106,19 @@
           }
         },
         {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "zakef",
+              "etnachta",
+              "sof-pasuk"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
+          }
+        },
+        {
           "type": "this-week",
           "params": {
             "family": "zakef",
@@ -1260,6 +1273,19 @@
               6,
               12
             ]
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "revia",
+              "zakef",
+              "etnachta"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
           }
         },
         {
@@ -1419,6 +1445,19 @@
               "mercha-tevir"
             ],
             "extraMarks": 2
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "tevir",
+              "etnachta",
+              "revia"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
           }
         },
         {
@@ -1589,6 +1628,19 @@
           }
         },
         {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "azla",
+              "tevir",
+              "revia"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
+          }
+        },
+        {
           "type": "this-week",
           "params": {
             "family": "azla",
@@ -1751,6 +1803,19 @@
           }
         },
         {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "segol",
+              "zakef",
+              "revia"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
+          }
+        },
+        {
           "type": "this-week",
           "params": {
             "family": "segol",
@@ -1892,6 +1957,19 @@
               6,
               14
             ]
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "telisha-ketana",
+              "azla",
+              "segol"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
           }
         },
         {
@@ -2051,6 +2129,19 @@
           }
         },
         {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "pazer",
+              "azla",
+              "telisha-ketana"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
+          }
+        },
+        {
           "type": "this-week",
           "params": {
             "family": "pazer",
@@ -2204,6 +2295,19 @@
             "items": 4,
             "choices": 4,
             "label": "All ten"
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "zakef-gadol",
+              "zakef",
+              "pazer"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
           }
         },
         {
@@ -2799,6 +2903,19 @@
           }
         },
         {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "zakef",
+              "etnachta",
+              "sof-pasuk"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
+          }
+        },
+        {
           "type": "this-week",
           "params": {
             "family": "zakef",
@@ -2940,6 +3057,19 @@
           }
         },
         {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "revia",
+              "zakef",
+              "etnachta"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
+          }
+        },
+        {
           "type": "this-week",
           "params": {
             "family": "revia",
@@ -3078,6 +3208,19 @@
             ],
             "items": 4,
             "audio": true
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "tevir",
+              "etnachta",
+              "revia"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
           }
         },
         {
@@ -3234,6 +3377,19 @@
           }
         },
         {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "azla",
+              "tevir",
+              "revia"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
+          }
+        },
+        {
           "type": "this-week",
           "params": {
             "family": "azla",
@@ -3383,6 +3539,19 @@
           }
         },
         {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "segol",
+              "zakef",
+              "revia"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
+          }
+        },
+        {
           "type": "this-week",
           "params": {
             "family": "segol",
@@ -3507,6 +3676,19 @@
               6,
               16
             ]
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "telisha-ketana",
+              "azla",
+              "segol"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
           }
         },
         {
@@ -3650,6 +3832,19 @@
           }
         },
         {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "pazer",
+              "azla",
+              "telisha-ketana"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
+          }
+        },
+        {
           "type": "this-week",
           "params": {
             "family": "pazer",
@@ -3782,6 +3977,19 @@
               "zakef"
             ],
             "items": 4
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "zakef-gadol",
+              "zakef",
+              "pazer"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
           }
         },
         {
@@ -3949,6 +4157,19 @@
             "items": 6,
             "choices": 4,
             "label": "All eleven"
+          }
+        },
+        {
+          "type": "hear-and-name",
+          "params": {
+            "families": [
+              "sof-haftarah",
+              "sof-pasuk",
+              "zakef-gadol"
+            ],
+            "items": 3,
+            "choices": 3,
+            "mode": "read"
           }
         },
         {

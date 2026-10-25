@@ -7,6 +7,7 @@ import { comesBack, composeReview, emptyProgress, isDone, localDay, recordAnswer
 import { answerRun, currentItem, runDone, startRun, type Run } from "../../lib/learn/run";
 import { useCourseVerses } from "./course-data";
 import { icons, LoadFailure, revealAnswer } from "./bits";
+import { fromZakef, isHarder } from "../../lib/learn/production";
 import { QuickTenLinks } from "./home";
 import { HearAndName, SameOrDifferent, TapThePhrase, WhereDoesItEnd } from "./drills";
 import { LearnServices, useLearnServices, useProgress } from "./services";
@@ -26,9 +27,12 @@ export function reviewItems(slots: readonly ReviewSlot[], pools: Pools, progress
     // With one family done, the second choice is a family it is confused with that the learner has been taught; with none, the naming slot is skipped, never filled with an untaught family.
     const partner = known.length > 1 ? null : COURSE.families[slot.family].confusedWith.find(other => MELODY_FAMILIES[slot.melody].includes(other) && taught(progress, slot.melody).includes(other));
     // Daniel 2026-10-24: no same-or-different anywhere in Learn; recognition is naming on families the learner has heard.
-    const name: Drill | null = known.length > 1 || partner ? { type: "hear-and-name", params: { families: known.length > 1 ? known : [slot.family, partner!], items: 1, choices: Math.min(3, Math.max(2, known.length)), weight: {} } } : null;
+    // N18: a card in box 3 or higher gets the harder item. A naming card from zakef on is asked from the text, with no recording first; an ending card is asked with no recording first.
+    const harder = isHarder(progress.cards[slot.card]?.box ?? 0);
+    const name: Drill | null = known.length > 1 || partner ? { type: "hear-and-name", params: { families: known.length > 1 ? known : [slot.family, partner!], items: 1, choices: Math.min(3, Math.max(2, known.length)), weight: {},
+      ...(harder && fromZakef(slot.family, slot.melody) ? { mode: "read" as const } : {}) } } : null;
     const own: Drill[] = slot.skill === "find" ? [{ type: "tap-the-phrase", params: { families: [slot.family], items: 1, verseWords: [5, 16] } }]
-      : slot.skill === "end" ? [{ type: "where-does-it-end", params: { families: [slot.family], items: 1, audio: true, verseWords: [5, 16] } }] : [];
+      : slot.skill === "end" ? [{ type: "where-does-it-end", params: { families: [slot.family], items: 1, audio: !harder, verseWords: [5, 16] } }] : [];
     const choices: Drill[] = name ? [...own, name] : own;
     let picked: DrillItem | null = null;
     for (const drill of choices) for (let attempt = 0; attempt < 6 && !picked; attempt++) {
