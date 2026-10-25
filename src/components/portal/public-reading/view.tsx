@@ -94,12 +94,20 @@ export function goToReading(address: string) {
   try { window.sessionStorage.setItem(HEADING_FOCUS, String(Date.now())); } catch { /* Focus starts on the page, as before. */ }
   go(address);
 }
+/** The ask is read once, when this reading mounts: a page that was still loading when the person chose another reading must not
+ * spend it, because the next page is the one it was left for. Focus follows once this reading is shown. */
 function useHeadingFocus(shown: boolean) {
+  const asked = useRef(false);
   useEffect(() => {
-    if (!shown) return;
-    let asked = false;
-    try { const at = Number(window.sessionStorage.getItem(HEADING_FOCUS)), age = Date.now() - at; window.sessionStorage.removeItem(HEADING_FOCUS); asked = Number.isSafeInteger(at) && at > 0 && age >= 0 && age < HEADING_FOCUS_MS; } catch { /* Nothing was asked. */ }
-    if (asked) document.getElementById("public-reading-title")?.focus({ preventScroll: true });
+    try {
+      const at = Number(window.sessionStorage.getItem(HEADING_FOCUS)), age = Date.now() - at; window.sessionStorage.removeItem(HEADING_FOCUS);
+      if (Number.isSafeInteger(at) && at > 0 && age >= 0 && age < HEADING_FOCUS_MS) asked.current = true;
+    } catch { /* Nothing was asked. */ }
+  }, []);
+  useEffect(() => {
+    if (!shown || !asked.current) return;
+    asked.current = false;
+    document.getElementById("public-reading-title")?.focus({ preventScroll: true });
   }, [shown]);
 }
 export function replaceAddress(address: string) { try { if (window.location.pathname + window.location.search !== address) window.history.replaceState(null, "", address); } catch { /* Address bar stays as it was. */ } }

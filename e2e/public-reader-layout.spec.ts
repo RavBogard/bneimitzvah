@@ -17,10 +17,10 @@ function passageOf(ranges: string[], kind: "torah" | "haftarah") {
 // A whole parashah is more than one text page (a page is 100 verses), as a real week is.
 const week = { torah: ["Genesis 1:1-6:8"], haftarah: ["Isaiah 42:5-43:10"] };
 const LATENCY = 120;
-async function mock(page: Page) {
+async function mock(page: Page, latency = LATENCY) {
   await page.route("**/api/public/**", async route => {
     const url = new URL(route.request().url()), q = url.searchParams;
-    await new Promise(resolve => setTimeout(resolve, LATENCY));
+    await new Promise(resolve => setTimeout(resolve, latency));
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) }).catch(() => {});
     const kind = q.get("kind") as "torah" | "haftarah", ranges = q.has("ref") ? q.get("ref")!.split("; ") : week[kind];
     if (url.pathname === "/api/public/reading") {
@@ -140,7 +140,10 @@ test("the next text page puts focus at the start of the new text, and Previous r
 });
 
 test("choosing a reading from the chooser lands focus on the new reading's heading", async ({ page }) => {
-  await mock(page);
+  // Slow answers: this week is still loading when the reading is chosen, and the page being left must not spend the focus the next page is owed.
+  await mock(page, 600);
+  // The next page is slow to arrive, so this one is still running when its week answers.
+  await page.route("**/read?reading=*", async route => { await new Promise(resolve => setTimeout(resolve, 1500)); await route.continue(); });
   await page.goto("/read");
   await page.getByRole("button", { name: "Choose a reading", exact: true }).click();
   await page.getByLabel("Parashah", { exact: true }).selectOption({ label: "Noach" });
