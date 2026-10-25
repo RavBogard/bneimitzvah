@@ -152,6 +152,7 @@ it("keeps service reading and its local retry available when scripture text retu
     await click(tab, "Reload service parts");
     await ui(panel(tab).getByRole("button", { name: "Synthetic part 0", exact: true })).toBeVisible();
     await click(tab, "Synthetic part 0"); await ui(panel(tab).locator(".service-unit")).toContainText("Synthetic translation 0");
+    await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click());
     await ui(tab.getByRole("heading", { name: "Text unavailable", exact: true })).toBeVisible();
   } finally { scriptureUnavailable = false; }
 });
@@ -379,11 +380,14 @@ it("fences a late selected-unit response across linked-child switching and never
   const admin = await page("admin"); await assign(admin, sibling.id, [content.second]);
   const parent = await page("tutor"); await workspace(parent, "parent"); await click(parent, "Practice with Synthetic");
   await ui(parent.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
+  await safe(() => parent.getByRole("tab", { name: "Service parts", exact: true }).click());
   let release!: () => void, held = false, delivered = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await parent.route("**/service-plan/unit", async route => { const response = await route.fetch(); held = true; await gate; await route.fulfill({ response }).catch(() => undefined); delivered = true; });
   try {
     await click(parent, "Synthetic part 0"); await ui.poll(() => held).toBe(true);
     await safe(() => parent.getByRole("button", { name: /^Switch practice to/ }).filter({ hasText: "Sibling" }).click());
+    // A new child opens on the Reading tab; Service parts is one tap away.
+    await safe(() => parent.getByRole("tab", { name: "Service parts", exact: true }).click());
     await ui(panel(parent).getByRole("button", { name: "Synthetic part 2", exact: true })).toBeVisible();
     release(); await ui.poll(() => delivered).toBe(true);
     expect(await panel(parent).locator(".service-unit").count()).toBe(0);
@@ -407,7 +411,7 @@ it("reads service-only student plans without scripture assignments and preserves
   const [haftarah] = await fixture.ownerDb.select().from(s.assignment).where(eq(s.assignment.kind, "haftarah"));
   await fixture.ownerDb.delete(s.assignmentVerse).where(eq(s.assignmentVerse.assignmentId, haftarah.id)); await fixture.ownerDb.delete(s.assignment).where(eq(s.assignment.id, haftarah.id));
   const tab = await page("student", true); await workspace(tab, "student", "reading"); await firstHebrew(tab);
-  expect(await tab.getByRole("tab", { name: "Service parts", exact: true }).count()).toBe(1);
+  await ui(tab.getByRole("tab", { name: "Service parts", exact: true })).toBeVisible();
   await fixture.ownerDb.delete(s.assignmentVerse).where(eq(s.assignmentVerse.studentId, fixture.student.id)); await fixture.ownerDb.delete(s.assignment).where(eq(s.assignment.studentId, fixture.student.id));
   await click(tab, "Refresh reading");
   await ui(tab.getByRole("heading", { name: "Explore the full Torah portion", exact: true })).toBeVisible();

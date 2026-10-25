@@ -243,12 +243,18 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
   }, [sheetOpen]);
   const openSheet = (event: { currentTarget: HTMLElement }) => { sheetOrigin.current = event.currentTarget; setSheetOpen(true); };
   // Every role switches between the reading, service parts and lessons as tabs (1.9 N10). All stay mounted,
-  // so reloads, access checks and unsent work behave exactly as on one long page. The view is the address's ?tab=,
-  // so a reload keeps it; with none, the reading shows. Choosing the view already showing writes nothing.
-  const tabbed = true, search = useSearchParams(), tab: PageTab = parseReadingTab(search.get("tab")) ?? "reading";
-  const tabNow = useRef(tab); tabNow.current = tab;
+  // so reloads, access checks and unsent work behave exactly as on one long page. The view is kept in the address's
+  // ?tab= so a reload keeps it; with none the reading shows. The panel changes at once (state), the address follows,
+  // and an address that changes under us (a tab-bar link, Back) brings its view forward.
+  const tabbed = true, search = useSearchParams(), urlTab = parseReadingTab(search.get("tab")) ?? "reading";
+  const [tab, setTabState] = useState<PageTab>(urlTab), tabNow = useRef<PageTab>(urlTab);
+  useEffect(() => { tabNow.current = urlTab; setTabState(urlTab); }, [urlTab]);
   // A chosen tab writes the address even when that view is the default; the program's own moves write only when they change what shows.
-  const setTab = useCallback((value: PageTab, chosen = false) => { const shown = chosen ? parseReadingTab(new URLSearchParams(window.location.search).get("tab")) : tabNow.current; if (value !== shown) { tabNow.current = value; writeTabParam(value); } }, []);
+  const setTab = useCallback((value: PageTab, chosen = false) => {
+    const written = parseReadingTab(new URLSearchParams(window.location.search).get("tab")), changed = value !== tabNow.current;
+    tabNow.current = value; setTabState(value);
+    if (chosen ? value !== written : changed) writeTabParam(value);
+  }, []);
   useLayoutEffect(() => { if (tabbed && tab !== "reading") audio.stopAll(); }, [audio, tabbed, tab]);
   // The tabs exist only once the student has loaded; until then (or after a failed load) both panels show.
   const tabsShown = tabbed && Boolean(student);
@@ -312,6 +318,9 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
     event.preventDefault(); setTab(pageTabs[next][0], true); document.getElementById(tabId(pageTabs[next][0]))?.focus();
   };
   const countdown = student ? ceremonyCountdown(student.ceremonyDate) : null, marked = useProgressSummary(progress, selectedReading?.kind);
+  // N10 slot: N3's section chip row (aliyot, or the tutor's sections) joins this row in a sticky bar once that component exists.
+  // On a learner's phone the row waits under the reading, as the lens switch does, so the first verse stays above the fold.
+  const tabRow = tabbed && <div role="tablist" aria-label="Student page" className="page-tabs" onKeyDown={tabKeys}>{pageTabs.map(([value, label]) => <button key={value} type="button" role="tab" id={tabId(value)} aria-controls={panelId(value)} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1} className="page-tab" onClick={() => setTab(value, true)}>{label}</button>)}</div>;
   // Learners (students, child practice, parents) always open in Lein; staff open in the lens they last used.
   return <ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} /><div className="reading-workspace reading-with-work" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
     <section aria-label="Assigned reading">
@@ -326,7 +335,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
           <button type="button" className="hero-icon" aria-label="Refresh reading" onClick={() => {
             const target = studyDenied, turn = sequence.current;
             // Explicit reload retains translation drafts; only Sources must settle before their owners are replaced.
-            void guardReading("sources").then(leave => { if (leave && environment.current.studyDenied === target && sequence.current === turn && !abort.current?.signal.aborted) setRetry(value => value + 1); });
+            void guardDeparture("sources").then(leave => { if (leave && environment.current.studyDenied === target && sequence.current === turn && !abort.current?.signal.aborted) setRetry(value => value + 1); });
           }}>{refreshIcon}</button>
         </div>
         <RehearsalDates student={student} />
@@ -348,8 +357,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       </header>
       {mode === "parent" && <ParentStudySummary store={parentSummary} baseline={authorizedReading ?? null} scope={parentScope} concealed={concealed} notice={congregation.consentNotice} />}
       {!learner && readings.length > 0 && <AssignmentContext row={selectedReading} current />}
-      {/* 1.9 N10 slot: N3's section chip row (aliyot, or the tutor's sections) joins this row in a sticky bar once that component exists. */}
-      {tabbed && <div role="tablist" aria-label="Student page" className="page-tabs" onKeyDown={tabKeys}>{pageTabs.map(([value, label]) => <button key={value} type="button" role="tab" id={tabId(value)} aria-controls={panelId(value)} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1} className="page-tab" onClick={() => setTab(value, true)}>{label}</button>)}</div>}</> : <>
+      {!learner && tabRow}</> : <>
       <h2 id="reading-heading"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>
       <div className="reading-student-context"><p className="reading-date">Ceremony date: <time dateTime={student.ceremonyDate}>{student.ceremonyDate}</time></p>
       <button className="button-text" aria-label="Refresh reading" onClick={() => setRetry(value => value + 1)}>Refresh</button>
@@ -370,6 +378,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
       {work.notice && <p className="field-help" role="status">{work.notice}</p>}
       {authorizedReading && !concealed && <p className="field-help"><a href="https://www.centralreform.org/beit-mitzvah/" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC preparation guide</a></p>}
       {!learner && otherReadings.length > 0 && <details className="reading-other-assignments"><summary>Other confirmed reading details</summary>{otherReadings.map(row => <AssignmentContext key={row.id} row={row} />)}</details>}</>)}
+      {learner && student && tabRow}
     </section>
     {student && !song && <aside className="reading-tools" aria-labelledby="tools-heading"><h2 id="tools-heading">Practice tools</h2>
       <p>The confirmed assignment appears here. Use the review form below to propose and confirm changes.</p>

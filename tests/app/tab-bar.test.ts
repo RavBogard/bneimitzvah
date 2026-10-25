@@ -100,6 +100,11 @@ describe("the shell's files", () => {
     // From 1000px it is a rail and is never hidden for the keyboard.
     expect(stripped).toMatch(/@media \(min-width: 1000px\)[\s\S]*\.bar\[data-hidden\] \{ display: block; \}/);
   });
+  it("write nothing to web storage (the student-work privacy test allows none)", () => {
+    for (const file of ["role-memory.ts", "tab-bar.tsx", "tab-param.ts", "tabs.ts", "more.tsx", "people-nav.tsx"]) {
+      expect(readFileSync(`src/components/portal/shell/${file}`, "utf8").replace(/\/\/.*$/gm, ""), file).not.toMatch(/sessionStorage|localStorage|indexedDB|document\.cookie/);
+    }
+  });
   it("keep the print links to the approved pair", () => {
     const reading = readFileSync("src/components/portal/workspace/reading.tsx", "utf8"), study = readFileSync("src/components/portal/workspace/study/view.tsx", "utf8");
     for (const source of [reading, study]) { expect(source).toContain("Print the whole reading"); expect(source).toContain("Print practice sheet"); }

@@ -1,10 +1,8 @@
-// The role a person was last in, for the pages that belong to no one role (Account, Email, More). Role names only, in the
-// session storage of this tab; nothing about a student. Blocked storage means those pages fall back to the highest role.
+// The role a person was last in, for the pages that belong to no one role (Account, Email, More). It is kept in the page's
+// memory only, never in web storage (a signed-in screen writes nothing to the device): moving between pages remembers it, a
+// reload falls back to the highest role.
 import type { Role } from "../api";
 
-const KEY = "crc-shell-role";
-export function rememberedRole(): Role | null {
-  try { const value = window.sessionStorage.getItem(KEY); return value === "student" || value === "parent" || value === "tutor" || value === "admin" ? value : null; }
-  catch { return null; }
-}
-export function rememberRole(role: Role) { try { window.sessionStorage.setItem(KEY, role); } catch { /* Storage blocked. */ } }
+let last: Role | null = null;
+export function rememberedRole(): Role | null { return last; }
+export function rememberRole(role: Role) { last = role; }
