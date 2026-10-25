@@ -46,7 +46,7 @@ function Citation({ value }: { value: SourceCitation }) {
 }
 export function SourcesPanel({ scopeKey, baseline, kind, offset, onRefreshReading }: { scopeKey: string; baseline: Assigned; kind: StudyKind; offset: number; onRefreshReading(): Promise<unknown> }) {
   const { createSources, createSourceContent, registerDeparture, registerWork, guardDeparture } = useWorkspace(), id = useId();
-  const lifetime = useRef<SourcePanelLifetime | null>(null), labels = useRef(new Map<string, SourceCitation>()), catalog = useRef<string | null>(null);
+  const counter = useRef<((signal: AbortSignal) => Promise<number>) | null>(null), lifetime = useRef<SourcePanelLifetime | null>(null), labels = useRef(new Map<string, SourceCitation>()), catalog = useRef<string | null>(null);
   type Reader = { target: SourceContentTarget; owner: SourceContentOwner; state: SourceContentState; unregister(): void; origin: HTMLButtonElement };
   const reader = useRef<Reader | null>(null), [reading, setReading] = useState<Reader | null>(null);
   const clearReader = useCallback(() => { const previous = reader.current; reader.current = null; previous?.owner.dispose(); previous?.unregister(); setReading(null); }, []);
@@ -55,7 +55,8 @@ export function SourcesPanel({ scopeKey, baseline, kind, offset, onRefreshReadin
   useLayoutEffect(() => {
     let active = true; labels.current.clear(); catalog.current = null; setState(null); setReview(null); setUnavailable(false);
     let api: SourceAssignmentClient;
-    try { api = createSources(baseline, kind, offset); } catch { setUnavailable(true); return; }
+    try { api = createSources(baseline, kind, offset); } catch { setUnavailable(true); counter.current = null; return; }
+    counter.current = async signal => (await api.read(signal)).citations.length;
     const current = createSourcePanelLifetime({ scopeKey, api, onReview: value => { if (active) setReview(value); }, onState: value => {
       if (!active) return;
       const target = reader.current?.target;
@@ -67,7 +68,7 @@ export function SourcesPanel({ scopeKey, baseline, kind, offset, onRefreshReadin
       if (value.phase === "disposed") { labels.current.clear(); catalog.current = null; }
       setState(value);
     } });
-    lifetime.current = current; setState(current.owner.state);
+    lifetime.current = current; setState(current.owner.state); 
     const removeDeparture = registerDeparture(current.guard, "sources"), removeWork = registerWork(current);
     return () => { active = false; clearReader(); current.dispose(); removeDeparture(); removeWork(); if (lifetime.current === current) lifetime.current = null; labels.current.clear(); };
     // baseline is captured by the owner identified by the complete parent scope key.
@@ -75,6 +76,15 @@ export function SourcesPanel({ scopeKey, baseline, kind, offset, onRefreshReadin
   }, [scopeKey, createSources, registerDeparture, registerWork, clearReader]);
   const current = state?.scopeKey === scopeKey ? state : null, open = current?.open ?? false;
   const needsDeparture = Boolean(current?.dirty || current?.pending);
+  // The panel lives in the verse tools Sheet, for one verse (1.9 N4, G2): a count of that verse's assigned sources is asked for once, on its own, so the control can say
+  // how many there are (or not appear at all). The panel itself, its state and its own reads are exactly as they were: it opens, loads and closes only when asked to.
+  const [counted, setCounted] = useState<number | "unknown" | null>(null);
+  useEffect(() => {
+    const ask = counter.current; setCounted(null); if (!ask) return;
+    const abort = new AbortController();
+    ask(abort.signal).then(total => { if (!abort.signal.aborted) setCounted(total); }, () => { if (!abort.signal.aborted) setCounted("unknown"); });
+    return () => abort.abort();
+  }, [scopeKey, createSources]);
   useEffect(() => {
     if (!needsDeparture) return;
     const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
@@ -113,8 +123,12 @@ export function SourcesPanel({ scopeKey, baseline, kind, offset, onRefreshReadin
   const selected = new Set(current?.draftIds ?? []), assigned = current?.current?.citations ?? [], additions = current?.draftIds.filter(value => !assigned.some(entry => entry.id === value)) ?? [];
   const unknown = current?.phase === "unknown" || current?.phase === "checking", busy = current?.phase === "saving" || current?.phase === "checking";
   const checkbox = (entry: SourceCitation) => <label className={styles.choice}><input type="checkbox" checked={selected.has(entry.id)} disabled={!editing || !selected.has(entry.id) && selected.size >= 32} onChange={event => lifetime.current?.owner.select(entry.id, event.target.checked)} /><Citation value={entry} /></label>;
+  // "Sources (n)", and only where there are sources: a reader sees nothing for a verse with none. Staff keep the bare control, the way to add the first.
+  const count = current?.current ? current.current.citations.length : typeof counted === "number" ? counted : null;
+  const shown = unavailable || counted === "unknown" || (count !== null && (count > 0 || staff)) || Boolean(current?.open);
+  if (!shown) return null;
   return <section className={styles.sources} aria-label={`Sources for ${baseline.readings.find(row => row.kind === kind)?.verses[offset] ?? "this verse"}`}>
-    <button type="button" className={styles.disclosure} aria-expanded={open} aria-controls={`${id}-body`} onClick={() => void toggle()}>Sources</button>
+    <button type="button" className={styles.disclosure} aria-expanded={open} aria-controls={`${id}-body`} onClick={() => void toggle()}>{count ? `Sources (${count})` : "Sources"}</button>
     {unavailable && <p role="status">Sources aren’t available for this reading.</p>}
     {open && current && <div id={`${id}-body`} className={styles.panel}>
       <h5>Assigned sources</h5>

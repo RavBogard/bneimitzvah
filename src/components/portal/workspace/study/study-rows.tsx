@@ -1,10 +1,12 @@
 "use client";
+import { useMemo } from "react";
 import { useReadingPrefs } from "../reading-prefs";
 import type { AssignmentEnding } from "../../../../lib/hebrew/study-annotations";
-import { Apparatus, PhraseLegend, StudyHebrew, useVerseColors } from "./annotations";
+import { Apparatus, firstWordKey, PhraseLegend, StudyHebrew, useVerseColors } from "./annotations";
+import { WordGroup } from "./word-group";
 import { useCommentLink, VerseCommentary, type WorkState } from "./commentary-view";
 import type { StudyVerse } from "./api";
-import { InlineVersePanel, useWordCardOpener, VerseActions } from "./verse-panel";
+import { useWordCardOpener, VerseActions } from "./verse-panel";
 import { tapWord } from "./word-nav";
 import { useOwnLayer } from "./own-layer";
 import { ChoiceCheck, verseState, type VerseChoiceView } from "./verse-choice";
@@ -17,8 +19,8 @@ import styles from "./commentary.module.css";
  * hairline, and the verse's actions (Compare) under it, then, on a member's own saved reading only, the closed
  * Yours row (spec §3.2 item 5). No tikkun here: Study is about meaning.
  */
-function StudyRow({ verse, assignment, id, onVerse, onWord, activeWord, listening, toolsAvailable, showEnglish, works, label, choice }: {
-  verse: StudyVerse; assignment: AssignmentEnding; id: string; onVerse?(): void; onWord?(index: number): void; activeWord: number | null;
+function StudyRow({ verse, assignment, id, onVerse, onWord, onTools, activeWord, listening, toolsAvailable, showEnglish, works, label, choice }: {
+  verse: StudyVerse; assignment: AssignmentEnding; id: string; onVerse?(): void; onWord?(index: number): void; onTools?(opener: HTMLElement): void; activeWord: number | null;
   listening: boolean; toolsAvailable: boolean; showEnglish: boolean; works: readonly WorkState[]; label?: string; choice?: VerseChoiceView;
 }) {
   const state = verseState(choice, verse.ref);
@@ -43,17 +45,18 @@ function StudyRow({ verse, assignment, id, onVerse, onWord, activeWord, listenin
       <div className={styles.verseSide}>
         {showEnglish && <p className={`study-english ${styles.english}`} lang="en" dir="ltr" data-english-ref={verse.ref}>{verse.english ?? "English reference unavailable for this verse."}</p>}
         <VerseCommentary verse={verse} works={works} link={link} />
-        <VerseActions verse={verse.ref} />
+        <VerseActions verse={verse.ref} onTools={onTools} />
         {own?.yours(verse, works)}
       </div>
     </article>
-    <InlineVersePanel verse={verse.ref} />
   </>;
 }
 
-export function StudyRows({ verses, assignment, group, sections = [], onVerse, onWord, activeWord, listening = true, toolsAvailable = true, showEnglish = true, works, choice }: {
+export function StudyRows({ verses, assignment, group, sections = [], onVerse, onWord, onTools, activeWord, listening = true, toolsAvailable = true, showEnglish = true, works, choice }: {
   verses: readonly StudyVerse[]; assignment: AssignmentEnding; group: string; sections?: readonly { index: number; label: string }[];
-  onVerse?(index: number): void; onWord?(verse: number, word: number): void; activeWord: { verse: number; index: number } | null; listening?: boolean;
+  onVerse?(index: number): void; onWord?(verse: number, word: number): void;
+  /** Where the workspace offers a verse's tools (its Sheet): each row then has a "Verse tools" action, handing over the ref and the button to return focus to. */
+  onTools?(ref: string, opener: HTMLElement): void; activeWord: { verse: number; index: number } | null; listening?: boolean;
   /** False where words have no tools (the proposed portion), so their labels promise none. */
   toolsAvailable?: boolean; showEnglish?: boolean;
   /** Each shown work's state for a verse, in Works order. */
@@ -61,10 +64,11 @@ export function StudyRows({ verses, assignment, group, sections = [], onVerse, o
   /** "Choose verses": while choosing, verse numbers toggle the selection and words are not interactive. */
   choice?: VerseChoiceView;
 }) {
-  return <div className={`study-verses ${styles.rows}`} aria-label="Hebrew reading, verse by verse" tabIndex={-1} data-study-rows="">
+  const first = useMemo(() => firstWordKey(verses), [verses]);
+  return <WordGroup scope={`${verses[0]?.ref}|${verses.length}`} first={first} className={`study-verses ${styles.rows}`} aria-label="Hebrew reading, verse by verse" tabIndex={-1} data-study-rows="">
     {verses.map((verse, index) => <StudyRow key={verse.ref} verse={verse} assignment={assignment} id={`${group}-row-${index}`}
       label={sections.find(section => section.index === index)?.label}
-      onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined}
+      onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined} onTools={onTools ? opener => onTools(verse.ref, opener) : undefined}
       activeWord={activeWord?.verse === index ? activeWord.index : null} listening={listening} toolsAvailable={toolsAvailable} showEnglish={showEnglish} works={works(verse.ref)} choice={choice} />)}
-  </div>;
+  </WordGroup>;
 }

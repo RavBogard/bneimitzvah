@@ -34,7 +34,7 @@ test("reviewed proposed audio adds main verse controls and highlight without ass
     audio: { activeWord: { verse: 0, index: 0 }, onWord() {}, onVerse() {}, player } }));
   expect(markup).toContain('aria-label="Reading playback"'); expect(markup).toContain("Whole verse"); expect(markup).toContain("Practice");
   expect(markup).toContain('data-reference-active="true"'); expect(markup).toContain('aria-label="Hear Genesis 1:1"');
-  expect(markup).toContain('aria-label="Hear whole verse Genesis 1:1"'); expect(markup).not.toMatch(/select word [0-9]+ for tools/);
+  expect(markup).toContain(">Hear whole verse</span>"); expect(markup).not.toContain("select word for tools");
   expect(markup).toContain("Verses 1–100 of 146"); expect(markup).toContain("not an assigned reading yet"); expect(markup).toContain("CC-BY-SA-4.0");
   expect(markup).not.toMatch(/Word tools|Mark practiced|Translation draft|My translation|Practice calendar/);
   expect(load).not.toHaveBeenCalled();
@@ -52,7 +52,7 @@ test("readonly flowing renderer removes listening affordances but assigned rende
   const read = renderToStaticMarkup(createElement(FlowingStudyText, common));
   expect(read).not.toContain('role="button"'); expect(read).not.toContain('aria-label="Hear'); expect(read).toContain("<sup");
   const assigned = renderToStaticMarkup(createElement(FlowingStudyText, { ...common, onWord() {}, onVerse() {} }));
-  expect(assigned).toContain('aria-label="Hear Genesis 1:1"'); expect(assigned).toContain('role="button"'); expect(assigned).toContain("Hear whole verse Genesis 1:1; select word 1 for tools");
+  expect(assigned).toContain('aria-label="Hear Genesis 1:1"'); expect(assigned).toContain('role="button"'); expect(assigned).toContain(">Hear whole verse; select word for tools</span>");
 });
 
 test("unresolved slot and temporary failures offer honest recovery with no invented portion or assignment operation", () => {

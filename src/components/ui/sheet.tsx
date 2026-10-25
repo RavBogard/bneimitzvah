@@ -22,8 +22,13 @@ export type SheetProps = {
 };
 
 const FOCUSABLE = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
+/** What Tab can reach. The content of a closed <details> is skipped even though the browser still gives it boxes (only its own summary is reachable), or the wrap would look for a last stop nobody can stand on. */
+function reachable(node: HTMLElement) {
+  const folded = node.closest("details:not([open])");
+  return !folded || (node.tagName === "SUMMARY" && node.parentElement === folded);
+}
 function focusables(root: HTMLElement) {
-  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(node => !node.hasAttribute("disabled") && node.getAttribute("aria-hidden") !== "true" && node.getClientRects().length > 0);
+  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(node => !node.hasAttribute("disabled") && node.getAttribute("aria-hidden") !== "true" && node.getClientRects().length > 0 && reachable(node));
 }
 
 /**

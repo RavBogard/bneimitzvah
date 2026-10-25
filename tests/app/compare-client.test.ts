@@ -46,7 +46,7 @@ test("the browser parser accepts exactly the server's answer, credits recomputed
 test("Compare sits under each Study row only inside a panel scope, in Study, for Torah and Prophets verses", () => {
   const inStudy = (child: ReturnType<typeof createElement>, lens: "study" | "lein" = "study") => renderToStaticMarkup(createElement(StudyLensScope, { storageKey: null, query: lens, children: createElement(VersePanelScope, { children: child }) }));
   expect(inStudy(createElement(VerseActions, { verse: "Genesis 12:1" }))).toContain(">Compare</button>");
-  expect(inStudy(createElement(VerseActions, { verse: "Genesis 12:1" }))).toContain('aria-expanded="false"');
+  expect(inStudy(createElement(VerseActions, { verse: "Genesis 12:1" }))).toContain('aria-haspopup="dialog"');
   expect(inStudy(createElement(VerseActions, { verse: "Genesis 12:1" }), "lein")).toContain(">Compare</button>"); // the rows only exist in Study
   expect(inStudy(createElement(VerseActions, { verse: "Psalms 1:1" }))).toBe("");
   expect(renderToStaticMarkup(createElement(VerseActions, { verse: "Genesis 12:1" }))).toBe(""); // no scope: no action

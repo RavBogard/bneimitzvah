@@ -2,15 +2,15 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { StudyHebrew } from "../../src/components/portal/workspace/study/annotations";
+import { firstWordKey, FlowingStudyText, StudyHebrew } from "../../src/components/portal/workspace/study/annotations";
 import { ReadingPlace } from "../../src/components/portal/workspace/study/reading-place";
 import { chapterOf, pageOffsetFor, readingChapters, topVisible } from "../../src/components/portal/workspace/study/reading-place-model";
-import { escapeClosesPanel, focusKey, moveWord, requestPanel, type PanelOpen } from "../../src/components/portal/workspace/study/verse-panel-state";
+import { focusKey, moveWord, requestPanel, type PanelOpen } from "../../src/components/portal/workspace/study/verse-panel-state";
 import { adjacentWord, rovingTarget, tapWord } from "../../src/components/portal/workspace/study/word-nav";
 import { WordPanelView } from "../../src/components/portal/workspace/study/word-panel";
 import type { StudyVerse } from "../../src/components/portal/workspace/study/api";
 import type { WordGrammar } from "../../src/lib/hebrew/word-details";
-import { wordSentence } from "../../src/lib/hebrew/word-sentence";
+import { carriesQamatsQatan, QAMATS_QATAN_NOTE, wordSentence } from "../../src/lib/hebrew/word-sentence";
 vi.mock("server-only", () => ({}));
 
 const ready = (...morphemes: Extract<WordGrammar, { status: "ready" }>["morphemes"][number][]): WordGrammar => ({ status: "ready", language: "hebrew", morphemes });
@@ -79,7 +79,24 @@ describe("keyboard", () => {
     expect(found.filter(tag => tag.includes('tabindex="0"'))).toHaveLength(1);
     expect(found[0]).toContain('tabindex="0"');
     expect(found.slice(1).every(tag => tag.includes('tabindex="-1"'))).toBe(true);
-    expect(found[1]).toContain('aria-label="Open word 2 of Genesis 1:1"');
+    // The word names itself by its Hebrew (no aria-label); what a tap does is its description (1.9 N4, F5).
+    expect(found.every(tag => !tag.includes("aria-label"))).toBe(true);
+    expect(found.every(tag => tag.includes('aria-describedby="v-act"'))).toBe(true);
+    expect(html).toContain('id="v-act"'); expect(html).toContain(">Open word</span>");
+    expect(html.match(/id="v-act"/g)).toHaveLength(1); // one description for the verse, not one per word
+  });
+  it("is one Tab stop for the whole passage, not one per verse", () => {
+    const second: StudyVerse = { ...verse, ref: "Genesis 1:2" };
+    const html = renderToStaticMarkup(createElement(FlowingStudyText, { verses: [verse, second], assignment: { kind: "torah", confirmed: true, verses: [verse.ref, second.ref] }, group: "g", activeWord: null, onWord() {} }));
+    const found = words(html);
+    expect(found).toHaveLength(6);
+    expect(found.filter(tag => tag.includes('tabindex="0"'))).toHaveLength(1);
+    expect(found[0]).toContain('tabindex="0"');
+  });
+  it("names the first word of a passage that has one", () => {
+    const empty: StudyVerse = { ...verse, ref: "Genesis 1:3", hebrew: { text: "", readingText: "", paragraphAfter: null, segments: [] } };
+    expect(firstWordKey([verse, empty])).toBe("Genesis 1:1#0");
+    expect(firstWordKey([empty])).toBeNull();
   });
 });
 
@@ -100,17 +117,7 @@ describe("the one panel at a time", () => {
     const same = word("Genesis 1:1", 2);
     expect(moveWord(same, "Genesis 1:1", 2)).toBe(same);
   });
-  it("Esc returns focus: it closes only from the panel, its opener or a word, never under a modal", () => {
-    const base = { key: "Escape", defaultPrevented: false, modal: false, inPanel: false, onOpener: false, onWord: false, kind: "word" as const };
-    expect(escapeClosesPanel({ ...base, inPanel: true })).toBe(true);
-    expect(escapeClosesPanel({ ...base, onWord: true })).toBe(true);
-    expect(escapeClosesPanel({ ...base, onOpener: true, kind: "compare" })).toBe(true);
-    expect(escapeClosesPanel({ ...base, onWord: true, kind: "compare" })).toBe(false);
-    expect(escapeClosesPanel(base)).toBe(false);
-    expect(escapeClosesPanel({ ...base, inPanel: true, modal: true })).toBe(false);
-    expect(escapeClosesPanel({ ...base, inPanel: true, defaultPrevented: true })).toBe(false);
-    expect(escapeClosesPanel({ ...base, inPanel: true, key: "Enter" })).toBe(false);
-    // Closing from Esc is the same request as tapping the open word again: focus is restored to the opener.
+  it("closing is the same request as tapping the open word again: focus is restored to the opener (Esc itself is the Sheet's)", () => {
     expect(requestPanel(word("Genesis 1:1", 2), { verse: "Genesis 1:1", kind: "word", word: 2 }, "p").restoreFocus).toBe(true);
   });
   it("keeps the reader's place when a word card steps on, but moves focus when another panel opens", () => {
@@ -130,6 +137,18 @@ describe("the word card's layout", () => {
     expect(at("<details")).toBeLessThan(at("Dictionary senses go here"));
     expect(html).toContain("<summary>Dictionary details</summary>");
     expect(html).not.toMatch(/<details[^>]* open/);
+  });
+});
+
+describe("the qamats qatan note (1.9 N4)", () => {
+  // Miqra according to the Masorah marks a qamats qatan with U+05C7 (the pipeline note in docs/superpowers/research/2026-10-15-trope-engine); the card says so only for a word that carries it.
+  const view = (text: string) => renderToStaticMarkup(createElement(WordPanelView, { text, place: "Word 1 of 3", sentence: "A noun.", actions: null, details: null }));
+  it("shows the approved note when the word carries U+05C7, and only then", () => {
+    expect(carriesQamatsQatan("\u05DB\u05C7\u05BC\u05DC")).toBe(true);
+    expect(carriesQamatsQatan("\u05DB\u05B8\u05DC")).toBe(false);
+    expect(view("\u05DB\u05C7\u05BC\u05DC")).toContain("This vowel says o (qamats katan).");
+    expect(view("\u05DB\u05B8\u05DC")).not.toContain("qamats katan");
+    expect(QAMATS_QATAN_NOTE).toBe("This vowel says o (qamats katan).");
   });
 });
 

@@ -15,7 +15,7 @@ import { LensSwitch } from "../workspace/lens-switch";
 import { LENS_STORAGE, lensFromSearch, StudyLensScope, useStudyLens, type Lens } from "../workspace/study-lens";
 import { StudyRows } from "../workspace/study/study-rows";
 import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi, workStatuses } from "../workspace/study/commentary-view";
-import { DiscussionList, VersePanelColumn, VersePanelScope, WordPanelSource } from "../workspace/study/verse-panel";
+import { DiscussionList, VersePanelScope, WordPanelSource } from "../workspace/study/verse-panel";
 import type { WordPanelHost } from "../workspace/study/word-panel";
 import { ReadingPlace, scrollToVerse } from "../workspace/study/reading-place";
 import { namedReading, type NamedReading } from "../../../lib/readings/named-readings";
@@ -138,7 +138,8 @@ export function useDocumentTitle(text: string) {
 export function Shell({ title, children, signedIn = false, back, settled = true }: { title: string; children: ReactNode; signedIn?: boolean; back?: () => string | null; settled?: boolean }) {
   useDocumentTitle(readTitle(title, useProductName()));
   return <div className="portal-shell">
-    <a className="skip-link" href="#public-reading-main">Skip to the reading</a>
+    {/* Where there is a reading on the page, "Skip to the reading" lands on it (the dock and the words are then its first stops), not at the top of the page it already is at; without one, on the page's main. */}
+    <a className="skip-link" href="#public-reading-main" onClick={event => { const text = document.querySelector<HTMLElement>("[data-reading-text]"); if (!text) return; event.preventDefault(); text.focus({ preventScroll: true }); text.scrollIntoView({ block: "start" }); }}>Skip to the reading</a>
     <header className="portal-header app-bar"><a className="portal-brand" href="/">CRC Torah</a>
       {signedIn ? <a className="app-bar-account" href="/account"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M5 20c1.2-3.6 3.8-5.5 7-5.5s5.8 1.9 7 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg><span>Account</span></a>
         : <ReturnSignInLink className="app-bar-account" back={back}>Sign in</ReturnSignInLink>}</header>
@@ -608,7 +609,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     {/* The section chips (N3): a tab for each aliyah, in the sticky bar above the text. The page below changes with the tab, so one panel serves them all. */}
     {sections.length > 0 && <SectionTabs sticky label="Reading sections" panelId={`${group}-section`} current={sections[range.section]?.n ?? null}
       tabs={sections.map(row => ({ id: row.n, label: row.label }))} onSelect={n => changeWin(sections.findIndex(row => row.n === n))} />}
-    <div className="reading-passage-layout" id={sections.length > 0 ? `${group}-section` : undefined} role={sections.length > 0 ? "tabpanel" : undefined} aria-label={sections.length > 0 ? sections[range.section]?.label : undefined} ref={textAnchor} tabIndex={-1}>
+    <div className="reading-passage-layout" data-reading-text="" id={sections.length > 0 ? `${group}-section` : undefined} role={sections.length > 0 ? "tabpanel" : undefined} aria-label={sections.length > 0 ? sections[range.section]?.label : undefined} ref={textAnchor} tabIndex={-1}>
       <ReadingToolbar englishHidden={Boolean(drillVerse)} listeningEnabled={listening} tikkunAvailable={kind === "torah"} worksCorpus={corpus} onHear={listening && page ? () => hear(focus ?? 0) : undefined} />
       <section className="assigned-study" aria-label={kind === "torah" ? "Torah text" : "Haftarah text"} data-size={prefs.size}>
         {!page ? text?.key === textKey && text.error ? <div role="status"><h4>Text unavailable</h4><p>{text.error === 429 ? RATE_LIMITED_MESSAGE : "The verses didn’t load. Check your connection and try again."}</p><button type="button" className="button-secondary" onClick={onRetry}>Reload text</button></div>
@@ -658,7 +659,6 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
             onIndex={at => setLift(value => value && { index: at, opening: value.opening, navigation: value.navigation + 1 })} onClose={() => { audio.stopAll(); setLift(null); }} />}
         </>}
       </section>
-      <VersePanelColumn />
     </div>
   </VersePanelScope>;
 }
