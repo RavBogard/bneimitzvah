@@ -59,6 +59,19 @@ export function LiftedLine({ verses, assignment, index, total, offset, onIndex, 
     const target = active === null ? null : node.querySelector<HTMLElement>(`[data-phrase="${active}"]`);
     if (target) target.scrollIntoView({ block: "center", behavior: reduced() ? "auto" : "smooth" }); else node.scrollTo({ top: 0 });
   }, [active, index]);
+  // A long verse on a small phone is set a little smaller, step by step, until all of it shows on the stage; below the floor it scrolls inside the stage.
+  useLayoutEffect(() => {
+    const node = stage.current; if (!node) return;
+    const hebrew = () => node.querySelector<HTMLElement>(".lift-hebrew");
+    // The verse itself, not the notes under it, must end inside the stage.
+    const shows = () => { const row = hebrew(); return !row || row.getBoundingClientRect().bottom - node.getBoundingClientRect().top + node.scrollTop <= node.clientHeight - 8; };
+    const fit = () => {
+      let scale = 1; node.style.setProperty("--lift-fit", "1");
+      while (!shows() && scale > 0.55) { scale = Math.round((scale - 0.05) * 100) / 100; node.style.setProperty("--lift-fit", String(scale)); }
+    };
+    fit(); window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [verse.ref, prefs, phrases.length]);
   const atStart = index === 0 && currentPhrase === 0, atEnd = index === verses.length - 1 && (phrases.length === 0 || currentPhrase === phrases.length - 1);
   function next() {
     playback.current?.suspend(); setPlayingWord(null);

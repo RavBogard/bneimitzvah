@@ -359,7 +359,7 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     setFocus(at); setDrillTarget(null); playback.current?.select(at, word);
     if (word === "verse") tools.current?.selectVerse(at); else tools.current?.select(at, word);
   });
-  const chooseWord = (at: number, word: number) => release(() => { setFocus(at); setDrillTarget(null); if (listening) playMainVerseForWord(playback.current, tools.current, at, word); else tools.current?.select(at, word); });
+  const chooseWord = (at: number, word: number) => release(() => { setFocus(at); setDrillTarget(null); if (listening) playMainVerseForWord(playback.current, tools.current, at, word); else { tools.current?.select(at, word); tools.current?.reveal(); } });
   const changeIndex = (next: number) => { if (next === index) return; pendingJump.current = null; audio.stopAll(); setLift(null); setFocus(null); setDrill(null); setDrillTarget(null); setOffset(0); onIndex(next); };
   const changeOffset = (next: number) => { if (next === offset) return; if (linkedIndex !== null) onVerseLeft(); setDrillTarget(null); setOffset(next); };
   const offsets = passage.pages.map(row => row.offset);

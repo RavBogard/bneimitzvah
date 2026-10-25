@@ -50,3 +50,10 @@ it("keeps the siddur address out of src except in the settings validation", () =
   walk("src");
   expect(found).toEqual(["server/settings/validation.ts"]);
 });
+
+it("lays the two links out as a flex row, with no separator text between them", () => {
+  const html = render({ torah: true, haftarah: true });
+  expect(html).toContain('class="field-help siddur-blessings"');
+  expect(html).not.toContain("·");
+  expect(html).toMatch(/<\/a><a /);
+});

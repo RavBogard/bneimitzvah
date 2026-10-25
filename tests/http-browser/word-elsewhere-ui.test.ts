@@ -57,7 +57,7 @@ it("a student on a phone taps a word and goes to its other places in the reading
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible();
   const tools = tab.getByRole("region", { name: "Word tools", exact: true }), elsewhere = tools.getByRole("region", { name: "This word elsewhere", exact: true });
   await tab.locator('.study-verses [data-verse-ref="Genesis 1:1"] [data-word-index="0"]').first().click();
-  await tools.getByRole("button", { name: "Word tools", exact: true }).click();
+  await ui(tools.getByRole("button", { name: "Word tools", exact: true })).toHaveAttribute("aria-expanded", "true");
   await ui(tools).toContainText("Genesis 1:1 · Word 1 of 2"); await ui(tools.getByText("Synthetic B sense", { exact: true })).toBeVisible();
   await ui(elsewhere).toContainText("It appears 2 more times in your reading.");
   await ui(elsewhere.locator("mark")).toHaveText(["בָּ֖ג", "בָּ֑ג"]); await ui(elsewhere.getByRole("button", { name: "More places", exact: true })).toHaveCount(0);

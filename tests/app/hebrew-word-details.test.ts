@@ -2,7 +2,7 @@ import { expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { createHash } from "node:crypto";
 import { createSelectedWordDetails } from "../../src/server/study/lexical/word-details";
-import { parseStudyWordDetails, parseWordGrammar, WORD_DETAILS_ATTRIBUTION, WORD_DETAILS_LIMITS, type StudyWordDetails } from "../../src/lib/hebrew/word-details";
+import { cleanOccurrenceGloss, parseStudyWordDetails, parseWordGrammar, WORD_DETAILS_ATTRIBUTION, WORD_DETAILS_LIMITS, type StudyWordDetails } from "../../src/lib/hebrew/word-details";
 import { parseTahot, parseTbesh } from "../../src/server/study/lexical/step";
 import type { StepSourceLoader } from "../../src/server/study/lexical/source-loader";
 import { normalizeHebrew } from "../../src/server/study/normalize";
@@ -94,4 +94,13 @@ it("bounds UTF8 glosses, Hebrew headwords and entry/morpheme counts, rejecting H
   expect(parseWordGrammar({ status: "ready", language: "hebrew", morphemes: [{ partOfSpeech: "noun", gender: undefined }] })).toBeNull();
   expect(parseWordGrammar({ status: "ready", language: "hebrew", morphemes: [{ partOfSpeech: "verb", stem: "guessed", form: "perfect" }] })).toBeNull();
   expect(Buffer.byteLength(JSON.stringify(dto))).toBeLessThan(WORD_DETAILS_LIMITS.bytes);
+});
+
+it("shows a joined-prefix gloss as plain words, with no slash artifact", async () => {
+  expect(cleanOccurrenceGloss("and/ he saw")).toBe("and he saw");
+  expect(cleanOccurrenceGloss("in/ the beginning")).toBe("in the beginning");
+  expect(cleanOccurrenceGloss("and/ to/ the earth")).toBe("and to the earth");
+  expect(cleanOccurrenceGloss("he/she")).toBe("he/she");
+  const result = await ready(verse(), 0, source(row(1, "בָּג", "and/ he saw") + "\n" + row(2, "דָּג")));
+  expect(result.occurrence.gloss).toBe("and he saw");
 });

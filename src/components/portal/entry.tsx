@@ -10,7 +10,8 @@ import { FrontDoor, type FrontDoorAccount } from "./front-door/front-door";
 import { AccountRequest } from "./account-request";
 import { purgeOffline } from "../../lib/offline/pack-index";
 
-export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "accepted" | "uncertain" }
+export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "uncertain" }
+  | { kind: "accepted"; role: SessionSummary["roles"][number] }
   | { kind: "signed-in"; summary: SessionSummary } | { kind: "invitation"; review: InvitationReview };
 /**
  * What the front door app bar shows for an entry state. A refused account is signed in, so Sign in
@@ -114,7 +115,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
         // The raw invitation lives only in its HttpOnly pending cookie. The
         // reviewed binding is transient memory and never a URL/storage value.
         parseAcceptance(await requestPortal("/api/invitations/accept", { reviewBinding: view.review.reviewBinding }));
-        setView({ kind: "accepted" }); focusNext.current = true;
+        setView({ kind: "accepted", role: view.review.role }); focusNext.current = true;
       }
     } catch (error) {
       const status = failure(error);
@@ -189,7 +190,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
           <button type="button" className="button-primary" disabled={pending !== null} onClick={() => void action("accept")}>{pending === "accept" ? "Accepting invitation…" : "Accept invitation"}</button>
           <button type="button" className="button-text" disabled={pending !== null} onClick={() => void action("sign-out")}>Sign out to use another account</button>
         </>}
-        {view.kind === "accepted" && <><p role="status">Your invitation has been accepted.</p><a className="button-primary" href="/">Continue</a></>}
+        {view.kind === "accepted" && <><p role="status">Your invitation has been accepted.</p><a className="button-primary" href={rolePath(view.role)}>Continue</a></>}
         {view.kind === "invalid-invitation" && <><p>This invitation may have changed, expired, already been accepted, or belong to another account. No new access has been added by this request.</p><p>Open the latest invitation email, or ask the congregation for a new invitation.</p><button type="button" className="button-primary" onClick={retry}>{message ? "Review invitation again" : "Check invitation again"}</button><a className="button-text" href="/">Check my access</a></>}
         {view.kind === "uncertain" && <><p>The request was interrupted. Your invitation may have been accepted. Check your access before trying again.</p><a className="button-primary" href="/">Check my access</a><button type="button" className="button-text" onClick={retry}>Review invitation again</button></>}
         {view.kind === "forbidden" && <><p>This account can’t use the requested access right now. Ask the congregation for help, or sign in with a different account.</p><button type="button" className="button-secondary" disabled={pending !== null} onClick={() => void action("sign-out")}>{pending === "sign-out" ? "Signing out…" : "Sign out"}</button></>}

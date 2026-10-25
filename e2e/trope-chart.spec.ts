@@ -81,3 +81,15 @@ test("failed local font keeps printing unavailable and offers explicit reload", 
   await page.getByRole("button", { name: "Reload chart", exact: true }).focus();
   await expect(page.getByRole("button", { name: "Reload chart", exact: true })).toBeFocused();
 });
+
+test("the chart offers no workspace link signed out, keeps code points out of the visible text, and spells sof pasuk one way", async ({ page }) => {
+  await page.route("**/api/session", route => route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ error: "unauthorized" }) }));
+  await page.goto("/trope-chart");
+  await expect(page.locator("[data-chart-accent]")).toHaveCount(30);
+  await expect(page.getByRole("link", { name: "Return to workspace" })).toHaveCount(0);
+  const text = await page.locator("main").innerText();
+  expect(text).not.toMatch(/U\+[0-9A-F]{4}/);
+  expect(text).not.toContain("pasuq");
+  expect(text).toContain("silluq / sof pasuk");
+  await expect(page.locator('[data-chart-accent="0591"]')).toHaveAttribute("title", "U+0591");
+});

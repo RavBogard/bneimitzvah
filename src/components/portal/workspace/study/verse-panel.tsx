@@ -164,6 +164,8 @@ function Panel({ open, onClose }: { open: Open; onClose(): void }) {
     const stepped = scope?.stepFocus.current ?? null; if (scope) scope.stepFocus.current = null;
     const button = stepped ? section.current?.querySelector<HTMLElement>(`button[data-word-step="${stepped}"]:not([disabled])`) : null;
     (button ?? heading.current)?.focus({ preventScroll: true });
+    // On a phone the card opens after the whole row, commentary included, so a word tap would leave it below the fold: bring it into view, moving the page no further than it must.
+    if (open.kind === "word" && scope && !scope.wide) section.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   const word = open.kind === "word" ? scope?.host.current : null;
   return <section id={open.id} ref={section} className={styles.versePanel} aria-labelledby={`${open.id}-heading`} data-verse-panel={open.verse}>

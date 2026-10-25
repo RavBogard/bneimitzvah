@@ -2,13 +2,13 @@
 import type { CSSProperties } from "react";
 import { COURSE, familyColor, lessonMinutes, pathLessons, type Lesson, type Melody } from "../../lib/learn/course";
 import { courseDone, emptyProgress, heard, isDone, isUnlocked, localDay, nextLesson, reviewSummary, type Progress } from "../../lib/learn/progress";
+import { reviewLine } from "../../lib/learn/review-line";
 import { openPractice } from "../../lib/learn/practice";
 import { DRAFTED } from "./activity-copy";
 import { ContourMark, FamilyChip, icons } from "./bits";
 import { useProgress } from "./services";
 import styles from "./learn.module.css";
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 export function LearnAppBar() {
   return <header className="portal-header app-bar"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a></header>;
 }
@@ -61,7 +61,7 @@ export function CourseHome() {
               <p className={styles.nextLine}>{next.summary}</p>
               <div className={styles.nextAction}><a className="button-start" href={`/learn/${next.id}`} aria-describedby="learn-next">Start</a><span className={styles.minutes}>about {lessonMinutes(next)} minutes</span></div>
             </section>}
-          {review && <a className={styles.review} href="/learn/review"><span>Review: {plural(review.phrases, "phrase", "phrases")}, about {plural(review.minutes, "minute", "minutes")}</span>{icons.arrow}</a>}
+          {review && <a className={styles.review} href="/learn/review"><span>{reviewLine(review)}</span>{icons.arrow}</a>}
           {ready && <QuickTenLinks progress={progress} />}
           <p className={styles.heard}>Can hear: {torah.heard} of {torah.of} Torah phrases · {haftarah.heard} of {haftarah.of} haftarah phrases</p>
           <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a></nav>

@@ -15,7 +15,6 @@
 .mark { display: flex; flex-direction: column; align-items: start; min-width: 0; max-width: 11rem; break-inside: avoid; }
 .sample { display: inline-block; font-size: 2rem; line-height: 2; padding-inline: 0.25em; background: var(--family-color, transparent); color: var(--color-ink); }
 .markName { line-height: 1.5; overflow-wrap: anywhere; }
-.codepoint { color: var(--color-muted); font-size: 0.8125rem; margin-top: 0.25rem; }
 .other { border-top: 1px solid var(--color-ink); padding-top: 1.5rem; margin-top: 2.5rem; }
 .otherMarks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem 1.5rem; }
 .sources { border-top: 1px solid var(--color-rule); margin-top: 2.5rem; padding-top: 1.5rem; color: var(--color-muted); font-size: 0.875rem; }
@@ -44,7 +43,6 @@
   .mark { max-width: none; flex: 1 1 0; }
   .sample { font-size: 22pt; line-height: 1.6; padding-inline: 0.15em; }
   .markName { font-size: 10pt; line-height: 1.25; }
-  .codepoint { display: none; }
   .other { margin-top: 9pt; padding-top: 6pt; }
   .otherMarks { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5pt 6pt; }
   .otherMarks .sample { font-size: 20pt; }

@@ -165,7 +165,8 @@ export function LessonLog({ mode, studentId, register, tabbed }: { mode: Reading
     if (!validDate(current.lessonDate)) { setNotice("Choose the date of the lesson."); return; }
     if (!text.trim()) { setNotice("Write a few words about the lesson first."); return; }
     if (/[\x00-\x08\x0e-\x1f\x7f-\x9f]/.test(text)) { setNotice("This note has a hidden character that can’t be saved. Retype the part you pasted."); return; }
-    if (summaryBytes(text) > summaryLimit) { setNotice("This note is too long. Shorten it a little, then save."); return; }
+    // The live hint under the field already says it is too long: say it once there, and take the writer to the field.
+    if (summaryBytes(text) > summaryLimit) { setNotice(""); field.current?.focus(); return; }
     const operation: LessonOperation = current.base
       ? { type: "edit", entryId: current.entryId, expectedVersion: current.base.version, lessonDate: current.lessonDate, summary: text }
       : { type: "create", entryId: current.entryId, lessonDate: current.lessonDate, summary: text };

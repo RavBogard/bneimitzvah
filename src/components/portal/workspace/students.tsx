@@ -1,13 +1,13 @@
 "use client";
 import { AccountRequestsLine } from "./accounts/workspace";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { workspaceApi, type Student } from "./api";
-import { RequireRole, statusOf, useWorkspace, WorkspaceLink } from "./provider";
+import { RequireRole, rolePaths, statusOf, useWorkspace, WorkspaceLink } from "./provider";
 import { ceremonyCountdown, ReadingPanel } from "./reading";
-import { reconcileSelectedStudent } from "./student-label";
+import { reconcileSelectedStudent, sortStudentsByCeremony } from "./student-label";
 import { HonorsEntry, HonorsNote } from "./honors/sheet";
 
 export function StudentWorkspace({ mode, studentId }: { mode: "student" | "parent" | "tutor"; studentId?: string }) {
@@ -31,6 +31,14 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
   const [paging, setPaging] = useState(false);
   const abort = useRef<AbortController | null>(null), rowsRef = useRef(rows), selectedRef = useRef(selected);
   rowsRef.current = rows; selectedRef.current = selected;
+  const ordered = useMemo(() => sortStudentsByCeremony(rows), [rows]), strip = useRef<HTMLUListElement | null>(null);
+  // On a phone the compact chip strip scrolls sideways: bring the chosen student's chip into it (the strip only; the page stays where it is).
+  useEffect(() => {
+    const list = strip.current, chip = list?.querySelector<HTMLElement>('[aria-current="page"], [aria-pressed="true"]');
+    if (!list || !chip) return;
+    const frame = list.getBoundingClientRect(), box = chip.getBoundingClientRect();
+    if (box.left < frame.left) list.scrollLeft -= frame.left - box.left; else if (box.right > frame.right) list.scrollLeft += box.right - frame.right;
+  }, [selected, ordered]);
   const reconcileStudent = useCallback((current: Student) => { setRows(previous => reconcileSelectedStudent(previous, selectedRef.current, current)); }, []);
   const load = useCallback(async (preserve = true) => {
     abort.current?.abort(); const request = new AbortController(), turn = ++sequence.current; abort.current = request;
@@ -74,7 +82,7 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
   }
   if (switching) return <section className="sibling-selection" aria-label="Choose a child for practice"><h2>Practice with another child</h2>
     {loading ? <p role="status">Loading linked children…</p> : error ? <><p role="alert">Linked children couldn’t be loaded.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload children</button></>
-      : <><ul className="student-selection-list">{rows.map(row => <li key={row.id}><button className="button-secondary" disabled={busy || context?.studentId === row.id} onClick={() => void selectChild(row.id)}>Switch practice to <bdi dir="auto">{row.firstName} {row.lastName}</bdi></button></li>)}</ul>{more && <button className="button-text" disabled={busy || paging} onClick={() => void loadMore()}>{paging ? "Loading children…" : "Load more children"}</button>}</>}
+      : <><ul className="student-selection-list">{ordered.map(row => <li key={row.id}><button className="button-secondary" disabled={busy || context?.studentId === row.id} onClick={() => void selectChild(row.id)}>Switch practice to <bdi dir="auto">{row.firstName} {row.lastName}</bdi></button></li>)}</ul>{more && <button className="button-text" disabled={busy || paging} onClick={() => void loadMore()}>{paging ? "Loading children…" : "Load more children"}</button>}</>}
   </section>;
   const heading = mode === "student" ? "Your assigned reading" : mode === "parent" ? "Your children’s readings" : "Your assigned students";
   const focused = Boolean(routeStudentId);
@@ -82,7 +90,7 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
     {mode !== "student" && !focused && <p className="selection-lede">{mode === "parent" ? "Choose a child to see their reading." : "Who are you teaching today?"}</p>}
     {loading ? <p role="status">Loading available students…</p> : error ? <div role="alert"><p>Students couldn’t be loaded. No previous selection is being shown.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload students</button></div>
       : !rows.length ? <p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p>
-        : <>{(mode !== "student" || rows.length !== 1) && <><ul className={`student-cards${focused || selected ? " student-cards-compact" : ""}`} aria-label={mode === "parent" ? "Child" : "Student"}>{rows.map(row => <li key={row.id}>
+        : <>{(mode !== "student" || rows.length !== 1) && <><ul ref={strip} className={`student-cards${focused || selected ? " student-cards-compact" : ""}`} aria-label={mode === "parent" ? "Child" : "Student"}>{ordered.map(row => <li key={row.id}>
             {mode === "tutor" ? <WorkspaceLink href={`/workspace/tutor/${row.id}`} className="student-card" data-student-id={row.id} aria-current={selected === row.id ? "page" : undefined}><StudentCardBody row={row} /></WorkspaceLink>
               : <button type="button" className="student-card" data-student-id={row.id} aria-pressed={selected === row.id} onClick={() => { void guardDeparture().then(leave => { if (leave) setSelected(row.id); }); }}><StudentCardBody row={row} /></button>}
           </li>)}</ul>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
@@ -106,6 +114,7 @@ export function PracticeWorkspace({ studentId }: { studentId: string }) {
 
 export function RoleChoice() {
   const { summary } = useWorkspace(), router = useRouter();
-  useEffect(() => { if (summary.roles.length === 1 && summary.roles[0] === "student") router.replace("/workspace/student"); }, [summary, router]);
+  // One role leaves nothing to choose: go straight to that role's workspace (fixed paths, never a supplied address).
+  useEffect(() => { if (summary.roles.length === 1) router.replace(rolePaths[summary.roles[0]]); }, [summary, router]);
   return <section className="role-workspace"><h1>Choose your workspace</h1><p>Use one role at a time. Your available roles are shown above.</p>{summary.roles.length === 0 && <p>No congregation role is linked to this account. Open your invitation email, or ask the congregation for an invitation.</p>}</section>;
 }
