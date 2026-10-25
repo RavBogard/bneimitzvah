@@ -60,10 +60,10 @@ it("a delayed approved refresh cannot act on replacement metadata, while current
   expect(await refreshSourceReading(current, async () => false, refresh)).toBe(false); expect(refresh).not.toHaveBeenCalled();
   expect(await refreshSourceReading(current, async () => true, refresh)).toBe(true); expect(refresh).toHaveBeenCalledOnce(); replacement.session.dispose();
 });
-it("renders one initially closed disclosure with no read, browse, save or content action", () => {
+it("renders no Sources control until it knows there are sources (1.9 N4, G2), and no read, browse, save or content action", () => {
   const base: Assigned = { mode: "student", student: { id: "10000000-0000-4000-8000-000000000001", revision: 1, firstName: "Synthetic", lastName: "Sources", ceremonyDate: "2027-01-02" }, context: null, readings: [] };
   const html = renderToStaticMarkup(createElement(SourcesPanel, { scopeKey: "closed", baseline: base, kind: "torah", offset: 0, onRefreshReading: async () => undefined }));
-  expect(html).toContain('aria-expanded="false"'); expect(html).toContain(">Sources</button>"); expect(html).not.toContain("Browse related sources"); expect(html).not.toContain("Save sources"); expect(html).not.toContain("Read source"); expect(workspace.createSources).not.toHaveBeenCalled();
+  expect(html).toBe(""); expect(html).not.toContain("Browse related sources"); expect(html).not.toContain("Save sources"); expect(html).not.toContain("Read source"); expect(workspace.createSources).not.toHaveBeenCalled();
 });
 it("renders distinct dirty/uncertain departure semantics without promising rollback or displaying request internals", () => {
   const render = (review: SourceDeparture) => renderToStaticMarkup(createElement(SourceDepartureReview, { review, onKeep() {}, onLeave() {} }));

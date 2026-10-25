@@ -7,42 +7,32 @@ import { DiscussionListView, DiscussionPanelBody, DiscussionsSource, useDiscussi
 import type { DiscussionPassage } from "./discussions-api";
 import { DISCUSSION_LABELS } from "../../../../lib/discussions/labels";
 import { WordPanelBody, type WordPanelHost } from "./word-panel";
-import { escapeClosesPanel, focusKey, moveWord, requestPanel, type PanelOpen, type VersePanelKind } from "./verse-panel-state";
+import { focusKey, moveWord, requestPanel, type PanelOpen, type VersePanelKind } from "./verse-panel-state";
 import { useStudyLens } from "../study-lens";
+import { Button, Sheet } from "../../../ui";
 import styles from "./commentary.module.css";
 
 /**
- * The verse panel (1.3): one open at a time on a page, for one verse, in Study only. On phones (1000px and
- * narrower) it opens in place after the verse's row; on wide screens it opens a column between the rows and
- * the tools rail. Opening moves focus to its heading; Close or Esc closes it and puts focus back on the
- * button that opened it. The verse that opened it stays where it was on screen while the text reflows.
- * Release 1.7 adds the "word" kind: in Study a tap on a word opens its card here (word-panel.tsx); Previous word and
- * Next word move it, and Esc puts focus back on the word it was last on. The pure rules are in verse-panel-state.ts.
+ * The verse panel (1.3), now in the one Sheet (1.9 N4): one open at a time on a page, for one verse, in Study only. It rises from the
+ * bottom at every width, is modal with focus trapped, and opens on its title. Esc, a tap outside, Close or a swipe down closes it and
+ * puts focus back on what opened it (a word, an action, a list entry). The page behind it does not move: nothing scrolls on open, and
+ * on close the word it was last on is scrolled into view only if Next word took it off screen.
+ * Release 1.7 adds the "word" kind: in Study a tap on a word opens its card here (word-panel.tsx); Previous word and Next word move it,
+ * and closing puts focus back on the word it was last on. The pure rules are in verse-panel-state.ts.
  * Release 1.7 M6b adds the "discussion" kind: a verse that anchors a curated discussion has one quiet marker, and a reading's list of
  * sources opens the same panel at the source's verse (discussions.tsx). "Back to this verse" then returns the reader to the verse.
  */
 export type { VersePanelKind } from "./verse-panel-state";
 type Open = PanelOpen;
-type Scope = Readonly<{ open: Open | null; wide: boolean; active: boolean; toggle(verse: string, kind: VersePanelKind, trigger: HTMLElement): void; close(): void; closeWord(): void; stepFocus: { current: "previous" | "next" | null };
+type Scope = Readonly<{ open: Open | null; active: boolean; toggle(verse: string, kind: VersePanelKind, trigger: HTMLElement): void; close(): void; closeWord(): void;
   /** A source in a reading's list: the discussion panel at its verse, brought into view first. */
   openFromList(verse: string, trigger: HTMLElement): void; backToVerse(): void;
-  /** Study's word tap: the word card for one word, beside its verse. Null when no text page has registered a host. */
+  /** Study's word tap: the word card for one word, in the sheet. Null when no text page has registered a host. */
   openWord: ((verse: string, word: number, trigger: HTMLElement | null) => void) | null; moveWord(verse: string, word: number, from?: "previous" | "next"): void;
   host: { current: WordPanelHost | null }; setHost(host: WordPanelHost | null): void }>;
 const Context = createContext<Scope | null>(null);
-export const WIDE_PANEL_QUERY = "(min-width: 1001px)";
-const verseTop = (ref: string) => { try { return document.querySelector(`[data-verse-ref="${CSS.escape(ref)}"]`)?.getBoundingClientRect().top ?? null; } catch { return null; } };
-
-function useWide(): boolean {
-  const [wide, setWide] = useState(false);
-  useEffect(() => {
-    let media: MediaQueryList;
-    try { media = window.matchMedia(WIDE_PANEL_QUERY); } catch { return; }
-    const update = () => setWide(media.matches); update();
-    media.addEventListener("change", update); return () => media.removeEventListener("change", update);
-  }, []);
-  return wide;
-}
+const wordElement = (verse: string, word: number) => { try { return document.querySelector<HTMLElement>(`[data-verse-ref="${CSS.escape(verse)}"] [data-word-index="${word}"][role="button"]`); } catch { return null; } };
+const inView = (element: HTMLElement) => { const box = element.getBoundingClientRect(); return box.top >= 0 && box.bottom <= window.innerHeight; };
 
 /**
  * Holds the page's one open panel, in Study only: Lein closes it and offers none. `passage` (the reading's canonical ref and kind) asks for
@@ -50,16 +40,12 @@ function useWide(): boolean {
  */
 export function VersePanelScope({ children, passage }: { children: ReactNode; passage?: DiscussionPassage | null }) {
   const lens = useStudyLens(), active = lens.available && lens.lens === "study";
-  const [open, setOpen] = useState<Open | null>(null), wide = useWide(), base = useId();
-  const trigger = useRef<HTMLElement | null>(null), anchor = useRef<{ verse: string; top: number } | null>(null), restore = useRef(false);
-  const reveal = useRef<string | null>(null), lastWord = useRef<{ verse: string; word: number } | null>(null), toVerse = useRef<string | null>(null);
-  const remember = (verse: string) => { const top = verseTop(verse); anchor.current = top === null ? null : { verse, top }; };
+  const [open, setOpen] = useState<Open | null>(null), base = useId();
+  const trigger = useRef<HTMLElement | null>(null), lastWord = useRef<{ verse: string; word: number } | null>(null), toVerse = useRef<string | null>(null);
   const current = useRef(open); current.current = open;
   const request = useCallback((verse: string, kind: VersePanelKind, element: HTMLElement | null, word?: number, from?: "list") => {
-    remember(verse);
     const next = requestPanel(current.current, { verse, kind, word, from }, `${base}-panel`);
-    restore.current = next.restoreFocus;
-    if (!next.restoreFocus) trigger.current = element;
+    if (!next.restoreFocus) { trigger.current = element; if (kind !== "word") lastWord.current = null; }
     setOpen(next.open);
   }, [base]);
   const toggle = useCallback((verse: string, kind: VersePanelKind, element: HTMLElement) => request(verse, kind, element), [request]);
@@ -68,58 +54,36 @@ export function VersePanelScope({ children, passage }: { children: ReactNode; pa
   const openWord = useCallback((verse: string, word: number, element: HTMLElement | null) => {
     request(verse, "word", element, word); host.current?.onVisit?.(verse);
   }, [request]);
-  // Previous or Next word: the card follows to the next word's verse, which is brought into view; focus stays on the button pressed.
-  const stepFocus = useRef<"previous" | "next" | null>(null);
-  const stepWord = useCallback((verse: string, word: number, from?: "previous" | "next") => {
+  // Previous or Next word: the card follows to the next word, which may be in another verse; focus stays on the button pressed.
+  const stepWord = useCallback((verse: string, word: number) => {
     const shown = current.current, next = moveWord(shown, verse, word); if (!shown || next === shown) return;
-    stepFocus.current = from ?? null; reveal.current = verse; trigger.current = null; setOpen(next); host.current?.onVisit?.(verse);
+    trigger.current = null; setOpen(next); host.current?.onVisit?.(verse);
   }, []);
-  const close = useCallback(() => {
-    const shown = current.current; if (!shown) return;
-    remember(shown.verse); restore.current = true; setOpen(null);
-  }, []);
+  const close = useCallback(() => { setOpen(null); }, []);
   const closeWord = useCallback(() => { if (current.current?.kind === "word") close(); }, [close]);
   // A list entry takes the reader to the verse (the text page that holds it is loaded first), then opens its sources there.
   const openFromList = useCallback((verse: string, element: HTMLElement) => { host.current?.reveal?.(verse); request(verse, "discussion", element, undefined, "list"); }, [request]);
-  // Back to this verse: the panel closes and the verse itself, not the list entry that opened it, takes focus.
+  // Back to this verse: the sheet closes and the verse itself, not the list entry that opened it, takes focus.
   const backToVerse = useCallback(() => {
     const shown = current.current; if (!shown) return;
-    host.current?.reveal?.(shown.verse); remember(shown.verse); restore.current = false; trigger.current = null; toVerse.current = shown.verse; setOpen(null);
+    host.current?.reveal?.(shown.verse); trigger.current = null; toVerse.current = shown.verse; setOpen(null);
   }, []);
   useLayoutEffect(() => { if (open?.kind === "word" && open.word !== undefined) lastWord.current = { verse: open.verse, word: open.word }; }, [open]);
-  // The text column narrows or widens as the panel opens or closes: keep the verse where the reader saw it.
-  useLayoutEffect(() => {
-    const held = anchor.current; anchor.current = null;
-    if (held) { const top = verseTop(held.verse); if (top !== null && Math.abs(top - held.top) > 0.5) window.scrollBy(0, top - held.top); }
-    const shown = reveal.current; reveal.current = null;
-    if (shown) { try { const box = document.querySelector(`[data-verse-ref="${CSS.escape(shown)}"]`)?.getBoundingClientRect(); if (box && (box.top < 0 || box.bottom > window.innerHeight)) document.querySelector(`[data-verse-ref="${CSS.escape(shown)}"]`)?.scrollIntoView({ block: "center" }); } catch { /* Stay where the page is. */ } }
+  /** Where focus goes when the sheet closes: the verse (Back to this verse), else the word the card was last on, else what opened it. */
+  const returnTarget = useCallback((): HTMLElement | null => {
     const back = toVerse.current; toVerse.current = null;
-    if (back && !open) { try { const row = document.querySelector<HTMLElement>(`[data-study-rows] [data-verse-ref="${CSS.escape(back)}"]`); if (row) { row.tabIndex = -1; row.focus({ preventScroll: true }); } } catch { /* Stay where the page is. */ } }
-    if (!open && restore.current) {
-      restore.current = false;
-      // A word card's focus goes back to the word it was last on, wherever Next word took it.
-      if (!trigger.current?.isConnected && lastWord.current) { try { trigger.current = document.querySelector<HTMLElement>(`[data-verse-ref="${CSS.escape(lastWord.current.verse)}"] [data-word-index="${lastWord.current.word}"][role="button"]`); } catch { trigger.current = null; } }
-      if (trigger.current?.isConnected) trigger.current.focus({ preventScroll: true });
-    }
-  }, [open, wide]);
-  useEffect(() => {
-    if (!open) return;
-    // Esc belongs to the panel only while the reader is in it (or on the button that opened it) and no modal is
-    // open above the page: a modal (Up close, the reading sheet, a guide walk) closes itself, and the panel stays.
-    const key = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
-      let modal = false; try { modal = document.querySelector("dialog:modal") !== null; } catch { modal = document.querySelector("dialog[open]") !== null; }
-      const panel = document.getElementById(open.id), focused = document.activeElement;
-      if (!focused || !escapeClosesPanel({ key: event.key, defaultPrevented: event.defaultPrevented, modal, kind: open.kind, inPanel: Boolean(panel?.contains(focused)),
-        onOpener: focused === trigger.current, onWord: focused instanceof Element && focused.closest("[data-word-index]") !== null })) return;
-      event.preventDefault(); close();
-    };
-    document.addEventListener("keydown", key); return () => document.removeEventListener("keydown", key);
-  }, [open, close]);
+    let target: HTMLElement | null = null;
+    if (back) { try { target = document.querySelector<HTMLElement>(`[data-study-rows] [data-verse-ref="${CSS.escape(back)}"]`); } catch { target = null; } if (target) target.tabIndex = -1; }
+    else if (trigger.current?.isConnected) target = trigger.current;
+    else if (lastWord.current) target = wordElement(lastWord.current.verse, lastWord.current.word);
+    // Next word may have taken the card off screen: bring the word back, no further than it takes.
+    if (target && !inView(target)) { try { target.scrollIntoView({ block: "center" }); } catch { /* Stay where the page is. */ } }
+    return target;
+  }, []);
   useEffect(() => { if (!active) setOpen(null); }, [active]);
-  const value = useMemo<Scope>(() => ({ open: active ? open : null, wide, active, toggle, close, closeWord, stepFocus, openFromList, backToVerse, openWord: hasWords ? openWord : null, moveWord: stepWord, host, setHost }),
-    [active, open, wide, toggle, close, closeWord, openFromList, backToVerse, hasWords, openWord, stepWord, setHost]);
-  const scope = <Context.Provider value={value}>{children}</Context.Provider>;
+  const value = useMemo<Scope>(() => ({ open: active ? open : null, active, toggle, close, closeWord, openFromList, backToVerse, openWord: hasWords ? openWord : null, moveWord: stepWord, host, setHost }),
+    [active, open, toggle, close, closeWord, openFromList, backToVerse, hasWords, openWord, stepWord, setHost]);
+  const scope = <Context.Provider value={value}>{children}{active && open && <VersePanelSheet open={open} onClose={close} returnTarget={returnTarget} />}</Context.Provider>;
   return passage === undefined ? scope : <DiscussionsSource passage={passage} active={active}>{scope}</DiscussionsSource>;
 }
 const usePanel = () => useContext(Context);
@@ -144,51 +108,41 @@ export function WordPanelSource({ host }: { host: WordPanelHost | null }) {
 }
 
 const ACTIONS: readonly { kind: VersePanelKind; label: string }[] = [{ kind: "compare", label: "Compare" }, { kind: "shelf", label: "More on this verse" }];
-/** The verse's actions, under its row in Study: Compare, More on this verse, and (on a verse that anchors a discussion) its sources. Nothing outside a VersePanelScope. */
-export function VerseActions({ verse }: { verse: string }) {
-  const scope = usePanel(), anchored = useIsAnchor(verse);
-  if (!scope || !parseCompareVerse(verse)) return null;
-  const actions = anchored ? [...ACTIONS, { kind: "discussion" as const, label: DISCUSSION_LABELS.marker }] : ACTIONS;
+/** The verse's actions, under its row in Study: Compare, More on this verse, (on a verse that anchors a discussion) its sources, and where the page has verse tools, "Verse tools". Nothing outside a VersePanelScope. */
+export function VerseActions({ verse, onTools }: { verse: string; onTools?(opener: HTMLElement): void }) {
+  const scope = usePanel(), anchored = useIsAnchor(verse), comparable = parseCompareVerse(verse);
+  if (!scope || (!comparable && !onTools)) return null;
+  const actions = comparable ? anchored ? [...ACTIONS, { kind: "discussion" as const, label: DISCUSSION_LABELS.marker }] : ACTIONS : [];
   return <div className={styles.actions}>
-    {actions.map(action => { const open = scope.open?.verse === verse && scope.open.kind === action.kind;
-      return <button key={action.kind} type="button" className={styles.action} aria-expanded={open} aria-controls={open ? scope.open!.id : undefined}
-        onClick={event => scope.toggle(verse, action.kind, event.currentTarget)}>{action.label}</button>; })}
+    {actions.map(action => <button key={action.kind} type="button" className={styles.action} aria-haspopup="dialog"
+      onClick={event => scope.toggle(verse, action.kind, event.currentTarget)}>{action.label}</button>)}
+    {onTools && <button type="button" className={styles.action} aria-haspopup="dialog" onClick={event => onTools(event.currentTarget)}>Verse tools</button>}
   </div>;
 }
 
-function Panel({ open, onClose }: { open: Open; onClose(): void }) {
-  const heading = useRef<HTMLHeadingElement | null>(null), section = useRef<HTMLElement | null>(null), lens = useStudyLens(), scope = usePanel();
-  const key = focusKey(open);
+const titleOf = (open: Open) => open.kind === "discussion" ? `${DISCUSSION_LABELS.marker} · ${open.verse}` : open.kind === "compare" ? `Compare ${open.verse}` : open.kind === "word" ? `Word in ${open.verse}` : `More on ${open.verse}`;
+
+/** What the sheet holds for the open panel. After Previous word or Next word the button pressed may have become disabled: focus then goes to the sheet's title, never to the page. */
+function PanelBody({ open }: { open: Open }) {
+  const body = useRef<HTMLDivElement | null>(null), lens = useStudyLens(), scope = usePanel();
   useEffect(() => {
-    // Previous word or Next word on a phone moves the card to another verse's row: focus goes back to the button the reader pressed.
-    const stepped = scope?.stepFocus.current ?? null; if (scope) scope.stepFocus.current = null;
-    const button = stepped ? section.current?.querySelector<HTMLElement>(`button[data-word-step="${stepped}"]:not([disabled])`) : null;
-    (button ?? heading.current)?.focus({ preventScroll: true });
-    // On a phone the card opens after the whole row, commentary included, so a word tap would leave it below the fold: bring it into view, moving the page no further than it must.
-    if (open.kind === "word" && scope && !scope.wide) section.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
-  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (open.kind !== "word") return;
+    const at = document.activeElement;
+    if ((at instanceof HTMLButtonElement && at.disabled) || at === document.body) body.current?.closest("dialog")?.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
+  });
   const word = open.kind === "word" ? scope?.host.current : null;
-  return <section id={open.id} ref={section} className={styles.versePanel} aria-labelledby={`${open.id}-heading`} data-verse-panel={open.verse}>
-    <div className={styles.panelHead}>
-      <h3 id={`${open.id}-heading`} ref={heading} tabIndex={-1}>{open.kind === "discussion" ? <>{DISCUSSION_LABELS.marker} · </> : open.kind === "compare" ? "Compare " : open.kind === "word" ? "Word in " : "More on "}<bdi dir="ltr">{open.verse}</bdi></h3>
-      <div className={styles.panelButtons}>
-        {open.kind === "discussion" && open.from === "list" && scope && <button type="button" className={styles.panelClose} onClick={scope.backToVerse}>{DISCUSSION_LABELS.back}</button>}
-        <button type="button" className={styles.panelClose} onClick={onClose}>Close</button>
-      </div>
-    </div>
+  return <div id={open.id} ref={body} className={styles.versePanel} data-verse-panel={open.verse}>
     {open.kind === "compare" ? <CompareView verse={open.verse} />
       : open.kind === "discussion" ? <DiscussionPanelBody verse={open.verse} />
-      : open.kind === "word" ? word && open.word !== undefined && scope ? <WordPanelBody key={word.scopeKey} host={word} verse={open.verse} word={open.word} onMove={scope.moveWord} onGone={onClose} /> : null
+      : open.kind === "word" ? word && open.word !== undefined && scope ? <WordPanelBody key={word.scopeKey} host={word} verse={open.verse} word={open.word} onMove={scope.moveWord} onGone={scope.close} /> : null
         : <ShelfView key={open.verse} verse={open.verse} inline={lens.works} />}
-  </section>;
+  </div>;
 }
-/** Phones: the panel in place, right after its verse's row. */
-export function InlineVersePanel({ verse }: { verse: string }) {
+/** The one Sheet of the verse panel, mounted while a panel is open. `focusKey` keeps the same sheet (and the reader's place on its buttons) while a word card steps on. */
+function VersePanelSheet({ open, onClose, returnTarget }: { open: Open; onClose(): void; returnTarget(): HTMLElement | null }) {
   const scope = usePanel();
-  return scope?.open && !scope.wide && scope.open.verse === verse ? <Panel open={scope.open} onClose={scope.close} /> : null;
-}
-/** Wide screens: the panel's own column, placed in the reading layout between the text and the tools rail. */
-export function VersePanelColumn() {
-  const scope = usePanel();
-  return scope?.open && scope.wide ? <aside className="verse-panel-column"><Panel open={scope.open} onClose={scope.close} /></aside> : null;
+  return <Sheet open onClose={onClose} title={titleOf(open)} closeLabel="Close" returnFocusTo={returnTarget}
+    footer={open.kind === "discussion" && open.from === "list" && scope ? <Button variant="quiet" onClick={scope.backToVerse}>{DISCUSSION_LABELS.back}</Button> : undefined}>
+    <PanelBody key={focusKey(open)} open={open} />
+  </Sheet>;
 }

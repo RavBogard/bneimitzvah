@@ -189,7 +189,7 @@ it("reconciles a held successful mark across same-scope refresh and rejects its 
     await firstMark(tab, "Got it"); await post.ready(); await safe(() => tab.keyboard.press("Escape")); await click(tab, "Refresh reading"); await loaded(tab, "Genesis 1:1");
     expect((await markStatus(tab)).data.verses[0].selfCheck).toEqual({ state: "got-it", version: 1 });
   } finally { post.release(); }
-  await ui(tab.locator(".hero-marked")).toHaveText(/^\s*·\s*1 got it$/); await ui(tab.locator(".study-verse-detail").first().locator(".verse-mark")).toHaveText("Got it"); await post.remove(); expect(writes).toBe(1);
+  await ui(tab.locator(".hero-marked")).toHaveText(/^\s*·\s*1 got it$/); await ui(tab.locator(".study-verse-bar .verse-mark")).toHaveText("Got it"); // the selected verse's mark (the first verse, until another is chosen) await post.remove(); expect(writes).toBe(1);
   const old = await held(tab, "**/progress/self-check");
   try {
     await firstMark(tab, "Still working"); await old.ready(); await safe(() => tab.keyboard.press("Escape"));
@@ -212,7 +212,7 @@ it("keeps overlapping parent views read-only and fences held child progress afte
   await ui(tab.locator("dialog.lift").getByRole("button", { name: "Solid", exact: true })).toHaveCount(0); await safe(() => tab.keyboard.press("Escape"));
   const hold = await held(tab, new RegExp(`/api/students/${fixture.student.id}/progress\\?`), route => route.request().method() === "GET");
   try { await click(tab, "Refresh reading"); await hold.ready(); await click(tab, "Switch practice to Synthetic Sibling"); await loaded(tab, "Genesis 3:1"); } finally { hold.release(); }
-  await hold.remove(); await ui(tab.locator(".hero-marked")).toHaveCount(0); expect(await tab.locator(".study-verse-details .verse-mark").count()).toBe(0);
+  await hold.remove(); await ui(tab.locator(".hero-marked")).toHaveCount(0); expect(await tab.locator(".study-verse-bar .verse-mark").count()).toBe(0);
   await openFirstVerse(tab); await ui(tab.locator("dialog.lift .lift-ref")).toHaveText("Genesis 3:1"); await ui(tab.locator("dialog.lift").getByRole("button", { name: "Got it", exact: true })).toHaveAttribute("aria-pressed", "false"); await safe(() => tab.keyboard.press("Escape"));
   await ui(lessons(tab).getByRole("button", { name: "Add lesson note", exact: true })).toHaveCount(0);
 });

@@ -35,7 +35,7 @@ const row = (page: Page, ref: string) => page.locator(`[data-study-rows] article
 const compare = (page: Page, ref: string) => row(page, ref).getByRole("button", { name: "Compare", exact: true });
 const panel = (page: Page) => page.locator("[data-verse-panel]");
 
-test("Compare opens one panel for the verse: every other translation credited as Sefaria states it, then the Targum, and Esc gives focus back", async ({ page }, info) => {
+test("Compare opens one sheet for the verse: every other translation credited as Sefaria states it, then the Targum, and Esc gives focus back", async ({ page }) => {
   const sefaria = await mock(page);
   await page.goto("/read?lens=study");
   await expect(row(page, "Genesis 1:1")).toBeVisible();
@@ -43,34 +43,27 @@ test("Compare opens one panel for the verse: every other translation credited as
   const button = compare(page, "Genesis 1:2");
   expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await button.scrollIntoViewIfNeeded();
-  const before = (await row(page, "Genesis 1:2").boundingBox())!.y;
+  const scrolled = await page.evaluate(() => scrollY);
   await button.click();
-  await expect(button).toHaveAttribute("aria-expanded", "true");
-  const heading = panel(page).getByRole("heading", { name: "Compare Genesis 1:2" });
-  await expect(heading).toBeFocused();
+  // One Sheet (1.9 N4): modal, named for the verse, opening on its title, and the page behind it does not move.
+  const sheet = page.getByRole("dialog", { name: "Compare Genesis 1:2" });
+  await expect(sheet.getByRole("heading", { name: "Compare Genesis 1:2" })).toBeFocused();
+  expect(await page.evaluate(() => scrollY)).toBe(scrolled);
   await expect(panel(page).getByText("Synthetic rendering one of Genesis 1:2.")).toBeVisible();
   await expect(panel(page).getByRole("link", { name: "Synthetic Edition Two, via Sefaria (Copyright: Synthetic Press)" })).toHaveAttribute("href", sefariaEditionUrl("Genesis 1:2", "en", "Synthetic Edition Two"));
   await expect(panel(page).getByRole("heading", { name: "Onkelos" })).toBeVisible();
   await expect(panel(page).locator('[lang="arc"][dir="rtl"]')).toHaveText("אָבָג דֵּה");
   await expect(panel(page).getByRole("link", { name: "Synthetic Targum English, via Sefaria (licence not stated)" })).toBeVisible();
-  const wide = info.project.name === "desktop";
-  // Wide: a column between the rows and the rail, and the verse stays put; phones and tablets: in place after the row.
-  await expect(page.locator(".verse-panel-column")).toHaveCount(wide ? 1 : 0);
-  if (wide) expect(Math.abs((await row(page, "Genesis 1:2").boundingBox())!.y - before)).toBeLessThanOrEqual(2);
-  else expect(await row(page, "Genesis 1:2").evaluate(node => node.nextElementSibling?.hasAttribute("data-verse-panel"))).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  // One panel at a time: another verse's Compare replaces it.
-  await compare(page, "Genesis 1:3").click();
-  await expect(panel(page)).toHaveCount(1);
-  await expect(panel(page).getByRole("heading", { name: "Compare Genesis 1:3" })).toBeFocused();
   await page.keyboard.press("Escape");
-  await expect(panel(page)).toHaveCount(0);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(button).toBeFocused();
+  // Another verse's Compare opens its own sheet; Close does the same as Esc.
+  await compare(page, "Genesis 1:3").click();
+  await expect(page.getByRole("dialog", { name: "Compare Genesis 1:3" }).getByRole("heading", { name: "Compare Genesis 1:3" })).toBeFocused();
+  await page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(compare(page, "Genesis 1:3")).toBeFocused();
-  // Close does the same.
-  await compare(page, "Genesis 1:1").click();
-  await panel(page).getByRole("button", { name: "Close", exact: true }).click();
-  await expect(panel(page)).toHaveCount(0);
-  await expect(compare(page, "Genesis 1:1")).toBeFocused();
   // Lein has no Compare.
   await page.getByRole("button", { name: "Lein", exact: true }).click();
   await expect(page.getByRole("button", { name: "Compare", exact: true })).toHaveCount(0);
@@ -87,26 +80,17 @@ test("a failed Compare is one quiet line with Try again, and the reading is unto
   await expect(panel(page).getByText("Synthetic rendering one of Genesis 1:1.")).toBeVisible();
 });
 
-test("Esc with a modal open closes the modal, never the Compare panel under it", async ({ page }) => {
+test("the Compare sheet is modal: Tab never leaves it, and a tap outside closes it and gives focus back", async ({ page }) => {
   await mock(page);
   await page.goto("/read?lens=study");
-  // In Study a tap on a word opens its word card and selects the verse (which offers Up close); Compare then replaces the card.
-  await row(page, "Genesis 1:2").locator('[data-word-index="0"]').first().click();
   await compare(page, "Genesis 1:1").click();
-  await expect(panel(page).getByText("Synthetic rendering one of Genesis 1:1.")).toBeVisible();
-  // Up close is a modal dialog over the page.
-  await page.getByRole("button", { name: "View Genesis 1:2 up close", exact: true }).click();
-  const lift = page.locator("dialog.lift");
-  await expect(lift).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(lift).toHaveCount(0);
-  await expect(panel(page)).toBeVisible();
-  // Focus elsewhere on the page: Esc leaves the panel alone too.
-  await page.getByRole("heading", { level: 1 }).click();
-  await page.keyboard.press("Escape");
-  await expect(panel(page)).toBeVisible();
-  // Back in the panel, Esc closes it.
-  await panel(page).getByRole("link").first().focus();
-  await page.keyboard.press("Escape");
-  await expect(panel(page)).toHaveCount(0);
+  const sheet = page.getByRole("dialog", { name: "Compare Genesis 1:1" });
+  await expect(sheet.getByText("Synthetic rendering one of Genesis 1:1.")).toBeVisible();
+  const inside = () => page.evaluate(() => document.activeElement?.closest("dialog") !== null);
+  for (let step = 0; step < 12; step++) { await page.keyboard.press("Tab"); expect(await inside()).toBe(true); }
+  for (let step = 0; step < 12; step++) { await page.keyboard.press("Shift+Tab"); expect(await inside()).toBe(true); }
+  // A tap on the backdrop (the top of the screen, above the sheet) closes it.
+  await page.mouse.click(4, 4);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(compare(page, "Genesis 1:1")).toBeFocused();
 });

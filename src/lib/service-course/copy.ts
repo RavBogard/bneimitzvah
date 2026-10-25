@@ -21,6 +21,9 @@ export const COPY = Object.freeze({
     dotNext: ", next", // home.state.dot.next
     eveningLater: "Saturday evening and Havdalah come next.", // home.evening.later
     nav: "Course", // aria-label of the link row (Learn to lein uses the same word)
+    mineHeading: "Your parts", // home.mine.heading (2.0 SC4)
+    mineLine: "The prayers you lead, in service order.", // home.mine.line
+    serviceStart: "Your whole service in the siddur, from page {page}", // home.serviceStart, the approved 1.8 string
     fluencyRow: "New to Hebrew letters? Start with Reading Hebrew.", // home.fluency.row
     reviewRow: "Review: {n} words, about {m} minutes", // home.review.row
     quickTenRow: "Quick ten: ten words from your prayers, about 2 minutes", // qt.homeRow
@@ -114,6 +117,7 @@ export const COPY = Object.freeze({
     word: "Done", // step.done
     siddur: "Open in the siddur, page {page}", // done.siddur, the approved 1.8 string
     nextName: "Next: {lesson}", // done.nextName
+    nextMine: "Next of your parts: {lesson}", // done.nextMine (2.0 SC4)
     startNext: "Start next lesson", // done.startNext
     back: "Back to the course", // done.back
   }),
@@ -124,6 +128,13 @@ export const COPY = Object.freeze({
     retry: "Try again", // st.retry
     notFound: "This lesson isn’t in the course.", // st.notfound
     tenantOff: "The service course isn’t available here yet.", // st.tenant.off
+    pathLoading: "Checking your parts…", // st.path.loading (2.0 SC4)
+    pathError: "Your parts could not be loaded. The whole service is below.", // st.path.error
+    pathNoPlan: "Your tutor hasn’t chosen your parts yet. These are the parts most students lead.", // st.path.noplan
+    pathCleared: "No service parts are assigned to you right now.", // st.path.cleared
+    pathReview: "Your parts may change. Your tutor will review them with you.", // st.path.review
+    pathWithdrawn: "Your parts are being updated. Ask your tutor which ones you lead.", // st.path.withdrawn
+    slotUnknown: "Page numbers are from the morning service until your service time is set.", // st.slot.unknown
   }),
   aboutPage: Object.freeze({
     title: "About this course", // ab.title

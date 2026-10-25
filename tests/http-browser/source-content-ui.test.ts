@@ -13,6 +13,7 @@ import { projectRelatedCatalog } from "../../src/server/study/sources/discovery"
 import { browserFixture } from "./fixture";
 import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
+import { closeVerseTools, openVerseTools, toolsSheet } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 vi.mock("server-only", () => ({}));
@@ -28,7 +29,8 @@ const versions = () => parseEditionMetadata(Array.from({ length: 12 }, (_, n) =>
 const bodyText = (ref: string, language: string) => captureNamedNode && language === "he"
   ? ("בְּעִיר דִּמְיוֹן קְטַנָּה נִפְתַּח חַלּוֹן כָּחוֹל. הַיְּלָדִים מְצַיְּרִים עָנָן סָגֹל וּמַנִּיחִים לְיַדוֹ כּוֹכָב מִנְּיָר.\n\n" + "לְיַד הַשֻּׁלְחָן עוֹמֵד כִּסֵּא יָרֹק. עַל הַמַּדָּף נָחָה סִירָה קְטַנָּה, וּבַחַלּוֹן נִרְאֶה פֶּרַח דִּמְיוֹנִי.\n\n").repeat(4)
   : `Synthetic commentary (${ref}; ${language}). דָּג e\u0301.\n` + "Invented explanation. ".repeat(60);
-const panel = (tab: Page) => tab.locator('.study-verse-detail[data-verse-ref="Genesis 1:1"]').getByRole("region", { name: "Sources for Genesis 1:1", exact: true });
+// The first verse's Sources are in its verse tools (one Sheet for the selected verse, 1.9 N4); page() leaves that sheet open.
+const panel = (tab: Page) => toolsSheet(tab, "Genesis 1:1").locator('.study-verse-detail[data-verse-ref="Genesis 1:1"]').getByRole("region", { name: "Sources for Genesis 1:1", exact: true });
 const reader = (tab: Page, n = 0) => panel(tab).getByRole("region", { name: `Read source: ${sourceRef(n)}`, exact: true });
 const sourceList = (tab: Page, kind: "Assigned" | "Related" = "Assigned") => panel(tab).getByRole("list", { name: `${kind} sources`, exact: true });
 async function api(tab: Page, path: string, body?: unknown) { return tab.evaluate(async ({ path, body }) => { const response = await fetch(path, { method: body === undefined ? "GET" : "POST", cache: "no-store", headers: body === undefined ? {} : { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) }); return { status: response.status, value: await response.json() }; }, { path, body }); }
@@ -40,9 +42,9 @@ async function page(who: "admin" | "tutor" | "student" = "admin", phone = false,
   await tab.goto("/", { waitUntil: "domcontentloaded" });
   if (!cookies[who]) { const email = `pg-${who}@example.test`; expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); cookies[who] = await context.cookies(); }
   await tab.goto(who === "student" ? "/workspace/student?tab=reading" : `/workspace/${who === "admin" ? "admin/students" : "tutor"}/${fixture.student.id}${who === "admin" ? "/reading" : ""}`, { waitUntil: "domcontentloaded" });
-  await ui(tab.locator('.study-verses [data-verse-ref="Genesis 1:1"]')).toBeVisible(); return tab;
+  await ui(tab.locator('.study-verses [data-verse-ref="Genesis 1:1"]')).toBeVisible(); await openVerseTools(tab, "Genesis 1:1"); return tab;
 }
-async function open(tab: Page) { await panel(tab).getByRole("button", { name: "Sources", exact: true }).click(); await ui(sourceList(tab)).toBeVisible(); }
+async function open(tab: Page) { await openVerseTools(tab, "Genesis 1:1"); await panel(tab).getByRole("button", { name: /^Sources( \(\d+\))?$/ }).click(); await ui(sourceList(tab)).toBeVisible(); }
 async function browse(tab: Page) { await panel(tab).getByRole("button", { name: "Browse related sources", exact: true }).click(); await ui(sourceList(tab, "Related")).toBeVisible(); }
 async function readCitation(tab: Page, n = 0, lane: "Assigned" | "Related" = "Assigned") { await sourceList(tab, lane).getByRole("button", { name: `Read source: ${sourceRef(n)}`, exact: true }).click(); await ui(reader(tab, n).getByRole("list", { name: "Source editions", exact: true })).toBeVisible(); }
 async function readEdition(tab: Page, n = 0, language: "en" | "he" = "he") { const row = reader(tab, n).getByRole("listitem").filter({ hasText: `Invented edition ${language === "en" ? "000" : "001"}` }); await row.getByRole("button", { name: `Read ${language === "he" ? "Hebrew" : "English"} edition`, exact: true }).click(); const scalar = reader(tab, n).locator(`[lang="${language}"]`); await ui(scalar).toHaveText(bodyText(sourceRef(n), language)); expect(await scalar.textContent()).toBe(bodyText(sourceRef(n), language)); }
@@ -74,7 +76,7 @@ it("all actual modes explicitly list/read editions without assignment writes, au
     await readEdition(tab); await ui(reader(tab).getByRole("link")).toHaveCount(0); await reader(tab).getByRole("button", { name: "Back to editions", exact: true }).click(); await readEdition(tab, 0, "en"); expect(posts).toBe(0); await noAudio(tab);
     await reader(tab).getByRole("button", { name: "Back to the verse", exact: true }).click(); await ui(reader(tab)).toHaveCount(0);
   }
-  const child = await page("tutor"); await child.getByRole("link", { name: "Parent", exact: true }).click(); await child.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await ui(child.locator(".study-verses")).toBeVisible(); await open(child); await readCitation(child); await readEdition(child); await child.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(child.locator(".study-verses")).toBeVisible(); await open(child); await readCitation(child); await readEdition(child); await noAudio(child);
+  const child = await page("tutor"); await closeVerseTools(child); await child.getByRole("link", { name: "Parent", exact: true }).click(); await child.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await ui(child.locator(".study-verses")).toBeVisible(); await open(child); await readCitation(child); await readEdition(child); await closeVerseTools(child); await child.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(child.locator(".study-verses")).toBeVisible(); await open(child); await readCitation(child); await readEdition(child); await noAudio(child);
 });
 
 it("related readers page explicitly, hold unknown rights, and quiet return retains the exact text DOM without any source-provider GET", async () => {
@@ -104,7 +106,7 @@ it("read-only content actions cannot alter an uncertain save or its exact retry 
 });
 
 it("actual guardian revocation during a held body clears old child text and cannot publish its late result", async () => {
-  const tab = await page("tutor"); await tab.getByRole("link", { name: "Parent", exact: true }).click(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(tab.locator(".study-verses")).toBeVisible(); await open(tab); await readCitation(tab);
+  const tab = await page("tutor"); await closeVerseTools(tab); await tab.getByRole("link", { name: "Parent", exact: true }).click(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(tab.locator(".study-verses")).toBeVisible(); await open(tab); await readCitation(tab);
   let entered!: () => void, release!: () => void; const entry = new Promise<void>(done => { entered = done; }), wait = new Promise<void>(done => { release = done; }); bodyBarrier = { entered, wait };
   await reader(tab).getByRole("listitem").filter({ hasText: "Invented edition 001" }).getByRole("button").click();
   try { await entry; await fixture.ownerDb.update(s.guardian).set({ revokedAt: new Date() }).where(eq(s.guardian.studentId, fixture.student.id)); } finally { release(); }

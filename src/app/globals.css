@@ -678,13 +678,27 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
   .workspace-main:has(.reading-toolbar) { padding-bottom: 4rem; }
   .toolbar-menu { position: fixed; inset: auto; top: 50%; left: 50%; bottom: auto; transform: translate(-50%, -50%); }
 }
-/* 1.3: the verse panel opens its own column between the text and the tools rail; the verse stays put (verse-panel.tsx). */
-@media (min-width: 1001px) {
-  .reading-passage-layout:has(> .verse-panel-column) { grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem) 6.5rem; }
-  .reading-passage-layout:has(> .verse-panel-column) > .reading-toolbar { grid-column: 3; }
-  .verse-panel-column { grid-column: 2; grid-row: 1; align-self: start; position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow: auto; overscroll-behavior: contain; min-width: 0; }
-  .verse-panel-column > section { margin: 0; }
+/* 1.9 N4: the tool dock. On a phone (and a tablet) the toolbar leaves the top of the passage for the thumb zone at the bottom of the screen: Colors, English, Size and Hear
+   in one rounded bar, above the signed-in tab bar where there is one (the bar's measured height is --shell-bar-h; a page with none keeps clear of the home indicator). The passage
+   keeps matching padding below it, so the dock covers no verse at the end of the scroll, a focused word is scrolled clear of it, and Choose verses' own bottom bar sits above it
+   (--dock-clear). At 1001px and wider the toolbar stays the sticky rail beside the text. From 1000px the tab bar is itself a rail at the left, so only below that does the dock sit
+   above a bar. The dock's height is measured by the toolbar (--dock-h) so larger text is included. */
+@media (max-width: 1000px) {
+  html:has(.reading-toolbar) { --dock-base: env(safe-area-inset-bottom, 0px); --dock-clear: calc(var(--dock-base) + var(--dock-h, 4.75rem) + 1rem); scroll-padding-bottom: var(--dock-clear); }
+  .reading-passage-layout > .reading-toolbar { position: fixed; inset: auto 0 calc(var(--dock-base) + 0.5rem) 0; z-index: 20; width: min(30rem, calc(100vw - 1.5rem)); margin: 0 auto; }
+  .reading-passage-layout > .reading-toolbar[data-hidden] { display: none; }
+  .reading-passage-layout:has(> .reading-toolbar) { padding-bottom: var(--dock-clear); }
+  .toolbar-menu { bottom: calc(var(--dock-base) + var(--dock-h, 4.75rem) + 1rem); }
 }
+@media (max-width: 999.98px) {
+  html:has(.reading-toolbar) { --dock-base: var(--shell-bar-h, env(safe-area-inset-bottom, 0px)); }
+}
+@media print { .reading-toolbar { display: none; } }
+
+/* The selected verse's bar (1.9 N4): its tools (one Sheet), Up close and its mark, under the passage. */
+.study-verse-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; margin-block: 1.25rem 0; }
+.study-verse-detail { display: grid; gap: 0.75rem; min-width: 0; }
+.study-verse-detail > * { margin-block: 0; }
 
 /* Phase 2: tutor home as student cards, a page per student, the same reading. */
 .selection-lede { font-size: clamp(1.75rem, 5vw, 2.5rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin: 0.25rem 0 1.25rem; max-width: 20ch; }

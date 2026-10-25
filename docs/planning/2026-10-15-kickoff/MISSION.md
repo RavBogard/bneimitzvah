@@ -305,3 +305,16 @@ Daniel answered the alignment questions on 2026-10-23, after the rulings above. 
 - **Copy.** Daniel, 2026-10-24, "Keep all" for the service course strings (252), the D'var Torah strings, and the five fix lines (the 429 message, the uninvited sign-in line, "Tap verse numbers to choose them.", "Sign in to save", "page 23, after Mi Shebeirach"). Only the pilot kit is still unapproved.
 - **Order.** Daniel, 2026-10-24: "I don't care about order. Feel free to reorder however, and continue until they are all finished."
 - **Learn-to-lein spec path.** The 2.0 brief's `docs/superpowers/specs/2026-10-22-learn-to-lein.md` does not exist. Use `docs/superpowers/plans/2026-10-22-learn-to-lein.md` and `docs/planning/2026-10-22-learn-to-lein/`.
+
+## Amended 2026-10-25 (Daniel, the Beit Mitzvah siddur text in the evening course)
+
+- **The CRC Beit Mitzvah siddur text may be shown in the course, CRC only.** Daniel, 2026-10-25, recorded in Cowork's `QUESTIONS-1.9.md`: "the CRC siddur can be used . It's fine. Siddur integration is only for CRC, and only CRC exists at this point. Let 2.5 deal with that."
+  - The evening (Saturday night and Havdalah) lessons use the siddur's own text from the `legacy-beit-mitzvah` feed in ShireiShabbat. That is the same feed the app already serves for assigned parts.
+  - They follow the book's order and page numbers (printed pages 33–63).
+  - For the CRC tenant, this replaces the 2.0 rule that this text is "never shown, stored or cached". Every other congregation is left to 2.5.
+- **Who sees it (Daniel, 2026-10-25, popup):** "Anyone on the CRC site". Signed-out visitors to the CRC site see the text too.
+- **Offline (Daniel, 2026-10-25, popup):** "Yes, for signed-in CRC people". Signed-in CRC people may keep it on the device in the offline pack. Signed-out visitors may not.
+- **Unchanged:**
+  - The text never enters any repo, fixture or snapshot, and `tests/never-in-repo.test.mjs` stays green.
+  - It is never served to any other tenant.
+  - The haftarah, shirei-shabbat and shirei-tfilah repos are still only read from.

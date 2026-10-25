@@ -16,7 +16,7 @@ test("modal short controls preview current verse without loading or autoplay on 
       index, total: 2, offset: 0, onIndex() {}, onClose() {}, reference: { scopeKey: "synthetic-modal", audio: coordinator, active: true, navigation: index + 1, load } }));
     expect(markup).toContain('aria-label="Reading playback"');
     expect(markup).toContain(`${verses[index].ref}</bdi> \u00b7 Whole verse`);
-    expect(markup).toContain(`aria-label="Hear whole verse ${verses[index].ref}"`);
+    expect(markup).toContain(">Hear whole verse</span>");
     expect(markup).toContain('aria-label="Close practice view"');
     expect(markup).toContain("Practice"); expect(markup).toContain("Recording credit");
     expect(markup).not.toContain("Load recording"); expect(markup).not.toContain("for tools");

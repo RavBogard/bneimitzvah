@@ -59,7 +59,8 @@ function Editor({ coordinator, kind, verseRef, stream, cell }: { coordinator: Wo
 }
 export function VerseTools({ coordinator, kind, verseRef }: { coordinator: WorkCoordinator; kind: StudyKind; verseRef: string }) {
   useSyncExternalStore(coordinator.subscribe, coordinator.snapshot, coordinator.snapshot);
-  const [stream, setStream] = useState<Stream>("draft"), id = useId(), scope = coordinator.scope(kind);
+  // The sheet mounts this fresh each time it opens (1.9 N4): a note someone has typed and not yet sent brings the Notes stream back with it, where it was left.
+  const [stream, setStream] = useState<Stream>(() => coordinator.cell(kind, verseRef, "note")?.text ? "note" : "draft"), id = useId(), scope = coordinator.scope(kind);
   if (!scope) return null;
   const active = coordinator.active?.kind === kind && coordinator.active.ref === verseRef, verse = scope.verses.get(verseRef), cell = coordinator.cell(kind, verseRef, stream);
   const learner = scope.baseline.mode === "student" || scope.baseline.mode === "child-practice", staff = scope.baseline.mode === "tutor" || scope.baseline.mode === "admin", editable = stream === "draft" ? learner : staff;

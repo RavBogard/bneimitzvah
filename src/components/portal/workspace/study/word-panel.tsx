@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode }
 import { projectStudyVerse } from "../../../../lib/hebrew/study-tokens";
 import type { StudyWordAids } from "../../../../lib/hebrew/word-aids";
 import type { StudyWordDetails } from "../../../../lib/hebrew/word-details";
-import { wordSentence } from "../../../../lib/hebrew/word-sentence";
+import { carriesQamatsQatan, QAMATS_QATAN_NOTE, wordSentence } from "../../../../lib/hebrew/word-sentence";
 import { PLAN as OFFLINE } from "../../../../lib/offline/copy";
 import { useOfflineWording } from "../../offline/status";
 import type { StudyVerse } from "./api";
@@ -34,10 +34,12 @@ const idle: WordToolsState = Object.freeze({ open: false, selection: null, aids:
 
 /** The card's layout, with nothing fetched: the word and its place, the sentence, the actions, and the folded details. */
 export function WordPanelView({ text, place, sentence, actions, details }: { text: string; place: string; sentence: ReactNode; actions: ReactNode; details: ReactNode }) {
+  // A word with a qamats qatan says so (the text marks it; see word-sentence.ts).
   return <div className={styles.wordPanel} data-word-panel="">
     <p className={styles.wordText} lang="he" dir="rtl">{text}</p>
     <p className={styles.wordPlace}>{place}</p>
     <p className={styles.sentence} role="status">{sentence}</p>
+    {carriesQamatsQatan(text) && <p className={styles.vowelNote}>{QAMATS_QATAN_NOTE}</p>}
     <div className={styles.actions}>{actions}</div>
     <details className={styles.fold}><summary>Dictionary details</summary>{details}</details>
   </div>;

@@ -34,10 +34,12 @@ it("gives every colored reading word a unique, nonempty phrase description along
     for (const id of attr(word, "aria-describedby")!.split(/\s+/)) {
       const matches = all.filter(node => attr(node, "id") === id);
       expect(matches).toHaveLength(1);
+      // A word's action (1.9 N4: one line shared by the verse) is described too; the phrase's description names its words.
+      if (id.endsWith("-act")) { expect(text(matches[0])).toMatch(/\S/); continue; }
       expect(text(matches[0])).toMatch(/\S.*Word/);
     }
   }
-  const listLegends = all.filter(node => attr(node, "class") === "sr-only");
+  const listLegends = all.filter(node => attr(node, "class") === "sr-only" && !attr(node, "id")?.endsWith("-act"));
   expect(listLegends).toHaveLength(2);
   expect(listLegends.every(node => text(node).includes("Word"))).toBe(true);
 });

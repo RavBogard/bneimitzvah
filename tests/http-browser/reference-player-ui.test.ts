@@ -82,6 +82,8 @@ async function page(mobile = false, who: "admin" | "tutor" = "admin", authentica
   return { tab, state, owner, hold() { state.held = { release, started }; return state.held; } };
 }
 const player = (tab: Page) => tab.getByRole("region", { name: "Reading playback", exact: true });
+/** What a tap on a word does, as a screen reader gets it: the text its aria-describedby names (the word's own name is its Hebrew; 1.9 N4). */
+const described = (target: import("playwright").Locator) => target.evaluate(node => (node.getAttribute("aria-describedby") ?? "").split(" ").map(id => document.getElementById(id)?.textContent ?? "").find(text => text !== "") ?? null);
 const word = (tab: Page, verse: number, index: number) => tab.locator(`.study-verses [data-verse-ref="Genesis 1:${verse}"] [data-word-index="${index}"]`).first();
 async function playing(tab: Page) {
   // The synchronous gesture primer can play before any authorized source loads.
@@ -198,7 +200,7 @@ it("held student and child practice read directly, keep word tools and open opti
     for (const [mobile, scheme] of [[false, "light"], [false, "dark"], [true, "light"], [true, "dark"]] as const) {
       const { tab, state } = await page(mobile, "tutor", authenticated, { held: true, colorScheme: scheme, destination: "/workspace/student?tab=reading" }); authenticated ??= tab.context();
       const reading = tab.locator(".study-verses"); await ui(player(tab)).toHaveCount(0); await ui(tab.getByRole("dialog")).toHaveCount(0);
-      await ui(tab.getByRole("button", { name: /^Hear/ })).toHaveCount(0); await ui(word(tab, 1, 1)).toHaveAttribute("aria-label", "Select word 2 of Genesis 1:1 for tools");
+      await ui(tab.getByRole("button", { name: /^Hear/ })).toHaveCount(0); expect(await described(word(tab, 1, 1))).toBe("Select word for tools");
       const start = tab.getByRole("button", { name: "Start reading", exact: true }); await start.focus(); await tab.keyboard.press("Enter");
       await ui(reading).toBeFocused(); await ui(tab.getByRole("dialog")).toHaveCount(0); expect(await native(tab)).toMatchObject({ count: 0, allClean: true });
       expect(state.pageRequests).toBe(0); expect(state.requests).toBe(0);
@@ -331,10 +333,11 @@ it("supports colors-off qere/maqaf and keyboard whole-verse playback in the phon
     const toolbar = document.querySelector(".reading-toolbar")!, flow = document.querySelector(".study-verses")!;
     return { position: getComputedStyle(toolbar).position, bottom: toolbar.getBoundingClientRect().bottom, top: flow.getBoundingClientRect().top, bars: document.querySelectorAll(".reading-toolbar").length };
   });
-  expect(clearance.position).toBe("static"); expect(clearance.bars).toBe(1); expect(clearance.bottom).toBeLessThanOrEqual(clearance.top);
+  // The toolbar is the tool dock on a phone (1.9 N4): fixed in the thumb zone, and one only.
+  expect(clearance.position).toBe("fixed"); expect(clearance.bars).toBe(1);
   await tab.getByRole("button", { name: "Colors", exact: true }).click(); await ui(tab.locator(".study-verses [data-family]")).toHaveCount(0);
   const qere = tab.locator('.study-verses [data-verse-ref="Genesis 1:1"] .study-read-alternative [data-word-index="1"]');
-  await ui(qere).toHaveAttribute("aria-label", "Hear whole verse Genesis 1:1; select word 2 for tools");
+  expect(await described(qere)).toBe("Hear whole verse; select word for tools");
   await qere.focus(); await qere.press("Enter"); await playing(tab); await ui(player(tab).getByLabel("Practice", { exact: true })).toHaveValue("verse");
   expect((await native(tab)).currentTime).toBeGreaterThanOrEqual(0); expect((await native(tab)).currentTime).toBeLessThan(1);
   await tab.evaluate(() => { const audio = (window as TrackedWindow).referenceAudios.at(-1)!; audio.currentTime = 2.2; audio.dispatchEvent(new Event("timeupdate")); }); await ui(qere).toHaveAttribute("data-reference-active", "true");

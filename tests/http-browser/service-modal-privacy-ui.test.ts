@@ -9,6 +9,7 @@ import { syntheticServiceCatalog } from "../helpers/service-learning";
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
+import { closeVerseTools, openVerseTools, workPanel } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
@@ -113,13 +114,14 @@ it("retains only the rightful service decision during a quiet check, preserving 
 it("serializes service and unknown-note guards, and canceling the later decision stops the reading request and preserves the unknown note", async () => {
   const tab = await page(), writes = countWrites(tab), text = "Synthetic uncertain service-guard note";
   await choose(tab);
-  const note = tab.locator(".verse-work").first(); await safe(() => note.locator("summary").first().click());
+  const note = await workPanel(tab); await safe(() => note.locator("summary").first().click());
   await safe(() => note.getByRole("button", { name: "Teacher notes", exact: true }).click()); await safe(() => note.getByRole("textbox").fill(text));
   // A real authorized commit followed by a lost response creates an unknown
   // outcome. No second POST may be issued by the departure sequence.
   await tab.route("**/work/note", async route => { const response = await route.fetch(); expect(response.status()).toBe(200); await response.dispose(); await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"unavailable"}' }); });
   await safe(() => note.getByRole("button", { name: "Add student-visible note", exact: true }).click());
   await ui(note.locator(".work-status")).toContainText("Save not confirmed");
+  await closeVerseTools(tab); // the page's controls are behind the sheet; the unknown note stays in the tab's work state
   await prepareReading(tab); await click(tab, "Save assignment");
   await ui(serviceGuard(tab)).toBeVisible(); expect(await modalCount(tab)).toBe(1); await ui(sheet(tab)).toBeHidden();
   await click(tab, "Discard service draft and continue"); await ui(serviceGuard(tab)).toBeHidden(); await ui(workGuard(tab)).toBeVisible();
@@ -133,12 +135,14 @@ it("serializes service and unknown-note guards, and canceling the later decision
   // tab/stream before checking retained coordinator text, not a hidden control.
   await safe(() => tab.getByRole("tab", { name: "Reading", exact: true }).click());
   await ui(tab.getByRole("tab", { name: "Reading", exact: true })).toHaveAttribute("aria-selected", "true");
+  await openVerseTools(tab, "Genesis 1:1");
   if (await note.getAttribute("open") === null) await safe(() => note.locator("summary").first().click());
   await safe(() => note.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await ui(note.getByRole("textbox")).toHaveValue(text); await ui(note.locator(".work-status")).toContainText("Save not confirmed");
   expect(writes).toEqual({ confirm: 0, note: 1 }); await tab.unroute("**/work/note");
   // An explicit departure clears the unknown local copy and unmounts both
   // modal owners; this must not resurrect the suspended reading sheet.
+  await closeVerseTools(tab); // the role links are behind the sheet
   await safe(() => tab.getByRole("navigation", { name: "Workspace roles", exact: true }).getByRole("link", { name: "Parent", exact: true }).click());
   await ui(workGuard(tab)).toBeVisible(); expect(await modalCount(tab)).toBe(1); await click(tab, "Leave without confirming");
   await ui(tab.getByRole("list", { name: "Child", exact: true })).toBeVisible(); expect(await modalCount(tab)).toBe(0);

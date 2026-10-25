@@ -1,3 +1,4 @@
+import { closeVerseTools, openVerseTools } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
@@ -41,7 +42,8 @@ async function page(who: "student" | "tutor" | "admin", mobile = false) {
   const tab = observe(await context.newPage()); await navigate(tab, "/"); const email = who === "student" ? "pg-work-student@example.test" : who === "admin" ? "pg-admin@example.test" : "pg-tutor@example.test";
   const login = await api(tab, "/api/auth/sign-in/magic-link", { email }); expect(login.status, "synthetic SDK sign-in HTTP status").toBe(200); await openAuthMail(tab, fixture.takeMail(email)); sdkCookies.set(who, await context.cookies()); return tab;
 }
-async function click(tab: Page, name: string) { await safe(() => tab.getByRole("button", { name, exact: true }).click()); }
+// The page's own controls sit behind the modal verse-tools sheet, so a reader closes it first; the unsent text stays in the tab's work state either way.
+async function click(tab: Page, name: string) { if (await tab.getByRole("dialog", { name: /^Verse tools · / }).count()) await closeVerseTools(tab); await safe(() => tab.getByRole("button", { name, exact: true }).click()); }
 async function loaded(tab: Page, ref = "Genesis 1:1") {
   try { await ui(tab.locator(".study-verses").getByRole("heading", { name: ref, level: 4, exact: true })).toBeVisible(); }
   catch {
@@ -50,8 +52,9 @@ async function loaded(tab: Page, ref = "Genesis 1:1") {
     throw new Error(`Assigned reading not visible; HTTP ${httpEvidence.get(tab)?.join(",")}; fixed states ${states.join(",") || "none"}; page error count ${browserErrors.get(tab) ?? 0}`);
   }
 }
-function verse(tab: Page, ref = "Genesis 1:1") { return tab.locator(`.study-verse-detail[data-verse-ref="${ref}"]`); }
-async function tools(tab: Page, ref = "Genesis 1:1") { const panel = verse(tab, ref).locator(".verse-work"); if (await panel.getAttribute("open") === null) await safe(() => panel.locator("summary").first().click()); await ui(panel.locator(".verse-work-content")).toBeVisible(); return panel; }
+// A verse's translation and notes are in its verse tools (one Sheet for the selected verse, 1.9 N4): the verse is selected and its sheet opened, as a reader does.
+// The sheet is modal, so a test that then uses the page's own controls closes it first (closeVerseTools); the unsent text stays in the tab's work state and is there on reopening.
+async function tools(tab: Page, ref = "Genesis 1:1") { const panel = (await openVerseTools(tab, ref)).locator(".verse-work"); if (await panel.getAttribute("open") === null) await safe(() => panel.locator("summary").first().click()); await ui(panel.locator(".verse-work-content")).toBeVisible(); return panel; }
 async function singleRecovery(panel: Locator, message: string) {
   await ui(panel.locator(".work-editor [role=status]")).toHaveCount(1);
   await ui(panel.locator(".work-editor .request-error")).toHaveCount(1);
@@ -74,7 +77,7 @@ async function capture(tab: Page, name: string) {
   const directory = join(process.cwd(), ".impeccable", "review"); await mkdir(directory, { recursive: true });
   async function expectedState() {
     await ui(tab.locator(".reading-with-work")).toBeVisible();
-    const panel = tab.locator(".study-verse-details .verse-work[open]"); await ui(panel).toBeVisible();
+    const panel = tab.locator(".study-verse-detail .verse-work[open]"); await ui(panel).toBeVisible();
     if (state === "revision-review" || state === "revision-unknown") {
       await ui(panel.getByRole("textbox")).toHaveJSProperty("readOnly", true);
       await ui(panel.getByRole("region", { name: /Review unsent translation/ })).toBeVisible();
@@ -237,7 +240,8 @@ it("guards controlled leave, explicit reload barriers and quiet retained reading
   let phase = "initial-departure";
   try {
   const tab = await page("student"); await learner(tab); const panel = await tools(tab, "Genesis 1:4");
-  await safe(() => panel.getByRole("textbox").fill("Synthetic departure edit")); await safe(() => tab.getByRole("link", { name: "Account and sign out", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await ui(tab.getByRole("dialog").getByRole("button", { name: "Keep working", exact: true })).toBeFocused(); await click(tab, "Keep working"); await ui(tab.getByRole("link", { name: "Account and sign out", exact: true })).toBeFocused(); await ui(panel.getByRole("textbox")).toHaveValue("Synthetic departure edit");
+  await safe(() => panel.getByRole("textbox").fill("Synthetic departure edit")); await closeVerseTools(tab); // the page's links sit behind the sheet; closing it loses no text
+  await safe(() => tab.getByRole("link", { name: "Account and sign out", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await ui(tab.getByRole("dialog").getByRole("button", { name: "Keep working", exact: true })).toBeFocused(); await click(tab, "Keep working"); await ui(tab.getByRole("link", { name: "Account and sign out", exact: true })).toBeFocused(); await tools(tab, "Genesis 1:4"); await ui(panel.getByRole("textbox")).toHaveValue("Synthetic departure edit");
   phase = "explicit-text-outage";
   // Pause before debounce, then verify all three independent reads hold the reveal barrier.
   // Dispatch only these deliberate reloads without moving focus: a real pointer
@@ -274,6 +278,7 @@ it("guards controlled leave, explicit reload barriers and quiet retained reading
   const leaving = await tools(tab, "Genesis 1:4"), discarded = "Synthetic discard before departure";
   // An unfinished composition stays unsent even when the ordinary link click blurs the field.
   await safe(() => leaving.getByRole("textbox").dispatchEvent("compositionstart")); await safe(() => leaving.getByRole("textbox").fill(discarded));
+  await closeVerseTools(tab);
   await safe(() => tab.getByRole("link", { name: "Account and sign out", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await click(tab, "Discard unsent edits and continue");
   await ui(tab.getByRole("dialog")).toBeHidden(); await accountReady(tab);
   // A fresh access check must keep sign-out available, rather than briefly visiting / and returning to the reading.
@@ -283,7 +288,7 @@ it("guards controlled leave, explicit reload barriers and quiet retained reading
   expect((await fixture.ownerDb.select().from(s.translationDraft).where(and(eq(s.translationDraft.studentId, fixture.student.id), eq(s.translationDraft.verseRef, "Genesis 1:4"), eq(s.translationDraft.text, discarded)))).length).toBe(0);
   phase = "staff-save-departure";
   const admin = await page("admin"); await staff(admin); const notePanel = await tools(admin, "Genesis 1:7"); await safe(() => notePanel.getByRole("button", { name: "Teacher notes", exact: true }).click());
-  await safe(() => notePanel.getByRole("textbox").fill("Synthetic explicitly saved on departure")); await safe(() => admin.getByRole("link", { name: "All students", exact: true }).click()); await ui(admin.getByRole("dialog")).toBeVisible(); await click(admin, "Save and continue"); await ui.poll(() => new URL(admin.url()).pathname).toBe("/workspace/admin/students");
+  await safe(() => notePanel.getByRole("textbox").fill("Synthetic explicitly saved on departure")); await closeVerseTools(admin); await safe(() => admin.getByRole("link", { name: "All students", exact: true }).click()); await ui(admin.getByRole("dialog")).toBeVisible(); await click(admin, "Save and continue"); await ui.poll(() => new URL(admin.url()).pathname).toBe("/workspace/admin/students");
   expect((await fixture.ownerDb.select().from(s.tutorNote).where(and(eq(s.tutorNote.verseRef, "Genesis 1:7"), eq(s.tutorNote.text, "Synthetic explicitly saved on departure")))).length).toBe(1);
   } catch { throw new Error(`Student work lifecycle fixed phase: ${phase}; private details withheld`); }
 });

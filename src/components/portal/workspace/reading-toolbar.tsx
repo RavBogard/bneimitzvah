@@ -1,5 +1,6 @@
 "use client";
-import { useId } from "react";
+import { useId, useLayoutEffect, useRef } from "react";
+import { useKeyboardOpen } from "../shell/tab-bar";
 import { textSizes, tikkunViews, useReadingPrefs, useSetReadingPrefs } from "./reading-prefs";
 import { MAX_INLINE_WORKS, STUDY_WORKS, useStudyLens } from "./study-lens";
 import { COMMENTARY_WORKS } from "../../../lib/readings/commentary";
@@ -15,7 +16,8 @@ export function workCoverageNote(key: string): "Torah only" | "Prophets only" | 
   return editions?.torah && !editions.neviim ? "Torah only" : editions?.neviim && !editions.torah ? "Prophets only" : null;
 }
 
-/** One toolbar drives every verse on the page through shared preferences. */
+/** One toolbar drives every verse on the page through shared preferences. On a phone it is the tool dock (1.9 N4): fixed in the thumb zone above the tab bar, hidden only
+ *  while the on-screen keyboard is open, and measured so the passage keeps matching padding below it (globals.css, --dock-h). On a wide screen it is the rail beside the text. */
 /** The Tikkun control appears only beside Torah text in Lein; a haftarah is read from a printed book, not a scroll,
  *  and Study is about meaning. In Study, Works chooses the commentaries shown under each verse (`worksCorpus`
  *  says which ones cover this text: the Women's Commentary covers the Torah only). */
@@ -25,9 +27,18 @@ export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailab
   const prefs = useReadingPrefs(), setReadingPrefs = useSetReadingPrefs(), lens = useStudyLens(), id = useId(), englishWhy = `${id}-english-why`, menu = `${id}-size`, tikkunMenu = `${id}-tikkun`, worksMenu = `${id}-works`;
   const size = textSizes.find(row => row.id === prefs.size)!, view = tikkunViews.find(row => row.id === prefs.tikkunView) ?? tikkunViews[0];
   const study = lens.available && lens.lens === "study";
+  const keyboard = useKeyboardOpen(), nav = useRef<HTMLElement>(null);
+  // The dock's own height, kept for the passage's padding. A hidden dock (keyboard open) keeps the last height, so the page does not jump.
+  useLayoutEffect(() => {
+    const node = nav.current; if (!node || typeof ResizeObserver === "undefined") return;
+    const root = document.documentElement, measure = () => { if (node.offsetHeight) root.style.setProperty("--dock-h", `${node.offsetHeight}px`); };
+    measure();
+    const observer = new ResizeObserver(measure); observer.observe(node);
+    return () => { observer.disconnect(); root.style.removeProperty("--dock-h"); };
+  }, []);
   const covers = (work: string) => Boolean(COMMENTARY_WORKS[work]?.editions[worksCorpus]);
   const shown = lens.works.filter(covers);
-  return <nav className="reading-toolbar" aria-label="Reading tools" data-lens={study ? "study" : "lein"}>
+  return <nav ref={nav} className="reading-toolbar" aria-label="Reading tools" data-lens={study ? "study" : "lein"} data-hidden={keyboard ? "" : undefined}>
     <button type="button" className="toolbar-item" aria-pressed={prefs.colors} onClick={() => setReadingPrefs({ colors: !prefs.colors })}>{icons.colors}<span>Colors</span></button>
     {/* Study keeps its own English choice, which starts on; Lein's stays as the reader left it. */}
     {/* aria-disabled, not disabled, so the button stays focusable and its reason is read. */}

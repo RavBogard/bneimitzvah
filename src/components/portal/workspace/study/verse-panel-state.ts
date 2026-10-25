@@ -1,6 +1,6 @@
 /**
  * The verse panel's decisions, kept free of React and the page so they can be tested: what a request opens or
- * closes, where a word step lands, and when Esc belongs to the panel. verse-panel.tsx applies them.
+ * closes and where a word step lands. verse-panel.tsx applies them; Esc, a tap outside and a swipe down belong to the Sheet.
  */
 /** Compare translations, More on this verse (the shelf), one word's card, or a verse's curated discussion sources. */
 export type VersePanelKind = "compare" | "shelf" | "word" | "discussion";
@@ -22,14 +22,5 @@ export function moveWord(shown: PanelOpen | null, verse: string, word: number): 
   return Object.freeze({ verse, kind: "word" as const, id: shown.id, word });
 }
 
-/**
- * Esc belongs to the panel only while the reader is in it, on the button that opened it, or (for a word card)
- * on a word of the text, and no modal is open above the page.
- */
-export function escapeClosesPanel(input: { key: string; defaultPrevented: boolean; modal: boolean; inPanel: boolean; onOpener: boolean; onWord: boolean; kind: VersePanelKind }): boolean {
-  if (input.key !== "Escape" || input.defaultPrevented || input.modal) return false;
-  return input.inPanel || input.onOpener || (input.kind === "word" && input.onWord);
-}
-
-/** Where the open panel's own heading takes focus: when it opens, and when its verse changes, but a word card stepping on keeps the reader's place. */
+/** Where the open panel's sheet keeps its place: a new panel (or another verse's) starts over on the title, but a word card stepping on keeps the reader's place. */
 export const focusKey = (open: Pick<PanelOpen, "verse" | "kind">): string => open.kind === "word" ? "word" : `${open.kind}:${open.verse}`;

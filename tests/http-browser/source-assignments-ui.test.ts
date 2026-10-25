@@ -9,6 +9,7 @@ import { eq, and } from "drizzle-orm";
 import { browserFixture } from "./fixture";
 import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
+import { closeVerseTools, inStudy, openVerseTools, toolsSheet } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { parseRelatedMetadata, SourceMetadataUnavailable } from "../../src/server/study/sources/metadata";
@@ -20,7 +21,8 @@ let siblingId: string, catalogRevision = 0, relatedFailure = false, relatedCalls
 const contexts: BrowserContext[] = [], cookies: Partial<Record<"admin" | "tutor" | "student", Awaited<ReturnType<BrowserContext["cookies"]>>>> = {};
 declare global { interface Window { sourceUiAudioCount: number } }
 function rows(ref: string) { return Array.from({ length: 13 }, (_, index) => ({ _id: `source_${String(index).padStart(3, "0")}`, sourceRef: `Invented Commentary ${index + 1}`, index_title: "Invented Complete Commentary", category: catalogRevision ? "Commentary revised" : "Commentary", anchorRef: ref, collectiveTitle: { en: `Invented source ${index + 1}`, he: null } })); }
-const detail = (tab: Page, ref = "Genesis 1:1") => tab.locator(`.study-verse-detail[data-verse-ref="${ref}"]`);
+// A verse's Sources are in its verse tools (one Sheet for the selected verse, 1.9 N4). page() leaves the first verse's sheet open; open() opens another verse's.
+const detail = (tab: Page, ref = "Genesis 1:1") => toolsSheet(tab, ref).locator(`.study-verse-detail[data-verse-ref="${ref}"]`);
 const panel = (tab: Page, ref = "Genesis 1:1") => detail(tab, ref).getByRole("region", { name: `Sources for ${ref}`, exact: true });
 const assigned = (tab: Page) => panel(tab).getByRole("list", { name: "Assigned sources", exact: true });
 async function api(tab: Page, path: string, body?: unknown) { return tab.evaluate(async ({ path, body }) => { const result = await fetch(path, { method: body === undefined ? "GET" : "POST", headers: body === undefined ? {} : { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body), cache: "no-store" }); return { status: result.status, data: await result.json() }; }, { path, body }); }
@@ -37,9 +39,9 @@ async function page(who: "admin" | "tutor" | "student" = "admin", mobile = false
   await tab.goto("/", { waitUntil: "domcontentloaded" });
   if (!cookies[who]) { const email = `pg-${who}@example.test`; expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); cookies[who] = await context.cookies(); }
   await tab.goto(who === "student" ? "/workspace/student?tab=reading" : `/workspace/${who === "admin" ? "admin/students" : "tutor"}/${fixture.student.id}${who === "admin" ? "/reading" : ""}`, { waitUntil: "domcontentloaded" });
-  await ui(tab.locator('.study-verses [data-verse-ref="Genesis 1:1"]')).toBeVisible(); return tab;
+  await ui(tab.locator('.study-verses [data-verse-ref="Genesis 1:1"]')).toBeVisible(); await openVerseTools(tab, "Genesis 1:1"); return tab;
 }
-async function open(tab: Page, ref = "Genesis 1:1") { await panel(tab, ref).getByRole("button", { name: "Sources", exact: true }).click(); await ui(panel(tab, ref).getByRole("button", { name: "Browse related sources", exact: true })).toBeEnabled(); }
+async function open(tab: Page, ref = "Genesis 1:1") { await openVerseTools(tab, ref); await panel(tab, ref).getByRole("button", { name: /^Sources( \(\d+\))?$/ }).click(); await ui(panel(tab, ref).getByRole("button", { name: "Browse related sources", exact: true })).toBeEnabled(); }
 async function browse(tab: Page, ref = "Genesis 1:1") { await panel(tab, ref).getByRole("button", { name: "Browse related sources", exact: true }).click(); await ui(panel(tab, ref).getByRole("list", { name: "Related sources", exact: true })).toBeVisible(); }
 type SourceResponseBody = Awaited<ReturnType<import("playwright").APIResponse["json"]>>;
 async function observeSourceResponse(tab: Page, endpoint: "source-assignments" | "source-assignments/receipt", action: () => Promise<void>) {
@@ -96,7 +98,7 @@ async function capturePacket() {
   for (const theme of ["light", "dark"] as const) {
     const desktop = await page("admin", false, theme); await capture(desktop, `desktop-${theme}-closed`); await open(desktop); await browse(desktop); await panel(desktop).getByRole("list", { name: "Related sources", exact: true }).getByRole("checkbox").nth(7).check();
     if (theme === "light") { await capture(desktop, "desktop-light-selection"); await capture(desktop, "desktop-light-selection-detail", panel(desktop)); }
-    else { await desktop.route("**/source-assignments", route => route.request().method() === "POST" ? route.abort("failed") : route.continue()); await panel(desktop).getByRole("button", { name: "Save sources", exact: true }).click(); await ui(panel(desktop).getByRole("button", { name: "Check what saved", exact: true })).toBeVisible(); await panel(desktop).getByRole("button", { name: "Sources", exact: true }).click(); const dialog = desktop.getByRole("dialog", { name: "Leave sources?", exact: true }); await ui(dialog).toBeVisible(); await capture(desktop, "desktop-dark-uncertain-departure"); await capture(desktop, "desktop-dark-uncertain-departure-detail", dialog); }
+    else { await desktop.route("**/source-assignments", route => route.request().method() === "POST" ? route.abort("failed") : route.continue()); await panel(desktop).getByRole("button", { name: "Save sources", exact: true }).click(); await ui(panel(desktop).getByRole("button", { name: "Check what saved", exact: true })).toBeVisible(); await panel(desktop).getByRole("button", { name: /^Sources( \(\d+\))?$/ }).click(); const dialog = desktop.getByRole("dialog", { name: "Leave sources?", exact: true }); await ui(dialog).toBeVisible(); await capture(desktop, "desktop-dark-uncertain-departure"); await capture(desktop, "desktop-dark-uncertain-departure-detail", dialog); }
     const phone = await page("student", true, theme); await capture(phone, `phone-${theme}-closed`); await open(phone); await browse(phone); await capture(phone, `phone-${theme}-open`); await capture(phone, `phone-${theme}-open-detail`, panel(phone));
   }
   await writeFile(join(directory, "manifest.json"), JSON.stringify({ schema: "source-assignment-capture/v1", images: manifest }, null, 2) + "\n", { flag: "wx" });
@@ -113,7 +115,7 @@ it.runIf(process.env.SOURCE_ASSIGNMENTS_RECAPTURE === "1")("recaptures only the 
   const unchanged = manifest.images.filter(image => !names.includes(image.name)).map(image => ({ ...image }));
   const focusFacts: { name: string; focusBeforeWasSkip: boolean; sourcesFocused: boolean; skipOffscreenBefore: boolean; skipOffscreenAfter: boolean; developmentIndicatorSuppressed: true }[] = [];
   async function detailCapture(tab: Page, name: string) {
-    const target = panel(tab), sources = target.getByRole("button", { name: "Sources", exact: true });
+    const target = panel(tab), sources = target.getByRole("button", { name: /^Sources( \(\d+\))?$/ });
     const focusBeforeWasSkip = await tab.evaluate(() => document.activeElement?.matches(".skip-link") ?? false);
     await sources.focus(); await ui(sources).toBeFocused(); await target.scrollIntoViewIfNeeded();
     await tab.evaluate(async () => { await document.fonts.ready; await new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))); });
@@ -134,16 +136,33 @@ it.runIf(process.env.SOURCE_ASSIGNMENTS_RECAPTURE === "1")("recaptures only the 
   await writeFile(join(process.cwd(), ".local-logs", "source-assignments-detail-recapture.json"), JSON.stringify({ schema: "source-assignment-detail-recapture/v1", replaced: names, untouchedImages: unchanged.length, sourceStateMatches: true, focusFacts, originalManifestSha256: createHash("sha256").update(originalBytes).digest("hex"), manifestSha256: createHash("sha256").update(await readFile(manifestPath)).digest("hex") }, null, 2) + "\n", { flag: "wx" });
 });
 
-it("keeps Sources closed and metadata idle until explicit open/browse; readonly student and child can page without mutation or audio", async () => {
+it("shows no Sources control on a verse that has none, to a student or a child, and asks for no related metadata", async () => {
   const tab = await page("student", true); let posts = 0, calendars = 0; tab.on("request", request => { const path = new URL(request.url()).pathname; if (path.endsWith("/source-assignments") && request.method() === "POST") posts++; if (path.includes("practice-calendar") && request.method() === "POST") calendars++; });
-  const before = relatedCalls; await ui(panel(tab).getByRole("button", { name: "Sources", exact: true })).toHaveAttribute("aria-expanded", "false"); expect(relatedCalls).toBe(before);
-  await open(tab); expect(relatedCalls).toBe(before); await browse(tab); expect(relatedCalls).toBe(before + 1);
+  const before = relatedCalls;
+  // The sheet is open for the first verse, and it has no sources: a reader sees no Sources control at all (1.9 N4, G2).
+  await ui(detail(tab)).toBeVisible(); await ui(panel(tab)).toHaveCount(0); await ui(tab.getByRole("button", { name: /^Sources/ })).toHaveCount(0);
+  expect(relatedCalls).toBe(before); expect(posts).toBe(0); expect(calendars).toBe(0); await noAudio(tab);
+  const child = await page("tutor"); await closeVerseTools(child); await child.getByRole("link", { name: "Parent", exact: true }).click();
+  await child.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await child.getByRole("button", { name: "Practice with Synthetic", exact: true }).click();
+  await ui(child.locator(".study-verses")).toBeVisible(); await openVerseTools(child, "Genesis 1:1"); await ui(detail(child)).toBeVisible(); await ui(child.getByRole("button", { name: /^Sources/ })).toHaveCount(0); await noAudio(child);
+});
+
+it("says how many sources a verse has, to a reader, who can look at them and browse related ones but change nothing; staff keep the bare control to add the first", async () => {
+  const admin = await page("admin"); const bare = panel(admin).getByRole("button", { name: "Sources", exact: true }); await ui(bare).toBeVisible();
+  await open(admin); await browse(admin); await panel(admin).getByRole("list", { name: "Related sources", exact: true }).getByRole("checkbox").nth(0).check(); await save(admin);
+  await ui(panel(admin).getByRole("button", { name: "Sources (1)", exact: true })).toBeVisible();
+  const tab = await page("student", true); let posts = 0; tab.on("request", request => { if (new URL(request.url()).pathname.endsWith("/source-assignments") && request.method() === "POST") posts++; });
+  const before = relatedCalls; await ui(panel(tab).getByRole("button", { name: "Sources (1)", exact: true })).toHaveAttribute("aria-expanded", "false"); expect(relatedCalls).toBe(before);
+  await open(tab); expect(relatedCalls).toBe(before); await ui(assigned(tab).getByRole("listitem")).toHaveCount(1); await browse(tab); expect(relatedCalls).toBe(before + 1);
   await ui(panel(tab).getByRole("list", { name: "Related sources", exact: true }).getByRole("listitem")).toHaveCount(10);
   await panel(tab).getByRole("button", { name: "Next sources", exact: true }).click(); await ui(panel(tab)).toContainText("Invented source 13");
-  await ui(panel(tab).getByRole("checkbox")).toHaveCount(0); await ui(panel(tab).getByRole("button", { name: "Save sources", exact: true })).toHaveCount(0); expect(posts).toBe(0); expect(calendars).toBe(0); await noAudio(tab);
-  const child = await page("tutor"); await child.getByRole("link", { name: "Parent", exact: true }).click();
-  await child.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await child.getByRole("button", { name: "Practice with Synthetic", exact: true }).click();
-  await ui(child.locator(".study-verses")).toBeVisible(); await open(child); await browse(child); await ui(panel(child).getByRole("checkbox")).toHaveCount(0); await ui(panel(child).getByRole("button", { name: "Save sources", exact: true })).toHaveCount(0); await noAudio(child);
+  await ui(panel(tab).getByRole("checkbox")).toHaveCount(0); await ui(panel(tab).getByRole("button", { name: "Save sources", exact: true })).toHaveCount(0); expect(posts).toBe(0); await noAudio(tab);
+  // A student's own other verse has none, so it shows no control.
+  await tab.keyboard.press("Escape"); await ui(toolsSheet(tab, "Genesis 1:1")).toHaveCount(0);
+  await openVerseTools(tab, "Genesis 1:2"); await ui(detail(tab, "Genesis 1:2")).toBeVisible(); await ui(tab.getByRole("button", { name: /^Sources/ })).toHaveCount(0);
+  // Put it back as it was.
+  await admin.reload({ waitUntil: "domcontentloaded" }); await ui(admin.locator('.study-verses [data-verse-ref="Genesis 1:1"]')).toBeVisible(); await openVerseTools(admin, "Genesis 1:1");
+  await open(admin); await assigned(admin).getByRole("checkbox").nth(0).uncheck(); const cleared = await save(admin); expect(cleared.committed.citations).toEqual([]);
 });
 
 it("assigns a full set, removes one and clears it through actual admin services; assigned tutor can separately save without autosave or source text", async () => {
@@ -157,7 +176,7 @@ it("assigns a full set, removes one and clears it through actual admin services;
 });
 
 it("holds changed catalog proof until explicit review, retains assignments on metadata outage, and removes without provider I/O", async () => {
-  const ref = "Genesis 1:2", tab = await page("admin"); await open(tab, ref); await browse(tab, ref); const related = panel(tab, ref).getByRole("list", { name: "Related sources", exact: true });
+  const ref = "Genesis 1:2", tab = await page("admin"); await inStudy(tab); await open(tab, ref); await browse(tab, ref); const related = panel(tab, ref).getByRole("list", { name: "Related sources", exact: true });
   await related.getByRole("checkbox").nth(0).check(); await save(tab, ref); await related.getByRole("checkbox").nth(1).check();
   let writes = 0; tab.on("request", request => { if (new URL(request.url()).pathname.endsWith("/source-assignments") && request.method() === "POST") writes++; });
   catalogRevision = 1; await panel(tab, ref).getByRole("button", { name: "Next sources", exact: true }).click(); await ui(panel(tab, ref).getByRole("button", { name: "Review related sources", exact: true })).toBeVisible();
@@ -169,7 +188,7 @@ it("holds changed catalog proof until explicit review, retains assignments on me
 });
 
 it("keeps a genuinely committed save unknown when the final session probe fails, then reconciles the original separately from a newer head", async () => {
-  const ref = "Genesis 1:3", tab = await page("admin"); await open(tab, ref); await browse(tab, ref); await panel(tab, ref).getByRole("list", { name: "Related sources", exact: true }).getByRole("checkbox").nth(0).check();
+  const ref = "Genesis 1:3", tab = await page("admin"); await inStudy(tab); await open(tab, ref); await browse(tab, ref); await panel(tab, ref).getByRole("list", { name: "Related sources", exact: true }).getByRole("checkbox").nth(0).check();
   let failFinalProbe = false, captured: Record<string, unknown> | undefined;
   await tab.route("**/api/session", async route => { if (failFinalProbe) { failFinalProbe = false; await route.fulfill({ status: 503, contentType: "application/json", body: '{"ok":false}' }); } else await route.continue(); });
   const committedThenUnverified = async (route: Route) => { if (route.request().method() !== "POST") return route.continue(); captured = route.request().postDataJSON(); const response = await privateRouteFetch(route, tab); if (!response) return; expect(response.status()).toBe(200); failFinalProbe = true; await route.fulfill({ response }); };
@@ -194,15 +213,16 @@ it("keeps a missing receipt unconfirmed and retries only the exact original UUID
 });
 
 it("retains a dirty draft on quiet return and Keep working; explicit discard reloads, while delivered authority loss cancels an old departure review", async () => {
-  const ref = "Genesis 1:2", tab = await page("admin"); await open(tab, ref); await browse(tab, ref); const choice = panel(tab, ref).getByRole("list", { name: "Related sources", exact: true }).getByRole("checkbox").nth(4); await choice.check();
+  const ref = "Genesis 1:2", tab = await page("admin"); await inStudy(tab); await open(tab, ref); await browse(tab, ref); const choice = panel(tab, ref).getByRole("list", { name: "Related sources", exact: true }).getByRole("checkbox").nth(4); await choice.check();
   let posts = 0, texts = 0; tab.on("request", request => { const path = new URL(request.url()).pathname; if (path.endsWith("/source-assignments") && request.method() === "POST") posts++; if (path.endsWith("/study-text")) texts++; }); const before = relatedCalls;
   await quiet(tab); await ui(choice).toBeChecked(); expect(posts).toBe(0); expect(texts).toBe(0); expect(relatedCalls).toBe(before);
-  const refresh = tab.getByRole("button", { name: "Refresh reading", exact: true }), dialog = tab.getByRole("dialog", { name: "Leave sources?", exact: true });
-  await refresh.click(); await ui(dialog).toBeVisible(); await dialog.getByRole("button", { name: "Keep working", exact: true }).click(); await ui(choice).toBeChecked(); expect(texts).toBe(0); expect(posts).toBe(0);
-  await refresh.click(); await ui(dialog).toBeVisible(); const loaded = tab.waitForResponse(value => new URL(value.url()).pathname.endsWith("/study-text") && value.status() === 200); await dialog.getByRole("button", { name: "Discard changes", exact: true }).click(); await loaded;
-  await ui(panel(tab, ref).getByRole("button", { name: "Sources", exact: true })).toHaveAttribute("aria-expanded", "false"); expect(posts).toBe(0);
+  // The page's own controls are behind the sheet, so leaving is asked for by closing it: the same question, since the choices live in it.
+  const dialog = tab.getByRole("dialog", { name: "Leave sources?", exact: true });
+  await tab.keyboard.press("Escape"); await ui(dialog).toBeVisible(); await dialog.getByRole("button", { name: "Keep working", exact: true }).click(); await ui(choice).toBeChecked(); expect(texts).toBe(0); expect(posts).toBe(0);
+  await tab.keyboard.press("Escape"); await ui(dialog).toBeVisible(); await dialog.getByRole("button", { name: "Discard changes", exact: true }).click(); await ui(toolsSheet(tab, ref)).toHaveCount(0);
+  await openVerseTools(tab, ref); await ui(panel(tab, ref).getByRole("button", { name: /^Sources( \(\d+\))?$/ })).toHaveAttribute("aria-expanded", "false"); expect(posts).toBe(0);
   await open(tab, ref); await browse(tab, ref); await panel(tab, ref).getByRole("list", { name: "Related sources", exact: true }).getByRole("checkbox").nth(5).check();
-  await tab.getByRole("button", { name: "Haftarah text", exact: true }).click(); await ui(dialog).toBeVisible();
+  await tab.keyboard.press("Escape"); await ui(dialog).toBeVisible();
   const denied = tab.waitForResponse(value => new URL(value.url()).pathname === "/api/session" && value.status() === 401); await tab.context().clearCookies(); await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await denied;
   await ui(dialog).toHaveCount(0); await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible(); await ui(tab.locator(".study-verses")).toHaveCount(0); await ui(panel(tab, ref)).toHaveCount(0); expect(posts).toBe(0); await noAudio(tab);
 });
@@ -212,13 +232,14 @@ it("offers an honest unknown-save departure without automatic retry, then clears
   const before = await fixture.ownerDb.select().from(s.verseSourceAssignment).where(and(eq(s.verseSourceAssignment.studentId, fixture.student.id), eq(s.verseSourceAssignment.verseRef, "Genesis 1:1"))); let posts = 0;
   await tab.route("**/source-assignments", async route => { if (route.request().method() === "POST") { posts++; await route.abort("failed"); } else await route.continue(); });
   await panel(tab).getByRole("button", { name: "Save sources", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Check what saved", exact: true })).toBeVisible();
-  const disclosure = panel(tab).getByRole("button", { name: "Sources", exact: true }), dialog = tab.getByRole("dialog", { name: "Leave sources?", exact: true });
+  const disclosure = panel(tab).getByRole("button", { name: /^Sources( \(\d+\))?$/ }), dialog = tab.getByRole("dialog", { name: "Leave sources?", exact: true });
   await disclosure.click(); await ui(dialog).toContainText("It may still complete if you leave"); await dialog.getByRole("button", { name: "Keep working", exact: true }).click(); await ui(panel(tab).getByRole("button", { name: "Check what saved", exact: true })).toBeVisible(); expect(posts).toBe(1);
   await disclosure.click(); await dialog.getByRole("button", { name: "Leave without confirming", exact: true }).click(); await ui(disclosure).toHaveAttribute("aria-expanded", "false"); expect(posts).toBe(1);
   const after = await fixture.ownerDb.select().from(s.verseSourceAssignment).where(and(eq(s.verseSourceAssignment.studentId, fixture.student.id), eq(s.verseSourceAssignment.verseRef, "Genesis 1:1"))); expect(after.length).toBe(before.length);
-  await tab.getByRole("link", { name: "Parent", exact: true }).click(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(tab.locator(".study-verses")).toBeVisible(); await open(tab); await browse(tab);
-  await tab.getByRole("button", { name: "Switch practice to Synthetic Sibling", exact: true }).click(); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible(); await ui(panel(tab).getByRole("button", { name: "Sources", exact: true })).toHaveAttribute("aria-expanded", "false");
-  await open(tab); await ui(assigned(tab)).toHaveCount(0); await browse(tab);
+  await closeVerseTools(tab); await tab.getByRole("link", { name: "Parent", exact: true }).click(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click(); await tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(tab.locator(".study-verses")).toBeVisible(); await open(tab); await browse(tab);
+  await closeVerseTools(tab); await tab.getByRole("button", { name: "Switch practice to Synthetic Sibling", exact: true }).click(); await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible(); await openVerseTools(tab, "Genesis 1:1");
+  // The sibling's scope starts clean: a child in practice has no sources on this verse, so there is no Sources control (1.9 N4, G2), and nothing of the other child's is shown.
+  await ui(detail(tab)).toBeVisible(); await ui(tab.getByRole("button", { name: /^Sources/ })).toHaveCount(0); await ui(assigned(tab)).toHaveCount(0);
   await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(0) }).where(eq(s.session.userId, fixture.tutor.id)); const expired = tab.waitForResponse(value => new URL(value.url()).pathname === "/api/session" && value.status() === 401); await tab.evaluate(() => window.dispatchEvent(new Event("focus"))); await expired;
   await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible(); await ui(tab.locator(".study-verses")).toHaveCount(0); await ui(panel(tab)).toHaveCount(0); await noAudio(tab);
 });

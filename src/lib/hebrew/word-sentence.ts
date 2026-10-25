@@ -23,6 +23,13 @@ const gn = (part: WordGrammarFeature) => [gender(part), part.number].filter(Bool
 const pgn = (part: WordGrammarFeature) => [part.person && PERSON[part.person], gender(part), part.number].filter(Boolean).join(" ");
 const after = (text: string) => text ? `, ${text}` : "";
 
+/**
+ * The qamats qatan note (Daniel, 2026-10-24 review decision 10; 1.9 N4). Miqra according to the Masorah marks every qamats qatan with its own code point,
+ * U+05C7, so the card says so only for a word that carries it; no word list stands in for the text. Approved wording, verbatim.
+ */
+export const QAMATS_QATAN_NOTE = "This vowel says o (qamats katan).";
+export const carriesQamatsQatan = (word: string) => word.includes("\u05C7");
+
 /** The part of speech the sentence is about: the word itself, not a prefix (and, the, in) or a suffix (his, her). */
 export function mainMorpheme(parts: readonly WordGrammarFeature[]): WordGrammarFeature | null {
   return parts.find(part => ["verb", "noun", "adjective", "pronoun"].includes(part.partOfSpeech))
