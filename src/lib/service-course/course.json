@@ -2,7 +2,7 @@
   "schema": "service-course/v1",
   "features": {
     "recordings": false,
-    "fluency": false
+    "fluency": true
   },
   "units": [
     {
@@ -118,7 +118,7 @@
       "kind": "fluency",
       "title": "Letters, part one",
       "summary": "The first eleven letters, and the ones that look alike.",
-      "goal": "After this you can TODO(A7 has no goal for f1; Daniel to approve wording)",
+      "goal": null,
       "section": "reading",
       "keyWords": [],
       "prerequisites": [],
@@ -142,7 +142,7 @@
       "kind": "fluency",
       "title": "Vowels",
       "summary": "The marks under and over letters, and their sounds.",
-      "goal": "After this you can TODO(A7 has no goal for f3; Daniel to approve wording)",
+      "goal": null,
       "section": "reading",
       "keyWords": [],
       "prerequisites": [
@@ -155,7 +155,7 @@
       "kind": "fluency",
       "title": "Dots that change a letter",
       "summary": "Bet and vet, kaf and chaf, shin and sin.",
-      "goal": "After this you can TODO(A7 has no goal for f4; Daniel to approve wording)",
+      "goal": null,
       "section": "reading",
       "keyWords": [],
       "prerequisites": [
@@ -168,8 +168,13 @@
       "kind": "fluency",
       "title": "Reading words",
       "summary": "Words from the prayers, one syllable at a time.",
-      "goal": "After this you can TODO(A7 has no goal for f5; Daniel to approve wording)",
+      "goal": null,
       "section": "reading",
+      "corpus": [
+        { "unit": "shma.the-shma@shabbat-shacharit", "blocks": [0, 1] },
+        { "unit": "shma.barchu@shabbat-shacharit", "blocks": [0, 1] },
+        { "unit": "torah.blessing-before-the-torah@shabbat-shacharit", "blocks": [0, 2] }
+      ],
       "keyWords": [],
       "prerequisites": [
         "f4"
@@ -183,6 +188,11 @@
       "summary": "Whole lines from Bar’chu, the Sh’ma and a blessing.",
       "goal": "After this you can read a whole line of a prayer on your own.",
       "section": "reading",
+      "corpus": [
+        { "unit": "shma.the-shma@shabbat-shacharit", "blocks": [0, 1] },
+        { "unit": "shma.barchu@shabbat-shacharit", "blocks": [0, 1] },
+        { "unit": "torah.blessing-before-the-torah@shabbat-shacharit", "blocks": [0, 2] }
+      ],
       "keyWords": [],
       "prerequisites": [
         "f5"
