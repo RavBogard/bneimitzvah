@@ -537,6 +537,8 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .study-read-alternative { color: var(--color-muted); }
 .student-aliyah { display: inline-flex; align-items: center; min-height: 32px; margin: 0.75rem 0 0.5rem; padding: 0 0.75rem; border-radius: 999px; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-teal); color: var(--color-teal); font-size: 0.875rem; font-weight: 650; }
 .study-page-position { color: var(--color-muted); font-variant-numeric: tabular-nums; }
+/* Where the section chips are (1.9 N3), a verse or the text brought to the top of the screen stops below their sticky bar, not under it. */
+body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .reading-passage-layout { scroll-margin-top: 5rem; }
 .study-pages .button-secondary { border-radius: 999px; }
 .study-credits { border-top: 0; margin-top: 1.5rem; color: var(--color-muted); }
 .study-credits > summary { color: var(--color-action); width: fit-content; }

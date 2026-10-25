@@ -68,6 +68,17 @@ export function extendSelection(order: readonly string[], selected: ReadonlySet<
   return next;
 }
 
+/**
+ * What a tap on a verse number does to the selection. A second tap after exactly one verse chosen, on a later verse, makes the range from the
+ * first to it (F4: most people choosing verses mean "from this verse to that one"). Shift, or Select range, extends from the last verse tapped
+ * (`anchor`); any other tap adds or takes away that one verse.
+ */
+export function tapVerse(order: readonly string[], selected: ReadonlySet<string>, anchor: string | null, ref: string, options: { shift?: boolean; rangeMode?: boolean } = {}): ReadonlySet<string> {
+  const lone = selected.size === 1 ? [...selected][0] : null, afterOne = lone !== null && order.indexOf(ref) > order.indexOf(lone);
+  const from = afterOne && !(options.shift || options.rangeMode) ? lone : anchor;
+  return (afterOne || options.shift || options.rangeMode) && from !== null && from !== ref ? extendSelection(order, selected, from, ref) : toggleVerse(selected, ref);
+}
+
 /** The selection as people read it: "Genesis 12:1–3; 12:8–9" (a book already named by the group before it is not named again). */
 export function selectionLine(ranges: readonly string[]): string {
   let book: string | null = null;

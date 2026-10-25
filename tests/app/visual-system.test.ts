@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Button, ButtonLink, Chip, EmptyState, List, ListRow, PageHeader, Segmented, Sheet } from "../../src/components/ui";
+import { Button, ButtonLink, Chip, EmptyState, List, ListRow, PageHeader, SectionTabs, Segmented, Sheet } from "../../src/components/ui";
 import { Gallery } from "../../src/app/design-system/gallery";
 
 // 1.9 N9: the visual system foundation. Static checks on the tokens and the components' markup; the browser-measured checks
@@ -137,6 +137,19 @@ describe("the components, as markup", () => {
     expect(markup.match(/type="radio"/g)).toHaveLength(2);
     expect(markup.match(/checked=""/g)).toHaveLength(1);
     expect(markup).toMatch(/<input type="radio"[^>]*value="b"[^>]*checked=""|<input type="radio"[^>]*checked=""[^>]*value="b"/);
+  });
+  it("SectionTabs is a named tablist with one selected tab and one tab stop, the open one", () => {
+    const tabs = [{ id: "1", label: "Aliyah 1" }, { id: "2", label: "Aliyah 2" }, { id: "M", label: "Maftir" }];
+    const markup = html(h(SectionTabs, { label: "Reading sections", tabs, current: "2", onSelect: () => {}, sticky: true }));
+    expect(markup).toContain('role="tablist" aria-label="Reading sections"');
+    expect(markup.match(/role="tab"/g)).toHaveLength(3);
+    expect(markup.match(/aria-selected="true"/g)).toHaveLength(1);
+    expect(markup.match(/tabindex="0"/g)).toHaveLength(1);
+    expect(markup).toMatch(/aria-selected="true"[^>]*tabindex="0"[^>]*>Aliyah 2</);
+    // Nothing open (the page shows none of them): every tab is reachable, the first holds the stop, none is selected.
+    const none = html(h(SectionTabs, { label: "Reading sections", tabs, current: null, onSelect: () => {} }));
+    expect(none).not.toContain('aria-selected="true"');
+    expect(none.match(/tabindex="0"/g)).toHaveLength(1);
   });
   it("Chip prints its word for every tone, and carries the tone as data", () => {
     for (const tone of ["neutral", "attention", "done", "info", "danger"] as const) expect(html(h(Chip, { tone, children: `Word ${tone}` }))).toMatch(new RegExp(`data-tone="${tone}">Word ${tone}</span>$`));
