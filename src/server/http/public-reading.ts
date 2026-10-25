@@ -21,6 +21,7 @@ import { SERVICE_TEXT_UNITS } from "../../lib/service-course/course";
 import { SERVICE_TEXT_BUILD, type ServiceText } from "../../lib/service-course/text";
 import { CourseTextUnavailable } from "../service-course/text";
 import { REFUSED_COURSE_UNIT } from "../service-course/pin";
+import type { ApprovedPortionSummary } from "../../lib/portion-summary/credit";
 
 /**
  * Signed-out reading routes. A strict allowlist under /api/public/: GET only, a
@@ -55,6 +56,8 @@ export type PublicRuntime = Readonly<{
    * with their transliteration and English. Never the licensed Beit Mitzvah catalog, which this runtime cannot read at all.
    */
   serviceText(unit: string): Promise<ServiceText>;
+  /** The parashah's approved portion summary (1.9 N6), read through portion_summary_public only; null when none is approved. */
+  portionSummary(reading: string): Promise<ApprovedPortionSummary | null>;
 }>;
 export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Response>) => Promise<Response>;
 
@@ -63,7 +66,7 @@ export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Re
  * named by a Shabbat `date` (the weekly page) or, for "Any reading", by a canonical `ref` with its
  * `kind` (the 1.5 offline packer depends on these exact shapes).
  */
-type Route = Readonly<{ kind: "reading" | "aliyot" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source" | "manifest" | "discussions" | "service-text"; keysets: readonly (readonly string[])[] }>;
+type Route = Readonly<{ kind: "reading" | "aliyot" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source" | "manifest" | "discussions" | "service-text" | "portion-summary"; keysets: readonly (readonly string[])[] }>;
 const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/reading": { kind: "reading", keysets: [["date"], ["ref", "kind"]] },
   // The reader's print sheet (2026-10-23): a Shabbat's calendar aliyot, numbers and book names only.
@@ -82,6 +85,8 @@ const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/discussions": { kind: "discussions", keysets: [["reading"], ["ref", "kind"]] },
   // The service course's Read step (2.0 SC2): one public unit the course names, by its stable id.
   "/api/public/service-text": { kind: "service-text", keysets: [["unit", "build"]] },
+  // A parashah's approved portion summary (1.9 N6): a parashah slug from the list, nothing else.
+  "/api/public/portion-summary": { kind: "portion-summary", keysets: [["reading"]] },
 });
 /** Longest decoded value per key; a `ref` is bounded by READING_REF_LIMITS.chars, everything else by 80. */
 const valueLimit = (key: string) => key === "ref" ? READING_REF_LIMITS.chars : 80; // a source ref is bounded tighter (256 bytes) by its own check
@@ -174,6 +179,7 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
       || query.reading !== undefined && namedReading(query.reading) === null
       // A unit the course does not name, or the mixed Mi Shebeirach under any name, never opens the database (A2 discrepancy 13).
       || selected.kind === "service-text" && (!SERVICE_TEXT_UNITS.has(query.unit) || REFUSED_COURSE_UNIT.test(query.unit) || query.build !== SERVICE_TEXT_BUILD)
+      || selected.kind === "portion-summary" && namedReading(query.reading)?.group !== "parashah"
       || query.kind !== undefined && query.kind !== "torah" && query.kind !== "haftarah"
       || query.ref !== undefined && selected.kind !== "source" && canonicalReadingRef(query.ref, query.kind) === null
       || [query.offset, selected.kind === "translations" || selected.kind === "related" ? undefined : query.verse, query.word].some(value => value !== undefined && !/^(?:0|[1-9]\d{0,3})$/.test(value))) return failure(400);
@@ -239,6 +245,13 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
             // With the name its change line needs ("Selected and ordered by {productName}", the CC BY note of changes).
             const shelf = await runtime.shelf(query.verse, signal), productName = await runtime.productName();
             return json({ ...shelf, productName } as unknown as JsonValue, 3600);
+          }
+          case "portion-summary": {
+            // The same answer signed in or out (no session is ever read here): the approved revision with its credit, or
+            // null. A draft is never in it. A withdrawal or a new approval reaches every cache within about ten minutes.
+            const summary = await runtime.portionSummary(query.reading);
+            return new Response(JSON.stringify({ reading: query.reading, summary }), { status: 200, headers: { ...common, "content-type": "application/json; charset=utf-8",
+              "cache-control": "public, max-age=60", "vercel-cdn-cache-control": "public, s-maxage=300, stale-while-revalidate=60" } });
           }
           case "discussions": {
             // The same answer signed in or out (no session is ever read here). Published only, never a curator. A discussion

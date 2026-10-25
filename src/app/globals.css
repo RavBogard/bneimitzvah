@@ -97,7 +97,7 @@ p { max-width: 65ch; }
 .button-secondary:hover { background: var(--color-hover); border-color: var(--color-ink); }
 .button-secondary:active { background: var(--lake-tint); }
 button:disabled { cursor: wait; opacity: 0.6; }
-.button-text { display: block; width: fit-content; background: transparent; border: 0; color: var(--color-action); font-size: 0.9375rem; text-decoration: underline; text-underline-offset: 0.2em; padding: 0.75rem 0; margin-top: 0.5rem; min-height: 44px; }
+.button-text { display: block; width: fit-content; max-width: 100%; min-width: 0; white-space: normal; text-align: start; overflow-wrap: anywhere; background: transparent; border: 0; color: var(--color-action); font-size: 0.9375rem; text-decoration: underline; text-underline-offset: 0.2em; padding: 0.75rem 0; margin-top: 0.5rem; min-height: 44px; }
 .button-text:hover { color: var(--color-action-hover); }
 /* The siddur page links sit in a wrapping row with a gap; each link is a block-level .button-text, so a dot between them would strand on its own line. */
 .siddur-blessings { display: flex; flex-wrap: wrap; gap: 0 1.25rem; }
@@ -156,7 +156,7 @@ html { scrollbar-color: var(--color-control-rule) var(--color-canvas); scrollbar
 .workspace-notice { color: var(--color-teal); padding-block: 0.75rem; margin-bottom: 1.5rem; }
 .workspace-heading-row { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: start; gap: 1rem; margin-bottom: 1rem; }
 select { display: block; width: min(100%, 36rem); font: inherit; padding: 0.6875rem 2rem 0.6875rem 0.875rem; border: 1px solid var(--color-control-rule); border-radius: var(--radius-control); color: var(--color-ink); background: var(--color-surface); min-height: 48px; }
-.reading-workspace { display: grid; grid-template-columns: minmax(0, 2fr) minmax(15rem, 1fr); gap: 3rem; margin-top: 2.5rem; }
+.reading-workspace { display: grid; grid-template-columns: minmax(0, 2fr) minmax(min(15rem, 100%), 1fr); gap: 3rem; margin-top: 2.5rem; }
 .reading-workspace > section { min-width: 0; }
 .reading-date { color: var(--color-muted); margin-top: 0.5rem; font-variant-numeric: tabular-nums; }
 .reading-student-context { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; align-items: center; }
@@ -621,14 +621,14 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 
 /* Phase 2: tutor home as student cards, a page per student, the same reading. */
 .selection-lede { font-size: clamp(1.75rem, 5vw, 2.5rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; margin: 0.25rem 0 1.25rem; max-width: 20ch; }
-.student-cards { list-style: none; padding: 0; margin: 0 0 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.75rem; }
-.student-card { display: flex; flex-direction: column; align-items: flex-start; gap: 0.375rem; width: 100%; min-height: 88px; padding: 1rem 1.25rem; border: 0; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); color: var(--color-ink); text-align: start; text-decoration: none; transition: box-shadow 160ms var(--ease-settle); }
+.student-cards { list-style: none; padding: 0; margin: 0 0 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); gap: 0.75rem; }
+.student-card { display: flex; flex-direction: column; align-items: flex-start; gap: 0.375rem; width: 100%; min-width: 0; min-height: 88px; padding: 1rem 1.25rem; border: 0; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); color: var(--color-ink); text-align: start; text-decoration: none; transition: box-shadow 160ms var(--ease-settle); }
 .student-card:hover { box-shadow: inset 0 0 0 2px var(--lake); color: var(--color-ink); }
 .student-card[aria-current="page"], .student-card[aria-pressed="true"] { background: var(--lake); color: #fff; box-shadow: none; }
 .student-card-name { font-size: 1.125rem; font-weight: 750; letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .student-card-date { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; color: var(--color-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
 .student-card[aria-current="page"] .student-card-date, .student-card[aria-pressed="true"] .student-card-date { color: rgb(255 255 255 / 0.85); }
-.student-card-days { background: var(--marigold); color: var(--on-ink); font-weight: 650; font-size: 0.8125rem; padding: 0.0625rem 0.5rem; border-radius: 999px; }
+.student-card-days { white-space: normal; background: var(--marigold); color: var(--on-ink); font-weight: 650; font-size: 0.8125rem; padding: 0.0625rem 0.5rem; border-radius: 999px; }
 .student-cards-compact { display: flex; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; margin-bottom: 1rem; padding-bottom: 0.25rem; }
 .student-cards-compact > li { flex: 0 0 auto; }
 .student-cards-compact .student-card { min-height: 44px; padding: 0.5rem 1rem; border-radius: 999px; flex-direction: row; align-items: center; }

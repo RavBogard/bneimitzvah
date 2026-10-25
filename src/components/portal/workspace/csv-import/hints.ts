@@ -62,7 +62,8 @@ export function rowHints(csv: string): Map<number, string> {
     try { parseCeremonyDate(raw.ceremonyDate); } catch { fields.add("ceremonyDate"); }
     const contact = (key: string, required: boolean) => { if (blank(raw[key])) { if (required) fields.add(key); } else if (!email(raw[key])) fields.add(key); };
     contact("parentEmail", kind === "child"); contact("ownEmail", kind === "adult"); if (full) contact("parent2_email", false);
-    if (full && !["morning", "havdalah", "unknown"].includes(raw.service_slot.trim())) fields.add("service_slot");
+    // A blank slot imports as unknown, like the other optional columns.
+    if (full && !blank(raw.service_slot) && !["morning", "havdalah", "unknown"].includes(raw.service_slot.trim())) fields.add("service_slot");
     for (const [key, limit] of Object.entries(LIMITS)) if (raw[key] !== undefined && (bytes.encode(raw[key].trim()).length > limit || /[<>]/.test(raw[key]))) fields.add(key);
     const own = raw.ownEmail?.trim().toLowerCase(), same = !blank(own) && [raw.parentEmail, raw.parent2_email].some(value => !blank(value) && value.trim().toLowerCase() === own);
     const named = [...fields].sort((a, b) => header.indexOf(a) - header.indexOf(b)).map(key => COLUMN_NAMES[key] ?? key);

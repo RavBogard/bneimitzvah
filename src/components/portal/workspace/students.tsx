@@ -9,6 +9,7 @@ import { RequireRole, rolePaths, statusOf, useWorkspace, WorkspaceLink } from ".
 import { ceremonyCountdown, ReadingPanel } from "./reading";
 import { reconcileSelectedStudent, sortStudentsByCeremony } from "./student-label";
 import { HonorsEntry, HonorsNote } from "./honors/sheet";
+import { DocumentTitle } from "./document-title";
 
 export function StudentWorkspace({ mode, studentId }: { mode: "student" | "parent" | "tutor"; studentId?: string }) {
   const { summary } = useWorkspace();
@@ -86,7 +87,9 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
   </section>;
   const heading = mode === "student" ? "Your assigned reading" : mode === "parent" ? "Your children’s readings" : "Your assigned students";
   const focused = Boolean(routeStudentId);
-  return <section className={`role-workspace${focused ? " role-workspace-focused" : ""}`}><h1 className="sr-only">{heading}</h1>
+  // On a student's own page the h1 is the student's name (and so is the tab title), once the list has said who that is.
+  const named = focused ? rows.find(row => row.id === selected) : undefined, studentName = named ? `${named.firstName} ${named.lastName}` : null;
+  return <section className={`role-workspace${focused ? " role-workspace-focused" : ""}`}>{studentName ? <><h1 className="sr-only"><bdi dir="auto">{studentName}</bdi></h1><DocumentTitle heading={studentName} /></> : <h1 className="sr-only">{heading}</h1>}
     {mode !== "student" && !focused && <p className="selection-lede">{mode === "parent" ? "Choose a child to see their reading." : "Who are you teaching today?"}</p>}
     {loading ? <p role="status">Loading available students…</p> : error ? <div role="alert"><p>Students couldn’t be loaded. No previous selection is being shown.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload students</button></div>
       : !rows.length ? <p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p>

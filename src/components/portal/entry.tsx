@@ -224,6 +224,6 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
       </div>
       {task}
     </main>
-    <footer className="portal-footer"><span>Learning at Central Reform Congregation</span><span>Your account and reading stay private.</span></footer>
+    <div className="portal-footer"><span>Learning at Central Reform Congregation</span><span>Your account and reading stay private.</span></div>
   </div>;
 }

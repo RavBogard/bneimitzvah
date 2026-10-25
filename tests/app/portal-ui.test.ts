@@ -25,7 +25,7 @@ describe("portal entry client trust and transport contracts", () => {
   it("uses the same closed query decision for public head and GIS props", async () => {
     for (const query of [{}, { intent: "account" }, { error: "authentication" }, { intent: "account", error: "authentication" }, { intent: ["account"] }, { intent: "https://foreign.example.test" }, { token: "synthetic" }, { error: ["authentication", "authentication"] }]) {
       const boundary = publicSignInBoundary(query, "sign-in"), props = { searchParams: Promise.resolve(query) };
-      expect(await signInMetadata(props)).toEqual({ referrer: boundary.referrer });
+      expect(await signInMetadata(props)).toEqual({ title: "Open your reading | CRC Torah", referrer: boundary.referrer });
       const page = await SignInPage(props); expect(page.props).toMatchObject({ inlineGoogle: boundary.inlineGoogle, googleIntent: boundary.intent, authenticationError: boundary.authenticationError });
       const home = await Home(props), head = await homeMetadata(props); expect(home.props.inlineGoogle).toBe(Object.keys(query).length === 0); expect(head.referrer).toBe(home.props.inlineGoogle ? "strict-origin-when-cross-origin" : "no-referrer");
     }

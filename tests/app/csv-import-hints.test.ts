@@ -35,8 +35,11 @@ describe("CSV import explanations", () => {
 
   it("checks the full layout's service slot and optional contacts", () => {
     const row = (slot: string, second: string) => `Synthetic,Full,2027-01-02,parent@example.test,,${slot},,,,,,${second},,`;
-    const hints = rowHints([CSV_FULL_HEADER, row("morning", ""), row("", "not-an-email")].join("\n"));
+    const hints = rowHints([CSV_FULL_HEADER, row("morning", ""), row("afternoon", "not-an-email"), row("", ""), row("  ", "")].join("\n"));
     expect(hints.has(2)).toBe(false);
     expect(hints.get(3)).toBe("check the service slot (morning, havdalah or unknown) and second parent email.");
+    // A blank slot is allowed: it imports as unknown.
+    expect(hints.has(4)).toBe(false);
+    expect(hints.has(5)).toBe(false);
   });
 });
