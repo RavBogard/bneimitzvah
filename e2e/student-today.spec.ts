@@ -74,7 +74,10 @@ test.describe("at 390x844", () => {
     await mock(page, { today: "2026-11-20" });
     await page.goto("/workspace/student");
     await expect(page.getByRole("heading", { level: 1, name: "Vayeshev", exact: true })).toBeVisible();
-    await expect(today(page).getByText(/rehearsal/i)).toHaveCount(0);
+    // The lake field names no rehearsal (the calendar below still keys the days it marked).
+    const lake = page.getByRole("heading", { level: 1 }).locator("xpath=..");
+    await expect(lake.getByText("Sat, Dec 12, 2026", { exact: true })).toBeVisible();
+    await expect(lake.getByText(/rehearsal/i)).toHaveCount(0);
   });
 
   test("Today fits in one and a half screens", async ({ page }) => {
@@ -82,6 +85,7 @@ test.describe("at 390x844", () => {
     await page.goto("/workspace/student");
     await expect(today(page).getByRole("list", { name: "Reading sections", exact: true }).getByRole("listitem")).toHaveCount(8);
     await expect(today(page).getByText("Practice calendar", { exact: true })).toBeVisible();
+    await expect(today(page).getByText(/^Latest from/)).toBeVisible(); await expect(today(page).getByText("Days you practised", { exact: false })).toBeVisible();
     // Today is the screen: the shell around it (app bar, footer, tab bar) is not counted. The fullest case is checked, a Torah reading with seven aliyot and a haftarah (eight rows).
     const height = await page.locator("#workspace-main").evaluate(node => node.getBoundingClientRect().height);
     expect(height, "Today height").toBeLessThanOrEqual(Math.round(844 * 1.5));
