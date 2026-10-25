@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { FamilyId } from "../../lib/trope/chart-catalog";
-import { ALWAYS_RUN, drillSkill, lessonById, type Drill, type Lesson, type Melody, type ThisWeek as ThisWeekActivity } from "../../lib/learn/course";
+import { ALWAYS_RUN, drillSkill, familyName, lessonById, type Drill, type Lesson, type Melody, type ThisWeek as ThisWeekActivity } from "../../lib/learn/course";
 import { tropeLabel, tropeSample } from "../../lib/learn/marks";
 import { drillItems, itemCard, phraseAt, poolOf, seededRandom, type DrillItem, type Phrase, type Pools } from "../../lib/learn/pools";
 import { cardId, completeLesson, localDay, recordAnswer } from "../../lib/learn/progress";
@@ -22,7 +22,7 @@ type Step = Readonly<{ kind: "hear" } | { kind: "verses" } | { kind: "sound" } |
 export function lessonSteps(lesson: Lesson, optional: readonly Drill[] = []): Step[] {
   if (lesson.activities.some(activity => activity.type === "first-verse")) return [{ kind: "first-verse" }, { kind: "done" }];
   return [{ kind: "hear" }, { kind: "sound" }, { kind: "verses" }, ...(lesson.id === "intro-phrases" ? [] : [{ kind: "anchors" as const }]),
-    ...optional.filter(activity => activity.type !== "same-or-different" && lesson.id !== "intro-phrases").map((activity, index) => ({ kind: "drill" as const, activity, index })), { kind: "done" }];
+    ...optional.map((activity, index) => ({ kind: "drill" as const, activity, index })), { kind: "done" }];
 }
 type Ready = Extract<CourseVerses, { status: "ready" }>;
 
@@ -106,8 +106,19 @@ function Marks({ lesson }: { lesson: Lesson }) {
       <span className={`${styles.hebrew} ${styles.markSample}`} lang="he" dir="rtl" aria-hidden="true">{tropeSample(accent)}</span><span className={styles.markName}>{tropeLabel(accent)}</span>
     </li>)}</ul></section>;
 }
-function Legend({ verse, melody }: { verse: ExampleVerse["verse"]; melody: Melody }) {
-  return <div className={styles.answerHead}>{verse.phrases.map(phrase => <FamilyChip key={phrase.index} family={phrase.family} melody={melody} />)}</div>;
+/**
+ * The phrase chips of a whole-verse example, each with a play control that plays that phrase's own words, cut from the same
+ * human recording as the verse (N17a: sounds before recognition). Nothing here is generated chant.
+ */
+function Legend({ verse, melody, scope }: { verse: ExampleVerse["verse"]; melody: Melody; scope: string }) {
+  const ids = verse.phrases.map(phrase => `${scope}:${phrase.index}`);
+  return <div className={styles.answerHead}>
+    {verse.phrases.map((phrase, n) => <span key={phrase.index} className={styles.phraseHalf}>
+      <FamilyChip family={phrase.family} melody={melody} />
+      <PlayTile id={ids[n]} iconOnly label={`Hear ${familyName(phrase.family)}`} requests={[phraseRequest(verse, phrase.units)]} />
+    </span>)}
+    <AudioError id={ids} />
+  </div>;
 }
 
 /** Hear it: the family, the phrase at Large over its colour, the play tile, what to listen for. */
@@ -118,8 +129,8 @@ function HearIt({ lesson, examples, onNext }: { lesson: Lesson; examples: readon
   return <>
     <div className={styles.stage}>
       {lesson.family && <FamilyChipLive id={id} family={lesson.family} melody={lesson.melody} />}
-      {first && words && <UnitsText playback={[id]} verse={first.verse} units={words} className={styles.phraseLarge} look={() => "inked"} />}
-      {first && !lesson.family && <Legend verse={first.verse} melody={lesson.melody} />}
+      {first && words && <UnitsText playback={[id, ...first.verse.phrases.map(phrase => `${id}:half:${first.example.ref}:${phrase.index}`)]} verse={first.verse} units={words} className={styles.phraseLarge} look={() => "inked"} />}
+      {first && !lesson.family && <Legend verse={first.verse} melody={lesson.melody} scope={`${id}:half:${first.example.ref}`} />}
       <PlayTile id={id} requests={requests} onPlayed={() => setHeard(true)} />
       <AudioError id={id} />
       {first && <span className={styles.ref}><bdi dir="ltr">{first.verse.ref}</bdi></span>}
@@ -145,7 +156,8 @@ function InVerses({ lesson, examples, onNext }: { lesson: Lesson; examples: read
       return <li key={id} className={styles.verseRow}>
         <PlayTile id={id} iconOnly label={`Hear ${example.ref}`} requests={[phraseRequest(verse, example.words)]} />
         <div>
-          <UnitsText playback={[id]} verse={verse} units={example.words} className={styles.phraseStandard} look={() => "inked"} />
+          <UnitsText playback={[id, ...verse.phrases.map(phrase => `${id}:half:${phrase.index}`)]} verse={verse} units={example.words} className={styles.phraseStandard} look={() => "inked"} />
+          {!lesson.family && <Legend verse={verse} melody={lesson.melody} scope={`${id}:half`} />}
           <p className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></p>
           <p className={styles.why}>{example.why}</p>
           <AudioError id={id} />

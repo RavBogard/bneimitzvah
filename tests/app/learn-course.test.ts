@@ -37,11 +37,11 @@ describe("the Learn to lein course data", () => {
   it("knows every activity type and keeps params inside ACTIVITIES.md's ranges", () => {
     const unknown = copy(); unknown.lessons[1].activities[0].type = "quick-ten";
     expect(problems(unknown).some(p => p.includes("unknown type"))).toBe(true);
-    const many = copy(); many.lessons[1].activities[1].params.choices = 5;
+    const many = copy(); many.lessons[1].activities[0].params.choices = 5;
     expect(problems(many).some(p => p.includes("choices"))).toBe(true);
-    const family = copy(); family.lessons[1].activities[1].params.families = ["sof-pasuk", "sof-haftarah"];
+    const family = copy(); family.lessons[1].activities[0].params.families = ["sof-pasuk", "sof-haftarah"];
     expect(problems(family).some(p => p.includes("families"))).toBe(true);
-    const stray = copy(); stray.lessons[1].activities[1].params.timer = 10;
+    const stray = copy(); stray.lessons[1].activities[0].params.timer = 10;
     expect(problems(stray).some(p => p.includes("unknown params"))).toBe(true);
     for (const lesson of COURSE.lessons) {
       const items = lesson.activities.filter(isDrill).reduce((sum, a) => sum + a.params.items, 0);

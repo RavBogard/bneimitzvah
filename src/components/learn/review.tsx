@@ -14,16 +14,22 @@ import styles from "./learn.module.css";
 
 /** The families a learner has finished in a melody: the review's distractors. */
 const learned = (progress: Progress, melody: Melody) => COURSE.lessons.filter(lesson => lesson.melody === melody && lesson.family && isDone(progress, lesson.id)).map(lesson => lesson.family!) as FamilyId[];
+/** A finished orientation lesson (no family of its own): its whole-verse examples have played their phrases. */
+const orientation = (progress: Progress, melody: Melody) => COURSE.lessons.filter(lesson => lesson.melody === melody && !lesson.family && isDone(progress, lesson.id));
+/** The families a learner has been taught in a melody: each finished lesson's own, and every phrase heard in a finished orientation lesson's whole-verse examples (N17a). */
+const taught = (progress: Progress, melody: Melody) => [...new Set([...learned(progress, melody), ...orientation(progress, melody).flatMap(lesson => lesson.examples.flatMap(example => (example.phrases ?? []).map(phrase => phrase.family)))])];
 /** One item for each slot, by its skill, from a verse other than the last item's. */
 export function reviewItems(slots: readonly ReviewSlot[], pools: Pools, progress: Progress, seed: number): { item: DrillItem; slot: ReviewSlot }[] {
   const out: { item: DrillItem; slot: ReviewSlot }[] = [];
   for (const [n, slot] of slots.entries()) {
-    const known = learned(progress, slot.melody).filter(family => MELODY_FAMILIES[slot.melody].includes(family));
-    if (!known.includes(slot.family)) continue;
-    const name: Drill | null = known.length < 2 ? null : { type: "hear-and-name", params: { families: known, items: 1, choices: Math.min(3, known.length), weight: {} } };
-    const names = name ? [name] : [];
-    const choices: Drill[] = slot.skill === "find" ? [{ type: "tap-the-phrase", params: { families: [slot.family], items: 1, verseWords: [5, 16] } }, ...names]
-      : slot.skill === "end" ? [{ type: "where-does-it-end", params: { families: [slot.family], items: 1, audio: true, verseWords: [5, 16] } }, ...names] : names;
+    const known = [...new Set([slot.family, ...learned(progress, slot.melody)])].filter(family => MELODY_FAMILIES[slot.melody].includes(family));
+    // With one family done, the second choice is a family it is confused with that the learner has been taught; with none, the naming slot is skipped, never filled with an untaught family.
+    const partner = known.length > 1 ? null : COURSE.families[slot.family].confusedWith.find(other => MELODY_FAMILIES[slot.melody].includes(other) && taught(progress, slot.melody).includes(other));
+    const name: Drill | null = n % 3 === 2 && known.length > 1 ? { type: "same-or-different", params: { families: known, items: 1 } }
+      : known.length > 1 || partner ? { type: "hear-and-name", params: { families: known.length > 1 ? known : [slot.family, partner!], items: 1, choices: Math.min(3, Math.max(2, known.length)), weight: {} } } : null;
+    const own: Drill[] = slot.skill === "find" ? [{ type: "tap-the-phrase", params: { families: [slot.family], items: 1, verseWords: [5, 16] } }]
+      : slot.skill === "end" ? [{ type: "where-does-it-end", params: { families: [slot.family], items: 1, audio: true, verseWords: [5, 16] } }] : [];
+    const choices: Drill[] = name ? [...own, name] : own;
     let picked: DrillItem | null = null;
     for (const drill of choices) for (let attempt = 0; attempt < 6 && !picked; attempt++) {
       const [item] = drillItems(drill, pools, { melody: slot.melody, focus: slot.family }, seededRandom(seed + n * 31 + attempt));
@@ -39,7 +45,7 @@ function Review() {
   const { progress: loaded, update, until } = useProgress(), progress = loaded ?? emptyProgress();
   const seed = useRef(Math.floor(Math.random() * 2 ** 31)), today = localDay(Date.now());
   const plan = useMemo(() => loaded ? composeReview(loaded, today, seededRandom(seed.current), until) : null, [loaded === null]); // eslint-disable-line react-hooks/exhaustive-deps
-  const lessons = useMemo(() => plan ? COURSE.lessons.filter(lesson => lesson.family && plan.some(slot => slot.melody === lesson.melody && (slot.family === lesson.family || learned(progress, slot.melody).includes(lesson.family!)))) : [], [plan]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lessons = useMemo(() => plan ? COURSE.lessons.filter(lesson => plan.some(slot => slot.melody === lesson.melody && (lesson.family ? slot.family === lesson.family || learned(progress, slot.melody).includes(lesson.family) : isDone(progress, lesson.id)))) : [], [plan]); // eslint-disable-line react-hooks/exhaustive-deps
   const [retry, setRetry] = useState(0), data = useCourseVerses(lessons, retry);
   const frame = (body: ReactNode, footer?: ReactNode) => <div className={`portal-shell ${styles.shell}`}>
     <header className={styles.bar}><a className={styles.close} href="/learn" aria-label="Back to the path">{icons.close}</a><h1 className={styles.barTitle}>Review</h1><span /></header>

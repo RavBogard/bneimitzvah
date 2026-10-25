@@ -137,6 +137,52 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
   expect(routes.seen.every(path => path.startsWith("/api/public/"))).toBe(true);
 });
 
+test("a new learner's first lesson is Hear it, a phrase to try, In verses, Done: sounds before recognition, and each half's control plays its own cut", async ({ page }) => {
+  test.setTimeout(120_000);
+  const routes = syntheticCourseRoutes(); await routes.install(page);
+  await page.goto("/learn");
+  await expect(page.locator("[data-next]")).toHaveAttribute("data-next", "intro-phrases");
+  await page.locator("[data-next]").getByRole("link", { name: "Start" }).click();
+  await expect(page).toHaveURL(/\/learn\/intro-phrases$/);
+  await expect(page.locator("main[data-step=hear]")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("list", { name: "Step 1 of 4" })).toBeAttached();
+  // Hear it: each half of Genesis 1:1 has its own control, named Hear {family}, and plays a cut shorter than the whole verse.
+  const blobSize = (src: string) => page.evaluate(async url => (await (await fetch(url)).blob()).size, src);
+  const lastPlayed = () => page.evaluate(() => { const list = (window as unknown as { learnPlays: string[] }).learnPlays; return list[list.length - 1]; });
+  const sizes: Record<string, number> = {};
+  for (const name of ["Hear etnachta", "Hear sof pasuk", "Hear it"]) {
+    const before = await plays(page);
+    await page.getByRole("button", { name, exact: true }).click();
+    await expect.poll(() => plays(page)).toBeGreaterThan(before);
+    sizes[name] = await blobSize((await lastPlayed())!);
+    await page.getByRole("button", { name, exact: true }).click(); // a second press stops it
+  }
+  expect(sizes["Hear etnachta"]).toBeGreaterThan(0);
+  expect(sizes["Hear sof pasuk"]).toBeGreaterThan(0);
+  expect(sizes["Hear etnachta"]).toBeLessThan(sizes["Hear it"]);
+  expect(sizes["Hear sof pasuk"]).toBeLessThan(sizes["Hear it"]);
+  await expect(page.getByText("The recording did not load. Try again.")).toHaveCount(0);
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  // The sound step: one real engine phrase to echo and try, then on to the examples.
+  await expect(page.locator("main[data-step=sound]")).toBeVisible();
+  await page.getByRole("button", { name: "Examples", exact: true }).click();
+  // In verses: every whole-verse example offers both halves.
+  await expect(page.getByRole("heading", { name: "In verses" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Hear etnachta", exact: true })).toHaveCount(4);
+  await expect(page.getByRole("button", { name: "Hear sof pasuk", exact: true })).toHaveCount(4);
+  const before = await plays(page);
+  await page.getByRole("button", { name: "Hear sof pasuk", exact: true }).first().click();
+  await expect.poll(() => plays(page)).toBeGreaterThan(before);
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  // No question stands between the sounds and Done: no same or different, no which half.
+  await expect(page.locator("main[data-step=done]")).toBeVisible();
+  await expect(page.getByText("Same tune or different?")).toHaveCount(0);
+  await expect(page.getByText("Return to this phrase whenever you need it.", { exact: false })).toBeVisible();
+  const stored = JSON.parse((await page.evaluate(key => localStorage.getItem(key), KEY))!);
+  expect(Object.keys(stored.lessons)).toEqual(["intro-phrases"]);
+  expect(stored.cards).toEqual({});
+});
+
 test("tapping a word opens its card, never trope; Escape, Close and a tap outside close it and focus goes back to the word", async ({ page }, testInfo) => {
   const routes = syntheticCourseRoutes(); await routes.install(page); await seed(page, introDone);
   await page.goto("/learn/torah-etnachta");

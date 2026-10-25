@@ -24,7 +24,6 @@ export function taughtSoundFamilies(lesson: Lesson, progress: Progress | null, m
 }
 /** Old catalogue drills remain a data API. Course use requires taught options and never asserts family == acoustic sameness. */
 export function optionalSoundDrills(lesson: Lesson, taught: ReadonlySet<FamilyId>): Drill[] {
-  if (lesson.id === "intro-phrases") return [];
   return lesson.activities.filter(isDrill).flatMap<Drill>(activity => {
     if (activity.type === "same-or-different") return [];
     if (activity.type === "look-alikes") return [activity];
