@@ -213,3 +213,12 @@ The engine splits phrases at every pausing mark (verse.ts:74–79). No field hol
 - The first-phrase step is a path row, not a lesson.
 - N19 keeps verse cards in a separate document.
 - Open items 2 and 4 follow the recommendations, since neither needs new wording. Items 1, 3, 5 and 6 and the "Hear {family}" label go to Daniel.
+
+## Daniel's answers (popups, 2026-10-24)
+
+1. First-verse ending: **"Keep ours, gated (Recommended)"**. "You can lein this verse." shows only after the learner taps "Same as the reader". "Not yet" returns to phrase practice with no celebration.
+2. N17a's per-half clips: **"Ship, I'll listen after (Recommended)"**. They go live with the re-order. Daniel listens on the site, and any cut he rejects comes out.
+3. The first-phrase row: **"After the endings, for everyone (Recommended)"**. It sits after the two endings. Signed-out visitors get this week's first phrase, and students get their own. Its signed-out label is drafted for Daniel's later approval; until then the row shows only to signed-in students.
+4. N19a content: **"Claude shortlists, you pick (Recommended)"**. Claude proposes three word-timed verses with their engine splits and candidate joins. Daniel listens, picks one and writes the cues. Nothing is built before that.
+
+The accessible name "Hear {family}" follows the approved "Hear {ref}" pattern and ships with N17a.
