@@ -1,6 +1,6 @@
 "use client";
 import { useId } from "react";
-import { textSizes, tikkunViews, useReadingPrefsNow, useSetReadingPrefs } from "./reading-prefs";
+import { textSizes, tikkunViews, useReadingPrefs, useSetReadingPrefs } from "./reading-prefs";
 import { MAX_INLINE_WORKS, STUDY_WORKS, useStudyLens } from "./study-lens";
 import { COMMENTARY_WORKS } from "../../../lib/readings/commentary";
 import { icons } from "./study/lift";
@@ -22,7 +22,7 @@ export function workCoverageNote(key: string): "Torah only" | "Prophets only" | 
 export function ReadingToolbar({ onHear, listeningEnabled = false, tikkunAvailable = false, worksCorpus = "torah", englishHidden = false }: { onHear?(): void; listeningEnabled?: boolean; tikkunAvailable?: boolean; worksCorpus?: "torah" | "neviim";
   /** The translate drill is hiding the English: the button then reads not pressed and says why it does nothing, and the reader's own choice is kept. */
   englishHidden?: boolean } = {}) {
-  const prefs = useReadingPrefsNow(), setReadingPrefs = useSetReadingPrefs(), lens = useStudyLens(), id = useId(), englishWhy = `${id}-english-why`, menu = `${id}-size`, tikkunMenu = `${id}-tikkun`, worksMenu = `${id}-works`;
+  const prefs = useReadingPrefs(), setReadingPrefs = useSetReadingPrefs(), lens = useStudyLens(), id = useId(), englishWhy = `${id}-english-why`, menu = `${id}-size`, tikkunMenu = `${id}-tikkun`, worksMenu = `${id}-works`;
   const size = textSizes.find(row => row.id === prefs.size)!, view = tikkunViews.find(row => row.id === prefs.tikkunView) ?? tikkunViews[0];
   const study = lens.available && lens.lens === "study";
   const covers = (work: string) => Boolean(COMMENTARY_WORKS[work]?.editions[worksCorpus]);
