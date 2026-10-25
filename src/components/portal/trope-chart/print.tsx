@@ -19,7 +19,7 @@ export function PrintChart() {
   }
   return <div data-chart-print-controls data-chart-font-state={state}>
     <button className="button-primary" disabled={state !== "ready"} onClick={() => void print()}>Print chart</button>
-    <p role="status">{state === "ready" ? "Chart ready to print." : state === "loading" ? "Preparing the Hebrew for printing…" : "The Hebrew font could not be loaded. Reload the chart before printing."}</p>
+    <p role="status">{state === "ready" ? "" : state === "loading" ? "Preparing the Hebrew for printing…" : "The Hebrew font could not be loaded. Reload the chart before printing."}</p>
     {state === "error" && <button className="button-secondary" onClick={() => window.location.reload()}>Reload chart</button>}
   </div>;
 }

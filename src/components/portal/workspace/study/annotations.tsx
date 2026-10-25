@@ -1,10 +1,12 @@
 "use client";
-import { useMemo, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { Fragment, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { rovingTarget } from "./word-nav";
 import { colorStudyVerse, type AssignmentEnding, type ColorResult } from "../../../../lib/hebrew/study-annotations";
 import { projectStudyVerse, type DisplayPart, type StudyProjection } from "../../../../lib/hebrew/study-tokens";
 import { PHRASE_FAMILIES } from "../../../../lib/trope/chart-catalog";
-import { INVERTED_NUN, tikkunPieces, tikkunSigns, tikkunText } from "../../../../lib/hebrew/tikkun";
+import { INVERTED_NUN, tikkunPieces, tikkunSigns, tikkunText, type TikkunPiece } from "../../../../lib/hebrew/tikkun";
+import { studyAtoms, type StudyAtom } from "../../../../lib/hebrew/tikkun-atoms";
+import { useTikkunLayout, type TikkunLayout } from "./tikkun-layout";
 import hebrewStyles from "../../../../styles/hebrew-font.module.css";
 import stamStyles from "../../../../styles/stam-font.module.css";
 import { useReadingPrefs, type TikkunView } from "../reading-prefs";
@@ -32,7 +34,9 @@ export function useVerseColors(verse: StudyVerse, assignment: AssignmentEnding, 
   return useMemo(() => enabled ? colorStudyVerse(verse.ref, verse.hebrew, { kind, confirmed, verses: verses ? verses.split("\n") : [] }) : null, [enabled, verse, kind, confirmed, verses]);
 }
 
-export function StudyHebrew({ verse, colors, id, className = "", activeWord = null, onWordSelect, inline = false, wordAction = "word", toolsAvailable = true, linked = null }: { verse: StudyVerse; inline?: boolean; colors: Ready | null; id: string; className?: string; activeWord?: number | null;
+export function StudyHebrew({ verse, colors, id, className = "", activeWord = null, onWordSelect, inline = false, wordAction = "word", toolsAvailable = true, linked = null, atoms = null, layout = null }: { verse: StudyVerse; inline?: boolean; colors: Ready | null; id: string; className?: string; activeWord?: number | null;
+  /** Side-by-side tikkun: the verse as aligned atoms, set in the rows `layout` gives (the same rows as the scroll column). */
+  atoms?: readonly StudyAtom[] | null; layout?: TikkunLayout | null;
   /** `element` is the word that was chosen, so a card opened from it can hand focus back. */
   onWordSelect?(index: number, element?: HTMLElement): void; wordAction?: "word" | "verse" | "tools" | "phrase" | "card"; toolsAvailable?: boolean;
   /** Words a commentary quotes, underlined while its comment is pointed at (the comment-to-word link). */
@@ -85,7 +89,17 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-word-index]") : null;
     if (!target || !event.currentTarget.contains(target)) return;
     const index = Number(target.dataset.wordIndex); if (Number.isSafeInteger(index) && index >= 0 && projection && index < projection.words.length) onWordSelect(index, event.currentTarget.querySelector<HTMLElement>(`[data-word-index="${index}"][role="button"]`) ?? target);
-  } : undefined}>{projection ? projection.runs.map((run, index) => run.kind === "text" ? <span key={run.segment}>{parts(run.parts)}</span>
+  } : undefined} {...(atoms && projection ? { "data-tk-side": "pointed" } : {})}>{atoms && projection ? (layout?.rows ?? [[0, atoms.length] as const]).map(([from, to], line) =>
+    <span key={line} className={`${styles.tkLine} ${layout?.rows ? "" : styles.tkLineOpen}`.trim()} data-tk-line={line}>{atoms.slice(from, to).map((atom, offset) => {
+      const gapRun = (at: number) => { const run = projection.runs[at]; return run.kind === "gap" && !trailing(at, projection.runs.length, run.kind) ? <span key={`gap-${at}`}>{gap(run.break)}</span> : null; };
+      return <Fragment key={from + offset}><span className={styles.tkAtom} data-tk-atom={from + offset} data-joined={atom.joined ? "" : undefined}>
+        {atom.before.map(gapRun)}
+        {atom.kind === "alternative" && atom.run ? <span className="study-alternative">{alternative(atom.run.written, parts(atom.run.read))}</span> : atom.kind === "sign" ? sign : null}
+        {atom.parts.length ? parts(atom.parts) : null}
+        {atom.after.map(gapRun)}
+      </span>{from + offset < atoms.length - 1 && !atoms[from + offset + 1].joined && " "}</Fragment>;
+    })}</span>)
+    : projection ? projection.runs.map((run, index) => run.kind === "text" ? <span key={run.segment}>{parts(run.parts)}</span>
     : run.kind === "alternative" ? <span className="study-alternative" key={run.segment}>{alternative(run.written, parts(run.read))}</span>
       : run.kind === "gap" && trailing(index, projection.runs.length, run.kind) ? null : <span key={run.segment}>{run.kind === "gap" ? gap(run.break) : sign}</span>)
     : verse.hebrew.segments.map((segment, index) => segment.kind === "text" ? <span key={index}>{segment.text}</span>
@@ -154,15 +168,17 @@ export function studyFlowGroups(verses: readonly StudyVerse[], sectionStarts: re
 /** Scroll lettering for one verse: consonants only, in the STaM face, never interactive.
  *  Given the verse's projection, each written word carries its pointed word's phrase color (when colors
  *  are on) and the playing-word highlight; the letters are the same either way (tikkunPieces). */
-export function TikkunVerse({ verse, className = "", projection = null, colors = null, activeWord = null, ...rest }: {
+export function TikkunVerse({ verse, className = "", projection = null, colors = null, activeWord = null, atoms = null, layout = null, ...rest }: {
   verse: StudyVerse; className?: string; projection?: StudyProjection | null; colors?: Ready | null; activeWord?: number | null; "aria-hidden"?: boolean;
+  /** Side-by-side tikkun: the verse as aligned atoms, set in the rows `layout` gives (the same rows as the pointed column). */
+  atoms?: readonly StudyAtom[] | null; layout?: TikkunLayout | null;
 }) {
   const text = useMemo(() => projection ? null : tikkunText(verse.hebrew.text), [projection, verse.hebrew.text]);
   const signs = useMemo(() => tikkunSigns(verse.hebrew.segments), [verse.hebrew.segments]);
   const pieces = useMemo(() => projection ? tikkunPieces(projection.runs) : null, [projection]);
   // The scroll writes the inverted nuns (Numbers 10:35-36), so they stay; every other mark is gone.
   const sign = (key?: number) => <span key={key} role="img" aria-label="Inverted nun, Masoretic sign">{INVERTED_NUN}</span>;
-  const words = pieces?.map((piece, index) => {
+  const render = (piece: TikkunPiece, index: number) => {
     if (piece.sign) return sign(index);
     if (piece.wordIndex === null) return piece.text;
     // A ketiv stands for every word of its qere, so it lights up while any of them plays.
@@ -170,7 +186,13 @@ export function TikkunVerse({ verse, className = "", projection = null, colors =
     return <span key={index} data-tikkun-word={piece.wordIndex} data-family={family?.id} data-reference-active={active ? "true" : undefined}
       className={[family ? styles.word : "", active ? referenceStyles.activeWord : ""].filter(Boolean).join(" ") || undefined}
       style={family ? { "--phrase-color": family.color } as CSSProperties : undefined}>{piece.text}</span>;
-  });
+  };
+  const words = pieces?.map(render);
+  if (atoms && projection) return <span className={`${stamStyles.stam} ${className}`.trim()} lang="he" dir="rtl" data-tikkun-ref={verse.ref} data-tk-side="tikkun" {...rest}>
+    {(layout?.rows ?? [[0, atoms.length] as const]).map(([from, to], line) => <span key={line} className={`${styles.tkLine} ${layout?.rows ? "" : styles.tkLineOpen}`.trim()} data-tk-line={line}>
+      {atoms.slice(from, to).map((atom, offset) => <Fragment key={from + offset}><span className={styles.tkAtom} data-tk-atom={from + offset}>{atom.tikkun.map(render)}</span>{from + offset < atoms.length - 1 && " "}</Fragment>)}
+    </span>)}
+  </span>;
   return <span className={`${stamStyles.stam} ${className}`.trim()} lang="he" dir="rtl" data-tikkun-ref={verse.ref} {...rest}>
     {words ?? <>{signs.before && <>{sign()}{text && " "}</>}{text}{signs.after && <> {sign()}</>}</>}
   </span>;
@@ -190,17 +212,21 @@ function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAv
     return value.status === "ready" ? value.projection : null;
   }, [tikkun, colors, verse.ref, verse.hebrew]);
   const number = /:([1-9]\d*)$/.exec(verse.ref)?.[1];
-  return <span data-verse-ref={verse.ref} className={styles.flowVerse} data-verse-picked={state.picked || undefined} data-verse-marked={state.marked || undefined}>
+  // Side by side, both columns are set from one list of lines, so a row holds the same words on each side (a printed tikkun).
+  const host = useRef<HTMLSpanElement>(null), atoms = useMemo(() => tikkun === "beside" && projection ? studyAtoms(projection.runs) : null, [tikkun, projection]);
+  const layout = useTikkunLayout(host, atoms, `${prefs.size}|${prefs.colors}`);
+  const aligned = atoms !== null && atoms.length > 0;
+  return <span ref={host} data-verse-ref={verse.ref} data-tk-rows={aligned ? "" : undefined} className={styles.flowVerse} data-verse-picked={state.picked || undefined} data-verse-marked={state.marked || undefined}>
     <span className={styles.flowHebrew} data-hebrew-ref={verse.ref}>
     <span className="sr-only" role="heading" aria-level={4} dir="ltr">{verse.ref}</span>
     {state.choosing && choice ? <button type="button" className={`${styles.verseNumber} ${styles.chooseNumber}`} onClick={event => choice.onToggle(verse.ref, event.shiftKey)} aria-pressed={state.picked} aria-label={`Select ${verse.ref}`} title={verse.ref}>{state.picked && <ChoiceCheck />}{number ?? verse.ref}</button>
       : onVerse ? <button type="button" className={styles.verseNumber} onClick={onVerse} aria-label={`Hear ${verse.ref}`} title={verse.ref}>{state.marked && <ChoiceCheck />}{number ?? verse.ref}</button>
         : <sup title={verse.ref}>{state.marked && <ChoiceCheck />}{number ?? verse.ref}</sup>}{state.marked && <span className="sr-only"> (selected)</span>}{" "}
-    {replaced ? <TikkunVerse verse={verse} className={styles.flowTikkunInline} projection={projection} colors={colors} activeWord={activeWord} /> : <StudyHebrew verse={verse} colors={colors} id={id} inline activeWord={activeWord} onWordSelect={state.choosing ? undefined : onWord} wordAction={listening ? "verse" : "tools"} toolsAvailable={toolsAvailable} linked={linked} />}{" "}
+    {replaced ? <TikkunVerse verse={verse} className={styles.flowTikkunInline} projection={projection} colors={colors} activeWord={activeWord} /> : <StudyHebrew verse={verse} colors={colors} id={id} inline activeWord={activeWord} onWordSelect={state.choosing ? undefined : onWord} wordAction={listening ? "verse" : "tools"} toolsAvailable={toolsAvailable} linked={linked} atoms={aligned ? atoms : null} layout={layout} />}{" "}
     {verse.hebrew.paragraphAfter === "setumah" && <span className={styles.closedGap} role="img" aria-label="Closed paragraph" />}
     {colors && <span className="sr-only">{phraseGroups(colors).map(row => <span key={row.phrase} id={`${id}-phrase-${row.phrase}`}>{row.family.label}, {range(row.first, row.last)}. </span>)}</span>}
     </span>
-    {tikkun === "beside" && <TikkunVerse verse={verse} className={styles.flowTikkun} projection={projection} colors={colors} activeWord={activeWord} aria-hidden />}
+    {tikkun === "beside" && <TikkunVerse verse={verse} className={styles.flowTikkun} projection={projection} colors={colors} activeWord={activeWord} atoms={aligned ? atoms : null} layout={layout} aria-hidden />}
     {showEnglish && (englishHidden ? <span className={`study-english ${styles.flowEnglish} ${styles.flowEnglishHidden}`} lang="en" dir="ltr" data-english-hidden={verse.ref}>{englishHidden}</span>
       : <span className={`study-english ${styles.flowEnglish}`} lang="en" dir="ltr" data-english-ref={verse.ref}>{verse.english ?? "English reference unavailable for this verse."}</span>)}
   </span>;

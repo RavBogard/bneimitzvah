@@ -39,6 +39,6 @@ export function UnsubscribePage() {
         {view.kind !== "ready" && view.kind !== "pending" && <a className="button-secondary" href="/workspace/email">Email settings</a>}
       </section>
     </main>
-    <footer className="portal-footer"><span>Central Reform Congregation</span></footer>
+    <div className="portal-footer"><span>Central Reform Congregation</span></div>
   </div>;
 }

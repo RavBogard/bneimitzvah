@@ -34,6 +34,7 @@ import { CommentaryUnavailable, type CommentaryReader } from "../../src/server/s
 import type { TranslationsReader } from "../../src/server/study/translations";
 import { unavailablePinnedSource, unavailableShelf, unavailableSource, unavailableTranslations, unavailableServiceText } from "../helpers/translations";
 import { readPublicDiscussions } from "../../src/server/discussions/public";
+import { readApprovedPortionSummary } from "../../src/server/portion-summary/public";
 import type { ReferenceCatalog } from "../../src/server/reference-audio/catalog";
 import { ReferenceUnavailable } from "../../src/server/reference-audio/catalog";
 import { createStudyService } from "../../src/server/study/service";
@@ -150,6 +151,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       discussions: (verses: readonly string[]) => withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => readPublicDiscussions(tx, PUBLIC_TENANT, verses)),
       pinnedSource: unavailablePinnedSource,
       serviceText: unavailableServiceText,
+      portionSummary: (reading: string) => withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => readApprovedPortionSummary(tx, PUBLIC_TENANT, reading)),
     });
     async function withPublicRuntime(action: (runtime: PublicRuntime) => Promise<Response>) {
       await withTenantTransaction(db, { tenantId: "crc" }, async () => undefined);

@@ -112,7 +112,8 @@ it("shows a remembered consonant-only tikkun column in the STaM face beside Tora
   expect(cells.map(cell => cell.ref)).toEqual(["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"]);
   for (const cell of cells) { expect(cell.font.startsWith('"CRC Stam Ashkenaz"')).toBe(true); expect(cell.hidden).toBe("true"); expect(cell.lang).toBe("he"); expect(cell.interactive).toBe(0); }
   expect(await flow.locator("[data-tikkun-ref]").evaluateAll(markCount)).toBe(0);
-  const fonts = await stamGlyphs(tab, '.assigned-study [data-tikkun-ref="Genesis 1:1"]');
+  // Chromium reports the fonts of the text directly inside the node it is asked about, so ask about a written word: its letters are the glyphs that must come from the Stam face.
+  const fonts = await stamGlyphs(tab, '.assigned-study [data-tikkun-ref="Genesis 1:1"] [data-tikkun-word]');
   expect(fonts.some(font => font.isCustomFont && font.familyName === "Stam Ashkenaz CLM" && font.glyphCount > 0)).toBe(true);
   expect(fonts.every(font => font.isCustomFont)).toBe(true);
   // Wide screens keep the pointed, playable text and put the tikkun on its left, verse by verse.

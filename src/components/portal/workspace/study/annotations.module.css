@@ -39,7 +39,7 @@
 .flowParagraph:has(.flowTikkun) .flowHebrew, .flowParagraph:has(.flowTikkun) .inlineHebrew, .flowParagraph:has(.flowTikkun) .flowTikkun { overflow-wrap: normal; word-break: keep-all; }
 .flowParagraph:has(.flowTikkun) .flowVerse { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 2rem; align-items: stretch; direction: rtl; }
 .flowParagraph:has(.flowTikkun) .flowHebrew { display: block; grid-column: 1; grid-row: 1; padding-block: 0.25rem; text-align: start; }
-.flowTikkun { display: block; grid-column: 2; grid-row: 1; padding: 0.25rem 1.5rem; background: var(--color-surface); box-shadow: inset 1px 0 0 var(--color-rule), inset -1px 0 0 var(--color-rule); font-size: calc(var(--hebrew-size, 2rem) * 1.08); line-height: 2; text-align: justify; text-align-last: start; color: var(--color-ink); }
+.flowTikkun { display: block; grid-column: 2; grid-row: 1; padding: 0.25rem 1.5rem; background: var(--color-surface); box-shadow: inset 1px 0 0 var(--color-rule), inset -1px 0 0 var(--color-rule); font-size: calc(var(--hebrew-size, 2rem) * 1.08 * var(--tk-fit, 1)); line-height: 2; text-align: justify; text-align-last: start; color: var(--color-ink); }
 .flowParagraph:has(.flowTikkun) .flowVerse:first-child .flowTikkun { border-start-start-radius: var(--radius-control); border-start-end-radius: var(--radius-control); box-shadow: inset 1px 0 0 var(--color-rule), inset -1px 0 0 var(--color-rule), inset 0 1px 0 var(--color-rule); padding-top: 0.75rem; }
 .flowParagraph:has(.flowTikkun) .flowVerse:last-child .flowTikkun { border-end-start-radius: var(--radius-control); border-end-end-radius: var(--radius-control); padding-bottom: 0.75rem; }
 .flowParagraph:has(.flowTikkun) .flowVerse:last-child .flowTikkun { box-shadow: inset 1px 0 0 var(--color-rule), inset -1px 0 0 var(--color-rule), inset 0 -1px 0 var(--color-rule); }
@@ -51,11 +51,33 @@
 @media (max-width: 1000px) {
   .flowParagraph:has(.flowTikkun) { font-size: min(var(--hebrew-size, 2rem), 2rem); }
   .flowParagraph:has(.flowTikkun) .flowVerse { column-gap: 0.625rem; }
-  .flowTikkun { padding-inline: 0.5rem; font-size: calc(min(var(--hebrew-size, 2rem), 2rem) * 0.92); line-height: 1.95; text-align: start; }
+  .flowTikkun { padding-inline: 0.5rem; font-size: calc(min(var(--hebrew-size, 2rem), 2rem) * 0.92 * var(--tk-fit, 1)); line-height: 1.95; text-align: start; }
 }
 @media (min-width: 1001px) {
   /* With English between verses the column breaks, so each verse's tikkun is its own card. */
   .flowParagraph:has(.flowEnglish) .flowVerse .flowTikkun { border-radius: var(--radius-control); box-shadow: inset 0 0 0 1px var(--color-rule); padding-block: 0.5rem; }
+}
+/* Aligned rows: the layout hook breaks the verse once and both columns are set from that list, so each
+   row holds the same words on the pointed side and on the scroll side, as in a printed tikkun. The verse is a
+   grid of N rows; each column is a subgrid across them, so a row is as tall as the taller of its two lines.
+   A line never wraps (the hook measured it to fit), and a word is never broken. Until the first measure the
+   atoms sit in one wrapping line, which is the old flow. --tk-fit shrinks the type only when one word is wider than its column. */
+.tkLine { display: flex; flex-wrap: nowrap; column-gap: 0.3em; min-width: 0; align-self: center; white-space: nowrap; }
+.tkLineOpen { flex-wrap: wrap; white-space: normal; }
+.tkAtom { flex: none; display: inline-block; }
+.flowVerse[data-tk-rows] { grid-template-rows: repeat(var(--tk-lines, 1), auto); }
+.flowVerse[data-tk-rows] > .flowHebrew { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: subgrid; grid-row: 1 / span var(--tk-lines, 1); column-gap: 0.25rem; }
+.flowVerse[data-tk-rows] > .flowHebrew > .inlineHebrew[lang="he"] { display: grid; grid-column: 2; grid-row: 1 / span var(--tk-lines, 1); grid-template-rows: subgrid; font-size: calc(1em * var(--tk-fit, 1)); min-width: 0; }
+.flowVerse[data-tk-rows] > .flowHebrew > :is(button, sup) { grid-column: 1; grid-row: 1; align-self: center; justify-self: center; }
+/* The pointed text has no word space after a maqaf: the gap the line puts between atoms is taken back. */
+.flowVerse[data-tk-rows] .tkLine > .tkAtom[data-joined]:not(:first-child) { margin-inline-start: -0.3em; }
+.flowVerse[data-tk-rows] > .flowTikkun { display: grid; grid-template-rows: subgrid; grid-row: 1 / span var(--tk-lines, 1); text-align: start; }
+.flowVerse[data-tk-rows] > .flowEnglish { grid-row: auto; }
+/* A closed paragraph keeps its spoken label; there is no room to draw the gap inside a row. */
+.flowVerse[data-tk-rows] > .flowHebrew > .closedGap { grid-column: 1; grid-row: 1; inline-size: 0; block-size: 0; overflow: hidden; }
+@media (min-width: 1001px) {
+  /* Wide screens set the scroll column like a scroll: every row but the last of a verse runs the full width. */
+  .flowVerse[data-tk-rows] > .flowTikkun .tkLine:not(:last-child) { justify-content: space-between; }
 }
 /* The comment-to-word link: the quoted words are underlined while their comment is pointed at.
    An underline that appears, never an animation; it sits below the lowest vowels. */

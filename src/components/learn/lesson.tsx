@@ -69,7 +69,7 @@ function LessonFlow({ id }: { id: string }) {
     <a className="skip-link" href="#lesson-main">Skip to the lesson</a>
     <header className={styles.bar}>
       <a className={styles.close} href="/learn" aria-label="Back to the path">{icons.close}</a>
-      <p className={styles.barTitle}>{lesson.title}</p>
+      <h1 className={styles.barTitle}>{lesson.title}</h1>
       <ol className={styles.rail} aria-label={`Step ${at + 1} of ${steps.length}`}>{steps.map((_, i) => <li key={i} data-state={i < at ? "past" : i === at ? "current" : undefined} />)}</ol>
     </header>
     <main id="lesson-main" ref={main} tabIndex={-1} className={styles.lesson} data-step={step.kind}>
@@ -216,7 +216,7 @@ function Done({ lesson, complete, nextId, fallback }: { lesson: Lesson; complete
   const next = nextId ? lessonById(nextId) : null;
   const week = lesson.activities.find((activity): activity is ThisWeekActivity => activity.type === "this-week");
   return <>
-    <div className={styles.doneHead}><h1 className={styles.doneTitle}>{lesson.title}</h1><p className={styles.doneWord}>Done</p></div>
+    <div className={styles.doneHead}><h2 className={styles.doneTitle}>{lesson.title}</h2><p className={styles.doneWord}>Done</p></div>
     <p className={styles.doneLine}>{lesson.activities.some(activity => activity.type === "first-verse") ? PRACTICED_VERSE : "Return to this phrase whenever you need it. You can keep practising or use it in a reading."}</p>
     {week && <ThisWeekSection activity={week} lesson={lesson} fallback={fallback} />}
     {next && <p className={styles.nextName}>Next: {next.title}</p>}

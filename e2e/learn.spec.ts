@@ -47,6 +47,11 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
   await expect(next).toHaveAttribute("data-next", "torah-sof-pasuk");
   await expect(page.getByText("Family lessons visited: 0 of 10 Torah · 0 of 11 haftarah")).toBeVisible();
   await expect(page.getByText("Progress is saved on this device. Sign in to keep it.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in");
+  // Every lesson on both paths is a link (the order is advice), while Next still recommends one.
+  await expect(page.locator('section[aria-labelledby="path-torah"] ol a')).toHaveCount(12);
+  await expect(page.locator('section[aria-labelledby="path-haftarah"] ol a')).toHaveCount(12);
+  await expect(page.locator("[data-next]")).toHaveCount(1);
   await next.getByRole("link", { name: "Start" }).click();
   await expect(page).toHaveURL(/\/learn\/torah-sof-pasuk$/);
 
@@ -82,7 +87,13 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
     const prompt = await page.locator("main h2").first().innerText();
     if (i === 0) {
       missedPrompt = prompt; await answer(page, false);
-      if (prompt === "Which phrase is this?") { await expect(page.getByText(/^That one is .+\. Here is .+ for comparison\.$/)).toBeVisible(); sawFeedback = true; }
+      if (prompt === "Which phrase is this?") { await expect(page.getByText(/^That one is .+\. Here is .+ for comparison\.$/)).toBeVisible(); sawFeedback = true;
+        // G19: the wrong choice is an x on a muted fill, not the heavier outline; the right one keeps the colour and the check.
+        const wrong = page.locator("main button[data-state=chosen]");
+        await expect(wrong).toHaveCount(1); await expect(wrong.locator("svg")).toHaveCount(1);
+        await expect.poll(() => wrong.evaluate(node => getComputedStyle(node).boxShadow)).toBe("none");
+        await expect(page.locator("main button[data-state=right]")).toHaveCount(1);
+      }
     } else await answer(page, true);
     const nextButton = page.getByRole("button", { name: "Next", exact: true });
     await expect(nextButton).toBeEnabled();

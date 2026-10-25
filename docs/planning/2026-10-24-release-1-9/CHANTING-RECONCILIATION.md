@@ -144,6 +144,21 @@ Nothing is built before he picks. The build is course-verse settings in `lessons
 - A starting-choice screen or stored entry profile. It needs new wording and a schema change; linking every lesson gives the skip with nothing stored.
 - Splitting the Learn hot-file group.
 
+**Shortlist for Daniel (Claude, 2026-10-24).** All four verses are course examples served word-timed today (`course-data.ts:62,73`) and are absent from the uncovered lists in `docs/superpowers/research/2026-10-22-reference-audio-coverage.md`. No clip has been listened to. Ranges are zero-based word units, as in `lessons.json`.
+
+| Verse | Role | Units | Marks | Parts A / B | Joins | Marks not yet taught |
+|---|---|---|---|---|---|---|
+| Gen 1:1 (:539) | Starter (recommended) | 7 | tipcha, munach, etnachta, mercha, tipcha, mercha, silluq | 0–2 / 3–6 | 1–4 or 2–4 | none |
+| Ex 25:8 (:617) | Prepared alternative | 5 | mercha, tipcha, etnachta, tipcha, silluq | 0–2 / 3–4 | 1–3 or 2–3 | none |
+| Num 24:5 (:565) | Third | 5 (unit 0 is the maqaf chain) | mercha, tipcha, etnachta, tipcha, silluq | 0–2 / 3–4 | 1–3 or 2–3 | none |
+| Isaiah 40:1 (:2424) | Haftarah orientation | 5 | mercha, tipcha, etnachta, tipcha, silluq | 0–2 / 3–4 | 1–3 or 2–3 | n/a |
+
+- Gen 1:1 is the best known and has a real join inside B, but it is the most-drilled verse and the longest.
+- Ex 25:8 is the shortest and least worn, but its B is two words, so the join is nearly trivial.
+- Num 24:5's service tune may pull the ear away from the Torah melody.
+- Num 6:26 is dropped because it brings kadma, mahpach, pashta and zakef katan (unit 2) and a paseq before they are taught. Deut 6:4 is out for a similar reason: it has a paseq and mercha legarmeh, and the Shema tune bleeds in.
+- Daniel still listens to the exact cuts (boundary-v2), picks, and writes the cues.
+
 ## 4. The worked first reading on existing components
 
 | Step | Exists | New | Assets |

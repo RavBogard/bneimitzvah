@@ -49,7 +49,7 @@ export function HearAndName({ item, pools, melody, contrast, onAnswer }: DrillPr
       const state = !chosen ? undefined : family === item.answer.family ? "right" : family === chosen ? "chosen" : "other";
       return <li key={family}><button type="button" className={styles.choice} data-state={state} disabled={!!chosen} aria-pressed={chosen === family}
         style={state === "right" ? phraseStyle(family) : undefined} data-family={family} data-right={family === item.answer.family || undefined} onClick={() => pick(family)}>
-        <ContourMark family={family} melody={melody} /><span>{familyName(family)}</span>{state === "right" && <span className={styles.choiceMark}>{icons.check}</span>}
+        <ContourMark family={family} melody={melody} /><span>{familyName(family)}</span>{state === "right" && <span className={styles.choiceMark}>{icons.check}</span>}{state === "chosen" && <span className={styles.choiceMark}>{icons.wrong}</span>}
       </button></li>;
     })}</ul>
     <p role="status" className={styles.feedback}>{chosen && chosen !== item.answer.family ? compared ? `That one is ${familyName(item.answer.family)}. Here is ${familyName(chosen)} for comparison.` : `That one is ${familyName(item.answer.family)}.`
@@ -70,12 +70,14 @@ export function SameOrDifferent({ item, pools, onAnswer }: DrillProps<SameItem>)
   const part = (n: number) => state.id === id && state.status === "playing" && state.part === n;
   const button = (same: boolean, label: string) => <button type="button" className={styles.choice} disabled={chosen !== null} aria-pressed={chosen === same}
     data-state={chosen === null ? undefined : same === item.same ? "right" : chosen === same ? "chosen" : "other"} style={{ "--phrase-color": "var(--lake-tint)" } as CSSProperties} data-right={same === item.same || undefined} onClick={() => pick(same)}>
-    <span>{label}</span>{chosen !== null && same === item.same && <span className={styles.choiceMark}>{icons.check}</span>}</button>;
+    <span>{label}</span>{chosen !== null && same === item.same && <span className={styles.choiceMark}>{icons.check}</span>}{chosen === same && same !== item.same && <span className={styles.choiceMark}>{icons.wrong}</span>}</button>;
   return <>
     <h2 className={styles.prompt}>Same tune or different?</h2>
     <div className={styles.playRow}><PlayTile id={id} requests={both} /><span className={styles.number} data-on={part(0)} aria-hidden="true">1</span><span className={styles.number} data-on={part(1)} aria-hidden="true">2</span></div>
     <AudioError id={id} />
     <div className={styles.pair}>{button(true, "Same tune")}{button(false, "Different tune")}</div>
+    {/* Finding 22: the answer is spoken as well as shown, with the right button's own label (as hear-and-name speaks its right family). */}
+    <p role="status" className="sr-only">{chosen !== null ? item.same ? "Same tune" : "Different tune" : ""}</p>
     {chosen !== null && <div className={styles.answer} data-answer><div className={styles.pairList}>{[item.first, item.second].map((phrase, n) => {
       const verse = verseOf(pools, phrase);
       return <div key={n} className={styles.pairRow}><span className={styles.number} aria-hidden="true">{n + 1}</span>
@@ -213,7 +215,7 @@ export function LookAlikes({ item, onAnswer, first = item.first }: DrillProps<Lo
           <LookWord playback={n === item.answer ? [id] : []} side={side} context={item.context} card={false} /></button>
         : <div key={n} className={`${styles.choice} ${styles.lookWord}`} data-look={n} data-state={state} style={{ "--phrase-color": "var(--lake-tint)" } as CSSProperties}>
           <LookWord playback={[...(n === item.answer ? [id] : []), { id: `${id}:words`, part: n === tapped ? 0 : 1 }]} side={side} context={item.context} card />
-          <span className={styles.lookMark} dir="ltr">{state === "right" && <span className={styles.choiceMark}>{icons.check}</span>}{side.word.mark}</span>
+          <span className={styles.lookMark} dir="ltr">{state === "right" && <span className={styles.choiceMark}>{icons.check}</span>}{state === "chosen" && <span className={styles.choiceMark}>{icons.wrong}</span>}{side.word.mark}</span>
         </div>;
     })}</div>
     <p role="status" className={styles.feedback}>{tapped !== null ? lookTell(answerSide) : ""}</p>
@@ -242,7 +244,7 @@ export function WhichHalf({ item, pools, onAnswer }: DrillProps<HalfItem>) {
   const button = (half: "before" | "after", label: string) => <button type="button" className={styles.choice} disabled={!!chosen} aria-pressed={chosen === half}
     data-state={!chosen ? undefined : half === item.half ? "right" : half === chosen ? "chosen" : "other"} style={{ "--phrase-color": "var(--lake-tint)" } as CSSProperties}
     data-right={half === item.half || undefined} onClick={() => pick(half)}>
-    <span>{label}</span>{chosen && half === item.half && <span className={styles.choiceMark}>{icons.check}</span>}</button>;
+    <span>{label}</span>{chosen && half === item.half && <span className={styles.choiceMark}>{icons.check}</span>}{chosen === half && half !== item.half && <span className={styles.choiceMark}>{icons.wrong}</span>}</button>;
   return <>
     <h2 className={styles.prompt}>{leadIn ? copy.promptLeadIn : copy.promptPhrase}</h2>
     <div className={styles.playRow}><PlayTile id={id} requests={requests} /></div>
