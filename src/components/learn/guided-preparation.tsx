@@ -20,6 +20,7 @@ const prompts: Record<PreparationStage, string> = {
 export function GuidedPreparation({ verse, lein, onDone, onAnother }: { verse: AnalysedVerse; lein: string | null; onDone(): void; onAnother?: () => void }) {
   const [state, dispatch] = useReducer(preparationStep, undefined, startPreparation), [rate, setRate] = useState(1), [colors, setColors] = useState(true);
   const [repairTarget, setRepairTarget] = useState<"words" | "tune-repair" | "unsure">("words");
+  const [comparisonFailed, setComparisonFailed] = useState(false);
   const { player } = useLearnServices(), playback = usePlayerState(), heading = useRef<HTMLHeadingElement>(null);
   const lastPrompt = useRef(`${state.stage}:${state.part}:${state.join}`);
   const parts = preparationParts(verse), part = parts[state.part], whole = [0, verse.units.length - 1] as const;
@@ -41,7 +42,11 @@ export function GuidedPreparation({ verse, lein, onDone, onAnother }: { verse: A
     node.scrollIntoView({ block: "start", behavior: "instant" });
   }, [state.stage, state.part, state.join]);
   useEffect(() => () => player.stop(), [player]);
-  const play = (words: readonly [number, number], label: string, suffix: string) => <PlayTile id={`${id}:${suffix}`} requests={[phraseRequest(verse, words)]} label={label} rate={rate} />;
+  useEffect(() => {
+    if (state.stage === "whole-check" && playback.status === "error" && playback.id === `${id}:model`) setComparisonFailed(true);
+  }, [state.stage, playback, id]);
+  const play = (words: readonly [number, number], label: string, suffix: string) => <PlayTile id={`${id}:${suffix}`} requests={[phraseRequest(verse, words)]} label={label} rate={rate}
+    onPlayed={() => { if (state.stage === "whole-check" && suffix === "model") setComparisonFailed(false); }} />;
   const bindings = ["model", "ending", "word", "smaller"].map(suffix => `${id}:${suffix}`);
   const nextPart = () => go({ type: "next-part", count: parts.length });
   const chooseRepair = (target: "tune-repair" | "unsure") => { if (state.stage !== "whole-check") { stage(target); return; } setRepairTarget(target); stage("choose-part"); };
@@ -95,11 +100,12 @@ export function GuidedPreparation({ verse, lein, onDone, onAnother }: { verse: A
       <button type="button" className="button-secondary" onClick={() => go({ type: "part", part: state.join })}>Practice the first part</button>
     </div>}
     {state.stage === "whole-check" && <div className={styles.preparationActions}>
-      <button type="button" className="button-start" onClick={() => go({ type: "self-report", same: true })}>Same as the reader</button>
+      <button type="button" className="button-start" disabled={comparisonFailed} onClick={() => go({ type: "self-report", same: true })}>Same as the reader</button>
       <button type="button" className="button-secondary" onClick={() => { setRepairTarget("words"); go({ type: "self-report", same: false }); }}>Not yet</button>
       {parts.length > 1 && <button type="button" className="button-secondary" onClick={() => stage("join-model")}>Practice the join</button>}
       <button type="button" className="button-secondary" onClick={() => stage("whole-attempt")}>Try the whole verse again</button>
     </div>}
+    {state.stage === "whole-check" && comparisonFailed && <p>The comparison recording needs a successful retry. Replay the whole verse, work on a part, or return later.</p>}
     {state.stage === "recover" && <p>Choose a familiar part below. Try from there, then connect it to the next part. This is a practice strategy; ask your congregation about public-reading customs.</p>}
     {state.stage === "summary" ? <>
       {state.selfComparison === "same" && <><p>You can lein this verse.</p><p>Based on your comparison with the reader. This app hasn’t assessed your voice.</p></>}

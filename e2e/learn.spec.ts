@@ -27,6 +27,13 @@ async function answer(page: Page, right: boolean) {
   }
 }
 
+async function hearAnchor(page: Page, family: string) {
+  const row = page.locator("[data-sound-anchors] li").filter({ has: page.locator(`[data-family-chip="${family}"]`) });
+  const model = row.getByRole("button", { name: /^Hear / });
+  await model.click(); await expect(model).toHaveAttribute("data-state", "playing");
+  await expect(model).toHaveAttribute("data-state", "idle", { timeout: 10_000 });
+}
+
 test("a learner opens the course, hears a phrase, misses one item and gets it back, and finishes the lesson; progress survives a reload", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   const routes = syntheticCourseRoutes(); await routes.install(page); await seed(page, introDone);
@@ -35,10 +42,10 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
   expect(response?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
   await expect(page).toHaveTitle("Learn to lein | CRC Torah");
   await expect(page.getByRole("heading", { level: 1, name: "Learn to lein" })).toBeVisible();
-  await expect(page.getByText("About ten short phrases make up the whole tune.")).toBeVisible();
+  await expect(page.getByText("Hear a phrase, chant it yourself, then connect it to a reading. Return to words, sounds and joins whenever you need help.", { exact: true })).toBeVisible();
   const next = page.locator("[data-next]");
   await expect(next).toHaveAttribute("data-next", "torah-sof-pasuk");
-  await expect(page.getByText("Can hear: 0 of 10 Torah phrases · 0 of 11 haftarah phrases")).toBeVisible();
+  await expect(page.getByText("Family lessons visited: 0 of 10 Torah · 0 of 11 haftarah")).toBeVisible();
   await expect(page.getByText("Progress is saved on this device. Sign in to keep it.")).toBeVisible();
   await next.getByRole("link", { name: "Start" }).click();
   await expect(page).toHaveURL(/\/learn\/torah-sof-pasuk$/);
@@ -59,8 +66,12 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
   });
   expect(sizes.hebrew, "the Hebrew is the largest text").toBeGreaterThan(sizes.other);
   await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.locator("[data-sound-stage=model]")).toBeVisible();
+  await page.getByRole("button", { name: "Examples", exact: true }).click();
   await expect(page.getByRole("heading", { name: "In verses" })).toBeVisible();
   await page.getByRole("button", { name: "Next", exact: true }).click();
+  await hearAnchor(page, "etnachta");
+  await page.getByRole("button", { name: "Start optional questions", exact: true }).click();
 
   // Drills: the first item is answered wrong, comes back later, and is answered right.
   let missedPrompt = "", sawFeedback = false;
@@ -94,7 +105,7 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
 
   // Done: a plain fact, then this week's reading, then the next step.
   await expect(page.locator("main[data-step=done]")).toBeVisible();
-  await expect(page.getByText("You can hear the end of a verse coming and know the mark that ends it.")).toBeVisible();
+  await expect(page.getByText("Return to this phrase whenever you need it. You can keep practising or use it in a reading.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "In this week's reading" })).toBeVisible();
   await expect(page.locator("main [class*=weekRows] li").first()).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Next: Etnachta")).toBeVisible();
@@ -106,9 +117,9 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
   await page.getByRole("link", { name: "Back to the path" }).last().click();
   await expect(page).toHaveURL(/\/learn$/);
   await expect(page.locator("[data-next]")).toHaveAttribute("data-next", "torah-etnachta");
-  await expect(page.getByText("Can hear: 1 of 10 Torah phrases · 0 of 11 haftarah phrases")).toBeVisible();
+  await expect(page.getByText("Family lessons visited: 1 of 10 Torah · 0 of 11 haftarah")).toBeVisible();
   await page.reload();
-  await expect(page.getByText("Can hear: 1 of 10 Torah phrases · 0 of 11 haftarah phrases")).toBeVisible();
+  await expect(page.getByText("Family lessons visited: 1 of 10 Torah · 0 of 11 haftarah")).toBeVisible();
   await expect(page.locator('a[href="/learn/torah-sof-pasuk"] [data-state=done]')).toBeVisible();
   // Nothing is due today; the review line appears only when a phrase is.
   await expect(page.getByRole("link", { name: /^Review:/ })).toHaveCount(0);
@@ -161,7 +172,7 @@ test("a corrupt saved value means a fresh start, never an error", async ({ page 
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.goto("/learn");
   await expect(page.locator("[data-next]")).toHaveAttribute("data-next", "intro-phrases");
-  await expect(page.getByText("Can hear: 0 of 10 Torah phrases · 0 of 11 haftarah phrases")).toBeVisible();
+  await expect(page.getByText("Family lessons visited: 0 of 10 Torah · 0 of 11 haftarah")).toBeVisible();
   await expect(page.getByText("Best after The two endings.")).toBeVisible();
   await page.goto("/learn/review");
   await expect(page.getByText("Nothing to review yet. Finish a lesson and its phrases come back here.")).toBeVisible();
@@ -180,7 +191,12 @@ test("at 360px the home, a lesson and a drill fit with no sideways scroll and 56
   await page.goto("/learn/torah-etnachta");
   await expect(page.locator("main[data-step=hear]")).toBeVisible({ timeout: 20_000 });
   expect(await noHorizontalScroll(page)).toBe(true);
-  for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Try the sound", exact: true }).click();
+  await page.getByRole("button", { name: "Try this familiar phrase directly", exact: true }).click();
+  await page.getByRole("button", { name: "Compare with the reader", exact: true }).click();
+  await page.getByRole("button", { name: "Optional recognition practice", exact: true }).click();
+  await hearAnchor(page, "sof-pasuk");
+  await page.getByRole("button", { name: "Start optional questions", exact: true }).click();
   await expect(page.locator("main[data-step=drill]")).toBeVisible();
   expect(await noHorizontalScroll(page)).toBe(true);
   for (const box of await page.locator("main button[class*=choice], main button[class*=play]").evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))) expect(box).toBeGreaterThanOrEqual(56);

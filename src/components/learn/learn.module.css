@@ -305,3 +305,6 @@ a.stepLink:hover { background: var(--color-hover); color: var(--color-ink); }
 .preparationHelp label { display: block; margin-block: 0.75rem; }
 .preparationHelp p { margin-block: 1rem; }
 @media (max-width: 480px) { .preparationActions { align-items: stretch; } .preparationActions > button, .preparationActions > a { width: 100%; } }
+.soundAnchor { display: grid; justify-items: start; gap: 0.75rem; padding-block: 1.25rem; border-block-end: 1px solid var(--color-rule); }
+.soundAnchor > p { margin: 0; }
+.soundNavigation { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }

@@ -1,12 +1,14 @@
 "use client";
 import type { CSSProperties } from "react";
 import { COURSE, familyColor, lessonMinutes, pathLessons, type Lesson, type Melody } from "../../lib/learn/course";
-import { courseDone, emptyProgress, heard, isDone, isUnlocked, localDay, nextLesson, reviewSummary, type Progress } from "../../lib/learn/progress";
+import { courseDone, emptyProgress, heard, isDone, isUnlocked, localDay, reviewSummary, type Progress } from "../../lib/learn/progress";
+import { recommendedLesson } from "../../lib/learn/recommendation";
 import { reviewLine } from "../../lib/learn/review-line";
 import { openPractice } from "../../lib/learn/practice";
 import { DRAFTED } from "./activity-copy";
 import { ContourMark, FamilyChip, icons } from "./bits";
 import { useProgress } from "./services";
+import { LearningStart } from "./learning-start";
 import styles from "./learn.module.css";
 
 export function LearnAppBar() {
@@ -43,7 +45,7 @@ export function QuickTenLinks({ progress }: { progress: Progress }) {
 export function CourseHome() {
   const { progress: loaded, account, until } = useProgress();
   const progress = loaded ?? emptyProgress(), ready = loaded !== null;
-  const next = nextLesson(progress), review = ready ? reviewSummary(progress, localDay(Date.now()), until) : null;
+  const next = recommendedLesson(progress), review = ready ? reviewSummary(progress, localDay(Date.now()), until) : null;
   const torah = heard(progress, "torah"), haftarah = heard(progress, "haftarah");
   const haftarahOpen = isUnlocked(progress, pathLessons("haftarah")[0]);
   return <div className={`portal-shell ${styles.shell}`}>
@@ -53,8 +55,8 @@ export function CourseHome() {
       <div className={styles.home}>
         <div className={styles.homeLead}>
           <h1 className={styles.title}>Learn to lein</h1>
-          <p className={styles.intro}>About ten short phrases make up the whole tune. Hear them one at a time, then lein a verse.</p>
-          {courseDone(progress) ? <section className={styles.next} aria-labelledby="learn-next"><h2 id="learn-next" className={styles.nextTitle}>Done. Review when you like.</h2></section>
+          <p className={styles.intro}>Hear a phrase, chant it yourself, then connect it to a reading. Return to words, sounds and joins whenever you need help.</p>
+          {courseDone(progress) ? <section className={styles.next} aria-labelledby="learn-next"><h2 id="learn-next" className={styles.nextTitle}>Keep preparing readings</h2><p><a href="/learn/prepare">Prepare a passage</a> or revisit a lesson below.</p></section>
             : next && <section className={styles.next} aria-labelledby="learn-next" data-next={next.id}>
               <div className={styles.nextTop}><span className={styles.nextLabel}>Next</span>{next.family && <FamilyChip family={next.family} melody={next.melody} />}</div>
               <h2 id="learn-next" className={styles.nextTitle}>{next.title}</h2>
@@ -63,7 +65,8 @@ export function CourseHome() {
             </section>}
           {review && <a className={styles.review} href="/learn/review"><span>{reviewLine(review)}</span>{icons.arrow}</a>}
           {ready && <QuickTenLinks progress={progress} />}
-          <p className={styles.heard}>Can hear: {torah.heard} of {torah.of} Torah phrases · {haftarah.heard} of {haftarah.of} haftarah phrases</p>
+          <LearningStart />
+          <p className={styles.heard}>Family lessons visited: {torah.heard} of {torah.of} Torah · {haftarah.heard} of {haftarah.of} haftarah</p>
           <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a></nav>
           {account.state !== "synced" && <p className={styles.saved}>Progress is saved on this device. Sign in to keep it.</p>}
         </div>

@@ -21,11 +21,13 @@ async function shot(page: Page, testInfo: TestInfo, name: string) {
   await page.screenshot({ path: dir ? join(dir, `${name}-${testInfo.project.name}.png`) : testInfo.outputPath(`${name}.png`), fullPage: true });
 }
 async function phoneWidth(page: Page, testInfo: TestInfo) { if (testInfo.project.name === "phone") await page.setViewportSize({ width: 390, height: 844 }); }
-/** From a lesson's Hear step, answer drills rightly until the heading matches; returns how many items it took. */
+/** Enter explicit optional exercises through examples/models, then answer until the target heading. */
 async function drillUntil(page: Page, heading: RegExp) {
-  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Examples", exact: true }).click();
   await expect(page.getByRole("heading", { name: "In verses" })).toBeVisible();
   await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Models for optional recognition", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Start optional questions", exact: true }).click();
   for (let i = 0; i < 30; i++) {
     await expect(page.locator("main h2").first()).toBeVisible();
     if (heading.test(await page.locator("main h2").first().innerText())) return i;
