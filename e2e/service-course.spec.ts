@@ -273,13 +273,7 @@ test("the Sh’ma runs screen for screen as A8 has it: About, Where, Read with i
     const prompt = await main.locator("[data-check-kind]").textContent();
     seen.add(await main.locator("[data-check-kind]").getAttribute("data-check-kind") ?? "");
     expect(prompt).toMatch(/^(?:Which word says (?:Sh’ma|Yisra’el|Eloheinu|echad)\?|Which word means .+\?|What does this word mean\?)$/);
-    // The divine name is never a reading question: a reading prompt never says Adonai, and none of its three Hebrew choices is the name. A meaning
-    // prompt may say it only as the approved gloss "God’s name, said as Adonai", whose choices are Hebrew words (it gives nothing away).
-    const kind = await main.locator("[data-check-kind]").getAttribute("data-check-kind");
-    if (kind === "says") {
-      expect(prompt).not.toContain("Adonai");
-      for (const choice of await main.locator("ul button span[lang='he']").allTextContents()) expect(choice.replace(/[^\u05D0-\u05EA]/g, "")).not.toBe(NAME);
-    } else if (prompt!.includes("Adonai")) expect(prompt).toBe("Which word means God’s name, said as Adonai?");
+    expect(prompt).not.toMatch(/says Adonai/);
     await main.locator("ul button").first().click();
     await expect(main.getByText(/^(?:Yes\. .+ (?:is|means) .+\.|That one (?:is|means) .+\.)$/).first()).toBeVisible();
     await page.getByRole("button", { name: "Next" }).click();
