@@ -10,6 +10,10 @@ test("public chart covers the catalog with the local Hebrew font and printable l
   await expect(page).toHaveTitle("Trope chart | CRC Torah");
   await expect(page.getByRole("heading", { level: 1, name: "Trope chart", exact: true })).toBeVisible();
   await expect(page.locator("[data-chart-family]")).toHaveCount(11);
+  // Each family heading is a link to its lesson, named by the lesson title.
+  await expect(page.locator("[data-chart-family] h3 a[href^='/learn/']")).toHaveCount(11);
+  await expect(page.locator("[data-chart-family=sof-pasuk] h3 a")).toHaveAttribute("href", "/learn/torah-sof-pasuk");
+  await expect(page.locator("[data-chart-family=sof-pasuk] h3 a")).toHaveText("Sof pasuk");
   await expect(page.locator("[data-chart-accent]")).toHaveCount(30);
   await expect(page.getByRole("button", { name: "Print chart", exact: true })).toBeEnabled();
   const marks = await page.locator("[data-chart-accent]").evaluateAll(nodes => nodes.map(node => ({

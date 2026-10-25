@@ -18,15 +18,14 @@ function PathList({ melody, progress, next }: { melody: Melody; progress: Progre
   return <>{units.map(unit => <div key={unit.id}>
     {!(unit.lessons.length === 1 && COURSE.lessons.find(row => row.id === unit.lessons[0])?.title === unit.title) && <h3 className={styles.unitTitle}>{unit.title}</h3>}
     <ol className={styles.path}>{unit.lessons.map(id => {
-      const lesson = COURSE.lessons.find(row => row.id === id)!, done = isDone(progress, id), open = isUnlocked(progress, lesson);
+      const lesson = COURSE.lessons.find(row => row.id === id)!, done = isDone(progress, id);
       const state = done ? "done" : next?.id === id ? "next" : "later";
       const dot = <span className={styles.dot} data-state={state} data-plain={lesson.family ? undefined : ""} style={done && lesson.family ? { "--phrase-color": familyColor(lesson.family) } as CSSProperties : undefined} aria-hidden="true">{done && icons.check}</span>;
       const status = <span className="sr-only">{done ? ", done" : state === "next" ? ", next" : ""}</span>;
       const mark = lesson.family ? <span className={styles.stepMark}><ContourMark family={lesson.family} melody={melody} /></span> : <span />;
       const title = lesson.title.replace(/ in the haftarah$/, "");
-      return <li key={id} className={styles.step}>{open
-        ? <a className={styles.stepLink} data-state={state} href={`/learn/${id}`}>{dot}<span>{title}{status}</span>{mark}</a>
-        : <span className={styles.stepLink} data-state="later">{dot}<span>{title}</span>{mark}</span>}</li>;
+      // Every lesson is a link: the order is advice (as "Best after The two endings." is), and Next still names one lesson.
+      return <li key={id} className={styles.step}><a className={styles.stepLink} data-state={state} href={`/learn/${id}`}>{dot}<span>{title}{status}</span>{mark}</a></li>;
     })}</ol>
   </div>)}</>;
 }
@@ -65,7 +64,7 @@ export function CourseHome() {
           {ready && <QuickTenLinks progress={progress} />}
           <p className={styles.heard}>Can hear: {torah.heard} of {torah.of} Torah phrases · {haftarah.heard} of {haftarah.of} haftarah phrases</p>
           <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a></nav>
-          {account.state !== "synced" && <p className={styles.saved}>Progress is saved on this device. Sign in to keep it.</p>}
+          {account.state !== "synced" && <p className={styles.saved}>Progress is saved on this device. <a href="/sign-in">Sign in</a> to keep it.</p>}
         </div>
         <div className={styles.paths}>
           <section aria-labelledby="path-torah"><div className={styles.pathHead}><h2 id="path-torah">Torah</h2></div><PathList melody="torah" progress={progress} next={next} /></section>

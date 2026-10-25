@@ -17,6 +17,7 @@ export const icons = {
   stop: svg(<rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" stroke="none" />),
   close: svg(<path d="M6 6l12 12M18 6L6 18" />),
   check: svg(<path d="M5 12.5l4.5 4.5L19 7.5" />, 18),
+  wrong: svg(<path d="M7 7l10 10M17 7L7 17" />, 18),
   arrow: svg(<path d="M9 6l6 6-6 6" />, 20),
   back: svg(<path d="M15 6l-6 6 6 6" />, 20),
 };

@@ -41,8 +41,8 @@ function Review() {
   const lessons = useMemo(() => plan ? COURSE.lessons.filter(lesson => lesson.family && plan.some(slot => slot.melody === lesson.melody && (slot.family === lesson.family || learned(progress, slot.melody).includes(lesson.family!)))) : [], [plan]); // eslint-disable-line react-hooks/exhaustive-deps
   const [retry, setRetry] = useState(0), data = useCourseVerses(lessons, retry);
   const frame = (body: ReactNode, footer?: ReactNode) => <div className={`portal-shell ${styles.shell}`}>
-    <header className={styles.bar}><a className={styles.close} href="/learn" aria-label="Back to the path">{icons.close}</a><p className={styles.barTitle}>Review</p><span /></header>
-    <main className={styles.lesson}>{body}</main>{footer && <div className={styles.footer}><div className={styles.footerInner}>{footer}</div></div>}
+    <header className={styles.bar}><a className={styles.close} href="/learn" aria-label="Back to the path">{icons.close}</a><h1 className={styles.barTitle}>Review</h1><span /></header>
+    <main className={styles.lesson}>{body}{footer && <div className={styles.footer}><div className={styles.footerInner}>{footer}</div></div>}</main>
   </div>;
   if (!loaded) return frame(<p role="status" className={styles.state}>Loading the review…</p>);
   if (!plan?.length) return frame(<><p className={styles.doneLine}>Nothing to review yet. Finish a lesson and its phrases come back here.</p><QuickTenLinks progress={progress} /></>,
