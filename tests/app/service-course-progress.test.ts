@@ -191,7 +191,7 @@ describe("signed-in service-course progress", () => {
 
   it("is a document apart from Learn to lein's: neither course's writes reach the other, and the owner names differ", async () => {
     const t = await setup();
-    // Learn to lein's writes name their owner too since #102.
+    // Learn to lein's writes name their owner too (#102); the helper adds it only for the service course's routes.
     const learnOwner = (await t.call("/api/learn/progress", "learner")).json.owner;
     await t.call("/api/learn/progress/merge", "learner", { progress: { schema: "learn-progress/v1", lessons: { "intro-phrases": { done: T1 } }, cards: {} }, owner: learnOwner });
     expect((await t.call("/api/learn/service/progress", "learner")).json).toMatchObject({ progress: null, version: 0 });
@@ -201,7 +201,7 @@ describe("signed-in service-course progress", () => {
     expect(learn.json.owner).not.toBe((await t.call("/api/learn/service/progress", "learner")).json.owner);
     // Each route refuses the other course's document.
     expect((await t.call("/api/learn/service/progress/merge", "learner", { progress: { schema: "learn-progress/v1", lessons: {}, cards: {} } })).status).toBe(400);
-    expect((await t.call("/api/learn/progress/merge", "learner", { progress: doc() })).status).toBe(400);
+    expect((await t.call("/api/learn/progress/merge", "learner", { progress: doc(), owner: learnOwner })).status).toBe(400);
   });
 
   it("lets an approved Member with no role keep only their own progress, and refuses an ended membership naming only its own owner", async () => {
