@@ -136,6 +136,9 @@ export function createProgressSync(io: SyncIo) {
    */
   function refused(status: number, value: unknown) {
     if (status !== 401 && status !== 403) return;
+    // Refused naming someone other than the account this tab writes for: another person has this browser now. The tab is frozen
+    // until its next start, so nothing done here is saved into the copy kept for this tab's account (as Learn's sync, #102).
+    if (status === 403 && owner !== null && refusedOwner(value) !== owner) frozen = true;
     const marker = readMarker(io.storage());
     // The marker goes only once the empty copy is saved: a marker dropped over a copy still holding progress would hand it to the next account.
     if (marker && !marker.dirty && !(status === 403 && refusedOwner(value) === marker.owner) && io.store.save(emptyProgress())) { dropMarker(io.storage()); io.onProgress(emptyProgress()); }
