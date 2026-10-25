@@ -1,17 +1,15 @@
-/* Choose verses (1.7, M2b): one bar that stays in view while verses are chosen. White object, hairline, lake as the only accent, no shadow or motion. */
-.bar { position: sticky; bottom: var(--dock-clear, 0px); z-index: 4; display: grid; gap: 0.5rem; margin-block: 1rem; padding: 0.75rem 1rem 1rem; border-radius: var(--radius-object); background: var(--color-surface);
+/* Choose verses (1.7, M2b; one row since 1.9 N5): one bar that stays in view while verses are chosen. White object, hairline, lake as the only accent, no shadow or motion.
+   The count line and one row of buttons; from 700px the line shares the row. The bar's name is for assistive technology. */
+.bar { position: sticky; bottom: var(--dock-clear, 0px); z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; margin-block: 0.75rem; padding: 0.5rem 0.75rem; border-radius: var(--radius-object); background: var(--color-surface);
   box-shadow: inset 0 0 0 1px var(--color-rule), 0 -1px 0 var(--color-rule); max-height: 100dvh; overflow-y: auto; }
 .bar:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
-.name { margin: 0; font-size: 1rem; font-weight: 700; }
-.line { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.note { margin: 0; color: var(--color-danger); }
-.actions { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.5rem 0.75rem; }
-.actions > :global(.button-secondary), .actions > :global(.button-primary) { min-height: 44px; width: auto; }
+.name { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; font-size: 1rem; }
+.line { flex: 1 1 100%; min-width: 0; margin: 0; font-size: 0.9375rem; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.note { flex: 1 1 100%; margin: 0; color: var(--color-danger); }
+.actions { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.25rem; }
+.actions > :global(.button-secondary), .actions > :global(.button-primary), .actions :global(.button-hero-secondary) { min-height: 44px; width: auto; flex: 1 1 auto; justify-content: center; padding-inline: 0.625rem; font-size: 0.9375rem; white-space: nowrap; }
 .actions > :global(.request-error) { flex: 1 1 100%; margin: 0; }
 /* The save form opens under the buttons, so Cancel stays beside them. */
-.actions > form { order: 5; }
+.actions > form { order: 5; flex: 1 1 100%; }
 .actions button[aria-pressed="true"] { background: var(--lake-tint); box-shadow: inset 0 0 0 2px var(--lake); }
-@media (max-width: 640px) {
-  .bar { padding: 0.75rem 0.75rem 0.875rem; }
-  .actions > :global(.button-secondary), .actions > :global(.button-hero-secondary) { flex: 1 1 auto; justify-content: center; }
-}
+@media (min-width: 700px) { .line { flex: 1 1 14rem; } .actions { flex: 0 1 auto; } }

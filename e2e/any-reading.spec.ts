@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { expandReadingRanges } from "../src/lib/readings/ranges";
 import { TANAKH_VERSE_COUNTS } from "../src/lib/readings/catalog";
 import { studyRangePlan } from "../src/components/portal/workspace/study/api";
+import { closeMore, openMore } from "./more-sheet";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
 
 // "Any reading" on the built, unconfigured production server. Every reading and text answer is a synthetic
@@ -45,6 +46,8 @@ test("Choose a reading opens a parashah, a holiday and a custom passage of the P
   await expect(page.getByRole("heading", { level: 1, name: "Synthetic", exact: true })).toBeVisible();
   await expect(page).toHaveTitle("This week’s reading | CRC Torah");
   await expect(page.getByRole("button", { name: "Previous week", exact: true })).toBeVisible();
+  // Choose a reading is in the More sheet (N5).
+  await openMore(page);
   const toggle = page.getByRole("button", { name: "Choose a reading", exact: true });
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await toggle.click();
@@ -62,7 +65,9 @@ test("Choose a reading opens a parashah, a holiday and a custom passage of the P
   await expect(page.getByText("Parashah", { exact: true }).first()).toBeVisible();
   await expect(verse(page, "Genesis 6:9")).toBeVisible();
   await expect(passageButton(page, "Torah")).toHaveAttribute("aria-pressed", "true");
+  await openMore(page);
   await expect(page.getByRole("button", { name: "This week", exact: true })).toBeVisible();
+  await closeMore(page);
   await expect(page.getByRole("button", { name: "Previous week", exact: true })).toHaveCount(0);
   await passageButton(page, "Haftarah").click();
   await expect(verse(page, "Isaiah 54:1")).toBeVisible();
@@ -72,6 +77,7 @@ test("Choose a reading opens a parashah, a holiday and a custom passage of the P
   await expect(passageButton(page, "Haftarah")).toHaveAttribute("aria-pressed", "true");
   expect(calls).toContain("/api/public/reading?ref=Genesis+6%3A9-11%3A32&kind=torah");
   // A festival that crosses books: its passages in Hebcal's order, each its own button.
+  await openMore(page);
   await page.getByRole("button", { name: "Choose a reading", exact: true }).click();
   await chooser(page).getByLabel("Holidays and special Shabbatot", { exact: true }).selectOption("simchat-torah");
   await chooser(page).locator("form").nth(1).getByRole("button", { name: "Open", exact: true }).click();
@@ -81,6 +87,7 @@ test("Choose a reading opens a parashah, a holiday and a custom passage of the P
   await expect(verse(page, "Genesis 1:1")).toBeVisible();
   await expect(page).toHaveURL(/\/read\?reading=simchat-torah&passage=2$/);
   // Any passage of the Prophets.
+  await openMore(page);
   await page.getByRole("button", { name: "Choose a reading", exact: true }).click();
   const custom = chooser(page);
   await custom.getByRole("group", { name: "Custom passage" }).getByRole("button", { name: "Prophets", exact: true }).click();

@@ -169,7 +169,7 @@ dd { margin: 0; font-weight: 600; }
 .skip-link:focus { top: 1rem; }
 [lang="he"] { direction: rtl; line-height: 2; letter-spacing: normal; font-feature-settings: "mark", "mkmk"; }
 html { scrollbar-color: var(--color-control-rule) var(--color-canvas); scrollbar-width: thin; }
-.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; min-height: 0; clip-path: inset(50%); white-space: nowrap; border: 0; }
 @media (max-width: 900px) {
   .portal-shell { padding-inline: 2rem; }
   .entry-layout { column-gap: 3rem; padding-top: 4rem; }
@@ -516,9 +516,9 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 
 /* Verses are objects you can tap. */
 .assigned-study { border-top: 0; padding-top: 0; --hebrew-size: 2rem; }
-.assigned-study[data-size="small"] { --hebrew-size: 1.625rem; }
-.assigned-study[data-size="large"] { --hebrew-size: 2.5rem; }
-.assigned-study[data-size="huge"] { --hebrew-size: 3.125rem; }
+.assigned-study[data-size="small"] { --hebrew-size: 1.625rem; --comment-scale: 0.8125; }
+.assigned-study[data-size="large"] { --hebrew-size: 2.5rem; --comment-scale: 1.25; }
+.assigned-study[data-size="huge"] { --hebrew-size: 3.125rem; --comment-scale: 1.5625; }
 .study-hebrew { font-size: var(--hebrew-size, 2rem); margin-block: 0.5rem 0.25rem; }
 .study-verses { margin-block: 1.25rem; }
 .study-verses > li { margin: 0 0 0.75rem; padding: 0; border: 0; }
@@ -1089,4 +1089,19 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
   .button-primary, .button-secondary, .button-start, .button-hero-secondary, .toolbar-item, .lift-icon, .lift-step, .verse-lift, .study-kind-choice .button-secondary { border: 1px solid ButtonText; }
   :is(button, a)[aria-pressed="true"], :is(button, a, [role="tab"])[aria-selected="true"], a[aria-current="page"], .toolbar-item[data-active="true"] {
     forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+}
+
+/* 1.9 N5: on /read the reading starts at the top of the screen (the first Hebrew above y 320 on a Pixel 7): the header, the lenses and the chips are tight, and the first section label and verse close up under them. */
+@media (max-width: 640px) {
+  .workspace-main:has([data-more-button]) { padding-top: 0.5rem; }
+  .reading-workspace:has([data-more-button]) { margin-top: 0; }
+  .reading-workspace:has([data-more-button]) .reading-lens-row { margin-block: 0.25rem; }
+  .reading-workspace:has([data-more-button]) [data-section-tabs] { padding-block: 0.25rem; }
+  .reading-workspace:has([data-more-button]) .study-verses { margin-block-start: 0.25rem; }
+  .reading-workspace:has([data-more-button]) .study-verses > li:first-child .study-hebrew { margin-block-start: 0; }
+}
+/* The first section label under the chips says what the selected chip already says; it stays for assistive technology (the panel is named by it too) and drops out of the sight line. */
+.reading-workspace:has([data-more-button]) .study-verses > :first-child > .student-aliyah:first-child, .reading-workspace:has([data-more-button]) [data-study-rows] > .student-aliyah:first-child { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; min-height: 0; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@media (max-width: 640px) {
+  .reading-workspace:has([data-more-button]) [data-study-rows] > :first-child + article:first-of-type, .reading-workspace:has([data-more-button]) [data-study-rows] > article:first-child { padding-top: 0.25rem; }
 }

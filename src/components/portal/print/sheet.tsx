@@ -17,7 +17,7 @@ import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { expandReadingRanges } from "../../../lib/readings/ranges";
 import { pageTitle } from "../../../lib/site/product-name";
 import { aliyahStartsIn, portionLabel, portionPicks, portionRef, type PortionPick, type WeekPortions } from "../../../lib/print/portions";
-import { parsePrintAddress, printAddress, printTargetFromRead, type PrintTarget } from "../../../lib/print/print-address";
+import { parsePrintAddress, printAddress, printTargetFromRead, readAddressOfPrint, type PrintTarget } from "../../../lib/print/print-address";
 import { COMMENTARY_CHOICES, DEFAULT_FORMAT, normalizeCommentary, type SheetFormat } from "../../../lib/print/sheet-format";
 import { appendixChapters, buildAppendix, printableCoverage, type AppendixGroup } from "../../../lib/print/appendix";
 import { createCommentaryChapterStore } from "../workspace/study/commentary-api";
@@ -228,6 +228,7 @@ export function PrintSheetPage() {
         <div className="hero-actions">
           <button type="button" className={`button-start ${styles.printButton}`} disabled={!sheet || printing === "preparing" || commentaryPending} onClick={() => void print()}>{icons.print}<span>Print</span></button>
           <button type="button" className="button-hero-secondary" aria-expanded={chooser} aria-controls={chooserId} onClick={() => setChooser(value => !value)}>Choose a reading</button>
+          {target && today && <a className="button-hero-secondary" href={readAddressOfPrint(target, today)}>Back to the reading</a>}
           {target?.mode !== "week" && today && <button type="button" className="button-hero-secondary" onClick={() => open(weekTarget(today))}>This week</button>}
         </div>
         <p role="status" className={styles.status}>{printing === "preparing" ? "Getting the Hebrew ready to print…" : printing === "error" ? "The Hebrew lettering didn’t load. Reload the page, then print again." : ""}</p>

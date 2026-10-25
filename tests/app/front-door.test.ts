@@ -88,6 +88,21 @@ test("a loaded week shows the parashah at display scale with its date and both r
   expect(holiday).toMatch(/>This week’s reading<\/h1>/);
 });
 
+test("on a Saturday the home leads with the next Shabbat: its label, its own address for Lein and Study, and a way to the day's reading (1.9 N5)", () => {
+  const markup = renderToStaticMarkup(createElement(ThisWeekView, { state: { date: "2026-10-31", status: "ready", week: week("2026-10-31"), next: true } }));
+  expect(markup).toContain(">Next Shabbat</p>");
+  expect(markup).not.toContain(">This Shabbat</p>");
+  expect(markup).toContain('<time dateTime="2026-10-31">Saturday, October 31, 2026</time>');
+  expect(markup).toContain('href="/read?date=2026-10-31">Lein</a>');
+  expect(markup).toContain('href="/read?date=2026-10-31&amp;lens=study">Study</a>');
+  expect(markup).toContain('href="/read">This Shabbat</a>');
+  // Any other day: as before, and no second link.
+  const plain = renderToStaticMarkup(createElement(ThisWeekView, { state: { date: "2026-10-24", status: "ready", week: week("2026-10-24") } }));
+  expect(plain).toContain(">This Shabbat</p>");
+  expect(plain).not.toContain("Next Shabbat");
+  expect(plain).not.toContain('>This Shabbat</a>');
+});
+
 test("invitation, sign-in and account entry stay plain pages with no doors, even if asked for them", async () => {
   const pages = [
     renderToStaticMarkup(createElement(AcceptInvitationPage)),
