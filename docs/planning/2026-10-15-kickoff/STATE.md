@@ -73,8 +73,12 @@
   - **Open PRs:**
     - **#88 SC4:** the adversarial review PASSED. Its two should-fixes were pushed (the owner mismatch on put and merge, and re-validating a merge), head b62f368, waiting on CI. Merge after N12, renumber the migration to 0046 (snapshot regenerated from 0045), then apply it to prod with its check script.
     - **#99 N12:** migration 0045_lesson_note_before_next. Its builder was asked to rename it from 0047 to 0045. It needs the second-agent RLS check before merge, then a prod apply. The check script is in the session scratchpad as lesson-note-before-next-migrate.mjs.
+  - **#100 N19** (ready, CI green, not merged):
+    - Its own adversarial review fixed a sibling-tab owner bug in verse-card sync.
+    - Migration 0048_verse_review sits at journal idx 45. It is owner-only with forced RLS and is not applied to prod.
+    - Merge order: N12 0045, then SC4 0046, then N19 renumbered to 0047.
+    - N19 did NOT touch Learn's progress-sync, so the Learn shared-browser fix needs its own PR.
   - **In flight (worktrees):**
-    - N19 in bneimitzvah-n19 (Opus; any migration would be 0048, owner-only).
     - N4 in bneimitzvah-n4 (Lein tap stays HEAR, per Daniel's Friday-prep ruling).
   - **SECURITY (tell Daniel; fix in progress):**
     - Learn to lein's live progress sync can fold one account's progress into another on a shared browser. The case: A is synced in tab 1, signs out, and B signs in in tab 2. A's next change goes out with B's cookie, and a 409 merge or a version-matched PUT writes A into B.
