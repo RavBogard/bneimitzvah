@@ -6,7 +6,7 @@ import { TORAH_BOOKS } from "../readings/ranges";
 /**
  * 1.9 N19: review cards for a student's own verses, `learn-verses/v1`. A verse the student marked Got it, or the tutor
  * marked Solid, becomes a card in the same Leitner boxes as the phrase cards, with the same ceremony-date cap
- * (progress.ts: gapDays, effectiveDue). It is its own owner-only document (migration 0048), so every stored
+ * (progress.ts: gapDays, effectiveDue). It is its own owner-only document (migration 0047), so every stored
  * `learn-progress/v1` document and its strict parser stay exactly as they are. Pure; the clock is always passed in.
  */
 export const VERSE_REVIEW_SCHEMA = "learn-verses/v1" as const;

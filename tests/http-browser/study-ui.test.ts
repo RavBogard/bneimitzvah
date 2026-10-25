@@ -1,4 +1,5 @@
 import { observeSilentAudio, expectSilentAudio, privateRouteFetch, observeInitialShortPage } from "./audio-observation";
+import { closeVerseTools, openVerseTools, selectVerse } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { expect as ui } from "@playwright/test";
@@ -185,7 +186,8 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   const initialMetadata = metadataLoads.slice(beforeMetadata); expect(initialMetadata.length).toBeGreaterThanOrEqual(1); expect(initialMetadata.length).toBeLessThanOrEqual(2);
   for (const batch of initialMetadata) expect(batch).toEqual({ kind: "torah", offset: 0, refs: ["Genesis 1:1", "Genesis 1:2", "Genesis 1:3"] });
   await ui(adminTab.locator(".reading-review").first()).toContainText("Needs review");
-  await ui(adminTab.locator(".assigned-study").getByText("Closed paragraph (setumah) after this verse.", { exact: true }).first()).toBeVisible();
+  // The paragraph note is part of the verse's tools (one Sheet for the selected verse, 1.9 N4): the first verse is selected, and its sheet carries the note.
+  await ui((await openVerseTools(adminTab, "Genesis 1:1")).getByText("Closed paragraph (setumah) after this verse.", { exact: true })).toBeVisible(); await closeVerseTools(adminTab);
   expect(await adminTab.locator(".study-hebrew").first().getAttribute("lang") === "he" && await adminTab.locator(".study-hebrew").first().getAttribute("dir") === "rtl").toBe(true);
   expect(await adminTab.locator(".study-english img").count()).toBe(0);
   // Staff read with English off by default, as tutors do; the toolbar turns it on.
@@ -232,7 +234,7 @@ it("shows escaped structured Hebrew, qere/ketiv, paragraph and partial-English c
   if (canonical.status !== "ready") throw new Error("Synthetic study word projection unavailable");
   expect(indices).toBe(canonical.projection.words.map(word => word.index).join(","));
   await setColors(learner, false);
-  expect(await learner.locator(".study-verses [data-family], .study-verses [data-phrase], .study-hebrew [aria-describedby]").count()).toBe(0);
+  expect(await learner.locator(".study-verses [data-family], .study-verses [data-phrase], .study-hebrew [aria-describedby*='-phrase-']").count()).toBe(0); // no phrase colours, so no phrase descriptions (the words still carry their action's description)
   expect(await first.locator("[data-word-index]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-word-index")).join(","))).toBe(indices);
   expect(await first.locator(".study-alternative > span:first-child [data-word-index]").count()).toBe(0); // Ketiv is never a reading-word target.
   expect(await hebrew.textContent() === original && calls === beforeColors).toBe(true);
@@ -289,8 +291,10 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
         return { top: bounds.top, bottom: bounds.bottom };
       });
       expect(firstWord.top).toBeGreaterThanOrEqual(0); expect(firstWord.bottom).toBeLessThanOrEqual(await tab.evaluate(() => innerHeight));
-      const clearance = await tab.evaluate(() => ({ toolbar: document.querySelector(".reading-toolbar")!.getBoundingClientRect().bottom, passage: document.querySelector(".study-verses")!.getBoundingClientRect().top }));
-      expect(clearance.toolbar).toBeLessThanOrEqual(clearance.passage);
+      // The toolbar is the tool dock on a phone (1.9 N4): fixed at the bottom, with matching padding under the passage so it covers no verse at the end.
+      const dock = await tab.evaluate(() => { const bar = document.querySelector(".reading-toolbar")!, layout = document.querySelector(".reading-passage-layout")!;
+        return { position: getComputedStyle(bar).position, padding: Number.parseFloat(getComputedStyle(layout).paddingBottom), height: bar.getBoundingClientRect().height }; });
+      expect(dock.position).toBe("fixed"); expect(dock.padding).toBeGreaterThanOrEqual(dock.height);
       const readingText = await first.textContent();
       await safe(() => tab.screenshot({ path: join(directory, `${size.toLowerCase()}-reading.png`) }));
       await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).focus()); await safe(() => tab.keyboard.press("Tab"));
@@ -298,7 +302,7 @@ it("wraps a synthetic long verse at Standard and Huge on a phone and keeps Start
       await safe(() => tab.keyboard.press("Enter"));
       await ui(tab.locator(".study-verses")).toBeFocused(); await heldReading(tab);
       await ui(tab.getByRole("region", { name: "Reading playback", exact: true })).toHaveCount(0); await ui(tab.getByRole("dialog")).toHaveCount(0);
-      const closeup = tab.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }); await safe(() => closeup.click());
+      await selectVerse(tab, "Genesis 1:1"); const closeup = tab.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }); await safe(() => closeup.click());
       const dialog = tab.getByRole("dialog", { name: "Genesis 1:1", exact: true }); await ui(dialog).toBeVisible();
       await ui(dialog.getByRole("button", { name: "Close practice view", exact: true })).toBeVisible();
       expect(await dialog.locator(".study-hebrew").textContent()).toBe(readingText);
@@ -353,7 +357,8 @@ it("retains optional close-up during a quiet unchanged access check without requ
 
 it("keeps unsent typing and an unknown save intact while phrase controls change", async () => {
   const tab = await page("student"); await navigate(tab, "/workspace/student"); await loaded(tab, "Genesis 1:1");
-  const panel = tab.locator('.study-verse-detail[data-verse-ref="Genesis 1:1"] .verse-work'); await safe(() => panel.locator("summary").click());
+  // The translation and notes are in the verse tools sheet; closing the sheet (to use the page's controls) leaves the unsent text in the tab, and reopening shows it.
+  const panel = (await openVerseTools(tab, "Genesis 1:1")).locator(".verse-work"); await safe(() => panel.locator("summary").click());
   const field = panel.getByRole("textbox"); await ui(field).toBeVisible();
   let release!: () => void, committed = false, writes = 0; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route("**/work/draft", async route => { writes++; const response = await privateRouteFetch(route, tab); if (!response) return; committed = response.status() === 200; await gate; await route.fulfill({ response }).catch(() => undefined); });
@@ -362,12 +367,15 @@ it("keeps unsent typing and an unknown save intact while phrase controls change"
     await ui.poll(() => committed).toBe(true);
     await safe(() => field.fill("Synthetic queued typing kept through phrase colors"));
     await ui(panel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab.", { timeout: 18_000 });
+    await closeVerseTools(tab);
     await colorVerse(tab, "Genesis 1:1");
     await setColors(tab, false); await setColors(tab, true);
     await colorVerse(tab, "Genesis 1:2");
+    await openVerseTools(tab, "Genesis 1:1");
     await ui(field).toHaveValue("Synthetic queued typing kept through phrase colors");
     await ui(panel.locator(".work-status")).toHaveText("Save not confirmed. Your text is still in this tab."); expect(writes).toBe(1);
   } finally { release(); await tab.unroute("**/work/draft"); }
+  await openVerseTools(tab, "Genesis 1:1");
   await safe(() => panel.getByRole("button", { name: "Check what saved", exact: true }).click());
   await ui(field).toHaveValue("Synthetic queued typing kept through phrase colors"); await ui(panel.locator(".work-status")).toHaveText("Saved", { timeout: 18_000 });
 });

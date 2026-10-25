@@ -1,13 +1,15 @@
 "use client";
 import { useRef, useState } from "react";
-import { Button, ButtonLink, Chip, EmptyState, List, ListRow, PageHeader, Segmented, Sheet } from "../../components/ui";
+import { Button, ButtonLink, Chip, EmptyState, List, ListRow, PageHeader, SectionTabs, Segmented, Sheet } from "../../components/ui";
 import styles from "./gallery.module.css";
 
 // Fixture words only (this page is never served outside the browser tests).
+const TABS = [{ id: "one", label: "Aliyah 1" }, { id: "two", label: "Aliyah 2" }, { id: "three", label: "Maftir" }] as const;
 const CHOICES = [{ value: "one", label: "First" }, { value: "two", label: "Second" }, { value: "three", label: "Third" }] as const;
 
 export function Gallery() {
   const [choice, setChoice] = useState<(typeof CHOICES)[number]["value"]>("one");
+  const [tab, setTab] = useState<string>("one");
   const [pressed, setPressed] = useState(0), [confirmed, setConfirmed] = useState(0);
   const [sheet, setSheet] = useState(false), [word, setWord] = useState(false);
   const target = useRef<HTMLSpanElement>(null);
@@ -53,6 +55,11 @@ export function Gallery() {
       <h2 id="g-seg">Segmented</h2>
       <Segmented label="Fixture choice" options={CHOICES} value={choice} onChange={setChoice} />
       <p id="choice">Chosen {choice}.</p>
+    </section>
+    <section className={styles.section} aria-labelledby="g-tabs">
+      <h2 id="g-tabs">Section tabs</h2>
+      <SectionTabs label="Fixture sections" tabs={TABS} current={tab} onSelect={setTab} />
+      <p id="tab-chosen">Open {tab}.</p>
     </section>
     <section className={styles.section} aria-labelledby="g-chips">
       <h2 id="g-chips">Chips</h2>

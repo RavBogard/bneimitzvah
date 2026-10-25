@@ -119,7 +119,7 @@ test("current-only keyset ties, closed safe DTOs and unsafe creator names do not
   expect(first.nextCursor).toEqual({ lessonDate: "2026-10-16", entryId: ids[1] });
   const second = await f.lesson.page(f.mutation(), { ...f.selection, mode: "parent" }, first.nextCursor);
   expect(second).toMatchObject({ entries: [{ entryId: ids[0] }, { entryId: ids[51] }], nextCursor: null });
-  for (const entry of first.entries) expect(Object.keys(entry).sort()).toEqual(["canDelete", "canEdit", "displayName", "entryId", "lessonDate", "summary", "version"]);
+  for (const entry of first.entries) expect(Object.keys(entry).sort()).toEqual(["beforeNext", "canDelete", "canEdit", "displayName", "entryId", "lessonDate", "summary", "version"]);
   for (const name of ["unsafe@example.test", "Synthetic\u0007Tutor", "x".repeat(1000), "", " \n "]) {
     await f.owner(() => f.db.update(s.user).set({ name }).where(eq(s.user.id, f.identities.multi.id)));
     const page = await f.lesson.page(f.mutation(), { ...f.selection, mode: "parent" });

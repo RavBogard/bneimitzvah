@@ -11,7 +11,8 @@
 .flowEnglish { display: block; margin-block: 0.25rem 1rem; margin-inline: 0; max-inline-size: 62ch; font: 400 1rem/1.7 "Bricolage Grotesque", sans-serif; text-align: start; unicode-bidi: isolate; }
 /* The translate drill hides each verse’s English behind one muted line, so the passage keeps its shape. */
 .flowEnglishHidden { color: var(--color-muted); font-style: italic; }
-.verseNumber { display: inline; vertical-align: super; font: 600 0.875rem/1.8 "Bricolage Grotesque", sans-serif; color: var(--lake-deep); background: transparent; border: 0; padding: 0.35rem; cursor: pointer; border-radius: var(--radius-control); }
+/* A 44px target (1.9 N4, F5) that leaves the line exactly as it was: the box is 44px square, and the negative margins give back what the text did not need, so the line box is the same height. */
+.verseNumber { display: inline-flex; align-items: center; justify-content: center; min-inline-size: 44px; min-block-size: 44px; margin: -0.875rem -0.5rem; vertical-align: super; font: 600 0.875rem/1 "Bricolage Grotesque", sans-serif; color: var(--lake-deep); background: transparent; border: 0; padding: 0; cursor: pointer; border-radius: var(--radius-control); }
 .verseNumber:hover { background: var(--lake-tint); }
 /* Keyboard focus on a word or a verse number: the ring colour of the whole app (lake-deep on light, marigold on dark; at least 3:1 on the page and on every phrase fill),
    with a halo of the surface colour between the ring and the word so the ring never sits on a neighbour's fill. */
@@ -25,6 +26,10 @@
 .flowVerse[data-verse-picked], .flowVerse[data-verse-marked] { background: var(--lake-tint); box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .verseNumber svg { vertical-align: -0.1em; margin-inline-end: 0.2em; }
 .playable [data-word-index] { cursor: pointer; border-radius: 0.18em; }
+/* A wider target for the thumb (1.9 N4, G23): a word that can be tapped reaches a little past its letters, above, below and to each side. The reach is a pseudo-element, so no
+   text moves and no colour block grows; a word is always painted over its neighbour's reach, so a tap on a word's own letters is always that word. */
+.playable [data-word-index][role="button"] { position: relative; }
+.playable [data-word-index][role="button"]::after { content: ""; position: absolute; inset: -0.35em -0.2em; }
 /* A hover underline only where there is a hover (on touch it would stay after a tap), set below the lowest vowels like .linked. */
 @media (hover: hover) { .playable [data-word-index]:hover { text-decoration: underline; text-underline-offset: 0.5em; text-decoration-skip-ink: none; } }
 /* A maqaf phrase is one chanted unit and moves to the next line whole. It is an inline block no wider than the line, so a phrase wider than the whole line (320px at Huge) still wraps inside itself instead of reaching past the screen. */

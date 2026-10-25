@@ -5,8 +5,8 @@ import type { LessonLogCursor, LessonLogEntry } from "../../../../lib/lesson-log
 export type LessonPage = { entries: LessonLogEntry[]; nextCursor: LessonLogCursor | null };
 export type LessonOperation =
   | { type: "page"; before?: LessonLogCursor }
-  | { type: "create"; entryId: string; lessonDate: string; summary: string }
-  | { type: "edit"; entryId: string; expectedVersion: number; lessonDate: string; summary: string }
+  | { type: "create"; entryId: string; lessonDate: string; summary: string; beforeNext: string | null }
+  | { type: "edit"; entryId: string; expectedVersion: number; lessonDate: string; summary: string; beforeNext: string | null }
   | { type: "delete"; entryId: string; expectedVersion: number };
 export type LessonResult = LessonPage | { entry: LessonLogEntry } | { removed: string; version: number };
 export class LessonError extends PortalRequestError {
@@ -28,13 +28,17 @@ export function lessonDate(value: unknown): string {
 }
 export const summaryLimit = 4096;
 export const summaryBytes = (text: string) => encoder.encode(text.replace(/\r\n?/g, "\n")).length;
+/** The "Before next time" line (N12): the server's own rule, at most 1024 UTF-8 bytes; blank is no line at all. */
+export const beforeNextLimit = 1024;
+export const beforeNextValue = (text: string | null) => { const value = text?.replace(/\r\n?/g, "\n") ?? ""; return value.trim() ? value : null; };
 function entry(value: unknown, mode: ReadingMode): LessonLogEntry {
-  const row = object(value, ["entryId", "lessonDate", "summary", "version", "displayName", "canEdit", "canDelete"]);
+  const row = object(value, ["entryId", "lessonDate", "summary", "beforeNext", "version", "displayName", "canEdit", "canDelete"]);
   if (typeof row.summary !== "string" || !row.summary.trim() || !row.summary.isWellFormed() || summaryBytes(row.summary) > summaryLimit) return bad();
+  if (row.beforeNext !== null && (typeof row.beforeNext !== "string" || !row.beforeNext.trim() || !row.beforeNext.isWellFormed() || summaryBytes(row.beforeNext) > beforeNextLimit)) return bad();
   if (typeof row.displayName !== "string" || !row.displayName.trim() || row.displayName.length > 256 || typeof row.canEdit !== "boolean" || typeof row.canDelete !== "boolean") return bad();
   // Only staff can ever change a lesson; a learner view offering it is a broken answer.
   if (!writable(mode) && (row.canEdit || row.canDelete)) return bad();
-  return { entryId: identifier(row.entryId), lessonDate: lessonDate(row.lessonDate), summary: row.summary, version: version(row.version), displayName: row.displayName, canEdit: row.canEdit, canDelete: row.canDelete };
+  return { entryId: identifier(row.entryId), lessonDate: lessonDate(row.lessonDate), summary: row.summary, beforeNext: row.beforeNext, version: version(row.version), displayName: row.displayName, canEdit: row.canEdit, canDelete: row.canDelete };
 }
 export function parseLessonPage(value: unknown, mode: ReadingMode, studentId: string, before?: LessonLogCursor): LessonPage {
   const row = object(value, ["ok", "studentId", "mode", "entries", "nextCursor"]);
@@ -58,8 +62,8 @@ export async function fetchLessons(mode: ReadingMode, studentId: string, operati
   const query = new URLSearchParams({ mode });
   if (operation.type === "page" && operation.before) { query.set("beforeDate", operation.before.lessonDate); query.set("beforeId", operation.before.entryId); }
   const path = operation.type === "page" ? `?${query}` : operation.type === "create" ? "" : `/${identifier(operation.entryId)}/${operation.type}`;
-  const body = operation.type === "create" ? { mode, entryId: operation.entryId, lessonDate: operation.lessonDate, summary: operation.summary }
-    : operation.type === "edit" ? { mode, expectedVersion: operation.expectedVersion, lessonDate: operation.lessonDate, summary: operation.summary }
+  const body = operation.type === "create" ? { mode, entryId: operation.entryId, lessonDate: operation.lessonDate, summary: operation.summary, beforeNext: operation.beforeNext }
+    : operation.type === "edit" ? { mode, expectedVersion: operation.expectedVersion, lessonDate: operation.lessonDate, summary: operation.summary, beforeNext: operation.beforeNext }
     : operation.type === "delete" ? { mode, expectedVersion: operation.expectedVersion } : undefined;
   const controller = new AbortController(), abort = () => controller.abort();
   if (signal.aborted) abort(); signal.addEventListener("abort", abort, { once: true }); const timer = setTimeout(abort, 12_000);
@@ -80,7 +84,8 @@ export async function fetchLessons(mode: ReadingMode, studentId: string, operati
       return { removed: operation.entryId, version: Number(row.version) };
     }
     const row = object(value, ["ok", "entry"]), saved = entry(row.entry, mode);
-    if (row.ok !== true || saved.entryId !== operation.entryId || saved.lessonDate !== operation.lessonDate || saved.summary !== operation.summary.replace(/\r\n?/g, "\n")) return bad();
+    if (row.ok !== true || saved.entryId !== operation.entryId || saved.lessonDate !== operation.lessonDate || saved.summary !== operation.summary.replace(/\r\n?/g, "\n")
+      || saved.beforeNext !== beforeNextValue(operation.beforeNext)) return bad();
     // A create is version 1; an edit advances by one, or keeps its version when nothing changed.
     if (operation.type === "create" ? saved.version !== 1 : saved.version !== operation.expectedVersion && saved.version !== operation.expectedVersion + 1) return bad();
     return { entry: saved };

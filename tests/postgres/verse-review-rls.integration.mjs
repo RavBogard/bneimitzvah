@@ -7,7 +7,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { disposableConfig, query } from "./disposable.mjs";
 
-// 1.9 N19, a student's own verse cards (migration 0048): the owner_only policy against real PostgreSQL with a
+// 1.9 N19, a student's own verse cards (migration 0047): the owner_only policy against real PostgreSQL with a
 // real restricted login, on the saved layer's model (saved-rls.integration.mjs). Its own database, opt-in only.
 const doc = JSON.stringify({ schema: "learn-verses/v1", cards: {} });
 

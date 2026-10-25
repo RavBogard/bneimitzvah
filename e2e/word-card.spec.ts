@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { studyEditions } from "../src/components/portal/workspace/study/credits";
 
-// The Study word card on the built, unconfigured production server. Every reading and text answer is a synthetic route
+// The Study word card (in the one Sheet, 1.9 N4) on the built, unconfigured production server. Every reading and text answer is a synthetic route
 // fulfilment (invented syllables, numbered English); word aids and details answer 503, so the card shows its quiet fallback.
 const word = ["אָבָ֑ג", "דֵּ֖ה", "וְזַ֥ח"];
 const verseOf = (ref: string, count = 1) => { const text = `${Array.from({ length: count }, () => word.join(" ")).join(" ")}׃`; return { ref, english: `Synthetic translation ${ref}`, hebrew: { text, readingText: text, paragraphAfter: null, segments: [{ kind: "text", text }] } }; };
@@ -19,15 +19,18 @@ async function mock(page: Page, longVerse = 1) {
 }
 const row = (page: Page, ref: string) => page.locator(`[data-study-rows] article[data-verse-ref="${ref}"]`);
 const wordAt = (page: Page, ref: string, index: number) => row(page, ref).locator(`[role="button"][data-word-index="${index}"]`);
-const card = (page: Page) => page.locator("[data-verse-panel]");
+const card = (page: Page) => page.getByRole("dialog");
 
-test("in Study a tap opens the word card beside the verse, Next word moves it, and Esc gives focus back to the word", async ({ page }) => {
+test("in Study a tap opens the word card in the sheet without moving the page, Next word moves it, and Esc gives focus back to the word", async ({ page }) => {
   await mock(page);
   await page.goto("/read?lens=study");
   await expect(row(page, "Genesis 1:1")).toBeVisible();
   await expect(page.locator("[data-reading-place]")).toContainText("Genesis 1:1");
+  await wordAt(page, "Genesis 1:1", 0).scrollIntoViewIfNeeded();
+  const scrolled = await page.evaluate(() => scrollY);
   await wordAt(page, "Genesis 1:1", 0).click();
   await expect(card(page).getByRole("heading", { name: "Word in Genesis 1:1" })).toBeFocused();
+  expect(await page.evaluate(() => scrollY)).toBe(scrolled);
   await expect(card(page).getByText("Word 1 of 3", { exact: true })).toBeVisible();
   await expect(card(page).getByRole("button", { name: "Previous word", exact: true })).toBeDisabled();
   await card(page).getByRole("button", { name: "Next word", exact: true }).click();
@@ -38,19 +41,27 @@ test("in Study a tap opens the word card beside the verse, Next word moves it, a
   await expect(wordAt(page, "Genesis 1:1", 1)).toBeFocused();
 });
 
-test("each verse is one Tab stop, and the arrow keys move between its words right to left", async ({ page }) => {
+test("the passage is one Tab stop, and the arrow keys move between its words right to left and on into the next verse", async ({ page }) => {
   await mock(page);
   await page.goto("/read?lens=study");
   await expect(row(page, "Genesis 1:2")).toBeVisible();
-  await expect(row(page, "Genesis 1:2").locator('[role="button"][data-word-index][tabindex="0"]')).toHaveCount(1);
+  const stops = page.locator('[data-study-rows] [role="button"][data-word-index][tabindex="0"]');
+  await expect(stops).toHaveCount(1);
+  await expect(wordAt(page, "Genesis 1:1", 0)).toHaveAttribute("tabindex", "0");
   await wordAt(page, "Genesis 1:2", 0).focus();
+  await expect(stops).toHaveCount(1);
+  await expect(wordAt(page, "Genesis 1:2", 0)).toHaveAttribute("tabindex", "0");
   await page.keyboard.press("ArrowLeft");
   await expect(wordAt(page, "Genesis 1:2", 1)).toBeFocused();
-  await expect(row(page, "Genesis 1:2").locator('[role="button"][data-word-index][tabindex="0"]')).toHaveCount(1);
   await page.keyboard.press("ArrowRight");
   await expect(wordAt(page, "Genesis 1:2", 0)).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(wordAt(page, "Genesis 1:2", 2)).toBeFocused();
+  await page.keyboard.press("ArrowLeft");
+  await expect(wordAt(page, "Genesis 1:3", 0)).toBeFocused();
+  await expect(stops).toHaveCount(1);
   await page.keyboard.press("Enter");
-  await expect(card(page).getByRole("heading", { name: "Word in Genesis 1:2" })).toBeFocused();
+  await expect(card(page).getByRole("heading", { name: "Word in Genesis 1:3" })).toBeFocused();
 });
 
 test("in Lein a tap on a word opens no word card", async ({ page }) => {
@@ -60,17 +71,19 @@ test("in Lein a tap on a word opens no word card", async ({ page }) => {
   await expect(card(page)).toHaveCount(0);
 });
 
-test("on a phone the word card opens in view even when the tapped word sits at the bottom of the screen", async ({ page }, info) => {
-  test.skip(info.project.name !== "phone", "The card opens in place under the row only on narrow screens.");
+test("on a phone the word card is in view even when the tapped word sits at the bottom of the screen, and the page stays where it was", async ({ page }, info) => {
+  test.skip(info.project.name !== "phone", "A phone's sheet covers the lower part of the screen.");
   await mock(page);
   await page.goto("/read?lens=study");
   await expect(row(page, "Genesis 1:2")).toBeVisible();
   const target = wordAt(page, "Genesis 1:2", 0);
   await target.evaluate(element => element.scrollIntoView({ block: "end" }));
+  const scrolled = await page.evaluate(() => scrollY);
   await target.click();
   const heading = card(page).getByRole("heading", { name: "Word in Genesis 1:2" });
   await expect(heading).toBeFocused();
   await expect(heading).toBeInViewport({ ratio: 1 });
+  expect(await page.evaluate(() => scrollY)).toBe(scrolled);
 });
 
 test("in Lein on a phone a tap on a word opens its card and brings it into view", async ({ page }, info) => {

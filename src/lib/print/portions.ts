@@ -96,3 +96,13 @@ export function aliyahStartsIn(portions: WeekPortions, pick: PortionPick, verses
   }
   return out;
 }
+
+/** What each pick is called, on the print sheet's Portion control and on /read's (the same words in both). */
+export const PORTION_LABELS: Readonly<Record<PortionPick, string>> = Object.freeze({ full: "Full calendar portion", triennial: "Triennial portion", maftir: "Maftir",
+  "aliyah-1": "Aliyah 1", "aliyah-2": "Aliyah 2", "aliyah-3": "Aliyah 3", "aliyah-4": "Aliyah 4", "aliyah-5": "Aliyah 5", "aliyah-6": "Aliyah 6", "aliyah-7": "Aliyah 7" });
+/** A pick's label, with the triennial year when the calendar names it ("Triennial portion (year 2)"). */
+export const portionLabel = (pick: PortionPick, portions: WeekPortions | null): string =>
+  pick === "triennial" && portions?.triennial?.year ? `${PORTION_LABELS[pick]} (year ${portions.triennial.year})` : PORTION_LABELS[pick];
+/** The picks a week offers, in the control's order: the whole portion always, the rest only where the calendar gives them (a festival Saturday gives none). */
+export const portionPicks = (portions: WeekPortions | null): readonly PortionPick[] =>
+  PORTION_PICKS.filter(pick => pick === "full" || (portions !== null && portionRef(portions, pick) !== null));

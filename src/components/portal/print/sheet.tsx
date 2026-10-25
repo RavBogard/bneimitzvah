@@ -16,7 +16,7 @@ import { addDays, shabbatOnOrAfter, thisShabbat } from "../../../lib/readings/pu
 import { TANAKH_VERSE_COUNTS } from "../../../lib/readings/catalog";
 import { expandReadingRanges } from "../../../lib/readings/ranges";
 import { pageTitle } from "../../../lib/site/product-name";
-import { aliyahStartsIn, portionRef, PORTION_PICKS, type PortionPick, type WeekPortions } from "../../../lib/print/portions";
+import { aliyahStartsIn, portionLabel, portionPicks, portionRef, type PortionPick, type WeekPortions } from "../../../lib/print/portions";
 import { parsePrintAddress, printAddress, printTargetFromRead, type PrintTarget } from "../../../lib/print/print-address";
 import { COMMENTARY_CHOICES, DEFAULT_FORMAT, normalizeCommentary, type SheetFormat } from "../../../lib/print/sheet-format";
 import { appendixChapters, buildAppendix, printableCoverage, type AppendixGroup } from "../../../lib/print/appendix";
@@ -36,8 +36,6 @@ const MAX_PAGES = 10; // A passage is at most 1,000 verses, 100 to a text page.
 const kindName = (kind: "torah" | "haftarah") => kind === "torah" ? "Torah" : "Haftarah";
 const longDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
 const statusOf = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
-const PICK_LABELS: Readonly<Record<PortionPick, string>> = Object.freeze({ full: "Full calendar portion", triennial: "Triennial portion", maftir: "Maftir",
-  "aliyah-1": "Aliyah 1", "aliyah-2": "Aliyah 2", "aliyah-3": "Aliyah 3", "aliyah-4": "Aliyah 4", "aliyah-5": "Aliyah 5", "aliyah-6": "Aliyah 6", "aliyah-7": "Aliyah 7" });
 
 /** What a Shabbat offers the reading controls: which texts it has, and its calendar aliyot when they loaded. */
 type Week = Readonly<{ date: string; torah: boolean; haftarah: boolean; kind: "torah" | "haftarah"; portions: WeekPortions | null; pick: PortionPick }>;
@@ -330,14 +328,14 @@ function Status({ load, unavailable, onRetry, onThisWeek }: { load: Load | null;
 
 /** The Shabbat's own choices: Torah or haftarah, a date, and which part of the Torah reading. */
 function ReadingControls({ week, today, onOpen }: { week: Week; today: string | null; onOpen(target: PrintTarget): void }) {
-  const field = useId(), picks = PORTION_PICKS.filter(pick => pick === "full" || (week.portions !== null && portionRef(week.portions, pick) !== null));
+  const field = useId(), picks = portionPicks(week.portions);
   return <div className={styles.group}>
     {week.torah && week.haftarah && <Choice legend="Reading" name="kind" value={week.kind} onChange={kind => onOpen({ mode: "week", date: week.date === today ? null : week.date, kind: kind === "haftarah" ? "haftarah" : null, pick: "full" })}
       options={[["torah", "Torah"], ["haftarah", "Haftarah"]]} />}
     {week.kind === "torah" && picks.length > 1 && <>
       <label className={styles.label} htmlFor={`${field}-pick`}>Portion</label>
       <select id={`${field}-pick`} className={styles.select} value={week.pick} onChange={event => onOpen({ mode: "week", date: week.date === today ? null : week.date, kind: null, pick: event.target.value as PortionPick })}>
-        {picks.map(pick => <option key={pick} value={pick}>{pick === "triennial" && week.portions?.triennial?.year ? `${PICK_LABELS[pick]} (year ${week.portions.triennial.year})` : PICK_LABELS[pick]}</option>)}
+        {picks.map(pick => <option key={pick} value={pick}>{portionLabel(pick, week.portions)}</option>)}
       </select>
     </>}
     <label className={styles.label} htmlFor={`${field}-date`}>Find a date</label>

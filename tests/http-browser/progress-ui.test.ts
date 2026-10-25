@@ -9,6 +9,7 @@ import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
 import { openAuthMail } from "./auth-navigation";
+import { markOf } from "./verse-tools";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
@@ -37,7 +38,6 @@ async function workspace(tab: Page, role: "tutor" | "student") {
   if (role === "tutor") await safe(() => tab.getByLabel("Student", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", level: 4, exact: true })).toBeVisible();
 }
-const card = (tab: Page, ref: string) => tab.locator(`.study-verse-detail[data-verse-ref="${ref}"]`);
 async function openPractice(tab: Page) { await safe(() => tab.getByRole("button", { name: "View Genesis 1:1 up close", exact: true }).click()); await ui(lift(tab)).toBeVisible(); }
 const lift = (tab: Page) => tab.locator("dialog.lift");
 async function liftTo(tab: Page, ref: string) {
@@ -92,14 +92,14 @@ it("lets a student mark verses in practice and a tutor assess them, keeping the 
   let saved = await progress(student, "student");
   expect(saved.verses.map(row => [row.selfCheck.state, row.selfCheck.version, row.assessment.state])).toEqual([["got-it", 1, "not-started"], ["working", 1, "not-started"], ["unmarked", 0, "not-started"]]);
   await safe(() => student.keyboard.press("Escape")); await ui(lift(student)).toBeHidden();
-  await ui(card(student, "Genesis 1:1").locator(".verse-mark")).toHaveText("Got it");
-  await ui(card(student, "Genesis 1:2").locator(".verse-mark")).toHaveText("Still working");
-  await ui(card(student, "Genesis 1:3").locator(".verse-mark")).toHaveCount(0);
+  await ui(await markOf(student, "Genesis 1:1")).toHaveText("Got it");
+  await ui(await markOf(student, "Genesis 1:2")).toHaveText("Still working");
+  await ui(await markOf(student, "Genesis 1:3")).toHaveCount(0);
   await ui(student.locator(".hero-marked")).toHaveText(/^\s*·\s*1 got it$/);
   await capture(student, "student-list-mobile");
 
   const tutor = await page("tutor"); await workspace(tutor, "tutor");
-  await ui(card(tutor, "Genesis 1:1").locator(".verse-mark")).toHaveText("Student: got it");
+  await ui(await markOf(tutor, "Genesis 1:1")).toHaveText("Student: got it");
   await openPractice(tutor);
   await ui(lift(tutor).getByRole("group", { name: "How Genesis 1:1 is going" })).toHaveCount(0);
   await ui(lift(tutor).locator(".lift-progress-note:not([role])")).toHaveText("Student: got it");
@@ -107,14 +107,14 @@ it("lets a student mark verses in practice and a tutor assess them, keeping the 
   await ui(lift(tutor).getByRole("button", { name: "Not started", exact: true })).toHaveAttribute("aria-pressed", "false");
   await capture(tutor, "tutor-lift-desktop");
   await safe(() => tutor.keyboard.press("Escape"));
-  await ui(card(tutor, "Genesis 1:1").locator(".verse-mark")).toHaveText(["Student: got it", "Tutor: solid"]);
+  await ui(await markOf(tutor, "Genesis 1:1")).toHaveText(["Student: got it", "Tutor: solid"]);
   await ui(tutor.locator(".hero-marked")).toHaveText(/^\s*·\s*1 got it · 1 solid$/);
   saved = await progress(tutor, "tutor");
   expect([saved.verses[0].selfCheck, saved.verses[0].assessment]).toEqual([{ state: "got-it", version: 1 }, { state: "solid", version: 1 }]);
 
   // The student sees the tutor's assessment, and clearing their own mark leaves it alone.
   await safe(() => student.getByRole("button", { name: "Refresh reading", exact: true }).click());
-  await ui(card(student, "Genesis 1:1").locator(".verse-mark")).toHaveText("Got it");
+  await ui(await markOf(student, "Genesis 1:1")).toHaveText("Got it");
   await openPractice(student);
   await ui(lift(student).locator(".lift-progress-note:not([role])")).toHaveText("Your tutor: solid");
   await ui(await mark(student, "How Genesis 1:1 is going", "Got it")).toHaveAttribute("aria-pressed", "false");
@@ -171,6 +171,6 @@ it("keeps an uncertain mark unverified until an explicit read succeeds, without 
     expect(posts).toBe(1);
     await safe(() => student.keyboard.press("Escape"));
     await ui(student.locator(".hero-marked")).toContainText("1 got it");
-    await ui(card(student, "Genesis 1:1").locator(".verse-mark")).toHaveText("Got it");
+    await ui(await markOf(student, "Genesis 1:1")).toHaveText("Got it");
   } finally { release(); await student.unroute(pattern); }
 });

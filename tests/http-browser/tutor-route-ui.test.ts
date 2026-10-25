@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
+import { closeVerseTools, openVerseTools, workPanel } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
@@ -73,12 +74,13 @@ it("opens authorized card and copied direct routes, captures tutor home and phon
   await capture(tab, "phone-reading");
   await safe(() => tab.setViewportSize({ width: 1440, height: 1000 })); await capture(tab, "desktop-reading");
   const copied = await tab.context().newPage(); await navigate(copied, `/workspace/tutor/${fixture.student.id}`); await loaded(copied, "Genesis 1:1");
-  const panel = tab.locator(".verse-work").first(); await safe(() => panel.locator("summary").click());
+  const panel = await workPanel(tab); await safe(() => panel.locator("summary").click());
   await safe(() => panel.getByRole("button", { name: "Teacher notes", exact: true }).click());
   const field = panel.getByRole("textbox"), draft = "Synthetic unsent tutor card departure note"; await ui(field).toBeVisible(); await safe(() => field.fill(draft));
   let writes = 0; tab.on("request", request => { if (request.method() === "POST" && new URL(request.url()).pathname.endsWith("/work/note")) writes++; });
+  await closeVerseTools(tab); // the student cards are behind the sheet; closing it loses no text
   await safe(() => card(tab, sibling.id).click()); await ui(tab.getByRole("dialog", { name: "Review work before leaving", exact: true })).toBeVisible();
-  await safe(() => tab.getByRole("button", { name: "Keep working", exact: true }).click()); await ui(field).toHaveValue(draft);
+  await safe(() => tab.getByRole("button", { name: "Keep working", exact: true }).click()); await openVerseTools(tab, "Genesis 1:1"); await ui(field).toHaveValue(draft); await closeVerseTools(tab);
   await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/workspace/tutor/${fixture.student.id}`);
   await safe(() => card(tab, sibling.id).click()); await safe(() => tab.getByRole("button", { name: "Discard unsent edits and continue", exact: true }).click()); await loaded(tab, "Genesis 2:1");
   await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/workspace/tutor/${sibling.id}`); expect(writes).toBe(0);

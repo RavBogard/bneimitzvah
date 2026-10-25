@@ -13,19 +13,19 @@ import { accessFixture } from "./access-fixture";
 import { withTenantTransaction } from "../../src/server/db/runtime";
 
 // 1.9 N19: a student's own verse cards, on Learn progress's model (course-progress-migration.test.ts) with its own owner setting.
-const TAG = "0048_verse_review", TABLE = "verse_review";
+const TAG = "0047_verse_review", TABLE = "verse_review";
 const opened: { client: { close(): Promise<void> } }[] = [];
 afterEach(async () => { await Promise.all(opened.splice(0).map(f => f.client.close())); });
 const doc = (extra: Record<string, unknown> = {}) => JSON.stringify({ schema: "learn-verses/v1", cards: {}, ...extra });
 
-test("0048 adds only the verse_review table, leaves existing rows and the audit list unchanged, and replays", async () => {
+test("0047 adds only the verse_review table, leaves existing rows and the audit list unchanged, and replays", async () => {
   const isolation = await isolatedEnv(), client = new PGlite();
   try {
     const folder = "src/server/db/migrations", journal = JSON.parse(await readFile(join(folder, "meta/_journal.json"), "utf8"));
     const own = journal.entries.findIndex((e: { tag: string }) => e.tag === TAG);
     expect(own).toBeGreaterThan(0);
     expect(journal.entries[own].idx).toBe(own);
-    expect(journal.entries[own].when).toBeGreaterThan(journal.entries.find((e: { tag: string }) => e.tag === "0044_portion_summary").when);
+    expect(journal.entries[own].when).toBeGreaterThan(journal.entries.find((e: { tag: string }) => e.tag === "0046_service_course_progress").when);
     const entries = journal.entries.slice(0, own), prior = join(isolation.home, "prior");
     await mkdir(join(prior, "meta"), { recursive: true }); await writeFile(join(prior, "meta/_journal.json"), JSON.stringify({ ...journal, entries }));
     for (const e of entries) await copyFile(join(folder, e.tag + ".sql"), join(prior, e.tag + ".sql"));
@@ -44,10 +44,10 @@ test("0048 adds only the verse_review table, leaves existing rows and the audit 
 
     // The generated snapshot adds the one table and changes nothing else.
     const snapshots = (await readdir(join(folder, "meta"))).filter(name => /^\d{4}_snapshot\.json$/.test(name)).sort();
-    const at = snapshots.indexOf("0048_snapshot.json");
+    const at = snapshots.indexOf("0047_snapshot.json");
     expect(at).toBeGreaterThan(0);
-    const current = JSON.parse(await readFile(join(folder, "meta/0048_snapshot.json"), "utf8"));
-    const previous = JSON.parse(await readFile(join(folder, "meta/0044_snapshot.json"), "utf8"));
+    const current = JSON.parse(await readFile(join(folder, "meta/0047_snapshot.json"), "utf8"));
+    const previous = JSON.parse(await readFile(join(folder, "meta/0046_snapshot.json"), "utf8"));
     expect(current.prevId).toBe(previous.id);
     const expected = structuredClone(previous.tables);
     expected[`public.${TABLE}`] = current.tables[`public.${TABLE}`];

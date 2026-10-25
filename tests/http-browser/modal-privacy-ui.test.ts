@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
+import { closeVerseTools, openVerseTools, workPanel } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
@@ -28,9 +29,10 @@ async function page() {
   await ui(tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true })).toBeVisible(); return tab;
 }
 async function pendingDeparture(tab: Page, draft: string) {
-  const verse = tab.locator(".verse-work").first(); await safe(() => verse.locator("summary").click());
+  const verse = await workPanel(tab); await safe(() => verse.locator("summary").click());
   await safe(() => verse.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await safe(() => verse.getByRole("textbox").fill(draft));
+  await closeVerseTools(tab); // the page's controls are behind the sheet; closing it loses no text
   await click(tab, "Change verses"); await ui(editor(tab)).toBeVisible();
   await safe(() => tab.getByLabel("Passage", { exact: true }).selectOption("custom"));
   await safe(() => tab.getByText("Advanced references and aliyah boundaries", { exact: true }).click());
@@ -75,9 +77,10 @@ it("retains the sole rightful departure modal during a quiet check without confi
   await safe(() => tab.keyboard.press("Escape")); await ui(editor(tab)).toBeHidden();
   await ui(tab.getByRole("button", { name: "Change verses", exact: true })).toBeFocused();
   // The retained note stream remains independently selectable after the guard.
-  const notePanel = tab.locator(".verse-work").first();
+  const notePanel = await workPanel(tab);
   await safe(() => notePanel.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await ui(notePanel.getByRole("textbox")).toHaveValue(draft);
+  await closeVerseTools(tab);
   await click(tab, "Change verses"); await ui(tab.getByLabel("Custom verse ranges", { exact: true })).toHaveValue("Genesis 1:1-2");
   expect(writes).toBe(0); await tab.unroute("**/api/session");
 });

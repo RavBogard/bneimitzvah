@@ -25,4 +25,5 @@ export * from "./page-view-schema";
 export * from "./discussions-schema";
 export * from "./course-text-schema";
 export * from "./portion-summary-schema";
+export * from "./service-course-progress-schema";
 export * from "./verse-review-schema";

@@ -220,7 +220,7 @@ function parentProjection(serverDays = ["2026-10-17"]) {
   const store = new ParentSummaryStore(read, scope => scope === live, denied, () => dayOrdinal("2026-10-17"));
   return { value, scope, denied, read, store, live: (scope: string) => { live = scope; } };
 }
-const savedLesson = { status: "ready" as const, latest: { lessonDate: "2026-10-17", displayName: "Synthetic author", summary: "Synthetic saved note <img src=x>\nNo inferred next step." } };
+const savedLesson = { status: "ready" as const, latest: { lessonDate: "2026-10-17", displayName: "Synthetic author", summary: "Synthetic saved note <img src=x>\nNo inferred next step.", beforeNext: null } };
 test("parent summary reads only calendar dates after parent authorization and covers the final seven server days", async () => {
   const f = parentProjection(); await f.store.loadDates();
   for (const mode of ["student", "child-practice", "tutor", "admin"] as const) { f.store.configure(baseline(mode), f.scope); await f.store.loadDates(); }
@@ -273,4 +273,14 @@ test("parent summary renders honest states, closed escaped saved note, and conce
   const markup = render(); expect(markup).toContain("Lesson author:"); expect(markup).toContain("&lt;img src=x&gt;"); expect(markup).not.toMatch(/<details[^>]*open|<img|assigned tutor|%/); expect(render(true)).toBe(""); expect(render(false, "different-child-or-epoch")).toBe("");
   f.read.mockRejectedValueOnce(new PortalRequestError(503)); await f.store.loadDates(); expect(render()).toContain("Practice dates couldn’t be loaded."); expect(render()).toContain("Synthetic author"); expect(f.denied).not.toHaveBeenCalled();
   f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 3, lesson: { status: "unavailable" } }); expect(render()).toContain("The latest lesson couldn’t be loaded.");
+});
+test("N12: the parent who reads the latest note sees its Before next time line, escaped, under the field's own name, and nothing when there is none", () => {
+  const f = parentProjection(); f.store.configure(f.value, f.scope);
+  const render = () => renderToStaticMarkup(createElement(ParentStudySummary, { store: f.store, baseline: f.value, scope: f.scope, concealed: false }));
+  f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 1, lesson: savedLesson });
+  expect(render()).not.toContain("Before next time");
+  f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 2, lesson: { ...savedLesson, latest: { ...savedLesson.latest, beforeNext: "When I sit down after dinner, I will chant <b>verse 3</b> twice." } } });
+  const markup = render();
+  expect(markup).toContain("Before next time:"); expect(markup).not.toContain("Before your next lesson");
+  expect(markup).toContain("When I sit down after dinner, I will chant &lt;b&gt;verse 3&lt;/b&gt; twice."); expect(markup).not.toContain("<b>");
 });

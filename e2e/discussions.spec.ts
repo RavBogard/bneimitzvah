@@ -51,19 +51,19 @@ test("the marker is on the anchor verses only; opening it shows the sources with
   const button = marker(page, "Genesis 1:2");
   await button.scrollIntoViewIfNeeded();
   expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  const before = (await row(page, "Genesis 1:2").boundingBox())!.y;
+  const scrolled = await page.evaluate(() => scrollY);
   await button.click();
-  await expect(panel(page).getByRole("heading", { name: "Sources on this verse · Genesis 1:2" })).toBeFocused();
+  await expect(page.getByRole("dialog", { name: "Sources on this verse · Genesis 1:2" }).getByRole("heading", { name: "Sources on this verse · Genesis 1:2" })).toBeFocused();
   await expect(panel(page).getByText("A synthetic question")).toBeVisible();
   await expect(panel(page).getByText("Synthetic first source.")).toBeVisible();
   await expect(panel(page).getByRole("link", { name: `${EN}, via Sefaria (CC BY)` })).toBeVisible();
   await expect(panel(page).locator("[data-source-detail]")).toHaveText("Selected by Rabbi Synthetic");
   await expect(panel(page).locator("[data-discussion-credit]")).not.toContainText("Rabbi Synthetic");
   await expect(panel(page).getByRole("link", { name: /on Sefaria$/ })).toHaveAttribute("href", sourceSefariaUrl("Synthetic Mishnah 1:1", { language: "en", title: EN }));
-  // The reader's place holds while the panel opens.
-  expect(Math.abs((await row(page, "Genesis 1:2").boundingBox())!.y - before)).toBeLessThan(2);
+  // The reader's place holds while the sheet opens.
+  expect(await page.evaluate(() => scrollY)).toBe(scrolled);
   // This is a verse panel: the one a source from the list opens too, so Back to this verse is not offered from the marker.
-  await expect(panel(page).getByRole("button", { name: "Back to this verse" })).toHaveCount(0);
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Back to this verse" })).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(panel(page)).toHaveCount(0);
   await expect(button).toBeFocused();
@@ -82,7 +82,7 @@ test("the list is headed 'Sources for this reading'; a source opens at its verse
   await expect(panel(page).getByText(`Claude translation for ${PRODUCT}`)).toBeVisible();
   await expect(panel(page).locator("strong", { hasText: "translated" })).toBeVisible();
   await expect(panel(page).locator("[data-source-detail]")).toHaveText("Selected by Rabbi Synthetic");
-  await panel(page).getByRole("button", { name: "Back to this verse" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Back to this verse" }).click();
   await expect(panel(page)).toHaveCount(0);
   await expect(row(page, "Genesis 1:3")).toBeFocused();
   // Esc from the list's own opener hands focus back to it.

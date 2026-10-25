@@ -48,7 +48,8 @@ export function createLessonLogService<Q extends PgQueryResultHKT>(input: { acce
         let row = await data.insert(tx, actor, write); assertLive();
         if (!row) {
           row = await data.lock(tx, actor, write.entryId); assertLive();
-          if (!row || row.deleted || row.version !== 1 || row.creatorMembershipId !== actor.membershipId || row.creatorUserId !== actor.userId || row.lessonDate !== write.lessonDate || row.summary !== write.summary) return conflict;
+          if (!row || row.deleted || row.version !== 1 || row.creatorMembershipId !== actor.membershipId || row.creatorUserId !== actor.userId || row.lessonDate !== write.lessonDate || row.summary !== write.summary
+            || (row.beforeNext ?? null) !== write.beforeNext) return conflict;
         } else { await data.audit(tx, actor, "create", row.entryId); assertLive(); }
         return { ok: true, entry: await project(tx, actor, row, assertLive) };
       });
@@ -60,9 +61,11 @@ export function createLessonLogService<Q extends PgQueryResultHKT>(input: { acce
         if (!row) throw new AccessDenied(404);
         if (!data.canChange(actor, row)) throw new AccessDenied(403);
         if (row.deleted || row.version !== write.expectedVersion) return conflict;
-        if (row.lessonDate === write.lessonDate && row.summary === write.summary) return { ok: true, entry: await project(tx, actor, row, assertLive) };
+        // Leaving beforeNext out keeps the saved line, so an edit from an older page never erases it.
+        const beforeNext = write.beforeNext === undefined ? row.beforeNext ?? null : write.beforeNext;
+        if (row.lessonDate === write.lessonDate && row.summary === write.summary && (row.beforeNext ?? null) === beforeNext) return { ok: true, entry: await project(tx, actor, row, assertLive) };
         if (row.version === 2147483647) return conflict;
-        const changed = await data.change(tx, actor, row, { lessonDate: write.lessonDate, summary: write.summary }); assertLive();
+        const changed = await data.change(tx, actor, row, { lessonDate: write.lessonDate, summary: write.summary, beforeNext }); assertLive();
         if (!changed) return conflict;
         await data.audit(tx, actor, "edit", row.entryId); assertLive();
         return { ok: true, entry: await project(tx, actor, changed, assertLive) };
@@ -75,7 +78,7 @@ export function createLessonLogService<Q extends PgQueryResultHKT>(input: { acce
         if (!row) throw new AccessDenied(404);
         if (!data.canChange(actor, row)) throw new AccessDenied(403);
         if (row.deleted || row.version !== write.expectedVersion || row.version === 2147483647) return conflict;
-        const changed = await data.change(tx, actor, row, { summary: "", deleted: true }); assertLive();
+        const changed = await data.change(tx, actor, row, { summary: "", beforeNext: null, deleted: true }); assertLive();
         if (!changed) return conflict;
         await data.audit(tx, actor, "delete", row.entryId); assertLive();
         return { ok: true, entryId: row.entryId, version: changed.version };

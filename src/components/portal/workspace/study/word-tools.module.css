@@ -46,6 +46,7 @@ button.place:hover { background: var(--lake-tint); }
 /* The word card beside the verse in Study (word-panel.tsx): the word, its place, one plain sentence, the actions, and the dictionary details folded. */
 .wordPanel { min-width: 0; color: var(--color-ink); }
 .wordPanel .wordText { margin: 0; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 2rem; line-height: 1.7; }
+.vowelNote { margin: 0.25rem 0 0; font-size: 0.9375rem; line-height: 1.5; color: var(--color-muted); }
 .wordPanel .wordPlace { margin: 0; font-size: 0.9375rem; color: var(--color-muted); }
 .wordPanel .sentence { margin: 0.5rem 0 0; line-height: 1.6; }
 .wordPanel .actions { margin-block: 0.75rem 0.5rem; }

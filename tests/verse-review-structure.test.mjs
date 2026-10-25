@@ -21,9 +21,9 @@ async function files(dir) {
 const sources = await Promise.all([...await files("src"), ...await files("scripts")].map(async path => ({ path, text: await readFile(join(root, path), "utf8") })));
 const importsOf = text => [...text.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)].map(m => m[1]);
 const source = path => { const file = sources.find(row => row.path === path); assert.ok(file, path); return file.text; };
-const MIGRATION = "src/server/db/migrations/0048_verse_review.sql";
+const MIGRATION = "src/server/db/migrations/0047_verse_review.sql";
 
-test("only src/server/verse-review/access.ts and migration 0048 name app.verse_review_owner, set once, after the student check", () => {
+test("only src/server/verse-review/access.ts and migration 0047 name app.verse_review_owner, set once, after the student check", () => {
   const naming = sources.filter(file => file.text.includes("app.verse_review_owner")).map(file => file.path).sort();
   assert.deepEqual(naming, [MIGRATION, "src/server/verse-review/access.ts"]);
   const access = source("src/server/verse-review/access.ts");

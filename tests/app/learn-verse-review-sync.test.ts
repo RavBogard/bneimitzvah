@@ -85,6 +85,64 @@ describe("the verse cards in the browser", () => {
   });
 });
 
+describe("two tabs, two accounts, one browser (the progress-sync race)", () => {
+  // One browser's cookie jar, shared by both tabs; a fake server that keeps one document per account, as the real one does
+  // (owner check before anything is read or written). Every request reads the cookie at the moment it is sent.
+  function browser() {
+    let cookie: "A" | "B" = "A";
+    const docs: Record<string, { review: unknown; version: number }> = { A: { review: null, version: 0 }, B: { review: null, version: 0 } };
+    const name = (who: string) => who.toLowerCase().repeat(32);
+    const held: (() => void)[] = [];
+    const server = (path: string, init?: RequestInit) => {
+      const who = cookie, mine = docs[who], view = () => ({ ok: true, owner: name(who), review: mine.review, version: mine.version, until: null });
+      if (!init?.body) return json(view());
+      const body = JSON.parse(String(init.body)) as { review: unknown; expectedVersion: number; expectedOwner: string };
+      if (body.expectedOwner !== name(who)) return json({ error: "forbidden" }, 403);
+      if (body.expectedVersion !== mine.version) return json({ ok: false, code: "conflict", current: view() }, 409);
+      mine.review = body.review; mine.version++;
+      return json(view());
+    };
+    const tab = (slow = false) => {
+      const timers: (() => void)[] = [];
+      const fetch = async (path: string, init?: RequestInit) => { const answer = server(path, init); if (slow && init?.body) await new Promise<void>(resolve => held.push(resolve)); return answer; };
+      const sync = createVerseReviewSync({ fetch: fetch as unknown as typeof globalThis.fetch, onState: () => {}, timer: callback => { timers.push(callback); return timers.length; }, clearTimer: () => {} });
+      const tick = async () => { for (const callback of timers.splice(0)) callback(); for (let i = 0; i < 4; i++) await new Promise(resolve => setTimeout(resolve, 0)); };
+      return { sync, tick };
+    };
+    return { tab, docs, signIn: (who: "A" | "B") => { cookie = who; }, release: async () => { for (const resolve of held.splice(0)) resolve(); for (let i = 0; i < 4; i++) await new Promise(r => setTimeout(r, 0)); } };
+  }
+  it("a slow answer for A that lands after B took the browser stays A's: B's cards and B's tab are untouched, and nothing is kept on the device", async () => {
+    const b = browser(), one = b.tab(true);
+    await one.sync.start();
+    one.sync.update(review => recordVerse(review, NOA, false, D));
+    await one.tick();                       // A's write leaves with A's cookie and its answer is held
+    b.signIn("B");
+    const two = b.tab();
+    await two.sync.start();
+    two.sync.update(review => recordVerse(review, SECOND, false, D)); await two.tick();
+    await b.release();                      // A's answer lands now, after B took the browser
+    expect(b.docs.A.review).toEqual(doc({ [NOA]: [0, D] }));
+    expect(b.docs.B.review).toEqual(doc({ [SECOND]: [0, D] }));
+    expect(two.sync.state).toEqual({ status: "ready", review: doc({ [SECOND]: [0, D] }), until: null });
+    // Tab one's next change goes out with B's cookie and A's owner: refused, dropped, and B's document is unchanged.
+    one.sync.update(review => recordVerse(review, SECOND, true, D)); one.sync.update(review => recordVerse(review, verseCardId("torah", "Genesis 23:3"), false, D));
+    await one.tick(); await b.release();
+    expect(one.sync.state).toEqual({ status: "unavailable" });
+    expect(b.docs.B).toEqual({ review: doc({ [SECOND]: [0, D] }), version: 1 });
+    expect(b.docs.A).toEqual({ review: doc({ [NOA]: [0, D] }), version: 1 });
+  });
+  it("a write queued in A's tab that leaves after B signed in is refused before anything is read or written", async () => {
+    const b = browser(), one = b.tab();
+    await one.sync.start();
+    one.sync.update(review => recordVerse(review, NOA, false, D));
+    b.signIn("B");
+    await one.tick();
+    expect(one.sync.state).toEqual({ status: "unavailable" });
+    expect(b.docs.B).toEqual({ review: null, version: 0 });
+    expect(b.docs.A).toEqual({ review: null, version: 0 });
+  });
+});
+
 describe("Got it and Solid marks become cards", () => {
   const assigned = (mode: "student" | "tutor") => ({ mode, student: { id: "11111111-1111-4111-8111-111111111111", firstName: "Noa", lastName: "Synthetic", ceremonyDate: "2027-01-02", revision: 1 }, context: null,
     readings: [{ id: "22222222-2222-4222-8222-222222222222", kind: "torah", revision: 1, ranges: ["Genesis 23:1-4"], verses: ["Genesis 23:1", "Genesis 23:2", "Genesis 23:3", "Genesis 23:4"], needsReview: false }] }) as never;

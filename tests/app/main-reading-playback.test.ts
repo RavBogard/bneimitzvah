@@ -66,9 +66,9 @@ it("main verse playback needs no word timing but an explicit numeric drill still
 it("flowing keyboard affordances name whole verse while lifted/explicit word labels retain word identity", () => {
   const verse: StudyVerse = { ref: "Genesis 1:1", english: null, hebrew: { text, readingText: text, paragraphAfter: null, segments: [{ kind: "text", text }] } };
   const flowing = renderToStaticMarkup(createElement(FlowingStudyText, { verses: [verse], assignment: { kind: "torah", confirmed: true, verses: [verse.ref] }, group: "main", activeWord: null, onWord() {}, onVerse() {} }));
-  expect(flowing).toContain('tabindex="0"'); expect(flowing).toContain('Hear whole verse Genesis 1:1; select word 2 for tools');
+  expect(flowing).toContain('tabindex="0"'); expect(flowing).toContain(">Hear whole verse; select word for tools</span>");
   const lifted = renderToStaticMarkup(createElement(StudyHebrew, { verse, colors: null, id: "lifted", onWordSelect() {} }));
-  expect(lifted).toContain('Hear word 2 of Genesis 1:1'); expect(lifted).not.toContain("Hear whole verse");
+  expect(lifted).toContain(">Hear word</span>"); expect(lifted).not.toContain("Hear whole verse");
   const initial = renderToStaticMarkup(createElement(ReadingPlayer, { scopeKey: "main", verses: [verse], active: true, load: vi.fn(), register() {}, onActiveWord() {} }));
   expect(initial).toContain("hear the whole verse"); expect(initial).not.toContain("Click a word to hear it");
 });
@@ -78,9 +78,10 @@ it("held listening preserves the exact flowing text and word-tool affordances wi
   const verse: StudyVerse = { ref: "Genesis 1:1", english: null, hebrew: { ...hebrew, segments: [...hebrew.segments] } };
   const common = { verses: [verse], assignment: { kind: "torah" as const, confirmed: true, verses: [verse.ref] }, group: "main", activeWord: null, onWord() {} };
   const held = renderToStaticMarkup(createElement(FlowingStudyText, { ...common, listening: false }));
-  expect(held).toContain("Select word 2 of Genesis 1:1 for tools"); expect(held).toContain("study-read-alternative"); expect(held).toContain('tabindex="-1"'); expect(held).not.toContain("Hear");
+  expect(held).toContain(">Select word for tools</span>"); expect(held).toContain("study-read-alternative"); expect(held).toContain('tabindex="-1"'); expect(held).not.toContain("Hear");
   const enabled = renderToStaticMarkup(createElement(FlowingStudyText, { ...common, onVerse() {} }));
-  const textOnly = (html: string) => html.replace(/<[^>]*>/g, "");
+  // What each word does is its hidden description (1.9 N4, F5); the visible text is the Hebrew.
+  const textOnly = (html: string) => html.replace(/<span hidden=""[^>]*>[^<]*<\/span>/g, "").replace(/<[^>]*>/g, "");
   const heldText = textOnly(held);
   expect(heldText.trim()).not.toBe(""); expect(heldText).toContain("אָ֑ב"); expect(heldText).toContain("גַּ");
   expect(heldText).toBe(textOnly(enabled));
@@ -152,7 +153,7 @@ it("flows consecutive Hebrew without verse cards, while preserving actual breaks
   expect(studyFlowGroups([{ ...verses[0], hebrew: { ...verses[0].hebrew, paragraphAfter: "petuchah" } }, ...verses.slice(1)])).toEqual([[0],[1],[2],[3]]);
   const markup = renderToStaticMarkup(createElement(FlowingStudyText, { verses, assignment: { kind: "torah", confirmed: true, verses: verses.map(value => value.ref) }, group: "synthetic", onVerse() {}, onWord() {}, activeWord: { verse: 0, index: 1 } }));
   expect(markup).not.toContain("verse-card"); expect(markup).not.toContain("<article"); expect(markup).not.toContain("<dialog");
-  expect(markup).toContain('aria-label="Hear Genesis 1:1"'); expect(markup).toContain('aria-label="Hear whole verse Genesis 1:1; select word 2 for tools"'); expect(markup).toContain('data-reference-active="true"'); expect(markup).toMatch(/זָח<\/span><span class="study-read-alternative"/);
+  expect(markup).toContain('aria-label="Hear Genesis 1:1"'); expect(markup).toContain(">Hear whole verse; select word for tools</span>"); expect(markup).toContain('data-reference-active="true"'); expect(markup).toMatch(/זָח<\/span><span class="study-read-alternative"/);
   const load = vi.fn(); renderToStaticMarkup(createElement(ReadingPlayer, { scopeKey: "synthetic", verses, active: true, load, register() {}, onActiveWord() {} })); expect(load).not.toHaveBeenCalled();
 });
 

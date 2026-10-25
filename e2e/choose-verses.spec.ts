@@ -60,7 +60,7 @@ test("choose verses from the text, separated groups with the live count, then sa
   await page.getByRole("button", { name: "Choose verses", exact: true }).click();
   await expect(bar(page)).toBeFocused();
   await expect(anySave).toHaveCount(0);
-  await expect(line(page)).toHaveText("No verses chosen");
+  await expect(line(page)).toHaveText("Tap verse numbers to choose them.");
   // Words are not buttons while choosing, so a tap on one does nothing.
   await expect(page.locator(".study-verses [data-word-index][role=\"button\"]")).toHaveCount(0);
   await verse(page, 1).click();
@@ -115,7 +115,7 @@ test("a verse chosen in Study shows the check, leaves the word card shut, and Ca
   await expect(bar(page)).toHaveCount(0);
   const word = page.locator("[data-study-rows] [data-verse-ref=\"Deuteronomy 31:2\"] [data-word-index][role=\"button\"]").first();
   await word.click();
-  await expect(page.locator("[data-verse-panel]").getByRole("heading", { name: "Word in Deuteronomy 31:2" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Word in Deuteronomy 31:2" })).toBeVisible();
 });
 
 test("Change verses on a saved reading starts in the whole portion with its verses selected, refuses kindly, keeps the choice, and saves with the revision", async ({ page }) => {

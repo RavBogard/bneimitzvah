@@ -22,7 +22,7 @@ import { ReadingToolbar } from "./reading-toolbar";
 import { PracticeSheet } from "./study/practice-sheet";
 import { ReadingPrefsScope } from "./reading-prefs";
 import { LENS_STORAGE, StudyLensScope } from "./study-lens";
-import { DiscussionList, VersePanelColumn, VersePanelScope } from "./study/verse-panel";
+import { DiscussionList, VersePanelScope } from "./study/verse-panel";
 import { ProgressStore } from "./progress/store";
 import { useSearchParams } from "next/navigation";
 import { parseReadingTab } from "../shell/tabs";
@@ -318,7 +318,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
     event.preventDefault(); setTab(pageTabs[next][0], true); document.getElementById(tabId(pageTabs[next][0]))?.focus();
   };
   const countdown = student ? ceremonyCountdown(student.ceremonyDate) : null, marked = useProgressSummary(progress, selectedReading?.kind);
-  // N10 slot: N3's section chip row (aliyot, or the tutor's sections) joins this row in a sticky bar once that component exists.
+  // N3's section chip row (the tutor's aliyot, with "Service parts" last) is built in `study/view.tsx` and sits in a sticky bar above the passage for every role, because a
+  // learner's page tabs (this row) wait under the reading; its "Service parts" chip opens the Service parts tab here (`onService`).
   // On a learner's phone the row waits under the reading, as the lens switch does, so the first verse stays above the fold.
   const tabRow = tabbed && <div role="tablist" aria-label="Student page" className="page-tabs" onKeyDown={tabKeys}>{pageTabs.map(([value, label]) => <button key={value} type="button" role="tab" id={tabId(value)} aria-controls={panelId(value)} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1} className="page-tab" onClick={() => setTab(value, true)}>{label}</button>)}</div>;
   // Learners (students, child practice, parents) always open in Lein; staff open in the lens they last used.
@@ -372,8 +373,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
           {listeningEnabled && <button type="button" className="button-secondary" disabled={!hearReady || concealed || current?.loading} onClick={() => lift.current?.(0)}>Hear Haftarah</button>}</header>}
         <AssignedStudyText audio={audio} stopAudio={audio.stopAll} baseline={current?.value ?? null} register={registerStudy} reloadMetadata={load} authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} onKindChange={setSelectedKind}
         guardDeparture={guardReading} renderGuide={(kind, verseRef) => <GuideVerseNotes store={guide} kind={kind} verseRef={verseRef} />} renderWork={(kind, verseRef) => <VerseTools coordinator={work} kind={kind} verseRef={verseRef} />} renderActiveWork={() => work.active && <VerseTools coordinator={work} kind={work.active.kind} verseRef={work.active.ref} />}
-        onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} onPrint={learner && !printDisabled ? openPrint : undefined} printSheetHref={learner ? printSheetHref ?? undefined : undefined} learner={learner} songSession={song} liftHandle={lift} practiceHandle={practice} textStartHandle={textStart} verseLookupHandle={verseLookup} onPracticeReady={setPracticeReady} onHearReady={setHearReady} active={!tabbed || tab === "reading"}
-        onShown={(kind, offset, length) => progress.ensure(kind, offset, length)} renderMark={(kind, verseRef) => <VerseMark store={progress} kind={kind} verseRef={verseRef} />} renderLiftControls={(kind, verseRef) => <LiftProgress store={progress} kind={kind} verseRef={verseRef} />} onVisit={(kind, verseRef) => calendar.visitVerse(kind, verseRef)} /><VersePanelColumn /></div></VersePanelScope>
+        onPage={async (kind, offset, signal) => { await work.loadPage(kind, offset, signal); }} onPrint={learner && !printDisabled ? openPrint : undefined} printSheetHref={learner ? printSheetHref ?? undefined : undefined} learner={learner} songSession={song} liftHandle={lift} practiceHandle={practice} textStartHandle={textStart} verseLookupHandle={verseLookup} onPracticeReady={setPracticeReady} onHearReady={setHearReady} active={!tabbed || tab === "reading"} onService={tabbed ? () => setTab("service", true) : undefined}
+        onShown={(kind, offset, length) => progress.ensure(kind, offset, length)} renderMark={(kind, verseRef) => <VerseMark store={progress} kind={kind} verseRef={verseRef} />} renderLiftControls={(kind, verseRef) => <LiftProgress store={progress} kind={kind} verseRef={verseRef} />} onVisit={(kind, verseRef) => calendar.visitVerse(kind, verseRef)} /></div></VersePanelScope>
       {student && authorizedReading && !concealed && !exploring && selectedReading && <div className={`guide-place guide-place-narrow`}><GuideCard store={guide} kind={selectedReading.kind} firstName={student.firstName} learner={learner} onStudy={() => setWalking(true)} /></div>}
       {work.notice && <p className="field-help" role="status">{work.notice}</p>}
       {authorizedReading && !concealed && <p className="field-help"><a href="https://www.centralreform.org/beit-mitzvah/" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC preparation guide</a></p>}

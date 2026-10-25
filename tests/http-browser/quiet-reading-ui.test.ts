@@ -7,6 +7,7 @@ import { isolatedEnv } from "../helpers/isolatedEnv.mjs";
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
+import { openVerseTools } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
@@ -43,7 +44,7 @@ async function page(mode: "student" | "parent" = "student") {
   await ui(tab.locator(".study-verses")).toBeVisible(); await heldReading(tab); return tab;
 }
 async function editor(tab: Page, ordinal = 0) {
-  const tools = tab.locator(".verse-work").nth(ordinal);
+  const tools = (await openVerseTools(tab, `Genesis 1:${ordinal + 1}`)).locator(".verse-work");
   if (await tools.getAttribute("open") === null) await tools.locator("summary").click();
   const field = tools.getByRole("textbox", { name: `My translation · Genesis 1:${ordinal + 1}`, exact: true }); await ui(field).toBeVisible(); return { tools, field };
 }
