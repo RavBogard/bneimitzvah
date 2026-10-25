@@ -8,7 +8,7 @@ import { studyEditions } from "../../src/components/portal/workspace/study/credi
 const prefs = vi.hoisted(() => ({ colors: true, translation: false, size: "standard", tikkunView: "off" as "off" | "beside" | "only" }));
 const setPrefs = vi.hoisted(() => ({ calls: [] as unknown[] }));
 vi.mock("server-only", () => ({}));
-vi.mock("../../src/components/portal/workspace/reading-prefs", async original => ({ ...await original<typeof import("../../src/components/portal/workspace/reading-prefs")>(), useReadingPrefs: () => prefs, useSetReadingPrefs: () => (change: unknown) => { setPrefs.calls.push(change); } }));
+vi.mock("../../src/components/portal/workspace/reading-prefs", async original => ({ ...await original<typeof import("../../src/components/portal/workspace/reading-prefs")>(), useReadingPrefs: () => prefs, useReadingPrefsNow: () => prefs, useSetReadingPrefs: () => (change: unknown) => { setPrefs.calls.push(change); } }));
 const ReadingToolbar = (await import("../../src/components/portal/workspace/reading-toolbar")).ReadingToolbar as (props: { tikkunAvailable?: boolean }) => ReturnType<typeof import("../../src/components/portal/workspace/reading-toolbar").ReadingToolbar>;
 const { FlowingStudyText } = await import("../../src/components/portal/workspace/study/annotations");
 const { PracticeSheetDocument } = await import("../../src/components/portal/workspace/study/practice-sheet");

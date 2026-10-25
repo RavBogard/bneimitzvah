@@ -2,6 +2,7 @@ import type { StudyKind } from "../workspace/study/api";
 import { canonicalReadingRef } from "../../../lib/readings/reading-ref";
 import { namedReading } from "../../../lib/readings/named-readings";
 import { isSaturday, shabbatOnOrAfter } from "../../../lib/readings/public-shabbat";
+import { isPortionPick, type PortionPick } from "../../../lib/print/portions";
 
 /**
  * Every signed-out reading URL, in one place: the /api/public requests the reader makes (and the 1.5
@@ -36,12 +37,14 @@ export const selectorKey = (selector: ReadingSelector) => selector.by === "date"
  * A `ref` address may add `&mark=<canonical ref>`: the verses of a selection, marked in the whole portion it came from (1.7).
  * Any of them may add `&verse=<n>` (1-based, within the passage shown: that verse opens selected, in the
  * player when recordings are on) and `&lens=study`.
+ * A Shabbat's Torah may add `&pick=` (release 1.9 N3), the words /print takes: `triennial`, `aliyah-1` to `aliyah-7` or `maftir`
+ * (`full`, the whole portion, is left out). An aliyah or the maftir opens on that section; the triennial opens that reading.
  */
 export type ReadTarget = Readonly<{ mode: "week"; date: string | null; kind: StudyKind | null }>
   | Readonly<{ mode: "named"; slug: string; passage: number }>
   | Readonly<{ mode: "ref"; ref: string; kind: StudyKind; mark?: string }>
   | Readonly<{ mode: "saved"; id: string }>;
-export type ReadAddress = Readonly<{ target: ReadTarget | null; verse: number | null; study: boolean }>;
+export type ReadAddress = Readonly<{ target: ReadTarget | null; verse: number | null; study: boolean; pick?: PortionPick }>;
 export const READ_VERSE_MAX = 1000;
 
 const SAVED_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -69,15 +72,18 @@ export function parseReadAddress(search: string): ReadAddress {
   const date = params.get("date");
   let shabbat: string | null = null;
   if (date !== null && /^\d{4}-\d{2}-\d{2}$/.test(date)) { try { shabbat = isSaturday(date) ? date : shabbatOnOrAfter(date); } catch { shabbat = null; } }
-  return { target: { mode: "week", date: shabbat, kind: kindOf(params.get("kind")) }, verse, study };
+  const kind = kindOf(params.get("kind")), pick = params.get("pick");
+  // Only a Shabbat's Torah has aliyot; anything else carries no pick.
+  return { target: { mode: "week", date: shabbat, kind }, verse, study, ...kind !== "haftarah" && isPortionPick(pick) && pick !== "full" ? { pick } : {} };
 }
 
 /** The shareable address of a target; this week's Lein with nothing selected is plain /read. */
-export function readAddress(target: ReadTarget, options: { today?: string | null; verse?: number | null; study?: boolean } = {}): string {
+export function readAddress(target: ReadTarget, options: { today?: string | null; verse?: number | null; study?: boolean; pick?: PortionPick | null } = {}): string {
   const entries: [string, string][] = [];
   if (target.mode === "week") {
     if (target.date && target.date !== options.today) entries.push(["date", target.date]);
     if (target.kind === "haftarah") entries.push(["kind", "haftarah"]);
+    else if (options.pick && options.pick !== "full") entries.push(["pick", options.pick]);
   } else if (target.mode === "named") {
     entries.push(["reading", target.slug]);
     if (target.passage !== 1) entries.push(["passage", String(target.passage)]);

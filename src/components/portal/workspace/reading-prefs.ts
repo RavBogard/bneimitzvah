@@ -1,5 +1,5 @@
 "use client";
-import { createContext, createElement, useCallback, useContext, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, createElement, useCallback, useContext, useDeferredValue, useSyncExternalStore, type ReactNode } from "react";
 import { notePreferencesChanged, onPreferencesApplied } from "./account-preferences";
 
 // Display preferences only: no student text, identity or progress is stored.
@@ -84,9 +84,18 @@ const Scope = createContext<{ key: string; englishOnWide: boolean }>({ key: scop
 export function ReadingPrefsScope({ studentId, englishOnWide = false, children }: { studentId: string; englishOnWide?: boolean; children: ReactNode }) {
   return createElement(Scope.Provider, { value: { key: scopeKey(studentId), englishOnWide } }, children);
 }
-export function useReadingPrefs(): ReadingPrefs {
+/** The choice as it was just made: for the control that made it, which must answer at once. */
+export function useReadingPrefsNow(): ReadingPrefs {
   const { key, englishOnWide } = useContext(Scope);
   return useSyncExternalStore(subscribe, () => read(key, englishOnWide), () => defaults);
+}
+/**
+ * The choice the text is set in. A change reaches the text as a background render (1.9 N3, G14): the control that made it answers at once
+ * (`useReadingPrefsNow`) and the page stays usable while a section of verses is set again in the new colours or size. An external store's
+ * own updates cannot be transitions, so the deferral is made here, where the text reads it.
+ */
+export function useReadingPrefs(): ReadingPrefs {
+  return useDeferredValue(useReadingPrefsNow());
 }
 export function useSetReadingPrefs() {
   const { key, englishOnWide } = useContext(Scope);

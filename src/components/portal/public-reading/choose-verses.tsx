@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import type { VerseChoiceView } from "../workspace/study/verse-choice";
-import { countLine, countSelected, extendSelection, fitsGroups, selectionFromRanges, selectionLine, selectionRanges, toggleVerse, SELECTION_MAX_GROUPS } from "../../../lib/readings/verse-selection";
+import { countLine, countSelected, fitsGroups, selectionFromRanges, selectionLine, selectionRanges, tapVerse, SELECTION_MAX_GROUPS } from "../../../lib/readings/verse-selection";
+import { printAddress } from "../../../lib/print/print-address";
 import styles from "./choose-verses.module.css";
 
 /** The words of Choose verses. "Choose verses", "Change verses" and "Whole portion" are the approved plan's; the rest are the plainest literal labels. */
@@ -16,6 +17,8 @@ export const CHOOSE_STRINGS = Object.freeze({
   done: "Done",
   save: "Save",
   none: "No verses chosen",
+  /** The bar before anything is chosen (Daniel, 2026-10-24, "Keep all"). */
+  hint: "Tap verse numbers to choose them.",
   tooMany: `A reading can hold at most ${SELECTION_MAX_GROUPS} separate groups of verses.`,
   rangeFrom: "Choose the last verse of the range.",
 });
@@ -62,8 +65,8 @@ export function useVerseChoice(plan: ChoosePlan | undefined, order: readonly str
   const change = (next: ReadonlySet<string>) => { setSelected(next); setSaved(false); };
   const onToggle = useCallback((ref: string, shift: boolean) => {
     setNote("");
-    const extend = (shift || rangeMode) && anchor !== null && anchor !== ref;
-    const next = extend ? extendSelection(order, selected, anchor, ref) : toggleVerse(selected, ref);
+    // A second tap after one verse makes the range (F4); Shift and Select range extend from the last verse tapped.
+    const next = tapVerse(order, selected, anchor, ref, { shift, rangeMode });
     if (!fitsGroups(order, next)) { setNote(CHOOSE_STRINGS.tooMany); return; }
     change(next); setAnchor(ref); setRangeMode(false);
   }, [order, selected, anchor, rangeMode]);
@@ -81,10 +84,11 @@ export function useVerseChoice(plan: ChoosePlan | undefined, order: readonly str
   useEffect(() => { told.current?.(choosing); return () => told.current?.(false); }, [choosing]);
   const view: VerseChoiceView | undefined = plan ? { choosing, selected, marked, onToggle } : undefined;
   const button = plan && !choosing ? <button type="button" ref={opener} className="button-secondary" onClick={begin}>{plan.label}</button> : null;
-  const live = rangeMode && anchor !== null ? `${countLine(count, ranges)}. ${CHOOSE_STRINGS.rangeFrom}` : countLine(count, ranges);
+  const live = rangeMode && anchor !== null ? `${countLine(count, ranges)}. ${CHOOSE_STRINGS.rangeFrom}` : count < 1 ? CHOOSE_STRINGS.hint : countLine(count, ranges);
   const barView = plan && choosing ? <ChooseBar barRef={bar} label={plan.label} line={live} note={note} rangeMode={rangeMode} canRange={anchor !== null} empty={count < 1} saved={saved}
     onRange={() => setRangeMode(value => !value)} onClear={() => { change(new Set()); setAnchor(null); setRangeMode(false); setNote(""); }} onCancel={leave}
-    save={count > 0 ? plan.save({ kind, ranges, count, line: selectionLine(ranges) }, () => setSaved(true)) : null} /> : null;
+    save={count > 0 ? plan.save({ kind, ranges, count, line: selectionLine(ranges) }, () => setSaved(true)) : null}
+    print={count > 0 ? printAddress({ mode: "ref", ref: ranges.join("; "), kind }) : null} /> : null;
   return { view, button, extra: plan && !choosing ? plan.extra : null, bar: barView, choosing };
 }
 
@@ -98,9 +102,11 @@ export function PlaceLink({ base, href, place, children }: { base: string; href(
 }
 
 /** The bar that stays in view while choosing: the live count and references, range, clear, save and cancel. */
-function ChooseBar({ barRef, label, line, note, rangeMode, canRange, empty, saved, onRange, onClear, onCancel, save }: {
+function ChooseBar({ barRef, label, line, note, rangeMode, canRange, empty, saved, onRange, onClear, onCancel, save, print }: {
   barRef: { current: HTMLElement | null }; label: string; line: string; note: string; rangeMode: boolean; canRange: boolean; empty: boolean; saved: boolean;
   onRange(): void; onClear(): void; onCancel(): void; save: ReactNode;
+  /** The print sheet of exactly the chosen verses (F4): /print names them by ref, so it prints those verses and nothing else. */
+  print: string | null;
 }) {
   const id = useId();
   return <section ref={barRef} tabIndex={-1} className={styles.bar} aria-labelledby={`${id}-name`} data-choose-bar="">
@@ -111,6 +117,7 @@ function ChooseBar({ barRef, label, line, note, rangeMode, canRange, empty, save
       <button type="button" className="button-secondary" aria-pressed={rangeMode} disabled={!canRange} onClick={onRange}>{CHOOSE_STRINGS.range}</button>
       <button type="button" className="button-secondary" disabled={empty} onClick={onClear}>{CHOOSE_STRINGS.clear}</button>
       {save}
+      {print && <a className="button-secondary" href={print} data-choose-print="">Print</a>}
       <button type="button" className="button-secondary" onClick={onCancel}>{saved ? CHOOSE_STRINGS.done : CHOOSE_STRINGS.cancel}</button>
     </div>
   </section>;

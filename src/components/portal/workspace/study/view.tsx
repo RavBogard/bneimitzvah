@@ -19,19 +19,22 @@ import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useRe
 import { VersePanelColumn, VersePanelScope, WordPanelSource } from "./verse-panel";
 import type { WordPanelHost } from "./word-panel";
 import { ReadingPlace, scrollToVerse } from "./reading-place";
-import { pageOffsetFor } from "./reading-place-model";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
+import { sectionIndexAt, sectionsFromStarts, type Section } from "../../../../lib/readings/sections";
+import { SectionTabs } from "../../../ui";
+import { NextSection } from "./next-section";
 import { PortalRequestError } from "../../api";
 import { watchReadingAudioDeadline } from "./reading-player-intent";
 import type { ShortReferenceOwner } from "./short-reference-bridge";
 
 export type StudyReload = { clear(): void; reload(baseline: Assigned, signal: AbortSignal): Promise<void> };
+const NO_SECTIONS: readonly Section[] = Object.freeze([]), SERVICE_CHIP = "service";
 /** Aliyah labels above the verse where an aliyah starts (or continues from the previous text page), in either lens. */
 function aliyahSections(kind: StudyKind, assignment: Assigned["readings"][number], verses: readonly StudyVerse[]) {
   return verses.flatMap((verse, index) => { const position = aliyahPosition(kind, assignment.aliyahStarts, assignment.verses, verse.ref);
     return position && (position.startsHere || index === 0) ? [{ index, label: `Aliyah ${position.number}${position.startsHere ? " starts here" : " · continued from the previous text page"}` }] : []; });
 }
-export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderGuide, renderWork, renderActiveWork, onPage, onPrint, printSheetHref, learner = false, liftHandle, practiceHandle, textStartHandle, verseLookupHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, active = true, audio, stopAudio }: {
+export function AssignedStudyText({ baseline, register, reloadMetadata, authorityFailed, onKindChange, guardDeparture, serviceHref, renderGuide, renderWork, renderActiveWork, onPage, onPrint, printSheetHref, learner = false, liftHandle, practiceHandle, textStartHandle, verseLookupHandle, songSession = learner, onShown, renderMark, renderLiftControls, onVisit, onHearReady, onPracticeReady, onService, active = true, audio, stopAudio }: {
   baseline: Assigned | null; register(value: StudyReload): () => void; reloadMetadata(): Promise<Assigned>; authorityFailed(status: number): void; onKindChange(kind: StudyKind): void;
   guardDeparture?(): Promise<boolean>; serviceHref?: string; renderGuide?(kind: StudyKind, verseRef: string): ReactNode; renderWork?(kind: StudyKind, verseRef: string): ReactNode; renderActiveWork?(): ReactNode; onPage?(kind: StudyKind, offset: number, signal: AbortSignal): Promise<void>;
   /** Opens the printable practice sheet; learners on phones reach it here rather than in the hero. */
@@ -52,6 +55,8 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   /** Called only when the reader explicitly opens a verse: tapping it, Start, or stepping to another verse. Never on a reload. */
   onVisit?(kind: StudyKind, verseRef: string): void;
   onHearReady?(ready: boolean): void; onPracticeReady?(ready: boolean): void; active?: boolean;
+  /** Where the "Service parts" chip goes, the last chip of the section row (1.9 N3); absent, the row has none. */
+  onService?(): void;
   audio?: ReturnType<typeof createReadingAudioCoordinator>; stopAudio?(): void;
 }) {
   const { readStudy, createShortReferenceOwner, readWordAids, readWordDetails, summary, concealed, epoch } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
@@ -118,7 +123,17 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       if (loaded && onPage && request && controller.current === request && turn === generation.current && !request.signal.aborted && metadata.current === value) await onPage(kind, offset, request.signal);
     } catch { /* Authority state has already cleared text and metadata. */ }
   }
-  const livePage = key && state.binding === key && !state.loading ? state.page : undefined;
+  // The tutor's recorded aliyot are the sections (1.9 N3, decision 2). A section is a text page that starts where it does (the server cuts a page from any
+  // offset), and what is shown is that page up to the section's end: one section at a time, and the text flows inside it. A section longer than a text page
+  // goes on by the page controls. Which section is open is simply the section the loaded page starts in.
+  const rawPage = key && state.binding === key && !state.loading ? state.page : undefined;
+  const sections = useMemo(() => { const row = baseline?.readings.find(item => item.kind === state.kind); return state.kind === "torah" && row ? sectionsFromStarts(row.verses, row.aliyahStarts) : NO_SECTIONS; }, [baseline, state.kind]);
+  const livePage = useMemo(() => {
+    if (!rawPage || !sections.length) return rawPage;
+    const at = sectionIndexAt(sections, rawPage.offset), end = at >= 0 ? sections[at].end : rawPage.offset + rawPage.verses.length;
+    return { ...rawPage, verses: rawPage.verses.slice(0, Math.max(1, end - rawPage.offset)), nextOffset: rawPage.offset + rawPage.verses.length >= end ? null : rawPage.nextOffset };
+  }, [rawPage, sections]);
+  const sectionNow = livePage && sections.length ? sectionIndexAt(sections, livePage.offset) : -1;
   useEffect(() => { const ref = pendingJump.current; if (ref && livePage?.verses.some(row => row.ref === ref)) { pendingJump.current = null; scrollToVerse(ref); } }, [livePage]);
   const listeningEnabled = baseline?.referenceListeningEnabled === true;
   const textReady = Boolean(livePage && !concealed), canHear = textReady && active && listeningEnabled;
@@ -208,36 +223,45 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   if (!baseline) return <section className="assigned-study" aria-label="Assigned text"><p role="status">Text is hidden while the assignment is checked.</p></section>;
   if (!baseline.readings.length) return null;
   const kind = current?.kind ?? selection.current?.kind ?? baseline.readings[0].kind, assignment = baseline.readings.find(row => row.kind === kind);
-  const offsets = [0]; if (assignment && current?.page) { let next: number | null = 0; while (next !== null) { const page = studyPlan(baseline, kind, next); next = page.nextOffset; if (next !== null) offsets.push(next); } }
-  const previous = current?.page ? offsets[offsets.indexOf(current.page.offset) - 1] : undefined;
-  const single = current?.page ? previous === undefined && current.page.nextOffset === null : false;
+  // The text pages of what is open: the whole assignment, or the open section (which starts its own first page).
+  const first = sectionNow >= 0 ? sections[sectionNow].start : 0, last = sectionNow >= 0 ? sections[sectionNow].end : Infinity;
+  const offsets = [first]; if (assignment && livePage) { let next: number | null = first; while (next !== null) { const page = studyPlan(baseline, kind, next); next = page.nextOffset; if (next !== null && next < last) offsets.push(next); else next = null; } }
+  const previous = livePage ? offsets[offsets.indexOf(livePage.offset) - 1] : undefined;
+  const single = livePage ? previous === undefined && livePage.nextOffset === null : false;
   // Study's word card (1.7): the verse panel reads word details through the same authority checks as Word tools.
-  const wordScope = JSON.stringify([summary.sessionBinding, epoch, key, kind, current?.page?.offset, generation.current]);
-  const wordHost: WordPanelHost | null = study && !concealed && active && current?.page && !current.loading ? {
-    scopeKey: wordScope, verses: current.page.verses,
+  const wordScope = JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage?.offset, generation.current]);
+  const wordHost: WordPanelHost | null = study && !concealed && active && livePage && !current?.loading ? {
+    scopeKey: wordScope, verses: livePage.verses,
     readAids: async (index, signal) => {
-      const value = baseline, page = current.page!, turn = generation.current;
+      const value = baseline, page = livePage!, turn = generation.current;
       if (signal.aborted || metadata.current !== value || page !== livePage || !page.verses[index]) throw new PortalRequestError(409);
       const result = await readWordAids(value, kind, page.offset + index, page.verses[index], signal);
       if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
       return result;
     },
     readDetails: async (index, word, signal) => {
-      const value = baseline, page = current.page!, turn = generation.current;
+      const value = baseline, page = livePage!, turn = generation.current;
       if (signal.aborted || metadata.current !== value || page !== livePage || !page.verses[index]) throw new PortalRequestError(409);
       const result = await readWordDetails(value, kind, page.offset + index, page.verses[index], word, signal);
       if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
       return result;
     },
-    onHear: listeningEnabled ? (index, word) => hear(current.page!, index, word) : undefined,
+    onHear: listeningEnabled ? (index, word) => hear(livePage!, index, word) : undefined,
     onVisit: ref => onVisit?.(kind, ref),
     reveal: ref => jumpTo(ref),
   } : null;
   const jumpTo = (ref: string) => {
-    if (current?.page?.verses.some(row => row.ref === ref)) { scrollToVerse(ref); return; }
-    const target = pageOffsetFor(offsets, assignment!.verses, ref);
-    if (target !== null && target !== current?.page?.offset) { pendingJump.current = ref; void explicitLoad(kind, target); }
+    if (livePage?.verses.some(row => row.ref === ref)) { scrollToVerse(ref); return; }
+    const target = pageFor(assignment!.verses.indexOf(ref));
+    if (target !== null && target !== livePage?.offset) { pendingJump.current = ref; void explicitLoad(kind, target); }
   };
+  // The offset of the text page that holds a verse (by its place in the assignment): a section's pages begin at the section's start, else the server's own chain from 0.
+  function pageFor(position: number): number | null {
+    if (position < 0) return null;
+    let at = sections.length ? sections[Math.max(0, sectionIndexAt(sections, position))].start : 0;
+    for (;;) { const plan = studyPlan(baseline!, kind, at); if (plan.nextOffset === null || plan.nextOffset > position) return at; at = plan.nextOffset; }
+  }
+  const goSection = (index: number) => { const target = sections[index]; if (target && target.start !== livePage?.offset) void explicitLoad(kind, target.start); };
   return <section className="assigned-study" aria-label="Assigned text" data-size={prefs.size}>
     <WordPanelSource host={wordHost} />
     {/* On a learner's phone the switch waits under the passage, so the first verse stays above the fold. */}
@@ -245,76 +269,83 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
       {baseline.readings.length > 1 && <div className="study-kind-choice" role="group" aria-label="Reading text selection">{baseline.readings.map(row => <button key={row.kind} className="button-secondary" aria-label={row.kind === "torah" ? "Torah text" : "Haftarah text"} aria-pressed={kind === row.kind} disabled={current?.loading} onClick={() => void explicitLoad(row.kind, 0)}>{row.kind === "torah" ? "Torah" : "Haftarah"}</button>)}{serviceHref && <a className="button-secondary service-entry" href={serviceHref}>Service parts</a>}</div>}
       <LensSwitch />
     </div>}
+    {/* The section chips (N3): a tab for each recorded aliyah, and "Service parts" last. In the sticky bar above the text, for every role: a learner's page tabs sit under the reading. */}
+    {sections.length > 0 && <SectionTabs sticky label="Reading sections" current={sectionNow >= 0 ? sections[sectionNow].n : null}
+      tabs={[...sections.map(row => ({ id: row.n, label: row.label })), ...onService ? [{ id: SERVICE_CHIP, label: "Service parts" }] : []]}
+      onSelect={id => { if (id === SERVICE_CHIP) onService?.(); else goSection(sections.findIndex(row => row.n === id)); }} />}
     {!current || current.loading ? <p role="status">Loading the assigned text…</p> : current.error ? <div role="status"><h4>{current.error === 409 ? "Assignment changed" : [401, 403, 404].includes(current.error) ? "Text access changed" : "Text unavailable"}</h4>
       <p>{current.error === 409 ? learner ? "Your reading was just updated. Load the new version to keep going." : "Refresh the reading metadata before loading this assignment’s text again." : learner ? "The verses didn’t load. Check your connection and try again." : "No previous text is being shown. Confirmed references and the reading review form remain separate."}</p>
       <button className="button-secondary" onClick={() => { if (current.error === 409) void reloadMetadata().catch(() => undefined); else void explicitLoad(kind, selection.current?.offset ?? 0); }}>{current.error === 409 ? "Refresh reading and text" : "Reload assigned text"}</button>
       {renderActiveWork?.()}
-    </div> : current.page && <>
+    </div> : livePage && <>
       {study ? <>
         <CommentaryStatus works={workStatuses(works, corpus)} />
         <ReadingPlace refs={assignment!.verses} pageKey={wordScope} onJump={jumpTo} />
-        <StudyRows verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled} showEnglish={lens.english}
-          sections={aliyahSections(kind, assignment!, current.page.verses)} works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))}
-          onVerse={listeningEnabled ? index => hear(current.page!, index) : undefined} onWord={(index, word) => { if (listeningEnabled) playMainVerseForWord(playback.current, tools.current, index, word); else { tools.current?.select(index, word); tools.current?.reveal(); } onVisit?.(kind, current.page!.verses[index].ref); }} />
-      </> : <FlowingStudyText verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled} showEnglish={songSession && prefs.translation} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
-        sections={aliyahSections(kind, assignment!, current.page.verses)} linked={linkedVerse(leinLink, current.page.verses)}
-        onVerse={listeningEnabled ? index => hear(current.page!, index) : undefined} onWord={(index, word) => { if (listeningEnabled) playMainVerseForWord(playback.current, tools.current, index, word); else { tools.current?.select(index, word); tools.current?.reveal(); } onVisit?.(kind, current.page!.verses[index].ref); }} />}
-      {!concealed && listeningEnabled && <ReadingPlayer key={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current])}
-        scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current])} verses={current.page.verses} active={active && !lift} enabled={!concealed && !lift} expiresAt={baseline?.context ? Date.parse(baseline.context.expiresAt) : undefined} audio={audio ? { coordinator: audio, slot: "assigned" } : undefined}
+        <StudyRows verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled} showEnglish={lens.english}
+          sections={aliyahSections(kind, assignment!, livePage.verses)} works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))}
+          onVerse={listeningEnabled ? index => hear(livePage!, index) : undefined} onWord={(index, word) => { if (listeningEnabled) playMainVerseForWord(playback.current, tools.current, index, word); else { tools.current?.select(index, word); tools.current?.reveal(); } onVisit?.(kind, livePage!.verses[index].ref); }} />
+      </> : <FlowingStudyText verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled} showEnglish={songSession && prefs.translation} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
+        sections={aliyahSections(kind, assignment!, livePage.verses)} linked={linkedVerse(leinLink, livePage.verses)}
+        onVerse={listeningEnabled ? index => hear(livePage!, index) : undefined} onWord={(index, word) => { if (listeningEnabled) playMainVerseForWord(playback.current, tools.current, index, word); else { tools.current?.select(index, word); tools.current?.reveal(); } onVisit?.(kind, livePage!.verses[index].ref); }} />}
+      {/* The end of the section (N3): the next one's first verse, faint, and the way on. The verse comes from the page already loaded, when it is on it. */}
+      {sectionNow >= 0 && sectionNow + 1 < sections.length && livePage.nextOffset === null
+        && <NextSection onNext={() => goSection(sectionNow + 1)} preview={rawPage?.verses[sections[sectionNow + 1].start - rawPage.offset]} />}
+      {!concealed && listeningEnabled && <ReadingPlayer key={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])}
+        scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])} verses={livePage.verses} active={active && !lift} enabled={!concealed && !lift} expiresAt={baseline?.context ? Date.parse(baseline.context.expiresAt) : undefined} audio={audio ? { coordinator: audio, slot: "assigned" } : undefined}
         register={registerPlayback} onActiveWord={setPlayingWord} load={async (index, signal) => {
-          const value = baseline, page = current.page!, turn = generation.current;
+          const value = baseline, page = livePage!, turn = generation.current;
           if (signal.aborted || metadata.current !== value || page !== livePage || !page.verses[index]) throw new PortalRequestError(409);
           const owned = shortMetadata.current; if (!owned) throw new PortalRequestError(409);
           const result = await owned.load(index, signal);
           if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
           return result;
         }} />}
-      {!concealed && active && <WordTools key={`word-tools:${JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current])}`}
-        scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current])} verses={current.page.verses} register={registerTools}
+      {!concealed && active && <WordTools key={`word-tools:${JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])}`}
+        scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current])} verses={livePage.verses} register={registerTools}
         readAids={async (index, signal) => {
-          const value = baseline, page = current.page!, turn = generation.current;
+          const value = baseline, page = livePage!, turn = generation.current;
           if (signal.aborted || metadata.current !== value || page !== livePage || !page.verses[index]) throw new PortalRequestError(409);
           const result = await readWordAids(value, kind, page.offset + index, page.verses[index], signal);
           if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
           return result;
         }} readDetails={async (index, word, signal) => {
-          const value = baseline, page = current.page!, turn = generation.current;
+          const value = baseline, page = livePage!, turn = generation.current;
           if (signal.aborted || metadata.current !== value || page !== livePage || !page.verses[index]) throw new PortalRequestError(409);
           const result = await readWordDetails(value, kind, page.offset + index, page.verses[index], word, signal);
           if (signal.aborted || turn !== generation.current || metadata.current !== value) throw new PortalRequestError(409);
           return result;
-        }} onHear={listeningEnabled ? (index, word) => hear(current.page!, index, word) : undefined}
+        }} onHear={listeningEnabled ? (index, word) => hear(livePage!, index, word) : undefined}
         onPlace={(ref, wordIndex) => {
-          const page = current.page!, here = page.verses.findIndex(row => row.ref === ref), position = assignment!.verses.indexOf(ref);
+          const page = livePage!, here = page.verses.findIndex(row => row.ref === ref), position = assignment!.verses.indexOf(ref);
           if (position < 0) return;
           if (here >= 0) { tools.current?.select(here, wordIndex); onVisit?.(kind, ref); return; }
-          const target = offsets.filter(offset => offset <= position).at(-1);
-          if (target !== undefined && target !== page.offset) void explicitLoad(kind, target, { ref, wordIndex });
+          const target = pageFor(position);
+          if (target !== null && target !== page.offset) void explicitLoad(kind, target, { ref, wordIndex });
         }}
-        takePlace={() => { const place = pendingPlace.current, page = current.page!; pendingPlace.current = null;
+        takePlace={() => { const place = pendingPlace.current, page = livePage!; pendingPlace.current = null;
           return place && place.kind === kind && place.offset === page.offset && place.turn === generation.current ? { ref: place.ref, wordIndex: place.wordIndex } : null; }} />}
-      <div className="study-verse-details">{current.page.verses.map((verse, index) => <div key={verse.ref} className="study-verse-detail" data-verse-ref={verse.ref}>
-        <div className="verse-card-head"><h4>Verse tools · <bdi dir="ltr">{verse.ref}</bdi></h4>{renderMark?.(kind, verse.ref)}<button type="button" className="button-text" onClick={() => open(current.page!, index)}>View {verse.ref} up close</button></div>
+      <div className="study-verse-details">{livePage.verses.map((verse, index) => <div key={verse.ref} className="study-verse-detail" data-verse-ref={verse.ref}>
+        <div className="verse-card-head"><h4>Verse tools · <bdi dir="ltr">{verse.ref}</bdi></h4>{renderMark?.(kind, verse.ref)}<button type="button" className="button-text" onClick={() => open(livePage!, index)}>View {verse.ref} up close</button></div>
         {!songSession && !study && <p className="study-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
         <Apparatus verse={verse} learner={learner} />{renderGuide?.(kind, verse.ref)}
         {!study && <VerseRashi verse={verse} state={rashi.lookup.forVerse(verse.ref)} link={leinLink} retry={rashi.retry} />}
-        {!concealed && <SourcesPanel key={`sources:${JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page!.offset, generation.current, verse.ref])}`}
-          scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page!.offset, generation.current, verse.ref])} baseline={baseline} kind={kind} offset={current.page!.offset + index} onRefreshReading={reloadMetadata} />}
+        {!concealed && <SourcesPanel key={`sources:${JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage!.offset, generation.current, verse.ref])}`}
+          scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage!.offset, generation.current, verse.ref])} baseline={baseline} kind={kind} offset={livePage!.offset + index} onRefreshReading={reloadMetadata} />}
         {renderWork?.(kind, verse.ref)}
       </div>)}</div>
       {!learner && kind==="torah" && assignment!.aliyahStarts===null && <p className="field-help">Aliyah boundaries have not been recorded for this assignment.</p>}
-      {learner ? !single && <p className="study-page-position">Verses {current.page.offset + 1}–{current.page.offset + current.page.verses.length} of {current.page.totalVerses}</p>
-        : <p role="status">Verses {current.page.offset + 1}–{current.page.offset + current.page.verses.length} of {current.page.totalVerses}. {current.page.translation.status === "partial" ? "The selected English edition is missing for some verses." : current.page.translation.status === "unavailable" ? "The selected English edition is unavailable on this page." : "Selected English edition available."}</p>}
+      {learner ? !single && <p className="study-page-position">Verses {livePage.offset + 1}–{livePage.offset + livePage.verses.length} of {livePage.totalVerses}</p>
+        : <p role="status">Verses {livePage.offset + 1}–{livePage.offset + livePage.verses.length} of {livePage.totalVerses}. {livePage.translation.status === "partial" ? "The selected English edition is missing for some verses." : livePage.translation.status === "unavailable" ? "The selected English edition is unavailable on this page." : "Selected English edition available."}</p>}
       {!learner && <p className="field-help">Hebrew: Miqra according to the Masorah. English reference: JPS2023. No alternate edition is substituted.</p>}
-      {!single && <nav className="study-pages" aria-label="Text pages"><button className="button-secondary" disabled={previous === undefined} onClick={() => previous !== undefined && void explicitLoad(kind, previous)}>Previous text page</button><button className="button-secondary" disabled={current.page.nextOffset === null} onClick={() => current.page?.nextOffset !== null && void explicitLoad(kind, current.page!.nextOffset!)}>Next text page</button></nav>}
+      {!single && <nav className="study-pages" aria-label="Text pages"><button className="button-secondary" disabled={previous === undefined} onClick={() => previous !== undefined && void explicitLoad(kind, previous)}>Previous text page</button><button className="button-secondary" disabled={livePage.nextOffset === null} onClick={() => livePage?.nextOffset !== null && void explicitLoad(kind, livePage!.nextOffset!)}>Next text page</button></nav>}
       {study && <CommentaryCredits works={works} refs={commentaryRefs} />}
-      <div className="study-more"><StudyCredits chapters={current.page.chapters} summary={learner ? "About this text" : undefined} />{learner && <WorkspaceLink href="/trope-chart">Trope chart</WorkspaceLink>}{learner && onPrint && <button type="button" className="button-text study-print-action" onClick={onPrint}>Print practice sheet</button>}{learner && printSheetHref && <WorkspaceLink className="study-print-sheet" href={printSheetHref}>Print the whole reading</WorkspaceLink>}{learner && <div className="reading-lens-foot"><LensSwitch /></div>}</div>
-      {lift && textReady && lift.page === current.page && <LiftedLine learner={learner} verses={current.page.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} index={lift.index} total={current.page.totalVerses} offset={current.page.offset}
+      <div className="study-more"><StudyCredits chapters={livePage.chapters} summary={learner ? "About this text" : undefined} />{learner && <WorkspaceLink href="/trope-chart">Trope chart</WorkspaceLink>}{learner && onPrint && <button type="button" className="button-text study-print-action" onClick={onPrint}>Print practice sheet</button>}{learner && printSheetHref && <WorkspaceLink className="study-print-sheet" href={printSheetHref}>Print the whole reading</WorkspaceLink>}{learner && <div className="reading-lens-foot"><LensSwitch /></div>}</div>
+      {lift && textReady && lift.page === livePage && <LiftedLine learner={learner} verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} index={lift.index} total={livePage.totalVerses} offset={livePage.offset}
         reference={audio && listeningEnabled ? { audio, active: active && !concealed, expiresAt: baseline.context ? Date.parse(baseline.context.expiresAt) : undefined,
-          navigation: lift.navigation, scopeKey: JSON.stringify([summary.sessionBinding, epoch, key, kind, current.page.offset, generation.current, lift.opening]),
+          navigation: lift.navigation, scopeKey: JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage.offset, generation.current, lift.opening]),
           load: async (index, signal) => {
             const owner = modalOwner.current, selected = modalScope.current, turn = generation.current;
-            if (!owner || !selected || index !== selected.index || selected.page !== current.page || signal.aborted) throw new PortalRequestError(409);
+            if (!owner || !selected || index !== selected.index || selected.page !== livePage || signal.aborted) throw new PortalRequestError(409);
             modalRequest.current?.abort(); const request = new AbortController(); modalRequest.current = request;
             const abort = () => request.abort(); signal.addEventListener("abort", abort, { once: true });
             try { const result = await owner.load(index, request.signal);

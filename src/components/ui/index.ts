@@ -5,4 +5,5 @@ export { EmptyState, type EmptyStateProps } from "./empty-state";
 export { List, ListRow, type ListRowProps } from "./list-row";
 export { PageHeader, type PageHeaderProps } from "./page-header";
 export { Segmented, type SegmentedOption, type SegmentedProps } from "./segmented";
+export { SectionTabs, type SectionTab, type SectionTabsProps } from "./section-tabs";
 export { Sheet, type SheetProps } from "./sheet";
