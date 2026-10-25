@@ -241,7 +241,7 @@ test("the work's foot credits each edition once, with its licence, via Sefaria, 
   const state = ready([comment("דה", "a")]);
   const markup = renderToStaticMarkup(createElement(CommentaryCredits, { works: [{ work: "rashi", lookup: { forVerse: () => state } }], refs: ["Genesis 1:1", "Genesis 1:2"] }));
   expect(markup).toContain("Hebrew and English: <a");
-  expect(markup.match(/via Sefaria \(public domain\)/g)).toHaveLength(1);
+  expect(markup.match(/via Sefaria \(CC BY\)/g)).toHaveLength(1);
   expect(markup).toContain(`href="${edition("he").url.replaceAll("&", "&amp;")}"`);
   expect(markup).toContain('href="https://www.sefaria.org/Rashi_on_Genesis.1"');
   expect(renderToStaticMarkup(createElement(CommentaryCredits, { works: [{ work: "rashi", lookup: { forVerse: (): CommentaryVerseState => ({ status: "loading" }) } }], refs: ["Genesis 1:1"] }))).toBe("");

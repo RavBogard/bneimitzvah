@@ -236,6 +236,12 @@ all N1–N25 ─► N16's final re-measure ─► v1.9.0
 - **Print:** Metsudah prints under the existing appendix licence filter (CC-BY passes) with its credit, like any other Sefaria text (Daniel's licence ruling: no written confirmation needed). No new licence code path.
 - Verify the edition title and licence live against Sefaria's versions API at build time (as the 2026-10-22 note in `commentary.ts` did) and record the date in the comment. If Sefaria's served licence is ever not CC-BY, the existing filter drops it and the 1929 edition shows.
 - **Exit tests:** Study's Rashi on Gen 18:1 shows Metsudah first with its credit; the alternative is one tap away; `/print` with the commentary appendix shows Metsudah with its CC-BY credit; an edition with a non-open licence is still refused by the filter; no Metsudah text in fixtures or the repo (never-in-repo green).
+- **Done (1.9 N1).** Live check 2026-10-25: "Rashi Chumash, Metsudah Publications, 2009", CC-BY, English and Hebrew, present in all 187 Torah chapters. Decided here:
+  - Metsudah's Hebrew is pinned first beside its English, because comments pair by index and its English matches its own Hebrew (two verses differ: Genesis 26:35, 49:24) but not the 1929 Hebrew (54 of 187 chapters, Numbers throughout). The 1929 edition stays next in both languages and answers any chapter Metsudah lacks.
+  - No edition choice is stored anywhere, so no remembered choice is overridden; the Rashi on/off preference is untouched.
+  - Print needed no code: the existing licence filter passes CC-BY and still refuses CC-BY-SA and unknown.
+  - Gap (tier C, needs wording): an in-app control to switch a chapter to the 1929 edition. Today the credit links to Sefaria, where editions can be switched.
+  - The dropped maqaf in "This word elsewhere" is not small: the word-details contract excludes the maqaf by design (`wordDetailsWord`, the wire alphabet and its binding hash), so it stays for the word-details work, not N1.
 
 #### N2. Taamey Frank CLM: licence check and vendoring (S, Opus) — decision 10
 

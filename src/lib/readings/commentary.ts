@@ -50,18 +50,25 @@ function work(key: string, title: string, hebrewTitle: string, index: string, co
 /** Whether Sefaria marks this work complex for this book. */
 export const commentaryComplex = (value: CommentaryWork, book: string) => Array.isArray(value.complex) ? value.complex.includes(book) : value.complex === true;
 const silbermann = "Pentateuch with Rashi's commentary by M. Rosenbaum and A.M. Silbermann, 1929-1934";
+const metsudah = "Rashi Chumash, Metsudah Publications, 2009";
 
 // Edition titles and licences verified live on 2026-10-22: Rashi against
 // https://www.sefaria.org/api/texts/versions/Rashi_on_<Book> for every Torah and Nevi'im book; the Women's
 // Commentary against its versions listing and its v3 chapter texts. Daniel ruled on these licences 2026-10-22.
+// 2026-10-25 (1.9 N1): "Rashi Chumash, Metsudah Publications, 2009" re-verified live against
+// https://www.sefaria.org/api/texts/versions/Rashi_on_Genesis: English and Hebrew, licence CC-BY, and present with that licence in
+// all 187 Torah chapters (v3 chapter request). Daniel's decision 9 makes it the first Torah edition; the 1929 Rosenbaum-Silbermann
+// stays next. Its Hebrew comes first too because comments pair with the English by index: Metsudah's English matches Metsudah's own
+// Hebrew comment for comment (two verses differ, Genesis 26:35 and 49:24) but not the 1929 Hebrew (54 of 187 chapters, Numbers
+// throughout). Nothing stores a chosen edition, so no remembered choice is overridden. Print needs no code: appendix.ts filters by licence.
 export const COMMENTARY_WORKS: Readonly<Record<string, CommentaryWork>> = Object.freeze({
   rashi: Object.freeze({ key: "rashi", title: "Rashi", hebrewTitle: "רש״י", index: "Rashi on {book}", indexTitle: "Rashi on {book}", complex: false,
     sectionNames: Object.freeze(["Chapter", "Verse", "Comment"] as const), editions: Object.freeze({
     torah: Object.freeze({
-      he: Object.freeze([edition("he", silbermann, "Public Domain"),
+      he: Object.freeze([edition("he", metsudah, "CC-BY"), edition("he", silbermann, "Public Domain"),
         edition("he", "Pentateuch with Rashi's commentary by M. Rosenbaum and A.M. Silbermann -- corrected vocalization", "Public Domain"),
         edition("he", "On Your Way", "Public Domain")]),
-      en: Object.freeze([edition("en", silbermann, "Public Domain")]),
+      en: Object.freeze([edition("en", metsudah, "CC-BY"), edition("en", silbermann, "Public Domain")]),
     }),
     neviim: Object.freeze({
       he: Object.freeze([edition("he", "Vocalized Edition", "CC0"), edition("he", "On Your Way", "Public Domain"), edition("he", "On Your Way -- new", "Public Domain")]),
