@@ -88,8 +88,9 @@ export function ServiceHome() {
           {review && <a className={learn.review} href="/learn/service/review" data-row="review"><span>{fill(COPY.home.reviewRow, { n: review.cards, m: review.minutes })}</span>{icons.arrow}</a>}
           {ready && quickTenOpen(progress) && <a className={learn.review} href="/learn/service/practice/quick-ten" data-row="quick-ten"><span>{COPY.home.quickTenRow}</span>{icons.arrow}</a>}
           <nav className={learn.links} aria-label={COPY.home.nav}><a href="/learn">{COPY.home.lein}</a><a href="/learn/service/about">{COPY.home.about}</a></nav>
-          {/* Only once the account is known: signed out, or an account that keeps no progress here (never a flash before a sync). */}
-          {(account.state === "signed-out" || account.state === "not-eligible") && <p className={learn.saved} data-saved="device">{savedBefore}<a href="/sign-in">Sign in</a>{savedAfter}</p>}
+          {/* Until the account holds the progress (synced), it is on this device, so the line stays: also when the account cannot be
+              reached at all, as on a server with no database. Learn to lein's home does the same. */}
+          {account.state !== "synced" && <p className={learn.saved} data-saved="device">{savedBefore}<a href="/sign-in">Sign in</a>{savedAfter}</p>}
         </div>
         <div className={learn.paths}>
           <YourParts view={view} progress={progress} next={next} />
