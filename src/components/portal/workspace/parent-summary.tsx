@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 import type { Assigned } from "./api";
 import { PortalRequestError } from "../api";
 import { dayOrdinal, dayString, type PracticeDates } from "./practice-calendar/api";
-import type { LessonSummarySnapshot } from "./lessons/panel";
+import { BeforeNext, type LessonSummarySnapshot } from "./lessons/panel";
 
 type CalendarRead = (mode: "parent", studentId: string, operation: { type: "calendar"; fromDate: string; throughDate: string }, signal: AbortSignal) => Promise<PracticeDates>;
 type Lesson = LessonSummarySnapshot["lesson"];
@@ -70,6 +70,7 @@ export function ParentStudySummary({ store, baseline, scope, concealed, notice =
     <div><h3>Latest saved lesson</h3>
       {lesson.status === "loading" ? <p role="status">Loading the latest lesson…</p> : lesson.status === "unavailable" ? <p>The latest lesson couldn’t be loaded.</p> : !lesson.latest ? <p>No saved lesson yet.</p> : <>
         <p><time dateTime={lesson.latest.lessonDate}>{label(lesson.latest.lessonDate)}</time> · Lesson author: <bdi dir="auto">{lesson.latest.displayName}</bdi></p>
+        {lesson.latest.beforeNext && <BeforeNext text={lesson.latest.beforeNext} own={false} />}
         <details key={JSON.stringify([scope, lesson.latest])}><summary>Read saved lesson note</summary><p className="parent-summary-note" dir="auto">{lesson.latest.summary}</p></details>
       </>}
     </div>
