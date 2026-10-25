@@ -94,6 +94,15 @@ Main at writing: `a9bbd6e`. Live: v1.8.0 (`7c13cac`), prod ledger 43 (newest mig
       - Ex 25:8 in the offline pack and its snapshot;
       - new wording for the lesson's title, summary, goal and body, which now say "this week's reading". This wording is tier C, drafted by Cowork in its 1.9 handoff T3.
   - /learn/prepare joins the public page-view count.
+- **C1 Daniel's answers in Cowork's 1.9 session (2026-10-25, recorded verbatim in `cowork-offload/1.9/QUESTIONS-1.9.md`).**
+  - SC7 is held. Daniel's answer was "Hold the evening course". The public Shirei Tfilah mirror is two months behind and the local feeds are licensed builds. He also said "There is a beit Mitzvah siddur in the repo. That is the main one". Lane 3 runs N17 → N18 → N19 → SC6 without SC7. v2.0.0 waits on SC7 or on Daniel releasing it from the set.
+  - Calendar: "Hebcal wins". T10's 11 live-site mismatches are fixed in a calendar PR, with T10-CALENDAR.json as test fixtures.
+  - Rate limit: "600/min, IP only". Daniel changes the Vercel Firewall rule himself (Cowork T7-OPS-STEPS.md).
+  - Pilot: "Pilot on torah.* once DNS is done".
+  - Beta: "Checklist as a reminder; my word decides" (Cowork T9-BETA.md).
+  - T12 (2.5 scoping) is skipped for now.
+  - T1 and T2: the 10 portion summaries are approved. T2 takes the top six sources as they are, and each discussion is titled "Sources for {parashah}". Both load through the staff MCP: summaries as drafts, which Daniel approves himself in the app because approval stamps the credit.
+  - T6: no licence differs from this plan. N2 and N8 follow T6-FONTS.md steps 1–8.
 
 ## Versions and tags
 
