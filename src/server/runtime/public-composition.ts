@@ -16,6 +16,7 @@ import { createSefariaTranslationsReader } from "../study/translations";
 import { createSefariaPinnedSourceReader, createSefariaSourceReader } from "../study/source-text";
 import { memoPinnedSource, readPublicDiscussions } from "../discussions/public";
 import { readCourseText, serviceTextOf } from "../service-course/text";
+import { eveningTextOf, readEveningText } from "../service-course/evening";
 import { readApprovedPortionSummary } from "../portion-summary/public";
 import { createSefariaMetadataReader } from "../study/sources/sefaria-metadata";
 import { createHebcalReader } from "../../lib/readings/proposals";
@@ -77,6 +78,9 @@ export function composePublicRuntime<Q extends PgQueryResultHKT>(config: Runtime
     // The service course (2.0 SC2): the public tenant's active pinned PUBLIC build, read in its own tenant transaction after
     // resolveTenant. The licensed service_catalog is not read here.
     serviceText: async (unit: string) => serviceTextOf(await withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => readCourseText(tx, PUBLIC_TENANT)), unit),
+    // The evening lessons (2.0 SC7): the public tenant's pinned siddur book, read in its own tenant transaction after resolveTenant,
+    // through the one course module allowed to read it (service-course/evening.ts), which refuses any congregation but CRC first.
+    eveningText: async (unit: string) => { const { book, volume } = await withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => readEveningText(tx, PUBLIC_TENANT)); return eveningTextOf(book, unit, volume); },
     // Portion summaries (1.9 N6): the public tenant's approved revision only, through portion_summary_public.
     portionSummary: (reading: string) => withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => readApprovedPortionSummary(tx, PUBLIC_TENANT, reading)),
   });

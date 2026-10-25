@@ -21,6 +21,7 @@ export async function handleOfflineRequest(request: Request, runtime: HttpRuntim
     uniqueQuery(request.url, []);
     if (request.headers.has("X-Practice-Context")) throw new AccessDenied(403);
     const value = await runtime.offline.packs(request);
-    return privateJson({ owner: value.owner, packs: value.packs.map(pack => ({ kind: pack.kind, ref: pack.ref, name: pack.name })) });
+    // `evening` (2.0 SC7): whether this signed-in person may keep the CRC siddur's evening lesson text (CRC members only).
+    return privateJson({ owner: value.owner, packs: value.packs.map(pack => ({ kind: pack.kind, ref: pack.ref, name: pack.name })), evening: value.evening === true });
   } catch (error) { return errorResponse(error); }
 }

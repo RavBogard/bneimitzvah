@@ -6,8 +6,8 @@ import { referenceRecord } from "../../../lib/reference-audio/source";
 import { analyseVerse, type AnalysedVerse } from "../../../lib/learn/verse";
 import { unitWordParts, type WordCardTarget } from "../../../lib/learn/word-tap";
 import { letters } from "../../../lib/service-course/check";
-import { hebrewWords, parseServiceText, SERVICE_TEXT_BUILD, SERVICE_TEXT_LIMITS, type ServiceText } from "../../../lib/service-course/text";
-import type { TorahRef } from "../../../lib/service-course/course";
+import { EVENING_TEXT_BUILD, EVENING_UNIT, hebrewWords, parseEveningText, parseServiceText, SERVICE_TEXT_BUILD, SERVICE_TEXT_LIMITS, type ServiceText } from "../../../lib/service-course/text";
+import { CRC_TENANT, type TorahRef } from "../../../lib/service-course/course";
 
 /**
  * The service course's two reads, both public and signed out: a prayer's text from /api/public/service-text (2.0 SC2), and, for a
@@ -16,7 +16,10 @@ import type { TorahRef } from "../../../lib/service-course/course";
  */
 const bad = (): never => { throw new PortalRequestError(503); };
 export const serviceTextPath = (unit: string) => `/api/public/service-text?${new URLSearchParams([["unit", unit], ["build", SERVICE_TEXT_BUILD]]).toString()}`;
+/** An evening lesson's text (2.0 SC7): a Saturday-evening unit of the CRC siddur, from its own route. The route answers 404 off the CRC site. */
+export const eveningTextPath = (unit: string) => `/api/public/evening-text?${new URLSearchParams([["unit", unit], ["build", EVENING_TEXT_BUILD]]).toString()}`;
 export async function fetchServiceText(unit: string, signal: AbortSignal): Promise<ServiceText> {
+  if (EVENING_UNIT.test(unit)) return parseEveningText(await getJson(eveningTextPath(unit), SERVICE_TEXT_LIMITS.answerBytes, signal), unit, CRC_TENANT.siddurBook) ?? bad();
   return parseServiceText(await getJson(serviceTextPath(unit), SERVICE_TEXT_LIMITS.answerBytes, signal), unit) ?? bad();
 }
 

@@ -17,8 +17,8 @@ import { publicDiscussionsAnswer, type PublicDiscussionsRead } from "../discussi
 import { versesFor } from "../discussions/validation";
 import type { PinnedSourceReader } from "../study/source-text";
 import { namedReading } from "../../lib/readings/named-readings";
-import { SERVICE_TEXT_UNITS } from "../../lib/service-course/course";
-import { SERVICE_TEXT_BUILD, type ServiceText } from "../../lib/service-course/text";
+import { EVENING_TEXT_UNITS, SERVICE_TEXT_UNITS } from "../../lib/service-course/course";
+import { EVENING_TEXT_BUILD, EVENING_UNIT, SERVICE_TEXT_BUILD, type ServiceText } from "../../lib/service-course/text";
 import { CourseTextUnavailable } from "../service-course/text";
 import { REFUSED_COURSE_UNIT } from "../service-course/pin";
 import type { ApprovedPortionSummary } from "../../lib/portion-summary/credit";
@@ -56,6 +56,11 @@ export type PublicRuntime = Readonly<{
    * with their transliteration and English. Never the licensed Beit Mitzvah catalog, which this runtime cannot read at all.
    */
   serviceText(unit: string): Promise<ServiceText>;
+  /**
+   * The evening and Havdalah lessons (2.0 SC7): one Saturday-evening unit of the congregation's own Beit Mitzvah siddur, pinned, as
+   * lines with the book's attribution. CRC only: any other congregation is refused before the database (MISSION, amended 2026-10-25).
+   */
+  eveningText(unit: string): Promise<ServiceText>;
   /** The parashah's approved portion summary (1.9 N6), read through portion_summary_public only; null when none is approved. */
   portionSummary(reading: string): Promise<ApprovedPortionSummary | null>;
 }>;
@@ -66,7 +71,7 @@ export type PublicRuntimeScope = (action: (runtime: PublicRuntime) => Promise<Re
  * named by a Shabbat `date` (the weekly page) or, for "Any reading", by a canonical `ref` with its
  * `kind` (the 1.5 offline packer depends on these exact shapes).
  */
-type Route = Readonly<{ kind: "reading" | "aliyot" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source" | "manifest" | "discussions" | "service-text" | "portion-summary"; keysets: readonly (readonly string[])[] }>;
+type Route = Readonly<{ kind: "reading" | "aliyot" | "text" | "word-aids" | "word-details" | "short" | "commentary" | "translations" | "related" | "source" | "manifest" | "discussions" | "service-text" | "evening-text" | "portion-summary"; keysets: readonly (readonly string[])[] }>;
 const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/reading": { kind: "reading", keysets: [["date"], ["ref", "kind"]] },
   // The reader's print sheet (2026-10-23): a Shabbat's calendar aliyot, numbers and book names only.
@@ -85,6 +90,8 @@ const exact: Readonly<Record<string, Route>> = Object.freeze({
   "/api/public/discussions": { kind: "discussions", keysets: [["reading"], ["ref", "kind"]] },
   // The service course's Read step (2.0 SC2): one public unit the course names, by its stable id.
   "/api/public/service-text": { kind: "service-text", keysets: [["unit", "build"]] },
+  // The evening lessons' Read step (2.0 SC7): one Saturday-evening unit of the CRC siddur an evening lesson names, by its stable id.
+  "/api/public/evening-text": { kind: "evening-text", keysets: [["unit", "build"]] },
   // A parashah's approved portion summary (1.9 N6): a parashah slug from the list, nothing else.
   "/api/public/portion-summary": { kind: "portion-summary", keysets: [["reading"]] },
 });
@@ -179,6 +186,8 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
       || query.reading !== undefined && namedReading(query.reading) === null
       // A unit the course does not name, or the mixed Mi Shebeirach under any name, never opens the database (A2 discrepancy 13).
       || selected.kind === "service-text" && (!SERVICE_TEXT_UNITS.has(query.unit) || REFUSED_COURSE_UNIT.test(query.unit) || query.build !== SERVICE_TEXT_BUILD)
+      // The same for the evening: only a unit an evening lesson names, of the pinned siddur build, never the Mi Shebeirach.
+      || selected.kind === "evening-text" && (!EVENING_TEXT_UNITS.has(query.unit) || !EVENING_UNIT.test(query.unit) || REFUSED_COURSE_UNIT.test(query.unit) || query.build !== EVENING_TEXT_BUILD)
       || selected.kind === "portion-summary" && namedReading(query.reading)?.group !== "parashah"
       || query.kind !== undefined && query.kind !== "torah" && query.kind !== "haftarah"
       || query.ref !== undefined && selected.kind !== "source" && canonicalReadingRef(query.ref, query.kind) === null
@@ -277,9 +286,21 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
             // A pinned public build does not change under a reader: kept like a verse page (F1). A build the congregation has not
             // stored, or one that fails its pin, is a 503 with no-store, so nothing but the pinned public text is ever kept.
             const answer = await runtime.serviceText(query.unit);
-            if (answer.unit !== query.unit || REFUSED_COURSE_UNIT.test(answer.unit)) return failure(503);
+            if (answer.unit !== query.unit || REFUSED_COURSE_UNIT.test(answer.unit) || !("licence" in answer.credit)) return failure(503);
             return json({ unit: answer.unit, volume: answer.volume, credit: { title: answer.credit.title, licence: answer.credit.licence },
               lines: answer.lines.map(line => ({ he: line.he, ...(line.tr !== undefined ? { tr: line.tr } : {}), ...(line.en !== undefined ? { en: line.en } : {}) })) }, 86400, KEPT);
+          }
+          case "evening-text": {
+            // Daniel, 2026-10-25: anyone on the CRC site may read it, but only a signed-in CRC person may keep it on the device. So the
+            // browser is told to keep nothing (no-store: no HTTP cache, and the worker stores nothing at runtime); the installed app keeps
+            // it only through the signed-in owner pack (src/lib/offline). The CDN, which holds it for this host only, may keep it a day.
+            const answer = await runtime.eveningText(query.unit);
+            if (answer.unit !== query.unit || REFUSED_COURSE_UNIT.test(answer.unit) || !("attribution" in answer.credit)) return failure(503);
+            const body = JSON.stringify({ unit: answer.unit, volume: answer.volume, credit: { title: answer.credit.title, attribution: answer.credit.attribution },
+              lines: answer.lines.map(line => ({ he: line.he, ...(line.tr !== undefined ? { tr: line.tr } : {}), ...(line.en !== undefined ? { en: line.en } : {}) })) });
+            if (Buffer.byteLength(body) > 2 * 1024 * 1024) return failure(503);
+            return new Response(body, { status: 200, headers: { ...common, "content-type": "application/json; charset=utf-8", "cache-control": "no-store",
+              "vercel-cdn-cache-control": "public, s-maxage=86400, stale-while-revalidate=86400" } });
           }
           case "source": {
             let text;

@@ -166,9 +166,34 @@ describe("signed-in service-course progress", () => {
     expect(await t.f.owner(async () => (await t.f.db.select().from(s.serviceCourseProgressTable).where(eq(s.serviceCourseProgressTable.membershipId, t.f.learnerMember.id))).length)).toBe(1);
   });
 
+  it("keeps the evening and Havdalah lessons' progress (2.0 SC7) under the same owner-only rules, the owner check included", async () => {
+    const t = await setup();
+    const evening = doc({ "maariv-aravim": T1, havdalah: T2, "shavua-tov": T2 }, { "word:maariv-aravim:read": [1, "2026-10-21"], "word:havdalah:meaning": [1, "2026-10-22"] });
+    const merged = await t.call("/api/learn/service/progress/merge", "learner", { progress: evening });
+    expect(merged.status).toBe(200);
+    expect(Object.keys(merged.json.progress.lessons).sort()).toEqual(["havdalah", "maariv-aravim", "shavua-tov"]);
+    const read = await t.call("/api/learn/service/progress", "learner");
+    expect(read.json).toMatchObject({ ok: true, version: merged.json.version });
+    expect(Object.keys(read.json.progress.lessons).sort()).toEqual(["havdalah", "maariv-aravim", "shavua-tov"]);
+    expect(Object.keys(read.json.progress.cards).sort()).toEqual(["word:havdalah:meaning", "word:maariv-aravim:read"]);
+    // A put or merge naming another account is refused, naming only the signed-in account; nothing is stored.
+    const other = await t.ownerOf("admin");
+    for (const path of ["/api/learn/service/progress/put", "/api/learn/service/progress/merge"]) {
+      const body = path.endsWith("/merge") ? { progress: doc({ eliyahu: T2 }), owner: other } : { progress: doc({ eliyahu: T2 }), expectedVersion: read.json.version, owner: other };
+      const refused = await t.call(path, "learner", body);
+      expect(refused.status, path).toBe(403);
+      expect(refused.json.owner, path).toBe(await t.ownerOf("learner"));
+    }
+    expect(Object.keys((await t.call("/api/learn/service/progress", "learner")).json.progress.lessons).sort()).toEqual(["havdalah", "maariv-aravim", "shavua-tov"]);
+    // Nobody else reads it.
+    for (const who of ["admin", "multi", "member"] as const) expect((await t.call("/api/learn/service/progress", who)).json.progress, who).toBeNull();
+  });
+
   it("is a document apart from Learn to lein's: neither course's writes reach the other, and the owner names differ", async () => {
     const t = await setup();
-    await t.call("/api/learn/progress/merge", "learner", { progress: { schema: "learn-progress/v1", lessons: { "intro-phrases": { done: T1 } }, cards: {} } });
+    // Learn to lein's writes name their owner too since #102.
+    const learnOwner = (await t.call("/api/learn/progress", "learner")).json.owner;
+    await t.call("/api/learn/progress/merge", "learner", { progress: { schema: "learn-progress/v1", lessons: { "intro-phrases": { done: T1 } }, cards: {} }, owner: learnOwner });
     expect((await t.call("/api/learn/service/progress", "learner")).json).toMatchObject({ progress: null, version: 0 });
     await t.call("/api/learn/service/progress/merge", "learner", { progress: doc({ shma: T2 }) });
     const learn = await t.call("/api/learn/progress", "learner");
@@ -286,11 +311,11 @@ describe("a student's own path", () => {
     const unset = (await unknown.call("/api/learn/service/path", "learner")).json;
     expect(unset).toMatchObject({ state: "no-plan", slot: "unknown" });
     expect(unset.items.slice(0, 2)).toEqual([{ lesson: "shma", page: 10 }, { lesson: "vahavta", page: 11 }]);
-    // An evening student with no plan: no morning page is passed off as theirs.
+    // An evening student with no plan: the six parts at their evening pages (2.0 SC7), never a morning page passed off as theirs.
     const evening = await withCatalog({ slot: "havdalah" });
     const answer = (await evening.call("/api/learn/service/path", "learner")).json;
     expect(answer).toMatchObject({ state: "no-plan", slot: "havdalah" });
-    expect(answer.items).toEqual(["shma", "vahavta", "torah-before", "torah-after", "haftarah-before", "haftarah-after"].map(lesson => ({ lesson })));
+    expect(answer.items).toEqual([["shma", 39], ["vahavta", 40], ["torah-before", 52], ["torah-after", 52], ["haftarah-before", 53], ["haftarah-after", 54]].map(([lesson, page]) => ({ lesson, page })));
   });
 
   it("reads only the signed-in student's own plan: another student's plan never reaches them, and staff cannot read a student's path", async () => {

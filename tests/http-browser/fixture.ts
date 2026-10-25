@@ -154,6 +154,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       discussions: (verses: readonly string[]) => withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => readPublicDiscussions(tx, PUBLIC_TENANT, verses)),
       pinnedSource: unavailablePinnedSource,
       serviceText: unavailableServiceText,
+      eveningText: unavailableServiceText,
       portionSummary: (reading: string) => withTenantTransaction(db, { tenantId: PUBLIC_TENANT }, tx => readApprovedPortionSummary(tx, PUBLIC_TENANT, reading)),
     });
     async function withPublicRuntime(action: (runtime: PublicRuntime) => Promise<Response>) {

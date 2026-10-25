@@ -57,7 +57,7 @@ export function YourParts({ view, progress, next }: { view: PathView; progress: 
   </section>;
 }
 
-/** The course home: one next step, the links, the signed-in student's own parts, and every unit of the Shabbat morning service in order. */
+/** The course home: one next step, the links, the signed-in student's own parts, every unit of the Shabbat morning service in order, then (CRC, 2.0 SC7) Saturday evening and Havdalah. */
 export function ServiceHome() {
   const { progress: loaded, account } = useServiceProgress();
   const view = useServicePath(account);
@@ -100,7 +100,8 @@ export function ServiceHome() {
             <p className={styles.unitSummary}>{unit.summary}</p>
             <PathList lessons={unit.lessons.map(id => lessonById(id)!).filter(lesson => lessonOpen(lesson))} progress={progress} next={next} />
           </section>)}
-          <p className={styles.later}>{COPY.home.eveningLater}</p>
+          {/* The evening's units list above when the congregation's evening is on (CRC's, 2.0 SC7); elsewhere this line stays. */}
+          {!CRC_TENANT.evening && <p className={styles.later}>{COPY.home.eveningLater}</p>}
         </div>
       </div>
     </main>
