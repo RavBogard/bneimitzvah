@@ -32,7 +32,7 @@ function FamilyHeading({ family }: { family: { id: string; label: string } }) {
 export default function TropeChartPage() {
   return <div className={`portal-shell ${styles.shell}`} data-chart-page>
     <a className="skip-link" href="#trope-chart-main">Skip to chart</a>
-    <header className={`portal-header ${styles.header}`}><Link className="portal-brand" href="/">CRC Torah</Link><WorkspaceLink className={styles.back} /></header>
+    <header className={`portal-header app-bar ${styles.header}`}><Link className="portal-brand" href="/">CRC Torah</Link><WorkspaceLink className={`app-bar-account ${styles.back}`} /></header>
     <main id="trope-chart-main" className={styles.main}>
       <div className={styles.introduction}><h1 className={styles.title}>Trope chart</h1><p>Find the signs, their names and the phrase families used in your reading.</p><PrintChart /></div>
       <section aria-labelledby="phrase-families-heading"><h2 id="phrase-families-heading" className={styles.sectionHeading}>Phrase families</h2><p className={styles.explanation}>Color belongs to a whole phrase, ending at its closing sign. It does not give every sign its own permanent color or melody.</p>

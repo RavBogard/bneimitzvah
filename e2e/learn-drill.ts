@@ -18,11 +18,13 @@ export async function answerRight(page: Page) {
   }
 }
 
-/** From the lesson's Hear step to Done, answering every drill rightly. */
+/** Opt into the current lesson's supported structural exercises, then answer them rightly. */
 export async function finishLesson(page: Page) {
-  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Examples", exact: true }).click();
   await expect(page.getByRole("heading", { name: "In verses" })).toBeVisible();
   await page.getByRole("button", { name: "Next", exact: true }).click();
+  const anchors = page.getByRole("button", { name: "Start optional questions", exact: true });
+  if (await anchors.count()) await anchors.click();
   for (let i = 0; i < 40; i++) {
     if (await page.locator("main").getAttribute("data-step") === "done") break;
     await expect(page.locator("main h2").first()).toBeVisible();

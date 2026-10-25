@@ -7,7 +7,8 @@ import { portalRoutesFixture } from "./portal-routes-fixture";
 import { createHttpDispatcher } from "../../src/server/http/dispatch";
 import { createServiceLearningService } from "../../src/server/service-learning/service";
 import { createServiceCoursePath } from "../../src/server/service-course/path";
-import { PROGRESS_SCHEMA } from "../../src/lib/service-course/progress";
+import { PROGRESS_SCHEMA, completeLesson, emptyProgress, serializeProgress } from "../../src/lib/service-course/progress";
+import { lessonById } from "../../src/lib/service-course/course";
 import { parsePath } from "../../src/lib/service-course/path";
 import { syntheticServiceCatalog } from "../helpers/service-learning";
 
@@ -82,6 +83,15 @@ describe("signed-in service-course progress", () => {
     expect(second.json).toMatchObject({ ok: true, version: 2 });
     expect(second.json.progress).toEqual(doc({ shma: T1, vahavta: T2 }, { "word:shma:meaning": [2, "2026-10-25"], "word:shma:read": [3, "2026-10-30"] }));
     expect((await t.call("/api/learn/service/progress", "learner")).json).toMatchObject({ version: 2, progress: second.json.progress });
+  });
+
+  it("keeps SC3's Reading Hebrew lessons and every review card a lesson plants, under the same rules", async () => {
+    const t = await setup();
+    const planted = [lessonById("f1")!, lessonById("f3")!, lessonById("shma")!].reduce((value, lesson) => completeLesson(value, lesson, Date.parse(T1)), emptyProgress());
+    expect(Object.keys(planted.cards).length).toBeGreaterThan(2);
+    const saved = await t.call("/api/learn/service/progress/merge", "learner", { progress: planted });
+    expect(saved.status).toBe(200);
+    expect(saved.json.progress).toEqual(JSON.parse(serializeProgress(planted)!));
   });
 
   it("replaces the document under its version and answers a stale version with the current one", async () => {

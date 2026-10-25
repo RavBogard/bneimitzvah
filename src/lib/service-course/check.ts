@@ -17,7 +17,7 @@ export type CheckItem =
 /** The divine name, written yod-yod or yod-hei-vav-hei, is said "Adonai": a reading item on it would test a convention, not decoding (A8). */
 const DIVINE = /^(?:\u05D9\u05D9|\u05D9\u05D4\u05D5\u05D4)$/;
 export const letters = (word: string) => word.replace(/[^\u05D0-\u05EA]/g, "");
-const isDivine = (word: string) => DIVINE.test(letters(word));
+export const isDivine = (word: string) => DIVINE.test(letters(word));
 
 /** Every word of the Read's lines, with its transliteration where the line lines up. */
 export function readWords(lesson: Lesson, text: ServiceText): readonly ReadWord[] {
@@ -43,26 +43,28 @@ export function seeded(seed: number): () => number {
   let a = seed >>> 0;
   return () => { a = (a + 0x6d2b79f5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
-const shuffle = <T,>(items: readonly T[], rng: () => number): T[] => { const out = [...items]; for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; } return out; };
+export const shuffle = <T,>(items: readonly T[], rng: () => number): T[] => { const out = [...items]; for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; } return out; };
 const sameTranslit = (a: string, b: string) => a.toLocaleLowerCase("en") === b.toLocaleLowerCase("en");
 
 /** Two other words to stand beside a reading target: key words first, then any word of the Read, never one that looks or sounds the same. */
-function sayChoices(target: ReadWord, keys: readonly ResolvedKeyWord[], words: readonly ReadWord[], rng: () => number): ReadWord[] | null {
+export function sayChoices(target: ReadWord, keys: readonly ResolvedKeyWord[], words: readonly ReadWord[], rng: () => number): ReadWord[] | null {
   const ok = (word: ReadWord) => word.translit && word.he !== target.he && letters(word.he) !== letters(target.he) && !sameTranslit(word.translit, target.translit!) && !isDivine(word.he);
   const pool: ReadWord[] = [];
   for (const word of [...shuffle(keys, rng), ...shuffle(words, rng)]) if (ok(word) && !pool.some(other => letters(other.he) === letters(word.he) || sameTranslit(other.translit!, word.translit!))) pool.push(word);
   return pool.length >= 2 ? shuffle([target, ...pool.slice(0, 2)], rng) : null;
 }
 
-/** The Check for one lesson and its loaded text: `check.items` items, about half reading and half meaning, or fewer when the text gives fewer. */
-export function buildCheck(lesson: Lesson, text: ServiceText, rng: () => number): readonly CheckItem[] {
-  if (!lesson.read || !lesson.check) return [];
-  const keys = resolveKeyWords(lesson, text), words = readWords(lesson, text), wanted = lesson.check.items;
+/** Reading items for the key words that can be read from the loaded text, in a seeded order: each names a word and asks for it among three. */
+export function saysItems(keys: readonly ResolvedKeyWord[], words: readonly ReadWord[], rng: () => number): CheckItem[] {
   const says: CheckItem[] = [];
   for (const target of shuffle(keys.filter(key => key.checkable && key.translit), rng)) {
     const choices = sayChoices(target, keys, words, rng);
     if (choices) says.push(Object.freeze({ kind: "says", key: `says:${target.line}:${target.word}`, target, choices: Object.freeze(choices) }));
   }
+  return says;
+}
+/** Meaning items for a lesson's key words, alternating Hebrew-to-English and English-to-Hebrew; none with fewer than three different words. */
+export function meaningItems(keys: readonly ResolvedKeyWord[], rng: () => number): CheckItem[] {
   const meaning: CheckItem[] = [];
   const distinct = keys.filter((key, i) => keys.findIndex(other => letters(other.he) === letters(key.he)) === i);
   if (distinct.length >= 3) shuffle(distinct, rng).forEach((target, i) => {
@@ -71,23 +73,33 @@ export function buildCheck(lesson: Lesson, text: ServiceText, rng: () => number)
       ? Object.freeze({ kind: "what-means", key: `what:${target.line}:${target.word}`, target, choices: Object.freeze(shuffle([target.gloss, ...others.map(other => other.gloss)], rng)) })
       : Object.freeze({ kind: "means-word", key: `means:${target.line}:${target.word}`, target, choices: Object.freeze(shuffle([target, ...others], rng)) }));
   });
+  return meaning;
+}
+
+/** The Check for one lesson and its loaded text: `check.items` items, about half reading and half meaning, or fewer when the text gives fewer. */
+export function buildCheck(lesson: Lesson, text: ServiceText, rng: () => number): readonly CheckItem[] {
+  if (!lesson.read || !lesson.check) return [];
+  const keys = resolveKeyWords(lesson, text), wanted = lesson.check.items;
+  const says = saysItems(keys, readWords(lesson, text), rng), meaning = meaningItems(keys, rng);
   const reading = Math.min(says.length, Math.ceil(wanted / 2)), picked = [...says.slice(0, reading), ...meaning.slice(0, wanted - reading)];
   if (picked.length < wanted) picked.push(...says.slice(reading, reading + wanted - picked.length));
   return picked.length >= 3 ? Object.freeze(shuffle(picked, rng)) : Object.freeze([]);
 }
 
 /** One run through the Check: a miss comes back three to five items later, at most twice; then it is left for review. */
-export type CheckRun = Readonly<{ queue: readonly CheckItem[]; at: number; misses: ReadonlyMap<string, number> }>;
+export type CheckRun<T extends { key: string } = CheckItem> = Readonly<{ queue: readonly T[]; at: number; misses: ReadonlyMap<string, number> }>;
 export const CHECK_REASKS = 2;
-export const startCheck = (items: readonly CheckItem[]): CheckRun => Object.freeze({ queue: Object.freeze([...items]), at: 0, misses: new Map() });
-export const currentCheck = (run: CheckRun): CheckItem | null => run.queue[run.at] ?? null;
-export const checkDone = (run: CheckRun) => run.at >= run.queue.length;
-export function answerCheck(run: CheckRun, right: boolean, rng: () => number): CheckRun {
+export const startCheck = <T extends { key: string }>(items: readonly T[]): CheckRun<T> => Object.freeze({ queue: Object.freeze([...items]), at: 0, misses: new Map() });
+export const currentCheck = <T extends { key: string }>(run: CheckRun<T>): T | null => run.queue[run.at] ?? null;
+export const checkDone = <T extends { key: string }>(run: CheckRun<T>) => run.at >= run.queue.length;
+/** `reasks` is how many times one step may come back (a line read again: once); `at: "end"` brings a miss back after the planned items (Quick ten) rather than three to five on. */
+export function answerCheck<T extends { key: string }>(run: CheckRun<T>, right: boolean, rng: () => number, options: { reasks?: number; at?: "soon" | "end" } = {}): CheckRun<T> {
+  const reasks = options.reasks ?? CHECK_REASKS;
   const item = currentCheck(run); if (!item) return run;
   const queue = [...run.queue], next = run.at + 1, misses = new Map(run.misses);
   if (!right) {
     const count = (misses.get(item.key) ?? 0) + 1; misses.set(item.key, count);
-    if (count <= CHECK_REASKS) queue.splice(Math.min(next + 3 + Math.floor(rng() * 3), queue.length), 0, item);
+    if (count <= reasks) queue.splice(options.at === "end" ? queue.length : Math.min(next + 3 + Math.floor(rng() * 3), queue.length), 0, item);
   }
   return Object.freeze({ queue: Object.freeze(queue), at: next, misses });
 }

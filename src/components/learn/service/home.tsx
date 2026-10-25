@@ -3,6 +3,8 @@ import { CRC_TENANT, homeUnits, lessonById, lessonMinutes, lessonOpen, type Less
 import { COPY, fill } from "../../../lib/service-course/copy";
 import { courseDone, emptyProgress, isDone, nextLesson, type Progress } from "../../../lib/service-course/progress";
 import type { Path } from "../../../lib/service-course/path";
+import { quickTenOpen, reviewSummary } from "../../../lib/service-course/cards";
+import { localDay } from "../../../lib/learn/progress";
 import { siddurPageLink } from "../../../lib/siddur/link";
 import { DEFAULT_SIDDUR_URL } from "../../../server/settings/validation";
 import { SiddurLink } from "../../portal/siddur-link";
@@ -62,7 +64,7 @@ export function ServiceHome() {
   const progress = loaded ?? emptyProgress(), ready = loaded !== null;
   if (!CRC_TENANT.enabled) return <div className={`portal-shell ${learn.shell}`}><ServiceAppBar /><main className={learn.main}><p role="status">{COPY.state.tenantOff}</p></main></div>;
   const mine = pathLessons(view);
-  const next = nextLesson(progress, CRC_TENANT, mine ?? CRC_TENANT.defaultPath);
+  const next = nextLesson(progress, CRC_TENANT, mine ?? CRC_TENANT.defaultPath), review = ready ? reviewSummary(progress, localDay(Date.now())) : null;
   // Below a Your parts answer (a list or a line), the rest of the course sits under its own heading.
   const listed = view.status === "ready" || view.status === "error";
   const [savedBefore, savedAfter] = COPY.home.saved.split("Sign in");
@@ -82,6 +84,9 @@ export function ServiceHome() {
               <p className={learn.nextLine}>{next.summary}</p>
               <div className={learn.nextAction}><a className="button-start" href={`/learn/service/${next.id}`} aria-describedby="service-next">{COPY.home.start}</a><span className={learn.minutes}>{fill(COPY.home.minutes, { n: lessonMinutes(next) })}</span></div>
             </section>}
+          {ready && !isDone(progress, "f1") && <a className={learn.review} href="/learn/service/f1" data-row="fluency"><span>{COPY.home.fluencyRow}</span>{icons.arrow}</a>}
+          {review && <a className={learn.review} href="/learn/service/review" data-row="review"><span>{fill(COPY.home.reviewRow, { n: review.cards, m: review.minutes })}</span>{icons.arrow}</a>}
+          {ready && quickTenOpen(progress) && <a className={learn.review} href="/learn/service/practice/quick-ten" data-row="quick-ten"><span>{COPY.home.quickTenRow}</span>{icons.arrow}</a>}
           <nav className={learn.links} aria-label={COPY.home.nav}><a href="/learn">{COPY.home.lein}</a><a href="/learn/service/about">{COPY.home.about}</a></nav>
           {/* Signed in and synced, the account keeps the progress, so the device line goes (as Learn to lein's home does). */}
           {account.state !== "synced" && <p className={learn.saved} data-saved="device">{savedBefore}<a href="/sign-in">Sign in</a>{savedAfter}</p>}

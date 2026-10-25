@@ -44,6 +44,7 @@ test("Try again after a 429 loads the lesson once the limit has passed", async (
 });
 
 test("the reader says the same on a 429: its text and the week", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-10-21T15:00:00Z")); // 2026-10-31 below must never be the current week
   const routes = syntheticCourseRoutes(); await routes.install(page);
   await page.route("**/api/public/text?*", route => limited(route));
   await page.goto("/read");
@@ -61,6 +62,7 @@ test("the reader says the same on a 429: its text and the week", async ({ page }
  * have answered it) sits in front of the synthetic routes. The walk must not meet a 429, and the count is the page's own budget.
  */
 test("the finding-1 walk runs twice in a row without meeting the limit", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-10-21T15:00:00Z")); // 2026-10-31 below must never be the current week
   test.setTimeout(180_000);
   const routes = syntheticCourseRoutes(); await routes.install(page); await seed(page, introDone);
   const LIMIT = 120;

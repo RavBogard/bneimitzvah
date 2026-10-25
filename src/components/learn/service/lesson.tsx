@@ -11,6 +11,7 @@ import { icons, LessonSiddurLink } from "./bits";
 import { pathLessons, useServicePath, useServiceProgress } from "./progress";
 import type { Account } from "./progress-sync";
 import { CheckStep, KeyWordsStep, LessonWords, ReadStep, useCheckItems, useLessonText, type TextState } from "./read";
+import { FluencyLesson } from "./fluency";
 
 /**
  * The steps of a lesson (A4 3.2). A prayer with public text is About, Where, Read, Key words, Check and Done; a prayer without it
@@ -33,6 +34,7 @@ function Footer({ children }: { children: ReactNode }) {
 export function ServiceLesson({ id }: { id: string }) {
   const lesson = lessonById(id);
   if (!lesson || !lessonOpen(lesson)) return <p role="status">{COPY.state.notFound}</p>;
+  if (lesson.kind === "fluency") return <FluencyLesson lesson={lesson} />;
   return <WordCardScope><LessonFlow lesson={lesson} /></WordCardScope>;
 }
 function LessonFlow({ lesson }: { lesson: Lesson }) {
@@ -130,7 +132,7 @@ function Done({ lesson, state, complete, progress, account }: { lesson: Lesson; 
   const next = mine ?? (after ? lessonAfter(after, lesson.id, CRC_TENANT) : null);
   return <>
     <div className={learn.doneHead}><h1 className={learn.doneTitle}>{lesson.title}</h1><p className={learn.doneWord}>{COPY.done.word}</p></div>
-    <p className={learn.doneLine}>{presentGoal(lesson.goal)}</p>
+    {lesson.goal && <p className={learn.doneLine}>{presentGoal(lesson.goal)}</p>}
     <LessonSiddurLink lessonId={lesson.id} />
     {next && <p className={learn.nextName}>{fill(mine ? COPY.done.nextMine : COPY.done.nextName, { lesson: next.title })}</p>}
     <Footer>

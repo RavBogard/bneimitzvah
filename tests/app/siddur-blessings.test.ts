@@ -22,7 +22,7 @@ it("shows the Torah and haftarah blessings lines with the approved wording for C
   expect(html).toContain(`href="${origin}/?book=legacy-beit-mitzvah&amp;p=22"`);
   expect(html).toContain(">Torah blessings: siddur page 22</a>");
   expect(html).toContain(`href="${origin}/?book=legacy-beit-mitzvah&amp;p=23"`);
-  expect(html).toContain(">Haftarah blessings: siddur pages 23–24</a>");
+  expect(html).toContain(">Haftarah blessings: siddur page 23, after Mi Shebeirach</a>");
   expect(html.match(/target="_blank"/g)).toHaveLength(2);
   expect(html.match(/rel="noopener noreferrer"/g)).toHaveLength(2);
   expect(html).not.toContain("!");

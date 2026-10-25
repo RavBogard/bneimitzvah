@@ -87,7 +87,22 @@ Main at writing: `a9bbd6e`. Live: v1.8.0 (`7c13cac`), prod ledger 43 (newest mig
   - (6) Guided verse practice uses the approved LD-03 "Your turn" lines.
   - (7) A first-verse lesson counts as visited without "Same as the reader".
   - (8) N19a: the starter is Gen 1:1 (parts 0–2 and 3–6), with Ex 25:8 as the prepared alternative.
+    - #84 merged (1e1c4c3) without making the switch. Its first-verse lesson takes this week's shortest Torah verse that has a ready recording (12 words or fewer). If none qualifies it falls back to Gen 1:1, then Num 6:26, then Deut 6:4.
+    - Making Gen 1:1 the fixed starter is N19a's remaining work:
+      - a course-verse source option in the validator;
+      - `first-verse.tsx` taking the course verse ahead of this week's;
+      - Ex 25:8 in the offline pack and its snapshot;
+      - new wording for the lesson's title, summary, goal and body, which now say "this week's reading". This wording is tier C, drafted by Cowork in its 1.9 handoff T3.
   - /learn/prepare joins the public page-view count.
+- **C1 Daniel's answers in Cowork's 1.9 session (2026-10-25, recorded verbatim in `cowork-offload/1.9/QUESTIONS-1.9.md`).**
+  - SC7 is held. Daniel's answer was "Hold the evening course". The public Shirei Tfilah mirror is two months behind and the local feeds are licensed builds. He also said "There is a beit Mitzvah siddur in the repo. That is the main one". Lane 3 runs N17 → N18 → N19 → SC6 without SC7. v2.0.0 waits on SC7 or on Daniel releasing it from the set.
+  - Calendar: "Hebcal wins". T10's 11 live-site mismatches are fixed in a calendar PR, with T10-CALENDAR.json as test fixtures.
+  - Rate limit: "600/min, IP only". Daniel changes the Vercel Firewall rule himself (Cowork T7-OPS-STEPS.md).
+  - Pilot: "Pilot on torah.* once DNS is done".
+  - Beta: "Checklist as a reminder; my word decides" (Cowork T9-BETA.md).
+  - T12 (2.5 scoping) is skipped for now.
+  - T1 and T2: the 10 portion summaries are approved. T2 takes the top six sources as they are, and each discussion is titled "Sources for {parashah}". Both load through the staff MCP: summaries as drafts, which Daniel approves himself in the app because approval stamps the credit.
+  - T6: no licence differs from this plan. N2 and N8 follow T6-FONTS.md steps 1–8.
 
 ## Versions and tags
 
@@ -173,6 +188,12 @@ all N1–N25 ─► N16's final re-measure ─► v1.9.0
 - **Files:** `public-reading/view.tsx` (the signed-out aside at ~100 moves after the reading or into a fixed slot; reserve the reading block's height), the date row's styles.
 - **Depends on:** #71 merged.
 - **Exit tests:** `S/visual/cls.cjs` (copy the script into the repo's e2e or a scratch run) reads below 0.1 on /read and Study at 4× CPU; at a 200% root font on a Pixel 7, /read is no wider than the viewport; after "Start reading", `document.activeElement` is the reading heading or first verse.
+- **Done (1.8.2 P2).** Closed D3's /read part, D4's /read part, D10 and F-SITE 25 on /read, F-SITE 11, and F-SITE 19. Decided here:
+  - The Save card (the aside) is added only once the reading's week or passage list has answered, below the reading, and the reading holds a screen of room (`min-height: 70svh`) while its text loads. The first paint draws the week navigation inert, with the date line and button row reserved. Measured with the repo spec `e2e/public-reader-layout.spec.ts` at 4x CPU and 120 ms of network delay: CLS 0 on desktop and tablet, at most 0.018 on a Pixel 7, in Lein and in Study (the baseline was 0.43 in Study). What remains on a phone is the loading title taking two lines and a parashah name one.
+  - The date row wraps (`flex-wrap`, a 10rem field that may shrink to nothing); at a 200% root font on a Pixel 7 Lein, Study and the reading chooser fit 412 px. The check uses the configured device width, because Chrome's mobile emulation widens `innerWidth` to match overflowing content.
+  - Start reading focuses the first verse's Hear button when verses can be heard, otherwise the labelled reading. A new text page (Previous/Next text page) does the same. Choosing a reading, and "This week" from a chosen reading, are full page loads, so they leave a 30-second note in session storage and the next reading focuses its heading once shown. Previous week, Next week and Find a date keep focus where it is: stepping through weeks by keyboard must not take the reader off the control, and a date field changes as digits are typed.
+  - F-SITE 11 reads "Haftarah blessings: siddur page 23, after Mi Shebeirach" (the approved text, in the Torah line's form).
+  - F-SITE 19: N20 had already made "Continue with Google" the one label on /sign-in and /; what still differed was /account's handoff link ("Continue to Google sign-in", now "Continue with Google") and the header. /sign-in and /trope-chart now wear the blue app bar; the chart's bar shows "Return to workspace" for a member and "Sign in" otherwise, after the session answers (the bar holds its height meanwhile); on paper the bar is plain. No new wording.
 
 ### P3. Workspace and admin defects (S, Sonnet) — lane 2
 

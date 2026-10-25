@@ -1,23 +1,27 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { FamilyId } from "../../lib/trope/chart-catalog";
-import { ALWAYS_RUN, drillSkill, isDrill, lessonById, presentGoal, type Drill, type Lesson, type Melody, type ThisWeek as ThisWeekActivity } from "../../lib/learn/course";
+import { ALWAYS_RUN, drillSkill, familyName, lessonById, type Drill, type Lesson, type Melody, type ThisWeek as ThisWeekActivity } from "../../lib/learn/course";
 import { tropeLabel, tropeSample } from "../../lib/learn/marks";
-import { drillItems, itemCard, phraseAt, poolOf, seededRandom, type DrillItem, type Phrase } from "../../lib/learn/pools";
-import { cardId, completeLesson, localDay, nextLesson, recordAnswer } from "../../lib/learn/progress";
+import { drillItems, itemCard, phraseAt, poolOf, seededRandom, type DrillItem, type Phrase, type Pools } from "../../lib/learn/pools";
+import { cardId, completeLesson, localDay, recordAnswer } from "../../lib/learn/progress";
+import { recommendedLesson } from "../../lib/learn/recommendation";
+import { optionalSoundDrills, soundAnchorPools, soundAnchors, soundRange, taughtSoundFamilies } from "../../lib/learn/sound-practice";
 import { answerRun, currentItem, freshPace, mayStopEarly, pace, runDone, startRun, type LessonPace, type Run } from "../../lib/learn/run";
 import { lessonExtraRefs, lessonSources, useCourseVerses, type CourseVerses, type ExampleVerse } from "./course-data";
 import { AudioError, FamilyChip, icons, LoadFailure, phraseRequest, PlayTile, revealAnswer, UnitsText } from "./bits";
 import { BuildThePhrase, HearAndName, LookAlikes, SameOrDifferent, TapThePhrase, WhereDoesItEnd, WhichHalf } from "./drills";
 import { FirstVerse } from "./first-verse";
+import { SoundAnchors, SoundPractice } from "./sound-practice";
 import { ThisWeekSection } from "./this-week";
 import { LearnServices, useLearnServices, usePlayerState, useProgress } from "./services";
 import styles from "./learn.module.css";
 
-type Step = Readonly<{ kind: "hear" } | { kind: "verses" } | { kind: "drill"; activity: Drill; index: number } | { kind: "first-verse" } | { kind: "done" }>;
-export function lessonSteps(lesson: Lesson): Step[] {
+type Step = Readonly<{ kind: "hear" } | { kind: "verses" } | { kind: "sound" } | { kind: "anchors" } | { kind: "drill"; activity: Drill; index: number } | { kind: "first-verse" } | { kind: "done" }>;
+export function lessonSteps(lesson: Lesson, optional: readonly Drill[] = []): Step[] {
   if (lesson.activities.some(activity => activity.type === "first-verse")) return [{ kind: "first-verse" }, { kind: "done" }];
-  return [{ kind: "hear" }, { kind: "verses" }, ...lesson.activities.filter(isDrill).map((activity, index) => ({ kind: "drill" as const, activity, index })), { kind: "done" }];
+  return [{ kind: "hear" }, { kind: "sound" }, { kind: "verses" }, ...(lesson.id === "intro-phrases" ? [] : [{ kind: "anchors" as const }]),
+    ...optional.map((activity, index) => ({ kind: "drill" as const, activity, index })), { kind: "done" }];
 }
 type Ready = Extract<CourseVerses, { status: "ready" }>;
 
@@ -27,9 +31,11 @@ export function LessonScreen({ id }: { id: string }) {
 }
 function LessonFlow({ id }: { id: string }) {
   const lesson = lessonById(id)!;
-  const steps = useMemo(() => lessonSteps(lesson), [lesson]);
+  const [optional, setOptional] = useState<readonly Drill[]>([]), [modeled, setModeled] = useState<ReadonlySet<FamilyId>>(() => new Set());
+  const [namingPools, setNamingPools] = useState<Pools | null>(null);
+  const steps = useMemo(() => lessonSteps(lesson, optional), [lesson, optional]);
   const [at, setAt] = useState(0), [retry, setRetry] = useState(0), [paceState, setPace] = useState<LessonPace>(freshPace);
-  const sources = useMemo(() => lessonSources(lesson), [lesson]), extra = useMemo(() => lessonExtraRefs(lesson).map(ref => ({ kind: lesson.melody, ref })), [lesson]);
+  const sources = useMemo(() => lesson.id === "intro-phrases" ? [lesson] : lessonSources(lesson), [lesson]), extra = useMemo(() => lessonExtraRefs(lesson).map(ref => ({ kind: lesson.melody, ref })), [lesson]);
   const data = useCourseVerses(steps[0].kind === "first-verse" ? [] : sources, retry, extra);
   const { player } = useLearnServices();
   const { progress, update, until } = useProgress();
@@ -47,6 +53,15 @@ function LessonFlow({ id }: { id: string }) {
     update(value => recordAnswer(value, id, right, localDay(Date.now()), { until }));
   }, [update, until]);
   const doneIndex = steps.length - 1;
+  const taught = taughtSoundFamilies(lesson, progress, modeled);
+  const hearIndex = steps.findIndex(row => row.kind === "hear"), verseIndex = steps.findIndex(row => row.kind === "verses"), soundIndex = steps.findIndex(row => row.kind === "sound"), anchorsIndex = steps.findIndex(row => row.kind === "anchors");
+  const onModeled = (family: FamilyId) => setModeled(value => value.has(family) ? value : new Set([...value, family]));
+  const startQuestions = () => {
+    if (data.status !== "ready") return;
+    const anchors = soundAnchors(lesson, data.examples), eligible = new Set(anchors.filter(anchor => taught.has(anchor.family)).map(anchor => anchor.family));
+    setNamingPools(soundAnchorPools(data.pools, anchors.filter(anchor => eligible.has(anchor.family))));
+    setOptional(optionalSoundDrills(lesson, eligible)); go(anchorsIndex + 1);
+  };
   /** Where eight right in a row goes from step `from`: past the other drills, but never past a look-alikes or which-half step not yet run. */
   const afterEarlyStop = (from: number) => { const next = steps.findIndex((row, i) => i > from && row.kind === "drill" && ALWAYS_RUN.has(row.activity.type)); return next < 0 ? doneIndex : next; };
   return <div className={`portal-shell ${styles.shell}`}>
@@ -58,13 +73,25 @@ function LessonFlow({ id }: { id: string }) {
     </header>
     <main id="lesson-main" ref={main} tabIndex={-1} className={styles.lesson} data-step={step.kind}>
       {step.kind === "first-verse" ? <FirstVerse lesson={lesson} onDone={() => go(doneIndex)} />
-        : step.kind === "done" ? <Done lesson={lesson} fallback={data.status === "ready" ? data.examples.get(lesson.id) ?? [] : []} complete={() => update(value => completeLesson(value, lesson, Date.now(), until))} nextId={progress ? nextLesson(completeLesson(progress, lesson, Date.now()))?.id ?? null : null} />
+        : step.kind === "done" ? <Done lesson={lesson} fallback={data.status === "ready" ? data.examples.get(lesson.id) ?? [] : []} complete={() => update(value => completeLesson(value, lesson, Date.now(), until))} nextId={progress ? recommendedLesson(completeLesson(progress, lesson, Date.now()))?.id ?? null : null} />
         : data.status === "loading" ? <p role="status" className={styles.state}>Loading the lesson…</p>
         : data.status === "error" || !(data.examples.get(lesson.id)?.length) ? <LoadFailure rateLimited={data.status === "error" && data.rateLimited} onRetry={() => setRetry(n => n + 1)} />
         : step.kind === "hear" ? <HearIt lesson={lesson} examples={data.examples.get(lesson.id) ?? []} onNext={() => go(at + 1)} />
         : step.kind === "verses" ? <InVerses lesson={lesson} examples={data.examples.get(lesson.id) ?? []} onNext={() => go(at + 1)} />
-        : <DrillStep key={`${at}`} lesson={lesson} activity={step.activity} data={data} stopEarly={!ALWAYS_RUN.has(step.activity.type) && mayStopEarly(paceState)}
+        : step.kind === "sound" ? (() => {
+          const first = data.examples.get(lesson.id)![0], words = soundRange(lesson, first.verse, first.example.words);
+          return words ? <SoundPractice lesson={lesson} verse={first.verse} words={words} onModeled={onModeled} onExamples={() => go(verseIndex)} onAnchors={anchorsIndex >= 0 ? () => go(anchorsIndex) : undefined} onDone={() => go(doneIndex)} />
+            : <LoadFailure onRetry={() => setRetry(value => value + 1)} />;
+        })()
+        : step.kind === "anchors" ? <SoundAnchors lesson={lesson} examples={data.examples} taught={taught} onModeled={onModeled} onStart={startQuestions} onDone={() => go(doneIndex)} />
+        : <DrillStep key={`${at}`} lesson={lesson} activity={step.activity} data={step.activity.type === "hear-and-name" && namingPools ? { ...data, pools: namingPools } : data} stopEarly={!ALWAYS_RUN.has(step.activity.type) && mayStopEarly(paceState)}
           onAnswered={onAnswered} onDone={() => { if (mayStopEarly(paceState)) stopped.current = true; go(stopped.current ? afterEarlyStop(at) : at + 1); }} />}
+      {data.status === "ready" && soundIndex >= 0 && step.kind !== "done" && <nav className={styles.soundNavigation} aria-label="Lesson practice choices">
+        {step.kind !== "sound" && <button type="button" className={styles.textButton} onClick={() => go(soundIndex)}>Try the sound</button>}
+        {step.kind !== "verses" && <button type="button" className={styles.textButton} onClick={() => go(verseIndex)}>Examples</button>}
+        {step.kind !== "hear" && <button type="button" className={styles.textButton} onClick={() => go(hearIndex)}>Hear the teaching</button>}
+        {step.kind === "drill" && <button type="button" className={styles.textButton} onClick={() => go(doneIndex)}>Finish without more questions</button>}
+      </nav>}
     </main>
   </div>;
 }
@@ -78,8 +105,19 @@ function Marks({ lesson }: { lesson: Lesson }) {
       <span className={`${styles.hebrew} ${styles.markSample}`} lang="he" dir="rtl" aria-hidden="true">{tropeSample(accent)}</span><span className={styles.markName}>{tropeLabel(accent)}</span>
     </li>)}</ul></section>;
 }
-function Legend({ verse, melody }: { verse: ExampleVerse["verse"]; melody: Melody }) {
-  return <div className={styles.answerHead}>{verse.phrases.map(phrase => <FamilyChip key={phrase.index} family={phrase.family} melody={melody} />)}</div>;
+/**
+ * The phrase chips of a whole-verse example, each with a play control that plays that phrase's own words, cut from the same
+ * human recording as the verse (N17a: sounds before recognition). Nothing here is generated chant.
+ */
+function Legend({ verse, melody, scope }: { verse: ExampleVerse["verse"]; melody: Melody; scope: string }) {
+  const ids = verse.phrases.map(phrase => `${scope}:${phrase.index}`);
+  return <div className={styles.answerHead}>
+    {verse.phrases.map((phrase, n) => <span key={phrase.index} className={styles.phraseHalf}>
+      <FamilyChip family={phrase.family} melody={melody} />
+      <PlayTile id={ids[n]} iconOnly label={`Hear ${familyName(phrase.family)}`} requests={[phraseRequest(verse, phrase.units)]} />
+    </span>)}
+    <AudioError id={ids} />
+  </div>;
 }
 
 /** Hear it: the family, the phrase at Large over its colour, the play tile, what to listen for. */
@@ -90,8 +128,8 @@ function HearIt({ lesson, examples, onNext }: { lesson: Lesson; examples: readon
   return <>
     <div className={styles.stage}>
       {lesson.family && <FamilyChipLive id={id} family={lesson.family} melody={lesson.melody} />}
-      {first && words && <UnitsText verse={first.verse} units={words} className={styles.phraseLarge} look={() => "inked"} />}
-      {first && !lesson.family && <Legend verse={first.verse} melody={lesson.melody} />}
+      {first && words && <UnitsText playback={[id, ...first.verse.phrases.map(phrase => `${id}:half:${first.example.ref}:${phrase.index}`)]} verse={first.verse} units={words} className={styles.phraseLarge} look={() => "inked"} />}
+      {first && !lesson.family && <Legend verse={first.verse} melody={lesson.melody} scope={`${id}:half:${first.example.ref}`} />}
       <PlayTile id={id} requests={requests} onPlayed={() => setHeard(true)} />
       <AudioError id={id} />
       {first && <span className={styles.ref}><bdi dir="ltr">{first.verse.ref}</bdi></span>}
@@ -117,7 +155,8 @@ function InVerses({ lesson, examples, onNext }: { lesson: Lesson; examples: read
       return <li key={id} className={styles.verseRow}>
         <PlayTile id={id} iconOnly label={`Hear ${example.ref}`} requests={[phraseRequest(verse, example.words)]} />
         <div>
-          <UnitsText verse={verse} units={example.words} className={styles.phraseStandard} look={() => "inked"} />
+          <UnitsText playback={[id, ...verse.phrases.map(phrase => `${id}:half:${phrase.index}`)]} verse={verse} units={example.words} className={styles.phraseStandard} look={() => "inked"} />
+          {!lesson.family && <Legend verse={verse} melody={lesson.melody} scope={`${id}:half`} />}
           <p className={styles.ref}><bdi dir="ltr">{verse.ref}</bdi></p>
           <p className={styles.why}>{example.why}</p>
           <AudioError id={id} />
@@ -189,7 +228,8 @@ function Done({ lesson, complete, nextId, fallback }: { lesson: Lesson; complete
   const week = lesson.activities.find((activity): activity is ThisWeekActivity => activity.type === "this-week");
   return <>
     <div className={styles.doneHead}><h2 className={styles.doneTitle}>{lesson.title}</h2><p className={styles.doneWord}>Done</p></div>
-    <p className={styles.doneLine}>{presentGoal(lesson.goal)}</p>
+    {/* A first verse leaves the Done line off rather than show a false or certifying sentence (CHANTING-RECONCILIATION.md, N17 amendment); its ending is "You can lein this verse.", gated on "Same as the reader". */}
+    {!lesson.activities.some(activity => activity.type === "first-verse") && <p className={styles.doneLine}>Return to this phrase whenever you need it. You can keep practising or use it in a reading.</p>}
     {week && <ThisWeekSection activity={week} lesson={lesson} fallback={fallback} />}
     {next && <p className={styles.nextName}>Next: {next.title}</p>}
     <Footer>

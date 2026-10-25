@@ -49,5 +49,5 @@
   .doors { gap: 1rem; }
   .door { padding: 1.25rem 1rem 1.5rem; }
   .doorAction { width: 100%; }
-  .task > :global(.entry-task[data-entry-state="loading"]) { min-height: 29.75rem; }
+  .task > :global(.entry-task[data-entry-state="loading"]) { min-height: 30.25rem; }
 }

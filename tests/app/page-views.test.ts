@@ -27,7 +27,7 @@ describe("which page a beacon names", () => {
       ["/read", "/read"], ["/read?date=2026-10-24", "/read"], ["/read?date=2026-10-24&kind=haftarah&verse=3&lens=study", "/read"], ["/read?anything=else", "/read"],
       ["/read?reading=noach", "/read/noach"], ["/read?reading=noach&passage=2&verse=4", "/read/noach"], ["/read?reading=vayakhel-pekudei", "/read/vayakhel-pekudei"],
       ["/read?ref=Genesis%206%3A9-11%3A32&kind=torah", READ_ANY_PATH],
-      ["/learn", "/learn"], ["/learn/about", "/learn/about"], ["/learn/review", "/learn/review"], ["/learn/torah-zakef-gadol", "/learn/torah-zakef-gadol"], ["/learn/intro-phrases?x=1", "/learn/intro-phrases"],
+      ["/learn", "/learn"], ["/learn/about", "/learn/about"], ["/learn/review", "/learn/review"], ["/learn/prepare", "/learn/prepare"], ["/learn/prepare?ref=Genesis%2012%3A1-3&kind=torah", "/learn/prepare"], ["/learn/torah-zakef-gadol", "/learn/torah-zakef-gadol"], ["/learn/intro-phrases?x=1", "/learn/intro-phrases"],
       ["/trope-chart", "/trope-chart"],
       // A member's own saved reading is personal: never counted. Unknown slugs, refs, lessons and pages are dropped.
       ["/read?saved=0b4f6f2e-8f0e-4f53-9a0e-2a7c9d1e5b6f", null], ["/read?saved=x", null], ["/read?reading=not-a-reading", null], ["/read?reading=noach&passage=99", null],
@@ -42,11 +42,11 @@ describe("which page a beacon names", () => {
   it("is a fixed list from the code, each path within the table's own check, so no request can add a path", () => {
     const paths = publicPageViewPaths();
     expect(new Set(paths).size).toBe(paths.length);
-    expect(paths.length).toBe(6 + NAMED_READINGS.length + COURSE.lessons.length + COURSE.practice.length);
+    expect(paths.length).toBe(7 + NAMED_READINGS.length + COURSE.lessons.length + COURSE.practice.length);
     expect(paths.length).toBeLessThan(200);
     // "any" is the Any-reading bucket, never a reading; "about" and "review" are pages, never lessons.
     expect(NAMED_READINGS.some(r => r.slug === "any")).toBe(false);
-    expect(COURSE.lessons.some(l => l.id === "about" || l.id === "review")).toBe(false);
+    expect(COURSE.lessons.some(l => l.id === "about" || l.id === "review" || l.id === "prepare")).toBe(false);
     for (const path of paths) {
       expect(path).toMatch(/^(\/[a-z0-9]+(-[a-z0-9]+)*)+$/); expect(path.length).toBeGreaterThanOrEqual(2); expect(path.length).toBeLessThanOrEqual(96);
       // Every stored path is a fixed point: it is what one real address normalizes to.
@@ -246,7 +246,7 @@ describe("where the beacon is mounted", () => {
       expect(await readFile(layout, "utf8")).toMatch(/<PageViewBeacon \/>/);
     // Every page those layouts wrap is one of the public pages; a signed-in page added under them must be placed elsewhere.
     expect(all.filter(f => /^src\/app\/(read|learn|trope-chart)\//.test(f) && /\/page\.tsx$/.test(f)).sort()).toEqual([
-      "src/app/learn/[lesson]/page.tsx", "src/app/learn/about/page.tsx", "src/app/learn/page.tsx", "src/app/learn/practice/[id]/page.tsx", "src/app/learn/review/page.tsx", "src/app/learn/service/[lesson]/page.tsx", "src/app/learn/service/about/page.tsx", "src/app/learn/service/page.tsx", "src/app/read/page.tsx", "src/app/trope-chart/page.tsx"]);
+      "src/app/learn/[lesson]/page.tsx", "src/app/learn/about/page.tsx", "src/app/learn/page.tsx", "src/app/learn/practice/[id]/page.tsx", "src/app/learn/prepare/page.tsx", "src/app/learn/review/page.tsx", "src/app/learn/service/[lesson]/page.tsx", "src/app/learn/service/about/page.tsx", "src/app/learn/service/page.tsx", "src/app/learn/service/practice/quick-ten/page.tsx", "src/app/learn/service/review/page.tsx", "src/app/read/page.tsx", "src/app/trope-chart/page.tsx"]);
     // Nothing under the signed-in workspace, the account page, sign-in, connect or the root layout imports it.
     for (const file of all.filter(f => /^src\/app\/(workspace|account|sign-in|connect|invitations|unsubscribe|offline)\//.test(f) || f === "src/app/layout.tsx" || f === "src/app/page.tsx"))
       expect(await readFile(file, "utf8"), file).not.toMatch(/PageViewBeacon|page-view-beacon|api\/public\/view/);
