@@ -32,6 +32,9 @@
 .play[data-state="playing"] { background: var(--lake); color: #fff; }
 .play svg { flex: none; }
 .playIcon { padding: 0; width: 56px; }
+/* A whole-verse example phrase chip with its own play control (N17a): the control stays a 44px target beside the chip. */
+.phraseHalf { display: inline-flex; align-items: center; gap: 0.375rem; }
+.phraseHalf .play { min-height: 44px; min-width: 44px; width: 44px; }
 .playing .bars rect { animation: none; }
 
 /* ---------- app bar and page frame ---------- */
