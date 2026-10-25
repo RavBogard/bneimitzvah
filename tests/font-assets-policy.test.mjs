@@ -11,6 +11,7 @@ import { isolatedEnv } from "./helpers/isolatedEnv.mjs";
 const fontPath = "public/fonts/noto-serif-hebrew/NotoSerifHebrew.ttf";
 const licensePath = "public/fonts/noto-serif-hebrew/OFL.txt";
 const brandFontPath = "public/fonts/bricolage-grotesque/BricolageGrotesque.ttf";
+const brandSubsetPath = "public/fonts/bricolage-grotesque/BricolageGrotesque-latin.woff2";
 const brandLicensePath = "public/fonts/bricolage-grotesque/OFL.txt";
 const stamFontPath = "public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.ttf";
 const stamLicensePath = "public/fonts/stam-ashkenaz-clm/LICENSE.txt";
@@ -35,11 +36,13 @@ async function fixture(action) {
 }
 
 test("font manifest is a fixed immutable pair and byte comparison has no repository override", () => {
-  assert.equal(FONT_ASSETS.length, 7);
-  assert.deepEqual(FONT_ASSETS.map(asset => [asset.family, asset.kind]), [["noto-serif-hebrew", "font"], ["noto-serif-hebrew", "license"], ["bricolage-grotesque", "font"], ["bricolage-grotesque", "license"], ["stam-ashkenaz-clm", "font"], ["stam-ashkenaz-clm", "license"], ["stam-ashkenaz-clm", "source"]]);
+  assert.equal(FONT_ASSETS.length, 8);
+  assert.deepEqual(FONT_ASSETS.map(asset => [asset.family, asset.kind]), [["noto-serif-hebrew", "font"], ["noto-serif-hebrew", "license"], ["bricolage-grotesque", "font"], ["bricolage-grotesque", "font"], ["bricolage-grotesque", "license"], ["stam-ashkenaz-clm", "font"], ["stam-ashkenaz-clm", "license"], ["stam-ashkenaz-clm", "source"]]);
   assert.equal(reviewedFontAsset("public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.ttf").sha256, "18aec29cd0f3e2f31049224712e740468fc893344289ceb1c86b02b619854ca6");
   assert.equal(reviewedFontAsset("public/fonts/stam-ashkenaz-clm/LICENSE.txt").sha256, "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643");
   assert.equal(reviewedFontAsset(brandFontPath).sha256, "413e7357809ddd12fd80a96a8a396de0e401638d4acd3cb3e37532f0472ac682");
+  assert.equal(reviewedFontAsset(brandSubsetPath).sha256, "6a051c984a4fc560ee3045cbf604cd905396ce53cdc3b8ebe08cc11f44315d59");
+  assert.equal(reviewedFontAsset(brandSubsetPath).size, 109576);
   assert.equal(reviewedFontAsset(brandLicensePath).sha256, "4b5a7d8f37f5602621c8a8d7358a6a2e71317e6c231c661e15aef0275d3e07ba");
   assert.equal(reviewedFontAsset(fontPath).size, 183600);
   assert.equal(reviewedFontAsset(licensePath).size, 4382);
@@ -197,7 +200,7 @@ test("exact-path byte attributes preserve real font and OFL through autocrlf che
   const pair = await officialPair(), attributes = await readFile(new URL("../.gitattributes", import.meta.url), "utf8");
   const rules = attributes.split(/\r?\n/).filter(line => line && !line.startsWith("#"));
   assert.deepEqual(rules, [
-    `/${fontPath} -text`, `/${licensePath} -text`, `/${brandFontPath} -text`, `/${brandLicensePath} -text`, `/${stamFontPath} -text`, `/${stamLicensePath} -text`, `/${stamSourcePath} -text`,
+    `/${fontPath} -text`, `/${licensePath} -text`, `/${brandFontPath} -text`, `/${brandSubsetPath} -text`, `/${brandLicensePath} -text`, `/${stamFontPath} -text`, `/${stamLicensePath} -text`, `/${stamSourcePath} -text`,
     "/src/server/db/migrations/** text eol=lf",
     "/scripts/db-migrate.mjs text eol=lf",
     "/scripts/release-migrate*.mjs text eol=lf",
@@ -237,7 +240,7 @@ test("each reviewed font family pairs with its own notice and never borrows anot
   await fixture(async ({ root, env, git, put }) => {
     for (const [path, bytes] of brand) await put(path, bytes);
     assert.deepEqual((await inspectRepository(root, env)).findings, []);
-    git("add", brandFontPath, brandLicensePath);
+    git("add", brandFontPath, brandSubsetPath, brandLicensePath);
     assert.deepEqual((await inspectRepository(root, env)).findings, []);
     await rm(join(root, brandLicensePath)); git("rm", "--cached", "--quiet", brandLicensePath);
     await put(licensePath, hebrew.get(licensePath));
@@ -252,9 +255,9 @@ test("exact-path byte attributes also preserve the Bricolage pair through autocr
   const pair = await officialPair("bricolage-grotesque"), attributes = await readFile(new URL("../.gitattributes", import.meta.url), "utf8");
   await fixture(async ({ root, env, git, put }) => {
     git("config", "core.autocrlf", "true"); await put(".gitattributes", attributes);
-    for (const [path, bytes] of pair) await put(path, bytes); git("add", ".gitattributes", brandFontPath, brandLicensePath);
+    for (const [path, bytes] of pair) await put(path, bytes); git("add", ".gitattributes", brandFontPath, brandSubsetPath, brandLicensePath);
     for (const path of pair.keys()) await rm(join(root, path));
-    git("checkout-index", "--force", "--", brandFontPath, brandLicensePath);
+    git("checkout-index", "--force", "--", brandFontPath, brandSubsetPath, brandLicensePath);
     for (const asset of familyAssets("bricolage-grotesque")) {
       assert.ok(matchesAssetPin(await readFile(join(root, asset.path)), asset), "checked-out bytes must match the original official pin");
       assert.ok(matchesAssetPin(git("show", `:${asset.path}`), asset), "indexed bytes must match the original official pin");

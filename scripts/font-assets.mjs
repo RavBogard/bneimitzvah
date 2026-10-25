@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
-// Approval boundary: exact unchanged upstream bytes and their adjacent notice,
+// Approval boundary: exact upstream bytes (plus the one recorded derivative, the Bricolage Latin WOFF2 subset whose tool,
+// command and input hash are in public/fonts/PROVENANCE.md) and their adjacent notice,
 // paired per family: a font never ships without its own notice. A GPL family
 // also ships its unchanged upstream source ("source"), which like the font is
 // accepted only byte for byte; its embedded author notice is not re-scanned.
@@ -13,6 +14,8 @@ export const FONT_ASSETS = Object.freeze([
     sha256: "9b9fe028b5ba74d231659a1bbaf0ed09b11e759d1ca6a070999e16d151616b47" }),
   Object.freeze({ path: "public/fonts/bricolage-grotesque/BricolageGrotesque.ttf", family: "bricolage-grotesque", kind: "font", size: 408496,
     sha256: "413e7357809ddd12fd80a96a8a396de0e401638d4acd3cb3e37532f0472ac682" }),
+  Object.freeze({ path: "public/fonts/bricolage-grotesque/BricolageGrotesque-latin.woff2", family: "bricolage-grotesque", kind: "font", size: 109576,
+    sha256: "6a051c984a4fc560ee3045cbf604cd905396ce53cdc3b8ebe08cc11f44315d59" }),
   Object.freeze({ path: "public/fonts/bricolage-grotesque/OFL.txt", family: "bricolage-grotesque", kind: "license", size: 4403,
     sha256: "4b5a7d8f37f5602621c8a8d7358a6a2e71317e6c231c661e15aef0275d3e07ba" }),
   Object.freeze({ path: "public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.ttf", family: "stam-ashkenaz-clm", kind: "font", size: 14968,

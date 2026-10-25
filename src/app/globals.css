@@ -4,11 +4,33 @@
    on night-lake navy. */
 @font-face {
   font-family: "Bricolage Grotesque";
-  src: url("/fonts/bricolage-grotesque/BricolageGrotesque.ttf") format("truetype");
+  src: url("/fonts/bricolage-grotesque/BricolageGrotesque-latin.woff2") format("woff2");
   font-style: normal;
-  font-weight: 200 800;
-  font-stretch: 75% 100%;
+  font-weight: 400 800;
+  font-stretch: 100%;
   font-display: swap;
+}
+/* Metric-matched stand-ins for the swap: size-adjust scales a system face to the average advance of Bricolage (English letter
+   frequencies, optical size 16: 107% at 400, 111% at 750) and the overrides restore its 930/-270 ascent and descent, so the
+   page does not move when the web font arrives. Arial and Helvetica share metrics and Liberation Sans is metric-compatible;
+   a device with none of them just uses the rest of the stack. */
+@font-face {
+  font-family: "Bricolage Grotesque Fallback";
+  src: local("Arial"), local("Helvetica"), local("Liberation Sans");
+  font-weight: 400 500;
+  size-adjust: 107%;
+  ascent-override: 86.9%;
+  descent-override: 25.2%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Bricolage Grotesque Fallback";
+  src: local("Arial Bold"), local("Arial-BoldMT"), local("Helvetica Bold"), local("Helvetica-Bold"), local("Liberation Sans Bold");
+  font-weight: 600 800;
+  size-adjust: 111%;
+  ascent-override: 83.8%;
+  descent-override: 24.3%;
+  line-gap-override: 0%;
 }
 :root {
   --lake: #1d5ba6;
@@ -57,7 +79,7 @@
   --focus-offset: 4px;
   --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
   color-scheme: light;
-  font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Bricolage Grotesque", "Bricolage Grotesque Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
   font-optical-sizing: auto;
   color: var(--color-ink);
   background: var(--color-canvas);
