@@ -80,7 +80,7 @@ test("the course home opens at 360 px: the next lesson, the links, every unit, a
   await expect(page.locator("[data-row='review'], [data-row='quick-ten']")).toHaveCount(0);
   // Every row of every list is a link, never a bare span (DP-09): 37 morning lessons, the 6 of the strand and the 11 of the evening, 54 links.
   await expect(page.locator("ol li")).toHaveCount(54);
-  await expect(page.locator("ol li > a[href^='/learn/service/']")).toHaveCount(43);
+  await expect(page.locator("ol li > a[href^='/learn/service/']")).toHaveCount(54);
   expect(await noHorizontalScroll(page)).toBe(true);
 });
 
