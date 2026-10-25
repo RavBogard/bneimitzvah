@@ -13,6 +13,7 @@ import { projectRelatedCatalog } from "../../src/server/study/sources/discovery"
 import { browserFixture } from "./fixture";
 import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
+import { openVerseTools, toolsSheet } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 vi.mock("server-only", () => ({}));
@@ -26,7 +27,8 @@ const editions = () => parseEditionMetadata(["he", "en"].map(language => ({ titl
 let fixture: Awaited<ReturnType<typeof browserFixture>>, browser: Browser, stop: (() => Promise<void>) | undefined, restore: (() => void) | undefined, readingId = "", relatedCalls = 0, editionCalls = 0, bodyCalls = 0, duplicateKeys = 0;
 let barrier: { entered(): void; wait: Promise<void>; release(): void } | undefined;
 const contexts: BrowserContext[] = [], cookies: Partial<Record<"admin" | "student", Awaited<ReturnType<BrowserContext["cookies"]>>>> = {};
-const panel = (tab: Page) => tab.locator('.study-verse-detail[data-verse-ref="Genesis 1:1"]').getByRole("region", { name: "Sources for Genesis 1:1", exact: true });
+// The first verse's Sources are in its verse tools (one Sheet for the selected verse, 1.9 N4); page() leaves that sheet open.
+const panel = (tab: Page) => toolsSheet(tab, "Genesis 1:1").locator('.study-verse-detail[data-verse-ref="Genesis 1:1"]').getByRole("region", { name: "Sources for Genesis 1:1", exact: true });
 const reader = (tab: Page, n: number) => panel(tab).getByRole("region", { name: `Read source: ${refs[n]}`, exact: true });
 const list = (tab: Page, lane: "Assigned" | "Related") => panel(tab).getByRole("list", { name: `${lane} sources`, exact: true });
 async function api(tab: Page, path: string, body: unknown) { return tab.evaluate(async ({ path, body }) => { const response = await fetch(path, { method: "POST", cache: "no-store", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }); return { status: response.status, value: await response.json() }; }, { path, body }); }
@@ -38,9 +40,9 @@ async function page(who: "admin" | "student", phone = false, colorScheme: "light
   await tab.goto("/", { waitUntil: "domcontentloaded" });
   if (!cookies[who]) { const email = `pg-${who}@example.test`; expect((await api(tab, "/api/auth/sign-in/magic-link", { email })).status).toBe(200); await openAuthMail(tab, fixture.takeMail(email)); cookies[who] = await context.cookies(); }
   await tab.goto(who === "student" ? "/workspace/student" : `/workspace/admin/students/${fixture.student.id}/reading`, { waitUntil: "domcontentloaded" });
-  await ui(tab.locator('.study-verses [data-verse-ref="Genesis 1:1"]')).toBeVisible(); return tab;
+  await ui(tab.locator('.study-verses [data-verse-ref="Genesis 1:1"]')).toBeVisible(); await openVerseTools(tab, "Genesis 1:1"); return tab;
 }
-async function open(tab: Page) { await panel(tab).getByRole("button", { name: "Sources", exact: true }).click(); await ui(list(tab, "Assigned")).toBeVisible(); }
+async function open(tab: Page) { await openVerseTools(tab, "Genesis 1:1"); await panel(tab).getByRole("button", { name: /^Sources( \(\d+\))?$/ }).click(); await ui(list(tab, "Assigned")).toBeVisible(); }
 async function browse(tab: Page) { await panel(tab).getByRole("button", { name: "Browse related sources", exact: true }).click(); await ui(list(tab, "Related")).toBeVisible(); }
 async function citation(tab: Page, n: number, lane: "Assigned" | "Related") { await list(tab, lane).getByRole("button", { name: `Read source: ${refs[n]}`, exact: true }).click(); await ui(reader(tab, n).getByRole("list", { name: "Source editions", exact: true })).toBeVisible(); }
 async function choose(tab: Page, n: number, language: "he" | "en") { await reader(tab, n).getByRole("button", { name: `Read ${language === "he" ? "Hebrew" : "English"} edition`, exact: true }).click(); }

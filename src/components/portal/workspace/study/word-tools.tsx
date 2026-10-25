@@ -2,6 +2,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { projectStudyVerse } from "../../../../lib/hebrew/study-tokens";
 import type { StudyWordAids } from "../../../../lib/hebrew/word-aids";
+import { carriesQamatsQatan, QAMATS_QATAN_NOTE } from "../../../../lib/hebrew/word-sentence";
 import { WORD_DETAILS_ATTRIBUTION, type StudyWordDetails, type WordElsewhere, type WordGrammar, type WordPlace } from "../../../../lib/hebrew/word-details";
 import { createWordToolsSelection, type WordToolsState } from "./word-tools-selection";
 import type { StudyVerse } from "./api";
@@ -99,6 +100,7 @@ export function WordCard({ id, state, verse, heading, headingId, headingRef, act
   return <div id={id} className={[styles.panel, compact ? styles.compact : "", className ?? ""].filter(Boolean).join(" ")}>
     {!word || !verse || !selected ? <p>Word tools aren’t available for this passage.</p> : <>
       {!bare && <div className={styles.heading}><h4 id={headingId} className={styles.word} lang="he" dir="rtl" ref={headingRef} tabIndex={-1}>{heading ?? word.text}</h4><p><bdi>{verse.ref}</bdi> · Word {selected.index + 1} of {words.length}</p></div>}
+      {!bare && carriesQamatsQatan(word.text) && <p className={styles.vowelNote}>{QAMATS_QATAN_NOTE}</p>}
       {!bare && actions && <div className={styles.actions}>{actions}</div>}
       <div className={styles.sections}>
         <section aria-label="Meaning in this verse"><h5>Meaning in this verse</h5>{state.details.status === "loading" ? <p role="status">Loading word details…</p> : <p>{details?.occurrence.gloss || "An occurrence meaning isn’t available for this word."}</p>}</section>

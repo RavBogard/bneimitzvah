@@ -9,6 +9,7 @@ import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
+import { closeVerseTools, openVerseTools } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
@@ -20,7 +21,10 @@ const safe = async <T>(action: () => Promise<T>): Promise<T> => { try { return a
 const panel = (tab: Page) => tab.locator(".reading-preview");
 async function click(tab: Page, name: string) { await safe(() => tab.getByRole("button", { name, exact: true }).click()); }
 // Staff edit verses in a sheet over the reading; verse notes are on the page beneath it.
+// The notes are in the first verse's tools (one Sheet for the selected verse, 1.9 N4). That sheet is modal, so it is closed before the verse editor opens, as a person would.
+const workTools = async (tab: Page) => (await openVerseTools(tab, "Genesis 1:1")).locator(".verse-work");
 async function openSheet(tab: Page) {
+  if (await tab.getByRole("dialog", { name: /^Verse tools · / }).count()) await closeVerseTools(tab);
   await safe(() => tab.getByRole("button", { name: /^(Change|Assign) verses$/ }).click());
   await ui(tab.locator(".reading-editor").getByText(/^Calendar:/)).toBeVisible();
   for (const name of ["Advanced references and aliyah boundaries", "Hebrew preview and verse selection (optional)"]) {
@@ -55,7 +59,7 @@ async function reading(tab: Page, role = "admin") {
 }
 async function assertDesktopStudyColumns(tab: Page) {
   const layout = await safe(() => tab.locator(".assigned-study").evaluate(section => {
-    const flow = section.querySelector(".study-verses"), marker = flow?.querySelector(".student-aliyah"), verse = flow?.querySelector('p[lang="he"]'), tools = section.querySelector(".study-verse-detail");
+    const flow = section.querySelector(".study-verses"), marker = flow?.querySelector(".student-aliyah"), verse = flow?.querySelector('p[lang="he"]'), tools = section.querySelector(".study-verse-bar");
     if (!marker || !verse || !tools || !flow) return null;
     const bounds = (element: Element) => { const rect = element.getBoundingClientRect(); return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }; };
     return { marker: bounds(marker), flow: bounds(flow), verse: bounds(verse), tools: bounds(tools), viewport: innerWidth, words: flow.querySelectorAll("[data-word-index]").length };
@@ -251,7 +255,7 @@ it("reviews and confirms only cuts with truthful preserved context, retaining sa
     sourceStatus: "unavailable", sourceFetchedAt: null, source: { date: "2026-12-26", calendar: "diaspora" } };
   await fixture.ownerDb.update(s.assignment).set({ proposalSnapshot: snapshot }).where(eq(s.assignment.id, assignment.id));
   await reading(tab); await closeSheet(tab);
-  const tools = tab.locator(".assigned-study .verse-work").first();
+  const tools = await workTools(tab);
   await safe(() => tools.locator("summary").first().click());
   await safe(() => tools.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await safe(() => tools.getByRole("textbox").fill("Synthetic note retained after a cut-only revision"));
@@ -290,7 +294,7 @@ it("reviews and confirms only cuts with truthful preserved context, retaining sa
   const [persisted] = await fixture.ownerDb.select().from(s.assignment).where(eq(s.assignment.id, assignment.id));
   expect(persisted.proposalSnapshot).toEqual(snapshot);
   await closeSheet(tab);
-  const reloadedTools = tab.locator(".assigned-study .verse-work").first();
+  const reloadedTools = await workTools(tab);
   if (await reloadedTools.getAttribute("open") === null) await safe(() => reloadedTools.locator("summary").first().click());
   await safe(() => reloadedTools.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await safe(() => reloadedTools.locator(".work-history > summary").click());
@@ -302,7 +306,7 @@ it("requires an explicit current-assignment reseed after a cut-only revision and
   const tab = await page(); await reading(tab); await click(tab, "Use current assignment");
   await safe(() => tab.getByLabel("Subsequent aliyah starts", { exact: true }).fill("Genesis 1:3"));
   await closeSheet(tab);
-  const tools = tab.locator(".assigned-study .verse-work").first();
+  const tools = await workTools(tab);
   await safe(() => tools.locator("summary").first().click());
   await safe(() => tools.getByRole("button", { name: "Teacher notes", exact: true }).click());
   const text = "Synthetic unsent note recovered across a cut-only change";
@@ -317,7 +321,7 @@ it("requires an explicit current-assignment reseed after a cut-only revision and
   await ui(tab.getByRole("button", { name: "Review assignment", exact: true })).toBeDisabled();
   await ui(tab.getByLabel("Subsequent aliyah starts", { exact: true })).toHaveValue("Genesis 1:3");
   await closeSheet(tab);
-  const recovered = tab.locator(".assigned-study .verse-work").first();
+  const recovered = await workTools(tab);
   await safe(() => recovered.getByRole("button", { name: "Teacher notes", exact: true }).click());
   await ui(recovered.getByRole("textbox")).toHaveValue(text);
   await ui(recovered.getByRole("textbox")).toHaveAttribute("readonly", "");

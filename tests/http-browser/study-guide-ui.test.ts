@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { browserFixture } from "./fixture";
 import { assertBrowserStartupAllowed, BROWSER_ORIGIN, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
+import { closeVerseTools, openVerseTools } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import { guide, note, source, theme } from "../helpers/study-guide-fixture";
@@ -46,7 +47,8 @@ async function page(who: "student" | "parent" | "tutor" | "admin", mobile = fals
   return tab;
 }
 const card = (tab: Page) => tab.getByRole("region", { name: "About this portion", exact: true });
-const verse = (tab: Page, ref: string) => tab.locator(`.study-verse-detail[data-verse-ref="${ref}"]`);
+// Each verse's notes are in its own verse tools (one Sheet for the selected verse, 1.9 N4), so a verse is opened to be looked at.
+const verse = (tab: Page, ref: string) => openVerseTools(tab, ref);
 
 beforeAll(async () => {
   assertBrowserStartupAllowed(); restore = installLoopbackFetchGuard();
@@ -77,17 +79,19 @@ it("student sees the overview card with the Claude label, and each note only und
   await ui(card(tab).locator("bdi[lang=he]")).toHaveText("אור");
   // "Genesis 2:1" is outside the assigned verses; its theme still shows because Genesis 1:1 remains.
   await ui(card(tab).locator("li")).toHaveCount(2);
-  const notes = (ref: string) => verse(tab, ref).getByRole("region", { name: `Study notes for ${ref}`, exact: true });
-  await ui(notes("Genesis 1:3").getByText("Invented note on the first spoken word.", { exact: true })).toBeVisible();
-  await ui(notes("Genesis 1:3").getByRole("link", { name: /On Sefaria/ })).toHaveCount(2);
-  await ui(notes("Genesis 1:3").getByRole("link", { name: /On Sefaria/ }).first()).toHaveAttribute("href", "https://www.sefaria.org/Invented_Commentary_on_Exodus_40%3A34%3A1");
-  await ui(notes("Genesis 1:1")).toBeVisible();
-  await ui(notes("Genesis 1:2")).toHaveCount(0);
+  const notes = async (ref: string) => (await verse(tab, ref)).getByRole("region", { name: `Study notes for ${ref}`, exact: true });
+  const third = await notes("Genesis 1:3");
+  await ui(third.getByText("Invented note on the first spoken word.", { exact: true })).toBeVisible();
+  await ui(third.getByRole("link", { name: /On Sefaria/ })).toHaveCount(2);
+  await ui(third.getByRole("link", { name: /On Sefaria/ }).first()).toHaveAttribute("href", "https://www.sefaria.org/Invented_Commentary_on_Exodus_40%3A34%3A1");
+  await ui(await notes("Genesis 1:1")).toBeVisible();
+  await ui(await notes("Genesis 1:2")).toHaveCount(0);
+  await closeVerseTools(tab);
 });
 
 it("Your translation & notes sits under More at the bottom of each verse card, after Sources", async () => {
   const tab = await page("student");
-  const detail = verse(tab, "Genesis 1:3"), more = detail.locator(".verse-work summary");
+  const detail = await verse(tab, "Genesis 1:3"), more = detail.locator(".verse-work summary");
   await ui(more).toHaveText(/^More · Your translation & notes/);
   const order = await detail.evaluate(node => [...node.children].map(child => child.matches("[data-guide-notes]") ? "notes" : child.matches(".verse-work") ? "more" : child.querySelector?.('[aria-label^="Sources for"]') || child.getAttribute("aria-label")?.startsWith("Sources for") ? "sources" : null).filter(Boolean));
   expect(order.indexOf("notes")).toBeLessThan(order.indexOf("more"));
@@ -121,7 +125,8 @@ it("walk opens on the first theme, Next advances through its verses then the nex
   await ui(walk.getByRole("button", { name: "Next", exact: true })).toHaveCount(0);
   await walk.getByRole("button", { name: "Done", exact: true }).click();
   await ui(walk).toHaveCount(0);
-  await ui(tab.locator('[data-guide-notes="Genesis 1:1"]')).toBeFocused();
+  // The notes are in the verse tools sheet now, which is not open, so the walk gives focus back to the button that opened it.
+  await ui(card(tab).getByRole("button", { name: "Study the themes", exact: true })).toBeFocused();
 });
 
 it("parent sees the card and the tick state but no tick button", async () => {

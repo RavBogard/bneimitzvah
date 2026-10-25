@@ -16,12 +16,12 @@ import { useStudyLens } from "../study-lens";
 import { LensSwitch } from "../lens-switch";
 import { StudyRows } from "./study-rows";
 import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi, workStatuses } from "./commentary-view";
-import { VersePanelColumn, VersePanelScope, WordPanelSource } from "./verse-panel";
+import { VersePanelScope, WordPanelSource } from "./verse-panel";
 import type { WordPanelHost } from "./word-panel";
 import { ReadingPlace, scrollToVerse } from "./reading-place";
 import { aliyahPosition } from "../../../../lib/readings/aliyah-starts";
 import { sectionIndexAt, sectionsFromStarts, type Section } from "../../../../lib/readings/sections";
-import { SectionTabs } from "../../../ui";
+import { SectionTabs, Sheet } from "../../../ui";
 import { NextSection } from "./next-section";
 import { PortalRequestError } from "../../api";
 import { watchReadingAudioDeadline } from "./reading-player-intent";
@@ -59,13 +59,16 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   onService?(): void;
   audio?: ReturnType<typeof createReadingAudioCoordinator>; stopAudio?(): void;
 }) {
-  const { readStudy, createShortReferenceOwner, readWordAids, readWordDetails, summary, concealed, epoch } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
+  const { readStudy, createShortReferenceOwner, readWordAids, readWordDetails, summary, concealed, epoch, guardDeparture: guardLeaving } = useWorkspace(), aidsGroup = useId(), prefs = useReadingPrefs();
   const lens = useStudyLens(), study = lens.lens === "study", leinLink = useCommentLink();
   const shortMetadata = useRef<ShortReferenceOwner | null>(null);
   const playback = useRef<ReadingPlayerHandle | null>(null), registerPlayback = useCallback((value: ReadingPlayerHandle | null) => { playback.current = value; }, []);
   const tools = useRef<WordToolsHandle | null>(null), registerTools = useCallback((value: WordToolsHandle | null) => { tools.current = value; }, []);
   const [playingWord, setPlayingWord] = useState<{ verse: number; index: number } | null>(null);
   const [lift, setLift] = useState<{ page: StudyPage; index: number; opening: number; navigation: number } | null>(null);
+  // The selected verse (1.9 N4): the one last tapped (its number, one of its words, Up close), else the first. Its tools are one Sheet, opened from the bar under the passage
+  // (and, in Study, from the verse's own actions); only the selected verse's tools are ever on the page.
+  const [picked, setPicked] = useState<string | null>(null), [toolsRef, setToolsRef] = useState<string | null>(null), toolsOpener = useRef<HTMLElement | null>(null);
   const modalOwner = useRef<ShortReferenceOwner | null>(null), modalRequest = useRef<AbortController | null>(null), modalSequence = useRef(0);
   const modalScope = useRef(lift); modalScope.current = lift;
   const metadata = useRef<Assigned | null>(null), controller = useRef<AbortController | null>(null), generation = useRef(0);
@@ -192,8 +195,14 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
   const clearLink = leinLink.clear;
   useEffect(() => { clearLink(); }, [livePage, study, clearLink]);
   useEffect(() => { if (shown) onShown?.(...shown); }, [livePage]); // eslint-disable-line react-hooks/exhaustive-deps
-  const hear = (page: StudyPage, index: number, word: ReadingSelection = "verse") => { playback.current?.select(index, word); if (word === "verse") tools.current?.selectVerse(index); else tools.current?.select(index, word); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
-  const open = (page: StudyPage, index: number) => { stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.suspend(); modalRequest.current?.abort();
+  const toolsVerse = livePage && toolsRef ? livePage.verses.find(row => row.ref === toolsRef) ?? null : null;
+  useEffect(() => { if (toolsRef && livePage && !toolsVerse) setToolsRef(null); }, [toolsRef, livePage, toolsVerse]);
+  // Closing asks the sources guard first, because the sheet's Sources hold choices that closing would drop. Unsent translation and notes are not asked about:
+  // their text lives in the work coordinator, not in the sheet, so closing loses nothing and the reader's place and words are all still there on reopening.
+  const closeTools = async () => { if (await guardLeaving("sources")) setToolsRef(null); };
+  const openTools = (ref: string, opener: HTMLElement | null) => { toolsOpener.current = opener; setPicked(ref); setToolsRef(ref); };
+  const hear = (page: StudyPage, index: number, word: ReadingSelection = "verse") => { setPicked(page.verses[index].ref); playback.current?.select(index, word); if (word === "verse") tools.current?.selectVerse(index); else tools.current?.select(index, word); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
+  const open = (page: StudyPage, index: number) => { setPicked(page.verses[index].ref); stopAudio?.(); playback.current?.suspend(); shortMetadata.current?.suspend(); modalRequest.current?.abort();
     const old = modalScope.current, next = { page, index, opening: old?.page === page ? old.opening : ++modalSequence.current, navigation: (old?.navigation ?? 0) + 1 };
     modalScope.current = next; setLift(next); if (state.kind) onVisit?.(state.kind, page.verses[index].ref); };
   if (verseLookupHandle) verseLookupHandle.current = livePage && !concealed ? ref => livePage.verses.find(row => row.ref === ref) ?? null : null;
@@ -283,10 +292,11 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
         <ReadingPlace refs={assignment!.verses} pageKey={wordScope} onJump={jumpTo} />
         <StudyRows verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled} showEnglish={lens.english}
           sections={aliyahSections(kind, assignment!, livePage.verses)} works={ref => works.map(row => ({ work: row.work, state: row.lookup.forVerse(ref) }))}
-          onVerse={listeningEnabled ? index => hear(livePage!, index) : undefined} onWord={(index, word) => { if (listeningEnabled) playMainVerseForWord(playback.current, tools.current, index, word); else { tools.current?.select(index, word); tools.current?.reveal(); } onVisit?.(kind, livePage!.verses[index].ref); }} />
+          onVerse={listeningEnabled ? index => hear(livePage!, index) : undefined} onWord={(index, word) => { setPicked(livePage!.verses[index].ref); if (listeningEnabled) playMainVerseForWord(playback.current, tools.current, index, word); else { tools.current?.select(index, word); tools.current?.reveal(); } onVisit?.(kind, livePage!.verses[index].ref); }}
+          onTools={(ref, opener) => openTools(ref, opener)} />
       </> : <FlowingStudyText verses={livePage.verses} assignment={{ kind, confirmed: true, verses: assignment!.verses }} group={aidsGroup} activeWord={playingWord} listening={listeningEnabled} showEnglish={songSession && prefs.translation} tikkun={kind === "torah" ? prefs.tikkunView : "off"}
         sections={aliyahSections(kind, assignment!, livePage.verses)} linked={linkedVerse(leinLink, livePage.verses)}
-        onVerse={listeningEnabled ? index => hear(livePage!, index) : undefined} onWord={(index, word) => { if (listeningEnabled) playMainVerseForWord(playback.current, tools.current, index, word); else { tools.current?.select(index, word); tools.current?.reveal(); } onVisit?.(kind, livePage!.verses[index].ref); }} />}
+        onVerse={listeningEnabled ? index => hear(livePage!, index) : undefined} onWord={(index, word) => { setPicked(livePage!.verses[index].ref); if (listeningEnabled) playMainVerseForWord(playback.current, tools.current, index, word); else { tools.current?.select(index, word); tools.current?.reveal(); } onVisit?.(kind, livePage!.verses[index].ref); }} />}
       {/* The end of the section (N3): the next one's first verse, faint, and the way on. The verse comes from the page already loaded, when it is on it. */}
       {sectionNow >= 0 && sectionNow + 1 < sections.length && livePage.nextOffset === null
         && <NextSection onNext={() => goSection(sectionNow + 1)} preview={rawPage?.verses[sections[sectionNow + 1].start - rawPage.offset]} />}
@@ -324,15 +334,24 @@ export function AssignedStudyText({ baseline, register, reloadMetadata, authorit
         }}
         takePlace={() => { const place = pendingPlace.current, page = livePage!; pendingPlace.current = null;
           return place && place.kind === kind && place.offset === page.offset && place.turn === generation.current ? { ref: place.ref, wordIndex: place.wordIndex } : null; }} />}
-      <div className="study-verse-details">{livePage.verses.map((verse, index) => <div key={verse.ref} className="study-verse-detail" data-verse-ref={verse.ref}>
-        <div className="verse-card-head"><h4>Verse tools · <bdi dir="ltr">{verse.ref}</bdi></h4>{renderMark?.(kind, verse.ref)}<button type="button" className="button-text" onClick={() => open(livePage!, index)}>View {verse.ref} up close</button></div>
-        {!songSession && !study && <p className="study-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
-        <Apparatus verse={verse} learner={learner} />{renderGuide?.(kind, verse.ref)}
-        {!study && <VerseRashi verse={verse} state={rashi.lookup.forVerse(verse.ref)} link={leinLink} retry={rashi.retry} />}
-        {!concealed && <SourcesPanel key={`sources:${JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage!.offset, generation.current, verse.ref])}`}
-          scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage!.offset, generation.current, verse.ref])} baseline={baseline} kind={kind} offset={livePage!.offset + index} onRefreshReading={reloadMetadata} />}
-        {renderWork?.(kind, verse.ref)}
-      </div>)}</div>
+      {/* The selected verse (1.9 N4): its tools are one Sheet, its mark and Up close beside it. Only this verse's tools are ever on the page, however long the section. */}
+      {(() => { const index = Math.max(0, livePage.verses.findIndex(row => row.ref === picked)), verse = livePage.verses[index];
+        return <div className="study-verse-bar" data-selected-verse={verse.ref}>
+          <button type="button" className="button-secondary" aria-haspopup="dialog" onClick={event => openTools(verse.ref, event.currentTarget)}>Verse tools · <bdi dir="ltr">{verse.ref}</bdi></button>
+          <button type="button" className="button-text" onClick={() => open(livePage!, index)}>View {verse.ref} up close</button>
+          {renderMark?.(kind, verse.ref)}
+        </div>; })()}
+      {toolsVerse && <Sheet open onClose={() => void closeTools()} title={`Verse tools · ${toolsVerse.ref}`} closeLabel="Close" returnFocusTo={() => toolsOpener.current}>
+        <div className="study-verse-detail" data-verse-ref={toolsVerse.ref}>
+          {renderMark && <div className="verse-card-head">{renderMark(kind, toolsVerse.ref)}</div>}
+          {!songSession && !study && <p className="study-english" lang="en" dir="ltr">{toolsVerse.english ?? "English reference unavailable for this verse."}</p>}
+          <Apparatus verse={toolsVerse} learner={learner} />{renderGuide?.(kind, toolsVerse.ref)}
+          {!study && <VerseRashi verse={toolsVerse} state={rashi.lookup.forVerse(toolsVerse.ref)} link={leinLink} retry={rashi.retry} />}
+          {!concealed && <SourcesPanel key={`sources:${JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage!.offset, generation.current, toolsVerse.ref])}`}
+            scopeKey={JSON.stringify([summary.sessionBinding, epoch, key, kind, livePage!.offset, generation.current, toolsVerse.ref])} baseline={baseline} kind={kind} offset={livePage!.offset + livePage.verses.indexOf(toolsVerse)} onRefreshReading={reloadMetadata} />}
+          {renderWork?.(kind, toolsVerse.ref)}
+        </div>
+      </Sheet>}
       {!learner && kind==="torah" && assignment!.aliyahStarts===null && <p className="field-help">Aliyah boundaries have not been recorded for this assignment.</p>}
       {learner ? !single && <p className="study-page-position">Verses {livePage.offset + 1}–{livePage.offset + livePage.verses.length} of {livePage.totalVerses}</p>
         : <p role="status">Verses {livePage.offset + 1}–{livePage.offset + livePage.verses.length} of {livePage.totalVerses}. {livePage.translation.status === "partial" ? "The selected English edition is missing for some verses." : livePage.translation.status === "unavailable" ? "The selected English edition is unavailable on this page." : "Selected English edition available."}</p>}

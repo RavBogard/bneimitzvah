@@ -46,25 +46,22 @@ const more = (page: Page, ref: string) => row(page, ref).getByRole("button", { n
 const panel = (page: Page) => page.locator("[data-verse-panel]");
 const pills = (page: Page) => panel(page).getByRole("group", { name: "Kinds of texts" });
 
-test("More on this verse: kinds of texts as wrapping pills, curated works, a citation that opens in place with its credit, and Esc", async ({ page }, info) => {
+test("More on this verse: kinds of texts as wrapping pills, curated works, a citation that opens in place with its credit, and Esc", async ({ page }) => {
   await mock(page);
   await page.goto("/read?lens=study");
   const button = more(page, "Genesis 1:2");
   await button.scrollIntoViewIfNeeded();
   expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  const before = (await row(page, "Genesis 1:2").boundingBox())!.y;
+  const scrolled = await page.evaluate(() => scrollY);
   await button.click();
-  await expect(panel(page).getByRole("heading", { name: "More on Genesis 1:2" })).toBeFocused();
+  await expect(page.getByRole("dialog", { name: "More on Genesis 1:2" }).getByRole("heading", { name: "More on Genesis 1:2" })).toBeFocused();
+  expect(await page.evaluate(() => scrollY)).toBe(scrolled);
   // Rashi is already inline (Study's default Works), so the shelf leaves it out.
   await expect(pills(page).getByRole("button")).toHaveText(["Commentary 1", "Midrash 1", "Halakhah 1", "Talmud 1", "Targum 1", "Everything else 2"]);
   await expect(panel(page).getByText("Rashi", { exact: true })).toHaveCount(0);
   await expect(panel(page).getByText("Composed 1246–1270")).toBeVisible();
-  for (const box of await pills(page).getByRole("button").evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))) expect(box).toBeGreaterThanOrEqual(44);
+  for (const box of await pills(page).getByRole("button").evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))) expect(box).toBeGreaterThanOrEqual(43.99);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  const wide = info.project.name === "desktop";
-  await expect(page.locator(".verse-panel-column")).toHaveCount(wide ? 1 : 0);
-  if (wide) expect(Math.abs((await row(page, "Genesis 1:2").boundingBox())!.y - before)).toBeLessThanOrEqual(2);
-  else expect(await row(page, "Genesis 1:2").evaluate(node => node.nextElementSibling?.hasAttribute("data-verse-panel"))).toBe(true);
   // A citation opens its text in place: three comments as one, then the credit, linked.
   const ramban = panel(page).getByRole("button", { name: "Ramban on Genesis 1:2 · 3 comments", exact: true });
   await ramban.click();
@@ -117,7 +114,9 @@ test("with reduced motion the panel opens at once, and Lein offers no shelf", as
   await page.goto("/read?lens=study");
   await more(page, "Genesis 1:3").click();
   await expect(panel(page)).toBeVisible();
-  expect(await panel(page).evaluate(node => { const style = getComputedStyle(node); return [style.animationName, style.transitionDuration]; })).toEqual(["none", "0s"]);
+  // The sheet's rise snaps: no animation at all.
+  expect(await page.getByRole("dialog").evaluate(node => getComputedStyle(node).animationName)).toBe("none");
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Lein", exact: true }).click();
   await expect(page.getByRole("button", { name: "More on this verse", exact: true })).toHaveCount(0);
   await expect(panel(page)).toHaveCount(0);

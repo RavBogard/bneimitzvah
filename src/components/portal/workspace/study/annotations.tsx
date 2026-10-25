@@ -1,7 +1,8 @@
 "use client";
-import { Fragment, useMemo, useRef, useState, type ClipboardEvent, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { Fragment, useContext, useMemo, useRef, useState, type ClipboardEvent, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import { maqafChains } from "../../../../lib/hebrew/mixed-runs";
 import { rovingTarget } from "./word-nav";
+import { WordGroup, WordGroupContext, wordKey } from "./word-group";
 import { colorStudyVerse, type AssignmentEnding, type ColorResult } from "../../../../lib/hebrew/study-annotations";
 import { projectStudyVerse, type DisplayPart, type StudyProjection } from "../../../../lib/hebrew/study-tokens";
 import { PHRASE_FAMILIES } from "../../../../lib/trope/chart-catalog";
@@ -47,6 +48,12 @@ function chained(pieces: readonly DisplayPart[], elements: ReactNode[]): ReactNo
   return out;
 }
 const MAQAF = "\u05be";
+
+/** The first word of a passage that has one: the word the group's single Tab stop starts on (see word-group.tsx). Null when no verse here has a word. */
+export function firstWordKey(verses: readonly StudyVerse[]): string | null {
+  for (const verse of verses) { const result = projectStudyVerse(verse.ref, verse.hebrew); if (result.status === "ready" && result.projection.words.length > 0) return wordKey(verse.ref, 0); }
+  return null;
+}
 
 /**
  * Copying Hebrew from the page: the hidden headings and phrase legends are for screen readers, so they never travel with the text.
@@ -103,9 +110,15 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
   }, [colors, verse.ref, verse.hebrew]);
   const Container = inline ? "span" : "p";
   const focusableWords = new Set<number>();
-  // One Tab stop per verse: the word the reader last landed on, else the first. Arrows move among the others.
-  const [stop, setStop] = useState<number | null>(null);
+  // One Tab stop: inside a passage's WordGroup it is the whole passage's (the word the reader last landed on, else the passage's first word);
+  // alone (the up-close verse) it is this verse's. Arrows move among the others.
+  const group = useContext(WordGroupContext), [stop, setStop] = useState<number | null>(null);
   let first: number | null = null;
+  // Each word is named by its Hebrew; what a tap does is its description, one line shared by the verse's words (the old label without the word's number and verse,
+  // which the reader now has from the Hebrew word and the verse's own heading). Kept beside the verse, so the text stays clean and the page small.
+  const actionId = `${id}-act`, action = wordAction === "card" ? "Open word" : wordAction === "tools" ? "Select word for tools" : wordAction === "phrase" ? "Focus phrase"
+    : wordAction === "verse" ? toolsAvailable ? "Hear whole verse; select word for tools" : "Hear whole verse" : "Hear word";
+  let described = false;
   const parts = (pieces: readonly DisplayPart[]) => chained(pieces, pieces.map((part, index) => {
     const word = part.wordIndex === null ? null : colors?.words[part.wordIndex];
     const family = word?.family ? families.get(word.family) : null;
@@ -114,31 +127,35 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
     const firstPart = part.wordIndex !== null && !focusableWords.has(part.wordIndex);
     if (part.wordIndex !== null) focusableWords.add(part.wordIndex);
     if (firstPart && first === null) first = part.wordIndex;
-    const tabStop = stop !== null && projection && stop < projection.words.length ? stop : first;
-    return <span key={index} role={onWordSelect && firstPart ? "button" : undefined} tabIndex={onWordSelect && firstPart ? part.wordIndex === tabStop ? 0 : -1 : undefined}
-      aria-label={onWordSelect && firstPart ? wordAction === "card" ? `Open word ${part.wordIndex! + 1} of ${verse.ref}` : wordAction === "tools" ? `Select word ${part.wordIndex! + 1} of ${verse.ref} for tools` : wordAction === "phrase" ? `Focus phrase at word ${part.wordIndex! + 1} of ${verse.ref}` : wordAction === "verse" ? toolsAvailable ? `Hear whole verse ${verse.ref}; select word ${part.wordIndex! + 1} for tools` : `Hear whole verse ${verse.ref}` : `Hear word ${part.wordIndex! + 1} of ${verse.ref}` : undefined} data-word-index={part.wordIndex ?? undefined} data-family={family?.id} data-phrase={word?.phrase ?? undefined}
+    const button = Boolean(onWordSelect && firstPart), localStop = stop !== null && projection && stop < projection.words.length ? stop : first;
+    const tabStop = button && (group ? (group.stop ?? group.first) === wordKey(verse.ref, part.wordIndex!) : part.wordIndex === localStop);
+    const phraseId = !family || word?.phrase === null || word?.phrase === undefined ? undefined : `${id}-phrase-${word.phrase}`;
+    if (button) described = true;
+    return <span key={index} role={button ? "button" : undefined} tabIndex={button ? tabStop ? 0 : -1 : undefined}
+      data-word-index={part.wordIndex ?? undefined} data-family={family?.id} data-phrase={word?.phrase ?? undefined}
       data-reference-active={active ? "true" : undefined} data-linked={quoted ? "true" : undefined} className={[family ? styles.word : "", active ? referenceStyles.activeWord : "", quoted ? styles.linked : ""].filter(Boolean).join(" ") || undefined} style={family ? { "--phrase-color": family.color, "--w": part.wordIndex } as CSSProperties : undefined}
-      aria-describedby={!family || word?.phrase === null || word?.phrase === undefined ? undefined : `${id}-phrase-${word.phrase}`}>{part.text}</span>;
+      aria-describedby={[button ? actionId : undefined, phraseId].filter(Boolean).join(" ") || undefined}>{part.text}</span>;
   }));
   const alternative = (written: string, read: ReactNode) => <><span>{maqafChains(written).map((run, at) => run.chain ? <span key={at} className={styles.chain}>{run.text}</span> : run.text)}</span><span className="study-read-alternative"> [<span className="study-qere-label" lang="en" dir="ltr">read / qere:</span> {read}]</span></>;
   // A paragraph break after the verse is apparatus: the note below names it.
   const trailing = (index: number, count: number, kind: string) => kind === "gap" && verse.hebrew.paragraphAfter !== null && index === count - 1;
   const gap = (kind: "petuchah" | "setumah") => <span className="study-paragraph-gap"><span className={inline ? "sr-only" : undefined} lang="en" dir="ltr">[{kind === "petuchah" ? "open paragraph" : "closed paragraph"}]</span></span>;
   const sign = <span role="img" aria-label="Inverted nun, Masoretic sign">׆</span>;
-  return <Container className={`study-hebrew ${hebrewStyles.hebrew} ${inline ? styles.inlineHebrew : ""} ${onWordSelect ? styles.playable : ""} ${className}`.trim()} lang="he" dir="rtl" onKeyDown={onWordSelect ? event => {
+  const container = <Container className={`study-hebrew ${hebrewStyles.hebrew} ${inline ? styles.inlineHebrew : ""} ${onWordSelect ? styles.playable : ""} ${className}`.trim()} lang="he" dir="rtl" onKeyDown={onWordSelect ? event => {
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-word-index][role="button"]') : null;
     if (!target || !event.currentTarget.contains(target)) return;
     const index = Number(target.dataset.wordIndex);
     if (event.key !== "Enter" && event.key !== " ") {
-      // Roving focus, right to left in Hebrew order: ArrowLeft reads on, ArrowRight goes back.
-      const words = [...event.currentTarget.querySelectorAll<HTMLElement>('[data-word-index][role="button"]')], to = rovingTarget(words.indexOf(target), words.length, event.key);
+      // Roving focus, right to left in Hebrew order: ArrowLeft reads on, ArrowRight goes back, across every verse of the passage; Home and End stay in this verse.
+      const scoped = event.key === "Home" || event.key === "End" ? event.currentTarget : target.closest("[data-word-group]") ?? event.currentTarget;
+      const words = [...scoped.querySelectorAll<HTMLElement>('[data-word-index][role="button"]')], to = rovingTarget(words.indexOf(target), words.length, event.key);
       if (to === null || event.altKey || event.ctrlKey || event.metaKey) return;
       event.preventDefault(); words[to]?.focus(); return;
     }
     if (projection && Number.isSafeInteger(index) && index >= 0 && index < projection.words.length) { event.preventDefault(); event.stopPropagation(); onWordSelect(index, target); }
   } : undefined} onFocus={onWordSelect ? event => {
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-word-index][role="button"]') : null;
-    const index = Number(target?.dataset.wordIndex); if (target && Number.isSafeInteger(index)) setStop(index);
+    const index = Number(target?.dataset.wordIndex); if (target && Number.isSafeInteger(index)) { if (group) group.setStop(wordKey(verse.ref, index)); else setStop(index); }
   } : undefined} onClick={onWordSelect ? event => {
     if (window.getSelection()?.toString()) return;
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-word-index]") : null;
@@ -160,6 +177,7 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
     : verse.hebrew.segments.map((segment, index) => segment.kind === "text" ? <span key={index}>{segment.text}</span>
       : segment.kind === "alternative" ? <span className="study-alternative" key={index}>{alternative(segment.written, segment.read)}</span>
         : segment.kind === "gap" && trailing(index, verse.hebrew.segments.length, segment.kind) ? null : <span key={index}>{segment.kind === "gap" ? gap(segment.break) : sign}</span>)}</Container>;
+  return <>{container}{described && <span hidden id={actionId} className="sr-only" lang="en" dir="ltr">{action}</span>}</>;
 }
 
 /** Masoretic apparatus sits under the line, never inside it. */
@@ -299,10 +317,11 @@ export function FlowingStudyText({ verses, assignment, group, sections = [], onV
   /** "Choose verses": while choosing, verse numbers toggle the selection and words are not interactive. */
   choice?: VerseChoiceView;
 }) {
-  return <div className={`study-verses ${styles.flow}`} aria-label="Hebrew reading" tabIndex={-1} data-tikkun={tikkun === "off" ? undefined : tikkun} onCopy={copyHebrew}>
+  const first = useMemo(() => firstWordKey(verses), [verses]);
+  return <WordGroup scope={`${verses[0]?.ref}|${verses.length}`} first={first} className={`study-verses ${styles.flow}`} aria-label="Hebrew reading" tabIndex={-1} data-tikkun={tikkun === "off" ? undefined : tikkun} onCopy={copyHebrew}>
     {studyFlowGroups(verses, sections.map(section => section.index)).map(indices => <div key={verses[indices[0]].ref}>
       {sections.find(section => section.index === indices[0]) && <p className="student-aliyah">{sections.find(section => section.index === indices[0])!.label}</p>}
       <p className={styles.flowParagraph} lang="he" dir="rtl">{indices.map(index => <FlowVerse key={verses[index].ref} verse={verses[index]} assignment={assignment} id={`${group}-flow-${index}`} onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined} activeWord={activeWord?.verse === index ? activeWord.index : null} toolsAvailable={toolsAvailable} listening={listening} showEnglish={showEnglish} englishHidden={englishHidden} tikkun={tikkun} linked={linked?.verse === index ? linked : null} choice={choice} />)}</p>
     </div>)}
-  </div>;
+  </WordGroup>;
 }
