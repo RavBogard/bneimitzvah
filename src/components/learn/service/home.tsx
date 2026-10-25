@@ -2,6 +2,8 @@
 import { CRC_TENANT, homeUnits, lessonById, lessonMinutes, lessonOpen, type Lesson } from "../../../lib/service-course/course";
 import { COPY, fill } from "../../../lib/service-course/copy";
 import { courseDone, emptyProgress, isDone, nextLesson, type Progress } from "../../../lib/service-course/progress";
+import { quickTenOpen, reviewSummary } from "../../../lib/service-course/cards";
+import { localDay } from "../../../lib/learn/progress";
 import learn from "../learn.module.css";
 import styles from "./service.module.css";
 import { icons, ServiceAppBar } from "./bits";
@@ -26,7 +28,7 @@ export function ServiceHome() {
   const { progress: loaded } = useServiceProgress();
   const progress = loaded ?? emptyProgress(), ready = loaded !== null;
   if (!CRC_TENANT.enabled) return <div className={`portal-shell ${learn.shell}`}><ServiceAppBar /><main className={learn.main}><p role="status">{COPY.state.tenantOff}</p></main></div>;
-  const next = nextLesson(progress, CRC_TENANT);
+  const next = nextLesson(progress, CRC_TENANT), review = ready ? reviewSummary(progress, localDay(Date.now())) : null;
   return <div className={`portal-shell ${learn.shell}`}>
     <a className="skip-link" href="#service-main">Skip to the course</a>
     <ServiceAppBar />
@@ -43,6 +45,9 @@ export function ServiceHome() {
               <p className={learn.nextLine}>{next.summary}</p>
               <div className={learn.nextAction}><a className="button-start" href={`/learn/service/${next.id}`} aria-describedby="service-next">{COPY.home.start}</a><span className={learn.minutes}>{fill(COPY.home.minutes, { n: lessonMinutes(next) })}</span></div>
             </section>}
+          {ready && !isDone(progress, "f1") && <a className={learn.review} href="/learn/service/f1" data-row="fluency"><span>{COPY.home.fluencyRow}</span>{icons.arrow}</a>}
+          {review && <a className={learn.review} href="/learn/service/review" data-row="review"><span>{fill(COPY.home.reviewRow, { n: review.cards, m: review.minutes })}</span>{icons.arrow}</a>}
+          {ready && quickTenOpen(progress) && <a className={learn.review} href="/learn/service/practice/quick-ten" data-row="quick-ten"><span>{COPY.home.quickTenRow}</span>{icons.arrow}</a>}
           <nav className={learn.links} aria-label={COPY.home.nav}><a href="/learn">{COPY.home.lein}</a><a href="/learn/service/about">{COPY.home.about}</a></nav>
           <p className={learn.saved}>{COPY.home.saved}</p>
         </div>

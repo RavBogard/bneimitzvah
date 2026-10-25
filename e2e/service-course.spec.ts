@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 // The built, unconfigured production server, signed out, at 360 px. The service course (2.0 SC1) is reachable by its URL
 // only: nothing in the navigation or the front door links to it yet, and it is noindex like the other learning pages.
+// 2.0 SC3 adds Reading Hebrew (f1 to f6), Review and Quick ten, all from this browser's progress and the same synthetic text.
 test.use({ viewport: { width: 360, height: 740 } });
 const KEY = "crc-torah:service-progress/v1";
 const MORNING = ["modeh-ani", "tallit", "mah-tovu", "hineih-mah-tov", "birchot-hashachar", "psukei-dzimrah", "chatzi-kaddish", "barchu", "yotzeir-or", "ahavah-rabbah", "shma", "vahavta", "mi-chamochah",
@@ -21,13 +22,15 @@ const syntheticLine = (line: number) => ({ he: Array.from({ length: 46 }, (_, w)
 const answer = (unit: string, lines: object[]) => ({ unit, volume: "shabbat-shacharit", credit: { title: "Shirei Tfilah", licence: "CC BY-NC-SA 4.0" }, lines });
 const SHMA = [word(1), word(2), NAME, word(4), NAME, word(6)];
 const shmaAnswer = (unit: string) => answer(unit, [{ he: SHMA.join(" "), tr: "Sh’ma Yisra’el, Adonai Eloheinu, Adonai echad.", en: "Synthetic first line." }, { he: [word(20), word(21), word(22)].join(" "), en: "Synthetic second line." }]);
-async function serveText(page: Page, status = 200) {
+/** A short line whose transliteration lines up word for word: what f6 reads. The real volume's first lines are short; the synthetic ones are long so every key word index exists. */
+const shortLine = (unit: string) => ({ he: Array.from({ length: 5 }, (_, i) => word(unit.length * 3 + i)).join(" "), tr: Array.from({ length: 5 }, (_, i) => `short${unit.length}x${i}`).join(" "), en: "Synthetic short line." });
+async function serveText(page: Page, status = 200, shortFirst = false) {
   const asked: string[] = [];
   await page.route("**/api/public/service-text?**", async route => {
     const unit = new URL(route.request().url()).searchParams.get("unit") ?? "";
     asked.push(new URL(route.request().url()).searchParams.get("build") === "edfef85" ? unit : "wrong-build");
     if (status !== 200) return route.fulfill({ status, contentType: "application/json", headers: { "cache-control": "no-store" }, body: JSON.stringify({ error: "unavailable" }) });
-    const body = unit === "shma.the-shma@shabbat-shacharit" ? shmaAnswer(unit) : answer(unit, Array.from({ length: 10 }, (_, i) => syntheticLine(i)));
+    const body = unit === "shma.the-shma@shabbat-shacharit" ? shmaAnswer(unit) : answer(unit, [...(shortFirst ? [shortLine(unit)] : []), ...Array.from({ length: 10 }, (_, i) => syntheticLine(i))]);
     return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   });
   return asked;
@@ -67,12 +70,15 @@ test("the course home opens at 360 px: the next lesson, the links, every unit, a
   await expect(nav.getByRole("link", { name: "Learn to lein" })).toHaveAttribute("href", "/learn");
   await expect(nav.getByRole("link", { name: "About" })).toHaveAttribute("href", "/learn/service/about");
   for (const title of ["The parts every student leads", "Morning blessings", "The Sh’ma and its blessings", "The Amidah", "The Torah service", "Closing the service"]) await expect(page.getByRole("heading", { level: 2, name: title })).toBeVisible();
-  // The strand of letters waits for its own slice: no unit, no row.
-  await expect(page.getByText("Reading Hebrew")).toHaveCount(0);
-  await expect(page.getByText("New to Hebrew letters?")).toHaveCount(0);
-  // Every row of every list is a link, never a bare span (DP-09): 37 lessons, 37 links.
-  await expect(page.locator("ol li")).toHaveCount(37);
-  await expect(page.locator("ol li > a[href^='/learn/service/']")).toHaveCount(37);
+  // Reading Hebrew sits at the top, optional: its unit, its six lessons and the quiet row that points to it until f1 is done (2.0 SC3).
+  await expect(page.getByRole("heading", { level: 2, name: "Reading Hebrew" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "New to Hebrew letters? Start with Reading Hebrew." })).toHaveAttribute("href", "/learn/service/f1");
+  await expect(page.locator("[data-unit='reading'] li")).toHaveText(["Letters, part one", "Letters, part two", "Vowels", "Dots that change a letter", "Reading words", "Reading lines"]);
+  // Nothing is due and nothing is read yet: no Review row, no Quick ten row.
+  await expect(page.locator("[data-row='review'], [data-row='quick-ten']")).toHaveCount(0);
+  // Every row of every list is a link, never a bare span (DP-09): 37 lessons and the 6 of the strand, 43 links.
+  await expect(page.locator("ol li")).toHaveCount(43);
+  await expect(page.locator("ol li > a[href^='/learn/service/']")).toHaveCount(43);
   expect(await noHorizontalScroll(page)).toBe(true);
 });
 
@@ -193,8 +199,9 @@ test("About names the teacher and the text, and goes back to the course", async 
   await expect(page).toHaveURL(/\/learn\/service$/);
 });
 
-test("the strand of letters is closed and an unknown lesson is a plain 404, as in Learn to lein", async ({ page }) => {
-  for (const id of ["f1", "f6", "nope", "evening"]) expect((await page.goto(`/learn/service/${id}`))?.status(), id).toBe(404);
+test("the strand of letters is open and an unknown lesson is a plain 404, as in Learn to lein", async ({ page }) => {
+  for (const id of ["f1", "f6"]) expect((await page.goto(`/learn/service/${id}`))?.status(), id).toBe(200);
+  for (const id of ["nope", "evening", "f7"]) expect((await page.goto(`/learn/service/${id}`))?.status(), id).toBe(404);
 });
 
 test("keyboard: the skip link and the thumb button are reachable, and the focus moves to the lesson on Next", async ({ page }) => {
@@ -219,6 +226,8 @@ test("the Sh’ma runs screen for screen as A8 has it: About, Where, Read with i
   // Read it: the lines right to left, the instruction, the toggles off, the credit, the note and the siddur link.
   await expect(main.getByRole("heading", { level: 1, name: "Read it" })).toBeVisible();
   await expect(main.getByText("Read each line aloud at your own pace. Tap a word to see what it means.")).toBeVisible();
+  // Until f1 is done, a quiet link points to Reading Hebrew.
+  await expect(main.getByRole("link", { name: "New to Hebrew letters? Start with Reading Hebrew." })).toHaveAttribute("href", "/learn/service/f1");
   const lines = main.locator("ol li p[lang='he']");
   await expect(lines).toHaveCount(2);
   await expect(lines.first()).toHaveAttribute("dir", "rtl");
@@ -264,7 +273,13 @@ test("the Sh’ma runs screen for screen as A8 has it: About, Where, Read with i
     const prompt = await main.locator("[data-check-kind]").textContent();
     seen.add(await main.locator("[data-check-kind]").getAttribute("data-check-kind") ?? "");
     expect(prompt).toMatch(/^(?:Which word says (?:Sh’ma|Yisra’el|Eloheinu|echad)\?|Which word means .+\?|What does this word mean\?)$/);
-    expect(prompt).not.toContain("Adonai");
+    // The divine name is never a reading question: a reading prompt never says Adonai, and none of its three Hebrew choices is the name. A meaning
+    // prompt may say it only as the approved gloss "God’s name, said as Adonai", whose choices are Hebrew words (it gives nothing away).
+    const kind = await main.locator("[data-check-kind]").getAttribute("data-check-kind");
+    if (kind === "says") {
+      expect(prompt).not.toContain("Adonai");
+      for (const choice of await main.locator("ul button span[lang='he']").allTextContents()) expect(choice.replace(/[^\u05D0-\u05EA]/g, "")).not.toBe(NAME);
+    } else if (prompt!.includes("Adonai")) expect(prompt).toBe("Which word means God’s name, said as Adonai?");
     await main.locator("ul button").first().click();
     await expect(main.getByText(/^(?:Yes\. .+ (?:is|means) .+\.|That one (?:is|means) .+\.)$/).first()).toBeVisible();
     await page.getByRole("button", { name: "Next" }).click();
@@ -315,4 +330,249 @@ test("the Mi Shebeirach never asks for text: its Read step is the siddur link al
     const response = await request.get(`/api/public/service-text?unit=${encodeURIComponent(unit)}&build=edfef85`);
     expect(response.status(), unit).toBe(400);
   }
+});
+
+// ---- 2.0 SC3: Reading Hebrew, Review and Quick ten -------------------------------------------------------------------------------
+
+/** Words that count right answers, a score, a tally or a streak: none may appear anywhere on a screen of the strand, Review or Quick ten. */
+const COUNTING = /\b\d+ (?:of|out of) \d+\b|\bscore\b|\bcorrect\b|\bpoints?\b|\btally\b|\bstreak\b|\bperfect\b|\bwell done\b|\bgreat\b/i;
+const stored = async (page: Page) => JSON.parse((await page.evaluate(key => localStorage.getItem(key), KEY)) as string);
+/** Progress written into this browser, as the course keeps it: lessons done at an instant, cards in boxes with a due day. */
+async function seedProgress(page: Page, lessons: string[], cards: Record<string, { box: number; due: string }> = {}) {
+  await page.goto("/learn/service");
+  await page.evaluate(([key, doc]) => localStorage.setItem(key, doc), [KEY, JSON.stringify({ schema: "service-course-progress/v1", lessons: Object.fromEntries(lessons.map(id => [id, { done: "2026-10-20T10:00:00.000Z" }])), cards })]);
+  await page.reload();
+}
+/** One lesson of the strand from its Intro to its Done screen, answering every question with its first choice and reading every word and line. */
+async function runStrandLesson(page: Page, id: string) {
+  const main = page.locator("main#lesson-main");
+  await page.goto(`/learn/service/${id}`);
+  let steps = 0;
+  for (; steps < 80; steps++) {
+    await expect(main).toHaveAttribute("data-step", /^(?:intro|item|word|line|done)$/);
+    const step = await main.getAttribute("data-step");
+    expect(await main.evaluate(node => node.scrollWidth <= node.clientWidth + 1), `${id} ${step} no sideways scroll`).toBe(true);
+    if (step === "done") break;
+    if (step === "intro") await page.getByRole("button", { name: "Next" }).click();
+    else if (step === "item") { await main.locator("ul button").first().click(); await expect(main.locator("[aria-live='polite']").first()).not.toBeEmpty(); await page.getByRole("button", { name: "Next" }).click(); }
+    else if (step === "word") { await main.getByRole("button", { name: "Show transliteration" }).click(); await expect(main.locator("[data-translit]")).toBeVisible(); await page.getByRole("button", { name: "Next" }).click(); }
+    else if (step === "line") {
+      const reveal = main.getByRole("button", { name: "Show the next word" });
+      while (await reveal.count()) await reveal.click();
+      await expect(main.locator("[data-translit]")).not.toContainText("___");
+      await main.getByRole("button", { name: "I read it" }).click();
+    }
+    await expect(main).toBeFocused();
+  }
+  expect(steps, `${id} reaches Done`).toBeLessThan(80);
+  await expect(main.getByText("Done", { exact: true })).toBeVisible();
+  return main;
+}
+
+test("the six fluency lessons run in order with no audio, each from its Intro to its Done, and nothing on screen counts right answers", async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.unrouteAll({ behavior: "ignoreErrors" }); const asked = await serveText(page, 200, true);
+  const requests: string[] = []; page.on("request", request => requests.push(new URL(request.url()).pathname));
+  const goals: Record<string, string | null> = { f1: null, f2: "You can name every Hebrew letter, including the final forms.", f3: null, f4: null, f5: null, f6: "You can read a whole line of a prayer on your own." };
+  const titles = ["Letters, part one", "Letters, part two", "Vowels", "Dots that change a letter", "Reading words", "Reading lines"];
+  for (const [n, id] of ["f1", "f2", "f3", "f4", "f5", "f6"].entries()) {
+    await page.goto(`/learn/service/${id}`);
+    const main = page.locator("main#lesson-main");
+    if (n < 4) {
+      // The Intro first: the title, the lesson's own summary, and what the questions will name.
+      await expect(main.getByRole("heading", { level: 1, name: titles[n] })).toBeVisible();
+      await expect(main).toHaveAttribute("data-step", "intro");
+      await expect(main.locator("ul li").first()).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${id} intro`).toBe(true);
+    }
+    const done = await runStrandLesson(page, id);
+    if (goals[id]) await expect(done.getByText(goals[id]!)).toBeVisible();
+    else await expect(done.locator("p").filter({ hasText: /^You can / })).toHaveCount(0);
+    await expect(done.getByText(n < 5 ? `Next: ${titles[n + 1]}` : "Next: Sh’ma")).toBeVisible();
+    expect(await page.locator("audio, video").count(), id).toBe(0);
+    await expect(done.getByText(COUNTING), `${id} done`).toHaveCount(0);
+    const progress = await stored(page);
+    expect(Object.keys(progress.lessons)).toContain(id);
+  }
+  // In order, and nothing played: no recording, no audio file, no learner recording was ever asked for.
+  expect(requests.filter(path => /\.(?:mp3|m4a|ogg|wav|webm)$|audio|recording/i.test(path))).toEqual([]);
+  // f5 and f6 read the pinned public text: only the three units of their corpus, each under the pinned build.
+  expect([...new Set(asked)].sort()).toEqual(["shma.barchu@shabbat-shacharit", "shma.the-shma@shabbat-shacharit", "torah.blessing-before-the-torah@shabbat-shacharit"]);
+  const progress = await stored(page);
+  expect(Object.keys(progress.lessons).sort()).toEqual(["f1", "f2", "f3", "f4", "f5", "f6"]);
+  // f1 plants its letters, f2 the rest and the five finals, f3 its vowels; f4 to f6 plant none.
+  expect(Object.keys(progress.cards).filter(id => id.startsWith("letter:"))).toHaveLength(27);
+  expect(Object.keys(progress.cards).filter(id => id.startsWith("vowel:"))).toHaveLength(8);
+  expect(Object.keys(progress.cards)).toHaveLength(35);
+  // With f1 done the quiet link to Reading Hebrew is gone from a prayer's Read step and from the home.
+  await page.goto("/learn/service"); await expect(page.getByText("New to Hebrew letters?")).toHaveCount(0);
+});
+
+test("Reading Hebrew asks a letter by sight, a vowel by sound and a dot pair by sound, with the approved wording and no same-or-different", async ({ page }) => {
+  const main = page.locator("main#lesson-main");
+  const prompts = new Set<string>(); const said = new Set<string>();
+  for (const id of ["f1", "f2", "f3", "f4"]) {
+    await page.goto(`/learn/service/${id}`);
+    await page.getByRole("button", { name: "Next" }).click();
+    for (let n = 0; n < 120 && await main.getAttribute("data-step") === "item"; n++) {
+      prompts.add(((await main.locator("[data-check-kind]").textContent()) ?? "").replace(/Which one is .+\?/, "Which one is {name}?"));
+      await main.locator("ul button").nth(n % 2).click();
+      said.add(((await main.locator("[aria-live='polite']").first().textContent()) ?? "").replace(/\s+/g, " "));
+      await page.getByRole("button", { name: "Next" }).click();
+    }
+  }
+  expect([...prompts].sort()).toEqual(["Is this shin or sin?", "These two look alike. Which one is {name}?", "This letter comes only at the end of a word. Which letter is it?", "Which letter is this?",
+    "Which sound does this make?", "With the dot or without it?"].sort());
+  for (const line of said) { expect(line).not.toMatch(/\bsame\b|\bdifferent\b|!/i); expect(line).toMatch(/(?:^Yes\. .+ is .+\.|^That one is .+\.|sounds like “.+”\.|^The dot makes .+\. Without it, .+\.)/); }
+});
+
+test("a letter lesson shows its Intro with names, a vowel lesson shows each vowel with its sound, and a dot lesson shows each pair", async ({ page }) => {
+  const main = page.locator("main#lesson-main");
+  await page.goto("/learn/service/f1");
+  await expect(main.getByText("The first eleven letters, and the ones that look alike.")).toBeVisible();
+  await expect(main.locator("ul li")).toHaveCount(11);
+  await expect(main.locator("ul li").nth(1)).toContainText("Bet/Vet");
+  await page.goto("/learn/service/f2"); await expect(main.locator("ul li")).toHaveCount(16); await expect(main.getByText("Final Mem")).toBeVisible();
+  await page.goto("/learn/service/f3");
+  await expect(main.getByText("Chirik sounds like “ee”.")).toBeVisible();
+  await expect(main.getByText("Kamatz sounds like “ah”.")).toBeVisible();
+  await page.goto("/learn/service/f4");
+  await expect(main.getByText("The dot makes b. Without it, v.")).toBeVisible();
+  await expect(main.getByText("The dot makes p. Without it, f.")).toBeVisible();
+  await expect(main.getByText("Shin", { exact: true })).toBeVisible(); await expect(main.getByText("Sin", { exact: true })).toBeVisible();
+});
+
+test("f6 brings a line marked Not yet back once, and keeps the answer nowhere", async ({ page }) => {
+  await page.unrouteAll({ behavior: "ignoreErrors" }); await serveText(page, 200, true);
+  await page.goto("/learn/service/f6");
+  const main = page.locator("main#lesson-main");
+  await expect(main).toHaveAttribute("data-step", "line");
+  const first = await main.locator("[data-read-line]").textContent();
+  await main.getByRole("button", { name: "Not yet" }).click();
+  // Two questions on the line, then the next line, then (later) the same first line again, once.
+  let seen = 0;
+  for (let n = 0; n < 60 && await main.getAttribute("data-step") !== "done"; n++) {
+    const step = await main.getAttribute("data-step");
+    if (step === "line") { if ((await main.locator("[data-read-line]").textContent()) === first) seen++; await main.getByRole("button", { name: "I read it" }).click(); }
+    else { await main.locator("ul button").first().click(); await page.getByRole("button", { name: "Next" }).click(); }
+  }
+  expect(seen).toBe(1);
+  const progress = await stored(page);
+  expect(JSON.stringify(progress)).not.toMatch(/notyet|readit|self/i);
+  expect(Object.keys(progress)).toEqual(["schema", "lessons", "cards"]);
+});
+
+test("f5 and f6 say the text did not load, offer Try again and are never marked done", async ({ page }) => {
+  await page.unrouteAll({ behavior: "ignoreErrors" }); await serveText(page, 503);
+  await page.goto("/learn/service/f5");
+  const main = page.locator("main#lesson-main");
+  await expect(main.getByRole("alert")).toContainText("The prayer text did not load. Try again.");
+  expect(await page.evaluate(key => localStorage.getItem(key), KEY)).toBeNull();
+  await page.unrouteAll({ behavior: "ignoreErrors" }); await serveText(page);
+  await main.getByRole("button", { name: "Try again" }).click();
+  await expect(main).toHaveAttribute("data-step", "word");
+  await expect(main.getByText("Read the word one syllable at a time. Then show the transliteration to check yourself.")).toBeVisible();
+});
+
+test("Quick ten opens only after three prayers with a Read step, or after f6, and its row is absent until then", async ({ page }) => {
+  await page.goto("/learn/service/practice/quick-ten");
+  await expect(page.getByText("Quick ten opens after three prayers you have read.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to the course" }).last()).toBeVisible();
+  // Two prayers with a Read step, and two moments and a prayer with no text, are not enough.
+  await seedProgress(page, ["shma", "vahavta", "torah-reading", "commentary", "psukei-dzimrah"]);
+  await expect(page.locator("[data-row='quick-ten']")).toHaveCount(0);
+  await page.goto("/learn/service/practice/quick-ten");
+  await expect(page.getByText("Quick ten opens after three prayers you have read.")).toBeVisible();
+  // The third prayer with a Read step opens it, and the home offers it.
+  await seedProgress(page, ["shma", "vahavta", "barchu"]);
+  await expect(page.locator("[data-row='quick-ten']")).toContainText("Quick ten: ten words from your prayers, about 2 minutes");
+  await expect(page.locator("[data-row='quick-ten']")).toHaveAttribute("href", "/learn/service/practice/quick-ten");
+  // f6 alone opens it too.
+  await seedProgress(page, ["f6"]);
+  await expect(page.locator("[data-row='quick-ten']")).toBeVisible();
+});
+
+test("Quick ten asks ten words by sound, shows each word in its line, follows on its own, ends on Done and moves the words' cards", async ({ page }) => {
+  test.setTimeout(120_000);
+  await seedProgress(page, ["shma", "vahavta", "barchu"], Object.fromEntries(["shma", "vahavta", "barchu"].map(id => [`word:${id}:read`, { box: 1, due: "2026-12-30" }])));
+  await page.locator("[data-row='quick-ten']").click();
+  const main = page.locator("main#lesson-main");
+  await expect(page.getByRole("heading", { level: 1, name: "Quick ten" })).toBeVisible();
+  let asked = 0;
+  for (; asked < 30; asked++) {
+    await expect.poll(async () => (await main.locator("ul button:not([disabled])").count()) > 0 || (await main.getByText(/^Done\./).count()) > 0, { timeout: 8000 }).toBe(true);
+    if (await main.getByText(/^Done\./).count()) break;
+    await expect(main.locator("[data-check-kind]")).toHaveText(/^Which says \S+\?$/);
+    expect(await main.locator("ul button").count()).toBe(3);
+    expect(await main.locator("ul button span[lang='he']").count()).toBe(3);
+    await expect(main.getByRole("button", { name: "Next" })).toHaveCount(0);
+    expect(await inViewport(page, "button:has-text('Stop here')")).toBe(true);
+    await main.locator("ul button").nth(asked % 3).click();
+    // The answer: what it says, and the word in its line, marked.
+    await expect(main.locator("[aria-live='polite'] p").first()).toHaveText(/^(?:Yes\. .+ is .+\.|That one is .+\.)$/);
+    await expect(main.locator("mark")).toHaveCount(1);
+    await expect(main.getByText(COUNTING)).toHaveCount(0);
+  }
+  expect(asked).toBeGreaterThanOrEqual(10);
+  await expect(main.getByText(/^Done\.(?: The ones you missed come back in review\.)?$/)).toBeVisible();
+  await expect(main.getByText(COUNTING)).toHaveCount(0);
+  const progress = await stored(page);
+  expect(Object.keys(progress.lessons).sort()).toEqual(["barchu", "shma", "vahavta"]);
+  // A card moves at most one box a run on a right answer and drops two on a miss: box 1 is 0, 1 or 2 afterwards, never more.
+  for (const card of Object.values(progress.cards) as { box: number }[]) { expect(card.box).toBeGreaterThanOrEqual(0); expect(card.box).toBeLessThanOrEqual(2); }
+  await page.getByRole("link", { name: "Back to the course" }).last().click();
+  await expect(page).toHaveURL(/\/learn\/service$/);
+});
+
+test("Quick ten stops where the learner stops", async ({ page }) => {
+  await seedProgress(page, ["f6"]);
+  await page.goto("/learn/service/practice/quick-ten");
+  const main = page.locator("main#lesson-main");
+  await expect(main.locator("ul button").first()).toBeEnabled();
+  await main.getByRole("button", { name: "Stop here" }).click();
+  await expect(main.getByText(/^Done\./)).toBeVisible();
+  await expect(main.getByText(COUNTING)).toHaveCount(0);
+});
+
+test("Review says nothing is due, then runs the due cards, letters and words together, and ends on Done", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/learn/service/review");
+  await expect(page.getByText("Nothing to review today.")).toBeVisible();
+  const due = "2026-10-01", cards: Record<string, { box: number; due: string }> = {};
+  for (const id of ["alef", "bet", "gimel", "dalet", "hei", "vav", "zayin", "chet", "tet", "yod", "kaf"]) cards[`letter:${id}:name`] = { box: 1, due };
+  cards["word:shma:read"] = { box: 2, due }; cards["word:shma:meaning"] = { box: 2, due };
+  await seedProgress(page, ["f1", "shma"], cards);
+  await expect(page.locator("[data-row='review']")).toContainText("Review: 13 words, about 2 minutes");
+  await page.locator("[data-row='review']").click();
+  const main = page.locator("main#lesson-main");
+  await expect(page.getByRole("heading", { level: 1, name: "Review" })).toBeVisible();
+  const kinds = new Set<string>();
+  for (let n = 0; n < 40 && await main.getByText(/^Done\.$/).count() === 0; n++) {
+    await expect(main.locator("[data-check-kind]")).toBeVisible();
+    kinds.add(((await main.locator("[data-check-kind]").textContent()) ?? "").replace(/Which one is .+\?/, "Which one is {name}?").replace(/Which word (?:says|means) .+\?/, "Which word …?"));
+    await main.locator("ul button").first().click();
+    await expect(main.getByText(COUNTING)).toHaveCount(0);
+    await page.getByRole("button", { name: "Next" }).click();
+  }
+  await expect(main.getByText("Done.", { exact: true })).toBeVisible();
+  expect([...kinds].some(kind => kind === "Which letter is this?" || kind.startsWith("These two look alike"))).toBe(true);
+  expect([...kinds].some(kind => kind === "Which word …?" || kind === "What does this word mean?")).toBe(true);
+  const progress = await stored(page);
+  expect(Object.keys(progress.cards)).toHaveLength(13);
+  // Cards that came up have moved: a right answer lifts a card one box and puts it a few days out, a miss drops it two and asks it today.
+  expect(Object.values(progress.cards).some(card => (card as { due: string }).due !== due)).toBe(true);
+  expect(Object.keys(progress.lessons).sort()).toEqual(["f1", "shma"]);
+});
+
+test("the strand, Review and Quick ten open at 360 px with the thumb button in reach and no sideways scroll", async ({ page }) => {
+  await seedProgress(page, ["f6", "shma", "vahavta", "barchu"], { "letter:alef:name": { box: 1, due: "2026-10-01" }, "letter:bet:name": { box: 1, due: "2026-10-01" }, "letter:gimel:name": { box: 1, due: "2026-10-01" } });
+  for (const path of ["/learn/service/f1", "/learn/service/f3", "/learn/service/review", "/learn/service/practice/quick-ten"]) {
+    const response = await page.goto(path);
+    expect(response?.status(), path).toBe(200);
+    expect(response?.headers()["x-robots-tag"], path).toBe("noindex, nofollow");
+    await expect(page.locator("main#lesson-main")).toBeVisible();
+    expect(await noHorizontalScroll(page), path).toBe(true);
+  }
+  await page.goto("/learn/service/f1");
+  expect(await inViewport(page, "button.button-start")).toBe(true);
 });

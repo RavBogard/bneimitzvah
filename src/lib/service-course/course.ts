@@ -19,7 +19,10 @@ export type KeyWord = Readonly<{ block: number; word: number; gloss: string; roo
 export type TorahRef = Readonly<{ ref: string; kind: "torah" | "haftarah"; block: number; words: readonly [number, number] }>;
 /** The public volume's unit a Read step shows (SC2). Unit ids and block indices only, never text. */
 export type Read = Readonly<{ unit: string; blocks: readonly [number, number]; torahRef?: TorahRef }>;
-export type Lesson = Readonly<{ id: string; kind: LessonKind; title: string; summary: string; goal: string; section: string; read?: Read;
+/** The public lines a fluency lesson's words and lines come from (2.0 SC3): a unit and a range of its blocks, never text. */
+export type Corpus = Readonly<{ unit: string; blocks: readonly [number, number] }>;
+/** `goal` is null only for a fluency lesson whose end-of-lesson line is not approved yet; its Done screen then shows no goal line. */
+export type Lesson = Readonly<{ id: string; kind: LessonKind; title: string; summary: string; goal: string | null; section: string; read?: Read; corpus?: readonly Corpus[];
   keyWords: readonly KeyWord[]; check?: Readonly<{ items: number }>; prerequisites: readonly string[]; hear: null }>;
 export type Unit = Readonly<{ id: string; title: string; summary: string; phase: "morning" | "evening"; map: boolean; lessons: readonly string[] }>;
 export type Letter = Readonly<{ id: string; name: string; char: string }>;
@@ -138,15 +141,25 @@ export function validateServiceCourse(courseValue: unknown, tenantValues: readon
   for (const [n, row] of lessonRows.slice(0, COURSE_LIMITS.lessons).entries()) {
     if (!isObject(row) || typeof row.id !== "string" || !LESSON_ID.test(row.id)) { fail(`lesson ${n}: id`); continue; }
     const where = `lesson ${row.id}`;
-    exactKeys(row, ["id", "kind", "title", "summary", "goal", "section", "read", "keyWords", "check", "prerequisites", "hear"], where, fail);
+    exactKeys(row, ["id", "kind", "title", "summary", "goal", "section", "read", "corpus", "keyWords", "check", "prerequisites", "hear"], where, fail);
     if (ids.has(row.id)) fail(`${where}: duplicate id`); ids.add(row.id);
     const kind = row.kind === "fluency" || row.kind === "prayer" || row.kind === "moment" ? row.kind : (fail(`${where}: kind`), "prayer" as LessonKind);
     const title = text(`${where} title`, row.title, COURSE_LIMITS.title), summary = text(`${where} summary`, row.summary, COURSE_LIMITS.lessonSummary);
-    const goal = text(`${where} goal`, row.goal, COURSE_LIMITS.goal);
+    // A fluency lesson may have no goal line until its wording is approved (A7 has goals for f2 and f6 only); every other lesson needs one.
+    const goal = row.goal === null && kind === "fluency" ? null : text(`${where} goal`, row.goal, COURSE_LIMITS.goal);
     if (goal && !goal.startsWith("After this you can ")) fail(`${where}: goal must start "After this you can"`);
-    if (fluencyOn && /TODO/.test(goal)) fail(`${where}: goal is still a TODO and the fluency strand is on`);
+    if (goal && /TODO/.test(goal)) fail(`${where}: goal is still a TODO`);
     const section = typeof row.section === "string" && UNIT_ID.test(row.section) ? row.section : (fail(`${where}: section`), "");
     const read = row.read === undefined ? undefined : parseRead(row.read, where, fail);
+    // A fluency lesson's words and lines come from its corpus: public units and block ranges, no key words and no Check of its own.
+    const corpus: Corpus[] = [];
+    if (row.corpus !== undefined) {
+      if (kind !== "fluency" || !Array.isArray(row.corpus) || row.corpus.length < 1 || row.corpus.length > 3) fail(`${where}: corpus`);
+      else for (const [i, entry] of row.corpus.entries()) {
+        const parsed = isObject(entry) && entry.torahRef === undefined ? parseRead(entry, `${where} corpus ${i}`, fail) : (fail(`${where}: corpus ${i}`), undefined);
+        if (parsed) corpus.push(Object.freeze({ unit: parsed.unit, blocks: parsed.blocks }));
+      }
+    }
     const keyWords: KeyWord[] = [];
     if (!Array.isArray(row.keyWords) || row.keyWords.length > COURSE_LIMITS.keyWords) fail(`${where}: keyWords`);
     else for (const [i, word] of row.keyWords.entries()) {
@@ -163,6 +176,7 @@ export function validateServiceCourse(courseValue: unknown, tenantValues: readon
       else check = Object.freeze({ items: row.check.items });
     }
     if (kind === "moment" && (read || keyWords.length || check)) fail(`${where}: a moment lesson has no read, keyWords or check`);
+    if (kind === "fluency" && (read || keyWords.length || check)) fail(`${where}: a fluency lesson has no read, keyWords or check; its text is its corpus`);
     if ((keyWords.length || check) && !read) fail(`${where}: keyWords and check need a read`);
     // A Read step brings three to six key words and a Check (A4 3.1); each gloss once, so a meaning item never offers two right answers.
     if (read && (keyWords.length < 3 || !check)) fail(`${where}: a read needs three to six key words and a check`);
@@ -171,7 +185,7 @@ export function validateServiceCourse(courseValue: unknown, tenantValues: readon
     // Rule 7: the 2.1 slot.
     if (row.hear !== null && !(recordings && isObject(row.hear))) fail(`${where}: hear must be null while recordings is false`);
     const prerequisites = Array.isArray(row.prerequisites) && row.prerequisites.every(id => typeof id === "string") ? row.prerequisites as string[] : (fail(`${where}: prerequisites`), []);
-    lessons.push(Object.freeze({ id: row.id, kind, title, summary, goal, section, ...(read ? { read } : {}), keyWords: Object.freeze(keyWords), ...(check ? { check } : {}), prerequisites: Object.freeze(prerequisites), hear: null }));
+    lessons.push(Object.freeze({ id: row.id, kind, title, summary, goal, section, ...(read ? { read } : {}), ...(corpus.length ? { corpus: Object.freeze(corpus) } : {}), keyWords: Object.freeze(keyWords), ...(check ? { check } : {}), prerequisites: Object.freeze(prerequisites), hear: null }));
   }
   const byId = new Map(lessons.map(lesson => [lesson.id, lesson]));
   for (const lesson of lessons) for (const id of lesson.prerequisites) if (!byId.has(id)) fail(`lesson ${lesson.id}: prerequisite ${id.slice(0, 40)} does not exist`);
@@ -303,6 +317,6 @@ export const pageOf = (tenant: Tenant, id: string, slot: "morning" | "havdalah" 
  * The public units a Read step may ask `/api/public/service-text` for: exactly the units course.json names, nothing else. The
  * route refuses any other unit before it opens the database, so the public text it serves is the course's and only the course's.
  */
-export const SERVICE_TEXT_UNITS: ReadonlySet<string> = new Set(SERVICE_COURSE.lessons.flatMap(lesson => lesson.read ? [lesson.read.unit] : []));
+export const SERVICE_TEXT_UNITS: ReadonlySet<string> = new Set(SERVICE_COURSE.lessons.flatMap(lesson => [...(lesson.read ? [lesson.read.unit] : []), ...(lesson.corpus ?? []).map(entry => entry.unit)]));
 /** About how long a lesson takes: the teaching and the map, plus a minute to read and a minute for its words; 3 to 6. */
 export const lessonMinutes = (lesson: Lesson): number => Math.min(6, 3 + (lesson.read ? 1 : 0) + (lesson.keyWords.length >= 4 ? 1 : 0));

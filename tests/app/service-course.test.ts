@@ -34,8 +34,8 @@ describe("the real course files", () => {
     expect(serviceOrder()).toHaveLength(37);
     expect(TENANTS).toHaveLength(1);
   });
-  it("keep recordings off and the fluency strand closed, and name public units to read by id only (2.0 SC2)", () => {
-    expect(SERVICE_COURSE.features).toEqual({ recordings: false, fluency: false });
+  it("keep recordings off and the fluency strand open (2.0 SC3), and name public units to read by id only (2.0 SC2)", () => {
+    expect(SERVICE_COURSE.features).toEqual({ recordings: false, fluency: true });
     expect(SERVICE_COURSE.lessons.every(lesson => lesson.hear === null)).toBe(true);
     // 30 of the 37 morning lessons read public text (A4 2.1); the moments, P'sukei D'zimrah and the mixed Mi Shebeirach link to the siddur.
     const reading = SERVICE_COURSE.lessons.filter(lesson => lesson.read).map(lesson => lesson.id);
@@ -49,12 +49,14 @@ describe("the real course files", () => {
     }
     expect(lessonById("shma")!.read).toEqual({ unit: "shma.the-shma@shabbat-shacharit", blocks: [0, 1], torahRef: { ref: "Deuteronomy 6:4", kind: "torah", block: 0, words: [0, 5] } });
     expect(lessonById("shma")!.goal).toBe("After this you can read the Sh’ma’s first line and say what its key words mean.");
-    expect(SERVICE_COURSE.lessons.filter(lesson => lessonOpen(lesson))).toHaveLength(37);
-    expect(homeUnits().map(unit => unit.id)).toEqual(["leads", "waking", "shma", "amidah", "torah", "closing"]);
+    expect(SERVICE_COURSE.lessons.filter(lesson => lessonOpen(lesson))).toHaveLength(43);
+    expect(homeUnits().map(unit => unit.id)).toEqual(["reading", "leads", "waking", "shma", "amidah", "torah", "closing"]);
   });
   it("keep every lesson inside the limits the units and lessons promise, and every goal in the course's form", () => {
     for (const lesson of SERVICE_COURSE.lessons) {
       expect(lesson.title.length, lesson.id).toBeLessThanOrEqual(60); expect(lesson.summary.length, lesson.id).toBeLessThanOrEqual(60);
+      // A fluency lesson whose end-of-lesson line is not approved yet (A7 has f2 and f6 only) has none; every other lesson has one.
+      if (lesson.goal === null) { expect(["f1", "f3", "f4", "f5"], lesson.id).toContain(lesson.id); continue; }
       expect(lesson.goal.startsWith("After this you can "), lesson.id).toBe(true); expect(lesson.goal.length).toBeLessThanOrEqual(240);
     }
     for (const unit of SERVICE_COURSE.units) { expect(unit.title.length).toBeLessThanOrEqual(60); expect(unit.summary.length).toBeLessThanOrEqual(160); }
@@ -254,9 +256,18 @@ describe("the validator, rule by rule (A4 5.3)", () => {
     expect(has(problemsOf((_, crc) => { crc.lessons.aleinu.teaching.text += " Well done."; }), "well done")).toBe(true);
     expect(has(problemsOf(course => { course.lessons[10].title = "Sh’ma".normalize("NFD") + "́"; }), "title: text")).toBe(true);
   });
-  it("keeps a TODO goal out of any build that turns the fluency strand on", () => {
+  it("lets only a fluency lesson go without a goal line, and keeps a TODO goal out of every build", () => {
     expect(problemsOf(() => {})).toEqual([]);
-    expect(has(problemsOf(course => { course.features.fluency = true; }), "still a TODO")).toBe(true);
+    expect(has(problemsOf(course => { course.lessons.find((lesson: { id: string }) => lesson.id === "f2").goal = "After this you can TODO(wording)"; }), "still a TODO")).toBe(true);
+    expect(has(problemsOf(course => { course.lessons.find((lesson: { id: string }) => lesson.id === "shma").goal = null; }), "goal: text")).toBe(true);
+    expect(has(problemsOf(course => { course.lessons.find((lesson: { id: string }) => lesson.id === "f1").goal = null; }), "goal")).toBe(false);
+  });
+  it("keeps a fluency lesson's corpus to public units of its own, and nothing else a corpus", () => {
+    expect(has(problemsOf(course => { course.lessons.find((lesson: { id: string }) => lesson.id === "f5").corpus[0].unit = "mi-shebeirach.healing@shabbat-shacharit"; }), "refused")).toBe(true);
+    expect(has(problemsOf(course => { course.lessons.find((lesson: { id: string }) => lesson.id === "f5").corpus[0].unit = "shma.the-shma@legacy-beit-mitzvah"; }), "read unit")).toBe(true);
+    expect(has(problemsOf(course => { course.lessons.find((lesson: { id: string }) => lesson.id === "shma").corpus = [{ unit: "shma.barchu@shabbat-shacharit", blocks: [0, 1] }]; }), "corpus")).toBe(true);
+    expect(has(problemsOf(course => { course.lessons.find((lesson: { id: string }) => lesson.id === "f5").corpus[0].torahRef = { ref: "Deuteronomy 6:4", kind: "torah", block: 0, words: [0, 5] }; }), "corpus 0")).toBe(true);
+    expect(has(problemsOf(course => { course.lessons.find((lesson: { id: string }) => lesson.id === "f5").check = { items: 3 }; }), "fluency lesson has no read")).toBe(true);
   });
   it("is itself unable to ship the licensed siddur: no unit id, key or value names the licensed volume", () => {
     const all = JSON.stringify([rawCourse, { ...rawCrc, siddurBook: "", lessons: Object.fromEntries(Object.entries(rawCrc.lessons).map(([id, row]) => [id, { ...row, teaching: undefined }])) }]);
