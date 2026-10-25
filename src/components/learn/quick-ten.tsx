@@ -34,8 +34,8 @@ function QuickTen({ practice }: { practice: Practice }) {
   const data = useCourseVerses(lessons, retry);
   const main = useRef<HTMLElement>(null);
   const frame = (body: ReactNode, footer?: ReactNode) => <div className={`portal-shell ${styles.shell}`}>
-    <header className={styles.bar}><a className={styles.close} href="/learn" aria-label="Back to the path">{icons.close}</a><p className={styles.barTitle}>{copy.title}</p><span /></header>
-    <main ref={main} tabIndex={-1} className={styles.lesson} data-step="quick-ten">{body}</main>{footer && <div className={styles.footer}><div className={styles.footerInner}>{footer}</div></div>}
+    <header className={styles.bar}><a className={styles.close} href="/learn" aria-label="Back to the path">{icons.close}</a><h1 className={styles.barTitle}>{copy.title}</h1><span /></header>
+    <main ref={main} tabIndex={-1} className={styles.lesson} data-step="quick-ten">{body}{footer && <div className={styles.footer}><div className={styles.footerInner}>{footer}</div></div>}</main>
   </div>;
   const back = <a className={styles.backLink} href="/learn">Back to the path</a>;
   if (!loaded) return frame(<p role="status" className={styles.state}>{NEW.quickTenLoading}</p>);
@@ -68,7 +68,7 @@ function QuickTenRun({ practice, families, pools, frame, main, back }: { practic
     return () => clearTimeout(timer);
   }, [answered, finished, busy]); // eslint-disable-line react-hooks/exhaustive-deps
   if (finished || !shown.item) {
-    return frame(<div className={styles.doneHead}><h1 className={styles.doneTitle}>{copy.title}</h1>
+    return frame(<div className={styles.doneHead}><h2 className={styles.doneTitle}>{copy.title}</h2>
       <p className={styles.doneLine}>{run.missed.size ? copy.endMissed : copy.endClean}</p></div>, back);
   }
   const item = shown.item as NameItem;
