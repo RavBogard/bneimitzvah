@@ -78,6 +78,16 @@ Main at writing: `a9bbd6e`. Live: v1.8.0 (`7c13cac`), prod ledger 43 (newest mig
 - **N6.6 One public read.** `readApprovedPortionSummary` (through the security-invoker `portion_summary_public` view, approved rows only) behind `GET /api/public/portion-summary?reading=<slug>`, the same answer signed in or out; a change reaches every cache within about ten minutes (CDN 300 s, stale 60 s, browser 60 s). Until N7 renders it, an approval is public data no page shows, so the tools say it "will show once the reading page displays summaries" and never claim readers see it. /read, Study, print and the offline pack all read this one route (N7 renders it; N24 owns adding it to `PACK_DATA_PATH`, so until then no pack can hold it). The membership and grant ids (`drafted_by`, `approved_by`, `approved_grant_id`) are never readable by the runtime.
 - **N6.7 Insights column needs no migration.** M6's `curated_discussion_source.anchor_ref` already anchors every source to one verse, and `/api/public/discussions?reading=` already returns a parashah's published sources in reading order; N7 builds the column on that unchanged. M6 is admin-only to write, so nothing a member writes can reach it.
 - **P4.1 The word card's CC BY change notice stays.** F-SITE 15 asked to drop "Normalized into selected-word facts". That sentence is the change notice CC BY 4.0 requires for the adapted dictionary data, so it is kept. Removing it would be a licence question for Daniel, and keeping it needs no ruling.
+- **L1 Codex's sound-first curriculum lands as #84, replacing #83 (Daniel, 2026-10-24, popups).** #84 merges `codex/chanting-curriculum` (78f6c9a), N17a and main into one Learn PR.
+  - (1) Every drafted learner line is approved. Claude tidies them: straight apostrophes, "practise" as the verb, and nothing longer than two sentences.
+  - (2) "Part n of m" stays. The home count "Can hear: n of m" is removed.
+  - (3) "Start where you are" stays, collapsed below the main action, signed out too, with no level stored. This replaces the earlier no-starting-choice decision.
+  - (4) Same/different is cut everywhere, review included. Recognition is optional naming on models the learner has already heard.
+  - (5) "You can lein this verse." stands alone, without Codex's qualifier.
+  - (6) Guided verse practice uses the approved LD-03 "Your turn" lines.
+  - (7) A first-verse lesson counts as visited without "Same as the reader".
+  - (8) N19a: the starter is Gen 1:1 (parts 0–2 and 3–6), with Ex 25:8 as the prepared alternative.
+  - /learn/prepare joins the public page-view count.
 
 ## Versions and tags
 
