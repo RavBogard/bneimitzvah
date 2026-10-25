@@ -30,6 +30,11 @@
 /* Home. */
 .unitSummary { margin: 0.25rem 0 0.5rem; max-width: 62ch; color: var(--color-muted); font-size: 0.9375rem; }
 .later { color: var(--color-muted); }
+/* Your parts (2.0 SC4): the student's own page under each part, the state lines, and the heading over the rest of the course. */
+.partPage { margin: 0 0 0.25rem 2.625rem; }
+.partPage a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 650; }
+.pathLine { margin: 0; max-width: 62ch; }
+.allHeading { margin: 0; }
 
 /* Read it (2.0 SC2): the public text, right to left, large; transliteration and English on request under each line. */
 .toggles { display: flex; flex-wrap: wrap; gap: 0.5rem; }

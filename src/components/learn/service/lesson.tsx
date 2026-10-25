@@ -2,13 +2,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CRC_TENANT, lessonById, lessonOpen, mapSections, presentGoal, sectionLessons, serviceNeighbours, teachingOf, unitById, type Lesson } from "../../../lib/service-course/course";
 import { COPY, emphasised, fill, typographic } from "../../../lib/service-course/copy";
-import { completeLesson, lessonAfter } from "../../../lib/service-course/progress";
+import { completeLesson, lessonAfter, nextOnPath, type Progress } from "../../../lib/service-course/progress";
 import type { CheckItem } from "../../../lib/service-course/check";
 import { WordCardScope } from "../word-card";
 import learn from "../learn.module.css";
 import styles from "./service.module.css";
 import { icons, LessonSiddurLink } from "./bits";
-import { useServiceProgress } from "./progress";
+import { pathLessons, useServicePath, useServiceProgress } from "./progress";
+import type { Account } from "./progress-sync";
 import { CheckStep, KeyWordsStep, LessonWords, ReadStep, useCheckItems, useLessonText, type TextState } from "./read";
 
 /**
@@ -42,7 +43,7 @@ function LessonFlow({ lesson }: { lesson: Lesson }) {
   const items = useCheckItems(lesson, text, seed);
   const steps = useMemo(() => lessonSteps(lesson, items ? items.length : null), [lesson, items]);
   const [at, setAt] = useState(0);
-  const { progress, update } = useServiceProgress();
+  const { progress, account, update } = useServiceProgress();
   const main = useRef<HTMLElement>(null);
   const go = useCallback((next: number) => { setAt(next); window.scrollTo({ top: 0 }); main.current?.focus({ preventScroll: true }); }, []);
   const index = Math.min(at, steps.length - 1), step = steps[index];
@@ -62,8 +63,7 @@ function LessonFlow({ lesson }: { lesson: Lesson }) {
           : step === "read" ? lesson.read ? <><ReadStep lesson={lesson} state={state} onRetry={retry} />{forward(!text)}</> : <><SiddurOnly lesson={lesson} />{forward()}</>
           : step === "words" && text ? <><KeyWordsStep lesson={lesson} text={text} />{forward()}</>
           : step === "check" && items ? <CheckStep key={seed} items={items as readonly CheckItem[]} seed={seed} onFinish={next} footer={children => <Footer>{children}</Footer>} />
-          : step === "done" ? <Done lesson={lesson} state={state} complete={() => update(value => completeLesson(value, lesson, Date.now()))}
-            nextId={progress ? lessonAfter(completeLesson(progress, lesson, Date.now()), lesson.id, CRC_TENANT)?.id ?? null : null} />
+          : step === "done" ? <Done lesson={lesson} state={state} complete={() => update(value => completeLesson(value, lesson, Date.now()))} progress={progress} account={account} />
           : <p role="status" className={styles.note}>{COPY.state.lessonLoading}</p>}
       </LessonWords>
     </main>
@@ -120,15 +120,19 @@ function SiddurOnly({ lesson }: { lesson: Lesson }) {
  * End of a lesson: what you can now do, where it is in the siddur, the next step. Done marks the lesson when it opens, and a lesson
  * with a Read only once its text has loaded (A4 3.2: a prayer whose text failed is never marked done).
  */
-function Done({ lesson, state, complete, nextId }: { lesson: Lesson; state: TextState; complete(): void; nextId: string | null }) {
+function Done({ lesson, state, complete, progress, account }: { lesson: Lesson; state: TextState; complete(): void; progress: Progress | null; account: Account }) {
   const ready = !lesson.read || state.status === "ready";
   useEffect(() => { if (ready) complete(); }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
-  const next = nextId ? lessonById(nextId) : null;
+  // A signed-in student with parts goes on to the next of their own parts (2.0 SC4, done.nextMine); everyone else to the next lesson.
+  const path = pathLessons(useServicePath(account));
+  const after = progress ? completeLesson(progress, lesson, Date.now()) : null;
+  const mine = after && path ? nextOnPath(after, path) : null;
+  const next = mine ?? (after ? lessonAfter(after, lesson.id, CRC_TENANT) : null);
   return <>
     <div className={learn.doneHead}><h1 className={learn.doneTitle}>{lesson.title}</h1><p className={learn.doneWord}>{COPY.done.word}</p></div>
     <p className={learn.doneLine}>{presentGoal(lesson.goal)}</p>
     <LessonSiddurLink lessonId={lesson.id} />
-    {next && <p className={learn.nextName}>{fill(COPY.done.nextName, { lesson: next.title })}</p>}
+    {next && <p className={learn.nextName}>{fill(mine ? COPY.done.nextMine : COPY.done.nextName, { lesson: next.title })}</p>}
     <Footer>
       {next && <a className="button-start" href={`/learn/service/${next.id}`}>{COPY.done.startNext}</a>}
       <a className={learn.backLink} href="/learn/service">{COPY.done.back}</a>
