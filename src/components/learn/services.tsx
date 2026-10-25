@@ -56,8 +56,8 @@ function progressHub() {
   document.addEventListener("visibilitychange", hide); window.addEventListener("pagehide", () => hub.sync.flush());
   // Back online (the installed app used offline, 1.5 A1): the account's copy and this device's meet again.
   window.addEventListener("online", () => { void hub.sync.start(); });
-  // Another tab saved: show what it saved.
-  window.addEventListener("storage", event => { if (event.key === null || event.key === PROGRESS_KEY || event.key === SYNC_KEY) set({ progress: store.load() }); });
+  // Another tab saved: show what it saved, unless this tab is frozen (the browser's copy is another account's now).
+  window.addEventListener("storage", event => { if (!hub.sync.frozen && (event.key === null || event.key === PROGRESS_KEY || event.key === SYNC_KEY)) set({ progress: store.load() }); });
   return hub;
 }
 function useProgressState(): ProgressState {
@@ -67,10 +67,10 @@ function useProgressState(): ProgressState {
 export function useProgress() {
   const { progress, account } = useProgressState();
   const update = useCallback((change: (value: Progress) => Progress) => {
-    // The stored copy is the working copy: another tab may have saved since this one last read it.
-    const hub = progressHub(), next = change(hub.store.load());
-    hub.store.save(next); hub.state = Object.freeze({ ...hub.state, progress: next }); for (const listener of hub.listeners) listener();
-    hub.sync.changed();
+    // The stored copy is the working copy: another tab may have saved since this one last read it. A frozen tab (the
+    // browser's copy is another account's now) keeps its change on this page only and saves nothing into that copy.
+    const hub = progressHub(), next = change(hub.sync.frozen ? hub.state.progress ?? emptyProgress() : hub.store.load());
+    hub.sync.record(next); hub.state = Object.freeze({ ...hub.state, progress: next }); for (const listener of hub.listeners) listener();
   }, []);
   /** A signed-in student's ceremony: review gaps close in on it. */
   const until = account.state === "synced" ? account.until : null;

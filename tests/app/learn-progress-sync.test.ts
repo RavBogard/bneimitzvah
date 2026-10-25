@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { browserProgressStore, emptyProgress, mergeProgress, parseProgress, PROGRESS_KEY, type Progress } from "../../src/lib/learn/progress";
-import { createProgressSync, SYNC_KEY, type Account } from "../../src/components/learn/progress-sync";
+import { createProgressSync, SYNC_KEY, type Account, type SyncLocks } from "../../src/components/learn/progress-sync";
 
 // The browser half of signed-in progress, against a fake server and in-memory storage.
 class MemoryStorage { values = new Map<string, string>();
@@ -54,7 +54,7 @@ describe("signed-in progress in the browser", () => {
     const r = rig({ progress: account, version: 4, until: "2027-01-02" }, undefined, local);
     await r.sync.start();
     expect(r.calls.map(c => c.path)).toEqual(["/api/learn/progress", "/api/learn/progress/merge"]);
-    expect(r.calls[1].body).toEqual({ progress: local });
+    expect(r.calls[1].body).toEqual({ progress: local, owner: A });
     expect(r.store.load()).toEqual(mergeProgress(account, local));
     expect(r.marker()).toEqual({ owner: A, version: 5, dirty: false });
     expect(r.sync.account).toEqual({ state: "synced", until: "2027-01-02" });
@@ -191,5 +191,262 @@ describe("signed-in progress in the browser", () => {
     await r.sync.start();
     expect(r.store.load()).toEqual(account);
     expect(r.calls.map(c => c.path)).toEqual(["/api/learn/progress"]);
+  });
+});
+
+describe("another account signed in in another tab", () => {
+  // Tab 1 synced as A; A signed out and B signed in in tab 2 without opening Learn, so this tab's marker still names A.
+  async function switched() {
+    const r = rig({ owner: A, progress: doc({ "intro-phrases": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "intro-phrases": T1 }));
+    await r.sync.start();
+    expect(r.sync.account).toMatchObject({ state: "synced" });
+    const from = r.calls.length;
+    r.state.owner = B; r.state.progress = doc({ "torah-etnachta": T2 }); r.state.version = 9;
+    const mine = doc({ "intro-phrases": T1, "torah-sof-pasuk": T2 });
+    r.store.save(mine); r.sync.changed();
+    return { r, mine, later: () => r.calls.slice(from) };
+  }
+  it("names A in every write, so the server refuses it; A's unsent change stays here and nothing is merged into B", async () => {
+    const { r, mine, later } = await switched();
+    r.state.before = path => { if (path.endsWith("/put")) { r.state.status = 403; r.state.refusal = { error: "forbidden", owner: B }; } };
+    r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
+    const puts = later().filter(c => c.path === "/api/learn/progress/put");
+    expect(puts).toHaveLength(1);
+    expect(puts[0].body).toEqual({ progress: mine, expectedVersion: 3, owner: A });
+    expect(later().some(c => c.path === "/api/learn/progress/merge")).toBe(false);
+    expect(r.store.load()).toEqual(mine);
+    expect(r.marker()).toEqual({ owner: A, version: 3, dirty: true });
+    expect(r.sync.account.state).toBe("not-eligible");
+    expect(r.state.progress).toEqual(doc({ "torah-etnachta": T2 }));
+    // Nothing more leaves this tab for B: a later change is kept here, not sent.
+    r.store.save(doc({ "intro-phrases": T1, "torah-sof-pasuk": T2, "torah-zakef": T2 })); r.sync.changed();
+    expect(r.timers).toHaveLength(0);
+    expect(later()).toHaveLength(1);
+  });
+  it("never merges A's progress into B on a 409 that names B, even from a server that does not check the owner", async () => {
+    const { r, mine, later } = await switched();
+    r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
+    expect(later().filter(c => c.path === "/api/learn/progress/put")).toHaveLength(1);
+    expect(later().some(c => c.path === "/api/learn/progress/merge")).toBe(false);
+    expect(r.store.load()).toEqual(mine);
+    expect(r.marker()).toEqual({ owner: A, version: 3, dirty: true });
+    expect(r.sync.account.state).toBe("not-eligible");
+    expect(r.state.progress).toEqual(doc({ "torah-etnachta": T2 }));
+    expect(r.state.version).toBe(9);
+  });
+  it("never settles a 200 that names B either: B's copy does not replace A's here, and the browser stops writing", async () => {
+    const { r, mine } = await switched();
+    r.state.version = 3; // The versions happen to match, so the put is accepted by a server that does not check the owner.
+    r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
+    expect(r.store.load()).toEqual(mine);
+    expect(r.marker()).toEqual({ owner: A, version: 3, dirty: true });
+    expect(r.sync.account.state).toBe("not-eligible");
+    expect(r.seen.progress.at(-1)).not.toEqual(doc({ "torah-etnachta": T2 }));
+  });
+  it("keeps the first sign-in copy working: a fresh browser's progress still goes into the account that signed in", async () => {
+    const local = doc({ "intro-phrases": T1 }), r = rig({ owner: B, progress: doc({ "torah-etnachta": T2 }), version: 2 }, undefined, local);
+    await r.sync.start();
+    expect(r.calls.map(c => c.path)).toEqual(["/api/learn/progress", "/api/learn/progress/merge"]);
+    expect(r.calls[1].body).toEqual({ progress: local, owner: B });
+    expect(r.store.load()).toEqual(mergeProgress(doc({ "torah-etnachta": T2 }), local));
+    expect(r.marker()).toEqual({ owner: B, version: 3, dirty: false });
+  });
+  it("on a closed 400 (a write the server cannot read) keeps the change here, unsent, and does not retry on its own", async () => {
+    const r = rig({ progress: doc({ "intro-phrases": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "intro-phrases": T1 }));
+    await r.sync.start();
+    const changed = doc({ "intro-phrases": T1, "torah-zakef": T2 });
+    r.store.save(changed); r.sync.changed(); r.state.status = 400;
+    r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
+    expect(r.calls.map(c => c.path)).toEqual(["/api/learn/progress", "/api/learn/progress/put"]);
+    expect(r.store.load()).toEqual(changed);
+    expect(r.marker()).toEqual({ owner: A, version: 3, dirty: true });
+    expect(r.timers).toHaveLength(0);
+  });
+});
+
+describe("two tabs sharing one browser's storage while the account changes underneath a write", () => {
+  // One storage, one server that answers for whichever account's cookie the browser holds when a request leaves,
+  // and two or more sync instances (tabs). A request can be held so another tab runs before its answer lands.
+  function browser(locks: SyncLocks | null | undefined) {
+    const storage = new MemoryStorage(), store = browserProgressStore(() => storage as unknown as Storage);
+    const accounts: Record<string, { progress: Progress | null; version: number }> = { [A]: { progress: doc({ "intro-phrases": T1 }), version: 3 }, [B]: { progress: doc({ "torah-etnachta": T2 }), version: 7 } };
+    const net = { cookie: A, hold: null as null | ((path: string) => Promise<void> | null), sent: [] as { path: string; body: any }[] }; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const reply = (status: number, value: unknown) => new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
+    const view = (who: string) => ({ ok: true, owner: who, progress: accounts[who].progress, version: accounts[who].version, until: null });
+    const fetcher = (async (path: string, init?: RequestInit) => {
+      const who = net.cookie, body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      if (body) net.sent.push({ path, body });
+      let response: Response;
+      if (path === "/api/learn/progress") response = reply(200, view(who));
+      else if (body.owner !== who) response = reply(403, { error: "forbidden", owner: who });
+      else if (path.endsWith("/put")) {
+        if (body.expectedVersion !== accounts[who].version) response = reply(409, { ok: false, code: "conflict", current: view(who) });
+        else { accounts[who].progress = parseProgress(body.progress); accounts[who].version++; response = reply(200, view(who)); }
+      } else {
+        const current = accounts[who]; current.progress = current.progress ? mergeProgress(current.progress, parseProgress(body.progress)!) : parseProgress(body.progress); current.version++;
+        response = reply(200, view(who));
+      }
+      const wait = net.hold?.(path); if (wait) { net.hold = null; await wait; }
+      return response;
+    }) as unknown as typeof fetch;
+    const tab = () => {
+      const timers: (() => void)[] = [];
+      const sync = createProgressSync({ fetch: fetcher, storage: () => storage as unknown as Storage, store, onProgress: () => {}, onAccount: () => {},
+        timer: callback => { timers.push(callback); return timers.length; }, clearTimer: () => {}, ...(locks === undefined ? {} : { locks }) });
+      return { sync, timers };
+    };
+    const marker = () => JSON.parse(storage.getItem(SYNC_KEY) ?? "null");
+    return { storage, store, accounts, net, tab, marker };
+  }
+  const ticks = async () => { for (let i = 0; i < 12; i++) await settle(); };
+  // The browser's own Web Locks where the runtime has them, and the marker re-check alone where it does not.
+  const variants = [["with the browser's locks", undefined], ["without locks", null]] as const;
+
+  for (const [name, locks] of variants) {
+    it(`never folds B's copy into A when A's put is answered after B's tab took the browser (${name})`, async () => {
+      const b = browser(locks);
+      b.store.save(doc({ "intro-phrases": T1 })); b.storage.setItem(SYNC_KEY, JSON.stringify({ owner: A, version: 3, dirty: false }));
+      const one = b.tab(); await one.sync.start();
+      expect(one.sync.account.state).toBe("synced");
+      b.store.save(doc({ "intro-phrases": T1, "torah-zakef": T1 })); one.sync.changed();
+      // A's put leaves with A's cookie and its answer is slow; meanwhile A signs out, B signs in and opens Learn in tab 2.
+      b.net.hold = path => path.endsWith("/put") ? (async () => { b.net.cookie = B; await b.tab().sync.start(); })() : null;
+      one.timers.shift()!(); await ticks();
+      expect(one.sync.account.state).toBe("not-eligible");
+      expect(b.marker()).toEqual({ owner: B, version: 7, dirty: false });
+      expect(b.store.load()).toEqual(doc({ "torah-etnachta": T2 }));
+      // A signs in again later on this browser and opens Learn: A's account holds only A's own lessons.
+      b.net.cookie = A; await b.tab().sync.start(); await ticks();
+      expect(Object.keys(b.accounts[A].progress!.lessons).sort()).toEqual(["intro-phrases", "torah-zakef"]);
+      expect(Object.keys(b.accounts[B].progress!.lessons)).toEqual(["torah-etnachta"]);
+    });
+
+    it(`never folds B's copy into A when A's first-sign-in merge is answered after B's tab took the browser (${name})`, async () => {
+      const b = browser(locks);
+      b.store.save(doc({ "torah-sof-pasuk": T1 }));
+      b.net.hold = path => path.endsWith("/merge") ? (async () => { b.net.cookie = B; b.store.save(doc({ "torah-etnachta": T2 })); b.storage.setItem(SYNC_KEY, JSON.stringify({ owner: B, version: 7, dirty: false })); })() : null;
+      const one = b.tab(); await one.sync.start(); await ticks();
+      expect(one.sync.account.state).toBe("not-eligible");
+      expect(b.marker()).toEqual({ owner: B, version: 7, dirty: false });
+      expect(b.store.load()).toEqual(doc({ "torah-etnachta": T2 }));
+      expect(b.net.sent.filter(c => c.path.endsWith("/put"))).toHaveLength(0);
+      expect(Object.keys(b.accounts[A].progress!.lessons).sort()).toEqual(["intro-phrases", "torah-sof-pasuk"]);
+    });
+
+    it(`sends no merge after a 409 once B's tab has taken the browser (${name})`, async () => {
+      const b = browser(locks);
+      b.store.save(doc({ "intro-phrases": T1 })); b.storage.setItem(SYNC_KEY, JSON.stringify({ owner: A, version: 3, dirty: false }));
+      const one = b.tab(); await one.sync.start();
+      b.accounts[A].version = 4; // Another device of A's wrote first, so A's put meets a conflict.
+      b.store.save(doc({ "intro-phrases": T1, "torah-zakef": T1 })); one.sync.changed();
+      b.net.hold = path => path.endsWith("/put") ? (async () => { b.net.cookie = B; await b.tab().sync.start(); b.net.cookie = A; })() : null;
+      one.timers.shift()!(); await ticks();
+      expect(b.net.sent.filter(c => c.path.endsWith("/merge"))).toHaveLength(0);
+      expect(one.sync.account.state).toBe("not-eligible");
+      expect(b.marker()).toEqual({ owner: B, version: 7, dirty: false });
+      expect(Object.keys(b.accounts[A].progress!.lessons)).toEqual(["intro-phrases"]);
+    });
+
+    it(`treats a marker dropped since A's put left (a sign-out in another tab) as displaced: A's copy does not come back (${name})`, async () => {
+      const b = browser(locks);
+      b.store.save(doc({ "intro-phrases": T1 })); b.storage.setItem(SYNC_KEY, JSON.stringify({ owner: A, version: 3, dirty: false }));
+      const one = b.tab(); await one.sync.start();
+      b.store.save(doc({ "intro-phrases": T1, "torah-zakef": T1 })); one.sync.changed();
+      // While A's put is out, another tab signs the browser out and clears the device.
+      b.net.hold = path => path.endsWith("/put") ? (async () => { b.store.save(emptyProgress()); b.storage.removeItem(SYNC_KEY); })() : null;
+      one.timers.shift()!(); await ticks();
+      expect(one.sync.account.state).toBe("not-eligible");
+      expect(one.sync.frozen).toBe(true);
+      expect(b.marker()).toBeNull();
+      expect(b.store.load()).toEqual(emptyProgress());
+    });
+  }
+
+  it("freezes a displaced tab: it saves nothing into the other account's copy and marks nothing, until its next start", async () => {
+    const b = browser(undefined);
+    b.store.save(doc({ "intro-phrases": T1 })); b.storage.setItem(SYNC_KEY, JSON.stringify({ owner: A, version: 3, dirty: false }));
+    const one = b.tab(); await one.sync.start();
+    expect(one.sync.frozen).toBe(false);
+    b.store.save(doc({ "intro-phrases": T1, "torah-zakef": T1 })); one.sync.changed();
+    b.net.hold = path => path.endsWith("/put") ? (async () => { b.net.cookie = B; await b.tab().sync.start(); })() : null;
+    one.timers.shift()!(); await ticks();
+    expect(one.sync.frozen).toBe(true);
+    // B, at tab 1, finishes a lesson: nothing reaches the browser's copy (B's) or its marker, and nothing is sent.
+    const sent = b.net.sent.length;
+    expect(one.sync.record(doc({ "torah-zakef": T1, "torah-sof-pasuk": T2 }))).toBe(false);
+    one.sync.changed(); one.sync.flush(); await ticks();
+    expect(b.store.load()).toEqual(doc({ "torah-etnachta": T2 }));
+    expect(b.marker()).toEqual({ owner: B, version: 7, dirty: false });
+    expect(one.timers).toHaveLength(0);
+    expect(b.net.sent.length).toBe(sent);
+    // The next start learns B is signed in, takes B's copy, and writes for B.
+    await one.sync.start(); await ticks();
+    expect(one.sync.frozen).toBe(false);
+    expect(one.sync.account.state).toBe("synced");
+    expect(one.sync.record(doc({ "torah-etnachta": T2, "torah-sof-pasuk": T2 }))).toBe(true);
+    expect(b.marker()).toEqual({ owner: B, version: 7, dirty: true });
+  });
+
+  it("freezes a tab refused naming another account, so B's work there never lands in A's unsent copy", async () => {
+    const b = browser(undefined);
+    b.store.save(doc({ "intro-phrases": T1 })); b.storage.setItem(SYNC_KEY, JSON.stringify({ owner: A, version: 3, dirty: false }));
+    const one = b.tab(); await one.sync.start();
+    const mine = doc({ "intro-phrases": T1, "torah-zakef": T1 });
+    b.store.save(mine); one.sync.changed();
+    b.net.cookie = B; // A signed out and B signed in elsewhere; this tab's put goes out with B's cookie and A's name.
+    one.timers.shift()!(); await ticks();
+    expect(b.net.sent.at(-1)).toMatchObject({ path: "/api/learn/progress/put", body: { owner: A } });
+    expect(one.sync.account.state).toBe("not-eligible");
+    expect(one.sync.frozen).toBe(true);
+    expect(one.sync.record(doc({ "torah-etnachta": T2 }))).toBe(false);
+    expect(b.store.load()).toEqual(mine);
+    expect(b.marker()).toEqual({ owner: A, version: 3, dirty: true });
+    expect(Object.keys(b.accounts[B].progress!.lessons)).toEqual(["torah-etnachta"]);
+  });
+
+  it("does not freeze a tab refused as its own account: a member without a grant keeps saving on this device", async () => {
+    const r = rig({ progress: doc({ "intro-phrases": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "intro-phrases": T1 }));
+    await r.sync.start();
+    r.state.status = 403; r.state.refusal = { error: "forbidden", owner: A };
+    r.store.save(doc({ "intro-phrases": T1, "torah-zakef": T2 })); r.sync.changed();
+    r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
+    expect(r.sync.account.state).toBe("not-eligible");
+    expect(r.sync.frozen).toBe(false);
+    const next = doc({ "intro-phrases": T1, "torah-zakef": T2, "torah-etnachta": T2 });
+    expect(r.sync.record(next)).toBe(true);
+    expect(r.store.load()).toEqual(next);
+  });
+
+  it("takes the shared lock for every settle and merge check, so no other tab lands between the check and the save", async () => {
+    const names: string[] = [];
+    const locks: SyncLocks = { request: async (name, callback) => { names.push(name); return callback(); } };
+    const b = browser(locks);
+    b.store.save(doc({ "torah-sof-pasuk": T1 }));
+    const one = b.tab(); await one.sync.start(); await ticks();
+    expect(one.sync.account.state).toBe("synced");
+    expect(names.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(names)).toEqual(new Set([SYNC_KEY]));
+  });
+
+  it("falls back to the marker re-check when the lock is refused before it runs", async () => {
+    const locks: SyncLocks = { request: async () => { throw new Error("locks unavailable"); } };
+    const b = browser(locks);
+    b.store.save(doc({ "torah-sof-pasuk": T1 }));
+    const one = b.tab(); await one.sync.start(); await ticks();
+    expect(one.sync.account.state).toBe("synced");
+    expect(b.marker()).toEqual({ owner: A, version: 4, dirty: false });
+  });
+});
+
+describe("a sign-out whose cleared copy cannot be saved", () => {
+  it("keeps the marker when the empty copy is not saved, so the copy left here is still accounted for", async () => {
+    const r = rig({ status: 401 }, { owner: A, version: 3, dirty: false }, doc({ "intro-phrases": T1 }));
+    const setItem = r.storage.setItem.bind(r.storage);
+    r.storage.setItem = (key: string, value: string) => { if (key === PROGRESS_KEY) throw new Error("quota"); setItem(key, value); };
+    await r.sync.start();
+    expect(r.sync.account.state).toBe("signed-out");
+    expect(r.marker()).toEqual({ owner: A, version: 3, dirty: false });
+    expect(r.store.load()).toEqual(doc({ "intro-phrases": T1 }));
+    expect(r.seen.progress).toEqual([]);
   });
 });
