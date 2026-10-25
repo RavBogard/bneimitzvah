@@ -9,6 +9,8 @@ import { expandReadingRanges } from "../src/lib/readings/ranges";
 // and reading answers are synthetic route fulfilments, so the pages' own client code is under test (the server's carrying of the
 // return address through the code and Google's state is tested in tests/app). Invented names and example.test addresses only.
 const ORIGIN = "http://127.0.0.1:3100";
+// The reader turns the current week's address into plain /read, so the browser clock is pinned to a Wednesday whose Shabbat is 2026-10-24: the 2026-10-31 addresses below are then always another week, whatever day the suite runs.
+test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(new Date("2026-10-21T15:00:00Z")); });
 const PORTION = "Deuteronomy 31:1-30";
 const json = (route: Route, status: number, body: unknown) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 const text = `${["אָבָ֑ג", "דֵּ֖ה", "וְזַ֥ח"].join(" ")}׃`;
