@@ -3,8 +3,8 @@ import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { createAccessService } from "../access/service";
 import type { AccessRequest, AccessTransaction } from "../access/types";
 import * as data from "../data/service-course-progress";
-import { mergeProgress, parseProgress, type Progress } from "../../lib/service-course/progress";
-import { createServiceCourseProgressAccess, serviceCourseOwnerName, type ServiceCourseOwner } from "./progress-access";
+import { mergeProgress, parseProgress, serializeProgress, type Progress } from "../../lib/service-course/progress";
+import { createServiceCourseProgressAccess, serviceCourseOwnerName, ServiceCourseRefused, type ServiceCourseOwner } from "./progress-access";
 import * as validate from "./progress-validation";
 
 /**
@@ -25,8 +25,14 @@ const view = (owner: ServiceCourseOwner, row: data.ServiceCourseProgressRow | nu
 export function createServiceCourseProgressService<Q extends PgQueryResultHKT>(input: { access: Pick<ReturnType<typeof createAccessService<Q>>, "withVerifiedIdentity"> }) {
   const withOwner = createServiceCourseProgressAccess<Q>(input);
   // Every write takes the member's write lock first, so a merge sees every earlier write of this member.
-  const write = <T>(request: Request, action: (tx: AccessTransaction<Q>, owner: ServiceCourseOwner) => Promise<T>) =>
-    withOwner<T>(request, "data-write", async (tx, owner) => { await data.lockOwnerWrites(tx, owner); return action(tx, owner); });
+  // A write names the account the browser holds progress for; another account's (a tab whose session changed underneath it on a
+  // shared device) is refused with the signed-in account's own owner name, before anything is read or written.
+  const write = <T>(request: Request, expected: string, action: (tx: AccessTransaction<Q>, owner: ServiceCourseOwner) => Promise<T>) =>
+    withOwner<T>(request, "data-write", async (tx, owner) => {
+      const name = serviceCourseOwnerName(owner);
+      if (expected !== name) throw new ServiceCourseRefused(name);
+      await data.lockOwnerWrites(tx, owner); return action(tx, owner);
+    });
   return Object.freeze({
     /** 401 signed out, 403 without a membership or a live grant: the browser learns its own state from this. */
     async get(request: Request) {
@@ -35,7 +41,7 @@ export function createServiceCourseProgressService<Q extends PgQueryResultHKT>(i
     /** Replace the document under its version; a stale version is a 409 conflict carrying the current one. */
     async put(request: Request, supplied: unknown) {
       const value = validate.put(supplied);
-      return write(request, async (tx, owner) => {
+      return write(request, value.owner, async (tx, owner) => {
         const current = await data.progressRow(tx, owner), until = await data.ownCeremonyDate(tx, owner);
         if ((current?.version ?? 0) !== value.expectedVersion) return { ok: false as const, code: "conflict" as const, current: view(owner, current, until) };
         const row = current ? await data.updateProgress(tx, owner, value.expectedVersion, value.progress) : await data.insertProgress(tx, owner, value.progress);
@@ -49,9 +55,13 @@ export function createServiceCourseProgressService<Q extends PgQueryResultHKT>(i
      */
     async merge(request: Request, supplied: unknown) {
       const value = validate.merge(supplied);
-      return write(request, async (tx, owner) => {
+      return write(request, value.owner, async (tx, owner) => {
         const current = await data.progressRow(tx, owner), until = await data.ownCeremonyDate(tx, owner);
         const merged = current ? mergeProgress(stored(current), value.progress) : value.progress;
+        // Two valid documents can merge into one the parser refuses (more cards, or more bytes, than one document holds): never
+        // store what a later read would refuse; answer 409 with the account's copy, and the browser keeps its own.
+        const text = serializeProgress(merged);
+        if (text === null || !parseProgress(JSON.parse(text))) return { ok: false as const, code: "too-large" as const, current: view(owner, current, until) };
         const row = current ? await data.updateProgress(tx, owner, current.version, merged) : await data.insertProgress(tx, owner, merged);
         if (!row) throw new Error("Service course progress unavailable");
         return view(owner, row, until);

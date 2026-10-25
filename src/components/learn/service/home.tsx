@@ -88,8 +88,8 @@ export function ServiceHome() {
           {review && <a className={learn.review} href="/learn/service/review" data-row="review"><span>{fill(COPY.home.reviewRow, { n: review.cards, m: review.minutes })}</span>{icons.arrow}</a>}
           {ready && quickTenOpen(progress) && <a className={learn.review} href="/learn/service/practice/quick-ten" data-row="quick-ten"><span>{COPY.home.quickTenRow}</span>{icons.arrow}</a>}
           <nav className={learn.links} aria-label={COPY.home.nav}><a href="/learn">{COPY.home.lein}</a><a href="/learn/service/about">{COPY.home.about}</a></nav>
-          {/* Signed in and synced, the account keeps the progress, so the device line goes (as Learn to lein's home does). */}
-          {account.state !== "synced" && <p className={learn.saved} data-saved="device">{savedBefore}<a href="/sign-in">Sign in</a>{savedAfter}</p>}
+          {/* Only once the account is known: signed out, or an account that keeps no progress here (never a flash before a sync). */}
+          {(account.state === "signed-out" || account.state === "not-eligible") && <p className={learn.saved} data-saved="device">{savedBefore}<a href="/sign-in">Sign in</a>{savedAfter}</p>}
         </div>
         <div className={learn.paths}>
           <YourParts view={view} progress={progress} next={next} />

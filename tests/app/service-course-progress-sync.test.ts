@@ -55,7 +55,7 @@ describe("signed-in progress in the browser", () => {
     const r = rig({ progress: account, version: 4, until: "2027-01-02" }, undefined, local);
     await r.sync.start();
     expect(r.calls.map(c => c.path)).toEqual(["/api/learn/service/progress", "/api/learn/service/progress/merge"]);
-    expect(r.calls[1].body).toEqual({ progress: local });
+    expect(r.calls[1].body).toEqual({ progress: local, owner: A });
     expect(r.store.load()).toEqual(mergeProgress(account, local));
     expect(r.marker()).toEqual({ owner: A, version: 5, dirty: false });
     expect(r.sync.account).toEqual({ state: "synced", until: "2027-01-02" });
@@ -199,5 +199,49 @@ describe("the course's own keys", () => {
   it("keeps its marker and its document apart from Learn to lein's, so neither course's sync reads the other's", () => {
     expect(SYNC_KEY).toBe("crc-torah:service-sync/v1");
     expect(PROGRESS_KEY).toBe("crc-torah:service-progress/v1");
+  });
+});
+
+describe("another account signed in in another tab (2.0 SC4 review)", () => {
+  // Tab 1 synced as A; A signed out and B signed in in tab 2 without opening the course, so this tab's marker still names A.
+  async function switched() {
+    const r = rig({ owner: A, progress: doc({ "aleinu": T1 }), version: 3 });
+    await r.sync.start();
+    expect(r.sync.account).toMatchObject({ state: "synced" });
+    const from = r.calls.length;
+    r.state.owner = B; r.state.progress = doc({ "barchu": T2 }); r.state.version = 9;
+    const mine = doc({ "aleinu": T1, "shma": T2 });
+    r.store.save(mine); r.sync.changed();
+    return { r, mine, later: () => r.calls.slice(from) };
+  }
+  it("names A in every write, so a server that checks refuses it; A's unsent change stays here and nothing is merged into B", async () => {
+    const { r, mine, later } = await switched();
+    r.state.before = path => { if (path.endsWith("/put")) { r.state.status = 403; r.state.refusal = { error: "forbidden", owner: B }; } };
+    r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
+    const put = later().find(c => c.path === "/api/learn/service/progress/put")!;
+    expect(put.body.owner).toBe(A);
+    expect(later().some(c => c.path === "/api/learn/service/progress/merge")).toBe(false);
+    expect(r.store.load()).toEqual(mine);
+    expect(r.marker()).toMatchObject({ owner: A, dirty: true });
+    expect(r.sync.account.state).toBe("not-eligible");
+    expect(r.state.progress).toEqual(doc({ "barchu": T2 }));
+  });
+  it("never merges A's progress into B on a 409 that names B, even from a server that does not check the owner", async () => {
+    const { r, mine, later } = await switched();
+    r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
+    expect(later().filter(c => c.path === "/api/learn/service/progress/put")).toHaveLength(1);
+    expect(later().some(c => c.path === "/api/learn/service/progress/merge")).toBe(false);
+    expect(r.store.load()).toEqual(mine);
+    expect(r.marker()).toMatchObject({ owner: A, dirty: true });
+    expect(r.state.progress).toEqual(doc({ "barchu": T2 }));
+    expect(r.state.version).toBe(9);
+  });
+  it("never settles a 200 that names B either: B's copy does not replace A's here, and the browser stops writing", async () => {
+    const { r, mine, later } = await switched();
+    r.state.version = 3; // The versions happen to match, so the put is accepted by a server that does not check the owner.
+    r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
+    expect(r.store.load()).toEqual(mine);
+    expect(r.marker()).toMatchObject({ owner: A, dirty: true });
+    expect(r.sync.account.state).toBe("not-eligible");
   });
 });

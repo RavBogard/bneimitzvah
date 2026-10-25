@@ -20,8 +20,9 @@ describe("service-course progress: staff blindness canary", () => {
     const dispatch = createHttpDispatcher(async action => action(f.runtime));
     const audits = await f.owner(async () => (await f.db.select().from(s.auditEvent)).length);
     for (const who of ["admin", "multi", "learner"] as const) {
+      const owner = (await (await dispatch(new Request(`${ORIGIN}/api/learn/service/progress`, { headers: { cookie: f.identities[who].cookie } }))).json() as { owner: string }).owner;
       const response = await dispatch(new Request(`${ORIGIN}/api/learn/service/progress/merge`, { method: "POST",
-        headers: { cookie: f.identities[who].cookie, origin: ORIGIN, "content-type": "application/json" }, body: JSON.stringify({ progress: doc }) }));
+        headers: { cookie: f.identities[who].cookie, origin: ORIGIN, "content-type": "application/json" }, body: JSON.stringify({ progress: doc, owner }) }));
       expect(response.status, who).toBe(200);
     }
     expect(await f.owner(async () => (await f.db.select().from(s.auditEvent)).length)).toBe(audits);

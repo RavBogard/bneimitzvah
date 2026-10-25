@@ -49,7 +49,20 @@ async function setup() {
   });
   const dispatch = createHttpDispatcher(async action => action(f.runtime));
   const cookie = (who: Who) => who === "anonymous" ? "" : who in extra ? extra[who].cookie : f.identities[who as "admin"].cookie;
+  // Every write names the account it is for (2.0 SC4 review): the caller's own, read first, unless the test names one itself.
+  const owners = new Map<Who, string | null>();
+  const ownerOf = async (who: Who) => {
+    if (!owners.has(who)) {
+      const h = new Headers(); if (cookie(who)) h.set("cookie", cookie(who));
+      const value = await (await dispatch(new Request(`${ORIGIN}/api/learn/service/progress`, { headers: h }))).json() as { owner?: unknown };
+      owners.set(who, typeof value.owner === "string" ? value.owner : null);
+    }
+    return owners.get(who)!;
+  };
   const call = async (path: string, who: Who, body?: unknown, headers: Record<string, string> = {}, raw?: string) => {
+    if (path.startsWith("/api/learn/service/progress/") && body && typeof body === "object" && !Array.isArray(body) && !("owner" in body)) {
+      const owner = await ownerOf(who); if (owner) body = { ...body, owner };
+    }
     const h = new Headers(headers), c = cookie(who);
     if (c && !h.has("cookie")) h.set("cookie", c);
     if (body !== undefined || raw !== undefined) { if (!h.has("origin")) h.set("origin", ORIGIN); if (!h.has("content-type")) h.set("content-type", "application/json"); }
@@ -59,7 +72,7 @@ async function setup() {
     const text = await response.text();
     return { status: response.status, text, json: (text ? JSON.parse(text) : null) as Record<string, any> }; // eslint-disable-line @typescript-eslint/no-explicit-any
   };
-  return { f, call };
+  return { f, call, ownerOf };
 }
 
 describe("signed-in service-course progress", () => {
@@ -92,6 +105,42 @@ describe("signed-in service-course progress", () => {
     const saved = await t.call("/api/learn/service/progress/merge", "learner", { progress: planted });
     expect(saved.status).toBe(200);
     expect(saved.json.progress).toEqual(JSON.parse(serializeProgress(planted)!));
+  });
+
+  it("refuses a write named for another account, on put and on merge, naming only the signed-in account and changing nothing", async () => {
+    const t = await setup();
+    await t.call("/api/learn/service/progress/merge", "learner", { progress: doc({ shma: T1 }) });
+    const learner = await t.ownerOf("learner"), multi = await t.ownerOf("multi");
+    expect(learner).not.toBe(multi);
+    // A tab still holding the learner's progress writes after another account signed in on the same device.
+    for (const [path, body] of [["/api/learn/service/progress/put", { progress: doc({ vahavta: T2 }), expectedVersion: 0, owner: learner }],
+      ["/api/learn/service/progress/merge", { progress: doc({ vahavta: T2 }), owner: learner }]] as const) {
+      const refused = await t.call(path, "multi", body);
+      expect(refused.status, path).toBe(403);
+      expect(refused.json, path).toEqual({ error: "forbidden", owner: multi });
+    }
+    expect((await t.call("/api/learn/service/progress", "multi")).json).toMatchObject({ progress: null, version: 0 });
+    expect((await t.call("/api/learn/service/progress", "learner")).json).toMatchObject({ version: 1, progress: doc({ shma: T1 }) });
+    // A missing or malformed owner is a plain 400.
+    for (const owner of [undefined, "", "x".repeat(32), learner!.toUpperCase()]) {
+      const body = owner === undefined ? { progress: doc() } : { progress: doc(), owner };
+      expect((await t.call("/api/learn/service/progress/merge", "multi", undefined, {}, JSON.stringify(body))).status, String(owner)).toBe(400);
+    }
+  });
+
+  it("refuses with 409 a merge whose result one document cannot hold, and stores nothing new", async () => {
+    const t = await setup();
+    const cards = (word: string) => Object.fromEntries(Array.from({ length: 125 }, (_, i) => [[`word:${word}${i}:read`, [2, "2026-11-01"] as [number, string]], [`word:${word}${i}:meaning`, [2, "2026-11-01"] as [number, string]]]).flat());
+    const first = doc({ shma: T1 }, cards("a")), second = doc({ vahavta: T2 }, cards("b"));
+    expect(Object.keys(first.cards)).toHaveLength(250);
+    expect((await t.call("/api/learn/service/progress/merge", "learner", { progress: first })).json).toMatchObject({ ok: true, version: 1 });
+    const merged = await t.call("/api/learn/service/progress/merge", "learner", { progress: second });
+    expect(merged.status).toBe(409);
+    expect(merged.json).toMatchObject({ ok: false, code: "too-large", current: { version: 1 } });
+    const after = await t.call("/api/learn/service/progress", "learner");
+    expect(after.status).toBe(200);
+    expect(after.json).toMatchObject({ version: 1 });
+    expect(Object.keys(after.json.progress.cards)).toHaveLength(250);
   });
 
   it("replaces the document under its version and answers a stale version with the current one", async () => {

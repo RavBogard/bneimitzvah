@@ -3,7 +3,7 @@ vi.mock("server-only", () => ({}));
 import { eq } from "drizzle-orm";
 import * as s from "../../src/server/db/index";
 import { AccessDenied } from "../../src/server/access/errors";
-import { createServiceCourseProgressService } from "../../src/server/service-course/progress-service";
+import { createServiceCourseProgressService, serviceCourseOwnerName } from "../../src/server/service-course/progress-service";
 import { deferred, postgresAccessFixture, waitForEntry } from "./access-fixture";
 import { query } from "./disposable.mjs";
 import { withTenantTransaction } from "../../src/server/db/runtime";
@@ -28,11 +28,11 @@ test("two devices merging at once: the write lock makes the second merge see the
   const f = await fixture();
   const entered = deferred(), release = deferred();
   const stop = await f.intercept("a", text => text.includes("pg_advisory_xact_lock"), async proceed => { const result = await proceed(); entered.resolve(); await release.promise; return result; });
-  const a = safe(f.courseA.merge(f.mutation(), { progress: doc("shma", "2026-10-20T10:00:00.000Z") }));
+  const a = safe(f.courseA.merge(f.mutation(), { progress: doc("shma", "2026-10-20T10:00:00.000Z"), owner: serviceCourseOwnerName({ tenantId: "crc", membershipId: f.member.id }) }));
   let b: Promise<unknown> | undefined;
   try {
     await waitForEntry(entered.promise, a);
-    b = safe(f.courseB.merge(f.mutation(), { progress: doc("vahavta", "2026-10-21T10:00:00.000Z") }));
+    b = safe(f.courseB.merge(f.mutation(), { progress: doc("vahavta", "2026-10-21T10:00:00.000Z"), owner: serviceCourseOwnerName({ tenantId: "crc", membershipId: f.member.id }) }));
     await f.waitForLock(f.pidB, f.pidA);
   } finally { release.resolve(); stop(); }
   const results = await Promise.all([a, b!]) as { ok?: boolean; version?: number }[];
@@ -47,7 +47,7 @@ test("revoking the grant a progress request holds waits for it, and without any 
   const grants = await f.ownerDb.select().from(s.roleGrant).where(eq(s.roleGrant.membershipId, f.member.id));
   const entered = deferred(), release = deferred();
   const stop = await f.intercept("a", text => text.includes("pg_advisory_xact_lock"), async proceed => { const result = await proceed(); entered.resolve(); await release.promise; return result; });
-  const a = safe(f.courseA.merge(f.mutation(), { progress: doc("shma", "2026-10-20T10:00:00.000Z") }));
+  const a = safe(f.courseA.merge(f.mutation(), { progress: doc("shma", "2026-10-20T10:00:00.000Z"), owner: serviceCourseOwnerName({ tenantId: "crc", membershipId: f.member.id }) }));
   let revoke: Promise<unknown> | undefined;
   try {
     await waitForEntry(entered.promise, a);
