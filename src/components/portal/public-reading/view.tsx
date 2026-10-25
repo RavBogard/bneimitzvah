@@ -65,7 +65,7 @@ export function PublicReading() {
   const [address, setAddress] = useState<ReadAddress | null>(null), [query, setQuery] = useState<Lens | null>(null), [back, setBack] = useState<SaveReturn>(NO_SAVE_RETURN);
   useEffect(() => { setQuery(lensFromSearch(window.location.search)); setAddress(parseReadAddress(window.location.search)); setBack(parseSaveReturn(window.location.search)); }, []);
   return <StudyLensScope storageKey={LENS_STORAGE.weekly} query={query}>
-    {!address ? <Shell title={WEEK_TITLE}><Hero eyebrow="Torah and haftarah" title="Loading the reading" /></Shell>
+    {!address ? <Shell title={WEEK_TITLE} settled={false}><Hero eyebrow="Torah and haftarah" title="Loading the reading" meta={<MetaReserve />} nav={<WeekNavReserve />} actions={<ActionsReserve />} /><ReadingBlock /></Shell>
       : address.target?.mode === "week" ? <WeekReading initial={address.target} verse={address.verse} saveReturn={back} />
         : address.target?.mode === "saved" ? <SavedReadingPage id={address.target.id} verse={address.verse} />
         : address.target ? <ChosenReading target={address.target} verse={address.verse} saveReturn={back} />
@@ -87,6 +87,29 @@ function useReturn(saveReturn: SaveReturn, address: (verse: number | null) => st
 }
 
 export const go = (address: string) => { try { window.location.assign(address); } catch { /* Stay. */ } };
+const HEADING_FOCUS = "crc-torah:reading-focus/v1", HEADING_FOCUS_MS = 30_000;
+/** Moving to another reading is a new page, so focus would start on the body. This tab asks the next page to land focus on the new
+ * reading's heading once the reading is shown (F-SITE 25); the ask is short-lived and spent by the first reading that shows. */
+export function goToReading(address: string) {
+  try { window.sessionStorage.setItem(HEADING_FOCUS, String(Date.now())); } catch { /* Focus starts on the page, as before. */ }
+  go(address);
+}
+/** The ask is read once, when this reading mounts: a page that was still loading when the person chose another reading must not
+ * spend it, because the next page is the one it was left for. Focus follows once this reading is shown. */
+function useHeadingFocus(shown: boolean) {
+  const asked = useRef(false);
+  useEffect(() => {
+    try {
+      const at = Number(window.sessionStorage.getItem(HEADING_FOCUS)), age = Date.now() - at; window.sessionStorage.removeItem(HEADING_FOCUS);
+      if (Number.isSafeInteger(at) && at > 0 && age >= 0 && age < HEADING_FOCUS_MS) asked.current = true;
+    } catch { /* Nothing was asked. */ }
+  }, []);
+  useEffect(() => {
+    if (!shown || !asked.current) return;
+    asked.current = false;
+    document.getElementById("public-reading-title")?.focus({ preventScroll: true });
+  }, [shown]);
+}
 export function replaceAddress(address: string) { try { if (window.location.pathname + window.location.search !== address) window.history.replaceState(null, "", address); } catch { /* Address bar stays as it was. */ } }
 
 export const readTitle = (name: string, productName: string) => pageTitle(productName, name);
@@ -101,8 +124,10 @@ export function useDocumentTitle(text: string) {
     return () => observer?.disconnect();
   }, [text]);
 }
-/** `signedIn`: the page already verified the session (a member's own saved reading); public modes never ask, and offer Sign in. */
-export function Shell({ title, children, signedIn = false, back }: { title: string; children: ReactNode; signedIn?: boolean; back?: () => string | null }) {
+/** `signedIn`: the page already verified the session (a member's own saved reading); public modes never ask, and offer Sign in.
+ * `settled`: the reading above has stopped growing. The Save card is added only then, below the reading, so it never sits where the
+ * reading is about to arrive and moves under a reader's eyes (D3). */
+export function Shell({ title, children, signedIn = false, back, settled = true }: { title: string; children: ReactNode; signedIn?: boolean; back?: () => string | null; settled?: boolean }) {
   useDocumentTitle(readTitle(title, useProductName()));
   return <div className="portal-shell">
     <a className="skip-link" href="#public-reading-main">Skip to the reading</a>
@@ -112,7 +137,7 @@ export function Shell({ title, children, signedIn = false, back }: { title: stri
     <main id="public-reading-main" className="workspace-main">
       <div className="reading-workspace reading-with-work"><section aria-labelledby="public-reading-title">
         {children}
-        {!signedIn && <aside className={styles.signIn} aria-labelledby="public-sign-in-heading">
+        {!signedIn && settled && <aside className={styles.signIn} aria-labelledby="public-sign-in-heading">
           <h2 id="public-sign-in-heading">Save this reading</h2>
           <p>Sign in to keep this reading, your place and your preferred commentaries. Everything on this page is open to anyone.</p>
           <ReturnSignInLink className="button-start" back={back}>Sign in</ReturnSignInLink>
@@ -124,17 +149,32 @@ export function Shell({ title, children, signedIn = false, back }: { title: stri
 export function Hero({ eyebrow, title, meta, nav, actions }: { eyebrow: string; title: string; meta?: ReactNode; nav?: ReactNode; actions?: ReactNode }) {
   return <header className="reading-hero">
     <p className={styles.eyebrow}>{eyebrow}</p>
-    <h1 id="public-reading-title" className="hero-reference">{title}</h1>
+    <h1 id="public-reading-title" className={`hero-reference ${styles.title}`} tabIndex={-1}>{title}</h1>
     {meta && <p className="hero-meta">{meta}</p>}
     {nav && <nav className={styles.weeks} aria-label="Choose a reading">{nav}</nav>}
     {actions}
   </header>;
 }
+/** Rooms held while a reading loads, so what arrives does not push the page down (D3). */
+export const MetaReserve = ({ children }: { children?: ReactNode }) => <span className={styles.metaReserve} aria-hidden={children ? undefined : true}>{children ?? "\u00a0"}</span>;
+export const ActionsReserve = () => <div className={`hero-actions ${styles.actionsReserve}`} aria-hidden="true" />;
+/** The week page's own navigation, drawn inert before the page knows its address, with the same controls in the same places. */
+const WeekNavReserve = () => <>
+  <button type="button" className="button-hero-secondary" disabled>Previous week</button>
+  <button type="button" className="button-hero-secondary" disabled>Next week</button>
+  <label className={styles.picker}><span>Find a date</span><input type="date" disabled /></label>
+  <button type="button" className="button-hero-secondary" disabled>Choose a reading</button>
+</>;
+/** Holds a screen's worth of room for the reading until it is shown, so the Save card and the foot of the page stay below it.
+ * `reserve` is false for an error or an empty week, which have nothing more coming. */
+export function ReadingBlock({ reserve = true, children }: { reserve?: boolean; children?: ReactNode }) {
+  return <div className={reserve ? styles.readingBlock : undefined}>{children}</div>;
+}
 /** The "Choose a reading" toggle and its panel, opened in place under the hero. */
 export function useChooser(initiallyOpen = false) {
   const [open, setOpen] = useState(initiallyOpen), id = useId(), lens = useStudyLens();
   const button = <button type="button" className="button-hero-secondary" aria-expanded={open} aria-controls={id} onClick={() => setOpen(value => !value)}>Choose a reading</button>;
-  const panel = open ? <ReadingChooser id={id} study={lens.lens === "study"} onOpen={go} /> : null;
+  const panel = open ? <ReadingChooser id={id} study={lens.lens === "study"} onOpen={goToReading} /> : null;
   return { button, panel };
 }
 /** Start reading: scroll to the text and, with recordings, play the first verse. `row(extra, print)` adds Save or Edit beside it,
@@ -154,7 +194,7 @@ export function useStarter() {
 function Unavailable() {
   const chooser = useChooser(true), today = useToday();
   return <Shell title="Reading unavailable">
-    <Hero eyebrow="Torah and haftarah" title="Reading unavailable" nav={<>{today && <button type="button" className="button-hero-secondary" onClick={() => go("/read")}>This week</button>}{chooser.button}</>} />
+    <Hero eyebrow="Torah and haftarah" title="Reading unavailable" nav={<>{today && <button type="button" className="button-hero-secondary" onClick={() => goToReading("/read")}>This week</button>}{chooser.button}</>} />
     {chooser.panel}
     <div className="workspace-state" role="status"><h2>That reading isn’t available</h2><p>The address doesn’t name a reading this page can open. Choose one, or go back to this week.</p></div>
   </Shell>;
@@ -188,18 +228,21 @@ function WeekReading({ initial, verse, saveReturn }: { initial: Extract<ReadTarg
   // Back from "Sign in to save" with a selection, choosing opens with it.
   const choosePlan: ChoosePlan | undefined = current ? { label: CHOOSE_STRINGS.choose, start: saveReturn.choose ?? [], autoStart: Boolean(saveReturn.choose), onChoosing: setChoosing, onPlace: ref => { back.place.current = ref; },
     save: (selection, saved) => <SaveReading passage={{ title: current.parashah, label: selection.line, kind: selection.kind, ranges: selection.ranges, date: current.date }} onSaved={saved} back={back.forSave(selection.ranges)} offer={back.choiceOffer} /> } : undefined;
-  return <Shell title={WEEK_TITLE} back={back.here}>
+  const weekShown = Boolean(week && week.date === date && (week.value || week.error));
+  useHeadingFocus(weekShown);
+  return <Shell title={WEEK_TITLE} back={back.here} settled={weekShown}>
     <Hero eyebrow={isThisWeek ? "This Shabbat" : date ? "Shabbat" : "Torah and haftarah"} title={current ? current.parashah ?? "Shabbat reading" : week?.error ? "Reading unavailable" : "Loading the reading"}
-      meta={date && <><time dateTime={date}>{longDate(date)}</time>{current?.torah && <> · Torah <bdi dir="ltr">{displayRange(current.torah.ranges)}</bdi></>}{current?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(current.haftarah.ranges)}</bdi></>}<OfflinePill /></>}
+      meta={<MetaReserve>{date && <><time dateTime={date}>{longDate(date)}</time>{current?.torah && <> · Torah <bdi dir="ltr">{displayRange(current.torah.ranges)}</bdi></>}{current?.haftarah && <> · Haftarah <bdi dir="ltr">{displayRange(current.haftarah.ranges)}</bdi></>}<OfflinePill /></>}</MetaReserve>}
       nav={<>
         <button type="button" className="button-hero-secondary" disabled={!date} onClick={() => date && change(addDays(date, -7))}>Previous week</button>
-        {!isThisWeek && today && <button type="button" className="button-hero-secondary" onClick={() => change(today)}>This week</button>}
+        {date !== null && !isThisWeek && today && <button type="button" className="button-hero-secondary" onClick={() => change(today)}>This week</button>}
         <button type="button" className="button-hero-secondary" disabled={!date} onClick={() => date && change(addDays(date, 7))}>Next week</button>
         <label className={styles.picker}><span>Find a date</span><input type="date" value={date ?? ""} onChange={event => { const value = event.target.value; if (/^\d{4}-\d{2}-\d{2}$/.test(value)) { try { change(shabbatOnOrAfter(value)); } catch { /* Ignore partial input. */ } } }} /></label>
         {chooser.button}
       </>}
-      actions={sources.length > 0 && starter.row(current && shown && !choosing && <SaveReading passage={{ title: current.parashah, label: shown.kind === "torah" ? "Torah" : "Haftarah", kind: shown.kind, ranges: shown.ranges, date: current.date }} back={back.forSave()} offer={back.passageOffer} />, date && shown ? printAddress({ mode: "week", date, kind: shown.kind === "haftarah" ? "haftarah" : null, pick: "full" }, undefined, { today }) : undefined)} />
+      actions={sources.length > 0 ? starter.row(current && shown && !choosing && <SaveReading passage={{ title: current.parashah, label: shown.kind === "torah" ? "Torah" : "Haftarah", kind: shown.kind, ranges: shown.ranges, date: current.date }} back={back.forSave()} offer={back.passageOffer} />, date && shown ? printAddress({ mode: "week", date, kind: shown.kind === "haftarah" ? "haftarah" : null, pick: "full" }, undefined, { today }) : undefined) : !current && !week?.error ? <ActionsReserve /> : null} />
     {chooser.panel}
+    <ReadingBlock reserve={!week?.error && !(current && !sources.length)}>
     {week?.error && <div className="workspace-state" role="status"><h2>{week.error === 400 ? "That date isn’t available" : "The reading didn’t load"}</h2>
       <p>{week.error === 400 ? "Choose a Shabbat within the next few years, or go back to this week." : week.error === 429 ? RATE_LIMITED_MESSAGE : "Check your connection and try again."}</p>
       {week.error === 400 && today ? <button type="button" className="button-secondary" onClick={() => change(today)}>Go to this week</button> : <button type="button" className="button-secondary" onClick={() => setRetry(value => value + 1)}>Try again</button>}
@@ -211,6 +254,7 @@ function WeekReading({ initial, verse, saveReturn }: { initial: Extract<ReadTarg
       <PassageReading key={current.date} sources={sources} index={index} onIndex={next => { setKind(sources[next].source.passage.kind); setLinked(null); }}
         verse={linked} onVerseLeft={() => setLinked(null)} registerStart={starter.register} retry={retry} onRetry={() => setRetry(value => value + 1)} choose={choosePlan} />
     </>}
+    </ReadingBlock>
   </Shell>;
 }
 
@@ -254,18 +298,21 @@ function ChosenReading({ target, verse, saveReturn }: { target: Extract<ReadTarg
   const choosePlan: ChoosePlan | undefined = sources.length > 0 ? { label: CHOOSE_STRINGS.choose, start: saveReturn.choose ?? (refTarget?.mark ? refTarget.mark.split("; ") : []), autoStart: Boolean(saveReturn.choose), marked: refTarget?.mark ? refTarget.mark.split("; ") : undefined,
     extra: links, onPlace: ref => { place.current = ref; back.place.current = ref; }, onChoosing: setChoosing,
     save: (selection, saved) => <SaveReading passage={{ title, label: selection.line, kind: selection.kind, ranges: selection.ranges, date: null }} onSaved={saved} back={back.forSave(selection.ranges)} offer={back.choiceOffer} /> } : undefined;
-  return <Shell title={title} back={back.here}>
+  useHeadingFocus(loaded !== null);
+  return <Shell title={title} back={back.here} settled={loaded !== null}>
     <Hero eyebrow={named ? GROUP_EYEBROW[named.group] : "Any reading"} title={loaded?.error ? "Reading unavailable" : title}
       meta={<>{passages.map((row, at) => <span key={at}>{at > 0 && " · "}{row.label} <bdi dir="ltr">{displayRange([row.ref])}</bdi></span>)}</>}
-      nav={<><button type="button" className="button-hero-secondary" onClick={() => go(readAddress({ mode: "week", date: null, kind: null }, { study: lens.lens === "study" }))}>This week</button>{chooser.button}</>}
+      nav={<><button type="button" className="button-hero-secondary" onClick={() => goToReading(readAddress({ mode: "week", date: null, kind: null }, { study: lens.lens === "study" }))}>This week</button>{chooser.button}</>}
       actions={sources.length > 0 && starter.row(sources[index] && !choosing && <SaveReading passage={{ title: named ? named.name : title, label: passages[index]?.label ?? null, kind: sources[index].source.passage.kind, ranges: sources[index].source.passage.ranges, date: null }} back={back.forSave()} offer={back.passageOffer} />,
         printAddress(target.mode === "named" ? { mode: "named", slug: target.slug, passage: index + 1 } : target))} />
     {chooser.panel}
+    <ReadingBlock reserve={!loaded?.error}>
     {loaded?.error && <div className="workspace-state" role="status"><h2>{loaded.error === 400 ? "That reading isn’t available" : "The reading didn’t load"}</h2>
       <p>{loaded.error === 400 ? "Choose another reading, or go back to this week." : loaded.error === 429 ? RATE_LIMITED_MESSAGE : "Check your connection and try again."}</p>
       {loaded.error !== 400 && <button type="button" className="button-secondary" onClick={() => setRetry(value => value + 1)}>Try again</button>}</div>}
     {sources.length > 0 && <PassageReading key={sources.map(row => selectorKey(row.source.selector)).join("|")} sources={sources} index={index}
       onIndex={next => { setIndex(next); setLinked(null); }} verse={linked} onVerseLeft={() => setLinked(null)} registerStart={starter.register} retry={retry} onRetry={() => setRetry(value => value + 1)} choose={choosePlan} />}
+    </ReadingBlock>
   </Shell>;
 }
 
@@ -401,7 +448,17 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     if (target !== null && target !== offset) { pendingJump.current = ref; changeOffset(target); }
   });
   useEffect(() => { const ref = pendingJump.current; if (page && ref && page.verses.some(row => row.ref === ref)) { pendingJump.current = null; scrollToVerse(ref); } }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
-  const start = useRef<() => void>(() => {}); start.current = () => { textAnchor.current?.scrollIntoView({ block: "start" }); if (listening && page) hear(0); else textAnchor.current?.focus(); };
+  // Focus follows the reader into the text (D10, F-SITE 25): to the first verse's own button when verses can be heard, else to the labelled
+  // reading itself. Without this, Start reading or a new text page leaves focus on the control that was pressed, or on nothing.
+  const focusReading = () => {
+    const anchor = textAnchor.current; if (!anchor) return;
+    anchor.scrollIntoView({ block: "start" });
+    const target = anchor.querySelector<HTMLElement>(".study-verses [data-verse-ref] button[aria-label^='Hear ']:not([disabled])") ?? anchor.querySelector<HTMLElement>(".study-verses") ?? anchor;
+    target.focus({ preventScroll: true });
+  };
+  const start = useRef<() => void>(() => {}); start.current = () => { if (listening && page) hear(0); focusReading(); };
+  const pagerFocus = useRef(false), pagerTo = (next: number) => { pagerFocus.current = true; changeOffset(next); };
+  useEffect(() => { if (page && pagerFocus.current) { pagerFocus.current = false; focusReading(); } }); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { registerStart(page ? () => start.current() : null); return () => registerStart(null); }, [page, registerStart]);
 
   // The drill follows the selected verse. Reveal, Hide again and End drill never start or stop audio; Next verse stops the old verse's audio
@@ -488,8 +545,8 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
             <span className="field-help">Up close shows each phrase of trope by name.</span></p>}
           {(previousOffset !== undefined || nextOffset !== null) && <>
             <p className="study-page-position">Verses {page.offset + 1}–{page.offset + page.verses.length} of {page.totalVerses}</p>
-            <nav className="study-pages" aria-label="Text pages"><button type="button" className="button-secondary" disabled={previousOffset === undefined} onClick={() => previousOffset !== undefined && changeOffset(previousOffset)}>Previous text page</button>
-              <button type="button" className="button-secondary" disabled={nextOffset === null} onClick={() => nextOffset !== null && changeOffset(nextOffset)}>Next text page</button></nav></>}
+            <nav className="study-pages" aria-label="Text pages"><button type="button" className="button-secondary" disabled={previousOffset === undefined} onClick={() => previousOffset !== undefined && pagerTo(previousOffset)}>Previous text page</button>
+              <button type="button" className="button-secondary" disabled={nextOffset === null} onClick={() => nextOffset !== null && pagerTo(nextOffset)}>Next text page</button></nav></>}
           {study && <CommentaryCredits works={works} refs={refs} />}
           <div className="study-more"><StudyCredits chapters={page.chapters} summary="About this text" /><a href="/trope-chart">Trope chart</a></div>
           {choice.bar}

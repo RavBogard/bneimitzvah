@@ -21,6 +21,9 @@ export const COPY = Object.freeze({
     dotNext: ", next", // home.state.dot.next
     eveningLater: "Saturday evening and Havdalah come next.", // home.evening.later
     nav: "Course", // aria-label of the link row (Learn to lein uses the same word)
+    fluencyRow: "New to Hebrew letters? Start with Reading Hebrew.", // home.fluency.row
+    reviewRow: "Review: {n} words, about {m} minutes", // home.review.row
+    quickTenRow: "Quick ten: ten words from your prayers, about 2 minutes", // qt.homeRow
   }),
   frame: Object.freeze({
     close: "Back to the course", // frame.close
@@ -55,6 +58,7 @@ export const COPY = Object.freeze({
     englishHide: "Hide English", // read.english.hide
     siddurNote: "Your siddur may print this prayer a little differently. Read it there too.", // read.siddurNote
     credit: "Text: {volume}, {licence}.", // read.credit
+    newToHebrew: "New to Hebrew letters? Start with Reading Hebrew.", // read.newToHebrew
   }),
   words: Object.freeze({
     instruction: "A few words to know in this prayer. Tap one for more.", // words.instruction
@@ -70,6 +74,41 @@ export const COPY = Object.freeze({
     miss: "That one is {translit}.", // check.miss
     missMeaning: "That one means {gloss}.", // check.missMeaning
     again: "This one comes back in a moment.", // check.again
+  }),
+  fluency: Object.freeze({
+    letterPrompt: "Which letter is this?", // fl.letter.prompt
+    letterLookalike: "These two look alike. Which one is {name}?", // fl.letter.lookalike
+    finalPrompt: "This letter comes only at the end of a word. Which letter is it?", // fl.final.prompt
+    vowelPrompt: "Which sound does this make?", // fl.vowel.prompt
+    vowelTell: "{vowel} sounds like {sound}.", // fl.vowel.tell
+    dotPrompt: "With the dot or without it?", // fl.dot.prompt
+    shinPrompt: "Is this shin or sin?", // fl.dot.shin
+    dotTell: "The dot makes {a}. Without it, {b}.", // fl.dot.tell
+    wordInstruction: "Read the word one syllable at a time. Then show the transliteration to check yourself.", // fl.word.instruction
+    wordShow: "Show transliteration", // fl.word.show
+    wordPrompt: "Which word says {translit}?", // fl.word.prompt
+    lineInstruction: "Read the whole line aloud. Then show the transliteration, one word at a time.", // fl.line.instruction
+    lineReveal: "Show the next word", // fl.line.reveal
+    lineReadIt: "I read it", // fl.line.readIt
+    lineNotYet: "Not yet", // fl.line.notYet
+    // The two letter names the shin-or-sin prompt and its answers use; both are in A7's list of letter names for {name}.
+    shin: "Shin",
+    sin: "Sin",
+  }),
+  quickTen: Object.freeze({
+    title: "Quick ten", // qt.title
+    prompt: "Which says {translit}?", // qt.prompt
+    stop: "Stop here", // qt.stop
+    endClean: "Done.", // qt.endClean
+    endMissed: "Done. The ones you missed come back in review.", // qt.endMissed
+    empty: "Quick ten opens after three prayers you have read.", // qt.empty
+    loading: "Loading the words…", // qt.loading
+  }),
+  review: Object.freeze({
+    title: "Review", // rv.title
+    loading: "Loading the review…", // rv.loading
+    empty: "Nothing to review today.", // rv.empty
+    done: "Done.", // the Quick ten's clean ending, reused: A7 has no line for the end of a review
   }),
   done: Object.freeze({
     word: "Done", // step.done

@@ -178,7 +178,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
             }} onFinish={() => {
               if (gate.current !== "google") return;
               gate.current = null; setPending(null);
-            }} /> : <a className="button-secondary" href={!invitation && !autoEnterStudent ? "/sign-in?intent=account" : "/sign-in"} referrerPolicy="no-referrer" aria-disabled={pending !== null} tabIndex={pending !== null ? -1 : undefined} onClick={event => { if (pending !== null) event.preventDefault(); }}>Continue to Google sign-in</a>}
+            }} /> : <a className="button-secondary" href={!invitation && !autoEnterStudent ? "/sign-in?intent=account" : "/sign-in"} referrerPolicy="no-referrer" aria-disabled={pending !== null} tabIndex={pending !== null ? -1 : undefined} onClick={event => { if (pending !== null) event.preventDefault(); }}>Continue with Google</a>}
             <div className="form-divider"><span>or use email</span></div>
             <form onSubmit={submit}>
               <label htmlFor="entry-email">Email address</label>
@@ -220,7 +220,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
   return <div className="portal-shell">
     <a className="skip-link" href="#portal-main">Skip to sign-in and access</a>
     <TabSkipLink roles={shellRoles} />
-    <header className="portal-header"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a><span>Central Reform Congregation</span></header>
+    <header className="portal-header app-bar"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a><span>Central Reform Congregation</span></header>
     <main id="portal-main" className="entry-layout">
       <div className="entry-introduction">
         <h1>{invitation ? "Join your congregation’s practice" : "Open your reading"}</h1>

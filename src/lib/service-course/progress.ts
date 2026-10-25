@@ -1,10 +1,11 @@
 import { SERVICE_COURSE, CRC_TENANT, lessonById, serviceOrder, type Lesson, type Tenant } from "./course";
+import { withLessonCards } from "./cards";
 
 /**
  * A learner's progress in the service course, `service-course-progress/v1`: lessons done and, from release 2.0's
  * reading slices, review cards in boxes. Pure; the clock is always passed in. Signed out it lives in this browser
  * only, under its own key: Learn to lein's progress and this course's do not share a document (A4 8.1).
- * This slice writes lessons only; the card map is parsed strictly so a later slice can fill it.
+ * It holds lessons done and, from 2.0 SC3, review cards (cards.ts plants them when a lesson is done).
  */
 export const PROGRESS_SCHEMA = "service-course-progress/v1" as const;
 export const PROGRESS_KEY = "crc-torah:service-progress/v1";
@@ -51,10 +52,13 @@ export function serializeProgress(progress: Progress): string | null {
 }
 
 export const isDone = (progress: Progress, id: string) => Object.hasOwn(progress.lessons, id);
-/** Marks a lesson done. Done is done: a second visit keeps the first instant. */
+/**
+ * Marks a lesson done. Done is done: a second visit keeps the first instant. The lesson's review cards enter box 1 with it (2.0 SC3),
+ * and a lesson finished before they existed gets them the next time its Done screen opens; a card the learner already has keeps its place.
+ */
 export function completeLesson(progress: Progress, lesson: Lesson, now: number): Progress {
-  if (isDone(progress, lesson.id)) return progress;
-  return Object.freeze({ ...progress, lessons: Object.freeze({ ...progress.lessons, [lesson.id]: Object.freeze({ done: new Date(now).toISOString() }) }) });
+  const marked = isDone(progress, lesson.id) ? progress : Object.freeze({ ...progress, lessons: Object.freeze({ ...progress.lessons, [lesson.id]: Object.freeze({ done: new Date(now).toISOString() }) }) });
+  return withLessonCards(marked, lesson, now);
 }
 /**
  * The next lesson: the first one not done on the path, then in unit order. The path is the congregation's default

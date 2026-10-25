@@ -9,6 +9,8 @@ import type { WordCardTarget } from "../../../lib/learn/word-tap";
 import { PortalRequestError } from "../../portal/api";
 import { RATE_LIMITED_MESSAGE } from "../../portal/public-reading/rate-limited";
 import { useWordCard } from "../word-card";
+import { isDone } from "../../../lib/service-course/progress";
+import { useServiceProgress } from "./progress";
 import { fetchServiceText, fetchVerse, verseTargets } from "./text-api";
 import { icons, LessonSiddurLink } from "./bits";
 import learn from "../learn.module.css";
@@ -71,7 +73,7 @@ export function LessonWords({ lesson, text, children }: { lesson: Lesson; text: 
 }
 
 /** One line of Hebrew as printed, its words counted the course's way; key words and verse words are buttons. */
-function HebrewLine({ he, line, large = true, mark }: { he: string; line: number; large?: boolean; mark?: number }) {
+export function HebrewLine({ he, line, large = true, mark }: { he: string; line: number; large?: boolean; mark?: number }) {
   const words = useContext(WordsContext);
   let index = 0;
   const parts = he.split(/(\s+)/).flatMap((chunk, c) => /^\s+$/.test(chunk) ? [<span key={`s${c}`}>{chunk}</span>] : chunk.split(/(?<=\u05BE)/).map((piece, p) => {
@@ -95,6 +97,7 @@ function TextProblem({ state, onRetry }: { state: TextState; onRetry(): void }) 
 /** Step 3: the lines, right to left, with transliteration and English on request (Batch 2 Q8), the credit and the siddur link. */
 export function ReadStep({ lesson, state, onRetry }: { lesson: Lesson; state: TextState; onRetry(): void }) {
   const [tr, setTr] = useState(false), [en, setEn] = useState(false);
+  const { progress } = useServiceProgress(), letters = !progress || isDone(progress, "f1");
   const words = useContext(WordsContext), read = lesson.read!;
   const text = state.status === "ready" ? state.text : null;
   const lines = text ? text.lines.slice(read.blocks[0], read.blocks[1] + 1) : [];
@@ -116,6 +119,7 @@ export function ReadStep({ lesson, state, onRetry }: { lesson: Lesson; state: Te
     </>}
     <p className={styles.note}>{COPY.read.siddurNote}</p>
     <LessonSiddurLink lessonId={lesson.id} />
+    {!letters && <p className={styles.note}><a href="/learn/service/f1">{COPY.read.newToHebrew}</a></p>}
   </>;
 }
 
