@@ -26,6 +26,7 @@ import { createSavedTools } from "./saved-tools";
 import type { Calendar, Snapshot } from "../../lib/readings/proposals";
 import { createAnalyticsTools } from "./analytics-tools";
 import { createDiscussionTools } from "./discussion-tools";
+import { createPortionSummaryTools } from "./portion-summary-tools";
 import type { DiscussionService } from "../discussions/service";
 
 type JsonSchema = Readonly<Record<string, unknown>>;
@@ -237,6 +238,7 @@ export function createTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>[] {
     ...createSavedTools<Q>(),
     ...createAnalyticsTools<Q>(),
     ...createDiscussionTools<Q>(),
+    ...createPortionSummaryTools<Q>(),
   ] satisfies Tool<Q>[]);
 }
 
