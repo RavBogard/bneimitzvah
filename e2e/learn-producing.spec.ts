@@ -87,7 +87,8 @@ test("a box 3 naming card from zakef on is read first: text, no recording, then 
   expect(await plays(page)).toBe(0);
   const main = page.locator("main");
   await expect(main.getByRole("button", { name: "Hear it", exact: true })).toHaveCount(0);
-  expect(await main.locator("[data-unit]").count()).toBeGreaterThan(1);
+  // The phrase is on screen as text; a drawn phrase can be a single word, so only its presence is asserted.
+  expect(await main.locator("[data-unit]").count()).toBeGreaterThan(0);
   await main.locator("button[class*=choice]:not([data-right])").first().click();
   await expect(main.locator("[data-read-result]")).toHaveText("Not quite");
   await expect(main.getByRole("link", { name: /^More about / })).toBeVisible();
