@@ -69,6 +69,27 @@
 - GATE: merged #75 (1.9 N6, portion summary, ae2e959) and applied `0044_portion_summary` to production with the scratch operator (check, then apply with its own verify). Proceeded because CI was green, the adversarial review's five fixes were in the merged head, and the check found the ledger at 44 with the journal at 45 and no portion_summary objects yet. All thirteen checks passed on the live database: ledger 45; forced RLS with the one tenant_isolation policy; INSERT-only table grant; the exact SELECT and UPDATE column lists, with drafted_by, approved_by and approved_grant_id unreadable; the portion_summary_guard trigger; the security_invoker, security_barrier public view; the two runtime functions, all three closed to PUBLIC; no PUBLIC grants; an empty table; the seven older tables unchanged; tenants, hosts, audit events, students and role grants unchanged.
 - GATE: tagged v1.8.2 at f079b94 (P1–P5 live, plus N6, N20, #84, N9, SC3 and the two test-flake fixes #90 and #92). Proceeded because main's CI was green there after one re-run (a known timing flake in http-browser practice-calendar-ui), the deploy succeeded, and /, /read and /learn answered 200 signed out.
 - GATE: merged N10 (#89) with two screen-reader-only labels pending Daniel's confirmation ("Workspace", "Skip to workspace tabs"). Proceeded because they follow the approved "Skip to the lesson" pattern. They are listed in Cowork's T3 batch.
+- **Resume point, 2026-10-25 (v1.8.2 live at f079b94; then N10, N1, the T10 calendar #93, N17, N2, N18 and N3 merged and deployed; prod ledger still 45):**
+  - **Open PRs:**
+    - **#88 SC4:** the adversarial review PASSED. Its two should-fixes were pushed (the owner mismatch on put and merge, and re-validating a merge), head b62f368, waiting on CI. Merge after N12, renumber the migration to 0046 (snapshot regenerated from 0045), then apply it to prod with its check script.
+    - **#99 N12:** migration 0045_lesson_note_before_next. Its builder was asked to rename it from 0047 to 0045. It needs the second-agent RLS check before merge, then a prod apply. The check script is in the session scratchpad as lesson-note-before-next-migrate.mjs.
+  - **In flight (worktrees):**
+    - N19 in bneimitzvah-n19 (Opus; any migration would be 0048, owner-only).
+    - N4 in bneimitzvah-n4 (Lein tap stays HEAR, per Daniel's Friday-prep ruling).
+  - **SECURITY (tell Daniel; fix in progress):**
+    - Learn to lein's live progress sync can fold one account's progress into another on a shared browser. The case: A is synced in tab 1, signs out, and B signs in in tab 2. A's next change goes out with B's cookie, and a 409 merge or a version-matched PUT writes A into B.
+    - The fix is in SC4's copy now. Learn's copy (src/components/learn progress-sync and its server) gets the same fix: N19 includes it if it touches those files, otherwise a separate PR right after N19.
+  - **Next milestones:**
+    - Lane 1: N5, N25, N7, N8.
+    - Lane 2: N11 (Today shows N12's beforeNext), N13, N14, N15, N16.
+    - Lane 3: SC6, N19a (needs T3 wording).
+    - Lane 4: SC5 (0046 or later, adversarial privacy), N21–N24.
+    - SC7 is held (Daniel, C1).
+  - **Daniel's items:**
+    - Load the 10 approved T1 summaries and the T2 sources through the staff MCP, which isn't signed in to this session.
+    - The Vercel Firewall rule to 600 a minute, IP only.
+    - The T3 wording batch: Cowork's handoff T3 lists every gap added on 2026-10-25.
+  - **Flaky tests to stabilise:** http-browser practice-calendar-session-review, practice-calendar-ui (a verse-visit count), quiet-reading-ui (a 5 s timeout).
 - **Resume point, 2026-10-24 night (v1.8.0 live; product review running; 2.0 plan imported and starting):**
   - **Build order (added 2026-10-24, later):** one combined plan for 1.8.2, 1.9 and the rest of 2.0 (D'var Torah cut), in four lanes with tags v1.8.2, v1.9.0, v1.9.1 and v2.0.0: [docs/planning/2026-10-24-release-1-9/PLAN.md](../2026-10-24-release-1-9/PLAN.md). First milestones: P1 (Hebrew text, contrast, dark mode), P3 (workspace defects), P4 (Learn defects with F6), F1 (in progress), then N20 (sign-in). Waiting on Daniel: the tier B string batch listed there.
   - Live: v1.8.0 at 7c13cac, prod ledger 43 (newest migration 0042_curated_discussions; the next free number is 0043).
