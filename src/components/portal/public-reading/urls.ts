@@ -87,3 +87,27 @@ export function readAddress(target: ReadTarget, options: { today?: string | null
   if (options.study) entries.push(["lens", "study"]);
   return entries.length ? `/read?${query(entries)}` : "/read";
 }
+
+/**
+ * Coming back from "Sign in to save" (release 1.9 N20). The way back to the reader adds `save=1`, and, for a selection
+ * from Choose verses, `choose=<ranges>`, to the reading's own address: the reader then opens choosing with those verses
+ * and offers Save at once. Both are read once and left out of the address the page writes back; the verses are checked
+ * again against the passage on screen, so anything else is simply not chosen.
+ */
+export type SaveReturn = Readonly<{ choose: readonly string[] | null; offer: boolean }>;
+const CHOSEN = /^[A-Za-z0-9 :;,.-]{1,1000}$/;
+export function parseSaveReturn(search: string): SaveReturn {
+  let params: URLSearchParams;
+  try { params = new URLSearchParams(search); } catch { return { choose: null, offer: false }; }
+  const offer = params.getAll("save").length === 1 && params.get("save") === "1", chosen = params.getAll("choose");
+  const choose = offer && chosen.length === 1 && CHOSEN.test(chosen[0]) ? chosen[0].split("; ").filter(Boolean) : null;
+  return { choose: choose?.length ? choose : null, offer };
+}
+/** A reading's address with the save offer (and a selection's verses) added, for the way back from sign-in. */
+export function saveReturnAddress(address: string, ranges?: readonly string[]): string {
+  const mark = address.indexOf("?"), path = mark === -1 ? address : address.slice(0, mark), params = new URLSearchParams(mark === -1 ? "" : address.slice(mark + 1));
+  params.delete("save"); params.delete("choose");
+  if (ranges?.length) params.set("choose", ranges.join("; "));
+  params.set("save", "1");
+  return `${path}?${params.toString()}`;
+}

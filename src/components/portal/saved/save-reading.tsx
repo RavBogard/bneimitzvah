@@ -1,6 +1,8 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createSavedReading, fetchSavedReadings, type SavedKind } from "./api";
+import { rememberSignedIn, signedInHint, signInPending } from "../signed-in-hint";
+import { ReturnSignInLink } from "../return-sign-in-link";
 import { savedReadingHref } from "./my-readings";
 import styles from "./saved.module.css";
 
@@ -21,16 +23,19 @@ const problems: Record<Exclude<SaveProblem, null>, string> = {
   unavailable: "The reading didn’t save. Try again.",
 };
 
-/** The quiet Save beside the passage, in each of its states. Everything opens inline; nothing is a dialog. */
-export function SaveReadingView({ step, problem, name, date, panelId, savedId = null, onSave, onName, onDate, onSubmit, onCancel }: {
-  step: SaveStep; problem: SaveProblem; name: string; date: string; panelId: string; savedId?: string | null;
+/**
+ * The quiet Save beside the passage, in each of its states. Everything opens inline; nothing is a dialog. Signed out, Save is
+ * "Sign in to save" (F4), a link that comes back to this reading (`back`, N20) and offers Save there.
+ */
+export function SaveReadingView({ step, problem, name, date, panelId, savedId = null, back, onSave, onName, onDate, onSubmit, onCancel }: {
+  step: SaveStep; problem: SaveProblem; name: string; date: string; panelId: string; savedId?: string | null; back?: () => string | null;
   onSave: () => void; onName: (value: string) => void; onDate: (value: string) => void; onSubmit: () => void; onCancel: () => void;
 }) {
   const open = step === "form" || step === "saving";
   return <div className={styles.save} data-save-step={step}>
-    {step !== "saved" && <button type="button" className="button-hero-secondary" aria-expanded={open} aria-controls={open ? panelId : undefined}
+    {step === "signed-out" ? <ReturnSignInLink className="button-hero-secondary" back={back}>Sign in to save</ReturnSignInLink>
+      : step !== "saved" && <button type="button" className="button-hero-secondary" aria-expanded={open} aria-controls={open ? panelId : undefined}
       disabled={step === "checking" || step === "saving"} onClick={onSave}>Save</button>}
-    {step === "signed-out" && <p className={styles.line}><a href="/sign-in">Sign in to save readings</a></p>}
     {step === "not-eligible" && <p className={styles.line}><a href="/account">Ask for an account to save readings</a></p>}
     {step === "unavailable" && <p className={styles.line} role="status">Saving isn’t available right now. Try again.</p>}
     {step === "saved" && <p className={styles.line} role="status">Saved to <a href="/">My readings</a>.{savedId && <> <a href={savedReadingHref(savedId)}>Open your reading</a></>}</p>}
@@ -52,24 +57,34 @@ export function SaveReadingView({ step, problem, name, date, panelId, savedId = 
  * Save on the signed-out reading (accounts plan §5). It asks about the account only when pressed:
  * signed out it offers sign-in, an account without saved readings is pointed to /account, and a
  * member gets an inline form pre-filled with the passage's name and its Shabbat.
+ * A browser not seen signed in here starts on "Sign in to save" without asking (F4, N20). `back` is the way back from
+ * sign-in; `offer`, once true, is the return from it: Save asks at once, as if pressed, and the offer is spent.
  */
-export function SaveReading({ passage, onSaved }: { passage: SavablePassage; onSaved?(): void }) {
+export function SaveReading({ passage, onSaved, back, offer }: { passage: SavablePassage; onSaved?(): void; back?: () => string | null; offer?: { current: boolean } }) {
   const [step, setStep] = useState<SaveStep>("idle"), [problem, setProblem] = useState<SaveProblem>(null), [savedId, setSavedId] = useState<string | null>(null);
   const [name, setName] = useState(() => suggestedName(passage)), [date, setDate] = useState(passage.date ?? "");
   const panelId = useId(), live = useRef<AbortController | null>(null);
   // Another passage on screen starts over; nothing typed for the last one carries across.
   const key = JSON.stringify([passage.kind, passage.ranges, passage.date, passage.title, passage.label]);
-  useEffect(() => { live.current?.abort(); setStep("idle"); setProblem(null); setName(suggestedName(passage)); setDate(passage.date ?? ""); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => { live.current?.abort(); setStep(signedInHint() ? "idle" : "signed-out"); setProblem(null); setName(suggestedName(passage)); setDate(passage.date ?? ""); }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => live.current?.abort(), []);
   const begin = () => { live.current?.abort(); const controller = new AbortController(); live.current = controller; return controller; };
-  const onSave = () => {
-    if (step === "form") { setStep("idle"); setProblem(null); return; }
+  const check = (spend?: { current: boolean }) => {
     const controller = begin(); setStep("checking");
     fetchSavedReadings(controller.signal).then(list => {
       if (controller.signal.aborted) return;
+      if (spend) spend.current = false;
+      rememberSignedIn(list.state !== "signed-out");
       setStep(list.state === "signed-out" ? "signed-out" : list.state === "not-eligible" ? "not-eligible" : "form");
     }, () => { if (!controller.signal.aborted) setStep("unavailable"); });
   };
+  const onSave = () => {
+    if (step === "form") { setStep("idle"); setProblem(null); return; }
+    check();
+  };
+  // Back from "Sign in to save": ask straight away; the first answer spends the offer. Back from a Google sign-in that
+  // went straight to this reading (no offer, no hint yet): ask once, so a session that is here shows Save.
+  useEffect(() => { if (offer?.current) check(offer); else if (!signedInHint() && signInPending()) check(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const onSubmit = () => {
     const trimmed = name.trim(), length = Array.from(trimmed).length;
     if (length < 1 || length > 80 || (date && !/^\d{4}-\d{2}-\d{2}$/.test(date))) { setProblem("invalid"); return; }
@@ -77,10 +92,10 @@ export function SaveReading({ passage, onSaved }: { passage: SavablePassage; onS
     createSavedReading({ name: trimmed, date: date || null, kind: passage.kind, ranges: passage.ranges.join("; ") }, controller.signal).then(result => {
       if (controller.signal.aborted) return;
       if (result.ok) { setSavedId(result.reading.id); setStep("saved"); onSaved?.(); return; }
-      if (result.code === "signed-out" || result.code === "not-eligible") { setStep(result.code); return; }
+      if (result.code === "signed-out" || result.code === "not-eligible") { rememberSignedIn(result.code !== "signed-out"); setStep(result.code); return; }
       setStep("form"); setProblem(result.code);
     });
   };
-  return <SaveReadingView step={step} problem={problem} name={name} date={date} panelId={panelId} savedId={savedId} onSave={onSave} onName={setName} onDate={setDate} onSubmit={onSubmit}
+  return <SaveReadingView step={step} problem={problem} name={name} date={date} panelId={panelId} savedId={savedId} back={back} onSave={onSave} onName={setName} onDate={setDate} onSubmit={onSubmit}
     onCancel={() => { live.current?.abort(); setStep("idle"); setProblem(null); }} />;
 }

@@ -126,61 +126,24 @@ it("restricts inline Google metadata to public safe queries and preserves privat
   // Within the code's 5 minutes this device reopens on the code form (1.5); Use a different email returns to the choices.
   await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible(); await tab.getByRole("button", { name: "Use a different email", exact: true }).click();
   await ui(tab.getByRole("link", { name: "Continue to Google sign-in", exact: true })).toHaveAttribute("href", "/sign-in"); expect(libraries).toBe(0);
-  await tab.getByRole("link", { name: "Continue to Google sign-in", exact: true }).click(); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible(); await referrerPolicy(tab, "strict-origin-when-cross-origin");
-  expect(await tab.locator('script[src="https://accounts.google.com/gsi/client"]').getAttribute("referrerpolicy")).toBe("strict-origin-when-cross-origin"); expect(new URL(tab.url()).search).toBe("");
+  await tab.getByRole("link", { name: "Continue to Google sign-in", exact: true }).click(); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeEnabled(); await referrerPolicy(tab, "strict-origin-when-cross-origin");
+  // Our own button (decision 8, N20): nothing from Google is loaded until it is pressed.
+  expect(await tab.locator('script[src*="accounts.google.com"]').count()).toBe(0); expect(libraries).toBe(0); expect(new URL(tab.url()).search).toBe("");
 });
 
-it("passes only fixed Account intent to the challenge and follows a synthetic verified Account destination", async () => {
-  const tab = await page(); await installGoogleBoundary(tab); let accountIntent = false;
-  await tab.route("**/api/auth/google/challenge", async route => { const body = route.request().postDataJSON(); accountIntent = Object.keys(body).join() === "intent" && body.intent === "account"; await route.continue(); });
-  // This is client destination wiring only; real signed cryptography and nonce binding are tested in auth-http.
-  await tab.route("**/api/auth/sign-in/social", route => route.fulfill({ contentType: "application/json", body: '{"ok":true,"next":"/account"}' }));
-  await navigate(tab, "/sign-in?intent=account"); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible(); await referrerPolicy(tab, "strict-origin-when-cross-origin");
-  await tab.getByRole("button", { name: "Continue with Google", exact: true }).click(); await callback(tab);
-  await ui.poll(() => new URL(tab.url()).pathname).toBe("/account"); await referrerPolicy(tab, "no-referrer"); await ui(tab.getByRole("link", { name: "Continue to Google sign-in", exact: true })).toBeVisible(); expect(accountIntent).toBe(true);
-});
-
-it("prepares the real browser challenge and submits GIS credentials only in a bounded body", async () => {
-  const tab = await page(); await installGoogleBoundary(tab);
-  let posts = 0, valid = false;
-  await tab.route("**/api/auth/sign-in/social", async route => {
-    posts++; const body = route.request().postDataJSON();
-    valid = Object.keys(body).sort().join() === "challengeId,credential,csrfToken" && body.credential === syntheticGoogleCredential
-      && /^[A-Za-z0-9_-]{43}$/.test(body.challengeId) && /^[A-Za-z0-9_-]{43}$/.test(body.csrfToken) && !new URL(route.request().url()).search;
-    await route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"authentication"}' });
-  });
-  await navigate(tab, "/");
-  await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
-  expect(await tab.evaluate(() => /^[A-Za-z0-9_-]{43}$/.test((window as Window & { __syntheticGoogleNonce?: string }).__syntheticGoogleNonce ?? ""))).toBe(true);
+it("passes only the fixed Account destination to Google's redirect and loads nothing from Google before Continue with Google", async () => {
+  const tab = await page(); await installGoogleBoundary(tab); const asked: unknown[] = []; let libraries = 0;
+  tab.on("request", request => { if (new URL(request.url()).origin === "https://accounts.google.com" && new URL(request.url()).pathname !== "/o/oauth2/v2/auth") libraries++; });
+  await tab.route("**/api/auth/google/redirect", route => { asked.push(route.request().postDataJSON());
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ url: "https://accounts.google.com/o/oauth2/v2/auth?client_id=synthetic&state=synthetic" }) }); });
+  await navigate(tab, "/sign-in?intent=account"); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeEnabled(); await referrerPolicy(tab, "strict-origin-when-cross-origin");
+  expect(libraries).toBe(0);
+  const leaving = tab.waitForRequest(request => request.url().startsWith("https://accounts.google.com/o/oauth2/v2/auth?"), { timeout: 30_000 });
   await safe(() => tab.getByRole("button", { name: "Continue with Google", exact: true }).click());
-  await ui(tab.getByRole("button", { name: "Cancel Google sign-in", exact: true })).toBeVisible();
-  await callback(tab);
-  await ui(tab.getByText("Google sign-in is unavailable or this attempt ended. You can use email below.", { exact: true })).toBeVisible();
-  expect(posts === 1 && valid).toBe(true);
-  expect(new URL(tab.url()).pathname).toBe("/"); await clean(tab, [syntheticGoogleCredential]);
+  await safe(() => leaving);
+  expect(asked).toEqual([{ next: "account" }]); expect(libraries).toBe(0);
 });
 
-it("cancellation and acknowledged logout discard late GIS callbacks without posting an old credential", async () => {
-  const tab = await page(); await installGoogleBoundary(tab); let posts = 0, signedIn = false;
-  await tab.route("**/api/auth/sign-in/social", async route => { posts++; await route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"authentication"}' }); });
-  await tab.route("**/api/session", route => signedIn ? route.fulfill({ contentType: "application/json", body: JSON.stringify({ roles: [], membershipAvailable: false, saved: false, approver: false, sessionBinding: "A".repeat(43) }) }) : route.fallback());
-  await navigate(tab, "/"); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
-  await safe(() => tab.getByRole("button", { name: "Continue with Google", exact: true }).click());
-  await safe(() => tab.getByRole("button", { name: "Cancel Google sign-in", exact: true }).click());
-  await callback(tab); expect(posts).toBe(0);
-  // Keep the old closure in this document while the entry component unmounts.
-  await navigate(tab, "/"); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
-  await safe(() => tab.evaluate(() => {
-    const state = window as Window & { __syntheticGoogleCallback?: unknown; __oldSyntheticGoogleCallback?: unknown };
-    state.__oldSyntheticGoogleCallback = state.__syntheticGoogleCallback;
-  }));
-  signedIn = true; await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus"))));
-  await ui(tab.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
-  signedIn = false; await safe(() => tab.getByRole("button", { name: "Sign out", exact: true }).click());
-  await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
-  await callback(tab, true); expect(posts).toBe(0);
-  await ui(tab.getByLabel("Email address")).toBeEnabled();
-});
 it("single-submits a real magic link, shows separate genuine roles without fake destinations, and signs out", async () => {
   const tab = await page(); await navigate(tab, "/sign-in");
   await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
@@ -374,51 +337,21 @@ it("handles mocked setup/provider failures with retry, fixed diagnostics and acc
     expect(await tab.getByLabel("Email address").count()).toBe(0); await clean(tab, ["PRIVATE_PROVIDER_SENTINEL"]);
     unavailable = false; await safe(() => tab.getByRole("button", { name: "Try again", exact: true }).click());
     await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeFocused();
-    await ui(tab.getByText("Google sign-in is unavailable or this attempt ended. You can use email below.", { exact: true })).toBeVisible();
+    await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeEnabled();
     await ui(tab.getByLabel("Email address")).toBeEnabled();
     await clean(tab, ["PRIVATE_PROVIDER_SENTINEL"]);
   }
 });
 
-it("Try Google again starts a fresh GIS attempt in place without reloading the sign-in page", async () => {
-  const tab = await page(); let challenges = 0;
-  tab.on("request", request => { if (new URL(request.url()).pathname === "/api/auth/google/challenge") challenges++; });
-  // The context route aborts the GIS library, so the first attempt fails as in an app's in-app browser.
-  await navigate(tab, "/sign-in");
-  await ui(tab.getByText("Google sign-in is unavailable or this attempt ended. You can use email below.", { exact: true })).toBeVisible();
-  const before = challenges; await safe(() => tab.evaluate(() => { (window as Window & { __sameDocument?: boolean }).__sameDocument = true; }));
-  await installGoogleBoundary(tab);
-  await safe(() => tab.getByRole("button", { name: "Try Google again", exact: true }).click());
-  await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
-  expect(await tab.evaluate(() => (window as Window & { __sameDocument?: boolean }).__sameDocument === true)).toBe(true);
-  // A focus/visibility refresh may remount the button too; at least the retry's own challenge was asked.
-  expect(challenges).toBeGreaterThanOrEqual(before + 1);
-});
-
-it("a retried attempt never posts the previous attempt's late GIS credential", async () => {
-  const tab = await page(); await installGoogleBoundary(tab); let posts = 0;
-  await tab.route("**/api/auth/sign-in/social", async route => { posts++; await route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"authentication"}' }); });
-  await navigate(tab, "/sign-in"); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
-  await safe(() => tab.getByRole("button", { name: "Continue with Google", exact: true }).click());
-  await safe(() => tab.getByRole("button", { name: "Cancel Google sign-in", exact: true }).click());
-  await safe(() => tab.evaluate(() => {
-    const state = window as Window & { __syntheticGoogleCallback?: unknown; __oldSyntheticGoogleCallback?: unknown };
-    state.__oldSyntheticGoogleCallback = state.__syntheticGoogleCallback;
-  }));
-  await safe(() => tab.getByRole("button", { name: "Try Google again", exact: true }).click());
-  await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
-  await callback(tab, true); expect(posts).toBe(0);
-});
-
-it("the sign-in page offers Google in this window, which asks the portal for Google's address and goes there", async () => {
+it("the sign-in page offers our own Continue with Google, which asks the portal for Google's address, carries a return address, and goes there", async () => {
   const tab = await page(true); const asked: unknown[] = [];
   await tab.route("**/api/auth/google/redirect", route => { asked.push(route.request().postDataJSON());
     return route.fulfill({ contentType: "application/json", body: JSON.stringify({ url: "https://accounts.google.com/o/oauth2/v2/auth?client_id=synthetic&state=synthetic" }) }); });
-  await navigate(tab, "/sign-in?intent=account");
+  await navigate(tab, `/sign-in?return=${encodeURIComponent("/read?date=2026-10-31&lens=study")}`);
   const leaving = tab.waitForRequest(request => request.url().startsWith("https://accounts.google.com/o/oauth2/v2/auth?"), { timeout: 30_000 });
-  await safe(() => tab.getByRole("button", { name: "Continue with Google in this window", exact: true }).click());
+  await safe(() => tab.getByRole("button", { name: "Continue with Google", exact: true }).click());
   await safe(() => leaving);
-  expect(asked).toEqual([{ next: "account" }]);
+  expect(asked).toEqual([{ return: "/read?date=2026-10-31&lens=study" }]);
 });
 
 describe("Connect Claude consent page on a phone", () => {
@@ -465,6 +398,47 @@ describe("Connect Claude consent page on a phone", () => {
     const asked = seen.length;
     await navigate(tab, "/connect"); await heading(tab, "This request has expired");
     expect(seen.length).toBe(asked);
+  });
+
+  // The GIS popup now lives only here (decision 8, N20: the sign-in pages use our own button on the redirect path).
+  it("prepares the real browser challenge and submits GIS credentials only in a bounded body", async () => {
+    const tab = await page(); await consentRoutes(tab, {}); await installGoogleBoundary(tab);
+    let posts = 0, valid = false;
+    await tab.route("**/api/auth/sign-in/social", async route => {
+      posts++; const body = route.request().postDataJSON();
+      valid = Object.keys(body).sort().join() === "challengeId,credential,csrfToken" && body.credential === syntheticGoogleCredential
+        && /^[A-Za-z0-9_-]{43}$/.test(body.challengeId) && /^[A-Za-z0-9_-]{43}$/.test(body.csrfToken) && !new URL(route.request().url()).search;
+      await route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"authentication"}' });
+    });
+    await navigate(tab, `/connect#request=${pending}`); await heading(tab, "Claude wants to connect");
+    await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
+    expect(await tab.evaluate(() => /^[A-Za-z0-9_-]{43}$/.test((window as Window & { __syntheticGoogleNonce?: string }).__syntheticGoogleNonce ?? ""))).toBe(true);
+    await safe(() => tab.getByRole("button", { name: "Continue with Google", exact: true }).click());
+    await ui(tab.getByRole("button", { name: "Cancel Google sign-in", exact: true })).toBeVisible();
+    await callback(tab);
+    await ui(tab.getByText("Google sign-in didn’t open here.", { exact: true })).toBeVisible();
+    expect(posts === 1 && valid).toBe(true);
+    expect(new URL(tab.url()).pathname).toBe("/connect"); await clean(tab, [syntheticGoogleCredential]);
+  });
+
+  it("cancellation and a retried attempt discard late GIS callbacks without posting an old credential", async () => {
+    const tab = await page(); await consentRoutes(tab, {}); await installGoogleBoundary(tab); let posts = 0, challenges = 0;
+    tab.on("request", request => { if (new URL(request.url()).pathname === "/api/auth/google/challenge") challenges++; });
+    await tab.route("**/api/auth/sign-in/social", async route => { posts++; await route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"authentication"}' }); });
+    await navigate(tab, `/connect#request=${pending}`); await heading(tab, "Claude wants to connect");
+    await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
+    await safe(() => tab.getByRole("button", { name: "Continue with Google", exact: true }).click());
+    await safe(() => tab.getByRole("button", { name: "Cancel Google sign-in", exact: true }).click());
+    await callback(tab); expect(posts).toBe(0);
+    await safe(() => tab.evaluate(() => {
+      const state = window as Window & { __syntheticGoogleCallback?: unknown; __oldSyntheticGoogleCallback?: unknown };
+      state.__oldSyntheticGoogleCallback = state.__syntheticGoogleCallback;
+    }));
+    const before = challenges;
+    await safe(() => tab.getByRole("button", { name: "Try Google again", exact: true }).click());
+    await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
+    expect(challenges).toBeGreaterThanOrEqual(before + 1);
+    await callback(tab, true); expect(posts).toBe(0);
   });
 
   it("Continue with Google in this window keeps the request in this tab for the return from Google", async () => {

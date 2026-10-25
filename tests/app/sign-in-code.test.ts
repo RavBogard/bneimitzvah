@@ -255,6 +255,35 @@ test("a pending invitation only changes where the code sends the person; it neve
   expect(await f.db.select().from(schema.membership)).toHaveLength(0);
 });
 
+test("a return address asked with the email is sealed with the address and is where the right code lands; a refused one is a 400 (N20)", async () => {
+  for (const origin of ["http://localhost:3000", "https://bneimitzvah.centralreform.org"]) {
+    const f = await fixture(origin);
+    for (const value of ["//evil.example", "https://evil.example/read", "/\\evil.example", "/%2F%2Fevil.example", "/read#x", "/sign-in", "/workspace/admin", ["/read"], 1, null, ""]) {
+      const refused = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "back@example.test", return: value }));
+      expect(refused.status, JSON.stringify(value)).toBe(400); expect(f.bindingOf(refused)).toBe("");
+    }
+    expect(f.messages).toHaveLength(0); expect(f.sdk).not.toHaveBeenCalled();
+    const back = "/read?date=2026-10-31&choose=Genesis+18%3A1-10&save=1";
+    const asked = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "back@example.test", return: back }));
+    expect(asked.status).toBe(200); expect(await asked.json()).toEqual({ requested: true });
+    const binding = f.bindingOf(asked), mail = f.messages.at(-1)!;
+    // Sealed: neither the cookie nor the email shows it; the email's link keeps its fixed landing.
+    expect(decodeURIComponent(binding)).not.toContain("2026-10-31"); expect(mail.text).not.toContain("2026-10-31");
+    const signed = await f.enter(mail.code, binding);
+    expect(signed.status).toBe(200); expect(await signed.json()).toEqual({ ok: true, next: back });
+    // Without a return, the code lands on the default as before.
+    const plain = await f.ask("plain@example.test"), done = await f.enter(plain.mail.code, plain.binding);
+    expect(await done.json()).toEqual({ ok: true, next: "/" });
+  }
+  // A pending invitation still wins over a return address.
+  const f = await fixture();
+  const staged = await f.dispatch(f.request("/api/invitations/open", { token: randomBytes(32).toString("base64url") }));
+  const pending = cookieOf(staged);
+  const asked = await f.dispatch(f.request("/api/auth/sign-in/magic-link", { email: "invited-back@example.test", return: "/read" }, { cookie: pending }));
+  const signed = await f.enter(f.messages.at(-1)!.code, `${pending}; ${f.bindingOf(asked)}`);
+  expect(await signed.json()).toEqual({ ok: true, next: "/invitations/accept" });
+});
+
 test("the code route keeps the cookie-mutation and practice-context boundaries", async () => {
   const f = await fixture();
   const { binding, mail } = await f.ask("boundary@example.test");

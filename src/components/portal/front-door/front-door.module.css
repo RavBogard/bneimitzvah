@@ -30,6 +30,9 @@
 .task > :global(.entry-task) { padding-top: 0; border-top: 0; }
 .task h3 { margin: 0; font-size: 1.125rem; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
 .task > :global(.entry-task) > h3 + p { margin-top: 0.75rem; }
+/* While access is being checked the door holds the height of the signed-out sign-in it usually becomes (measured with
+   Continue with Google, email and Ask for an account), so the Learn door and everything below do not jump (D3, N20). */
+.task > :global(.entry-task[data-entry-state="loading"]) { min-height: 28.25rem; }
 
 @media (min-width: 1001px) {
   .main { padding-top: 3rem; }
@@ -46,4 +49,5 @@
   .doors { gap: 1rem; }
   .door { padding: 1.25rem 1rem 1.5rem; }
   .doorAction { width: 100%; }
+  .task > :global(.entry-task[data-entry-state="loading"]) { min-height: 29.75rem; }
 }

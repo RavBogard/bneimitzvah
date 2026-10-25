@@ -1,5 +1,6 @@
 import "server-only";
 import { AccessDenied } from "../access/errors";
+import { returnAddress } from "../../lib/site/return-address";
 
 export type BoundaryStatus = 400 | 404 | 405 | 408 | 413 | 415;
 const messages = { 400: "invalid-request", 401: "authentication-required", 403: "forbidden", 404: "not-found", 405: "method-not-allowed",
@@ -52,6 +53,13 @@ const localDestinations = new Set<string>(["/", "/sign-in", "/sign-in?error=auth
 export function privateRedirect(destination: LocalDestination): Response {
   if (!localDestinations.has(destination)) return errorResponse(undefined);
   const headers = privateHeaders(); headers.set("location", destination);
+  return new Response(null, { status: 303, headers });
+}
+/** A sign-in's way back to the page the person started from (release 1.9 N20): only an address `returnAddress` accepts. */
+export function privateReturnRedirect(destination: string): Response {
+  const checked = returnAddress(destination);
+  if (!checked) return errorResponse(undefined);
+  const headers = privateHeaders(); headers.set("location", checked);
   return new Response(null, { status: 303, headers });
 }
 

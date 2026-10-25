@@ -59,7 +59,7 @@ test("a pending request says so, a full day or queue is refused plainly, and a m
   await expect(page.getByRole("region", { name: "My readings" })).toBeVisible();
 });
 
-test("parents, tutors and admins are not offered a request; a student-only account is, on /account", async ({ page }) => {
+test("parents, tutors, admins and students are not offered a request on /account (G20: a student already has an account)", async ({ page }) => {
   await week(page);
   const asked: string[] = [];
   page.on("request", request => { if (new URL(request.url()).pathname === "/api/account/request") asked.push(request.method()); });
@@ -73,5 +73,25 @@ test("parents, tutors and admins are not offered a request; a student-only accou
   expect(asked).toEqual([]);
   roles = ["student"]; saved = false;
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Ask for an account", exact: true })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Available roles" }).getByRole("link", { name: "Student", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ask for an account", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveCount(0);
+  expect(asked).toEqual([]);
+});
+
+test("signed out, /, /sign-in and /account each show the way to ask for an account (F3), and it signs in to Account", async ({ page }) => {
+  await week(page);
+  await page.route("**/api/session", route => json(route, 401, { error: "authentication-required" }));
+  for (const path of ["/", "/sign-in", "/account"]) {
+    await page.goto(path);
+    await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+    const ask = page.getByRole("link", { name: "Ask for an account", exact: true });
+    await expect(ask).toHaveAttribute("href", "/sign-in?return=%2Faccount");
+    const box = await ask.boundingBox(); expect(box && box.height >= 44).toBe(true);
+  }
+  // On the way there, sign-in returns to Account, where the request form opens once signed in; the link is not offered again.
+  await page.getByRole("link", { name: "Ask for an account", exact: true }).click();
+  await expect(page).toHaveURL(/\/sign-in\?return=%2Faccount$/);
+  await expect(page.getByRole("button", { name: "Continue with Google", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toHaveCount(0);
 });

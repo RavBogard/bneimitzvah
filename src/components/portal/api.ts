@@ -1,4 +1,5 @@
 import type { AuthDestination } from "./sign-in-boundary";
+import { returnAddress } from "../../lib/site/return-address";
 export const roleNames = { student: "Student", parent: "Parent", tutor: "Tutor", admin: "Rabbi / admin" } as const;
 export type Role = keyof typeof roleNames;
 /** `saved`: the account keeps its own saved readings; `approver`: it may approve account requests (Release 1.4). */
@@ -52,6 +53,13 @@ export function parseAuthResult(value: unknown): AuthDestination {
   const row = record(value, ["ok", "next"]);
   if (row.ok !== true || (row.next !== "/" && row.next !== "/invitations/accept" && row.next !== "/account")) return unavailable();
   return row.next;
+}
+/** The typed code's answer (N20): a fixed landing, or the return address this device sealed when it asked for the email. */
+export function parseCodeResult(value: unknown): string {
+  const row = record(value, ["ok", "next"]);
+  if (row.ok !== true) return unavailable();
+  if (row.next === "/" || row.next === "/invitations/accept" || row.next === "/account") return row.next;
+  return returnAddress(row.next) ?? unavailable();
 }
 /** Redirect-mode Google: only Google's own authorization endpoint may be navigated to. */
 export function parseGoogleRedirect(value: unknown): string {

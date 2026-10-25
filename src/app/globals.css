@@ -102,7 +102,10 @@ button:disabled { cursor: wait; opacity: 0.6; }
 /* The siddur page links sit in a wrapping row with a gap; each link is a block-level .button-text, so a dot between them would strand on its own line. */
 .siddur-blessings { display: flex; flex-wrap: wrap; gap: 0 1.25rem; }
 .siddur-blessings .button-text { margin-top: 0; }
-.google-button { width: 100%; }
+.google-button { width: 100%; gap: 0.75rem; }
+.google-button svg { flex: none; }
+.google-continue .google-button { margin-top: 1.5rem; }
+.entry-ask a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
 .form-divider { display: flex; align-items: center; gap: 1rem; color: var(--color-muted); font-size: 0.875rem; margin: 1.75rem 0; }
 .form-divider::before, .form-divider::after { content: ""; height: 1px; flex: 1; background: var(--color-rule); }
 label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
@@ -360,7 +363,8 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 }
 
 /* ===== Song session: shell, student reading, toolbar and the lifted line ===== */
-.portal-header.app-bar { background: var(--lake); color: #fff; border-bottom: 0; padding-block: 0.75rem; min-height: 60px; box-shadow: 0 0 0 100vmax var(--lake); clip-path: inset(0 -100vmax); }
+/* The bar holds the height its 44px account link gives it even before that link appears (the front door checks access first; D3, N20). */
+.portal-header.app-bar { background: var(--lake); color: #fff; border-bottom: 0; padding-block: 0.75rem; min-height: calc(44px + 1.5rem); box-shadow: 0 0 0 100vmax var(--lake); clip-path: inset(0 -100vmax); }
 .app-bar .portal-brand { color: #fff; font-size: 1.125rem; font-weight: 750; letter-spacing: -0.02em; }
 .app-bar a { color: #fff; }
 .app-bar :focus-visible { outline-color: var(--marigold); }
