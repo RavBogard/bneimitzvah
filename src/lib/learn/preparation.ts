@@ -24,4 +24,3 @@ export function preparationJoin(parts: readonly (readonly [number, number])[], j
   return [parts[join][0], (parts[join + 1] ?? parts[join])[1]];
 }
 export const independentPreparation = (stage: PreparationStage) => stage === "attempt" || stage === "join-attempt" || stage === "whole-attempt";
-export const PRACTICED_VERSE = "You’ve practiced preparing a verse: learn the parts, connect them, try without the recording, and return to anything uncertain.";

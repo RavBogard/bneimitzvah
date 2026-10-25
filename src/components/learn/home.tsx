@@ -65,7 +65,7 @@ export function CourseHome() {
           {review && <a className={styles.review} href="/learn/review"><span>{reviewLine(review)}</span>{icons.arrow}</a>}
           {ready && <QuickTenLinks progress={progress} />}
           <LearningStart />
-          <p className={styles.heard}>Family lessons visited: {torah.heard} of {torah.of} Torah · {haftarah.heard} of {haftarah.of} haftarah</p>
+          <p className={styles.heard}>Can hear: {torah.heard} of {torah.of} Torah phrases · {haftarah.heard} of {haftarah.of} haftarah phrases</p>
           <nav className={styles.links} aria-label="Course"><a href="/trope-chart">Trope chart</a><a href="/learn/about">About</a></nav>
           {account.state !== "synced" && <p className={styles.saved}>Progress is saved on this device. <a href="/sign-in">Sign in</a> to keep it.</p>}
         </div>

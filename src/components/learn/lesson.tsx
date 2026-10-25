@@ -9,7 +9,6 @@ import { recommendedLesson } from "../../lib/learn/recommendation";
 import { optionalSoundDrills, soundAnchorPools, soundAnchors, soundRange, taughtSoundFamilies } from "../../lib/learn/sound-practice";
 import { answerRun, currentItem, freshPace, mayStopEarly, pace, runDone, startRun, type LessonPace, type Run } from "../../lib/learn/run";
 import { lessonExtraRefs, lessonSources, useCourseVerses, type CourseVerses, type ExampleVerse } from "./course-data";
-import { PRACTICED_VERSE } from "../../lib/learn/preparation";
 import { AudioError, FamilyChip, icons, LoadFailure, phraseRequest, PlayTile, revealAnswer, UnitsText } from "./bits";
 import { BuildThePhrase, HearAndName, LookAlikes, SameOrDifferent, TapThePhrase, WhereDoesItEnd, WhichHalf } from "./drills";
 import { FirstVerse } from "./first-verse";
@@ -229,7 +228,8 @@ function Done({ lesson, complete, nextId, fallback }: { lesson: Lesson; complete
   const week = lesson.activities.find((activity): activity is ThisWeekActivity => activity.type === "this-week");
   return <>
     <div className={styles.doneHead}><h2 className={styles.doneTitle}>{lesson.title}</h2><p className={styles.doneWord}>Done</p></div>
-    <p className={styles.doneLine}>{lesson.activities.some(activity => activity.type === "first-verse") ? PRACTICED_VERSE : "Return to this phrase whenever you need it. You can keep practising or use it in a reading."}</p>
+    {/* A first verse leaves the Done line off rather than show a false or certifying sentence (CHANTING-RECONCILIATION.md, N17 amendment); its ending is "You can lein this verse.", gated on "Same as the reader". */}
+    {!lesson.activities.some(activity => activity.type === "first-verse") && <p className={styles.doneLine}>Return to this phrase whenever you need it. You can keep practising or use it in a reading.</p>}
     {week && <ThisWeekSection activity={week} lesson={lesson} fallback={fallback} />}
     {next && <p className={styles.nextName}>Next: {next.title}</p>}
     <Footer>

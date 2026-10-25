@@ -74,7 +74,7 @@ test("comparison offers exact verse repair, recovery and an honest public return
   await stage(page, "verse");
   await page.getByRole("button", { name: "Try the whole section without the recording", exact: true }).click();
   await page.getByRole("button", { name: "Compare after my attempt", exact: true }).click();
-  await page.getByRole("button", { name: "Practice finding my place", exact: true }).click();
+  await page.getByRole("button", { name: "Practise finding my place", exact: true }).click();
   await stage(page, "recover");
   await page.getByRole("combobox", { name: "Restart at", exact: true }).selectOption("1");
   await expect(page.locator("[data-passage-stage=recover] p[lang=he]")).toHaveCount(1);

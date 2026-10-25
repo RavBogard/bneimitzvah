@@ -45,7 +45,7 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
   await expect(page.getByText("Hear a phrase, chant it yourself, then connect it to a reading. Return to words, sounds and joins whenever you need help.", { exact: true })).toBeVisible();
   const next = page.locator("[data-next]");
   await expect(next).toHaveAttribute("data-next", "torah-sof-pasuk");
-  await expect(page.getByText("Family lessons visited: 0 of 10 Torah · 0 of 11 haftarah")).toBeVisible();
+  await expect(page.getByText("Can hear: 0 of 10 Torah phrases · 0 of 11 haftarah phrases")).toBeVisible();
   await expect(page.getByText("Progress is saved on this device. Sign in to keep it.")).toBeVisible();
   await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in");
   // Every lesson on both paths is a link (the order is advice), while Next still recommends one.
@@ -90,7 +90,7 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
       if (prompt === "Which phrase is this?") { await expect(page.getByText(/^That one is .+\. Here is .+ for comparison\.$/)).toBeVisible(); sawFeedback = true;
         // G19: the wrong choice is an x on a muted fill, not the heavier outline; the right one keeps the colour and the check.
         const wrong = page.locator("main button[data-state=chosen]");
-        await expect(wrong).toHaveCount(1); await expect(wrong.locator("svg")).toHaveCount(1);
+        await expect(wrong).toHaveCount(1); await expect(wrong.locator("svg:not([class*=contour])")).toHaveCount(1); // the x, beside the family's contour mark
         await expect.poll(() => wrong.evaluate(node => getComputedStyle(node).boxShadow)).toBe("none");
         await expect(page.locator("main button[data-state=right]")).toHaveCount(1);
       }
@@ -128,9 +128,9 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
   await page.getByRole("link", { name: "Back to the path" }).last().click();
   await expect(page).toHaveURL(/\/learn$/);
   await expect(page.locator("[data-next]")).toHaveAttribute("data-next", "torah-etnachta");
-  await expect(page.getByText("Family lessons visited: 1 of 10 Torah · 0 of 11 haftarah")).toBeVisible();
+  await expect(page.getByText("Can hear: 1 of 10 Torah phrases · 0 of 11 haftarah phrases")).toBeVisible();
   await page.reload();
-  await expect(page.getByText("Family lessons visited: 1 of 10 Torah · 0 of 11 haftarah")).toBeVisible();
+  await expect(page.getByText("Can hear: 1 of 10 Torah phrases · 0 of 11 haftarah phrases")).toBeVisible();
   await expect(page.locator('a[href="/learn/torah-sof-pasuk"] [data-state=done]')).toBeVisible();
   // Nothing is due today; the review line appears only when a phrase is.
   await expect(page.getByRole("link", { name: /^Review:/ })).toHaveCount(0);
@@ -152,8 +152,11 @@ test("a new learner's first lesson is Hear it, a phrase to try, In verses, Done:
   const sizes: Record<string, number> = {};
   for (const name of ["Hear etnachta", "Hear sof pasuk", "Hear it"]) {
     const before = await plays(page);
-    await page.getByRole("button", { name, exact: true }).click();
+    const control = page.getByRole("button", { name, exact: true });
+    await control.click();
     await expect.poll(() => plays(page)).toBeGreaterThan(before);
+    // Read the clip only once it is the one sounding: the silent unlock clip before it is released as soon as the cut attaches.
+    await expect(control).toHaveAttribute("data-state", "playing", { timeout: 10_000 });
     sizes[name] = await blobSize((await lastPlayed())!);
     await page.getByRole("button", { name, exact: true }).click(); // a second press stops it
   }
@@ -229,7 +232,7 @@ test("a corrupt saved value means a fresh start, never an error", async ({ page 
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.goto("/learn");
   await expect(page.locator("[data-next]")).toHaveAttribute("data-next", "intro-phrases");
-  await expect(page.getByText("Family lessons visited: 0 of 10 Torah · 0 of 11 haftarah")).toBeVisible();
+  await expect(page.getByText("Can hear: 0 of 10 Torah phrases · 0 of 11 haftarah phrases")).toBeVisible();
   await expect(page.getByText("Best after The two endings.")).toBeVisible();
   await page.goto("/learn/review");
   await expect(page.getByText("Nothing to review yet. Finish a lesson and its phrases come back here.")).toBeVisible();

@@ -49,7 +49,7 @@ export function SoundPractice({ lesson, verse, words, onExamples, onAnchors, onD
     {silent && <p>The recording is off. Take your time; listen again when you choose to compare.</p>}
     {state.stage === "model" && <p>Follow the words and the tune. You can open a word for syllables and stress, or try the phrase directly if it is familiar.</p>}
     {state.stage === "compare" && <>
-      <p>Compare the words and the pattern you practiced in your own comfortable voice. This is your comparison; the app has not assessed your singing.</p>
+      <p>Compare the words and the pattern you practised in your own comfortable voice. This is your comparison; the app has not assessed your singing.</p>
       <div className={styles.preparationActions}>
         <button type="button" className="button-secondary" disabled={failed} onClick={() => dispatch({ type: "compare", comparison: "familiar" })}>The words and pattern felt familiar</button>
         <button type="button" className="button-secondary" onClick={() => { dispatch({ type: "compare", comparison: "revisit" }); stage("tune"); }}>I want to revisit the tune</button>
@@ -91,7 +91,7 @@ export function SoundAnchors({ lesson, examples, taught, onModeled, onStart, onD
   return <section className={styles.preparation} data-sound-anchors="">
     <h2 className={styles.prompt}>Models for optional recognition</h2>
     <p>Hear and echo any sound you want to revisit. New sounds join the questions after their model has played. You can finish without answering questions.</p>
-    <p>Different words and readers can sound different. Keep the model available and listen for the pattern you practiced.</p>
+    <p>Different words and readers can sound different. Keep the model available and listen for the pattern you practised.</p>
     <ul className={styles.verses}>{anchors.map(({ family, phrase, verse }) => {
       const id = `anchor:${lesson.id}:${family}:${phrase.ref}`;
       return <li key={family} className={styles.soundAnchor}>

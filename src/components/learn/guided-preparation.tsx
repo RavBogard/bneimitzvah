@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useReducer, useRef, useState } from "react";
 import type { AnalysedVerse } from "../../lib/learn/verse";
-import { independentPreparation, PRACTICED_VERSE, preparationJoin, preparationParts, preparationStep, startPreparation, type PreparationAction, type PreparationStage } from "../../lib/learn/preparation";
+import { independentPreparation, preparationJoin, preparationParts, preparationStep, startPreparation, type PreparationAction, type PreparationStage } from "../../lib/learn/preparation";
 import { AudioError, FamilyChip, phraseRequest, PlayTile, UnitsText } from "./bits";
 import { useLearnServices, usePlayerState } from "./services";
 import styles from "./learn.module.css";
@@ -13,8 +13,8 @@ const prompts: Record<PreparationStage, string> = {
   "tune-repair": "Listen to the ending. Try the ending, then the whole phrase.",
   unsure: "Listen to a smaller part, then return to the phrase.", "join-model": "Now connect the two parts. Listen across the join, then try it.",
   "join-attempt": "Connect the parts without the recording.", "join-check": "How did the join feel?",
-  "whole-attempt": "Chant the whole verse without the recording.", "whole-check": "Then listen and choose what to work on.", "choose-part": "Choose a part to practice.",
-  recover: "If you lose your place, return to a part you know, find the next words, and continue.", summary: "A verse practiced",
+  "whole-attempt": "Chant the whole verse without the recording.", "whole-check": "Then listen and choose what to work on.", "choose-part": "Choose a part to practise.",
+  recover: "If you lose your place, return to a part you know, find the next words, and continue.", summary: "A verse practised",
 };
 /** A learner-paced preparation loop. Only explicit model buttons start sound; attempts always stop it. */
 export function GuidedPreparation({ verse, lein, onDone, onAnother }: { verse: AnalysedVerse; lein: string | null; onDone(): void; onAnother?: () => void }) {
@@ -50,7 +50,7 @@ export function GuidedPreparation({ verse, lein, onDone, onAnother }: { verse: A
   const bindings = ["model", "ending", "word", "smaller"].map(suffix => `${id}:${suffix}`);
   const nextPart = () => go({ type: "next-part", count: parts.length });
   const chooseRepair = (target: "tune-repair" | "unsure") => { if (state.stage !== "whole-check") { stage(target); return; } setRepairTarget(target); stage("choose-part"); };
-  const partPicker = (target: "words" | "tune-repair" | "unsure") => <label className={styles.preparationSpeed}>Choose a part to practice <select value="" onChange={event => go({ type: "part", part: Number(event.target.value), stage: target })}>
+  const partPicker = (target: "words" | "tune-repair" | "unsure") => <label className={styles.preparationSpeed}>Choose a part to practise <select value="" onChange={event => go({ type: "part", part: Number(event.target.value), stage: target })}>
     <option value="" disabled>Choose a part</option>{parts.map((_, n) => <option key={n} value={n}>Part {n + 1}</option>)}</select></label>;
   const repairChoices = <div className={styles.preparationActions}>
     <button type="button" className="button-secondary" onClick={() => stage("word-repair")}>Work on a word</button>
@@ -96,20 +96,21 @@ export function GuidedPreparation({ verse, lein, onDone, onAnother }: { verse: A
       {play([part[0], part[0]], "Hear the first word", "smaller")}
     </div>}
     {state.stage === "join-check" && <div className={styles.preparationActions}>
-      <button type="button" className="button-secondary" onClick={() => stage("join-model")}>Practice the join again</button>
-      <button type="button" className="button-secondary" onClick={() => go({ type: "part", part: state.join })}>Practice the first part</button>
+      <button type="button" className="button-secondary" onClick={() => stage("join-model")}>Practise the join again</button>
+      <button type="button" className="button-secondary" onClick={() => go({ type: "part", part: state.join })}>Practise the first part</button>
     </div>}
     {state.stage === "whole-check" && <div className={styles.preparationActions}>
       <button type="button" className="button-start" disabled={comparisonFailed} onClick={() => go({ type: "self-report", same: true })}>Same as the reader</button>
       <button type="button" className="button-secondary" onClick={() => { setRepairTarget("words"); go({ type: "self-report", same: false }); }}>Not yet</button>
-      {parts.length > 1 && <button type="button" className="button-secondary" onClick={() => stage("join-model")}>Practice the join</button>}
+      {parts.length > 1 && <button type="button" className="button-secondary" onClick={() => stage("join-model")}>Practise the join</button>}
       <button type="button" className="button-secondary" onClick={() => stage("whole-attempt")}>Try the whole verse again</button>
     </div>}
     {state.stage === "whole-check" && comparisonFailed && <p>The comparison recording needs a successful retry. Replay the whole verse, work on a part, or return later.</p>}
     {state.stage === "recover" && <p>Choose a familiar part below. Try from there, then connect it to the next part. This is a practice strategy; ask your congregation about public-reading customs.</p>}
     {state.stage === "summary" ? <>
       {state.selfComparison === "same" && <><p>You can lein this verse.</p><p>Based on your comparison with the reader. This app hasn’t assessed your voice.</p></>}
-      <p>{PRACTICED_VERSE}</p><p>Return later: try the part you prepared before replay. Revisit anything uncertain.</p>
+      {/* Daniel 2026-10-24, answer 1 ("Keep ours, gated"): the only ending line is "You can lein this verse.", after "Same as the reader". */}
+      <p>Return later: try the part you prepared before replay. Revisit anything uncertain.</p>
       <div className={styles.preparationActions}>
         <button type="button" className="button-secondary" onClick={() => stage("whole-attempt")}>Try this verse before replay</button>
         {onAnother && <button type="button" className="button-secondary" onClick={() => { player.stop(); onAnother(); }}>Prepare another verse</button>}
@@ -130,11 +131,11 @@ export function GuidedPreparation({ verse, lein, onDone, onAnother }: { verse: A
         {state.stage === "whole-attempt" && <button type="button" className="button-start" onClick={() => stage("whole-check")}>Compare the whole verse</button>}
       </div>
       <details className={styles.preparationHelp}><summary>Choose a part or use less help</summary>
-        <label>Practice part <select value={state.part} onChange={event => go({ type: "part", part: Number(event.target.value) })}>{parts.map((_, n) => <option key={n} value={n}>Part {n + 1}</option>)}</select></label>
+        <label>Practise part <select value={state.part} onChange={event => go({ type: "part", part: Number(event.target.value) })}>{parts.map((_, n) => <option key={n} value={n}>Part {n + 1}</option>)}</select></label>
         <button type="button" className={styles.textButton} onClick={() => go({ type: "part", part: state.part })}>Open this part</button>
         <label><input type="checkbox" checked={colors} onChange={event => setColors(event.target.checked)} /> Show phrase colors</label>
         <p>Try familiar words with less help. In Lein, the Tikkun menu offers pointed text, side by side, or letters only. Open the pointed text wherever you need it.</p>
-        {lein && <a href={lein}>Practice this verse in Lein</a>}
+        {lein && <a href={lein}>Practise this verse in Lein</a>}
         <button type="button" className={styles.textButton} onClick={() => stage("recover")}>Find a starting point after a stumble</button>
       </details>
       <button type="button" className={styles.textButton} onClick={() => stage("summary")}>Return later</button>
