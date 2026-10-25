@@ -141,7 +141,7 @@ describe("drill items", () => {
   });
 });
 
-import { firstVerseCandidates } from "../../src/lib/learn/first-verse";
+import { firstVerseCandidates, ownVerseCandidates } from "../../src/lib/learn/first-verse";
 describe("your first verse", () => {
   it("picks the shortest word-ready verse of common families, preferring two halves over a one-phrase list", () => {
     const list = verse("Genesis 7:1", [w(A.mercha, 0), w(A.tipcha, 1), end(2)]);
@@ -151,5 +151,13 @@ describe("your first verse", () => {
     const long = verse("Genesis 7:5", threePhrases());
     expect(firstVerseCandidates([long, rare, list, quiet, halves], 12).map(v => v.ref)).toEqual(["Genesis 7:2", "Genesis 7:5", "Genesis 7:1", "Genesis 7:3"]);
     expect(firstVerseCandidates([long], 6)).toEqual([]);
+  });
+  it("starts a student's own reading at its first word-ready verse, in reading order, with no length cap and rare melodies last (1.9 N17)", () => {
+    const first = verse("Genesis 23:1", threePhrases()), second = verse("Genesis 23:2", [w(A.tipcha, 0), w(A.etnachta, 1), end(2)]);
+    const rare = verse("Genesis 23:3", [w(A.pazer, 0), w(A.tipcha, 1), end(2)], "torah", { wordReady: false });
+    const special = verse("Genesis 1:5", [w(A.tipcha, 0), w(A.etnachta, 1), end(2)]);
+    expect(ownVerseCandidates([special, first, rare, second]).map(v => v.ref)).toEqual(["Genesis 23:1", "Genesis 23:2", "Genesis 1:5"]);
+    expect(ownVerseCandidates([first]).map(v => v.ref)).toEqual(["Genesis 23:1"]);
+    expect(ownVerseCandidates([rare])).toEqual([]);
   });
 });
