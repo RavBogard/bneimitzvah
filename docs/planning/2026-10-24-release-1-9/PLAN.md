@@ -106,7 +106,7 @@ A builder who finishes a lane takes the next unblocked milestone from any lane, 
 |---|---|
 | 1. Reading surface | P1 → P2 → P5 → N1 → N2 → N3 → N25 → N4 → N5 → N6 → N7 → N8 |
 | 2. Shell and people | P3 → N9 → N10 → N11 → N12 → N13 → N14 → N15 → N16 |
-| 3. Learn and the course | P4 → (merge #73, SC1) → SC2 → SC3 → N17 → N18 → N19 → SC7 → SC6 |
+| 3. Learn and the course | P4 → N17a → SC3 → N17 → N18 → N19 → SC7 → SC6; N19a when Daniel approves its content (SC1 and SC2 merged). See CHANTING-RECONCILIATION.md |
 | 4. Accounts and privacy | F1 (in progress) → N20 → SC4 → SC5 → N21 → N22 → N23 → N24 |
 
 **First milestones now:** lane 1 P1 (M, Sonnet), lane 2 P3 (S, Sonnet), lane 3 P4 (S, Sonnet), lane 4 F1 (M, Sonnet, in progress) then N20 (M, Opus).
@@ -319,6 +319,14 @@ all N1–N25 ─► N16's final re-measure ─► v1.9.0
 - **Depends on:** every other N1–N25 milestone.
 
 ### Lane 3: Learn
+
+Astra's chanting curriculum (`docs/planning/2026-10-24-chanting-program-review/`, read-only here) is reconciled in [CHANTING-RECONCILIATION.md](CHANTING-RECONCILIATION.md). P4 fixes F6 finding 10 by linking every lesson, with no new string, and leaves `lessons.json` alone. N17a re-orders the opening (sounds before recognition, no same/different in Torah lessons 1–3). N17's first-phrase step is a path row after unit 1, fed from one reading source (the assigned range, otherwise this week's verse). N18 shows the celebration only after "Same as the reader" and stores that answer nowhere. N19 keeps verse cards in a separate owner-only document. N19a, the worked first verse, waits on Daniel's content.
+
+#### N17a. Opening re-order (S, Sonnet) — Astra's curriculum; CHANTING-RECONCILIATION.md §3
+
+- intro-phrases becomes Hear it, In verses, Done, with per-half play controls cut from the same human recording. Same/different leaves torah-sof-pasuk and torah-etnachta. Review's one-family fallback stops naming untaught zakef. A new `learn-taught-first` test enforces sounds before recognition.
+- **Files:** `lib/learn/lessons.json`, `course.ts`, `components/learn/lesson.tsx`, `review.tsx`, the Learn tests. No lesson is added, removed or renamed. No schema change.
+- **Exit tests:** see CHANTING-RECONCILIATION.md §3. No "Same tune or different?" in lessons 1–3 over 20 seeded runs; `lessonCards`, `nextLesson` and `coursePassages` unchanged; a full v1 document opens unchanged.
 
 #### N17. Learn wired to the student's own reading (M, Sonnet) — G4
 
