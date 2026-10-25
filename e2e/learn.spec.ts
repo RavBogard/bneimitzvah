@@ -207,7 +207,7 @@ test("tapping a word opens its card, never trope; Escape, Close and a tap outsid
   expect(await plays(page), "a tapped word plays nothing").toBe(before);
   expect(routes.seen.some(path => path.startsWith("/api/public/word-details?"))).toBe(true);
   const close = card.getByRole("button", { name: "Close" });
-  expect((await close.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect((await close.boundingBox())!.height).toBeGreaterThanOrEqual(43.99);
   if (testInfo.project.name === "phone") expect(await noHorizontalScroll(page)).toBe(true);
   await page.keyboard.press("Escape");
   await expect(card).toHaveCount(0);

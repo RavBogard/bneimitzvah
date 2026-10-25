@@ -1,0 +1,103 @@
+/* 1.9 N9 visual system. These components spend the tokens in globals.css (six type steps, three weights, a radius per object,
+   the four staff tones, one focus ring) and nothing else: no colour, size or radius is written here as a literal. Flat, as
+   DESIGN.md says: hairlines are inset 1px shadows, nothing casts a shadow, and the only motion is the Sheet's rise, which
+   snaps under prefers-reduced-motion. Every control is at least 44px tall and wide. The one focus ring is the global
+   :focus-visible rule; a component only moves its offset where the ring would otherwise be clipped. */
+
+/* ---- Button ---- */
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 48px; min-width: 44px; padding: 0.6875rem 1.125rem; border: 1px solid transparent; border-radius: var(--radius-control); font-family: inherit; font-size: var(--text-body); font-weight: var(--weight-semibold); line-height: 1.3; text-align: center; text-decoration: none; cursor: pointer; transition: background-color 160ms var(--ease-settle), border-color 160ms var(--ease-settle), color 160ms var(--ease-settle); }
+.button:disabled, .button[aria-disabled="true"] { opacity: 0.6; cursor: not-allowed; }
+.block { display: flex; width: 100%; }
+.primary { background: var(--color-action-fill); color: #fff; }
+.primary:hover:not(:disabled) { background: var(--lake-deep); color: #fff; }
+.secondary { border-color: var(--color-control-rule); background: var(--color-surface); color: var(--color-ink); }
+.secondary:hover:not(:disabled) { background: var(--color-hover); border-color: var(--color-ink); color: var(--color-ink); }
+.secondary:active:not(:disabled) { background: var(--lake-tint); }
+.quiet { min-height: 44px; padding-inline: 0.875rem; background: transparent; color: var(--color-action); }
+.quiet:hover:not(:disabled) { background: var(--color-hover); color: var(--color-action-hover); }
+.destructive.primary { background: var(--danger-fill); }
+.destructive.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--danger-fill) 84%, #000); }
+.destructive.secondary { border-color: var(--danger-ink); color: var(--danger-ink); }
+.destructive.secondary:hover:not(:disabled) { border-color: var(--danger-ink); color: var(--danger-ink); }
+.destructive.quiet { color: var(--danger-ink); }
+.destructive.quiet:hover:not(:disabled) { color: var(--danger-ink); }
+
+/* ---- Sheet: a native modal dialog that rises from the bottom at every width ---- */
+.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: min(40rem, 100%); max-width: none; max-height: min(90svh, calc(100svh - 1rem)); padding: 0; border: 0; border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; background: var(--color-surface); color: var(--color-ink); box-shadow: inset 0 0 0 1px var(--color-rule); overflow: hidden; translate: 0 var(--sheet-drag, 0px); }
+.sheet[open] { display: flex; flex-direction: column; animation: sheet-rise 240ms var(--ease-settle); }
+.sheet::backdrop { background: rgb(11 22 38 / 0.5); }
+:global(html):has(.sheet[open]) { overflow: hidden; }
+@keyframes sheet-rise { from { transform: translateY(100%); } to { transform: none; } }
+.grab { flex: none; padding: 0.5rem 0.5rem 0 1.25rem; cursor: grab; touch-action: none; user-select: none; }
+.handle { display: block; width: 2.25rem; height: 4px; margin: 0.125rem auto 0.25rem; border-radius: var(--radius-pill); background: var(--color-control-rule); }
+.headrow { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
+.title { flex: 1; min-width: 0; margin: 0; padding-block: 0.5rem; font-size: var(--text-heading); font-weight: var(--weight-strong); line-height: 1.25; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.title:focus { outline: none; }
+.close { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--color-ink); }
+.close:hover { background: var(--color-hover); }
+.close svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.sheetBody { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0.25rem 1.25rem max(1.25rem, env(safe-area-inset-bottom)); }
+.sheetBody > * + * { margin-top: 0.75rem; }
+.footer { flex: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem; padding: 0.75rem 1.25rem max(1rem, env(safe-area-inset-bottom)); border-top: 1px solid var(--color-rule); }
+.sheetBody:has(+ .footer) { padding-bottom: 1rem; }
+@media (max-width: 480px) { .footer > * { flex: 1 1 100%; } }
+
+/* ---- ListRow: grouped rows for staff lists ---- */
+.list { list-style: none; margin: 0; padding: 0; background: var(--color-surface); border-radius: var(--radius-object); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.item + .item { border-top: 1px solid var(--color-rule); }
+.item:first-child, .item:first-child > .row { border-start-start-radius: var(--radius-object); border-start-end-radius: var(--radius-object); }
+.item:last-child, .item:last-child > .row { border-end-start-radius: var(--radius-object); border-end-end-radius: var(--radius-object); }
+.row { display: flex; align-items: center; gap: 0.875rem; width: 100%; min-height: 56px; margin: 0; padding: 0.75rem 1rem; border: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; text-align: start; text-decoration: none; }
+a.row, button.row { cursor: pointer; transition: background-color 160ms var(--ease-settle); }
+a.row:hover, button.row:hover { background: var(--color-hover); color: inherit; }
+.rowMain { flex: 1; min-width: 0; }
+.rowTitle { display: block; font-size: var(--text-body); font-weight: var(--weight-semibold); line-height: 1.35; overflow-wrap: anywhere; }
+.rowMeta { display: block; margin-top: 0.125rem; color: var(--color-muted); font-size: var(--text-callout); line-height: 1.4; overflow-wrap: anywhere; }
+.rowTrailing { flex: none; display: inline-flex; align-items: center; gap: 0.5rem; }
+.chevron { flex: none; width: 20px; height: 20px; fill: none; stroke: var(--color-muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+:global([dir="rtl"]) .chevron { transform: scaleX(-1); }
+
+/* ---- PageHeader: the one header, with the one h1 size ---- */
+.header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.75rem 1rem; padding-block: 1rem 0.75rem; }
+.headerText { flex: 1 1 16rem; min-width: 0; }
+.pageTitle { max-width: none; margin: 0; font-size: var(--text-title); font-weight: var(--weight-strong); line-height: 1.15; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.pageTitle:focus { outline: none; }
+.description { max-width: 60ch; margin: 0.25rem 0 0; color: var(--color-muted); font-size: var(--text-callout); line-height: 1.45; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+/* ---- EmptyState: words and one next action, nothing drawn ---- */
+.empty { display: grid; justify-items: start; gap: 0.5rem; padding: 1.75rem 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.emptyTitle { max-width: none; margin: 0; font-size: var(--text-heading); font-weight: var(--weight-strong); line-height: 1.25; letter-spacing: -0.01em; }
+.emptyBody { margin: 0; color: var(--color-muted); font-size: var(--text-body); }
+.emptyAction { margin-top: 0.5rem; }
+
+/* ---- Segmented: one choice from a few, as a radio group ---- */
+.segmented { display: flex; width: fit-content; max-width: 100%; gap: 0.25rem; margin: 0; padding: 0.25rem; border: 0; border-radius: var(--radius-pill); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
+.segment { position: relative; flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin: 0; padding: 0 1.25rem; border-radius: var(--radius-pill); color: var(--color-ink); font-size: var(--text-callout); font-weight: var(--weight-semibold); line-height: 1.2; text-align: center; cursor: pointer; transition: background-color 160ms var(--ease-settle), color 160ms var(--ease-settle); }
+.segment:hover { background: var(--color-hover); }
+.segment input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; opacity: 0; cursor: pointer; }
+.segment:has(input:checked) { background: var(--color-action-fill); color: #fff; }
+.segment:has(input:focus-visible) { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+.segment:has(input:disabled) { opacity: 0.6; cursor: not-allowed; }
+.segment:has(input:disabled) input { cursor: not-allowed; }
+
+/* ---- Chip: a state or a count, always a word; colour is never the only signal ---- */
+.chip { display: inline-flex; align-items: center; min-height: 1.75rem; padding: 0.125rem 0.75rem; border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-ink); box-shadow: inset 0 0 0 1px var(--color-rule); font-size: var(--text-caption); font-weight: var(--weight-semibold); line-height: 1.2; white-space: nowrap; }
+.attention { background: var(--attention-fill); color: var(--attention-ink); box-shadow: none; }
+.done { color: var(--done-ink); box-shadow: inset 0 0 0 1px var(--done-ink); }
+.info { color: var(--info-ink); box-shadow: inset 0 0 0 1px var(--info-ink); }
+.danger { color: var(--danger-ink); box-shadow: inset 0 0 0 1px var(--danger-ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet[open] { animation: none; }
+  .button, .row, .segment { transition: none; }
+}
+
+/* Forced colours: the system keeps text and borders, so edges and the selected segment are said in system colours. */
+@media (forced-colors: active) {
+  .button, .chip, .sheet, .list, .empty, .segmented { border: 1px solid CanvasText; }
+  .button { border-color: ButtonText; }
+  .segment { border: 1px solid transparent; }
+  .segment:has(input:checked) { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+  .handle { background: CanvasText; }
+}

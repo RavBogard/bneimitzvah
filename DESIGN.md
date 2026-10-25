@@ -45,7 +45,7 @@ typography:
     letterSpacing: "-0.02em"
   body:
     fontFamily: "Bricolage Grotesque, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "1rem"
+    fontSize: "1.0625rem"
     fontWeight: 400
     lineHeight: 1.55
   label:
@@ -243,6 +243,19 @@ The lifted line and the verse cards print trope phrases with the pastel family c
 **The Named Steps Rule.** Hebrew size is one of four named steps chosen from the toolbar and remembered per student; nothing else resizes scripture.
 
 **The Hebrew Stays Whole Rule.** Qere labels, paragraph signs and notes are set in the UI face at small size and sit beside or under the Hebrew line; no apparatus text is styled as scripture.
+
+### Amendment, 2026-10-24 (Daniel, review decision 3, "Yes, full system"): the type scale, 17px body and the shared components
+
+Where this section differs from the Hierarchy above, this section rules; pages move to it milestone by milestone (1.9 N10 onward), so older sizes above still describe screens not yet moved. The tokens are in `src/app/globals.css`, the components in `src/components/ui`, and `/design-system` (a 404 outside the browser tests) shows them all.
+
+- **Six type steps, in Bricolage:** display 40px (the reading hero's one next decision), title 26px (the one page h1, `PageHeader`), heading 19px (section and sheet titles), **body 17px** (running text, buttons, list titles), callout 15px (meta lines, segment labels, field help) and caption 13px (chips, footers). The body is 17px on every page now; headings set in rem or clamp do not move with it. Hebrew keeps its four named steps and is not on this scale.
+- **Three weights:** 400, 600, 750. No other weight is written in new styles.
+- **A radius per object:** control 12px (buttons, fields), object 16px (list groups, empty states, verse cards), sheet and dock 22px (the sheet on its top corners only), pill (chips, segmented control, Start).
+- **Four staff tones, never colour alone:** `attention` (marigold fill behind ink, so still never text), `done` (forest), `info` (lake), `danger` (red text, or a red fill with white type for a destructive button). A tone always appears with a word: `Chip` only takes a string.
+- **One focus ring:** the global `:focus-visible` rule, 3px solid at a 4px offset, deep lake in light and marigold in dark. Components never draw another.
+- **One Button, three variants:** primary, secondary, quiet, each at least 44px tall. A destructive button takes the danger tone and opens a confirm Sheet; only the sheet's confirm action runs, and the safe choice has focus.
+- **One Sheet:** a native modal dialog that rises from the bottom edge at every width (full width on a phone, at most 40rem on a laptop), traps focus with Tab wrapping both ways, returns focus to where it came from (or to an element its owner names), closes on Esc, a tap outside, the close button or a swipe down, and ignores all of those while its action is running. Its rise is a functional transition rather than a second authored motion, and it snaps under reduced motion. This does not yet move the reading tools to a bottom dock; that amendment to the phone toolbar rule comes with N4.
+- **Also shared:** `ListRow` (grouped rows, 56px, one target across the row), `PageHeader`, `EmptyState` (words and one action, nothing drawn), `Segmented` (a radio group), `Chip`.
 
 ## Layout
 

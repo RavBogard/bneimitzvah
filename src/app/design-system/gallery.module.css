@@ -1,0 +1,5 @@
+.page { max-width: 48rem; margin: 0 auto; padding: 1rem 1rem 4rem; }
+.section { display: grid; gap: 0.75rem; margin-top: 2rem; }
+.section > h2 { font-size: var(--text-heading); font-weight: var(--weight-strong); }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.word { display: inline-flex; align-items: center; min-height: 44px; padding: 0 0.5rem; font-size: var(--text-body); cursor: pointer; }
