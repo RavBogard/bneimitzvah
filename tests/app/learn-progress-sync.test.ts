@@ -346,7 +346,76 @@ describe("two tabs sharing one browser's storage while the account changes under
       expect(b.marker()).toEqual({ owner: B, version: 7, dirty: false });
       expect(Object.keys(b.accounts[A].progress!.lessons)).toEqual(["intro-phrases"]);
     });
+
+    it(`treats a marker dropped since A's put left (a sign-out in another tab) as displaced: A's copy does not come back (${name})`, async () => {
+      const b = browser(locks);
+      b.store.save(doc({ "intro-phrases": T1 })); b.storage.setItem(SYNC_KEY, JSON.stringify({ owner: A, version: 3, dirty: false }));
+      const one = b.tab(); await one.sync.start();
+      b.store.save(doc({ "intro-phrases": T1, "torah-zakef": T1 })); one.sync.changed();
+      // While A's put is out, another tab signs the browser out and clears the device.
+      b.net.hold = path => path.endsWith("/put") ? (async () => { b.store.save(emptyProgress()); b.storage.removeItem(SYNC_KEY); })() : null;
+      one.timers.shift()!(); await ticks();
+      expect(one.sync.account.state).toBe("not-eligible");
+      expect(one.sync.frozen).toBe(true);
+      expect(b.marker()).toBeNull();
+      expect(b.store.load()).toEqual(emptyProgress());
+    });
   }
+
+  it("freezes a displaced tab: it saves nothing into the other account's copy and marks nothing, until its next start", async () => {
+    const b = browser(undefined);
+    b.store.save(doc({ "intro-phrases": T1 })); b.storage.setItem(SYNC_KEY, JSON.stringify({ owner: A, version: 3, dirty: false }));
+    const one = b.tab(); await one.sync.start();
+    expect(one.sync.frozen).toBe(false);
+    b.store.save(doc({ "intro-phrases": T1, "torah-zakef": T1 })); one.sync.changed();
+    b.net.hold = path => path.endsWith("/put") ? (async () => { b.net.cookie = B; await b.tab().sync.start(); })() : null;
+    one.timers.shift()!(); await ticks();
+    expect(one.sync.frozen).toBe(true);
+    // B, at tab 1, finishes a lesson: nothing reaches the browser's copy (B's) or its marker, and nothing is sent.
+    const sent = b.net.sent.length;
+    expect(one.sync.record(doc({ "torah-zakef": T1, "torah-sof-pasuk": T2 }))).toBe(false);
+    one.sync.changed(); one.sync.flush(); await ticks();
+    expect(b.store.load()).toEqual(doc({ "torah-etnachta": T2 }));
+    expect(b.marker()).toEqual({ owner: B, version: 7, dirty: false });
+    expect(one.timers).toHaveLength(0);
+    expect(b.net.sent.length).toBe(sent);
+    // The next start learns B is signed in, takes B's copy, and writes for B.
+    await one.sync.start(); await ticks();
+    expect(one.sync.frozen).toBe(false);
+    expect(one.sync.account.state).toBe("synced");
+    expect(one.sync.record(doc({ "torah-etnachta": T2, "torah-sof-pasuk": T2 }))).toBe(true);
+    expect(b.marker()).toEqual({ owner: B, version: 7, dirty: true });
+  });
+
+  it("freezes a tab refused naming another account, so B's work there never lands in A's unsent copy", async () => {
+    const b = browser(undefined);
+    b.store.save(doc({ "intro-phrases": T1 })); b.storage.setItem(SYNC_KEY, JSON.stringify({ owner: A, version: 3, dirty: false }));
+    const one = b.tab(); await one.sync.start();
+    const mine = doc({ "intro-phrases": T1, "torah-zakef": T1 });
+    b.store.save(mine); one.sync.changed();
+    b.net.cookie = B; // A signed out and B signed in elsewhere; this tab's put goes out with B's cookie and A's name.
+    one.timers.shift()!(); await ticks();
+    expect(b.net.sent.at(-1)).toMatchObject({ path: "/api/learn/progress/put", body: { owner: A } });
+    expect(one.sync.account.state).toBe("not-eligible");
+    expect(one.sync.frozen).toBe(true);
+    expect(one.sync.record(doc({ "torah-etnachta": T2 }))).toBe(false);
+    expect(b.store.load()).toEqual(mine);
+    expect(b.marker()).toEqual({ owner: A, version: 3, dirty: true });
+    expect(Object.keys(b.accounts[B].progress!.lessons)).toEqual(["torah-etnachta"]);
+  });
+
+  it("does not freeze a tab refused as its own account: a member without a grant keeps saving on this device", async () => {
+    const r = rig({ progress: doc({ "intro-phrases": T1 }), version: 3 }, { owner: A, version: 3, dirty: false }, doc({ "intro-phrases": T1 }));
+    await r.sync.start();
+    r.state.status = 403; r.state.refusal = { error: "forbidden", owner: A };
+    r.store.save(doc({ "intro-phrases": T1, "torah-zakef": T2 })); r.sync.changed();
+    r.timers.shift()!(); for (let i = 0; i < 8; i++) await settle();
+    expect(r.sync.account.state).toBe("not-eligible");
+    expect(r.sync.frozen).toBe(false);
+    const next = doc({ "intro-phrases": T1, "torah-zakef": T2, "torah-etnachta": T2 });
+    expect(r.sync.record(next)).toBe(true);
+    expect(r.store.load()).toEqual(next);
+  });
 
   it("takes the shared lock for every settle and merge check, so no other tab lands between the check and the save", async () => {
     const names: string[] = [];
