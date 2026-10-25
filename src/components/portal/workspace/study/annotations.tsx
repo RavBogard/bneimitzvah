@@ -1,5 +1,6 @@
 "use client";
-import { Fragment, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { Fragment, useMemo, useRef, useState, type ClipboardEvent, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { maqafChains } from "../../../../lib/hebrew/mixed-runs";
 import { rovingTarget } from "./word-nav";
 import { colorStudyVerse, type AssignmentEnding, type ColorResult } from "../../../../lib/hebrew/study-annotations";
 import { projectStudyVerse, type DisplayPart, type StudyProjection } from "../../../../lib/hebrew/study-tokens";
@@ -28,6 +29,60 @@ const range = (first: number, last: number) => first === last ? `Word ${first}` 
 const unavailableText = (result: ColorResult) => result.status === "unavailable" && result.reason === "unsupported-system"
   ? "Phrase colors aren’t available for Psalms, Proverbs and Job yet." : "Phrase colors aren’t available for this verse.";
 
+/**
+ * A maqaf joins words into one chanted unit, so the words and the maqafs between them are set in one no-break span and a line never
+ * ends on a maqaf. A separator joins only when it is a maqaf with no space in it; the elements keep their own keys, roles and focus.
+ */
+function chained(pieces: readonly DisplayPart[], elements: ReactNode[]): ReactNode[] {
+  const out: ReactNode[] = [];
+  let chain: ReactNode[] = [], last: "word" | "joiner" | null = null;
+  const flush = () => { if (chain.length > 1) out.push(<span key={`chain-${out.length}`} className={styles.chain}>{chain}</span>); else out.push(...chain); chain = []; last = null; };
+  pieces.forEach((piece, index) => {
+    const kind = piece.wordIndex !== null ? "word" : piece.text.includes(MAQAF) && !/\s/u.test(piece.text) ? "joiner" : null;
+    if (kind === null) { flush(); out.push(elements[index]); return; }
+    if (kind === last) flush();
+    chain.push(elements[index]); last = kind;
+  });
+  flush();
+  return out;
+}
+const MAQAF = "\u05be";
+
+/**
+ * Copying Hebrew from the page: the hidden headings and phrase legends are for screen readers, so they never travel with the text.
+ * Where verses run together (Lein), each verse in the selection copies as its number, a space, its Hebrew and a newline ("18:1 ...");
+ * the number is left off a verse whose start is not in the selection. A selection with nothing hidden in it copies as it is.
+ */
+export function copyHebrew(event: ClipboardEvent<HTMLElement>) {
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed || !selection.rangeCount || !event.clipboardData) return;
+  const range = selection.getRangeAt(0), root = event.currentTarget;
+  const strip = (fragment: DocumentFragment) => { for (const node of fragment.querySelectorAll(".sr-only")) node.remove(); return fragment; };
+  const cells = [...root.querySelectorAll<HTMLElement>("[data-hebrew-ref]")].filter(cell => range.intersectsNode(cell));
+  const mixed = [...root.querySelectorAll(".study-english")].some(node => range.intersectsNode(node));
+  let text: string;
+  if (cells.length && !mixed) {
+    text = cells.map(cell => {
+      // This verse's part of the selection, and whether it starts where the verse does.
+      const part = document.createRange();
+      part.selectNodeContents(cell);
+      const whole = range.compareBoundaryPoints(Range.START_TO_START, part) <= 0;
+      if (!whole) part.setStart(range.startContainer, range.startOffset);
+      if (range.compareBoundaryPoints(Range.END_TO_END, part) < 0) part.setEnd(range.endContainer, range.endOffset);
+      const fragment = strip(part.cloneContents());
+      for (const node of fragment.querySelectorAll("[data-verse-number]")) node.remove();
+      const number = /([1-9]\d*:[1-9]\d*)$/.exec(cell.dataset.hebrewRef ?? "")?.[1];
+      return `${whole && number ? `${number} ` : ""}${(fragment.textContent ?? "").replace(/\s+/gu, " ").trim()}\n`;
+    }).join("");
+  } else {
+    const fragment = range.cloneContents();
+    if (!fragment.querySelector(".sr-only")) return;
+    text = strip(fragment).textContent ?? "";
+  }
+  event.clipboardData.setData("text/plain", text);
+  event.preventDefault();
+}
+
 /** Phrase analysis runs only when colors are shown; word identity is independent. */
 export function useVerseColors(verse: StudyVerse, assignment: AssignmentEnding, enabled: boolean) {
   const { kind, confirmed } = assignment, verses = assignment.verses.join("\n");
@@ -51,7 +106,7 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
   // One Tab stop per verse: the word the reader last landed on, else the first. Arrows move among the others.
   const [stop, setStop] = useState<number | null>(null);
   let first: number | null = null;
-  const parts = (pieces: readonly DisplayPart[]) => pieces.map((part, index) => {
+  const parts = (pieces: readonly DisplayPart[]) => chained(pieces, pieces.map((part, index) => {
     const word = part.wordIndex === null ? null : colors?.words[part.wordIndex];
     const family = word?.family ? families.get(word.family) : null;
     const active = part.wordIndex !== null && part.wordIndex === activeWord;
@@ -64,8 +119,8 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
       aria-label={onWordSelect && firstPart ? wordAction === "card" ? `Open word ${part.wordIndex! + 1} of ${verse.ref}` : wordAction === "tools" ? `Select word ${part.wordIndex! + 1} of ${verse.ref} for tools` : wordAction === "phrase" ? `Focus phrase at word ${part.wordIndex! + 1} of ${verse.ref}` : wordAction === "verse" ? toolsAvailable ? `Hear whole verse ${verse.ref}; select word ${part.wordIndex! + 1} for tools` : `Hear whole verse ${verse.ref}` : `Hear word ${part.wordIndex! + 1} of ${verse.ref}` : undefined} data-word-index={part.wordIndex ?? undefined} data-family={family?.id} data-phrase={word?.phrase ?? undefined}
       data-reference-active={active ? "true" : undefined} data-linked={quoted ? "true" : undefined} className={[family ? styles.word : "", active ? referenceStyles.activeWord : "", quoted ? styles.linked : ""].filter(Boolean).join(" ") || undefined} style={family ? { "--phrase-color": family.color, "--w": part.wordIndex } as CSSProperties : undefined}
       aria-describedby={!family || word?.phrase === null || word?.phrase === undefined ? undefined : `${id}-phrase-${word.phrase}`}>{part.text}</span>;
-  });
-  const alternative = (written: string, read: ReactNode) => <><span>{written}</span><span className="study-read-alternative"> [<span className="study-qere-label" lang="en" dir="ltr">read / qere:</span> {read}]</span></>;
+  }));
+  const alternative = (written: string, read: ReactNode) => <><span>{maqafChains(written).map((run, at) => run.chain ? <span key={at} className={styles.chain}>{run.text}</span> : run.text)}</span><span className="study-read-alternative"> [<span className="study-qere-label" lang="en" dir="ltr">read / qere:</span> {read}]</span></>;
   // A paragraph break after the verse is apparatus: the note below names it.
   const trailing = (index: number, count: number, kind: string) => kind === "gap" && verse.hebrew.paragraphAfter !== null && index === count - 1;
   const gap = (kind: "petuchah" | "setumah") => <span className="study-paragraph-gap"><span className={inline ? "sr-only" : undefined} lang="en" dir="ltr">[{kind === "petuchah" ? "open paragraph" : "closed paragraph"}]</span></span>;
@@ -137,7 +192,7 @@ export function AnnotatedStudyVerse({ verse, assignment, group, number, showEngl
     if ((event.target as HTMLElement).closest(interactive) || window.getSelection()?.toString()) return;
     onLift();
   } : undefined;
-  return <article data-verse-ref={verse.ref} className={`verse-card${onLift ? " verse-card-liftable" : ""}`} onClick={lift}>
+  return <article data-verse-ref={verse.ref} className={`verse-card${onLift ? " verse-card-liftable" : ""}`} onClick={lift} onCopy={copyHebrew}>
     <div className="verse-card-head">
       {number !== undefined && <span className="verse-number" aria-hidden="true">{number}</span>}
       <h4><bdi dir="ltr">{verse.ref}</bdi></h4>
@@ -147,7 +202,7 @@ export function AnnotatedStudyVerse({ verse, assignment, group, number, showEngl
       </button>}
     </div>
     <StudyHebrew verse={verse} colors={colors} id={id} />
-    {colors && <div className="sr-only"><PhraseLegend colors={colors} id={id} verseRef={verse.ref} /></div>}
+    {colors && <div className="sr-only" lang="en" dir="ltr"><PhraseLegend colors={colors} id={id} verseRef={verse.ref} /></div>}
     {result && result.status !== "ready" && <p role="status" className="field-help">{unavailableText(result)}</p>}
     {showEnglish && <p className="study-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
     <Apparatus verse={verse} learner={learner} />
@@ -218,13 +273,13 @@ function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAv
   const aligned = atoms !== null && atoms.length > 0;
   return <span ref={host} data-verse-ref={verse.ref} data-tk-rows={aligned ? "" : undefined} className={styles.flowVerse} data-verse-picked={state.picked || undefined} data-verse-marked={state.marked || undefined}>
     <span className={styles.flowHebrew} data-hebrew-ref={verse.ref}>
-    <span className="sr-only" role="heading" aria-level={4} dir="ltr">{verse.ref}</span>
-    {state.choosing && choice ? <button type="button" className={`${styles.verseNumber} ${styles.chooseNumber}`} onClick={event => choice.onToggle(verse.ref, event.shiftKey)} aria-pressed={state.picked} aria-label={`Select ${verse.ref}`} title={verse.ref}>{state.picked && <ChoiceCheck />}{number ?? verse.ref}</button>
-      : onVerse ? <button type="button" className={styles.verseNumber} onClick={onVerse} aria-label={`Hear ${verse.ref}`} title={verse.ref}>{state.marked && <ChoiceCheck />}{number ?? verse.ref}</button>
-        : <sup title={verse.ref}>{state.marked && <ChoiceCheck />}{number ?? verse.ref}</sup>}{state.marked && <span className="sr-only"> (selected)</span>}{" "}
+    <span className="sr-only" role="heading" aria-level={4} lang="en" dir="ltr">{verse.ref}</span>
+    {state.choosing && choice ? <button type="button" className={`${styles.verseNumber} ${styles.chooseNumber}`} onClick={event => choice.onToggle(verse.ref, event.shiftKey)} aria-pressed={state.picked} aria-label={`Select ${verse.ref}`} lang="en" dir="ltr" data-verse-number title={verse.ref}>{state.picked && <ChoiceCheck />}{number ?? verse.ref}</button>
+      : onVerse ? <button type="button" className={styles.verseNumber} onClick={onVerse} aria-label={`Hear ${verse.ref}`} lang="en" dir="ltr" data-verse-number title={verse.ref}>{state.marked && <ChoiceCheck />}{number ?? verse.ref}</button>
+        : <sup title={verse.ref} lang="en" dir="ltr" data-verse-number>{state.marked && <ChoiceCheck />}{number ?? verse.ref}</sup>}{state.marked && <span className="sr-only" lang="en" dir="ltr"> (selected)</span>}{aligned ? " " : "\u00a0"}
     {replaced ? <TikkunVerse verse={verse} className={styles.flowTikkunInline} projection={projection} colors={colors} activeWord={activeWord} /> : <StudyHebrew verse={verse} colors={colors} id={id} inline activeWord={activeWord} onWordSelect={state.choosing ? undefined : onWord} wordAction={listening ? "verse" : "tools"} toolsAvailable={toolsAvailable} linked={linked} atoms={aligned ? atoms : null} layout={layout} />}{" "}
     {verse.hebrew.paragraphAfter === "setumah" && <span className={styles.closedGap} role="img" aria-label="Closed paragraph" />}
-    {colors && <span className="sr-only">{phraseGroups(colors).map(row => <span key={row.phrase} id={`${id}-phrase-${row.phrase}`}>{row.family.label}, {range(row.first, row.last)}. </span>)}</span>}
+    {colors && <span className="sr-only" lang="en" dir="ltr">{phraseGroups(colors).map(row => <span key={row.phrase} id={`${id}-phrase-${row.phrase}`}>{row.family.label}, {range(row.first, row.last)}. </span>)}</span>}
     </span>
     {tikkun === "beside" && <TikkunVerse verse={verse} className={styles.flowTikkun} projection={projection} colors={colors} activeWord={activeWord} atoms={aligned ? atoms : null} layout={layout} aria-hidden />}
     {showEnglish && (englishHidden ? <span className={`study-english ${styles.flowEnglish} ${styles.flowEnglishHidden}`} lang="en" dir="ltr" data-english-hidden={verse.ref}>{englishHidden}</span>
@@ -244,7 +299,7 @@ export function FlowingStudyText({ verses, assignment, group, sections = [], onV
   /** "Choose verses": while choosing, verse numbers toggle the selection and words are not interactive. */
   choice?: VerseChoiceView;
 }) {
-  return <div className={`study-verses ${styles.flow}`} aria-label="Hebrew reading" tabIndex={-1} data-tikkun={tikkun === "off" ? undefined : tikkun}>
+  return <div className={`study-verses ${styles.flow}`} aria-label="Hebrew reading" tabIndex={-1} data-tikkun={tikkun === "off" ? undefined : tikkun} onCopy={copyHebrew}>
     {studyFlowGroups(verses, sections.map(section => section.index)).map(indices => <div key={verses[indices[0]].ref}>
       {sections.find(section => section.index === indices[0]) && <p className="student-aliyah">{sections.find(section => section.index === indices[0])!.label}</p>}
       <p className={styles.flowParagraph} lang="he" dir="rtl">{indices.map(index => <FlowVerse key={verses[index].ref} verse={verses[index]} assignment={assignment} id={`${group}-flow-${index}`} onVerse={onVerse ? () => onVerse(index) : undefined} onWord={onWord ? word => onWord(index, word) : undefined} activeWord={activeWord?.verse === index ? activeWord.index : null} toolsAvailable={toolsAvailable} listening={listening} showEnglish={showEnglish} englishHidden={englishHidden} tikkun={tikkun} linked={linked?.verse === index ? linked : null} choice={choice} />)}</p>

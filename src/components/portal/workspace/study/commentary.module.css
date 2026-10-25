@@ -58,7 +58,7 @@ button.number[aria-pressed="true"] > span { background: var(--lake); color: #fff
 /* The English edition's own lemma, calmer than bold; capitals become small capitals, the letters unchanged. */
 .lemma { font-weight: 500; }
 .lemma[data-caps] { font-variant-caps: all-small-caps; letter-spacing: 0.02em; }
-.dibburLink { display: inline; margin: 0; padding: 0; border: 0; border-radius: 0.25em; background: transparent; color: inherit; font: inherit; line-height: inherit; text-align: inherit; cursor: pointer; }
+.dibburLink { display: inline-flex; align-items: center; min-width: 24px; min-height: 24px; margin: 0; padding: 0; border: 0; border-radius: 0.25em; background: transparent; color: inherit; font: inherit; line-height: inherit; text-align: inherit; cursor: pointer; }
 .dibburLink:hover .dibbur, .dibburLink[aria-pressed="true"] .dibbur { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.3em; }
 .dibburLink:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
 .controls { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin-block: 0 -0.25rem; }
@@ -83,8 +83,11 @@ button.number[aria-pressed="true"] > span { background: var(--lake); color: #fff
 .credits p { margin: 0 0 0.5rem; }
 .credits strong { color: var(--color-ink); font-weight: 650; }
 .creditLine { display: block; }
-.credits a { color: var(--color-muted); text-decoration-color: color-mix(in srgb, var(--color-muted) 55%, transparent); }
+.credits a { display: inline-block; min-height: 24px; padding-block: 0.25rem; color: var(--color-muted); text-decoration-color: color-mix(in srgb, var(--color-muted) 55%, transparent); }
 .credits a:hover { color: var(--color-action); }
+.credits a.creditLine { display: block; width: fit-content; }
+/* Hebrew quoted inside Rashi's English (the word a comment translates): the Hebrew face and language, not the English face, which has no Hebrew glyphs. */
+.hebrewInEnglish { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 1.15em; font-synthesis: none; font-feature-settings: "mark", "mkmk"; unicode-bidi: isolate; }
 
 /* Quiet states: one line per work, never in front of the Hebrew */
 .status { margin-block: 0.25rem 0.5rem; color: var(--color-muted); font-size: 0.875rem; }

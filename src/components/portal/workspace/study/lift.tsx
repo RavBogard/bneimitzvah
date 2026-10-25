@@ -113,7 +113,7 @@ export function LiftedLine({ verses, assignment, index, total, offset, onIndex, 
         if (reference) playback.current?.select(index, "verse");
         const selectedPhrase = colors?.words[word]?.phrase, position = phrases.findIndex(row => row.phrase === selectedPhrase); if (position >= 0) setPhrase(position);
       } : undefined} wordAction={reference ? "verse" : "phrase"} toolsAvailable={false} className={`lift-hebrew${active !== null ? " lift-phrasing" : ""}`} />
-      {active !== null && <style>{`.lift-phrasing [data-phrase="${active}"]{opacity:1;animation:ink-pull 560ms var(--ease-settle) both;animation-delay:calc((var(--w) - ${phrases[currentPhrase].first - 1}) * 70ms)}`}</style>}
+      {active !== null && <style>{`.lift .lift-phrasing [data-phrase="${active}"]{color:#13202f;background:linear-gradient(var(--phrase-color),var(--phrase-color)) right / 100% 100% no-repeat;animation:ink-pull 560ms var(--ease-settle) both;animation-delay:calc((var(--w) - ${phrases[currentPhrase].first - 1}) * 70ms)}`}</style>}
       {prefs.translation && <p className="lift-english" lang="en" dir="ltr">{verse.english ?? "English reference unavailable for this verse."}</p>}
       <Apparatus verse={verse} learner={learner} />
       {prefs.colors && <PhraseLegend colors={result} id={`${id}-v`} verseRef={verse.ref} />}

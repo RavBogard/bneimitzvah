@@ -9,7 +9,7 @@ import styles from "./commentary.module.css";
 function Edition({ value, language }: { value: CompareEdition; language: "en" | "arc" }) {
   return <li className={styles.compareItem}>
     <p className={styles.compareTitle}><bdi>{value.title}</bdi></p>
-    <p className={`${styles.compareText} ${language === "arc" ? styles.aramaic : ""}`} lang={language} dir={language === "arc" ? "rtl" : "ltr"}><Runs runs={value.runs} /></p>
+    <p className={`${styles.compareText} ${language === "arc" ? styles.aramaic : ""}`} lang={language} dir={language === "arc" ? "rtl" : "ltr"}><Runs runs={value.runs} mixed={language === "en"} /></p>
     <p className={styles.compareCredit}><a href={value.url} target="_blank" rel="noopener noreferrer">{value.credit}</a></p>
   </li>;
 }

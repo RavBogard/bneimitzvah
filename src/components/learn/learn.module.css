@@ -6,6 +6,8 @@
 /* ---------- shared ---------- */
 .hebrew { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", "Times New Roman", serif; font-weight: 400; font-synthesis: none; font-feature-settings: "mark", "mkmk"; direction: rtl; unicode-bidi: isolate; overflow-wrap: anywhere; }
 .unit { border-radius: 0.18em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+/* A maqaf chain is one unit and never breaks at its maqaf (on a phone narrower than 24rem a chain may be wider than the screen, so it may break there). */
+@media (min-width: 24rem) { .unit { white-space: nowrap; } }
 .inked { background: var(--phrase-color); color: #13202f; }
 /* The ink pull: a phrase's colour wipes in word by word, right to left with the reading. */
 .pull { background: linear-gradient(var(--phrase-color), var(--phrase-color)) right / 0% 100% no-repeat; color: inherit; animation: ink-pull 560ms var(--ease-settle) both; animation-delay: calc(var(--w, 0) * 70ms); }
