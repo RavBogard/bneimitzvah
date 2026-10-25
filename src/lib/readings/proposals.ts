@@ -16,6 +16,8 @@ export class ReadingUnavailable extends Error {
 const TTL = 24 * 60 * 60 * 1000;
 const MAX_BYTES = 128 * 1024;
 const MAX_HAFTARAH_SEGMENTS = 8;
+/** Hebcal names an eve reading "Erev ..." and an afternoon reading "... (Mincha)". */
+const SECONDARY_READING = /^Erev |\(Mincha\)$/;
 const object = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
 const label = (value: unknown): string => {
   if (typeof value !== "string" || value.length < 1 || value.length > 160 || /[<>@\x00-\x1f]/.test(value)) throw new Error("Invalid calendar label");
@@ -30,6 +32,16 @@ export function hebcalRequest(dateInput: unknown, calendar: Calendar = "diaspora
   return { date, calendar, url, cacheKey: `hebcal:leyning:v2:${calendar}:${date}:triennial` };
 }
 
+/**
+ * Hebcal counts Pinchas' first aliyah (Numbers 25:10-26:4) as 14 verses; the catalog's chapters give 13 (the two versifications
+ * divide Numbers 25 and 26 one verse apart). The range itself is validated against the catalog, so only this exact one-verse
+ * overcount, on a range that crosses that chapter boundary, is accepted; every other count mismatch is still refused.
+ */
+function hebcalSeamCount(row: Record<string,unknown>, claimed: unknown, actual: number): boolean {
+  const begin=Number(String(row.b).split(":")[0]), end=Number(String(row.e).split(":")[0]);
+  return row.k==="Numbers" && begin===25 && end>=26 && claimed===actual+1;
+}
+
 function normalizePayload(payload: unknown, date: CeremonyDate, calendar: Calendar, counts: VerseCounts, fromCache=false): { snapshot: Snapshot; payload: unknown } {
   if (!object(payload) || !Array.isArray(payload.items) || payload.items.length > 16) throw new Error("Invalid calendar response");
   if (fromCache && (!object(payload.binding) || payload.binding.version!==2 || payload.binding.date!==date || payload.binding.calendar!==calendar)) throw new Error("Cache request binding mismatch");
@@ -38,11 +50,17 @@ function normalizePayload(payload: unknown, date: CeremonyDate, calendar: Calend
   if (payload.range!==undefined && (!object(payload.range) || payload.range.start!==date || payload.range.end!==date)) throw new Error("Wrong reading date range");
 
   if (fromCache && payload.classification==="multiple" && payload.items.length===0) return {snapshot:{date,calendar,reading:null,haftarah:null,classification:"multiple"},payload};
-  if (payload.items.length>1) {
-    if(payload.items.some(item=>!object(item) || item.date!==date))throw new Error("Wrong calendar item date");
-    return {snapshot:{date,calendar,reading:null,haftarah:null,classification:"multiple"},payload:{binding,classification:"multiple",items:[]}};
+  let items: unknown[] = payload.items;
+  if (items.length>1) {
+    if(items.some(item=>!object(item) || item.date!==date))throw new Error("Wrong calendar item date");
+    // Hebcal lists a day's eve or afternoon reading beside its morning reading (Erev Purim beside Shabbat Zachor, Yom Kippur's Mincha
+    // beside its morning, Erev Simchat Torah beside Shmini Atzeret). Those are never the day's reading, so they are set aside by the
+    // names Hebcal gives them; if exactly one reading is left it is the day's. Anything else stays ambiguous: no first-item guess.
+    const morning=items.filter(item=>!SECONDARY_READING.test(String(((item as Record<string,unknown>).name as Record<string,unknown> | undefined)?.en)));
+    if(morning.length!==1)return {snapshot:{date,calendar,reading:null,haftarah:null,classification:"multiple"},payload:{binding,classification:"multiple",items:[]}};
+    items=morning;
   }
-  const item = payload.items[0];
+  const item = items[0];
   if (item === undefined) return { snapshot: { date, calendar, reading: null, haftarah: null, classification:"missing" }, payload: { binding, items: [] } };
   if (!object(item) || item.date !== date || !object(item.name)) throw new Error("Wrong or invalid calendar item");
   const safe: Record<string, unknown> = { date, name: { en: label(item.name.en) } };
@@ -61,8 +79,9 @@ function normalizePayload(payload: unknown, date: CeremonyDate, calendar: Calend
       if (!/^[1-9]\d*:[1-9]\d*$/.test(value.b) || (value.e !== undefined && !/^[1-9]\d*:[1-9]\d*$/.test(value.e as string))) throw new Error("Invalid aliyah endpoint");
       const row: Record<string,unknown> = { k:value.k, b:value.b, e:value.e ?? value.b };
       const verses = expandReadingRanges([hebcalRef(row)],kind,counts);
-      if (value.v !== undefined && value.v !== verses.length) throw new Error("Invalid aliyah verse count");
-      if (value.v !== undefined) row.v=value.v;
+      if (value.v !== undefined && value.v !== verses.length && !hebcalSeamCount(row,value.v,verses.length)) throw new Error("Invalid aliyah verse count");
+      // The count kept is the catalog's own, which every later check (the cache's, a student's reading) compares against.
+      if (value.v !== undefined) row.v=verses.length;
       if (value.reason !== undefined) row.reason=label(value.reason);
       out[n]=row;
     }

@@ -90,7 +90,7 @@ describe("print_sheet_link", () => {
   });
 
   it("names a Shabbat with no weekly reading honestly", async () => {
-    const holiday = vi.fn(async (date: string, calendar: "diaspora" | "israel") => { const value = await syntheticReading(date, calendar); return { ...value, snapshot: { ...value.snapshot, classification: "holiday" as const } }; });
+    const holiday = vi.fn(async (date: string, calendar: "diaspora" | "israel") => { const value = await syntheticReading(date, calendar); return { ...value, snapshot: { ...value.snapshot, reading: null, haftarah: null, classification: "multiple" as const } }; });
     const t = await mcpFixture(true, undefined, { loadReading: holiday });
     await t.google("admin");
     const token = (await t.connect("admin", { scope: "portal:read" })).access_token as string;

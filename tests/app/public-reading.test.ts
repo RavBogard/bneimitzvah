@@ -89,11 +89,13 @@ test("the week shows this Shabbat's full parashah and haftarah from the shared c
   expect((await h.service.text("torah", date, 100)).verses.map(verse => verse.ref)).toEqual(genesis.slice(100));
   expect(page.verses.every(verse => typeof verse.english === "string")).toBe(true); // JPS 2023, as for students
   expect(h.loadText.mock.calls[0][0]).toMatchObject({ kind: "torah", ranges: ["Genesis 1:1-4:26"], offset: 0, translation: "jps2023" });
-  // A holiday or ambiguous week shows no invented Torah reading.
-  const holiday = await harness({ snapshot: () => ({ classification: "holiday" }) });
-  expect((await holiday.service.week(date)).torah).toBeNull();
-  await expect(holiday.service.text("torah", date, 0)).rejects.toMatchObject({ code: "not-found" });
-  expect((await holiday.service.text("haftarah", date, 0)).verses).toHaveLength(3);
+  // A festival on Shabbat reads its own Torah (the calendar's joined aliyot); an ambiguous week shows no invented Torah reading.
+  const festival = await harness({ snapshot: () => ({ classification: "holiday" }) });
+  expect((await festival.service.week(date)).torah).toMatchObject({ kind: "torah", ranges: ["Genesis 1:1-4:26"] });
+  const ambiguous = await harness({ snapshot: () => ({ classification: "multiple", reading: null, haftarah: null }) });
+  expect((await ambiguous.service.week(date)).torah).toBeNull();
+  await expect(ambiguous.service.text("torah", date, 0)).rejects.toMatchObject({ code: "not-found" });
+  expect((await festival.service.text("haftarah", date, 0)).verses).toHaveLength(3);
 });
 
 test("inputs are bounded: dates, kinds, page offsets, verse and word indexes", async () => {

@@ -62,7 +62,9 @@ function plan(kind: PublicKind, ranges: readonly string[]): Plan {
 /** The full parashah (as the signed-in proposed portion) and the haftarah actually read. */
 export function publicPlans(snapshot: Snapshot): { torah: Plan | null; haftarah: Plan | null } {
   let torah: Plan | null = null, haftarah: Plan | null = null;
-  if (snapshot.classification === "regular" && snapshot.reading) {
+  // A festival that falls on Shabbat (Hebcal type "holiday") reads its own Torah in place of the weekly portion; the same joined
+  // range applies, and an aliyot set that does not join into one gapless range (a fast day's) is refused by proposeReading below.
+  if ((snapshot.classification === "regular" || snapshot.classification === "holiday") && snapshot.reading) {
     try { const ref = proposeReading(snapshot, counts, { pick: "full" }).selection?.ref; if (ref) torah = plan("torah", readingSegments(ref)); } catch { torah = null; }
   }
   if (snapshot.haftarah) { try { haftarah = plan("haftarah", readingSegments(snapshot.haftarah)); } catch { haftarah = null; } }
