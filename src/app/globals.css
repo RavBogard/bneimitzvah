@@ -390,6 +390,8 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .portal-header.app-bar { background: var(--lake); color: #fff; border-bottom: 0; padding-block: 0.75rem; min-height: calc(44px + 1.5rem); box-shadow: 0 0 0 100vmax var(--lake); clip-path: inset(0 -100vmax); }
 .app-bar .portal-brand { color: #fff; font-size: 1.125rem; font-weight: 750; letter-spacing: -0.02em; }
 .app-bar a { color: #fff; }
+/* The sign-in page's tagline sits on the bar (F-SITE 19, one header everywhere). */
+.portal-header.app-bar > span { color: rgb(255 255 255 / 0.85); }
 .app-bar :focus-visible { outline-color: var(--marigold); }
 .app-bar-account { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; padding-inline: 0.75rem; margin-inline-end: -0.75rem; border-radius: 999px; text-decoration: none; font-weight: 600; }
 .app-bar-account:hover { background: rgb(255 255 255 / 0.14); color: #fff; }

@@ -91,6 +91,7 @@ test("the chart offers no workspace link signed out, keeps code points out of th
   await page.goto("/trope-chart");
   await expect(page.locator("[data-chart-accent]")).toHaveCount(30);
   await expect(page.getByRole("link", { name: "Return to workspace" })).toHaveCount(0);
+  await expect(page.locator("header.app-bar").getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in");
   const text = await page.locator("main").innerText();
   expect(text).not.toMatch(/U\+[0-9A-F]{4}/);
   expect(text).not.toContain("pasuq");

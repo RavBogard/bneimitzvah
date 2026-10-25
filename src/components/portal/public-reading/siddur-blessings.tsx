@@ -11,6 +11,6 @@ export function SiddurBlessings({ torah, haftarah, siddurUrl = DEFAULT_SIDDUR_UR
   if (!torahLink && !haftarahLink) return null;
   return <p className="field-help siddur-blessings" data-siddur-blessings="">
     {torahLink && <SiddurLink href={torahLink}>Torah blessings: siddur page {TORAH_BLESSINGS_PAGE}</SiddurLink>}
-    {haftarahLink && <SiddurLink href={haftarahLink}>Haftarah blessings: siddur pages {HAFTARAH_BLESSINGS_PAGES.first}–{HAFTARAH_BLESSINGS_PAGES.last}</SiddurLink>}
+    {haftarahLink && <SiddurLink href={haftarahLink}>Haftarah blessings: siddur page {HAFTARAH_BLESSINGS_PAGES.first}, after Mi Shebeirach</SiddurLink>}
   </p>;
 }

@@ -114,7 +114,7 @@ it("restricts inline Google metadata to public safe queries and preserves privat
   const tab = await page(); await installGoogleBoundary(tab); let libraries = 0;
   tab.on("request", request => { if (request.url() === "https://accounts.google.com/gsi/client") libraries++; });
   await navigate(tab, "/account"); await ui(tab.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible(); await referrerPolicy(tab, "no-referrer");
-  const handoff = tab.getByRole("link", { name: "Continue to Google sign-in", exact: true }); expect(await handoff.getAttribute("href")).toBe("/sign-in?intent=account"); expect(libraries).toBe(0);
+  const handoff = tab.getByRole("link", { name: "Continue with Google", exact: true }); expect(await handoff.getAttribute("href")).toBe("/sign-in?intent=account"); expect(libraries).toBe(0);
   let release!: () => void; const held = new Promise<void>(resolve => { release = resolve; });
   try {
     await tab.route("**/api/auth/sign-in/magic-link", async route => { await held; await route.fulfill({ contentType: "application/json", body: '{"requested":true}' }); });
@@ -125,8 +125,8 @@ it("restricts inline Google metadata to public safe queries and preserves privat
   await navigate(tab, "/sign-in?intent=foreign&token=synthetic"); await referrerPolicy(tab, "no-referrer");
   // Within the code's 5 minutes this device reopens on the code form (1.5); Use a different email returns to the choices.
   await ui(tab.getByRole("heading", { name: "Check your email", exact: true })).toBeVisible(); await tab.getByRole("button", { name: "Use a different email", exact: true }).click();
-  await ui(tab.getByRole("link", { name: "Continue to Google sign-in", exact: true })).toHaveAttribute("href", "/sign-in"); expect(libraries).toBe(0);
-  await tab.getByRole("link", { name: "Continue to Google sign-in", exact: true }).click(); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeEnabled(); await referrerPolicy(tab, "strict-origin-when-cross-origin");
+  await ui(tab.getByRole("link", { name: "Continue with Google", exact: true })).toHaveAttribute("href", "/sign-in"); expect(libraries).toBe(0);
+  await tab.getByRole("link", { name: "Continue with Google", exact: true }).click(); await ui(tab.getByRole("button", { name: "Continue with Google", exact: true })).toBeEnabled(); await referrerPolicy(tab, "strict-origin-when-cross-origin");
   // Our own button (decision 8, N20): nothing from Google is loaded until it is pressed.
   expect(await tab.locator('script[src*="accounts.google.com"]').count()).toBe(0); expect(libraries).toBe(0); expect(new URL(tab.url()).search).toBe("");
 });
@@ -268,7 +268,7 @@ it("keeps invitation landing nonaccepting and accepts one reviewed binding only,
   await clean(recipient, [token]);
   await safe(() => recipient.getByRole("button", { name: "Review invitation", exact: true }).click());
   await ui(recipient.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
-  await referrerPolicy(recipient, "no-referrer"); await ui(recipient.getByRole("link", { name: "Continue to Google sign-in", exact: true })).toHaveAttribute("href", "/sign-in");
+  await referrerPolicy(recipient, "no-referrer"); await ui(recipient.getByRole("link", { name: "Continue with Google", exact: true })).toHaveAttribute("href", "/sign-in");
   expect(accepts).toBe(0);
   expect(await recipient.getByRole("button", { name: "Accept invitation", exact: true }).count()).toBe(0);
   await signIn(recipient, email, true);
