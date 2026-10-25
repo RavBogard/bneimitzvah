@@ -125,10 +125,13 @@ describe("stars and the Yours row", () => {
       expect(source).not.toMatch(/writeOwn|openStudy|saveSavedWork|savedText\(|<textarea|DrillDraft|noDraft/);
     expect(yoursSource).not.toMatch(/YoursField|onSave|Write one in Yours/);
   });
-  it("is Daniel's approved sign-in card heading on a public reading, with the body unchanged", () => {
+  it("is Daniel's approved sign-in card on a public reading (heading, and the N20 body), and its Sign in comes back here", () => {
     const html = renderToStaticMarkup(createElement(Shell, { title: "Synthetic", children: null }));
     expect(html).toMatch(/<h2 id="public-sign-in-heading">Save this reading<\/h2>/);
-    expect(html).toContain("Sign in to see your own verses, your tutor’s notes and your practice days. Everything on this page is open to anyone.");
+    expect(html).toContain("<p>Sign in to keep this reading, your place and your preferred commentaries. Everything on this page is open to anyone.</p>");
+    expect(html).not.toContain("your tutor’s notes");
+    // Drawn as plain /sign-in; the address with the way back is filled in when the link is used (return-sign-in-link.tsx).
+    expect(html).toContain('<a class="button-start" href="/sign-in">Sign in</a>');
     expect(html).not.toContain("Preparing for your Beit Mitzvah?");
     const signedIn = renderToStaticMarkup(createElement(Shell, { title: "Synthetic", children: null, signedIn: true }));
     expect(signedIn).not.toContain("public-sign-in-heading");

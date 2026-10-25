@@ -68,7 +68,9 @@ describe("Save on /read", () => {
     expect(view("idle")).toContain('<button type="button" class="button-hero-secondary" aria-expanded="false">Save</button>');
     expect(view("idle")).not.toContain("<form");
     expect(view("checking")).toMatch(/disabled="">Save<\/button>/);
-    expect(view("signed-out")).toContain('<a href="/sign-in">Sign in to save readings</a>');
+    // Signed out, Save is "Sign in to save" (F4), a link in Save's own place; no Save button beside it.
+    expect(view("signed-out")).toContain('<a class="button-hero-secondary" href="/sign-in">Sign in to save</a>');
+    expect(view("signed-out")).not.toContain(">Save</button>");
     expect(view("not-eligible")).toContain('<a href="/account">Ask for an account to save readings</a>');
     expect(view("unavailable")).toContain("Saving isn’t available right now. Try again.");
     const saved = view("saved");
