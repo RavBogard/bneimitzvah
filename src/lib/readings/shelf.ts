@@ -62,7 +62,9 @@ export function shelfSefariaUrl(verse: string): string {
 
 /** Text a shelf item may name: Sefaria's plain citation set, ending in a numeric or daf address. */
 export const SOURCE_REF_LIMITS = Object.freeze({ bytes: 256 });
-const SOURCE_REF = /^[\p{L}\p{N} ,.'’()\-:;"]+ \d+[ab]?(?::\d+)*(?:-\d+[ab]?(?::\d+)*)?$/u;
+// A "?" may close a word of the title (Sefaria's "... Was Jacob Right to Take the Blessings? 13-16"), never start a query: it must be
+// followed by a space, a comma or a semicolon. Every URL built from a ref encodes it (sourceSefariaUrl, sourcePath, the source proxy).
+const SOURCE_REF = /^(?:[\p{L}\p{N} ,.'’()\-:;"]|\?(?=[ ,;]))+ \d+[ab]?(?::\d+)*(?:-\d+[ab]?(?::\d+)*)?$/u;
 export function parseSourceRef(value: unknown): string | null {
   if (typeof value !== "string" || !value || new TextEncoder().encode(value).byteLength > SOURCE_REF_LIMITS.bytes || !value.isWellFormed()) return null;
   if (value !== value.normalize("NFC") || value.trim() !== value || /\s{2}/.test(value) || !SOURCE_REF.test(value)) return null;
