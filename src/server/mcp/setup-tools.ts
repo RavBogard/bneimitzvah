@@ -13,7 +13,7 @@ import { readingView } from "../portal/service";
 import * as relationships from "../relationships/data";
 import { displayName, writeTutorAssignment, writeTutorRevocation } from "../relationships/service";
 import { preferredFirst } from "../settings/validation";
-import { writeNewStudent, writeStudentEdit } from "../students/service";
+import { writeNewStudent, writeStudentDisable, writeStudentEdit } from "../students/service";
 import { rehearsalsFit, studentInput } from "../students/validation";
 import { lockRabbi } from "../study-guides/authority";
 import { currentVerseCapture } from "../study/current-verse-context";
@@ -338,6 +338,12 @@ export function createSetupTools<Q extends PgQueryResultHKT>(): readonly Tool<Q>
       ["studentId", "expectedRevision"]),
       handler: async (input, ctx) => editStudent(input, ctx, EDIT_FIELDS),
     },
+    {
+      name: "disable_student", roles, scope, annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+      description: "Take a student off the roster, as the portal's Disable does, for a duplicate or a student who left: the record and its history stay, marked disabled, and the student no longer appears in list_students or takes any setup. Show the rabbi the student's name, date and reading (get_student_setup) and disable only on the rabbi's instruction in this conversation. expectedRevision is the student's revision from get_student_setup. Sends nothing to anyone.",
+      inputSchema: closed({ studentId, expectedRevision: { type: "integer", minimum: 1, maximum: 2147483647, description: "The student's revision from get_student_setup." } }, ["studentId", "expectedRevision"]),
+      handler: async (input, ctx) => disableStudent(input, ctx),
+    },
   ] satisfies Tool<Q>[]);
 }
 
@@ -450,6 +456,24 @@ async function editStudent<Q extends PgQueryResultHKT>(input: Record<string, unk
     const shownFields = Object.fromEntries(given.map(key => [key, key === "firstName" || key === "lastName" || key === "hebrewName" ? shown(after[key] ?? null) : after[key]]));
     return { ok: true, studentId: id, revision: updated.revision, ...shownFields, rehearsal1: after.rehearsal1, rehearsal2: after.rehearsal2, serviceSlot: after.serviceSlot, readingsSentToReview: updated.readingNeedsReview,
       next: updated.readingNeedsReview ? "The date or slot changed, so the student's readings and service plan are marked for review: check the readings with get_student_setup." : "Nothing was sent to anyone." };
+  });
+}
+
+/** disable_student: the portal's Disable (writeStudentDisable) under the live admin roster connection. */
+async function disableStudent<Q extends PgQueryResultHKT>(input: Record<string, unknown>, ctx: ToolContext<Q>) {
+  requireRoster(ctx.actor);
+  if (ctx.actor.unattended) return routine;
+  const id = input.studentId as string, expected = input.expectedRevision as number;
+  return asAdmin(ctx, "authority-write", async (tx, live, portal, alive) => {
+    const current = await roster.editableStudent(tx, live.tenantId, id);
+    if (!current || current.disabledAt) throw new AccessDenied(404);
+    if (current.revision !== expected) return { ok: false, code: "conflict", currentRevision: current.revision, hint: "The student changed since get_student_setup: read it again, show the rabbi, and resend with the current revision." };
+    alive();
+    const updated = await writeStudentDisable(tx, portal, id, expected, ctx.mcp.now());
+    if (!updated) return { ok: false, code: "conflict", hint: "The student changed since get_student_setup: read it again and resend with the current revision." };
+    alive();
+    return { ok: true, studentId: id, name: shown(`${current.firstName} ${current.lastName}`), ceremonyDate: current.ceremonyDate, revision: updated.revision, disabled: true,
+      next: "The student is off the roster; the record and its history stay. Nothing was sent to anyone." };
   });
 }
 

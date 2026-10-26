@@ -9,7 +9,7 @@ import { closeMcpFixtures, mcpFixture } from "./mcp-fixture";
 afterEach(async () => { vi.restoreAllMocks(); await closeMcpFixtures(); });
 
 // Student setup through the portal MCP (Daniel, 2026-10-21: "Add setup + sources"). Synthetic students and sources only.
-const SETUP = ["list_tutors", "get_student_setup", "find_sources", "assign_sources", "remove_source_assignment", "preview_student_reading", "set_student_reading", "set_student_tutor", "set_student_service", "create_student", "update_student"];
+const SETUP = ["list_tutors", "get_student_setup", "find_sources", "assign_sources", "remove_source_assignment", "preview_student_reading", "set_student_reading", "set_student_tutor", "set_student_service", "create_student", "update_student", "disable_student"];
 const ALL = "portal:read portal:study portal:roster";
 const raw = (ref: string) => Array.from({ length: 40 }, (_, i) => ({ _id: `source_${String(i).padStart(2, "0")}`, sourceRef: `Invented Work ${i} on ${ref}`, index_title: `Invented Work ${i}`, category: "Commentary", anchorRef: ref }));
 
@@ -54,6 +54,7 @@ describe("student setup through the portal MCP", () => {
       ["set_student_tutor", { studentId: crc.id, expectedTutorIds: [], tutorIds: [] }],
       ["set_student_service", { studentId: crc.id, expectedRevision: 2, serviceSlot: "morning" }],
       ["update_student", { studentId: crc.id, expectedRevision: 2, hebrewName: "Invented" }],
+      ["disable_student", { studentId: crc.id, expectedRevision: 2 }],
     ];
     for (const [name, args] of calls) expect((await call(name, args)).text, name).toMatch(/Not found/);
     expect(await audits(["student.update", "reading.set", "tutor.assign", "tutor.revoke", "source-assignment.set"])).toHaveLength(0);
@@ -82,6 +83,7 @@ describe("student setup through the portal MCP", () => {
     const hint = (name: string) => listed.find(x => x.name === name)!.annotations;
     for (const name of ["list_tutors", "get_student_setup", "find_sources", "preview_student_reading"]) expect(hint(name)).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     for (const name of ["remove_source_assignment", "set_student_reading", "set_student_tutor", "set_student_service", "update_student"]) expect(hint(name)).toMatchObject({ readOnlyHint: false, destructiveHint: true, idempotentHint: true });
+    expect(hint("disable_student")).toMatchObject({ readOnlyHint: false, destructiveHint: true, idempotentHint: false });
     for (const name of ["assign_sources", "create_student"]) expect(hint(name)).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: true });
   });
 
@@ -199,6 +201,23 @@ describe("student setup through the portal MCP", () => {
     // Another congregation's connection would add to its own roster only; this one never reaches it, and no address ever comes back.
     expect((await call("get_student_setup", { studentId: t.f.students[3].id })).text).toMatch(/Not found/);
     for (const text of texts) { expect(text).not.toMatch(/@/); expect(text).not.toMatch(/withheld/); }
+  });
+
+  it("takes a student off the roster through the portal's Disable, keeping the record, with a conflict on a stale revision and nothing in another congregation", async () => {
+    const { json, call, crc, other, student, audits, t } = await setup();
+    expect(await json("disable_student", { studentId: crc.id, expectedRevision: 9 })).toMatchObject({ ok: false, code: "conflict", currentRevision: 1 });
+    expect(await student(crc.id)).toMatchObject({ disabledAt: null, revision: 1 });
+    expect(await json("disable_student", { studentId: crc.id, expectedRevision: 1 })).toMatchObject({ ok: true, studentId: crc.id, name: "Synthetic Sibling A", revision: 2, disabled: true });
+    expect(await student(crc.id)).toMatchObject({ revision: 2, firstName: "Synthetic", parentEmail: crc.parentEmail });
+    expect((await student(crc.id)).disabledAt).toBeInstanceOf(Date);
+    expect(await audits(["student.update"])).toHaveLength(1);
+    // Gone from the list and from every setup tool; disabling again finds nothing.
+    expect((await json("list_students", {})).students.map((s: { id: string }) => s.id)).not.toContain(crc.id);
+    expect((await call("disable_student", { studentId: crc.id, expectedRevision: 2 })).text).toMatch(/Not found/);
+    expect((await call("disable_student", { studentId: other.id, expectedRevision: 1 })).text).toMatch(/Not found/);
+    expect(await student(other.id)).toMatchObject({ disabledAt: null, revision: 1 });
+    expect(await audits(["student.update"])).toHaveLength(1);
+    expect(t.f.students.length).toBeGreaterThan(1);
   });
 
   it("edits names, the Hebrew name and the ceremony date through the portal's student edit, sending readings to review on a new date", async () => {
