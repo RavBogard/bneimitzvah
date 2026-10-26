@@ -11,6 +11,7 @@ import { MavenLinkPanel } from "./maven-link";
 import { useSearchParams } from "next/navigation";
 import { staffApi } from "./staff/api";
 import { Button, PageHeader } from "../../ui";
+import { DocumentTitle } from "./document-title";
 import { byCeremony, isSunday, needsYouRows, statusChips, type NeedsYouStudent, type StudentStatus } from "./staff/model";
 import { NeedsYou } from "./staff/needs-you";
 import { ThisWeekLists } from "./staff/this-week";
@@ -198,7 +199,7 @@ function Roster() {
   return <section className="role-workspace admin-workspace">
     <AccountRequestsLine mode="admin" />
     {/* The screen is titled by the tab that opened it: This week (the default) or Students (?tab=students). */}
-    <PageHeader title={thisWeek ? "This week" : "Students"} actions={thisWeek ? undefined : <><WorkspaceLink className="button-secondary" href="/workspace/admin/students/import">Import</WorkspaceLink><Button ref={addButton} variant="primary" disabled={pending || loading || unavailable || conflict} onClick={event => choose(null, event)}>Add student</Button></>} />
+    <PageHeader title={thisWeek ? "This week" : "Students"} actions={thisWeek ? undefined : <><WorkspaceLink className="button-secondary" href="/workspace/admin/students/import">Import</WorkspaceLink><Button ref={addButton} variant="primary" disabled={pending || loading || unavailable || conflict} onClick={event => choose(null, event)}>Add student</Button></>} />{!thisWeek && <DocumentTitle heading="Students" />}
     {!sheetOpen && notice}{!sheetOpen && conflict && <button type="button" className="button-secondary admin-pill roster-reload-inline" onClick={() => void load().catch(() => undefined)}>Reload roster</button>}
     {loading ? <p role="status">Loading students…</p> : unavailable ? <div className="admin-state" role="alert"><h2>Students unavailable</h2><p>The full list couldn’t be loaded, so none of it is shown. Access may have changed, or the list may be too large to load at once.</p><button className="button-secondary admin-pill" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
       : <>
