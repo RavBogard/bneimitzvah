@@ -4,6 +4,7 @@ import { APPROVED, PLAN } from "../../../lib/offline/copy";
 import { purgeOffline, savedPacks } from "../../../lib/offline/pack-index";
 import { WINDOW_MS, type Pack } from "../../../lib/offline/policy";
 import { readAddress } from "../public-reading/urls";
+import { COPY as SERVICE_COPY } from "../../../lib/service-course/copy";
 import { savedDate, useOfflinePacks, useOnline, usePlatform, useProductName } from "./status";
 import styles from "./offline.module.css";
 
@@ -18,8 +19,10 @@ import styles from "./offline.module.css";
  * replaced another on this device never sees the other's list.
  */
 const displayRange = (ranges: string) => ranges.replace(/(\d)-(\d)/g, "$1–$2");
-const target = (pack: Pack) => pack.descriptor.type === "week" ? "/read" : pack.descriptor.type === "ref" ? readAddress({ mode: "ref", ref: pack.descriptor.ref, kind: pack.descriptor.kind }) : "/learn";
-const label = (pack: Pack) => pack.descriptor.type === "course" ? APPROVED.courseLabel
+// The evening lessons' text (2.0 SC7, signed-in CRC people only) opens the service course and is named by the course's own title.
+const target = (pack: Pack) => pack.descriptor.type === "week" ? "/read" : pack.descriptor.type === "ref" ? readAddress({ mode: "ref", ref: pack.descriptor.ref, kind: pack.descriptor.kind })
+  : pack.descriptor.type === "evening" ? "/learn/service" : "/learn";
+const label = (pack: Pack) => pack.descriptor.type === "course" ? APPROVED.courseLabel : pack.descriptor.type === "evening" ? SERVICE_COPY.home.title
   : pack.descriptor.type === "ref" ? pack.label || `${pack.descriptor.kind === "torah" ? "Torah" : "Haftarah"} ${displayRange(pack.descriptor.ref)}`
     : pack.label && pack.label !== "week" ? pack.label : APPROVED.weekLabel;
 

@@ -49,4 +49,4 @@ export const unavailablePinnedSource = async (): Promise<never> => { throw new S
 /** The service course's public text (2.0 SC2), not stored: every unit is unavailable. */
 export const unavailableServiceText = async (): Promise<never> => { throw new CourseTextUnavailable("unavailable"); };
 export const unavailableExtras = Object.freeze({ translations: unavailableTranslations, shelf: unavailableShelf, source: unavailableSource, productName: syntheticProductName,
-  discussions: noDiscussions, pinnedSource: unavailablePinnedSource, serviceText: unavailableServiceText, portionSummary: async () => null });
+  discussions: noDiscussions, pinnedSource: unavailablePinnedSource, serviceText: unavailableServiceText, eveningText: unavailableServiceText, portionSummary: async () => null });

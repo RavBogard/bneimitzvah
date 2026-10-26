@@ -42,8 +42,17 @@ export const STATIC_PATH = /^\/(?:_next\/static|fonts)\//;
 export const STATIC_UNSAFE = /%2f|%5c|%2e|\/\.\.?(?:\/|$)|\/\//i;
 /** PocketTorah short clips only (G3): exactly the content-addressed short-v1 path, no query. */
 export const CLIP_PATH = /^\/reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$/;
-/** The public reading routes a pack may hold (§3.2): reading, text and short-reference pages. */
-export const PACK_DATA_PATH = /^\/api\/public\/(?:reading|text|reference\/short)$/;
+/** The public reading routes a pack may hold (§3.2): reading, text and short-reference pages, and (2.0 SC7) the evening lessons' text. */
+export const PACK_DATA_PATH = /^\/api\/public\/(?:reading|text|reference\/short|evening-text)$/;
+/**
+ * A route only an owner pack may hold (2.0 SC7): the CRC siddur's evening text. Daniel, 2026-10-25: "Yes, for signed-in CRC people";
+ * a signed-out visitor's device keeps none of it. The private /api/offline/packs names the evening pack only for a signed-in CRC person,
+ * so it is always an owner pack, which the sign-out purge and an account switch remove; a public pack holding it is no index at all,
+ * and the worker serves it only from a pack of the index's own owner.
+ */
+export const OWNER_ONLY_PATH = /^\/api\/public\/evening-text$/;
+const pathOf = (asset: string) => { const query = asset.indexOf("?"); return query < 0 ? asset : asset.slice(0, query); };
+export const ownerOnlyAsset = (asset: string): boolean => typeof asset === "string" && OWNER_ONLY_PATH.test(pathOf(asset));
 
 /** May this same-origin path (with its query) ever enter a pack? The G3 and private-data guard. */
 export function packAssetAllowed(asset: string): boolean {
@@ -65,8 +74,8 @@ export const OWNER_KEY = /^[A-Za-z0-9_-]{43}$/;
 const PACK_REF = /^[A-Za-z0-9 :;,.-]{1,1000}$/;
 export const packRefAllowed = (ref: unknown): ref is string => typeof ref === "string" && PACK_REF.test(ref);
 
-export type PackDescriptor = Readonly<{ type: "week"; date: string } | { type: "course" } | { type: "ref"; kind: "torah" | "haftarah"; ref: string }>;
-/** `owner` is "public" (This week, the course) or the owner key of the person whose own reading it is. */
+export type PackDescriptor = Readonly<{ type: "week"; date: string } | { type: "course" } | { type: "ref"; kind: "torah" | "haftarah"; ref: string } | { type: "evening" }>;
+/** `owner` is "public" (This week, the course) or the owner key of the person whose own reading (or, CRC, evening text) it is. */
 export type Pack = Readonly<{
   key: string; owner: string; label: string; descriptor: PackDescriptor; assets: readonly string[];
   bytes: number; renewedAt: number; expiresAt: number; format: 1;
@@ -86,6 +95,7 @@ function descriptorOf(value: unknown): PackDescriptor | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
   if (row.type === "course" && Object.keys(row).length === 1) return Object.freeze({ type: "course" });
+  if (row.type === "evening" && Object.keys(row).length === 1) return Object.freeze({ type: "evening" });
   if (row.type === "week" && Object.keys(row).length === 2 && typeof row.date === "string" && DATE.test(row.date)) return Object.freeze({ type: "week", date: row.date });
   if (row.type === "ref" && Object.keys(row).length === 3 && (row.kind === "torah" || row.kind === "haftarah") && packRefAllowed(row.ref))
     return Object.freeze({ type: "ref", kind: row.kind, ref: row.ref });
@@ -104,10 +114,14 @@ export function parsePackIndex(value: unknown): PackIndex {
     for (const raw of row.packs) {
       if (!raw || typeof raw !== "object" || Array.isArray(raw)) return EMPTY_INDEX;
       const p = raw as Record<string, unknown>, descriptor = descriptorOf(p.descriptor);
-      // A public pack is This week or the course; an owner pack is a ref of the index's own owner, and only that.
-      const ownerOk = p.owner === "public" ? descriptor?.type !== "ref" : owner !== null && p.owner === owner && descriptor?.type === "ref";
+      // A public pack is This week or the course; an owner pack is a ref (or, CRC, the evening text) of the index's own owner, and only that.
+      const owned = descriptor?.type === "ref" || descriptor?.type === "evening";
+      const ownerOk = p.owner === "public" ? !!descriptor && !owned : owner !== null && p.owner === owner && owned;
       if (typeof p.key !== "string" || p.key.length > 64 || !ownerOk || typeof p.label !== "string" || p.label.length > 160 || !descriptor
-        || !Array.isArray(p.assets) || p.assets.length > 4000 || !p.assets.every(packAssetAllowed) || !Number.isSafeInteger(p.bytes) || (p.bytes as number) < 0
+        || !Array.isArray(p.assets) || p.assets.length > 4000 || !p.assets.every(packAssetAllowed)
+        // The evening text is only ever an owner pack's: a public pack that holds it, or an evening pack holding anything else, is no index.
+        || (p.owner === "public" && (p.assets as string[]).some(ownerOnlyAsset)) || (descriptor.type === "evening" && !(p.assets as string[]).every(ownerOnlyAsset))
+        || !Number.isSafeInteger(p.bytes) || (p.bytes as number) < 0
         || !Number.isSafeInteger(p.renewedAt) || !Number.isSafeInteger(p.expiresAt) || p.format !== 1) return EMPTY_INDEX;
       packs.push(Object.freeze({ key: p.key, owner: p.owner as string, label: p.label, descriptor, assets: Object.freeze([...(p.assets as string[])]),
         bytes: p.bytes as number, renewedAt: p.renewedAt as number, expiresAt: p.expiresAt as number, format: 1 }));
@@ -126,6 +140,7 @@ export function workerPolicy(input: { build: string; enabled: boolean; shellPage
     offlineCache: OFFLINE_CACHE, family: CACHE_FAMILY, indexKey: INDEX_KEY, header: OFFLINE_HEADER, windowMs: WINDOW_MS, skewMs: SKEW_MS,
     shellPages: Object.freeze([...input.shellPages]), shellAssets: [MANIFEST_PATH], shellLimits: SHELL_LIMITS, manifestPath: MANIFEST_PATH,
     staticPath: STATIC_PATH.source, staticUnsafe: STATIC_UNSAFE.source, clipPath: CLIP_PATH.source, packDataPath: PACK_DATA_PATH.source, ownerKey: OWNER_KEY.source,
+    ownerOnlyPath: OWNER_ONLY_PATH.source,
   });
 }
 export type WorkerPolicy = ReturnType<typeof workerPolicy>;

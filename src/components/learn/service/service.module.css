@@ -47,7 +47,7 @@
 .lineHe { font-size: 1.75rem; line-height: 1.8; margin: 0; text-align: right; }
 .lineHeSmall { font-size: 1.25rem; line-height: 1.7; margin: 0; text-align: right; }
 .lineTr { margin: 0; font-size: 1.0625rem; line-height: 1.5; color: var(--color-ink); max-width: none; }
-.lineEn { margin: 0; font-size: 1rem; line-height: 1.5; color: var(--color-muted); max-width: none; }
+.lineEn { margin: 0; font-size: 1rem; line-height: 1.5; color: var(--color-muted); max-width: none; white-space: pre-line; }
 /* A word with a card: underlined in marigold, never colour alone. */
 .word { display: inline; margin: 0; padding: 0.15em 0; border: 0; background: transparent; color: inherit; font: inherit; line-height: inherit; cursor: pointer;
   text-decoration: underline; text-decoration-color: var(--marigold); text-decoration-thickness: 0.08em; text-underline-offset: 0.3em; border-radius: 0.2em; }

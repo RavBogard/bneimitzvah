@@ -10,6 +10,7 @@ import type { createPortalService } from "../portal/service";
 import type { SavedService } from "../saved/service";
 import { canonicalReadingRef } from "../../lib/readings/reading-ref";
 import { congregationToday } from "../../lib/readings/public-shabbat";
+import { eveningTenantFile } from "../service-course/evening";
 
 /**
  * The installed app's owner packs (1.5 plan §3.10, A2): which of the signed-in person's own readings the device may
@@ -24,7 +25,8 @@ export const OFFLINE_MEMBER_UPCOMING = 3;
 export const OFFLINE_OWNER_PACKS = 8;
 const STUDENTS = 4;
 export type OfflinePackDescriptor = Readonly<{ kind: "torah" | "haftarah"; ref: string; name: string | null }>;
-export type OfflinePacks = Readonly<{ owner: string; packs: readonly OfflinePackDescriptor[] }>;
+/** `evening`: this person may keep the CRC siddur's evening lesson text on the device (2.0 SC7): a signed-in CRC member, never another congregation. */
+export type OfflinePacks = Readonly<{ owner: string; packs: readonly OfflinePackDescriptor[]; evening: boolean }>;
 
 export function createOfflineService<Q extends PgQueryResultHKT>(input: {
   access: Pick<ReturnType<typeof createAccessService<Q>>, "withVerifiedIdentity" | "listStudents">;
@@ -42,7 +44,9 @@ export function createOfflineService<Q extends PgQueryResultHKT>(input: {
     const who = await input.access.withVerifiedIdentity(request, { intent: "read" }, async (tx, identity) => {
       const grants = identity.membership ? await availableRoles(tx, identity.tenantId, identity.membership.id) : [];
       const member = identity.membership ? await activeMember(tx, identity.tenantId, identity.membership.id) : null;
-      return Object.freeze({ tenantId: identity.tenantId, userId: identity.userId, student: grants.some(grant => grant.role === "student"), member: member !== null });
+      return Object.freeze({ tenantId: identity.tenantId, userId: identity.userId, student: grants.some(grant => grant.role === "student"), member: member !== null,
+        // Daniel, 2026-10-25: "Yes, for signed-in CRC people". A membership in the host's congregation, which is CRC with its evening on.
+        evening: !!identity.membership && eveningTenantFile(identity.tenantId) !== null });
     });
     const out: OfflinePackDescriptor[] = [], seen = new Set<string>();
     const add = (kind: unknown, ref: unknown, name: string | null) => {
@@ -74,7 +78,7 @@ export function createOfflineService<Q extends PgQueryResultHKT>(input: {
         .slice(0, OFFLINE_MEMBER_UPCOMING);
       for (const row of upcoming) add(row.kind, row.ranges, row.name);
     }
-    return Object.freeze({ owner: ownerKey(who.tenantId, who.userId), packs: Object.freeze(out) });
+    return Object.freeze({ owner: ownerKey(who.tenantId, who.userId), packs: Object.freeze(out), evening: who.evening });
   }
   return Object.freeze({ packs });
 }

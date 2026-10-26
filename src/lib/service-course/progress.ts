@@ -1,4 +1,4 @@
-import { SERVICE_COURSE, CRC_TENANT, lessonById, serviceOrder, type Lesson, type Tenant } from "./course";
+import { SERVICE_COURSE, CRC_TENANT, isEveningLesson, lessonById, lessonOpen, serviceOrder, type Lesson, type Tenant } from "./course";
 import { withLessonCards } from "./cards";
 
 /**
@@ -85,8 +85,9 @@ export function completeLesson(progress: Progress, lesson: Lesson, now: number):
  * The fluency strand never becomes "Next" on its own (A4 6.3).
  */
 export function nextLesson(progress: Progress, tenant: Tenant = CRC_TENANT, path: readonly string[] = tenant.defaultPath): Lesson | null {
-  for (const id of path) { const lesson = lessonById(id); if (lesson && lesson.kind !== "fluency" && !isDone(progress, id)) return lesson; }
-  for (const unit of SERVICE_COURSE.units) for (const id of unit.lessons) { const lesson = lessonById(id); if (lesson && lesson.kind !== "fluency" && !isDone(progress, id)) return lesson; }
+  for (const id of path) { const lesson = lessonById(id); if (lesson && lesson.kind !== "fluency" && lessonOpen(lesson, SERVICE_COURSE, tenant) && !isDone(progress, id)) return lesson; }
+  // The morning's units, then (CRC, 2.0 SC7) Saturday evening and Havdalah; a congregation without the evening never reaches them.
+  for (const unit of SERVICE_COURSE.units) for (const id of unit.lessons) { const lesson = lessonById(id); if (lesson && lesson.kind !== "fluency" && lessonOpen(lesson, SERVICE_COURSE, tenant) && !isDone(progress, id)) return lesson; }
   return null;
 }
 /**
@@ -94,7 +95,7 @@ export function nextLesson(progress: Progress, tenant: Tenant = CRC_TENANT, path
  * first, then the morning's units), and from the last one on, the first not done anywhere.
  */
 export function lessonAfter(progress: Progress, id: string, tenant: Tenant = CRC_TENANT): Lesson | null {
-  const order = SERVICE_COURSE.units.flatMap(unit => unit.lessons).map(lessonId => lessonById(lessonId)!).filter(lesson => lesson.kind !== "fluency");
+  const order = SERVICE_COURSE.units.flatMap(unit => unit.lessons).map(lessonId => lessonById(lessonId)!).filter(lesson => lesson.kind !== "fluency" && lessonOpen(lesson, SERVICE_COURSE, tenant));
   const at = order.findIndex(lesson => lesson.id === id);
   for (const lesson of at < 0 ? [] : order.slice(at + 1)) if (!isDone(progress, lesson.id)) return lesson;
   return nextLesson(progress, tenant);
@@ -104,8 +105,9 @@ export function nextOnPath(progress: Progress, path: readonly string[]): Lesson 
   for (const id of path) { const lesson = lessonById(id); if (lesson && lesson.kind !== "fluency" && !isDone(progress, id)) return lesson; }
   return null;
 }
-/** Every prayer and moment of the service is done. */
-export const courseDone = (progress: Progress) => serviceOrder().every(lesson => isDone(progress, lesson.id));
+/** Every prayer and moment of the service is done: the morning's, and (CRC, 2.0 SC7) the evening's own lessons. */
+export const courseDone = (progress: Progress, tenant: Tenant = CRC_TENANT) => serviceOrder().every(lesson => isDone(progress, lesson.id))
+  && SERVICE_COURSE.lessons.every(lesson => !isEveningLesson(lesson) || !lessonOpen(lesson, SERVICE_COURSE, tenant) || isDone(progress, lesson.id));
 
 /** Browser storage for signed-out learners: one key, every access guarded; corrupt or missing means fresh. */
 export type ProgressStore = Readonly<{ load(): Progress; save(progress: Progress): boolean }>;

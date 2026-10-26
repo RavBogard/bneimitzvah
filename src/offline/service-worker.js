@@ -14,6 +14,8 @@ const STATIC_UNSAFE = new RegExp(POLICY.staticUnsafe, "i");
 const CLIP_PATH = new RegExp(POLICY.clipPath);
 const PACK_DATA_PATH = new RegExp(POLICY.packDataPath);
 const OWNER_KEY = new RegExp(POLICY.ownerKey);
+/** The CRC siddur's evening text (2.0 SC7): served offline only from a pack of the index's own owner, never from a public pack. */
+const OWNER_ONLY_PATH = typeof POLICY.ownerOnlyPath === "string" && POLICY.ownerOnlyPath ? new RegExp(POLICY.ownerOnlyPath) : /^\/api\/public\/evening-text$/;
 const OWN_ORIGIN = self.location.origin;
 const LOOPBACK = /^http:\/\/(?:127\.0\.0\.1|localhost)(?::\d{1,5})?$/;
 /** Off (the tombstone) when PORTAL_OFFLINE_ENABLED is "false", or anywhere but the torah origin and loopback. */
@@ -125,7 +127,8 @@ async function fromPack(url) {
   // Never reopen (and so recreate) a pack cache a purge deleted.
   if (!await caches.has(POLICY.offlineCache)) return null;
   const cache = await caches.open(POLICY.offlineCache), index = await readIndex(cache), key = url.pathname + url.search, now = Date.now();
-  if (!index || !index.packs.some(pack => live(pack, now) && pack.assets.includes(key))) return null;
+  const ownerOnly = OWNER_ONLY_PATH.test(url.pathname);
+  if (!index || !index.packs.some(pack => live(pack, now) && pack.assets.includes(key) && (!ownerOnly || (index.owner !== null && pack.owner === index.owner)))) return null;
   const hit = await cache.match(url.href, { ignoreVary: true });
   if (!hit || hit.status !== 200) return null;
   const headers = new Headers(hit.headers);
