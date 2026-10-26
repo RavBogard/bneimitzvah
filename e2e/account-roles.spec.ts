@@ -69,9 +69,12 @@ test("an accepted invitation's Continue lands on the work, and Sign out on Accou
   // Account, then Sign out: the form is what is left.
   await page.route("**/api/auth/sign-out", route => json(route, 200, { ok: true }));
   await page.goto("/account");
+  // Wait for the signed-in Account page before the session turns signed out, or its own session read can see the 401 first.
+  const signOut = page.getByRole("button", { name: "Sign out", exact: true });
+  await expect(signOut).toBeVisible();
   await page.unroute("**/api/session");
   await page.route("**/api/session", route => json(route, 401, { error: "authentication-required" }));
-  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await signOut.click();
   await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Ask for an account", exact: true })).toBeVisible();
 });
