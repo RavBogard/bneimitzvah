@@ -36,6 +36,15 @@ Read first, every session: `docs/planning/2026-10-15-kickoff/MISSION.md` (Daniel
 - **Planning and wording:**
   - Planning, wording and research go to Cowork.
   - Builders never wait on wording; gaps are batched into one popup round.
+- **Fewer round trips (Daniel 2026-10-26: "really small changes … rather than grouping them together"):**
+  - Before a wave starts, the lead gathers every foreseeable wording gap for it into one popup round, so builders start with the strings. Gaps found while building wait for one end-of-wave popup, never one per PR.
+  - One fix round per PR: review findings and late wording go to the builder together, in one push. A delta re-review only when the fix touches security; never for wording.
+  - Milestones that share screens or files go to one builder as one PR, with one review.
+  - Size work by area, not by the plan's milestone numbers. Each PR has fixed costs (a fresh agent's context, about 25 minutes of CI, a review, a fix round), so bundle a whole area into one PR and keep small milestones out of their own pipelines (Daniel 2026-10-26: "each of these milestones is a tiny little thing"). The rest of 1.9 is three bundles: staff screens (N14, N15 and leftovers), practice visibility (N23), and N16.
+  - Mechanical fixes (a test locator, a string, an allow-list entry) the lead makes directly instead of reviving an agent.
+- **Small wording is the lead's call (Daniel 2026-10-26: "You really don't need my calls on these small wording things. Your judgement is generally fine"):**
+  - Labels, empty states, status lines, chips, errors and email details: decide in the house voice. That means the child's name and never pronouns, no exclamation points or pep talk, plain verbs, "practise". Log each decision in the plan's "Decided here".
+  - Ask Daniel only for wording that is a real product decision: a new promise to families, anything about privacy or what others can see, or a MISSION-level rule.
 - **Never relaxed:** adversarial reviews on high-stakes work, never-in-repo, the RLS tests, the migration check scripts, and CI's three device projects.
 
 ## Git
