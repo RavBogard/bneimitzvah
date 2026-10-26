@@ -19,7 +19,7 @@ import { requireCookieMutation } from "./mutations";
 import { errorResponse, HttpBoundaryError, privateJson, type JsonValue } from "./responses";
 
 type Kind = "short-explore-page" | "short-reference-page" | "explore-prepare" | "explore-page" | "preview-prepare" | "preview-page" | "session" | "students" | "student" | "reading" | "study-text" | "study-word-aids" | "study-word-details" | "study-sources" | "reference-audio" | "practice-read" | "practice-enter" | "practice-switch" | "practice-exit"
-  | "admin-students" | "edit" | "disable" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "pending" | "accept"
+  | "admin-students" | "edit" | "disable" | "ceremony-done" | "ceremony-reverse" | "csv-preview" | "csv-confirm" | "prepare" | "confirm" | "invite-issue" | "invite-reissue" | "invite-revoke" | "pending" | "accept"
   | "eligible-tutors" | "relationships" | "tutor-assign" | "tutor-unassign" | "guardian-revoke" | "identity-revoke" | "guardian-practice" | "grant-revoke" | "cantor";
 type Route = { kind: Kind; methods: readonly string[]; id?: string; linkId?: string };
 const exact: Record<string, Route> = {
@@ -67,8 +67,8 @@ function route(pathname: string): Route | null {
   const grant = /^\/api\/admin\/(grants|tutors)\/([^/]+)\/(revoke|cantor)$/.exec(pathname);
   if (grant) return grant[1] === "grants" && grant[3] === "revoke" ? { kind: "grant-revoke", methods: ["POST"], id: grant[2] }
     : grant[1] === "tutors" && grant[3] === "cantor" ? { kind: "cantor", methods: ["POST"], id: grant[2] } : null;
-  const admin = /^\/api\/admin\/students\/([^/]+)\/(edit|disable)$/.exec(pathname);
-  if (admin) return { kind: admin[2] as "edit" | "disable", methods: ["POST"], id: admin[1] };
+  const admin = /^\/api\/admin\/students\/([^/]+)\/(edit|disable|ceremony-done|ceremony-reverse)$/.exec(pathname);
+  if (admin) return { kind: admin[2] as "edit" | "disable" | "ceremony-done" | "ceremony-reverse", methods: ["POST"], id: admin[1] };
   const invite = /^\/api\/admin\/invitations\/([^/]+)\/(reissue|revoke)$/.exec(pathname);
   if (invite) return { kind: invite[2] === "reissue" ? "invite-reissue" : "invite-revoke", methods: ["POST"], id: invite[1] };
   return null;
@@ -439,7 +439,7 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
           return privateJson({ students: rows.map(row => ({ id: row.id, firstName: row.firstName, lastName: row.lastName, ceremonyDate: row.ceremonyDate,
             rehearsal1: row.rehearsal1, rehearsal2: row.rehearsal2, studentKind: row.studentKind, serviceSlot: row.serviceSlot, parentEmail: row.parentEmail, ownEmail: row.ownEmail,
             hebrewName: row.hebrewName, secondParentEmail: row.secondParentEmail, importMetadata: row.importMetadata,
-            disabledAt: row.disabledAt?.toISOString() ?? null, revision: row.revision })) });
+            disabledAt: row.disabledAt?.toISOString() ?? null, ceremonyDoneAt: row.ceremonyDoneAt?.toISOString() ?? null, revision: row.revision })) });
         }
         const body = await objectBody(request, ["student"]), value = await runtime.students.create(request, { mode: "admin", student: studentInput(body.student) });
         return privateJson({ id: value.id, revision: value.revision }, 201);
@@ -452,6 +452,13 @@ export async function handlePortalRequest(request: Request, runtime: HttpRuntime
       case "disable": {
         uniqueQuery(request.url, []); const body = await objectBody(request, ["expectedRevision"]);
         const value = await runtime.students.disable(request, { mode: "admin", studentId: id!, expectedRevision: integer(body.expectedRevision) });
+        return value.ok ? privateJson({ ok: true, id: value.id, revision: value.revision }) : stale();
+      }
+      // N21 "Ceremony done": admin mode only (src/server/students/ceremony-done.ts refuses every other mode and checks the live grant).
+      case "ceremony-done": case "ceremony-reverse": {
+        uniqueQuery(request.url, []); const body = await objectBody(request, ["expectedRevision"]);
+        const selection = { mode: "admin" as const, studentId: id!, expectedRevision: integer(body.expectedRevision) };
+        const value = selected.kind === "ceremony-done" ? await runtime.ceremonyDone.set(request, selection) : await runtime.ceremonyDone.reverse(request, selection);
         return value.ok ? privateJson({ ok: true, id: value.id, revision: value.revision }) : stale();
       }
       case "csv-preview": case "csv-confirm": {

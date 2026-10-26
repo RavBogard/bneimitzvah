@@ -5,6 +5,7 @@ import type { AccessTransaction,ActiveMode,Actor,StudentActor,StudentAuthority }
 import { AccessDenied,AccessUnavailable } from "../access/errors";
 import { requireCookieMutation,type CookieMutationRequest } from "../http/mutations";
 import * as data from "../data/roster";
+import { liveRows as ceremonyDoneRows } from "../data/ceremony-done";
 import { TANAKH_VERSE_COUNTS } from "../../lib/readings/catalog";
 import { parsePick,type Pick } from "../../lib/readings/leyning.mjs";
 import { expandReadingRanges,readingSegments,type CeremonyDate,type VerseCounts } from "../../lib/readings/ranges";
@@ -238,7 +239,9 @@ export function createStudentService<Q extends PgQueryResultHKT>(input:{
     return input.access.withAdminCapability(request,{mode:selection.mode,capability:"manage-students"},async(tx,actor)=>{
       const rows=await data.roster(tx,actor.tenantId);
       if(rows.length>5000)throw new AccessDenied(403);
-      return rows.map(({id,firstName,lastName,ceremonyDate,rehearsal1,rehearsal2,serviceSlot,studentKind,parentEmail,ownEmail,hebrewName,secondParentEmail,importMetadata,disabledAt,revision})=>({id,firstName,lastName,ceremonyDate,rehearsal1,rehearsal2,serviceSlot,studentKind,parentEmail,ownEmail,hebrewName,secondParentEmail,importMetadata,disabledAt,revision}));
+      // N21: the instant each student's ceremony was marked done, or null; the admin's Students page lists those apart.
+      const done=new Map((await ceremonyDoneRows(tx,actor.tenantId)).map(row=>[row.studentId,row.setAt]));
+      return rows.map(({id,firstName,lastName,ceremonyDate,rehearsal1,rehearsal2,serviceSlot,studentKind,parentEmail,ownEmail,hebrewName,secondParentEmail,importMetadata,disabledAt,revision})=>({id,firstName,lastName,ceremonyDate,rehearsal1,rehearsal2,serviceSlot,studentKind,parentEmail,ownEmail,hebrewName,secondParentEmail,importMetadata,disabledAt,ceremonyDoneAt:done.get(id)??null,revision}));
     });
   }
   async function create(request:CookieMutationRequest,selection:Mode&{student:unknown}){

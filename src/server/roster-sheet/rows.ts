@@ -5,6 +5,7 @@ import type { AccessTransaction } from "../access/types";
 import { confirmedReadings } from "../data/portal";
 import { readingView } from "../portal/service";
 import * as s from "../db/index";
+import { notCeremonyDone } from "../data/ceremony-done";
 
 export const ROSTER_HEADER = Object.freeze(["Student", "Hebrew name", "Date", "Slot", "Parashah", "Torah verses", "Haftarah verses", "Tutor", "Rehearsal 1", "Rehearsal 2"]);
 const SLOT: Record<string, string> = { morning: "Morning", havdalah: "Havdalah", unknown: "" };
@@ -14,9 +15,10 @@ const cell = (value: unknown) => typeof value === "string" ? value.trim().slice(
 // The Sheet is shared with staff; an account name that is an address (or carries control characters) is shown as "Tutor".
 const tutorName = (value: string) => { const label = value.trim(); return label && label.length <= 160 && !/[<>@\x00-\x1f\x7f]/.test(label) ? label : "Tutor"; };
 
-/** The staff roster, one row per current student in ceremony order: names, dates, readings, tutors. No contact data. */
+/** The staff roster, one row per current student in ceremony order: names, dates, readings, tutors. No contact data. A student
+ * whose ceremony is done (N21) is not a current student and has no row. */
 export async function rosterRows<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string): Promise<string[][]> {
-  const students = await tx.select().from(s.student).where(and(eq(s.student.tenantId, tenantId), isNull(s.student.disabledAt)))
+  const students = await tx.select().from(s.student).where(and(eq(s.student.tenantId, tenantId), isNull(s.student.disabledAt), notCeremonyDone(s.student.tenantId, s.student.id)))
     .orderBy(asc(s.student.ceremonyDate), asc(s.student.lastName), asc(s.student.id)).limit(1000);
   const rows: string[][] = [[...ROSTER_HEADER]];
   for (const student of students) {
