@@ -136,6 +136,20 @@ export const COPY = Object.freeze({
     pathWithdrawn: "Your parts are being updated. Ask your tutor which ones you lead.", // st.path.withdrawn
     slotUnknown: "Page numbers are from the morning service until your service time is set.", // st.slot.unknown
   }),
+  // The per-part finished mark (2.0 SC5, A7 "Tutor view (staff only)", Batch 3 Q12): staff strings, and the student's own line.
+  tutor: Object.freeze({
+    heading: "Learn the service", // tu.heading
+    line: "Parts {firstName} has finished. Nothing else is shared.", // tu.line
+    colPart: "Part", // tu.col.part
+    colStatus: "Status", // tu.col.status
+    finished: "Finished", // tu.finished
+    finishedOn: "Finished {date}", // tu.finished.on
+    notYet: "Not yet", // tu.notyet
+    empty: "No service parts are assigned yet.", // tu.empty
+    error: "The list couldn’t be loaded.", // tu.error
+    loading: "Loading the parts…", // tu.loading
+    studentLine: "Your tutor can see which of your parts you’ve finished.", // tu.student.line
+  }),
   aboutPage: Object.freeze({
     title: "About this course", // ab.title
     p1: "Each lesson teaches one prayer: what it is, where it sits in the service, how to read it, and a few words to know. The teaching on each prayer is by Rabbi Daniel Bogard.", // ab.p1

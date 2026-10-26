@@ -115,4 +115,12 @@ describe("Your parts, in each of its states", () => {
     expect([COPY.home.mineHeading, COPY.home.mineLine, COPY.home.serviceStart, COPY.done.nextMine, COPY.state.pathLoading, COPY.state.pathError, COPY.state.pathNoPlan,
       COPY.state.pathCleared, COPY.state.pathReview, COPY.state.pathWithdrawn, COPY.state.slotUnknown]).toEqual(approved);
   });
+  it("tells the student their tutor can see finished parts (2.0 SC5, A7 tu.student.line) under assigned parts only, where a tutor sees them", () => {
+    expect(COPY.tutor.studentLine).toBe("Your tutor can see which of your parts you’ve finished.");
+    expect(render({ status: "ready", path: path() })).toContain(COPY.tutor.studentLine);
+    // With no plan the tutor's view has no parts, so the line would not be true; nor with no list at all.
+    expect(render({ status: "ready", path: path({ state: "no-plan", plan: undefined, serviceStart: undefined }) })).not.toContain(COPY.tutor.studentLine);
+    for (const state of ["cleared", "withdrawn"] as const) expect(render({ status: "ready", path: path({ state, items: [], serviceStart: undefined }) })).not.toContain(COPY.tutor.studentLine);
+    for (const status of ["idle", "none", "loading", "error"] as const) expect(render({ status })).not.toContain(COPY.tutor.studentLine);
+  });
 });
