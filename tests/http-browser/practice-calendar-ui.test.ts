@@ -192,7 +192,7 @@ it("shows read-only parent dates, then the selected child practice week with con
   await ui(tab.getByRole("button", { name: "Practice with Synthetic", exact: true })).toBeVisible();
   expect(await week(tab).count()).toBe(0); expect(seen.reads).toEqual([request.url()]); expect(seen.posts).toHaveLength(0); expect(await rows()).toEqual(beforeParent);
   const day = await serverDay(tab, () => click(tab, "Practice with Synthetic"));
-  await ui(tab.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible();
   await ui(week(tab).getByRole("listitem")).toHaveCount(7); await todayMarked(tab, true);
   expect(seen.reads.slice(1).every(url => new URL(url).searchParams.get("mode") === "child-practice")).toBe(true);
   expect(seen.posts).toHaveLength(0);
@@ -201,8 +201,8 @@ it("shows read-only parent dates, then the selected child practice week with con
   expect(seen.posts[0].body).toMatchObject({ mode: "child-practice", expectedDay: day, action: "visit", target: { type: "verse", assignmentId, verseRef: "Genesis 1:1" } });
   await ui(tab.locator(".study-verses")).toBeFocused(); await heldReading(tab);
   await capture(tab, "practice-calendar-child");
-  await click(tab, "Return to parent view");
-  await ui(tab.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeHidden();
+  await click(tab, "Done");
+  await ui(tab.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeHidden();
   expect(await tab.locator(".practice-week, .practice-day").count()).toBe(0); expect(seen.posts).toHaveLength(1);
   await safe(() => tab.context().close());
 });

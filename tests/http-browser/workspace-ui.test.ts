@@ -167,12 +167,14 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   const tab = await page(); await signIn(tab, "pg-tutor@example.test"); await navigate(tab, "/workspace/parent");
   await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await ui(tab.getByRole("heading", { name: "Synthetic Learner", exact: true })).toBeVisible();
+  // Once a child is chosen the page is about that child: no "Choose a child" heading or line is left.
+  await ui(tab.getByRole("heading", { name: /^Choose a child/ })).toHaveCount(0); await ui(tab.getByText("Choose a child to see their reading.", { exact: true })).toHaveCount(0);
   const copied = await tab.context().newPage(); await navigate(copied, `/workspace/practice/${fixture.student.id}`);
   await ui(copied.getByLabel("Child", { exact: true })).toBeVisible();
   let rawHandle = "";
   await tab.route("**/api/practice/enter", async route => { const response = await route.fetch(); rawHandle = (await response.json()).handle; await route.fulfill({ response }); });
   await safe(() => tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click());
-  await ui(tab.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible();
   await ui(tab.getByText("Genesis 1:1\u20133", { exact: true })).toBeVisible();
   await capture(tab, "workspace-child-confirmed-reading");
   await tab.setViewportSize({ width: 390, height: 844 });
@@ -202,7 +204,7 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   // not replace the later child view when released.
   await safe(() => tab.getByRole("button", { name: "Refresh reading", exact: true }).click()); await ui.poll(() => held).toBe(true);
   try {
-    await safe(() => tab.getByRole("button", { name: "Switch practice to Synthetic Sibling", exact: true }).click());
+    await safe(() => tab.getByRole("button", { name: "Switch to Synthetic Sibling", exact: true }).click());
     await ui(tab.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   } finally { release(); }
   await tab.unroute(`**/api/students/${fixture.student.id}/reading?mode=child-practice`);
@@ -211,7 +213,7 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await focus(copied); await ui(copied.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   expect(await tab.evaluate(handle => !location.href.includes(handle) && !document.body.textContent?.includes(handle) && !JSON.stringify({ local: { ...localStorage }, tab: { ...sessionStorage } }).includes(handle), rawHandle)).toBe(true);
   await capture(tab, "workspace-child-practice-empty-assignment");
-  await safe(() => tab.getByRole("button", { name: "Return to parent view", exact: true }).click()); await ui(tab.getByLabel("Child", { exact: true })).toBeVisible();
+  await safe(() => tab.getByRole("button", { name: "Done", exact: true }).click()); await ui(tab.getByLabel("Child", { exact: true })).toBeVisible();
   await ui(tab.locator("#workspace-main").getByText("You’re back in your read-only parent view.", { exact: true })).toBeVisible();
   await ui(copied.getByRole("heading", { name: "Synthetic Sibling", exact: true })).toBeVisible();
   await safe(() => tab.getByRole("link", { name: "Tutor", exact: true }).click());
@@ -224,11 +226,11 @@ it("keeps sibling tab handles isolated, rejects a copied practice URL and discar
   await safe(() => tab.getByRole("link", { name: "Parent", exact: true }).click());
   await safe(() => tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click());
   await safe(() => tab.getByRole("button", { name: "Practice with Synthetic", exact: true }).click());
-  await ui(tab.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible();
   let finishExit!: () => void, exitHeld = false, exitDelivered = false;
   const exitGate = new Promise<void>(resolve => { finishExit = resolve; });
   await tab.route("**/api/practice/exit", async route => { const response = await route.fetch(); exitHeld = true; await exitGate; await route.fulfill({ response }); exitDelivered = true; });
-  await safe(() => tab.getByRole("button", { name: "Return to parent view", exact: true }).click());
+  await safe(() => tab.getByRole("button", { name: "Done", exact: true }).click());
   try {
     await ui.poll(() => exitHeld).toBe(true);
     await safe(() => tab.getByRole("link", { name: "Tutor", exact: true }).click());

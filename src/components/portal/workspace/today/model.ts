@@ -8,7 +8,7 @@ import type { ProgressVerse } from "../../../../lib/progress/types";
 import { dayOrdinal, dayString } from "../practice-calendar/api";
 
 const dateParts = (date: string) => date.split("-").map(Number) as [number, number, number];
-const shortDay = (date: string) => { const [year, month, day] = dateParts(date); return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(Date.UTC(year, month - 1, day)); };
+export const shortDay = (date: string) => { const [year, month, day] = dateParts(date); return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(Date.UTC(year, month - 1, day)); };
 
 /** The device's calendar date as YYYY-MM-DD. The tests pin the browser clock, so this never depends on the day they run. */
 export function deviceDate(now = new Date()): string {

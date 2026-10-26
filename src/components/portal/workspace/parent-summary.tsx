@@ -1,9 +1,11 @@
 "use client";
-import { useSyncExternalStore } from "react";
+import { useId, useSyncExternalStore } from "react";
 import type { Assigned } from "./api";
 import { PortalRequestError } from "../api";
 import { dayOrdinal, dayString, type PracticeDates } from "./practice-calendar/api";
 import { BeforeNext, type LessonSummarySnapshot } from "./lessons/panel";
+import { nextDateLine, weekdayShort } from "./parent-week";
+import { deviceDate } from "./today/model";
 
 type CalendarRead = (mode: "parent", studentId: string, operation: { type: "calendar"; fromDate: string; throughDate: string }, signal: AbortSignal) => Promise<PracticeDates>;
 type Lesson = LessonSummarySnapshot["lesson"];
@@ -61,25 +63,31 @@ export class ParentSummaryStore {
   }
 }
 const label = (date: string) => new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
-/** notice: the congregation's consent notice from its settings (what is stored, who hears it, when it is deleted); nothing when unset. */
+/**
+ * The parent's "This week" card (1.9 N13): the next date in relative words, the days practised this week, and the latest lesson note, open.
+ * Everything on it is read through reads the parent already has (the child's dates, the practice calendar, the lesson notes).
+ * notice: the congregation's consent notice from its settings (what is stored, who hears it, when it is deleted); nothing when unset.
+ */
 export function ParentStudySummary({ store, baseline, scope, concealed, notice = null }: { store: ParentSummaryStore; baseline: Assigned | null; scope: string; concealed: boolean; notice?: string | null }) {
-  const state = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
+  const state = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot), practised = useId();
   if (!baseline || baseline.mode !== "parent" || concealed || !store.matches(baseline, scope)) return null;
-  const lesson = state.lesson, dates = state.dates;
+  const lesson = state.lesson, dates = state.dates, next = nextDateLine(baseline.student, deviceDate());
   return <section className="parent-study-summary" aria-label="Preparation summary">
-    <div><h3>Latest saved lesson</h3>
+    <h3>This week</h3>
+    {next && <p className="parent-summary-next">{next}</p>}
+    <div className="parent-summary-practised">
+      {dates.status === "loading" ? <p role="status">Loading practice dates…</p> : dates.status === "unavailable" ? <p>Practice dates couldn’t be loaded.</p>
+        : dates.dates.length ? <><span id={practised}>Practised this week:</span> <ul className="parent-summary-dates" aria-labelledby={practised}>{dates.dates.map(date => <li key={date}><time dateTime={date}>{weekdayShort(date)}</time></li>)}</ul></>
+          : <p>No practice dates recorded in these seven days.</p>}
+    </div>
+    <div className="parent-summary-lesson">
       {lesson.status === "loading" ? <p role="status">Loading the latest lesson…</p> : lesson.status === "unavailable" ? <p>The latest lesson couldn’t be loaded.</p> : !lesson.latest ? <p>No saved lesson yet.</p> : <>
-        <p><time dateTime={lesson.latest.lessonDate}>{label(lesson.latest.lessonDate)}</time> · Lesson author: <bdi dir="auto">{lesson.latest.displayName}</bdi></p>
+        <p><time dateTime={lesson.latest.lessonDate}>{label(lesson.latest.lessonDate)}</time> · from <bdi dir="auto">{lesson.latest.displayName}</bdi></p>
+        <p className="parent-summary-note" dir="auto">{lesson.latest.summary}</p>
         {lesson.latest.beforeNext && <BeforeNext text={lesson.latest.beforeNext} own={false} />}
-        <details key={JSON.stringify([scope, lesson.latest])}><summary>Read saved lesson note</summary><p className="parent-summary-note" dir="auto">{lesson.latest.summary}</p></details>
       </>}
     </div>
-    <div><h3>Recorded practice dates</h3>
-      {dates.status === "loading" ? <p role="status">Loading practice dates…</p> : dates.status === "unavailable" ? <p>Practice dates couldn’t be loaded.</p> : <>
-        <p>Seven days ending <time dateTime={dates.serverDay}>{label(dates.serverDay)}</time>.</p>
-        {dates.dates.length ? <ul className="parent-summary-dates">{dates.dates.map(date => <li key={date}><time dateTime={date}>{label(date)}</time></li>)}</ul> : <p>No practice dates recorded in these seven days.</p>}
-      </>}
-    </div>
+    {/* N23-3 slot: the mark-count line ("{studentName} has marked {gotIt} verses Got it and {working} Still working.") goes here when N23's privacy review passes. */}
     {notice && <p className="parent-consent-notice" dir="auto">{notice}</p>}
   </section>;
 }

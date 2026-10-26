@@ -133,8 +133,8 @@ it("reviews tutor assignment/removal with fresh target reads, blocks duplicate s
 });
 
 it("revokes only the selected parent practice context, removes exact parent/student links and preserves sibling access", async () => {
-  const admin = await page(), parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await click(parent, "Practice with Synthetic"); await ui(parent.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
-  const other = await parent.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => other.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click()); await click(other, "Practice with Synthetic"); await ui(other.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
+  const admin = await page(), parent = await page("tutor"); await navigate(parent, "/workspace/parent"); await safe(() => parent.getByLabel("Child", { exact: true }).locator(`[data-student-id="${fixture.student.id}"]`).click()); await click(parent, "Practice with Synthetic"); await ui(parent.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible();
+  const other = await parent.context().newPage(); await navigate(other, "/workspace/parent"); await safe(() => other.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click()); await click(other, "Practice with Synthetic"); await ui(other.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible();
   await navigate(admin, `/workspace/admin/students/${fixture.student.id}/access`); await accessLoaded(admin); await safe(() => action(admin, "Parents", "Stop child practice").click()); await confirm(admin);
   const denied = parent.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/reading` && response.status() === 404);
   // A real denial short-circuits the normal successful quiet probe sequence.
@@ -142,7 +142,7 @@ it("revokes only the selected parent practice context, removes exact parent/stud
   await safe(() => parent.evaluate(() => window.dispatchEvent(new Event("focus")))); expect((await denied).status()).toBe(404); await ui.poll(() => new URL(parent.url()).pathname).toBe("/workspace/parent"); await ui(parent.getByText("Practice access changed. Choose an available child again.", { exact: true })).toBeVisible(); await ui(parent.getByLabel("Child", { exact: true })).toBeVisible();
   expect(await parent.locator(".reading-workspace").count()).toBe(0);
   await ui(parent.locator(".study-verses, .study-hebrew, .verse-work, dialog:modal")).toHaveCount(0);
-  await focus(other); await ui(other.getByRole("heading", { name: "Child practice", level: 1, exact: true })).toBeVisible();
+  await focus(other); await ui(other.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible();
   await safe(() => action(admin, "Parents", "Allow child practice").click()); await confirm(admin); await safe(() => action(admin, "Parents", "Remove").click()); await confirm(admin); await safe(() => action(admin, "Student sign-in", "Remove").click()); await confirm(admin);
   const current = (await api(admin, `/api/admin/students/${fixture.student.id}/relationships`)).data; expect(current.guardians.length === 0 && current.identities.length === 0).toBe(true);
   expect((await api(admin, `/api/admin/students/${sibling.id}/relationships`)).data.guardians.length === 1).toBe(true);

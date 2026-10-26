@@ -53,7 +53,12 @@ async function page(who: "parent" | "admin" | "student", mobile = false, colorSc
 }
 async function open(tab: Page, child: typeof children[number], who: "parent" | "admin") {
   await tab.goto(who === "parent" ? "/workspace/parent" : "/workspace/admin/students", { waitUntil: "domcontentloaded" });
-  if (who === "parent") { await tab.locator(`button.student-card[data-student-id="${child.id}"]`).click(); await tab.getByRole("button", { name: "Family honors", exact: true }).click(); }
+  if (who === "parent") {
+    await tab.locator(`button.student-card[data-student-id="${child.id}"]`).click(); await ui(tab.getByRole("button", { name: "Open the honors form", exact: true })).toBeVisible();
+    await ui(tab.getByRole("heading", { name: /^Choose a child/ })).toHaveCount(0);
+    await ui.poll(() => tab.evaluate(() => { const summary = document.querySelector(".parent-study-summary"), honors = document.getElementById("family-honors"); return !!honors && (!summary || !!(summary.compareDocumentPosition(honors) & Node.DOCUMENT_POSITION_FOLLOWING)); })).toBe(true);
+    await tab.getByRole("button", { name: "Open the honors form", exact: true }).click();
+  }
   else await tab.getByRole("button", { name: `Honors for ${child.name}`, exact: true }).click();
   await ui(sheet(tab).getByRole("heading", { name: "Opening the ark", exact: true })).toBeVisible();
 }
@@ -243,20 +248,22 @@ it("own adult uses the existing honors sheet and link controls while child pract
   try {
     const denied = student.waitForResponse(response => new URL(response.url()).pathname === `/api/students/${fixture.student.id}/honors` && response.status() === 403);
     await student.evaluate(() => window.dispatchEvent(new Event("focus"))); await denied;
-    await ui(sheet(student)).toHaveCount(0); await ui(student.getByRole("button", { name: "Family honors", exact: true })).toHaveCount(0);
+    await ui(sheet(student)).toHaveCount(0); await ui(student.getByRole("button", { name: "Open the honors form", exact: true })).toHaveCount(0);
     await ui(student.locator('input[value="Synthetic Adult Honoree"]')).toHaveCount(0); expect((await api(student, `/api/students/${fixture.student.id}/honors?mode=student`)).status).toBe(403);
     expect((await api(student, `/api/students/${fixture.student.id}/honoree-links/status`, { mode: "student", startVerse: "Genesis 1:2" })).status).toBe(403);
     expect((await api(student, `/api/students/${fixture.student.id}/honoree-links/receipt`, receiptIntent)).status).toBe(403);
     await student.goto("/workspace/student?tab=reading", { waitUntil: "domcontentloaded" });
-    await ui(student.getByRole("region", { name: "Family honors", exact: true })).toBeVisible(); await ui(student.getByRole("button", { name: "Family honors", exact: true })).toHaveCount(0);
+    await ui(student.getByRole("region", { name: "Family honors", exact: true })).toBeVisible(); await ui(student.getByRole("button", { name: "Open the honors form", exact: true })).toHaveCount(0);
+    // An adult's honors entry sits after the adult's reading (G20).
+    await ui.poll(() => student.evaluate(() => { const reading = document.getElementById("reading-heading"), honors = document.getElementById("family-honors"); return !!reading && !!honors && !!(reading.compareDocumentPosition(honors) & Node.DOCUMENT_POSITION_FOLLOWING); })).toBe(true);
   } finally { await fixture.ownerDb.update(s.student).set({ studentKind: "adult" }).where(eq(s.student.id, fixture.student.id)); }
   const parent = await page("parent"), entered = await api(parent, "/api/practice/enter", { studentId: children[0].id }); expect(entered.status).toBe(201); const denied = await parent.evaluate(async ({ id, handle }) => { const r = await fetch(`/api/students/${id}/honors?mode=parent`, { headers: { "X-Practice-Context": handle }, cache: "no-store" }); return r.status; }, { id: children[0].id, handle: entered.data.handle }); expect(denied).toBe(403);
-  await parent.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await parent.locator(`button.student-card[data-student-id="${children[0].id}"]`).click(); await parent.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(parent.getByRole("button", { name: "Return to parent view", exact: true })).toBeVisible(); await ui(parent.getByRole("button", { name: "Family honors", exact: true })).toHaveCount(0);
-  await parent.goto("/workspace/tutor", { waitUntil: "domcontentloaded" }); await ui(parent.locator(".role-workspace")).toBeVisible(); await ui(parent.getByRole("button", { name: "Family honors", exact: true })).toHaveCount(0);
+  await parent.goto("/workspace/parent", { waitUntil: "domcontentloaded" }); await parent.locator(`button.student-card[data-student-id="${children[0].id}"]`).click(); await parent.getByRole("button", { name: "Practice with Synthetic", exact: true }).click(); await ui(parent.getByRole("button", { name: "Done", exact: true })).toBeVisible(); await ui(parent.getByRole("button", { name: "Open the honors form", exact: true })).toHaveCount(0);
+  await parent.goto("/workspace/tutor", { waitUntil: "domcontentloaded" }); await ui(parent.locator(".role-workspace")).toBeVisible(); await ui(parent.getByRole("button", { name: "Open the honors form", exact: true })).toHaveCount(0);
 });
 
 async function openAdult(tab: Page) {
-  await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" }); await tab.getByRole("button", { name: "Family honors", exact: true }).click();
+  await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" }); await tab.getByRole("button", { name: "Open the honors form", exact: true }).click();
   await ui(sheet(tab).getByRole("heading", { name: "Opening the ark", exact: true })).toBeVisible();
 }
 async function captureAdultPacket() {

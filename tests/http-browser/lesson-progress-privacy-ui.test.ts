@@ -81,21 +81,20 @@ const parentSummary = (tab: Page) => tab.getByRole("region", { name: "Preparatio
 // Explicit local opt-in only; region captures exclude reading text and use this fixture's synthetic note.
 async function captureParentSummary(tab: Page) {
   if (process.env.PARENT_SUMMARY_CAPTURE !== "1") return;
-  const root = join(process.cwd(), ".local-logs", "parent-summary-captures-v1"), region = parentSummary(tab), disclosure = region.locator("details");
+  const root = join(process.cwd(), ".local-logs", "parent-summary-captures-v1"), region = parentSummary(tab), note = region.locator(".parent-summary-note");
   await mkdir(root); const captures: { file: string; sha256: string; viewportWidth: number; width: number; height: number }[] = [];
   expect(await region.locator(".parent-summary-note").textContent()).toBe("Synthetic parent saved note <b>plain text</b>");
   try {
     for (const width of [1440, 390]) {
       await safe(() => tab.setViewportSize({ width, height: width === 390 ? 844 : 1000 }));
       await safe(() => tab.evaluate(async () => { await document.fonts.ready; }));
-      for (const open of [false, true]) {
-        if ((await disclosure.getAttribute("open") !== null) !== open) await safe(() => disclosure.locator("summary").click());
+      for (const open of [true]) {
         const file = `${width}-${open ? "open" : "closed"}.png`, bytes = await safe(() => region.screenshot({ path: join(root, file), animations: "disabled" }));
         captures.push({ file, sha256: createHash("sha256").update(bytes).digest("hex"), viewportWidth: width, width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) });
       }
     }
     await writeFile(join(root, "manifest.json"), JSON.stringify({ synthetic: true, region: "parent-summary", captures }, null, 2) + "\n", { flag: "wx" });
-  } finally { if (await disclosure.getAttribute("open") !== null) await safe(() => disclosure.locator("summary").click()); await safe(() => tab.setViewportSize({ width: 1440, height: 1000 })); }
+  } finally { await safe(() => tab.setViewportSize({ width: 1440, height: 1000 })); }
 }
 
 it("keeps selected-parent saved notes and server-day dates read-only, quiet, and isolated across held sibling reads", async () => {
@@ -119,12 +118,12 @@ it("keeps selected-parent saved notes and server-day dates read-only, quiet, and
     await fixture.ownerDb.insert(s.lessonLog).values({ tenantId: "crc", studentId: fixture.student.id, entryId: noteId, creatorMembershipId: tutorMemberId, creatorUserId: fixture.tutor.id, lessonDate: seededDay, summary: "Synthetic parent saved note <b>plain text</b>", version: 1, deleted: false });
     await fixture.ownerDb.insert(s.practiceDay).values([{ tenantId: "crc", studentId: fixture.student.id, practiceDay: seededDay }, { tenantId: "crc", studentId: fixture.student.id, practiceDay: dayString(dayOrdinal(seededDay) - 8) }]);
     await click(tab, "Refresh reading");
-    const summary = parentSummary(tab); await ui(summary.getByText(/Lesson author:/)).toBeVisible();
-    const disclosure = summary.locator("details"); await ui(disclosure).not.toHaveAttribute("open", "");
+    const summary = parentSummary(tab); await ui(summary.getByText(/· from /)).toBeVisible();
+    const disclosure = summary.locator(".parent-summary-note"); await ui(disclosure).toBeVisible();
     await ui(summary.locator(".parent-summary-dates time")).toHaveCount(1); await ui(summary.locator(".parent-summary-dates time")).toHaveAttribute("datetime", seededDay);
     expect(requests).toEqual({ lessons: 2, dates: 2, writes: 0, raw: 0 });
     await captureParentSummary(tab);
-    await safe(() => disclosure.locator("summary").click()); await ui(summary.locator(".parent-summary-note")).toHaveText("Synthetic parent saved note <b>plain text</b>"); expect(await summary.locator(".parent-summary-note b").count()).toBe(0);
+    await ui(summary.locator(".parent-summary-note")).toHaveText("Synthetic parent saved note <b>plain text</b>"); expect(await summary.locator(".parent-summary-note b").count()).toBe(0);
     const node = await summary.elementHandle(), before = { ...requests }; let release!: () => void, ready = false, used = false, readingChecked = false, afterReadingSessions = 0;
     const gate = new Promise<void>(resolve => { release = resolve; });
     const observed = (response: import("playwright").Response) => { const path = new URL(response.url()).pathname; if (path === `/api/students/${fixture.student.id}/reading` && response.status() === 200) readingChecked = true; if (readingChecked && path === "/api/session" && response.status() === 200) afterReadingSessions++; };
@@ -133,11 +132,11 @@ it("keeps selected-parent saved notes and server-day dates read-only, quiet, and
     await tab.route("**/api/session", hold);
     try {
       await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await ui.poll(() => ready).toBe(true);
-      await ui(disclosure).toHaveAttribute("open", ""); await ui(summary.getByText("Loading the latest lesson…", { exact: true })).toHaveCount(0);
+      await ui(disclosure).toBeVisible(); await ui(summary.getByText("Loading the latest lesson…", { exact: true })).toHaveCount(0);
       expect(await node!.evaluate(value => value === document.querySelector(".parent-study-summary"))).toBe(true); expect(requests).toEqual(before);
     } finally { release(); }
     await ui.poll(() => afterReadingSessions).toBeGreaterThanOrEqual(2); await tab.unroute("**/api/session", hold); tab.off("response", observed);
-    await ui(disclosure).toHaveAttribute("open", ""); expect(await node!.evaluate(value => value === document.querySelector(".parent-study-summary"))).toBe(true); expect(requests).toEqual(before);
+    await ui(disclosure).toBeVisible(); expect(await node!.evaluate(value => value === document.querySelector(".parent-study-summary"))).toBe(true); expect(requests).toEqual(before);
     // A changed authorized parent reading takes the real blocking provider refresh path.
     const blocking = await held(tab, "**/lesson-log?*");
     try {
@@ -145,9 +144,9 @@ it("keeps selected-parent saved notes and server-day dates read-only, quiet, and
       await safe(() => tab.evaluate(() => window.dispatchEvent(new Event("focus")))); await blocking.ready();
       await ui(parentSummary(tab)).toHaveCount(0); expect(requests).toEqual({ lessons: 3, dates: 2, writes: 0, raw: 0 });
     } finally { blocking.release(); }
-    await blocking.remove(); await ui(parentSummary(tab).getByText(/Lesson author:/)).toBeVisible();
+    await blocking.remove(); await ui(parentSummary(tab).getByText(/· from /)).toBeVisible();
     await ui(parentSummary(tab).locator(".parent-summary-dates time")).toHaveAttribute("datetime", seededDay);
-    await ui(parentSummary(tab).locator("details")).not.toHaveAttribute("open", "");
+    await ui(parentSummary(tab).locator(".parent-summary-note")).toBeVisible();
     expect(requests).toEqual({ lessons: 3, dates: 3, writes: 0, raw: 0 });
     let releaseOld!: () => void, oldReady = false, drained!: () => void; const oldGate = new Promise<void>(resolve => { releaseOld = resolve; }), oldDone = new Promise<void>(resolve => { drained = resolve; });
     const oldPattern = new RegExp(`/api/students/${fixture.student.id}/practice-calendar\\?`);
@@ -211,7 +210,7 @@ it("keeps overlapping parent views read-only and fences held child progress afte
   await ui(tab.locator("dialog.lift").getByRole("button", { name: "Got it", exact: true })).toHaveAttribute("aria-pressed", "true");
   await ui(tab.locator("dialog.lift").getByRole("button", { name: "Solid", exact: true })).toHaveCount(0); await safe(() => tab.keyboard.press("Escape"));
   const hold = await held(tab, new RegExp(`/api/students/${fixture.student.id}/progress\\?`), route => route.request().method() === "GET");
-  try { await click(tab, "Refresh reading"); await hold.ready(); await click(tab, "Switch practice to Synthetic Sibling"); await loaded(tab, "Genesis 3:1"); } finally { hold.release(); }
+  try { await click(tab, "Refresh reading"); await hold.ready(); await click(tab, "Switch to Synthetic Sibling"); await loaded(tab, "Genesis 3:1"); } finally { hold.release(); }
   await hold.remove(); await ui(tab.locator(".hero-marked")).toHaveCount(0); expect(await tab.locator(".study-verse-bar .verse-mark").count()).toBe(0);
   await openFirstVerse(tab); await ui(tab.locator("dialog.lift .lift-ref")).toHaveText("Genesis 3:1"); await ui(tab.locator("dialog.lift").getByRole("button", { name: "Got it", exact: true })).toHaveAttribute("aria-pressed", "false"); await safe(() => tab.keyboard.press("Escape"));
   await ui(lessons(tab).getByRole("button", { name: "Add lesson note", exact: true })).toHaveCount(0);

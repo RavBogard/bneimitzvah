@@ -135,7 +135,7 @@ it("ignores a held old calendar 401 after a real role and child-context replacem
     await click(tab, "Practice with Synthetic"); await ready(tab,1,sibling.id,"child-practice"); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();
   } finally { release(); }
   await completed; await pageFetchesSettled(tab); await ready(tab,1,sibling.id,"child-practice");
-  await ui(tab.getByRole("heading", { name: "Child practice", exact: true, level: 1 })).toBeVisible(); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();
+  await ui(tab.getByRole("heading", { name: /^Practising with /, level: 1 })).toBeVisible(); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();
   expect(await tab.getByRole("heading", { name: "Sign in to continue", exact: true }).count()).toBe(0); expect(seen.events).toEqual(["POST"]);
   // A stale refusal cannot clear this rightful selection, but a real revoked
   // relationship still fails the existing authoritative focus/session check.
