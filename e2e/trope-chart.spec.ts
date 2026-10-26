@@ -59,6 +59,9 @@ test("public chart covers the catalog with the local Hebrew font and printable l
   if (testInfo.project.name === "desktop") {
     await page.emulateMedia({ media: "print" });
     await expect(page.getByRole("button", { name: "Print chart", exact: true })).toBeHidden();
+    // The closed "Other signs" section still prints: its signs are visible under print media with the section closed.
+    await expect(page.locator("[data-chart-poetic]")).not.toHaveAttribute("open", "");
+    for (const mark of await page.locator('[data-chart-poetic] [lang="he"]').all()) await expect(mark).toBeVisible();
     await page.pdf({ path: testInfo.outputPath("trope-chart-letter.pdf"), format: "Letter", printBackground: true });
     await page.pdf({ path: testInfo.outputPath("trope-chart-a4.pdf"), format: "A4", printBackground: true });
     await page.pdf({ path: testInfo.outputPath("trope-chart-letter-no-background.pdf"), format: "Letter", printBackground: false });

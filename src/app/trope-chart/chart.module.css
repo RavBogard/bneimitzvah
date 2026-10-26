@@ -53,6 +53,8 @@
   .markName { font-size: 10pt; line-height: 1.25; }
   .poetic { margin-top: 9pt; padding-top: 4pt; }
   .poeticSummary { font-size: 12pt; min-height: 0; }
+  /* A closed section still prints: its content shows whatever the open state (browsers without ::details-content are covered by the beforeprint handler in PrintChart). */
+  .poetic::details-content { content-visibility: visible; display: block; height: auto; }
   .other { margin-top: 9pt; padding-top: 6pt; }
   .otherMarks { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5pt 6pt; }
   .otherMarks .sample { font-size: 20pt; }

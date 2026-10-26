@@ -10,6 +10,14 @@ async function ready() {
 export function PrintChart() {
   const [state, setState] = useState<"loading" | "ready" | "error">("loading"), gate = useRef(false), alive = useRef(true);
   useEffect(() => { alive.current = true; void ready().then(() => { if (alive.current) setState("ready"); }, () => { if (alive.current) setState("error"); }); return () => { alive.current = false; }; }, []);
+  // However the chart is printed (the button or the browser's own print), a closed "Other signs" section opens for the paper and closes again after.
+  useEffect(() => {
+    let reopened: HTMLDetailsElement[] = [];
+    const before = () => { reopened = [...document.querySelectorAll<HTMLDetailsElement>("details[data-chart-poetic]:not([open])")]; for (const section of reopened) section.open = true; };
+    const after = () => { for (const section of reopened) section.open = false; reopened = []; };
+    window.addEventListener("beforeprint", before); window.addEventListener("afterprint", after);
+    return () => { window.removeEventListener("beforeprint", before); window.removeEventListener("afterprint", after); };
+  }, []);
   async function print() {
     if (gate.current || state !== "ready") return;
     gate.current = true;
