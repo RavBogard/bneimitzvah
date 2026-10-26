@@ -5,7 +5,7 @@ import type { AccessTransaction } from "../access/types";
 import * as s from "../db/index";
 import { parseBoundedServiceJson, parseServiceFeed, SERVICE_FEED_LIMITS, type ServiceBlock, type ServiceSpan } from "../service-learning/feed";
 import { EVENING_TEXT_UNITS, eveningTextTenant, TENANTS } from "../../lib/service-course/course";
-import { EVENING_TEXT_BUILD, EVENING_TEXT_LIMITS, EVENING_UNIT, REFUSED_UNIT, SERVICE_TEXT_LIMITS, type ServiceText, type TextLine } from "../../lib/service-course/text";
+import { EVENING_TEXT_BUILD, EVENING_TEXT_LIMITS, EVENING_UNIT, REFUSED_UNIT, SERVICE_TEXT_LIMITS, hebrewWords, translitWords, type ServiceText, type TextLine } from "../../lib/service-course/text";
 import { CourseTextUnavailable } from "./text";
 
 /**
@@ -57,6 +57,13 @@ const samePins = (stored: unknown, pin: EveningTextPin) => isRecord(stored) && O
 /** A span list's reading text: footnotes are dropped, emphasis and strong keep their words. */
 const spanText = (spans: readonly ServiceSpan[]): string => spans.map(span => "t" in span ? span.t : "em" in span ? spanText(span.em) : "strong" in span ? spanText(span.strong) : "").join("");
 
+/** A printed repeat mark in a transliteration ("(3x)", "(8X)"): sung, not read, so it is not a word of the line. */
+const REPEAT_MARK = /^\(\d{1,2}x\)[.,;:]?$/i;
+/** Whether a transliteration has exactly the Hebrew line's words, counted the course's way, repeat marks aside. */
+export const translitMatches = (he: string, tr: string): boolean => {
+  const words = hebrewWords(he).length;
+  return words > 0 && translitWords(tr).filter(word => !REPEAT_MARK.test(word)).length === words;
+};
 /**
  * One unit's blocks as lines (pure). `translits` holds each block's transliteration by index (the licensed parser checks it and does
  * not keep it); `fix` is the pinned build's correction for this unit, if any.
@@ -68,8 +75,10 @@ export function eveningLines(blocks: readonly ServiceBlock[], translits: readonl
     if (LINE_TYPES.includes(block.type) && HEBREW_LETTER.test(he)) {
       const from = fix && Object.hasOwn(fix, index) ? fix[index] : index;
       const tr = from === null ? undefined : translits[from]?.trim();
-      // A row's credit ("~ ...") or a row with no Latin letters is never shown as a transliteration.
-      out.push({ he, ...(tr && LATIN_LETTER.test(tr) && !tr.startsWith("~") ? { tr } : {}) });
+      // A row's credit ("~ ...") or a row with no Latin letters is never shown as a transliteration, and neither is one whose words do
+      // not match the line's Hebrew word for word (a printed repeat mark such as "(3x)" aside): so a row the source shifted can never
+      // show its neighbour's transliteration, whichever unit or build it is in.
+      out.push({ he, ...(tr && LATIN_LETTER.test(tr) && !tr.startsWith("~") && translitMatches(he, tr) ? { tr } : {}) });
       return;
     }
     // A translation the book prints after its lines joins the last line, with its own credit line; a labelled kavannah, a source-owned

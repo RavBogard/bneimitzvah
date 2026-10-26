@@ -124,6 +124,11 @@ function definiteNotFound(): Response {
  * and a repeat read of the same page, lesson or chapter costs the limiter nothing.
  */
 const KEPT = { browser: 3600, stale: 86400 } as const;
+/**
+ * The CDN tag on every evening text answer (2.0 SC7): withdrawing the siddur book, or moving its pin, purges every cached answer at
+ * once by this tag (Vercel's invalidate-by-tag), rather than waiting out the day the CDN may keep them.
+ */
+export const EVENING_CACHE_TAG = "evening-text";
 type Kept = typeof KEPT | undefined;
 function json(value: JsonValue, cdnSeconds: number, kept?: Kept): Response {
   const body = JSON.stringify(value);
@@ -300,7 +305,7 @@ export async function handlePublicReadingRequest(request: Request, withPublic: P
               lines: answer.lines.map(line => ({ he: line.he, ...(line.tr !== undefined ? { tr: line.tr } : {}), ...(line.en !== undefined ? { en: line.en } : {}) })) });
             if (Buffer.byteLength(body) > 2 * 1024 * 1024) return failure(503);
             return new Response(body, { status: 200, headers: { ...common, "content-type": "application/json; charset=utf-8", "cache-control": "no-store",
-              "vercel-cdn-cache-control": "public, s-maxage=86400, stale-while-revalidate=86400" } });
+              "vercel-cdn-cache-control": "public, s-maxage=86400, stale-while-revalidate=86400", "vercel-cache-tag": EVENING_CACHE_TAG } });
           }
           case "source": {
             let text;

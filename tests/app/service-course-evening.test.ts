@@ -12,11 +12,11 @@ import { CRC_TENANT, CourseError, EVENING_TEXT_UNITS, SERVICE_COURSE, SERVICE_TE
   mapSections, pageOf, sectionLessons, serviceNeighbours, teachingOf, validateServiceCourse, type Tenant } from "../../src/lib/service-course/course";
 import { EVENING_TEXT_BUILD, alignedTranslit, parseEveningText, parseServiceText, type ServiceText } from "../../src/lib/service-course/text";
 import { completeLesson, emptyProgress, lessonAfter, nextLesson, parseProgress } from "../../src/lib/service-course/progress";
-import { EVENING_TEXT_PIN, TRANSLIT_FIXES, eveningLines, eveningTenantFile, eveningTextOf, parseEveningBook, readEveningText } from "../../src/server/service-course/evening";
+import { EVENING_TEXT_PIN, TRANSLIT_FIXES, eveningLines, eveningTenantFile, eveningTextOf, parseEveningBook, readEveningText, translitMatches } from "../../src/server/service-course/evening";
 import { CourseTextUnavailable } from "../../src/server/service-course/text";
 import { APPROVED_BOOKLET } from "../../src/server/honoree/booklet-projector";
 import { AccessDenied } from "../../src/server/access/errors";
-import { handlePublicReadingRequest, type PublicRuntime } from "../../src/server/http/public-reading";
+import { EVENING_CACHE_TAG, handlePublicReadingRequest, type PublicRuntime } from "../../src/server/http/public-reading";
 import type { ServiceBlock } from "../../src/server/service-learning/feed";
 import { eveningTextPath } from "../../src/components/learn/service/text-api";
 import { EVENING_PACK_KEY, openOffline, parseOwnerAnswer, renewPack, PackStopped, type OwnerAnswer, type PackerIo } from "../../src/lib/offline/packer";
@@ -152,10 +152,23 @@ describe("the evening text's projection", () => {
       [he(3), "~Bob Marley"], [he(4), tr(3)], [he(6), tr(3)], [undefined, tr(6)]];
     const blocks = rows.map(([h]) => block(h ? { type: "stanza", he: h } : { type: "stanza", he: "" })), translits = rows.map(([, t]) => t);
     const unfixed = eveningLines(blocks, translits), fixed = eveningLines(blocks, translits, fix);
-    // Without the fix, no Hebrew row has its own transliteration: three show a neighbour's, two a credit (dropped).
-    expect(unfixed.filter(line => alignedTranslit(line)).length).toBe(0); expect(unfixed.filter(line => line.tr).length).toBe(3);
+    // Without the fix, no Hebrew row has its own transliteration: three would show a neighbour's and two a credit, and all are dropped.
+    expect(unfixed.filter(line => alignedTranslit(line)).length).toBe(0); expect(unfixed.filter(line => line.tr).length).toBe(0); // the guard drops them all
     expect(fixed.map(line => line.tr)).toEqual([tr(4), tr(3), tr(3), undefined, tr(6)]);
     expect(fixed.every(line => !line.tr || alignedTranslit(line))).toBe(true);
+  });
+  it("never shows a transliteration that does not match its line word for word, so a shifted row cannot show its neighbour's, in any unit or build", () => {
+    // Synthetic rows shifted the way the Hashkiveinu's are, in a unit with no correction: each Hebrew row would carry the next row's words.
+    const words = (n: number, at = 0) => Array.from({ length: n }, (_, i) => String.fromCharCode(0x05D0 + at + i) + String.fromCharCode(0x05D1 + at + i)).join(" ");
+    const blocks = [block({ type: "stanza", he: words(4) }), block({ type: "stanza", he: words(3, 5) }), block({ type: "stanza", he: words(5, 9) })];
+    const shifted = eveningLines(blocks, ["one two three", "uno dos tres cuatro cinco", "un deux"]);
+    expect(shifted.map(line => line.tr)).toEqual([undefined, undefined, undefined]);
+    // Matching rows keep theirs, a printed repeat mark aside; a row one word short, or one word long, shows none.
+    const kept = eveningLines(blocks, ["a b c d", "a (3x) b c", "a b c d e (8X)."]);
+    expect(kept.map(line => line.tr)).toEqual(["a b c d", "a (3x) b c", "a b c d e (8X)."]);
+    expect(eveningLines([blocks[0]], ["a b c"])[0].tr).toBeUndefined();
+    expect(eveningLines([blocks[0]], ["a b c d e"])[0].tr).toBeUndefined();
+    expect(translitMatches(words(2), "a (3x) b")).toBe(true); expect(translitMatches(words(2), "a b (3x) c")).toBe(false);
   });
   it("reads only the course's evening units from the pinned bytes, with the book's title and attribution, and refuses anything not pinned", () => {
     const c = syntheticEveningCatalog();
@@ -245,6 +258,8 @@ describe("GET /api/public/evening-text", () => {
       expect(response.status).toBe(200);
       expect(response.headers.get("cache-control")).toBe("no-store");
       expect(response.headers.get("vercel-cdn-cache-control")).toBe("public, s-maxage=86400, stale-while-revalidate=86400");
+      // Tagged, so a withdrawal or a moved pin purges every cached answer at once.
+      expect(response.headers.get("vercel-cache-tag")).toBe(EVENING_CACHE_TAG); expect(EVENING_CACHE_TAG).toBe("evening-text");
       expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
       expect(response.headers.get("set-cookie")).toBeNull();
     }
