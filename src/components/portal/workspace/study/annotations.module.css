@@ -110,7 +110,7 @@
   :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) .flowVerse[data-tk-rows] > .flowHebrew > .inlineHebrew[lang="he"] { grid-row: 1 / span calc(var(--tk-lines, 1) * 2); }
   :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) .flowVerse[data-tk-rows] > .flowHebrew .tkLine { grid-row: calc(var(--tk-i, 0) * 2 + 1); }
   :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) .flowVerse[data-tk-rows] > .flowTikkun { grid-column: 1; grid-row: 1 / span calc(var(--tk-lines, 1) * 2); padding: 0; background: none; box-shadow: none; border-radius: 0; }
-  :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) .flowVerse[data-tk-rows] > .flowTikkun .tkLine { grid-row: calc(var(--tk-i, 0) * 2 + 2); padding-inline: 0.5rem; background: var(--color-surface); box-shadow: inset 1px 0 0 var(--color-rule), inset -1px 0 0 var(--color-rule); }
+  :global(.assigned-study):is([data-size="large"], [data-size="huge"]) .flowParagraph:has(.flowTikkun) .flowVerse[data-tk-rows] > .flowTikkun .tkLine { grid-row: calc(var(--tk-i, 0) * 2 + 2); padding-inline: 0; background: var(--color-surface); box-shadow: inset 1px 0 0 var(--color-rule), inset -1px 0 0 var(--color-rule); }
 }
 /* The comment-to-word link: the quoted words are underlined while their comment is pointed at.
    An underline that appears, never an animation; it sits below the lowest vowels. */
