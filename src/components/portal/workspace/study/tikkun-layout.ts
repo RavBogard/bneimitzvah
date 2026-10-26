@@ -59,6 +59,8 @@ export function useTikkunLayout(host: RefObject<HTMLElement | null>, atoms: read
     const root = host.current;
     if (!root || !active) return;
     root.style.setProperty("--tk-lines", String(layout.rows?.length ?? 1)); root.style.setProperty("--tk-fit", String(layout.scale));
+    // Each line's number, for the stacked layout (phones at Large and Huge) that places line i of the pointed text and line i of the scroll on neighbouring rows.
+    for (const line of root.querySelectorAll<HTMLElement>("[data-tk-line]")) line.style.setProperty("--tk-i", line.dataset.tkLine ?? "0");
     return () => { root.style.removeProperty("--tk-lines"); root.style.removeProperty("--tk-fit"); };
   }, [host, active, layout]);
 

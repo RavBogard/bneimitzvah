@@ -1,4 +1,5 @@
 /public/fonts/noto-serif-hebrew/NotoSerifHebrew.ttf -text
+/public/fonts/noto-serif-hebrew/NotoSerifHebrew-hebrew.woff2 -text
 /public/fonts/noto-serif-hebrew/OFL.txt -text
 /public/fonts/bricolage-grotesque/BricolageGrotesque.ttf -text
 /public/fonts/bricolage-grotesque/BricolageGrotesque-latin.woff2 -text
@@ -7,6 +8,7 @@
 /public/fonts/stam-ashkenaz-clm/LICENSE.txt -text
 /public/fonts/stam-ashkenaz-clm/StamAshkenazCLM.sfd -text
 /public/fonts/taamey-frank-clm/TaameyFrankCLM.ttf -text
+/public/fonts/taamey-frank-clm/TaameyFrankCLM-hebrew.woff2 -text
 /public/fonts/taamey-frank-clm/LICENSE.txt -text
 /public/fonts/taamey-frank-clm/TaameyFrankCLM.sfd -text
 

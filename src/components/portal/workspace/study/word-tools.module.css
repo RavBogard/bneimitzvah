@@ -4,7 +4,7 @@
 .disclosure[aria-expanded="true"] { background: var(--lake-tint); }
 .panel { padding-block-start: 1.25rem; max-width: 65ch; }
 .heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1.25rem; }
-.heading .word { margin: 0; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 2.25rem; line-height: 1.8; }
+.heading .word { margin: 0; font-family: "CRC Taamey Frank", "Taamey Frank CLM", "CRC Noto Hebrew Fallback", "Noto Serif Hebrew", serif; font-size: 2.25rem; line-height: 1.8; }
 .heading p { margin: 0; font-size: 0.9375rem; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-block: 0.75rem 1.5rem; }
 .actions button { min-height: 44px; padding: 0.45rem 0.85rem; border: 1px solid var(--color-rule); border-radius: var(--radius-control); color: var(--color-action); background: var(--color-surface); }
@@ -15,7 +15,7 @@
 .panel h5 { margin: 0 0 0.4rem; font-size: 1rem; }
 .panel p { line-height: 1.6; }
 .panel section p { margin-block: 0.25rem 1rem; }
-.syllables { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 0.5rem; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 2rem; line-height: 1.9; }
+.syllables { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 0.5rem; font-family: "CRC Taamey Frank", "Taamey Frank CLM", "CRC Noto Hebrew Fallback", "Noto Serif Hebrew", serif; font-size: 2rem; line-height: 1.9; }
 .syllables [data-stress="tonic"] { font-weight: 700; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
 .syllables [data-stress="secondary"] { text-decoration: underline dotted; text-underline-offset: 0.2em; }
 .grammar { margin: 0; padding-inline-start: 1.25rem; line-height: 1.7; }
@@ -29,7 +29,7 @@
 button.place { cursor: pointer; }
 button.place:hover { background: var(--lake-tint); }
 .placeRef { font-size: 0.9375rem; color: var(--color-action); }
-.snippet { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 1.375rem; line-height: 1.8; }
+.snippet { font-family: "CRC Taamey Frank", "Taamey Frank CLM", "CRC Noto Hebrew Fallback", "Noto Serif Hebrew", serif; font-size: 1.375rem; line-height: 1.8; }
 .snippet mark { background: color-mix(in srgb, var(--marigold) 40%, transparent); color: inherit; border-radius: 0.18em; padding-inline: 0.1em; }
 .more { margin-block-start: 0.5rem; }
 .more > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--color-action); }
@@ -45,7 +45,7 @@ button.place:hover { background: var(--lake-tint); }
 
 /* The word card beside the verse in Study (word-panel.tsx): the word, its place, one plain sentence, the actions, and the dictionary details folded. */
 .wordPanel { min-width: 0; color: var(--color-ink); }
-.wordPanel .wordText { margin: 0; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-size: 2rem; line-height: 1.7; }
+.wordPanel .wordText { margin: 0; font-family: "CRC Taamey Frank", "Taamey Frank CLM", "CRC Noto Hebrew Fallback", "Noto Serif Hebrew", serif; font-size: 2rem; line-height: 1.7; }
 .vowelNote { margin: 0.25rem 0 0; font-size: 0.9375rem; line-height: 1.5; color: var(--color-muted); }
 .wordPanel .wordPlace { margin: 0; font-size: 0.9375rem; color: var(--color-muted); }
 .wordPanel .sentence { margin: 0.5rem 0 0; line-height: 1.6; }

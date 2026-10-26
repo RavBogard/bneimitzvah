@@ -20,7 +20,7 @@ test("optional verse-bound English preserves the exact continuous flow, qere and
   for (const verse of verses) expect(on).toContain(`data-english-ref="${verse.ref}"`);
   expect(on).toContain("English reference unavailable for this verse.");
   expect(on).toContain("&lt;script&gt;not markup&lt;/script&gt;"); expect(on).not.toContain("<script>");
-  expect(off).toContain("read / qere:"); expect(off).toContain('data-reference-active="true"');
+  expect(off).toMatch(/<span class="study-read-alternative">[^]*?<\/span> <span class="study-read-chip" lang="en" dir="ltr" data-copy-skip="">read<span class="sr-only">\. Chant this word \(qere\)\. The scroll writes it differently \(ketiv\)\.<\/span><\/span> <span class="study-ketiv">/); expect(off).not.toContain("read / qere:"); expect(off).toContain('data-reference-active="true"');
   expect(on.match(/data-word-index="\d+"/g)).toEqual(off.match(/data-word-index="\d+"/g));
   expect(render(false)).toBe(off);
 });
@@ -43,7 +43,7 @@ test("reviewed proposed audio adds main verse controls and highlight without ass
 test("proposed text uses flowing Hebrew/qere and real credits without fake Hear/word/progress/draft controls", () => {
   const markup = renderToStaticMarkup(createElement(ExplorationContent, { ...actions, state: { pending: false, result: explorationPrepared(), page: explorationPage() } }));
   expect(markup).toContain('aria-label="Proposed Torah portion"'); expect(markup).toContain("Verses 1–100 of 146");
-  expect(markup).toContain("not an assigned reading yet"); expect(markup).toContain("read / qere:"); expect(markup).toContain("About this text"); expect(markup).toContain("CC-BY-SA-4.0");
+  expect(markup).toContain("not an assigned reading yet"); expect(markup).toContain("study-read-chip"); expect(markup).not.toContain("read / qere:"); expect(markup).toContain("About this text"); expect(markup).toContain("CC-BY-SA-4.0");
   expect(markup).toContain("Next text page"); expect(markup).not.toMatch(/Hear word|aria-label="Hear |role="button"|<audio|data-reference-active="true"|Translation draft|Mark practiced/);
 });
 

@@ -1,6 +1,32 @@
+/* Noto Serif Hebrew: the Hebrew of the interface (labels, commentary, word lists). A Hebrew-only WOFF2 subset of the pinned 2.004 file;
+   its tool, command and hashes are in public/fonts/PROVENANCE.md. The weight and width axes are kept, `mark` stays, and `mkmk` is
+   absent from a Hebrew-only subset by design (its lookups position Hebrew marks only against Latin combining marks). */
 @font-face {
   font-family: "CRC Noto Serif Hebrew";
-  src: url("/fonts/noto-serif-hebrew/NotoSerifHebrew.ttf") format("truetype");
+  src: url("/fonts/noto-serif-hebrew/NotoSerifHebrew-hebrew.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* The same Noto file again, for the reading text only: it answers only for Hebrew letters, points and marks (and the joiners and the dotted circle).
+   Taamey Frank has no glyph for the no-break space or the en dash that the reading text also holds (the hidden phrase names say "Words 2–5"), so a
+   fallback that answered for them would download this file on every reading page just to draw a space. The browser fetches the file once for both rules. */
+@font-face {
+  font-family: "CRC Noto Hebrew Fallback";
+  src: url("/fonts/noto-serif-hebrew/NotoSerifHebrew-hebrew.woff2") format("woff2");
+  unicode-range: U+0590-05FF, U+200C-200F, U+25CC, U+FB1D-FB4F;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* Taamey Frank CLM: the reading text (Lein, Study, Practice up close, the print sheet's vowelled Hebrew) from 1.9 N8. A Hebrew
+   WOFF2 subset of the unmodified Medium face (GPL v2 with the font exception; PROVENANCE.md). One weight exists, and the Bold
+   faces upstream hide the trope, so every weight maps to it and nothing is synthesized. */
+@font-face {
+  font-family: "CRC Taamey Frank";
+  src: url("/fonts/taamey-frank-clm/TaameyFrankCLM-hebrew.woff2") format("woff2");
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
@@ -8,6 +34,15 @@
 
 .hebrew[lang="he"] {
   font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", "Times New Roman", serif;
+  font-weight: 400;
+  font-synthesis: none;
+  font-feature-settings: "mark", "mkmk";
+}
+
+/* The reading text. A device with Taamey Frank CLM installed is the first fallback; the Noto face is the next, so a missing
+   glyph or a failed download keeps the vowels and trope in place on a face that carries them. */
+.reading[lang="he"] {
+  font-family: "CRC Taamey Frank", "Taamey Frank CLM", "CRC Noto Hebrew Fallback", "Noto Serif Hebrew", "Times New Roman", serif;
   font-weight: 400;
   font-synthesis: none;
   font-feature-settings: "mark", "mkmk";

@@ -120,6 +120,23 @@ for (const [name, sample] of Object.entries(samples)) for (const width of [280, 
   });
 }
 
+// 1.9 N8 (G18): on a phone at Large and Huge the pointed text and the scroll stack, each scroll line under its pointed line; at Standard
+// they stay side by side. Where they sit is measured, never assumed: the scroll column is below the pointed one, or beside it.
+async function arrangement(page: Page) {
+  return page.evaluate(() => {
+    const verse = document.querySelector<HTMLElement>(".study-verses [data-verse-ref]")!;
+    const pointed = verse.querySelector<HTMLElement>('[data-tk-side="pointed"] [data-tk-line]')!.getBoundingClientRect(), tikkun = verse.querySelector<HTMLElement>('[data-tk-side="tikkun"] [data-tk-line]')!.getBoundingClientRect();
+    return { below: tikkun.top >= pointed.bottom - 1, beside: tikkun.right <= pointed.left + 1 || tikkun.left >= pointed.right - 1 };
+  });
+}
+for (const width of [320, 412]) for (const [size, expected] of [["huge", { below: true, beside: false }], ["standard", { below: false, beside: true }]] as const) {
+  test(`on a phone at ${width}px, ${size} text ${size === "huge" ? "stacks the two columns" : "keeps them side by side"}`, async ({ page }) => {
+    await open(page, samples.lech, { width, size, colors: true });
+    expect(await arrangement(page)).toEqual(expected);
+    expect((await measure(page)).overflow).toEqual([]);
+  });
+}
+
 // A browser or font that sets the letters a little wider than the one the page was designed on must still settle:
 // the rows and the type scale are measured, never assumed, and measuring never loops.
 for (const spacing of [0.02, 0.05, 0.09]) for (const width of [320, 412]) {

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const fontPath = "/fonts/noto-serif-hebrew/NotoSerifHebrew.ttf";
+const fontPath = "/fonts/taamey-frank-clm/TaameyFrankCLM-hebrew.woff2";
 const proof = "בָ֑ בָ֙ בָ֮ בָֽ׃";
 
 test("public chart covers the catalog with the local Hebrew font and printable layouts", async ({ page }, testInfo) => {
@@ -21,7 +21,8 @@ test("public chart covers the catalog with the local Hebrew font and printable l
   })));
   expect(new Set(marks.map(mark => mark.codepoint)).size).toBe(30);
   for (const mark of marks) {
-    expect(mark.sample).toBe(`בָ${String.fromCodePoint(parseInt(mark.codepoint!, 16))}`);
+    // 1.9 N8: the sign sits on a bare carrier, never under a vowel.
+    expect(mark.sample).toBe(`ב${String.fromCodePoint(parseInt(mark.codepoint!, 16))}`);
     expect(mark.sample).toBe(mark.sample?.normalize("NFC"));
   }
   const cdp = await page.context().newCDPSession(page);
@@ -30,7 +31,7 @@ test("public chart covers the catalog with the local Hebrew font and printable l
   const dom = await cdp.send("DOM.getDocument");
   const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: dom.root.nodeId, selector: '[data-chart-accent="0591"] [lang="he"]' });
   const { fonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId });
-  expect(fonts.some(font => font.isCustomFont && font.familyName === "Noto Serif Hebrew" && font.glyphCount > 0)).toBe(true);
+  expect(fonts.some(font => font.isCustomFont && font.familyName === "Taamey Frank CLM" && font.glyphCount > 0)).toBe(true);
   expect(fonts.every(font => font.isCustomFont)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole("button", { name: "Print chart", exact: true }).focus();
@@ -82,7 +83,7 @@ test("printing waits for a successful Hebrew font load and rechecks before invok
   expect(await page.evaluate(() => (window as unknown as Window & { chartPrintCalls: number }).chartPrintCalls)).toBe(0);
   release();
   await expect(print).toBeEnabled();
-  expect(await page.evaluate(text => document.fonts.check('400 32px "CRC Noto Serif Hebrew"', text), proof)).toBe(true);
+  expect(await page.evaluate(text => document.fonts.check('400 32px "CRC Taamey Frank"', text), proof)).toBe(true);
   await print.click();
   await expect.poll(() => page.evaluate(() => (window as unknown as Window & { chartPrintCalls: number }).chartPrintCalls)).toBe(1);
 });

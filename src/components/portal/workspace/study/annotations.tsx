@@ -5,7 +5,7 @@ import { rovingTarget } from "./word-nav";
 import { WordGroup, WordGroupContext, wordKey } from "./word-group";
 import { colorStudyVerse, type AssignmentEnding, type ColorResult } from "../../../../lib/hebrew/study-annotations";
 import { projectStudyVerse, type DisplayPart, type StudyProjection } from "../../../../lib/hebrew/study-tokens";
-import { PHRASE_FAMILIES } from "../../../../lib/trope/chart-catalog";
+import { PHRASE_FAMILIES, phraseFill } from "../../../../lib/trope/chart-catalog";
 import { INVERTED_NUN, tikkunPieces, tikkunSigns, tikkunText, type TikkunPiece } from "../../../../lib/hebrew/tikkun";
 import { studyAtoms, type StudyAtom } from "../../../../lib/hebrew/tikkun-atoms";
 import { useTikkunLayout, type TikkunLayout } from "./tikkun-layout";
@@ -48,6 +48,8 @@ function chained(pieces: readonly DisplayPart[], elements: ReactNode[]): ReactNo
   return out;
 }
 const MAQAF = "\u05be";
+/** The letters a Torah scroll writes for a paragraph break: pe for an open one (petuchah), samekh for a closed one (setumah). */
+const PARAGRAPH_LETTER = { petuchah: "\u05e4", setumah: "\u05e1" } as const;
 
 /** The first word of a passage that has one: the word the group's single Tab stop starts on (see word-group.tsx). Null when no verse here has a word. */
 export function firstWordKey(verses: readonly StudyVerse[]): string | null {
@@ -64,7 +66,7 @@ export function copyHebrew(event: ClipboardEvent<HTMLElement>) {
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed || !selection.rangeCount || !event.clipboardData) return;
   const range = selection.getRangeAt(0), root = event.currentTarget;
-  const strip = (fragment: DocumentFragment) => { for (const node of fragment.querySelectorAll(".sr-only")) node.remove(); return fragment; };
+  const strip = (fragment: DocumentFragment) => { for (const node of fragment.querySelectorAll(".sr-only, [data-copy-skip]")) node.remove(); return fragment; };
   const cells = [...root.querySelectorAll<HTMLElement>("[data-hebrew-ref]")].filter(cell => range.intersectsNode(cell));
   const mixed = [...root.querySelectorAll(".study-english")].some(node => range.intersectsNode(node));
   let text: string;
@@ -83,7 +85,7 @@ export function copyHebrew(event: ClipboardEvent<HTMLElement>) {
     }).join("");
   } else {
     const fragment = range.cloneContents();
-    if (!fragment.querySelector(".sr-only")) return;
+    if (!fragment.querySelector(".sr-only, [data-copy-skip]")) return;
     text = strip(fragment).textContent ?? "";
   }
   event.clipboardData.setData("text/plain", text);
@@ -119,6 +121,8 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
   const actionId = `${id}-act`, action = wordAction === "card" ? "Open word" : wordAction === "tools" ? "Select word for tools" : wordAction === "phrase" ? "Focus phrase"
     : wordAction === "verse" ? toolsAvailable ? "Hear whole verse; select word for tools" : "Hear whole verse" : "Hear word";
   let described = false;
+  // G18: the colour of a phrase is never the only sign of where it ends: its last word also carries a bar at its end (left) edge.
+  const phraseEnds = useMemo(() => colors ? new Set(phraseGroups(colors).map(group => group.last - 1)) : null, [colors]);
   const parts = (pieces: readonly DisplayPart[]) => chained(pieces, pieces.map((part, index) => {
     const word = part.wordIndex === null ? null : colors?.words[part.wordIndex];
     const family = word?.family ? families.get(word.family) : null;
@@ -133,15 +137,16 @@ export function StudyHebrew({ verse, colors, id, className = "", activeWord = nu
     if (button) described = true;
     return <span key={index} role={button ? "button" : undefined} tabIndex={button ? tabStop ? 0 : -1 : undefined}
       data-word-index={part.wordIndex ?? undefined} data-family={family?.id} data-phrase={word?.phrase ?? undefined}
-      data-reference-active={active ? "true" : undefined} data-linked={quoted ? "true" : undefined} className={[family ? styles.word : "", active ? referenceStyles.activeWord : "", quoted ? styles.linked : ""].filter(Boolean).join(" ") || undefined} style={family ? { "--phrase-color": family.color, "--w": part.wordIndex } as CSSProperties : undefined}
+      data-phrase-end={family && part.wordIndex !== null && phraseEnds?.has(part.wordIndex) ? "" : undefined} data-reference-active={active ? "true" : undefined} data-linked={quoted ? "true" : undefined} className={[family ? styles.word : "", active ? referenceStyles.activeWord : "", quoted ? styles.linked : ""].filter(Boolean).join(" ") || undefined} style={family ? { "--phrase-color": phraseFill(family.id), "--w": part.wordIndex } as CSSProperties : undefined}
       aria-describedby={[button ? actionId : undefined, phraseId].filter(Boolean).join(" ") || undefined}>{part.text}</span>;
   }));
-  const alternative = (written: string, read: ReactNode) => <><span>{maqafChains(written).map((run, at) => run.chain ? <span key={at} className={styles.chain}>{run.text}</span> : run.text)}</span><span className="study-read-alternative"> [<span className="study-qere-label" lang="en" dir="ltr">read / qere:</span> {read}]</span></>;
+  // G18: the qere is what is chanted, so it is set full size (and is the tap target); the chip says so, and the ketiv, which the scroll writes, follows small.
+  const alternative = (written: string, read: ReactNode) => <><span className="study-read-alternative">{read}</span> <span className="study-read-chip" lang="en" dir="ltr" data-copy-skip="">read<span className="sr-only">. Chant this word (qere). The scroll writes it differently (ketiv).</span></span> <span className="study-ketiv">{maqafChains(written).map((run, at) => run.chain ? <span key={at} className={styles.chain}>{run.text}</span> : run.text)}</span></>;
   // A paragraph break after the verse is apparatus: the note below names it.
   const trailing = (index: number, count: number, kind: string) => kind === "gap" && verse.hebrew.paragraphAfter !== null && index === count - 1;
-  const gap = (kind: "petuchah" | "setumah") => <span className="study-paragraph-gap"><span className={inline ? "sr-only" : undefined} lang="en" dir="ltr">[{kind === "petuchah" ? "open paragraph" : "closed paragraph"}]</span></span>;
+  const gap = (kind: "petuchah" | "setumah") => <span className="study-paragraph-gap"><span className="study-paragraph-mark" lang="he" aria-hidden="true" data-copy-skip="">{PARAGRAPH_LETTER[kind]}</span><span className="sr-only" lang="en" dir="ltr">[{kind === "petuchah" ? "open paragraph" : "closed paragraph"}]</span></span>;
   const sign = <span role="img" aria-label="Inverted nun, Masoretic sign">׆</span>;
-  const container = <Container className={`study-hebrew ${hebrewStyles.hebrew} ${inline ? styles.inlineHebrew : ""} ${onWordSelect ? styles.playable : ""} ${className}`.trim()} lang="he" dir="rtl" onKeyDown={onWordSelect ? event => {
+  const container = <Container className={`study-hebrew ${hebrewStyles.reading} ${inline ? styles.inlineHebrew : ""} ${onWordSelect ? styles.playable : ""} ${className}`.trim()} lang="he" dir="rtl" onKeyDown={onWordSelect ? event => {
     const target = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-word-index][role="button"]') : null;
     if (!target || !event.currentTarget.contains(target)) return;
     const index = Number(target.dataset.wordIndex);
@@ -185,7 +190,7 @@ export function Apparatus({ verse, learner = false }: { verse: StudyVerse; learn
   const alternative = verse.hebrew.segments.some(segment => segment.kind === "alternative");
   if (!alternative && !verse.hebrew.paragraphAfter) return null;
   return <div className="study-apparatus">
-    {alternative && <p className="field-help">{learner ? "Read aloud the word in brackets (qere), not the written form (ketiv) before it." : "Written form (ketiv) is followed by the read alternative (qere); neither is silently substituted."}</p>}
+    {alternative && <p className="field-help">Chant this word (qere). The scroll writes it differently (ketiv).</p>}
     {verse.hebrew.paragraphAfter && <p className="study-paragraph-note">{verse.hebrew.paragraphAfter === "petuchah" ? "Open paragraph (petuchah) after this verse." : "Closed paragraph (setumah) after this verse."}</p>}
   </div>;
 }
@@ -193,7 +198,7 @@ export function Apparatus({ verse, learner = false }: { verse: StudyVerse; learn
 export function PhraseLegend({ colors, id, verseRef }: { colors: ColorResult | null; id: string; verseRef: string }) {
   if (!colors) return null;
   if (colors.status !== "ready") return <p role="status" className="field-help">{unavailableText(colors)}</p>;
-  return <ol className={styles.legend} aria-label={`Phrase families for ${verseRef}`}>{phraseGroups(colors).map(({ phrase, family, first, last }) => <li id={`${id}-phrase-${phrase}`} key={phrase} style={{ "--phrase-color": family.color } as CSSProperties}>
+  return <ol className={styles.legend} aria-label={`Phrase families for ${verseRef}`}>{phraseGroups(colors).map(({ phrase, family, first, last }) => <li id={`${id}-phrase-${phrase}`} key={phrase} style={{ "--phrase-color": phraseFill(family.id) } as CSSProperties}>
     <span className={styles.chip}>{family.label}</span><span className={styles.wordRange}>{range(first, last)}</span>
   </li>)}</ol>;
 }
@@ -249,6 +254,7 @@ export function TikkunVerse({ verse, className = "", projection = null, colors =
   const text = useMemo(() => projection ? null : tikkunText(verse.hebrew.text), [projection, verse.hebrew.text]);
   const signs = useMemo(() => tikkunSigns(verse.hebrew.segments), [verse.hebrew.segments]);
   const pieces = useMemo(() => projection ? tikkunPieces(projection.runs) : null, [projection]);
+  const phraseEnds = useMemo(() => colors ? new Set(phraseGroups(colors).map(group => group.last - 1)) : new Set<number>(), [colors]);
   // The scroll writes the inverted nuns (Numbers 10:35-36), so they stay; every other mark is gone.
   const sign = (key?: number) => <span key={key} role="img" aria-label="Inverted nun, Masoretic sign">{INVERTED_NUN}</span>;
   const render = (piece: TikkunPiece, index: number) => {
@@ -256,9 +262,9 @@ export function TikkunVerse({ verse, className = "", projection = null, colors =
     if (piece.wordIndex === null) return piece.text;
     // A ketiv stands for every word of its qere, so it lights up while any of them plays.
     const word = colors?.words[piece.wordIndex], family = word?.family ? families.get(word.family) : null, active = activeWord !== null && piece.words.includes(activeWord);
-    return <span key={index} data-tikkun-word={piece.wordIndex} data-family={family?.id} data-reference-active={active ? "true" : undefined}
+    return <span key={index} data-tikkun-word={piece.wordIndex} data-family={family?.id} data-phrase-end={family && piece.wordIndex !== null && phraseEnds.has(piece.wordIndex) ? "" : undefined} data-reference-active={active ? "true" : undefined}
       className={[family ? styles.word : "", active ? referenceStyles.activeWord : ""].filter(Boolean).join(" ") || undefined}
-      style={family ? { "--phrase-color": family.color } as CSSProperties : undefined}>{piece.text}</span>;
+      style={family ? { "--phrase-color": phraseFill(family.id) } as CSSProperties : undefined}>{piece.text}</span>;
   };
   const words = pieces?.map(render);
   if (atoms && projection) return <span className={`${stamStyles.stam} ${className}`.trim()} lang="he" dir="rtl" data-tikkun-ref={verse.ref} data-tk-side="tikkun" {...rest}>
@@ -296,7 +302,7 @@ function FlowVerse({ verse, assignment, id, onVerse, onWord, activeWord, toolsAv
       : onVerse ? <button type="button" className={styles.verseNumber} onClick={onVerse} aria-label={`Hear ${verse.ref}`} lang="en" dir="ltr" data-verse-number title={verse.ref}>{state.marked && <ChoiceCheck />}{number ?? verse.ref}</button>
         : <sup title={verse.ref} lang="en" dir="ltr" data-verse-number>{state.marked && <ChoiceCheck />}{number ?? verse.ref}</sup>}{state.marked && <span className="sr-only" lang="en" dir="ltr"> (selected)</span>}{aligned ? " " : "\u00a0"}
     {replaced ? <TikkunVerse verse={verse} className={styles.flowTikkunInline} projection={projection} colors={colors} activeWord={activeWord} /> : <StudyHebrew verse={verse} colors={colors} id={id} inline activeWord={activeWord} onWordSelect={state.choosing ? undefined : onWord} wordAction={listening ? "verse" : "tools"} toolsAvailable={toolsAvailable} linked={linked} atoms={aligned ? atoms : null} layout={layout} />}{" "}
-    {verse.hebrew.paragraphAfter === "setumah" && <span className={styles.closedGap} role="img" aria-label="Closed paragraph" />}
+    {verse.hebrew.paragraphAfter && <span className={verse.hebrew.paragraphAfter === "setumah" ? styles.closedGap : styles.openMark} role="img" aria-label={verse.hebrew.paragraphAfter === "setumah" ? "Closed paragraph" : "Open paragraph"}><span className="study-paragraph-mark" lang="he" aria-hidden="true" data-copy-skip="">{PARAGRAPH_LETTER[verse.hebrew.paragraphAfter]}</span></span>}
     {colors && <span className="sr-only" lang="en" dir="ltr">{phraseGroups(colors).map(row => <span key={row.phrase} id={`${id}-phrase-${row.phrase}`}>{row.family.label}, {range(row.first, row.last)}. </span>)}</span>}
     </span>
     {tikkun === "beside" && <TikkunVerse verse={verse} className={styles.flowTikkun} projection={projection} colors={colors} activeWord={activeWord} atoms={aligned ? atoms : null} layout={layout} aria-hidden />}

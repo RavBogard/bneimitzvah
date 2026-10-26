@@ -88,7 +88,7 @@
 .sheet[data-show="english"] .english, .sheet[data-show="english"] .number { padding-top: var(--row-pad) !important; }
 .sheet[data-show="hebrew"] .number { padding-top: calc(var(--row-pad) + (var(--he-size) * var(--he-lh) - var(--en-size) * 1.4) / 2) !important; }
 
-.hebrew { padding-inline: 0.5em 0; font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", "Times New Roman", serif; font-size: var(--he-size); font-weight: var(--he-weight);
+.hebrew { padding-inline: 0.5em 0; font-family: "CRC Taamey Frank", "Taamey Frank CLM", "CRC Noto Hebrew Fallback", "Noto Serif Hebrew", "Times New Roman", serif; font-size: var(--he-size); font-weight: var(--he-weight);
   line-height: var(--he-lh); font-synthesis: none; font-feature-settings: "mark", "mkmk"; text-align: right; text-wrap: pretty; overflow-wrap: anywhere; }
 .sheet[data-show="hebrew"] .hebrew { padding-inline: 0; }
 .english { padding-inline: 0 0.75em; font-weight: var(--en-weight); line-height: var(--en-lh); text-align: left; hyphens: auto; text-wrap: pretty; overflow-wrap: anywhere; }
@@ -98,9 +98,10 @@
 .missing { color: var(--muted); font-style: italic; }
 .chain { display: inline-block; max-inline-size: 100%; }
 .inlineHebrew { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", "Times New Roman", serif; font-size: 1.1em; font-synthesis: none; font-feature-settings: "mark", "mkmk"; unicode-bidi: isolate; }
-.alternative .written { color: var(--muted); }
-.read { white-space: nowrap; }
-.qere { font-family: "Bricolage Grotesque", system-ui, sans-serif; font-size: 0.42em; font-weight: 600; color: var(--muted); vertical-align: 0.35em; }
+.alternative .written { color: var(--muted); font-size: 0.62em; }
+.qere { font-family: "Bricolage Grotesque", system-ui, sans-serif; font-size: 0.4em; font-weight: 600; color: var(--muted); vertical-align: 0.6em; padding: 0 0.5em; border: 0.5pt solid var(--muted); border-radius: 999px; }
+/* "Letters only" is the scroll's lettering, in the Torah-scroll face (1.9 N8, G18). It carries no vowels or trope, so none of the reading face's mark features apply. */
+.sheet[data-script="letters"] .hebrew { font-family: "CRC Stam Ashkenaz", "Stam Ashkenaz CLM", "CRC Noto Serif Hebrew", "Noto Serif Hebrew", serif; font-feature-settings: normal; }
 .paragraph { color: var(--muted); font-size: 0.8em; }
 
 /* The notes column: ruled for writing, or left blank, with a hairline beside the text. */

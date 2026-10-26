@@ -32,7 +32,7 @@
 [data-tikkun="on"] .line { grid-template-columns: 2.75rem minmax(0, 1fr) minmax(0, 1fr); }
 .number { padding-top: 0.95rem; font-size: 0.875rem; font-weight: 700; color: var(--sheet-muted); text-align: center; font-variant-numeric: tabular-nums; }
 .line :global(.study-hebrew).pointed { margin: 0; font-size: 1.875rem; line-height: 2.05; color: #13202f; }
-.line :global(.study-read-alternative) { color: var(--sheet-muted); }
+.line :global(.study-ketiv) { color: var(--sheet-muted); }
 .tikkun { margin: 0; padding-inline-start: 1.25rem; border-inline-start: 1px solid var(--sheet-rule); font-size: 2rem; line-height: 2; text-align: justify; text-align-last: start; color: #13202f; }
 .footer { margin-top: 1.5rem; padding-top: 0.75rem; border-top: 1px solid var(--sheet-rule); font-size: 0.8125rem; color: var(--sheet-muted); }
 .footer p { margin: 0.125rem 0; }

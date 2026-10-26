@@ -105,6 +105,37 @@
     color-scheme: dark;
   }
 }
+/* Phrase fills (1.9 N8, G18): one custom property per family, day inks here and night inks in dark mode. The values are
+   PHRASE_FAMILIES in src/lib/trope/chart-catalog.ts and tests/phrase-colors.test.mjs holds the two equal. Every fill carries the dark
+   ink #13202f, so words and chips keep their ink in both themes. */
+:root {
+  --phrase-zakef: #fff692;
+  --phrase-etnachta: #9ac5ff;
+  --phrase-sof-pasuk: #ff89ac;
+  --phrase-revia: #fda66d;
+  --phrase-tevir: #d7ffca;
+  --phrase-segol: #b2a3d0;
+  --phrase-azla: #4ac0ab;
+  --phrase-telisha-ketana: #f7ccd2;
+  --phrase-pazer: #d1bfd8;
+  --phrase-zakef-gadol: #debb9b;
+  --phrase-sof-haftarah: #aeffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --phrase-zakef: #b29337;
+    --phrase-etnachta: #57a8f7;
+    --phrase-sof-pasuk: #c0858c;
+    --phrase-revia: #d2b157;
+    --phrase-tevir: #8dc19b;
+    --phrase-segol: #ee97c8;
+    --phrase-azla: #1eb29d;
+    --phrase-telisha-ketana: #d9b0ba;
+    --phrase-pazer: #b385c8;
+    --phrase-zakef-gadol: #d99373;
+    --phrase-sof-haftarah: #17ccf0;
+  }
+}
 * { box-sizing: border-box; }
 body { margin: 0; font-size: var(--text-body); line-height: 1.55; background: var(--color-canvas); }
 ::selection { background: var(--marigold); color: var(--on-ink); }
@@ -257,9 +288,11 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .study-verses > li { margin-block: 1.5rem 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--color-rule); }
 .study-verses > li:first-child { margin-top: 0.75rem; }
 .study-verses h4 { color: var(--color-muted); font-size: 1rem; font-weight: 500; }
-.study-hebrew { font-family: "Times New Roman", "Noto Serif Hebrew", serif; font-size: 2rem; line-height: 2; text-align: start; overflow-wrap: anywhere; margin-block: 1rem; }
-.study-read-alternative { font-size: 0.75em; }
+.study-hebrew { font-family: "CRC Taamey Frank", "Taamey Frank CLM", "Times New Roman", "Noto Serif Hebrew", serif; font-size: 2rem; line-height: 2; text-align: start; overflow-wrap: anywhere; margin-block: 1rem; }
+/* G18: the qere is chanted, so it is full size; the ketiv, which the scroll writes, is small and quiet. */
+.study-ketiv { font-size: 0.62em; color: var(--color-muted); }
 .study-paragraph-gap { display: inline-block; min-width: 1.5em; font-size: 0.625em; margin-inline: 0.4em; }
+.study-paragraph-mark { color: var(--color-muted); font-weight: 400; }
 .study-paragraph-note { color: var(--color-muted); margin-bottom: 1rem; }
 .study-english { white-space: pre-line; overflow-wrap: anywhere; line-height: 1.7; }
 .study-kind-choice, .study-pages { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-block: 1rem; }
@@ -549,7 +582,6 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .study-english { color: var(--color-ink); margin-top: 0.5rem; max-width: 62ch; }
 .study-apparatus { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--color-rule); }
 .study-apparatus p { margin: 0; font-size: 0.875rem; color: var(--color-muted); }
-.study-read-alternative { color: var(--color-muted); }
 .student-aliyah { display: inline-flex; align-items: center; min-height: 32px; margin: 0.75rem 0 0.5rem; padding: 0 0.75rem; border-radius: 999px; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-teal); color: var(--color-teal); font-size: 0.875rem; font-weight: 650; }
 .study-page-position { color: var(--color-muted); font-variant-numeric: tabular-nums; }
 /* Where the section chips are (1.9 N3), a verse or the text brought to the top of the screen stops below their sticky bar, not under it. */
@@ -582,7 +614,7 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .toolbar-menu button { display: flex; align-items: center; gap: 0.875rem; width: 100%; min-height: 52px; padding: 0 0.75rem; border: 0; border-radius: 14px; background: transparent; color: var(--color-ink); font-weight: 600; text-align: start; }
 .toolbar-menu button:hover { background: var(--color-hover); }
 .toolbar-menu button[aria-pressed="true"] { background: var(--lake-tint); }
-.toolbar-menu-sample { font-family: "CRC Noto Serif Hebrew", serif; width: 2.5rem; text-align: center; line-height: 1; }
+.toolbar-menu-sample { font-family: "CRC Taamey Frank", "Taamey Frank CLM", "CRC Noto Hebrew Fallback", serif; width: 2.5rem; text-align: center; line-height: 1; }
 .toolbar-menu [data-size="small"] .toolbar-menu-sample { font-size: 1.25rem; }
 .toolbar-menu [data-size="standard"] .toolbar-menu-sample { font-size: 1.5rem; }
 .toolbar-menu [data-size="large"] .toolbar-menu-sample { font-size: 1.875rem; }
@@ -616,7 +648,8 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .lift-english { max-width: 40ch; text-align: center; font-size: 1.125rem; line-height: 1.5; opacity: 0.92; }
 .lift .study-apparatus { border-top-color: rgb(255 255 255 / 0.3); text-align: center; }
 .lift .study-apparatus p, .lift .field-help { color: rgb(255 255 255 / 0.85); }
-.lift .study-read-alternative { color: rgb(255 255 255 / 0.8); }
+.lift .study-ketiv { color: rgb(255 255 255 / 0.8); }
+.lift .study-paragraph-mark { color: rgb(255 255 255 / 0.8); }
 .lift-nav { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 0.75rem; padding: 0.75rem 1rem max(1rem, env(safe-area-inset-bottom)); }
 .lift-step { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 56px; border: 0; border-radius: 999px; background: rgb(255 255 255 / 0.14); color: #fff; font-size: 1.0625rem; font-weight: 700; }
 .lift-step:hover { background: rgb(255 255 255 / 0.22); }
@@ -666,10 +699,12 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 /* Finish-review fixes: apparatus stays out of the lifted line, tools sit beside the verses on desktop. */
 /* A ketiv and its qere may wrap between their words; only the label and a maqaf chain are kept whole (a nowrap box here pushed the qere off the left edge). */
 .study-alternative { unicode-bidi: isolate; }
-.study-qere-label { white-space: nowrap; }
-.lift .study-qere-label, .lift .study-read-alternative { font: 600 0.875rem/1 "Bricolage Grotesque", sans-serif; vertical-align: super; }
+/* The "read" chip marks the qere (tier B, approved 2026-10-24); its sentence is read aloud, not shown. */
+.study-read-chip { display: inline-block; padding: 0.0625rem 0.4375rem; border-radius: 999px; background: var(--lake-tint); color: var(--color-ink); font: 600 0.75rem/1.4 "Bricolage Grotesque", sans-serif; letter-spacing: 0; vertical-align: 0.7em; white-space: nowrap; user-select: none; }
+.lift .study-read-chip { background: rgb(255 255 255 / 0.2); color: #fff; font-size: 0.875rem; }
 .lift .study-alternative [data-word-index] { font: inherit; }
-.lift .study-read-alternative [data-word-index] { font-family: "CRC Noto Serif Hebrew", serif; font-size: calc(var(--hebrew-size, 2rem) * 0.9); font-weight: 400; vertical-align: baseline; }
+/* The phrase-end bar belongs to the phrase being practised only; the words that stepped back have no fill to carry it. */
+.lift .lift-phrasing [data-phrase-end] { box-shadow: none; }
 .reading-hero { max-width: 52rem; }
 /* The one compact practice bar (1.9 N13): "Practising with Noa", a switch for each other child, Done, and the coaching line under them. */
 .practice-bar { display: grid; gap: 0.5rem; margin-bottom: 0.75rem; }

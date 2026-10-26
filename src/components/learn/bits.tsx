@@ -6,6 +6,8 @@ import { contourPath, CONTOUR_BOX } from "../../lib/learn/contours";
 import type { AnalysedVerse } from "../../lib/learn/verse";
 import type { PhraseRequest } from "../../lib/learn/phrase-audio";
 import { routeUnitTap, unitWordParts } from "../../lib/learn/word-tap";
+// The Hebrew @font-face rules, which every Learn and service-course page needs whatever else it loads.
+import "../../styles/hebrew-font.module.css";
 import { usePlayerState, useLearnServices } from "./services";
 import { RATE_LIMITED_MESSAGE } from "../portal/public-reading/rate-limited";
 import { useWordCard } from "./word-card";

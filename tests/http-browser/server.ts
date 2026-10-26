@@ -52,10 +52,10 @@ async function isolatedNextProject() {
     await cp(join(source, "src"), join(dir, "src"), { recursive: true });
     // The public pages read the product name through the public runtime, which reaches the chant engine's text module (src/server/study/word-aids.ts), so the engine is copied beside src.
     await cp(join(source, "trope"), join(dir, "trope"), { recursive: true });
-    for (const [family, font, license] of [["noto-serif-hebrew", "NotoSerifHebrew.ttf", "OFL.txt"], ["bricolage-grotesque", "BricolageGrotesque.ttf", "OFL.txt"], ["stam-ashkenaz-clm", "StamAshkenazCLM.ttf", "LICENSE.txt"]]) {
+    for (const [family, font, license] of [["noto-serif-hebrew", "NotoSerifHebrew.ttf", "OFL.txt"], ["bricolage-grotesque", "BricolageGrotesque.ttf", "OFL.txt"], ["stam-ashkenaz-clm", "StamAshkenazCLM.ttf", "LICENSE.txt"], ["taamey-frank-clm", "TaameyFrankCLM.ttf", "LICENSE.txt"]]) {
       const fontDirectory = join("public", "fonts", family);
       await mkdir(join(dir, fontDirectory), { recursive: true });
-      for (const file of [font, license, ...(family === "bricolage-grotesque" ? ["BricolageGrotesque-latin.woff2"] : [])]) await cp(join(source, fontDirectory, file), join(dir, fontDirectory, file));
+      for (const file of [font, license, ...(family === "bricolage-grotesque" ? ["BricolageGrotesque-latin.woff2"] : family === "noto-serif-hebrew" ? ["NotoSerifHebrew-hebrew.woff2"] : family === "taamey-frank-clm" ? ["TaameyFrankCLM-hebrew.woff2"] : [])]) await cp(join(source, fontDirectory, file), join(dir, fontDirectory, file));
     }
     for (const file of ["package.json", "next.config.ts", "tsconfig.json"]) await cp(join(source, file), join(dir, file));
     return { dir };
