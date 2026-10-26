@@ -17,6 +17,18 @@ test("site mode: the brand, the Beta mark, Read, Learn and Sign in, with Sign in
   expect(markup).not.toContain("Account");
 });
 
+test("the brand link carries Siona Benjamin's disc at 28px with an empty alt, before the name, in both modes, and is still named CRC Torah", () => {
+  for (const mode of ["site", "minimal"] as const) {
+    const markup = bar({ mode });
+    const brand = /<a class="portal-brand"[^>]*>(.*?)<\/a>/s.exec(markup)![1];
+    expect(brand, mode).toMatch(/^<img [^>]*src="\/brand\/mural-64\.webp"[^>]*srcSet="\/brand\/mural-64\.webp 1x, \/brand\/mural-128\.webp 2x"[^>]*\/>CRC Torah$/);
+    expect(brand, mode).toContain('alt=""');
+    expect(brand, mode).toContain('width="28"');
+    expect(brand, mode).toContain('height="28"');
+    expect(links(markup)[0], mode).toEqual(["/", "CRC Torah"]);
+  }
+});
+
 test("minimal mode: the brand and Beta only, no links beside the brand", () => {
   const markup = bar({ mode: "minimal" });
   expect(markup).toContain('data-site-bar="minimal"');
@@ -37,7 +49,9 @@ test("signed in, the right side is the account control, named Account, in the sa
   const css = readFileSync(join(process.cwd(), "src", "app", "globals.css"), "utf8");
   expect(css).toMatch(/\.site-bar-end \{[^}]*min-width: 7\.5rem/);
   expect(css).toMatch(/@media \(max-width: 479\.98px\)[^@]*\.site-bar-account-text \{ position: absolute/);
-  expect(css).toMatch(/@media \(max-width: 359\.98px\) \{ \.site-bar \.site-beta \{ display: none; \} \}/);
+  // Beta hides below the width where disc, name, Beta, Read, Learn and the icon-only account fit on one line (368px measured; 375px set).
+  expect(css).toMatch(/@media \(max-width: 374\.98px\) \{ \.site-bar \.site-beta \{ display: none; \} \}/);
+  expect(css).not.toMatch(/\.site-bar \.portal-brand[^}]*display: none|\.site-bar-mark[^}]*display: none/);
   expect(css).toMatch(/\.site-bar \{ flex-wrap: nowrap/);
 });
 

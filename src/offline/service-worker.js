@@ -66,7 +66,7 @@ async function sweep(now) {
   });
 }
 
-const ASSET = /(?:\/_next\/static\/|\/fonts\/)[^"'()\s\\<>`]+/g;
+const ASSET = /(?:\/_next\/static\/|\/fonts\/|\/brand\/)[^"'()\s\\<>`]+/g;
 /** Chunk lists in inline bootstrap data name build files without the /_next prefix. */
 const BARE_ASSET = /(?<![\w/.-])static\/(?:chunks|css|media)\/[^"'()\s\\<>`]+/g;
 const CSS_URL = /url\(\s*['"]?([^'")\s]+)['"]?\s*\)/g;

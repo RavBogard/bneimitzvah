@@ -43,12 +43,11 @@ const PUBLIC_SURFACES: Readonly<Record<string, string>> = {
   "src/server/reference-audio/public-short.ts": "content-addressed PocketTorah clips under /reference-audio/short-v1",
   "src/server/http/mcp.ts": "OAuth discovery metadata only (publicMetadata): the same document for everyone, no data; the token, consent and MCP routes in the same file stay private",
   "src/app/sw.js/route.ts": "the service worker file",
-  "src/lib/offline/icon.tsx": "the installable app's icons",
 };
 /** Files that name a cache header only to forbid caching (privateHeaders, no-store); a positive directive here still fails the first test. */
 const NO_STORE_ONLY = new Set(["src/server/http/responses.ts", "src/server/http/page-views.ts", "src/server/http/reference-review.ts", "src/lib/navigation/canonical.ts"]);
-/** Static public pages (the signed-out reader, print sheet, Learn course and trope chart, their share images, and the icons): no cookie, no session, built once. */
-const STATIC_PUBLIC = (file: string) => ["learn", "read", "print", "trope-chart"].some(dir => file.startsWith(`src/app/${dir}/`)) || /^src\/app\/(?:icons\/\[name\]|favicon\.ico|apple-touch-icon\.png|sw\.js)\//.test(file);
+/** Static public pages (the signed-out reader, print sheet, Learn course and trope chart, and their share images): no cookie, no session, built once. */
+const STATIC_PUBLIC = (file: string) => ["learn", "read", "print", "trope-chart"].some(dir => file.startsWith(`src/app/${dir}/`)) || /^src\/app\/sw\.js\//.test(file);
 
 test("a positive cache directive appears only in the deliberately public surfaces, and in mcp.ts only on the discovery metadata", () => {
   const positive = new Set<string>(), named = new Set<string>(), staticCached = new Set<string>();

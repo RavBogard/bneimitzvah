@@ -131,5 +131,7 @@ test("the share card is a 1200 by 630 png for each public page, with and without
     const bytes = Buffer.from(await response.arrayBuffer());
     expect([...bytes.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
     expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual([1200, 630]);
+    // Siona Benjamin's disc is in the card (a plain lake card with text alone is a few dozen kilobytes).
+    expect(bytes.length, title).toBeGreaterThan(150_000);
   }
 });

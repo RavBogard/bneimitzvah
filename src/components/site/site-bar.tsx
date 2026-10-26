@@ -23,6 +23,15 @@ export function currentSiteLink(pathname: string | null | undefined): SiteLink |
   return under(path, "/read") ? "read" : under(path, "/learn") || under(path, "/trope-chart") ? "learn" : under(path, "/account") ? "account" : null;
 }
 
+/**
+ * The brand mark: Siona Benjamin's CRC floor as a 28px disc (DESIGN.md, Brand mark). Decoration, so the brand link keeps the name
+ * "CRC Torah"; the width and height are set so the bar does not shift while it loads. The 2x file serves dense screens.
+ */
+export function BrandMark() {
+  // eslint-disable-next-line @next/next/no-img-element -- a 28px disc from public/brand; next/image would add a resizing hop for two fixed files
+  return <img className="site-bar-mark" src="/brand/mural-64.webp" srcSet="/brand/mural-64.webp 1x, /brand/mural-128.webp 2x" width={28} height={28} alt="" decoding="async" />;
+}
+
 /** The person icon the account control draws (it is decoration; the control is named "Account"). */
 export function AccountIcon() {
   return <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M5 20c1.2-3.6 3.8-5.5 7-5.5s5.8 1.9 7 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
@@ -56,7 +65,7 @@ export function SiteBarView({ mode = "site", signedIn = false, back, onNavigate,
   const current = currentSiteLink(pathname);
   const link = (key: SiteLink, href: string, children: ReactNode, extra = "") => <a className={`site-bar-link${extra}`} href={href} aria-current={current === key ? "page" : undefined} onClick={onNavigate ? event => onNavigate(event, href) : undefined}>{children}</a>;
   return <header className={`portal-header app-bar site-bar${className ? ` ${className}` : ""}`} data-site-bar={mode}>
-    <div className="portal-brand-group"><a className="portal-brand" href="/" onClick={onNavigate ? event => onNavigate(event, "/") : undefined}>{productName ?? "CRC Torah"}</a><BetaMark /></div>
+    <div className="portal-brand-group"><a className="portal-brand" href="/" onClick={onNavigate ? event => onNavigate(event, "/") : undefined}><BrandMark />{productName ?? "CRC Torah"}</a><BetaMark /></div>
     {mode === "site" && <nav className="site-bar-nav" aria-label="Site">
       {link("read", "/read", <span className="site-bar-text">Read</span>)}
       {link("learn", "/learn", <span className="site-bar-text">Learn</span>)}
