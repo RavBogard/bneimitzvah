@@ -136,6 +136,8 @@ test("Quick ten opens after three phrases, runs one phrase after another with no
   await expect(page.getByRole("heading", { name: "Which phrase is this?" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Next", exact: true })).toHaveCount(0);
   await expect(page.locator("main button[class*=choice]")).toHaveCount(3);
+  // T3 P4-3: a position under the bar, never a score.
+  await expect(page.locator("[data-quick-ten-position]")).toHaveText("Phrase 1 of 10");
   if (testInfo.project.name === "phone") expect(await noHorizontalScroll(page)).toBe(true);
   await shot(page, testInfo, "quick-ten-question");
   // A miss, then the next phrase follows on its own once the comparison has played and the verse has shown.
@@ -143,8 +145,10 @@ test("Quick ten opens after three phrases, runs one phrase after another with no
   await expect(page.locator("main [data-answer]")).toBeVisible();
   await shot(page, testInfo, "quick-ten-answered");
   await expect(page.locator("main button[class*=choice]:not([disabled])").first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator("[data-quick-ten-position]")).toHaveText("Phrase 2 of 10");
   await page.locator("main button[class*=choice][data-right]").first().click();
   await expect(page.locator("main button[class*=choice]:not([disabled])").first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator("[data-quick-ten-position]")).toHaveText("Phrase 3 of 10");
   await page.getByRole("button", { name: "Stop here" }).click();
   await expect(page.getByText("Done. The ones you missed come back in review.")).toBeVisible();
   await shot(page, testInfo, "quick-ten-done");

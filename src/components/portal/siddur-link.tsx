@@ -3,7 +3,7 @@ import { crcSiddurPageLink } from "../../lib/siddur/pages";
 
 /** A link into the siddur reader: its own tab, with no opener and no referrer. */
 export function SiddurLink({ href, children, className = "button-text" }: { href: string; children: ReactNode; className?: string }) {
-  return <a className={className} href={href} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">{children}</a>;
+  return <a className={className} href={href} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">{children}<span className="sr-only">, opens in a new tab</span></a>;
 }
 
 /**

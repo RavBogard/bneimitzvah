@@ -36,7 +36,8 @@ export type WhereDoesItEnd = Readonly<{ type: "where-does-it-end"; params: Reado
 export type TapThePhrase = Readonly<{ type: "tap-the-phrase"; params: Readonly<{ families: readonly FamilyId[]; items: number; verseWords: readonly [number, number] }> }>;
 export type BuildThePhrase = Readonly<{ type: "build-the-phrase"; params: Readonly<{ family: FamilyId; items: number; patterns: readonly (readonly TropeId[])[]; extraMarks: number }> }>;
 export type ThisWeek = Readonly<{ type: "this-week"; params: Readonly<{ family: FamilyId; kind?: Melody; show: number; find: number }> }>;
-export type FirstVerse = Readonly<{ type: "first-verse"; params: Readonly<{ kind: Melody; maxWords: number; steps: readonly FirstVerseStep[]; celebrate: boolean; openInLein: boolean }> }>;
+/** `source: "this-week"` takes the week's shortest word-ready verse (the haftarah lesson); `"course"` (N19a) takes the lesson's own examples in order, so the Torah lesson starts on Genesis 1:1 with Exodus 25:8 after it. */
+export type FirstVerse = Readonly<{ type: "first-verse"; params: Readonly<{ source: "this-week" | "course"; kind: Melody; maxWords: number; steps: readonly FirstVerseStep[]; celebrate: boolean; openInLein: boolean }> }>;
 export type FirstVerseStep = "phrases" | "whole" | "along-0.75" | "along-1";
 /** 1.6: Same sign, different place. Two words carrying look-alike signs; read them (or hear one) and tap. */
 export type LookAlikes = Readonly<{ type: "look-alikes"; params: Readonly<{ pairs: readonly LookAlikePairId[]; items: number; mode: "read" | "hear" }> }>;
@@ -369,11 +370,13 @@ function parseActivity(value: unknown, family: FamilyId | null, melody: Melody, 
     }
     case "first-verse": {
       only(["source", "kind", "pick", "maxWords", "steps", "celebrate", "openInLein"]);
-      if (p.source !== "this-week" || p.pick !== "shortest-word-ready" || p.kind !== melody || family !== null) fail("source, pick or kind");
+      // A course source (N19a) is picked in the lesson's own example order; the week's source picks its shortest verse.
+      const source = p.source === "this-week" && p.pick === "shortest-word-ready" ? "this-week" : p.source === "course" && p.pick === "course-order" ? "course" : (fail("source or pick"), "this-week");
+      if (p.kind !== melody || family !== null) fail("kind");
       const steps = ["phrases", "whole", "along-0.75", "along-1"];
       if (!Array.isArray(p.steps) || p.steps.length !== steps.length || p.steps.some((step, i) => step !== steps[i])) fail("steps");
       if (typeof p.celebrate !== "boolean" || typeof p.openInLein !== "boolean") fail("celebrate or openInLein");
-      return { type: "first-verse", params: { kind: melody, maxWords: integer(p.maxWords, 3, 20) ? p.maxWords as number : (fail("maxWords"), 12), steps: steps as FirstVerseStep[], celebrate: p.celebrate === true, openInLein: p.openInLein === true } };
+      return { type: "first-verse", params: { source, kind: melody, maxWords: integer(p.maxWords, 3, 20) ? p.maxWords as number : (fail("maxWords"), 12), steps: steps as FirstVerseStep[], celebrate: p.celebrate === true, openInLein: p.openInLein === true } };
     }
     default: fail(`unknown type ${value.type}`); return null;
   }

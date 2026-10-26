@@ -42,7 +42,7 @@ test("the header is two lines: the date and kind of Shabbat, then the parashah w
   const sheet = await openMore(page);
   await expect(sheet.getByRole("heading", { name: "More", exact: true })).toBeFocused();
   for (const name of ["Start reading", "Choose verses", "Choose a reading", "This week"]) await expect(sheet.getByRole("button", { name, exact: true }), name).toBeVisible();
-  for (const name of ["Print", "Trope chart", "Torah blessings: siddur page 22", "Haftarah blessings: siddur page 23, after Mi Shebeirach"]) await expect(sheet.getByRole("link", { name, exact: true }), name).toBeVisible();
+  for (const name of ["Print", "Trope chart", "Torah blessings: siddur page 22 , opens in a new tab", "Haftarah blessings: siddur page 23, after Mi Shebeirach , opens in a new tab"]) await expect(sheet.getByRole("link", { name, exact: true }), name).toBeVisible();
   await expect(sheet.getByLabel("Find a date", { exact: true })).toBeVisible();
   await expect(sheet.getByLabel("Portion", { exact: true })).toBeVisible();
   await expect(sheet.getByRole("link", { name: "Sign in to save", exact: true })).toBeVisible();

@@ -93,6 +93,11 @@ Main at writing: `a9bbd6e`. Live: v1.8.0 (`7c13cac`), prod ledger 43 (newest mig
       - `first-verse.tsx` taking the course verse ahead of this week's;
       - Ex 25:8 in the offline pack and its snapshot;
       - new wording for the lesson's title, summary, goal and body, which now say "this week's reading". This wording is tier C, drafted by Cowork in its 1.9 handoff T3.
+    - Done on `release-1-9/learn-t3-n19a` (2026-10-25), with Daniel's T3 answers ("Keep all"):
+      - The validator takes `source: "course"` with `pick: "course-order"`; the Torah first-verse lesson uses it and the haftarah lesson keeps `this-week`.
+      - The lesson's examples run Genesis 1:1 (parts 0–2 and 3–6), then Exodus 25:8 (parts 0–2 and 3–4), then the two older fallbacks. `first-verse.tsx` shows a student's own reading (N17) first, and otherwise only those, never asking for this week's reading.
+      - Exodus 25:8 was already an example of two Torah lessons, so the offline pack and its snapshot already held it; a test now pins both verses in the pack. Both verses have reference recordings with word timings (checked against the public short-resolution route), so no generated chant is involved.
+      - The signed-out first-phrase row reads "This week's first phrase" and opens `/learn/prepare` (or `?kind=haftarah`), on both paths, once the account check has answered "none".
   - /learn/prepare joins the public page-view count.
 - **C1 Daniel's answers in Cowork's 1.9 session (2026-10-25, recorded verbatim in `cowork-offload/1.9/QUESTIONS-1.9.md`).**
   - SC7 is held. Daniel's answer was "Hold the evening course". The public Shirei Tfilah mirror is two months behind and the local feeds are licensed builds. He also said "There is a beit Mitzvah siddur in the repo. That is the main one". Lane 3 runs N17 → N18 → N19 → SC6 without SC7. v2.0.0 waits on SC7 or on Daniel releasing it from the set.

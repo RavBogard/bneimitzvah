@@ -6,7 +6,7 @@ import { tropeLabel, tropeSample, isConjunctive } from "../../lib/learn/marks";
 import { phraseAt, type BuildItem, type DrillItem, type EndItem, type HalfItem, type LookItem, type LookSide, type NameItem, type Phrase, type Pools, type SameItem, type TapItem } from "../../lib/learn/pools";
 import { LEADS_ON, type AnalysedVerse } from "../../lib/learn/verse";
 import { lessonOfFamily } from "../../lib/learn/production";
-import { DRAFTED, lookTell } from "./activity-copy";
+import { BUILD_SAY, DRAFTED, lookTell } from "./activity-copy";
 import { AudioError, ContourMark, FamilyChip, icons, phraseRequest, phraseStyle, PlayTile, UnitsText } from "./bits";
 import { useLearnServices, usePlayerState } from "./services";
 import styles from "./learn.module.css";
@@ -171,14 +171,20 @@ export function TapThePhrase({ item, pools, onAnswer }: DrillProps<TapItem>) {
 export function BuildThePhrase({ item, pools, onAnswer }: DrillProps<BuildItem>) {
   const { player } = useLearnServices(), id = `build:${item.key}`, verse = verseOf(pools, item.phrase);
   const marks = item.phrase.tropes as TropeId[], [placed, setPlaced] = useState<number[]>([]), [miss, setMiss] = useState<{ tile: number; n: number } | null>(null), missed = useRef(false);
+  // T3 P4-5 to P4-7: what a screen reader hears after each tap (a position, never a score); each tap renders a fresh node so a repeat is spoken again.
+  const [say, setSay] = useState<{ n: number; text: string } | null>(null);
   useAutoplay(id, [request(item.phrase)]);
   if (!verse) return null;
   const done = placed.length === marks.length;
   const tap = (tile: number) => {
     if (done || placed.includes(tile)) return;
     const position = placed.length;
-    if (item.tiles[tile] !== marks[position]) { missed.current = true; setMiss({ tile, n: (miss?.n ?? 0) + 1 }); return; }
+    if (item.tiles[tile] !== marks[position]) {
+      missed.current = true; setMiss({ tile, n: (miss?.n ?? 0) + 1 });
+      setSay(value => ({ n: (value?.n ?? 0) + 1, text: BUILD_SAY.later(tropeLabel(item.tiles[tile])) })); return;
+    }
     const next = [...placed, tile]; setPlaced(next); setMiss(null);
+    setSay(value => ({ n: (value?.n ?? 0) + 1, text: next.length === marks.length ? BUILD_SAY.complete : BUILD_SAY.placed(tropeLabel(marks[position]), next.length, marks.length) }));
     const unit = item.phrase.words[0] + position;
     if (next.length === marks.length) { void player.play(`${id}:all`, [request(item.phrase)]); onAnswer(!missed.current); }
     else void player.play(`${id}:word`, [phraseRequest(verse, [unit, unit])]);
@@ -187,6 +193,7 @@ export function BuildThePhrase({ item, pools, onAnswer }: DrillProps<BuildItem>)
     <h2 className={styles.prompt}>Hear it, then build it.</h2>
     <div className={styles.playRow}><PlayTile id={id} requests={[request(item.phrase)]} /></div>
     <AudioError id={[id, `${id}:word`, `${id}:all`]} />
+    <p role="status" className="sr-only">{say && <span key={say.n}>{say.text}</span>}</p>
     <ol className={styles.slots} aria-label="Marks in order">{marks.map((_, i) => {
       const tile = placed[i];
       return <li key={i} className={styles.slot} data-filled={tile !== undefined}>{tile !== undefined ? <span className={styles.tile} style={{ boxShadow: "none", background: "transparent" }}>
