@@ -28,7 +28,18 @@ async function routes(page: Page, signedIn: { value: boolean }) {
   await page.route("**/api/saved/reading?*", route => signedIn.value ? json(route, 200, { ok: true, reading, offset: 0, totalVerses: 3, nextOffset: null,
     verses: refs.map(ref => ({ ref, translation: null, note: null, mark: null })) }) : json(route, 401, { error: "authentication-required" }));
 }
-const restoredFromCache = (page: Page) => page.evaluate(() => (window as Window & { restoredFromCache?: boolean }).restoredFromCache === true);
+/**
+ * Whether Back was served from the back-forward cache (an annotation only). goBack can resolve while Chromium is still committing the
+ * history navigation, so the first evaluate may land in the document being replaced ("Execution context was destroyed"): wait for the
+ * navigation to settle and read again. The assertions that follow are unchanged.
+ */
+async function restoredFromCache(page: Page): Promise<boolean> {
+  for (let attempt = 0; ; attempt++) {
+    await page.waitForLoadState("load");
+    try { return await page.evaluate(() => (window as Window & { restoredFromCache?: boolean }).restoredFromCache === true); }
+    catch (error) { if (attempt >= 4 || !/Execution context was destroyed|navigat/i.test(String(error))) throw error; }
+  }
+}
 
 test("Back after signing out hides a saved reading restored from the back-forward cache", async ({ page }) => {
   const signedIn = { value: true };
