@@ -78,7 +78,9 @@ it("moves between the areas of the tab bar, finds a student, and adds one in a s
   await capture(tab, "admin-roster-sheet", false);
   await safe(() => sheet(tab).getByRole("button", { name: "Save student", exact: true }).click());
   await ui(sheet(tab)).toBeHidden();
-  await ui(tab.getByText("Added Synthetic Added. No invitation has been sent. Use People to invite family and choose a tutor.", { exact: true })).toBeVisible();
+  // 1.9 N14 (AD-02), this message's one wording check: three next steps, each a link.
+  await ui(tab.getByTestId("roster-added")).toHaveText("Added Synthetic. Next: choose a tutor, invite a parent, assign the reading");
+  for (const name of ["choose a tutor", "invite a parent", "assign the reading"]) await ui(tab.getByTestId("roster-added").getByRole("link", { name, exact: true })).toBeVisible();
   await ui(roster(tab).getByRole("listitem")).toHaveCount(3);
   // Edit opens the same sheet with the student's details; the student kind is a two-way choice.
   await safe(() => roster(tab).getByRole("button", { name: "Edit details for Synthetic Added", exact: true }).click());

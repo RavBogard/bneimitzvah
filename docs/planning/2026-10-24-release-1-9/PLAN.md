@@ -665,6 +665,8 @@ Each stays off until answered. Source IDs point to the lens findings.
 - N22: the invitation email subject is "Central Reform Congregation invited you to CRC Torah".
 - N14 Needs-you rows: "No tutor yet. Choose a tutor." · "The family's invitation expired. Send a new one." · "No reading yet. Assign the reading." · "No service date yet. Set the service." · "Honors not started. Open the honors form."
 - SC5 (review note): "Count only signed-in." Finished marks come only from lessons done while signed in to that account; signed-out progress stays on the device and is never uploaded. Built as SC5a.
+- Later the same day: N21's button is "Undo"; after setting it, "Noa: ceremony done."; after undoing it, "Noa is back in the active list. Choose a tutor." N22's emails show the last full day the link works ("The link works through Sunday, November 1."). Student and tutor lines follow the parent line. "Link copied." after a copy; a copied row reads "Link copied, not emailed". N8: Learn lessons and the service course also use Taamey Frank; the honoree page and the share card stay on Noto. SC5: "Progress is saved on this device." and "Signed out, progress stays on this device. Nothing here records you." Staff empty states: "Nothing needs you this week." · "Nothing marked Still working." · "No students yet." · "Family: not invited yet". A failed confirm reads "Couldn't confirm the reading. Try again."; the honors-row button stays "Edit".
+- From now on, small wording is the lead's call, logged here (Daniel: "You really don't need my calls on these small wording things").
 
 ### Tier C: gaps (no draft anywhere; not invented here)
 

@@ -27,7 +27,7 @@ function recoveryMessage(label: string, detail: string) {
   }
   return remainder ? `${label} ${remainder}` : label;
 }
-function Editor({ coordinator, kind, verseRef, stream, cell }: { coordinator: WorkCoordinator; kind: StudyKind; verseRef: string; stream: Stream; cell: WorkCell }) {
+export function WorkEditor({ coordinator, kind, verseRef, stream, cell }: { coordinator: WorkCoordinator; kind: StudyKind; verseRef: string; stream: Stream; cell: WorkCell }) {
   const id = useId(), [recovering, setRecovering] = useState(false);
   const label = stream === "draft" ? "My translation" : "Student-visible note";
   const revision = cell.revisionRecovery, recovery = Boolean(revision) || cell.phase === "unknown" || cell.phase === "conflict", status = saveLabel(cell, stream), separateError = Boolean(cell.error && !recovery);
@@ -73,7 +73,7 @@ export function VerseTools({ coordinator, kind, verseRef }: { coordinator: WorkC
       {verse && cell && (!cell.revisionRecovery || cell.verified) && <section id={`${id}-${stream}`} aria-label={`${stream === "draft" ? learner ? "My translation" : "Student translation" : learner ? "Notes from your teachers" : "Teacher notes"} for ${verseRef}`}>
         {staff && stream === "note" && <p className="field-help">The student can read these notes.</p>}
         {cell.verified && stream === "note" && <div className="work-notes">{!verse.notes.length ? <p>No teacher notes yet.</p> : verse.notes.map(note => <article key={note.id}><p className="work-text" dir="auto">{note.text}</p><WorkAttribution version={note} assignmentId={assignment.id} revision={assignment.revision} /></article>)}</div>}
-        {editable ? <><Editor coordinator={coordinator} kind={kind} verseRef={verseRef} stream={stream} cell={cell} />{stream === "draft" && cell.verified && cell.head && <WorkAttribution version={cell.head} assignmentId={assignment.id} revision={assignment.revision} />}</> : cell.verified && stream === "draft" && <div><p className="field-help">Saved student translation · Read-only</p><p className="work-text" dir="auto">{verse.draft ? verse.draft.text || "Translation cleared · Saved" : "No translation saved yet"}</p>{verse.draft && <WorkAttribution version={verse.draft} assignmentId={assignment.id} revision={assignment.revision} />}</div>}
+        {editable ? <><WorkEditor coordinator={coordinator} kind={kind} verseRef={verseRef} stream={stream} cell={cell} />{stream === "draft" && cell.verified && cell.head && <WorkAttribution version={cell.head} assignmentId={assignment.id} revision={assignment.revision} />}</> : cell.verified && stream === "draft" && <div><p className="field-help">Saved student translation · Read-only</p><p className="work-text" dir="auto">{verse.draft ? verse.draft.text || "Translation cleared · Saved" : "No translation saved yet"}</p>{verse.draft && <WorkAttribution version={verse.draft} assignmentId={assignment.id} revision={assignment.revision} />}</div>}
         {cell.verified && <WorkHistory coordinator={coordinator} cell={cell} kind={kind} verseRef={verseRef} stream={stream} />}
       </section>}
     </div>}

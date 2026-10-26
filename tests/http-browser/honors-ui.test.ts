@@ -54,10 +54,12 @@ async function page(who: "parent" | "admin" | "student", mobile = false, colorSc
 async function open(tab: Page, child: typeof children[number], who: "parent" | "admin") {
   await tab.goto(who === "parent" ? "/workspace/parent" : "/workspace/admin/students", { waitUntil: "domcontentloaded" });
   if (who === "parent") {
-    await tab.locator(`button.student-card[data-student-id="${child.id}"]`).click(); await ui(tab.getByRole("button", { name: "Open the honors form", exact: true })).toBeVisible();
+    // Before a save the row offers "Open the honors form"; after one it reads "Family honors · n of 7 sections saved · Edit" (1.9 N13).
+    const entry = tab.getByRole("region", { name: "Family honors", exact: true }).getByRole("button", { name: /^(Open the honors form|Edit)$/ });
+    await tab.locator(`button.student-card[data-student-id="${child.id}"]`).click(); await ui(entry).toBeVisible();
     await ui(tab.getByRole("heading", { name: /^Choose a child/ })).toHaveCount(0);
     await ui.poll(() => tab.evaluate(() => { const summary = document.querySelector(".parent-study-summary"), honors = document.getElementById("family-honors"); return !!honors && (!summary || !!(summary.compareDocumentPosition(honors) & Node.DOCUMENT_POSITION_FOLLOWING)); })).toBe(true);
-    await tab.getByRole("button", { name: "Open the honors form", exact: true }).click();
+    await entry.click();
   }
   else await tab.getByRole("button", { name: `Honors for ${child.name}`, exact: true }).click();
   await ui(sheet(tab).getByRole("heading", { name: "Opening the ark", exact: true })).toBeVisible();
@@ -263,7 +265,7 @@ it("own adult uses the existing honors sheet and link controls while child pract
 });
 
 async function openAdult(tab: Page) {
-  await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" }); await tab.getByRole("button", { name: "Open the honors form", exact: true }).click();
+  await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" }); await tab.getByRole("region", { name: "Family honors", exact: true }).getByRole("button", { name: /^(Open the honors form|Edit)$/ }).click();
   await ui(sheet(tab).getByRole("heading", { name: "Opening the ark", exact: true })).toBeVisible();
 }
 async function captureAdultPacket() {

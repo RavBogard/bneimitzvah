@@ -48,13 +48,15 @@ const CODE = /^\d{6}$/;
 export type InvitationMailRole = "parent" | "student" | "tutor";
 const INVITATION_ROLES: readonly string[] = ["parent", "student", "tutor"];
 /**
- * The invitation's expiry as the email states it (Daniel, N22): the date only, no clock time, e.g. "Monday, November 2".
- * It is the calendar date of the expiry instant in the congregation's time zone (America/Chicago, as everywhere else),
- * so it is never a date later than the real expiry.
+ * The invitation's expiry as the email states it (Daniel, N22): "The link works through Sunday, November 1", the last full
+ * day the link works, date only, no clock time. It is the day before the expiry instant's own calendar date in the
+ * congregation's time zone (America/Chicago, as everywhere else), so the link works all through the day the email names.
  */
 export function invitationExpiryText(expiresAt: Date): string {
   if (!(expiresAt instanceof Date) || !Number.isFinite(expiresAt.getTime())) throw 0;
-  return new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", weekday: "long", month: "long", day: "numeric" }).format(expiresAt)
+  // The last full day the link works (Daniel, N22): the calendar day before the expiry's own date in Central time.
+  const [year, month, day] = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(expiresAt).split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "long", month: "long", day: "numeric" }).format(new Date(Date.UTC(year, month - 1, day - 1)))
     .replace(/[  ]/g, " ");
 }
 /**
@@ -65,8 +67,8 @@ export function invitationExpiryText(expiresAt: Date): string {
 export function invitationMailText(input: Readonly<{ congregation: string; productName: string; role: InvitationMailRole; expiresAt: Date; link: string }>) {
   const until = invitationExpiryText(input.expiresAt);
   const line = input.role === "parent"
-    ? `${input.congregation} invited you as a parent on ${input.productName}, to follow your child's Beit Mitzvah preparation. The link works until ${until}.`
-    : `${input.congregation} invited you as a ${input.role} on ${input.productName}. The link works until ${until}.`;
+    ? `${input.congregation} invited you as a parent on ${input.productName}, to follow your child's Beit Mitzvah preparation. The link works through ${until}.`
+    : `${input.congregation} invited you as a ${input.role} on ${input.productName}. The link works through ${until}.`;
   const subject = `${input.congregation} invited you to ${input.productName}`;
   // No number in a subject: a lock screen or Gmail card must never offer one as a code.
   if (/\p{N}/u.test(subject)) throw 0;

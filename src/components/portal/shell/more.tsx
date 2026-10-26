@@ -18,7 +18,8 @@ export function MoreWorkspace() {
   const { summary } = useWorkspace(), pathname = usePathname();
   const role = shellRole(pathname, summary.roles, rememberedRole());
   if (role !== "admin" && role !== "tutor") return <section className="workspace-state"><h1>Role unavailable</h1><p>This account doesn’t have that access. Choose one of your available roles.</p><a href="/workspace">Choose a role</a></section>;
-  const rows = role === "admin" ? adminRows : [email, claude, ...(summary.approver ? [{ href: "/workspace/accounts", title: "Account requests", meta: "approve accounts for people who ask" }] : [])];
+  // 1.9 N14 (G7): a tutor's Settings are the account's own (Account), listed first as the admin's Settings are.
+  const rows = role === "admin" ? adminRows : [{ href: "/account", title: "Settings" }, email, claude, ...(summary.approver ? [{ href: "/workspace/accounts", title: "Account requests", meta: "approve accounts for people who ask" }] : [])];
   return <section className="role-workspace">
     <PageHeader title="More" />
     <List label="More">{rows.map(row => <ListRow key={row.href} href={row.href} title={row.title} meta={"meta" in row ? row.meta : undefined} />)}</List>

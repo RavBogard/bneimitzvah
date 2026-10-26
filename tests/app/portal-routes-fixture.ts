@@ -10,6 +10,7 @@ import { createServiceCoursePath } from "../../src/server/service-course/path";
 import { createServicePartFinished } from "../../src/server/service-course/finished";
 import { createPracticeVisibilityService } from "../../src/server/practice-visibility/service";
 import { createCeremonyDoneService } from "../../src/server/students/ceremony-done";
+import { createStaffService } from "../../src/server/staff/service";
 import { createCongregationSettingsService } from "../../src/server/settings/service";
 import { createClaudeConnectionsService } from "../../src/server/connections/service";
 import { createMavenLinkService } from "../../src/server/students/maven-links";
@@ -92,7 +93,7 @@ export async function portalRoutesFixture() {
     studyWordDetails: createStudyWordDetailsService({ access: f.service, practice, loadText: async () => { throw new StudyUnavailable("upstream"); }, source: { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) } }),
     study: createStudyService({ access: f.service, practice, load: async () => { throw new StudyUnavailable("upstream"); } }), progress: createProgressService({ access: f.service, practice }), haftarahSheets: createHaftarahSheets({ fetch: async () => { throw new Error("No haftarah library in tests"); } }), studyGuides: studyGuideWebSurface(createStudyGuideService({ access: f.service, practice, check: async ({ body }) => ({ ok: true as const, body }) })), lessonLog: createLessonLogService({ access: f.service, practice }), practiceCalendar: createPracticeCalendarService({ access: f.service, practice }), recordings: createStudentRecordingService({ access: f.service, practice }),
     portal, relationships: createRelationshipService({ access: f.service }), pendingInvitations,
-    serviceLearning, serviceCoursePath: createServiceCoursePath({ access: f.service, serviceLearning }), servicePartFinished: createServicePartFinished({ access: f.service }), practiceVisibility: createPracticeVisibilityService({ access: f.service }), ceremonyDone: createCeremonyDoneService({ access: f.service }),
+    serviceLearning, serviceCoursePath: createServiceCoursePath({ access: f.service, serviceLearning }), servicePartFinished: createServicePartFinished({ access: f.service }), practiceVisibility: createPracticeVisibilityService({ access: f.service }), ceremonyDone: createCeremonyDoneService({ access: f.service }), staff: createStaffService({ access: f.service }),
     referenceReview: createReferenceReviewService({ access: f.service, reviewer: undefined, get: async () => { throw new ReviewUnavailable(); } }),
     serviceEcosystem: createServiceEcosystemService({ access:f.service,practice,broker:createMusicBroker(undefined) }),
     serviceScheduler: createServiceScheduler({ db:f.db, broker:createMusicBroker(undefined) }),
