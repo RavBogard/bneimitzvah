@@ -23,6 +23,30 @@ export async function listInvitations<Q extends PgQueryResultHKT>(tx: AccessTran
     .orderBy(s.invite.id).limit(limit).for("share", { of: s.invite });
 }
 
+/**
+ * "Needs a parent invitation" (G13): approved members (tenant_member, live) whose verified address is a parent contact
+ * on an enabled student's roster record, with no live guardian link to that student through a live parent grant of
+ * their own membership, and no live, unexpired parent invitation to that address for that student. Never selects a
+ * token hash, a session or anything saved.
+ */
+export async function listParentInvitationsNeeded<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, tenantId: string, now: Date, limit: number) {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new AccessDenied(403);
+  const address = sql`lower(trim(${s.user.email}))`;
+  return tx.select({ memberId: s.tenantMember.id, name: s.tenantMember.displayName, email: s.user.email,
+    studentId: s.student.id, firstName: s.student.firstName, lastName: s.student.lastName })
+    .from(s.tenantMember)
+    .innerJoin(s.user, eq(s.user.id, s.tenantMember.userId))
+    .innerJoin(s.student, and(eq(s.student.tenantId, s.tenantMember.tenantId), isNull(s.student.disabledAt),
+      sql`(lower(trim(${s.student.parentEmail})) = ${address} or lower(trim(${s.student.secondParentEmail})) = ${address})`))
+    .where(and(eq(s.tenantMember.tenantId, tenantId), isNull(s.tenantMember.revokedAt), eq(s.user.emailVerified, true),
+      sql`not exists (select 1 from ${s.guardian} inner join ${s.roleGrant} on ${s.roleGrant.tenantId} = ${s.guardian.tenantId} and ${s.roleGrant.id} = ${s.guardian.parentGrantId}
+        where ${s.guardian.tenantId} = ${tenantId} and ${s.guardian.studentId} = ${s.student.id} and ${s.guardian.revokedAt} is null
+          and ${s.roleGrant.membershipId} = ${s.tenantMember.membershipId} and ${s.roleGrant.revokedAt} is null)`,
+      sql`not exists (select 1 from ${s.invite} where ${s.invite.tenantId} = ${tenantId} and ${s.invite.role} = 'parent' and ${s.invite.studentId} = ${s.student.id}
+        and ${s.invite.email} = ${address} and ${s.invite.acceptedAt} is null and ${s.invite.revokedAt} is null and ${s.invite.expiresAt} > ${now.toISOString()}::timestamptz)`))
+    .orderBy(s.tenantMember.id, s.student.id).limit(limit);
+}
+
 export async function consumeInvitationBudget<Q extends PgQueryResultHKT>(tx: AccessTransaction<Q>, actor: Actor, email: string, secret: string, now: number) {
   const bucketStart = Math.floor(now / HOUR) * HOUR;
   for (const [scope, value, limit] of [["actor", actor.membershipId, 20], ["recipient", email, 5]] as const) {

@@ -8,6 +8,8 @@ const origin = "https://synthetic.example.test";
 const apiKey = `re_${randomBytes(24).toString("hex")}`;
 const email = "synthetic@example.test";
 const productName = "CRC Torah";
+// An invitation names its congregation, role and expiry (decision 12); a sign-in email names none of them.
+const invite = { congregation: "Central Reform Congregation", role: "parent" as const, expiresAt: new Date("2026-11-02T21:15:00Z") };
 function link(kind: "invitation" | "magic-link") {
   const url = new URL(kind === "invitation" ? "/invitations/open" : "/auth/email", origin);
   url.hash = `token=${kind === "invitation" ? randomBytes(32).toString("base64url") : "A".repeat(32)}`;
@@ -25,7 +27,7 @@ test("both mail kinds use the fixed Resend endpoint and plain text with no track
   const code = "048213";
   for (const kind of ["invitation", "magic-link"] as const) {
     const url = link(kind);
-    expect(await send(kind, kind === "magic-link" ? { email, productName, url, code } : { email, productName, url })).toBeUndefined();
+    expect(await send(kind, kind === "magic-link" ? { email, productName, url, code } : { email, productName, url, ...invite })).toBeUndefined();
     const capture = captured.at(-1)!;
     const body = JSON.parse(String(capture.init.body));
     expect(capture.endpoint).toBe("https://api.resend.com/emails");
@@ -54,8 +56,9 @@ test("both mail kinds use the fixed Resend endpoint and plain text with no track
       expect(body.text).not.toMatch(/@\S+\s+#\d/);
       expect(body.text.includes(`#${code}`)).toBe(false);
     } else {
-      expect(body.subject).toBe("Your Beit Mitzvah invitation from CRC Torah");
-      expect(body.text).toBe(`Open this link to review your invitation:\n\n${url}\n\nIf you did not request this message, you can ignore it.`);
+      // Daniel's approved subject and parent line (decision 12), word for word.
+      expect(body.subject).toBe("Central Reform Congregation invited you to CRC Torah");
+      expect(body.text).toBe(`Central Reform Congregation invited you as a parent on CRC Torah, to follow your child's Beit Mitzvah preparation. The link works until Monday, November 2 at 3:15 PM CST.\n\nOpen this link to review your invitation:\n\n${url}\n\nIf you did not request this message, you can ignore it.`);
     }
     expect((capture.init.headers as Record<string, string>).authorization === `Bearer ${apiKey}`).toBe(true);
   }
@@ -68,14 +71,14 @@ test("mail rejects foreign, ambiguous, duplicated-token, header-injection and un
   for (const url of [good.replace(origin, "https://foreign.example.test"), `${good}#fragment`, `${good}&token=duplicate`, `${good}&email=synthetic`,
     good.replace("/invitations/open", "/invitations/%6fpen"), good.replace("https://", "https://user@"), good + "\n", good.replace("open", "open/"),
     link("magic-link") + "&callbackURL=https%3A%2F%2Fforeign.example.test"]) {
-    expect(await safeFailure(() => send(url.includes("magic-link") ? "magic-link" : "invitation", { email, productName, url }))).toBe(true);
+    expect(await safeFailure(() => url.includes("magic-link") ? send("magic-link", { email, productName, url, code: "048213" }) : send("invitation", { email, productName, url, ...invite }))).toBe(true);
   }
-  expect(await safeFailure(() => send("invitation", { email: email + "\r\nBcc: bad", productName, url: good }))).toBe(true);
+  expect(await safeFailure(() => send("invitation", { email: email + "\r\nBcc: bad", productName, url: good, ...invite }))).toBe(true);
   // A sign-in email never goes out without a well-formed code, and an invitation never carries one.
   for (const code of [undefined, "", "12345", "1234567", "12a456", " 123456", "123456\n", "１２３４５６"]) {
     expect(await safeFailure(() => send("magic-link", { email, productName, url: link("magic-link"), code }))).toBe(true);
   }
-  expect(await safeFailure(() => send("invitation", { email, productName, url: good, code: "123456" }))).toBe(true);
+  expect(await safeFailure(() => send("invitation", { email, productName, url: good, code: "123456", ...invite }))).toBe(true);
   // The code must be the only run of 6 or more digits in the email; an address that adds one sends nothing.
   const digits = "https://torah123456.example.test";
   const digitSend = createMailTransport({ origin: digits, apiKey, from: email, fetch: async () => { calls++; return new Response(); } });
@@ -94,7 +97,7 @@ test("a capped address's sign-in email (an explicit null code) leaves out only t
     "If you did not request this message, you can ignore it."].join("\n"));
   expect(sent[0].text.includes(SIGN_IN_CODE_LINES.code(productName))).toBe(false);
   expect(await safeFailure(() => send("magic-link", { email, productName, url }))).toBe(true);
-  expect(await safeFailure(() => send("invitation", { email, productName, url: link("invitation"), code: null }))).toBe(true);
+  expect(await safeFailure(() => send("invitation", { email, productName, url: link("invitation"), code: null, ...invite }))).toBe(true);
   // Link-only mail may hold no 6-digit run at all.
   const digits = "https://torah123456.example.test";
   const digitLink = new URL("/auth/email", digits); digitLink.hash = `token=${"A".repeat(32)}`;
@@ -110,7 +113,7 @@ test("an invitation whose random token happens to hold six digits in a row is st
   // Keep it a canonical base64url token: re-encode the decoded bytes, then confirm the run survived.
   const token = Buffer.from(url.hash.slice("#token=".length), "base64url").toString("base64url"); url.hash = `token=${token}`;
   expect(token).toMatch(/\d{6}/);
-  expect(await send("invitation", { email, productName, url: url.href })).toBeUndefined();
+  expect(await send("invitation", { email, productName, url: url.href, ...invite })).toBeUndefined();
   expect(calls).toBe(1);
 });
 
@@ -124,7 +127,7 @@ test("provider failures, private error causes, oversized bodies and stalled fetc
       async () => new Promise<Response>(() => {}),
     ] satisfies (typeof globalThis.fetch)[]) {
       const send = createMailTransport({ origin, apiKey, from: email, fetch, timeoutMs: 5 });
-      expect(await safeFailure(() => send("invitation", { email, productName, url: link("invitation") }))).toBe(true);
+      expect(await safeFailure(() => send("invitation", { email, productName, url: link("invitation"), ...invite }))).toBe(true);
     }
     expect(log.mock.calls.length).toBe(0);
   } finally { log.mockRestore(); }
@@ -139,11 +142,26 @@ test("the product name is the congregation's own, and one with any number, contr
   expect(sent[0].subject).toBe("Sign in to Temple Torah");
   expect(sent[0].text.includes("Or enter this code in the Temple Torah app:\n048213\n")).toBe(true);
   expect(sent[0].text.includes("type it anywhere but Temple Torah.")).toBe(true);
-  await send("invitation", { email, productName: "Temple Torah", url: link("invitation") });
-  expect(sent[1].subject).toBe("Your Beit Mitzvah invitation from Temple Torah");
+  await send("invitation", { email, productName: "Temple Torah", url: link("invitation"), ...invite, congregation: "Temple Israel" });
+  expect(sent[1].subject).toBe("Temple Israel invited you to Temple Torah");
   for (const name of ["Torah 2", "Torah ٢", "Torah ２", "Torah ²", "Torah ①", "Torah‏", "Torah\u0007", "", " Torah", undefined]) {
     expect(await safeFailure(() => send("magic-link", { email, productName: name as string, url: link("magic-link"), code: "048213" }))).toBe(true);
-    expect(await safeFailure(() => send("invitation", { email, productName: name as string, url: link("invitation") }))).toBe(true);
+    expect(await safeFailure(() => send("invitation", { email, productName: name as string, url: link("invitation"), ...invite }))).toBe(true);
+    expect(await safeFailure(() => send("invitation", { email, productName, url: link("invitation"), ...invite, congregation: name as string }))).toBe(true);
   }
   expect(calls).toBe(2);
+});
+
+test("an invitation names the congregation, the role and the expiry, and needs all three; a sign-in email takes none of them", async () => {
+  const sent: { subject: string; text: string }[] = [];
+  const send = createMailTransport({ origin, apiKey, from: email, fetch: async (_url, init) => { sent.push(JSON.parse(String(init!.body))); return new Response(); } });
+  for (const role of ["tutor", "student"] as const) await send("invitation", { email, productName, url: link("invitation"), ...invite, role });
+  expect(sent.map(mail => mail.subject)).toEqual(["Central Reform Congregation invited you to CRC Torah", "Central Reform Congregation invited you to CRC Torah"]);
+  expect(sent[0].text.startsWith("Central Reform Congregation invited you as a tutor on CRC Torah. The link works until Monday, November 2 at 3:15 PM CST.")).toBe(true);
+  expect(sent[1].text.startsWith("Central Reform Congregation invited you as a student on CRC Torah.")).toBe(true);
+  for (const extra of [{ role: undefined }, { role: "admin" }, { expiresAt: undefined }, { expiresAt: new Date(Number.NaN) }, { congregation: undefined }, { congregation: "Congregation <b>" }]) {
+    expect(await safeFailure(() => send("invitation", { email, productName, url: link("invitation"), ...invite, ...extra } as never))).toBe(true);
+  }
+  expect(await safeFailure(() => send("magic-link", { email, productName, url: link("magic-link"), code: "048213", ...invite }))).toBe(true);
+  expect(sent).toHaveLength(2);
 });

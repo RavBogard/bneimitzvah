@@ -6,7 +6,7 @@ import type { RosterStudent } from "../../src/components/portal/workspace/api";
 const id = (n: number) => `10000000-0000-4000-8000-${n.toString().padStart(12, "0")}`;
 const created = "2026-10-16T00:00:00.000Z", expires = "2026-10-19T00:00:00.000Z", attempted = "2026-10-16T00:00:01.000Z";
 const student: RosterStudent = { id: id(10), firstName: "Synthetic", lastName: "Student", ceremonyDate: "2027-01-02", studentKind: "child" as const, serviceSlot: "unknown" as const, revision: 1, parentEmail: "parent@example.test", ownEmail: null, disabledAt: null };
-const row = (n = 1) => ({ id: id(n), role: "parent", recipientEmail: "parent@example.test", student: { id: student.id, firstName: student.firstName, lastName: student.lastName }, status: "pending", createdAt: created, expiresAt: expires, acceptedAt: null, revokedAt: null, delivery: { status: "pending", attemptedAt: null } });
+const row = (n = 1) => ({ id: id(n), role: "parent", recipientEmail: "parent@example.test", student: { id: student.id, firstName: student.firstName, lastName: student.lastName }, status: "pending", createdAt: created, expiresAt: expires, expiresTomorrow: false, acceptedAt: null, revokedAt: null, delivery: { status: "pending", attemptedAt: null } });
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -19,7 +19,7 @@ it("projects lifecycle separately from durable mail outcomes with normalized pri
 });
 
 it("rejects malformed or leaking pages atomically, unsupported durable unknown, invalid timestamps and role targets", () => {
-  for (const changed of [{ ...row(), token: "private-sentinel" }, { ...row(), recipientEmail: "PARENT@example.test" }, { ...row(), role: "admin" }, { ...row(), student: null }, { ...row(), expiresAt: created }, { ...row(), status: "accepted" }, { ...row(), delivery: { status: "sent", attemptedAt: null } }, { ...row(), delivery: { status: "unknown", attemptedAt: null } }, { ...row(), createdAt: "invalid" }])
+  for (const changed of [{ ...row(), token: "private-sentinel" }, { ...row(), recipientEmail: "PARENT@example.test" }, { ...row(), role: "admin" }, { ...row(), student: null }, { ...row(), expiresAt: created }, { ...row(), status: "accepted" }, { ...row(), delivery: { status: "sent", attemptedAt: null } }, { ...row(), delivery: { status: "unknown", attemptedAt: null } }, { ...row(), createdAt: "invalid" }, { ...row(), expiresTomorrow: "yes" }, { ...row(), status: "expired", expiresTomorrow: true }])
     expect(() => parseInvitationPage({ invitations: [changed] })).toThrow(PortalRequestError);
   expect(() => parseInvitationPage({ invitations: [row(1), { ...row(2), diagnostic: "private-sentinel" }] })).toThrow(PortalRequestError);
 });

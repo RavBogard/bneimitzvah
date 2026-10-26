@@ -45,13 +45,35 @@ export const SIGN_IN_CODE_LINES = Object.freeze({
   never: (product: string) => `No one from ${product} will ever ask you for this code. Don’t read it to anyone or type it anywhere but ${product}.`,
 });
 const CODE = /^\d{6}$/;
+export type InvitationMailRole = "parent" | "student" | "tutor";
+const INVITATION_ROLES: readonly string[] = ["parent", "student", "tutor"];
+/** The invitation's expiry as the email states it, in the congregation's time (America/Chicago, as everywhere else). */
+export function invitationExpiryText(expiresAt: Date): string {
+  if (!(expiresAt instanceof Date) || !Number.isFinite(expiresAt.getTime())) throw 0;
+  return new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(expiresAt)
+    // ICU versions differ on the space before AM/PM (some use a narrow no-break space); plain text gets a plain space.
+    .replace(/[  ]/g, " ");
+}
+/**
+ * The invitation email (decision 12; G13): it names the congregation, the role and the expiry, and never a student.
+ * It is given no student at all, so no child's name can reach the subject or the body. The parent line is Daniel's
+ * approved wording; the student and tutor lines are the same sentence without the parent clause.
+ */
+export function invitationMailText(input: Readonly<{ congregation: string; productName: string; role: InvitationMailRole; expiresAt: Date; link: string }>) {
+  const until = invitationExpiryText(input.expiresAt);
+  const line = input.role === "parent"
+    ? `${input.congregation} invited you as a parent on ${input.productName}, to follow your child's Beit Mitzvah preparation. The link works until ${until}.`
+    : `${input.congregation} invited you as a ${input.role} on ${input.productName}. The link works until ${until}.`;
+  const subject = `${input.congregation} invited you to ${input.productName}`;
+  // No number in a subject: a lock screen or Gmail card must never offer one as a code.
+  if (/\p{N}/u.test(subject)) throw 0;
+  return { subject, text: `${line}\n\nOpen this link to review your invitation:\n\n${input.link}\n\n${IGNORE}` };
+}
 const IGNORE = "If you did not request this message, you can ignore it.";
 // A congregation's product name (tenant.product_name, E1) as these emails accept it: a plain name with no number of
 // any kind, so no name can add a code-like run or a digit to a subject. A refused name sends nothing.
 export const mailProductName = (value: unknown): value is string => plainName(value) && !/[\p{N}\p{Cf}\p{Cc}]/u.test(value as string);
-function bodyOf(kind: Kind, link: string, code: string | null | undefined, product: string): string {
-  // An invitation carries no code; its random token may hold digits by chance, so only the sign-in email is counted.
-  if (kind === "invitation") return `Open this link to review your invitation:\n\n${link}\n\n${IGNORE}`;
+function bodyOf(link: string, code: string | null | undefined, product: string): string {
   // The code is in the body only, never the subject (lock screens, provider subject logs). A capped address (null
   // code) gets the link only: line 2 (the label and the code) is left out and line 3 names only the link; lines 1, 4
   // and 5 are unchanged.
@@ -64,8 +86,8 @@ function bodyOf(kind: Kind, link: string, code: string | null | undefined, produ
   if (/(?![0-9])\p{N}/u.test(body) || (code === null ? runs.length !== 0 : runs.length !== 1 || runs[0] !== code)) throw 0;
   return body;
 }
-function subjectOf(kind: Kind, product: string): string {
-  const subject = kind === "invitation" ? `Your Beit Mitzvah invitation from ${product}` : `Sign in to ${product}`;
+function subjectOf(product: string): string {
+  const subject = `Sign in to ${product}`;
   // No number in a subject: a lock screen or Gmail card must never offer one as the code.
   if (/\p{N}/u.test(subject)) throw 0;
   return subject;
@@ -81,7 +103,8 @@ export function createMailTransport(input: { origin: string; apiKey: string; fro
       || !mailbox(input.from) || !/^re_[A-Za-z0-9_-]{8,256}$/.test(input.apiKey)
       || !Number.isInteger(timeout) || timeout < 1 || timeout > 10000) throw 0;
   } catch { throw new RuntimeUnavailable(); }
-  return async (kind: Kind, message: Readonly<{ email: string; url: string; productName: string; code?: string | null }>): Promise<void> => {
+  return async (kind: Kind, message: Readonly<{ email: string; url: string; productName: string; code?: string | null;
+    congregation?: string; role?: InvitationMailRole; expiresAt?: Date }>): Promise<void> => {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -89,14 +112,19 @@ export function createMailTransport(input: { origin: string; apiKey: string; fro
       // A sign-in email carries its code, or an explicit null when the address is capped (link only); an invitation
       // never carries one.
       if (kind === "magic-link" ? message.code !== null && (typeof message.code !== "string" || !CODE.test(message.code)) : message.code !== undefined) throw 0;
+      // An invitation names its congregation (a plain name with no number), its role and its expiry; a sign-in email none of them.
+      if (kind === "invitation" ? !mailProductName(message.congregation) || !INVITATION_ROLES.includes(message.role as string) || !(message.expiresAt instanceof Date)
+        : message.congregation !== undefined || message.role !== undefined || message.expiresAt !== undefined) throw 0;
       const link = canonicalLink(message.url, input.origin, kind);
+      const mail = kind === "invitation"
+        ? invitationMailText({ congregation: message.congregation!, productName: message.productName, role: message.role!, expiresAt: message.expiresAt!, link })
+        : { subject: subjectOf(message.productName), text: bodyOf(link, message.code, message.productName) };
       await Promise.race([
         (async () => {
           const response = await input.fetch("https://api.resend.com/emails", {
             method: "POST", redirect: "error", credentials: "omit", signal: controller.signal,
             headers: { authorization: `Bearer ${input.apiKey}`, "content-type": "application/json" },
-            body: JSON.stringify({ from: input.from, to: [message.email], subject: subjectOf(kind, message.productName),
-              text: bodyOf(kind, link, message.code, message.productName) }),
+            body: JSON.stringify({ from: input.from, to: [message.email], subject: mail.subject, text: mail.text }),
           });
           // No provider body/header/ID escapes, even on errors; do not buffer it.
           try {
@@ -180,7 +208,8 @@ export function accountMailText(kind: AccountMailKind, origin: string, tenant: R
     ? { subject: `An account request for ${tenant.productName}`,
       text: `Someone has asked for a ${tenant.productName} account.\n\nReview account requests: ${link}\n\nYou receive this because you approve accounts for ${tenant.name}.` }
     : { subject: `Your ${tenant.productName} account is ready`,
-      text: `Your account request was approved. Sign in with this email address to save readings. ${link}. If you did not ask for an account, you can ignore this email.` };
+      // The parent-invitation line is Daniel's approved wording (G13, TP-06): an account is never a parent's access.
+      text: `Your account request was approved. Sign in with this email address to save readings. ${link}. To follow a student's preparation, ask the congregation for a parent invitation. If you did not ask for an account, you can ignore this email.` };
 }
 export function createAccountMailTransport(input: { origin: string; apiKey: string; from: string; fetch: typeof globalThis.fetch; enabled: boolean; timeoutMs?: number }) {
   const timeout = input.timeoutMs ?? 5000;

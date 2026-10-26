@@ -25,7 +25,7 @@ import { createRelationshipService } from "../relationships/service";
 import { createPendingInvitations } from "../http/pending-invitations";
 import { createGoogleChallenges } from "../http/google-challenge";
 import { createPersistentReadingCache } from "../data/reading-cache";
-import { readProductName } from "../data/product-name";
+import { readProductName, readTenantNames } from "../data/product-name";
 import { createPersistentStudyCache } from "../data/study-cache";
 import { createSefariaStudyReader } from "../study/sefaria";
 import { createReferenceAudioService } from "../reference-audio/service";
@@ -180,7 +180,11 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const access = createAccessService({ db, auth, deployment: config.deployment });
   const referenceReview = createReferenceReviewService({ access, reviewer: config.referenceReview?.reviewer,
     get: config.referenceReview ? createPrivateReviewGet({ storeId: config.referenceReview.storeId }) : async () => { throw new ReviewUnavailable(); } });
-  const invitations = createInvitationService({ db, access, transport: async ({ email, url, tenantId }) => send("invitation", { email, url, productName: await productNameOf(tenantId) }), throttleSecret: purposeSecret(config, "invitation-throttle") });
+  const invitations = createInvitationService({ db, access, transport: async ({ email, url, tenantId, role, expiresAt }) => {
+    // The congregation and product names come from the one shared reader; the email is given no student (decision 12).
+    const names = await withTenantTransaction(db, { tenantId }, tx => readTenantNames(tx, tenantId));
+    await send("invitation", { email, url, productName: names.productName, congregation: names.name, role, expiresAt });
+  }, throttleSecret: purposeSecret(config, "invitation-throttle") });
   const loadReading = createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS });
   const musicBroker = createMusicBroker(config.serviceMusic, fetch);
   const practice = createPracticeService({ access });
