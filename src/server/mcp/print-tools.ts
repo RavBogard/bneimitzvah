@@ -22,7 +22,7 @@ const display = (ref: string) => ref.replace(/(\d)-(\d)/g, "$1–$2");
 const longDate = (date: string) => new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T00:00:00Z`));
 const squash = (value: string) => value.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]/g, "");
 const kindName = (kind: "torah" | "haftarah") => kind === "torah" ? "Torah" : "Haftarah";
-const PICK_NAMES: Readonly<Record<PortionPick, string>> = Object.freeze({ full: "the whole parashah", triennial: "the triennial portion", maftir: "the maftir",
+export const PICK_NAMES: Readonly<Record<PortionPick, string>> = Object.freeze({ full: "the whole parashah", triennial: "the triennial portion", maftir: "the maftir",
   "aliyah-1": "aliyah 1", "aliyah-2": "aliyah 2", "aliyah-3": "aliyah 3", "aliyah-4": "aliyah 4", "aliyah-5": "aliyah 5", "aliyah-6": "aliyah 6", "aliyah-7": "aliyah 7" });
 
 /** A catalog reading by slug or by name, ignoring case, spaces and punctuation ("Lech Lecha", "lech-lecha", "Lech-Lecha"). */
