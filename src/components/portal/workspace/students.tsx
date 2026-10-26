@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { parseReadingTab } from "../shell/tabs";
 import Link from "next/link";
 import { workspaceApi, type Student } from "./api";
+import { ChildPracticeDisclosure } from "../practice-visibility/disclosure";
 import { RequireRole, rolePaths, statusOf, useWorkspace, WorkspaceLink } from "./provider";
 import { ceremonyCountdown, ReadingPanel } from "./reading";
 import { reconcileSelectedStudent, sortStudentsByCeremony } from "./student-label";
@@ -99,7 +100,9 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
       </div>
       {loading ? <p role="status">Loading linked children…</p> : error ? <><p role="alert">Linked children couldn’t be loaded.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload children</button></>
         : <>{more && <button className="button-text" disabled={busy || paging} onClick={() => void loadMore()}>{paging ? "Loading children…" : "Load more children"}</button>}
-          {child && <p className="field-help practice-coach">Sit with <bdi dir="auto">{child.firstName}</bdi> for each verse. Tap Got it only when <bdi dir="auto">{child.firstName}</bdi> reads it without stopping.</p>}</>}
+          {child && <p className="field-help practice-coach">Sit with <bdi dir="auto">{child.firstName}</bdi> for each verse. Tap Got it only when <bdi dir="auto">{child.firstName}</bdi> reads it without stopping.</p>}
+          {/* 1.9 N23: a child who practises only with a parent is told here what the tutor sees, behind the same release gate. */}
+          {child && <ChildPracticeDisclosure name={child.firstName} place="child-practice" />}</>}
     </section>;
   }
   const selectedRow = rows.find(row => row.id === selected), selectedName = `${selectedRow?.firstName ?? ""} ${selectedRow?.lastName ?? ""}`;

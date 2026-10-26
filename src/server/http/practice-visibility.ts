@@ -28,6 +28,8 @@ export async function handlePracticeVisibilityRequest(request: Request, runtime:
     if (!UUID.test(found.studentId)) throw new HttpBoundaryError();
     if (request.headers.has("X-Practice-Context")) throw new HttpBoundaryError();
     if (mode === "parent") {
+      // Counts only. Daniel (2026-10-26): parents keep the child's current per-verse marks on the existing progress page, unchanged;
+      // decision 7 governs practice activity (days, verses opened, timing), which no parent route returns.
       const counts = await runtime.practiceVisibility.parent(request, { mode, studentId: found.studentId });
       return privateJson({ gotIt: counts.gotIt, working: counts.working });
     }

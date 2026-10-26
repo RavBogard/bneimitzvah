@@ -59,7 +59,8 @@ export function createPracticeVisibilityService<Q extends PgQueryResultHKT>(inpu
         const sortKey = (assignmentId: string, verseRef: string) => (byId.get(assignmentId)!.kind === "torah" ? 0 : 1) * 10_000 + byId.get(assignmentId)!.order.get(verseRef)!;
         const marks: PracticeMark[] = current.sort((a, b) => sortKey(a.assignment_id, a.verse_ref) - sortKey(b.assignment_id, b.verse_ref))
           .map(row => Object.freeze({ kind: byId.get(row.assignment_id)!.kind, verseRef: row.verse_ref, state: row.state as PracticeMarkState,
-            withParent: row.source_mode === null ? null : row.source_mode === "child-practice" }));
+            // Whether a parent was there is new under decision 7, so it shows only for a mark made on or after the release date.
+            withParent: row.day && row.day >= from ? row.source_mode === "child-practice" : null }));
 
         const days: PracticeDay[] = [];
         for (let day = today; day >= since; day = addDays(day, -1)) {
@@ -82,6 +83,11 @@ export function createPracticeVisibilityService<Q extends PgQueryResultHKT>(inpu
           stillWorking: marks.filter(mark => mark.state === "working").length, learn });
       });
     },
+    /**
+     * Daniel's ruling (2026-10-26): decision 7 governs practice ACTIVITY (days, verses opened, timing). A parent keeps seeing the
+     * child's current per-verse marks on the existing progress page, which practising together needs; that is unchanged. This read
+     * adds only the two counts, and never anything per day, the source of a mark or Learn.
+     */
     async parent(request: AccessRequest, selection: { mode: "parent"; studentId: string }): Promise<ParentPractice> {
       if (!gate()) throw new AccessDenied(404);
       if (selection.mode !== "parent") throw new AccessDenied(403);

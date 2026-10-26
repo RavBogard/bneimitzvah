@@ -2,11 +2,11 @@ import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
-import { canHearLines, dayLine, markLine, mixedUpLine, rosterLine, verseRanges } from "../../src/lib/practice-visibility/lines";
+import { canHearLines, dayLine, markLine, mixedUpLine, parentCountLine, rosterLine, verseRanges } from "../../src/lib/practice-visibility/lines";
 import { learnSummary } from "../../src/lib/practice-visibility/learn";
 import { PRACTICE_VISIBILITY_FROM, practiceVisibilityFrom } from "../../src/lib/practice-visibility/release";
-import { PRACTICE_DISCLOSURE } from "../../src/lib/practice-visibility/copy";
-import { PracticeDisclosure } from "../../src/components/portal/practice-visibility/disclosure";
+import { PRACTICE_DISCLOSURE, parentDisclosure } from "../../src/lib/practice-visibility/copy";
+import { ChildPracticeDisclosure, ParentAccountDisclosureList, PracticeDisclosure } from "../../src/components/portal/practice-visibility/disclosure";
 import { pathLessons } from "../../src/lib/learn/course";
 
 // 1.9 N23: the approved lines word for word (the one deliberate wording test for these lines), the Learn derivation, and the
@@ -62,4 +62,30 @@ test("the student's disclosure renders only with the release gate open, the same
   expect(source("components/learn/home.tsx")).toMatch(/<LearnPracticeDisclosure signedIn=\{account\.state === "synced"\} isStudent=\{isStudent\} \/>/);
   expect(source("server/practice-visibility/service.ts")).toMatch(/import \{ practiceVisibilityFrom \} from "..\/..\/lib\/practice-visibility\/release"/);
   expect(source("components/portal/practice-visibility/disclosure.tsx")).toMatch(/import \{ PRACTICE_VISIBILITY_FROM, practiceVisibilityFrom \} from "..\/..\/..\/lib\/practice-visibility\/release"/);
+});
+
+test("Daniel's Account line word for word, the parent line named and pronoun-free, and the parent's count line", () => {
+  expect(PRACTICE_DISCLOSURE.account).toBe("Your tutor sees which days you practised, which verses you opened, how you marked them, and in Learn to lein which phrases you can hear. Your parents see how you marked each verse. No one sees how long you practise or a score.");
+  expect(parentDisclosure("Noa")).toBe("Noa's tutor sees which days Noa practised, which verses Noa opened, how Noa marked them, and in Learn to lein which phrases Noa can hear. You see how Noa marked each verse. No one sees how long Noa practises or a score.");
+  // No pronoun for the child ("them" is the verses).
+  expect(PRACTICE_DISCLOSURE.parent).not.toMatch(/\b(he|she|they|his|her|hers|their|him)\b/i);
+  expect(parentCountLine("Noa", { gotIt: 12, working: 3 })).toBe("Noa has marked 12 verses Got it and 3 Still working.");
+  expect(parentCountLine("Noa", { gotIt: 1, working: 0 })).toBe("Noa has marked 1 verse Got it.");
+  expect(parentCountLine("Noa", { gotIt: 0, working: 2 })).toBe("Noa has marked 2 verses Still working.");
+  expect(parentCountLine("Noa", { gotIt: 0, working: 0 })).toBe("Noa has not marked any verses yet.");
+});
+
+test("a child who practises only with a parent is told in child practice, and a parent on Account, behind the same gate", () => {
+  for (const place of ["child-practice", "parent-account"] as const) {
+    expect(renderToStaticMarkup(createElement(ChildPracticeDisclosure, { name: "Noa", place }))).toBe("");
+    const open = renderToStaticMarkup(createElement(ChildPracticeDisclosure, { name: "Noa", place, from: "2026-10-27" }));
+    expect(open).toContain(`data-practice-disclosure="${place}"`); expect(open).toContain('<bdi dir="auto">Noa</bdi>'); expect(open).toContain('role="note"');
+  }
+  const list = renderToStaticMarkup(createElement(ParentAccountDisclosureList, { names: [{ id: "a", firstName: "Noa" }, { id: "b", firstName: "Eli" }], from: "2026-10-27" }));
+  expect(list.match(/data-practice-disclosure="parent-account"/g)).toHaveLength(2);
+  expect(renderToStaticMarkup(createElement(ParentAccountDisclosureList, { names: [{ id: "a", firstName: "Noa" }] }))).toBe("");
+  // The practice bar shows it for the child being practised with; the parent's Account shows it for each linked child.
+  expect(source("components/portal/workspace/students.tsx")).toMatch(/\{child && <ChildPracticeDisclosure name=\{child\.firstName\} place="child-practice" \/>\}/);
+  expect(source("components/portal/entry.tsx")).toMatch(/view\.summary\.roles\.includes\("parent"\) && <ParentAccountDisclosure load=\{parentChildren\} \/>/);
+  expect(source("components/portal/entry.tsx")).toMatch(/const parentChildren = \(\) => workspaceApi\.students\("parent"\);/);
 });

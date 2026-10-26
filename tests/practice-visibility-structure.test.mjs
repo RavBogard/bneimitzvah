@@ -79,3 +79,15 @@ test("no duration, time of day, action or play count is selectable through the r
   assert.match(migration, /jsonb_object_keys\(c\.progress->'lessons'\)/);
   assert.match(migration, /card\.value->'box'/);
 });
+
+test("only migration and schema files name a mark's instant, and nothing selects or returns a whole verse_self_check row", () => {
+  // The instant of a mark is a time of day; it leaves the database only as 0052's marks view's date.
+  const naming = sources.filter(file => /marked_at|markedAt/.test(file.text)).map(file => file.path);
+  assert.ok(naming.length > 0);
+  for (const path of naming) assert.match(path, /^src\/server\/db\/(migrations\/(\d{4}_[a-z0-9_]+\.sql|meta\/\d{4}_snapshot\.json)|[a-z-]+-schema\.ts)$/, `${path} names a mark's instant`);
+  for (const file of sources.filter(file => /verseSelfCheck|verse_self_check/.test(file.text) && !/^src\/server\/db\/migrations\//.test(file.path))) {
+    assert.doesNotMatch(file.text, /\.select\(\s*\)\s*\.from\(\s*(s\.)?verseSelfCheck\b/, `${file.path} selects a whole mark row`);
+    assert.doesNotMatch(file.text, /select\s+(\*|\w+\.\*|to_jsonb\(\s*\w+\s*\))[^;]*?\bfrom\s+"?(public"?\."?)?verse_self_check\b/i, `${file.path} selects a whole mark row`);
+    if (/\bverseSelfCheck\b/.test(file.text)) assert.doesNotMatch(file.text, /\.returning\(\s*\)/, `${file.path} returns a whole mark row`);
+  }
+});

@@ -110,12 +110,14 @@ describe("the assigned tutor's view", () => {
 
   it("starts the per-day lines on the release date: nothing a student did before the gate opened is shown per day", async () => {
     const t = await setup({ from: addDays(chicagoToday(), 1) });
-    await t.event(t.own.id, t.assignment.id, "Exodus 23:1"); await t.mark("Exodus 23:4", "got-it");
+    await t.event(t.own.id, t.assignment.id, "Exodus 23:1"); await t.mark("Exodus 23:4", "got-it"); await t.mark("Exodus 23:5", "got-it");
+    // A mark made with a parent before the release date: whether a parent was there stays unshown.
+    await t.f.owner(() => t.f.db.update(s.verseSelfCheck).set({ sourceMode: "child-practice", state: "working", version: 2 }).where(eq(s.verseSelfCheck.verseRef, "Exodus 23:5")));
     const answer = await t.read("multi", t.own.id);
     expect(answer.status).toBe(200);
     expect(answer.json.days).toEqual([]);
-    // The current mark itself was already the tutor's to see on the progress page; only the day and the source are new.
-    expect(answer.json.marks).toEqual([{ kind: "torah", verseRef: "Exodus 23:4", state: "got-it", withParent: false }]);
+    // The current mark itself was already the tutor's to see on the progress page; the day and the source are new, so neither shows.
+    expect(answer.json.marks).toEqual([{ kind: "torah", verseRef: "Exodus 23:4", state: "got-it", withParent: null }, { kind: "torah", verseRef: "Exodus 23:5", state: "working", withParent: null }]);
   });
 
   it("a tutor without an active tutor_student row reads nothing: another student, a revoked row, a ceremony-done student, another congregation", async () => {

@@ -72,3 +72,15 @@ export function canHearLines(learn: PracticeLearn): string[] {
 }
 /** LD-10: "Often mixed up: tevir and etnachta", or null with no pair. */
 export const mixedUpLine = (learn: PracticeLearn) => learn.mixedUp ? `Often mixed up: ${learn.mixedUp[0]} and ${learn.mixedUp[1]}` : null;
+
+/**
+ * The parent's count line (decided in the house voice; the child's name, never a pronoun): "Noa has marked 12 verses Got it and
+ * 3 Still working." A part with nothing in it is left out; with no marks at all, "Noa has not marked any verses yet."
+ */
+export function parentCountLine(name: string, counts: { gotIt: number; working: number }): string {
+  const verses = (n: number) => `${n} ${n === 1 ? "verse" : "verses"}`;
+  if (counts.gotIt > 0 && counts.working > 0) return `${name} has marked ${verses(counts.gotIt)} Got it and ${counts.working} Still working.`;
+  if (counts.gotIt > 0) return `${name} has marked ${verses(counts.gotIt)} Got it.`;
+  if (counts.working > 0) return `${name} has marked ${verses(counts.working)} Still working.`;
+  return `${name} has not marked any verses yet.`;
+}

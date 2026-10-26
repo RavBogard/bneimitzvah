@@ -12,7 +12,8 @@ import { FrontDoor, type FrontDoorAccount } from "./front-door/front-door";
 import { AccountRequest } from "./account-request";
 import { purgeOffline } from "../../lib/offline/pack-index";
 import { TabBar, TabSkipLink } from "./shell/tab-bar";
-import { PracticeDisclosure } from "./practice-visibility/disclosure";
+import { ParentAccountDisclosure, PracticeDisclosure } from "./practice-visibility/disclosure";
+import { workspaceApi } from "./workspace/api";
 
 export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "uncertain" }
   | { kind: "accepted"; role: SessionSummary["roles"][number] }
@@ -49,6 +50,8 @@ export const SIGN_IN_CODE_COPY = Object.freeze({
   wrong: "That code didn’t match. Check the email and try again.",
   expired: "That code has expired or was used. Request a new email to get a new code.",
 });
+/** 1.9 N23: the parent's own linked children, for the parent's practice-visibility line on Account (asked only once the gate is open). */
+const parentChildren = () => workspaceApi.students("parent");
 const rolePath = (role: SessionSummary["roles"][number]) => role === "admin" ? "/workspace/admin/students" : `/workspace/${role}`;
 const roleTasks: Record<SessionSummary["roles"][number], string> = { student: "your assigned reading", parent: "your child’s preparation and practice", tutor: "the students you teach", admin: "students, people and setup" };
 const failure = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
@@ -212,6 +215,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
             {/* 1.9 N11: a student's way to help, the congregation's own preparation guide (the link the reading page already carries). */}
             {/* 1.9 N23: the student is told what the tutor sees, behind the same release gate as every tutor and parent line. */}
             {view.summary.roles.includes("student") && <PracticeDisclosure place="account" />}
+            {view.summary.roles.includes("parent") && <ParentAccountDisclosure load={parentChildren} />}
             {view.summary.roles.includes("student") && <p><a href="https://www.centralreform.org/beit-mitzvah/" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Need help?</a></p>}
             {/* Never offered to a student, who already has an account (G20, 1.9 N20); other accounts without saved readings may ask. */}
             {!view.summary.saved && !view.summary.roles.includes("student") && <AccountRequest level={doors ? 4 : 3} />}</>
