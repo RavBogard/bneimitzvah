@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GoogleSignIn } from "./google-sign-in";
 import { browserStores, forgetPendingRequest, rememberPendingRequest, resolvePendingRequest, tabStores } from "./pending-request";
+import { BetaMark } from "../site/beta-mark";
 
 // The portal MCP consent page (Decided here, 2026-10-21). Claude sends the staff member here with
 // a signed request in the URL fragment; Google sign-in proves who they are; Allow returns Claude a code.
@@ -84,7 +85,7 @@ export function ConnectClaude() {
   const ready = view.kind === "ready" ? view : null, account = ready?.account ?? null;
   const signedInWithGoogle = !!account?.google, staff = !!account?.role;
   return <div className="portal-shell">
-    <header className="portal-header"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a><span>Central Reform Congregation</span></header>
+    <header className="portal-header"><div className="portal-brand-group"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a><BetaMark /></div><span>Central Reform Congregation</span></header>
     <main id="portal-main" className="entry-layout">
       <div className="entry-introduction">
         <h1>Connect Claude</h1>

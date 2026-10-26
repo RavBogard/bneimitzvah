@@ -14,9 +14,10 @@ import { useProgress } from "./services";
 import { useVerseReview } from "./own-verses";
 import { LearningStart } from "./learning-start";
 import styles from "./learn.module.css";
+import { BetaMark } from "../site/beta-mark";
 
 export function LearnAppBar() {
-  return <header className="portal-header app-bar"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a></header>;
+  return <header className="portal-header app-bar"><div className="portal-brand-group"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a><BetaMark /></div></header>;
 }
 
 /** 1.9 N23: a signed-in student is one whose own workspace answers with their assignment (the student API refuses everyone else). */

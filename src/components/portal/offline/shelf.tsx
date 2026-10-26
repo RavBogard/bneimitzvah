@@ -6,6 +6,7 @@ import { WINDOW_MS, type Pack } from "../../../lib/offline/policy";
 import { readAddress } from "../public-reading/urls";
 import { savedDate, useOfflinePacks, useOnline, usePlatform, useProductName } from "./status";
 import styles from "./offline.module.css";
+import { BetaMark } from "../../site/beta-mark";
 
 /**
  * /offline: what this device keeps, each with an Open link to the same address the reader or the course uses,
@@ -58,7 +59,7 @@ export function OfflineShelfView(props: Readonly<{ live: boolean | null; packs: 
   const empty = <p className={styles.shelfEmpty} role="status" data-testid="offline-empty">{removed ? APPROVED.removed : APPROVED.nothingSaved}</p>;
   return <div className="portal-shell">
     <a className="skip-link" href="#offline-main">Skip to main content</a>
-    <header className="portal-header app-bar"><a className="portal-brand" href="/">{productName ?? "CRC Torah"}</a></header>
+    <header className="portal-header app-bar"><div className="portal-brand-group"><a className="portal-brand" href="/">{productName ?? "CRC Torah"}</a><BetaMark /></div></header>
     <main id="offline-main" className={styles.shelfMain}>
       <h1 className={styles.shelfTitle}>{PLAN.saved}</h1>
       {live === false && empty}

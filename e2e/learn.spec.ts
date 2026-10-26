@@ -39,7 +39,7 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
   const routes = syntheticCourseRoutes(); await routes.install(page); await seed(page, introDone);
   const response = await page.goto("/learn");
   expect(response?.status()).toBe(200);
-  expect(response?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
+  expect(response?.headers()["x-robots-tag"]).toBeUndefined();
   await expect(page).toHaveTitle("Learn to lein | CRC Torah");
   await expect(page.getByRole("heading", { level: 1, name: "Learn to lein" })).toBeVisible();
   await expect(page.getByText("Hear a phrase, chant it yourself, then connect it to a reading. Return to words, sounds and joins whenever you need help.", { exact: true })).toBeVisible();

@@ -441,6 +441,11 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .portal-header.app-bar { background: var(--lake); color: #fff; border-bottom: 0; padding-block: 0.75rem; min-height: calc(44px + 1.5rem); box-shadow: 0 0 0 100vmax var(--lake); clip-path: inset(0 -100vmax); }
 .app-bar .portal-brand { color: #fff; font-size: 1.125rem; font-weight: 750; letter-spacing: -0.02em; }
 .app-bar a { color: #fff; }
+/* The "Beta" label beside the site name (BetaMark). It shares the name's flex row so the header's layout and height do not change; at 320px the name and the chip fit on one line. */
+.portal-brand-group { display: inline-flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.site-beta { flex: none; color: var(--color-muted); border: 1px solid currentColor; border-radius: 999px; padding: 0.0625rem 0.5rem; font-size: 0.75rem; font-weight: 600; line-height: 1.25; letter-spacing: 0.02em; white-space: nowrap; user-select: none; }
+.app-bar .site-beta { color: rgb(255 255 255 / 0.85); }
+@media print { .site-beta { display: none; } }
 /* The sign-in page's tagline sits on the bar (F-SITE 19, one header everywhere). */
 .portal-header.app-bar > span { color: rgb(255 255 255 / 0.85); }
 .app-bar :focus-visible { outline-color: var(--marigold); }

@@ -9,6 +9,7 @@ import { InstallHint } from "../offline/install-hint";
 import { SavedLine } from "../offline/status";
 import { startAccountPreferences } from "../workspace/account-preferences";
 import styles from "./front-door.module.css";
+import { BetaMark } from "../../site/beta-mark";
 
 /** What the app bar offers on the right: nothing while access is being checked or when a signed-in account is refused, Sign in, or the signed-in account (named by its role when it has exactly one). `saved`: the account keeps saved readings, so My readings shows. */
 export type FrontDoorAccount = null | Readonly<{ kind: "sign-in" }> | Readonly<{ kind: "account"; role: string | null; saved: boolean }>;
@@ -65,7 +66,7 @@ export function FrontDoor({ account, onSignIn, children }: { account: FrontDoorA
   return <div className="portal-shell">
     <a className="skip-link" href="#front-door-main">Skip to main content</a>
     <header className="portal-header app-bar">
-      <a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a>
+      <div className="portal-brand-group"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a><BetaMark /></div>
       {account?.kind === "sign-in" && <a className="app-bar-account" href="#beit-mitzvah" onClick={event => {
         // Scroll and focus without writing a fragment into the address bar.
         event.preventDefault(); door.current?.scrollIntoView({ block: "start" }); onSignIn();

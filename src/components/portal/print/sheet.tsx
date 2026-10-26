@@ -32,6 +32,7 @@ import styles from "./print.module.css";
 // The Hebrew face's @font-face, which the sheet's own type needs whatever else the page loads.
 import "../../../styles/hebrew-font.module.css";
 import "../../../styles/stam-font.module.css";
+import { BetaMark } from "../../site/beta-mark";
 
 const MAX_PAGES = 10; // A passage is at most 1,000 verses, 100 to a text page.
 const kindName = (kind: "torah" | "haftarah") => kind === "torah" ? "Torah" : "Haftarah";
@@ -222,7 +223,7 @@ export function PrintSheetPage() {
   return <div className={`portal-shell ${styles.root}`}>
     <style>{pageRule(format)}</style>
     <a className={`skip-link ${styles.screenOnly}`} href="#print-sheet-paper">Skip to the reading</a>
-    <header className={`portal-header app-bar ${styles.screenOnly}`}><a className="portal-brand" href="/">{productName}</a></header>
+    <header className={`portal-header app-bar ${styles.screenOnly}`}><div className="portal-brand-group"><a className="portal-brand" href="/">{productName}</a><BetaMark /></div></header>
     <main className="workspace-main">
       <header className={`reading-hero ${styles.screenOnly}`}>
         <h1 className="hero-reference">{title}</h1>
