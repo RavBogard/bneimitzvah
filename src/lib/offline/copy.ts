@@ -39,6 +39,8 @@ export const APPROVED = Object.freeze({
   savedUntil: (date: string) => `Saved until ${date}`,
   /** The offline pill when the device is offline and no saved reading is live. */
   offline: "Offline",
+  /** 2.0 SC6: /offline, the label of the service-course pack (A7 off.packLabel, approved "Keep all"). */
+  servicePackLabel: "Learn the service",
 });
 
 /** Wording no ruling gives yet. Each is one named constant, flagged for Daniel. A2 added none. */

@@ -13,7 +13,7 @@ import styles from "./service.module.css";
 import { icons, ServiceAppBar } from "./bits";
 import { pathLessons, useServiceProgress, type PathView } from "./progress";
 import { useCoursePath } from "./offline";
-import { useOfflineWording } from "../../portal/offline/status";
+import { savedDate, useOfflineWording } from "../../portal/offline/status";
 
 /** One lesson row. Every row is a link, in every state: a lesson never locks, so nothing here is a bare span (DP-09). */
 function Row({ lesson, progress, next, page }: { lesson: Lesson; progress: Progress; next: Lesson | null; page?: number }) {
@@ -51,9 +51,10 @@ export function YourParts({ view, progress, next, savedAt = null }: { view: Path
   if (path.state === "withdrawn") return <p className={styles.pathLine} data-path="withdrawn">{COPY.state.pathWithdrawn}</p>;
   const lessons = path.items.flatMap(item => { const lesson = lessonById(item.lesson); return lesson && lessonOpen(lesson) ? [{ lesson, page: item.page }] : []; });
   const start = path.serviceStart === undefined || offline ? null : siddurPageLink(DEFAULT_SIDDUR_URL, CRC_TENANT.siddurBook, path.serviceStart);
-  // 2.0 SC6: offline, the device's last copy (A7 st.path.offline, "Your parts as of {date}.", is not approved yet: no line is shown).
+  // 2.0 SC6: offline, the device's last copy, dated (A7 st.path.offline).
   return <section aria-labelledby="service-mine" data-path={path.state} data-review={path.review || undefined} data-slot={path.slot} data-path-copy={savedAt === null ? undefined : savedAt}>
     <div className={learn.pathHead}><h2 id="service-mine">{COPY.home.mineHeading}</h2></div>
+    {savedAt !== null && <p className={styles.unitSummary} data-path-offline="">{fill(COPY.state.pathOffline, { date: savedDate(savedAt) })}</p>}
     {path.state === "no-plan" ? <p className={styles.unitSummary}>{COPY.state.pathNoPlan}</p> : lessons.length > 0 && <p className={styles.unitSummary}>{COPY.home.mineLine}</p>}
     {path.review && <p className={styles.unitSummary}>{COPY.state.pathReview}</p>}
     {path.slot === "unknown" && <p className={styles.unitSummary}>{COPY.state.slotUnknown}</p>}

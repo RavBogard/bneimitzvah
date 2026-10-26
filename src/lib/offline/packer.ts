@@ -336,7 +336,8 @@ export async function openOffline(io: PackerIo & { locks?: Locks | null }) {
     const listed = new Set(answer.state === "owner" ? [...answer.packs.map(pack => ownerPackKey(pack.kind, pack.ref)), ...(answer.evening === true ? [EVENING_PACK_KEY] : [])] : []);
     await sweep(cache, io.now(), pack => (pack.descriptor.type !== "week" || pack.key === weekKey) && (pack.owner === "public" || answer.state === "unknown" || listed.has(pack.key)),
       answer.state === "owner" ? answer.owner : answer.state === "signed-out" ? null : undefined);
-    if (answer.state !== "unknown") setOfflineState({ ownerChecked: true });
+    // 2.0 SC6: the owner this check named rides with it, so a save of the student's parts can be tied to it (path-copy.ts).
+    if (answer.state !== "unknown") setOfflineState({ ownerChecked: true, ownerKey: answer.state === "owner" ? answer.owner : null });
     await refreshOfflineState(io.now(), weekKey);
     const fresh = await readIndex(cache);
     type Job = Readonly<{ key: string; descriptor: PackDescriptor; state?: "week" | "course" | "service"; own?: Readonly<{ owner: string; label: string }> }>;

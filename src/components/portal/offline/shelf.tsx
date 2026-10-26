@@ -4,7 +4,6 @@ import { APPROVED, PLAN } from "../../../lib/offline/copy";
 import { purgeOffline, savedPacks } from "../../../lib/offline/pack-index";
 import { WINDOW_MS, type Pack } from "../../../lib/offline/policy";
 import { readAddress } from "../public-reading/urls";
-import { COPY as SERVICE_COPY } from "../../../lib/service-course/copy";
 import { savedDate, useOfflinePacks, useOnline, usePlatform, useProductName } from "./status";
 import styles from "./offline.module.css";
 
@@ -23,11 +22,11 @@ import styles from "./offline.module.css";
  */
 const displayRange = (ranges: string) => ranges.replace(/(\d)-(\d)/g, "$1–$2");
 // The service-course pack (2.0 SC6, W14) and the evening lessons' text (2.0 SC7, signed-in CRC people only) open the service course and
-// are named by the course's own title, "Learn the service" (A7 off.packLabel is the same words).
+// are named by A7 off.packLabel.
 const service = (pack: Pack) => pack.descriptor.type === "service" || pack.descriptor.type === "evening";
 const target = (pack: Pack) => pack.descriptor.type === "week" ? "/read" : pack.descriptor.type === "ref" ? readAddress({ mode: "ref", ref: pack.descriptor.ref, kind: pack.descriptor.kind })
   : service(pack) ? "/learn/service" : "/learn";
-const label = (pack: Pack) => pack.descriptor.type === "course" ? APPROVED.courseLabel : service(pack) ? SERVICE_COPY.home.title
+const label = (pack: Pack) => pack.descriptor.type === "course" ? APPROVED.courseLabel : service(pack) ? APPROVED.servicePackLabel
   : pack.descriptor.type === "ref" ? pack.label || `${pack.descriptor.kind === "torah" ? "Torah" : "Haftarah"} ${displayRange(pack.descriptor.ref)}`
     : pack.label && pack.label !== "week" ? pack.label : APPROVED.weekLabel;
 

@@ -19,7 +19,7 @@ import type { Path } from "../../src/lib/service-course/path";
 import { eveningTextPath, serviceTextPath, versePath } from "../../src/components/learn/service/text-api";
 import { EVENING_PACK_KEY, openOffline, renewPack, servicePackCurrent, servicePackPaths, PackStopped, type OwnerAnswer, type PackerIo } from "../../src/lib/offline/packer";
 import { purgeOffline, readIndex, setOfflineState, sweep } from "../../src/lib/offline/pack-index";
-import { readPathCopy, savePathCopy } from "../../src/lib/offline/path-copy";
+import { pathRequest, readPathCopy, savePathCopy } from "../../src/lib/offline/path-copy";
 import { INDEX_KEY, OFFLINE_CACHE, PATH_COPY_KEY, SERVICE_PACK_KEY, TORAH_ORIGIN, WINDOW_MS, ownerOnlyAsset, packAssetAllowed, parsePackIndex, servicePackAssetAllowed } from "../../src/lib/offline/policy";
 import { SHELL_PAGES } from "../../src/lib/offline/shell";
 import { workerSource } from "../../src/lib/offline/worker-source";
@@ -211,12 +211,14 @@ describe("the last copy of a student's parts (Your parts offline)", () => {
     await cache.put(INDEX_KEY, new Response(JSON.stringify({ format: 1, owner, packs: [] }), { headers: { "content-type": "application/json" } }));
     return { caches, storage, cache };
   }
-  it("is kept only once this page load asked whose device it is, as that owner's, and holds no pages, plan or catalog ids", async () => {
+  /** This page's owner check, as openOffline records it, then the request taken before the parts are fetched. */
+  const checked = (owner: string | null) => { setOfflineState({ ownerChecked: true, ownerKey: owner }); return pathRequest(); };
+  it("is kept only after this page's owner check named an owner, as that owner's, and holds no pages, plan or catalog ids", async () => {
     const d = await device(OWNER);
-    setOfflineState({ ownerChecked: false });
-    expect(await savePathCopy(path, NOW, d.storage)).toBe(false);
-    setOfflineState({ ownerChecked: true });
-    expect(await savePathCopy(path, NOW, d.storage)).toBe(true);
+    setOfflineState({ ownerChecked: false, ownerKey: null });
+    expect(pathRequest()).toBeNull();
+    expect(await savePathCopy(path, pathRequest(), NOW, d.storage)).toBe(false);
+    expect(await savePathCopy(path, checked(OWNER), NOW, d.storage)).toBe(true);
     const stored = await (await d.cache.match(PATH_COPY_KEY))!.json();
     expect(stored).toEqual({ format: 1, owner: OWNER, savedAt: NOW, path: { ok: true, state: "assigned", slot: "havdalah", review: false, items: [{ lesson: "shma" }, { lesson: "vahavta" }] } });
     expect(await readPathCopy(NOW + 1000, d.storage)).toEqual({ savedAt: NOW, path: { ok: true, state: "assigned", slot: "havdalah", review: false, items: [{ lesson: "shma" }, { lesson: "vahavta" }] } });
@@ -225,33 +227,48 @@ describe("the last copy of a student's parts (Your parts offline)", () => {
     await d.cache.put(INDEX_KEY, new Response(JSON.stringify({ format: 1, owner: OTHER, packs: [] })));
     expect(await readPathCopy(NOW + 1000, d.storage)).toBeNull();
   });
+  it("parts fetched for A, index now B: nothing saved (two windows, A signs out and B signs in while A's request is out)", async () => {
+    const d = await device(OWNER);
+    const forA = checked(OWNER);
+    // Window 2: B's open made B the device's owner; this window's check still names A.
+    await d.cache.put(INDEX_KEY, new Response(JSON.stringify({ format: 1, owner: OTHER, packs: [] })));
+    expect(await savePathCopy(path, forA, NOW, d.storage)).toBe(false);
+    expect(d.cache.entries.has(origin + PATH_COPY_KEY)).toBe(false);
+    // This window's own check then names B: a request taken before it (for A) still saves nothing.
+    setOfflineState({ ownerKey: OTHER });
+    expect(await savePathCopy(path, forA, NOW, d.storage)).toBe(false);
+    expect(d.cache.entries.has(origin + PATH_COPY_KEY)).toBe(false);
+    // A sign-out purge since the request began (another tab's arrives by its channel) saves nothing either, even under the same owner.
+    const e = await device(OWNER), before = checked(OWNER)!;
+    expect(await savePathCopy(path, { ...before, generation: before.generation - 1 }, NOW, e.storage)).toBe(false);
+    expect(e.cache.entries.has(origin + PATH_COPY_KEY)).toBe(false);
+    // A check that named no one (signed out) gives no request at all.
+    expect(checked(null)).toBeNull();
+  });
   it("is never kept for a device with no owner, and never recreates a pack cache a purge deleted", async () => {
-    setOfflineState({ ownerChecked: true });
     const d = await device(null);
-    expect(await savePathCopy(path, NOW, d.storage)).toBe(false);
+    expect(await savePathCopy(path, checked(OWNER), NOW, d.storage)).toBe(false);
     const e = await device(OWNER);
     await e.caches.delete(OFFLINE_CACHE);
-    expect(await savePathCopy(path, NOW, e.storage)).toBe(false);
+    expect(await savePathCopy(path, checked(OWNER), NOW, e.storage)).toBe(false);
     expect(await e.caches.has(OFFLINE_CACHE)).toBe(false);
   });
   it("goes at sign-out (the open's sweep and the purge) and when another account takes the device; it stays for its own owner", async () => {
-    setOfflineState({ ownerChecked: true });
     const d = await device(OWNER);
-    await savePathCopy(path, NOW, d.storage);
+    await savePathCopy(path, checked(OWNER), NOW, d.storage);
     await sweep(d.cache as unknown as Cache, NOW + 1000);
     expect(d.cache.entries.has(origin + PATH_COPY_KEY)).toBe(true);
     await sweep(d.cache as unknown as Cache, NOW + 1000, () => true, OTHER);
     expect(d.cache.entries.has(origin + PATH_COPY_KEY)).toBe(false);
     await d.cache.put(INDEX_KEY, new Response(JSON.stringify({ format: 1, owner: OWNER, packs: [] })));
-    await savePathCopy(path, NOW, d.storage);
+    await savePathCopy(path, checked(OWNER), NOW, d.storage);
     await sweep(d.cache as unknown as Cache, NOW + 1000, () => true, null);
     expect(d.cache.entries.has(origin + PATH_COPY_KEY)).toBe(false);
-    // An account switch at an open deletes the whole pack cache, the copy with it.
+    // An account switch at an open deletes the whole pack cache, the copy with it; the open records the owner its check named.
     let answer: OwnerAnswer = { state: "owner", owner: OWNER, packs: [] };
     const h = harness(() => answer);
     await openOffline(h.io);
-    setOfflineState({ ownerChecked: true });
-    expect(await savePathCopy(path, NOW, h.caches as unknown as CacheStorage)).toBe(true);
+    expect(await savePathCopy(path, pathRequest(), NOW, h.caches as unknown as CacheStorage)).toBe(true);
     await openOffline(h.io);
     expect(await readPathCopy(NOW, h.caches as unknown as CacheStorage)).not.toBeNull();
     answer = { state: "owner", owner: OTHER, packs: [] };
@@ -259,18 +276,21 @@ describe("the last copy of a student's parts (Your parts offline)", () => {
     expect(await readPathCopy(NOW, h.caches as unknown as CacheStorage)).toBeNull();
     expect((await h.stored()).includes(PATH_COPY_KEY)).toBe(false);
   });
-  it("goes with Remove saved readings and the sign-out purge", async () => {
+  it("goes with Remove saved readings and the sign-out purge, which also forgets the checked owner", async () => {
     const caches = new FakeCaches();
     vi.stubGlobal("caches", caches);
     try {
       const cache = await caches.open(OFFLINE_CACHE);
       await cache.put(INDEX_KEY, new Response(JSON.stringify({ format: 1, owner: OWNER, packs: [] })));
-      setOfflineState({ ownerChecked: true });
-      await savePathCopy(path, NOW);
+      const request = checked(OWNER);
+      await savePathCopy(path, request, NOW);
       expect(await readPathCopy(NOW)).not.toBeNull();
       await purgeOffline();
       expect(await readPathCopy(NOW)).toBeNull();
       expect(await caches.has(OFFLINE_CACHE)).toBe(false);
+      expect(pathRequest()).toBeNull();
+      await caches.open(OFFLINE_CACHE).then(c => c.put(INDEX_KEY, new Response(JSON.stringify({ format: 1, owner: OWNER, packs: [] }))));
+      expect(await savePathCopy(path, request, NOW)).toBe(false);
     } finally { vi.unstubAllGlobals(); }
   });
 });

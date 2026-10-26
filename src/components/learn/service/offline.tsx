@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import { PLAN } from "../../../lib/offline/copy";
-import { readPathCopy, savePathCopy } from "../../../lib/offline/path-copy";
+import { pathRequest, readPathCopy, savePathCopy } from "../../../lib/offline/path-copy";
 import { useOfflinePacks, useOfflineWording } from "../../portal/offline/status";
 import { SiddurLink } from "../../portal/siddur-link";
 import type { Account } from "./progress-sync";
-import { useServicePath, type PathView } from "./progress";
+import { loadPath, useServicePath, type PathView } from "./progress";
 
 /**
  * The service course offline (2.0 SC6, A4 10 and 13), in the installed app on the torah or beitmitzvah origin. Everywhere else
@@ -23,13 +23,23 @@ export function SiddurOrOffline({ href, page, className, children }: { href: str
 }
 
 /**
- * A signed-in student's own parts: the live answer online, kept on the device as the owner's last copy (path-copy.ts); offline, with
- * no live answer, that copy. `savedAt` is set only when the copy is what shows.
+ * A signed-in student's own parts: the live answer online; offline, with no live answer, the owner's last copy on the device
+ * (path-copy.ts). `savedAt` is set only when the copy is what shows. The copy is saved from its own request, made only once this page's
+ * owner check has named an owner and tied to that owner and the purge counter as they were before it began, never from the answer
+ * shown on the page (which may have been asked for before the check, for another account).
  */
 export function useCoursePath(account: Account): { view: PathView; savedAt: number | null } {
-  const view = useServicePath(account), offline = useOfflineWording(), { ownerChecked } = useOfflinePacks();
+  const view = useServicePath(account), offline = useOfflineWording(), { ownerChecked, ownerKey } = useOfflinePacks();
   const [copy, setCopy] = useState<Awaited<ReturnType<typeof readPathCopy>>>(null);
-  useEffect(() => { if (view.status === "ready" && ownerChecked) void savePathCopy(view.path); }, [view, ownerChecked]);
+  const synced = account.state === "synced";
+  useEffect(() => {
+    if (!synced || offline) return;
+    const request = pathRequest();
+    if (!request) return;
+    let current = true;
+    void loadPath().then(next => { if (current && next.status === "ready") void savePathCopy(next.path, request); });
+    return () => { current = false; };
+  }, [synced, offline, ownerChecked, ownerKey]);
   const live = view.status === "ready";
   useEffect(() => {
     if (!offline || live) { setCopy(null); return; }

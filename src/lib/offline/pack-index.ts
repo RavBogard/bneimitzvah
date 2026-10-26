@@ -9,8 +9,9 @@ import { EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, OWNER_KEY, packLive, PATH_COPY_K
 export type PackState = "saving" | "saved" | "partial" | "no-space" | null;
 /** `shell`: the worker is active, so its app shell is installed. `ownerChecked`: this page load has asked the private
  * endpoint whose readings this device keeps (A2), so the owner packs it lists are this account's. */
-export type OfflineState = Readonly<{ week: PackState; course: PackState; service: PackState; savedUntil: number | null; shell: boolean; ownerChecked: boolean }>;
-const EMPTY_STATE: OfflineState = Object.freeze({ week: null, course: null, service: null, savedUntil: null, shell: false, ownerChecked: false });
+/** `ownerKey` (2.0 SC6): the owner key that check named, or null (signed out, not asked yet, or a purge since). */
+export type OfflineState = Readonly<{ week: PackState; course: PackState; service: PackState; savedUntil: number | null; shell: boolean; ownerChecked: boolean; ownerKey: string | null }>;
+const EMPTY_STATE: OfflineState = Object.freeze({ week: null, course: null, service: null, savedUntil: null, shell: false, ownerChecked: false, ownerKey: null });
 
 let state: OfflineState = EMPTY_STATE;
 const listeners = new Set<() => void>();
@@ -30,7 +31,7 @@ let channel: BroadcastChannel | null = null;
 try {
   if (typeof BroadcastChannel !== "undefined") {
     channel = new BroadcastChannel(PURGE_CHANNEL);
-    channel.onmessage = event => { if (event.data === "purge") { generation += 1; running?.abort(); running = null; } };
+    channel.onmessage = event => { if (event.data === "purge") { generation += 1; running?.abort(); running = null; setOfflineState({ ownerKey: null }); } };
   }
 } catch { channel = null; }
 /** Resolves when the pack in progress (if any) has finished, so a caller can start the next one without cutting it short. */
@@ -105,7 +106,7 @@ export async function savedPacks(now = Date.now()): Promise<readonly Pack[]> {
 export async function purgeOffline(): Promise<void> {
   generation += 1; running?.abort(); running = null;
   try { channel?.postMessage("purge"); } catch { /* No other tabs to tell. */ }
-  setOfflineState({ week: null, course: null, service: null, savedUntil: null });
+  setOfflineState({ week: null, course: null, service: null, savedUntil: null, ownerKey: null });
   const storage = cacheStorage(); if (!storage) return;
   try { await storage.delete(OFFLINE_CACHE); } catch { /* Nothing more to do here. */ }
   // A pack that was mid-write stops at its next check; wait briefly for it, then delete again in case it reopened the cache.

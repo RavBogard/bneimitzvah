@@ -135,6 +135,10 @@ export const COPY = Object.freeze({
     pathReview: "Your parts may change. Your tutor will review them with you.", // st.path.review
     pathWithdrawn: "Your parts are being updated. Ask your tutor which ones you lead.", // st.path.withdrawn
     slotUnknown: "Page numbers are from the morning service until your service time is set.", // st.slot.unknown
+    // 2.0 SC6, offline (A7, approved "Keep all").
+    textOffline: "This prayer’s text isn’t saved on this device. Connect to read it.", // st.text.offline
+    offlineAbout: "You can still read about this prayer.", // st.offline.teachingOk
+    pathOffline: "Your parts as of {date}. They update when you are online.", // st.path.offline
   }),
   // The per-part finished mark (2.0 SC5, A7 "Tutor view (staff only)", Batch 3 Q12): staff strings, and the student's own line.
   tutor: Object.freeze({
