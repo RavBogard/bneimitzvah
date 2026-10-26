@@ -11,9 +11,11 @@ Every agent prompt points here. A prompt adds only the milestone's own spec, pas
 ## Build, push, stop
 
 1. Implement the slice in the prompt and nothing more.
-2. Run locally: `npx tsc --noEmit --incremental false`, then the test files you changed or added, then `tests/never-in-repo.test.mjs`. Never the full Vitest, Playwright or http-browser suites; CI runs those.
-3. Commit, push, open the PR, and **stop**. Don't wait on CI and don't rerun jobs. The lead checks CI and comes back to you only with a failing test that is yours.
-4. Report in under 15 lines: the PR number, head SHA, what changed, the tests you ran, and the wording gaps.
+2. **Before pushing, search the tests for what you changed.** For every label, heading, link name, aria-label, test ID, class, route or stored key your change removes, renames or moves, grep `tests/`, `e2e/` and `tests/http-browser/` and update each match in the same commit. Also check guard tests your change may trip on purpose (Tab-stop budgets, storage allowlists, landmark counts, the policy registry) and update them with the reason in a comment. Say in your report what the search found.
+3. Run locally: `npx tsc --noEmit --incremental false`, then the test files you changed or added, then `tests/never-in-repo.test.mjs`. For any `tests/postgres/` or `tests/http-browser/` file you changed or that your search matched, run it with `npm run test:local-db -- <file>` (it starts a throwaway UTF-8 Postgres; `--http` builds first). Never the full Vitest, Playwright or http-browser suites; CI runs those.
+4. Before pushing, merge your PR's base branch into yours, so CI tests what will merge.
+5. Commit, push, open the PR, and **stop**. Don't wait on CI and don't rerun jobs. The lead checks CI and comes back to you only with a failing test that is yours.
+6. Report in under 15 lines: the PR number, head SHA, what changed, the tests you ran, and the wording gaps.
 
 ## Rules that always hold
 

@@ -1,5 +1,13 @@
 name: CI
-on: [push, pull_request]
+# A branch is tested once, through its pull request; main is tested on push. A newer commit on the same
+# pull request cancels the run it supersedes, so a fix never waits behind a run of the code it replaces.
+on:
+  push:
+    branches: [main]
+  pull_request:
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:
