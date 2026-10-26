@@ -4,7 +4,8 @@
    flat print, no shadows or gradients; the ink pull is the one authored motion. */
 
 /* ---------- shared ---------- */
-.hebrew { font-family: "CRC Noto Serif Hebrew", "Noto Serif Hebrew", "Times New Roman", serif; font-weight: 400; font-synthesis: none; font-feature-settings: "mark", "mkmk"; direction: rtl; unicode-bidi: isolate; overflow-wrap: anywhere; }
+/* 1.9 N8a: the vowelled and cantillated text a student reads in Learn and the service course is set in Taamey Frank CLM, as the reading is. */
+.hebrew { font-family: "CRC Taamey Frank", "Taamey Frank CLM", "CRC Noto Hebrew Fallback", "Noto Serif Hebrew", "Times New Roman", serif; font-weight: 400; font-synthesis: none; font-feature-settings: "mark", "mkmk"; direction: rtl; unicode-bidi: isolate; overflow-wrap: anywhere; }
 .unit { border-radius: 0.18em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 /* A maqaf chain is one unit and never breaks at its maqaf (on a phone narrower than 24rem a chain may be wider than the screen, so it may break there). */
 @media (min-width: 24rem) { .unit { white-space: nowrap; } }

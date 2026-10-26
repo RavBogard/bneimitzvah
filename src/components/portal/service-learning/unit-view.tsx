@@ -33,7 +33,7 @@ export function ServiceUnitView({ material }: { material: ServiceUnitMaterial })
     return parts.map((part, partIndex) => <span className="service-source-segment" key={partIndex}>{part}</span>);
   }
   function hebrew(text: string): ReactNode {
-    return <p className={`service-unit-hebrew study-hebrew ${hebrewStyles.hebrew}`} lang="he" dir="rtl">{text}</p>;
+    return <p className={`service-unit-hebrew study-hebrew ${hebrewStyles.reading}`} lang="he" dir="rtl">{text}</p>;
   }
   function texts(block: ServiceBlock, index: number, pieces?: readonly TextSegment[]): ReactNode {
     const sourceEnglish = block.role === "original" || block.type === "rubric";
