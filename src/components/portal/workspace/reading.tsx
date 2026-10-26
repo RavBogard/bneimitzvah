@@ -43,7 +43,7 @@ import type { PracticeDates } from "./practice-calendar/api";
 import { serviceSlotName, serviceSlotTime } from "./service-slot";
 import { StaffStudentLines } from "./staff/student-lines";
 import { NeedsWork } from "./staff/needs-work";
-import { TutorPracticeDays, TutorPracticeScope, useTutorPracticeRead } from "./staff/practice";
+import { TutorPracticeDays, TutorPracticeScope } from "./staff/practice";
 import { LiftNote } from "./staff/lift-note";
 
 const dayMs = 86_400_000;
@@ -188,8 +188,6 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary }:
   useEffect(() => registerReload(async () => { await load(); }), [registerReload, load]);
   const authorizedReading = result.key === key && !result.loading ? result.value : undefined;
   const congregation = useCongregation(Boolean(authorizedReading && !concealed)), links = congregation.links;
-  // 1.9 N23: the assigned tutor's read of this student's practice (nothing is asked for anyone else, or while the gate is closed).
-  const tutorPractice = useTutorPracticeRead(mode, studentId);
   useLayoutEffect(() => {
     if (mode !== "parent" || concealed || !authorizedReading || !parentSummary.matches(authorizedReading, parentScope)) return;
     // Provider reveal precedes its visible render; start only after that render is authorized.
@@ -330,7 +328,9 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary }:
   // On a learner's phone the row waits under the reading, as the lens switch does, so the first verse stays above the fold.
   const tabRow = tabbed && <div role="tablist" aria-label="Student page" className="page-tabs" onKeyDown={tabKeys}>{pageTabs.map(([value, label]) => <button key={value} type="button" role="tab" id={tabId(value)} aria-controls={panelId(value)} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1} className="page-tab" onClick={() => setTab(value, true)}>{label}</button>)}</div>;
   // Learners (students, child practice, parents) always open in Lein; staff open in the lens they last used.
-  return <TutorPracticeScope value={concealed ? null : tutorPractice}><ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} />
+  // 1.9 N23: the assigned tutor's read of this student's practice is held by the scope itself, so its answer re-renders only the lines
+  // that use it, never this panel (and never its playback). Nothing is asked for anyone else, or while the gate is closed.
+  return <TutorPracticeScope mode={mode} studentId={studentId} concealed={concealed}><ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} />
     {/* 1.9 N16 re-measure (CLS): while the reading loads it keeps a screen of room, so what follows it never jumps into view and out again. */}
     {current?.loading && <div className="reading-loading-space" aria-hidden="true" />}<div className="reading-workspace reading-with-work" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
     <section aria-label="Assigned reading">

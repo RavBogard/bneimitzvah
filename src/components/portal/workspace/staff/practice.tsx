@@ -35,8 +35,10 @@ export function useTutorPracticeRead(mode: string, studentId: string, from: stri
   }, [open, studentId, from]);
   return open && state?.id === studentId ? state.value : null;
 }
-export function TutorPracticeScope({ value, children }: { value: TutorPracticeState; children: ReactNode }) {
-  return <TutorPracticeContext.Provider value={value}>{children}</TutorPracticeContext.Provider>;
+/** Provides the read to the lines below it. The read's state lives here, so its answer re-renders only the context's users. */
+export function TutorPracticeScope({ mode, studentId, concealed, children }: { mode: string; studentId: string; concealed: boolean; children: ReactNode }) {
+  const value = useTutorPracticeRead(mode, studentId);
+  return <TutorPracticeContext.Provider value={concealed ? null : value}>{children}</TutorPracticeContext.Provider>;
 }
 
 /** TP-20 on a verse card: "Student (with parent): got it" when the tutor's read says a parent was there; "Student: got it" otherwise. */
