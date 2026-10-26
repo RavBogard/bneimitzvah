@@ -80,7 +80,7 @@ test("every action in More is reachable by keyboard: Enter opens it, Tab walks i
   await expect(moreButton(page)).toHaveAttribute("aria-haspopup", "dialog");
 });
 
-test("from the top of the page the dock is reached in twelve Tab presses, not sixteen or more, with More one stop among them", async ({ page }, info) => {
+test("from the top of the page the dock is reached in fourteen Tab presses, not sixteen or more, with More one stop among them", async ({ page }, info) => {
   test.skip(info.project.name !== "phone", "One device is enough.");
   await mockVayera(page, { mode: "ok" }, { haftarah: true });
   await page.goto(week);
@@ -97,8 +97,9 @@ test("from the top of the page the dock is reached in twelve Tab presses, not si
   }
   console.log("TAB PRESSES FROM THE TOP TO THE DOCK", dock, JSON.stringify(stops));
   expect(dock).toBeGreaterThan(0);
-  // Skip link, the bar (brand and Sign in), the arrows, More, the four lens buttons and the first chip, then the dock: eleven stops before it (N4 counted fifteen).
-  expect(dock).toBeLessThanOrEqual(12);
+  // Skip link, the site bar (brand, Read, Learn and Sign in), the arrows, More, the four lens buttons and the first chip, then the dock:
+  // thirteen stops before it (N4 counted fifteen). Read and Learn are the site menu Daniel asked for on every page (2026-10-26).
+  expect(dock).toBeLessThanOrEqual(14);
 });
 
 test("Start reading in More closes the sheet and puts focus in the reading; Choose verses closes it and puts focus on the bar", async ({ page }) => {
