@@ -96,7 +96,11 @@ describe("/sw.js", () => {
     expect(response.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
     expect(response.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
     expect((await response.text()).startsWith('"use strict";\nconst POLICY = Object.freeze(')).toBe(true);
-    expect(workerEnvironment({ VERCEL_GIT_COMMIT_SHA: "0123abcd", PORTAL_OFFLINE_ENABLED: "false" })).toEqual({ build: "0123abcd", enabled: false });
-    expect(workerEnvironment({ VERCEL_GIT_COMMIT_SHA: "nope;x" })).toEqual({ build: "dev", enabled: true });
+    const both = ["https://torah.centralreform.org", "https://beitmitzvah.centralreform.org"];
+    expect(workerEnvironment({ VERCEL_GIT_COMMIT_SHA: "0123abcd", PORTAL_OFFLINE_ENABLED: "false" })).toEqual({ build: "0123abcd", enabled: false, origins: both });
+    expect(workerEnvironment({ VERCEL_GIT_COMMIT_SHA: "nope;x" })).toEqual({ build: "dev", enabled: true, origins: both });
+    // N24 review F1: production with a selected canonical origin names it alone, so the other origin's /sw.js is the tombstone.
+    for (const selected of both) expect(workerEnvironment({ PORTAL_ENVIRONMENT: "production", PORTAL_DEPLOYMENT: "production", BETTER_AUTH_URL: selected }).origins).toEqual([selected]);
+    expect(workerEnvironment({ PORTAL_ENVIRONMENT: "preview", PORTAL_DEPLOYMENT: "production", BETTER_AUTH_URL: both[0] }).origins).toEqual(both);
   });
 });

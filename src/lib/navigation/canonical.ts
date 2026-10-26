@@ -41,6 +41,10 @@ export function canonicalNavigation(request: Pick<Request, "url" | "headers" | "
   if ((forwardedHost !== null && forwardedHost !== host) || (proto !== null && proto !== "https") || (port !== null && port !== "443")) return denied();
   const requestOrigin = request.headers.get("origin");
   if (requestOrigin !== null && requestOrigin !== `https://${host}`) return denied();
+  // The service worker script, exactly that path and only to read it: an alias serves its own /sw.js, which is then the tombstone
+  // (worker-source.ts names only the selected canonical origin), so a worker installed there before a cutover updates, clears its
+  // caches and unregisters. A redirected /sw.js would fail the browser's update check and leave the old worker serving its packs.
+  if (url.pathname === "/sw.js" && ["GET", "HEAD"].includes(request.method)) return null;
   if (!["GET", "HEAD"].includes(request.method) || /^\/api(?:\/|$)/i.test(url.pathname)) return denied();
   // A fixed nonempty harmless fragment replaces any incoming browser fragment.
   // Next's redirect parse/format pipeline strips a literal empty '#'.

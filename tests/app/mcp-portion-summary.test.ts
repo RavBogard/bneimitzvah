@@ -113,8 +113,10 @@ describe("portion summary tools", () => {
     for (const query of ["reading=Vayera", "reading=shabbat-shekalim", "reading=vayera&revision=1", "reading=vayera&status=draft", "ref=Genesis%2018:1"])
       expect((await route(`/api/public/portion-summary?${query}`)).status, query).toBe(400);
     expect((await route("/api/public/portion-summary?reading=vayera")).headers.get("vercel-cdn-cache-control")).toContain("s-maxage=300");
-    // The offline pack may hold no portion summary route of its own (N24 widens packs only through this same route).
-    expect(packAssetAllowed("/api/public/portion-summary?reading=vayera")).toBe(false);
+    // N24: the offline pack may hold this same public route (approved revisions only) and no other portion summary route: never the staff route or a draft path.
+    expect(packAssetAllowed("/api/public/portion-summary?reading=vayera")).toBe(true);
+    for (const path of ["/api/portion-summary?reading=vayera", "/api/portion-summary/drafts?reading=vayera", "/api/public/portion-summary/draft?reading=vayera", "/api/admin/portion-summary?reading=vayera", "/api/public/portion-summary"])
+      expect(packAssetAllowed(path), path).toBe(false);
 
     const listed = await json("list_portion_summaries", {});
     expect(listed.summaries).toEqual([expect.objectContaining({ reading: "vayera", revision: 1, status: "draft", summary: SUMMARY,

@@ -1,9 +1,9 @@
-import { HINT_DISMISSED_KEY, isLoopbackOrigin, SEAM_KEY, TORAH_ORIGIN } from "./policy";
+import { HINT_DISMISSED_KEY, isLoopbackOrigin, isOfflineOrigin, SEAM_KEY } from "./policy";
 
 /**
  * Where the page is running, for the install hint and the offline runtime (§3.1, §3.9).
- * - `origin`: the torah origin, or loopback with the test seam set (§6.2). Anywhere else (beitmitzvah, previews,
- *   aliases) the whole installable app is inert: no manifest link, no worker, no pack, no hint.
+ * - `origin`: one of the two offline origins, torah and beitmitzvah (1.9 N24), or loopback with the test seam set (§6.2).
+ *   Anywhere else (previews, aliases) the whole installable app is inert: no manifest link, no worker, no pack, no hint.
  * - `installed`: running as the installed app (display-mode standalone, or iOS's navigator.standalone).
  * - `device`: iPhone and iPad get their own steps (iPad: MacIntel with maxTouchPoints > 1, as iPadOS reports).
  */
@@ -16,7 +16,7 @@ type Env = Readonly<{
 }>;
 export function detectPlatform(env: Env): Platform {
   const loopback = isLoopbackOrigin(env.origin), seam = loopback ? env.seam : null;
-  const origin = env.origin === TORAH_ORIGIN || seam === "1" || seam === "browser";
+  const origin = isOfflineOrigin(env.origin) || seam === "1" || seam === "browser";
   const installed = seam === "1" || (seam !== "browser" && (env.matches("(display-mode: standalone)") || env.standalone === true));
   const ua = env.userAgent;
   const device: Device = /iPad/.test(ua) || (env.platform === "MacIntel" && env.maxTouchPoints > 1) ? "ipad"

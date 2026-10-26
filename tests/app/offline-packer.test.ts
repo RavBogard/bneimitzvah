@@ -15,9 +15,11 @@ import { syntheticResponse } from "../helpers/study";
 import { syntheticCommentaryFetch } from "../helpers/commentary";
 import { publicShortFixture, byteStream } from "./reference-public-short-fixture";
 import { askOwner, coursePackCurrent, openOffline, ownerPackKey, PackStopped, parseOwnerAnswer, renewPack, type PackerIo } from "../../src/lib/offline/packer";
-import { readIndex, sweep, writeIndex } from "../../src/lib/offline/pack-index";
-import { EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, packAssetAllowed, parsePackIndex, WINDOW_MS, type Pack } from "../../src/lib/offline/policy";
+import { purgeOffline, readIndex, sweep, writeIndex } from "../../src/lib/offline/pack-index";
+import { BEIT_MITZVAH_ORIGIN, EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, packAssetAllowed, parsePackIndex, WINDOW_MS, type Pack } from "../../src/lib/offline/policy";
 import { publicReadingPath, publicShortPath, publicTextPath } from "../../src/components/portal/public-reading/urls";
+import { publicAliyotPath } from "../../src/components/portal/print/api";
+import { portionSummaryPath } from "../../src/lib/portion-summary/reading";
 import { coursePassages } from "../../src/components/learn/verses-api";
 import { lookAlikeRefs, MELODIES } from "../../src/lib/learn/course";
 
@@ -33,15 +35,17 @@ class FakeCache {
 }
 class FakeCaches { stores = new Map<string, FakeCache>(); async open(name: string) { if (!this.stores.has(name)) this.stores.set(name, new FakeCache()); return this.stores.get(name)!; } async has(name: string) { return this.stores.has(name); } async delete(name: string) { return this.stores.delete(name); } async keys() { return [...this.stores.keys()]; } }
 
-async function harness(options: { pocketTorah?: boolean } = {}) {
+async function harness(options: { pocketTorah?: boolean; origin?: string; parashah?: string; portionSummary?: PublicRuntime["portionSummary"] } = {}) {
+  const base = options.origin ?? origin;
   const calendar = async (value: string, cal: "diaspora" | "israel") => ({ fetchedAt: Date.now(), snapshot: { date: parseCeremonyDate(value), calendar: cal, classification: "regular" as const,
-    reading: { parashah: "Synthetic portion", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1 as const, ref: "Genesis 1:1-2:3" }], triennial: null }, haftarah: "Isaiah 1:1-3" } });
+    reading: { parashah: options.parashah ?? "Synthetic portion", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1 as const, ref: "Genesis 1:1-2:3" }], triennial: null }, haftarah: "Isaiah 1:1-3" } });
   const upstream = vi.fn<typeof globalThis.fetch>(async url => syntheticResponse(decodeURIComponent(new URL(url instanceof Request ? url.url : url).pathname.split("/").at(-1)!)));
   const source = publicShortFixture(), catalog = parseReferenceCatalog(JSON.parse(new TextDecoder().decode(source.parent)))!;
   const short = await createShortSourceManifestLoader({ sha256: source.manifestSHA256, parentCatalogSHA256: source.parentCatalogSHA256, parentCatalogBytes: source.parent, get: async () => byteStream(source.manifest) })();
   const service = createPublicReadingService({ loadReading: calendar, loadText: createSefariaStudyReader({ fetch: upstream, verseCounts: TANAKH_VERSE_COUNTS }),
     stepSource: { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) }, pocketTorah: options.pocketTorah === false ? null : { loadCatalog: async () => catalog, loadManifest: async () => short } });
-  const runtime: PublicRuntime = { resolveTenant: async () => undefined, reading: service, commentary: createSefariaCommentaryReader({ fetch: syntheticCommentaryFetch() as typeof globalThis.fetch }), ...unavailableExtras };
+  const runtime: PublicRuntime = { resolveTenant: async () => undefined, reading: service, commentary: createSefariaCommentaryReader({ fetch: syntheticCommentaryFetch() as typeof globalThis.fetch }), ...unavailableExtras,
+    ...(options.portionSummary ? { portionSummary: options.portionSummary } : {}) };
   const dispatch = createHttpDispatcher(async () => { throw new Error("The session runtime must not be reached"); }, async action => action(runtime));
   const requests: { url: string; init: RequestInit }[] = [];
   let clipBody: Uint8Array = source.body, status: ((url: string) => number | null) = () => null, marked = false;
@@ -51,14 +55,14 @@ async function harness(options: { pocketTorah?: boolean } = {}) {
     if (forced) return new Response(null, { status: forced });
     let response: Response;
     if (new URL(url).pathname === source.source.path) response = new Response(clipBody.slice(), { headers: { "content-type": "audio/mpeg", "x-reference-license": "CC-BY-SA-3.0" } });
-    else response = await dispatch(new Request(url.replace(origin, source.origin)));
+    else response = await dispatch(new Request(url.replace(base, source.origin)));
     if (marked) { const headers = new Headers(response.headers); headers.set(OFFLINE_HEADER, "1"); response = new Response(response.body, { status: response.status, headers }); }
     Object.defineProperty(response, "url", { value: url });
     return response;
   }) as unknown as typeof globalThis.fetch;
   const caches = new FakeCaches();
   let now = NOW, quota = 10 ** 9;
-  const io: PackerIo = { origin, fetch, caches: caches as unknown as CacheStorage, now: () => now, estimate: async () => ({ usage: 0, quota }) };
+  const io: PackerIo = { origin: base, fetch, caches: caches as unknown as CacheStorage, now: () => now, estimate: async () => ({ usage: 0, quota }) };
   return { io, caches, requests, fetch, source, setNow: (value: number) => { now = value; }, setQuota: (value: number) => { quota = value; },
     setClip: (value: Uint8Array) => { clipBody = value; }, setStatus: (value: (url: string) => number | null) => { status = value; }, setMarked: (value: boolean) => { marked = value; } };
 }
@@ -75,7 +79,7 @@ describe("This week", () => {
     expect(pack).toMatchObject({ key: `week:${date}`, owner: "public", label: "Synthetic portion", descriptor: { type: "week", date }, format: 1, renewedAt: NOW });
     expect(pack.expiresAt - pack.renewedAt).toBe(WINDOW_MS);
     expect([...pack.assets].sort()).toEqual([publicReadingPath(week), publicTextPath(week, "torah", 0), publicShortPath(week, "torah", 0), publicTextPath(torah, "torah", 0), publicShortPath(torah, "torah", 0),
-      publicTextPath(week, "haftarah", 0), publicShortPath(week, "haftarah", 0), publicTextPath(haftarah, "haftarah", 0), publicShortPath(haftarah, "haftarah", 0), h.source.source.path]
+      publicTextPath(week, "haftarah", 0), publicShortPath(week, "haftarah", 0), publicTextPath(haftarah, "haftarah", 0), publicShortPath(haftarah, "haftarah", 0), h.source.source.path, publicAliyotPath(date)]
       .map(path => new URL(path, origin)).map(url => url.pathname + url.search).sort());
     expect(pack.assets.every(packAssetAllowed)).toBe(true);
     const cache = await offline(h);
@@ -186,12 +190,19 @@ test("a course pack from an older set of fixed passages is not current, so the n
   expect(coursePackCurrent({ assets: pack.assets.filter(asset => asset !== first.pathname + first.search) }, origin)).toBe(false);
 });
 
-test("only PocketTorah short-v1 clips and the three public data routes can ever be pack assets (G3)", () => {
-  for (const asset of ["/reference-audio/short-v1/" + "a".repeat(64) + ".mp3", "/api/public/reading?date=2026-10-24", "/api/public/text?ref=Genesis+1%3A1&kind=torah&offset=0", "/api/public/reference/short?date=2026-10-24&kind=torah&offset=0"])
+test("only PocketTorah short-v1 clips and the named public data routes can ever be pack assets (G3)", () => {
+  for (const asset of ["/reference-audio/short-v1/" + "a".repeat(64) + ".mp3", "/api/public/reading?date=2026-10-24", "/api/public/text?ref=Genesis+1%3A1&kind=torah&offset=0", "/api/public/reference/short?date=2026-10-24&kind=torah&offset=0",
+    "/api/public/aliyot?date=2026-10-24", "/api/public/portion-summary?reading=vayera", "/api/public/portion-summary?reading=lech-lecha"])
     expect(packAssetAllowed(asset), asset).toBe(true);
   for (const asset of ["/reference-audio/generated/" + "a".repeat(64) + ".mp3", "/reference-audio/short-v1/" + "A".repeat(64) + ".mp3", "/reference-audio/short-v1/" + "a".repeat(64) + ".mp3?x=1",
     "/reference-audio/voice/alto.mp3", "/api/public/reference/finkel/media/" + "a".repeat(64) + ".mp3", "/api/public/word-aids?date=2026-10-24&kind=torah&verse=0", "/api/public/commentary?work=rashi&chapter=Genesis+1",
-    "/api/students/s1/recordings", "/api/session", "/api/learn/progress", "/api/public/reading", "//evil.test/api/public/reading?date=1", "https://evil.test/x", "/api/public/text?x=1#y"])
+    "/api/students/s1/recordings", "/api/session", "/api/learn/progress", "/api/public/reading", "/api/public/aliyot", "/api/public/portion-summary",
+    "/api/admin/portion-summary?reading=vayera", "/api/portion-summary?reading=vayera", "/api/public/portion-summary/draft?reading=vayera", "/api/public/discussions?reading=vayera",
+    // Exactly one known parameter: no extra one (a draft or revision selector), no repeat, no other spelling.
+    "/api/public/portion-summary?reading=vayera&status=draft", "/api/public/portion-summary?reading=vayera&revision=1", "/api/public/portion-summary?reading=vayera&reading=noach",
+    "/api/public/portion-summary?status=draft&reading=vayera", "/api/public/portion-summary?reading=Vayera", "/api/public/portion-summary?reading=vayera%26status%3Ddraft", "/api/public/portion-summary?reading=",
+    "/api/public/portion-summary?reading=-vayera", "/api/public/portion-summary?ref=Genesis+18%3A1", "/api/public/aliyot?date=2026-10-24&date=2026-10-31", "/api/public/aliyot?date=2026-10-24&x=1",
+    "/api/public/aliyot?date=2026-10-24T00", "/api/public/aliyot?ref=Genesis+1%3A1", "//evil.test/api/public/reading?date=1", "https://evil.test/x", "/api/public/text?x=1#y"])
     expect(packAssetAllowed(asset), asset).toBe(false);
 });
 
@@ -318,5 +329,112 @@ describe("owner packs (A2): the person's own readings, and the purge on an accou
     // The label it becomes still fits the stored index.
     const pack = { key: "ref:torah:0", owner: A, label: emoji, descriptor: { type: "ref", kind: "torah", ref: "Genesis 1:1-5" }, assets: [], bytes: 0, renewedAt: 1, expiresAt: 2, format: 1 };
     expect(parsePackIndex({ format: 1, owner: A, packs: [pack] }).packs).toHaveLength(1);
+  });
+});
+
+describe("N24: on the beitmitzvah origin (decision 14) the learner's assigned reading is packed, and leaves with the account", () => {
+  const A = "A".repeat(43), B = "B".repeat(43), assigned = { kind: "torah" as const, ref: "Genesis 1:1-3", name: null };
+  const own = (owner: string) => async () => ({ state: "owner" as const, owner, packs: [assigned] });
+  const refPack = async (h: Awaited<ReturnType<typeof harness>>) => (await packs(h)).find(row => row.descriptor.type === "ref");
+
+  test("packed under its owner from the public routes only, with no cookie, on the beitmitzvah origin itself", async () => {
+    const h = await harness({ origin: BEIT_MITZVAH_ORIGIN });
+    await openOffline({ ...h.io, owner: own(A) });
+    const pack = await refPack(h), selector = { by: "ref" as const, ref: "Genesis 1:1-3", kind: "torah" as const };
+    expect(pack).toMatchObject({ key: ownerPackKey("torah", "Genesis 1:1-3"), owner: A, descriptor: { type: "ref", kind: "torah", ref: "Genesis 1:1-3" } });
+    expect(pack!.assets).toEqual(expect.arrayContaining([publicReadingPath(selector), publicTextPath(selector, "torah", 0)].map(path => { const url = new URL(path, BEIT_MITZVAH_ORIGIN); return url.pathname + url.search; })));
+    // Only the public reading routes and PocketTorah short clips: no private route, nothing generated (G3).
+    expect(pack!.assets.every(packAssetAllowed)).toBe(true);
+    expect(pack!.assets.every(asset => /^\/api\/public\/(?:reading|text|reference\/short)\?|^\/reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$/.test(asset))).toBe(true);
+    // Every pack request went to this origin with no cookie; the private endpoint is asked only through io.owner.
+    expect(h.requests.length).toBeGreaterThan(0);
+    expect(h.requests.every(row => row.url.startsWith(BEIT_MITZVAH_ORIGIN + "/") && row.init.credentials === "omit")).toBe(true);
+  });
+
+  test("sign-out deletes it (and every pack) at once; a later open signed out keeps none of it", async () => {
+    const h = await harness({ origin: BEIT_MITZVAH_ORIGIN });
+    await openOffline({ ...h.io, owner: own(A) });
+    expect(await refPack(h)).toBeDefined();
+    vi.stubGlobal("caches", h.caches);
+    try { await purgeOffline(); } finally { vi.unstubAllGlobals(); }
+    expect(await h.caches.has(OFFLINE_CACHE)).toBe(false);
+    await openOffline({ ...h.io, owner: async () => ({ state: "signed-out" as const }) });
+    expect(await refPack(h)).toBeUndefined();
+    expect((await readIndex((await offline(h)) as unknown as Cache)).owner).toBeNull();
+  });
+
+  test("another account on the same device never sees it: the whole cache goes before the new owner's packs", async () => {
+    const h = await harness({ origin: BEIT_MITZVAH_ORIGIN });
+    await openOffline({ ...h.io, owner: own(A) });
+    await openOffline({ ...h.io, owner: async () => ({ state: "owner" as const, owner: B, packs: [] }) });
+    const stored = await readIndex((await offline(h)) as unknown as Cache);
+    expect(stored.owner).toBe(B);
+    expect(stored.packs.some(row => row.owner === A || row.descriptor.type === "ref")).toBe(false);
+    // None of the learner's own pages is left in the cache (This week and the course were fetched again for the new owner).
+    const keys = new Set((await offline(h)).entries.keys()), selector = { by: "ref" as const, ref: "Genesis 1:1-3", kind: "torah" as const };
+    for (const path of [publicReadingPath(selector), publicTextPath(selector, "torah", 0)]) expect(keys.has(new URL(path, BEIT_MITZVAH_ORIGIN).href), path).toBe(false);
+  });
+});
+
+describe("N24: the week's aliyot and its approved portion summary go in This week, as the reader asks for them", () => {
+  const SLUG = "vayera";
+  const approved = Object.freeze({ reading: SLUG, revision: 2, summary: "Synthetic summary paragraph.", outline: [1, 2, 3, 4, 5, 6, 7].map(aliyah => ({ aliyah, line: `Synthetic line ${aliyah}` })),
+    credit: "Synthetic credit", approvedAt: "2026-10-20T12:00:00.000Z" });
+  const keyOf = (path: string) => { const url = new URL(path, origin); return url.pathname + url.search; };
+
+  test("the approved summary is packed byte for byte as the public route served it, beside the aliyot, with no cookie", async () => {
+    const asked: string[] = [];
+    const h = await harness({ parashah: "Vayera", portionSummary: async reading => { asked.push(reading); return approved as never; } });
+    expect(await renewPack(h.io, { type: "week", date }, signal())).toBe("saved");
+    const [pack] = await packs(h);
+    expect(pack.assets).toEqual(expect.arrayContaining([keyOf(publicAliyotPath(date)), keyOf(portionSummaryPath(SLUG))]));
+    expect(pack.assets.every(packAssetAllowed)).toBe(true);
+    expect(asked).toEqual([SLUG]);
+    const stored = await (await offline(h)).match(origin + portionSummaryPath(SLUG));
+    expect(await stored!.json()).toEqual({ reading: SLUG, summary: approved });
+    const aliyot = await (await (await offline(h)).match(origin + publicAliyotPath(date)))!.json();
+    expect(aliyot.date).toBe(date); expect(aliyot.full[0].ref).toBe("Genesis 1:1-2:3");
+    expect(h.requests.filter(row => /aliyot|portion-summary/.test(row.url)).every(row => row.init.credentials === "omit")).toBe(true);
+  });
+
+  test("a parashah with no approved summary keeps the route's null answer; a reading that is no parashah asks for none", async () => {
+    const h = await harness({ parashah: "Vayera" });
+    await renewPack(h.io, { type: "week", date }, signal());
+    expect(await (await (await offline(h)).match(origin + portionSummaryPath(SLUG)))!.json()).toEqual({ reading: SLUG, summary: null });
+    const other = await harness();
+    await renewPack(other.io, { type: "week", date }, signal());
+    expect(other.requests.some(row => row.url.includes("portion-summary"))).toBe(false);
+  });
+
+  test("anything beyond the approved shape (a draft's fields) is never packed, and This week is still saved", async () => {
+    const nested = [{ outline: approved.outline.map((row, at) => at === 0 ? { ...row, draft: "Synthetic unreviewed line" } : row) }, { credit: 7 }, { credit: null }];
+    for (const extra of [{ status: "draft" }, { draft: "Synthetic unreviewed text" }, { reviewed: false }, ...nested]) {
+      const h = await harness({ parashah: "Vayera", portionSummary: async () => ({ ...approved, ...extra }) as never });
+      expect(await renewPack(h.io, { type: "week", date }, signal())).toBe("saved");
+      const [pack] = await packs(h);
+      expect(pack.assets.some(asset => asset.includes("portion-summary")), JSON.stringify(extra)).toBe(false);
+      expect([...(await offline(h)).entries.keys()].some(key => key.includes("portion-summary")), JSON.stringify(extra)).toBe(false);
+    }
+  });
+
+  test("a failed aliyot or summary answer is left out without losing the week; a 429 still stops the pack", async () => {
+    const h = await harness({ parashah: "Vayera", portionSummary: async () => approved as never });
+    h.setStatus(url => /aliyot|portion-summary/.test(url) ? 503 : null);
+    expect(await renewPack(h.io, { type: "week", date }, signal())).toBe("saved");
+    expect((await packs(h))[0].assets.some(asset => /aliyot|portion-summary/.test(asset))).toBe(false);
+    const limited = await harness({ parashah: "Vayera", portionSummary: async () => approved as never });
+    limited.setStatus(url => url.includes("aliyot") ? 429 : null);
+    await expect(renewPack(limited.io, { type: "week", date }, signal())).rejects.toEqual(new PackStopped("rate-limited"));
+  });
+
+  test("on beitmitzvah, sign-out deletes them with every other pack", async () => {
+    const h = await harness({ origin: BEIT_MITZVAH_ORIGIN, parashah: "Vayera", portionSummary: async () => approved as never });
+    await openOffline({ ...h.io, owner: async () => ({ state: "owner" as const, owner: "A".repeat(43), packs: [] }) });
+    const cache = await offline(h);
+    expect(cache.entries.has(BEIT_MITZVAH_ORIGIN + portionSummaryPath(SLUG))).toBe(true);
+    expect(cache.entries.has(BEIT_MITZVAH_ORIGIN + publicAliyotPath(date))).toBe(true);
+    vi.stubGlobal("caches", h.caches);
+    try { await purgeOffline(); } finally { vi.unstubAllGlobals(); }
+    expect(await h.caches.has(OFFLINE_CACHE)).toBe(false);
   });
 });

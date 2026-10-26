@@ -18,8 +18,8 @@ const OWNER_KEY = new RegExp(POLICY.ownerKey);
 const OWNER_ONLY_PATH = typeof POLICY.ownerOnlyPath === "string" && POLICY.ownerOnlyPath ? new RegExp(POLICY.ownerOnlyPath) : /^\/api\/public\/evening-text$/;
 const OWN_ORIGIN = self.location.origin;
 const LOOPBACK = /^http:\/\/(?:127\.0\.0\.1|localhost)(?::\d{1,5})?$/;
-/** Off (the tombstone) when PORTAL_OFFLINE_ENABLED is "false", or anywhere but the torah origin and loopback. */
-const ACTIVE = POLICY.enabled === true && (OWN_ORIGIN === POLICY.origin || LOOPBACK.test(OWN_ORIGIN));
+/** Off (the tombstone) when PORTAL_OFFLINE_ENABLED is "false", or anywhere but the two named origins (torah, beitmitzvah) and loopback. */
+const ACTIVE = POLICY.enabled === true && ((Array.isArray(POLICY.origins) && POLICY.origins.includes(OWN_ORIGIN)) || LOOPBACK.test(OWN_ORIGIN));
 
 async function clearAll() {
   const keys = await caches.keys();

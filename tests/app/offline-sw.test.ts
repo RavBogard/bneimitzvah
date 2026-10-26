@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import vm from "node:vm";
 import { workerSource } from "../../src/lib/offline/worker-source";
-import { CLIP_PATH, DAY_MS, INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, PACK_DATA_PATH, SHELL_LIMITS, SKEW_MS, STATIC_PATH, TORAH_ORIGIN, WINDOW_MS, workerPolicy } from "../../src/lib/offline/policy";
+import { CLIP_PATH, DAY_MS, INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, PACK_DATA_PATH, SHELL_LIMITS, SKEW_MS, STATIC_PATH, TORAH_ORIGIN, BEIT_MITZVAH_ORIGIN, WINDOW_MS, workerPolicy } from "../../src/lib/offline/policy";
 import { SHELL_PAGES } from "../../src/lib/offline/shell";
 
 // The service worker in node:vm with a fake self, caches and fetch (1.5 plan §6.1). Synthetic bodies only.
@@ -26,7 +26,7 @@ class FakeCaches {
   async keys() { return [...this.stores.keys()]; }
 }
 type Handler = (event: unknown) => void;
-async function load(options: { enabled?: boolean; origin?: string; fetch?: (request: Request) => Promise<Response>; caches?: FakeCaches } = {}) {
+async function load(options: { enabled?: boolean; origin?: string; origins?: readonly string[]; fetch?: (request: Request) => Promise<Response>; caches?: FakeCaches } = {}) {
   const origin = options.origin ?? ORIGIN, listeners = new Map<string, Handler[]>(), caches = options.caches ?? new FakeCaches(origin);
   const network = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : new Request(new URL(String(input), origin), init);
@@ -36,7 +36,7 @@ async function load(options: { enabled?: boolean; origin?: string; fetch?: (requ
   const self = { location: new URL(`${origin}/sw.js`), addEventListener: (type: string, handler: Handler) => listeners.set(type, [...(listeners.get(type) ?? []), handler]),
     registration: { unregister: vi.fn(async () => true) }, clients: { claim: vi.fn(async () => undefined) }, skipWaiting: vi.fn(async () => undefined), navigator: {} };
   const context = vm.createContext({ self, caches, fetch: network, Response, Headers, Request, URL, TextDecoder, TextEncoder, console });
-  vm.runInContext(await workerSource({ build: "abc1234", enabled: options.enabled ?? true }), context);
+  vm.runInContext(await workerSource({ build: "abc1234", enabled: options.enabled ?? true, ...(options.origins ? { origins: options.origins } : {}) }), context);
   async function lifecycle(type: "install" | "activate") {
     const waits: Promise<unknown>[] = [];
     for (const handler of listeners.get(type) ?? []) handler({ waitUntil: (work: Promise<unknown>) => waits.push(work) });
@@ -73,7 +73,7 @@ describe("the worker's constants", () => {
     const policy = vm.runInContext("POLICY", w.context);
     expect(JSON.parse(JSON.stringify(policy))).toEqual(JSON.parse(JSON.stringify(workerPolicy({ build: "abc1234", enabled: true, shellPages: SHELL_PAGES }))));
     expect(Object.isFrozen(policy)).toBe(true);
-    expect(policy).toMatchObject({ origin: ORIGIN, offlineCache: OFFLINE_CACHE, indexKey: INDEX_KEY, header: OFFLINE_HEADER, windowMs: 14 * DAY_MS, skewMs: SKEW_MS, shellLimits: SHELL_LIMITS,
+    expect(policy).toMatchObject({ origins: [ORIGIN, BEIT_MITZVAH_ORIGIN], offlineCache: OFFLINE_CACHE, indexKey: INDEX_KEY, header: OFFLINE_HEADER, windowMs: 14 * DAY_MS, skewMs: SKEW_MS, shellLimits: SHELL_LIMITS,
       staticPath: STATIC_PATH.source, clipPath: CLIP_PATH.source, packDataPath: PACK_DATA_PATH.source, shellCache: "crc-shell-abc1234" });
     expect(policy.shellPages).toEqual(expect.arrayContaining(["/read", "/offline", "/learn", "/learn/review", "/learn/about", "/learn/torah-sof-pasuk",
       // 1.6: Quick ten, one page per melody.
@@ -245,12 +245,64 @@ describe("install, activate and the tombstone", () => {
     expect(await caches.keys()).toEqual(["someone-elses-cache"]);
     expect(w.self.registration.unregister).toHaveBeenCalled();
   });
-  test("on any origin but torah or loopback the worker is the tombstone", async () => {
-    for (const origin of ["https://beitmitzvah.centralreform.org", "https://bneimitzvah.vercel.app", "https://torah.centralreform.org.evil.test"]) {
+  test("on any origin but torah, beitmitzvah or loopback the worker is the tombstone", async () => {
+    for (const origin of ["https://bneimitzvah.vercel.app", "https://bneimitzvah.centralreform.org", "https://torah.centralreform.org.evil.test", "https://beitmitzvah.centralreform.org.evil.test", "http://beitmitzvah.centralreform.org"]) {
       const w = await load({ origin });
       expect(w.listeners.has("fetch"), origin).toBe(false);
       await w.lifecycle("activate"); expect(w.self.registration.unregister).toHaveBeenCalled();
     }
     expect((await load({ origin: "http://127.0.0.1:3187" })).listeners.has("fetch")).toBe(true);
+    for (const origin of [ORIGIN, BEIT_MITZVAH_ORIGIN]) expect((await load({ origin })).listeners.has("fetch"), origin).toBe(true);
+  });
+  test("N24 review F1: after a cutover the alias's /sw.js is the tombstone, which deletes its packs and unregisters; the canonical one stays live", async () => {
+    for (const [canonical, alias] of [[ORIGIN, BEIT_MITZVAH_ORIGIN], [BEIT_MITZVAH_ORIGIN, ORIGIN]]) {
+      const caches = new FakeCaches(alias);
+      for (const name of ["crc-shell-abc", OFFLINE_CACHE, "someone-elses-cache"]) await caches.open(name);
+      const w = await load({ origin: alias, origins: [canonical], caches });
+      expect(w.listeners.has("fetch"), alias).toBe(false);
+      await w.lifecycle("install"); await w.lifecycle("activate");
+      expect(await caches.keys()).toEqual(["someone-elses-cache"]);
+      expect(w.self.registration.unregister).toHaveBeenCalled();
+      expect((await load({ origin: canonical, origins: [canonical] })).listeners.has("fetch"), canonical).toBe(true);
+    }
+  });
+});
+
+describe("N24: the beitmitzvah origin (decision 14) works exactly like torah", () => {
+  const A = "A".repeat(43), B = "B".repeat(43), REF = "/api/public/text?ref=Genesis+1%3A1-3&kind=torah&offset=0", READING = "/api/public/reading?ref=Genesis+1%3A1-3&kind=torah";
+  const ownPack = (owner: string) => ({ key: "ref:torah:0123456789abcdef", owner, label: "", descriptor: { type: "ref", kind: "torah", ref: "Genesis 1:1-3" }, assets: [READING, REF, CLIP],
+    bytes: 1, renewedAt: Date.now(), expiresAt: Date.now() + WINDOW_MS, format: 1 });
+  async function installedOnBeit(owner: string) {
+    const caches = new FakeCaches(BEIT_MITZVAH_ORIGIN);
+    await seed(caches, [], { [REF]: json({ own: true }), [READING]: json({ reading: true }) });
+    await (await caches.open(OFFLINE_CACHE)).put(INDEX_KEY, new Response(JSON.stringify({ format: 1, owner, packs: [ownPack(owner)] }), { headers: { "content-type": "application/json" } }));
+    return load({ origin: BEIT_MITZVAH_ORIGIN, caches });
+  }
+  test("with the network cut, the learner's assigned reading opens from the owner pack; private routes are never answered", async () => {
+    const w = await installedOnBeit(A);
+    expect(w.listeners.has("fetch")).toBe(true);
+    for (const path of [READING, REF]) {
+      const hit = await w.request(path);
+      expect(hit?.status, path).toBe(200); expect(hit!.headers.get(OFFLINE_HEADER), path).toBe("1");
+    }
+    expect((await w.request(CLIP))!.headers.get(OFFLINE_HEADER)).toBe("1");
+    // The private endpoint that names the learner's readings, and every other signed-in route, are the browser's own business.
+    for (const path of ["/api/offline/packs", "/api/session", "/api/students", "/api/learn/progress", "/api/portion-summary?reading=vayera"]) expect(await w.request(path), path).toBeNull();
+  });
+  test("with the network cut, This week's aliyot and approved portion summary open from the public pack", async () => {
+    const ALIYOT = "/api/public/aliyot?date=2026-10-24", SUMMARY = "/api/public/portion-summary?reading=vayera";
+    const caches = new FakeCaches(BEIT_MITZVAH_ORIGIN);
+    await seed(caches, [pack(Date.now(), [DATA, ALIYOT, SUMMARY])], { [ALIYOT]: json({ aliyot: true }), [SUMMARY]: json({ reading: "vayera", summary: null }) });
+    const w = await load({ origin: BEIT_MITZVAH_ORIGIN, caches });
+    for (const path of [ALIYOT, SUMMARY]) { const hit = await w.request(path); expect(hit?.status, path).toBe(200); expect(hit!.headers.get(OFFLINE_HEADER), path).toBe("1"); }
+  });
+  test("after the sign-out purge, or with another account's index, nothing of the learner's is served", async () => {
+    const w = await installedOnBeit(A);
+    await w.caches.delete(OFFLINE_CACHE);
+    await expect(w.request(REF)).rejects.toThrow();
+    expect(await w.caches.has(OFFLINE_CACHE)).toBe(false);
+    const other = await installedOnBeit(A);
+    await (await other.caches.open(OFFLINE_CACHE)).put(INDEX_KEY, new Response(JSON.stringify({ format: 1, owner: B, packs: [ownPack(A)] }), { headers: { "content-type": "application/json" } }));
+    await expect(other.request(REF)).rejects.toThrow();
   });
 });

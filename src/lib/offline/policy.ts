@@ -6,8 +6,24 @@
  * (static pages and their build files), the three public reading routes, the public manifest, and
  * PocketTorah's content-addressed short clips. No private API, no recording, no generated chant.
  */
-/** The only origin that gets a manifest link, a worker or a pack (§3.1). Loopback is the test seam. */
+/** The intended main address (§3.1). */
 export const TORAH_ORIGIN = "https://torah.centralreform.org";
+/** The live address (Daniel's decision 14, 1.9 N24, 2026-10-24: "Work on both"). */
+export const BEIT_MITZVAH_ORIGIN = "https://beitmitzvah.centralreform.org";
+/**
+ * The only origins that get a manifest link, a worker or a pack: exactly these two, compared as whole strings, never by
+ * suffix. Loopback is the test seam. Each origin has its own Cache Storage and its own host-only session cookie, so a pack
+ * made on one is never served or seen on the other, and the sign-out and account-switch purges run on the origin they belong to.
+ * Previews and other hosts stay inert. Once production selects a canonical origin (BETTER_AUTH_URL), the worker names only that
+ * one (`workerOrigins`): the other becomes an alias whose pages redirect but whose /sw.js is still served, as the tombstone, so a
+ * worker installed there before the cutover deletes its caches and unregisters at its next update check.
+ */
+export const OFFLINE_ORIGINS: readonly string[] = Object.freeze([TORAH_ORIGIN, BEIT_MITZVAH_ORIGIN]);
+export const isOfflineOrigin = (origin: unknown): boolean => typeof origin === "string" && OFFLINE_ORIGINS.includes(origin);
+/** The origins the worker may run on: the selected canonical origin alone when one is selected (and is one of the two), else both. */
+export function workerOrigins(selected: string | null): readonly string[] {
+  return Object.freeze(selected !== null && isOfflineOrigin(selected) ? [selected] : [...OFFLINE_ORIGINS]);
+}
 export const SHELL_CACHE_PREFIX = "crc-shell-";
 export const OFFLINE_CACHE = "crc-offline-v1";
 /** Every cache this app ever makes starts with this; the tombstone deletes them all. */
@@ -42,8 +58,11 @@ export const STATIC_PATH = /^\/(?:_next\/static|fonts)\//;
 export const STATIC_UNSAFE = /%2f|%5c|%2e|\/\.\.?(?:\/|$)|\/\//i;
 /** PocketTorah short clips only (G3): exactly the content-addressed short-v1 path, no query. */
 export const CLIP_PATH = /^\/reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$/;
-/** The public reading routes a pack may hold (§3.2): reading, text and short-reference pages, and (2.0 SC7) the evening lessons' text. */
-export const PACK_DATA_PATH = /^\/api\/public\/(?:reading|text|reference\/short|evening-text)$/;
+/**
+ * The public reading routes a pack may hold (§3.2): reading, text and short-reference pages, (2.0 SC7) the evening lessons' text, and
+ * (1.9 N24) the week's calendar aliyot and its approved portion summary, the public route that never serves a draft.
+ */
+export const PACK_DATA_PATH = /^\/api\/public\/(?:reading|text|reference\/short|evening-text|aliyot|portion-summary)$/;
 /**
  * A route only an owner pack may hold (2.0 SC7): the CRC siddur's evening text. Daniel, 2026-10-25: "Yes, for signed-in CRC people";
  * a signed-out visitor's device keeps none of it. The private /api/offline/packs names the evening pack only for a signed-in CRC person,
@@ -54,11 +73,18 @@ export const OWNER_ONLY_PATH = /^\/api\/public\/evening-text$/;
 const pathOf = (asset: string) => { const query = asset.indexOf("?"); return query < 0 ? asset : asset.slice(0, query); };
 export const ownerOnlyAsset = (asset: string): boolean => typeof asset === "string" && OWNER_ONLY_PATH.test(pathOf(asset));
 
+const EXACT_QUERY: Readonly<Record<string, RegExp>> = Object.freeze({
+  "/api/public/portion-summary": /^\?reading=[a-z0-9]{1,80}(?:-[a-z0-9]{1,80}){0,8}$/,
+  "/api/public/aliyot": /^\?date=\d{4}-\d{2}-\d{2}$/,
+});
 /** May this same-origin path (with its query) ever enter a pack? The G3 and private-data guard. */
 export function packAssetAllowed(asset: string): boolean {
   if (typeof asset !== "string" || !asset.startsWith("/") || asset.startsWith("//") || asset.length > 2048 || /[\s#\\]/.test(asset)) return false;
   const query = asset.indexOf("?"), path = query < 0 ? asset : asset.slice(0, query), search = query < 0 ? "" : asset.slice(query);
   if (CLIP_PATH.test(path)) return search === "";
+  // 1.9 N24: these two take exactly one known parameter, as the reader asks for them: a parashah slug, or a date.
+  const exact = EXACT_QUERY[path];
+  if (exact) return exact.test(search);
   return PACK_DATA_PATH.test(path) && search.length > 1;
 }
 
@@ -133,9 +159,9 @@ export function parsePackIndex(value: unknown): PackIndex {
 export const isLoopbackOrigin = (origin: string) => /^http:\/\/(?:127\.0\.0\.1|localhost)(?::\d{1,5})?$/.test(origin);
 
 /** The constants the worker runs on, written into the head of /sw.js by its route. */
-export function workerPolicy(input: { build: string; enabled: boolean; shellPages: readonly string[] }) {
+export function workerPolicy(input: { build: string; enabled: boolean; shellPages: readonly string[]; origins?: readonly string[] }) {
   return Object.freeze({
-    build: /^[a-z0-9]{1,64}$/i.test(input.build) ? input.build : "dev", enabled: input.enabled === true, origin: TORAH_ORIGIN,
+    build: /^[a-z0-9]{1,64}$/i.test(input.build) ? input.build : "dev", enabled: input.enabled === true, origins: Object.freeze((input.origins ?? OFFLINE_ORIGINS).filter(isOfflineOrigin)),
     shellCache: SHELL_CACHE_PREFIX + (/^[a-z0-9]{1,64}$/i.test(input.build) ? input.build : "dev"), shellPrefix: SHELL_CACHE_PREFIX,
     offlineCache: OFFLINE_CACHE, family: CACHE_FAMILY, indexKey: INDEX_KEY, header: OFFLINE_HEADER, windowMs: WINDOW_MS, skewMs: SKEW_MS,
     shellPages: Object.freeze([...input.shellPages]), shellAssets: [MANIFEST_PATH], shellLimits: SHELL_LIMITS, manifestPath: MANIFEST_PATH,

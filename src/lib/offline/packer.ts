@@ -10,10 +10,14 @@ import { BUDGET, OFFLINE_CACHE, OFFLINE_PACKS_PATH, OWNER_KEY, RENEW_AFTER_MS, O
 import { CRC_TENANT, EVENING_TEXT_UNITS } from "../service-course/course";
 import { parseEveningText } from "../service-course/text";
 import { eveningTextPath } from "../../components/learn/service/text-api";
+import { publicAliyotPath } from "../../components/portal/print/api";
+import { parsePortions } from "../print/portions";
+import { parashahSlug, portionSummaryPath } from "../portion-summary/reading";
+import { parsePortionSummary } from "../../components/portal/workspace/study/portion-summary-api";
 import { assetKey, inspectPack, packingStarted, purgeGeneration, readIndex, refreshOfflineState, setOfflineState, sweep, trackPacking, writeIndex, type PackState } from "./pack-index";
 
 /**
- * The packer (§3.3–§3.5). It runs in the page, never the worker, and only in the installed app on the torah origin.
+ * The packer (§3.3–§3.5). It runs in the page, never the worker, and only in the installed app on the torah or beitmitzvah origin.
  * Two public packs, both owner "public": This week (the week's reading, its text and short-reference pages, both by
  * date for Lein and by ref for Learn's This week, and every clip they name) and the Learn to lein course (F3: every
  * fixed course passage's text and short pages and clips). Everything is fetched with no cookie, three at a time.
@@ -104,6 +108,38 @@ async function fetchJson(io: PackerIo, path: string, signal: AbortSignal, plan: 
 }
 const parsed = <T>(work: () => T): T => { try { return work(); } catch { throw new PackStopped("failed"); } };
 
+/**
+ * A page the reader can do without (1.9 N24: the week's aliyot, its portion summary): stored only when it answered 200 and `accept`
+ * takes it; otherwise left out and the pack is still made, as the reader itself reads Full only or draws no summary without it.
+ * Decided here: neither may stop This week from being saved. A 429 or a purge still stops the pack.
+ */
+async function optionalJson(io: PackerIo, path: string, signal: AbortSignal, plan: Plan, generation: number, accept: (value: unknown) => boolean) {
+  const scratch: Plan = { label: "", json: new Map(), clips: new Map(), bytes: 0 };
+  let value: unknown;
+  try { value = await fetchJson(io, path, signal, scratch, generation); }
+  catch (error) { if (error instanceof PackStopped && error.reason === "failed") return; throw error; }
+  let ok = false;
+  try { ok = accept(value); } catch { ok = false; }
+  if (!ok) return;
+  for (const [key, response] of scratch.json) plan.json.set(key, response);
+  plan.bytes += scratch.bytes;
+}
+/** Exactly the public portion-summary answer: `{ reading, summary }`, the summary null or an approved revision's closed shape, never more. */
+const SUMMARY_KEYS = "approvedAt,credit,outline,reading,revision,summary";
+function approvedSummaryAnswer(value: unknown, slug: string): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).sort().join() !== "reading,summary") return false;
+  const summary = (value as { summary: unknown }).summary;
+  if (summary !== null) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary) || Object.keys(summary).sort().join() !== SUMMARY_KEYS) return false;
+    const row = summary as Record<string, unknown>;
+    if (typeof row.credit !== "string" || typeof row.summary !== "string" || typeof row.approvedAt !== "string" || !Array.isArray(row.outline)) return false;
+    if (!row.outline.every(item => !!item && typeof item === "object" && !Array.isArray(item) && Object.keys(item).sort().join() === "aliyah,line"
+      && typeof (item as Record<string, unknown>).line === "string")) return false;
+  }
+  parsePortionSummary(value, slug);
+  return true;
+}
+
 /** One passage: every text page and, with recordings on, every short-reference page and the clips they name. */
 async function passage(io: PackerIo, source: PublicSource, signal: AbortSignal, plan: Plan, generation: number) {
   const kind = source.passage.kind;
@@ -124,6 +160,10 @@ async function planWeek(io: PackerIo, date: string, signal: AbortSignal, generat
   const value = await fetchJson(io, publicReadingPath({ by: "date", date }), signal, plan, generation);
   const parsedWeek = parsed(() => parsePublicWeek(value, date));
   plan.label = parsedWeek.parashah ?? "week";
+  // The reader asks for these beside the week (view.tsx), by the same addresses: the calendar aliyot, and a parashah's approved summary.
+  await optionalJson(io, publicAliyotPath(date), signal, plan, generation, answer => parsePortions(answer, date) !== null);
+  const slug = parashahSlug(parsedWeek.parashah);
+  if (slug) await optionalJson(io, portionSummaryPath(slug), signal, plan, generation, answer => approvedSummaryAnswer(answer, slug));
   for (const kind of ["torah", "haftarah"] as const) {
     const source = weekSource(parsedWeek, kind); if (!source) continue;
     await passage(io, source, signal, plan, generation);

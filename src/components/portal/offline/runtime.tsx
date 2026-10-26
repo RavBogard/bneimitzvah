@@ -5,8 +5,8 @@ import { CACHE_FAMILY, MANIFEST_PATH, REOPEN_MS } from "../../../lib/offline/pol
 import { packingIdle, refreshOfflineState, setOfflineState } from "../../../lib/offline/pack-index";
 
 /**
- * The installable app's page side (§3.1), mounted once in the root layout. On any origin but torah (and the
- * loopback test seam) it does nothing at all: no manifest link, no worker, no pack. On torah it links the
+ * The installable app's page side (§3.1), mounted once in the root layout. On any origin but torah and beitmitzvah (and the
+ * loopback test seam) it does nothing at all: no manifest link, no worker, no pack. On those two it links the
  * manifest and the Apple touch icon; in the installed app it also registers /sw.js, keeps storage persistent
  * (persisted() on every open, persist() again when it is false), and renews the packs on every online open,
  * first asking the private /api/offline/packs whose own readings this device keeps (A2).
