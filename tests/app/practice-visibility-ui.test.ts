@@ -65,8 +65,8 @@ test("the student's disclosure renders only with the release gate open, the same
 });
 
 test("Daniel's Account line word for word, the parent line named and pronoun-free, and the parent's count line", () => {
-  expect(PRACTICE_DISCLOSURE.account).toBe("Your tutor sees which days you practised, which verses you opened, how you marked them, and in Learn to lein which phrases you can hear. Your parents see how you marked each verse. No one sees how long you practise or a score.");
-  expect(parentDisclosure("Noa")).toBe("Noa's tutor sees which days Noa practised, which verses Noa opened, how Noa marked them, and in Learn to lein which phrases Noa can hear. You see how Noa marked each verse. No one sees how long Noa practises or a score.");
+  expect(PRACTICE_DISCLOSURE.account).toBe("Your tutor sees which days you practised, which verses you opened, how you marked them and whether a parent was with you, and in Learn to lein which phrases you can hear and the two you mix up most. Your parents see how you marked each verse. No one sees how long you practise or a score.");
+  expect(parentDisclosure("Noa")).toBe("Noa's tutor sees which days Noa practised, which verses Noa opened, how Noa marked them and whether a parent was there, and in Learn to lein which phrases Noa can hear and the two Noa mixes up most. You see how Noa marked each verse. No one sees how long Noa practises or a score.");
   // No pronoun for the child ("them" is the verses).
   expect(PRACTICE_DISCLOSURE.parent).not.toMatch(/\b(he|she|they|his|her|hers|their|him)\b/i);
   expect(parentCountLine("Noa", { gotIt: 12, working: 3 })).toBe("Noa has marked 12 verses Got it and 3 Still working.");
