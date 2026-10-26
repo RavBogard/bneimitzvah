@@ -8,6 +8,7 @@ import { requireCookieMutation } from "../http/mutations";
 import type { CookieMutationRequest } from "../http/mutations";
 import { withTenantTransaction } from "../db/runtime";
 import * as data from "../data/invitations";
+import { isCeremonyDone } from "../data/ceremony-done";
 import type { InvitedRole } from "../data/invitations";
 import { createInvitationSecret, hashInvitationToken, invitationLifetimeMs, normalizedInvitationEmail } from "./tokens";
 
@@ -122,6 +123,8 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
       if (selection.studentId) {
         const student = await data.lockInvitationStudent(tx, actor.tenantId, selection.studentId);
         if (!student || student.disabledAt) throw new AccessDenied(404);
+        // N21: no parent or student invitation for a student whose ceremony is done (the UI hides it; the server refuses it).
+        if (await isCeremonyDone(tx, actor.tenantId, student.id)) throw new AccessDenied(404);
         if (selection.role === "student" && (studentParentContactMatches(student, email) || await data.mailboxHasParentIdentity(tx, actor.tenantId, email))) throw new AccessDenied(403);
       }
       const now = new Date();
@@ -159,6 +162,8 @@ export function createInvitationService<Q extends PgQueryResultHKT>(input: {
     if (previous.studentId) {
       const student = await data.lockInvitationStudent(tx, actor.tenantId, previous.studentId);
       if (!student || student.disabledAt) throw new AccessDenied(404);
+      // N21: Send again and Copy link are refused, like a new invitation, once the student's ceremony is done.
+      if (await isCeremonyDone(tx, actor.tenantId, student.id)) throw new AccessDenied(404);
       if (previous.role === "student" && (studentParentContactMatches(student, previous.email) || await data.mailboxHasParentIdentity(tx, actor.tenantId, previous.email))) throw new AccessDenied(403);
     }
     const now = new Date();

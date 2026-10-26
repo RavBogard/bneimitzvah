@@ -6,6 +6,7 @@ import { portalRoutesFixture } from "./portal-routes-fixture";
 import { AccessDenied } from "../../src/server/access/errors";
 import { INVITATION_LIFETIME_MS, PARENT_INVITATION_LIFETIME_MS } from "../../src/server/invitations/tokens";
 import { invitationMailText } from "../../src/server/mail/transport";
+import { createCeremonyDoneService } from "../../src/server/students/ceremony-done";
 import * as s from "../../src/server/db/index";
 
 // Release 1.9 N22 (decision 12; G13): parent links last 7 days, the email never names the child, "Copy link" rotates the
@@ -220,6 +221,25 @@ describe("Copy link", () => {
     expect((await f.call("/api/admin/invitations/needed", { who: "admin", body: {} })).status).toBe(405);
     expect((await f.call("/api/admin/invitations/needed", { who: "multi" })).status).toBe(403);
     expect((await f.call("/api/admin/invitations/needed?x=1", { who: "admin" })).status).toBe(400);
+  });
+});
+
+describe("Ceremony done", () => {
+  it("refuses a parent or student invitation, Send again and Copy link for a ceremony-done student, and changes nothing", async () => {
+    const f = await invites();
+    const pending = await f.invitations.issue(f.request("admin"), parent(f.students[0].id));
+    const revision = await f.owner(async () => (await f.db.select({ revision: s.student.revision }).from(s.student).where(eq(s.student.id, f.students[0].id)))[0].revision);
+    await createCeremonyDoneService({ access: f.service }).set(f.request("admin"), { mode: "admin", studentId: f.students[0].id, expectedRevision: revision });
+    const before = await everything(f), sent = f.delivered.length;
+    expect(await denied(() => f.invitations.issue(f.request("admin"), parent(f.students[0].id)))).toBe(true);
+    expect(await denied(() => f.invitations.issue(f.request("admin"), { mode: "admin", role: "student", studentId: f.students[0].id, email: "student-new@example.test" }))).toBe(true);
+    expect(await denied(() => f.invitations.copyLink(f.request("admin"), { mode: "admin", inviteId: pending.inviteId }))).toBe(true);
+    expect(await denied(() => f.invitations.reissue(f.request("admin"), { mode: "admin", inviteId: pending.inviteId }))).toBe(true);
+    expect(await everything(f)).toBe(before);
+    expect(f.delivered.length).toBe(sent);
+    // Other students and tutor invitations are unaffected.
+    await f.invitations.issue(f.request("admin"), parent(f.students[1].id));
+    await f.invitations.issue(f.request("admin"), { mode: "admin", role: "tutor", email: "tutor-new@example.test" });
   });
 });
 
