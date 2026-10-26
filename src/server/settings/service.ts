@@ -20,7 +20,12 @@ export type SettingsView = Readonly<{
   version: number; settings: CongregationSettings; updatedAt: string | null;
   // What each field falls back to when it is left blank, so the page can say so.
   defaults: Readonly<{ rabbiDisplayName: string; siddurUrl: string }>;
+  // G21 (AD-13): what the operator decides, so the page can say so. email: the portal-wide email switch; rosterSheetId: whether
+  // this congregation sets its own roster sheet here (CRC's is set by the operator, so its field is hidden).
+  portal: Readonly<{ email: boolean; rosterSheetId: boolean }>;
 }>;
+/** The congregation whose roster sheet the operator sets (the first tenant). */
+const OPERATOR_SHEET_TENANT = "crc";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fail = (code: Failure["code"], problems?: readonly string[]): Failure => Object.freeze({ ok: false, code, ...(problems ? { problems: Object.freeze([...problems]) } : {}) });
@@ -40,13 +45,14 @@ const frozen = (settings: CongregationSettings): CongregationSettings => JSON.pa
  * product the admin grant is the rabbi/clergy (study spec S21), so no separate clergy capability
  * exists yet. Every save is a new version bound to expectedVersion and a mutation id receipt.
  */
-export function createCongregationSettingsService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>> }) {
+export function createCongregationSettingsService<Q extends PgQueryResultHKT>(input: { access: ReturnType<typeof createAccessService<Q>>; emailEnabled?: boolean }) {
   async function read(request: AccessRequest): Promise<SettingsView> {
     return input.access.withAdminCapability(request, { mode: "admin", capability: "read-defaults" }, async (tx, actor) => {
       const head = await data.settingsHead(tx, actor.tenantId), checked = head ? validateSettings(head.body) : null;
       const [tenant] = await tx.select({ customs: s.tenant.customs }).from(s.tenant).where(eq(s.tenant.id, actor.tenantId)).limit(1);
       return Object.freeze({ version: head?.version ?? 0, settings: checked?.ok ? frozen(checked.value) : {}, updatedAt: head ? head.createdAt.toISOString() : null,
-        defaults: Object.freeze({ rabbiDisplayName: legacyRabbiName(tenant?.customs) ?? "the rabbi", siddurUrl: DEFAULT_SIDDUR_URL }) });
+        defaults: Object.freeze({ rabbiDisplayName: legacyRabbiName(tenant?.customs) ?? "the rabbi", siddurUrl: DEFAULT_SIDDUR_URL }),
+        portal: Object.freeze({ email: input.emailEnabled === true, rosterSheetId: actor.tenantId !== OPERATOR_SHEET_TENANT }) });
     });
   }
   async function save(request: CookieMutationRequest, supplied: { expectedVersion: unknown; settings: unknown; mutationId: unknown }): Promise<SettingsSaveResult> {

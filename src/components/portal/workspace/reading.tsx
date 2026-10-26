@@ -43,6 +43,7 @@ import type { PracticeDates } from "./practice-calendar/api";
 import { serviceSlotName, serviceSlotTime } from "./service-slot";
 import { StaffStudentLines } from "./staff/student-lines";
 import { NeedsWork } from "./staff/needs-work";
+import { TutorPracticeDays, TutorPracticeScope } from "./staff/practice";
 import { LiftNote } from "./staff/lift-note";
 
 const dayMs = 86_400_000;
@@ -327,9 +328,13 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary }:
   // On a learner's phone the row waits under the reading, as the lens switch does, so the first verse stays above the fold.
   const tabRow = tabbed && <div role="tablist" aria-label="Student page" className="page-tabs" onKeyDown={tabKeys}>{pageTabs.map(([value, label]) => <button key={value} type="button" role="tab" id={tabId(value)} aria-controls={panelId(value)} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1} className="page-tab" onClick={() => setTab(value, true)}>{label}</button>)}</div>;
   // Learners (students, child practice, parents) always open in Lein; staff open in the lens they last used.
-  return <ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} /><div className="reading-workspace reading-with-work" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
+  // 1.9 N23: the assigned tutor's read of this student's practice is held by the scope itself, so its answer re-renders only the lines
+  // that use it, never this panel (and never its playback). Nothing is asked for anyone else, or while the gate is closed.
+  return <TutorPracticeScope mode={mode} studentId={studentId} concealed={concealed}><ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} />
+    {/* 1.9 N16 re-measure (CLS): while the reading loads it keeps a screen of room, so what follows it never jumps into view and out again. */}
+    {current?.loading && <div className="reading-loading-space" aria-hidden="true" />}<div className="reading-workspace reading-with-work" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
     <section aria-label="Assigned reading">
-      {!student ? <div className="workspace-state" aria-live="polite"><h2>{current?.error ? "Reading unavailable" : "Loading the assigned reading"}</h2>
+      {!student ? <div className={`workspace-state${current?.error ? "" : " reading-loading-space"}`} aria-live="polite"><h2>{current?.error ? "Reading unavailable" : "Loading the assigned reading"}</h2>
         <p>{current?.error === 404 || current?.error === 403 ? "This reading is no longer available in the selected role. Choose another available student." : current?.error ? "We couldn’t load the confirmed assignment. No previous student’s reading is being shown." : "Checking the selected student and confirmed references."}</p>
         {current?.error && <button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload reading</button>}</div> : <>
       {song ? <><header className={`reading-hero${learner ? " reading-current-assignment" : ""}`} aria-labelledby="reading-heading">
@@ -398,8 +403,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary }:
     </dialog> : <div id={editorId} className="reading-editor-anchor">{editor}</div>)}
     {tabPanel("service", <><ServiceLearningPanel id={serviceId} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} onDepartureActive={setServiceDepartureActive} onVisit={(plan, unitId) => calendar.visitUnit(plan, unitId)} />
       {authorizedReading && !concealed && <p className="field-help"><a href={links.siddurUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC digital siddur collection</a>{links.musicUrl && <> · <a href={links.musicUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Service music</a></>}</p>}</>)}
-    {tabPanel("lessons", <>{staff && student && authorizedReading && !concealed && <NeedsWork baseline={authorizedReading} />}{staff && student && authorizedReading && !concealed && <StaffPracticeDays calendar={calendar} firstName={student.firstName} />}<LessonLog mode={mode} studentId={studentId} register={registerLessons} tabbed={tabbed} /></>)}
+    {tabPanel("lessons", <>{staff && student && authorizedReading && !concealed && <NeedsWork baseline={authorizedReading} />}{staff && student && authorizedReading && !concealed && <TutorPracticeDays />}{staff && student && authorizedReading && !concealed && <StaffPracticeDays calendar={calendar} firstName={student.firstName} />}<LessonLog mode={mode} studentId={studentId} register={registerLessons} tabbed={tabbed} /></>)}
     {printing && authorizedReading && !concealed && selectedReading && <PracticeSheet baseline={authorizedReading} initialKind={selectedReading.kind} onClose={() => setPrinting(false)}
       authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} />}
-  </StudyLensScope></ReadingPrefsScope>;
+  </StudyLensScope></ReadingPrefsScope></TutorPracticeScope>;
 }

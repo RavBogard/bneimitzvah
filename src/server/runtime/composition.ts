@@ -204,7 +204,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   // The web runtime gets reads, ticks and staff status only; guide writes need the MCP or the operator bridge.
   const studyGuides = studyGuideWebSurface(createStudyGuideService({ access, practice, check: createGuideChecker({ related: createSefariaMetadataReader({ fetch }).related }) }));
   const lessonLog = createLessonLogService({ access, practice });
-  const congregationSettings = createCongregationSettingsService({ access });
+  const congregationSettings = createCongregationSettingsService({ access, emailEnabled: config.notificationsEnabled });
   // Release 1.1: staff end Claude connections from the portal; admins undo a wrong Maven link.
   const claudeConnections = createClaudeConnectionsService({ access });
   const mavenLinks = createMavenLinkService({ access });

@@ -165,7 +165,9 @@ p { max-width: 65ch; }
 .entry-task > p { margin-top: 1rem; }
 .entry-task > h2 + p { margin-top: 1.25rem; }
 .entry-task .button-primary, .entry-task .button-secondary { margin-top: 1.5rem; }
-.button-primary, .button-secondary { display: inline-flex; align-items: center; justify-content: center; text-align: center; min-height: 48px; padding: 0.6875rem 1.125rem; border: 1px solid transparent; border-radius: var(--radius-control); font-size: 1rem; font-weight: 600; line-height: 1.45; text-decoration: none; transition: background-color 160ms var(--ease-settle), border-color 160ms var(--ease-settle); }
+/* 1.9 N16 token pass (VA-16): these older class names draw exactly N9's Button (src/components/ui), so every screen has one button family. */
+.button-primary, .button-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; text-align: center; min-height: 48px; min-width: 44px; padding: 0.6875rem 1.125rem; border: 1px solid transparent; border-radius: var(--radius-control); font-family: inherit; font-size: var(--text-body); font-weight: var(--weight-semibold); line-height: 1.3; text-decoration: none; cursor: pointer; transition: background-color 160ms var(--ease-settle), border-color 160ms var(--ease-settle), color 160ms var(--ease-settle); }
+.button-primary:disabled, .button-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
 .button-primary { background: var(--color-action-fill); color: #fff; }
 .button-primary:hover { background: var(--lake-deep); color: #fff; }
 .button-primary:active { background: var(--lake-deep); }
@@ -220,11 +222,12 @@ html { scrollbar-color: var(--color-control-rule) var(--color-canvas); scrollbar
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
 
 /* Role workspaces extend the reviewed entry tokens. */
-.workspace-main { flex: 1; padding-block: 2rem 4rem; min-width: 0; }
+.workspace-main { flex: 1; padding-block: 2rem 4rem; min-width: 0; min-height: 100svh; }
 .workspace-role-nav { display: flex; flex-wrap: wrap; gap: 0.75rem 1.75rem; padding-bottom: 1.5rem; margin-bottom: 2.5rem; border-bottom: 1px solid var(--color-rule); }
 .workspace-role-nav a { display: inline-flex; align-items: center; min-height: 44px; color: var(--color-muted); }
 .workspace-role-nav a[aria-current="page"] { color: var(--color-action); font-weight: 650; }
-.workspace-main h1 { font-size: 2.25rem; max-width: none; margin-bottom: 1rem; }
+/* One h1 size on signed-in screens (VA-16): PageHeader's title step. A page's display title (Today's parashah) sets its own. */
+.workspace-main h1 { font-size: var(--text-title); font-weight: var(--weight-strong); line-height: 1.15; letter-spacing: -0.02em; max-width: none; margin-bottom: 1rem; }
 .workspace-main h3 { font-size: 1.125rem; margin: 0 0 0.75rem; font-weight: 650; }
 .workspace-state { max-width: 65ch; margin-block: 2rem; }
 .workspace-state > p, .role-workspace > p { margin-bottom: 1rem; }
@@ -364,7 +367,6 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 @media (max-width: 640px) {
   .workspace-main { padding-block: 1.5rem 3rem; }
   .workspace-role-nav { gap: 0.5rem 1.25rem; margin-bottom: 2rem; }
-  .workspace-main h1 { font-size: 1.875rem; }
   .reading-workspace { grid-template-columns: minmax(0, 1fr); gap: 2rem; margin-top: 1rem; }
   .reading-current-assignment { margin-top: 0.75rem; padding-top: 0.75rem; }
   .assigned-study { margin-top: 0.5rem; padding-top: 0.5rem; }
@@ -767,6 +769,7 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .student-card-date { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; color: var(--color-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
 .student-card[aria-current="page"] .student-card-date, .student-card[aria-pressed="true"] .student-card-date { color: rgb(255 255 255 / 0.85); }
 .student-card-days { white-space: normal; background: var(--marigold); color: var(--on-ink); font-weight: 650; font-size: 0.8125rem; padding: 0.0625rem 0.5rem; border-radius: 999px; }
+.student-card-practice { color: var(--color-muted); font-size: var(--text-callout); line-height: 1.4; }
 .student-cards-compact { display: flex; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; margin-bottom: 1rem; padding-bottom: 0.25rem; }
 .student-cards-compact > li { flex: 0 0 auto; }
 .student-cards-compact .student-card { min-height: 44px; padding: 0.5rem 1rem; border-radius: 999px; flex-direction: row; align-items: center; }
@@ -903,18 +906,12 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .lesson-form-actions .button-primary { min-width: min(100%, 12rem); border-radius: 999px; }
 .lesson-form-actions .button-secondary { border-radius: 999px; }
 .lesson-form-actions .button-text { margin: 0; }
-.lesson-delete { color: var(--color-danger); }
 .lesson-delete-confirm { padding: 1rem 1.125rem; border-radius: var(--radius-control); background: color-mix(in srgb, var(--color-danger) 10%, var(--color-surface)); }
 .lesson-delete-confirm > p { margin: 0 0 0.75rem; font-weight: 650; }
-.lesson-form-actions .lesson-delete-go { background: #b42318; }
-.lesson-form-actions .lesson-delete-go:hover { background: #8f1c13; }
 
 /* Admin (Phase 3): the same inks, restrained. One nav across the admin areas,
    a quiet list of students, and details in a sheet over the list. */
-.admin-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
-.admin-head h1 { margin: 0; }
-.admin-head-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
-.admin-pill { border-radius: 999px; padding-inline: 1.25rem; text-decoration: none; }
+.admin-pill { text-decoration: none; }
 .admin-state, .admin-empty { padding: 1.25rem; border-radius: var(--radius-object); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-rule); }
 .admin-state h2 { margin-top: 0; }
 .admin-empty p { margin: 0; color: var(--color-muted); }
@@ -939,7 +936,7 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .roster-chip { padding: 0.0625rem 0.5rem; border-radius: 999px; background: var(--color-canvas); box-shadow: inset 0 0 0 1px var(--color-control-rule); color: var(--color-muted); font-size: 0.8125rem; font-weight: 650; letter-spacing: 0; }
 .roster-row-disabled .roster-row-name { color: var(--color-muted); }
 .roster-row-actions { display: flex; gap: 0.25rem; }
-.roster-action { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 0.875rem; border: 0; border-radius: 999px; background: transparent; color: var(--color-action); font: inherit; font-size: 0.9375rem; font-weight: 600; text-decoration: none; cursor: pointer; }
+.roster-action { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 0.875rem; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--color-action); font: inherit; font-size: 0.9375rem; font-weight: 600; text-decoration: none; cursor: pointer; }
 .roster-action:hover { background: var(--color-hover); color: var(--color-action-hover); }
 .roster-action:disabled { color: var(--color-muted); cursor: default; background: transparent; }
 .roster-pages { margin-top: 0; }
@@ -962,10 +959,7 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .roster-sheet .disable-student { margin-top: 2rem; }
 .roster-sheet .disable-student h3 { margin: 0; font-size: 1.0625rem; }
 .roster-sheet .form-actions { margin-top: 1rem; }
-.roster-danger { background: #b42318; }
-.roster-danger:hover { background: #8f1c13; }
 @media (max-width: 640px) {
-  .admin-head h1 { font-size: 2rem; }
   .roster-search { max-width: none; flex-basis: 100%; }
   .roster-row { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0 0.5rem 0.5rem; }
   .roster-row-main { padding: 0.75rem 0.75rem 0.25rem; min-height: 0; }
@@ -997,9 +991,18 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 /* Claude connections (release 1.1): who connected, what Claude may do, and the Maven link in the roster sheet. */
 .connection-staff { font-weight: 500; color: var(--color-muted); }
 .connection-access { margin-top: 0.375rem; }
+.connections-empty { margin-top: 1rem; }
+.connections-empty > section { padding: 0; background: transparent; box-shadow: none; }
+.connections-empty p { overflow-wrap: anywhere; }
 .maven-link code { overflow-wrap: anywhere; font-size: 0.9375rem; }
-.people-danger { color: var(--color-danger); }
-.people-danger:hover { color: var(--color-danger); }
+/* G21 (AD-19): one danger look, as N9's destructive Button and its confirm sheet. The step that asks (or a one-step removal) is a
+   button in the danger ink; the action that confirms it is filled with the danger fill. The words always say what happens. */
+.people-danger, .lesson-delete { color: var(--danger-ink); }
+.people-danger:hover:not(:disabled), .lesson-delete:hover:not(:disabled) { color: var(--danger-ink); }
+.button-secondary.people-danger, .button-secondary.people-danger:hover:not(:disabled) { border-color: var(--danger-ink); }
+.roster-danger, .lesson-form-actions .lesson-delete-go { border-color: transparent; background: var(--danger-fill); color: #fff; }
+.roster-danger:hover:not(:disabled), .lesson-form-actions .lesson-delete-go:hover:not(:disabled) { background: color-mix(in srgb, var(--danger-fill) 84%, #000); color: #fff; }
+.roster-action.roster-danger:disabled { background: var(--danger-fill); color: #fff; opacity: 0.6; }
 .people-empty { margin: 1rem 0 0; color: var(--color-muted); }
 .people-assign { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--color-rule); }
 .people-assign label { font-weight: 650; }
@@ -1076,6 +1079,20 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .csv-workspace .csv-format { margin-block: 0 1.25rem; }
 .csv-step { display: flex; align-items: center; gap: 0.625rem; margin: 0 0 1rem; font-size: 1.25rem; font-weight: 750; letter-spacing: -0.01em; }
 .csv-step:focus { outline: none; }
+/* 1.9 N16 re-measure: a loading reading holds a screen of room (see reading.tsx), so the content after it does not shift. */
+.reading-loading-space { min-height: 100svh; }
+/* 1.9 N23: the assigned tutor's practice lines in Lessons. Dates and verses only. */
+.tutor-practice { margin-block: 1.5rem; }
+.tutor-practice-days { margin: 0.5rem 0 0; padding-inline-start: 1.25rem; display: grid; gap: 0.375rem; font-variant-numeric: tabular-nums; }
+.tutor-practice-learn { margin-top: 1rem; }
+.tutor-practice-learn p { margin: 0.25rem 0 0; }
+.settings-email-status { margin-top: 0.75rem; }
+/* G21: the rows to fix as a table, and the same-name-and-date warning (a word, never colour alone). */
+.csv-issues { width: 100%; margin: 0.5rem 0 1rem; border-collapse: collapse; font-size: var(--text-callout); }
+.csv-issues th, .csv-issues td { padding: 0.5rem 0.75rem; text-align: start; vertical-align: top; border-top: 1px solid var(--color-rule); overflow-wrap: anywhere; }
+.csv-issues thead th { border-top: 0; color: var(--color-muted); font-weight: var(--weight-semibold); }
+.csv-issues tbody th { width: 4rem; font-variant-numeric: tabular-nums; font-weight: var(--weight-semibold); }
+.csv-same-name { margin-block: 0.75rem; padding: 0.75rem 1rem; border-radius: var(--radius-control); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--attention-fill), inset 4px 0 0 var(--attention-fill); }
 .csv-step > span { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 999px; background: var(--lake); color: #fff; font-size: 0.9375rem; font-weight: 750; }
 .csv-workspace .csv-draft label { font-weight: 650; }
 .csv-workspace .csv-draft textarea { border: 0; box-shadow: inset 0 0 0 1px var(--color-control-rule); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.875rem; }

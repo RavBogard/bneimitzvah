@@ -29,6 +29,8 @@
   .tab[aria-current="page"] { background: var(--lake-tint); }
   .tab[aria-current="page"] .icon { background: transparent; }
   :global(.portal-shell):has(> .bar:not([data-hidden])), :global(.portal-shell):has(> .bar) { padding-bottom: 0; padding-inline-start: calc(11rem + 2rem); }
+  /* 1.9 N16 re-measure (CLS): while access is still being checked the rail's room is kept, so the page does not slide right when it appears. */
+  :global(.workspace-shell[data-rail-pending]) { padding-inline-start: calc(11rem + 2rem); }
 }
 
 /* A sub-navigation inside one area (People: Invitations, Tutors, Accounts): links in the segmented pill track. */

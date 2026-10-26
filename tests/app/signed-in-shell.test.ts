@@ -49,7 +49,9 @@ test("every signed-in page sets its own title, ending with | CRC Torah", async (
 
 test("a page whose h1 is fixed is titled with that h1", () => {
   const source = (file: string) => readFileSync(join(process.cwd(), "src", file), "utf8");
-  const headings = (file: string) => [...source(file).matchAll(/<h1[^>]*>([^<{]+)<\/h1>/g)].map(match => match[1]);
+  // A page's h1 is a literal <h1> or the one PageHeader's title (its first literal when the title is chosen by role).
+  const headings = (file: string) => [...[...source(file).matchAll(/<h1[^>]*>([^<{]+)<\/h1>/g)].map(match => match[1]),
+    ...[...source(file).matchAll(/<PageHeader title=(?:"([^"]+)"|\{[^"}]*"([^"]+)")/g)].map(match => match[1] ?? match[2])];
   const titleOf = (file: string) => /signedInTitle\("([^"]+)"\)/.exec(source(file))?.[1];
   for (const [component, page] of [
     ["components/portal/workspace/accounts/workspace.tsx", "app/workspace/accounts/page.tsx"],
@@ -74,8 +76,8 @@ test("each page has exactly one footer landmark: the credit, with no second page
   for (const markup of markups) {
     expect(markup.match(/<footer\b/g) ?? []).toHaveLength(1);
     expect(markup).toContain('<footer class="site-credit">');
-    // The page's own closing lines stay, as a plain block.
-    expect(markup).toMatch(/<div class="portal-footer">/);
+    // The page's own closing lines stay, as a named region (inside a landmark, for axe), never a second footer.
+    expect(markup).toMatch(/<section class="portal-footer" aria-label="About this portal">/);
   }
   // The workspace shell is client-only; its source must not bring a second footer either.
   expect(readFileSync(join(process.cwd(), "src", "components", "portal", "workspace", "provider.tsx"), "utf8")).not.toMatch(/<footer\b/);

@@ -30,7 +30,9 @@ async function fixture() {
 
 test("an admin reads empty settings, saves a version with a receipt and an audit row, and replays the same mutation", async () => {
   const f = await fixture();
-  expect(await f.send(PATH, { who: "admin" })).toEqual({ status: 200, body: { ok: true, view: { version: 0, settings: {}, updatedAt: null, defaults: { rabbiDisplayName: "the rabbi", siddurUrl: "https://siddur.centralreform.org/" } } } });
+  expect(await f.send(PATH, { who: "admin" })).toEqual({ status: 200, body: { ok: true, view: { version: 0, settings: {}, updatedAt: null, defaults: { rabbiDisplayName: "the rabbi", siddurUrl: "https://siddur.centralreform.org/" },
+    // G21: email is off in this suite, and CRC's roster sheet is the operator's, so its field is hidden.
+    portal: { email: false, rosterSheetId: false } } } });
   const mutationId = randomUUID(), settings = { rabbiDisplayName: "Rabbi Daniel", preferredSources: ["Rashi"], siddurUrl: "https://siddur.centralreform.org/v2/" };
   expect(await f.save({ settings, mutationId })).toEqual({ status: 200, body: { ok: true, replayed: false, version: 1 } });
   expect(await f.save({ settings, mutationId })).toEqual({ status: 200, body: { ok: true, replayed: true, version: 1 } });

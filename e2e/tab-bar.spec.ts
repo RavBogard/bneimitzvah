@@ -95,12 +95,12 @@ test.describe("at 390px", () => {
     };
     await tab(page, "People").click();
     await expect(page.getByRole("navigation", { name: "People", exact: true })).toBeVisible();
-    for (const name of ["Invitations", "Tutors", "Accounts"]) await onScreen(name, page.getByRole("navigation", { name: "People", exact: true }).getByRole("link", { name, exact: true }));
+    for (const name of ["Invitations", "Tutors", "Members"]) await onScreen(name, page.getByRole("navigation", { name: "People", exact: true }).getByRole("link", { name, exact: true }));
     await page.getByRole("navigation", { name: "People", exact: true }).getByRole("link", { name: "Tutors", exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Tutors", exact: true })).toBeVisible();
     await expect(tab(page, "People")).toHaveAttribute("aria-current", "page");
-    await page.getByRole("navigation", { name: "People", exact: true }).getByRole("link", { name: "Accounts", exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Accounts", exact: true })).toBeVisible();
+    await page.getByRole("navigation", { name: "People", exact: true }).getByRole("link", { name: "Members", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Members", exact: true })).toBeVisible();
     await expect(tab(page, "People")).toHaveAttribute("aria-current", "page");
     await tab(page, "More").click();
     await expect(page.getByRole("heading", { level: 1, name: "More", exact: true })).toBeVisible();
@@ -109,7 +109,7 @@ test.describe("at 390px", () => {
       await expect(main.getByRole("link", { name: new RegExp(`^${name}`) })).toBeVisible();
       await onScreen(name, main.getByRole("link", { name: new RegExp(`^${name}`) }));
     }
-    await expect(main.getByRole("button", { name: "Update staff Sheet", exact: true })).toBeVisible();
+    await expect(main.getByRole("button", { name: "Update the staff roster Sheet", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     // Each area opens from More, keeps More as the current tab, and Students no longer carries the staff Sheet button.
     for (const [name, heading] of [["Settings", "Congregation settings"], ["Email settings", "Email settings"], ["Claude connections", "Claude connections"], ["Recording review", "Recording review"]] as const) {

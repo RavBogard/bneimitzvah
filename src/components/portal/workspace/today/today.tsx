@@ -138,7 +138,9 @@ function TodayView({ headingId, student, ownAdultHonors, readings, marks, lesson
         <li key={`${reading.id}:${index}`}><Chip>{index === 0 ? `${reading.kind === "torah" ? "Torah" : "Haftarah"} ${segment}` : segment}</Chip></li>))}</ul>}
     </div>
     {readings.length === 0 ? <EmptyState title="No reading has been assigned yet" description="Your tutor or rabbi will add your verses here." /> : <>
-      {next && settled && <NextCard row={next} started={started} dates={dates} />}
+      {next && (settled ? <NextCard row={next} started={started} dates={dates} />
+        // 1.9 N16 re-measure (CLS): until marks and days settle, the card's room is held by an invisible copy, so the sections below do not jump.
+        : <div className={styles.pending} aria-hidden="true" inert><NextCard row={next} started={false} dates={{ status: "ready", serverDay: today, fromDate: today, throughDate: today, dates: new Set() }} /></div>)}
       <List label="Reading sections">{rows.map((row, index) => <ListRow key={row.key} href={READING_HREF} title={row.label}
         meta={<bdi dir="ltr" className={styles.nobreak} data-nobreak>{row.ref}</bdi>}
         trailing={states[index] ? <span className={styles.state} data-state={states[index]}><span className={styles.dot} aria-hidden="true" />{stateWord[states[index]!]}</span> : undefined} />)}</List>

@@ -66,7 +66,7 @@ it("a person asks, an admin sees the count and approves, and the new member save
     const line = admin.getByRole("link", { name: "Account requests (1) · Review", exact: true });
     await ui(line).toBeVisible();
     await line.click();
-    await ui(admin.getByRole("heading", { level: 1, name: "Accounts", exact: true })).toBeVisible();
+    await ui(admin.getByRole("heading", { level: 1, name: "Members", exact: true })).toBeVisible();
     const queue = admin.getByRole("region", { name: "Requests" });
     await ui(queue.getByRole("heading", { name: "Synthetic Asker", exact: true })).toBeVisible();
     await ui(queue.getByText("ui-asker@example.test")).toBeVisible();
@@ -134,7 +134,7 @@ it("an admin designates a tutor, who then sees and approves requests from the tu
   await signIn(tutor, "pg-tutor@example.test");
   await tutor.goto("/workspace/tutor", { waitUntil: "domcontentloaded" });
   await tutor.getByRole("link", { name: "Account requests (1) · Review", exact: true }).click();
-  await ui(tutor.getByRole("heading", { level: 1, name: "Accounts", exact: true })).toBeVisible();
+  await ui(tutor.getByRole("heading", { level: 1, name: "Account requests", exact: true })).toBeVisible();
   await ui(tutor.getByRole("region", { name: "Members" })).toHaveCount(0);
   await ui(tutor.getByRole("region", { name: "Approvers" })).toHaveCount(0);
   await tutor.getByRole("button", { name: "Approve: Asks a Tutor", exact: true }).click();

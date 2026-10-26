@@ -8,6 +8,7 @@ import { identityLabels, makeReview, relationshipApi, type Action, type Relation
 import { AccessReview } from "./review";
 import { staffApi, type Teaching } from "../staff/api";
 import { teachesLine } from "../staff/model";
+import { PageHeader } from "../../../ui";
 
 // teaching: on the Tutors page, each tutor's current students (1.9 N15, G11), or null where it isn't read or couldn't be.
 type Snapshot = { relationships: Relationships | null; tutors: Tutor[]; teaching: Map<string, Teaching["students"]> | null };
@@ -113,10 +114,10 @@ function Access({ studentId }: { studentId?: string }) {
   </li>;
   const calm = message === "Saved. Access is up to date." || message === "Access reloaded.";
   return <section className="role-workspace access-workspace admin-workspace">{!studentId && <PeopleNav />}{studentId && <div className="admin-crumbs"><WorkspaceLink href={`/workspace/admin/students/${studentId}/reading`}>Student page</WorkspaceLink></div>}
-    <div className="admin-head"><div><h1 ref={pageHeading} tabIndex={-1}>{studentId ? "People and access" : "Tutors"}</h1>
-      {data ? <p className="people-student"><bdi dir="auto">{data.student.firstName} {data.student.lastName}</bdi> · <time dateTime={data.student.ceremonyDate}>{ceremonyCountdown(data.student.ceremonyDate).label}</time>{data.student.disabled && <span className="roster-chip">Disabled</span>}</p>
-        : !studentId && <p className="people-student">Tutors join by invitation. Assign them to students from each student’s People page.</p>}</div>
-      {!failed && <button type="button" className="hero-icon roster-reload" aria-label="Reload access" disabled={pending || loading} onClick={() => void reload()}>{reloadIcon}</button>}</div>
+    <PageHeader title={studentId ? "People and access" : "Tutors"} titleRef={pageHeading}
+      description={data ? <><bdi dir="auto">{data.student.firstName} {data.student.lastName}</bdi> · <time dateTime={data.student.ceremonyDate}>{ceremonyCountdown(data.student.ceremonyDate).label}</time>{data.student.disabled && <> <span className="roster-chip">Disabled</span></>}</>
+        : !studentId ? "Tutors join by invitation. Assign them to students from each student’s People page." : undefined}
+      actions={!failed ? <button type="button" className="hero-icon roster-reload" aria-label="Reload access" disabled={pending || loading} onClick={() => void reload()}>{reloadIcon}</button> : undefined} />
     {data?.student.disabled && <p className="people-note">This student is disabled. Nobody can use their access; existing links can still be removed.</p>}
     {message && !review && <p className={calm ? "workspace-notice roster-message" : "request-error roster-message"} role={blocked ? "alert" : "status"}>{message}</p>}
     {loading ? <p role="status">Checking current access…</p> : failed ? <div className="admin-state" role="alert"><h2>Access unavailable</h2><p>Current access couldn’t be loaded, so none of it is shown.</p><div className="form-actions"><button className="button-secondary admin-pill" disabled={pending || loading} onClick={() => void reload()}>Reload access</button><WorkspaceLink className="button-text" href="/">Check account and sign in again</WorkspaceLink></div></div> : snapshot && <>
@@ -152,7 +153,7 @@ function Access({ studentId }: { studentId?: string }) {
             {data.identities.map(row => person(studentLabels.get(row.studentGrantId)!, "Student sign-in", act("Remove as a student", studentLabels.get(row.studentGrantId)!, { kind: "grant", group: "identities", linkId: row.id, grantId: row.studentGrantId }, true), `wider-${row.id}`))}
           </ul></section>
         </details>}
-      </> : snapshot.tutors.length ? <section className="people-card" aria-label="Tutors"><ul className="people-list">{snapshot.tutors.map(row => person(tutorLabels.get(row.id)!, <>{row.isCantor ? <span className="roster-chip">Cantor</span> : "Tutor"}{snapshot.teaching ? <span className="tutor-teaches" data-testid="tutor-teaches">{snapshot.teaching.get(row.id)?.length ? <bdi dir="auto">{teachesLine(snapshot.teaching.get(row.id)!.map(student => student.firstName))}</bdi> : "No students yet."}</span> : null}</>,
+      </> : snapshot.tutors.length ? <section className="people-card" aria-labelledby="tutors-list-heading"><h2 id="tutors-list-heading" className="sr-only">Tutors</h2><ul className="people-list">{snapshot.tutors.map(row => person(tutorLabels.get(row.id)!, <>{row.isCantor ? <span className="roster-chip">Cantor</span> : "Tutor"}{snapshot.teaching ? <span className="tutor-teaches" data-testid="tutor-teaches">{snapshot.teaching.get(row.id)?.length ? <bdi dir="auto">{teachesLine(snapshot.teaching.get(row.id)!.map(student => student.firstName))}</bdi> : "No students yet."}</span> : null}</>,
           <>{act(row.isCantor ? "Remove cantor flag" : "Mark as cantor", tutorLabels.get(row.id)!, { kind: "cantor", grantId: row.id, enabled: !row.isCantor })}{act("Remove as a tutor", tutorLabels.get(row.id)!, { kind: "grant", grantId: row.id }, true)}</>, row.id))}</ul></section>
         : <div className="admin-empty"><p className="admin-empty-title">No tutors yet</p><p>Invite a tutor from Invitations. They appear here once they accept.</p></div>}
       {(cursors.length > 1 || snapshot.tutors.length === 100) && <nav className="roster-pages" aria-label="Tutor pages"><button className="button-secondary admin-pill" disabled={disabled || cursors.length === 1} onClick={() => { setReview(null); setSelected(""); setCursors(previous => previous.slice(0, -1)); }}>Previous tutor page</button><button className="button-secondary admin-pill" disabled={disabled || snapshot.tutors.length !== 100} onClick={() => { setReview(null); setSelected(""); setCursors(previous => [...previous, snapshot.tutors[snapshot.tutors.length - 1].id]); }}>Next tutor page</button></nav>}

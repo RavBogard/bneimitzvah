@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { RequireRole, statusOf, useWorkspace } from "../provider";
 import { REVIEW_CHECKS, reviewApi, type Batch, type Check, type Checks, type Detail, type Entry } from "./api";
 import styles from "./review.module.css";
+import { Button, EmptyState, PageHeader } from "../../../ui";
 import hebrew from "../../../../styles/hebrew-font.module.css";
 import { studyEditions } from "../study/credits";
 
@@ -60,7 +61,8 @@ function Review() {
     const previous = preferred ?? current.current?.batch.id; request.current?.abort(); const controller = new AbortController(); request.current = controller; const turn = ++generation.current;
     stopAudio(); setPending(true); setMessage(""); setFailed(false); setBlocked(false); setDetail(null); setChecks(emptyChecks()); setDirty(false);
     try {
-      const list = await reviewApi.list(controller.signal), batch = list.find(row => row.id === previous) ?? list[0];
+      // G21 (AD-14): no batch assigned to this account (the service answers 404 to anyone it has nothing for) is the empty state, not an error.
+      const list = await reviewApi.list(controller.signal).catch((error: unknown) => { if (statusOf(error) === 404) return [] as Batch[]; throw error; }), batch = list.find(row => row.id === previous) ?? list[0];
       const next = batch ? await reviewApi.detail(batch.id, controller.signal) : null;
       if (!mounted.current || controller.signal.aborted || generation.current !== turn) return;
       setBatches(list); setDetail(next); if (next) selectEntry(next.entries[0]); else setSelected("");
@@ -126,14 +128,15 @@ function Review() {
     finally { gate.current = false; if (mounted.current) setPending(false); }
   }
   return <section className={`role-workspace admin-workspace ${styles.page}`}>
-    <div className="admin-head"><h1>Recording review</h1><button type="button" className="button-secondary" disabled={pending || audioPending} onClick={() => switchView(() => void load().catch(() => undefined))}>Reload review</button></div>
-    <p className={styles.intro}>Listen beside the Hebrew and record each check. This private review does not enable student playback.</p>
-    {message && <p role={failed ? "alert" : "status"} className={failed ? "request-error" : "workspace-notice"}>{message}</p>}
+    <PageHeader title="Recording review" description="Listen beside the Hebrew and record each check. This private review does not enable student playback."
+      actions={<Button disabled={pending || audioPending} onClick={() => switchView(() => void load().catch(() => undefined))}>Reload review</Button>} />
+    {message && !(failed && !detail) && <p role={failed ? "alert" : "status"} className={failed ? "request-error" : "workspace-notice"}>{message}</p>}
+    {failed && !detail && message && <div className="admin-state" role="alert" data-testid="review-error"><h2>The review couldn't be loaded</h2><p>{message}</p></div>}
     {switching && <section ref={switchPanel} tabIndex={-1} className={styles.switchPrompt} aria-label="Unsaved review checks"><h2>Keep your review checks?</h2><p>Save your checks before switching, or discard the changes to continue.</p><div className={styles.choices}><button type="button" className="button-secondary" onClick={() => { nextAction.current?.cancel(); nextAction.current = null; setSwitching(false); }}>Keep reviewing</button><button type="button" className="button-secondary" onClick={() => { const action = nextAction.current; nextAction.current = null; setSwitching(false); setDirty(false); dirtyRef.current = false; action?.proceed(); }}>Discard checks and continue</button></div></section>}
-    {pending && !detail ? <p role="status" aria-live="polite">Checking private review access…</p> : !detail && !blocked ? <div className="admin-empty"><h2>No private batches to review</h2><p>Prepared recordings will appear here when a batch is assigned to your account.</p></div> : null}
+    {pending && !detail ? <p role="status" aria-live="polite">Checking private review access…</p> : !detail && !blocked ? <EmptyState title="Nothing to review yet" description="Prepared recordings will appear here when a batch is assigned to your account." /> : null}
     {detail && <>
       <div className={styles.batch}><label>Private batch<select value={detail.batch.id} disabled={pending || audioPending} onChange={event => { const id = event.target.value; switchView(() => void load(id).catch(() => undefined)); }}>{batches.map((batch, index) => <option key={batch.id} value={batch.id}>Batch {index + 1} · {batch.entryCount} {batch.entryCount === 1 ? "recording" : "recordings"} · expires {displayDate(batch.expiresAt)}</option>)}</select></label>
-        <details className={styles.revoke}><summary>Batch access</summary><p>Revoke this entire batch’s private listening access. Saved review records remain.</p><button type="button" className="button-secondary" disabled={pending || blocked} onClick={() => void revoke()}>Revoke this batch</button></details></div>
+        <details className={styles.revoke}><summary>Batch access</summary><p>Revoke this entire batch’s private listening access. Saved review records remain.</p><button type="button" className="button-primary roster-danger" disabled={pending || blocked} onClick={() => void revoke()}>Revoke this batch</button></details></div>
       <div className={styles.layout}><nav className={styles.queue} aria-label="Recordings in this batch">{detail.entries.map((item, index) => <button type="button" key={item.assetKey} aria-current={selected === item.assetKey ? "true" : undefined} disabled={pending} onClick={() => { if (item.assetKey !== selected) switchView(() => { selectEntry(item); setMessage(""); setFailed(false); }); }}><span>Recording {index + 1}</span><strong>{title(item)}</strong><span>{item.mode === "spoken" ? "Spoken reading" : "Chant"} · {item.decision ? item.decision.wholeClipAccepted ? "Checks passed" : "On hold" : "Awaiting review"}</span></button>)}</nav>
         {entry && <article className={styles.recording} aria-label="Selected recording"><header><h2>{title(entry)}</h2><p>{entry.readingKind === "torah" ? "Torah" : "Haftarah"} · {entry.mode === "spoken" ? "Spoken reading" : "Chant"} · Whole recording</p></header>
           <div className={styles.passage} lang="he" dir="rtl">{entry.text.map(verse => <p key={verse.ref} className={hebrew.hebrew}><span className={styles.verseRef} lang="en" dir="ltr">{verse.ref}</span>{verse.readingText}</p>)}</div>

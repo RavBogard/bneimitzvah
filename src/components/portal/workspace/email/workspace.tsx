@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
 import { emailApi, type EmailKind, type EmailOption } from "./api";
 import { describeEmailOption as describe, WEEKDAYS } from "./describe";
+import { Button, PageHeader } from "../../../ui";
 
 const copy: Record<EmailKind, { title: string; choice: string }> = {
   "tutor-draft": { title: "Draft notices", choice: "Email me when a student I teach saves a translation draft" },
@@ -37,9 +38,8 @@ export function EmailSettingsWorkspace() {
   }
 
   return <section className="role-workspace email-workspace">
-    <div className="admin-head"><h1>Email settings</h1></div>
-    <p>Choose which emails the portal sends you. Every email also has a link to stop it.</p>
-    {failure ? <div className="admin-state" role="alert"><p>Your email settings couldn’t be loaded.</p><button type="button" className="button-secondary admin-pill" onClick={() => void load()}>Reload</button></div>
+    <PageHeader title="Email settings" description="Choose which emails the portal sends you. Every email also has a link to stop it." />
+    {failure ? <div className="admin-state" role="alert"><p>Your email settings couldn’t be loaded.</p><Button onClick={() => void load()}>Reload</Button></div>
       : !options ? <p role="status">Loading email settings…</p>
       : !options.length ? <p>There are no portal emails for your account.</p>
       : options.map(option => {

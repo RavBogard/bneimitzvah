@@ -7,8 +7,12 @@
  * - the student's disclosures on Account and in Learn render only when it is set (src/components/portal/practice-visibility/);
  * - the tutor's and parent's lines render only from that server's answers, so never while it is null;
  * - once set, the per-day lines start on this date: nothing a student did before the disclosure shipped is shown per day.
+ *
+ * Opened by 1.9 bundle C on the deploy day, 2026-10-27, after the review passed, Daniel approved the Account wording, and every
+ * disclosure placement (Account, Learn, the parent's practice bar, the parent's Account) was checked to render with the gate open
+ * (tests/app/practice-visibility-gate.test.ts). If the deploy lands later, move this date to that day.
  */
-export const PRACTICE_VISIBILITY_FROM: string | null = null;
+export const PRACTICE_VISIBILITY_FROM: string | null = "2026-10-27";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 /** The gate's date when it is a real calendar date, else null (closed). */

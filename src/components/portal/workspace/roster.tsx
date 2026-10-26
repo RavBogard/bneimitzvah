@@ -10,6 +10,7 @@ import { HonorsSheet } from "./honors/sheet";
 import { MavenLinkPanel } from "./maven-link";
 import { useSearchParams } from "next/navigation";
 import { staffApi } from "./staff/api";
+import { Button, PageHeader } from "../../ui";
 import { byCeremony, isSunday, needsYouRows, statusChips, type NeedsYouStudent, type StudentStatus } from "./staff/model";
 import { NeedsYou } from "./staff/needs-you";
 
@@ -195,7 +196,7 @@ function Roster() {
   const reloadIcon = <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
   return <section className="role-workspace admin-workspace">
     <AccountRequestsLine mode="admin" />
-    <div className="admin-head"><h1>Students</h1><div className="admin-head-actions"><WorkspaceLink className="button-secondary admin-pill" href="/workspace/admin/students/import">Import</WorkspaceLink><button ref={addButton} className="button-primary admin-pill" disabled={pending || loading || unavailable || conflict} onClick={event => choose(null, event)}>Add student</button></div></div>
+    <PageHeader title="Students" actions={<><WorkspaceLink className="button-secondary" href="/workspace/admin/students/import">Import</WorkspaceLink><Button ref={addButton} variant="primary" disabled={pending || loading || unavailable || conflict} onClick={event => choose(null, event)}>Add student</Button></>} />
     {!sheetOpen && notice}{!sheetOpen && conflict && <button type="button" className="button-secondary admin-pill roster-reload-inline" onClick={() => void load().catch(() => undefined)}>Reload roster</button>}
     {loading ? <p role="status">Loading students…</p> : unavailable ? <div className="admin-state" role="alert"><h2>Students unavailable</h2><p>The full list couldn’t be loaded, so none of it is shown. Access may have changed, or the list may be too large to load at once.</p><button className="button-secondary admin-pill" onClick={() => void load().catch(() => undefined)}>Reload roster</button></div>
       : <>
@@ -249,7 +250,7 @@ function Roster() {
               <div className="form-actions"><button type="button" className="button-primary admin-pill" disabled={pending || conflict} onClick={() => void ceremony(current, false)}>Ceremony done</button><button type="button" className="button-secondary admin-pill" disabled={pending} onClick={() => setConfirmDone(false)}>Cancel</button></div></>}
         </div>}
         {current && !current.disabledAt && <div className="disable-student"><h3>Disable this student</h3><p>Stops access to their practice. Their record and history are kept.</p>
-          {!confirmDisable ? <button className="button-secondary admin-pill" disabled={pending || conflict} onClick={() => { setConfirmDone(false); setConfirmDisable(true); }}>Disable student</button>
+          {!confirmDisable ? <button className="button-secondary people-danger" disabled={pending || conflict} onClick={() => { setConfirmDone(false); setConfirmDisable(true); }}>Disable student</button>
             : <><p role="status">Disable <bdi dir="auto">{fullName(current)}</bdi>?</p><p className="field-help" data-testid="disable-warning">This can't be undone here.</p><div className="form-actions"><button className="button-primary admin-pill roster-danger" disabled={pending || conflict} onClick={() => void mutate(true)}>{pending ? "Disabling…" : "Confirm disable"}</button><button className="button-secondary admin-pill" disabled={pending} onClick={() => setConfirmDisable(false)}>Keep student active</button></div></>}
         </div>}
       </section>}

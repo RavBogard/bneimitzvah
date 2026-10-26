@@ -98,7 +98,7 @@ it("fits a phone, and a tutor finds the page from the account page and sees only
   expect((await api(tutor, "/api/staff/claude-connections/revoke", { connectionId: mine.id })).status).toBe(404);
   await safe(() => main(tutor).getByRole("button", { name: /^End connection: / }).click());
   await safe(() => main(tutor).getByRole("button", { name: /^End now: / }).click());
-  await ui(main(tutor).getByText("No Claude connection is active.", { exact: true })).toBeVisible();
+  await ui(main(tutor).getByRole("heading", { name: "No Claude connection is active", exact: true })).toBeVisible();
   const rows = await fixture.ownerDb.select().from(s.mcpConnection).where(eq(s.mcpConnection.id, theirs.id));
   expect(rows[0].revokedAt).not.toBeNull();
   const [admin] = await fixture.ownerDb.select().from(s.mcpConnection).where(eq(s.mcpConnection.id, mine.id));

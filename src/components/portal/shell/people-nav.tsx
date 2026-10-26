@@ -5,7 +5,7 @@ import { WorkspaceLink } from "../workspace/provider";
 import styles from "./shell.module.css";
 
 // People holds three lists, and this moves between them. The old seven-area admin bar is retired (1.9 N10).
-const areas = [["/workspace/admin/invitations", "Invitations"], ["/workspace/admin/tutors", "Tutors"], ["/workspace/accounts", "Accounts"]] as const;
+const areas = [["/workspace/admin/invitations", "Invitations"], ["/workspace/admin/tutors", "Tutors"], ["/workspace/accounts", "Members"]] as const;
 
 export function PeopleNav() {
   const pathname = usePathname();

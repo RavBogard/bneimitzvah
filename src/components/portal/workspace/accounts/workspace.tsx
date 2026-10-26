@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { statusOf, useWorkspace, WorkspaceLink } from "../provider";
 import { PeopleNav } from "../../shell/people-nav";
+import { Button, PageHeader } from "../../../ui";
+import { DocumentTitle } from "../document-title";
 import { accountsApi, type AccountRequest, type ApproverMode, type ApproversView, type Member } from "./api";
 
 /** Daniel's approved approver help line (F1, wording approved 2026-10-23). */
@@ -81,12 +83,12 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
   }
 
   return <section className="role-workspace admin-workspace accounts-workspace">{admin && <PeopleNav />}
-    <div className="admin-head"><h1>Accounts</h1></div>
+    <PageHeader title={admin ? "Members" : "Account requests"} />{!admin && <DocumentTitle heading="Account requests" />}
     {productName && <p className="people-note">An account keeps a person’s saved readings, place in Learn to lein, preferred commentaries and settings. Everything else on <bdi dir="auto">{productName}</bdi> is open without one.</p>}
     {message && <p className={message.tone === "alert" ? "request-error roster-message" : "workspace-notice roster-message"} role={message.tone}>{message.text}</p>}
     {message?.signIn && <p><WorkspaceLink href="/">Check account and sign in again</WorkspaceLink></p>}
     {loading && !requests ? <p role="status">Loading account requests…</p>
-      : broken || !requests ? <div className="admin-state" role="alert"><p>Account requests couldn’t be loaded.</p><button type="button" className="button-secondary admin-pill" onClick={() => void load()}>Reload</button></div>
+      : broken || !requests ? <div className="admin-state" role="alert"><p>Account requests couldn’t be loaded.</p><Button onClick={() => void load()}>Reload</Button></div>
       : <>
         <section className="people-card" aria-labelledby="accounts-requests"><div className="people-card-head"><h2 id="accounts-requests">Requests</h2>
           <p>Approving gives the person an account and sends them one email. Declining removes the request and sends nothing.</p>
@@ -102,11 +104,11 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
             <div className="people-actions">
               {confirming === `decline:${row.id}` ? <>
                 <p className="field-help">Decline removes this request and sends nothing.</p>
-                <button type="button" className="roster-action people-danger" aria-label={`Decline request: ${row.name}`} disabled={pending} onClick={() => void decline(row)}>Decline request</button>
+                <button type="button" className="roster-action roster-danger" aria-label={`Decline request: ${row.name}`} disabled={pending} onClick={() => void decline(row)}>Decline request</button>
                 <button type="button" className="roster-action" aria-label={`Keep request: ${row.name}`} disabled={pending} onClick={() => setConfirming(null)}>Keep</button>
               </> : <>
                 <button type="button" className="roster-action" aria-label={`Approve: ${row.name}`} disabled={pending || confirming !== null} onClick={() => void approve(row)}>Approve</button>
-                <button type="button" className="roster-action" aria-label={`Decline: ${row.name}`} disabled={pending || confirming !== null} onClick={() => { setMessage(null); setConfirming(`decline:${row.id}`); }}>Decline</button>
+                <button type="button" className="roster-action people-danger" aria-label={`Decline: ${row.name}`} disabled={pending || confirming !== null} onClick={() => { setMessage(null); setConfirming(`decline:${row.id}`); }}>Decline</button>
               </>}
             </div>
           </li>)}</ul> : <p className="people-empty">No account requests are waiting.</p>}
@@ -118,9 +120,9 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
             <div className="people-body"><h3><bdi dir="auto">{row.name}</bdi></h3><p className="people-status">Member since <time dateTime={row.since}>{day(row.since)}</time></p></div>
             <div className="people-actions">
               {confirming === `end:${row.id}` ? <>
-                <button type="button" className="roster-action people-danger" aria-label={`End membership now: ${row.name}`} disabled={pending} onClick={() => void end(row)}>End membership</button>
+                <button type="button" className="roster-action roster-danger" aria-label={`End membership now: ${row.name}`} disabled={pending} onClick={() => void end(row)}>End membership</button>
                 <button type="button" className="roster-action" aria-label={`Keep membership: ${row.name}`} disabled={pending} onClick={() => setConfirming(null)}>Keep</button>
-              </> : <button type="button" className="roster-action" aria-label={`End membership: ${row.name}`} disabled={pending || confirming !== null} onClick={() => { setMessage(null); setConfirming(`end:${row.id}`); }}>End membership</button>}
+              </> : <button type="button" className="roster-action people-danger" aria-label={`End membership: ${row.name}`} disabled={pending || confirming !== null} onClick={() => { setMessage(null); setConfirming(`end:${row.id}`); }}>End membership</button>}
             </div>
           </li>)}</ul> : <p className="people-empty">No approved accounts yet.</p>}
         </section>}
@@ -129,7 +131,7 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
           {approvers.designated.length ? <ul className="people-list">{approvers.designated.map(row => <li key={row.id} className="people-row">
             <span className="people-avatar" aria-hidden="true">{initial(row.name)}</span>
             <div className="people-body"><h3><bdi dir="auto">{row.name}</bdi></h3><p className="people-status">Tutor · approves account requests</p></div>
-            <div className="people-actions"><button type="button" className="roster-action" aria-label={`Remove approver: ${row.name}`} disabled={pending} onClick={() => void remove(row.id, row.name)}>Remove</button></div>
+            <div className="people-actions"><button type="button" className="roster-action people-danger" aria-label={`Remove approver: ${row.name}`} disabled={pending} onClick={() => void remove(row.id, row.name)}>Remove</button></div>
           </li>)}</ul> : <p className="people-empty">No tutor approves requests yet.</p>}
           {approvers.candidates.length > 0 && <form className="accounts-add" onSubmit={event => { event.preventDefault(); void add(); }}>
             <label htmlFor={selectId}>Add an approver</label>
@@ -137,7 +139,7 @@ function AccountsPage({ mode }: { mode: ApproverMode }) {
               <select id={selectId} value={candidate} disabled={pending} onChange={event => setCandidate(event.target.value)}>
                 {approvers.candidates.map(row => <option key={row.tutorGrantId} value={row.tutorGrantId}>{row.name}</option>)}
               </select>
-              <button type="submit" className="button-secondary admin-pill" disabled={pending || !candidate}>Add</button>
+              <Button type="submit" disabled={pending || !candidate}>Add</Button>
             </div>
           </form>}
         </section>}

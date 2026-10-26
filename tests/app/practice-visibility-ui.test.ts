@@ -50,9 +50,10 @@ test("Learn's lines come from lesson ids and boxes only; a pair shows only when 
 });
 
 test("the student's disclosure renders only with the release gate open, the same gate the server checks", () => {
-  expect(PRACTICE_VISIBILITY_FROM).toBeNull(); // Closed until the review passes and Daniel approves the Account wording.
-  expect(renderToStaticMarkup(createElement(PracticeDisclosure, { place: "account" }))).toBe("");
-  expect(renderToStaticMarkup(createElement(PracticeDisclosure, { place: "learn" }))).toBe("");
+  // Opened by 1.9 bundle C (tests/app/practice-visibility-gate.test.ts holds the ordering); a closed gate still renders nothing.
+  expect(practiceVisibilityFrom(PRACTICE_VISIBILITY_FROM)).toBe(PRACTICE_VISIBILITY_FROM);
+  expect(renderToStaticMarkup(createElement(PracticeDisclosure, { place: "account", from: null }))).toBe("");
+  expect(renderToStaticMarkup(createElement(PracticeDisclosure, { place: "learn", from: null }))).toBe("");
   for (const bad of ["", "2026-02-30", "soon", "2026-10-1"]) expect(practiceVisibilityFrom(bad), bad).toBeNull();
   const account = renderToStaticMarkup(createElement(PracticeDisclosure, { place: "account", from: "2026-10-27" }));
   expect(account).toContain('data-practice-disclosure="account"'); expect(account).toContain('role="note"');
@@ -77,13 +78,13 @@ test("Daniel's Account line word for word, the parent line named and pronoun-fre
 
 test("a child who practises only with a parent is told in child practice, and a parent on Account, behind the same gate", () => {
   for (const place of ["child-practice", "parent-account"] as const) {
-    expect(renderToStaticMarkup(createElement(ChildPracticeDisclosure, { name: "Noa", place }))).toBe("");
+    expect(renderToStaticMarkup(createElement(ChildPracticeDisclosure, { name: "Noa", place, from: null }))).toBe("");
     const open = renderToStaticMarkup(createElement(ChildPracticeDisclosure, { name: "Noa", place, from: "2026-10-27" }));
     expect(open).toContain(`data-practice-disclosure="${place}"`); expect(open).toContain('<bdi dir="auto">Noa</bdi>'); expect(open).toContain('role="note"');
   }
   const list = renderToStaticMarkup(createElement(ParentAccountDisclosureList, { names: [{ id: "a", firstName: "Noa" }, { id: "b", firstName: "Eli" }], from: "2026-10-27" }));
   expect(list.match(/data-practice-disclosure="parent-account"/g)).toHaveLength(2);
-  expect(renderToStaticMarkup(createElement(ParentAccountDisclosureList, { names: [{ id: "a", firstName: "Noa" }] }))).toBe("");
+  expect(renderToStaticMarkup(createElement(ParentAccountDisclosureList, { names: [{ id: "a", firstName: "Noa" }], from: null }))).toBe("");
   // The practice bar shows it for the child being practised with; the parent's Account shows it for each linked child.
   expect(source("components/portal/workspace/students.tsx")).toMatch(/\{child && <ChildPracticeDisclosure name=\{child\.firstName\} place="child-practice" \/>\}/);
   expect(source("components/portal/entry.tsx")).toMatch(/view\.summary\.roles\.includes\("parent"\) && <ParentAccountDisclosure load=\{parentChildren\} \/>/);

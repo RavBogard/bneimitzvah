@@ -102,7 +102,7 @@ export const useWordCardOpener = () => usePanel()?.openWord ?? null;
  */
 export function DiscussionList() {
   const scope = usePanel(), view = useDiscussionsView();
-  return scope?.active && view ? <aside className="reading-sources-column" data-sources-column=""><DiscussionListView view={view} onOpen={scope.openFromList} /></aside> : null;
+  return scope?.active && view ? <div className="reading-sources-column" data-sources-column=""><DiscussionListView view={view} onOpen={scope.openFromList} /></div> : null;
 }
 /** On a phone or a tablet the sources are one tap away, in the Sheet: the button is in flow above the text, never over a verse; at laptop width the column replaces it. */
 export function SourcesButton() {

@@ -4,7 +4,8 @@ import { parseShelfLinks } from "../../src/server/study/shelf";
 import { createSefariaMetadataReader } from "../../src/server/study/sources/sefaria-metadata";
 import { SourceMetadataUnavailable } from "../../src/server/study/sources/metadata";
 import { compositionDates, inlineShelfTitles, isInlineWork, parseSourceRef, shelfSefariaUrl, SHELF_LIMITS, sourceSefariaUrl } from "../../src/lib/readings/shelf";
-import { parseShelfAnswer } from "../../src/components/portal/workspace/study/shelf-api";
+import { parseShelfAnswer, sourcePath } from "../../src/components/portal/workspace/study/shelf-api";
+import { validRef } from "../../src/server/discussions/validation";
 import { linkRow, syntheticLinks } from "../helpers/shelf";
 
 // Invented link rows: titles, categories, dates and citations only.
@@ -100,6 +101,13 @@ test("the shelf reads the same bounded links request as the signed-in catalog", 
 test("citations, dates, inline works and Sefaria links", () => {
   for (const ok of ["Ramban on Genesis 12:1", "Rosh Hashanah 16b:7", "Mishneh Torah, Sanctification of the New Month 1:1-3", "Tze'enah Ure'enah, Haftarot, Vaetchanan 2", "Berakhot 2a-3b", "Chizkuni, Genesis 12:1:1"])
     expect(parseSourceRef(ok), ok).toBe(ok);
+  // A real Sefaria title with a question mark in it; Sefaria refuses the ref without the "?", and every URL encodes it.
+  const asked = "Essays in Ethics; A Weekly Reading of the Jewish Bible, Toledot; Was Jacob Right to Take the Blessings? 13-16";
+  expect(parseSourceRef(asked)).toBe(asked);
+  expect(validRef(asked)).toBe(true);
+  expect(sourceSefariaUrl(asked)).toBe(`https://www.sefaria.org/${encodeURIComponent(asked)}`); expect(sourceSefariaUrl(asked)).not.toContain("?");
+  expect(new URL(sourcePath(asked), "https://example.test").searchParams.get("ref")).toBe(asked);
+  for (const query of ["Genesis?ref=x 1", "Genesis 12:1?", "Genesis? 12:1?x=1", "?Genesis 1"]) expect(parseSourceRef(query), query).toBeNull();
   for (const bad of ["Genesis", "Genesis 12:1 ", " Genesis 12:1", "Genesis  12:1", "<b>x</b> 1", "Genesis 12:1‮", "Genesis 12:1?x=1", "Genesis/12:1", "x".repeat(260) + " 1", "Genesis 12:1#", "", null])
     expect(parseSourceRef(bad), String(bad)).toBeNull();
   expect(compositionDates([1246, 1270])).toBe("Composed 1246–1270"); expect(compositionDates([900, 900])).toBe("Composed 900");
