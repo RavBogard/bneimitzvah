@@ -13,6 +13,31 @@ Read first, every session: `docs/planning/2026-10-15-kickoff/MISSION.md` (Daniel
 - **High-stakes work** (auth, tenant isolation, never-in-repo, the chant gate) gets an adversarial pass by a second agent before it is reported done.
 - **Done** means tests green on Windows and in CI and a deploy Daniel can open.
 
+## Operating procedure (token efficiency, Daniel 2026-10-25)
+
+- **Agents:**
+  - Each builder or reviewer prompt points to `docs/planning/AGENT-BRIEF.md`, plus the milestone's spec pasted in and its exact approved strings.
+  - Builders push, open the PR and stop.
+  - The lead checks CI with a background `merge-if-green` script, and wakes a builder only with a failing test that is theirs.
+- **Models and concurrency:**
+  - Sonnet builds. Opus is for adversarial reviews, and for builds that touch auth, RLS or licensed text.
+  - Two or three builders at once. Never two open PRs in the same hot-file group.
+  - Migration numbers are reserved when a milestone starts.
+- **Reviews:** an adversarial pass is limited to the diff and a named list of attacks. A re-review covers only the delta.
+- **Tests:**
+  - CI is the full check. Locally, run only tsc, the changed tests and never-in-repo.
+  - Fix flakes as soon as they appear.
+  - New tests assert roles and test ids, not wording.
+- **The lead:**
+  - Watch in the background, never by polling in the foreground.
+  - Read only the failing lines of a log.
+  - Make one STATE/PLAN commit per batch of merges.
+  - Keep updates to Daniel short.
+- **Planning and wording:**
+  - Planning, wording and research go to Cowork.
+  - Builders never wait on wording; gaps are batched into one popup round.
+- **Never relaxed:** adversarial reviews on high-stakes work, never-in-repo, the RLS tests, the migration check scripts, and CI's three device projects.
+
 ## Git
 
 - Commit with the same identity the haftarah repo's `main` uses (`RavBogard <RavBogard@users.noreply.github.com>`), set repo-locally.
