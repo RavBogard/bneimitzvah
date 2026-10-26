@@ -58,12 +58,14 @@ const checking = (tab: Page) => tab.locator("#workspace-main").getByRole("headin
 const isCalendar = (request: Request) => new URL(request.url()).pathname.endsWith("/practice-calendar");
 const isEvent = (request: Request) => new URL(request.url()).pathname.endsWith("/practice-events");
 function traffic(tab: Page) {
-  const posts: { body: Record<string, unknown>; context: string | null }[] = [], reads: string[] = [];
+  // `posts` is when a visit was SENT; `acks` is when the server ANSWERED it, which is after its row is committed. Read the database only after the acks.
+  const posts: { body: Record<string, unknown>; context: string | null }[] = [], reads: string[] = [], acks: number[] = [];
   tab.on("request", request => {
     if (isEvent(request)) { expect(request.method()).toBe("POST"); posts.push({ body: request.postDataJSON(), context: request.headers()["x-practice-context"] ?? null }); }
     if (isCalendar(request)) reads.push(request.url());
   });
-  return { posts, reads };
+  tab.on("response", response => { if (isEvent(response.request())) acks.push(response.status()); });
+  return { posts, reads, acks };
 }
 async function serverDay(tab: Page, action: () => Promise<unknown>) {
   const response = tab.waitForResponse(response => isCalendar(response.request()) && response.status() === 200);
@@ -118,6 +120,7 @@ it("shows the student's week, reports explicit inline verse visits on the server
     expect(seen.posts[1].body).toMatchObject({ expectedDay: day, target: { verseRef: "Genesis 1:2" } }); expect(seen.posts[1].body.eventId).not.toBe(seen.posts[0].body.eventId);
     await safe(() => tab.locator('.study-verses [data-verse-ref="Genesis 1:2"] [data-word-index="0"]').first().click());
     expect(seen.posts).toHaveLength(2);
+    await ui.poll(() => seen.acks).toEqual([200, 200]);
     const after = await rows(); expect(after.days).toBe(1); expect(after.events - before.events).toBe(2);
     // Same-authority quiet verification retains the calendar and sends no visit.
     let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });

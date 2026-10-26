@@ -7,6 +7,7 @@ import { browserFixture } from "./fixture";
 import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from "./server";
 import { installLoopbackFetchGuard } from "./egress";
 import { openAuthMail } from "./auth-navigation";
+import { countPageFetches, pageFetchesSettled } from "./fetch-settle";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
@@ -52,7 +53,9 @@ async function page() {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
   // Egress guard: only requests to other origins are intercepted, and they are aborted. Same-origin requests are deliberately NOT routed:
   // Firefox never reports requestfinished or requestfailed for a routed fetch that the page aborts (AbortSignal) before route.continue() settles,
-  // so Playwright counted it as in flight for good and every waitForLoadState("networkidle") below then timed out after 30 s.
+  // so Playwright counted it as in flight for good. Firefox does the same for ANY fetch the page aborts while a route exists, so waiting for quiet
+  // uses the page's own fetch count (fetch-settle.ts), never waitForLoadState("networkidle").
+  await countPageFetches(context);
   await context.route(url => url.origin !== BROWSER_ORIGIN, route => route.abort());
   const tab = await context.newPage(), reads:ServiceRead[]=[],requests=new WeakMap<BrowserRequest,ServiceRead>();serviceReads.set(tab,reads);
   tab.on("request",request=>{const url=new URL(request.url()),match=/^\/api\/students\/([^/]+)\/my-service$/.exec(url.pathname);if(match){const read:ServiceRead={studentId:match[1],mode:url.searchParams.get("mode")??"",started:performance.now(),terminal:"pending"};reads.push(read);requests.set(request,read);}});
@@ -62,13 +65,13 @@ async function page() {
   await safe(() => tab.goto("/", { waitUntil: "domcontentloaded" }));
   expect(await tab.evaluate(async () => (await fetch("/api/auth/sign-in/magic-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: "pg-tutor@example.test" }) })).status)).toBe(200);
   await openAuthMail(tab, fixture.takeMail("pg-tutor@example.test")); await tab.goto("/workspace/student", { waitUntil: "domcontentloaded" });
-  await ready(tab); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 1:1"]')).toBeVisible(); await tab.waitForLoadState("networkidle"); return tab;
+  await ready(tab); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 1:1"]')).toBeVisible(); await pageFetchesSettled(tab); return tab;
 }
 async function globallyGone(tab: Page) {
   await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible();
   expect(await tab.locator(".practice-day, .study-verses, [data-word-index], dialog[open]").count()).toBe(0);
   expect(await tab.getByRole("link", { name: "Parent", exact: true }).count()).toBe(0);
-  await tab.waitForLoadState("networkidle");
+  await pageFetchesSettled(tab);
 }
 beforeAll(async () => {
   try {
@@ -113,9 +116,9 @@ it("keeps calendar 403 and 404 local but makes a direct POST 401 globally termin
     await tab.route(eventPath(tab), route => route.fulfill({ status, contentType: "application/json", body: "{}" }));
     await click(tab, "View Genesis 1:1 up close"); await ui(week(tab)).toHaveCount(0); await ui(tab.locator(".study-verses")).toBeVisible();
     expect(await tab.getByRole("heading", { name: "Sign in to continue", exact: true }).count()).toBe(0);
-    await click(tab, "Close practice view"); await tab.waitForLoadState("networkidle"); expect(seen.sessions).toEqual([200]);
+    await click(tab, "Close practice view"); await pageFetchesSettled(tab); expect(seen.sessions).toEqual([200]);
     await tab.unroute(eventPath(tab));const expectedServiceReads=selectedReads(tab).length+1;
-    await click(tab, "Refresh reading"); await ready(tab,expectedServiceReads); await tab.waitForLoadState("networkidle"); seen.sessions.length = 0;
+    await click(tab, "Refresh reading"); await ready(tab,expectedServiceReads); await pageFetchesSettled(tab); seen.sessions.length = 0;
   }
   await tab.route(eventPath(tab), async route => { await expired(); await route.fulfill({ status: 401, contentType: "application/json", body: "{}" }); });
   await click(tab, "View Genesis 1:1 up close"); await globallyGone(tab); expect(seen.sessions).toEqual([200, 401]); expect(seen.events).toEqual(["POST", "POST", "POST"]); await tab.context().close();
@@ -131,7 +134,7 @@ it("ignores a held old calendar 401 after a real role and child-context replacem
     await tab.getByRole("link", { name: "Parent", exact: true }).click(); await tab.getByLabel("Child", { exact: true }).locator(`[data-student-id="${sibling.id}"]`).click();
     await click(tab, "Practice with Synthetic"); await ready(tab,1,sibling.id,"child-practice"); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();
   } finally { release(); }
-  await completed; await tab.waitForLoadState("networkidle"); await ready(tab,1,sibling.id,"child-practice");
+  await completed; await pageFetchesSettled(tab); await ready(tab,1,sibling.id,"child-practice");
   await ui(tab.getByRole("heading", { name: "Child practice", exact: true, level: 1 })).toBeVisible(); await ui(tab.locator('.study-verses [data-verse-ref="Genesis 2:1"]')).toBeVisible();
   expect(await tab.getByRole("heading", { name: "Sign in to continue", exact: true }).count()).toBe(0); expect(seen.events).toEqual(["POST"]);
   // A stale refusal cannot clear this rightful selection, but a real revoked
