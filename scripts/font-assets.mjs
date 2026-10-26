@@ -56,8 +56,8 @@ export const FONT_ASSETS = Object.freeze([
     sha256: "1099e746347ec41ae60c79dbab809b0d75cb4ae425f8d48403bc85e4661d5b81" }),
   Object.freeze({ path: "public/brand/favicon.ico", family: "brand-mural", kind: "image", size: 11376,
     sha256: "e22679cbb4bb9123aeb9eb9249c80f84a2a521a5fb3f4c53f7a83f4917c32f7b" }),
-  Object.freeze({ path: "public/brand/PROVENANCE.md", family: "brand-mural", kind: "license", size: 2211,
-    sha256: "20bd8c33013b21942c83a7cd2d9814861736c6f55601502b6e36be2b7d126d7e" }),
+  Object.freeze({ path: "public/brand/PROVENANCE.md", family: "brand-mural", kind: "license", size: 2246,
+    sha256: "31f348c5d1584a45cf5369250e3859f34ef3edc977f5c8ef82b1a1434776f274" }),
 ]);
 
 // Deliberately no path normalization or case folding at the trust boundary.

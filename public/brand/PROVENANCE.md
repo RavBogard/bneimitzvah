@@ -6,13 +6,13 @@ Derivatives of Siona Benjamin's floor mural at Central Reform Congregation, the 
 
 ## Permission
 
-Used with the congregation's permission; Daniel Bogard confirmed on 2026-10-26 that CRC has permission and that copies of 512 px and under may be committed.
+Used under permission held by Central Reform Congregation; Daniel Bogard confirmed on 2026-10-26 that CRC has permission and that copies of 512 px and under may be committed.
 
 ## Rule
 
 No copy larger than 512 px enters this repository; the full-resolution masters are kept outside it.
 
-The repository policy (scripts/font-assets.mjs, checked by tests/never-in-repo.test.mjs) accepts each file below only at its exact path with exactly these bytes, only beside this notice, and only when its own header declares no side larger than 512 px. Any other image is refused.
+The repository policy (scripts/font-assets.mjs, checked by tests/never-in-repo.test.mjs) accepts each file below only at its exact path with exactly these bytes, only beside this notice, and only when its own header declares no side larger than 512 px. Any other PNG, WebP or ICO image is refused.
 
 ## How they were made
 
