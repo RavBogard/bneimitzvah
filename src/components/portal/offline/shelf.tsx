@@ -4,7 +4,6 @@ import { APPROVED, PLAN } from "../../../lib/offline/copy";
 import { purgeOffline, savedPacks } from "../../../lib/offline/pack-index";
 import { WINDOW_MS, type Pack } from "../../../lib/offline/policy";
 import { readAddress } from "../public-reading/urls";
-import { COPY as SERVICE_COPY } from "../../../lib/service-course/copy";
 import { savedDate, useOfflinePacks, useOnline, usePlatform, useProductName } from "./status";
 import styles from "./offline.module.css";
 
@@ -22,22 +21,30 @@ import styles from "./offline.module.css";
  * and on a host that keeps nothing (a preview or an alias) it says the approved "Nothing is saved on this device yet."
  */
 const displayRange = (ranges: string) => ranges.replace(/(\d)-(\d)/g, "$1–$2");
-// The evening lessons' text (2.0 SC7, signed-in CRC people only) opens the service course and is named by the course's own title.
+// The service-course pack (2.0 SC6, W14) and the evening lessons' text (2.0 SC7, signed-in CRC people only) open the service course and
+// are named by A7 off.packLabel.
+const service = (pack: Pack) => pack.descriptor.type === "service" || pack.descriptor.type === "evening";
 const target = (pack: Pack) => pack.descriptor.type === "week" ? "/read" : pack.descriptor.type === "ref" ? readAddress({ mode: "ref", ref: pack.descriptor.ref, kind: pack.descriptor.kind })
-  : pack.descriptor.type === "evening" ? "/learn/service" : "/learn";
-const label = (pack: Pack) => pack.descriptor.type === "course" ? APPROVED.courseLabel : pack.descriptor.type === "evening" ? SERVICE_COPY.home.title
+  : service(pack) ? "/learn/service" : "/learn";
+const label = (pack: Pack) => pack.descriptor.type === "course" ? APPROVED.courseLabel : service(pack) ? APPROVED.servicePackLabel
   : pack.descriptor.type === "ref" ? pack.label || `${pack.descriptor.kind === "torah" ? "Torah" : "Haftarah"} ${displayRange(pack.descriptor.ref)}`
     : pack.label && pack.label !== "week" ? pack.label : APPROVED.weekLabel;
+
+/** The rows /offline lists: one "Learn the service" row, the service-course pack's, when both it and the evening text are saved. Decided here. */
+export function shelfRows(packs: readonly Pack[]): readonly Pack[] {
+  const hasService = packs.some(pack => pack.descriptor.type === "service");
+  return hasService ? packs.filter(pack => pack.descriptor.type !== "evening") : packs;
+}
 
 export function OfflineShelf() {
   const platform = usePlatform(), live = platform?.origin === true;
   const [packs, setPacks] = useState<readonly Pack[] | null>(null), [removed, setRemoved] = useState(false), productName = useProductName(live);
-  const { ownerChecked, week, course } = useOfflinePacks(), online = useOnline(), showOwn = ownerChecked || !online;
+  const { ownerChecked, week, course, service: serviceState } = useOfflinePacks(), online = useOnline(), showOwn = ownerChecked || !online;
   useEffect(() => {
     if (!live) return; let current = true;
     void savedPacks().then(rows => { if (current) setPacks(showOwn ? rows : rows.filter(pack => pack.owner === "public")); });
     return () => { current = false; };
-  }, [live, showOwn, week, course]);
+  }, [live, showOwn, week, course, serviceState]);
   return <OfflineShelfView live={platform === null ? null : live} packs={packs} removed={removed} productName={productName}
     onRemove={() => void purgeOffline().then(() => { setRemoved(true); setPacks([]); })} />;
 }
@@ -56,7 +63,7 @@ export function OfflineShelfView(props: Readonly<{ live: boolean | null; packs: 
       <h1 className={styles.shelfTitle}>{PLAN.saved}</h1>
       {live === false && empty}
       {live === true && <>
-      {packs !== null && (packs.length ? <ul className={styles.shelf}>{packs.map(pack => <li key={pack.key}>
+      {packs !== null && (packs.length ? <ul className={styles.shelf}>{shelfRows(packs).map(pack => <li key={pack.key} data-pack={pack.descriptor.type}>
         <span className={styles.shelfLabel}><bdi dir="auto">{label(pack)}</bdi></span>
         <span className={styles.shelfDate}>{APPROVED.savedUntil(savedDate(Math.min(pack.expiresAt, pack.renewedAt + WINDOW_MS)))}</span>
         <a className="button-secondary" href={target(pack)}>{PLAN.open}</a>

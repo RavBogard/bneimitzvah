@@ -6,10 +6,10 @@ import type { ShortReferenceSource } from "../reference-audio/short-source";
 import { coursePassages } from "../../components/learn/verses-api";
 import { parsePublicRefReading, parsePublicShortPage, parsePublicTextPage, parsePublicWeek, refSource, weekSource, type PublicSource } from "../../components/portal/public-reading/api";
 import { publicReadingPath, publicShortPath, publicTextPath } from "../../components/portal/public-reading/urls";
-import { BUDGET, OFFLINE_CACHE, OFFLINE_PACKS_PATH, OWNER_KEY, RENEW_AFTER_MS, OFFLINE_HEADER, PACK_CONCURRENCY, ownerOnlyAsset, packAssetAllowed, packRefAllowed, WINDOW_MS, type Pack, type PackDescriptor } from "./policy";
-import { CRC_TENANT, EVENING_TEXT_UNITS } from "../service-course/course";
-import { parseEveningText } from "../service-course/text";
-import { eveningTextPath } from "../../components/learn/service/text-api";
+import { BUDGET, OFFLINE_CACHE, OFFLINE_PACKS_PATH, OWNER_KEY, RENEW_AFTER_MS, OFFLINE_HEADER, PACK_CONCURRENCY, ownerOnlyAsset, packAssetAllowed, packRefAllowed, SERVICE_PACK_KEY, servicePackAssetAllowed, WINDOW_MS, type Pack, type PackDescriptor } from "./policy";
+import { CRC_TENANT, EVENING_TEXT_UNITS, SERVICE_COURSE, SERVICE_TEXT_UNITS, type TorahRef } from "../service-course/course";
+import { EVENING_UNIT, parseEveningText, parseServiceText } from "../service-course/text";
+import { eveningTextPath, parseVerse, serviceTextPath, versePath } from "../../components/learn/service/text-api";
 import { publicAliyotPath } from "../../components/portal/print/api";
 import { parsePortions } from "../print/portions";
 import { parashahSlug, portionSummaryPath } from "../portion-summary/reading";
@@ -209,6 +209,42 @@ async function planEvening(io: PackerIo, signal: AbortSignal, generation: number
   return plan;
 }
 
+/**
+ * 2.0 SC6 decision point: the service-course pack, a public pack like the Learn to lein course's. Exactly these addresses and nothing
+ * else: every public-lane unit the course names (Read steps, and the f5 and f6 corpus that Review, Quick ten and the strand read), and
+ * the first text page of each Bible verse a Read step's word card opens. Built from SERVICE_TEXT_UNITS, which leaves out every evening
+ * unit, so the licensed Beit Mitzvah book is never asked for here; servicePackAssetAllowed refuses it again.
+ */
+export function servicePackPaths(): readonly string[] {
+  const units = [...SERVICE_TEXT_UNITS].filter(unit => !EVENING_UNIT.test(unit)).sort();
+  const verses = new Map<string, Pick<TorahRef, "ref" | "kind">>();
+  for (const lesson of SERVICE_COURSE.lessons) { const ref = lesson.read?.torahRef; if (ref) verses.set(versePath(ref), { ref: ref.ref, kind: ref.kind }); }
+  return Object.freeze([...units.map(serviceTextPath), ...[...verses.keys()].sort()]);
+}
+const unitOf = (path: string) => path.startsWith("/api/public/service-text?") ? new URLSearchParams(path.slice(path.indexOf("?"))).get("unit") : null;
+/**
+ * Does a stored service-course pack hold every unit's text this build asks for, and nothing it no longer asks for? A release that moved
+ * a unit renews it at once. A verse page may be missing (see planService).
+ */
+export function servicePackCurrent(pack: Pick<Pack, "assets">): boolean {
+  const want = servicePackPaths(), have = new Set(pack.assets);
+  return want.every(path => unitOf(path) === null || have.has(path)) && pack.assets.every(asset => want.includes(asset));
+}
+async function planService(io: PackerIo, signal: AbortSignal, generation: number): Promise<Plan> {
+  const plan: Plan = { label: "", json: new Map(), clips: new Map(), bytes: 0 };
+  const verses = new Map(SERVICE_COURSE.lessons.flatMap(lesson => lesson.read?.torahRef ? [[versePath(lesson.read.torahRef), lesson.read.torahRef] as const] : []));
+  for (const path of servicePackPaths()) {
+    if (!servicePackAssetAllowed(path)) throw new PackStopped("failed");
+    const unit = unitOf(path), verse = verses.get(path);
+    // Each answer checked by the browser's own parser, as the lesson reads it. Every unit's text is required. A verse page is not:
+    // without it the line keeps its glossary cards (A4 7), as it does online when the verse does not load. Decided here.
+    if (unit !== null) { if (!parseServiceText(await fetchJson(io, path, signal, plan, generation), unit)) throw new PackStopped("failed"); }
+    else if (verse) await optionalJson(io, path, signal, plan, generation, answer => parseVerse(answer, verse) !== null);
+    else throw new PackStopped("failed");
+  }
+  return plan;
+}
+
 async function pool<T>(items: readonly T[], work: (item: T) => Promise<void>) {
   let next = 0, failure: unknown = null;
   await Promise.all(Array.from({ length: Math.min(PACK_CONCURRENCY, items.length) }, async () => {
@@ -224,7 +260,8 @@ export async function renewPack(io: PackerIo, descriptor: PackDescriptor, signal
   if ((descriptor.type === "ref" || descriptor.type === "evening") !== (own !== undefined) || (own && !OWNER_KEY.test(own.owner))) throw new PackStopped("failed");
   const plan = descriptor.type === "week" ? await planWeek(io, descriptor.date, signal, generation)
     : descriptor.type === "ref" ? await planRef(io, descriptor.kind, descriptor.ref, signal, generation)
-    : descriptor.type === "evening" ? await planEvening(io, signal, generation) : await planCourse(io, signal, generation);
+    : descriptor.type === "evening" ? await planEvening(io, signal, generation) : descriptor.type === "service" ? await planService(io, signal, generation)
+    : await planCourse(io, signal, generation);
   if (purgeGeneration() !== generation || signal.aborted) throw new PackStopped("purged");
   const cache = await io.caches.open(OFFLINE_CACHE);
   const missing: ShortReferenceSource[] = [];
@@ -256,9 +293,12 @@ export async function renewPack(io: PackerIo, descriptor: PackDescriptor, signal
   const assets = [...plan.json.keys(), ...plan.clips.keys()];
   if (!assets.every(packAssetAllowed)) throw new PackStopped("failed");
   if (purgeGeneration() !== generation || signal.aborted) throw new PackStopped("purged");
-  const key = descriptor.type === "week" ? `week:${descriptor.date}` : descriptor.type === "ref" ? ownerPackKey(descriptor.kind, descriptor.ref) : descriptor.type === "evening" ? EVENING_PACK_KEY : "course";
+  const key = descriptor.type === "week" ? `week:${descriptor.date}` : descriptor.type === "ref" ? ownerPackKey(descriptor.kind, descriptor.ref) : descriptor.type === "evening" ? EVENING_PACK_KEY
+    : descriptor.type === "service" ? SERVICE_PACK_KEY : "course";
   // The evening text only ever enters an owner's pack; nothing else may carry it.
   if ((descriptor.type === "evening") !== assets.some(ownerOnlyAsset) || (descriptor.type === "evening" && !assets.every(ownerOnlyAsset))) throw new PackStopped("failed");
+  // 2.0 SC6: the service-course pack is public-lane text only, by the one rule the stored index also holds it to.
+  if (descriptor.type === "service" && !assets.every(servicePackAssetAllowed)) throw new PackStopped("failed");
   const pack: Pack = Object.freeze({ key, owner: own ? own.owner : "public", label: own ? own.label : plan.label, descriptor, assets: Object.freeze(assets),
     bytes: plan.bytes + [...plan.clips.values()].reduce((sum, source) => sum + source.bytes, 0), renewedAt: now, expiresAt: now + WINDOW_MS, format: 1 });
   const index = await readIndex(cache);
@@ -290,28 +330,31 @@ export async function openOffline(io: PackerIo & { locks?: Locks | null }) {
     if (answer.state === "owner" && before.owner !== null && before.owner !== answer.owner) {
       // Another account's packs: everything goes, the public packs too, exactly as at a sign-out; then this owner's are packed.
       await io.caches.delete(OFFLINE_CACHE);
-      setOfflineState({ week: null, course: null, savedUntil: null });
+      setOfflineState({ week: null, course: null, service: null, savedUntil: null });
       cache = await io.caches.open(OFFLINE_CACHE);
     }
     const listed = new Set(answer.state === "owner" ? [...answer.packs.map(pack => ownerPackKey(pack.kind, pack.ref)), ...(answer.evening === true ? [EVENING_PACK_KEY] : [])] : []);
     await sweep(cache, io.now(), pack => (pack.descriptor.type !== "week" || pack.key === weekKey) && (pack.owner === "public" || answer.state === "unknown" || listed.has(pack.key)),
       answer.state === "owner" ? answer.owner : answer.state === "signed-out" ? null : undefined);
-    if (answer.state !== "unknown") setOfflineState({ ownerChecked: true });
+    // 2.0 SC6: the owner this check named rides with it, so a save of the student's parts can be tied to it (path-copy.ts).
+    if (answer.state !== "unknown") setOfflineState({ ownerChecked: true, ownerKey: answer.state === "owner" ? answer.owner : null });
     await refreshOfflineState(io.now(), weekKey);
     const fresh = await readIndex(cache);
-    type Job = Readonly<{ key: string; descriptor: PackDescriptor; state?: "week" | "course"; own?: Readonly<{ owner: string; label: string }> }>;
+    type Job = Readonly<{ key: string; descriptor: PackDescriptor; state?: "week" | "course" | "service"; own?: Readonly<{ owner: string; label: string }> }>;
     const own: Job[] = answer.state === "owner" ? answer.packs.map(pack => ({ key: ownerPackKey(pack.kind, pack.ref), descriptor: Object.freeze({ type: "ref" as const, kind: pack.kind, ref: pack.ref }),
       own: Object.freeze({ owner: answer.owner, label: pack.name ?? "" }) })) : [];
     // The evening lessons' text, for a signed-in CRC person only (2.0 SC7): an owner pack, so a sign-out or another account removes it.
     if (answer.state === "owner" && answer.evening === true) own.push({ key: EVENING_PACK_KEY, descriptor: Object.freeze({ type: "evening" as const }), own: Object.freeze({ owner: answer.owner, label: "" }) });
-    // This week first, then the person's own readings, then the course.
-    const jobs: Job[] = [{ key: weekKey, descriptor: { type: "week", date }, state: "week" }, ...own, { key: "course", descriptor: { type: "course" }, state: "course" }];
+    // This week first, then the person's own readings, then the course, then (2.0 SC6) the service course, where the congregation offers it.
+    const jobs: Job[] = [{ key: weekKey, descriptor: { type: "week", date }, state: "week" }, ...own, { key: "course", descriptor: { type: "course" }, state: "course" },
+      ...(CRC_TENANT.enabled ? [{ key: SERVICE_PACK_KEY, descriptor: { type: "service" as const }, state: "service" as const }] : [])];
     for (const job of jobs) {
       // A complete pack renewed in the last 12 hours is left alone, so moving between pages never re-asks the public routes
       // (their firewall allows 120 requests a minute per address). Decided here: renewal is at most twice a day.
       const current = fresh.packs.find(pack => pack.key === job.key);
       // A course pack built from an older set of fixed passages (a release that moved them, 1.6) is renewed at once.
-      if (current && (!job.own || current.label === job.own.label) && (job.key !== "course" || coursePackCurrent(current, io.origin)) && io.now() - current.renewedAt < RENEW_AFTER_MS && await inspectPack(cache, current, io.now(), io.origin) === "saved") continue;
+      if (current && (!job.own || current.label === job.own.label) && (job.key !== "course" || coursePackCurrent(current, io.origin)) && (job.key !== SERVICE_PACK_KEY || servicePackCurrent(current))
+        && io.now() - current.renewedAt < RENEW_AFTER_MS && await inspectPack(cache, current, io.now(), io.origin) === "saved") continue;
       if (job.state) setOfflineState({ [job.state]: "saving" });
       try { await renewPack(io, job.descriptor, controller.signal, job.own); }
       catch (error) {

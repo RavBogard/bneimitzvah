@@ -11,12 +11,15 @@ import { SiddurLink } from "../../portal/siddur-link";
 import learn from "../learn.module.css";
 import styles from "./service.module.css";
 import { icons, ServiceAppBar } from "./bits";
-import { pathLessons, useServicePath, useServiceProgress, type PathView } from "./progress";
+import { pathLessons, useServiceProgress, type PathView } from "./progress";
+import { useCoursePath } from "./offline";
+import { savedDate, useOfflineWording } from "../../portal/offline/status";
 
 /** One lesson row. Every row is a link, in every state: a lesson never locks, so nothing here is a bare span (DP-09). */
 function Row({ lesson, progress, next, page }: { lesson: Lesson; progress: Progress; next: Lesson | null; page?: number }) {
   const done = isDone(progress, lesson.id), state = done ? "done" : next?.id === lesson.id ? "next" : "later";
-  const href = page === undefined ? null : siddurPageLink(DEFAULT_SIDDUR_URL, CRC_TENANT.siddurBook, page);
+  // 2.0 SC6 (A4 13): offline, the home hides its siddur lines.
+  const offline = useOfflineWording(), href = page === undefined || offline ? null : siddurPageLink(DEFAULT_SIDDUR_URL, CRC_TENANT.siddurBook, page);
   return <li className={learn.step}>
     <a className={learn.stepLink} data-state={state} data-lesson={lesson.id} href={`/learn/service/${lesson.id}`}>
       <span className={learn.dot} data-state={state} data-plain="" aria-hidden="true">{done && icons.check}</span>
@@ -35,7 +38,8 @@ function PathList({ lessons, progress, next }: { lessons: readonly Lesson[]; pro
  * "Your parts" (2.0 SC4, A4 6.3 and W2, W3): a signed-in student's own parts in service order with their own pages, or one line
  * for each other state. Signed out, or an account with no student of its own, shows nothing here.
  */
-export function YourParts({ view, progress, next }: { view: PathView; progress: Progress; next: Lesson | null }) {
+export function YourParts({ view, progress, next, savedAt = null }: { view: PathView; progress: Progress; next: Lesson | null; savedAt?: number | null }) {
+  const offline = useOfflineWording();
   if (view.status === "idle" || view.status === "none") return null;
   if (view.status === "loading") return <section aria-labelledby="service-mine" data-path="loading">
     <div className={learn.pathHead}><h2 id="service-mine">{COPY.home.mineHeading}</h2></div>
@@ -46,9 +50,11 @@ export function YourParts({ view, progress, next }: { view: PathView; progress: 
   if (path.state === "cleared") return <p className={styles.pathLine} data-path="cleared">{COPY.state.pathCleared}</p>;
   if (path.state === "withdrawn") return <p className={styles.pathLine} data-path="withdrawn">{COPY.state.pathWithdrawn}</p>;
   const lessons = path.items.flatMap(item => { const lesson = lessonById(item.lesson); return lesson && lessonOpen(lesson) ? [{ lesson, page: item.page }] : []; });
-  const start = path.serviceStart === undefined ? null : siddurPageLink(DEFAULT_SIDDUR_URL, CRC_TENANT.siddurBook, path.serviceStart);
-  return <section aria-labelledby="service-mine" data-path={path.state} data-review={path.review || undefined} data-slot={path.slot}>
+  const start = path.serviceStart === undefined || offline ? null : siddurPageLink(DEFAULT_SIDDUR_URL, CRC_TENANT.siddurBook, path.serviceStart);
+  // 2.0 SC6: offline, the device's last copy, dated (A7 st.path.offline).
+  return <section aria-labelledby="service-mine" data-path={path.state} data-review={path.review || undefined} data-slot={path.slot} data-path-copy={savedAt === null ? undefined : savedAt}>
     <div className={learn.pathHead}><h2 id="service-mine">{COPY.home.mineHeading}</h2></div>
+    {savedAt !== null && <p className={styles.unitSummary} data-path-offline="">{fill(COPY.state.pathOffline, { date: savedDate(savedAt) })}</p>}
     {path.state === "no-plan" ? <p className={styles.unitSummary}>{COPY.state.pathNoPlan}</p> : lessons.length > 0 && <p className={styles.unitSummary}>{COPY.home.mineLine}</p>}
     {path.review && <p className={styles.unitSummary}>{COPY.state.pathReview}</p>}
     {path.slot === "unknown" && <p className={styles.unitSummary}>{COPY.state.slotUnknown}</p>}
@@ -62,7 +68,7 @@ export function YourParts({ view, progress, next }: { view: PathView; progress: 
 /** The course home: one next step, the links, the signed-in student's own parts, every unit of the Shabbat morning service in order, then (CRC, 2.0 SC7) Saturday evening and Havdalah. */
 export function ServiceHome() {
   const { progress: loaded, account } = useServiceProgress();
-  const view = useServicePath(account);
+  const { view, savedAt } = useCoursePath(account);
   const progress = loaded ?? emptyProgress(), ready = loaded !== null;
   if (!CRC_TENANT.enabled) return <div className={`portal-shell ${learn.shell}`}><ServiceAppBar /><main className={learn.main}><p role="status">{COPY.state.tenantOff}</p></main></div>;
   const mine = pathLessons(view);
@@ -95,7 +101,7 @@ export function ServiceHome() {
           {account.state !== "synced" && <p className={learn.saved} data-saved="device">{savedBefore}<a href="/sign-in">Sign in</a>{savedAfter}</p>}
         </div>
         <div className={learn.paths}>
-          <YourParts view={view} progress={progress} next={next} />
+          <YourParts view={view} progress={progress} next={next} savedAt={savedAt} />
           {listed && <h2 className={styles.allHeading}>{COPY.home.allHeading}</h2>}
           {homeUnits().map(unit => <section key={unit.id} aria-labelledby={`unit-${unit.id}`} data-unit={unit.id}>
             <div className={learn.pathHead}><h2 id={`unit-${unit.id}`}>{unit.title}</h2></div>

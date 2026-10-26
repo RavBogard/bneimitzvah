@@ -8,7 +8,8 @@ import { WordCardScope } from "../word-card";
 import learn from "../learn.module.css";
 import styles from "./service.module.css";
 import { icons, LessonSiddurLink } from "./bits";
-import { pathLessons, useServicePath, useServiceProgress, type PathView } from "./progress";
+import { pathLessons, useServiceProgress, type PathView } from "./progress";
+import { useCoursePath } from "./offline";
 import { CheckStep, KeyWordsStep, LessonWords, ReadStep, useCheckItems, useLessonText, type TextState } from "./read";
 import { FluencyLesson } from "./fluency";
 
@@ -46,7 +47,8 @@ function LessonFlow({ lesson }: { lesson: Lesson }) {
   const [at, setAt] = useState(0);
   const { progress, account, update } = useServiceProgress();
   // A signed-in student's own slot picks the evening teaching and pages for a prayer the evening repeats (2.0 SC7); signed out, the morning.
-  const pathView = useServicePath(account), slot: ServiceSlot = pathView.status === "ready" ? pathView.path.slot : "morning";
+  // Offline, the device's last copy of the student's parts (2.0 SC6), so the slot and Next of your parts hold.
+  const pathView = useCoursePath(account).view, slot: ServiceSlot = pathView.status === "ready" ? pathView.path.slot : "morning";
   const main = useRef<HTMLElement>(null);
   const go = useCallback((next: number) => { setAt(next); window.scrollTo({ top: 0 }); main.current?.focus({ preventScroll: true }); }, []);
   const index = Math.min(at, steps.length - 1), step = steps[index];

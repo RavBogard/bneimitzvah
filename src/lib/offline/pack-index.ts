@@ -1,4 +1,4 @@
-import { EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, packLive, WINDOW_MS, parsePackIndex, type Pack, type PackIndex } from "./policy";
+import { EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, OWNER_KEY, packLive, PATH_COPY_KEY, WINDOW_MS, parsePackIndex, type Pack, type PackIndex } from "./policy";
 
 /**
  * The page's side of the pack index (§3.3–§3.5): read, write, sweep, inspect and purge. Small and import-free of
@@ -9,8 +9,9 @@ import { EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, packLive, WINDOW_MS, parsePackIn
 export type PackState = "saving" | "saved" | "partial" | "no-space" | null;
 /** `shell`: the worker is active, so its app shell is installed. `ownerChecked`: this page load has asked the private
  * endpoint whose readings this device keeps (A2), so the owner packs it lists are this account's. */
-export type OfflineState = Readonly<{ week: PackState; course: PackState; savedUntil: number | null; shell: boolean; ownerChecked: boolean }>;
-const EMPTY_STATE: OfflineState = Object.freeze({ week: null, course: null, savedUntil: null, shell: false, ownerChecked: false });
+/** `ownerKey` (2.0 SC6): the owner key that check named, or null (signed out, not asked yet, or a purge since). */
+export type OfflineState = Readonly<{ week: PackState; course: PackState; service: PackState; savedUntil: number | null; shell: boolean; ownerChecked: boolean; ownerKey: string | null }>;
+const EMPTY_STATE: OfflineState = Object.freeze({ week: null, course: null, service: null, savedUntil: null, shell: false, ownerChecked: false, ownerKey: null });
 
 let state: OfflineState = EMPTY_STATE;
 const listeners = new Set<() => void>();
@@ -30,7 +31,7 @@ let channel: BroadcastChannel | null = null;
 try {
   if (typeof BroadcastChannel !== "undefined") {
     channel = new BroadcastChannel(PURGE_CHANNEL);
-    channel.onmessage = event => { if (event.data === "purge") { generation += 1; running?.abort(); running = null; } };
+    channel.onmessage = event => { if (event.data === "purge") { generation += 1; running?.abort(); running = null; setOfflineState({ ownerKey: null }); } };
   }
 } catch { channel = null; }
 /** Resolves when the pack in progress (if any) has finished, so a caller can start the next one without cutting it short. */
@@ -57,6 +58,8 @@ export async function sweep(cache: Cache, now: number, keep: (pack: Pack) => boo
   const index = await readIndex(cache), nextOwner = owner === undefined ? index.owner : owner;
   const packs = index.packs.filter(pack => packLive(pack, now) && keep(pack) && (pack.owner === "public" || pack.owner === nextOwner));
   const listed = new Set(packs.flatMap(pack => pack.assets));
+  // 2.0 SC6: the last copy of a student's parts stays only beside an index of its own owner, and only inside the 14 days.
+  if (nextOwner !== null && await pathCopyOwner(cache, now) === nextOwner) listed.add(PATH_COPY_KEY);
   for (const request of await cache.keys()) {
     const key = assetKey(request.url);
     if (key !== INDEX_KEY && !listed.has(key)) await cache.delete(request);
@@ -76,11 +79,16 @@ export async function inspectPack(cache: Cache, pack: Pack | undefined, now: num
 export async function refreshOfflineState(now = Date.now(), weekKey?: string) {
   const storage = cacheStorage(); if (!storage) return;
   try {
-    if (!await storage.has(OFFLINE_CACHE)) { setOfflineState({ week: state.week === "no-space" ? "no-space" : null, course: state.course === "no-space" ? "no-space" : null, savedUntil: null }); return; }
+    if (!await storage.has(OFFLINE_CACHE)) {
+      setOfflineState({ week: state.week === "no-space" ? "no-space" : null, course: state.course === "no-space" ? "no-space" : null, service: state.service === "no-space" ? "no-space" : null, savedUntil: null });
+      return;
+    }
     const cache = await storage.open(OFFLINE_CACHE), index = await readIndex(cache);
     const week = index.packs.find(pack => pack.descriptor.type === "week" && (!weekKey || pack.key === weekKey)), course = index.packs.find(pack => pack.descriptor.type === "course");
-    const [weekState, courseState] = await Promise.all([inspectPack(cache, week, now), inspectPack(cache, course, now)]);
+    const service = index.packs.find(pack => pack.descriptor.type === "service");
+    const [weekState, courseState, serviceState] = await Promise.all([inspectPack(cache, week, now), inspectPack(cache, course, now), inspectPack(cache, service, now)]);
     setOfflineState({ week: weekState ?? (state.week === "no-space" ? "no-space" : null), course: courseState ?? (state.course === "no-space" ? "no-space" : null),
+      service: serviceState ?? (state.service === "no-space" ? "no-space" : null),
       savedUntil: weekState && week ? Math.min(week.expiresAt, week.renewedAt + WINDOW_MS) : null });
   } catch { /* The state stays as it was. */ }
 }
@@ -98,7 +106,7 @@ export async function savedPacks(now = Date.now()): Promise<readonly Pack[]> {
 export async function purgeOffline(): Promise<void> {
   generation += 1; running?.abort(); running = null;
   try { channel?.postMessage("purge"); } catch { /* No other tabs to tell. */ }
-  setOfflineState({ week: null, course: null, savedUntil: null });
+  setOfflineState({ week: null, course: null, service: null, savedUntil: null, ownerKey: null });
   const storage = cacheStorage(); if (!storage) return;
   try { await storage.delete(OFFLINE_CACHE); } catch { /* Nothing more to do here. */ }
   // A pack that was mid-write stops at its next check; wait briefly for it, then delete again in case it reopened the cache.
@@ -107,4 +115,18 @@ export async function purgeOffline(): Promise<void> {
     await Promise.race([pending.catch(() => {}), new Promise(resolve => setTimeout(resolve, 3000))]);
     try { await storage.delete(OFFLINE_CACHE); } catch { /* Nothing more to do here. */ }
   }
+}
+
+/**
+ * 2.0 SC6: the owner of the stored copy of a student's parts, when it is one and inside the 14 days; null otherwise. The copy itself is
+ * read and written by path-copy.ts; the sweep only needs to know whose it is.
+ */
+export async function pathCopyOwner(cache: Cache, now: number): Promise<string | null> {
+  try {
+    const response = await cache.match(PATH_COPY_KEY);
+    if (!response) return null;
+    const value = await response.json() as Record<string, unknown> | null;
+    if (!value || typeof value !== "object" || typeof value.owner !== "string" || !OWNER_KEY.test(value.owner) || !Number.isSafeInteger(value.savedAt)) return null;
+    return packLive({ renewedAt: value.savedAt as number, expiresAt: (value.savedAt as number) + WINDOW_MS }, now) ? value.owner : null;
+  } catch { return null; }
 }

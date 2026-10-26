@@ -3,7 +3,7 @@ import { DEFAULT_SIDDUR_URL } from "../../../server/settings/validation";
 import { siddurPageLink } from "../../../lib/siddur/link";
 import { CRC_TENANT, pageOf, type ServiceSlot, type Tenant } from "../../../lib/service-course/course";
 import { COPY, fill } from "../../../lib/service-course/copy";
-import { SiddurLink } from "../../portal/siddur-link";
+import { SiddurOrOffline } from "./offline";
 import styles from "./service.module.css";
 
 // The course's own small pieces. It does not import Learn to lein's components, so a course page never carries
@@ -27,5 +27,6 @@ export function ServiceAppBar() {
 export function LessonSiddurLink({ lessonId, tenant = CRC_TENANT, slot = "morning" }: { lessonId: string; tenant?: Tenant; slot?: ServiceSlot }) {
   const page = pageOf(tenant, lessonId, slot), href = page === undefined ? null : siddurPageLink(DEFAULT_SIDDUR_URL, tenant.siddurBook, page);
   if (!href || page === undefined) return null;
-  return <p className={styles.siddur} data-siddur-page={page}><SiddurLink href={href}>{fill(COPY.done.siddur, { page })}</SiddurLink></p>;
+  // 2.0 SC6: offline, in the installed app, "Needs a connection" in its place (offline.tsx).
+  return <SiddurOrOffline className={styles.siddur} href={href} page={page}>{fill(COPY.done.siddur, { page })}</SiddurOrOffline>;
 }

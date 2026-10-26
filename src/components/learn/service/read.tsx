@@ -9,6 +9,7 @@ import type { WordCardTarget } from "../../../lib/learn/word-tap";
 import { PortalRequestError } from "../../portal/api";
 import { RATE_LIMITED_MESSAGE } from "../../portal/public-reading/rate-limited";
 import { useWordCard } from "../word-card";
+import { useOfflineWording } from "../../portal/offline/status";
 import { isDone } from "../../../lib/service-course/progress";
 import { useServiceProgress } from "./progress";
 import { fetchServiceText, fetchVerse, verseTargets } from "./text-api";
@@ -90,9 +91,13 @@ export function HebrewLine({ he, line, large = true, mark }: { he: string; line:
 }
 
 function TextProblem({ state, onRetry }: { state: TextState; onRetry(): void }) {
+  const offline = useOfflineWording();
   if (state.status === "loading") return <p role="status" className={styles.note}>{COPY.state.lessonLoading}</p>;
   if (state.status !== "error") return null;
   if (state.notHere) return <p role="status" className={styles.note}>{COPY.state.tenantOff}</p>;
+  // 2.0 SC6: offline with no saved text, A7's st.text.offline and st.offline.teachingOk. The lesson is not marked done either way.
+  if (offline) return <div role="status" className={learn.state} data-offline=""><p>{COPY.state.textOffline}</p><p>{COPY.state.offlineAbout}</p>
+    <button type="button" className="button-secondary" onClick={onRetry}>{COPY.state.retry}</button></div>;
   return <div role="alert" className={learn.state}><p>{state.rateLimited ? RATE_LIMITED_MESSAGE : COPY.state.textError}</p>
     <button type="button" className="button-secondary" onClick={onRetry}>{COPY.state.retry}</button></div>;
 }
