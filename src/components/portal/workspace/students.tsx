@@ -7,6 +7,7 @@ import { parseReadingTab } from "../shell/tabs";
 import Link from "next/link";
 import { workspaceApi, type Student } from "./api";
 import { ChildPracticeDisclosure } from "../practice-visibility/disclosure";
+import { TutorCardLine } from "./staff/practice";
 import { RequireRole, rolePaths, statusOf, useWorkspace, WorkspaceLink } from "./provider";
 import { ceremonyCountdown, ReadingPanel } from "./reading";
 import { reconcileSelectedStudent, sortStudentsByCeremony } from "./student-label";
@@ -24,10 +25,12 @@ export function StudentWorkspace({ mode, studentId }: { mode: "student" | "paren
 }
 
 /** A student as a card: name first, then the date and how far away it is. */
-function StudentCardBody({ row }: { row: Student }) {
+function StudentCardBody({ row, practice = false }: { row: Student; practice?: boolean }) {
   const countdown = ceremonyCountdown(row.ceremonyDate);
   return <><span className="student-card-name"><bdi dir="auto">{row.firstName} {row.lastName}</bdi></span>
-    <span className="student-card-date"><time dateTime={row.ceremonyDate}>{countdown.label}</time>{countdown.phrase && <span className="student-card-days">{countdown.phrase}</span>}</span></>;
+    <span className="student-card-date"><time dateTime={row.ceremonyDate}>{countdown.label}</time>{countdown.phrase && <span className="student-card-days">{countdown.phrase}</span>}</span>
+    {/* 1.9 N23 (TP-11): the assigned tutor's roster card line, behind the release gate. */}
+    {practice && <TutorCardLine studentId={row.id} />}</>;
 }
 
 function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "student" | "parent" | "tutor"; switching?: boolean; routeStudentId?: string }) {
@@ -117,7 +120,7 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
     {loading ? <p role="status">Loading available students…</p> : error ? <div role="alert"><p>Students couldn’t be loaded. No previous selection is being shown.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload students</button></div>
       : !rows.length ? <p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p>
         : <>{(mode !== "student" || rows.length !== 1) && <><ul ref={strip} className={`student-cards${focused || selected ? " student-cards-compact" : ""}`} aria-label={mode === "parent" ? "Child" : "Student"}>{ordered.map(row => <li key={row.id}>
-            {mode === "tutor" ? <WorkspaceLink href={`/workspace/tutor/${row.id}${viewTab ? `?tab=${viewTab}` : ""}`} className="student-card" data-student-id={row.id} aria-current={selected === row.id ? "page" : undefined}><StudentCardBody row={row} /></WorkspaceLink>
+            {mode === "tutor" ? <WorkspaceLink href={`/workspace/tutor/${row.id}${viewTab ? `?tab=${viewTab}` : ""}`} className="student-card" data-student-id={row.id} aria-current={selected === row.id ? "page" : undefined}><StudentCardBody row={row} practice={!focused && !selected} /></WorkspaceLink>
               : <button type="button" className="student-card" data-student-id={row.id} aria-pressed={selected === row.id} onClick={() => { void guardDeparture().then(leave => { if (leave) setSelected(row.id); }); }}><StudentCardBody row={row} /></button>}
           </li>)}</ul>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
           {focused && !selected && <div className="workspace-state"><h2>Student not found</h2><p>This student isn’t in your list. Choose one of your students above.</p></div>}

@@ -43,6 +43,7 @@ import type { PracticeDates } from "./practice-calendar/api";
 import { serviceSlotName, serviceSlotTime } from "./service-slot";
 import { StaffStudentLines } from "./staff/student-lines";
 import { NeedsWork } from "./staff/needs-work";
+import { TutorPracticeDays, TutorPracticeScope, useTutorPracticeRead } from "./staff/practice";
 import { LiftNote } from "./staff/lift-note";
 
 const dayMs = 86_400_000;
@@ -187,6 +188,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary }:
   useEffect(() => registerReload(async () => { await load(); }), [registerReload, load]);
   const authorizedReading = result.key === key && !result.loading ? result.value : undefined;
   const congregation = useCongregation(Boolean(authorizedReading && !concealed)), links = congregation.links;
+  // 1.9 N23: the assigned tutor's read of this student's practice (nothing is asked for anyone else, or while the gate is closed).
+  const tutorPractice = useTutorPracticeRead(mode, studentId);
   useLayoutEffect(() => {
     if (mode !== "parent" || concealed || !authorizedReading || !parentSummary.matches(authorizedReading, parentScope)) return;
     // Provider reveal precedes its visible render; start only after that render is authorized.
@@ -327,7 +330,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary }:
   // On a learner's phone the row waits under the reading, as the lens switch does, so the first verse stays above the fold.
   const tabRow = tabbed && <div role="tablist" aria-label="Student page" className="page-tabs" onKeyDown={tabKeys}>{pageTabs.map(([value, label]) => <button key={value} type="button" role="tab" id={tabId(value)} aria-controls={panelId(value)} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1} className="page-tab" onClick={() => setTab(value, true)}>{label}</button>)}</div>;
   // Learners (students, child practice, parents) always open in Lein; staff open in the lens they last used.
-  return <ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} /><div className="reading-workspace reading-with-work" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
+  return <TutorPracticeScope value={concealed ? null : tutorPractice}><ReadingPrefsScope studentId={studentId} englishOnWide={!staff}><StudyLensScope storageKey={staff ? LENS_STORAGE.staff : null}><DepartureReview coordinator={work} /><div className="reading-workspace reading-with-work" hidden={Boolean(current?.loading)} inert={Boolean(current?.loading)}>
     <section aria-label="Assigned reading">
       {!student ? <div className="workspace-state" aria-live="polite"><h2>{current?.error ? "Reading unavailable" : "Loading the assigned reading"}</h2>
         <p>{current?.error === 404 || current?.error === 403 ? "This reading is no longer available in the selected role. Choose another available student." : current?.error ? "We couldn’t load the confirmed assignment. No previous student’s reading is being shown." : "Checking the selected student and confirmed references."}</p>
@@ -398,8 +401,8 @@ export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary }:
     </dialog> : <div id={editorId} className="reading-editor-anchor">{editor}</div>)}
     {tabPanel("service", <><ServiceLearningPanel id={serviceId} mode={mode} studentId={studentId} baseline={current?.loading ? null : current?.value ?? null} register={registerService} reloadReading={load} onDepartureActive={setServiceDepartureActive} onVisit={(plan, unitId) => calendar.visitUnit(plan, unitId)} />
       {authorizedReading && !concealed && <p className="field-help"><a href={links.siddurUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">CRC digital siddur collection</a>{links.musicUrl && <> · <a href={links.musicUrl} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Service music</a></>}</p>}</>)}
-    {tabPanel("lessons", <>{staff && student && authorizedReading && !concealed && <NeedsWork baseline={authorizedReading} />}{staff && student && authorizedReading && !concealed && <StaffPracticeDays calendar={calendar} firstName={student.firstName} />}<LessonLog mode={mode} studentId={studentId} register={registerLessons} tabbed={tabbed} /></>)}
+    {tabPanel("lessons", <>{staff && student && authorizedReading && !concealed && <NeedsWork baseline={authorizedReading} />}{staff && student && authorizedReading && !concealed && <TutorPracticeDays />}{staff && student && authorizedReading && !concealed && <StaffPracticeDays calendar={calendar} firstName={student.firstName} />}<LessonLog mode={mode} studentId={studentId} register={registerLessons} tabbed={tabbed} /></>)}
     {printing && authorizedReading && !concealed && selectedReading && <PracticeSheet baseline={authorizedReading} initialKind={selectedReading.kind} onClose={() => setPrinting(false)}
       authorityFailed={status => { work.clear(); progress.configure(null); calendar.configure(null); studyDenied(status); }} />}
-  </StudyLensScope></ReadingPrefsScope>;
+  </StudyLensScope></ReadingPrefsScope></TutorPracticeScope>;
 }

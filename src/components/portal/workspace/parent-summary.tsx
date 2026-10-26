@@ -6,6 +6,7 @@ import { dayOrdinal, dayString, type PracticeDates } from "./practice-calendar/a
 import { BeforeNext, type LessonSummarySnapshot } from "./lessons/panel";
 import { nextDateLine, weekdayShort } from "./parent-week";
 import { deviceDate } from "./today/model";
+import { ParentCountLine } from "./staff/practice";
 
 type CalendarRead = (mode: "parent", studentId: string, operation: { type: "calendar"; fromDate: string; throughDate: string }, signal: AbortSignal) => Promise<PracticeDates>;
 type Lesson = LessonSummarySnapshot["lesson"];
@@ -87,7 +88,8 @@ export function ParentStudySummary({ store, baseline, scope, concealed, notice =
         {lesson.latest.beforeNext && <BeforeNext text={lesson.latest.beforeNext} own={false} />}
       </>}
     </div>
-    {/* N23-3 slot: the mark-count line ("{studentName} has marked {gotIt} verses Got it and {working} Still working.") goes here when N23's privacy review passes. */}
+    {/* 1.9 N23: the mark-count line, from the parent's own counts read (behind the release gate). */}
+    <ParentCountLine studentId={baseline.student.id} name={baseline.student.firstName} />
     {notice && <p className="parent-consent-notice" dir="auto">{notice}</p>}
   </section>;
 }

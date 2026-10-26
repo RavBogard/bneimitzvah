@@ -769,6 +769,7 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .student-card-date { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; color: var(--color-muted); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
 .student-card[aria-current="page"] .student-card-date, .student-card[aria-pressed="true"] .student-card-date { color: rgb(255 255 255 / 0.85); }
 .student-card-days { white-space: normal; background: var(--marigold); color: var(--on-ink); font-weight: 650; font-size: 0.8125rem; padding: 0.0625rem 0.5rem; border-radius: 999px; }
+.student-card-practice { color: var(--color-muted); font-size: var(--text-callout); line-height: 1.4; }
 .student-cards-compact { display: flex; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; margin-bottom: 1rem; padding-bottom: 0.25rem; }
 .student-cards-compact > li { flex: 0 0 auto; }
 .student-cards-compact .student-card { min-height: 44px; padding: 0.5rem 1rem; border-radius: 999px; flex-direction: row; align-items: center; }
@@ -1078,6 +1079,11 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .csv-workspace .csv-format { margin-block: 0 1.25rem; }
 .csv-step { display: flex; align-items: center; gap: 0.625rem; margin: 0 0 1rem; font-size: 1.25rem; font-weight: 750; letter-spacing: -0.01em; }
 .csv-step:focus { outline: none; }
+/* 1.9 N23: the assigned tutor's practice lines in Lessons. Dates and verses only. */
+.tutor-practice { margin-block: 1.5rem; }
+.tutor-practice-days { margin: 0.5rem 0 0; padding-inline-start: 1.25rem; display: grid; gap: 0.375rem; font-variant-numeric: tabular-nums; }
+.tutor-practice-learn { margin-top: 1rem; }
+.tutor-practice-learn p { margin: 0.25rem 0 0; }
 .settings-email-status { margin-top: 0.75rem; }
 /* G21: the rows to fix as a table, and the same-name-and-date warning (a word, never colour alone). */
 .csv-issues { width: 100%; margin: 0.5rem 0 1rem; border-collapse: collapse; font-size: var(--text-callout); }

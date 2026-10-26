@@ -3,6 +3,7 @@ import { useSyncExternalStore } from "react";
 import type { StudyKind } from "../study/api";
 import type { AssessmentState, SelfCheckState } from "../../../../lib/progress/types";
 import type { ProgressStore } from "./store";
+import { useStudentMarkLine } from "../staff/practice";
 
 const selfLabels: Record<SelfCheckState, string> = { unmarked: "Not marked", working: "Still working", "got-it": "Got it" };
 const assessmentLabels: Record<AssessmentState, string> = { "not-started": "Not started", working: "Working", solid: "Solid" };
@@ -17,9 +18,14 @@ export function VerseMark({ store, kind, verseRef }: { store: ProgressStore; kin
   // Staff and parents see both marks, each named; students see their own.
   const staff = store.stream !== "self-check", self = verse.selfCheck.state, assessment = verse.assessment.state;
   return <span className="verse-marks">
-    {self !== "unmarked" && <span className="verse-mark" data-state={self}>{self === "got-it" && check}{staff ? `Student: ${selfLabels[self].toLowerCase()}` : selfLabels[self]}</span>}
+    {self !== "unmarked" && <span className="verse-mark" data-state={self}>{self === "got-it" && check}{staff ? <StudentMark kind={kind} verseRef={verseRef} state={self} /> : selfLabels[self]}</span>}
     {staff && assessment !== "not-started" && <span className="verse-mark" data-state={assessment}>{assessment === "solid" && check}{`Tutor: ${assessmentLabels[assessment].toLowerCase()}`}</span>}
   </span>;
+}
+
+/** Staff see the student's own mark named: "Student: got it", and for the assigned tutor "Student (with parent): got it" (1.9 N23, TP-20). */
+function StudentMark({ kind, verseRef, state }: { kind: StudyKind; verseRef: string; state: "working" | "got-it" }) {
+  return <>{useStudentMarkLine(kind, verseRef, state)}</>;
 }
 
 /** In the practice view: students mark how a verse is going, tutors and admins assess it. */
