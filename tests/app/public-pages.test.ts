@@ -19,17 +19,22 @@ afterEach(() => { forgetPublicProductName(); vi.doUnmock("../../src/server/publi
 const ORIGIN = CANONICAL_ORIGINS[1];
 const THE_THREE = ["/read", "/learn", "/trope-chart"];
 
-test("the indexing switch ships off and names exactly the three public routes", () => {
-  expect(PUBLIC_INDEXING).toBe(false);
+test("the indexing switch ships on (Daniel, 2026-10-26) and names exactly the three public routes", () => {
+  expect(PUBLIC_INDEXING).toBe(true);
   expect([...INDEXABLE_PATHS]).toEqual(THE_THREE);
 });
 
-test("off is the behaviour before this change, exactly: header on every path, meta, robots.txt without a sitemap", async () => {
-  expect(noindexHeaderRule()).toEqual({ source: "/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] });
-  expect(await nextConfig.headers!()).toContainEqual(noindexHeaderRule(false));
-  expect(publicRobots()).toEqual({ index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } });
+test("the shipped state is on: the header rule skips the three routes, the public meta is indexable and robots.txt allows them", async () => {
+  expect(noindexHeaderRule()).toEqual(noindexHeaderRule(true));
+  expect(await nextConfig.headers!()).toContainEqual(noindexHeaderRule(true));
+  expect(publicRobots()).toEqual({ index: true, follow: true });
+  expect(robotsTxt(ORIGIN)).toEqual({ rules: { userAgent: "*", allow: THE_THREE, disallow: "/" }, sitemap: `${ORIGIN}/sitemap.xml` });
+});
+
+test("off stays available as the rollback: header on every path, noindex meta, robots.txt without a sitemap", () => {
+  expect(noindexHeaderRule(false)).toEqual({ source: "/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] });
+  expect(publicRobots(false)).toEqual({ index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } });
   expect(robotsTxt(ORIGIN, false)).toEqual({ rules: { userAgent: "*", disallow: "/" } });
-  expect(robots()).toEqual({ rules: { userAgent: "*", disallow: "/" } });
 });
 
 test("on indexes only the three routes: the header skips exactly them, robots.txt allows them and names the sitemap", () => {
@@ -112,7 +117,7 @@ test("the sitemap route resolves the canonical origin from BETTER_AUTH_URL and i
   try {
     Object.assign(process.env, { PORTAL_ENVIRONMENT: "production", PORTAL_DEPLOYMENT: "production", BETTER_AUTH_URL: CANONICAL_ORIGINS[0] });
     expect(sitemap()[0]).toMatchObject({ url: `${CANONICAL_ORIGINS[0]}/read` });
-    expect(robots()).toEqual({ rules: { userAgent: "*", disallow: "/" } });
+    expect(robots()).toEqual({ rules: { userAgent: "*", allow: THE_THREE, disallow: "/" }, sitemap: `${CANONICAL_ORIGINS[0]}/sitemap.xml` });
     process.env.PORTAL_DEPLOYMENT = "preview";
     expect(sitemap()).toEqual([]);
   } finally { for (const key of ["PORTAL_ENVIRONMENT", "PORTAL_DEPLOYMENT", "BETTER_AUTH_URL"]) { if (keep[key] === undefined) delete process.env[key]; else process.env[key] = keep[key]; } }

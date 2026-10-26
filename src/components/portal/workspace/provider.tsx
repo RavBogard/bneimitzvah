@@ -33,6 +33,7 @@ import { TabBar, TabSkipLink } from "../shell/tab-bar";
 
 import { fetchShortExplorationPage, checkShortExplorationExpectation } from "./study/short-exploration-api";
 import { createShortExplorationOwner as composeShortExplorationOwner, type ShortExplorationOwner } from "./study/short-exploration-owner";
+import { BetaMark } from "../../site/beta-mark";
 
 export const rolePaths = { student: "/workspace/student", parent: "/workspace/parent", tutor: "/workspace/tutor", admin: "/workspace/admin/students" } as const;
 type WorkLifecycle = { pause(): void; clear(): void; settle(): Promise<void>; hasUnsaved(): boolean; reveal(): void };
@@ -574,7 +575,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   return <div className="portal-shell workspace-shell" data-rail-pending={!shellShown && failure === null ? "" : undefined}>
     <a className="skip-link" href="#workspace-main">Skip to workspace</a>
     {shellShown && <TabSkipLink roles={summary!.roles} />}
-    <header className="portal-header app-bar"><Link className="portal-brand" href="/" onClick={event => controlledLink(event, "/")}>CRC Torah</Link>{pathname === rolePaths.student && <Link className="app-bar-learn" href="/learn" onClick={event => controlledLink(event, "/learn")}>Learn to lein</Link>}<Link className="app-bar-account" href="/account" onClick={event => controlledLink(event, "/account")} aria-label="Account and sign out"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M5 20c1.2-3.6 3.8-5.5 7-5.5s5.8 1.9 7 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg><span>Account</span></Link></header>
+    <header className="portal-header app-bar"><div className="portal-brand-group"><Link className="portal-brand" href="/" onClick={event => controlledLink(event, "/")}>CRC Torah</Link><BetaMark /></div>{pathname === rolePaths.student && <Link className="app-bar-learn" href="/learn" onClick={event => controlledLink(event, "/learn")}>Learn to lein</Link>}<Link className="app-bar-account" href="/account" onClick={event => controlledLink(event, "/account")} aria-label="Account and sign out"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M5 20c1.2-3.6 3.8-5.5 7-5.5s5.8 1.9 7 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg><span>Account</span></Link></header>
     <main id="workspace-main" className="workspace-main">
       {(checking || !summary) && <section className="workspace-state" aria-live="polite"><h1>{failure === null ? "Checking your access" : failure === 401 ? "Sign in to continue" : failure === 403 || failure === 404 ? "Access has changed" : "Workspace unavailable"}</h1>
         <p>{failure === null ? "Your student information is hidden until access has been checked." : failure === 401 ? "Use the account on your invitation." : failure === 403 || failure === 404 ? "The requested access is not available. Your previous student view has been cleared." : "We couldn’t load the workspace. Please try again shortly."}</p>

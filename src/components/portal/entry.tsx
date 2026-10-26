@@ -14,6 +14,7 @@ import { purgeOffline } from "../../lib/offline/pack-index";
 import { TabBar, TabSkipLink } from "./shell/tab-bar";
 import { ParentAccountDisclosure, PracticeDisclosure } from "./practice-visibility/disclosure";
 import { workspaceApi } from "./workspace/api";
+import { BetaMark } from "../site/beta-mark";
 
 export type View = { kind: "loading" | "unavailable" | "sign-in" | "invalid-invitation" | "forbidden" | "uncertain" }
   | { kind: "accepted"; role: SessionSummary["roles"][number] }
@@ -245,7 +246,7 @@ export function PortalEntry({ invitation = false, authenticationError = false, a
   return <div className="portal-shell">
     <a className="skip-link" href="#portal-main">Skip to sign-in and access</a>
     <TabSkipLink roles={shellRoles} />
-    <header className="portal-header app-bar"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a><span>Central Reform Congregation</span></header>
+    <header className="portal-header app-bar"><div className="portal-brand-group"><a className="portal-brand" href="/" aria-label="CRC Torah home">CRC Torah</a><BetaMark /></div><span>Central Reform Congregation</span></header>
     <main id="portal-main" className="entry-layout">
       <div className="entry-introduction">
         <h1>{invitation ? "Join your congregation’s practice" : "Open your reading"}</h1>

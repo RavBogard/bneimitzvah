@@ -1,11 +1,10 @@
 /**
- * The one switch for search indexing (Daniel, 2026-10-23, F2): until Daniel switches it on (his ruling of 2026-10-23, not a tag) every page, header and
- * robots.txt says noindex. Flipping this single constant to `true` then makes exactly the three public routes
- * below become indexable and everything else (signed-in pages, workspaces, the API, learn lessons and review,
- * the front door) stays noindex. robots.ts, next.config.ts headers and each page's robots meta all read it here.
+ * The one switch for search indexing (Daniel, 2026-10-23, F2). Daniel switched it on 2026-10-26 with the Beta label (MISSION amendment):
+ * exactly the three public routes below are indexable and everything else (signed-in pages, workspaces, the API, learn lessons and review,
+ * the front door) stays noindex. Setting this single constant back to `false` makes every page, header and robots.txt say noindex again. robots.ts, next.config.ts headers and each page's robots meta all read it here.
  * Dependency-free so next.config.ts can import it.
  */
-export const PUBLIC_INDEXING = false;
+export const PUBLIC_INDEXING = true;
 
 export const INDEXABLE_PATHS = Object.freeze(["/read", "/learn", "/trope-chart"] as const);
 export type IndexablePath = (typeof INDEXABLE_PATHS)[number];
