@@ -16,7 +16,7 @@ import { withTenantTransaction } from "../db/runtime";
 import type { AccessDatabase, AccessRequest } from "../access/types";
 import { createAuthStack } from "../auth/factory";
 import { createAccessService } from "../access/service";
-import { createInvitationService } from "../invitations/service";
+import { createInvitationService, type InvitationTransport } from "../invitations/service";
 import { createReadingPreviewService } from "../students/preview";
 import { createStudentService } from "../students/service";
 import { createPracticeService } from "../practice/service";
@@ -182,11 +182,13 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
   const access = createAccessService({ db, auth, deployment: config.deployment });
   const referenceReview = createReferenceReviewService({ access, reviewer: config.referenceReview?.reviewer,
     get: config.referenceReview ? createPrivateReviewGet({ storeId: config.referenceReview.storeId }) : async () => { throw new ReviewUnavailable(); } });
-  const invitations = createInvitationService({ db, access, transport: async ({ email, url, tenantId, role, expiresAt }) => {
+  const invitationTransport: InvitationTransport = async ({ email, url, tenantId, role, expiresAt }) => {
     // The congregation and product names come from the one shared reader; the email is given no student (decision 12).
     const names = await withTenantTransaction(db, { tenantId }, tx => readTenantNames(tx, tenantId));
     await send("invitation", { email, url, productName: names.productName, congregation: names.name, role, expiresAt });
-  }, throttleSecret: purposeSecret(config, "invitation-throttle") });
+  };
+  const invitationThrottle = purposeSecret(config, "invitation-throttle");
+  const invitations = createInvitationService({ db, access, transport: invitationTransport, throttleSecret: invitationThrottle });
   const loadReading = createHebcalReader({ fetch, cache: createPersistentReadingCache(db), verseCounts: TANAKH_VERSE_COUNTS });
   const musicBroker = createMusicBroker(config.serviceMusic, fetch);
   const practice = createPracticeService({ access });
@@ -225,7 +227,7 @@ export function composeRuntime<Q extends PgQueryResultHKT>(config: RuntimeConfig
     config: sheetAccount && config.rosterSheet ? { account: sheetAccount, sheetId: config.rosterSheet.sheetId } : null });
   // Portal MCP: the full study service (writes too) behind live, grant-bound connection authority.
   // Null until enabled by configuration; then its routes exist at all.
-  const mcp: McpEndpoint | null = config.mcpEnabled ? createMcpEndpoint({ db, access, practice, secret: purposeSecret(config, "portal-mcp"), loadText, related: sourceMetadata.related, loadReading, pinnedSource: createSefariaPinnedSourceReader({ fetch }) }) : null;
+  const mcp: McpEndpoint | null = config.mcpEnabled ? createMcpEndpoint({ db, access, practice, secret: purposeSecret(config, "portal-mcp"), loadText, related: sourceMetadata.related, loadReading, pinnedSource: createSefariaPinnedSourceReader({ fetch }), invitations: { transport: invitationTransport, throttleSecret: invitationThrottle } }) : null;
   // Approved material is loaded within the existing RLS transaction.
   const honoree = createHonoreeService({ db, access, deployment: config.deployment, origin: config.origin, signingSecret: config.authSecret, projectMaterial: loadHonoreeMaterial });
   const studySources = createStudySourceDiscoveryService({ access, practice, loadText, related: createSefariaMetadataReader({ fetch }).related });

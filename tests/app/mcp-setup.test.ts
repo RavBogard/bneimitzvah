@@ -9,7 +9,7 @@ import { closeMcpFixtures, mcpFixture } from "./mcp-fixture";
 afterEach(async () => { vi.restoreAllMocks(); await closeMcpFixtures(); });
 
 // Student setup through the portal MCP (Daniel, 2026-10-21: "Add setup + sources"). Synthetic students and sources only.
-const SETUP = ["list_tutors", "get_student_setup", "find_sources", "assign_sources", "remove_source_assignment", "preview_student_reading", "set_student_reading", "set_student_tutor", "set_student_service", "create_student", "update_student", "disable_student"];
+const SETUP = ["list_tutors", "get_student_setup", "find_sources", "assign_sources", "remove_source_assignment", "preview_student_reading", "set_student_reading", "set_student_tutor", "set_student_service", "create_student", "update_student", "disable_student", "invite_tutor"];
 const ALL = "portal:read portal:study portal:roster";
 const raw = (ref: string) => Array.from({ length: 40 }, (_, i) => ({ _id: `source_${String(i).padStart(2, "0")}`, sourceRef: `Invented Work ${i} on ${ref}`, index_title: `Invented Work ${i}`, category: "Commentary", anchorRef: ref }));
 
@@ -84,6 +84,7 @@ describe("student setup through the portal MCP", () => {
     for (const name of ["list_tutors", "get_student_setup", "find_sources", "preview_student_reading"]) expect(hint(name)).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     for (const name of ["remove_source_assignment", "set_student_reading", "set_student_tutor", "set_student_service", "update_student"]) expect(hint(name)).toMatchObject({ readOnlyHint: false, destructiveHint: true, idempotentHint: true });
     expect(hint("disable_student")).toMatchObject({ readOnlyHint: false, destructiveHint: true, idempotentHint: false });
+    expect(hint("invite_tutor")).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true });
     for (const name of ["assign_sources", "create_student"]) expect(hint(name)).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: true });
   });
 
@@ -201,6 +202,33 @@ describe("student setup through the portal MCP", () => {
     // Another congregation's connection would add to its own roster only; this one never reaches it, and no address ever comes back.
     expect((await call("get_student_setup", { studentId: t.f.students[3].id })).text).toMatch(/Not found/);
     for (const text of texts) { expect(text).not.toMatch(/@/); expect(text).not.toMatch(/withheld/); }
+  });
+
+  it("invites a tutor through the portal's invitation write and email, once, on a fresh connection only, never showing the address or link", async () => {
+    let clock = Date.now();
+    const { t, json, texts, owner } = await setup(() => clock);
+    const invites = () => owner(() => t.f.db.select().from(s.invite).where(eq(s.invite.role, "tutor")));
+    const issued = () => owner(() => t.f.db.select().from(s.auditEvent).where(and(eq(s.auditEvent.action, "invite.issue"), eq(s.auditEvent.actorMembershipId, t.f.adminMember.id))));
+    const before = (await invites()).length;
+    const made = await json("invite_tutor", { email: "New.Tutor@Example.test" });
+    expect(made).toMatchObject({ ok: true, delivery: "sent", invitationsSent: 1 });
+    expect(t.mail).toEqual([{ email: "new.tutor@example.test", url: expect.stringMatching(/\/invitations\/open#token=/), role: "tutor" }]);
+    const rows = await invites();
+    expect(rows).toHaveLength(before + 1);
+    expect(rows.find(r => r.id === made.inviteId)).toMatchObject({ tenantId: "crc", email: "new.tutor@example.test", studentId: null, inviterMembershipId: t.f.adminMember.id, deliveryStatus: "sent", acceptedAt: null });
+    expect(await issued()).toHaveLength(1);
+    // Asked again (or delivered twice): the live invitation comes back and nothing more is sent.
+    expect(await json("invite_tutor", { email: "new.tutor@example.test" })).toMatchObject({ ok: true, alreadyInvited: true, inviteId: made.inviteId, invitationsSent: 0 });
+    expect(t.mail).toHaveLength(1);
+    expect(await json("invite_tutor", { email: "not an address" })).toMatchObject({ ok: false, code: "invalid-input" });
+    // Fifteen minutes after approving the connection it is no longer fresh, as for adding a tutor; nothing is written or sent.
+    clock += 15 * 60_000;
+    expect(await json("invite_tutor", { email: "second.tutor@example.test" })).toMatchObject({ ok: false, code: "fresh-sign-in-required" });
+    expect(t.mail).toHaveLength(1);
+    expect(await invites()).toHaveLength(before + 1);
+    expect(await issued()).toHaveLength(1);
+    // The address and the link never come back to the conversation.
+    for (const text of texts) { expect(text).not.toMatch(/@/); expect(text).not.toMatch(/token|invitations\/open/); }
   });
 
   it("takes a student off the roster through the portal's Disable, keeping the record, with a conflict on a stale revision and nothing in another congregation", async () => {

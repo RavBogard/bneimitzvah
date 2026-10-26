@@ -1,3 +1,4 @@
+import { createDelegatedInvitations, type InvitationTransport } from "../invitations/service";
 import "server-only";
 import { createHmac } from "node:crypto";
 import type { PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -31,6 +32,8 @@ export function createMcpEndpoint<Q extends PgQueryResultHKT>(input: {
   pinnedSource?: PinnedSourceReader;
   /** The clock, for tests; Date.now otherwise. */
   now?: () => number;
+  /** The portal's invitation email and send budget, for invite_tutor; without it the tool answers that invitations are unavailable. */
+  invitations?: { transport: InvitationTransport; throttleSecret: string };
 }) {
   const mcp = createMcpAuthService({ db: input.db, access: input.access, secret: input.secret, now: input.now });
   const guides = createStudyGuideService({ access: input.access, practice: input.practice, check: createGuideChecker({ related: input.related }) });
@@ -39,12 +42,13 @@ export function createMcpEndpoint<Q extends PgQueryResultHKT>(input: {
     signingSecret: createHmac("sha256", input.secret).update("portal-mcp:reading-preparations/v1").digest("base64url") });
   const sources = createDelegatedSourceAssignments<Q>({ related: input.related });
   const discussions = createDiscussionService<Q>({ pinned: input.pinnedSource ?? createSefariaPinnedSourceReader({ fetch: (...args) => globalThis.fetch(...args) }) });
+  const invitations = input.invitations ? createDelegatedInvitations<Q>({ db: input.db, ...input.invitations }) : null;
   const tools = createTools<Q>();
   return Object.freeze({
     register: mcp.register, authorize: mcp.authorize, describe: mcp.describe, approve: mcp.approve, deny: mcp.deny,
     token: mcp.token, revoke: mcp.revoke, authenticate: mcp.authenticate,
     answer: (body: unknown, actor: McpActor, signal: AbortSignal) => answerRpc(body, { tools, instructions: INSTRUCTIONS, serverInfo: SERVER_INFO, signal,
-      ctx: { actor, mcp, guides, loadText: input.loadText, related: input.related, loadReading: input.loadReading, db: input.db, readings, sources, discussions } }),
+      ctx: { actor, mcp, guides, loadText: input.loadText, related: input.related, loadReading: input.loadReading, db: input.db, readings, sources, discussions, invitations } }),
   });
 }
 export type McpEndpoint = ReturnType<typeof createMcpEndpoint>;
