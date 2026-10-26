@@ -108,10 +108,10 @@ it("drops a held service visit acknowledgement after a real child-context switch
   try {
     await click(tab, "Synthetic part 2"); await ui.poll(() => held).toBe(true); expect(seen.posts).toHaveLength(1);
     expect(seen.posts[0].context).toEqual(expect.any(String)); expect(seen.posts[0].body).toMatchObject({ mode: "child-practice", action: "visit", target: { unitId: content.second, planId: plans.get(fixture.student.id)!.id } });
-    await click(tab, "Switch practice to Synthetic Sibling"); await ready(tab); await marked(tab, false);
+    await click(tab, "Switch to Synthetic Sibling"); await ready(tab); await marked(tab, false);
     expect(await days(sibling.id)).toBe(0); expect(await days(fixture.student.id)).toBe(1);
   } finally { release(); }
   await completed; await tab.unroute(target, hold); await marked(tab, false); expect(seen.posts).toHaveLength(1);
-  await click(tab, "Return to parent view"); await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/workspace/parent`);
+  await click(tab, "Done"); await ui(tab.getByLabel("Child", { exact: true })).toBeVisible(); await ui(tab).toHaveURL(`${BROWSER_ORIGIN}/workspace/parent`);
   expect(await tab.locator(".practice-week, .practice-day").count()).toBe(0); expect(seen.posts).toHaveLength(1); expect(seen.rawReads).toEqual([]); await tab.context().close();
 });

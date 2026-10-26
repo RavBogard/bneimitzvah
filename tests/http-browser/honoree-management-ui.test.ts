@@ -55,7 +55,7 @@ async function page(who: "parent" | "admin", mobile = false, colorScheme: "light
 }
 async function open(tab: Page, child: Child, who: "parent" | "admin") {
   await tab.goto(who === "parent" ? "/workspace/parent" : "/workspace/admin/students", { waitUntil: "domcontentloaded" });
-  if (who === "parent") { await tab.locator(`button.student-card[data-student-id="${child.id}"]`).click(); await tab.getByRole("button", { name: "Family honors", exact: true }).click(); }
+  if (who === "parent") { await tab.locator(`button.student-card[data-student-id="${child.id}"]`).click(); await tab.getByRole("button", { name: "Open the honors form", exact: true }).click(); }
   else await tab.getByRole("button", { name: `Honors for ${child.name}`, exact: true }).click();
   await ui(group(tab)).toBeVisible();
 }

@@ -270,7 +270,7 @@ test("parent summary renders honest states, closed escaped saved note, and conce
   expect(render()).toContain("Loading the latest lesson"); expect(render()).toContain("Loading practice dates");
   f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 1, lesson: { status: "ready", latest: null } }); await f.store.loadDates(); expect(render()).toContain("No saved lesson yet."); expect(render()).toContain("No practice dates recorded");
   f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 2, lesson: savedLesson });
-  const markup = render(); expect(markup).toContain("Lesson author:"); expect(markup).toContain("&lt;img src=x&gt;"); expect(markup).not.toMatch(/<details[^>]*open|<img|assigned tutor|%/); expect(render(true)).toBe(""); expect(render(false, "different-child-or-epoch")).toBe("");
+  const markup = render(); expect(markup).toContain("· from "); expect(markup).toContain("&lt;img src=x&gt;"); expect(markup).not.toMatch(/<details[^>]*open|<img|assigned tutor|%/); expect(render(true)).toBe(""); expect(render(false, "different-child-or-epoch")).toBe("");
   f.read.mockRejectedValueOnce(new PortalRequestError(503)); await f.store.loadDates(); expect(render()).toContain("Practice dates couldn’t be loaded."); expect(render()).toContain("Synthetic author"); expect(f.denied).not.toHaveBeenCalled();
   f.store.receiver()({ baseline: f.value, scope: f.scope, generation: 3, lesson: { status: "unavailable" } }); expect(render()).toContain("The latest lesson couldn’t be loaded.");
 });

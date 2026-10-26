@@ -90,7 +90,8 @@ function AssignmentContext({ row, current = false }: { row: Reading; current?: b
 type PageTab = "reading" | "service" | "lessons";
 const pageTabs: [PageTab, string][] = [["reading", "Reading"], ["service", "Service parts"], ["lessons", "Lessons"]];
 
-export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: ReadingMode; studentId: string; onStudentReload?(student: Student): void }) {
+/** afterSummary: what sits right after a parent's "This week" summary (their honors row, 1.9 N13); nothing for any other mode. */
+export function ReadingPanel({ mode, studentId, onStudentReload, afterSummary }: { mode: ReadingMode; studentId: string; onStudentReload?(student: Student): void; afterSummary?: ReactNode }) {
   const { readVerified: read, readWork, readProgress, readGuide, readPracticeCalendar, summary, epoch, busy, concealed, selectChild, registerReload, registerQuiet, registerWork, completeWork, registerDeparture, guardDeparture, serviceAuthorityFailed } = useWorkspace();
   const key = `${mode}:${studentId}:${epoch}`;
   const parentScope = JSON.stringify([summary.sessionBinding, epoch, mode, studentId]);
@@ -340,7 +341,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
           }}>{refreshIcon}</button>
         </div>
         <RehearsalDates student={student} />
-        {mode === "parent" && <p className="hero-meta">Read-only overview. Choose Practice with <bdi dir="auto">{student.firstName}</bdi> to mark verses together.</p>}
+        {mode === "parent" && <p className="hero-meta">Sit down with <bdi dir="auto">{student.firstName}</bdi> and tap Practice with <bdi dir="auto">{student.firstName}</bdi> to go through <bdi dir="auto">{student.firstName}</bdi>'s verses together.</p>}
         {exploring || readings.length === 0 ? <div className="reading-empty"><h3 className="hero-reference hero-reference-empty">{exploring ? "Explore the full Torah portion" : "No reading has been assigned yet"}</h3><p className="hero-meta">{exploring ? "Read the portion while you and your tutor choose your verses." : staff ? "Choose the verses this student will read." : "Your tutor or rabbi will add your verses here."}</p>
           <div className="hero-actions">{mode === "parent" && <button className="button-hero-secondary" disabled={busy} onClick={() => void selectChild(student.id)}>{busy ? "Opening practice…" : `Practice with ${student.firstName}`}</button>}{staff && <button type="button" className="button-hero-secondary" onClick={openSheet}>Assign verses</button>}{exploring && <button type="button" className="button-start" disabled={!proposedReady || concealed || current?.loading} onClick={startReading}>Start reading</button>}{practiceAction}{printAction}{printSheetAction}{mode === "student" && <LearnReviewAction />}</div></div> : <>
           {readings.length > 1 ? <AssignedReadingSummaries readings={readings} selectedKind={selectedReading.kind} marked={marked} /> : <><h3 className="hero-reference">{displayRange(selectedReading.ranges)}</h3>
@@ -357,6 +358,7 @@ export function ReadingPanel({ mode, studentId, onStudentReload }: { mode: Readi
         {!staff && <PracticeDays calendar={calendar} />}
       </header>
       {mode === "parent" && <ParentStudySummary store={parentSummary} baseline={authorizedReading ?? null} scope={parentScope} concealed={concealed} notice={congregation.consentNotice} />}
+      {mode === "parent" && afterSummary}
       {!learner && readings.length > 0 && <AssignmentContext row={selectedReading} current />}
       {!learner && tabRow}</> : <>
       <h2 id="reading-heading"><bdi dir="auto">{student.firstName} {student.lastName}</bdi></h2>

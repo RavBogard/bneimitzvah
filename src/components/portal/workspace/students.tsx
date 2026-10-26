@@ -30,7 +30,7 @@ function StudentCardBody({ row }: { row: Student }) {
 }
 
 function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "student" | "parent" | "tutor"; switching?: boolean; routeStudentId?: string }) {
-  const { epoch, context, busy, selectChild, registerReload, guardDeparture } = useWorkspace();
+  const { epoch, context, busy, selectChild, exitPractice, registerReload, guardDeparture } = useWorkspace();
   const [rows, setRows] = useState<Student[]>([]), [selected, setSelected] = useState<string | null>(null), [error, setError] = useState(false), [loading, setLoading] = useState(true), [more, setMore] = useState(false);
   const [retry, setRetry] = useState(0), gate = useRef(false), sequence = useRef(0);
   const [paging, setPaging] = useState(false);
@@ -46,11 +46,6 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
     const frame = list.getBoundingClientRect(), box = chip.getBoundingClientRect();
     if (box.left < frame.left) list.scrollLeft -= frame.left - box.left; else if (box.right > frame.right) list.scrollLeft += box.right - frame.right;
   }, [selected, ordered]);
-  useEffect(() => {
-    if (!honorsView || loading || !selected) return;
-    const heading = document.getElementById("family-honors");
-    heading?.focus({ preventScroll: true }); heading?.scrollIntoView({ block: "start" });
-  }, [honorsView, loading, selected]);
   const reconcileStudent = useCallback((current: Student) => { setRows(previous => reconcileSelectedStudent(previous, selectedRef.current, current)); }, []);
   const load = useCallback(async (preserve = true) => {
     abort.current?.abort(); const request = new AbortController(), turn = ++sequence.current; abort.current = request;
@@ -92,16 +87,30 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
     } catch { if (turn === sequence.current) setError(true); }
     finally { gate.current = false; setPaging(false); }
   }
-  if (switching) return <section className="sibling-selection" aria-label="Choose a child for practice"><h2>Practice with another child</h2>
-    {loading ? <p role="status">Loading linked children…</p> : error ? <><p role="alert">Linked children couldn’t be loaded.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload children</button></>
-      : <><ul className="student-selection-list">{ordered.map(row => <li key={row.id}><button className="button-secondary" disabled={busy || context?.studentId === row.id} onClick={() => void selectChild(row.id)}>Switch practice to <bdi dir="auto">{row.firstName} {row.lastName}</bdi></button></li>)}</ul>{more && <button className="button-text" disabled={busy || paging} onClick={() => void loadMore()}>{paging ? "Loading children…" : "Load more children"}</button>}</>}
-  </section>;
+  // The one compact practice bar (1.9 N13, tier B "Practising with Noa · Switch to Eli · Done"): the child's first name, a switch for each
+  // other linked child, Done, and the one coaching line. It uses names only: the app stores no pronouns.
+  if (switching) {
+    const child = rows.find(row => row.id === context?.studentId), others = ordered.filter(row => row.id !== context?.studentId);
+    return <section className="practice-bar" aria-label="Practice">
+      <div className="practice-bar-row">
+        {child ? <h1 className="practice-bar-title">Practising with <bdi dir="auto">{child.firstName}</bdi></h1> : <h1 className="sr-only">Practice</h1>}
+        {others.length > 0 && <ul className="practice-switches">{others.map(row => <li key={row.id}><button className="button-secondary" aria-label={`Switch to ${row.firstName} ${row.lastName}`} disabled={busy} onClick={() => void selectChild(row.id)}>Switch to <bdi dir="auto">{row.firstName}</bdi></button></li>)}</ul>}
+        <button className="button-hero-secondary practice-done" disabled={busy} onClick={() => void exitPractice()}>{busy ? "Closing practice…" : "Done"}</button>
+      </div>
+      {loading ? <p role="status">Loading linked children…</p> : error ? <><p role="alert">Linked children couldn’t be loaded.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload children</button></>
+        : <>{more && <button className="button-text" disabled={busy || paging} onClick={() => void loadMore()}>{paging ? "Loading children…" : "Load more children"}</button>}
+          {child && <p className="field-help practice-coach">Sit with <bdi dir="auto">{child.firstName}</bdi> for each verse. Tap Got it only when <bdi dir="auto">{child.firstName}</bdi> reads it without stopping.</p>}</>}
+    </section>;
+  }
+  const selectedRow = rows.find(row => row.id === selected), selectedName = `${selectedRow?.firstName ?? ""} ${selectedRow?.lastName ?? ""}`;
+  // A parent's honors row follows the "This week" summary (focused when the Honors tab brought the parent here).
+  const selectedHonors = selected && !context && mode === "parent" ? <HonorsEntry key={`parent:${selected}`} mode="parent" studentId={selected} name={selectedName} focusOnShow={honorsView} /> : undefined;
   const heading = mode === "student" ? "Your assigned reading" : mode === "parent" ? "Your children’s readings" : "Your assigned students";
   const focused = Boolean(routeStudentId);
   // On a student's own page the h1 is the student's name (and so is the tab title), once the list has said who that is.
   const named = focused ? rows.find(row => row.id === selected) : undefined, studentName = named ? `${named.firstName} ${named.lastName}` : null;
   return <section className={`role-workspace${focused ? " role-workspace-focused" : ""}`}>{studentName ? <><h1 className="sr-only"><bdi dir="auto">{studentName}</bdi></h1><DocumentTitle heading={studentName} /></> : <h1 className="sr-only">{heading}</h1>}
-    {mode !== "student" && !focused && <p className="selection-lede">{mode === "parent" ? "Choose a child to see their reading." : "Who are you teaching today?"}</p>}
+    {mode !== "student" && !focused && !selected && <p className="selection-lede">{mode === "parent" ? "Choose a child to see their reading." : "Who are you teaching today?"}</p>}
     {loading ? <p role="status">Loading available students…</p> : error ? <div role="alert"><p>Students couldn’t be loaded. No previous selection is being shown.</p><button className="button-secondary" onClick={() => setRetry(value => value + 1)}>Reload students</button></div>
       : !rows.length ? <p>No student is currently linked to this role. Ask the congregation for help with your assignment.</p>
         : <>{(mode !== "student" || rows.length !== 1) && <><ul ref={strip} className={`student-cards${focused || selected ? " student-cards-compact" : ""}`} aria-label={mode === "parent" ? "Child" : "Student"}>{ordered.map(row => <li key={row.id}>
@@ -109,18 +118,18 @@ function StudentSelection({ mode, switching = false, routeStudentId }: { mode: "
               : <button type="button" className="student-card" data-student-id={row.id} aria-pressed={selected === row.id} onClick={() => { void guardDeparture().then(leave => { if (leave) setSelected(row.id); }); }}><StudentCardBody row={row} /></button>}
           </li>)}</ul>{more && <button className="button-text" disabled={paging} onClick={() => void loadMore()}>{paging ? "Loading students…" : "Load more students"}</button>}</>}
           {focused && !selected && <div className="workspace-state"><h2>Student not found</h2><p>This student isn’t in your list. Choose one of your students above.</p></div>}
-          {selected && !context && (mode === "parent" || mode === "student" && rows.find(row => row.id === selected)?.ownAdultHonors === true) && <HonorsEntry key={`${mode}:${selected}`} mode={mode === "student" ? "student" : "parent"} studentId={selected} name={`${rows.find(row => row.id === selected)?.firstName ?? ""} ${rows.find(row => row.id === selected)?.lastName ?? ""}`} />}
-          {selected && <ReadingPanel mode={mode} studentId={selected} onStudentReload={reconcileStudent} />}
+          {selected && <ReadingPanel mode={mode} studentId={selected} onStudentReload={reconcileStudent} afterSummary={selectedHonors} />}
+          {/* An adult's own honors entry sits after the reading (G20). A parent's sits right after the summary, inside the panel (above). */}
+          {selected && !context && mode === "student" && selectedRow?.ownAdultHonors === true && <HonorsEntry key={`student:${selected}`} mode="student" studentId={selected} name={selectedName} />}
           {selected && mode === "student" && rows.find(row => row.id === selected)?.ownAdultHonors !== true && <HonorsNote />}</>}
   </section>;
 }
 
 export function PracticeWorkspace({ studentId }: { studentId: string }) {
-  const { context, busy, exitPractice } = useWorkspace(), router = useRouter();
+  const { context, busy } = useWorkspace(), router = useRouter();
   useEffect(() => { if (!context && !busy) router.replace("/workspace/parent"); }, [context, busy, router]);
   if (!context || context.studentId !== studentId) return <section className="workspace-state"><h1>Choose a child to practice</h1><p>This tab does not have a matching practice selection. Reloading never restores a practice handle.</p><Link href="/workspace/parent">Choose a linked child</Link></section>;
-  return <RequireRole role="parent"><section className="role-workspace"><div className="workspace-heading-row practice-bar"><h1>Child practice</h1><button className="button-hero-secondary" disabled={busy} onClick={() => void exitPractice()}>{busy ? "Closing practice…" : "Return to parent view"}</button></div>
-    <p role="status" className="field-help practice-scope">This tab only. Other tabs keep their own selections.</p>
+  return <RequireRole role="parent"><section className="role-workspace">
     <StudentSelection mode="parent" switching />
     <ReadingPanel mode="child-practice" studentId={studentId} />
   </section></RequireRole>;

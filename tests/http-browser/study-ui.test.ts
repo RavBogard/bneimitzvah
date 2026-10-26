@@ -387,7 +387,7 @@ it("discards held old-child text after a switch, keeps another tab independent, 
   const pattern = new RegExp(`/api/students/${fixture.student.id}/study-text\\?`); let release!: () => void, held = false; const gate = new Promise<void>(resolve => { release = resolve; });
   await tab.route(pattern, async route => { const response = await privateRouteFetch(route, tab); if (!response) return; held = true; await gate; await route.fulfill({ response }).catch(() => undefined); });
   await click(tab, "Refresh reading"); await ui.poll(() => held).toBe(true);
-  try { await click(tab, "Switch practice to Synthetic Sibling"); await loaded(tab, "Genesis 2:1"); } finally { release(); }
+  try { await click(tab, "Switch to Synthetic Sibling"); await loaded(tab, "Genesis 2:1"); } finally { release(); }
   await tab.unroute(pattern); expect(await tab.locator(".study-verses").getByRole("heading", { name: "Genesis 1:1", exact: true }).count()).toBe(0);
   expect(await tab.locator(".study-verses [data-verse-ref]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-verse-ref")).join(","))).toBe("Genesis 2:1,Genesis 2:2");
   await ui(colorsControl(tab)).toHaveAttribute("aria-pressed", "true"); await ui(tab.locator(".study-verses [data-family]").first()).toBeVisible(); // The sibling keeps their own default.

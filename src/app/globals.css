@@ -219,9 +219,6 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
 .reading-tools { align-self: start; padding-top: 1.5rem; border-top: 1px solid var(--color-ink); }
 .reading-tools p { margin-top: 1rem; }
 .reading-tools .button-primary { margin-top: 1.5rem; }
-.sibling-selection { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--color-rule); }
-.student-selection-list { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 1rem; }
-.student-selection-list bdi { margin-inline-start: 0.35em; }
 .roster-scroll { overflow-x: auto; margin-top: 1.75rem; }
 .roster-table { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
 .roster-table caption { text-align: left; color: var(--color-muted); padding-bottom: 1rem; }
@@ -346,9 +343,6 @@ summary { cursor: pointer; min-height: 44px; padding-block: 0.5rem; text-decorat
   .reading-editor-fields { grid-template-columns: minmax(0, 1fr); }
   .invitation-form-fields, .invitation-record-details { grid-template-columns: minmax(0, 1fr); }
   .workspace-heading-row > button { width: 100%; }
-  .student-selection-list { display: block; }
-  .student-selection-list li + li { margin-top: 0.75rem; }
-  .student-selection-list button { width: 100%; flex-wrap: wrap; }
   .roster-table th, .roster-table td { padding-inline-end: 0.5rem; font-size: 0.875rem; }
 }
 
@@ -677,9 +671,12 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .lift .study-alternative [data-word-index] { font: inherit; }
 .lift .study-read-alternative [data-word-index] { font-family: "CRC Noto Serif Hebrew", serif; font-size: calc(var(--hebrew-size, 2rem) * 0.9); font-weight: 400; vertical-align: baseline; }
 .reading-hero { max-width: 52rem; }
-.practice-bar { align-items: center; margin-bottom: 0.25rem; }
-.practice-bar h1 { margin: 0; font-size: 1.5rem; }
-.practice-scope { margin: 0 0 0.5rem; }
+/* The one compact practice bar (1.9 N13): "Practising with Noa", a switch for each other child, Done, and the coaching line under them. */
+.practice-bar { display: grid; gap: 0.5rem; margin-bottom: 0.75rem; }
+.practice-bar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.practice-bar-title { margin: 0 auto 0 0; font-size: 1.5rem; }
+.practice-switches { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.practice-coach { margin: 0; }
 @media (min-width: 1001px) {
   .reading-passage-layout:has(> .reading-toolbar) { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem; column-gap: 1.5rem; }
   .reading-passage-layout > .assigned-study, .reading-passage-layout > header { grid-column: 1; min-width: 0; }
@@ -1061,7 +1058,13 @@ a.roster-row-main:hover .roster-row-name bdi { text-decoration: underline; text-
 .parent-study-summary summary { min-height: 44px; padding-block: 0.5rem; cursor: pointer; }
 .parent-study-summary .parent-summary-note { white-space: pre-wrap; margin-block: 0.5rem; }
 .parent-consent-notice { margin: 0; color: var(--color-muted); font-size: 0.9375rem; white-space: pre-line; }
-.parent-summary-dates { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; margin-block: 0.5rem 0; padding-inline-start: 1.25rem; }
+.parent-study-summary h3 { margin: 0; }
+.parent-study-summary p { margin: 0; }
+.parent-summary-next { font-weight: 600; }
+.parent-summary-practised { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.5rem; }
+.parent-summary-dates { display: flex; flex-wrap: wrap; gap: 0 0.5rem; margin: 0; padding: 0; list-style: none; }
+.parent-summary-dates li:not(:last-child)::after { content: ","; }
+.parent-summary-lesson { display: grid; gap: 0.5rem; }
 /* Study guide placement: under the hero on wide screens, after the Hebrew on phones so Hebrew stays first. */
 .guide-place-wide { display: none; }
 @media (min-width: 1001px) { .guide-place-wide { display: block; } .guide-place-narrow { display: none; } }
