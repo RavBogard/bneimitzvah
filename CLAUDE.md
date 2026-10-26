@@ -45,6 +45,12 @@ Read first, every session: `docs/planning/2026-10-15-kickoff/MISSION.md` (Daniel
 - **Small wording is the lead's call (Daniel 2026-10-26: "You really don't need my calls on these small wording things. Your judgement is generally fine"):**
   - Labels, empty states, status lines, chips, errors and email details: decide in the house voice. That means the child's name and never pronouns, no exclamation points or pep talk, plain verbs, "practise". Log each decision in the plan's "Decided here".
   - Ask Daniel only for wording that is a real product decision: a new promise to families, anything about privacy or what others can see, or a MISSION-level rule.
+- **Rulings follow from his decisions (Daniel 2026-10-26: "just be logical and consistent with these decisions. You don't need my individual rulings on the vast majority of these"):**
+  - Product, privacy and wording questions that a logical, consistent reading of MISSION, the decisions and earlier rulings can answer are the lead's to decide, with the reasoning logged in "Decided here".
+  - Stop and ask only for money, licences, a second tenant, the beta label, irreversible production data changes, and messages to real people.
+- **Proportion (Daniel 2026-10-26: "you're stressing about disclosures and privacy way more than is needed for a learn to chant Torah site"):**
+  - Adversarial review only for the CLAUDE.md four: auth (sign-in, sessions, invitation tokens), tenant and cross-family isolation, never-in-repo (licensed text, family data), and the chant gate.
+  - What a child's own tutor or parent sees, disclosure wording, and caching on one's own device are ordinary product work. They get no gates, no ordering tests and no re-review rounds.
 - **Never relaxed:** adversarial reviews on high-stakes work, never-in-repo, the RLS tests, the migration check scripts, and CI's three device projects.
 
 ## Git

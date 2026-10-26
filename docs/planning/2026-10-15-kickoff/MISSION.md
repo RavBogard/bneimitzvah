@@ -318,3 +318,11 @@ Daniel answered the alignment questions on 2026-10-23, after the rulings above. 
   - The text never enters any repo, fixture or snapshot, and `tests/never-in-repo.test.mjs` stays green.
   - It is never served to any other tenant.
   - The haftarah, shirei-shabbat and shirei-tfilah repos are still only read from.
+
+**Amended 2026-10-26 (Daniel, beta).** Daniel: "It's beta once all the 2.0 work is done and live".
+- **When:** beta begins once v2.0.0 is tagged and its deploy is live.
+- **What beta is:** the F2 meaning. Set `PUBLIC_INDEXING` (`src/lib/site/indexing.ts`) to true, so `/read`, `/learn` and `/trope-chart` become indexable and robots.txt names the sitemap for the canonical origin. Signed-in pages, workspaces, the API, lessons and review stay noindex.
+- **What changes and what stays:**
+  - A "Beta" label in the site header, for now (Daniel, 2026-10-26: "List beta in the header for now"). This replaces "No alpha or beta label on screen" above.
+  - The real-family pilot is still "I'll say when": beta sends nothing to families.
+- **Canonical origin:** the sitemap follows `BETTER_AUTH_URL`. It names beitmitzvah until the torah cutover (T7) and torah after it.
