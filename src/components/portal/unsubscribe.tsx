@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { unsubscribe, type EmailKind } from "./workspace/email/api";
 import { PortalRequestError } from "./api";
-import { BetaMark } from "../site/beta-mark";
+import { SiteBar } from "../site/site-bar";
 
 const names: Record<EmailKind, string> = { "tutor-draft": "draft notices", "weekly-digest": "weekly updates", "practice-reminder": "practice reminders" };
 type View = { kind: "ready" | "missing" | "pending" | "invalid" | "unavailable" } | { kind: "done"; stopped: EmailKind };
@@ -28,7 +28,7 @@ export function UnsubscribePage() {
   }
   const title = view.kind === "done" ? "You’re unsubscribed" : view.kind === "missing" || view.kind === "invalid" ? "This link doesn’t work" : view.kind === "unavailable" ? "Something went wrong" : "Stop these emails?";
   return <div className="portal-shell">
-    <header className="portal-header"><div className="portal-brand-group"><a className="portal-brand" href="/">CRC Torah</a><BetaMark /></div><span>Central Reform Congregation</span></header>
+    <SiteBar mode="minimal" />
     <main id="portal-main" className="entry-layout">
       <section className="entry-task" aria-labelledby="unsubscribe-title" aria-busy={view.kind === "pending"}>
         <h2 id="unsubscribe-title" ref={heading} tabIndex={-1}>{title}</h2>
@@ -40,6 +40,5 @@ export function UnsubscribePage() {
         {view.kind !== "ready" && view.kind !== "pending" && <a className="button-secondary" href="/workspace/email">Email settings</a>}
       </section>
     </main>
-    <section className="portal-footer" aria-label="About this portal"><span>Central Reform Congregation</span></section>
   </div>;
 }

@@ -38,7 +38,7 @@ test("the home is a front door to This week, Beit Mitzvah and Learn to lein", as
   expect((await page.goto("/"))?.status()).toBe(200);
   await expect(page).toHaveTitle("CRC Torah");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", "Lein, learn to lein, and study the weekly Torah and haftarah at Central Reform Congregation");
-  await expect(page.getByRole("link", { name: "CRC Torah home", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "CRC Torah", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Noach", exact: true })).toBeVisible();
   await expect(page.getByText("Torah Genesis 6:9–11:32 · Haftarah Isaiah 54:1–55:5")).toBeVisible();
   await expect(page.getByRole("link", { name: "Lein", exact: true })).toHaveAttribute("href", "/read");
@@ -58,7 +58,7 @@ test("the home is a front door to This week, Beit Mitzvah and Learn to lein", as
   if (testInfo.project.name !== "tablet") await page.screenshot({ path: testInfo.outputPath(`front-door-${testInfo.project.name}.png`), fullPage: true });
 });
 
-test("on a 390px phone the Beit Mitzvah sign-in is one scroll away, Sign in jumps there, and nothing scrolls sideways", async ({ page }, testInfo) => {
+test("on a 390px phone the Beit Mitzvah sign-in is one scroll away, the bar's Sign in is a plain link to /sign-in, and nothing scrolls sideways", async ({ page }, testInfo) => {
   await session(page, signedOut); await week(page);
   for (const width of [390, 360]) {
     await page.setViewportSize({ width, height: 844 });
@@ -71,10 +71,11 @@ test("on a 390px phone the Beit Mitzvah sign-in is one scroll away, Sign in jump
     expect(top, "sign-in starts within the first two screens").toBeLessThan(844 * 2 - 120);
     const doors = await page.locator("[data-door]").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-door")));
     expect(doors).toEqual(["beit-mitzvah", "learn"]);
-    await page.getByRole("link", { name: "Sign in", exact: true }).click();
-    await expect(heading).toBeFocused();
-    await expect(heading).toBeInViewport();
-    expect(new URL(page.url()).hash).toBe("");
+    // Sign in no longer scrolls to the door: it is the site bar's link to the sign-in page.
+    const signIn = page.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "Sign in", exact: true });
+    await expect(signIn).toHaveAttribute("href", "/sign-in");
+    expect((await signIn.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    expect(await noHorizontalScroll(page)).toBe(true);
     if (width === 390 && testInfo.project.name === "phone") { await page.evaluate(() => scrollTo(0, 0)); await page.screenshot({ path: testInfo.outputPath("front-door-390.png"), fullPage: true }); }
   }
 });
@@ -98,11 +99,11 @@ test("a single-role student still goes straight to their reading from the home",
   await expect(page).toHaveURL(/\/workspace\/student$/);
 });
 
-test("signed in, the app bar shows the account and the Beit Mitzvah door offers the existing role links", async ({ page }) => {
+test("signed in, the site bar shows Account and the Beit Mitzvah door offers the existing role links", async ({ page }) => {
   await session(page, roles(["tutor"])); await week(page);
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 3, name: "You’re signed in", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Account: Tutor", exact: true })).toHaveAttribute("href", "/account");
+  await expect(page.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
   await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
   await expect(page.getByText("Continue to your work.", { exact: true })).toBeVisible();
   await expect(page.getByRole("list", { name: "Available roles" }).getByRole("link", { name: "Tutor", exact: true })).toHaveAttribute("href", "/workspace/tutor");
@@ -112,13 +113,14 @@ test("signed in, the app bar shows the account and the Beit Mitzvah door offers 
   await expect(page.getByRole("link", { name: "Account", exact: true })).toHaveAttribute("href", "/account");
 });
 
-test("a signed-in account that is refused gets Sign out in the door and no Sign in or account link in the app bar", async ({ page }) => {
+test("a signed-in account that is refused gets Sign out in the door, under the same site bar as every page", async ({ page }) => {
   await session(page, { status: 403, body: { error: "forbidden" } }); await week(page);
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 3, name: "Access is unavailable", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
-  await expect(page.locator(".app-bar-account")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveCount(0);
+  const site = page.getByRole("navigation", { name: "Site", exact: true });
+  await expect(site.getByRole("link", { name: "Read", exact: true })).toHaveAttribute("href", "/read");
+  await expect(site.getByRole("link", { name: "Learn", exact: true })).toHaveAttribute("href", "/learn");
 });
 
 test("the invitation page stays a plain invitation page with no doors", async ({ page }) => {

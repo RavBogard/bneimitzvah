@@ -154,7 +154,7 @@ test.describe("at 390px", () => {
     });
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     const geometry = await page.evaluate(() => {
-      const barBox = document.querySelector("nav#shell-tabs")!.getBoundingClientRect(), footer = document.querySelector(".portal-footer")!.getBoundingClientRect();
+      const barBox = document.querySelector("nav#shell-tabs")!.getBoundingClientRect(), footer = document.querySelector(".site-footer")!.getBoundingClientRect();
       const last = document.querySelector("#last-element")!.getBoundingClientRect();
       return { barTop: barBox.top, footerBottom: footer.bottom, lastBottom: last.bottom, viewport: innerHeight };
     });
@@ -172,19 +172,22 @@ test.describe("at 390px", () => {
     await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    const clear = await page.evaluate(() => document.querySelector(".portal-footer")!.getBoundingClientRect().bottom <= document.querySelector("nav#shell-tabs")!.getBoundingClientRect().top + 0.5);
+    const clear = await page.evaluate(() => document.querySelector(".site-footer")!.getBoundingClientRect().bottom <= document.querySelector("nav#shell-tabs")!.getBoundingClientRect().top + 0.5);
     expect(clear).toBe(true);
   });
 });
 
-test("from 1000px the tabs are a left rail beside the page; below it, a bar at the foot", async ({ page }) => {
+test("from 1000px the site bar spans the full width and the tabs are a left rail beneath it, beside the page; below it, a bar at the foot", async ({ page }) => {
   await session(page, ["student"]);
   await page.setViewportSize({ width: 1100, height: 800 });
   await page.goto("/workspace/student");
   await expect(bar(page)).toBeVisible();
-  const rail = (await bar(page).boundingBox())!, content = (await page.locator("#workspace-main").boundingBox())!;
+  const rail = (await bar(page).boundingBox())!, content = (await page.locator("#workspace-main").boundingBox())!, site = (await page.locator("[data-site-bar]").boundingBox())!;
+  expect(site.x).toBe(0);
+  expect(site.width, "the site bar spans the full width").toBeGreaterThanOrEqual(1100);
   expect(rail.x).toBe(0);
-  expect(rail.height).toBeGreaterThanOrEqual(790);
+  expect(rail.y, "the rail starts beneath the site bar, not beside it").toBeGreaterThanOrEqual(site.y + site.height - 0.5);
+  expect(rail.y + rail.height, "the rail runs to the foot of the window").toBeGreaterThanOrEqual(799);
   expect(rail.width).toBeLessThan(260);
   expect(content.x, "the page sits to the right of the rail").toBeGreaterThanOrEqual(rail.x + rail.width);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

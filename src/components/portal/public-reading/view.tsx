@@ -53,7 +53,7 @@ import { MoreScope, ReadHeader, useMore } from "./read-header";
 import { rareTropeNote, rareTropesIn } from "../../../lib/readings/rare-tropes";
 import styles from "./public-reading.module.css";
 import drillStyles from "./translate-drill.module.css";
-import { BetaMark } from "../../site/beta-mark";
+import { SiteBar } from "../../site/site-bar";
 
 export const displayRange = (ranges: readonly string[]) => ranges.join("; ").replace(/(\d)-(\d)/g, "$1–$2");
 const statusOf = (error: unknown) => error instanceof PortalRequestError ? error.status : 503;
@@ -149,9 +149,7 @@ export function Shell({ title, children, signedIn = false, back, settled = true 
   return <div className="portal-shell">
     {/* Where there is a reading on the page, "Skip to the reading" lands on it (the dock and the words are then its first stops), not at the top of the page it already is at; without one, on the page's main. */}
     <a className="skip-link" href="#public-reading-main" onClick={event => { const text = document.querySelector<HTMLElement>("[data-reading-text]"); if (!text) return; event.preventDefault(); text.focus({ preventScroll: true }); text.scrollIntoView({ block: "start" }); }}>Skip to the reading</a>
-    <header className="portal-header app-bar"><div className="portal-brand-group"><a className="portal-brand" href="/">CRC Torah</a><BetaMark /></div>
-      {signedIn ? <a className="app-bar-account" href="/account"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M5 20c1.2-3.6 3.8-5.5 7-5.5s5.8 1.9 7 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg><span>Account</span></a>
-        : <ReturnSignInLink className="app-bar-account" back={back}>Sign in</ReturnSignInLink>}</header>
+    <SiteBar signedIn={signedIn || undefined} back={back} />
     <main id="public-reading-main" className="workspace-main">
       <div className="reading-workspace reading-with-work"><section aria-labelledby="public-reading-title">
         {children}

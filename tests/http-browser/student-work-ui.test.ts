@@ -228,9 +228,9 @@ it("supports composition and byte validation, clear without repeated empty versi
   await click(tab, "Refresh reading"); await loaded(tab); const historyPanel = await tools(tab, "Genesis 1:11"); await safe(() => historyPanel.locator(".work-history > summary").click()); await ui(historyPanel.locator(".work-history li")).toHaveCount(20);
   await safe(() => historyPanel.getByRole("button", { name: "Older versions", exact: true }).click()); await ui(historyPanel.locator(".work-history li")).toHaveCount(4);
   // The student workspace app bar hosts Learn to lein, whose device-only progress and sync outline (lesson ids, review boxes and dates, no student text) is the one
-  // thing it may keep in this browser; everything the student wrote, saved or cleared above must still never touch web storage.
+  // thing it may keep in this browser (besides the site bar's signed-in hint, the one character "1"); everything the student wrote, saved or cleared above must still never touch web storage.
   expect(await tab.evaluate(() => {
-    const own = new Set(["crc-torah:learn-progress/v1", "crc-torah:learn-sync/v1"]), texts = ["Synthetic", "😀", "שָׁלוֹם"];
+    const own = new Set(["crc-torah:learn-progress/v1", "crc-torah:learn-sync/v1", "crc-torah:signed-in/v1"]), texts = ["Synthetic", "😀", "שָׁלוֹם"];
     const entries = [localStorage, sessionStorage].flatMap(store => Object.keys(store).map(key => [store === localStorage && own.has(key), key, store.getItem(key) ?? ""] as const));
     return sessionStorage.length === 0 && entries.every(([allowed, key, value]) => allowed && !texts.some(text => key.includes(text) || value.includes(text)));
   })).toBe(true);
@@ -241,7 +241,7 @@ it("guards controlled leave, explicit reload barriers and quiet retained reading
   try {
   const tab = await page("student"); await learner(tab); const panel = await tools(tab, "Genesis 1:4");
   await safe(() => panel.getByRole("textbox").fill("Synthetic departure edit")); await closeVerseTools(tab); // the page's links sit behind the sheet; closing it loses no text
-  await safe(() => tab.getByRole("link", { name: "Account and sign out", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await ui(tab.getByRole("dialog").getByRole("button", { name: "Keep working", exact: true })).toBeFocused(); await click(tab, "Keep working"); await ui(tab.getByRole("link", { name: "Account and sign out", exact: true })).toBeFocused(); await tools(tab, "Genesis 1:4"); await ui(panel.getByRole("textbox")).toHaveValue("Synthetic departure edit");
+  await safe(() => tab.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "Account", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await ui(tab.getByRole("dialog").getByRole("button", { name: "Keep working", exact: true })).toBeFocused(); await click(tab, "Keep working"); await ui(tab.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "Account", exact: true })).toBeFocused(); await tools(tab, "Genesis 1:4"); await ui(panel.getByRole("textbox")).toHaveValue("Synthetic departure edit");
   phase = "explicit-text-outage";
   // Pause before debounce, then verify all three independent reads hold the reveal barrier.
   // Dispatch only these deliberate reloads without moving focus: a real pointer
@@ -279,7 +279,7 @@ it("guards controlled leave, explicit reload barriers and quiet retained reading
   // An unfinished composition stays unsent even when the ordinary link click blurs the field.
   await safe(() => leaving.getByRole("textbox").dispatchEvent("compositionstart")); await safe(() => leaving.getByRole("textbox").fill(discarded));
   await closeVerseTools(tab);
-  await safe(() => tab.getByRole("link", { name: "Account and sign out", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await click(tab, "Discard unsent edits and continue");
+  await safe(() => tab.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "Account", exact: true }).click()); await ui(tab.getByRole("dialog")).toBeVisible(); await click(tab, "Discard unsent edits and continue");
   await ui(tab.getByRole("dialog")).toBeHidden(); await accountReady(tab);
   // A fresh access check must keep sign-out available, rather than briefly visiting / and returning to the reading.
   phase = "account-session-check";

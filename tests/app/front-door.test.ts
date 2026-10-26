@@ -18,7 +18,7 @@ const week = (date: string): PublicWeek => ({ date, parashah: "Noach", fetchedAt
 
 test("the home is CRC Torah's front door: This week, then the Beit Mitzvah door, then Learn to lein", async () => {
   const markup = await home();
-  expect(markup).toContain('aria-label="CRC Torah home">CRC Torah</a>');
+  expect(markup).toContain('>CRC Torah</a>');
   expect(markup).not.toContain("CRC Beit Mitzvah");
   const week = markup.indexOf('id="this-week-title"'), beit = markup.indexOf('data-door="beit-mitzvah"'), learn = markup.indexOf('data-door="learn"');
   expect(week).toBeGreaterThan(-1);
@@ -39,8 +39,8 @@ test("the home is CRC Torah's front door: This week, then the Beit Mitzvah door,
   expect(markup.indexOf('<h3 id="entry-title"')).toBeGreaterThan(beit);
   expect(markup.indexOf('<h3 id="entry-title"')).toBeLessThan(learn);
   expect(markup).toContain("Checking your access");
-  expect(markup).toContain("Central Reform Congregation");
-  expect(markup).toContain("Your account and reading stay private.");
+  // The footer is the layout's one footer, not the home's (signed-in-shell.test.ts); the home draws none of its own.
+  expect(markup).not.toMatch(/<footer\b/);
   // The earlier single-purpose entry copy is gone from the home, and no pep talk arrived with the doors.
   expect(markup).not.toContain("Open your reading");
   expect(markup).not.toMatch(/!<|!\s/);
@@ -116,25 +116,25 @@ test("invitation, sign-in and account entry stay plain pages with no doors, even
     expect(markup).not.toContain("this-week-title");
     expect(markup).not.toContain('href="/read?lens=study"');
     expect(markup).toContain('<h2 id="entry-title"');
-    expect(markup).toContain('aria-label="CRC Torah home">CRC Torah</a>');
+    expect(markup).toContain('>CRC Torah</a>');
   }
   expect(pages[0]).toContain("Join your congregation’s practice");
   expect(pages[0]).not.toContain('href="/read"');
 });
 
-test("a signed-in account that is refused sees neither Sign in nor an account link in the app bar", () => {
+test("a signed-in account that is refused still gets the same site bar; the door itself offers Sign out", () => {
   expect(frontDoorAccount({ kind: "forbidden" })).toBeNull();
   expect(frontDoorAccount({ kind: "loading" })).toBeNull();
   expect(frontDoorAccount({ kind: "sign-in" })).toEqual({ kind: "sign-in" });
-  expect(frontDoorAccount({ kind: "signed-in", summary: { membershipAvailable: true, roles: ["tutor"], saved: true, approver: false, sessionBinding: "A".repeat(43) } })).toEqual({ kind: "account", role: "Tutor", saved: true });
+  expect(frontDoorAccount({ kind: "signed-in", summary: { membershipAvailable: true, roles: ["tutor"], saved: true, approver: false, sessionBinding: "A".repeat(43) } })).toEqual({ kind: "account", saved: true });
   const bar = (account: ReturnType<typeof frontDoorAccount>) => {
-    const markup = renderToStaticMarkup(createElement(FrontDoor, { account, onSignIn: () => {}, children: createElement("p", null, "Synthetic task") }));
+    const markup = renderToStaticMarkup(createElement(FrontDoor, { account, children: createElement("p", null, "Synthetic task") }));
     return markup.slice(markup.indexOf("<header"), markup.indexOf("</header>"));
   };
   const refused = bar(frontDoorAccount({ kind: "forbidden" }));
-  expect(refused).toContain('aria-label="CRC Torah home">CRC Torah</a>');
-  expect(refused).not.toContain("app-bar-account");
-  expect(refused).not.toContain("Sign in");
-  expect(refused).not.toContain('href="/account"');
-  expect(bar({ kind: "sign-in" })).toContain(">Sign in</a>");
+  expect(refused).toContain('>CRC Torah</a>');
+  // The home's Sign in is a plain link to the sign-in page; there is no scroll-to-door behaviour or role-name label.
+  expect(bar({ kind: "sign-in" })).toContain('href="/sign-in"');
+  expect(bar({ kind: "sign-in" })).not.toContain("beit-mitzvah");
+  expect(bar({ kind: "account", saved: false })).toContain('href="/account"');
 });
