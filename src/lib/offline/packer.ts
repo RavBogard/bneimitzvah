@@ -13,7 +13,7 @@ import { eveningTextPath } from "../../components/learn/service/text-api";
 import { assetKey, inspectPack, packingStarted, purgeGeneration, readIndex, refreshOfflineState, setOfflineState, sweep, trackPacking, writeIndex, type PackState } from "./pack-index";
 
 /**
- * The packer (§3.3–§3.5). It runs in the page, never the worker, and only in the installed app on the torah origin.
+ * The packer (§3.3–§3.5). It runs in the page, never the worker, and only in the installed app on the torah or beitmitzvah origin.
  * Two public packs, both owner "public": This week (the week's reading, its text and short-reference pages, both by
  * date for Lein and by ref for Learn's This week, and every clip they name) and the Learn to lein course (F3: every
  * fixed course passage's text and short pages and clips). Everything is fetched with no cookie, three at a time.

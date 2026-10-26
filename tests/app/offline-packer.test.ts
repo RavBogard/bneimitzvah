@@ -15,8 +15,8 @@ import { syntheticResponse } from "../helpers/study";
 import { syntheticCommentaryFetch } from "../helpers/commentary";
 import { publicShortFixture, byteStream } from "./reference-public-short-fixture";
 import { askOwner, coursePackCurrent, openOffline, ownerPackKey, PackStopped, parseOwnerAnswer, renewPack, type PackerIo } from "../../src/lib/offline/packer";
-import { readIndex, sweep, writeIndex } from "../../src/lib/offline/pack-index";
-import { EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, packAssetAllowed, parsePackIndex, WINDOW_MS, type Pack } from "../../src/lib/offline/policy";
+import { purgeOffline, readIndex, sweep, writeIndex } from "../../src/lib/offline/pack-index";
+import { BEIT_MITZVAH_ORIGIN, EMPTY_INDEX, INDEX_KEY, OFFLINE_CACHE, OFFLINE_HEADER, packAssetAllowed, parsePackIndex, WINDOW_MS, type Pack } from "../../src/lib/offline/policy";
 import { publicReadingPath, publicShortPath, publicTextPath } from "../../src/components/portal/public-reading/urls";
 import { coursePassages } from "../../src/components/learn/verses-api";
 import { lookAlikeRefs, MELODIES } from "../../src/lib/learn/course";
@@ -33,7 +33,8 @@ class FakeCache {
 }
 class FakeCaches { stores = new Map<string, FakeCache>(); async open(name: string) { if (!this.stores.has(name)) this.stores.set(name, new FakeCache()); return this.stores.get(name)!; } async has(name: string) { return this.stores.has(name); } async delete(name: string) { return this.stores.delete(name); } async keys() { return [...this.stores.keys()]; } }
 
-async function harness(options: { pocketTorah?: boolean } = {}) {
+async function harness(options: { pocketTorah?: boolean; origin?: string } = {}) {
+  const base = options.origin ?? origin;
   const calendar = async (value: string, cal: "diaspora" | "israel") => ({ fetchedAt: Date.now(), snapshot: { date: parseCeremonyDate(value), calendar: cal, classification: "regular" as const,
     reading: { parashah: "Synthetic portion", type: "shabbat", summary: "", source: "Hebcal", aliyot: [{ n: 1 as const, ref: "Genesis 1:1-2:3" }], triennial: null }, haftarah: "Isaiah 1:1-3" } });
   const upstream = vi.fn<typeof globalThis.fetch>(async url => syntheticResponse(decodeURIComponent(new URL(url instanceof Request ? url.url : url).pathname.split("/").at(-1)!)));
@@ -51,14 +52,14 @@ async function harness(options: { pocketTorah?: boolean } = {}) {
     if (forced) return new Response(null, { status: forced });
     let response: Response;
     if (new URL(url).pathname === source.source.path) response = new Response(clipBody.slice(), { headers: { "content-type": "audio/mpeg", "x-reference-license": "CC-BY-SA-3.0" } });
-    else response = await dispatch(new Request(url.replace(origin, source.origin)));
+    else response = await dispatch(new Request(url.replace(base, source.origin)));
     if (marked) { const headers = new Headers(response.headers); headers.set(OFFLINE_HEADER, "1"); response = new Response(response.body, { status: response.status, headers }); }
     Object.defineProperty(response, "url", { value: url });
     return response;
   }) as unknown as typeof globalThis.fetch;
   const caches = new FakeCaches();
   let now = NOW, quota = 10 ** 9;
-  const io: PackerIo = { origin, fetch, caches: caches as unknown as CacheStorage, now: () => now, estimate: async () => ({ usage: 0, quota }) };
+  const io: PackerIo = { origin: base, fetch, caches: caches as unknown as CacheStorage, now: () => now, estimate: async () => ({ usage: 0, quota }) };
   return { io, caches, requests, fetch, source, setNow: (value: number) => { now = value; }, setQuota: (value: number) => { quota = value; },
     setClip: (value: Uint8Array) => { clipBody = value; }, setStatus: (value: (url: string) => number | null) => { status = value; }, setMarked: (value: boolean) => { marked = value; } };
 }
@@ -318,5 +319,49 @@ describe("owner packs (A2): the person's own readings, and the purge on an accou
     // The label it becomes still fits the stored index.
     const pack = { key: "ref:torah:0", owner: A, label: emoji, descriptor: { type: "ref", kind: "torah", ref: "Genesis 1:1-5" }, assets: [], bytes: 0, renewedAt: 1, expiresAt: 2, format: 1 };
     expect(parsePackIndex({ format: 1, owner: A, packs: [pack] }).packs).toHaveLength(1);
+  });
+});
+
+describe("N24: on the beitmitzvah origin (decision 14) the learner's assigned reading is packed, and leaves with the account", () => {
+  const A = "A".repeat(43), B = "B".repeat(43), assigned = { kind: "torah" as const, ref: "Genesis 1:1-3", name: null };
+  const own = (owner: string) => async () => ({ state: "owner" as const, owner, packs: [assigned] });
+  const refPack = async (h: Awaited<ReturnType<typeof harness>>) => (await packs(h)).find(row => row.descriptor.type === "ref");
+
+  test("packed under its owner from the public routes only, with no cookie, on the beitmitzvah origin itself", async () => {
+    const h = await harness({ origin: BEIT_MITZVAH_ORIGIN });
+    await openOffline({ ...h.io, owner: own(A) });
+    const pack = await refPack(h), selector = { by: "ref" as const, ref: "Genesis 1:1-3", kind: "torah" as const };
+    expect(pack).toMatchObject({ key: ownerPackKey("torah", "Genesis 1:1-3"), owner: A, descriptor: { type: "ref", kind: "torah", ref: "Genesis 1:1-3" } });
+    expect(pack!.assets).toEqual(expect.arrayContaining([publicReadingPath(selector), publicTextPath(selector, "torah", 0)].map(path => { const url = new URL(path, BEIT_MITZVAH_ORIGIN); return url.pathname + url.search; })));
+    // Only the public reading routes and PocketTorah short clips: no private route, nothing generated (G3).
+    expect(pack!.assets.every(packAssetAllowed)).toBe(true);
+    expect(pack!.assets.every(asset => /^\/api\/public\/(?:reading|text|reference\/short)\?|^\/reference-audio\/short-v1\/[a-f0-9]{64}\.mp3$/.test(asset))).toBe(true);
+    // Every pack request went to this origin with no cookie; the private endpoint is asked only through io.owner.
+    expect(h.requests.length).toBeGreaterThan(0);
+    expect(h.requests.every(row => row.url.startsWith(BEIT_MITZVAH_ORIGIN + "/") && row.init.credentials === "omit")).toBe(true);
+  });
+
+  test("sign-out deletes it (and every pack) at once; a later open signed out keeps none of it", async () => {
+    const h = await harness({ origin: BEIT_MITZVAH_ORIGIN });
+    await openOffline({ ...h.io, owner: own(A) });
+    expect(await refPack(h)).toBeDefined();
+    vi.stubGlobal("caches", h.caches);
+    try { await purgeOffline(); } finally { vi.unstubAllGlobals(); }
+    expect(await h.caches.has(OFFLINE_CACHE)).toBe(false);
+    await openOffline({ ...h.io, owner: async () => ({ state: "signed-out" as const }) });
+    expect(await refPack(h)).toBeUndefined();
+    expect((await readIndex((await offline(h)) as unknown as Cache)).owner).toBeNull();
+  });
+
+  test("another account on the same device never sees it: the whole cache goes before the new owner's packs", async () => {
+    const h = await harness({ origin: BEIT_MITZVAH_ORIGIN });
+    await openOffline({ ...h.io, owner: own(A) });
+    await openOffline({ ...h.io, owner: async () => ({ state: "owner" as const, owner: B, packs: [] }) });
+    const stored = await readIndex((await offline(h)) as unknown as Cache);
+    expect(stored.owner).toBe(B);
+    expect(stored.packs.some(row => row.owner === A || row.descriptor.type === "ref")).toBe(false);
+    // None of the learner's own pages is left in the cache (This week and the course were fetched again for the new owner).
+    const keys = new Set((await offline(h)).entries.keys()), selector = { by: "ref" as const, ref: "Genesis 1:1-3", kind: "torah" as const };
+    for (const path of [publicReadingPath(selector), publicTextPath(selector, "torah", 0)]) expect(keys.has(new URL(path, BEIT_MITZVAH_ORIGIN).href), path).toBe(false);
   });
 });

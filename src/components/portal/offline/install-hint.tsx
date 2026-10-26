@@ -7,7 +7,7 @@ import { usePlatform, useProductName } from "./status";
 import styles from "./offline.module.css";
 
 /**
- * The install hint (§3.9 with the 2026-10-23 popup ruling): on the torah origin, not already installed.
+ * The install hint (§3.9 with the 2026-10-23 popup ruling): on an offline origin (torah or beitmitzvah), not already installed.
  * - `front-door`: one quiet row under the doors, shown to anyone on a phone or tablet, signed in or not, until
  *   dismissed; once dismissed it stays dismissed. Never on a reading page, never a modal.
  * - `account`: always available from Account, on any device that can install from here.

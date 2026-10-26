@@ -6,8 +6,18 @@
  * (static pages and their build files), the three public reading routes, the public manifest, and
  * PocketTorah's content-addressed short clips. No private API, no recording, no generated chant.
  */
-/** The only origin that gets a manifest link, a worker or a pack (§3.1). Loopback is the test seam. */
+/** The intended main address (§3.1). */
 export const TORAH_ORIGIN = "https://torah.centralreform.org";
+/** The live address (Daniel's decision 14, 1.9 N24, 2026-10-24: "Work on both"). */
+export const BEIT_MITZVAH_ORIGIN = "https://beitmitzvah.centralreform.org";
+/**
+ * The only origins that get a manifest link, a worker or a pack: exactly these two, compared as whole strings, never by
+ * suffix. Loopback is the test seam. Each origin has its own Cache Storage and its own host-only session cookie, so a pack
+ * made on one is never served or seen on the other, and the sign-out and account-switch purges run on the origin they belong to.
+ * Previews and aliases stay inert (an alias is redirected to the canonical origin, and a redirected /sw.js never registers).
+ */
+export const OFFLINE_ORIGINS: readonly string[] = Object.freeze([TORAH_ORIGIN, BEIT_MITZVAH_ORIGIN]);
+export const isOfflineOrigin = (origin: unknown): boolean => typeof origin === "string" && OFFLINE_ORIGINS.includes(origin);
 export const SHELL_CACHE_PREFIX = "crc-shell-";
 export const OFFLINE_CACHE = "crc-offline-v1";
 /** Every cache this app ever makes starts with this; the tombstone deletes them all. */
@@ -135,7 +145,7 @@ export const isLoopbackOrigin = (origin: string) => /^http:\/\/(?:127\.0\.0\.1|l
 /** The constants the worker runs on, written into the head of /sw.js by its route. */
 export function workerPolicy(input: { build: string; enabled: boolean; shellPages: readonly string[] }) {
   return Object.freeze({
-    build: /^[a-z0-9]{1,64}$/i.test(input.build) ? input.build : "dev", enabled: input.enabled === true, origin: TORAH_ORIGIN,
+    build: /^[a-z0-9]{1,64}$/i.test(input.build) ? input.build : "dev", enabled: input.enabled === true, origins: Object.freeze([...OFFLINE_ORIGINS]),
     shellCache: SHELL_CACHE_PREFIX + (/^[a-z0-9]{1,64}$/i.test(input.build) ? input.build : "dev"), shellPrefix: SHELL_CACHE_PREFIX,
     offlineCache: OFFLINE_CACHE, family: CACHE_FAMILY, indexKey: INDEX_KEY, header: OFFLINE_HEADER, windowMs: WINDOW_MS, skewMs: SKEW_MS,
     shellPages: Object.freeze([...input.shellPages]), shellAssets: [MANIFEST_PATH], shellLimits: SHELL_LIMITS, manifestPath: MANIFEST_PATH,

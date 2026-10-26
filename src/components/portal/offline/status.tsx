@@ -11,7 +11,7 @@ import styles from "./offline.module.css";
 /**
  * The installable app's quiet status (§3.9, Song session): the reader's offline pill, the front door's saved line,
  * and "Needs a connection" in place of a tool's error. All of it is empty outside the installed app on the
- * torah origin, because only that app ever has packs or a worker.
+ * torah or beitmitzvah origin (1.9 N24), because only that app ever has packs or a worker.
  */
 export function useOfflinePacks(): OfflineState {
   return useSyncExternalStore(subscribeOfflineState, offlineState, offlineState);
@@ -26,7 +26,7 @@ export function usePlatform(): Platform | null {
   useEffect(() => { setPlatform(browserPlatform()); }, []);
   return platform;
 }
-/** Offline wording shows only where the installable app lives: the torah origin (inert on every other host). */
+/** Offline wording shows only where the installable app lives: the torah and beitmitzvah origins (inert on every other host). */
 export function useOfflineWording(): boolean {
   const platform = usePlatform(), online = useOnline();
   return platform?.origin === true && !online;
