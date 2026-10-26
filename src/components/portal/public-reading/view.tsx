@@ -16,7 +16,10 @@ import { LensSwitch } from "../workspace/lens-switch";
 import { LENS_STORAGE, lensFromSearch, StudyLensScope, useStudyLens, type Lens } from "../workspace/study-lens";
 import { StudyRows } from "../workspace/study/study-rows";
 import { CommentaryCredits, CommentaryStatus, linkedVerse, useCommentLink, useReadingWorks, VerseRashi, workStatuses } from "../workspace/study/commentary-view";
-import { DiscussionList, VersePanelScope, WordPanelSource } from "../workspace/study/verse-panel";
+import { DiscussionList, SourcesButton, VersePanelScope, WordPanelSource } from "../workspace/study/verse-panel";
+import { PortionSummaryBlock, usePortionSummary } from "../workspace/study/portion-summary";
+import type { ApprovedPortionSummary } from "../../../lib/portion-summary/credit";
+import { parashahSlug } from "../../../lib/portion-summary/reading";
 import type { WordPanelHost } from "../workspace/study/word-panel";
 import { ReadingPlace, scrollToVerse } from "../workspace/study/reading-place";
 import { namedReading, type NamedReading } from "../../../lib/readings/named-readings";
@@ -255,6 +258,8 @@ function WeekReading({ initial, verse, saveReturn, pick: initialPick }: { initia
   const change = (next: string) => { if (next !== date) { setDate(next); setKind(null); setLinked(null); setPick("full"); } };
   const index = Math.max(0, sources.findIndex(row => row.source.passage.kind === kind)), isThisWeek = date !== null && date === today;
   const shown = sources[index]?.source.passage;
+  // The parashah's approved summary (N7), asked for only while Study shows its Torah.
+  const summary = usePortionSummary(shown?.kind === "torah" ? parashahSlug(current?.parashah) : null, lens.lens === "study");
   // The sections the Torah is read in: the full portion's aliyot, or the triennial reading's own.
   const division = triennialSource ? "triennial" : "full";
   const sectionRows = useMemo(() => portions ? division === "triennial" ? portions.triennial?.aliyot : portions.full : undefined, [portions, division]);
@@ -307,7 +312,8 @@ function WeekReading({ initial, verse, saveReturn, pick: initialPick }: { initia
             verse={linked} onVerseLeft={() => setLinked(null)} registerStart={starter.register} retry={retry} onRetry={() => setRetry(value => value + 1)} choose={choosePlan}
             sectionRows={sectionRows} section={sectionOfPick(effectivePick)} onSection={n => { if (division === "full") { setPick(pickOfSection("full", n)); setLinked(null); } }}
             portion={shown?.kind === "torah" ? <PortionPicker portions={portions} pick={effectivePick} onPick={next => { setPick(next); setLinked(null); }} /> : undefined}
-            foot={shown?.kind === "torah" && rareNote ? <p className="field-help" data-rare-trope="">{rareNote}</p> : undefined} />}
+            summary={summary} summaryJump={division === "full"}
+            foot={shown?.kind === "torah" && rareNote ?<p className="field-help" data-rare-trope="">{rareNote}</p> : undefined} />}
     </>}
     </ReadingBlock>
   </Shell></MoreScope>;
@@ -316,6 +322,7 @@ function WeekReading({ initial, verse, saveReturn, pick: initialPick }: { initia
 /** A named reading from the catalog, or any canonical passage: its passages loaded by ref. */
 function ChosenReading({ target, verse, saveReturn }: { target: Extract<ReadTarget, { mode: "named" | "ref" }>; verse: number | null; saveReturn: SaveReturn }) {
   const named = target.mode === "named" ? namedReading(target.slug) : null, lens = useStudyLens(), chooser = useChooser(), starter = useStarter();
+  const summary = usePortionSummary(named?.group === "parashah" ? named.slug : null, lens.lens === "study");
   const passages = useMemo(() => named ? named.passages : target.mode === "ref" ? [{ label: target.kind === "torah" ? "Torah" : "Haftarah", kind: target.kind, ref: target.ref }] : [], [named, target]);
   const title = named ? named.name : target.mode === "ref" ? displayRange([target.ref]) : "Reading";
   const [index, setIndex] = useState(target.mode === "named" ? Math.min(target.passage, passages.length) - 1 : 0), [linked, setLinked] = useState(verse);
@@ -372,7 +379,7 @@ function ChosenReading({ target, verse, saveReturn }: { target: Extract<ReadTarg
       <p>{loaded.error === 400 ? "Choose another reading, or go back to this week." : loaded.error === 429 ? RATE_LIMITED_MESSAGE : "Check your connection and try again."}</p>
       {loaded.error !== 400 && <button type="button" className="button-secondary" onClick={() => setRetry(value => value + 1)}>Try again</button>}</div>}
     {sources.length > 0 && <PassageReading key={sources.map(row => selectorKey(row.source.selector)).join("|")} sources={sources} index={index}
-      onIndex={next => { setIndex(next); setLinked(null); }} verse={linked} onVerseLeft={() => setLinked(null)} registerStart={starter.register} retry={retry} onRetry={() => setRetry(value => value + 1)} choose={choosePlan} />}
+      onIndex={next => { setIndex(next); setLinked(null); }} verse={linked} onVerseLeft={() => setLinked(null)} registerStart={starter.register} retry={retry} onRetry={() => setRetry(value => value + 1)} choose={choosePlan} summary={summary} />}
     </ReadingBlock>
   </Shell></MoreScope>;
 }
@@ -394,7 +401,7 @@ function MoreAction({ onAct, children }: { onAct(): void; children: ReactNode })
  * `verse` (1-based in the passage shown) opens that verse selected: Word tools on it, and in the player
  * when recordings are on, ready to play. Any other choice lets it go (`onVerseLeft`).
  */
-export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, registerStart, retry, onRetry, verseExtra, choose, sectionRows, section, onSection, portion, foot }: {
+export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, registerStart, retry, onRetry, verseExtra, choose, sectionRows, section, onSection, portion, foot, summary, summaryJump }: {
   sources: readonly LabelledSource[]; index: number; onIndex(index: number): void; verse: number | null; onVerseLeft(): void;
   registerStart(start: (() => void) | null): void; retry: number; onRetry(): void;
   /** In Lein, shown under the selected verse before Up close (a saved reading's Working and Got it marks). */
@@ -409,6 +416,8 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   portion?: ReactNode;
   /** A reader note at the foot of the section, above its credits (a rare trope this week). */
   foot?: ReactNode;
+  /** The parashah's approved summary (1.9 N7), shown atop Study on the Torah; and whether its outline lines go to the page's sections (the full portion's aliyot, not the triennial reading's). */
+  summary?: ApprovedPortionSummary | null; summaryJump?: boolean;
 }) {
   const source = (sources[index] ?? sources[0]).source, passage = source.passage, kind = passage.kind, listening = source.listening, key = selectorKey(source.selector);
   const allVerses = useMemo(() => { try { return expandReadingRanges(passage.ranges, kind, TANAKH_VERSE_COUNTS); } catch { return []; } }, [passage, kind]);
@@ -583,6 +592,8 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
   };
   const start = useRef<() => void>(() => {}); start.current = () => { if (listening && page) hear(0); focusReading(); };
   const pagerFocus = useRef(false), pagerTo = (next: number) => { pagerFocus.current = true; changeWin(next); };
+  // An outline line of the portion summary: that aliyah's page, with focus on its first verse; the aliyah already open only takes the reader to its text.
+  const goAliyah = (n: string) => { const at = sections.findIndex(row => row.n === n); if (at < 0) return; if (at === win) focusReading(); else pagerTo(at); };
   useEffect(() => { if (page && pagerFocus.current) { pagerFocus.current = false; focusReading(); } }); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { registerStart(page ? () => start.current() : null); return () => registerStart(null); }, [page, registerStart]);
 
@@ -631,8 +642,10 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     {(choice.button || choice.extra || portion) && !more && <div className={styles.chooseRow}>{portion}{choice.button}{choice.extra}</div>}
     {/* With a More sheet (N5) the Portion control and Choose verses live in it, put there while it is open. */}
     {more?.slot && createPortal(<>{portion}{choice.button}{choice.extra}</>, more.slot)}
-    {/* Curated discussions (1.7 M6b): under the reading's header, in Study, only where this passage has any. */}
-    <DiscussionList />
+    {/* The portion summary (1.9 N7): atop Study, only an approved one, only on a parashah's Torah. Its outline goes to an aliyah where the page has it as a section. */}
+    {study && kind === "torah" && summary && <PortionSummaryBlock summary={summary} aliyot={summaryJump ? sections.map(row => row.n) : undefined} onAliyah={goAliyah} />}
+    {/* Curated discussions (1.7 M6b), in Study, only where this passage has any: one tap to the Sheet here; on a laptop they are the column beside the verses, below. */}
+    <SourcesButton />
     {sources.length > 1 && !more && <p className={`field-help ${styles.passageNote}`}><bdi dir="ltr">{displayRange(passage.ranges)}</bdi></p>}
     {/* The section chips (N3): a tab for each aliyah, in the sticky bar above the text. The page below changes with the tab, so one panel serves them all. */}
     {sections.length > 0 && <SectionTabs sticky label="Reading sections" panelId={`${group}-section`} current={sections[range.section]?.n ?? null}
@@ -688,6 +701,8 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
             onIndex={at => setLift(value => value && { index: at, opening: value.opening, navigation: value.navigation + 1 })} onClose={() => { audio.stopAll(); setLift(null); }} />}
         </>}
       </section>
+      {/* The sources column (1.9 N7): on a laptop, to the right of the verses (the layout's third column); a phone has the button above instead. */}
+      <DiscussionList />
     </div>
   </VersePanelScope>;
 }

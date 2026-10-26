@@ -695,6 +695,22 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 }
 @media print { .reading-toolbar { display: none; } }
 
+/* 1.9 N7: the Study sources column. From 1180px (a laptop) the curated sources stand in their own column to the right of the verses, as the layout's last column, and stay in
+   view as the page scrolls; the Hebrew keeps its size setting (the text column only wraps more). Narrower, the column is not drawn and a "Sources" button in flow above the text
+   opens the same list in the Sheet: one tap, over no verse. */
+.reading-sources-open { margin-block: 0.25rem 0.5rem; }
+.reading-sources-open .button-secondary { min-height: 44px; }
+.reading-sources-column { display: none; }
+@media (min-width: 1180px) {
+  .reading-sources-open { display: none; }
+  .reading-passage-layout:has(> .reading-sources-column) { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem minmax(14rem, 18rem); column-gap: 1.5rem; }
+  .reading-passage-layout:has(> .reading-sources-column):not(:has(> .reading-toolbar)) { grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem); }
+  .reading-passage-layout:has(> .reading-sources-column) > :not(.reading-toolbar):not(.reading-sources-column) { grid-column: 1; min-width: 0; }
+  .reading-sources-column { display: block; grid-column: 3; grid-row: 1; align-self: start; position: sticky; top: 5rem; max-height: calc(100svh - 6rem); overflow-y: auto; overscroll-behavior: contain; padding-inline-start: 1rem; box-shadow: inset 1px 0 0 var(--color-rule); }
+  .reading-passage-layout:not(:has(> .reading-toolbar)) > .reading-sources-column { grid-column: 2; }
+  .reading-sources-column > section { margin-block: 0; max-inline-size: none; }
+}
+
 /* The selected verse's bar (1.9 N4): its tools (one Sheet), Up close and its mark, under the passage. */
 .study-verse-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; margin-block: 1.25rem 0; }
 .study-verse-detail { display: grid; gap: 0.75rem; min-width: 0; }

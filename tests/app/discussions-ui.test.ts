@@ -93,7 +93,7 @@ afterEach(() => { vi.unstubAllGlobals(); });
 
 test("the marker is on anchor verses only, and says exactly what Daniel worded", async () => {
   const view = await viewOf();
-  expect(DISCUSSION_LABELS).toEqual({ marker: "Sources on this verse", list: "Sources for this reading", back: "Back to this verse" });
+  expect(DISCUSSION_LABELS).toEqual({ marker: "Sources on this verse", list: "Sources for this reading", column: "Sources", back: "Back to this verse" });
   for (const verse of ["Genesis 12:1", "Genesis 12:2"]) {
     const markup = study(createElement(VerseActions, { verse }), view);
     expect(markup).toContain(">Sources on this verse</button>");
@@ -108,9 +108,9 @@ test("the marker is on anchor verses only, and says exactly what Daniel worded",
   expect(renderToStaticMarkup(createElement(VerseActions, { verse: "Genesis 12:1" }))).toBe("");
 });
 
-test("the list is headed 'Sources for this reading' with each title and its sources, and is absent when there is nothing", async () => {
+test("the column is headed 'Sources' (print keeps its own words) with each title and its sources, and is absent when there is nothing", async () => {
   const view = await viewOf(), markup = study(createElement(DiscussionList), view);
-  expect(markup).toContain(">Sources for this reading</h3>");
+  expect(markup).toContain(">Sources</h3>"); expect(markup).not.toContain("Sources for this reading"); expect(markup).toContain("data-sources-column");
   expect(markup).toContain("Synthetic first"); expect(markup).toContain("Synthetic second");
   for (const ref of [REFS[0], REFS[2], REFS[0]]) expect(markup).toContain(ref);
   expect(markup.match(/data-discussion-open="/g)).toHaveLength(3);
@@ -177,7 +177,7 @@ test("a source with no text shows its credit and its Sefaria link and no text, a
   expect(edition).not.toContain("Synthetic English for");
   expect(edition).not.toMatch(/isn’t available|error|try again/i);
   // The list and the marker still come from the answer's structure alone.
-  expect(study(createElement(DiscussionList), view)).toContain("Sources for this reading");
+  expect(study(createElement(DiscussionList), view)).toContain(">Sources</h3>");
 });
 
 // ---- print -----------------------------------------------------------------------------------------------------------------
