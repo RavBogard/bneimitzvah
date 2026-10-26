@@ -9,6 +9,7 @@ import { BROWSER_ORIGIN, assertBrowserStartupAllowed, startBrowserServer } from 
 import { installLoopbackFetchGuard } from "./egress";
 import { openVerseTools } from "./verse-tools";
 import { openAuthMail } from "./auth-navigation";
+import { countPageFetches, pageFetchesSettled } from "./fetch-settle";
 import { syntheticUiStudyPage } from "../helpers/study-ui";
 import * as s from "../../src/server/db/index";
 vi.mock("server-only", () => ({}));
@@ -31,7 +32,7 @@ async function heldReading(tab: Page) {
 }
 async function page(mode: "student" | "parent" = "student") {
   const context = await browser.newContext({ baseURL: BROWSER_ORIGIN, viewport: { width: 1200, height: 700 }, serviceWorkers: "block", acceptDownloads: false }); contexts.push(context);
-  await observeSilentAudio(context);
+  await observeSilentAudio(context); await countPageFetches(context);
   await context.route("**/*", async route => { try { if (new URL(route.request().url()).origin === BROWSER_ORIGIN) await route.continue(); else await route.abort(); } catch { await route.abort(); } });
   const cookies = cached.get("tutor"); if (cookies) await context.addCookies(cookies);
   const tab = await context.newPage(), initialShort = observeInitialShortPage(tab); observeHeldMetadata(tab); shortRequests.set(tab, initialShort); await tab.goto("/", { waitUntil: "domcontentloaded" });
@@ -116,6 +117,11 @@ it("transient session503 retains reading but real ordinary-parent guardian revoc
 });
 
 it("actual SDK session expiry on focus removes private reading rather than quietly retaining it", async () => {
-  const tab = await page(); await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(0) }).where(eq(s.session.userId, fixture.tutor.id));
+  const tab = await page();
+  // The page's own startup checks (session probes that trail the first render, a check in flight) must have finished before the session expires.
+  // The workspace deliberately drops a focus that arrives while a check is in flight or the access check is running, and a check that began before
+  // the expiry cannot see it, so expiring mid-startup made this focus a no-op at random.
+  await pageFetchesSettled(tab);
+  await fixture.ownerDb.update(s.session).set({ expiresAt: new Date(0) }).where(eq(s.session.userId, fixture.tutor.id));
   await focus(tab); await ui(tab.getByRole("heading", { name: "Sign in to continue", exact: true })).toBeVisible(); expect(await tab.locator(".study-verses").count()).toBe(0); await heldReading(tab); await tab.context().close();
 });

@@ -17,6 +17,10 @@ async function safe<T>(action: () => Promise<T>): Promise<T> {
   try { return await action(); } catch { throw new Error("Portal UI browser operation failed; private details withheld"); }
 }
 async function navigate(tab: Page, url: string) { return safe(() => tab.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 })); }
+// The harness aborts a trip to another origin. Chromium then commits its error page, and a goto issued before that commit fails with
+// "Navigation ... is interrupted by another navigation to chrome-error://chromewebdata/". Start this before the click that leaves, and await it
+// (after the leaving request) before the next navigation.
+const errorPageAfterLeaving = (tab: Page) => tab.waitForEvent("framenavigated", { predicate: frame => frame === tab.mainFrame() && frame.url().startsWith("chrome-error:"), timeout: 30_000 });
 async function referrerPolicy(tab: Page, value: "no-referrer" | "strict-origin-when-cross-origin") {
   await ui.poll(() => tab.locator('head meta[name="referrer"]').evaluateAll(nodes => nodes.map(node => (node as HTMLMetaElement).content))).toEqual([value]);
 }
@@ -446,9 +450,9 @@ describe("Connect Claude consent page on a phone", () => {
     await tab.route("**/api/auth/google/redirect", route => { asked.push(route.request().postDataJSON());
       return route.fulfill({ contentType: "application/json", body: JSON.stringify({ url: "https://accounts.google.com/o/oauth2/v2/auth?client_id=synthetic&state=synthetic" }) }); });
     await navigate(tab, `/connect#request=${pending}`); await heading(tab, "Claude wants to connect");
-    const leaving = tab.waitForRequest(request => request.url().startsWith("https://accounts.google.com/o/oauth2/v2/auth?"), { timeout: 30_000 });
+    const leaving = tab.waitForRequest(request => request.url().startsWith("https://accounts.google.com/o/oauth2/v2/auth?"), { timeout: 30_000 }), errorPage = errorPageAfterLeaving(tab);
     await safe(() => tab.getByRole("button", { name: "Continue with Google in this window", exact: true }).click());
-    await safe(() => leaving);
+    await safe(() => leaving); await safe(() => errorPage);
     expect(asked).toEqual([{ next: "connect" }]);
     // Google returns to /connect in this same tab (the harness aborts the real trip).
     await navigate(tab, "/connect"); await heading(tab, "Claude wants to connect");
@@ -480,9 +484,9 @@ describe("Connect Claude consent page on a phone", () => {
       approve: { redirect: "https://claude.ai/api/mcp/auth_callback?code=synthetic&state=s1" } });
     await navigate(tab, `/connect#request=${pending}`); await heading(tab, "Claude wants to connect");
     // The redirect to claude.ai is aborted by this harness; the copy is dropped before it leaves.
-    const leaving = tab.waitForRequest(request => new URL(request.url()).origin === "https://claude.ai", { timeout: 30_000 });
+    const leaving = tab.waitForRequest(request => new URL(request.url()).origin === "https://claude.ai", { timeout: 30_000 }), errorPage = errorPageAfterLeaving(tab);
     await safe(() => tab.getByRole("button", { name: "Allow", exact: true }).click());
-    await safe(() => leaving);
+    await safe(() => leaving); await safe(() => errorPage);
     expect(seen.some(entry => entry.path === "approve" && entry.request === pending)).toBe(true);
     const asked = views(seen).length;
     await navigate(tab, "/connect"); await heading(tab, "This request has expired");
