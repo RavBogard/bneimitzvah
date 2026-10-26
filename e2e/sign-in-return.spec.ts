@@ -82,7 +82,7 @@ test("the front door holds the Beit Mitzvah door's height while access is checke
     await page.route("**/api/session", async route => { await held; await json(route, 401, { error: "authentication-required" }); });
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 3, name: "Checking your access", exact: true })).toBeVisible();
-    const learn = page.locator(".portal-footer");
+    const learn = page.locator('[data-door="learn"]');
     const before = await learn.evaluate(node => node.getBoundingClientRect().top + scrollY);
     answer();
     await expect(page.getByLabel("Email address")).toBeVisible();

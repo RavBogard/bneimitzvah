@@ -15,8 +15,8 @@
 .tab[aria-current="page"] .icon { background: var(--lake-tint); }
 .label { display: block; max-width: 100%; overflow-wrap: anywhere; }
 
-/* The page clears the bar's height at its foot. */
-:global(.portal-shell):has(> .bar:not([data-hidden])) { padding-bottom: var(--shell-bar-h, 4rem); }
+/* The page clears the bar's height at its foot: the body (the shell and the site footer after it) keeps the room, so the footer ends above the bar. */
+:global(body):has(:global(.portal-shell) > .bar:not([data-hidden])) { padding-bottom: var(--shell-bar-h, 4rem); }
 :global(.portal-shell):has(> .bar:not([data-hidden])) :global(.skip-link) { z-index: 30; }
 
 /* From 1000px the same four tabs are a rail at the left edge, with the page beside it. */
@@ -29,10 +29,13 @@
   .icon { padding: 0; }
   .tab[aria-current="page"] { background: var(--lake-tint); }
   .tab[aria-current="page"] .icon { background: transparent; }
-  :global(.portal-shell):has(> .bar:not([data-hidden])), :global(.portal-shell):has(> .bar) { padding-bottom: 0; padding-inline-start: calc(11rem + 2rem); }
+  :global(.portal-shell):has(> .bar) { padding-inline-start: calc(11rem + 2rem); }
+  /* The rail is at the left edge, so the footer keeps clear of it instead of the foot. */
+  :global(body):has(:global(.portal-shell) > .bar) { padding-bottom: 0; }
+  :global(body):has(:global(.portal-shell) > .bar) :global(.site-footer) { padding-inline-start: calc(11rem + 16px); }
   /* 1.9 N16 re-measure (CLS): while access is still being checked the rail's room is kept, so the page does not slide right when it appears. */
   :global(.workspace-shell[data-rail-pending]) { padding-inline-start: calc(11rem + 2rem); }
-  :global(.portal-shell):has(> .bar) > :global(.site-bar), :global(.workspace-shell[data-rail-pending]) > :global(.site-bar) { position: sticky; top: 0; z-index: 25; margin-inline-start: calc(-1 * (11rem + 2rem)); padding-inline-start: 1.5rem; }
+  :global(.portal-shell):has(> .bar) > :global(.site-bar), :global(.workspace-shell[data-rail-pending]) > :global(.site-bar) { position: sticky; top: 0; z-index: 25; margin-inline: calc(-1 * (11rem + 2rem)) -4rem; padding-inline: 1.5rem 4rem; }
 }
 
 /* A sub-navigation inside one area (People: Invitations, Tutors, Accounts): links in the segmented pill track. */
@@ -45,7 +48,7 @@
 .moreAction { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin: 1.5rem 0 0; }
 
 @media (prefers-reduced-motion: reduce) { .tab { transition: none; } }
-@media print { .bar { display: none; } :global(.portal-shell):has(> .bar) { padding-bottom: 0; padding-inline-start: 0; } :global(.portal-shell):has(> .bar) > :global(.site-bar) { position: static; margin-inline-start: 0; padding-inline-start: 0; } }
+@media print { .bar { display: none; } :global(body):has(:global(.portal-shell) > .bar) { padding-bottom: 0; } :global(.portal-shell):has(> .bar) { padding-bottom: 0; padding-inline-start: 0; } :global(.portal-shell):has(> .bar) > :global(.site-bar) { position: static; margin-inline: 0; padding-inline: 0; } }
 
 /* Forced colours: the system keeps text and edges, so the current tab is said with an edge and a system colour. */
 @media (forced-colors: active) {

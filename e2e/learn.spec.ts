@@ -47,7 +47,8 @@ test("a learner opens the course, hears a phrase, misses one item and gets it ba
   await expect(next).toHaveAttribute("data-next", "torah-sof-pasuk");
   await expect(page.getByText(/Can hear:|lessons visited/)).toHaveCount(0); // Daniel 2026-10-24: the home shows no count
   await expect(page.getByText("Progress is saved on this device. Sign in to keep it.")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in");
+  await expect(page.locator("main").getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in");
+  await expect(page.getByRole("navigation", { name: "Site", exact: true }).getByRole("link", { name: "Sign in", exact: true })).toHaveAttribute("href", "/sign-in");
   // Every lesson on both paths is a link (the order is advice), while Next still recommends one.
   await expect(page.locator('section[aria-labelledby="path-torah"] ol a')).toHaveCount(12);
   await expect(page.locator('section[aria-labelledby="path-haftarah"] ol a')).toHaveCount(12);
