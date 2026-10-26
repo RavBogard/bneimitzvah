@@ -26,7 +26,7 @@ class FakeCaches {
   async keys() { return [...this.stores.keys()]; }
 }
 type Handler = (event: unknown) => void;
-async function load(options: { enabled?: boolean; origin?: string; fetch?: (request: Request) => Promise<Response>; caches?: FakeCaches } = {}) {
+async function load(options: { enabled?: boolean; origin?: string; origins?: readonly string[]; fetch?: (request: Request) => Promise<Response>; caches?: FakeCaches } = {}) {
   const origin = options.origin ?? ORIGIN, listeners = new Map<string, Handler[]>(), caches = options.caches ?? new FakeCaches(origin);
   const network = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : new Request(new URL(String(input), origin), init);
@@ -36,7 +36,7 @@ async function load(options: { enabled?: boolean; origin?: string; fetch?: (requ
   const self = { location: new URL(`${origin}/sw.js`), addEventListener: (type: string, handler: Handler) => listeners.set(type, [...(listeners.get(type) ?? []), handler]),
     registration: { unregister: vi.fn(async () => true) }, clients: { claim: vi.fn(async () => undefined) }, skipWaiting: vi.fn(async () => undefined), navigator: {} };
   const context = vm.createContext({ self, caches, fetch: network, Response, Headers, Request, URL, TextDecoder, TextEncoder, console });
-  vm.runInContext(await workerSource({ build: "abc1234", enabled: options.enabled ?? true }), context);
+  vm.runInContext(await workerSource({ build: "abc1234", enabled: options.enabled ?? true, ...(options.origins ? { origins: options.origins } : {}) }), context);
   async function lifecycle(type: "install" | "activate") {
     const waits: Promise<unknown>[] = [];
     for (const handler of listeners.get(type) ?? []) handler({ waitUntil: (work: Promise<unknown>) => waits.push(work) });
@@ -253,6 +253,18 @@ describe("install, activate and the tombstone", () => {
     }
     expect((await load({ origin: "http://127.0.0.1:3187" })).listeners.has("fetch")).toBe(true);
     for (const origin of [ORIGIN, BEIT_MITZVAH_ORIGIN]) expect((await load({ origin })).listeners.has("fetch"), origin).toBe(true);
+  });
+  test("N24 review F1: after a cutover the alias's /sw.js is the tombstone, which deletes its packs and unregisters; the canonical one stays live", async () => {
+    for (const [canonical, alias] of [[ORIGIN, BEIT_MITZVAH_ORIGIN], [BEIT_MITZVAH_ORIGIN, ORIGIN]]) {
+      const caches = new FakeCaches(alias);
+      for (const name of ["crc-shell-abc", OFFLINE_CACHE, "someone-elses-cache"]) await caches.open(name);
+      const w = await load({ origin: alias, origins: [canonical], caches });
+      expect(w.listeners.has("fetch"), alias).toBe(false);
+      await w.lifecycle("install"); await w.lifecycle("activate");
+      expect(await caches.keys()).toEqual(["someone-elses-cache"]);
+      expect(w.self.registration.unregister).toHaveBeenCalled();
+      expect((await load({ origin: canonical, origins: [canonical] })).listeners.has("fetch"), canonical).toBe(true);
+    }
   });
 });
 

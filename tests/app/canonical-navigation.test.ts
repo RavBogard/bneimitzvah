@@ -136,3 +136,14 @@ test("the pinned Next redirect serializer preserves the fixed harmless fragment 
     expect(serialize(`${origin}/#home`)).toBe(origin + "/#home");
   }
 });
+
+test("N24 review F1: an alias serves its own /sw.js (exactly that path, read only), so an old worker there can update to the tombstone; every other alias path still redirects", () => {
+  for (const selected of [BEIT, TORAH]) {
+    const enabled = { ...production, BETTER_AUTH_URL: selected }, other = new URL(selected === BEIT ? TORAH : BEIT).host;
+    for (const host of [other, ...fixedAliases]) {
+      for (const method of ["GET", "HEAD"]) expect(canonicalNavigation(request(host, "/sw.js", method), enabled), `${host} ${method}`).toBeNull();
+      for (const path of ["/", "/sw.js/", "/sw.jsx", "/SW.JS", "/x/sw.js", "/sw.js.map", "/%2Fsw.js", "/offline", "/read"]) privateResponse(canonicalNavigation(request(host, path), enabled), 303);
+      for (const method of ["POST", "PUT", "DELETE"]) privateResponse(canonicalNavigation(request(host, "/sw.js", method), enabled), 404);
+    }
+  }
+});

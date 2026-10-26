@@ -129,7 +129,13 @@ const SUMMARY_KEYS = "approvedAt,credit,outline,reading,revision,summary";
 function approvedSummaryAnswer(value: unknown, slug: string): boolean {
   if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).sort().join() !== "reading,summary") return false;
   const summary = (value as { summary: unknown }).summary;
-  if (summary !== null && (!summary || typeof summary !== "object" || Array.isArray(summary) || Object.keys(summary).sort().join() !== SUMMARY_KEYS)) return false;
+  if (summary !== null) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary) || Object.keys(summary).sort().join() !== SUMMARY_KEYS) return false;
+    const row = summary as Record<string, unknown>;
+    if (typeof row.credit !== "string" || typeof row.summary !== "string" || typeof row.approvedAt !== "string" || !Array.isArray(row.outline)) return false;
+    if (!row.outline.every(item => !!item && typeof item === "object" && !Array.isArray(item) && Object.keys(item).sort().join() === "aliyah,line"
+      && typeof (item as Record<string, unknown>).line === "string")) return false;
+  }
   parsePortionSummary(value, slug);
   return true;
 }

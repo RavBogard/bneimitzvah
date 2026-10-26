@@ -402,7 +402,8 @@ describe("N24: the week's aliyot and its approved portion summary go in This wee
   });
 
   test("anything beyond the approved shape (a draft's fields) is never packed, and This week is still saved", async () => {
-    for (const extra of [{ status: "draft" }, { draft: "Synthetic unreviewed text" }, { reviewed: false }]) {
+    const nested = [{ outline: approved.outline.map((row, at) => at === 0 ? { ...row, draft: "Synthetic unreviewed line" } : row) }, { credit: 7 }, { credit: null }];
+    for (const extra of [{ status: "draft" }, { draft: "Synthetic unreviewed text" }, { reviewed: false }, ...nested]) {
       const h = await harness({ parashah: "Vayera", portionSummary: async () => ({ ...approved, ...extra }) as never });
       expect(await renewPack(h.io, { type: "week", date }, signal())).toBe("saved");
       const [pack] = await packs(h);
