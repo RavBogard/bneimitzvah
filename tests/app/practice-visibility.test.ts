@@ -179,10 +179,10 @@ describe("the release gate", () => {
     await t.mark("Exodus 23:4", "got-it");
     expect((await t.read("multi", t.own.id, "tutor")).status).toBe(404);
     expect((await t.read("multi", t.own.id, "parent")).status).toBe(404);
-    // The production composition's own gate is closed until the review passes and Daniel approves the disclosure.
+    // The production composition's own gate is open (1.9 bundle C), so its assigned tutor is answered.
     const shipped = createHttpDispatcher(async action => action(t.f.runtime));
     const response = await shipped(new Request(`${ORIGIN}/api/students/${t.own.id}/practice-visibility?mode=tutor`, { headers: { cookie: t.f.identities.multi.cookie } }));
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(200);
   });
 });
 
