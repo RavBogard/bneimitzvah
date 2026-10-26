@@ -228,9 +228,9 @@ it("supports composition and byte validation, clear without repeated empty versi
   await click(tab, "Refresh reading"); await loaded(tab); const historyPanel = await tools(tab, "Genesis 1:11"); await safe(() => historyPanel.locator(".work-history > summary").click()); await ui(historyPanel.locator(".work-history li")).toHaveCount(20);
   await safe(() => historyPanel.getByRole("button", { name: "Older versions", exact: true }).click()); await ui(historyPanel.locator(".work-history li")).toHaveCount(4);
   // The student workspace app bar hosts Learn to lein, whose device-only progress and sync outline (lesson ids, review boxes and dates, no student text) is the one
-  // thing it may keep in this browser; everything the student wrote, saved or cleared above must still never touch web storage.
+  // thing it may keep in this browser (besides the site bar's signed-in hint, the one character "1"); everything the student wrote, saved or cleared above must still never touch web storage.
   expect(await tab.evaluate(() => {
-    const own = new Set(["crc-torah:learn-progress/v1", "crc-torah:learn-sync/v1"]), texts = ["Synthetic", "😀", "שָׁלוֹם"];
+    const own = new Set(["crc-torah:learn-progress/v1", "crc-torah:learn-sync/v1", "crc-torah:signed-in/v1"]), texts = ["Synthetic", "😀", "שָׁלוֹם"];
     const entries = [localStorage, sessionStorage].flatMap(store => Object.keys(store).map(key => [store === localStorage && own.has(key), key, store.getItem(key) ?? ""] as const));
     return sessionStorage.length === 0 && entries.every(([allowed, key, value]) => allowed && !texts.some(text => key.includes(text) || value.includes(text)));
   })).toBe(true);
