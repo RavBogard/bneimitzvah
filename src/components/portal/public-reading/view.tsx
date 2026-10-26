@@ -594,10 +594,11 @@ export function PassageReading({ sources, index, onIndex, verse, onVerseLeft, re
     target.focus({ preventScroll: true });
   };
   const start = useRef<() => void>(() => {}); start.current = () => { if (listening && page) hear(0); focusReading(); };
-  const pagerFocus = useRef(false), pagerTo = (next: number) => { pagerFocus.current = true; changeWin(next); };
+  // The page the pager is taking the reader to: focus waits until that page's verses have rendered (the switch is a transition, 1.9 N16).
+  const pagerFocus = useRef<number | null>(null), pagerTo = (next: number) => { pagerFocus.current = next; changeWin(next); };
   // An outline line of the portion summary: that aliyah's page, with focus on its first verse; the aliyah already open only takes the reader to its text.
   const goAliyah = (n: string) => { const at = sections.findIndex(row => row.n === n); if (at < 0) return; if (at === win) focusReading(); else pagerTo(at); };
-  useEffect(() => { if (page && pagerFocus.current) { pagerFocus.current = false; focusReading(); } }); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (page && pagerFocus.current !== null && pagerFocus.current === win) { pagerFocus.current = null; focusReading(); } }); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { registerStart(page ? () => start.current() : null); return () => registerStart(null); }, [page, registerStart]);
 
   // The drill follows the selected verse. Reveal, Hide again and End drill never start or stop audio; Next verse stops the old verse's audio
