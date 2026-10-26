@@ -63,7 +63,7 @@ beforeAll(async () => {
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
 it("reviews a parent invitation before sending, then separately reviews reissue and exact revocation with authoritative lifecycle updates", async () => {
-  const tab = await page("admin"); await navigate(tab, "/workspace/admin/students"); await safe(() => tab.getByRole("navigation", { name: "Workspace", exact: true }).getByRole("link", { name: "People", exact: true }).click());
+  const tab = await page("admin"); await navigate(tab, "/workspace/admin/students?tab=students"); await safe(() => tab.getByRole("navigation", { name: "Workspace", exact: true }).getByRole("link", { name: "People", exact: true }).click());
   await fill(tab, "synthetic-managed-parent@example.test"); await click(tab, "Review invitation");
   expect((await api(tab, "/api/admin/invitations")).data.invitations.length === 0).toBe(true); await capture(tab, "invitation-review-desktop");
   let writes = 0;

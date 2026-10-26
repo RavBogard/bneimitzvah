@@ -117,7 +117,7 @@ function Import() {
   const ready = review && !review.value.canConfirm ? readyRows(review) : null;
   const sameName = review && roster ? sameNameAndDateRows(review.csv, roster, new Set([...review.value.issues.map(issue => issue.row), ...review.value.duplicateRows])) : [];
   const issueText = (issue: Preview["issues"][number]) => { const text = hints.get(issue.row) ?? (issue.code === "invalid-columns" ? "the number of columns doesn’t match the column names. Check for a missing or extra comma." : "check this row against the template."); return text.charAt(0).toLocaleUpperCase() + text.slice(1); };
-  return <section className="role-workspace csv-workspace admin-workspace"><div className="admin-crumbs"><WorkspaceLink href="/workspace/admin/students">All students</WorkspaceLink></div>
+  return <section className="role-workspace csv-workspace admin-workspace"><div className="admin-crumbs"><WorkspaceLink href="/workspace/admin/students?tab=students">All students</WorkspaceLink></div>
     <PageHeader title="Import students" description="Add many students at once from a spreadsheet. Importing sends nothing: nobody is invited or given access, and no reading or tutor is assigned." />
     {message && <p className={blocked || !receipt ? "request-error" : "workspace-notice"} role={blocked ? "alert" : "status"}>{message}</p>}
     {blocked === "unknown" && !checkedRoster && <Button variant="primary" disabled={pending || loading} onClick={() => void reload()}>Check what saved</Button>}

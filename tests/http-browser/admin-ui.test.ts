@@ -54,6 +54,11 @@ it("moves between the areas of the tab bar, finds a student, and adds one in a s
   const tab = await page(); await navigate(tab, "/workspace/admin/students");
   const nav = tab.getByRole("navigation", { name: "Workspace", exact: true });
   await ui(nav.getByRole("link", { name: "This week", exact: true })).toHaveAttribute("aria-current", "page");
+  await ui(tab.getByRole("heading", { level: 1, name: "This week", exact: true })).toBeVisible();
+  await ui(tab.getByRole("heading", { name: "Ceremonies this week", exact: true })).toBeVisible(); await ui(tab.getByRole("heading", { name: "Rehearsals this week", exact: true })).toBeVisible();
+  await safe(() => nav.getByRole("link", { name: "Students", exact: true }).click());
+  await ui(nav.getByRole("link", { name: "Students", exact: true })).toHaveAttribute("aria-current", "page");
+  await ui(tab.getByRole("heading", { level: 1, name: "Students", exact: true })).toBeVisible();
   await ui(roster(tab).getByRole("listitem")).toHaveCount(2);
   await ui(tab.getByText("2 students", { exact: true })).toBeVisible();
   // Search narrows the list by name; a miss says so.
@@ -125,7 +130,7 @@ it("moves between the areas of the tab bar, finds a student, and adds one in a s
 
 it("opens a student's page with the staff tabs and verse sheet, and links to their people", async () => {
   for (const mobile of [false, true]) {
-    const tab = await page(mobile); await navigate(tab, "/workspace/admin/students");
+    const tab = await page(mobile); await navigate(tab, "/workspace/admin/students?tab=students");
     await safe(() => roster(tab).getByRole("link", { name: /^Synthetic Learner/ }).click());
     await ui(tab.getByRole("heading", { name: "Synthetic Learner", level: 2, exact: true })).toBeVisible();
     await ui(tab.getByRole("navigation", { name: "Workspace", exact: true }).getByRole("link", { name: "Students", exact: true })).toHaveAttribute("aria-current", "page");

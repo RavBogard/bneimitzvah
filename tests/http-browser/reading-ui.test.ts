@@ -71,7 +71,7 @@ afterAll(async () => {
 }, 120_000);
 
 it("lets an admin review actual calendar choices, confirm once and replace only after authoritative reload", async () => {
-  const tab = await page("admin"); await navigate(tab, "/workspace/admin/students");
+  const tab = await page("admin"); await navigate(tab, "/workspace/admin/students?tab=students");
   await safe(() => tab.getByRole("list", { name: "Students", exact: true }).getByRole("link", { name: /^Synthetic Learner/ }).click());
   await openEditor(tab);
   await ui(tab.getByLabel("Passage",{exact:true})).toHaveValue("custom");
