@@ -22,7 +22,7 @@ import type { ReferenceResolution } from "../../../lib/reference-audio/source";
 import { fetchWork, type WorkOperation, type WorkPage, type WorkHistory, type WorkReceipt, type WorkRecovery } from "./work/api";
 import { fetchProgress, type ProgressOperation, type ProgressRows, type ProgressSaved } from "./progress/api";
 import { fetchGuide, type GuideFetch, type GuideOperation, type ThemeReadResult } from "./study/guide-api";
-import { serviceApi, type ServiceMetadata, type ServicePlan, type ServiceUnitResponse } from "./service-learning/api";
+import { serviceApi, type FinishedPart, type ServiceMetadata, type ServicePlan, type ServiceUnitResponse } from "./service-learning/api";
 import {readMyService as readMyServiceApi,readServiceMaterial as readMyServiceMaterialApi,serviceRequest,type MyService}from "./service-learning/ecosystem-api";
 import type{ServiceUnitMaterial}from "../../../lib/service-learning/types";
 import { fetchLessons, type LessonOperation, type LessonResult } from "./lessons/api";
@@ -55,6 +55,8 @@ type Workspace = {
   readProgress(baseline: Assigned, kind: StudyKind, operation: ProgressOperation, signal: AbortSignal): Promise<ProgressRows | ProgressSaved>;
   readGuide(baseline: Assigned, kind: StudyKind, operation: GuideOperation, signal: AbortSignal): Promise<GuideFetch | ThemeReadResult>;
   readServiceMetadata(mode: ReadingMode, id: string, signal: AbortSignal): Promise<ServiceMetadata>;
+  /** 2.0 SC5: the per-part finished mark, for a tutor or an admin only. */
+  readServiceFinished(mode: "admin" | "tutor", id: string, signal: AbortSignal): Promise<FinishedPart[]>;
   readMyService(mode:ReadingMode,id:string,signal:AbortSignal):Promise<MyService>;
   readMyServiceMaterial(mode:ReadingMode,id:string,rowId:string,signal:AbortSignal):Promise<ServiceUnitMaterial>;
   requestMyService(mode:ReadingMode,id:string,action:Parameters<typeof serviceRequest>[2],body:Record<string,unknown>,signal:AbortSignal):Promise<unknown>;
@@ -408,6 +410,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [practice, verifyWorkSession, deny, confirmAuthority]);
   const readServiceMetadata = useCallback((mode: ReadingMode, id: string, signal: AbortSignal) => serviceRead(mode, id, signal, selection => serviceApi.metadata(mode, id, signal, selection ?? undefined)), [serviceRead]);
+  const readServiceFinished = useCallback((mode: "admin" | "tutor", id: string, signal: AbortSignal) => serviceRead(mode, id, signal, () => serviceApi.finished(mode, id, signal)), [serviceRead]);
   const readMyService=useCallback((mode:ReadingMode,id:string,signal:AbortSignal)=>serviceRead(mode,id,signal,selection=>readMyServiceApi(mode,id,signal,selection??undefined)),[serviceRead]);
   const readMyServiceMaterial=useCallback((mode:ReadingMode,id:string,rowId:string,signal:AbortSignal)=>serviceRead(mode,id,signal,selection=>readMyServiceMaterialApi(mode,id,rowId,signal,selection??undefined)),[serviceRead]);
   const requestMyService=useCallback((mode:ReadingMode,id:string,action:Parameters<typeof serviceRequest>[2],body:Record<string,unknown>,signal:AbortSignal)=>serviceRead(mode,id,signal,selection=>serviceRequest(mode,id,action,body,signal,selection??undefined)),[serviceRead]);
@@ -578,7 +581,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         {failure === 401 ? <a className="button-primary" href="/sign-in">Sign in</a> : failure !== null && <button className="button-primary" onClick={() => { denials.current = []; refresh(); }}>Check access again</button>}</section>
       }
       {summary && <div hidden={checking || failure !== null} inert={checking || failure !== null} aria-hidden={checking || failure !== null}>
-        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readExploration, readExplorationPage, readReference, createShortReferenceOwner, createShortExplorationOwner, readWordAids, readWordDetails, createSources, createSourceContent, readWork, readProgress, readGuide, readServiceMetadata,readMyService,readMyServiceMaterial,requestMyService,readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, registerQuiet, concealed: checking || failure !== null }}>
+        <WorkspaceContext.Provider key={summary.sessionBinding} value={{ summary, context, epoch, busy, notice: visibleNotice, selectChild, exitPractice, refresh, read, readVerified, readStudy, readExploration, readExplorationPage, readReference, createShortReferenceOwner, createShortExplorationOwner, readWordAids, readWordDetails, createSources, createSourceContent, readWork, readProgress, readGuide, readServiceMetadata, readServiceFinished,readMyService,readMyServiceMaterial,requestMyService,readServiceUnit, readLessons, readPracticeCalendar, verifyServiceSession, serviceAuthorityFailed, registerWork, completeWork, registerDeparture, guardDeparture, registerReload, registerQuiet, concealed: checking || failure !== null }}>
           {summary.roles.length > 1 && <nav className="workspace-role-nav" aria-label="Workspace roles">{summary.roles.map(role => <Link key={role} href={rolePaths[role]} onClick={event => controlledLink(event, rolePaths[role])} aria-current={pathname === rolePaths[role] || pathname.startsWith(`${rolePaths[role]}/`) ? "page" : undefined}>{roleNames[role]}</Link>)}</nav>}
           {visibleNotice && <p className="workspace-notice" role="status">{visibleNotice}</p>}
           {workNotice && <p className="workspace-notice" role="status">{workNotice}</p>}

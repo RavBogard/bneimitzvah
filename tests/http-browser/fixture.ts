@@ -7,6 +7,7 @@ import { createCourseProgressService } from "../../src/server/course-progress/se
 import { createServiceCourseProgressService } from "../../src/server/service-course/progress-service";
 import { createVerseReviewService } from "../../src/server/verse-review/service";
 import { createServiceCoursePath } from "../../src/server/service-course/path";
+import { createServicePartFinished } from "../../src/server/service-course/finished";
 import { createCongregationSettingsService } from "../../src/server/settings/service";
 import { createClaudeConnectionsService } from "../../src/server/connections/service";
 import { createMavenLinkService } from "../../src/server/students/maven-links";
@@ -117,7 +118,7 @@ export async function browserFixture(options: { google?: boolean; emptyReadingDa
       studySources: createStudySourceDiscoveryService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), related: options.relatedReader ?? (async ref => parseRelatedMetadata([], ref)) }),
       studyWordDetails: createStudyWordDetailsService({ access, practice, loadText: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }), source: options.wordDetailsSource ?? { book: async () => Object.freeze([]), lexicon: async () => Object.freeze([]) } }),
       study: createStudyService({ access, practice, load: options.studyLoad ?? (async () => { throw new StudyUnavailable("upstream"); }) }), studentWork: createStudentWorkService({ access, practice, authorityBindingSecret: "synthetic-work-authority-binding-secret" }),
-    serviceLearning, serviceCoursePath: createServiceCoursePath({ access, serviceLearning }),
+    serviceLearning, serviceCoursePath: createServiceCoursePath({ access, serviceLearning }), servicePartFinished: createServicePartFinished({ access }),
     referenceReview: createReferenceReviewService({ access, reviewer: options.referenceReviewGet ? { tenantId: "crc", userId: base.admin.id } : undefined, get: options.referenceReviewGet ?? (async () => { throw new ReviewUnavailable(); }) }),
     serviceEcosystem,
     serviceScheduler: createServiceScheduler({ db, broker:createMusicBroker(undefined) }),

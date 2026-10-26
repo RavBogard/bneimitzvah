@@ -140,6 +140,8 @@ function Done({ lesson, state, complete, progress, pathView, slot }: { lesson: L
     {lesson.goal && <p className={learn.doneLine}>{presentGoal(lesson.goal)}</p>}
     <LessonSiddurLink lessonId={lesson.id} slot={slot} />
     {next && <p className={learn.nextName}>{fill(mine ? COPY.done.nextMine : COPY.done.nextName, { lesson: next.title })}</p>}
+    {/* 2.0 SC5: on an assigned part's Done screen, the student is told their tutor can see it (A7 tu.student.line). */}
+    {pathView.status === "ready" && pathView.path.state === "assigned" && pathView.path.items.some(item => item.lesson === lesson.id) && <p className={learn.doneLine} data-finished-line>{COPY.tutor.studentLine}</p>}
     <Footer>
       {next && <a className="button-start" href={`/learn/service/${next.id}`}>{COPY.done.startNext}</a>}
       <a className={learn.backLink} href="/learn/service">{COPY.done.back}</a>

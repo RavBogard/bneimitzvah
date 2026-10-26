@@ -118,18 +118,19 @@ export function parseServiceUnit(value: unknown, expected: ServicePlan, selected
   const result = material(row.material); if (result.unit.id !== selected || result.source.catalogIdentity !== current.catalogIdentity) return bad();
   return { state: "assigned", plan: current, material: result };
 }
-async function request(mode: ReadingMode, studentId: string, action: "metadata" | "unit" | "catalog" | "prepare" | "confirm", body: Record<string, unknown> | undefined, signal: AbortSignal, selection?: Selection): Promise<unknown> {
+async function request(mode: ReadingMode, studentId: string, action: "metadata" | "unit" | "catalog" | "prepare" | "confirm" | "finished", body: Record<string, unknown> | undefined, signal: AbortSignal, selection?: Selection): Promise<unknown> {
   if (!["student", "parent", "tutor", "admin", "child-practice"].includes(mode) || action !== "metadata" && action !== "unit" && mode !== "admin" && mode !== "tutor") return bad();
+  const read = action === "metadata" || action === "finished";
   const id = identifier(studentId);
   if (mode === "child-practice" && (!selection || selection.context.studentId !== id || Date.parse(selection.context.expiresAt) <= Date.now() || !/^[A-Za-z0-9_-]{43}$/.test(selection.handle))) return bad();
   const controller = new AbortController(), abort = () => controller.abort();
   if (signal.aborted) abort(); signal.addEventListener("abort", abort, { once: true }); const timer = setTimeout(abort, 12_000);
   const headers = new Headers({ accept: "application/json" });
-  if (action !== "metadata") headers.set("content-type", "application/json");
+  if (!read) headers.set("content-type", "application/json");
   if (mode === "child-practice") headers.set("X-Practice-Context", selection!.handle);
   try {
-    const path = `/api/students/${id}/service-plan${action === "metadata" ? `?mode=${mode}` : `/${action}`}`;
-    const response = await fetch(path, { method: action === "metadata" ? "GET" : "POST", body: action === "metadata" ? undefined : JSON.stringify({ mode, ...body }), headers, credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal });
+    const path = action === "finished" ? `/api/students/${id}/service-finished?mode=${mode}` : `/api/students/${id}/service-plan${action === "metadata" ? `?mode=${mode}` : `/${action}`}`;
+    const response = await fetch(path, { method: read ? "GET" : "POST", body: read ? undefined : JSON.stringify({ mode, ...body }), headers, credentials: "same-origin", cache: "no-store", redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal });
     if (!response.ok) throw new PortalRequestError(response.status);
     if (!response.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return bad();
     const reader = response.body?.getReader(); if (!reader) return bad(); const chunks: Uint8Array[] = []; let size = 0;
@@ -140,7 +141,20 @@ async function request(mode: ReadingMode, studentId: string, action: "metadata" 
   } catch (error) { if (error instanceof PortalRequestError) throw error; return bad(); }
   finally { clearTimeout(timer); signal.removeEventListener("abort", abort); }
 }
+/** One part on a student's plan and the day its lesson was finished, or null (2.0 SC5). */
+export type FinishedPart = { lesson: string; finished: string | null };
+/** The staff answer, strictly: a closed object, each part a lesson id once, each day a real date or null. */
+export function parseFinished(value: unknown): FinishedPart[] {
+  const row = closed(value, ["parts"]), parts = array(row.parts, 128).map(value => {
+    const part = closed(value, ["lesson", "finished"]), lesson = nonempty(part.lesson, 64);
+    if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(lesson)) return bad();
+    return { lesson, finished: part.finished === null ? null : date(part.finished) };
+  });
+  if (new Set(parts.map(part => part.lesson)).size !== parts.length) return bad();
+  return parts;
+}
 export const serviceApi = {
+  async finished(mode: "admin" | "tutor", id: string, signal: AbortSignal) { return parseFinished(await request(mode, id, "finished", undefined, signal)); },
   async metadata(mode: ReadingMode, id: string, signal: AbortSignal, selection?: Selection) { return parseServiceMetadata(await request(mode, id, "metadata", undefined, signal, selection)); },
   async unit(mode: ReadingMode, id: string, expected: ServicePlan, selected: string, signal: AbortSignal, selection?: Selection) { return parseServiceUnit(await request(mode, id, "unit", { planId: expected.id, planRevision: expected.revision, catalogIdentity: expected.catalogIdentity, unitId: selected }, signal, selection), expected, selected); },
   async catalog(mode: "admin" | "tutor", id: string, signal: AbortSignal) { return parseCatalog(await request(mode, id, "catalog", {}, signal)); },

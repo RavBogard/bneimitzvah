@@ -53,6 +53,8 @@ export function YourParts({ view, progress, next }: { view: PathView; progress: 
     {path.review && <p className={styles.unitSummary}>{COPY.state.pathReview}</p>}
     {path.slot === "unknown" && <p className={styles.unitSummary}>{COPY.state.slotUnknown}</p>}
     {lessons.length > 0 && <ol className={learn.path}>{lessons.map(({ lesson, page }) => <Row key={lesson.id} lesson={lesson} progress={progress} next={next} page={page} />)}</ol>}
+    {/* 2.0 SC5: only assigned parts are shown to the tutor, so the line shows only under assigned parts (A7 tu.student.line). */}
+    {path.state === "assigned" && lessons.length > 0 && <p className={styles.unitSummary} data-finished-line>{COPY.tutor.studentLine}</p>}
     {start && path.serviceStart !== undefined && <p className={styles.partPage} data-service-start={path.serviceStart}><SiddurLink href={start}>{fill(COPY.home.serviceStart, { page: path.serviceStart })}</SiddurLink></p>}
   </section>;
 }

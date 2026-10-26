@@ -5,9 +5,10 @@ import type { Assigned, ReadingMode } from "../api";
 import { statusOf, useWorkspace } from "../provider";
 import { ServiceUnitView } from "../../service-learning/unit-view";
 import type { ServiceUnitMaterial } from "../../../../lib/service-learning/types";
-import type { ServiceMetadata, ServicePlan } from "./api";
+import { servicePlanKey, type ServiceMetadata, type ServicePlan } from "./api";
 import { ServicePlanEditor } from "./editor";
 import { MyServicePanel } from "./my-service";
+import { FinishedParts } from "./finished";
 import { useCongregation } from "../settings/links";
 import { SiddurPageLink } from "../../siddur-link";
 
@@ -69,6 +70,7 @@ export function ServiceLearningPanel({ id, mode, studentId, baseline, register, 
     <h2 id={`${id}-heading`} tabIndex={-1}>Service parts</h2>
     {assigned?.state === "assigned" && <SiddurPageLink siddurUrl={congregation.links.siddurUrl} page={assigned.serviceStart} block>Your whole service in the siddur, from page {assigned.serviceStart}</SiddurPageLink>}
     <MyServicePanel mode={mode} studentId={studentId} baseline={baseline} onConnected={connectionChanged} />
+    {(mode === "admin" || mode === "tutor") && baseline && current && !current.loading && !current.error && assigned && <FinishedParts key={`${scope}|${servicePlanKey(assigned)}`} mode={mode} studentId={studentId} firstName={baseline.student.firstName} />}
     <details className="service-additional-practice" open={!connected}><summary>{connected?"Additional practice":"Assigned service material"}</summary>
     {!current || current.loading ? <p role="status">Checking assigned service parts…</p> : current.error ? <div role="status"><p>{current.error === 409 ? "The service plan changed. Reload it before choosing a part." : [401, 403, 404].includes(current.error) ? "Service parts are no longer available in this view." : "Service parts are unavailable. Your scripture reading is separate."}</p><button className="button-secondary" onClick={() => void reloadReading().catch(() => undefined)}>Reload service parts</button></div> : assigned && <>
       {assigned.state === "no-plan" && <p>No service parts have been assigned yet.</p>}

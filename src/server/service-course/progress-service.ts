@@ -6,6 +6,7 @@ import * as data from "../data/service-course-progress";
 import { mergeProgress, parseProgress, serializeProgress, type Progress } from "../../lib/service-course/progress";
 import { createServiceCourseProgressAccess, serviceCourseOwnerName, ServiceCourseRefused, type ServiceCourseOwner } from "./progress-access";
 import * as validate from "./progress-validation";
+import { markFinishedParts } from "./finished";
 
 /**
  * A member's own progress in the service course (2.0 SC4, A4 8.1): the same contract as Learn to lein's (plan item 25), on
@@ -46,6 +47,8 @@ export function createServiceCourseProgressService<Q extends PgQueryResultHKT>(i
         if ((current?.version ?? 0) !== value.expectedVersion) return { ok: false as const, code: "conflict" as const, current: view(owner, current, until) };
         const row = current ? await data.updateProgress(tx, owner, value.expectedVersion, value.progress) : await data.insertProgress(tx, owner, value.progress);
         if (!row) throw new Error("Service course progress unavailable");
+        // 2.0 SC5: the stored document's done lessons that are the student's own assigned parts become finished marks.
+        await markFinishedParts(tx, owner, stored(row));
         return view(owner, row, until);
       });
     },
@@ -64,6 +67,8 @@ export function createServiceCourseProgressService<Q extends PgQueryResultHKT>(i
         if (text === null || !parseProgress(JSON.parse(text))) return { ok: false as const, code: "too-large" as const, current: view(owner, current, until) };
         const row = current ? await data.updateProgress(tx, owner, current.version, merged) : await data.insertProgress(tx, owner, merged);
         if (!row) throw new Error("Service course progress unavailable");
+        // 2.0 SC5: the stored document's done lessons that are the student's own assigned parts become finished marks.
+        await markFinishedParts(tx, owner, stored(row));
         return view(owner, row, until);
       });
     },
