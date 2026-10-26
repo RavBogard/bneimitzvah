@@ -110,7 +110,7 @@ export function StudentToday() {
     choices={rows.length > 1 ? sortStudentsByCeremony(rows) : null} onChoose={id => { selected.current = id; void load().catch(() => undefined); }} />;
 }
 
-function TodayView({ headingId, student, ownAdultHonors, readings, marks, lesson, dates, choices, onChoose }: {
+export function TodayView({ headingId, student, ownAdultHonors, readings, marks, lesson, dates, choices, onChoose }: {
   headingId: string; student: Student; ownAdultHonors: boolean; readings: readonly Reading[]; marks: Slice<ReadonlyMap<Reading["kind"], readonly ProgressVerse[]>>; lesson: Slice<LessonLogEntry | null>;
   dates: ReturnType<PracticeCalendar["snapshot"]>; choices: Student[] | null; onChoose(id: string): void;
 }) {
@@ -125,6 +125,15 @@ function TodayView({ headingId, student, ownAdultHonors, readings, marks, lesson
   const next = rows.length ? rows[Math.max(0, states.findIndex(state => state !== "solid"))] : null;
   const dayMarks = calendarMarks(student), calendarDay = dates.status === "ready" ? dayOrdinal(dates.serverDay) : dayOrdinal(today);
   const note = lesson.status === "ready" ? lesson.value : null;
+  // The tutor's latest note reads before the sections list (1.9 role homes); with no reading assigned it still shows, after the empty state.
+  const noteBlock = note && <section className={styles.note} data-testid="today-note" aria-labelledby={`${headingId}-note`}>
+    <div className={styles.noteHead}>
+      <p id={`${headingId}-note`} className={styles.noteLabel}>Latest from <bdi dir="auto">{note.displayName}</bdi> · <time dateTime={note.lessonDate}>{noteDay(note.lessonDate)}</time>:</p>
+      <a className={styles.noteMore} href={LESSONS_HREF}>Lessons</a>
+    </div>
+    <p className={styles.noteText} dir="auto">{note.summary}</p>
+    {note.beforeNext && <BeforeNext text={note.beforeNext} own />}
+  </section>;
   return <section className={styles.today} data-today aria-labelledby={headingId}>
     <DocumentTitle heading={heading} />
     {choices && <ul className={styles.chooser} aria-label="Student">{choices.map(row => <li key={row.id}>
@@ -137,22 +146,15 @@ function TodayView({ headingId, student, ownAdultHonors, readings, marks, lesson
       {readings.length > 0 && <ul className={styles.readings} aria-label="Assigned readings">{readings.flatMap(reading => refSegments(reading.ranges).map((segment, index) =>
         <li key={`${reading.id}:${index}`}><Chip>{index === 0 ? `${reading.kind === "torah" ? "Torah" : "Haftarah"} ${segment}` : segment}</Chip></li>))}</ul>}
     </div>
-    {readings.length === 0 ? <EmptyState title="No reading has been assigned yet" description="Your tutor or rabbi will add your verses here." /> : <>
+    {readings.length === 0 ? <><EmptyState title="No reading has been assigned yet" description="Your tutor or rabbi will add your verses here." />{noteBlock}</> : <>
       {next && (settled ? <NextCard row={next} started={started} dates={dates} />
         // 1.9 N16 re-measure (CLS): until marks and days settle, the card's room is held by an invisible copy, so the sections below do not jump.
         : <div className={styles.pending} aria-hidden="true" inert><NextCard row={next} started={false} dates={{ status: "ready", serverDay: today, fromDate: today, throughDate: today, dates: new Set() }} /></div>)}
+      {noteBlock}
       <List label="Reading sections">{rows.map((row, index) => <ListRow key={row.key} href={READING_HREF} title={row.label}
         meta={<bdi dir="ltr" className={styles.nobreak} data-nobreak>{row.ref}</bdi>}
         trailing={states[index] ? <span className={styles.state} data-state={states[index]}><span className={styles.dot} aria-hidden="true" />{stateWord[states[index]!]}</span> : undefined} />)}</List>
     </>}
-    {note && <section className={styles.note} aria-labelledby={`${headingId}-note`}>
-      <div className={styles.noteHead}>
-        <p id={`${headingId}-note`} className={styles.noteLabel}>Latest from <bdi dir="auto">{note.displayName}</bdi> · <time dateTime={note.lessonDate}>{noteDay(note.lessonDate)}</time>:</p>
-        <a className={styles.noteMore} href={LESSONS_HREF}>Lessons</a>
-      </div>
-      <p className={styles.noteText} dir="auto">{note.summary}</p>
-      {note.beforeNext && <BeforeNext text={note.beforeNext} own />}
-    </section>}
     {dates.status !== "loading" && <div className={styles.calendar}><PracticeMonths today={calendarDay} first={dates.status === "ready" ? dayOrdinal(dates.fromDate) : calendarDay - 364}
       practiced={ordinal => dates.status === "ready" && dates.dates.has(dayString(ordinal))} marks={dayMarks} lastDay={dayOrdinal(student.ceremonyDate)} /></div>}
     {ownAdultHonors && <HonorsEntry key={student.id} mode="student" studentId={student.id} name={`${student.firstName} ${student.lastName}`} />}

@@ -80,7 +80,7 @@ beforeAll(async () => {
 afterAll(async () => { await Promise.all(contexts.map(context => context.close().catch(() => undefined))); await browser?.close().catch(() => undefined); await stop?.().catch(() => undefined); await fixture?.close().catch(() => undefined); restore?.(); }, 120_000);
 
 it("retains a draft through same-session Zoom focus and visible return, then discards it for a new session with the same role", async () => {
-  const tab = await page(); await signIn(tab, "pg-admin@example.test"); await navigate(tab, "/workspace/admin/students");
+  const tab = await page(); await signIn(tab, "pg-admin@example.test"); await navigate(tab, "/workspace/admin/students?tab=students");
   const prepared = await api(tab, `/api/students/${fixture.student.id}/reading/prepare`, { mode: "admin", ranges: ["Genesis 1:1-3"] });
   expect(prepared.status === 200 && prepared.data.status === "prepared").toBe(true);
   expect((await api(tab, `/api/students/${fixture.student.id}/reading/confirm`, { mode: "admin", binding: prepared.data.binding })).status === 200).toBe(true);
@@ -115,7 +115,7 @@ it("retains a draft through same-session Zoom focus and visible return, then dis
 });
 
 it("creates and edits a real roster record, blocks stale409 overwrite and leaves delayed mutation outcomes uncertain", async () => {
-  const tab = await page(true); await signIn(tab, "pg-admin@example.test"); await navigate(tab, "/workspace/admin/students");
+  const tab = await page(true); await signIn(tab, "pg-admin@example.test"); await navigate(tab, "/workspace/admin/students?tab=students");
   await safe(() => tab.getByRole("button", { name: "Add student", exact: true }).click());
   for (const [label, value] of [["First name", "Synthetic"], ["Last name", "Workspace"], ["Ceremony date", "2027-01-02"], ["Parent email", "workspace-parent@example.test"]]) await safe(() => tab.getByLabel(label, { exact: true }).fill(value));
   await safe(() => tab.getByRole("button", { name: "Save student", exact: true }).click());

@@ -785,6 +785,9 @@ body:has([data-section-tabs]) [data-verse-ref], body:has([data-section-tabs]) .r
 .student-card[aria-current="page"] .student-card-date, .student-card[aria-pressed="true"] .student-card-date { color: rgb(255 255 255 / 0.85); }
 .student-card-days { white-space: normal; background: var(--marigold); color: var(--on-ink); font-weight: 650; font-size: 0.8125rem; padding: 0.0625rem 0.5rem; border-radius: 999px; }
 .student-card-practice { color: var(--color-muted); font-size: var(--text-callout); line-height: 1.4; }
+.student-card-status { color: var(--color-muted); font-size: var(--text-callout); line-height: 1.4; }
+.student-card[aria-pressed="true"] .student-card-status { color: rgb(255 255 255 / 0.85); }
+.student-cards-compact .student-card-status { display: none; }
 .student-cards-compact { display: flex; gap: 0.5rem; overflow-x: auto; scrollbar-width: none; margin-bottom: 1rem; padding-bottom: 0.25rem; }
 .student-cards-compact > li { flex: 0 0 auto; }
 .student-cards-compact .student-card { min-height: 44px; padding: 0.5rem 1rem; border-radius: 999px; flex-direction: row; align-items: center; }

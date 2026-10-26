@@ -37,6 +37,21 @@ const when = (date: string, slot: string, services: ServiceSettings) => { const 
 export function HonorsNote() {
   return <section className={styles.entry} aria-label="Family honors"><div><h2>Family honors</h2><p>Your family or the congregation office arranges who takes part in your ceremony, such as opening the ark and the aliyot. If you’re arranging your own ceremony, send the names to the congregation office and they’ll enter them for you.</p></div></section>;
 }
+/**
+ * The status line on a parent's child card (several children): the same words the Family honors row uses once a form is saved.
+ * It says nothing until a form has a saved section, or if the read fails; the row's own wording for "nothing saved yet" is an action, not a status.
+ */
+export function HonorsCardLine({ studentId }: { studentId: string }) {
+  const { verifyServiceSession } = useWorkspace(), [saved, setSaved] = useState<{ id: string; sections: number } | null>(null);
+  useEffect(() => {
+    const request = new AbortController();
+    let api: ReturnType<typeof createHonorsClient>;
+    try { api = createHonorsClient({ studentId, mode: "parent", verify: verifyServiceSession, denied: () => undefined }); } catch { return; }
+    api.read(request.signal).then(value => { if (!request.signal.aborted) setSaved(value.saved ? { id: studentId, sections: savedSections(value.saved.form) } : null); }, () => undefined);
+    return () => request.abort();
+  }, [studentId, verifyServiceSession]);
+  return saved?.id === studentId && saved.sections > 0 ? <span className="student-card-status" data-testid="child-honors-line">{honorsRowLine(saved.sections)}</span> : null;
+}
 /** focusOnShow: the parent's Honors tab brings this heading into focus when the row appears (1.9 N10.1). */
 export function HonorsEntry({ studentId, name, mode = "parent", focusOnShow = false }: { studentId: string; name: string; mode?: "parent" | "student"; focusOnShow?: boolean }) {
   const [open, setOpen] = useState(false), { busy, context, verifyServiceSession } = useWorkspace(), origin = useRef<HTMLButtonElement>(null), heading = useRef<HTMLHeadingElement>(null);
